@@ -32,7 +32,6 @@ export default function BlogsPage() {
         <header className="mb-20">
           <h1
             className="mb-4 font-serif text-5xl font-bold tracking-tight md:text-6xl"
-            style={{ fontFamily: "'Libre Baskerville', serif" }}
           >
             {"T'Day Blog"}
           </h1>
@@ -64,7 +63,6 @@ export default function BlogsPage() {
 
                 <h2
                   className="mb-3 font-serif text-2xl font-bold tracking-tight transition-colors duration-300 md:text-3xl"
-                  style={{ fontFamily: "'Libre Baskerville', serif" }}
                 >
                   {post.title}
                 </h2>

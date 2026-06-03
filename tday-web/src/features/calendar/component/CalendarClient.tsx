@@ -21,6 +21,8 @@ import {
 import { TodoItemType } from "@/types";
 import { useDateRange } from "../hooks/useDateRange";
 import { useCalendarTodo } from "../query/get-calendar-todo";
+import { useTodoTimeline } from "@/features/todayTodos/query/get-todo-timeline";
+import type { SearchResultItem } from "@/components/ui/MobileSearchHeader";
 import {
   lazy,
   type PointerEvent as ReactPointerEvent,
@@ -66,8 +68,9 @@ import ListDot from "@/components/ListDot";
 import EditCalendarFormContainer from "./CalendarForm/EditFormContainer";
 import { useCompleteCalendarTodo } from "../query/complete-calendar-todo";
 import { useCompleteCalendarTodoInstance } from "../query/complete-calendar-todo-instance";
-import { CalendarDays, Check, ChevronLeft, ChevronRight, GripVertical, Pen, RefreshCcw, Trash } from "lucide-react";
+import { CalendarDays, Check, ChevronLeft, ChevronRight, Flag, Pen, RefreshCcw, Trash } from "lucide-react";
 import { isToday } from "date-fns";
+import { getPriorityFlag } from "@/lib/priority";
 
 const ConfirmDelete = lazy(() => import("./ConfirmationModals/ConfirmDelete"));
 const ConfirmDeleteAll = lazy(() => import("./ConfirmationModals/ConfirmDeleteAll"));
@@ -478,13 +481,16 @@ function DayCalendarSummary({
 function CalendarTaskRow({
   todo,
   listName,
+  highlighted = false,
 }: {
   todo: TodoItemType;
   listName?: string;
+  highlighted?: boolean;
 }) {
   const [displayForm, setDisplayForm] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteAllDialogOpen, setDeleteAllDialogOpen] = useState(false);
+  const [itemElement, setItemElement] = useState<HTMLElement | null>(null);
   const { t: appDict } = useTranslation("app");
   const { t: todayDict } = useTranslation("today");
   const { mutateComplete } = useCompleteCalendarTodo();
@@ -493,6 +499,17 @@ function CalendarTaskRow({
     id: todo.id,
     data: { todo },
   });
+  const priorityFlag = getPriorityFlag(todo.priority);
+
+  const setCombinedRef = (node: HTMLElement | null) => {
+    setItemElement(node);
+    setNodeRef(node);
+  };
+
+  useEffect(() => {
+    if (!highlighted || !itemElement) return;
+    itemElement.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [highlighted, itemElement]);
 
   const completeTask = () => {
     if (todo.instanceDate) {
@@ -512,26 +529,19 @@ function CalendarTaskRow({
         />
       )}
       <article
-        ref={setNodeRef}
+        ref={setCombinedRef}
+        {...attributes}
+        {...listeners}
         className={cn(
-          "group flex items-start justify-between gap-2 rounded-[20px] border border-white/70 bg-card/92 px-2 py-3 shadow-[0_12px_30px_-28px_hsl(var(--shadow)/0.45)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-card hover:shadow-[0_16px_36px_-28px_hsl(var(--shadow)/0.5)] dark:border-white/10 sm:px-3",
+          "group flex cursor-grab touch-none items-start justify-between gap-2 rounded-[20px] border border-white/70 bg-card/92 px-2 py-3 shadow-[0_12px_30px_-28px_hsl(var(--shadow)/0.45)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-card hover:shadow-[0_16px_36px_-28px_hsl(var(--shadow)/0.5)] active:cursor-grabbing dark:border-white/10 sm:px-3",
+          highlighted && "border-accent/55 ring-2 ring-accent/20 shadow-[0_14px_30px_-20px_hsl(var(--accent)/0.65)]",
           isDragging && "opacity-40",
         )}
       >
         <div className="flex min-w-0 items-start gap-2 sm:gap-3">
-          <button
-            type="button"
-            {...attributes}
-            {...listeners}
-            aria-label={`Drag to reschedule ${todo.title}`}
-            className="mt-0.5 flex h-9 w-5 shrink-0 cursor-grab touch-none items-center justify-center rounded-md text-muted-foreground/45 transition-colors hover:text-muted-foreground active:cursor-grabbing"
-          >
-            <GripVertical className="h-4 w-4" />
-          </button>
           <div className="pt-0.5">
             <TodoCheckbox
               icon={Check}
-              priority={todo.priority}
               complete={todo.completed}
               onChange={completeTask}
               checked={todo.completed}
@@ -544,9 +554,17 @@ function CalendarTaskRow({
             className="min-w-0 text-left"
             onClick={() => setDisplayForm(true)}
           >
-            <p className="line-clamp-2 text-[0.98rem] font-black leading-5 text-foreground">
-              {todo.title}
-            </p>
+            <div className="flex items-center gap-1.5">
+              {priorityFlag && (
+                <Flag
+                  className={cn("h-3.5 w-3.5 shrink-0", priorityFlag.className)}
+                  aria-label={priorityFlag.label}
+                />
+              )}
+              <p className="line-clamp-2 text-[0.98rem] font-black leading-5 text-foreground">
+                {todo.title}
+              </p>
+            </div>
             {todo.description && (
               <p className="mt-1 line-clamp-2 text-xs font-extrabold leading-4 text-muted-foreground">
                 {todo.description}
@@ -579,6 +597,7 @@ function CalendarTaskRow({
             size="icon"
             className="h-9 w-9 rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
             aria-label={todayDict("menu.edit")}
+            onPointerDown={(e) => e.stopPropagation()}
             onClick={() => setDisplayForm(true)}
           >
             <Pen className="h-4 w-4" />
@@ -589,6 +608,7 @@ function CalendarTaskRow({
             size="icon"
             className="h-9 w-9 rounded-full text-muted-foreground hover:bg-red/10 hover:text-red"
             aria-label={todayDict("menu.delete")}
+            onPointerDown={(e) => e.stopPropagation()}
             onClick={() => {
               if (todo.rrule) {
                 setDeleteAllDialogOpen(true);
@@ -657,8 +677,11 @@ export default function CalendarClient() {
   } | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const { todos: calendarTodos, todoLoading: calendarTodosLoading } = useCalendarTodo(calendarRange);
+  const { todos: allTimelineTodos } = useTodoTimeline();
   const { listMetaData } = useListMetaData()
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [highlightedTaskId, setHighlightedTaskId] = useState<string | null>(null);
+  const highlightTimer = useRef<number | null>(null);
   const [view, setView] = useState<CalendarViewMode>("month");
   const [slideDirection, setSlideDirection] = useState<SlideDirection | null>(null);
   const [animKey, setAnimKey] = useState(0);
@@ -744,21 +767,40 @@ export default function CalendarClient() {
     setCalendarRange(calendarRangeFor(dateForRange, view));
   }, [rangeAnchor, selectedDate, setCalendarRange, view]);
 
-  const filteredCalendarTodos = useMemo(() => {
+  // Search is a broad jump-to-task affordance (not a calendar-grid filter): match any
+  // active, not-overdue task across all dates; selecting one jumps the calendar to that
+  // date and highlights it. The calendar grid keeps showing every task.
+  const searchResults = useMemo<SearchResultItem[]>(() => {
     const query = searchQuery.trim().toLowerCase();
-    if (!query) return calendarTodos;
-    return calendarTodos.filter((todo) => {
-      const title = todo.title.toLowerCase();
-      const description = (todo.description || "").toLowerCase();
-      const listId = todo.listID ?? "";
-      const listName = (listMetaData[listId]?.name || "").toLowerCase();
-      return title.includes(query) || description.includes(query) || listName.includes(query);
-    });
-  }, [calendarTodos, listMetaData, searchQuery]);
+    if (!query) return [];
+    const now = new Date();
+    return allTimelineTodos
+      .filter((todo) => !todo.completed && todo.due >= now)
+      .filter((todo) => {
+        const title = todo.title.toLowerCase();
+        const description = (todo.description || "").toLowerCase();
+        const listId = todo.listID ?? "";
+        const listName = (listMetaData[listId]?.name || "").toLowerCase();
+        return title.includes(query) || description.includes(query) || listName.includes(query);
+      })
+      .sort((a, b) => a.due.getTime() - b.due.getTime())
+      .slice(0, 8)
+      .map((todo) => ({
+        id: todo.id,
+        title: todo.title,
+        subtitle: format(todo.due, "EEE, MMM d • h:mm a"),
+      }));
+  }, [searchQuery, allTimelineTodos, listMetaData]);
+
+  useEffect(() => {
+    return () => {
+      if (highlightTimer.current) window.clearTimeout(highlightTimer.current);
+    };
+  }, []);
 
   const tasksByDay = useMemo(() => {
     const grouped = new Map<string, TodoItemType[]>();
-    filteredCalendarTodos.forEach((todo) => {
+    calendarTodos.forEach((todo) => {
       const key = dayKey(todo.due);
       const items = grouped.get(key) ?? [];
       items.push(todo);
@@ -768,7 +810,7 @@ export default function CalendarClient() {
       items.sort((a, b) => a.due.getTime() - b.due.getTime());
     });
     return grouped;
-  }, [filteredCalendarTodos]);
+  }, [calendarTodos]);
 
   const selectedDayTasks = tasksByDay.get(dayKey(selectedDate)) ?? [];
 
@@ -795,6 +837,19 @@ export default function CalendarClient() {
     setAnimKey((key) => key + 1);
     setSelectedDate(date);
   }, [minimumMonth]);
+
+  const handleSelectSearchResult = useCallback(
+    (id: string) => {
+      const todo = allTimelineTodos.find((t) => t.id === id);
+      if (!todo) return;
+      setSearchQuery("");
+      selectDate(todo.due);
+      setHighlightedTaskId(id);
+      if (highlightTimer.current) window.clearTimeout(highlightTimer.current);
+      highlightTimer.current = window.setTimeout(() => setHighlightedTaskId(null), 2600);
+    },
+    [allTimelineTodos, selectDate],
+  );
 
   const navigatePeriod = useCallback((offset: -1 | 1) => {
     const currentDate = selectedDateRef.current;
@@ -878,6 +933,8 @@ export default function CalendarClient() {
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         trailingAction={todayAction}
+        results={searchResults}
+        onSelectResult={handleSelectSearchResult}
       />
       <NativePageTitle
         title={sidebarDict("calendar")}
@@ -939,6 +996,7 @@ export default function CalendarClient() {
                   key={todo.id}
                   todo={todo}
                   listName={todo.listID ? listMetaData[todo.listID]?.name : undefined}
+                  highlighted={highlightedTaskId === todo.id}
                 />
               ))}
             </div>

@@ -13,10 +13,6 @@ type UseCompleteTodoType = () => {
     completeMutateFn: UseMutateFunction<void, Error, TodoItemType, { oldTodos: TodoItemType[]; }>;
     completePending: boolean
 }
-type UsePinTodoType = () => {
-    pinMutateFn: UseMutateFunction<void, Error, TodoItemType, { oldTodos: unknown; }>;
-    pinPending: boolean
-}
 type UsePrioritizeTodoType = () => {
     prioritizeMutateFn: UseMutateFunction<void, Error, { id: string; level: "Low" | "Medium" | "High"; isRecurring: boolean; }, { oldTodos: TodoItemType[] | undefined; }>;
     prioritizePending: boolean
@@ -40,7 +36,6 @@ type UseEditTodoInstanceType = (setEditInstanceOnly: React.Dispatch<React.SetSta
 type TodoMutaionProviderProps = {
     useDeleteTodo: UseDeleteTodoType,
     useCompleteTodo: UseCompleteTodoType,
-    usePinTodo: UsePinTodoType,
     usePrioritizeTodo: UsePrioritizeTodoType,
     useReorderTodo: UseReorderTodoType,
     useEditTodoInstance: UseEditTodoInstanceType,
@@ -51,9 +46,9 @@ type TodoMutaionProviderProps = {
 const TodoMutationContext = createContext<Omit<TodoMutaionProviderProps, "children"> | null>(null)
 
 
-export default function TodoMutationProvider({ useDeleteTodo, useCompleteTodo, usePinTodo, usePrioritizeTodo, useReorderTodo, useEditTodo, useEditTodoInstance, children }: TodoMutaionProviderProps) {
+export default function TodoMutationProvider({ useDeleteTodo, useCompleteTodo, usePrioritizeTodo, useReorderTodo, useEditTodo, useEditTodoInstance, children }: TodoMutaionProviderProps) {
     return (
-        <TodoMutationContext.Provider value={{ useDeleteTodo, useCompleteTodo, usePinTodo, usePrioritizeTodo, useReorderTodo, useEditTodo, useEditTodoInstance }}>
+        <TodoMutationContext.Provider value={{ useDeleteTodo, useCompleteTodo, usePrioritizeTodo, useReorderTodo, useEditTodo, useEditTodoInstance }}>
             {children}
         </TodoMutationContext.Provider>
     )
