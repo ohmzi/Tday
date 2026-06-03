@@ -6,10 +6,10 @@
 // Vertical rhythm between timeline date sections. Driven by top margins only so the
 // gap above each date is owned by that date — empty dates pull up tight, dates with
 // tasks keep breathing room. Shared by the section droppable and the Overdue branch.
-export const sectionTopGapFirst = "mt-5 sm:mt-6 lg:mt-7"; // first section, below the page title
-export const sectionTopGapFilled = "mt-6 lg:mt-7"; // a date that has tasks
-export const sectionTopGapEmpty = "mt-3"; // a date with no tasks — tight
-export const headerToBodyGap = "mb-2.5 lg:mb-3"; // header → tasks/placeholder
+export const sectionTopGapFirst = "mt-2"; // first section, below the page title
+export const sectionTopGapFilled = "mt-3"; // a date that has tasks
+export const sectionTopGapEmpty = "mt-1"; // a date with no tasks — tight, native-style
+export const headerToBodyGap = "mb-1.5"; // header → tasks/placeholder
 
 // A section that is the active, valid drop target (whole-bucket highlight).
 export const sectionActiveClass =

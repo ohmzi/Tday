@@ -98,7 +98,7 @@ const TodoGroup = ({
     const showDragDisabledToast = reorderable && Boolean(preferences?.sortBy);
 
     return (
-      <div className={cn("space-y-2", className)}>
+      <div className={cn("space-y-0", className)}>
         {items.map((item) => (
           <div
             key={item.id}
@@ -127,7 +127,7 @@ const TodoGroup = ({
 
 
   return (
-    <div className={cn("space-y-2", className)}>
+    <div className={cn("space-y-0", className)}>
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}

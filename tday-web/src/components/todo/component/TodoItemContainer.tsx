@@ -6,7 +6,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { TodoItemType } from "@/types";
 import GripVertical from "@/components/ui/icon/gripVertical";
 import { Check, Flag, SquarePen, Trash } from "lucide-react";
-import { getDisplayDate } from "@/lib/date/displayDate";
+import { getDisplayTime } from "@/lib/date/displayDate";
 import { useLocale } from "@/lib/navigation";
 import { useTodoMutation } from "@/providers/TodoMutationProvider";
 import { useListMetaData } from "@/components/Sidebar/List/query/get-list-meta";
@@ -110,11 +110,12 @@ export const TodoItemCard = ({
         onMouseOver={() => setShowHandle(true)}
         onMouseOut={() => setShowHandle(false)}
         className={clsx(
-          "group relative flex max-w-full cursor-grab items-start justify-between gap-3 rounded-[20px] border border-white/70 bg-card/92 px-3 py-2.5 shadow-[0_12px_30px_-28px_hsl(var(--shadow)/0.45)] transition-all duration-200 active:cursor-grabbing hover:-translate-y-0.5 hover:border-white hover:bg-card hover:shadow-[0_16px_36px_-28px_hsl(var(--shadow)/0.5)] dark:border-white/10 dark:hover:border-white/20",
-          highlighted && "border-accent/55 ring-2 ring-accent/20 shadow-[0_14px_30px_-20px_hsl(var(--accent)/0.65)]",
-          dragging
-            ? "z-30 border-border/70 bg-card/95 shadow-2xl opacity-85 touch-manipulation"
-            : "shadow-[0_12px_30px_-28px_hsl(var(--shadow)/0.45)]",
+          // Flat native-style row with a bottom divider — no card chrome — on every
+          // breakpoint. Desktop keeps a grab cursor + subtle hover tint for affordance.
+          "group relative flex max-w-full items-center justify-between gap-3 border-b border-border/60 px-1 py-2.5",
+          "sm:cursor-grab sm:rounded-lg sm:transition-colors sm:duration-150 sm:active:cursor-grabbing sm:hover:bg-muted/40",
+          highlighted && "rounded-lg bg-accent/5",
+          dragging && "opacity-80",
         )}
       >
         <div
@@ -126,8 +127,8 @@ export const TodoItemCard = ({
           <GripVertical className="h-4 w-4" />
         </div>
 
-      <div className="flex items-start gap-3">
-        <div className="pt-0.5">
+      <div className="flex min-w-0 items-center gap-3">
+        <div className="shrink-0">
           <TodoCheckbox
             icon={Check}
             complete={completed}
@@ -139,12 +140,6 @@ export const TodoItemCard = ({
 
         <div className="max-w-full">
           <div className="mb-1.5 flex items-center gap-1.5">
-            {priorityFlag && (
-              <Flag
-                className={clsx("h-3.5 w-3.5 shrink-0", priorityFlag.className)}
-                aria-label={priorityFlag.label}
-              />
-            )}
             <p
               className={clsx(
                 "select-none text-[0.98rem] font-black leading-5 text-foreground transition-colors duration-300",
@@ -154,21 +149,17 @@ export const TodoItemCard = ({
               {title}
             </p>
           </div>
-          <pre className="w-48 whitespace-pre-wrap pb-2 text-xs font-extrabold leading-4 text-muted-foreground sm:w-full">
-            {description}
-          </pre>
+          {description && (
+            <pre className="w-48 whitespace-pre-wrap pb-2 text-xs font-extrabold leading-4 text-muted-foreground sm:w-full">
+              {description}
+            </pre>
+          )}
           <div className="flex flex-wrap items-center justify-start gap-2 text-xs font-black">
-            <p className={clsx(isOverdue ? "text-red" : "text-foreground")}>
-              {getDisplayDate(todoItem.due, true, locale, userTimeZone?.timeZone)}
+            {/* The date header already shows the day, so the row shows just the
+                time ("Due 1:00 AM") — same on mobile and desktop, matching native. */}
+            <p className={clsx("font-bold", isOverdue ? "text-red" : "text-muted-foreground")}>
+              {`Due ${getDisplayTime(todoItem.due, locale, userTimeZone?.timeZone)}`}
             </p>
-            {itemListID &&
-              <p className='flex items-center gap-1 rounded-full border border-border/70 bg-muted/70 px-2 py-[0.2rem] text-foreground/80'>
-                <ListDot id={itemListID} className="shrink-0 text-sm" />
-                <span className="max-w-14 truncate sm:max-w-24 md:max-w-52 lg:max-w-none">
-                  {listMetaData[itemListID]?.name}
-                </span>
-              </p>
-            }
             {isOverdue && showOverdueTag && (
               <p className='rounded-full border border-red/30 bg-red/10 px-2 py-[0.2rem] text-red font-medium'>
                 overdue
@@ -178,25 +169,61 @@ export const TodoItemCard = ({
         </div>
       </div>
 
-        <div className={clsx("flex items-center gap-1 transition-opacity", !showHandle && "opacity-0")}>
-          <button
-            type="button"
-            aria-label="Edit task"
-            onPointerDown={(e) => e.stopPropagation()}
-            onClick={() => setDisplayForm(true)}
-            className="rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        <div className="relative flex shrink-0 items-center gap-2 pr-1 sm:pr-0">
+          {/* Priority flag + list, right-aligned on the title line (native layout).
+              Mobile shows just the list icon; desktop shows the full name pill.
+              On desktop the meta fades out on hover to reveal the edit/delete actions. */}
+          <div
+            className={clsx(
+              "flex items-center gap-2 transition-opacity",
+              showHandle && "sm:opacity-0",
+            )}
           >
-            <SquarePen className="h-4 w-4" strokeWidth={1.8} />
-          </button>
-          <button
-            type="button"
-            aria-label="Delete task"
-            onPointerDown={(e) => e.stopPropagation()}
-            onClick={() => deleteMutateFn(todoItem)}
-            className="rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+            {priorityFlag && (
+              <Flag
+                className={clsx("h-4 w-4 shrink-0 sm:h-3.5 sm:w-3.5", priorityFlag.className)}
+                aria-label={priorityFlag.label}
+              />
+            )}
+            {itemListID && (
+              <>
+                <ListDot id={itemListID} className="h-4 w-4 sm:hidden" />
+                <span className="hidden items-center gap-1 rounded-full border border-border/70 bg-muted/70 px-2 py-[0.2rem] text-xs font-black text-foreground/80 sm:flex">
+                  <ListDot id={itemListID} className="shrink-0 text-sm" />
+                  <span className="max-w-24 truncate md:max-w-52 lg:max-w-none">
+                    {listMetaData[itemListID]?.name}
+                  </span>
+                </span>
+              </>
+            )}
+          </div>
+
+          {/* Desktop hover edit/delete actions, overlaid at the right edge. */}
+          <div
+            className={clsx(
+              "absolute right-0 top-1/2 hidden -translate-y-1/2 items-center gap-1 transition-opacity sm:flex",
+              showHandle ? "sm:opacity-100" : "sm:pointer-events-none sm:opacity-0",
+            )}
           >
-            <Trash className="h-4 w-4" strokeWidth={1.8} />
-          </button>
+            <button
+              type="button"
+              aria-label="Edit task"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={() => setDisplayForm(true)}
+              className="rounded-full bg-card/80 p-1.5 text-muted-foreground backdrop-blur transition-colors hover:bg-muted hover:text-foreground"
+            >
+              <SquarePen className="h-4 w-4" strokeWidth={1.8} />
+            </button>
+            <button
+              type="button"
+              aria-label="Delete task"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={() => deleteMutateFn(todoItem)}
+              className="rounded-full bg-card/80 p-1.5 text-muted-foreground backdrop-blur transition-colors hover:bg-destructive/10 hover:text-destructive"
+            >
+              <Trash className="h-4 w-4" strokeWidth={1.8} />
+            </button>
+          </div>
         </div>
       </div>
       <TaskFormSheet
