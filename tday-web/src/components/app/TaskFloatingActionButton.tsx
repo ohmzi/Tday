@@ -56,7 +56,8 @@ export default function TaskFloatingActionButton({
           }
           className={cn(
             "pointer-events-auto",
-            "flex h-14 items-center justify-center gap-2 rounded-full px-5",
+            // Icon-only circle on mobile (matching native); icon + label on desktop.
+            "flex h-14 w-14 items-center justify-center gap-2 rounded-full px-0 sm:w-auto sm:px-5",
             "border border-white/60 bg-accent text-white",
             "shadow-[0_18px_34px_-18px_hsl(var(--shadow)/0.65)]",
             "transition-transform duration-200 hover:-translate-y-0.5 active:translate-y-0.5 active:scale-95",
@@ -65,7 +66,9 @@ export default function TaskFloatingActionButton({
           style={buttonColor ? { backgroundColor: buttonColor } : undefined}
         >
           <Plus className="h-5 w-5 stroke-[2.6]" />
-          <span className="text-base font-black tracking-tight">Add Task</span>
+          <span className="hidden text-base font-black tracking-tight sm:inline">
+            Add Task
+          </span>
         </button>
       </div>
     </div>
