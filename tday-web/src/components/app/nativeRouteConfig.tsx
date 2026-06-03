@@ -97,7 +97,11 @@ export const homeCategoryRoutes = nativeRoutes.filter((route) =>
   ["overdue", "scheduled", "all", "priority", "completed", "calendar"].includes(route.id),
 );
 
-export const moreNavigationRoutes = nativeRoutes.filter((route) => route.id !== "today");
+// Settings is intentionally excluded here — it lives in the user/account menu, not in the
+// ••• More navigation sheet under Calendar.
+export const moreNavigationRoutes = nativeRoutes.filter(
+  (route) => route.id !== "today" && route.id !== "settings",
+);
 
 export function isNativeRouteActive(pathname: string, route: NativeRouteItem) {
   if (route.id === "today") {

@@ -4,12 +4,21 @@ import { Button } from "@/components/ui/button";
 import NativeAppBrandButton from "@/components/app/NativeAppBrandButton";
 import { cn } from "@/lib/utils";
 
+export interface SearchResultItem {
+  id: string;
+  title: string;
+  subtitle?: string;
+}
+
 interface MobileSearchHeaderProps {
   searchQuery?: string;
   onSearchChange?: (query: string) => void;
   placeholder?: string;
   trailingAction?: React.ReactNode;
   showBrandHome?: boolean;
+  /** When provided, a results dropdown is shown under the input while searching. */
+  results?: SearchResultItem[];
+  onSelectResult?: (id: string) => void;
 }
 
 const collapsedButtonClassName = cn(
@@ -24,6 +33,8 @@ export default function MobileSearchHeader({
   placeholder = "Search tasks...",
   trailingAction,
   showBrandHome = true,
+  results,
+  onSelectResult,
 }: MobileSearchHeaderProps) {
   const [internalQuery, setInternalQuery] = useState("");
   const [isExpanded, setIsExpanded] = useState(false);
@@ -115,7 +126,7 @@ export default function MobileSearchHeader({
       )}
     >
       {isExpanded ? (
-        <div className="flex min-w-0 flex-1 items-center">
+        <div className="relative flex min-w-0 flex-1 items-center">
           <div
             className={cn(
               "relative flex w-full items-center",
@@ -197,6 +208,38 @@ export default function MobileSearchHeader({
               </Button>
             </div>
           </div>
+
+          {onSelectResult && hasQuery && (
+            <div className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-2xl border border-white/70 bg-card/98 shadow-[0_24px_48px_-20px_hsl(var(--shadow)/0.5)] backdrop-blur-xl dark:border-white/10">
+              {results && results.length > 0 ? (
+                <ul className="max-h-72 overflow-y-auto py-1">
+                  {results.map((result) => (
+                    <li key={result.id}>
+                      <button
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => onSelectResult(result.id)}
+                        className="flex w-full flex-col items-start gap-0.5 px-4 py-2.5 text-left transition-colors hover:bg-muted/70"
+                      >
+                        <span className="line-clamp-1 text-sm font-black text-foreground">
+                          {result.title}
+                        </span>
+                        {result.subtitle && (
+                          <span className="line-clamp-1 text-xs font-extrabold text-muted-foreground">
+                            {result.subtitle}
+                          </span>
+                        )}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="px-4 py-3 text-sm font-extrabold text-muted-foreground">
+                  No matching tasks
+                </p>
+              )}
+            </div>
+          )}
         </div>
       ) : (
         <>

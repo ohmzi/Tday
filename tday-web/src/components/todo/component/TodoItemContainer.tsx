@@ -1,17 +1,17 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import TodoCheckbox from "@/components/ui/TodoCheckbox";
 import clsx from "clsx";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { TodoItemType } from "@/types";
 import GripVertical from "@/components/ui/icon/gripVertical";
-import { Check } from "lucide-react";
+import { Check, Flag, SquarePen, Trash } from "lucide-react";
 import { getDisplayDate } from "@/lib/date/displayDate";
 import { useLocale } from "@/lib/navigation";
 import { useTodoMutation } from "@/providers/TodoMutationProvider";
 import { useListMetaData } from "@/components/Sidebar/List/query/get-list-meta";
 import ListDot from "@/components/ListDot";
-import TodoItemMenuContainer from "./TodoItem/TodoMenu/TodoItemMenuContainer";
+import { getPriorityFlag } from "@/lib/priority";
 import { useUserTimezone } from "@/features/user/query/get-timezone";
 import { getTodoFocusElementId } from "@/lib/todoToastNavigation";
 import TaskFormSheet from "@/components/todo/component/TodoForm/TaskFormSheet";
@@ -22,6 +22,7 @@ type TodoItemContainerProps = {
   overdue?: boolean,
   perTaskOverdue?: boolean,
   highlighted?: boolean,
+  showOverdueTag?: boolean,
 }
 
 type TodoItemCardProps = TodoItemContainerProps & {
@@ -36,28 +37,53 @@ export const TodoItemCard = ({
   overdue,
   perTaskOverdue,
   highlighted = false,
+  showOverdueTag = true,
   containerProps,
   dragging = false,
   style,
   setDragNodeRef,
 }: TodoItemCardProps) => {
   const { listMetaData } = useListMetaData();
-  const { useCompleteTodo } = useTodoMutation();
+  const { useCompleteTodo, useDeleteTodo } = useTodoMutation();
   const { completeMutateFn } = useCompleteTodo();
+  const { deleteMutateFn } = useDeleteTodo();
   const locale = useLocale();
   const userTimeZone = useUserTimezone();
   const [itemElement, setItemElement] = useState<HTMLDivElement | null>(null);
   const { title, description, completed, priority, rrule } = todoItem;
   const isOverdue = overdue || (perTaskOverdue && !completed && todoItem.due < new Date());
   const itemListID = todoItem.listID;
+  const priorityFlag = getPriorityFlag(priority);
   const [displayForm, setDisplayForm] = useState(false);
   const [editInstanceOnly, setEditInstanceOnly] = useState(false);
   const [showHandle, setShowHandle] = useState(false);
+  // Brief "checking off" state: strike the title through, then fade the card out, then let
+  // the complete mutation remove it from cache. Keeps the existing pop sound + checkbox pop.
+  const [completing, setCompleting] = useState(false);
+  const completeTimer = useRef<number | null>(null);
 
   const setCombinedRef = (node: HTMLDivElement | null) => {
     setItemElement(node);
     setDragNodeRef?.(node);
   };
+
+  const handleToggleComplete = () => {
+    if (completed) {
+      completeMutateFn(todoItem);
+      return;
+    }
+    if (completing) return;
+    setCompleting(true);
+    completeTimer.current = window.setTimeout(() => {
+      completeMutateFn(todoItem);
+    }, 450);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (completeTimer.current) window.clearTimeout(completeTimer.current);
+    };
+  }, []);
 
   useEffect(() => {
     if (!displayForm) {
@@ -78,7 +104,7 @@ export const TodoItemCard = ({
       <div
         id={getTodoFocusElementId(todoItem.id)}
         ref={setCombinedRef}
-        style={style}
+        style={completing ? { ...style, opacity: 0, transition: "opacity 200ms ease 280ms" } : style}
         {...containerProps}
         onDoubleClick={() => setDisplayForm(true)}
         onMouseOver={() => setShowHandle(true)}
@@ -104,23 +130,35 @@ export const TodoItemCard = ({
         <div className="pt-0.5">
           <TodoCheckbox
             icon={Check}
-            priority={priority}
             complete={completed}
-            onChange={() => completeMutateFn(todoItem)}
-            checked={completed}
+            onChange={handleToggleComplete}
+            checked={completed || completing}
             variant={rrule ? "repeat" : "outline-solid"}
           />
         </div>
 
         <div className="max-w-full">
-          <p className="mb-1.5 select-none text-[0.98rem] font-black leading-5 text-foreground">
-            {title}
-          </p>
+          <div className="mb-1.5 flex items-center gap-1.5">
+            {priorityFlag && (
+              <Flag
+                className={clsx("h-3.5 w-3.5 shrink-0", priorityFlag.className)}
+                aria-label={priorityFlag.label}
+              />
+            )}
+            <p
+              className={clsx(
+                "select-none text-[0.98rem] font-black leading-5 text-foreground transition-colors duration-300",
+                completing && "text-muted-foreground line-through",
+              )}
+            >
+              {title}
+            </p>
+          </div>
           <pre className="w-48 whitespace-pre-wrap pb-2 text-xs font-extrabold leading-4 text-muted-foreground sm:w-full">
             {description}
           </pre>
           <div className="flex flex-wrap items-center justify-start gap-2 text-xs font-black">
-            <p className={clsx(isOverdue ? "text-red" : "text-lime")}>
+            <p className={clsx(isOverdue ? "text-red" : "text-foreground")}>
               {getDisplayDate(todoItem.due, true, locale, userTimeZone?.timeZone)}
             </p>
             {itemListID &&
@@ -131,7 +169,7 @@ export const TodoItemCard = ({
                 </span>
               </p>
             }
-            {isOverdue && (
+            {isOverdue && showOverdueTag && (
               <p className='rounded-full border border-red/30 bg-red/10 px-2 py-[0.2rem] text-red font-medium'>
                 overdue
               </p>
@@ -140,14 +178,25 @@ export const TodoItemCard = ({
         </div>
       </div>
 
-        <div>
-          <TodoItemMenuContainer
-            displayMenu={showHandle}
-            className={clsx("flex items-center gap-2 transition-opacity", !showHandle && "opacity-0")}
-            todo={todoItem}
-            setDisplayForm={setDisplayForm}
-            setEditInstanceOnly={setEditInstanceOnly}
-          />
+        <div className={clsx("flex items-center gap-1 transition-opacity", !showHandle && "opacity-0")}>
+          <button
+            type="button"
+            aria-label="Edit task"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={() => setDisplayForm(true)}
+            className="rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            <SquarePen className="h-4 w-4" strokeWidth={1.8} />
+          </button>
+          <button
+            type="button"
+            aria-label="Delete task"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={() => deleteMutateFn(todoItem)}
+            className="rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+          >
+            <Trash className="h-4 w-4" strokeWidth={1.8} />
+          </button>
         </div>
       </div>
       <TaskFormSheet
@@ -166,6 +215,7 @@ export const TodoItemContainer = ({
   overdue,
   perTaskOverdue,
   highlighted = false,
+  showOverdueTag = true,
 }: TodoItemContainerProps) => {
   //dnd kit setups
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
@@ -180,6 +230,7 @@ export const TodoItemContainer = ({
       overdue={overdue}
       perTaskOverdue={perTaskOverdue}
       highlighted={highlighted}
+      showOverdueTag={showOverdueTag}
       containerProps={{ ...attributes, ...listeners }}
       dragging={isDragging}
       style={style}
