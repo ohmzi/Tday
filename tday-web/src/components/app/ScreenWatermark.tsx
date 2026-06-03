@@ -16,7 +16,7 @@ export default function ScreenWatermark({
     <Icon
       aria-hidden
       strokeWidth={1.5}
-      className="pointer-events-none fixed right-[-3rem] top-1/2 -z-10 h-72 w-72 -translate-y-1/2 opacity-[0.045] sm:right-[-1.5rem] sm:h-[28rem] sm:w-[28rem]"
+      className="pointer-events-none fixed right-[-3rem] top-1/2 -z-10 h-72 w-72 -translate-y-1/2 opacity-[0.045] sm:right-[-1.5rem] sm:h-[28rem] sm:w-[28rem] lg:right-[max(2.5rem,calc((100vw-72rem)/2))]"
       style={color ? { color } : undefined}
     />
   );
