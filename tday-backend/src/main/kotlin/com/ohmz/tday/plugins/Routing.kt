@@ -41,6 +41,7 @@ fun Application.configureRouting() {
             timezoneRoutes()
             appSettingsRoutes()
             adminRoutes()
+            notificationRoutes()
             mobileProbeRoutes(config)
 
             route("/auth") {
