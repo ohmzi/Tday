@@ -117,16 +117,23 @@ export default function MobileSearchHeader({
   return (
     <header
       className={cn(
+        // Pinned toolbar: stays at the top, fully opaque so scrolled content is
+        // hidden behind it; the safe-area inset keeps the logo below the status bar.
         "sticky top-0 z-40",
-        "flex w-full items-center gap-2.5",
-        // Opaque background that also covers the scroll container's top padding and
-        // the safe-area inset, so scrolled content can't show behind/above the bar.
-        "-mt-4 bg-background pb-1.5 pt-[calc(1rem+env(safe-area-inset-top))] sm:-mt-6 sm:pt-[calc(1.5rem+env(safe-area-inset-top))]",
-        "lg:static lg:mt-0 lg:bg-transparent lg:pb-2 lg:pt-2",
+        "flex w-full items-center gap-2.5 bg-background",
+        "pt-[calc(0.5rem+env(safe-area-inset-top))] pb-1.5",
+        "lg:static lg:bg-transparent lg:pt-2 lg:pb-2",
         "transition-all duration-300",
         isExpanded ? "justify-stretch" : "justify-between",
       )}
     >
+      {/* Opaque backing that extends above the pinned bar to cover the scroll
+          container's top padding + the status-bar area, so day/task titles can
+          never be seen above or behind the toolbar while scrolling. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 bottom-full h-screen bg-background lg:hidden"
+      />
       {isExpanded ? (
         <div className="relative flex min-w-0 flex-1 items-center">
           <div

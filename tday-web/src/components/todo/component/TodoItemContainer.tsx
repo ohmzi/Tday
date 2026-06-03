@@ -180,8 +180,13 @@ export const TodoItemCard = ({
         )}
       >
         {/* Mobile: Edit + Delete revealed behind the row by a left swipe — native
-            pill style (blue edit, red delete), white icon, label beneath. */}
-        <div className="absolute inset-y-0 right-0 z-0 flex items-center gap-3 pr-3 sm:hidden">
+            pill style (blue edit, red delete), white icon, label beneath. Fade in
+            with the swipe so they're invisible when closed (lets the row stay
+            transparent, so the screen watermark shows through). */}
+        <div
+          className="absolute inset-y-0 right-0 z-0 flex items-center gap-3 pr-3 sm:hidden"
+          style={{ opacity: Math.min(1, Math.abs(swipeX) / ACTIONS_WIDTH) }}
+        >
           <button
             type="button"
             aria-label="Edit task"
@@ -239,8 +244,9 @@ export const TodoItemCard = ({
             touchAction: "pan-y",
           }}
           className={clsx(
-            // Flat native-style row; opaque bg masks the swipe actions when closed.
-            "relative z-10 flex items-center justify-between gap-3 bg-background px-1 py-2.5 sm:bg-transparent",
+            // Flat native-style row; transparent so the screen watermark shows
+            // through. Swipe actions are hidden via opacity when the row is closed.
+            "relative z-10 flex items-center justify-between gap-3 px-1 py-2.5",
             "sm:cursor-grab sm:rounded-lg sm:active:cursor-grabbing sm:hover:bg-muted/40",
             highlighted && "rounded-lg ring-2 ring-accent/25 sm:bg-accent/5 sm:ring-0",
           )}
