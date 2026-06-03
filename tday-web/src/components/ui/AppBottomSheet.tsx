@@ -87,7 +87,9 @@ export default function AppBottomSheet({
         )}
         <div
           className={cn(
-            "min-h-0 flex-1 overflow-y-auto px-5 pb-5 sm:px-6",
+            // Size to the content (no flex-1 collapse) and don't scroll — the
+            // sheet grows tall enough to show everything.
+            "overflow-visible px-5 pb-5 sm:px-6",
             bodyClassName,
           )}
         >

@@ -77,7 +77,9 @@ const DrawerContent = React.forwardRef<
   // Open keyboard: cap at 80% of the visible area and sit above the keyboard.
   const sheetStyle: React.CSSProperties = height
     ? {
-        maxHeight: Math.round((keyboardOpen ? 0.8 : 0.92) * height),
+        // Closed keyboard: grow up to 96% of the viewport so the whole form fits
+        // without scrolling. Open keyboard: cap at 85% of the visible area above it.
+        maxHeight: Math.round((keyboardOpen ? 0.85 : 0.96) * height),
         ...(keyboardOpen ? { bottom: keyboard } : null),
         ...style,
       }
