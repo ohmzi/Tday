@@ -6,6 +6,7 @@ import { useGroupedHistory } from "../hooks/useGroupedHistory";
 import GroupedCompletedTodoContainer from "./GroupedContainer";
 import { useTranslation } from "react-i18next";
 import NativePageTitle from "@/components/app/NativePageTitle";
+import ScreenWatermark from "@/components/app/ScreenWatermark";
 import { nativeScreenAccentColors } from "@/components/app/nativeScreenTheme";
 import MobileSearchHeader from "@/components/ui/MobileSearchHeader";
 import { CheckCircle, Search, X } from "lucide-react";
@@ -38,6 +39,7 @@ const CompletedTodoContainer = () => {
 
   return (
     <div className="mb-20">
+      <ScreenWatermark icon={CheckCircle} />
       <MobileSearchHeader searchQuery={searchQuery} onSearchChange={setSearchQuery} />
 
       <NativePageTitle

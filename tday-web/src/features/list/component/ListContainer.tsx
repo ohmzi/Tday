@@ -13,6 +13,8 @@ import TodoMutationProvider from "@/providers/TodoMutationProvider";
 import { useList } from "../query/get-list-todos";
 import { useListMetaData } from "@/components/Sidebar/List/query/get-list-meta";
 import NativePageTitle from "@/components/app/NativePageTitle";
+import ScreenWatermark from "@/components/app/ScreenWatermark";
+import { getListIcon } from "@/lib/listIcons";
 import { listColorAccentColors, nativeScreenAccentColors } from "@/components/app/nativeScreenTheme";
 import MobileSearchHeader from "@/components/ui/MobileSearchHeader";
 import ListDot from "@/components/ListDot";
@@ -82,6 +84,7 @@ const ListContainer = ({ id }: { id: string }) => {
             useReorderTodo={useReorderListTodo}
         >
             <div className="mb-20">
+                <ScreenWatermark icon={getListIcon(listMetaData[id]?.iconKey)} color={listAccent} />
                 {/* Sticky header with mobile menu + search — matches T'Day & Completed pages */}
                 <MobileSearchHeader
                     searchQuery={searchQuery}
