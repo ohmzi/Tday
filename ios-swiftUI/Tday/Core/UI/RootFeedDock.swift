@@ -30,6 +30,7 @@ struct RootFeedDock: View {
     let onSelect: (RootFeedTab) -> Void
 
     private let tabs: [RootFeedTab] = [.home, .floater]
+    @Environment(\.tdayColors) private var colors
 
     init(
         activeTab: RootFeedTab,
@@ -48,6 +49,52 @@ struct RootFeedDock: View {
     }
 
     var body: some View {
+        ZStack {
+            if collapsed {
+                collapsedButton
+                    .transition(
+                        .scale(scale: 0.82, anchor: .leading)
+                        .combined(with: .opacity)
+                    )
+            } else {
+                expandedControl
+                    .transition(
+                        .scale(scale: 0.82, anchor: .leading)
+                        .combined(with: .opacity)
+                    )
+            }
+        }
+        .animation(.spring(response: 0.34, dampingFraction: 0.82), value: collapsed)
+    }
+
+    // Icon-only pill shown when scrolled down.
+    // Tapping calls onSelect(activeTab), which triggers scroll-to-top in the parent,
+    // naturally returning scroll offset to 0 and expanding the dock back.
+    private var collapsedButton: some View {
+        Button {
+            onSelect(activeTab)
+        } label: {
+            Image(systemName: activeTab.systemImage)
+                .font(.system(size: 22, weight: .semibold))
+                .foregroundStyle(accentColor)
+                .frame(width: RootFeedDockMetrics.collapsedWidth, height: RootFeedDockMetrics.height)
+                .background(colors.surfaceVariant.opacity(0.76), in: Capsule())
+                .overlay(
+                    Capsule()
+                        .stroke(colors.onSurface.opacity(0.15), lineWidth: 1)
+                )
+        }
+        .buttonStyle(
+            TdayPressButtonStyle(
+                shadowColor: .black,
+                pressedShadowOpacity: 0.08,
+                normalShadowOpacity: 0.18
+            )
+        )
+        .accessibilityLabel(activeTab.title)
+    }
+
+    private var expandedControl: some View {
         TdayNativeSegmentedControl(
             labels: tabs.map(\.title),
             selectedIndex: activeIndex,
@@ -68,6 +115,7 @@ struct RootFeedDock: View {
 
 private enum RootFeedDockMetrics {
     static let width: CGFloat = 212
+    static let collapsedWidth: CGFloat = 60
     static let height: CGFloat = 60
     static let fontSize: CGFloat = 14.5
 }
