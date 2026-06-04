@@ -1,10 +1,11 @@
-import { CircleDashed, Home, MoreHorizontal } from "lucide-react";
+import { Home, Leaf, MoreHorizontal } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { usePathname, useRouter } from "@/lib/navigation";
 import {
   nativeAppContentClassName,
   nativeAppHorizontalPaddingClassName,
 } from "@/components/app/nativeAppLayout";
+import { nativeScreenAccentColors } from "@/components/app/nativeScreenTheme";
 import { cn } from "@/lib/utils";
 
 type DockTab = "home" | "floater" | "more";
@@ -14,13 +15,15 @@ const dockTabs: Array<{
   labelKey: "home" | "root_feed_tab_floater" | "more";
   icon: typeof Home;
   path?: string;
+  accentColor?: string;
 }> = [
-  { id: "home", labelKey: "home", icon: Home, path: "/app/tday" },
+  { id: "home", labelKey: "home", icon: Home, path: "/app/tday", accentColor: nativeScreenAccentColors.today },
   {
     id: "floater",
     labelKey: "root_feed_tab_floater",
-    icon: CircleDashed,
+    icon: Leaf,
     path: "/app/floater",
+    accentColor: nativeScreenAccentColors.floater,
   },
   { id: "more", labelKey: "more", icon: MoreHorizontal },
 ];
@@ -95,10 +98,11 @@ export default function RootDock({
                     "h-12 min-w-12 items-center justify-center gap-2 rounded-[20px] px-3",
                     "text-sm font-black transition-all duration-200",
                     selected
-                      ? "bg-card text-foreground shadow-[0_10px_24px_-18px_hsl(var(--shadow)/0.7)]"
+                      ? "bg-card shadow-[0_10px_24px_-18px_hsl(var(--shadow)/0.7)]"
                       : "text-muted-foreground hover:bg-card/55 hover:text-foreground",
                     selected && !isMore ? "sm:min-w-[104px]" : "sm:min-w-12",
                   )}
+                  style={selected && tab.accentColor ? { color: tab.accentColor } : undefined}
                 >
                   <Icon className="h-5 w-5 stroke-[2.4]" />
                   <span className={cn("hidden", selected && !isMore && "sm:inline")}>
