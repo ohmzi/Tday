@@ -513,7 +513,7 @@ fun TodoListScreen(
             val currentDue = todo.due ?: return@requestTaskReschedule
             val currentDate = LocalDate.ofInstant(currentDue, zoneId)
         if (currentDate != targetDate) {
-            ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+            ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CONFIRM)
             if (todo.isRecurring) {
                 pendingRescheduleDrop = TaskRescheduleDrop(todo = todo, targetDate = targetDate)
             } else {
@@ -1063,6 +1063,10 @@ fun TodoListScreen(
                                                     activeDropSectionKey = null
                                                     timelineDropTargetBounds.clear()
                                                     draggedScheduledTodoId = todo.id
+                                                    ViewCompat.performHapticFeedback(
+                                                        view,
+                                                        HapticFeedbackConstantsCompat.LONG_PRESS
+                                                    )
                                                     activeTimelineDrag =
                                                         TimelineInAppDrag(todo, position)
                                                 }
