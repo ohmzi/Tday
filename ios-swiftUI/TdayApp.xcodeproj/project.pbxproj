@@ -17,6 +17,8 @@
 		07D1F4A0C9434C54853E9D29 /* AppDataMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E4F3B64B40942F48202C32E /* AppDataMode.swift */; };
 		0A6188D6B8C9FC92A9927F1C /* SettingsRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DE0A20E66DEF6FD2146DB10 /* SettingsRepository.swift */; };
 		0BA0A83365B9CF5E63B5A9AA /* SnackbarManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 133161412A6BD2A0C04F745A /* SnackbarManager.swift */; };
+		F2E1D0C9B8A7F6E5D4C3B2A1 /* HapticManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6A7B8C9D0E1F2 /* HapticManager.swift */; };
+		A3F2E1D0C9B8A7F6E5D4C3B2 /* ShareSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2C3D4E5F6A7B8C9D0E1F2A3 /* ShareSheet.swift */; };
 		1618367E71392D77BC8C61B6 /* NavigationBackHistoryTitle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15B9BC191869EBEA7E8340E6 /* NavigationBackHistoryTitle.swift */; };
 		17A2E96F8BEA64247551A742 /* AppViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22BFAB0C2FA0BB186AEBFC5F /* AppViewModel.swift */; };
 		1AC138341BE3A2841CF05908 /* StringHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 593DCCDF3ADC95BE1CDC78FC /* StringHelpers.swift */; };
@@ -137,6 +139,8 @@
 		0E4F3B64B40942F48202C32E /* AppDataMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDataMode.swift; sourceTree = "<group>"; };
 		A9F10101A9F10101A9F10101 /* RootFeedDock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootFeedDock.swift; sourceTree = "<group>"; };
 		133161412A6BD2A0C04F745A /* SnackbarManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnackbarManager.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F6A7B8C9D0E1F2 /* HapticManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HapticManager.swift; sourceTree = "<group>"; };
+		B2C3D4E5F6A7B8C9D0E1F2A3 /* ShareSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareSheet.swift; sourceTree = "<group>"; };
 		15B9BC191869EBEA7E8340E6 /* NavigationBackHistoryTitle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationBackHistoryTitle.swift; sourceTree = "<group>"; };
 		19F61DADBD9B8EFC300698C4 /* SystemCredentialLoginTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemCredentialLoginTests.swift; sourceTree = "<group>"; };
 		1DABE0225668571D48D55B96 /* AuthViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthViewModel.swift; sourceTree = "<group>"; };
@@ -631,9 +635,11 @@
 			isa = PBXGroup;
 			children = (
 				AE3D896A638869384B4CF1EF /* ErrorRetryView.swift */,
+				A1B2C3D4E5F6A7B8C9D0E1F2 /* HapticManager.swift */,
 				15B9BC191869EBEA7E8340E6 /* NavigationBackHistoryTitle.swift */,
 				AC35A6A50C3BFA68468FEDF9 /* OfflineBanner.swift */,
 				A9F10101A9F10101A9F10101 /* RootFeedDock.swift */,
+				B2C3D4E5F6A7B8C9D0E1F2A3 /* ShareSheet.swift */,
 				133161412A6BD2A0C04F745A /* SnackbarManager.swift */,
 				0DE4A047CF237AD9F605D02E /* TaskFloatingActionButton.swift */,
 				8A7EC85EB5D9686D401249C6 /* UserFacingError.swift */,
@@ -824,6 +830,7 @@
 				535CABAC18AD47FEF15D2C11 /* CredentialEnvelope.swift in Sources */,
 				765ED719B3CCBB90176C55EB /* DomainModels.swift in Sources */,
 				FCDE195DEB990E58558699B1 /* ErrorRetryView.swift in Sources */,
+				F2E1D0C9B8A7F6E5D4C3B2A1 /* HapticManager.swift in Sources */,
 				5DB03218BE341B7C186F01AE /* CalendarPagingScrollView.swift in Sources */,
 				C0768A60B1B807FCA7A6D37F /* HomeScreen.swift in Sources */,
 				9D9B4F301D7261C3F4F95B6D /* HomeViewModel.swift in Sources */,
@@ -848,6 +855,7 @@
 				F5D16EE508D6244152B8E4B2 /* ServerURLState.swift in Sources */,
 				0A6188D6B8C9FC92A9927F1C /* SettingsRepository.swift in Sources */,
 				013BE5C9AD66548E50177C48 /* SettingsScreen.swift in Sources */,
+				A3F2E1D0C9B8A7F6E5D4C3B2 /* ShareSheet.swift in Sources */,
 				0BA0A83365B9CF5E63B5A9AA /* SnackbarManager.swift in Sources */,
 				1AC138341BE3A2841CF05908 /* StringHelpers.swift in Sources */,
 				222184A155C5A7B9F178007B /* SwiftDataModels.swift in Sources */,
