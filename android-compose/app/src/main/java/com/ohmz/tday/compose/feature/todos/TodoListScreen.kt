@@ -59,11 +59,11 @@ import androidx.compose.material.icons.rounded.ChevronLeft
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.DeleteOutline
+import androidx.compose.material.icons.rounded.Eco
 import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.Flag
 import androidx.compose.material.icons.rounded.Inbox
-import androidx.compose.material.icons.rounded.Inventory
 import androidx.compose.material.icons.rounded.MoreHoriz
 import androidx.compose.material.icons.rounded.NightsStay
 import androidx.compose.material.icons.rounded.RadioButtonUnchecked
@@ -3340,7 +3340,7 @@ private fun emptyStateIconForMode(
         TodoListMode.TODAY -> if (isTodayDaytime) Icons.Rounded.WbSunny else Icons.Rounded.NightsStay
         TodoListMode.OVERDUE -> Icons.Rounded.ErrorOutline
         TodoListMode.PRIORITY -> Icons.Rounded.Flag
-        TodoListMode.FLOATER -> Icons.Rounded.Inventory
+        TodoListMode.FLOATER -> Icons.Rounded.Eco
         TodoListMode.SCHEDULED -> Icons.Rounded.Schedule
         TodoListMode.ALL -> Icons.Rounded.Inbox
         TodoListMode.LIST -> tdayListIconForKey(listIconKey)

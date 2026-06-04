@@ -37,8 +37,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.BubbleChart
 import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.Eco
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
@@ -290,7 +290,7 @@ private fun CarModeButton(
         modifier = modifier.fillMaxHeight(),
     ) {
         Icon(
-            imageVector = if (mode == CarTaskMode.TODAY) Icons.Rounded.Home else Icons.Rounded.BubbleChart,
+            imageVector = if (mode == CarTaskMode.TODAY) Icons.Rounded.Home else Icons.Rounded.Eco,
             contentDescription = stringResource(mode.titleRes),
             tint = if (selected) {
                 MaterialTheme.colorScheme.onSurface
