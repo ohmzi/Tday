@@ -3,6 +3,7 @@ import {
   Calendar1,
   CalendarClock,
   CheckCircle,
+  CircleDotDashed,
   Clock3,
   Flag,
   Layers,
@@ -12,6 +13,7 @@ import {
 import { useCompletedTodo } from "@/features/completed/query/get-completedTodo";
 import { useTodo } from "@/features/todayTodos/query/get-todo";
 import { useTodoTimeline } from "@/features/todayTodos/query/get-todo-timeline";
+import { useFloater } from "@/features/floater/query/get-floater";
 import type { TodoItemType } from "@/types";
 
 export type NativeRouteId =
@@ -21,6 +23,7 @@ export type NativeRouteId =
   | "priority"
   | "all"
   | "completed"
+  | "floater"
   | "calendar"
   | "settings";
 
@@ -78,6 +81,13 @@ export const nativeRoutes: NativeRouteItem[] = [
     accentClass: "text-lime",
   },
   {
+    id: "floater",
+    label: "Floater",
+    path: "/app/floater",
+    icon: CircleDotDashed,
+    accentClass: "text-accent-teal",
+  },
+  {
     id: "calendar",
     label: "Calendar",
     path: "/app/calendar",
@@ -97,13 +107,17 @@ export const homeCategoryRoutes = nativeRoutes.filter((route) =>
   ["overdue", "scheduled", "all", "priority", "completed", "calendar"].includes(route.id),
 );
 
-// Settings is intentionally excluded here — it lives in the user/account menu, not in the
-// ••• More navigation sheet under Calendar.
+// Settings lives in the user/account menu. Floater is a root dock tab, so the
+// More sheet keeps the secondary destinations, including Calendar.
 export const moreNavigationRoutes = nativeRoutes.filter(
-  (route) => route.id !== "today" && route.id !== "settings",
+  (route) =>
+    route.id !== "today" && route.id !== "settings" && route.id !== "floater",
 );
 
 export function isNativeRouteActive(pathname: string, route: NativeRouteItem) {
+  if (route.id === "floater") {
+    return pathname.includes("/app/floater");
+  }
   if (route.id === "today") {
     return pathname.includes("/app/tday") || pathname.includes("/app/today");
   }
@@ -127,6 +141,7 @@ export function useNativeRouteCounts(): NativeRouteCounts {
   const { todos } = useTodo();
   const { todos: timelineTodos } = useTodoTimeline();
   const { completedTodos } = useCompletedTodo();
+  const { floaters } = useFloater();
   const now = new Date();
   const overdueCount = timelineTodos.filter((todo) => todo.due < now).length;
   const scheduledCount = timelineTodos.filter((todo) => todo.due >= now).length;
@@ -141,6 +156,7 @@ export function useNativeRouteCounts(): NativeRouteCounts {
     priority: priorityCount,
     all: timelineTodos.length,
     completed: completedTodos.length,
+    floater: floaters.filter((floater) => !floater.completed).length,
     calendar: scheduledCount,
     settings: null,
   };

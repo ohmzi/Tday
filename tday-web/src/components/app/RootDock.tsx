@@ -1,4 +1,5 @@
-import { Calendar1, Home, MoreHorizontal } from "lucide-react";
+import { CircleDotDashed, Home, MoreHorizontal } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { usePathname, useRouter } from "@/lib/navigation";
 import {
   nativeAppContentClassName,
@@ -6,22 +7,27 @@ import {
 } from "@/components/app/nativeAppLayout";
 import { cn } from "@/lib/utils";
 
-type DockTab = "home" | "calendar" | "more";
+type DockTab = "home" | "floater" | "more";
 
 const dockTabs: Array<{
   id: DockTab;
-  label: string;
+  labelKey: "home" | "root_feed_tab_floater" | "more";
   icon: typeof Home;
   path?: string;
 }> = [
-  { id: "home", label: "Home", icon: Home, path: "/app/tday" },
-  { id: "calendar", label: "Calendar", icon: Calendar1, path: "/app/calendar" },
-  { id: "more", label: "More", icon: MoreHorizontal },
+  { id: "home", labelKey: "home", icon: Home, path: "/app/tday" },
+  {
+    id: "floater",
+    labelKey: "root_feed_tab_floater",
+    icon: CircleDotDashed,
+    path: "/app/floater",
+  },
+  { id: "more", labelKey: "more", icon: MoreHorizontal },
 ];
 
 function activeDockTab(pathname: string): DockTab {
-  if (pathname.includes("/app/calendar")) {
-    return "calendar";
+  if (pathname.includes("/app/floater")) {
+    return "floater";
   }
   if (pathname.includes("/app/tday") || pathname.includes("/app/today")) {
     return "home";
@@ -38,6 +44,7 @@ export default function RootDock({
 }) {
   const router = useRouter();
   const pathname = usePathname();
+  const { t: appDict } = useTranslation("app");
   const activeTab = moreOpen ? "more" : activeDockTab(pathname);
 
   return (
@@ -66,6 +73,7 @@ export default function RootDock({
             {dockTabs.map((tab) => {
               const Icon = tab.icon;
               const selected = tab.id === activeTab;
+              const label = appDict(tab.labelKey);
               // The "More" button is hidden on mobile and only shown on desktop.
               const isMore = tab.id === "more";
 
@@ -73,7 +81,7 @@ export default function RootDock({
                 <button
                   key={tab.id}
                   type="button"
-                  aria-label={tab.label}
+                  aria-label={label}
                   onClick={() => {
                     if (isMore) {
                       onOpenMore();
@@ -94,7 +102,7 @@ export default function RootDock({
                 >
                   <Icon className="h-5 w-5 stroke-[2.4]" />
                   <span className={cn("hidden", selected && !isMore && "sm:inline")}>
-                    {tab.label}
+                    {label}
                   </span>
                 </button>
               );
