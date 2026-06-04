@@ -18,7 +18,7 @@ enum RootFeedTab: Hashable {
         case .home:
             return "house.fill"
         case .floater:
-            return "circle.dotted"
+            return "chart.bubble"
         }
     }
 }
