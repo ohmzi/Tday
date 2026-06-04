@@ -1,4 +1,4 @@
-import { CircleDotDashed, Home, MoreHorizontal } from "lucide-react";
+import { CircleDashed, Home, MoreHorizontal } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { usePathname, useRouter } from "@/lib/navigation";
 import {
@@ -19,7 +19,7 @@ const dockTabs: Array<{
   {
     id: "floater",
     labelKey: "root_feed_tab_floater",
-    icon: CircleDotDashed,
+    icon: CircleDashed,
     path: "/app/floater",
   },
   { id: "more", labelKey: "more", icon: MoreHorizontal },
