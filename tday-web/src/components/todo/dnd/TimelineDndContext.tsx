@@ -18,6 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useUserPreferences } from "@/providers/UserPreferencesProvider";
 import { useTimelineReschedule } from "./useTimelineReschedule";
 import { overlayCardClass } from "./timelineDndClasses";
+import { hapticDragStart, hapticDragOver, hapticDrop } from "@/lib/haptics";
 
 const DRAG_DISABLED_MESSAGE = "Drag disabled; a global filter is active";
 
@@ -36,11 +37,7 @@ export type TimelineDroppableData = {
 const OverSectionContext = createContext<string | null>(null);
 export const useTimelineOverSection = () => useContext(OverSectionContext);
 
-const triggerHaptic = (pattern: number | number[]) => {
-  if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
-    navigator.vibrate(pattern);
-  }
-};
+// Legacy wrapper removed — now using @/lib/haptics directly.
 
 /**
  * Single drag-and-drop context wrapping every section of a timeline screen.
@@ -83,7 +80,7 @@ export default function TimelineDndContext({
       }
       const data = event.active.data.current as TimelineDraggableData | undefined;
       setActiveTodo(data?.todo ?? null);
-      triggerHaptic(10);
+      hapticDragStart();
     },
     [preferences?.sortBy, toast],
   );
@@ -102,6 +99,7 @@ export default function TimelineDndContext({
         return;
       }
       setOverSectionKey(over.sectionKey);
+      hapticDragOver();
     },
     [preferences?.sortBy],
   );
@@ -115,7 +113,7 @@ export default function TimelineDndContext({
       if (!active?.todo || !over) return;
       const { targetDayKey } = over;
       if (targetDayKey == null || targetDayKey === active.currentDayKey) return;
-      triggerHaptic(15);
+      hapticDrop();
       reschedule(active.todo, targetDayKey);
     },
     [clear, preferences?.sortBy, reschedule],

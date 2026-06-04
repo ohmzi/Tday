@@ -6,10 +6,17 @@ import { AuthProvider } from "@/providers/AuthProvider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { SonnerToaster } from "@/components/ui/sonner";
+import { useThemeColor } from "@/hooks/useThemeColor";
+
+function ThemeColorSync() {
+  useThemeColor();
+  return null;
+}
 
 export default function App() {
   return (
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+      <ThemeColorSync />
       <QueryProvider>
         <AuthProvider>
           <TooltipProvider>

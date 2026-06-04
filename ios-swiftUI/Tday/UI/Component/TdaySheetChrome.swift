@@ -203,8 +203,11 @@ extension View {
 
 private struct TdayBottomSheetPresentationHost<SheetContent: View>: View {
     let content: SheetContent
+    @Environment(\.tdayColors) private var colors
+    @Environment(\.dismiss) private var dismiss
     @State private var keyboardFrame: CGRect?
     @State private var contentHeight: CGFloat = 0
+    @State private var scrimVisible = false
 
     init(@ViewBuilder content: () -> SheetContent) {
         self.content = content()
@@ -215,9 +218,14 @@ private struct TdayBottomSheetPresentationHost<SheetContent: View>: View {
             let keyboardBottomInset = keyboardBottomInset(for: proxy, contentHeight: contentHeight)
 
             ZStack(alignment: .bottom) {
-                Color.clear
+                // Dimmed backdrop so the sheet reads as a modal layer above the
+                // screen behind it. Tapping it dismisses, matching the platform's
+                // standard bottom-sheet behavior.
+                colors.bottomSheetScrim
+                    .opacity(scrimVisible ? 1 : 0)
                     .contentShape(Rectangle())
                     .ignoresSafeArea()
+                    .onTapGesture { dismissSheet() }
 
                 content
                     .frame(maxWidth: .infinity, alignment: .bottom)
@@ -237,6 +245,11 @@ private struct TdayBottomSheetPresentationHost<SheetContent: View>: View {
         .ignoresSafeArea(.container, edges: .bottom)
         .ignoresSafeArea(.keyboard, edges: .bottom)
         .presentationBackground(.clear)
+        .onAppear {
+            withAnimation(.easeOut(duration: 0.22)) {
+                scrimVisible = true
+            }
+        }
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillChangeFrameNotification)) { notification in
             updateKeyboardFrame(from: notification)
         }
@@ -246,6 +259,20 @@ private struct TdayBottomSheetPresentationHost<SheetContent: View>: View {
         .onPreferenceChange(TdayBottomSheetContentHeightPreferenceKey.self) { height in
             contentHeight = height
         }
+    }
+
+    private func dismissSheet() {
+        // Drop the keyboard first so it doesn't linger during the dismiss.
+        UIApplication.shared.sendAction(
+            #selector(UIResponder.resignFirstResponder),
+            to: nil,
+            from: nil,
+            for: nil
+        )
+        withAnimation(.easeIn(duration: 0.18)) {
+            scrimVisible = false
+        }
+        dismiss()
     }
 
     private func keyboardBottomInset(for proxy: GeometryProxy, contentHeight: CGFloat) -> CGFloat {
