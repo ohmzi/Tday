@@ -16,6 +16,9 @@ import com.ohmz.tday.compose.feature.widget.TodayTasksWidgetPreviewPublisher
 import com.ohmz.tday.compose.feature.widget.WidgetSyncWorker
 import dagger.hilt.android.HiltAndroidApp
 import io.sentry.android.core.SentryAndroid
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
@@ -39,20 +42,22 @@ class TdayApplication : Application(), Configuration.Provider {
     fun runDeferredStartup() {
         if (!deferredStartupRan.compareAndSet(false, true)) return
 
-        SentryAndroid.init(this) { options ->
-            options.dsn = BuildConfig.SENTRY_DSN
-            options.environment = if (BuildConfig.DEBUG) "development" else "production"
-            options.release = "tday-android@${BuildConfig.VERSION_NAME}"
-            options.dist = BuildConfig.VERSION_CODE.toString()
-            options.isSendDefaultPii = false
-            options.isEnableAutoSessionTracking = true
-            options.tracesSampleRate = TdayTelemetry.traceSampleRate(
-                BuildConfig.SENTRY_TRACES_SAMPLE_RATE,
-                if (BuildConfig.DEBUG) 1.0 else 0.2,
-            )
-            options.setBeforeSend { event, _ ->
-                event.user?.ipAddress = null
-                event
+        CoroutineScope(Dispatchers.Default).launch {
+            SentryAndroid.init(this@TdayApplication) { options ->
+                options.dsn = BuildConfig.SENTRY_DSN
+                options.environment = if (BuildConfig.DEBUG) "development" else "production"
+                options.release = "tday-android@${BuildConfig.VERSION_NAME}"
+                options.dist = BuildConfig.VERSION_CODE.toString()
+                options.isSendDefaultPii = false
+                options.isEnableAutoSessionTracking = true
+                options.tracesSampleRate = TdayTelemetry.traceSampleRate(
+                    BuildConfig.SENTRY_TRACES_SAMPLE_RATE,
+                    if (BuildConfig.DEBUG) 1.0 else 0.2,
+                )
+                options.setBeforeSend { event, _ ->
+                    event.user?.ipAddress = null
+                    event
+                }
             }
         }
 
