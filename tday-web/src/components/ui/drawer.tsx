@@ -5,10 +5,15 @@ import { cn } from "@/lib/utils"
 
 const Drawer = ({
   shouldScaleBackground = true,
+  // We own keyboard handling via the visual viewport (see useViewportSheetMetrics
+  // + DrawerContent). vaul's built-in input repositioning fights that math and
+  // leaves the sheet shifted after the keyboard dismisses, so disable it.
+  repositionInputs = false,
   ...props
 }: React.ComponentProps<typeof DrawerPrimitive.Root>) => (
   <DrawerPrimitive.Root
     shouldScaleBackground={shouldScaleBackground}
+    repositionInputs={repositionInputs}
     {...props}
   />
 )
@@ -47,7 +52,11 @@ function useViewportSheetMetrics() {
     const vv = window.visualViewport;
     const update = () => {
       if (vv) {
-        const keyboard = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+        const rawKeyboard = window.innerHeight - vv.height - vv.offsetTop;
+        // Treat anything under the threshold as "no keyboard" so the sheet
+        // settles back to a clean, full-height state once it dismisses (the
+        // residual offset is what used to leave it half-hidden).
+        const keyboard = rawKeyboard > 80 ? rawKeyboard : 0;
         setMetrics({ height: vv.height, keyboard });
       } else {
         setMetrics({ height: window.innerHeight, keyboard: 0 });
@@ -57,10 +66,12 @@ function useViewportSheetMetrics() {
     vv?.addEventListener("resize", update);
     vv?.addEventListener("scroll", update);
     window.addEventListener("resize", update);
+    window.addEventListener("orientationchange", update);
     return () => {
       vv?.removeEventListener("resize", update);
       vv?.removeEventListener("scroll", update);
       window.removeEventListener("resize", update);
+      window.removeEventListener("orientationchange", update);
     };
   }, []);
 
@@ -72,18 +83,35 @@ const DrawerContent = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Content>
 >(({ className, children, style, ...props }, ref) => {
   const { height, keyboard } = useViewportSheetMetrics();
-  const keyboardOpen = keyboard > 80;
-  // Closed keyboard: up to 92% of the viewport (content scrolls if longer).
-  // Open keyboard: cap at 80% of the visible area and sit above the keyboard.
+  const keyboardOpen = keyboard > 0;
+  // The sheet is anchored to the bottom of the *layout* viewport. When the
+  // keyboard opens the visual viewport shrinks but the layout viewport doesn't,
+  // so lift the sheet above the keyboard (`bottom`) and cap its height to the
+  // visible area. `bottom` is 0 when the keyboard is closed, so dismissing it
+  // resets the sheet cleanly. The body scrolls (see AppBottomSheet), so a
+  // shortened sheet never clips its contents.
   const sheetStyle: React.CSSProperties = height
     ? {
-        // Closed keyboard: grow up to 96% of the viewport so the whole form fits
-        // without scrolling. Open keyboard: cap at 85% of the visible area above it.
-        maxHeight: Math.round((keyboardOpen ? 0.85 : 0.96) * height),
-        ...(keyboardOpen ? { bottom: keyboard } : null),
+        maxHeight: Math.round((keyboardOpen ? 0.9 : 0.94) * height),
+        bottom: keyboard,
         ...style,
       }
     : style ?? {};
+
+  // With vaul's own input repositioning disabled, make sure the focused field
+  // is scrolled into the visible part of the sheet's scroll area.
+  const handleFocus = React.useCallback(
+    (event: React.FocusEvent<HTMLDivElement>) => {
+      const target = event.target as HTMLElement | null;
+      if (!target?.matches("input, textarea, select, [contenteditable='true']")) {
+        return;
+      }
+      window.requestAnimationFrame(() => {
+        target.scrollIntoView({ block: "center" });
+      });
+    },
+    [],
+  );
 
   return (
     <DrawerPortal>
@@ -91,13 +119,14 @@ const DrawerContent = React.forwardRef<
       <DrawerPrimitive.Content
         ref={ref}
         style={sheetStyle}
+        onFocus={handleFocus}
         className={cn(
-          "fixed inset-x-0 bottom-0 z-50 mt-24 flex h-auto flex-col  rounded-t-[10px] border bg-background",
+          "fixed inset-x-0 bottom-0 z-50 mt-24 flex h-auto flex-col rounded-t-[10px] border bg-background",
           className
         )}
         {...props}
       >
-        <div className="mx-auto mt-4 h-2 w-[100px] rounded-full bg-muted" />
+        <div className="mx-auto mt-4 h-2 w-[100px] shrink-0 rounded-full bg-muted" />
         {children}
       </DrawerPrimitive.Content>
     </DrawerPortal>

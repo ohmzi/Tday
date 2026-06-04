@@ -313,9 +313,10 @@ fun TodoListScreen(
                 .mapNotNull { it.listId }
                 .groupingBy { it }
                 .eachCount()
-            uiState.lists.mapNotNull { list ->
-                val count = floaterCountsByList[list.id] ?: return@mapNotNull null
-                list to count
+            // Show every list, including ones with no tasks yet, so a newly
+            // created (still-empty) list is always reachable here.
+            uiState.lists.map { list ->
+                list to (floaterCountsByList[list.id] ?: 0)
             }
         } else {
             emptyList()
