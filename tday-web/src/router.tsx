@@ -24,6 +24,8 @@ const TodoPage = lazy(() => import("@/pages/TodoPage"));
 const PriorityPage = lazy(() => import("@/pages/PriorityPage"));
 const ScheduledPage = lazy(() => import("@/pages/ScheduledPage"));
 const CompletedPage = lazy(() => import("@/pages/CompletedPage"));
+const FloaterPage = lazy(() => import("@/pages/FloaterPage"));
+const FloaterListPage = lazy(() => import("@/pages/FloaterListPage"));
 const AdminPage = lazy(() => import("@/pages/AdminPage"));
 const AdminRoute = lazy(() => import("@/pages/AdminRoute"));
 const SettingsPage = lazy(() => import("@/pages/SettingsPage"));
@@ -93,6 +95,8 @@ export const router = sentryCreateBrowserRouter([
                   { path: "priority", element: <PriorityPage /> },
                   { path: "scheduled", element: <ScheduledPage /> },
                   { path: "completed", element: <CompletedPage /> },
+                  { path: "floater", element: <FloaterPage /> },
+                  { path: "floater-list/:id", element: <FloaterListPage /> },
                   { path: "settings", element: <SettingsPage /> },
                   {
                     element: <AdminRoute />,

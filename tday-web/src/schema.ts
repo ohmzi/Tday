@@ -54,6 +54,18 @@ export const todoInstanceSchema = z.object({
   rrule: z.string().nullable(),
 });
 
+export const floaterSchema = z.object({
+  title: z
+    .string({ message: "title cannot be left empty" })
+    .trim()
+    .min(1, { message: "title cannot be left empty" }),
+  description: z.string().nullable().optional(),
+  priority: z.enum(["Low", "Medium", "High"], {
+    errorMap: () => ({ message: "priority must be one of: low, medium, high" }),
+  }),
+  listID: z.string().nullable().optional(),
+});
+
 const listColorValues = [
   "RED",
   "ORANGE",
