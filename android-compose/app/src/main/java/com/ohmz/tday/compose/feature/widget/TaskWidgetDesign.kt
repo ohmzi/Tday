@@ -19,6 +19,8 @@ import androidx.glance.LocalSize
 import androidx.glance.action.Action
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.AndroidRemoteViews
+import androidx.glance.appwidget.lazy.LazyColumn
+import androidx.glance.appwidget.lazy.itemsIndexed
 import androidx.glance.background
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
@@ -97,7 +99,6 @@ internal fun TaskWidgetContent(
     val widgetSize = LocalSize.current
     val layout = taskWidgetLayoutFor(widgetSize)
     val metrics = taskWidgetMetrics(layout)
-    val visibleRows = rows.take(taskWidgetVisibleRowCount(widgetSize, metrics))
     val watermark = when (state) {
         TaskWidgetContentState.SETUP -> visuals.setupWatermark
         TaskWidgetContentState.EMPTY,
@@ -148,7 +149,7 @@ internal fun TaskWidgetContent(
                 Spacer(modifier = GlanceModifier.height(metrics.contentSpacing))
 
                 TaskWidgetList(
-                    rows = visibleRows,
+                    rows = rows,
                     layout = layout,
                     metrics = metrics,
                     openAction = openAction,
@@ -426,8 +427,8 @@ private fun TaskWidgetList(
     openAction: Action,
     modifier: GlanceModifier = GlanceModifier,
 ) {
-    Column(modifier = modifier) {
-        rows.forEachIndexed { index, row ->
+    LazyColumn(modifier = modifier) {
+        itemsIndexed(rows, itemId = { _, row -> row.key }) { index, row ->
             TaskWidgetRow(
                 row = row,
                 layout = layout,
