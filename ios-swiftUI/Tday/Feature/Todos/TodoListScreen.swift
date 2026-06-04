@@ -4000,7 +4000,7 @@ private func emptyTimelineSystemImage(for mode: TodoListMode, listIconKey: Strin
     case .priority:
         return "flag.fill"
     case .floater:
-        return "chart.bubble"
+        return "leaf"
     case .list:
         return todoListSymbolName(for: listIconKey)
     }

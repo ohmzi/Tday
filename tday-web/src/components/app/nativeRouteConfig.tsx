@@ -6,10 +6,10 @@ import {
   Clock3,
   Flag,
   Layers,
+  Leaf,
   Settings,
   Sun,
 } from "lucide-react";
-import BubbleChartIcon from "@/components/icons/BubbleChartIcon";
 import { useCompletedTodo } from "@/features/completed/query/get-completedTodo";
 import { useTodo } from "@/features/todayTodos/query/get-todo";
 import { useTodoTimeline } from "@/features/todayTodos/query/get-todo-timeline";
@@ -84,7 +84,7 @@ export const nativeRoutes: NativeRouteItem[] = [
     id: "floater",
     label: "Floater",
     path: "/app/floater",
-    icon: BubbleChartIcon,
+    icon: Leaf,
     accentClass: "text-accent-teal",
   },
   {
