@@ -4031,37 +4031,37 @@ private func todoModeAccentColor(_ mode: TodoListMode, listColorKey: String?) ->
 func todoListAccentColor(for key: String?) -> Color {
     switch key {
     case "PINK":
-        return todoHexColor(0xC987A5)
+        return todoHexColor(0xE05299)
     case "GOLD":
-        return todoHexColor(0xC7AA63)
+        return todoHexColor(0xE8A530)
     case "DEEP_BLUE":
-        return todoHexColor(0x6F86C6)
+        return todoHexColor(0x3C9ADD)
     case "CORAL":
-        return todoHexColor(0xD39A82)
+        return todoHexColor(0xE6664C)
     case "TEAL":
-        return todoHexColor(0x67AAA7)
+        return todoHexColor(0x2EB8AC)
     case "SLATE", "GRAY":
-        return todoHexColor(0x7F8996)
+        return todoHexColor(0x3E4774)
     case "BLUE":
-        return todoHexColor(0x6F9FCE)
+        return todoHexColor(0x6EA8E1)
     case "PURPLE":
-        return todoHexColor(0x9A86CF)
+        return todoHexColor(0x7D67B6)
     case "ROSE":
-        return todoHexColor(0xC98299)
+        return todoHexColor(0xD1617D)
     case "LIGHT_RED":
-        return todoHexColor(0xD58D8D)
+        return todoHexColor(0xE06C6C)
     case "BRICK":
-        return todoHexColor(0xAD786E)
+        return todoHexColor(0xC64C39)
     case "YELLOW":
-        return todoHexColor(0xCFB866)
+        return todoHexColor(0xE8BA30)
     case "LIME", "GREEN":
-        return todoHexColor(0x8DBB73)
+        return todoHexColor(0x46B963)
     case "ORANGE":
-        return todoHexColor(0xD69B63)
+        return todoHexColor(0xE28736)
     case "RED":
-        return todoHexColor(0xD97873)
+        return todoHexColor(0xDF3A3A)
     default:
-        return todoHexColor(0xC987A5)
+        return todoHexColor(0xE05299)
     }
 }
 
