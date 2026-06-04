@@ -481,4 +481,39 @@
     background-clip: content-box;
   }
 }
+/* ── Task completion animation ── */
+@keyframes task-complete-out {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+}
+
+.animate-task-complete {
+  animation: task-complete-out 280ms ease-out forwards;
+}
+
+/* ── View Transitions (Chrome 111+) ── */
+@view-transition {
+  navigation: auto;
+}
+
+::view-transition-old(root) {
+  animation: 180ms ease-out both fade-out;
+}
+::view-transition-new(root) {
+  animation: 180ms ease-in both fade-in;
+}
+
+@keyframes fade-out {
+  to { opacity: 0; }
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+}
+
 /* https://www.joshwcomeau.com/css/designing-shadows/ */

@@ -4,7 +4,9 @@ import { usePathname } from "@/lib/navigation";
 import MoreNavigationSheet from "./MoreNavigationSheet";
 import RootDock from "./RootDock";
 import TaskFloatingActionButton from "./TaskFloatingActionButton";
+import InstallPromptBanner from "./InstallPromptBanner";
 import { useNativeRouteCounts } from "./nativeRouteConfig";
+import { usePrefetchRoutes } from "@/hooks/usePrefetchRoutes";
 
 export default function NativeAppShell({
   children,
@@ -14,6 +16,7 @@ export default function NativeAppShell({
   const [moreOpen, setMoreOpen] = useState(false);
   const counts = useNativeRouteCounts();
   const pathname = usePathname();
+  usePrefetchRoutes();
   const showTaskFab =
     !pathname.includes("/app/settings") &&
     !pathname.includes("/app/admin");
@@ -25,6 +28,7 @@ export default function NativeAppShell({
       </div>
       <RootDock onOpenMore={() => setMoreOpen(true)} moreOpen={moreOpen} />
       {showTaskFab && <TaskFloatingActionButton />}
+      <InstallPromptBanner />
       <MoreNavigationSheet open={moreOpen} onOpenChange={setMoreOpen} counts={counts} />
     </div>
   );
