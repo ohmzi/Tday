@@ -1,0 +1,258 @@
+import { useEffect, useMemo, useState } from "react";
+import { Flag, List as ListIcon } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import AppBottomSheet from "@/components/ui/AppBottomSheet";
+import FloaterListDot from "@/features/floaterList/component/FloaterListDot";
+import {
+  SheetCard,
+  SheetDivider,
+  SheetSectionTitle,
+  SheetSelectorRow,
+} from "@/components/ui/sheet-chrome";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import { useCreateFloater } from "@/features/floater/query/create-floater";
+import { useEditFloater } from "@/features/floater/query/update-floater";
+import { useFloaterListMetaData } from "@/features/floaterList/query/get-floater-list-meta";
+import type { FloaterItemType } from "@/types";
+import { cn } from "@/lib/utils";
+
+type FloaterFormSheetProps = {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  floater?: FloaterItemType;
+  overrideFields?: { listID?: string };
+};
+
+const priorityOptions: Array<{
+  value: FloaterItemType["priority"];
+  labelKey: "normal" | "important" | "urgent";
+}> = [
+  { value: "Low", labelKey: "normal" },
+  { value: "Medium", labelKey: "important" },
+  { value: "High", labelKey: "urgent" },
+];
+
+export default function FloaterFormSheet({
+  open,
+  onOpenChange,
+  floater,
+  overrideFields,
+}: FloaterFormSheetProps) {
+  const { t: appDict } = useTranslation("app");
+  const { toast } = useToast();
+  const { createMutateFn, createStatus } = useCreateFloater();
+  const { editTodoMutateFn, editTodoStatus } = useEditFloater();
+  const { floaterListMetaData } = useFloaterListMetaData();
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [priority, setPriority] = useState<FloaterItemType["priority"]>("Low");
+  const [listID, setListID] = useState<string | null>(null);
+  const [activeSelector, setActiveSelector] = useState<"priority" | "list" | null>(
+    null,
+  );
+
+  useEffect(() => {
+    if (!open) return;
+    setTitle(floater?.title ?? "");
+    setDescription(floater?.description ?? "");
+    setPriority(floater?.priority ?? "Low");
+    setListID(overrideFields?.listID ?? floater?.listID ?? null);
+    setActiveSelector(null);
+  }, [floater, open, overrideFields?.listID]);
+
+  useEffect(() => {
+    if (!floater && createStatus === "success") {
+      onOpenChange(false);
+    }
+  }, [createStatus, floater, onOpenChange]);
+
+  useEffect(() => {
+    if (floater && editTodoStatus === "success") {
+      onOpenChange(false);
+    }
+  }, [editTodoStatus, floater, onOpenChange]);
+
+  const lists = useMemo(
+    () =>
+      Object.entries(floaterListMetaData)
+        .filter(([, list]) => Boolean(list.name?.trim()))
+        .map(([id, list]) => ({ id, ...list }))
+        .sort((a, b) => a.name.localeCompare(b.name)),
+    [floaterListMetaData],
+  );
+
+  const selectedListName = listID ? floaterListMetaData[listID]?.name?.trim() : null;
+  const canSubmit = title.trim().length > 0;
+  const isEditing = Boolean(floater?.id);
+
+  const handleSubmit = () => {
+    const normalizedTitle = title.trim();
+    if (!normalizedTitle) return;
+
+    try {
+      const payload: FloaterItemType = {
+        id: floater?.id ?? "-1",
+        title: normalizedTitle,
+        description: description.trim() ? description : null,
+        priority,
+        listID: listID ?? null,
+        pinned: floater?.pinned ?? false,
+        completed: floater?.completed ?? false,
+        createdAt: floater?.createdAt ?? new Date(),
+        updatedAt: floater?.updatedAt ?? null,
+        order: floater?.order ?? Number.MAX_VALUE,
+        userID: floater?.userID ?? null,
+      };
+      if (isEditing) {
+        editTodoMutateFn(payload);
+      } else {
+        setTitle("");
+        setDescription("");
+        createMutateFn(payload);
+      }
+    } catch (error) {
+      if (error instanceof Error) {
+        toast({ description: error.message, variant: "destructive" });
+      }
+    }
+  };
+
+  return (
+    <AppBottomSheet
+      variant="native"
+      open={open}
+      onOpenChange={onOpenChange}
+      title={isEditing ? appDict("editFloater") : appDict("newFloater")}
+      onClose={() => onOpenChange(false)}
+      onConfirm={handleSubmit}
+      confirmDisabled={!canSubmit}
+      confirmLabel={appDict("save")}
+      closeLabel={appDict("cancel")}
+      bodyClassName="pb-6"
+    >
+      <div className="flex flex-col gap-3 pb-2">
+        <SheetCard>
+          <div className="px-[18px] pb-2 pt-3">
+            <textarea
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+              onKeyDown={(event) => {
+                if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+                  event.preventDefault();
+                  handleSubmit();
+                }
+              }}
+              placeholder={appDict("floaterTitlePlaceholder")}
+              className="min-h-12 w-full resize-none bg-transparent text-lg font-black text-foreground placeholder:text-muted-foreground/60 focus:outline-hidden"
+              autoFocus
+            />
+          </div>
+          <SheetDivider />
+          <input
+            value={description}
+            onChange={(event) => setDescription(event.target.value)}
+            name="description"
+            placeholder={appDict("notes")}
+            className="w-full bg-transparent px-[18px] py-3 text-base font-bold text-foreground placeholder:font-bold placeholder:text-muted-foreground/60 focus:outline-hidden"
+          />
+        </SheetCard>
+
+        <SheetSectionTitle>{appDict("details")}</SheetSectionTitle>
+        <SheetCard>
+          <SheetSelectorRow
+            icon={<ListIcon className="h-5 w-5" />}
+            label={appDict("floaterList")}
+            ariaLabel={`${appDict("floaterList")}, ${
+              selectedListName ?? appDict("noList")
+            }`}
+            value={
+              listID && selectedListName ? (
+                <>
+                  <FloaterListDot id={listID} className="h-3.5 w-3.5" />
+                  <span className="truncate">{selectedListName}</span>
+                </>
+              ) : (
+                appDict("noList")
+              )
+            }
+            onClick={() => setActiveSelector("list")}
+          />
+          <SheetDivider />
+          <SheetSelectorRow
+            icon={<Flag className="h-5 w-5" />}
+            label={appDict("priority")}
+            ariaLabel={`${appDict("priority")}, ${appDict(
+              priorityOptions.find((option) => option.value === priority)?.labelKey ??
+                "normal",
+            )}`}
+            value={appDict(
+              priorityOptions.find((option) => option.value === priority)?.labelKey ??
+                "normal",
+            )}
+            onClick={() => setActiveSelector("priority")}
+          />
+        </SheetCard>
+
+        {activeSelector === "priority" ? (
+          <SheetCard className="p-2">
+            {priorityOptions.map((option) => (
+              <Button
+                key={option.value}
+                type="button"
+                variant="ghost"
+                className={cn(
+                  "h-12 w-full justify-start rounded-2xl text-base font-black",
+                  priority === option.value && "bg-muted",
+                )}
+                onClick={() => {
+                  setPriority(option.value);
+                  setActiveSelector(null);
+                }}
+              >
+                {appDict(option.labelKey)}
+              </Button>
+            ))}
+          </SheetCard>
+        ) : null}
+
+        {activeSelector === "list" ? (
+          <SheetCard className="p-2">
+            <Button
+              type="button"
+              variant="ghost"
+              className={cn(
+                "h-12 w-full justify-start rounded-2xl text-base font-black",
+                listID == null && "bg-muted",
+              )}
+              onClick={() => {
+                setListID(null);
+                setActiveSelector(null);
+              }}
+            >
+              {appDict("noList")}
+            </Button>
+            {lists.map((list) => (
+              <Button
+                key={list.id}
+                type="button"
+                variant="ghost"
+                className={cn(
+                  "h-12 w-full justify-start gap-2 rounded-2xl text-base font-black",
+                  listID === list.id && "bg-muted",
+                )}
+                onClick={() => {
+                  setListID(list.id);
+                  setActiveSelector(null);
+                }}
+              >
+                <FloaterListDot id={list.id} className="h-4 w-4" />
+                <span className="truncate">{list.name}</span>
+              </Button>
+            ))}
+          </SheetCard>
+        ) : null}
+      </div>
+    </AppBottomSheet>
+  );
+}
