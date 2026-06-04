@@ -60,7 +60,7 @@ export default function AppBottomSheet({
         )}
       >
         {isNative ? (
-          <>
+          <div className="shrink-0">
             {/* Visually hidden title keeps vaul/Radix happy; the visible header
                 is rendered by SheetHeader below. */}
             <DrawerTitle className="sr-only">{title}</DrawerTitle>
@@ -72,9 +72,9 @@ export default function AppBottomSheet({
               confirmLabel={confirmLabel}
               closeLabel={closeLabel}
             />
-          </>
+          </div>
         ) : (
-          <DrawerHeader className="px-5 pb-3 pt-4 text-left sm:px-6">
+          <DrawerHeader className="shrink-0 px-5 pb-3 pt-4 text-left sm:px-6">
             <DrawerTitle className="text-2xl font-black tracking-tight text-foreground">
               {title}
             </DrawerTitle>
@@ -87,16 +87,17 @@ export default function AppBottomSheet({
         )}
         <div
           className={cn(
-            // Size to the content (no flex-1 collapse) and don't scroll — the
-            // sheet grows tall enough to show everything.
-            "overflow-visible px-5 pb-5 sm:px-6",
+            // Scrollable body so a keyboard-shortened sheet never clips its
+            // contents. When the sheet is tall enough for everything, there's
+            // no overflow and nothing scrolls.
+            "min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-5 sm:px-6",
             bodyClassName,
           )}
         >
           {children}
         </div>
         {!isNative && footer ? (
-          <div className="border-t border-border/70 bg-background/95 px-5 py-4 sm:px-6">
+          <div className="shrink-0 border-t border-border/70 bg-background/95 px-5 py-4 sm:px-6">
             {footer}
           </div>
         ) : null}

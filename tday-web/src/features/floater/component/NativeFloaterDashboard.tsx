@@ -54,12 +54,12 @@ export default function NativeFloaterDashboard() {
   }, [floaters]);
 
   const lists = useMemo(() => {
+    // Show every named list — including ones with no tasks yet — to match the
+    // native apps. Keep the natural (metadata) order so lists don't reshuffle
+    // as their task counts change.
     return Object.entries(floaterListMetaData)
       .filter(([, list]) => Boolean(list.name?.trim()))
-      .map(([id, list]) => ({ id, ...list, count: listCounts[id] ?? 0 }))
-      .filter((list) => list.count > 0)
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 6);
+      .map(([id, list]) => ({ id, ...list, count: listCounts[id] ?? 0 }));
   }, [floaterListMetaData, listCounts]);
 
   const filteredFloaters = useMemo(() => {
