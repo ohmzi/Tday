@@ -93,6 +93,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -306,9 +307,11 @@ fun HomeScreen(
     }
     val listById = remember(uiState.summary.lists) { uiState.summary.lists.associateBy { it.id } }
     val normalizedSearchQuery = remember(searchQuery) { searchQuery.trim().lowercase(Locale.getDefault()) }
-    val overdueCount = remember(uiState.searchableTodos) {
-        val now = Instant.now()
-        uiState.searchableTodos.count { todo -> todo.due?.isBefore(now) == true }
+    val overdueCount by remember {
+        derivedStateOf {
+            val now = Instant.now()
+            uiState.searchableTodos.count { todo -> todo.due?.isBefore(now) == true }
+        }
     }
     val dueFormatter = remember {
         DateTimeFormatter.ofPattern("EEE h:mm a")
@@ -1683,7 +1686,7 @@ private fun HomeTodayTaskRow(
                     onClick = {
                         ViewCompat.performHapticFeedback(
                             view,
-                            HapticFeedbackConstantsCompat.CLOCK_TICK
+                            HapticFeedbackConstantsCompat.SEGMENT_FREQUENT_TICK
                         )
                         closeSwipeSlot()
                         onEdit()
@@ -1700,7 +1703,7 @@ private fun HomeTodayTaskRow(
                     onClick = {
                         ViewCompat.performHapticFeedback(
                             view,
-                            HapticFeedbackConstantsCompat.CLOCK_TICK
+                            HapticFeedbackConstantsCompat.SEGMENT_FREQUENT_TICK
                         )
                         closeSwipeSlot()
                         onDelete()
@@ -1772,6 +1775,10 @@ private fun HomeTodayTaskRow(
                                 if (!pendingCompletion) {
                                     closeSwipeSlot()
                                     localChecked = true
+                                    ViewCompat.performHapticFeedback(
+                                        view,
+                                        HapticFeedbackConstantsCompat.CONFIRM
+                                    )
                                     pendingCompletion = true
                                     coroutineScope.launch {
                                         delay(160)

@@ -1,5 +1,7 @@
 package com.ohmz.tday.compose.core.model
 
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.Stable
 import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth
@@ -21,6 +23,7 @@ enum class TaskRescheduleScope {
     SERIES,
 }
 
+@Immutable
 data class CreateTaskPayload(
     val title: String,
     val description: String? = null,
@@ -30,6 +33,7 @@ data class CreateTaskPayload(
     val listId: String? = null,
 )
 
+@Immutable
 data class TodoItem(
     val id: String,
     val canonicalId: String,
@@ -131,6 +135,7 @@ fun timelineRescheduleTargetDate(
     return null
 }
 
+@Immutable
 data class ListSummary(
     val id: String,
     val name: String,
@@ -141,6 +146,7 @@ data class ListSummary(
     val createdAt: Instant? = null,
 )
 
+@Immutable
 data class DashboardSummary(
     val todayCount: Int,
     val scheduledCount: Int,
@@ -151,6 +157,7 @@ data class DashboardSummary(
     val lists: List<ListSummary>,
 )
 
+@Immutable
 data class CompletedItem(
     val id: String,
     val originalTodoId: String?,
@@ -166,12 +173,14 @@ data class CompletedItem(
     val listColor: String? = null,
 )
 
+@Immutable
 data class RegisterOutcome(
     val success: Boolean,
     val requiresApproval: Boolean,
     val message: String,
 )
 
+@Stable
 sealed interface AuthResult {
     data object Success : AuthResult
     data object PendingApproval : AuthResult
