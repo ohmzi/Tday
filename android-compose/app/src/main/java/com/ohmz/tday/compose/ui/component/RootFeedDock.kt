@@ -61,6 +61,7 @@ import androidx.core.view.HapticFeedbackConstantsCompat
 import androidx.core.view.ViewCompat
 import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.ui.theme.TdayDimens
+import com.ohmz.tday.compose.ui.theme.TdayFloaterAccent
 import com.ohmz.tday.compose.ui.theme.TdayRootFeedAccent
 import com.ohmz.tday.compose.ui.theme.TdayTodayBlue
 import kotlinx.coroutines.delay
@@ -92,6 +93,13 @@ private fun RootFeedTab.icon(): ImageVector {
     return when (this) {
         RootFeedTab.HOME -> Icons.Rounded.Home
         RootFeedTab.FLOATER -> Icons.Rounded.Eco
+    }
+}
+
+private fun RootFeedTab.accentColor(): Color {
+    return when (this) {
+        RootFeedTab.HOME -> TdayTodayBlue
+        RootFeedTab.FLOATER -> TdayFloaterAccent
     }
 }
 
@@ -337,7 +345,7 @@ fun RootFeedDock(
                     label = "rootFeedDockContentPressScale",
                 )
                 val contentColor = if (selected) {
-                    colorScheme.onSurface
+                    tab.accentColor()
                 } else {
                     colorScheme.onSurfaceVariant.copy(alpha = 0.82f)
                 }
