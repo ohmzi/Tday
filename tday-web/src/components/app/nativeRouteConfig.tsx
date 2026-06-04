@@ -3,13 +3,13 @@ import {
   Calendar1,
   CalendarClock,
   CheckCircle,
-  CircleDotDashed,
   Clock3,
   Flag,
   Layers,
   Settings,
   Sun,
 } from "lucide-react";
+import BubbleChartIcon from "@/components/icons/BubbleChartIcon";
 import { useCompletedTodo } from "@/features/completed/query/get-completedTodo";
 import { useTodo } from "@/features/todayTodos/query/get-todo";
 import { useTodoTimeline } from "@/features/todayTodos/query/get-todo-timeline";
@@ -84,7 +84,7 @@ export const nativeRoutes: NativeRouteItem[] = [
     id: "floater",
     label: "Floater",
     path: "/app/floater",
-    icon: CircleDotDashed,
+    icon: BubbleChartIcon,
     accentClass: "text-accent-teal",
   },
   {

@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import {
-  CircleDotDashed,
   Ellipsis,
   ListPlus,
   Search,
@@ -8,6 +7,7 @@ import {
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import ScreenWatermark from "@/components/app/ScreenWatermark";
+import BubbleChartIcon from "@/components/icons/BubbleChartIcon";
 import NativeAppBrandButton from "@/components/app/NativeAppBrandButton";
 import { Link, useRouter } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
@@ -86,7 +86,7 @@ export default function NativeFloaterDashboard() {
 
   return (
     <>
-      <ScreenWatermark icon={CircleDotDashed} color={floaterAccent} />
+      <ScreenWatermark icon={BubbleChartIcon} color={floaterAccent} />
       <div className="flex w-full flex-col gap-4 sm:gap-5">
         <header className="relative flex min-h-14 items-center justify-between gap-3">
           <NativeAppBrandButton className="min-w-0" />
