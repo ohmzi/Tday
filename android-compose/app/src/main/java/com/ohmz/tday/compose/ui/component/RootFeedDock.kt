@@ -29,7 +29,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.BubbleChart
+import androidx.compose.material.icons.rounded.Eco
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -91,7 +91,7 @@ private fun RootFeedTab.labelRes(): Int {
 private fun RootFeedTab.icon(): ImageVector {
     return when (this) {
         RootFeedTab.HOME -> Icons.Rounded.Home
-        RootFeedTab.FLOATER -> Icons.Rounded.BubbleChart
+        RootFeedTab.FLOATER -> Icons.Rounded.Eco
     }
 }
 
