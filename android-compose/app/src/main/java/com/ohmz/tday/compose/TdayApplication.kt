@@ -13,6 +13,7 @@ import com.ohmz.tday.compose.core.notification.ReminderRescheduleWorker
 import com.ohmz.tday.compose.core.notification.TaskReminderReceiver
 import com.ohmz.tday.compose.core.observability.TdayTelemetry
 import com.ohmz.tday.compose.feature.widget.TodayTasksWidgetPreviewPublisher
+import com.ohmz.tday.compose.feature.widget.WidgetSyncWorker
 import dagger.hilt.android.HiltAndroidApp
 import io.sentry.android.core.SentryAndroid
 import java.util.concurrent.TimeUnit
@@ -57,6 +58,7 @@ class TdayApplication : Application(), Configuration.Provider {
 
         createNotificationChannels()
         enqueuePeriodicRescheduleWorker()
+        WidgetSyncWorker.schedule(this)
     }
 
     private fun createNotificationChannels() {
