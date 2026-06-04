@@ -2,6 +2,7 @@ import { Plus } from "lucide-react";
 import { usePathname } from "@/lib/navigation";
 import { useCalendarCreateAction } from "@/features/calendar/context/CalendarCreateActionContext";
 import { useCreateTask } from "@/providers/CreateTaskProvider";
+import { useCreateFloaterTask } from "@/providers/CreateFloaterProvider";
 import {
   nativeAppContentClassName,
   nativeAppHorizontalPaddingClassName,
@@ -9,6 +10,7 @@ import {
 import { cn } from "@/lib/utils";
 import {
   activeListIdFromPath,
+  activeFloaterListIdFromPath,
   listColorAccentColors,
   nativeScreenAccentColors,
 } from "@/components/app/nativeScreenTheme";
@@ -26,12 +28,16 @@ export default function TaskFloatingActionButton({
   const pathname = usePathname();
   const calendarCreate = useCalendarCreateAction();
   const { openCreateTask } = useCreateTask();
+  const { openCreateFloater } = useCreateFloaterTask();
   const { listMetaData } = useListMetaData();
   const activeRoute = nativeRoutes.find((route) => isNativeRouteActive(pathname, route));
   const useCalendarCreate = activeRoute?.id === "calendar" && calendarCreate != null;
   const activeListId = activeListIdFromPath(pathname);
+  const activeFloaterListId = activeFloaterListIdFromPath(pathname);
+  const useFloaterCreate = pathname.includes("/app/floater");
   const activeListColor = activeListId ? listMetaData[activeListId]?.color : undefined;
   const buttonColor =
+    (useFloaterCreate ? nativeScreenAccentColors.floater : undefined) ??
     (activeListColor ? listColorAccentColors[activeListColor] : undefined) ??
     (activeRoute ? nativeScreenAccentColors[activeRoute.id] : undefined);
 
@@ -49,6 +55,13 @@ export default function TaskFloatingActionButton({
           onClick={
             useCalendarCreate
               ? calendarCreate
+              : useFloaterCreate
+                ? () =>
+                    openCreateFloater(
+                      activeFloaterListId
+                        ? { listID: activeFloaterListId }
+                        : undefined,
+                    )
               : () =>
                   openCreateTask(
                     activeListId ? { listID: activeListId } : undefined,

@@ -15,6 +15,35 @@ export type ListItemMetaMapType = {
   [id: string]: Omit<ListItemMetaType, "id">;
 };
 
+export interface FloaterListItemMetaType {
+  id: string;
+  name: string;
+  color?: ListColor;
+  iconKey?: string | null;
+  todoCount?: number;
+  userID?: string | null;
+  createdAt?: Date | null;
+  updatedAt?: Date | null;
+}
+
+export type FloaterListItemMetaMapType = {
+  [id: string]: Omit<FloaterListItemMetaType, "id">;
+};
+
+export interface FloaterItemType {
+  id: string;
+  title: string;
+  description: string | null;
+  pinned: boolean;
+  createdAt: Date | null;
+  updatedAt?: Date | null;
+  order: number;
+  priority: "Low" | "Medium" | "High";
+  userID?: string | null;
+  completed: boolean;
+  listID?: string | null;
+}
+
 export interface TodoItemType {
   id: string;
   title: string;

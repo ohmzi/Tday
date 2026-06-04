@@ -230,10 +230,10 @@ tday-web/src/
 
 ### App Shell and Navigation (Web)
 
-- Authenticated web routes render through a native-style app shell rather than the legacy visible sidebar. The shell owns the bottom `Home / Calendar / More` dock, circular create-task action, and More sheet.
-- `Home` routes to `/app/tday`, `Calendar` routes to `/app/calendar`, and `More` exposes existing secondary web routes such as Overdue, Scheduled, Priority, All Tasks, Completed, Lists, Settings, and user controls.
-- The web Home screen is a dashboard-style root feed backed by the existing scheduled todo/list queries. This pass is visual parity only; it does not add web Floater/Anytime routes or change backend/shared contracts.
-- The shell and Home tiles share web-only route metadata and counts, while feature pages continue to own their own query/mutation behavior.
+- Authenticated web routes render through a native-style app shell rather than the legacy visible sidebar. The shell owns the bottom `Home / Floater / More` dock, circular create action, and More sheet.
+- `Home` routes to `/app/tday`, `Floater` routes to `/app/floater`, and `More` exposes existing secondary web routes such as Overdue, Scheduled, Priority, All Tasks, Completed, Calendar, Lists, Settings, and user controls.
+- The web Home screen is a dashboard-style scheduled root feed backed by the existing todo/list queries. The Floater screen is a sibling root feed backed by `/api/floater` and `/api/floaterList`, with floater list detail at `/app/floater-list/:id`.
+- The shell, Home tiles, and Floater tab share web-only route metadata and counts, while feature pages continue to own their own query/mutation behavior.
 
 ### API Communication (Web)
 

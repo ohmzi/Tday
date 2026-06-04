@@ -9,6 +9,7 @@ export const nativeScreenAccentColors: Record<NativeRouteId, string> = {
   overdue: "#E06F66",
   all: "#68717A",
   completed: "#719F84",
+  floater: "#4D8F83",
   calendar: "#9A89D2",
   settings: "#68717A",
 };
@@ -38,7 +39,18 @@ export function activeListIdFromPath(pathname: string) {
   return pathname.slice(markerIndex + marker.length).split("/")[0] || null;
 }
 
+export function activeFloaterListIdFromPath(pathname: string) {
+  const marker = "/app/floater-list/";
+  const markerIndex = pathname.indexOf(marker);
+  if (markerIndex === -1) return null;
+  return pathname.slice(markerIndex + marker.length).split("/")[0] || null;
+}
+
 export function resolveNativeScreenAccent(pathname: string, listColor?: ListColor | null) {
+  if (pathname.includes("/app/floater")) {
+    return { color: nativeScreenAccentColors.floater, routeId: "floater" as const };
+  }
+
   if (pathname.includes("/app/list/") && listColor) {
     return {
       color: listColorAccentColors[listColor] ?? nativeScreenAccentColors.all,
