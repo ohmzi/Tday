@@ -35,6 +35,7 @@ const STATIC_SEGMENTS = new Set([
   "nlp",
   "list",
   "floater",
+  "floater-list",
   "floaterList",
   "completedTodo",
   "completedFloater",
