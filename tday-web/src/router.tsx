@@ -3,8 +3,8 @@ import * as Sentry from "@sentry/react";
 import { DEFAULT_LOCALE } from "@/i18n";
 import ProtectedRoute from "@/pages/ProtectedRoute";
 import { lazy, Suspense } from "react";
-import { Loader2 } from "lucide-react";
 import RouteErrorPage from "@/pages/RouteErrorPage";
+import AppShellSkeleton from "@/components/app/AppShellSkeleton";
 
 const LandingPage = lazy(() => import("@/pages/LandingPage"));
 const LoginPage = lazy(() => import("@/pages/LoginPage"));
@@ -36,11 +36,7 @@ const CalendarPage = lazy(() => import("@/pages/CalendarPage"));
 const AuthLayout = lazy(() => import("@/pages/AuthLayout"));
 
 function LazyFallback() {
-  return (
-    <div className="flex h-screen w-full items-center justify-center bg-background">
-      <Loader2 className="h-8 w-8 animate-spin text-accent" />
-    </div>
-  );
+  return <AppShellSkeleton />;
 }
 
 function SuspenseOutlet() {

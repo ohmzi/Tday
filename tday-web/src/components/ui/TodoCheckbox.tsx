@@ -1,6 +1,7 @@
 import clsx from "clsx";
 import React, { useEffect, useRef, useState } from "react";
 import { RefreshCcw } from "lucide-react";
+import { hapticSuccess } from "@/lib/haptics";
 
 export default function TodoCheckbox({
   complete,
@@ -44,6 +45,7 @@ export default function TodoCheckbox({
           if (!complete) {
             if (popAudio.current) popAudio.current.currentTime = 0;
             popAudio.current?.play();
+            hapticSuccess();
           } else {
             if (unpopAudio.current) unpopAudio.current.currentTime = 0;
             unpopAudio.current?.play();

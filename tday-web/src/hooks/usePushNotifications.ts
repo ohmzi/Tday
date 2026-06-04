@@ -4,11 +4,18 @@ import { isPushSupported, urlBase64ToUint8Array } from "@/lib/push/vapid";
 
 const PUSH_ENABLED_KEY = "tday.push-enabled";
 
+/** True when running as an installed PWA on iOS (navigator.standalone). */
+const isIosPwa =
+  typeof navigator !== "undefined" &&
+  (navigator as unknown as { standalone?: boolean }).standalone === true;
+
 type PushState = {
   isSupported: boolean;
   permission: NotificationPermission | "default";
   isSubscribed: boolean;
   isLoading: boolean;
+  /** True on iOS installed PWA — special prompt flow. */
+  isIosPwa: boolean;
 };
 
 async function fetchVapidKey(): Promise<string | null> {
@@ -35,6 +42,7 @@ export function usePushNotifications() {
     permission: typeof Notification !== "undefined" ? Notification.permission : "default",
     isSubscribed: false,
     isLoading: true,
+    isIosPwa,
   });
 
   // Reconcile state on mount
@@ -132,5 +140,26 @@ export function usePushNotifications() {
     }
   }, []);
 
-  return { ...state, subscribe, unsubscribe };
+  /** Update the PWA app badge count. Clears badge when count is 0 or omitted. */
+  const updateBadge = useCallback(async (count?: number) => {
+    if (!("setAppBadge" in navigator)) return;
+    try {
+      if (count && count > 0) {
+        await navigator.setAppBadge(count);
+      } else {
+        await navigator.clearAppBadge();
+      }
+    } catch {
+      // Badge API not available in this context — ignore.
+    }
+  }, []);
+
+  // Clear badge when the app gains focus
+  useEffect(() => {
+    const onFocus = () => updateBadge(0);
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [updateBadge]);
+
+  return { ...state, subscribe, unsubscribe, updateBadge };
 }

@@ -1,6 +1,8 @@
 import { Home, Leaf, MoreHorizontal } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { usePathname, useRouter } from "@/lib/navigation";
+import { hapticTick } from "@/lib/haptics";
+import { useRef, useEffect, useState, useCallback } from "react";
 import {
   nativeAppContentClassName,
   nativeAppHorizontalPaddingClassName,
@@ -50,6 +52,29 @@ export default function RootDock({
   const { t: appDict } = useTranslation("app");
   const activeTab = moreOpen ? "more" : activeDockTab(pathname);
 
+  // Sliding indicator pill
+  const navRef = useRef<HTMLDivElement>(null);
+  const buttonRefs = useRef<Map<DockTab, HTMLButtonElement>>(new Map());
+  const [pillStyle, setPillStyle] = useState<React.CSSProperties>({});
+
+  const updatePill = useCallback(() => {
+    const btn = buttonRefs.current.get(activeTab);
+    const nav = navRef.current;
+    if (!btn || !nav) return;
+    const navRect = nav.getBoundingClientRect();
+    const btnRect = btn.getBoundingClientRect();
+    setPillStyle({
+      transform: `translateX(${btnRect.left - navRect.left - 6}px)`,
+      width: `${btnRect.width}px`,
+      height: `${btnRect.height}px`,
+      opacity: 1,
+    });
+  }, [activeTab]);
+
+  useEffect(() => {
+    updatePill();
+  }, [updatePill]);
+
   return (
     <div
       className={cn(
@@ -65,14 +90,20 @@ export default function RootDock({
         )}
       >
         <nav
+          ref={navRef}
           aria-label="Primary app navigation"
           className={cn(
-            "pointer-events-auto h-16 rounded-[25px] border border-white/70 bg-muted/80 p-1.5",
+            "pointer-events-auto relative h-16 rounded-[25px] border border-white/70 bg-muted/80 p-1.5",
             "shadow-[0_18px_42px_-24px_hsl(var(--shadow)/0.65)] backdrop-blur-xl",
             "dark:border-white/10 dark:bg-muted/80",
           )}
         >
-          <div className="flex h-full items-center gap-1">
+          {/* Sliding indicator pill */}
+          <div
+            className="pointer-events-none absolute left-1.5 top-1.5 rounded-[20px] bg-card shadow-[0_10px_24px_-18px_hsl(var(--shadow)/0.7)] transition-all duration-300 ease-[cubic-bezier(0.25,1,0.5,1)]"
+            style={pillStyle}
+          />
+          <div className="relative flex h-full items-center gap-1">
             {dockTabs.map((tab) => {
               const Icon = tab.icon;
               const selected = tab.id === activeTab;
@@ -83,9 +114,13 @@ export default function RootDock({
               return (
                 <button
                   key={tab.id}
+                  ref={(el) => {
+                    if (el) buttonRefs.current.set(tab.id, el);
+                  }}
                   type="button"
                   aria-label={label}
                   onClick={() => {
+                    hapticTick();
                     if (isMore) {
                       onOpenMore();
                       return;
@@ -95,10 +130,10 @@ export default function RootDock({
                   aria-current={selected ? "page" : undefined}
                   className={cn(
                     isMore ? "hidden sm:flex" : "flex",
-                    "h-12 min-w-12 items-center justify-center gap-2 rounded-[20px] px-3",
+                    "relative z-[1] h-12 min-w-12 items-center justify-center gap-2 rounded-[20px] px-3",
                     "text-sm font-black transition-all duration-200",
                     selected
-                      ? "bg-card shadow-[0_10px_24px_-18px_hsl(var(--shadow)/0.7)]"
+                      ? ""
                       : "text-muted-foreground hover:bg-card/55 hover:text-foreground",
                     selected && !isMore ? "sm:min-w-[104px]" : "sm:min-w-12",
                   )}
