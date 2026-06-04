@@ -654,11 +654,10 @@ struct TodoListScreen: View {
             return []
         }
         let counts = Dictionary(grouping: viewModel.items.compactMap(\.listId), by: { $0 }).mapValues(\.count)
-        return viewModel.lists.compactMap { list in
-            guard let count = counts[list.id], count > 0 else {
-                return nil
-            }
-            return (list, count)
+        // Show every list, including ones with no tasks yet, so a newly created
+        // (still-empty) list is always reachable here.
+        return viewModel.lists.map { list in
+            (list: list, count: counts[list.id] ?? 0)
         }
     }
 
