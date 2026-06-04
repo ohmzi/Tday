@@ -272,7 +272,7 @@ private enum TaskWidgetMode {
         case .today:
             return isDaytime ? "sun.max.fill" : "moon.stars.fill"
         case .floater:
-            return "tray.full.fill"
+            return "chart.bubble"
         }
     }
 

@@ -92,7 +92,7 @@ struct TdayCarAppShortcuts: AppShortcutsProvider {
                 "Add anytime task in \(.applicationName)"
             ],
             shortTitle: "Add Floater",
-            systemImageName: "circle.dotted"
+            systemImageName: "chart.bubble"
         )
     }
 }

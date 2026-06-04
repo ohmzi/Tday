@@ -81,7 +81,7 @@ final class CarPlayCoordinator {
         }
         todayButton.isEnabled = mode != .today
 
-        let floaterButton = CPBarButton(image: UIImage(systemName: "circle.dotted") ?? UIImage()) { [weak self] _ in
+        let floaterButton = CPBarButton(image: UIImage(systemName: "chart.bubble") ?? UIImage()) { [weak self] _ in
             self?.selectMode(.floater)
         }
         floaterButton.isEnabled = mode != .floater
