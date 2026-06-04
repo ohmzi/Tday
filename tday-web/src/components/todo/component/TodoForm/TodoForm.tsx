@@ -152,7 +152,7 @@ const TodoForm = ({
           icon={<Flag className="h-5 w-5" />}
           label={appDict("priority")}
           ariaLabel={`${appDict("priority")}, ${appDict(priorityLabelKey[priority])}`}
-          value={appDict(priorityLabelKey[priority])}
+          value={null}
           onClick={() => setActive("priority")}
         />
         <SheetDivider />
