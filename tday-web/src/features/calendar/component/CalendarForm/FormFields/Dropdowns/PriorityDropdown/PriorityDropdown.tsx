@@ -37,23 +37,18 @@ const PriorityDropdownMenu = ({
           onClick={() => setPriority("Low")}
         >
           <Flag className={clsx("w-4 h-4 text-lime", priority == "Low" && "fill-lime")} />
-          {appDict("normal")}
         </DropdownMenuItem>
         <DropdownMenuItem
           className="hover:text-foreground hover:bg-popover-accent"
           onClick={() => setPriority("Medium")}
         >
           <Flag className={clsx("w-4 h-4 text-orange", priority == "Medium" && "fill-orange")} />
-
-          {appDict("important")}
         </DropdownMenuItem>
         <DropdownMenuItem
           className="hover:text-foreground hover:bg-popover-accent"
           onClick={() => setPriority("High")}
         >
           <Flag className={clsx("w-4 h-4 text-red", priority == "High" && "fill-red")} />
-
-          {appDict("urgent")}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
