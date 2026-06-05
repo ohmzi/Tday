@@ -16,6 +16,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { DEFAULT_LOCALE } from "@/i18n";
 import { captureUiException } from "@/lib/observability/sentry";
+import { isStaleChunkError, reloadOnceForStaleChunk } from "@/lib/chunkError";
 
 type ErrorVariant = "chunk" | "notFound" | "network" | "server" | "generic";
 
@@ -35,16 +36,10 @@ function classify(error: unknown): ErrorVariant {
     if (error.status >= 500) return "server";
   }
 
+  if (isStaleChunkError(error)) return "chunk";
+
   if (error instanceof Error) {
     const msg = error.message.toLowerCase();
-    if (
-      msg.includes("dynamically imported module") ||
-      msg.includes("failed to fetch dynamically imported module") ||
-      msg.includes("loading chunk") ||
-      msg.includes("loading css chunk")
-    )
-      return "chunk";
-
     if (
       msg.includes("failed to fetch") ||
       msg.includes("networkerror") ||
@@ -137,7 +132,13 @@ export default function RouteErrorPage() {
   const { message: errorMessage, stack: errorStack } = describeError(error);
 
   useEffect(() => {
-    if (variant === "chunk" || variant === "network") return;
+    // A stale chunk after a deploy: self-heal by reloading once into the fresh
+    // build instead of stranding the user on an error screen.
+    if (variant === "chunk") {
+      reloadOnceForStaleChunk();
+      return;
+    }
+    if (variant === "network") return;
     captureUiException(error, "route.error", { variant });
   }, [error, variant]);
 

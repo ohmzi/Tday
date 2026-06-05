@@ -1,6 +1,7 @@
 import React, { Component, ReactNode } from "react";
 import { RefreshCw, ShieldAlert, Home } from "lucide-react";
 import { captureUiException } from "@/lib/observability/sentry";
+import { isStaleChunkError, reloadOnceForStaleChunk } from "@/lib/chunkError";
 
 interface Props {
   children: ReactNode;
@@ -16,14 +17,7 @@ interface State {
 }
 
 /** Detects dynamic-import / chunk-loading failures caused by stale bundles. */
-function isChunkLoadError(error: unknown): boolean {
-  if (error instanceof Error) {
-    return /dynamically imported module|loading chunk|loading css chunk/i.test(
-      error.message,
-    );
-  }
-  return false;
-}
+const isChunkLoadError = isStaleChunkError;
 
 class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
@@ -42,6 +36,9 @@ class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    // Stale chunk after a deploy: reload once into the fresh build instead of
+    // surfacing a crash screen.
+    if (isChunkLoadError(error) && reloadOnceForStaleChunk()) return;
     captureUiException(error, "ui.error_boundary", {
       componentStack: errorInfo.componentStack,
     });
