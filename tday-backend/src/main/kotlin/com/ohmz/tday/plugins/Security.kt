@@ -1,6 +1,7 @@
 package com.ohmz.tday.plugins
 
 import com.ohmz.tday.db.tables.Users
+import com.ohmz.tday.observability.TdayObservability
 import com.ohmz.tday.security.AuthCachedUser
 import com.ohmz.tday.security.AuthUserCache
 import com.ohmz.tday.security.JwtService
@@ -11,23 +12,31 @@ import com.ohmz.tday.security.isSessionPastAbsoluteLifetime
 import com.ohmz.tday.security.issueSessionCookie
 import com.ohmz.tday.security.sessionCookieNames
 import com.ohmz.tday.security.shouldRenewSession
-import com.ohmz.tday.observability.TdayObservability
-import io.ktor.http.*
-import io.ktor.server.application.*
-import io.ktor.server.auth.*
+import com.ohmz.tday.services.UserApiKeyService
+import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpStatusCode
+import io.ktor.http.invoke
+import io.ktor.server.application.Application
+import io.ktor.server.application.ApplicationCall
+import io.ktor.server.application.ApplicationCallPipeline
+import io.ktor.server.application.call
+import io.ktor.server.application.install
+import io.ktor.server.auth.Authentication
+import io.ktor.server.auth.UserIdPrincipal
+import io.ktor.server.auth.bearer
 import io.ktor.server.request.path
 import io.ktor.server.response.respond
-import io.ktor.util.*
+import io.ktor.util.AttributeKey
+import kotlinx.coroutines.Dispatchers
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
-import kotlinx.coroutines.Dispatchers
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import org.koin.ktor.ext.inject
 
 private const val EVENT_DETAIL_USER_ID = "userId"
 private const val EVENT_DETAIL_PATH = "path"
+private const val API_KEY_PREFIX = "tday_"
 
 val AuthUserKey = AttributeKey<JwtUserClaims>("AuthUser")
 
@@ -41,6 +50,7 @@ fun Application.configureSecurity() {
     val jwtService by inject<JwtService>()
     val authUserCache by inject<AuthUserCache>()
     val eventLogger by inject<SecurityEventLogger>()
+    val userApiKeyService by inject<UserApiKeyService>()
 
     install(Authentication) {
         bearer("jwt") {
@@ -60,6 +70,28 @@ fun Application.configureSecurity() {
         }
 
         val token = resolveSessionToken(call)
+        if (token != null && token.startsWith(API_KEY_PREFIX)) {
+            // Per-user API key (e.g. dashboard widgets). Resolves to the owning user and
+            // populates the same auth principal the session path uses, then skips renewal.
+            val apiKeyUserId = userApiKeyService.resolveUserId(token)
+            if (apiKeyUserId != null) {
+                val user = loadCachedAuthUser(authUserCache, apiKeyUserId)
+                if (user != null) {
+                    call.attributes.put(
+                        AuthUserKey,
+                        JwtUserClaims(
+                            id = apiKeyUserId,
+                            role = user.role,
+                            approvalStatus = user.approvalStatus,
+                            tokenVersion = user.tokenVersion,
+                            timeZone = user.timeZone,
+                        ),
+                    )
+                }
+            }
+            return@intercept
+        }
+
         if (token != null) {
             val claims = jwtService.decode(token)
             if (claims != null) {
@@ -77,25 +109,7 @@ fun Application.configureSecurity() {
                     return@intercept
                 }
 
-                val cached = authUserCache.get(claims.id)
-                val user = if (cached != null) {
-                    cached
-                } else {
-                    val dbUser = newSuspendedTransaction(Dispatchers.IO) {
-                        Users.selectAll().where { Users.id eq claims.id }
-                            .firstOrNull()
-                    }
-                    if (dbUser != null) {
-                        val fetched = AuthCachedUser(
-                            role = dbUser[Users.role].name,
-                            approvalStatus = dbUser[Users.approvalStatus].name,
-                            tokenVersion = dbUser[Users.tokenVersion],
-                            timeZone = dbUser[Users.timeZone],
-                        )
-                        authUserCache.put(claims.id, fetched)
-                        fetched
-                    } else null
-                }
+                val user = loadCachedAuthUser(authUserCache, claims.id)
 
                 if (user != null) {
                     if (claims.tokenVersion == null || claims.tokenVersion == user.tokenVersion) {
@@ -228,6 +242,24 @@ private fun resolveSessionToken(call: ApplicationCall): String? {
         if (!cookie.isNullOrBlank()) return cookie
     }
     return null
+}
+
+private suspend fun loadCachedAuthUser(
+    authUserCache: AuthUserCache,
+    userId: String
+): AuthCachedUser? {
+    authUserCache.get(userId)?.let { return it }
+    val dbUser = newSuspendedTransaction(Dispatchers.IO) {
+        Users.selectAll().where { Users.id eq userId }.firstOrNull()
+    } ?: return null
+    val fetched = AuthCachedUser(
+        role = dbUser[Users.role].name,
+        approvalStatus = dbUser[Users.approvalStatus].name,
+        tokenVersion = dbUser[Users.tokenVersion],
+        timeZone = dbUser[Users.timeZone],
+    )
+    authUserCache.put(userId, fetched)
+    return fetched
 }
 
 private fun securityEventPath(call: ApplicationCall): String =
