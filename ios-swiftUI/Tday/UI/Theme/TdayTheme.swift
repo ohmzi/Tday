@@ -264,6 +264,7 @@ struct EmptyTaskWatermark: View {
             Image(systemName: systemName)
                 .font(.system(size: iconSize, weight: .regular))
                 .foregroundStyle(watermarkColor)
+                .scaleEffect(x: systemName == "leaf" ? -1 : 1, y: 1)
                 .rotationEffect(.degrees(-7))
                 .frame(width: iconSize, height: iconSize)
                 .position(
