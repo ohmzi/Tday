@@ -296,7 +296,8 @@ struct CalendarScreen: View {
         .overlay {
             EmptyTaskWatermark(
                 systemName: "calendar",
-                accentColor: calendarAccentColor
+                accentColor: calendarAccentColor,
+                assetName: "TileCalendar"
             )
         }
         .onChange(of: displayMode) { _, mode in

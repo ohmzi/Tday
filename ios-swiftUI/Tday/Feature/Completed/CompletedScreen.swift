@@ -55,7 +55,8 @@ struct CompletedScreen: View {
                 ZStack {
                     EmptyTaskWatermark(
                         systemName: "checkmark",
-                        accentColor: completedAccentColor
+                        accentColor: completedAccentColor,
+                        assetName: "TileComplete"
                     )
                     if viewModel.items.isEmpty, !viewModel.isLoading {
                         EmptyTaskBackgroundMessage(message: "No completed tasks")

@@ -1,5 +1,6 @@
 package com.ohmz.tday.compose.core.ui
 
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
@@ -18,6 +19,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
@@ -42,6 +44,39 @@ fun EmptyTaskWatermark(
 
         Icon(
             imageVector = imageVector,
+            contentDescription = null,
+            tint = watermarkTint.copy(alpha = 0.10f),
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .offset(x = 28.dp, y = iconCenterY - (iconSize / 2))
+                .size(iconSize)
+                .graphicsLayer {
+                    rotationZ = -7f
+                },
+        )
+    }
+}
+
+/** Drawable-backed variant so screens can render the shared lucide tile glyphs. */
+@Composable
+fun EmptyTaskWatermark(
+    @DrawableRes iconRes: Int,
+    accentColor: Color? = null,
+    modifier: Modifier = Modifier,
+) {
+    val neutralTint = MaterialTheme.colorScheme.onSurfaceVariant
+    val watermarkTint = accentColor
+        ?.let { lerp(neutralTint, it, 0.36f) }
+        ?: neutralTint
+
+    BoxWithConstraints(
+        modifier = modifier.fillMaxSize(),
+    ) {
+        val iconSize = 212.dp
+        val iconCenterY = maxHeight * (2f / 3f)
+
+        Icon(
+            painter = painterResource(iconRes),
             contentDescription = null,
             tint = watermarkTint.copy(alpha = 0.10f),
             modifier = Modifier
