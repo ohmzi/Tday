@@ -245,6 +245,9 @@ struct TdayBackground<Content: View>: View {
 struct EmptyTaskWatermark: View {
     let systemName: String
     let accentColor: Color
+    /// Optional asset-catalog name of a lucide template glyph; when set it is used
+    /// instead of the SF Symbol so screens match the web tile icons.
+    var assetName: String? = nil
 
     @Environment(\.tdayColors) private var colors
     private let iconSize: CGFloat = 194
@@ -254,6 +257,20 @@ struct EmptyTaskWatermark: View {
         colors.onSurfaceVariant.tdayBlended(with: accentColor, amount: 0.36).opacity(0.10)
     }
 
+    @ViewBuilder
+    private var watermarkImage: some View {
+        if let assetName {
+            Image(assetName)
+                .renderingMode(.template)
+                .resizable()
+                .scaledToFit()
+        } else {
+            Image(systemName: systemName)
+                .font(.system(size: iconSize, weight: .regular))
+                .scaleEffect(x: systemName == "leaf" ? -1 : 1, y: 1)
+        }
+    }
+
     var body: some View {
         GeometryReader { proxy in
             let screenBounds = UIScreen.main.bounds
@@ -261,10 +278,8 @@ struct EmptyTaskWatermark: View {
             let targetX = screenBounds.width - (iconSize / 2) + trailingOffset - frame.minX
             let targetY = (screenBounds.height * (2.0 / 3.0)) - frame.minY
 
-            Image(systemName: systemName)
-                .font(.system(size: iconSize, weight: .regular))
+            watermarkImage
                 .foregroundStyle(watermarkColor)
-                .scaleEffect(x: systemName == "leaf" ? -1 : 1, y: 1)
                 .rotationEffect(.degrees(-7))
                 .frame(width: iconSize, height: iconSize)
                 .position(

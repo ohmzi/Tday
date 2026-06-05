@@ -513,7 +513,7 @@ fun CalendarScreen(
                 },
         ) {
             EmptyTaskWatermark(
-                imageVector = Icons.Rounded.CalendarMonth,
+                iconRes = R.drawable.ic_lucide_calendar_1,
                 accentColor = CalendarAccentPurple,
             )
 

@@ -1,6 +1,7 @@
 package com.ohmz.tday.compose.feature.todos
 
 import androidx.activity.compose.BackHandler
+import androidx.annotation.DrawableRes
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearOutSlowInEasing
@@ -292,6 +293,7 @@ fun TodoListScreen(
         listIconKey = selectedList?.iconKey,
         isTodayDaytime = isTodayDaytime,
     )
+    val emptyWatermarkDrawable = emptyStateDrawableForMode(uiState.mode)
     val showSectionedTimeline =
         uiState.mode == TodoListMode.TODAY || uiState.mode == TodoListMode.OVERDUE || uiState.mode == TodoListMode.SCHEDULED || uiState.mode == TodoListMode.ALL || uiState.mode == TodoListMode.PRIORITY || uiState.mode == TodoListMode.FLOATER || uiState.mode == TodoListMode.LIST
     val suppressInitialTodayTimeline =
@@ -1158,10 +1160,17 @@ fun TodoListScreen(
                 }
             }
 
-            EmptyTaskWatermark(
-                imageVector = emptyWatermarkIcon,
-                accentColor = titleColor,
-            )
+            if (emptyWatermarkDrawable != null) {
+                EmptyTaskWatermark(
+                    iconRes = emptyWatermarkDrawable,
+                    accentColor = titleColor,
+                )
+            } else {
+                EmptyTaskWatermark(
+                    imageVector = emptyWatermarkIcon,
+                    accentColor = titleColor,
+                )
+            }
             if (uiState.items.isEmpty() && !uiState.isLoading && !suppressInitialTodayTimeline) {
                 EmptyTaskBackgroundMessage(
                     message = emptyStateMessageForMode(uiState.mode),
@@ -3315,6 +3324,21 @@ private fun emptyStateMessageForMode(mode: TodoListMode): String {
         TodoListMode.SCHEDULED -> stringResource(R.string.todos_empty_scheduled)
         TodoListMode.ALL -> stringResource(R.string.todos_empty_all)
         TodoListMode.LIST -> stringResource(R.string.todos_empty_list)
+    }
+}
+
+/**
+ * Lucide drawable watermark for the home-category modes, mirroring the web app.
+ * Returns null for modes that keep their Material vector watermark (today/floater/list).
+ */
+@DrawableRes
+private fun emptyStateDrawableForMode(mode: TodoListMode): Int? {
+    return when (mode) {
+        TodoListMode.OVERDUE -> R.drawable.ic_lucide_clock_3
+        TodoListMode.PRIORITY -> R.drawable.ic_lucide_flag
+        TodoListMode.SCHEDULED -> R.drawable.ic_lucide_calendar_clock
+        TodoListMode.ALL -> R.drawable.ic_lucide_layers
+        else -> null
     }
 }
 
