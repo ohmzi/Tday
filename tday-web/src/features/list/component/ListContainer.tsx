@@ -16,7 +16,7 @@ import NativePageTitle from "@/components/app/NativePageTitle";
 import ScreenWatermark from "@/components/app/ScreenWatermark";
 import { getListIcon } from "@/lib/listIcons";
 import { listColorAccentColors, nativeScreenAccentColors } from "@/components/app/nativeScreenTheme";
-import MobileSearchHeader from "@/components/ui/MobileSearchHeader";
+import NativeAppBrandButton from "@/components/app/NativeAppBrandButton";
 import ListDot from "@/components/ListDot";
 import ListFormSheet from "@/components/Sidebar/List/ListFormSheet";
 import { Button } from "@/components/ui/button";
@@ -85,12 +85,10 @@ const ListContainer = ({ id }: { id: string }) => {
         >
             <div className="mb-20">
                 <ScreenWatermark icon={getListIcon(listMetaData[id]?.iconKey)} color={listAccent} />
-                {/* Sticky header with mobile menu + search — matches T'Day & Completed pages */}
-                <MobileSearchHeader
-                    searchQuery={searchQuery}
-                    onSearchChange={setSearchQuery}
-                    placeholder={`Search in ${listName}...`}
-                />
+                <header className="sticky top-0 z-40 flex w-full items-center justify-between gap-2.5 bg-background pt-[calc(0.5rem+env(safe-area-inset-top))] pb-1.5 lg:static lg:bg-transparent lg:pt-2 lg:pb-2">
+                    <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-full h-screen bg-background lg:hidden" />
+                    <NativeAppBrandButton className="min-w-0 max-w-[58%] sm:max-w-none" />
+                </header>
 
                 <div className="flex items-start justify-between gap-3">
                     <NativePageTitle

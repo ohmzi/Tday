@@ -8,7 +8,6 @@ import { useTranslation } from "react-i18next";
 import NativePageTitle from "@/components/app/NativePageTitle";
 import ScreenWatermark from "@/components/app/ScreenWatermark";
 import { nativeScreenAccentColors } from "@/components/app/nativeScreenTheme";
-import MobileSearchHeader from "@/components/ui/MobileSearchHeader";
 import { CheckCircle, Search, X } from "lucide-react";
 
 const CompletedTodoContainer = () => {
@@ -31,7 +30,6 @@ const CompletedTodoContainer = () => {
   if (todoLoading)
     return (
       <div>
-        <MobileSearchHeader searchQuery={searchQuery} onSearchChange={setSearchQuery} />
         <Skeleton className="mt-8 h-10 w-56" />
         <TodoListLoading className="mt-8" />
       </div>
@@ -40,7 +38,6 @@ const CompletedTodoContainer = () => {
   return (
     <div className="mb-20">
       <ScreenWatermark icon={CheckCircle} />
-      <MobileSearchHeader searchQuery={searchQuery} onSearchChange={setSearchQuery} />
 
       <NativePageTitle
         title={completedDict("title")}

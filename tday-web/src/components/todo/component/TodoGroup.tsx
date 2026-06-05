@@ -78,7 +78,20 @@ const TodoGroup = ({
     useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } })
   );
 
+  const [isDragging, setIsDragging] = useState(false);
+
+  // Lock page scroll while a drag is active.
+  useEffect(() => {
+    if (!isDragging) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [isDragging]);
+
   function handleDragEnd(event: DragEndEvent) {
+    setIsDragging(false);
     const { active, over } = event;
     if (!over) return;
     if (active.id !== over.id) {
@@ -131,7 +144,9 @@ const TodoGroup = ({
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
+        onDragStart={() => setIsDragging(true)}
         onDragEnd={handleDragEnd}
+        onDragCancel={() => setIsDragging(false)}
       >
         <SortableContext
           items={items}
