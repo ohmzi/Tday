@@ -78,7 +78,7 @@ export default function TaskFloatingActionButton({
           )}
           style={buttonColor ? { backgroundColor: buttonColor } : undefined}
         >
-          <Plus className="h-7 w-7 stroke-[2.2]" />
+          <Plus className="h-8 w-8 stroke-[2.8]" />
           <span className="hidden text-base font-black tracking-tight sm:inline">
             Add Task
           </span>

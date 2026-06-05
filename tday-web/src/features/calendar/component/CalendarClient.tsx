@@ -22,7 +22,6 @@ import { TodoItemType } from "@/types";
 import { useDateRange } from "../hooks/useDateRange";
 import { useCalendarTodo } from "../query/get-calendar-todo";
 import { useTodoTimeline } from "@/features/todayTodos/query/get-todo-timeline";
-import type { SearchResultItem } from "@/components/ui/MobileSearchHeader";
 import {
   lazy,
   type PointerEvent as ReactPointerEvent,
@@ -58,7 +57,7 @@ import { useListMetaData } from "@/components/Sidebar/List/query/get-list-meta";
 import CreateCalendarFormContainer from "./CalendarForm/CreateFormContainer";
 import NativePageTitle from "@/components/app/NativePageTitle";
 import { nativeScreenAccentColors } from "@/components/app/nativeScreenTheme";
-import MobileSearchHeader from "@/components/ui/MobileSearchHeader";
+import NativeAppBrandButton from "@/components/app/NativeAppBrandButton";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import { useRegisterCalendarCreateAction } from "@/features/calendar/context/CalendarCreateActionContext";
@@ -915,11 +914,11 @@ export default function CalendarClient() {
   if (!mounted) {
     return (
       <div className="flex h-full w-full flex-col">
-        <MobileSearchHeader
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          trailingAction={todayAction}
-        />
+        <header className="sticky top-0 z-40 flex w-full items-center justify-between gap-2.5 bg-background pt-[calc(0.5rem+env(safe-area-inset-top))] pb-1.5 lg:static lg:bg-transparent lg:pt-2 lg:pb-2">
+          <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-full h-screen bg-background lg:hidden" />
+          <NativeAppBrandButton className="min-w-0 max-w-[58%] sm:max-w-none" />
+          <div className="flex shrink-0 items-center gap-2.5">{todayAction}</div>
+        </header>
         <div className="flex flex-1 items-center justify-center">
           <Spinner className="h-14 w-14" />
         </div>
@@ -929,13 +928,11 @@ export default function CalendarClient() {
 
   return (
     <div className="flex min-h-full flex-col">
-      <MobileSearchHeader
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        trailingAction={todayAction}
-        results={searchResults}
-        onSelectResult={handleSelectSearchResult}
-      />
+      <header className="sticky top-0 z-40 flex w-full items-center justify-between gap-2.5 bg-background pt-[calc(0.5rem+env(safe-area-inset-top))] pb-1.5 lg:static lg:bg-transparent lg:pt-2 lg:pb-2">
+        <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-full h-screen bg-background lg:hidden" />
+        <NativeAppBrandButton className="min-w-0 max-w-[58%] sm:max-w-none" />
+        <div className="flex shrink-0 items-center gap-2.5">{todayAction}</div>
+      </header>
       <NativePageTitle
         title={sidebarDict("calendar")}
         accentColor={nativeScreenAccentColors.calendar}

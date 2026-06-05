@@ -139,7 +139,7 @@ export default function RootDock({
                   )}
                   style={selected && tab.accentColor ? { color: tab.accentColor } : undefined}
                 >
-                  <Icon className="h-5 w-5 stroke-[2.4]" />
+                  <Icon className="h-6 w-6 stroke-[2.6]" />
                   <span className={cn("hidden", selected && !isMore && "sm:inline")}>
                     {label}
                   </span>

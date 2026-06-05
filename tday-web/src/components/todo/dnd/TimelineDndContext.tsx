@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -57,6 +57,17 @@ export default function TimelineDndContext({
   const reschedule = useTimelineReschedule(timeZone);
   const [activeTodo, setActiveTodo] = useState<TodoItemType | null>(null);
   const [overSectionKey, setOverSectionKey] = useState<string | null>(null);
+
+  // Lock page scroll while a drag is active so the user can move the card
+  // without the page sliding underneath.
+  useEffect(() => {
+    if (!activeTodo) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [activeTodo]);
 
   // Mirror the calendar/TodoGroup sensor config: a small mouse threshold keeps
   // clicks/double-clicks intact, and the touch delay lets a tap or scroll win
