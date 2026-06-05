@@ -1,7 +1,27 @@
+import clsx from "clsx";
 import { getListIcon } from "@/lib/listIcons";
-import { listColorMap } from "@/lib/listColorMap";
-import { cn } from "@/lib/utils";
 import { useFloaterListMetaData } from "@/features/floaterList/query/get-floater-list-meta";
+
+// Map every list color to its accent token. Normalized to uppercase so the icon
+// is tinted regardless of how the API casts the color value. Mirrors ListDot so
+// floater list icons match the main screen.
+const LIST_COLOR_CLASS: Record<string, string> = {
+  RED: "text-accent-red",
+  ORANGE: "text-accent-orange",
+  YELLOW: "text-accent-yellow",
+  LIME: "text-accent-lime",
+  BLUE: "text-accent-blue",
+  PURPLE: "text-accent-purple",
+  PINK: "text-accent-pink",
+  TEAL: "text-accent-teal",
+  CORAL: "text-accent-coral",
+  GOLD: "text-accent-gold",
+  DEEP_BLUE: "text-accent-deep-blue",
+  ROSE: "text-accent-rose",
+  LIGHT_RED: "text-accent-light-red",
+  BRICK: "text-accent-brick",
+  SLATE: "text-accent-slate",
+};
 
 export default function FloaterListDot({
   id,
@@ -11,21 +31,20 @@ export default function FloaterListDot({
   className?: string;
 }) {
   const { floaterListMetaData } = useFloaterListMetaData();
-  const list = floaterListMetaData[id];
-  const Icon = getListIcon(list?.iconKey);
-  const color =
-    listColorMap.find((option) => option.value === list?.color)?.tailwind ??
-    "bg-accent-teal";
+  const Icon = getListIcon(floaterListMetaData[id]?.iconKey);
+
+  const colorKey = String(floaterListMetaData[id]?.color ?? "")
+    .trim()
+    .toUpperCase();
+  const colorClass = LIST_COLOR_CLASS[colorKey] ?? "text-muted-foreground";
 
   return (
-    <span
-      className={cn(
-        "inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-white",
-        color,
+    <Icon
+      className={clsx(
+        "inline-flex h-3.5 w-3.5 shrink-0 stroke-[2.4]",
+        colorClass,
         className,
       )}
-    >
-      <Icon className="h-[0.62em] w-[0.62em] stroke-[2.5]" />
-    </span>
+    />
   );
 }
