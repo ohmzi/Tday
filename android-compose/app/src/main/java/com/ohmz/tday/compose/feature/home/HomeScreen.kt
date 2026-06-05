@@ -60,17 +60,14 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Flag
-import androidx.compose.material.icons.rounded.MoreHoriz
 import androidx.compose.material.icons.rounded.NightsStay
 import androidx.compose.material.icons.rounded.RadioButtonUnchecked
-import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.WbSunny
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -1282,13 +1279,13 @@ private fun TopSearchBar(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             PressableIconButton(
-                icon = Icons.AutoMirrored.Rounded.PlaylistAdd,
+                icon = R.drawable.ic_lucide_list_plus,
                 contentDescription = stringResource(R.string.action_create_list),
                 tint = colorScheme.onSurface,
                 onClick = onCreateList,
             )
             PressableIconButton(
-                icon = Icons.Rounded.MoreHoriz,
+                icon = R.drawable.ic_lucide_ellipsis,
                 contentDescription = stringResource(R.string.action_more),
                 tint = colorScheme.onSurface,
                 onClick = onOpenSettings,
@@ -1335,7 +1332,7 @@ private fun TopSearchBar(
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
-                        imageVector = Icons.Rounded.Search,
+                        painter = painterResource(R.drawable.ic_lucide_search),
                         contentDescription = stringResource(R.string.action_search),
                         tint = colorScheme.onSurface,
                         modifier = Modifier.size(22.dp),
@@ -1351,7 +1348,7 @@ private fun TopSearchBar(
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     Icon(
-                        imageVector = Icons.Rounded.Search,
+                        painter = painterResource(R.drawable.ic_lucide_search),
                         contentDescription = null,
                         tint = colorScheme.onSurface,
                         modifier = Modifier.size(24.dp),
@@ -1387,7 +1384,7 @@ private fun TopSearchBar(
                     )
 
                     PressableIconButton(
-                        icon = Icons.Rounded.Close,
+                        icon = R.drawable.ic_lucide_x,
                         contentDescription = stringResource(R.string.action_close_search),
                         tint = colorScheme.onSurfaceVariant.copy(alpha = 0.82f),
                         compact = true,
@@ -1433,7 +1430,7 @@ private fun MyListsHeader() {
 
 @Composable
 private fun PressableIconButton(
-    icon: ImageVector,
+    @DrawableRes icon: Int,
     contentDescription: String,
     tint: Color,
     compact: Boolean = false,
@@ -1481,7 +1478,7 @@ private fun PressableIconButton(
             contentAlignment = Alignment.Center,
         ) {
             Icon(
-                imageVector = icon,
+                painter = painterResource(icon),
                 contentDescription = contentDescription,
                 tint = tint,
                 modifier = Modifier.size(if (compact) 24.dp else 22.dp),
