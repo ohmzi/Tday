@@ -9,6 +9,7 @@ import { SheetCard, SheetSectionTitle } from "@/components/ui/sheet-chrome";
 import { api } from "@/lib/api-client";
 import { usePathname, useRouter } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
+import { hapticTick, hapticConfirm } from "@/lib/haptics";
 import { listColorMap } from "@/lib/listColorMap";
 import {
   DEFAULT_LIST_ICON_KEY,
@@ -240,7 +241,7 @@ export default function FloaterListFormSheet({
               <button
                 key={option.value}
                 type="button"
-                onClick={() => setColor(option.value)}
+                onClick={() => { hapticTick(); setColor(option.value); }}
                 className={cn(
                   "h-12 w-12 shrink-0 rounded-full transition-transform active:scale-95",
                   option.tailwind,
@@ -255,24 +256,26 @@ export default function FloaterListFormSheet({
 
         <SheetSectionTitle>{appDict("icon")}</SheetSectionTitle>
         <SheetCard className="p-3.5">
-          <div className="grid grid-cols-5 gap-2 sm:grid-cols-8">
+          <div className="flex gap-2.5 overflow-x-auto pb-1">
             {listIconOptions.map((option) => {
               const Icon = option.icon;
+              const selected = iconKey === option.key;
+
               return (
                 <button
                   key={option.key}
                   type="button"
-                  onClick={() => setIconKey(option.key)}
+                  onClick={() => { hapticTick(); setIconKey(option.key); }}
                   className={cn(
-                    "flex h-11 items-center justify-center rounded-2xl text-muted-foreground transition-colors",
-                    iconKey === option.key
-                      ? "bg-muted text-foreground ring-2 ring-foreground/20"
-                      : "hover:bg-muted/70 hover:text-foreground",
+                    "flex h-12 w-12 shrink-0 items-center justify-center rounded-full transition-transform active:scale-95",
+                    selected
+                      ? "bg-accent/15 text-accent ring-[2px] ring-accent/55"
+                      : "bg-muted/60 text-muted-foreground hover:text-foreground",
                   )}
-                  aria-label={option.label}
-                  aria-pressed={iconKey === option.key}
+                  aria-label={`Use ${option.label} icon`}
+                  aria-pressed={selected}
                 >
-                  <Icon className="h-5 w-5" />
+                  <Icon className="h-5 w-5 stroke-[2.4]" />
                 </button>
               );
             })}
@@ -280,44 +283,47 @@ export default function FloaterListFormSheet({
         </SheetCard>
 
         {error ? (
-          <p className="px-1 text-sm font-bold text-destructive">{error}</p>
+          <p className="px-1 text-sm font-extrabold text-destructive">{error}</p>
         ) : null}
 
         {isEditing && list ? (
-          <div className="pt-2">
-            {confirmingDelete ? (
-              <div className="flex items-center gap-2">
+          confirmingDelete ? (
+            <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-4">
+              <p className="text-sm font-extrabold text-destructive">
+                Delete &ldquo;{normalizeListName(list.name) || list.name}&rdquo; and all of
+                its floaters? This can&apos;t be undone.
+              </p>
+              <div className="mt-3 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => { hapticConfirm(); setConfirmingDelete(false); }}
+                  disabled={deleting}
+                  className="rounded-2xl border-border/70 bg-card px-5 font-black"
+                >
+                  Keep list
+                </Button>
                 <Button
                   type="button"
                   variant="destructive"
-                  className="h-12 flex-1 rounded-2xl font-black"
-                  disabled={deleting}
                   onClick={() => deleteListMutation.mutate(list.id)}
-                >
-                  {appDict("deleteFloaterList")}
-                </Button>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  className="h-12 rounded-2xl font-black"
                   disabled={deleting}
-                  onClick={() => setConfirmingDelete(false)}
+                  className="rounded-2xl px-5 font-black"
                 >
-                  {appDict("cancel")}
+                  {deleting ? "Deleting..." : appDict("deleteFloaterList")}
                 </Button>
               </div>
-            ) : (
-              <Button
-                type="button"
-                variant="ghost"
-                className="h-12 w-full rounded-2xl text-destructive hover:bg-destructive/10 hover:text-destructive"
-                onClick={() => setConfirmingDelete(true)}
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                {appDict("deleteFloaterList")}
-              </Button>
-            )}
-          </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setConfirmingDelete(true)}
+              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-destructive/30 bg-destructive/5 px-5 py-2.5 text-sm font-black text-destructive transition-colors hover:bg-destructive/10 active:scale-[0.99]"
+            >
+              <Trash2 className="h-4 w-4 stroke-[2.4]" />
+              {appDict("deleteFloaterList")}
+            </button>
+          )
         ) : null}
       </div>
     </AppBottomSheet>
