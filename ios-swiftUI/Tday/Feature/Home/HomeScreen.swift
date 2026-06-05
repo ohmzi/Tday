@@ -583,12 +583,12 @@ private struct HomeTopBar: View {
             }
 
             HStack(spacing: buttonGap) {
-                HomeIconCircleButton(icon: "text.badge.plus") {
+                HomeIconCircleButton(icon: "NavListPlus") {
                     HapticManager.buttonTap()
                     onCreateList()
                 }
 
-                HomeIconCircleButton(icon: "ellipsis") {
+                HomeIconCircleButton(icon: "NavEllipsis") {
                     HapticManager.gentleTap()
                     onOpenSettings()
                 }
@@ -603,8 +603,11 @@ private struct HomeTopBar: View {
                         searchExpanded = true
                     }
                 } label: {
-                    Image(systemName: "magnifyingglass")
-                        .font(.system(size: 22, weight: .semibold))
+                    Image("NavSearch")
+                        .renderingMode(.template)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 22, height: 22)
                         .foregroundStyle(colors.onSurface)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
@@ -614,8 +617,11 @@ private struct HomeTopBar: View {
                 .accessibilityLabel("Search")
 
                 HStack(spacing: 10) {
-                    Image(systemName: "magnifyingglass")
-                        .font(.system(size: 20, weight: .semibold))
+                    Image("NavSearch")
+                        .renderingMode(.template)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 20, height: 20)
                         .foregroundStyle(colors.onSurface)
                         .frame(width: HomeMetrics.compactButtonSize, height: HomeMetrics.compactButtonSize)
 
@@ -632,8 +638,11 @@ private struct HomeTopBar: View {
                         HapticManager.sheetDismiss()
                         onSearchClose()
                     } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 18, weight: .semibold))
+                        Image("NavClose")
+                            .renderingMode(.template)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 18, height: 18)
                             .foregroundStyle(colors.onSurfaceVariant.opacity(0.78))
                     }
                     .buttonStyle(
@@ -670,6 +679,7 @@ private struct HomeTopBar: View {
 }
 
 private struct HomeIconCircleButton: View {
+    /// Asset-catalog name of the lucide template glyph (shared with web/Android).
     let icon: String
     var compact = false
     let action: () -> Void
@@ -678,8 +688,11 @@ private struct HomeIconCircleButton: View {
 
     var body: some View {
         Button(action: action) {
-            Image(systemName: icon)
-                .font(.system(size: compact ? 20 : 22, weight: .semibold))
+            Image(icon)
+                .renderingMode(.template)
+                .resizable()
+                .scaledToFit()
+                .frame(width: compact ? 20 : 22, height: compact ? 20 : 22)
                 .foregroundStyle(colors.onSurface)
                 .frame(
                     width: compact ? HomeMetrics.compactButtonSize : HomeMetrics.topBarButtonSize,

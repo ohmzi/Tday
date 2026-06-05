@@ -50,7 +50,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -391,7 +393,11 @@ fun RootFeedDock(
                     val iconAlpha = if (selected) 1f - expansionProgress else 0f
 
                     Icon(
-                        imageVector = tab.icon(),
+                        painter = if (tab == RootFeedTab.HOME) {
+                            painterResource(R.drawable.ic_lucide_house)
+                        } else {
+                            rememberVectorPainter(tab.icon())
+                        },
                         contentDescription = null,
                         tint = animatedContentColor,
                         modifier = Modifier

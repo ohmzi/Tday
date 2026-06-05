@@ -3993,6 +3993,9 @@ private func emptyTimelineSystemImage(for mode: TodoListMode, listIconKey: Strin
     case .priority:
         return "flag.fill"
     case .floater:
+        if let listIconKey, !listIconKey.isEmpty {
+            return todoListSymbolName(for: listIconKey)
+        }
         return "leaf"
     case .list:
         return todoListSymbolName(for: listIconKey)
