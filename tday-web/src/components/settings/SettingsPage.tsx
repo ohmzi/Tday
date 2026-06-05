@@ -4,9 +4,11 @@ import {
   Bell,
   BellOff,
   Check,
+  Copy,
   Eye,
   EyeOff,
   Info,
+  Key,
   Keyboard,
   Languages,
   Loader2,
@@ -15,6 +17,7 @@ import {
   Moon,
   Settings,
   Sun,
+  Trash2,
   User,
 } from "lucide-react";
 import { useTheme } from "next-themes";
@@ -109,6 +112,89 @@ export default function SettingsPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const push = usePushNotifications();
+
+  const [apiKeyStatus, setApiKeyStatus] = useState<{
+    enabled: boolean;
+    keyPreview?: string | null;
+    createdAt?: string | null;
+  } | null>(null);
+  const [generatedApiKey, setGeneratedApiKey] = useState<string | null>(null);
+  const [apiKeyLoading, setApiKeyLoading] = useState(false);
+  const [showApiKey, setShowApiKey] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .GET({ url: "/api/user/api-key" })
+      .then((res) => {
+        if (!cancelled) setApiKeyStatus(res?.status ?? { enabled: false });
+      })
+      .catch(() => {
+        if (!cancelled) setApiKeyStatus({ enabled: false });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const handleGenerateApiKey = async () => {
+    setApiKeyLoading(true);
+    try {
+      const res = await api.POST({
+        url: "/api/user/api-key",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const created = res?.apiKey;
+      setGeneratedApiKey(created?.key ?? null);
+      setShowApiKey(true);
+      setApiKeyStatus({
+        enabled: true,
+        keyPreview: created?.keyPreview ?? null,
+        createdAt: created?.createdAt ?? null,
+      });
+      toast({ description: "API key generated. Copy it now — it won't be shown again." });
+    } catch (err) {
+      toast({
+        description: getErrorMessage(err, "Failed to generate API key"),
+        variant: "destructive",
+      });
+    } finally {
+      setApiKeyLoading(false);
+    }
+  };
+
+  const handleRevokeApiKey = async () => {
+    setApiKeyLoading(true);
+    try {
+      await api.DELETE({
+        url: "/api/user/api-key",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      setApiKeyStatus({ enabled: false });
+      setGeneratedApiKey(null);
+      setShowApiKey(false);
+      toast({ description: "API key revoked" });
+    } catch (err) {
+      toast({
+        description: getErrorMessage(err, "Failed to revoke API key"),
+        variant: "destructive",
+      });
+    } finally {
+      setApiKeyLoading(false);
+    }
+  };
+
+  const handleCopyApiKey = async () => {
+    if (!generatedApiKey) return;
+    try {
+      await navigator.clipboard.writeText(generatedApiKey);
+      toast({ description: "API key copied to clipboard" });
+    } catch {
+      toast({ description: "Failed to copy API key", variant: "destructive" });
+    }
+  };
 
   const handlePushToggle = async () => {
     try {
@@ -353,6 +439,68 @@ export default function SettingsPage() {
               );
             })}
           </div>
+        </CardContent>
+      </Card>
+
+      <Card className="rounded-2xl border-border/70 bg-card/95 mb-5">
+        <CardHeader className="space-y-1">
+          <CardTitle className="flex items-center gap-2 text-base"><Key className="h-4 w-4 text-accent" />API Key / Dashboard Access</CardTitle>
+          <CardDescription>
+            Generate a personal API key to connect external dashboards (e.g. the Homarr "Tday" widget). Paste this key together with your Tday server URL into the integration. Keep it secret — it grants access to your tasks.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="text-sm">
+              <p className="font-medium">
+                {apiKeyStatus?.enabled ? "API access enabled" : "API access disabled"}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {apiKeyStatus?.enabled
+                  ? apiKeyStatus.keyPreview
+                    ? `Active key ending in …${apiKeyStatus.keyPreview}`
+                    : "An active key exists"
+                  : "No key has been generated"}
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant={apiKeyStatus?.enabled ? "destructive" : "default"}
+              disabled={apiKeyLoading || apiKeyStatus === null}
+              onClick={apiKeyStatus?.enabled ? handleRevokeApiKey : handleGenerateApiKey}
+              className="h-10 shrink-0"
+            >
+              {apiKeyLoading ? (
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{apiKeyStatus?.enabled ? "Revoking..." : "Generating..."}</>
+              ) : apiKeyStatus?.enabled ? (
+                <><Trash2 className="mr-2 h-4 w-4" />Revoke Key</>
+              ) : (
+                <><Key className="mr-2 h-4 w-4" />Generate Key</>
+              )}
+            </Button>
+          </div>
+
+          {generatedApiKey && (
+            <div className="space-y-2 rounded-xl border border-border/60 bg-muted/40 p-3">
+              <p className="text-xs font-medium text-muted-foreground">
+                Copy your API key now — it won't be shown again.
+              </p>
+              <div className="flex gap-2">
+                <Input
+                  type={showApiKey ? "text" : "password"}
+                  value={generatedApiKey}
+                  readOnly
+                  className="h-10 flex-1 bg-background/50 font-mono text-xs"
+                />
+                <Button type="button" variant="outline" size="icon" className="h-10 w-10 shrink-0" onClick={() => setShowApiKey(!showApiKey)}>
+                  {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+                <Button type="button" variant="outline" size="icon" className="h-10 w-10 shrink-0" onClick={handleCopyApiKey}>
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
