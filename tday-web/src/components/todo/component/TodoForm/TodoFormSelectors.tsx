@@ -172,7 +172,7 @@ export default function TaskSelectorOverlays({
           <div key={value}>
             {index > 0 ? <SelectorDivider /> : null}
             <SelectorRow
-              label={null}
+              label={appDict(priorityLabelKey[value])}
               swatchClass={prioritySwatchClass(value)}
               selected={priority === value}
               onClick={() => {
