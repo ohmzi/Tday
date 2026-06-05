@@ -664,6 +664,16 @@ struct TodoListScreen: View {
         viewModel.mode == .floater && viewModel.listId == nil
     }
 
+    // Root floater empty state is shown inline (in the list, above the list
+    // names) to mirror the web layout, rather than as a full-screen overlay.
+    private var showInlineFloaterEmpty: Bool {
+        isRootFloaterScreen && viewModel.items.isEmpty && !viewModel.isLoading
+    }
+
+    private var floaterEmptyGapHeight: CGFloat {
+        UIScreen.main.bounds.height * 0.42
+    }
+
     private var isListDetailScreen: Bool {
         viewModel.mode == .list ||
             (viewModel.mode == .floater && !(viewModel.listId?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true))
@@ -805,7 +815,7 @@ struct TodoListScreen: View {
                             listIconKey: viewModel.lists.first(where: { $0.id == viewModel.listId })?.iconKey
                         )
                     )
-                    if viewModel.items.isEmpty, !viewModel.isLoading {
+                    if viewModel.items.isEmpty, !viewModel.isLoading, !isRootFloaterScreen {
                         EmptyTaskBackgroundMessage(
                             message: emptyTimelineMessage(for: viewModel.mode)
                         )
@@ -1717,6 +1727,21 @@ struct TodoListScreen: View {
                             sections: groupedSections,
                             isFirstSection: index == 0
                         )
+                    }
+
+                    if showInlineFloaterEmpty {
+                        Section {
+                            Text(emptyTimelineMessage(for: viewModel.mode))
+                                .font(.tdayRounded(size: 28, weight: .bold))
+                                .foregroundStyle(colors.onSurfaceVariant.opacity(0.66))
+                                .multilineTextAlignment(.center)
+                                .lineLimit(2)
+                                .minimumScaleFactor(0.82)
+                                .frame(maxWidth: .infinity, minHeight: floaterEmptyGapHeight, alignment: .center)
+                                .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
+                                .listRowBackground(colors.background)
+                                .listRowSeparator(.hidden)
+                        }
                     }
 
                     if !floaterListRows.isEmpty {

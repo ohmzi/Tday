@@ -12,9 +12,13 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+  /* Single font for the whole app. All three slots resolve to Nunito so
+     `font-sans`, `font-serif` and `font-mono` utilities can never fall back to
+     a browser default (the old `--font-mono: var(--font-mono)` was a cyclic
+     reference that left mono text — e.g. keycaps/code — in the UA font). */
   --font-sans: "Nunito", ui-rounded, system-ui, sans-serif;
   --font-serif: "Nunito", ui-rounded, system-ui, sans-serif;
-  --font-mono: var(--font-mono);
+  --font-mono: "Nunito", ui-rounded, system-ui, sans-serif;
 
   --color-form-background: hsl(var(--form-background));
 
@@ -146,6 +150,16 @@
   }
   body {
     @apply bg-background font-sans text-foreground antialiased;
+  }
+  /* Belt-and-braces: form controls don't inherit font-family by default in
+     every engine, so pin them to the app font too. Keeps inputs/buttons in the
+     bottom sheets from rendering in the system UI font. */
+  button,
+  input,
+  optgroup,
+  select,
+  textarea {
+    font-family: inherit;
   }
   @media (max-width: 767px) {
     :is(input, textarea, select):not([type="checkbox"]):not([type="radio"]):not([type="range"]) {

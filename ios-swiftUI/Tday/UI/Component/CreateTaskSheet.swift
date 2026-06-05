@@ -219,18 +219,32 @@ struct CreateTaskSheet: View {
             TdaySheetSectionTitle(text: "Details")
             TdaySheetCard {
                 CreateTaskSheetSelectorTriggerRow(
-                    iconName: "list.bullet",
+                    iconName: "LucideList",
                     title: "List",
                     value: selectedListName,
+                    valueLeading: lists.first(where: { $0.id == selectedListID }).map { list in
+                        AnyView(
+                            TdayListIcon(iconKey: list.iconKey, size: 16)
+                                .foregroundStyle(createTaskSheetListSwatchColor(list.color))
+                        )
+                    },
                     onTap: { activeSelector = .list }
                 )
 
                 TdaySheetDivider()
 
                 CreateTaskSheetSelectorTriggerRow(
-                    iconName: "text.badge.checkmark",
+                    iconName: "LucideFlag",
                     title: "Priority",
                     value: TaskPriorityDisplay.label(for: priority),
+                    valueLeading: AnyView(
+                        Image("LucideFlag")
+                            .renderingMode(.template)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 16, height: 16)
+                            .foregroundStyle(createTaskSheetPrioritySwatchColor(priority))
+                    ),
                     onTap: { activeSelector = .priority }
                 )
 
@@ -238,7 +252,7 @@ struct CreateTaskSheet: View {
                     TdaySheetDivider()
 
                     CreateTaskSheetSelectorTriggerRow(
-                        iconName: "repeat",
+                        iconName: "LucideRepeat",
                         title: "Repeat",
                         value: selectedRepeatLabel,
                         isEnabled: scheduleEnabled,
@@ -742,10 +756,12 @@ private struct CreateTaskSheetSelectorDoneButton: View {
 }
 
 private struct CreateTaskSheetSelectorTriggerRow: View {
+    /// Asset-catalog name of the lucide field glyph (shared with web/Android).
     let iconName: String
     let title: String
     let value: String
     var isEnabled = true
+    var valueLeading: AnyView? = nil
     let onTap: () -> Void
 
     @Environment(\.tdayColors) private var colors
@@ -753,10 +769,12 @@ private struct CreateTaskSheetSelectorTriggerRow: View {
     var body: some View {
         Button(action: onTap) {
             HStack(spacing: 14) {
-                Image(systemName: iconName)
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(colors.onSurfaceVariant.opacity(isEnabled ? 1 : 0.42))
+                Image(iconName)
+                    .renderingMode(.template)
+                    .resizable()
+                    .scaledToFit()
                     .frame(width: 22, height: 22)
+                    .foregroundStyle(colors.onSurfaceVariant.opacity(isEnabled ? 1 : 0.42))
 
                 Text(title)
                     .font(.tdayRounded(size: 18, weight: .heavy))
@@ -765,6 +783,10 @@ private struct CreateTaskSheetSelectorTriggerRow: View {
                 Spacer(minLength: 8)
 
                 HStack(spacing: 4) {
+                    if let valueLeading {
+                        valueLeading
+                    }
+
                     Text(value)
                         .font(.tdayRounded(size: 14, weight: .heavy))
                         .foregroundStyle(colors.onSurfaceVariant.opacity(isEnabled ? 1 : 0.48))

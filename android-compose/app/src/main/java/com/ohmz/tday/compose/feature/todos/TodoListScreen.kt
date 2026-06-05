@@ -121,6 +121,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -1117,6 +1118,35 @@ fun TodoListScreen(
                         }
                     }
 
+                    // Root floater empty state: mirror the web layout — a
+                    // centered "No floater tasks" message sitting in a gap in
+                    // the middle of the screen, with the list names below it
+                    // (instead of a full-screen watermark overlay).
+                    if (isRootFloaterScreen && uiState.items.isEmpty() && !uiState.isLoading) {
+                        item(
+                            key = "floater-empty-message",
+                            contentType = "floater-empty-message",
+                        ) {
+                            val gapHeight = (LocalConfiguration.current.screenHeightDp * 0.42f).dp
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(min = gapHeight),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text(
+                                    text = emptyStateMessageForMode(uiState.mode),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        .copy(alpha = 0.66f),
+                                    style = MaterialTheme.typography.displaySmall,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    textAlign = TextAlign.Center,
+                                    modifier = Modifier.padding(horizontal = 24.dp),
+                                )
+                            }
+                        }
+                    }
+
                     if (floaterListRows.isNotEmpty()) {
                         item(
                             key = "floater-my-lists-header",
@@ -1171,7 +1201,9 @@ fun TodoListScreen(
                     accentColor = titleColor,
                 )
             }
-            if (uiState.items.isEmpty() && !uiState.isLoading && !suppressInitialTodayTimeline) {
+            // Root floater shows its empty message inline (in the list, above
+            // the list names) so the overlay version would double up.
+            if (uiState.items.isEmpty() && !uiState.isLoading && !suppressInitialTodayTimeline && !isRootFloaterScreen) {
                 EmptyTaskBackgroundMessage(
                     message = emptyStateMessageForMode(uiState.mode),
                 )
