@@ -74,16 +74,26 @@ struct RootFeedDock: View {
         Button {
             onSelect(activeTab)
         } label: {
-            Image(systemName: activeTab.systemImage)
-                .font(.system(size: 22, weight: .semibold))
-                .scaleEffect(x: activeTab == .floater ? -1 : 1, y: 1)
-                .foregroundStyle(accentColor)
-                .frame(width: RootFeedDockMetrics.collapsedWidth, height: RootFeedDockMetrics.height)
-                .background(colors.surfaceVariant.opacity(0.76), in: Capsule())
-                .overlay(
-                    Capsule()
-                        .stroke(colors.onSurface.opacity(0.15), lineWidth: 1)
-                )
+            Group {
+                if activeTab == .home {
+                    Image("NavHouse")
+                        .renderingMode(.template)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 22, height: 22)
+                } else {
+                    Image(systemName: activeTab.systemImage)
+                        .font(.system(size: 22, weight: .semibold))
+                        .scaleEffect(x: activeTab == .floater ? -1 : 1, y: 1)
+                }
+            }
+            .foregroundStyle(accentColor)
+            .frame(width: RootFeedDockMetrics.collapsedWidth, height: RootFeedDockMetrics.height)
+            .background(colors.surfaceVariant.opacity(0.76), in: Capsule())
+            .overlay(
+                Capsule()
+                    .stroke(colors.onSurface.opacity(0.15), lineWidth: 1)
+            )
         }
         .buttonStyle(
             TdayPressButtonStyle(

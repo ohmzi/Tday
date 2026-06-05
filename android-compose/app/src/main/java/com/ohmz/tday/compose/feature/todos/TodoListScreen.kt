@@ -3351,7 +3351,8 @@ private fun emptyStateIconForMode(
         TodoListMode.TODAY -> if (isTodayDaytime) Icons.Rounded.WbSunny else Icons.Rounded.NightsStay
         TodoListMode.OVERDUE -> Icons.Rounded.ErrorOutline
         TodoListMode.PRIORITY -> Icons.Rounded.Flag
-        TodoListMode.FLOATER -> Icons.Rounded.Eco
+        TodoListMode.FLOATER ->
+            if (listIconKey.isNullOrBlank()) Icons.Rounded.Eco else tdayListIconForKey(listIconKey)
         TodoListMode.SCHEDULED -> Icons.Rounded.Schedule
         TodoListMode.ALL -> Icons.Rounded.Inbox
         TodoListMode.LIST -> tdayListIconForKey(listIconKey)
