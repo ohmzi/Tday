@@ -130,6 +130,20 @@ function syncXcodeProject(manifest) {
   }
 }
 
+function syncReleaseMetadata(manifest) {
+  for (const filePath of [
+    path.join(repoRoot, "tday-web", "public", "release", "current-release.json"),
+    path.join(repoRoot, "tday-web", "public", "release", "latest-changes.json"),
+  ]) {
+    if (!fs.existsSync(filePath)) continue;
+    const release = readJson(filePath);
+    release.version = manifest.version;
+    release.releaseUrl = `https://github.com/ohmzi/Tday/releases/tag/v${manifest.version}`;
+    release.compareUrl = null;
+    writeJson(filePath, release);
+  }
+}
+
 function syncEnvExamples(manifest) {
   for (const filePath of [
     path.join(repoRoot, ".env.example"),
@@ -167,6 +181,7 @@ function sync() {
   syncPackageLock(manifest);
   syncInfoPlist(manifest);
   syncXcodeProject(manifest);
+  syncReleaseMetadata(manifest);
   syncEnvExamples(manifest);
   console.log(`Version mirrors synced to ${manifest.version}`);
 }
@@ -203,6 +218,8 @@ function mirrorPaths() {
     path.join(repoRoot, "ios-swiftUI", "Tday", "Info.plist"),
     path.join(repoRoot, "ios-swiftUI", "project.yml"),
     path.join(repoRoot, "ios-swiftUI", "TdayApp.xcodeproj", "project.pbxproj"),
+    path.join(repoRoot, "tday-web", "public", "release", "current-release.json"),
+    path.join(repoRoot, "tday-web", "public", "release", "latest-changes.json"),
     path.join(repoRoot, ".env.example"),
     path.join(repoRoot, "tday-backend", ".env.example"),
   ];
