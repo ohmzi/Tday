@@ -268,7 +268,7 @@ const AllTasksTimelineContainer = ({
 
   // Global task search: matches across ALL dated tasks (not just this scope). Selecting a
   // result navigates to All Tasks focused on it, reusing the existing focus/scroll mechanism.
-  const searchResults = useMemo<SearchResultItem[]>(() => {
+  const searchResults = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
     if (!query) return [];
     return timelineItems

@@ -769,7 +769,7 @@ export default function CalendarClient() {
   // Search is a broad jump-to-task affordance (not a calendar-grid filter): match any
   // active, not-overdue task across all dates; selecting one jumps the calendar to that
   // date and highlights it. The calendar grid keeps showing every task.
-  const searchResults = useMemo<SearchResultItem[]>(() => {
+  const searchResults = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
     if (!query) return [];
     const now = new Date();
