@@ -1136,7 +1136,7 @@ private fun CreateListBottomSheet(
                                         contentAlignment = Alignment.Center,
                                     ) {
                                         Icon(
-                                            imageVector = option.icon,
+                                            painter = painterResource(option.iconRes),
                                             contentDescription = iconOptionDescription,
                                             tint = if (selected) selectedAccent else colorScheme.onSurfaceVariant,
                                         )
