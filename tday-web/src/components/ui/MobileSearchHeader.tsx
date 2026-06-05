@@ -22,9 +22,9 @@ interface MobileSearchHeaderProps {
 }
 
 const collapsedButtonClassName = cn(
-  "flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl",
-  "border border-white/70 bg-card/92 text-muted-foreground shadow-[0_10px_30px_-24px_hsl(var(--shadow)/0.42)]",
-  "transition-all duration-200 hover:bg-card hover:text-foreground dark:border-white/10",
+  "flex h-14 w-14 shrink-0 items-center justify-center rounded-full",
+  "border border-white/70 bg-card/90 text-foreground shadow-[0_12px_28px_-22px_hsl(var(--shadow)/0.55)]",
+  "transition-all duration-200 hover:-translate-y-0.5 hover:bg-card dark:border-white/10",
 );
 
 export default function MobileSearchHeader({
@@ -139,9 +139,9 @@ export default function MobileSearchHeader({
           <div
             className={cn(
               "relative flex w-full items-center",
-              "rounded-2xl",
-              "bg-card/92",
-              "border border-white/70 shadow-[0_10px_30px_-24px_hsl(var(--shadow)/0.42)]",
+              "rounded-full",
+              "bg-card/90",
+              "border border-white/70 shadow-[0_12px_28px_-22px_hsl(var(--shadow)/0.55)]",
               "transition-colors duration-200",
               "dark:border-white/10",
               isSearchFocused && ["bg-card", "border-accent/45"],
@@ -167,7 +167,7 @@ export default function MobileSearchHeader({
               }}
               onBlur={handleBlur}
               className={cn(
-                "h-11 w-full rounded-2xl bg-transparent pl-11 pr-20",
+                "h-14 w-full rounded-full bg-transparent pl-11 pr-20",
                 "text-base font-extrabold text-foreground md:text-sm",
                 "placeholder:text-muted-foreground/50",
                 "outline-none",
@@ -219,7 +219,7 @@ export default function MobileSearchHeader({
           </div>
 
           {onSelectResult && hasQuery && (
-            <div className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-2xl border border-white/70 bg-card/98 shadow-[0_24px_48px_-20px_hsl(var(--shadow)/0.5)] backdrop-blur-xl dark:border-white/10">
+            <div className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-[28px] border border-white/70 bg-card/98 shadow-[0_24px_48px_-20px_hsl(var(--shadow)/0.5)] backdrop-blur-xl dark:border-white/10">
               {results && results.length > 0 ? (
                 <ul className="max-h-72 overflow-y-auto py-1">
                   {results.map((result) => (

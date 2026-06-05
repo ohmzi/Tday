@@ -104,7 +104,7 @@ const ListContainer = ({ id }: { id: string }) => {
                             type="button"
                             variant="ghost"
                             size="icon"
-                            className="mt-4 h-12 w-12 shrink-0 rounded-full border border-white/70 bg-card/90 text-foreground shadow-[0_12px_28px_-22px_hsl(var(--shadow)/0.55)] hover:bg-card dark:border-white/10"
+                            className="mt-4 h-14 w-14 shrink-0 rounded-full border border-white/70 bg-card/90 text-foreground shadow-[0_12px_28px_-22px_hsl(var(--shadow)/0.55)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-card dark:border-white/10"
                             onClick={() => setEditListOpen(true)}
                             aria-label={`Edit ${listName || "list"}`}
                         >
