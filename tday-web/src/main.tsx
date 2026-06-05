@@ -41,6 +41,18 @@ Sentry.init({
   beforeSendTransaction: scrubSentryTransaction,
 });
 
+// Recover from stale dynamic-import chunks after a deploy: when a hashed chunk
+// referenced by an old cached bundle no longer exists, Vite fires this event.
+// Reload once to fetch the fresh index.html (and current chunks). The
+// sessionStorage guard prevents a reload loop if the failure is not deploy-related.
+window.addEventListener("vite:preloadError", (event) => {
+  event.preventDefault();
+  const RELOAD_FLAG = "tday:preload-error-reloaded";
+  if (sessionStorage.getItem(RELOAD_FLAG)) return;
+  sessionStorage.setItem(RELOAD_FLAG, "1");
+  window.location.reload();
+});
+
 if ("serviceWorker" in navigator && import.meta.env.PROD) {
   navigator.serviceWorker
     .register("/sw.js", { scope: "/" })

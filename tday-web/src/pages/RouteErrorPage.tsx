@@ -110,6 +110,22 @@ function getMeta(variant: ErrorVariant): ErrorMeta {
   }
 }
 
+function describeError(error: unknown): { message: string; stack: string } {
+  if (isRouteErrorResponse(error)) {
+    return {
+      message: `${error.status} ${error.statusText}`,
+      stack:
+        typeof error.data === "string"
+          ? error.data
+          : JSON.stringify(error.data ?? {}, null, 2),
+    };
+  }
+  if (error instanceof Error) {
+    return { message: error.message, stack: error.stack ?? "" };
+  }
+  return { message: String(error), stack: "" };
+}
+
 export default function RouteErrorPage() {
   const error = useRouteError();
   const params = useParams<{ locale?: string }>();
@@ -118,6 +134,7 @@ export default function RouteErrorPage() {
   const meta = getMeta(variant);
   const locale = params.locale || DEFAULT_LOCALE;
   const homePath = `/${locale}/app/tday`;
+  const { message: errorMessage, stack: errorStack } = describeError(error);
 
   useEffect(() => {
     if (variant === "chunk" || variant === "network") return;
@@ -183,6 +200,21 @@ export default function RouteErrorPage() {
             </Button>
           )}
         </div>
+
+        {/* Debug error details — visible in all builds so crash reports can be screenshotted */}
+        {errorMessage && (
+          <details className="mt-6 w-full max-w-lg text-left">
+            <summary className="cursor-pointer text-xs font-bold text-muted-foreground/60 hover:text-muted-foreground">
+              Error details
+            </summary>
+            <div className="mt-2 max-h-60 overflow-auto rounded-lg bg-muted/40 p-3 text-xs leading-relaxed text-muted-foreground ring-1 ring-border/40">
+              <p className="font-bold text-destructive">{errorMessage}</p>
+              {errorStack && (
+                <pre className="mt-2 whitespace-pre-wrap break-all opacity-70">{errorStack}</pre>
+              )}
+            </div>
+          </details>
+        )}
       </div>
     </div>
   );
