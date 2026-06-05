@@ -195,7 +195,10 @@ export default function NativeHomeDashboard() {
         </header>
 
         {searchOpen && (
-          <section className="rounded-[24px] border border-white/70 bg-card/92 p-3 shadow-[0_16px_36px_-30px_hsl(var(--shadow)/0.55)] dark:border-white/10">
+          <section className={cn(
+            "border border-white/70 bg-card/90 shadow-[0_12px_28px_-22px_hsl(var(--shadow)/0.55)] dark:border-white/10 transition-all duration-200",
+            searchQuery.trim() ? "rounded-[28px] pb-2" : "rounded-full",
+          )}>
             <div className="relative">
               <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <input
@@ -204,7 +207,7 @@ export default function NativeHomeDashboard() {
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
                 placeholder="Search tasks..."
-                className="h-12 w-full rounded-2xl border border-border/70 bg-muted/55 pl-11 pr-4 text-base font-extrabold outline-none transition-colors focus:border-accent/50 focus:bg-card md:text-sm"
+                className="h-14 w-full rounded-full bg-transparent pl-11 pr-4 text-base font-extrabold outline-none transition-colors md:text-sm"
               />
             </div>
             {searchQuery.trim() && (
