@@ -125,6 +125,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextLayoutResult
@@ -2492,7 +2493,7 @@ private fun ListSettingsBottomSheet(
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Icon(
-                                    imageVector = option.icon,
+                                    painter = painterResource(option.iconRes),
                                     contentDescription = stringResource(R.string.home_section_icon),
                                     tint = if (selected) selectedAccent else colorScheme.onSurfaceVariant,
                                 )
@@ -3341,6 +3342,7 @@ private fun emptyStateDrawableForMode(mode: TodoListMode): Int? {
     }
 }
 
+@Composable
 private fun emptyStateIconForMode(
     mode: TodoListMode,
     listIconKey: String?,

@@ -439,8 +439,7 @@ private struct FloaterSearchResultsCard: View {
                         ForEach(todos) { todo in
                             let list = todo.listId.flatMap { listsByID[$0] }
                             HStack(spacing: 10) {
-                                Image(systemName: todoListSymbolName(for: list?.iconKey))
-                                    .font(.system(size: 17, weight: .semibold))
+                                TdayListIcon(iconKey: list?.iconKey, size: 17)
                                     .foregroundStyle(todoListAccentColor(for: list?.color).opacity(0.92))
                                     .frame(width: 18)
 
@@ -523,8 +522,7 @@ private struct FloaterListCard: View {
                     )
                 )
 
-                Image(systemName: symbolName)
-                    .font(.system(size: 60, weight: .regular))
+                TdayListIcon(iconKey: list.iconKey, size: 60)
                     .foregroundStyle(todoBlendColor(containerColor, .white, amount: 0.34).opacity(0.42))
                     .offset(x: 18, y: 8)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
@@ -532,8 +530,7 @@ private struct FloaterListCard: View {
 
                 HStack {
                     HStack(spacing: 10) {
-                        Image(systemName: symbolName)
-                            .font(.system(size: 22, weight: .semibold))
+                        TdayListIcon(iconKey: list.iconKey, size: 22)
                             .foregroundStyle(.white)
                             .frame(width: 32, height: 32)
 
@@ -803,7 +800,10 @@ struct TodoListScreen: View {
                     EmptyTaskWatermark(
                         systemName: emptyWatermarkSystemName(for: context.date),
                         accentColor: modeAccentColor,
-                        assetName: emptyTimelineAssetName(for: viewModel.mode)
+                        assetName: emptyTimelineAssetName(
+                            for: viewModel.mode,
+                            listIconKey: viewModel.lists.first(where: { $0.id == viewModel.listId })?.iconKey
+                        )
                     )
                     if viewModel.items.isEmpty, !viewModel.isLoading {
                         EmptyTaskBackgroundMessage(
@@ -1923,8 +1923,7 @@ struct TodoListScreen: View {
                 if showListIndicator || priorityIcon != nil {
                     HStack(spacing: 8) {
                         if let listMeta, showListIndicator {
-                            Image(systemName: todoListSymbolName(for: listMeta.iconKey))
-                                .font(.system(size: TodoTimelineMetrics.minimalRowIndicatorSize, weight: .semibold))
+                            TdayListIcon(iconKey: listMeta.iconKey, size: TodoTimelineMetrics.minimalRowIndicatorSize)
                                 .foregroundStyle(todoListAccentColor(for: listMeta.color))
                         }
                         if let priorityIcon {
@@ -3216,8 +3215,7 @@ private struct ListSettingsSheet: View {
                                     .fill(accentColor)
                                     .frame(width: 86, height: 86)
 
-                                Image(systemName: selectedSymbolName)
-                                    .font(.system(size: 38, weight: .semibold))
+                                TdayListIcon(iconKey: iconKey, size: 38)
                                     .foregroundStyle(.white)
                             }
 
@@ -3308,8 +3306,7 @@ private struct ListSettingsSheet: View {
                                                     )
                                             }
                                             .overlay {
-                                                Image(systemName: todoListSymbolName(for: optionKey))
-                                                    .font(.system(size: 22, weight: .semibold))
+                                                TdayListIcon(iconKey: optionKey, size: 22)
                                                     .foregroundStyle(isSelected ? accentColor : tdayColors.onSurfaceVariant)
                                             }
                                     }
@@ -3965,7 +3962,7 @@ private func emptyTimelineMessage(for mode: TodoListMode) -> String {
 
 /// Lucide template-asset watermark for the home-category modes, mirroring web.
 /// Returns nil for modes that keep their SF Symbol watermark (today/floater/list).
-private func emptyTimelineAssetName(for mode: TodoListMode) -> String? {
+private func emptyTimelineAssetName(for mode: TodoListMode, listIconKey: String?) -> String? {
     switch mode {
     case .overdue:
         return "TileOverdue"
@@ -3975,6 +3972,13 @@ private func emptyTimelineAssetName(for mode: TodoListMode) -> String? {
         return "TileAll"
     case .priority:
         return "TilePriority"
+    case .list:
+        return tdayLucideListAsset(listIconKey)
+    case .floater:
+        if let listIconKey, !listIconKey.isEmpty {
+            return tdayLucideListAsset(listIconKey)
+        }
+        return "LucideLeaf"
     default:
         return nil
     }

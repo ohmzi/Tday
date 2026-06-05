@@ -1,162 +1,106 @@
 package com.ohmz.tday.compose.ui.theme
 
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.DirectionsRun
-import androidx.compose.material.icons.automirrored.rounded.List
-import androidx.compose.material.icons.automirrored.rounded.MenuBook
-import androidx.compose.material.icons.rounded.AcUnit
-import androidx.compose.material.icons.rounded.AccountBalance
-import androidx.compose.material.icons.rounded.AccountBalanceWallet
-import androidx.compose.material.icons.rounded.Architecture
-import androidx.compose.material.icons.rounded.Backpack
-import androidx.compose.material.icons.rounded.BeachAccess
-import androidx.compose.material.icons.rounded.Bookmark
-import androidx.compose.material.icons.rounded.Build
-import androidx.compose.material.icons.rounded.Cake
-import androidx.compose.material.icons.rounded.CalendarToday
-import androidx.compose.material.icons.rounded.CameraAlt
-import androidx.compose.material.icons.rounded.CardGiftcard
-import androidx.compose.material.icons.rounded.ChangeHistory
-import androidx.compose.material.icons.rounded.ChatBubbleOutline
-import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.ChildCare
-import androidx.compose.material.icons.rounded.Circle
-import androidx.compose.material.icons.rounded.Code
-import androidx.compose.material.icons.rounded.Computer
-import androidx.compose.material.icons.rounded.ContentCut
-import androidx.compose.material.icons.rounded.Description
-import androidx.compose.material.icons.rounded.DesktopWindows
-import androidx.compose.material.icons.rounded.DirectionsBoat
-import androidx.compose.material.icons.rounded.DirectionsCar
-import androidx.compose.material.icons.rounded.Eco
-import androidx.compose.material.icons.rounded.Edit
-import androidx.compose.material.icons.rounded.FamilyRestroom
-import androidx.compose.material.icons.rounded.Favorite
-import androidx.compose.material.icons.rounded.FitnessCenter
-import androidx.compose.material.icons.rounded.Flag
-import androidx.compose.material.icons.rounded.Flight
-import androidx.compose.material.icons.rounded.Headphones
-import androidx.compose.material.icons.rounded.Home
-import androidx.compose.material.icons.rounded.Inbox
-import androidx.compose.material.icons.rounded.Inventory
-import androidx.compose.material.icons.rounded.Key
-import androidx.compose.material.icons.rounded.Lightbulb
-import androidx.compose.material.icons.rounded.LocalBar
-import androidx.compose.material.icons.rounded.LocalMall
-import androidx.compose.material.icons.rounded.LocationCity
-import androidx.compose.material.icons.rounded.Medication
-import androidx.compose.material.icons.rounded.Mood
-import androidx.compose.material.icons.rounded.MusicNote
-import androidx.compose.material.icons.rounded.Palette
-import androidx.compose.material.icons.rounded.Payments
-import androidx.compose.material.icons.rounded.Pets
-import androidx.compose.material.icons.rounded.PriorityHigh
-import androidx.compose.material.icons.rounded.Restaurant
-import androidx.compose.material.icons.rounded.Schedule
-import androidx.compose.material.icons.rounded.School
-import androidx.compose.material.icons.rounded.ShoppingBasket
-import androidx.compose.material.icons.rounded.ShoppingCart
-import androidx.compose.material.icons.rounded.SportsBaseball
-import androidx.compose.material.icons.rounded.SportsBasketball
-import androidx.compose.material.icons.rounded.SportsEsports
-import androidx.compose.material.icons.rounded.SportsFootball
-import androidx.compose.material.icons.rounded.SportsSoccer
-import androidx.compose.material.icons.rounded.SportsTennis
-import androidx.compose.material.icons.rounded.Square
-import androidx.compose.material.icons.rounded.Star
-import androidx.compose.material.icons.rounded.Train
-import androidx.compose.material.icons.rounded.WaterDrop
-import androidx.compose.material.icons.rounded.WbSunny
-import androidx.compose.material.icons.rounded.Whatshot
-import androidx.compose.material.icons.rounded.Work
+import androidx.annotation.DrawableRes
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.vectorResource
+import com.ohmz.tday.compose.R
 import java.util.Locale
 
+// List icons are Lucide glyphs shared across web/Android/iOS — see docs/ICONS.md.
+// Each key maps to a path-only Lucide vector drawable (ic_lucide_*).
 data class TdayListIconOption(
     val key: String,
-    val icon: ImageVector,
+    @DrawableRes val iconRes: Int,
 )
 
 const val TDAY_DEFAULT_LIST_ICON_KEY = "inbox"
 
 val TdayListIconOptions = listOf(
-    TdayListIconOption(TDAY_DEFAULT_LIST_ICON_KEY, Icons.Rounded.Inbox),
-    TdayListIconOption("sun", Icons.Rounded.WbSunny),
-    TdayListIconOption("calendar", Icons.Rounded.CalendarToday),
-    TdayListIconOption("schedule", Icons.Rounded.Schedule),
-    TdayListIconOption("flag", Icons.Rounded.Flag),
-    TdayListIconOption("check", Icons.Rounded.Check),
-    TdayListIconOption("smile", Icons.Rounded.Mood),
-    TdayListIconOption("list", Icons.AutoMirrored.Rounded.List),
-    TdayListIconOption("bookmark", Icons.Rounded.Bookmark),
-    TdayListIconOption("key", Icons.Rounded.Key),
-    TdayListIconOption("gift", Icons.Rounded.CardGiftcard),
-    TdayListIconOption("cake", Icons.Rounded.Cake),
-    TdayListIconOption("school", Icons.Rounded.School),
-    TdayListIconOption("bag", Icons.Rounded.Backpack),
-    TdayListIconOption("edit", Icons.Rounded.Edit),
-    TdayListIconOption("document", Icons.Rounded.Description),
-    TdayListIconOption("book", Icons.AutoMirrored.Rounded.MenuBook),
-    TdayListIconOption("work", Icons.Rounded.Work),
-    TdayListIconOption("wallet", Icons.Rounded.AccountBalanceWallet),
-    TdayListIconOption("money", Icons.Rounded.Payments),
-    TdayListIconOption("fitness", Icons.Rounded.FitnessCenter),
-    TdayListIconOption("run", Icons.AutoMirrored.Rounded.DirectionsRun),
-    TdayListIconOption("food", Icons.Rounded.Restaurant),
-    TdayListIconOption("drink", Icons.Rounded.LocalBar),
-    TdayListIconOption("health", Icons.Rounded.Medication),
-    TdayListIconOption("monitor", Icons.Rounded.DesktopWindows),
-    TdayListIconOption("music", Icons.Rounded.MusicNote),
-    TdayListIconOption("computer", Icons.Rounded.Computer),
-    TdayListIconOption("game", Icons.Rounded.SportsEsports),
-    TdayListIconOption("headphones", Icons.Rounded.Headphones),
-    TdayListIconOption("eco", Icons.Rounded.Eco),
-    TdayListIconOption("pets", Icons.Rounded.Pets),
-    TdayListIconOption("child", Icons.Rounded.ChildCare),
-    TdayListIconOption("family", Icons.Rounded.FamilyRestroom),
-    TdayListIconOption("basket", Icons.Rounded.ShoppingBasket),
-    TdayListIconOption("cart", Icons.Rounded.ShoppingCart),
-    TdayListIconOption("mall", Icons.Rounded.LocalMall),
-    TdayListIconOption("inventory", Icons.Rounded.Inventory),
-    TdayListIconOption("soccer", Icons.Rounded.SportsSoccer),
-    TdayListIconOption("baseball", Icons.Rounded.SportsBaseball),
-    TdayListIconOption("basketball", Icons.Rounded.SportsBasketball),
-    TdayListIconOption("football", Icons.Rounded.SportsFootball),
-    TdayListIconOption("tennis", Icons.Rounded.SportsTennis),
-    TdayListIconOption("train", Icons.Rounded.Train),
-    TdayListIconOption("flight", Icons.Rounded.Flight),
-    TdayListIconOption("boat", Icons.Rounded.DirectionsBoat),
-    TdayListIconOption("car", Icons.Rounded.DirectionsCar),
-    TdayListIconOption("umbrella", Icons.Rounded.BeachAccess),
-    TdayListIconOption("drop", Icons.Rounded.WaterDrop),
-    TdayListIconOption("snow", Icons.Rounded.AcUnit),
-    TdayListIconOption("fire", Icons.Rounded.Whatshot),
-    TdayListIconOption("tools", Icons.Rounded.Build),
-    TdayListIconOption("scissors", Icons.Rounded.ContentCut),
-    TdayListIconOption("architecture", Icons.Rounded.Architecture),
-    TdayListIconOption("code", Icons.Rounded.Code),
-    TdayListIconOption("idea", Icons.Rounded.Lightbulb),
-    TdayListIconOption("chat", Icons.Rounded.ChatBubbleOutline),
-    TdayListIconOption("alert", Icons.Rounded.PriorityHigh),
-    TdayListIconOption("star", Icons.Rounded.Star),
-    TdayListIconOption("heart", Icons.Rounded.Favorite),
-    TdayListIconOption("circle", Icons.Rounded.Circle),
-    TdayListIconOption("square", Icons.Rounded.Square),
-    TdayListIconOption("triangle", Icons.Rounded.ChangeHistory),
-    TdayListIconOption("home", Icons.Rounded.Home),
-    TdayListIconOption("city", Icons.Rounded.LocationCity),
-    TdayListIconOption("bank", Icons.Rounded.AccountBalance),
-    TdayListIconOption("camera", Icons.Rounded.CameraAlt),
-    TdayListIconOption("palette", Icons.Rounded.Palette),
+    TdayListIconOption(TDAY_DEFAULT_LIST_ICON_KEY, R.drawable.ic_lucide_inbox),
+    TdayListIconOption("sun", R.drawable.ic_lucide_sun),
+    TdayListIconOption("calendar", R.drawable.ic_lucide_calendar),
+    TdayListIconOption("schedule", R.drawable.ic_lucide_clock),
+    TdayListIconOption("flag", R.drawable.ic_lucide_flag),
+    TdayListIconOption("check", R.drawable.ic_lucide_check),
+    TdayListIconOption("smile", R.drawable.ic_lucide_smile),
+    TdayListIconOption("list", R.drawable.ic_lucide_list),
+    TdayListIconOption("bookmark", R.drawable.ic_lucide_bookmark),
+    TdayListIconOption("key", R.drawable.ic_lucide_key),
+    TdayListIconOption("gift", R.drawable.ic_lucide_gift),
+    TdayListIconOption("cake", R.drawable.ic_lucide_cake),
+    TdayListIconOption("school", R.drawable.ic_lucide_graduation_cap),
+    TdayListIconOption("bag", R.drawable.ic_lucide_backpack),
+    TdayListIconOption("edit", R.drawable.ic_lucide_pencil),
+    TdayListIconOption("document", R.drawable.ic_lucide_file_text),
+    TdayListIconOption("book", R.drawable.ic_lucide_book),
+    TdayListIconOption("work", R.drawable.ic_lucide_briefcase_business),
+    TdayListIconOption("wallet", R.drawable.ic_lucide_wallet_cards),
+    TdayListIconOption("money", R.drawable.ic_lucide_circle_dollar_sign),
+    TdayListIconOption("fitness", R.drawable.ic_lucide_dumbbell),
+    TdayListIconOption("run", R.drawable.ic_lucide_activity),
+    TdayListIconOption("food", R.drawable.ic_lucide_utensils),
+    TdayListIconOption("drink", R.drawable.ic_lucide_wine),
+    TdayListIconOption("health", R.drawable.ic_lucide_briefcase_medical),
+    TdayListIconOption("monitor", R.drawable.ic_lucide_monitor),
+    TdayListIconOption("music", R.drawable.ic_lucide_music),
+    TdayListIconOption("computer", R.drawable.ic_lucide_monitor),
+    TdayListIconOption("game", R.drawable.ic_lucide_gamepad_2),
+    TdayListIconOption("headphones", R.drawable.ic_lucide_headphones),
+    TdayListIconOption("eco", R.drawable.ic_lucide_leaf),
+    TdayListIconOption("pets", R.drawable.ic_lucide_paw_print),
+    TdayListIconOption("child", R.drawable.ic_lucide_baby),
+    TdayListIconOption("family", R.drawable.ic_lucide_users_round),
+    TdayListIconOption("basket", R.drawable.ic_lucide_shopping_basket),
+    TdayListIconOption("cart", R.drawable.ic_lucide_shopping_cart),
+    TdayListIconOption("mall", R.drawable.ic_lucide_shopping_bag),
+    TdayListIconOption("inventory", R.drawable.ic_lucide_archive),
+    TdayListIconOption("soccer", R.drawable.ic_lucide_circle),
+    TdayListIconOption("baseball", R.drawable.ic_lucide_circle),
+    TdayListIconOption("basketball", R.drawable.ic_lucide_circle),
+    TdayListIconOption("football", R.drawable.ic_lucide_circle),
+    TdayListIconOption("tennis", R.drawable.ic_lucide_circle),
+    TdayListIconOption("train", R.drawable.ic_lucide_train),
+    TdayListIconOption("flight", R.drawable.ic_lucide_plane),
+    TdayListIconOption("boat", R.drawable.ic_lucide_ship),
+    TdayListIconOption("car", R.drawable.ic_lucide_car),
+    TdayListIconOption("umbrella", R.drawable.ic_lucide_umbrella),
+    TdayListIconOption("drop", R.drawable.ic_lucide_droplet),
+    TdayListIconOption("snow", R.drawable.ic_lucide_snowflake),
+    TdayListIconOption("fire", R.drawable.ic_lucide_flame),
+    TdayListIconOption("tools", R.drawable.ic_lucide_hammer),
+    TdayListIconOption("scissors", R.drawable.ic_lucide_scissors),
+    TdayListIconOption("architecture", R.drawable.ic_lucide_landmark),
+    TdayListIconOption("code", R.drawable.ic_lucide_code),
+    TdayListIconOption("idea", R.drawable.ic_lucide_lightbulb),
+    TdayListIconOption("chat", R.drawable.ic_lucide_message_circle),
+    TdayListIconOption("alert", R.drawable.ic_lucide_triangle_alert),
+    TdayListIconOption("star", R.drawable.ic_lucide_star),
+    TdayListIconOption("heart", R.drawable.ic_lucide_heart),
+    TdayListIconOption("circle", R.drawable.ic_lucide_circle),
+    TdayListIconOption("square", R.drawable.ic_lucide_square),
+    TdayListIconOption("triangle", R.drawable.ic_lucide_triangle),
+    TdayListIconOption("home", R.drawable.ic_lucide_house),
+    TdayListIconOption("city", R.drawable.ic_lucide_building_2),
+    TdayListIconOption("bank", R.drawable.ic_lucide_landmark),
+    TdayListIconOption("camera", R.drawable.ic_lucide_camera),
+    TdayListIconOption("palette", R.drawable.ic_lucide_palette),
 )
 
-private val TdayListIconMap = TdayListIconOptions.associate { it.key to it.icon }
+private val TdayListIconMap = TdayListIconOptions.associate { it.key to it.iconRes }
 
-fun tdayListIconForKey(iconKey: String?): ImageVector {
+/** Lucide drawable resource for a list icon key (falls back to the default inbox glyph). */
+@DrawableRes
+fun tdayListIconResForKey(iconKey: String?): Int {
     val normalizedKey = normalizeTdayListIconKeyOrNull(iconKey)
     return normalizedKey?.let { TdayListIconMap[it] }
         ?: TdayListIconMap.getValue(TDAY_DEFAULT_LIST_ICON_KEY)
 }
+
+/** Loads the list icon as an [ImageVector] for `Icon(imageVector = ...)` call sites. */
+@Composable
+fun tdayListIconForKey(iconKey: String?): ImageVector =
+    ImageVector.vectorResource(tdayListIconResForKey(iconKey))
 
 fun isTdayListIconKeySupported(iconKey: String): Boolean {
     return normalizeTdayListIconKeyOrNull(iconKey) != null

@@ -242,6 +242,62 @@ struct TdayBackground<Content: View>: View {
     }
 }
 
+// List icons are Lucide glyphs shared across web/Android/iOS — see docs/ICONS.md.
+// Each iconKey maps to a template SVG imageset named Lucide<Glyph>.
+private let tdayLucideListAssetTable: [String: String] = [
+    "inbox": "LucideInbox", "sun": "LucideSun", "calendar": "LucideCalendar",
+    "schedule": "LucideClock", "flag": "LucideFlag", "check": "LucideCheck",
+    "smile": "LucideSmile", "list": "LucideList", "bookmark": "LucideBookmark",
+    "key": "LucideKey", "gift": "LucideGift", "cake": "LucideCake",
+    "school": "LucideGraduationCap", "bag": "LucideBackpack", "edit": "LucidePencil",
+    "document": "LucideFileText", "book": "LucideBook", "work": "LucideBriefcaseBusiness",
+    "wallet": "LucideWalletCards", "money": "LucideCircleDollarSign", "fitness": "LucideDumbbell",
+    "run": "LucideActivity", "food": "LucideUtensils", "drink": "LucideWine",
+    "health": "LucideBriefcaseMedical", "monitor": "LucideMonitor", "music": "LucideMusic",
+    "computer": "LucideMonitor", "game": "LucideGamepad2", "headphones": "LucideHeadphones",
+    "eco": "LucideLeaf", "pets": "LucidePawPrint", "child": "LucideBaby",
+    "family": "LucideUsersRound", "basket": "LucideShoppingBasket", "cart": "LucideShoppingCart",
+    "mall": "LucideShoppingBag", "inventory": "LucideArchive", "soccer": "LucideCircle",
+    "baseball": "LucideCircle", "basketball": "LucideCircle", "football": "LucideCircle",
+    "tennis": "LucideCircle", "train": "LucideTrain", "flight": "LucidePlane",
+    "boat": "LucideShip", "car": "LucideCar", "umbrella": "LucideUmbrella",
+    "drop": "LucideDroplet", "snow": "LucideSnowflake", "fire": "LucideFlame",
+    "tools": "LucideHammer", "scissors": "LucideScissors", "architecture": "LucideLandmark",
+    "code": "LucideCode", "idea": "LucideLightbulb", "chat": "LucideMessageCircle",
+    "alert": "LucideTriangleAlert", "star": "LucideStar", "heart": "LucideHeart",
+    "circle": "LucideCircle", "square": "LucideSquare", "triangle": "LucideTriangle",
+    "home": "LucideHouse", "city": "LucideBuilding2", "bank": "LucideLandmark",
+    "camera": "LucideCamera", "palette": "LucidePalette",
+]
+
+/// Asset-catalog name of the shared Lucide template glyph for a list iconKey.
+func tdayLucideListAsset(_ key: String?) -> String {
+    let candidate = (key ?? "").trimmingCharacters(in: .whitespaces).lowercased()
+    let normalized: String
+    switch candidate {
+    case "briefcase": normalized = "work"
+    case "cocktail": normalized = "drink"
+    case "travel": normalized = "flight"
+    case "": normalized = "inbox"
+    default: normalized = candidate
+    }
+    return tdayLucideListAssetTable[normalized] ?? "LucideInbox"
+}
+
+/// Renders a list icon as a tintable template image (replaces SF Symbol list icons).
+struct TdayListIcon: View {
+    let iconKey: String?
+    var size: CGFloat = 24
+
+    var body: some View {
+        Image(tdayLucideListAsset(iconKey))
+            .renderingMode(.template)
+            .resizable()
+            .scaledToFit()
+            .frame(width: size, height: size)
+    }
+}
+
 struct EmptyTaskWatermark: View {
     let systemName: String
     let accentColor: Color
