@@ -22,6 +22,7 @@ import ListDot from "@/components/ListDot";
 import NLPTitleInput from "./NLPTitleInput";
 import TaskSelectorOverlays, { type TaskSelector } from "./TodoFormSelectors";
 import { priorityLabelKey, repeatLabelKey } from "./labels";
+import { getPriorityFlag } from "@/lib/priority";
 
 interface TodoFormProps {
   editInstanceOnly?: boolean;
@@ -103,7 +104,6 @@ const TodoForm = ({
             setTitle={setTitle}
             titleRef={titleRef}
             setDateRange={setDateRange}
-            onSubmit={handleForm}
           />
         </div>
         <SheetDivider />
@@ -152,7 +152,16 @@ const TodoForm = ({
           icon={<Flag className="h-5 w-5" />}
           label={appDict("priority")}
           ariaLabel={`${appDict("priority")}, ${appDict(priorityLabelKey[priority])}`}
-          value={null}
+          value={
+            <>
+              {getPriorityFlag(priority) ? (
+                <Flag
+                  className={`h-3.5 w-3.5 shrink-0 ${getPriorityFlag(priority)!.className}`}
+                />
+              ) : null}
+              <span className="truncate">{appDict(priorityLabelKey[priority])}</span>
+            </>
+          }
           onClick={() => setActive("priority")}
         />
         <SheetDivider />

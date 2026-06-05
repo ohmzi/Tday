@@ -551,10 +551,20 @@ private struct CreateTaskSheetScheduleToggleRow: View {
     var body: some View {
         Toggle(isOn: $isOn.animation(.spring(response: 0.28, dampingFraction: 0.9))) {
             HStack(spacing: 10) {
-                Image(systemName: isOn ? "calendar.badge.clock" : "tray.full")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(colors.onSurfaceVariant)
-                    .frame(width: 22, height: 22)
+                Group {
+                    if isOn {
+                        Image(systemName: "calendar.badge.clock")
+                            .font(.system(size: 20, weight: .semibold))
+                    } else {
+                        Image("LucideLeaf")
+                            .renderingMode(.template)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 20, height: 20)
+                    }
+                }
+                .foregroundStyle(colors.onSurfaceVariant)
+                .frame(width: 22, height: 22)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Schedule")

@@ -75,6 +75,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
@@ -473,7 +474,7 @@ fun CreateTaskBottomSheet(
                                             Column {
                                                 RowDivider()
                                                 SplitDateTimeRow(
-                                                    icon = Icons.Rounded.CalendarMonth,
+                                                    icon = ImageVector.vectorResource(R.drawable.ic_lucide_calendar_clock),
                                                     title = stringResource(R.string.create_task_due),
                                                     dateValue = dateOnlyFormatter.format(
                                                         Instant.ofEpochMilli(
@@ -496,7 +497,7 @@ fun CreateTaskBottomSheet(
                                 SectionHeading(stringResource(R.string.create_task_section_details))
                                 GroupCard {
                                     SheetDropdownRow(
-                                        icon = Icons.AutoMirrored.Rounded.List,
+                                        icon = ImageVector.vectorResource(R.drawable.ic_lucide_list),
                                         title = stringResource(R.string.create_task_list),
                                         value = selectedListName,
                                         options = listOf<ListSummary?>(null) + lists,
@@ -516,7 +517,7 @@ fun CreateTaskBottomSheet(
                                     )
                                     RowDivider()
                                     SheetDropdownRow(
-                                        icon = Icons.Rounded.LowPriority,
+                                        icon = ImageVector.vectorResource(R.drawable.ic_lucide_flag),
                                         title = stringResource(R.string.create_task_priority),
                                         value = priorityLabels.getValue(selectedPriority),
                                         options = priorityOptions,
@@ -528,7 +529,7 @@ fun CreateTaskBottomSheet(
                                     if (showScheduleControls) {
                                         RowDivider()
                                         SheetDropdownRow(
-                                            icon = Icons.Rounded.Repeat,
+                                            icon = ImageVector.vectorResource(R.drawable.ic_lucide_repeat),
                                             title = stringResource(R.string.create_task_repeat),
                                             value = repeatLabels.getValue(repeatPreset),
                                             options = if (scheduleEnabled) {
@@ -795,7 +796,9 @@ private fun ScheduleSwitchRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
-            imageVector = Icons.Rounded.CalendarMonth,
+            imageVector = ImageVector.vectorResource(
+                if (enabled) R.drawable.ic_lucide_calendar_clock else R.drawable.ic_lucide_leaf,
+            ),
             contentDescription = null,
             tint = colorScheme.onSurfaceVariant,
             modifier = Modifier.size(22.dp),

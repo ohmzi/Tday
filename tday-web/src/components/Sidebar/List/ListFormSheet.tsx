@@ -220,10 +220,12 @@ export default function ListFormSheet({
             <Input
               value={name}
               onChange={(event) => setName(event.target.value)}
+              enterKeyHint="done"
               onKeyDown={(event) => {
                 if (event.key === "Enter") {
+                  // Enter dismisses the keyboard (like native) instead of submitting.
                   event.preventDefault();
-                  void handleSubmit();
+                  event.currentTarget.blur();
                 }
               }}
               placeholder={appDict("listName")}
