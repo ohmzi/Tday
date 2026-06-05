@@ -37,12 +37,9 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.List
 import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.ExpandMore
-import androidx.compose.material.icons.rounded.LowPriority
-import androidx.compose.material.icons.rounded.Repeat
 import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -75,13 +72,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
@@ -102,6 +99,7 @@ import com.ohmz.tday.compose.ui.priority.canonicalPriorityValue
 import com.ohmz.tday.compose.ui.priority.priorityDisplayLabelRes
 import com.ohmz.tday.compose.ui.theme.TdayTaskCompleteAccent
 import com.ohmz.tday.compose.ui.theme.tdayListAccentColorOrNull
+import com.ohmz.tday.compose.ui.theme.tdayListIconForKey
 import com.ohmz.tday.compose.ui.theme.tdayPriorityColor
 import kotlinx.coroutines.delay
 import java.time.Instant
@@ -514,6 +512,21 @@ fun CreateTaskBottomSheet(
                                         onOptionSelected = { option ->
                                             selectedListId = option?.id
                                         },
+                                        valueLeading = {
+                                            val selected =
+                                                lists.firstOrNull { it.id == selectedListId }
+                                            if (selected != null) {
+                                                Icon(
+                                                    imageVector = tdayListIconForKey(selected.iconKey),
+                                                    contentDescription = null,
+                                                    tint = listColorSwatchForSelector(
+                                                        raw = selected.color,
+                                                        fallback = colorScheme.primary.copy(alpha = 0.75f),
+                                                    ),
+                                                    modifier = Modifier.size(16.dp),
+                                                )
+                                            }
+                                        },
                                     )
                                     RowDivider()
                                     SheetDropdownRow(
@@ -525,6 +538,14 @@ fun CreateTaskBottomSheet(
                                         optionSwatchColor = { option -> tdayPriorityColor(option) },
                                         isSelected = { option -> selectedPriority == option },
                                         onOptionSelected = { option -> selectedPriority = option },
+                                        valueLeading = {
+                                            Icon(
+                                                imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_flag),
+                                                contentDescription = null,
+                                                tint = tdayPriorityColor(selectedPriority),
+                                                modifier = Modifier.size(16.dp),
+                                            )
+                                        },
                                     )
                                     if (showScheduleControls) {
                                         RowDivider()
@@ -843,6 +864,7 @@ private fun SheetRow(
     title: String,
     value: String,
     onClick: () -> Unit,
+    valueLeading: (@Composable () -> Unit)? = null,
 ) {
     val view = LocalView.current
     val colorScheme = MaterialTheme.colorScheme
@@ -879,6 +901,11 @@ private fun SheetRow(
             modifier = Modifier
                 .padding(start = 8.dp),
         ) {
+            if (valueLeading != null) {
+                valueLeading()
+                Spacer(modifier = Modifier.width(6.dp))
+            }
+
             Text(
                 text = value,
                 style = MaterialTheme.typography.bodyMedium,
@@ -909,6 +936,7 @@ private fun <T> SheetDropdownRow(
     optionSwatchColor: (T) -> Color,
     isSelected: (T) -> Boolean,
     onOptionSelected: (T) -> Unit,
+    valueLeading: (@Composable () -> Unit)? = null,
 ) {
     var selectorOpen by remember { mutableStateOf(false) }
 
@@ -918,6 +946,7 @@ private fun <T> SheetDropdownRow(
             title = title,
             value = value,
             onClick = { selectorOpen = true },
+            valueLeading = valueLeading,
         )
 
         if (selectorOpen) {
