@@ -1,6 +1,7 @@
 package com.ohmz.tday.compose.feature.home
 
 import androidx.activity.compose.BackHandler
+import androidx.annotation.DrawableRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
@@ -14,7 +15,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.LocalOverscrollConfiguration
 import androidx.compose.foundation.background
@@ -62,19 +62,14 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
 import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.CalendarToday
-import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
-import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material.icons.rounded.Flag
-import androidx.compose.material.icons.rounded.Inbox
 import androidx.compose.material.icons.rounded.MoreHoriz
 import androidx.compose.material.icons.rounded.NightsStay
 import androidx.compose.material.icons.rounded.RadioButtonUnchecked
-import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.WbSunny
 import androidx.compose.material3.Card
@@ -110,13 +105,11 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -129,6 +122,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextLayoutResult
@@ -1929,8 +1923,8 @@ private fun CategoryGrid(
             CategoryCard(
                 modifier = Modifier.weight(1f),
                 color = Color(0xFFD98F4B),
-                icon = Icons.Rounded.Schedule,
-                backgroundWatermark = Icons.Rounded.Schedule,
+                iconRes = R.drawable.ic_lucide_calendar_clock,
+                watermarkRes = R.drawable.ic_lucide_calendar_clock,
                 title = stringResource(R.string.home_category_scheduled),
                 count = scheduledCount,
                 onClick = onOpenScheduled,
@@ -1938,8 +1932,8 @@ private fun CategoryGrid(
             CategoryCard(
                 modifier = Modifier.weight(1f),
                 color = Color(0xFFC97880),
-                icon = Icons.Rounded.Flag,
-                backgroundWatermark = Icons.Rounded.Flag,
+                iconRes = R.drawable.ic_lucide_flag,
+                watermarkRes = R.drawable.ic_lucide_flag,
                 title = stringResource(R.string.home_category_priority),
                 count = priorityCount,
                 onClick = onOpenPriority,
@@ -1949,8 +1943,8 @@ private fun CategoryGrid(
             CategoryCard(
                 modifier = Modifier.weight(1f),
                 color = Color(0xFFE06F66),
-                icon = Icons.Rounded.ErrorOutline,
-                backgroundWatermark = Icons.Rounded.ErrorOutline,
+                iconRes = R.drawable.ic_lucide_clock_3,
+                watermarkRes = R.drawable.ic_lucide_clock_3,
                 title = stringResource(R.string.home_category_overdue),
                 count = overdueCount,
                 onClick = onOpenOverdue,
@@ -1958,8 +1952,8 @@ private fun CategoryGrid(
             CategoryCard(
                 modifier = Modifier.weight(1f),
                 color = Color(0xFF68717A),
-                icon = Icons.Rounded.Inbox,
-                backgroundWatermark = Icons.Rounded.Inbox,
+                iconRes = R.drawable.ic_lucide_layers,
+                watermarkRes = R.drawable.ic_lucide_layers,
                 title = stringResource(R.string.home_category_all),
                 count = allCount,
                 onClick = onOpenAll,
@@ -1969,8 +1963,8 @@ private fun CategoryGrid(
             CategoryCard(
                 modifier = Modifier.weight(1f),
                 color = completedColor,
-                icon = Icons.Rounded.Check,
-                backgroundWatermark = Icons.Rounded.Check,
+                iconRes = R.drawable.ic_lucide_circle_check_big,
+                watermarkRes = R.drawable.ic_lucide_circle_check_big,
                 title = stringResource(R.string.home_category_completed),
                 count = completedCount,
                 onClick = onOpenCompleted,
@@ -1978,8 +1972,8 @@ private fun CategoryGrid(
             CategoryCard(
                 modifier = Modifier.weight(1f),
                 color = calendarTileColor(colorScheme),
-                icon = Icons.Rounded.CalendarToday,
-                backgroundGrid = true,
+                iconRes = R.drawable.ic_lucide_calendar_1,
+                watermarkRes = R.drawable.ic_lucide_calendar_1,
                 title = "Calendar",
                 count = calendarCount,
                 onClick = onOpenCalendar,
@@ -2000,9 +1994,8 @@ private fun calendarTileColor(colorScheme: ColorScheme): Color {
 private fun CategoryCard(
     modifier: Modifier,
     color: Color,
-    icon: ImageVector,
-    backgroundWatermark: ImageVector? = null,
-    backgroundGrid: Boolean = false,
+    @DrawableRes iconRes: Int,
+    @DrawableRes watermarkRes: Int? = null,
     title: String,
     count: Int? = null,
     onClick: () -> Unit,
@@ -2082,58 +2075,14 @@ private fun CategoryCard(
                     }
                 }
         ) {
-            if (backgroundGrid) {
-                val gridTint = lerp(color, Color.White, 0.32f)
-                Box(modifier = Modifier.matchParentSize()) {
-                    Canvas(
-                        modifier = Modifier
-                            .align(Alignment.CenterEnd)
-                            .offset(x = 28.dp, y = 14.dp)
-                            .size(width = 172.dp, height = 116.dp)
-                            .graphicsLayer { alpha = 0.42f },
-                    ) {
-                        val cols = 6
-                        val rows = 4
-                        val stroke = 1.2.dp.toPx()
-                        val lineColor = gridTint.copy(alpha = 0.85f)
-                        val borderColor = gridTint.copy(alpha = 0.95f)
-
-                        drawRoundRect(
-                            color = borderColor,
-                            cornerRadius = CornerRadius(8.dp.toPx(), 8.dp.toPx()),
-                            style = Stroke(width = stroke),
-                        )
-
-                        for (i in 1 until cols) {
-                            val x = size.width * i / cols
-                            drawLine(
-                                color = lineColor,
-                                start = Offset(x, 0f),
-                                end = Offset(x, size.height),
-                                strokeWidth = stroke,
-                            )
-                        }
-                        for (j in 1 until rows) {
-                            val y = size.height * j / rows
-                            drawLine(
-                                color = lineColor,
-                                start = Offset(0f, y),
-                                end = Offset(size.width, y),
-                                strokeWidth = stroke,
-                            )
-                        }
-                    }
-                }
-            }
-
-            if (backgroundWatermark != null) {
+            if (watermarkRes != null) {
                 Box(modifier = Modifier.matchParentSize()) {
                     Icon(
                         modifier = Modifier
                             .align(Alignment.CenterEnd)
                             .offset(x = 22.dp, y = 12.dp)
                             .size(124.dp),
-                        imageVector = backgroundWatermark,
+                        painter = painterResource(watermarkRes),
                         contentDescription = null,
                         tint = lerp(color, Color.White, 0.28f).copy(alpha = 0.4f),
                     )
@@ -2152,7 +2101,7 @@ private fun CategoryCard(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Icon(
-                        icon,
+                        painter = painterResource(iconRes),
                         contentDescription = null,
                         tint = Color.White,
                         modifier = Modifier.size(26.dp),

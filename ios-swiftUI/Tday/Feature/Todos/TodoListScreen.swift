@@ -802,7 +802,8 @@ struct TodoListScreen: View {
                 ZStack {
                     EmptyTaskWatermark(
                         systemName: emptyWatermarkSystemName(for: context.date),
-                        accentColor: modeAccentColor
+                        accentColor: modeAccentColor,
+                        assetName: emptyTimelineAssetName(for: viewModel.mode)
                     )
                     if viewModel.items.isEmpty, !viewModel.isLoading {
                         EmptyTaskBackgroundMessage(
@@ -3959,6 +3960,23 @@ private func emptyTimelineMessage(for mode: TodoListMode) -> String {
         return "No floater tasks"
     case .list:
         return "No tasks in this list"
+    }
+}
+
+/// Lucide template-asset watermark for the home-category modes, mirroring web.
+/// Returns nil for modes that keep their SF Symbol watermark (today/floater/list).
+private func emptyTimelineAssetName(for mode: TodoListMode) -> String? {
+    switch mode {
+    case .overdue:
+        return "TileOverdue"
+    case .scheduled:
+        return "TileScheduled"
+    case .all:
+        return "TileAll"
+    case .priority:
+        return "TilePriority"
+    default:
+        return nil
     }
 }
 

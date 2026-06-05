@@ -31,7 +31,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.BorderColor
-import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.ChevronLeft
 import androidx.compose.material.icons.rounded.DeleteOutline
@@ -290,7 +289,7 @@ fun CompletedScreen(
             }
 
             EmptyTaskWatermark(
-                imageVector = Icons.Rounded.Check,
+                iconRes = R.drawable.ic_lucide_circle_check_big,
                 accentColor = COMPLETED_TITLE_COLOR,
             )
             if (uiState.items.isEmpty() && !uiState.isLoading) {

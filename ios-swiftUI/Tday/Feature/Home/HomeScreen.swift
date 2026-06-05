@@ -932,8 +932,8 @@ private struct HomeCategoryBoard: View {
             HStack(spacing: HomeMetrics.tileGap) {
                 HomeCategoryTile(
                     color: Color(hex: 0xD98F4B),
-                    icon: "clock",
-                    watermark: "clock",
+                    icon: "TileScheduled",
+                    watermark: "TileScheduled",
                     title: "Scheduled",
                     count: scheduledCount,
                     action: onOpenScheduled
@@ -941,8 +941,8 @@ private struct HomeCategoryBoard: View {
 
                 HomeCategoryTile(
                     color: Color(hex: 0xC97880),
-                    icon: "flag.fill",
-                    watermark: "flag.fill",
+                    icon: "TilePriority",
+                    watermark: "TilePriority",
                     title: "Priority",
                     count: priorityCount,
                     action: onOpenPriority
@@ -952,8 +952,8 @@ private struct HomeCategoryBoard: View {
             HStack(spacing: HomeMetrics.tileGap) {
                 HomeCategoryTile(
                     color: Color(hex: 0xE06F66),
-                    icon: "exclamationmark.circle",
-                    watermark: "exclamationmark.circle",
+                    icon: "TileOverdue",
+                    watermark: "TileOverdue",
                     title: "Overdue",
                     count: overdueCount,
                     action: onOpenOverdue
@@ -961,8 +961,8 @@ private struct HomeCategoryBoard: View {
 
                 HomeCategoryTile(
                     color: Color(hex: 0x68717A),
-                    icon: "tray.fill",
-                    watermark: "tray.fill",
+                    icon: "TileAll",
+                    watermark: "TileAll",
                     title: "All",
                     count: allCount,
                     action: onOpenAll
@@ -972,8 +972,8 @@ private struct HomeCategoryBoard: View {
             HStack(spacing: HomeMetrics.tileGap) {
                 HomeCategoryTile(
                     color: Color(hex: 0x719F84),
-                    icon: "checkmark",
-                    watermark: "checkmark",
+                    icon: "TileComplete",
+                    watermark: "TileComplete",
                     title: "Completed",
                     count: completedCount,
                     action: onOpenCompleted
@@ -981,11 +981,10 @@ private struct HomeCategoryBoard: View {
 
                 HomeCategoryTile(
                     color: Color(hex: 0x9A89D2),
-                    icon: "calendar",
-                    watermark: nil,
+                    icon: "TileCalendar",
+                    watermark: "TileCalendar",
                     title: "Calendar",
                     count: calendarCount,
-                    backgroundGrid: true,
                     action: onOpenCalendar
                 )
             }
@@ -995,11 +994,11 @@ private struct HomeCategoryBoard: View {
 
 private struct HomeCategoryTile: View {
     let color: Color
+    /// Asset-catalog name of the lucide glyph (template-rendered), shared with web.
     let icon: String
     let watermark: String?
     let title: String
     let count: Int
-    var backgroundGrid = false
     let action: () -> Void
 
     var body: some View {
@@ -1038,14 +1037,12 @@ private struct HomeCategoryTile: View {
                         )
                     )
 
-                if backgroundGrid {
-                    HomeCalendarGridWatermark(baseColor: color)
-                        .allowsHitTesting(false)
-                }
-
                 if let watermark {
-                    Image(systemName: watermark)
-                        .font(.system(size: HomeMetrics.tileWatermarkSize, weight: .regular))
+                    Image(watermark)
+                        .renderingMode(.template)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: HomeMetrics.tileWatermarkSize, height: HomeMetrics.tileWatermarkSize)
                         .foregroundStyle(color.blended(with: .white, amount: 0.28).opacity(0.4))
                         .offset(x: HomeMetrics.tileWatermarkTrailingInset, y: 12)
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
@@ -1054,8 +1051,11 @@ private struct HomeCategoryTile: View {
 
                 VStack(alignment: .leading, spacing: 6) {
                     HStack(alignment: .center) {
-                        Image(systemName: icon)
-                            .font(.system(size: 22, weight: .bold))
+                        Image(icon)
+                            .renderingMode(.template)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 24, height: 24)
                             .foregroundStyle(.white)
                         Spacer()
                         Text("\(count)")
@@ -1075,43 +1075,6 @@ private struct HomeCategoryTile: View {
             .contentShape(shape)
         }
         .buttonStyle(HomeTileButtonStyle())
-    }
-}
-
-private struct HomeCalendarGridWatermark: View {
-    let baseColor: Color
-
-    var body: some View {
-        Canvas { context, size in
-            let rect = CGRect(origin: .zero, size: size)
-            let strokeColor = baseColor.blended(with: .white, amount: 0.32).opacity(0.9)
-            let lineColor = baseColor.blended(with: .white, amount: 0.32).opacity(0.82)
-            let lineWidth: CGFloat = 1.2
-            let cornerRadius: CGFloat = 8
-
-            let border = Path(roundedRect: rect, cornerRadius: cornerRadius)
-            context.stroke(border, with: .color(strokeColor), lineWidth: lineWidth)
-
-            for column in 1..<6 {
-                let x = rect.minX + (rect.width * CGFloat(column) / 6)
-                var path = Path()
-                path.move(to: CGPoint(x: x, y: rect.minY))
-                path.addLine(to: CGPoint(x: x, y: rect.maxY))
-                context.stroke(path, with: .color(lineColor), lineWidth: lineWidth)
-            }
-
-            for row in 1..<4 {
-                let y = rect.minY + (rect.height * CGFloat(row) / 4)
-                var path = Path()
-                path.move(to: CGPoint(x: rect.minX, y: y))
-                path.addLine(to: CGPoint(x: rect.maxX, y: y))
-                context.stroke(path, with: .color(lineColor), lineWidth: lineWidth)
-            }
-        }
-        .frame(width: 172, height: 116)
-        .offset(x: 28, y: 14)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
-        .opacity(0.42)
     }
 }
 
