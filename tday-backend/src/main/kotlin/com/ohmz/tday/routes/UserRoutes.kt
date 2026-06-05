@@ -2,18 +2,27 @@ package com.ohmz.tday.routes
 
 import arrow.core.Either
 import arrow.core.raise.either
+import com.ohmz.tday.config.AppConfig
+import com.ohmz.tday.di.inject
 import com.ohmz.tday.domain.AppError
 import com.ohmz.tday.domain.withAuth
-import com.ohmz.tday.models.request.*
+import com.ohmz.tday.models.request.ChangePasswordRequest
+import com.ohmz.tday.models.request.UserPatchKeyRequest
+import com.ohmz.tday.models.request.UserProfilePatchRequest
 import com.ohmz.tday.plugins.authUser
 import com.ohmz.tday.security.JwtService
 import com.ohmz.tday.security.SessionControl
 import com.ohmz.tday.security.issueSessionCookie
+import com.ohmz.tday.services.CreateApiKeyResponse
+import com.ohmz.tday.services.UserApiKeyService
 import com.ohmz.tday.services.UserService
-import com.ohmz.tday.config.AppConfig
-import io.ktor.server.request.*
-import io.ktor.server.routing.*
-import com.ohmz.tday.di.inject
+import io.ktor.server.request.receive
+import io.ktor.server.routing.Route
+import io.ktor.server.routing.delete
+import io.ktor.server.routing.get
+import io.ktor.server.routing.patch
+import io.ktor.server.routing.post
+import io.ktor.server.routing.route
 
 private val BASE64_REGEX = Regex("^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$")
 
@@ -22,6 +31,7 @@ fun Route.userRoutes() {
     val jwtService by inject<JwtService>()
     val sessionControl by inject<SessionControl>()
     val userService by inject<UserService>()
+    val userApiKeyService by inject<UserApiKeyService>()
 
     route("/user") {
         get {
@@ -79,6 +89,29 @@ fun Route.userRoutes() {
                         call.issueSessionCookie(config, jwtService, refreshedClaims)
                         mapOf("message" to "password changed")
                     }
+                }
+            }
+        }
+
+        route("/api-key") {
+            get {
+                call.withAuth { user ->
+                    userApiKeyService.status(user.id)
+                        .map { mapOf("status" to it) }
+                }
+            }
+
+            post {
+                call.withAuth { user ->
+                    userApiKeyService.generate(user.id)
+                        .map { CreateApiKeyResponse(message = "api key created", apiKey = it) }
+                }
+            }
+
+            delete {
+                call.withAuth { user ->
+                    userApiKeyService.revoke(user.id)
+                        .map { mapOf("message" to "api key revoked") }
                 }
             }
         }
