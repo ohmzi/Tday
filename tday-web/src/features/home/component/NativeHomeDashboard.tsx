@@ -257,9 +257,6 @@ export default function NativeHomeDashboard() {
 
         {todayIncomplete.length > 0 && (
           <section className="space-y-1">
-            <h2 className="px-1 text-[1.75rem] font-black leading-8 text-foreground">
-              Today
-            </h2>
             <TodoGroup
               todos={todayIncomplete}
               reorderable={false}

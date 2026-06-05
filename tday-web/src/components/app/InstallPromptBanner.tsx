@@ -34,13 +34,13 @@ export default function InstallPromptBanner() {
               <p className="mt-1 text-xs font-extrabold leading-relaxed text-muted-foreground">
                 Tap{" "}
                 <Share className="inline h-3.5 w-3.5 -translate-y-px text-accent" />{" "}
-                then <span className="font-black text-foreground">"Add to Home Screen"</span> for
-                offline access and notifications.
+                then <span className="font-black text-foreground">"Add to Home Screen"</span> to
+                launch T'Day full-screen from your home screen.
               </p>
             ) : (
               <>
                 <p className="mt-1 text-xs font-extrabold text-muted-foreground">
-                  Add to your home screen for the full native experience.
+                  Add T'Day to your home screen to launch it in its own window.
                 </p>
                 <button
                   type="button"
