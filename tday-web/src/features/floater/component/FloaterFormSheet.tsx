@@ -9,13 +9,17 @@ import {
   SheetSectionTitle,
   SheetSelectorRow,
 } from "@/components/ui/sheet-chrome";
-import { Button } from "@/components/ui/button";
+import {
+  CenteredSelectorOverlay,
+  SelectorDivider,
+  SelectorRow,
+} from "@/components/ui/sheet-chrome/CenteredSelectorOverlay";
+import { prioritySwatchClass } from "@/components/ui/sheet-chrome/swatches";
 import { useToast } from "@/hooks/use-toast";
 import { useCreateFloater } from "@/features/floater/query/create-floater";
 import { useEditFloater } from "@/features/floater/query/update-floater";
 import { useFloaterListMetaData } from "@/features/floaterList/query/get-floater-list-meta";
 import type { FloaterItemType } from "@/types";
-import { cn } from "@/lib/utils";
 
 type FloaterFormSheetProps = {
   open: boolean;
@@ -186,72 +190,60 @@ export default function FloaterFormSheet({
               priorityOptions.find((option) => option.value === priority)?.labelKey ??
                 "normal",
             )}`}
-            value={appDict(
-              priorityOptions.find((option) => option.value === priority)?.labelKey ??
-                "normal",
-            )}
+            value={null}
             onClick={() => setActiveSelector("priority")}
           />
         </SheetCard>
 
-        {activeSelector === "priority" ? (
-          <SheetCard className="p-2">
-            {priorityOptions.map((option) => (
-              <Button
-                key={option.value}
-                type="button"
-                variant="ghost"
-                className={cn(
-                  "h-12 w-full justify-start rounded-2xl text-base font-black",
-                  priority === option.value && "bg-muted",
-                )}
-                onClick={() => {
-                  setPriority(option.value);
-                  setActiveSelector(null);
-                }}
-              >
-                {appDict(option.labelKey)}
-              </Button>
-            ))}
-          </SheetCard>
-        ) : null}
-
-        {activeSelector === "list" ? (
-          <SheetCard className="p-2">
-            <Button
-              type="button"
-              variant="ghost"
-              className={cn(
-                "h-12 w-full justify-start rounded-2xl text-base font-black",
-                listID == null && "bg-muted",
-              )}
-              onClick={() => {
-                setListID(null);
-                setActiveSelector(null);
-              }}
-            >
-              {appDict("noList")}
-            </Button>
-            {lists.map((list) => (
-              <Button
-                key={list.id}
-                type="button"
-                variant="ghost"
-                className={cn(
-                  "h-12 w-full justify-start gap-2 rounded-2xl text-base font-black",
-                  listID === list.id && "bg-muted",
-                )}
+        <CenteredSelectorOverlay
+          open={activeSelector === "list"}
+          onOpenChange={(open) => !open && setActiveSelector(null)}
+          title={appDict("floaterList")}
+        >
+          <SelectorRow
+            label={appDict("noList")}
+            selected={listID == null}
+            onClick={() => {
+              setListID(null);
+              setActiveSelector(null);
+            }}
+          />
+          {lists.map((list) => (
+            <div key={list.id}>
+              <SelectorDivider />
+              <SelectorRow
+                label={list.name.trim()}
+                swatchNode={<FloaterListDot id={list.id} className="h-2.5 w-2.5" />}
+                selected={listID === list.id}
                 onClick={() => {
                   setListID(list.id);
                   setActiveSelector(null);
                 }}
-              >
-                <FloaterListDot id={list.id} className="h-4 w-4" />
-                <span className="truncate">{list.name}</span>
-              </Button>
-            ))}
-          </SheetCard>
-        ) : null}
+              />
+            </div>
+          ))}
+        </CenteredSelectorOverlay>
+
+        <CenteredSelectorOverlay
+          open={activeSelector === "priority"}
+          onOpenChange={(open) => !open && setActiveSelector(null)}
+          title={appDict("priority")}
+        >
+          {priorityOptions.map((option, index) => (
+            <div key={option.value}>
+              {index > 0 ? <SelectorDivider /> : null}
+              <SelectorRow
+                label={appDict(option.labelKey)}
+                swatchClass={prioritySwatchClass(option.value)}
+                selected={priority === option.value}
+                onClick={() => {
+                  setPriority(option.value);
+                  setActiveSelector(null);
+                }}
+              />
+            </div>
+          ))}
+        </CenteredSelectorOverlay>
       </div>
     </AppBottomSheet>
   );

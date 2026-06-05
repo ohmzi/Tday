@@ -101,7 +101,11 @@ export default function NativeFloaterDashboard() {
               }}
               aria-label={appDict("searchFloaters")}
             >
-              {searchOpen ? <X className="h-5 w-5" /> : <Search className="h-5 w-5" />}
+              {searchOpen ? (
+                <X className="h-6 w-6 stroke-[2.6]" />
+              ) : (
+                <Search className="h-6 w-6 stroke-[2.6]" />
+              )}
             </button>
             <button
               type="button"
@@ -109,7 +113,7 @@ export default function NativeFloaterDashboard() {
               onClick={() => setCreateListOpen(true)}
               aria-label={appDict("newFloaterList")}
             >
-              <ListPlus className="h-5 w-5" />
+              <ListPlus className="h-6 w-6 stroke-[2.6]" />
             </button>
             <button
               type="button"
@@ -117,7 +121,7 @@ export default function NativeFloaterDashboard() {
               onClick={() => router.push("/app/settings")}
               aria-label="Settings"
             >
-              <Ellipsis className="h-5 w-5" />
+              <Ellipsis className="h-6 w-6 stroke-[2.6]" />
             </button>
           </div>
         </header>
