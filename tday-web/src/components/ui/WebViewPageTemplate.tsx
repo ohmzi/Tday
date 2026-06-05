@@ -1,6 +1,6 @@
 import type { ElementType, ReactNode } from "react";
 import { ArrowUpRight } from "lucide-react";
-import MobileSearchHeader from "@/components/ui/MobileSearchHeader";
+import NativeAppBrandButton from "@/components/app/NativeAppBrandButton";
 import {
   Card,
   CardContent,
@@ -46,7 +46,10 @@ export function WebViewPageTemplate({
   return (
     <div className={cn(WEB_VIEW_PAGE_CLASS, className)}>
       <div className="lg:hidden">
-        <MobileSearchHeader />
+        <header className="sticky top-0 z-40 flex w-full items-center justify-between gap-2.5 bg-background pt-[calc(0.5rem+env(safe-area-inset-top))] pb-1.5">
+          <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-full h-screen bg-background" />
+          <NativeAppBrandButton className="min-w-0 max-w-[58%] sm:max-w-none" />
+        </header>
       </div>
 
       <header className="mt-8 space-y-1 sm:mt-10 lg:mt-0">

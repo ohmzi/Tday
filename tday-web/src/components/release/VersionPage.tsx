@@ -7,7 +7,7 @@ import {
   WEB_VIEW_CARD_CLASS,
   WebViewSectionCard,
 } from "@/components/ui/WebViewPageTemplate";
-import MobileSearchHeader from "@/components/ui/MobileSearchHeader";
+import NativeAppBrandButton from "@/components/app/NativeAppBrandButton";
 import NativePageTitle from "@/components/app/NativePageTitle";
 import { nativeScreenAccentColors } from "@/components/app/nativeScreenTheme";
 import {
@@ -23,7 +23,10 @@ const SURFACE_CLASS = "rounded-xl border border-border/70 bg-background/50";
 function VersionPageShell({ children }: { children: ReactNode }) {
   return (
     <div className="w-full space-y-5 pb-10">
-      <MobileSearchHeader />
+      <header className="sticky top-0 z-40 flex w-full items-center justify-between gap-2.5 bg-background pt-[calc(0.5rem+env(safe-area-inset-top))] pb-1.5 lg:static lg:bg-transparent lg:pt-2 lg:pb-2">
+        <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-full h-screen bg-background lg:hidden" />
+        <NativeAppBrandButton className="min-w-0 max-w-[58%] sm:max-w-none" />
+      </header>
 
       <Link
         to="/app/admin"
