@@ -34,3 +34,18 @@ export function hapticDragOver(): void {
 export function hapticDrop(): void {
   vibrate([20, 30, 50]);
 }
+
+/** Light tap — button press, search, add/create actions. */
+export function hapticButtonTap(): void {
+  vibrate(15);
+}
+
+/** Confirm action — sheet confirm, form submit, accept edit. */
+export function hapticConfirm(): void {
+  vibrate([20, 30, 40]);
+}
+
+/** Dismiss — sheet close, cancel, clear. */
+export function hapticDismiss(): void {
+  vibrate(8);
+}

@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { hapticTick } from "@/lib/haptics";
 
 // Centered overlay selector — mirrors iOS TdayCenteredSelectorCard. Built on
 // Radix Dialog so it portals to <body> and stacks (z-[60]) above the vaul drawer
@@ -54,7 +55,7 @@ export function SelectorRow({
   return (
     <button
       type="button"
-      onClick={onClick}
+      onClick={() => { hapticTick(); onClick(); }}
       aria-pressed={selected}
       className="flex w-full items-center gap-3.5 px-5 py-3 text-left transition-colors hover:bg-muted-foreground/5"
     >

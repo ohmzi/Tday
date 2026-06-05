@@ -77,8 +77,19 @@ struct TdaySheetActionButton: View {
 
     @Environment(\.tdayColors) private var colors
 
+    private var isConfirm: Bool {
+        accentColor == TdaySheetMetrics.confirmAccent
+    }
+
     var body: some View {
-        Button(action: action) {
+        Button {
+            if isConfirm {
+                HapticManager.sheetConfirm()
+            } else {
+                HapticManager.sheetDismiss()
+            }
+            action()
+        } label: {
             Image(systemName: systemName)
                 .font(.system(size: TdaySheetMetrics.actionIconSize, weight: .semibold))
                 .foregroundStyle(colors.onSurface.opacity(isEnabled ? 1 : 0.55))
@@ -262,6 +273,7 @@ private struct TdayBottomSheetPresentationHost<SheetContent: View>: View {
     }
 
     private func dismissSheet() {
+        HapticManager.sheetDismiss()
         // Drop the keyboard first so it doesn't linger during the dismiss.
         UIApplication.shared.sendAction(
             #selector(UIResponder.resignFirstResponder),
@@ -322,7 +334,10 @@ struct TdayCenteredSelectorRow: View {
     @Environment(\.tdayColors) private var colors
 
     var body: some View {
-        Button(action: action) {
+        Button {
+            HapticManager.gentleTap()
+            action()
+        } label: {
             HStack(spacing: 14) {
                 Circle()
                     .fill(swatchColor)

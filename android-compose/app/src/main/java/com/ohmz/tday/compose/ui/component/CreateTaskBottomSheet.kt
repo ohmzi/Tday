@@ -79,6 +79,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -86,6 +87,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.core.view.HapticFeedbackConstantsCompat
+import androidx.core.view.ViewCompat
 import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.ListSummary
@@ -679,6 +682,7 @@ private fun SplitDateTimeRow(
     onDateClick: () -> Unit,
     onTimeClick: () -> Unit,
 ) {
+    val view = LocalView.current
     val colorScheme = MaterialTheme.colorScheme
     val splitShape = RoundedCornerShape(14.dp)
 
@@ -718,7 +722,13 @@ private fun SplitDateTimeRow(
             Box(
                 modifier = Modifier
                     .weight(1f)
-                    .clickable(onClick = onDateClick)
+                    .clickable(onClick = {
+                        ViewCompat.performHapticFeedback(
+                            view,
+                            HapticFeedbackConstantsCompat.CLOCK_TICK
+                        )
+                        onDateClick()
+                    })
                     .padding(horizontal = 8.dp, vertical = 8.dp),
                 contentAlignment = Alignment.Center,
             ) {
@@ -742,7 +752,13 @@ private fun SplitDateTimeRow(
             Box(
                 modifier = Modifier
                     .weight(1f)
-                    .clickable(onClick = onTimeClick)
+                    .clickable(onClick = {
+                        ViewCompat.performHapticFeedback(
+                            view,
+                            HapticFeedbackConstantsCompat.CLOCK_TICK
+                        )
+                        onTimeClick()
+                    })
                     .padding(horizontal = 8.dp, vertical = 8.dp),
                 contentAlignment = Alignment.Center,
             ) {
@@ -764,12 +780,16 @@ private fun ScheduleSwitchRow(
     enabled: Boolean,
     onEnabledChange: (Boolean) -> Unit,
 ) {
+    val view = LocalView.current
     val colorScheme = MaterialTheme.colorScheme
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onEnabledChange(!enabled) }
+            .clickable {
+                ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+                onEnabledChange(!enabled)
+            }
             .heightIn(min = 72.dp)
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -821,12 +841,16 @@ private fun SheetRow(
     value: String,
     onClick: () -> Unit,
 ) {
+    val view = LocalView.current
     val colorScheme = MaterialTheme.colorScheme
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .clickable(onClick = {
+                ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+                onClick()
+            })
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

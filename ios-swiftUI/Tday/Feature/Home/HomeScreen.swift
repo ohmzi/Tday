@@ -304,6 +304,7 @@ struct HomeScreen: View {
                                     Spacer(minLength: 12)
 
                                     TaskFloatingActionButton {
+                                        HapticManager.buttonTap()
                                         closeSearch()
                                         showingCreateTask = true
                                     }
@@ -583,10 +584,12 @@ private struct HomeTopBar: View {
 
             HStack(spacing: buttonGap) {
                 HomeIconCircleButton(icon: "text.badge.plus") {
+                    HapticManager.buttonTap()
                     onCreateList()
                 }
 
                 HomeIconCircleButton(icon: "ellipsis") {
+                    HapticManager.gentleTap()
                     onOpenSettings()
                 }
             }
@@ -595,6 +598,7 @@ private struct HomeTopBar: View {
 
             ZStack {
                 Button {
+                    HapticManager.buttonTap()
                     withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
                         searchExpanded = true
                     }
@@ -625,6 +629,7 @@ private struct HomeTopBar: View {
                         .disabled(!searchExpanded)
 
                     Button {
+                        HapticManager.sheetDismiss()
                         onSearchClose()
                     } label: {
                         Image(systemName: "xmark.circle.fill")
@@ -803,6 +808,7 @@ private struct HomeTodayTaskRow: View {
             openSwipeTaskID = nil
         }
 
+        HapticManager.taskCompleted()
         withAnimation(.easeInOut(duration: 0.18)) {
             completionPhase = .checked
         }

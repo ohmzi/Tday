@@ -218,6 +218,7 @@ fun HomeScreen(
     onRootDockCollapsedChange: (Boolean) -> Unit = {},
     onRootControlsVisibleChange: (Boolean) -> Unit = {},
 ) {
+    val view = LocalView.current
     val colorScheme = MaterialTheme.colorScheme
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -638,6 +639,10 @@ fun HomeScreen(
                                                 .semantics(mergeDescendants = true) {}
                                                 .heightIn(min = 48.dp)
                                                 .clickable {
+                                                    ViewCompat.performHapticFeedback(
+                                                        view,
+                                                        HapticFeedbackConstantsCompat.CLOCK_TICK
+                                                    )
                                                     openTaskFromSearch(todo.id)
                                                 }
                                                 .padding(horizontal = 12.dp, vertical = 9.dp),
@@ -877,6 +882,7 @@ private fun CreateListBottomSheet(
     onDismiss: () -> Unit,
     onCreate: () -> Unit,
 ) {
+    val view = LocalView.current
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
     val dismissKeyboard = {
@@ -1083,7 +1089,13 @@ private fun CreateListBottomSheet(
                                                     bounded = true,
                                                     radius = 24.dp,
                                                 ),
-                                            ) { onListColorChange(option.key) },
+                                            ) {
+                                                ViewCompat.performHapticFeedback(
+                                                    view,
+                                                    HapticFeedbackConstantsCompat.CLOCK_TICK
+                                                )
+                                                onListColorChange(option.key)
+                                            },
                                     )
                                 }
                             }
@@ -1125,7 +1137,13 @@ private fun CreateListBottomSheet(
                                                     bounded = true,
                                                     radius = 24.dp,
                                                 ),
-                                            ) { onListIconChange(option.key) },
+                                            ) {
+                                                ViewCompat.performHapticFeedback(
+                                                    view,
+                                                    HapticFeedbackConstantsCompat.CLOCK_TICK
+                                                )
+                                                onListIconChange(option.key)
+                                            },
                                         contentAlignment = Alignment.Center,
                                     ) {
                                         Icon(

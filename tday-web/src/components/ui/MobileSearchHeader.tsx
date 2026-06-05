@@ -3,6 +3,7 @@ import { Search, X, Command } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import NativeAppBrandButton from "@/components/app/NativeAppBrandButton";
 import { cn } from "@/lib/utils";
+import { hapticButtonTap, hapticDismiss } from "@/lib/haptics";
 
 export interface SearchResultItem {
   id: string;
@@ -57,6 +58,7 @@ export default function MobileSearchHeader({
   }, []);
 
   const openSearch = useCallback(() => {
+    hapticButtonTap();
     clearCollapseTimer();
     setIsExpanded(true);
     window.requestAnimationFrame(() => {
@@ -65,6 +67,7 @@ export default function MobileSearchHeader({
   }, [clearCollapseTimer]);
 
   const closeSearch = useCallback(() => {
+    hapticDismiss();
     clearCollapseTimer();
     setSearchQuery("");
     setIsSearchFocused(false);

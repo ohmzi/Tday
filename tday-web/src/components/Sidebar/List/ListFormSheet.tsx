@@ -12,6 +12,7 @@ import {
 import { api } from "@/lib/api-client";
 import { usePathname, useRouter } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
+import { hapticTick, hapticConfirm } from "@/lib/haptics";
 import { listColorMap } from "@/lib/listColorMap";
 import {
   DEFAULT_LIST_ICON_KEY,
@@ -243,7 +244,7 @@ export default function ListFormSheet({
               <button
                 key={option.value}
                 type="button"
-                onClick={() => setColor(option.value)}
+                onClick={() => { hapticTick(); setColor(option.value); }}
                 className={cn(
                   "h-12 w-12 shrink-0 rounded-full transition-transform active:scale-95",
                   option.tailwind,
@@ -268,7 +269,7 @@ export default function ListFormSheet({
                 <button
                   key={option.key}
                   type="button"
-                  onClick={() => setIconKey(option.key)}
+                  onClick={() => { hapticTick(); setIconKey(option.key); }}
                   className={cn(
                     "flex h-12 w-12 shrink-0 items-center justify-center rounded-full transition-transform active:scale-95",
                     selected
@@ -300,7 +301,7 @@ export default function ListFormSheet({
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => setConfirmingDelete(false)}
+                  onClick={() => { hapticConfirm(); setConfirmingDelete(false); }}
                   disabled={deleting}
                   className="rounded-2xl border-border/70 bg-card px-5 font-black"
                 >

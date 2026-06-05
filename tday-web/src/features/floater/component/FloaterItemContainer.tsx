@@ -11,6 +11,7 @@ import { useCompleteFloater } from "@/features/floater/query/complete-floater";
 import { useDeleteFloater } from "@/features/floater/query/delete-floater";
 import type { FloaterItemType } from "@/types";
 import FloaterFormSheet from "./FloaterFormSheet";
+import { hapticButtonTap } from "@/lib/haptics";
 
 type FloaterItemContainerProps = {
   floater: FloaterItemType;
@@ -39,7 +40,7 @@ export default function FloaterItemContainer({
   >(null);
   const completeTimers = useRef<number[]>([]);
   const completing = completePhase !== null;
-  const ACTIONS_WIDTH = 140;
+  const ACTIONS_WIDTH = 110;
   const [swipeX, setSwipeX] = useState(0);
   const [swiping, setSwiping] = useState(false);
   const swipeTouch = useRef<
@@ -141,30 +142,30 @@ export default function FloaterItemContainer({
             aria-label="Edit floater"
             onPointerDown={(event) => event.stopPropagation()}
             onClick={() => {
+              hapticButtonTap();
               setDisplayForm(true);
               closeSwipe();
             }}
-            className="flex flex-col items-center gap-1"
+            className="flex items-center justify-center"
           >
-            <span className="flex h-[34px] w-14 items-center justify-center rounded-[17px] bg-[#4C7DDE]">
-              <SquarePen className="h-5 w-5 text-white" strokeWidth={2.2} />
+            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#4C7DDE]">
+              <SquarePen className="h-4 w-4 text-white" strokeWidth={2.2} />
             </span>
-            <span className="text-[11px] font-bold text-muted-foreground">Edit</span>
           </button>
           <button
             type="button"
             aria-label="Delete floater"
             onPointerDown={(event) => event.stopPropagation()}
             onClick={() => {
+              hapticButtonTap();
               deleteMutateFn(floater);
               closeSwipe();
             }}
-            className="flex flex-col items-center gap-1"
+            className="flex items-center justify-center"
           >
-            <span className="flex h-[34px] w-14 items-center justify-center rounded-[17px] bg-[#FF453A]">
-              <Trash className="h-5 w-5 text-white" strokeWidth={2.2} />
+            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#FF453A]">
+              <Trash className="h-4 w-4 text-white" strokeWidth={2.2} />
             </span>
-            <span className="text-[11px] font-bold text-muted-foreground">Delete</span>
           </button>
         </div>
 
@@ -268,7 +269,7 @@ export default function FloaterItemContainer({
                 type="button"
                 aria-label="Edit floater"
                 onPointerDown={(event) => event.stopPropagation()}
-                onClick={() => setDisplayForm(true)}
+                onClick={() => { hapticButtonTap(); setDisplayForm(true); }}
                 className="rounded-full bg-card/80 p-1.5 text-muted-foreground backdrop-blur transition-colors hover:bg-muted hover:text-foreground"
               >
                 <SquarePen className="h-4 w-4" strokeWidth={1.8} />
@@ -277,7 +278,7 @@ export default function FloaterItemContainer({
                 type="button"
                 aria-label="Delete floater"
                 onPointerDown={(event) => event.stopPropagation()}
-                onClick={() => deleteMutateFn(floater)}
+                onClick={() => { hapticButtonTap(); deleteMutateFn(floater); }}
                 className="rounded-full bg-card/80 p-1.5 text-muted-foreground backdrop-blur transition-colors hover:bg-destructive/10 hover:text-destructive"
               >
                 <Trash className="h-4 w-4" strokeWidth={1.8} />
