@@ -10,6 +10,9 @@ interface Props {
 interface State {
   hasError: boolean;
   isChunkError: boolean;
+  errorMessage: string;
+  errorStack: string;
+  componentStack: string;
 }
 
 /** Detects dynamic-import / chunk-loading failures caused by stale bundles. */
@@ -25,11 +28,17 @@ function isChunkLoadError(error: unknown): boolean {
 class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
-    this.state = { hasError: false, isChunkError: false };
+    this.state = { hasError: false, isChunkError: false, errorMessage: "", errorStack: "", componentStack: "" };
   }
 
   static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, isChunkError: isChunkLoadError(error) };
+    return {
+      hasError: true,
+      isChunkError: isChunkLoadError(error),
+      errorMessage: error?.message ?? String(error),
+      errorStack: error?.stack ?? "",
+      componentStack: "",
+    };
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
@@ -37,6 +46,7 @@ class ErrorBoundary extends Component<Props, State> {
       componentStack: errorInfo.componentStack,
     });
     console.error("Error caught by ErrorBoundary:", error, errorInfo);
+    this.setState({ componentStack: errorInfo.componentStack ?? "" });
   }
 
   static handleReload() {
@@ -92,24 +102,40 @@ class ErrorBoundary extends Component<Props, State> {
             <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
               <button
                 type="button"
-                onClick={ErrorBoundary.handleReload}
+                onClick={ErrorBoundary.handleGoHome}
                 className="inline-flex cursor-pointer items-center gap-2 rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/80"
               >
-                <RefreshCw className="h-4 w-4" />
-                Reload page
+                <Home className="h-4 w-4" />
+                Go home
               </button>
 
-              {!isChunkError && (
-                <button
-                  type="button"
-                  onClick={ErrorBoundary.handleGoHome}
-                  className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-input bg-background px-4 py-2.5 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
-                >
-                  <Home className="h-4 w-4" />
-                  Go home
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={ErrorBoundary.handleReload}
+                className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-input bg-background px-4 py-2.5 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Reload
+              </button>
             </div>
+
+            {/* Debug error details — visible in all builds so crash reports can be screenshotted */}
+            {this.state.errorMessage && (
+              <details className="mt-6 w-full max-w-lg text-left">
+                <summary className="cursor-pointer text-xs font-bold text-muted-foreground/60 hover:text-muted-foreground">
+                  Error details
+                </summary>
+                <div className="mt-2 max-h-60 overflow-auto rounded-lg bg-muted/40 p-3 text-xs leading-relaxed text-muted-foreground ring-1 ring-border/40">
+                  <p className="font-bold text-destructive">{this.state.errorMessage}</p>
+                  {this.state.errorStack && (
+                    <pre className="mt-2 whitespace-pre-wrap break-all opacity-70">{this.state.errorStack}</pre>
+                  )}
+                  {this.state.componentStack && (
+                    <pre className="mt-2 whitespace-pre-wrap break-all border-t border-border/30 pt-2 opacity-60">{this.state.componentStack}</pre>
+                  )}
+                </div>
+              </details>
+            )}
           </div>
         </div>
       );
