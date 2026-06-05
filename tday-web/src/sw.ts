@@ -1,10 +1,15 @@
 /// <reference lib="webworker" />
 import { precacheAndRoute, cleanupOutdatedCaches } from "workbox-precaching";
 import { registerRoute, NavigationRoute } from "workbox-routing";
-import { StaleWhileRevalidate } from "workbox-strategies";
+import {
+  StaleWhileRevalidate,
+  NetworkFirst,
+  NetworkOnly,
+} from "workbox-strategies";
 import { CacheableResponsePlugin } from "workbox-cacheable-response";
 import { ExpirationPlugin } from "workbox-expiration";
 import { createHandlerBoundToURL } from "workbox-precaching";
+import type { RouteHandlerCallback } from "workbox-core";
 
 declare const self: ServiceWorkerGlobalScope;
 
@@ -17,17 +22,50 @@ interface NotificationOptionsWithActions extends NotificationOptions {
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", (event) => event.waitUntil(self.clients.claim()));
 
+/* Let the page drive activation / a hard cache reset after a deploy. */
+self.addEventListener("message", (event) => {
+  const data = event.data as { type?: string } | undefined;
+  if (data?.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  } else if (data?.type === "CLEAR_CACHES") {
+    event.waitUntil(
+      caches.keys().then((keys) => Promise.all(keys.map((k) => caches.delete(k)))),
+    );
+  }
+});
+
 /* ── Precaching ── */
 cleanupOutdatedCaches();
 precacheAndRoute(self.__WB_MANIFEST);
 
-/* ── Navigation fallback (offline SPA shell) ── */
-const navigationHandler = createHandlerBoundToURL("/index.html");
+/* ── Navigation: network-first so a new deploy's index.html (with current ── */
+/* ── chunk hashes) is fetched while online; fall back to the precached    ── */
+/* ── shell only when the network fails/times out (offline).               ── */
+const offlineShellHandler = createHandlerBoundToURL("/index.html");
+const networkFirstNavigation = new NetworkFirst({
+  cacheName: "tday-navigation",
+  networkTimeoutSeconds: 4,
+  plugins: [new CacheableResponsePlugin({ statuses: [0, 200] })],
+});
+
+const navigationHandler: RouteHandlerCallback = async (options) => {
+  try {
+    const response = await networkFirstNavigation.handle(options);
+    if (response) return response;
+  } catch {
+    /* offline / network error — fall back to the precached shell */
+  }
+  return offlineShellHandler(options);
+};
+
 registerRoute(
   new NavigationRoute(navigationHandler, {
     denylist: [/^\/api/, /^\/ws/, /^\/.well-known/],
   }),
 );
+
+/* The build-version probe must always hit the origin, never a cache. */
+registerRoute(/^\/version\.json/, new NetworkOnly());
 
 /* ── Runtime API caching (stale-while-revalidate) ── */
 const apiCacheConfig = {

@@ -63,3 +63,34 @@ export function clearStaleChunkReloadFlag(): void {
     // ignore
   }
 }
+
+/**
+ * Separate one-shot guard for the proactive version-gate reload (see
+ * useVersionGate). Kept distinct from RELOAD_KEY so the reactive chunk-error
+ * net and the proactive version check don't consume each other's budget.
+ */
+const VERSION_RELOAD_KEY = "tday:version-reload";
+
+export function versionReloadAlreadyTried(): boolean {
+  try {
+    return sessionStorage.getItem(VERSION_RELOAD_KEY) != null;
+  } catch {
+    return false;
+  }
+}
+
+export function markVersionReloadTried(): void {
+  try {
+    sessionStorage.setItem(VERSION_RELOAD_KEY, "1");
+  } catch {
+    // ignore
+  }
+}
+
+export function clearVersionReloadFlag(): void {
+  try {
+    sessionStorage.removeItem(VERSION_RELOAD_KEY);
+  } catch {
+    // ignore
+  }
+}

@@ -13,6 +13,7 @@ import {
 } from "./lib/observability/sentry";
 import {
   clearStaleChunkReloadFlag,
+  clearVersionReloadFlag,
   reloadOnceForStaleChunk,
 } from "./lib/chunkError";
 
@@ -54,8 +55,11 @@ window.addEventListener("vite:preloadError", (event) => {
 });
 
 // If the app stays alive past initial render, it loaded cleanly — clear the
-// guard so a future deploy within this session can also self-heal.
-window.setTimeout(clearStaleChunkReloadFlag, 8000);
+// reload guards so a future deploy within this session can also self-heal.
+window.setTimeout(() => {
+  clearStaleChunkReloadFlag();
+  clearVersionReloadFlag();
+}, 8000);
 
 if ("serviceWorker" in navigator && import.meta.env.PROD) {
   navigator.serviceWorker

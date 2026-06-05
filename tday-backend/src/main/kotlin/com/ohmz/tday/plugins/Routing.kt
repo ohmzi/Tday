@@ -5,7 +5,9 @@ import com.ohmz.tday.domain.requireApprovedAuthUser
 import com.ohmz.tday.routes.*
 import com.ohmz.tday.routes.auth.*
 import com.ohmz.tday.services.RealtimeService
+import io.ktor.http.HttpHeaders
 import io.ktor.server.application.Application
+import io.ktor.server.response.header
 import io.ktor.server.response.respond
 import io.ktor.server.response.respondFile
 import io.ktor.server.routing.get
@@ -83,10 +85,13 @@ fun Application.configureRouting() {
 
                     val candidate: java.io.File = java.io.File(dir, relPath).canonicalFile
                     if (candidate.isFile && candidate.path.startsWith(dir.path)) {
+                        call.response.header(HttpHeaders.CacheControl, cacheControlFor(relPath))
                         call.respondFile(candidate)
                     } else {
                         val index: java.io.File = java.io.File(dir, "index.html")
                         if (index.isFile) {
+                            // SPA shell for any unknown route: must always revalidate.
+                            call.response.header(HttpHeaders.CacheControl, NO_STORE)
                             call.respondFile(index)
                         }
                     }
@@ -94,4 +99,21 @@ fun Application.configureRouting() {
             }
         }
     }
+}
+
+private const val NO_STORE = "no-cache, no-store, must-revalidate"
+private const val IMMUTABLE = "public, max-age=31536000, immutable"
+private const val DEFAULT_STATIC = "public, max-age=3600"
+
+/**
+ * Cache-Control for a served static file by its relative path.
+ * - version.json and the HTML shell: always revalidate (so new builds are picked up).
+ * - content-hashed files under the assets dir: immutable for a year (filename changes per build).
+ * - everything else (icons, manifest, locales): a modest TTL.
+ */
+private fun cacheControlFor(relPath: String): String = when {
+    relPath == "version.json" -> NO_STORE
+    relPath.startsWith("assets/") -> IMMUTABLE
+    relPath.isEmpty() || relPath.endsWith(".html") -> NO_STORE
+    else -> DEFAULT_STATIC
 }
