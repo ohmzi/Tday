@@ -105,7 +105,7 @@ private struct TodoTrailingSwipeActionsModifier: ViewModifier {
                 Spacer()
                 TodoSwipePillActionButton(
                     title: "Edit",
-                    systemImage: "square.and.pencil",
+                    assetName: "ActionEdit",
                     tint: TaskSwipeActionTint.edit,
                     revealProgress: revealProgress,
                     revealDelay: 0.62
@@ -117,7 +117,7 @@ private struct TodoTrailingSwipeActionsModifier: ViewModifier {
 
                 TodoSwipePillActionButton(
                     title: "Delete",
-                    systemImage: "trash",
+                    assetName: "ActionDelete",
                     tint: TaskSwipeActionTint.delete,
                     revealProgress: revealProgress,
                     revealDelay: 0.04
@@ -315,7 +315,8 @@ private struct HorizontalSwipePanObserver: UIViewRepresentable {
 
 private struct TodoSwipePillActionButton: View {
     let title: String
-    let systemImage: String
+    /// Asset-catalog name of the lucide template glyph (shared with web/Android).
+    let assetName: String
     let tint: Color
     let revealProgress: CGFloat
     let revealDelay: CGFloat
@@ -332,8 +333,11 @@ private struct TodoSwipePillActionButton: View {
                 ZStack {
                     RoundedRectangle(cornerRadius: 17, style: .continuous)
                         .fill(tint)
-                    Image(systemName: systemImage)
-                        .font(.system(size: 21, weight: .semibold))
+                    Image(assetName)
+                        .renderingMode(.template)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 21, height: 21)
                         .foregroundStyle(.white)
                 }
                 .frame(width: 56, height: 34)

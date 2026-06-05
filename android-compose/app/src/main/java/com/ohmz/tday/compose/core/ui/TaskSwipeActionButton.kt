@@ -1,5 +1,6 @@
 package com.ohmz.tday.compose.core.ui
 
+import androidx.annotation.DrawableRes
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -23,13 +24,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
 @Composable
 fun TaskSwipeActionButton(
-    icon: ImageVector,
+    @DrawableRes icon: Int,
     contentDescription: String,
     label: String,
     tint: Color,
@@ -76,7 +77,7 @@ fun TaskSwipeActionButton(
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
-                    imageVector = icon,
+                    painter = painterResource(icon),
                     contentDescription = contentDescription,
                     tint = tint,
                     modifier = Modifier.size(21.dp),
