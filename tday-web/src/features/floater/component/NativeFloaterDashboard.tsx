@@ -11,7 +11,7 @@ import ScreenWatermark from "@/components/app/ScreenWatermark";
 import NativeAppBrandButton from "@/components/app/NativeAppBrandButton";
 import { Link, useRouter } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
-import { buildFloaterSections } from "@/lib/floater/buildFloaterSections";
+import { sortFloatersByPriority } from "@/lib/floater/buildFloaterSections";
 import { getListIcon } from "@/lib/listIcons";
 import {
   listColorAccentColors,
@@ -77,8 +77,8 @@ export default function NativeFloaterDashboard() {
     });
   }, [floaterListMetaData, floaters, searchQuery]);
 
-  const sections = useMemo(
-    () => buildFloaterSections(filteredFloaters),
+  const sortedFloaters = useMemo(
+    () => sortFloatersByPriority(filteredFloaters),
     [filteredFloaters],
   );
   const isSearching = Boolean(searchQuery.trim());
@@ -167,7 +167,7 @@ export default function NativeFloaterDashboard() {
           </div>
         ) : null}
 
-        {!floaterLoading && isSearching && sections.length === 0 ? (
+        {!floaterLoading && isSearching && sortedFloaters.length === 0 ? (
           <div className="mx-auto flex min-h-[45vh] max-w-md flex-col items-center justify-center text-center">
             <div className="relative mb-6">
               <div className="flex h-24 w-24 items-center justify-center rounded-full bg-muted/50">
@@ -189,17 +189,8 @@ export default function NativeFloaterDashboard() {
           </div>
         ) : null}
 
-        {!floaterLoading && sections.length > 0 ? (
-          <div className="space-y-5">
-            {sections.map((section) => (
-              <section key={section.id} className="space-y-1">
-                <h2 className="px-1 text-[1.75rem] font-black leading-8 text-foreground">
-                  {appDict(section.labelKey)}
-                </h2>
-                <FloaterGroup floaters={section.items} reorderable={false} />
-              </section>
-            ))}
-          </div>
+        {!floaterLoading && sortedFloaters.length > 0 ? (
+          <FloaterGroup floaters={sortedFloaters} reorderable={false} />
         ) : null}
 
         {lists.length > 0 ? (

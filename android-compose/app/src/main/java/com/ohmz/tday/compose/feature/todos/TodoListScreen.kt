@@ -2569,6 +2569,8 @@ private fun TimelineSectionHeader(
     onHeaderClick: (() -> Unit)? = null,
     onTapForQuickAdd: (() -> Unit)?,
 ) {
+    if (section.title.isEmpty()) return
+
     val colorScheme = MaterialTheme.colorScheme
     val headerInteractionSource = remember { MutableInteractionSource() }
     val isHeaderPressed by headerInteractionSource.collectIsPressedAsState()
@@ -3102,37 +3104,17 @@ private fun buildFloaterSections(items: List<TodoItem>): List<TodoSection> {
     val floaterItems = items
         .sortedWith(
             compareByDescending<TodoItem> { it.pinned }
+                .thenBy { floaterPriorityRank(it.priority) }
+                .thenByDescending { it.updatedAt }
                 .thenBy { it.title.lowercase(Locale.getDefault()) },
         )
 
-    return listOfNotNull(
-        floaterItems.filter { isUrgentPriority(it.priority) }
-            .takeIf { it.isNotEmpty() }
-            ?.let {
-                TodoSection(
-                    key = "floater-urgent",
-                    title = "Urgent",
-                    items = it,
-                )
-            },
-        floaterItems.filter { isImportantPriority(it.priority) }
-            .takeIf { it.isNotEmpty() }
-            ?.let {
-                TodoSection(
-                    key = "floater-important",
-                    title = "Important",
-                    items = it,
-                )
-            },
-        floaterItems.filterNot {
-            isUrgentPriority(it.priority) || isImportantPriority(it.priority)
-        }.takeIf { it.isNotEmpty() }?.let {
-            TodoSection(
-                key = "floater-normal",
-                title = "Normal",
-                items = it,
-            )
-        },
+    return listOf(
+        TodoSection(
+            key = "floater-all",
+            title = "",
+            items = floaterItems,
+        ),
     )
 }
 
