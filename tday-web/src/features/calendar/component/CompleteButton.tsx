@@ -3,6 +3,7 @@ import { useCompleteCalendarTodo } from "../query/complete-calendar-todo";
 import { useCompleteCalendarTodoInstance } from "../query/complete-calendar-todo-instance";
 import { TodoItemType } from "@/types";
 import { useTranslation } from "react-i18next";
+import { hapticSuccess } from "@/lib/haptics";
 
 export default function CompleteButton({
   todoItem,
@@ -18,6 +19,7 @@ export default function CompleteButton({
     <div className="flex justify-end p-3 ">
       <button
         onClick={() => {
+          hapticSuccess();
           if (todoItem.instanceDate) {
             mutateInstanceComplete({ todoItem });
           } else {

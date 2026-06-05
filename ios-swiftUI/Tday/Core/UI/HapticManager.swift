@@ -45,4 +45,23 @@ enum HapticManager {
         let generator = UIImpactFeedbackGenerator(style: .light)
         generator.impactOccurred(intensity: 0.4)
     }
+
+    /// Button press — search, add, create actions.
+    static func buttonTap() {
+        let generator = UIImpactFeedbackGenerator(style: .light)
+        generator.impactOccurred(intensity: 0.6)
+    }
+
+    /// Sheet confirm / form submit / accept edit.
+    static func sheetConfirm() {
+        let generator = UINotificationFeedbackGenerator()
+        generator.prepare()
+        generator.notificationOccurred(.success)
+    }
+
+    /// Sheet dismiss / cancel / close.
+    static func sheetDismiss() {
+        let generator = UIImpactFeedbackGenerator(style: .light)
+        generator.impactOccurred(intensity: 0.3)
+    }
 }

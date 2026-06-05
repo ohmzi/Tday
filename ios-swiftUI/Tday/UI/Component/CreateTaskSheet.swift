@@ -313,6 +313,7 @@ struct CreateTaskSheet: View {
     }
 
     private func submit() async {
+        HapticManager.sheetConfirm()
         isSubmitting = true
         let payload = CreateTaskPayload(
             title: title.trimmingCharacters(in: .whitespacesAndNewlines),
@@ -628,7 +629,7 @@ private struct CreateTaskSheetDateTimeControl: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            Button(action: onDateTap) {
+            Button(action: { HapticManager.gentleTap(); onDateTap() }) {
                 Text(dateText)
                     .frame(width: 113, height: 38)
                     .contentShape(Rectangle())
@@ -641,7 +642,7 @@ private struct CreateTaskSheetDateTimeControl: View {
                 .fill(colors.onSurfaceVariant.opacity(0.2))
                 .frame(width: 1, height: 22)
 
-            Button(action: onTimeTap) {
+            Button(action: { HapticManager.gentleTap(); onTimeTap() }) {
                 Text(timeText)
                     .frame(width: 92, height: 38)
                     .contentShape(Rectangle())
@@ -681,7 +682,7 @@ private struct CreateTaskSheetDateSelectorContent: View {
                 .tint(colors.primary)
                 .padding(.horizontal, 12)
 
-            CreateTaskSheetSelectorDoneButton(action: onDone)
+            CreateTaskSheetSelectorDoneButton(action: { HapticManager.gentleTap(); onDone() })
         }
     }
 }
@@ -702,7 +703,7 @@ private struct CreateTaskSheetTimeSelectorContent: View {
                 .clipped()
                 .padding(.horizontal, 12)
 
-            CreateTaskSheetSelectorDoneButton(action: onDone)
+            CreateTaskSheetSelectorDoneButton(action: { HapticManager.gentleTap(); onDone() })
         }
     }
 }

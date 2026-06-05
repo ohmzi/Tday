@@ -8,6 +8,7 @@ import {
   nativeAppHorizontalPaddingClassName,
 } from "@/components/app/nativeAppLayout";
 import { cn } from "@/lib/utils";
+import { hapticButtonTap } from "@/lib/haptics";
 import {
   activeListIdFromPath,
   activeFloaterListIdFromPath,
@@ -54,18 +55,22 @@ export default function TaskFloatingActionButton({
           aria-label="Add task"
           onClick={
             useCalendarCreate
-              ? calendarCreate
+              ? () => { hapticButtonTap(); calendarCreate(); }
               : useFloaterCreate
-                ? () =>
+                ? () => {
+                    hapticButtonTap();
                     openCreateFloater(
                       activeFloaterListId
                         ? { listID: activeFloaterListId }
                         : undefined,
-                    )
-              : () =>
+                    );
+                  }
+              : () => {
+                  hapticButtonTap();
                   openCreateTask(
                     activeListId ? { listID: activeListId } : undefined,
-                  )
+                  );
+                }
           }
           className={cn(
             "pointer-events-auto",

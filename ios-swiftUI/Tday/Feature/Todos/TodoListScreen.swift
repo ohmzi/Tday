@@ -320,6 +320,7 @@ private struct RootFeedSearchTitleRow: View {
 
                 ZStack {
                     Button {
+                        HapticManager.buttonTap()
                         withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
                             searchExpanded = true
                         }
@@ -351,7 +352,7 @@ private struct RootFeedSearchTitleRow: View {
                             .tint(colors.primary)
                             .disabled(!searchExpanded)
 
-                        Button(action: onSearchClose) {
+                        Button(action: { HapticManager.sheetDismiss(); onSearchClose() }) {
                             Image(systemName: "xmark.circle.fill")
                                 .font(.system(size: 18, weight: .semibold))
                                 .foregroundStyle(colors.onSurfaceVariant.opacity(0.78))
@@ -462,6 +463,7 @@ private struct FloaterSearchResultsCard: View {
                             .padding(.vertical, 9)
                             .contentShape(Rectangle())
                             .onTapGesture {
+                                HapticManager.gentleTap()
                                 onOpenTodo(todo)
                             }
                         }
@@ -1045,6 +1047,7 @@ struct TodoListScreen: View {
                     },
                     onCreateList: {
                         closeRootFloaterSearch()
+                        HapticManager.buttonTap()
                         showingCreateList = true
                     },
                     onOpenSettings: {
@@ -1098,6 +1101,7 @@ struct TodoListScreen: View {
             Spacer(minLength: 12)
 
             TaskFloatingActionButton(fillColor: modeAccentColor) {
+                HapticManager.buttonTap()
                 showingCreateTask = true
             }
             .padding(.trailing, 18)
@@ -1563,28 +1567,32 @@ struct TodoListScreen: View {
                             )
                     }
                 } header: {
-                    Text(section.title)
-                        .foregroundStyle(isActiveDropSection ? colors.error : colors.onSurfaceVariant)
-                        .frame(maxWidth: .infinity, minHeight: 38, alignment: .leading)
-                        .contentShape(Rectangle())
-                        .todoInAppDropTargetFrame(
-                            targetID: "standard-header-\(section.id)",
-                            section: section,
-                            enabled: viewModel.mode.supportsTaskReschedule && isDropEligibleSection
-                        )
-                        .timelinePinnedSectionHeaderBackground()
-                        .scheduledTodoDropTarget(
-                            section: section,
-                            draggedTodo: draggedTodo,
-                            resolveTodo: resolveTodoForDrop,
-                            onMove: { todo, targetDate in
-                                requestReschedule(todo, to: targetDate)
-                            },
-                            canMoveTodo: canDropTodo,
-                            onSectionChange: { sectionId in
-                                setActiveDropSection(sectionId)
-                            }
-                        )
+                    if section.title.isEmpty {
+                        EmptyView()
+                    } else {
+                        Text(section.title)
+                            .foregroundStyle(isActiveDropSection ? colors.error : colors.onSurfaceVariant)
+                            .frame(maxWidth: .infinity, minHeight: 38, alignment: .leading)
+                            .contentShape(Rectangle())
+                            .todoInAppDropTargetFrame(
+                                targetID: "standard-header-\(section.id)",
+                                section: section,
+                                enabled: viewModel.mode.supportsTaskReschedule && isDropEligibleSection
+                            )
+                            .timelinePinnedSectionHeaderBackground()
+                            .scheduledTodoDropTarget(
+                                section: section,
+                                draggedTodo: draggedTodo,
+                                resolveTodo: resolveTodoForDrop,
+                                onMove: { todo, targetDate in
+                                    requestReschedule(todo, to: targetDate)
+                                },
+                                canMoveTodo: canDropTodo,
+                                onSectionChange: { sectionId in
+                                    setActiveDropSection(sectionId)
+                                }
+                            )
+                    }
                 }
             }
         }
@@ -1979,6 +1987,7 @@ struct TodoListScreen: View {
         if openSwipeTaskID == todo.id {
             openSwipeTaskID = nil
         }
+        HapticManager.taskCompleted()
         withAnimation(.easeInOut(duration: 0.16)) {
             completionPhases[todo.id] = .checked
         }
@@ -3680,52 +3689,15 @@ private func buildFloaterTimelineSections(items: [TodoItem]) -> [TodoTimelineSec
     let floaterItems = items
         .sorted(by: floaterTodoSortPrecedes)
 
-    let sectionSpecs: [(id: String, title: String, items: [TodoItem])] = [
-        (
-            "floater-urgent",
-            "Urgent",
-            floaterItems.filter { TaskPriorityDisplay.isUrgent($0.priority) }
-        ),
-        (
-            "floater-important",
-            "Important",
-            floaterItems.filter { TaskPriorityDisplay.isImportant($0.priority) }
-        ),
-        (
-            "floater-normal",
-            "Normal",
-            floaterItems.filter {
-                !TaskPriorityDisplay.isUrgent($0.priority) &&
-                    !TaskPriorityDisplay.isImportant($0.priority)
-            }
-        ),
-    ]
-
-    let sections = sectionSpecs.compactMap { spec -> TodoTimelineSection? in
-        guard !spec.items.isEmpty else {
-            return nil
-        }
-        return TodoTimelineSection(
-            id: spec.id,
-            title: spec.title,
-            items: spec.items,
+    return [
+        TodoTimelineSection(
+            id: "floater-all",
+            title: "",
+            items: floaterItems,
             isCollapsible: false,
             targetDate: nil
-        )
-    }
-
-    if sections.isEmpty {
-        return [
-            TodoTimelineSection(
-                id: "floater-normal",
-                title: "Normal",
-                items: [],
-                isCollapsible: false,
-                targetDate: nil
-            ),
-        ]
-    }
-    return sections
+        ),
+    ]
 }
 
 private func floaterTodoSortPrecedes(_ lhs: TodoItem, _ rhs: TodoItem) -> Bool {
@@ -3736,6 +3708,10 @@ private func floaterTodoSortPrecedes(_ lhs: TodoItem, _ rhs: TodoItem) -> Bool {
     let rhsPriority = floaterPriorityRank(rhs.priority)
     if lhsPriority != rhsPriority {
         return lhsPriority < rhsPriority
+    }
+    // Same priority — sort by updatedAt (newest first), then title
+    if let lhsUpdated = lhs.updatedAt, let rhsUpdated = rhs.updatedAt, lhsUpdated != rhsUpdated {
+        return lhsUpdated > rhsUpdated
     }
     return lhs.title.localizedCaseInsensitiveCompare(rhs.title) == .orderedAscending
 }

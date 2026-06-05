@@ -86,6 +86,7 @@ private struct TodoTrailingSwipeActionsModifier: ViewModifier {
                     if offsetX != 0 {
                         closeActions()
                     } else {
+                        HapticManager.swipeReveal()
                         revealHint()
                     }
                 }
@@ -109,6 +110,7 @@ private struct TodoTrailingSwipeActionsModifier: ViewModifier {
                     revealProgress: revealProgress,
                     revealDelay: 0.62
                 ) {
+                    HapticManager.buttonTap()
                     closeActions()
                     onEdit()
                 }
@@ -120,6 +122,7 @@ private struct TodoTrailingSwipeActionsModifier: ViewModifier {
                     revealProgress: revealProgress,
                     revealDelay: 0.04
                 ) {
+                    HapticManager.buttonTap()
                     closeActions()
                     onDelete()
                 }

@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Check, ChevronDown, X } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { hapticConfirm, hapticDismiss } from "@/lib/haptics";
 
 // Native sheet chrome — mirrors ios-swiftUI/Tday/UI/Component/TdaySheetChrome.swift.
 // Shared by the task sheet, list sheet, and calendar create/edit forms so every
@@ -62,7 +63,7 @@ export function SheetHeader({
       <SheetActionButton
         icon={<X className="h-5 w-5 stroke-[2.6]" />}
         accentRgb={CLOSE_ACCENT}
-        onClick={onClose}
+        onClick={() => { hapticDismiss(); onClose(); }}
         ariaLabel={closeLabel}
       />
       <h2 className="min-w-0 flex-1 truncate text-center text-2xl font-black tracking-tight text-foreground">
@@ -73,7 +74,7 @@ export function SheetHeader({
           icon={<Check className="h-5 w-5 stroke-[2.6]" />}
           accentRgb={CONFIRM_ACCENT}
           disabled={confirmDisabled}
-          onClick={onConfirm}
+          onClick={() => { hapticConfirm(); onConfirm?.(); }}
           ariaLabel={confirmLabel}
         />
       ) : (
