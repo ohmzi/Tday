@@ -63,8 +63,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.Delete
-import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Flag
 import androidx.compose.material.icons.rounded.NightsStay
 import androidx.compose.material.icons.rounded.RadioButtonUnchecked
@@ -1685,7 +1683,7 @@ private fun HomeTodayTaskRow(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 TaskSwipeActionButton(
-                    icon = Icons.Rounded.Edit,
+                    icon = R.drawable.ic_lucide_square_pen,
                     contentDescription = stringResource(R.string.action_edit_task),
                     label = stringResource(R.string.action_edit),
                     tint = Color.White,
@@ -1702,7 +1700,7 @@ private fun HomeTodayTaskRow(
                     },
                 )
                 TaskSwipeActionButton(
-                    icon = Icons.Rounded.Delete,
+                    icon = R.drawable.ic_lucide_trash,
                     contentDescription = stringResource(R.string.action_delete_task),
                     label = stringResource(R.string.action_delete),
                     tint = Color.White,

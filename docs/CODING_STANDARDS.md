@@ -203,6 +203,16 @@ Card(
 <div style={{ backgroundColor: "#FFFFFF", color: "#1C2333", padding: "18px" }}>
 ```
 
+### Icons — One Lucide Source Across Platforms
+
+All user-facing icons come from **[Lucide](https://lucide.dev)** and must look identical on web, Android, and iOS. Do not use a platform's built-in icon set (Material `Icons.*`, SF Symbols `Image(systemName:)`) for shared product surfaces.
+
+- **Web**: use the `lucide-react` component directly (the reference).
+- **Android**: embed the glyph as a path-only vector drawable `res/drawable/ic_lucide_<glyph>.xml` and render with `painterResource`.
+- **iOS**: add a template SVG imageset in `Assets.xcassets` and render with `Image("<Name>").renderingMode(.template)`.
+
+See `docs/ICONS.md` for the full mechanics, the add-an-icon checklist, and the current shared-glyph table. Keep all three platforms in sync when adding or changing an icon.
+
 ### No Hardcoded Strings
 
 All user-facing strings must live in a single centralized source — never inline in component code, screen layouts, or route handlers. This applies to labels, button text, error messages shown to users, placeholders, tooltips, and any other text the user sees.

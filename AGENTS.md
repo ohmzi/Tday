@@ -95,6 +95,7 @@ T'Day is a task app, not a marketing site. Mobile screens should feel quiet, use
 
 - Prefer direct usable UI over explanatory copy.
 - Keep controls discoverable through familiar icons, clear labels, and expected placement.
+- Icons come from a single Lucide source shared across web/Android/iOS — never platform-native icon sets (Material `Icons.*`, SF Symbols) for shared surfaces. See `docs/ICONS.md`.
 - Use rounded typography and the existing soft, focused visual language.
 - Keep cards purposeful. Do not nest decorative cards.
 - Use haptics where the surrounding code already does for primary button actions.
