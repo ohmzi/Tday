@@ -32,6 +32,14 @@ The Docker image (`Dockerfile.backend`) is a multi-stage build:
 
 The production image is a **single JVM process** serving both the REST API and the static SPA.
 
+Each frontend build also stamps a **unique build id** (`git-sha + UTC timestamp`) into the JS bundle as `__BUILD_ID__` and emits a matching `dist/version.json` (`{ "buildId", "version" }`), served at `/version.json`. This is the cache key that drives client cache invalidation — see [Web Cache Invalidation & Client Updates](#web-cache-invalidation--client-updates). For a readable SHA in the id, pass it as a build arg (the `.git` dir is not copied into the frontend stage):
+
+```bash
+docker compose build --build-arg GIT_SHA=$(git rev-parse --short HEAD) tday-backend
+```
+
+Without it the id falls back to a timestamp only — still unique per build, just less traceable.
+
 ```bash
 # Local build
 docker compose up -d --build
@@ -407,3 +415,91 @@ docker compose pull && docker compose up -d
 - Existing databases without Flyway history are baselined at version `2`; empty databases replay the full schema snapshot and then incremental migrations.
 - Verify the app is healthy by checking `GET /health` returns `{ "status": "ok" }`.
 - Review `docker logs tday_backend` for startup errors.
+- **Web clients self-update.** Already-open browsers/PWAs detect the new build and reload into it automatically — no manual cache clearing on each release. See below.
+
+## Web Cache Invalidation & Client Updates
+
+### Why this exists
+
+`tday-web` is a Vite PWA served same-origin by the backend from `/app/static`. Every build produces content-hashed chunks and a fresh `index.html`. Without coordination, an already-open client (or a Service Worker / browser / Cloudflare cache) keeps an **old `index.html`** whose chunk hashes no longer exist on the server. When the app then lazy-loads a route chunk it gets a 404 → the SPA fallback returns `index.html` (HTML) → the dynamic import fails and the app crashes (`Failed to fetch dynamically imported module`, or in WebKit `undefined is not an object (evaluating 'o._result.default')`).
+
+This system makes deploys self-healing across every OS/browser. It has four cooperating layers, each guarded against reload loops.
+
+### 1. Per-build cache key
+
+- `tday-web/vite.config.ts` computes a unique `BUILD_ID` once per build (`GIT_SHA` env/arg → else `git rev-parse` → else `dev`, suffixed with a UTC timestamp). It is both:
+  - injected into the bundle as the `__BUILD_ID__` define (declared in `src/vite-env.d.ts`), and
+  - emitted as `dist/version.json` via an inline `generateBundle` plugin (single source of truth — the same const feeds both, so they can never disagree).
+- The backend serves `dist/version.json` at `/version.json` automatically (it rides in the static dir; no backend route needed).
+
+### 2. HTTP cache headers (`tday-backend/.../plugins/Routing.kt`)
+
+The static handler sets `Cache-Control` by path (`cacheControlFor`), so browsers and Cloudflare cache correctly:
+
+| Resource | `Cache-Control` | Rationale |
+|----------|-----------------|-----------|
+| `index.html`, SPA-fallback HTML, `/version.json` | `no-cache, no-store, must-revalidate` | Always revalidate so a new build is picked up immediately |
+| `/assets/**` (content-hashed) | `public, max-age=31536000, immutable` | Filename changes every build, so cache forever safely |
+| everything else (icons, manifest, locales) | `public, max-age=3600` | Modest TTL for non-hashed static files |
+
+The HTML rule is keyed so the **SPA fallback** (e.g. a deep link like `/en/app/tday`) is also `no-store`, not just literal `index.html`.
+
+### 3. Service worker (`tday-web/src/sw.ts`)
+
+- **Navigations are NetworkFirst** (`cacheName: tday-navigation`, 4s timeout), falling back to the precached `/index.html` **only when offline**. So online clients always fetch the current `index.html` (and thus current chunk refs); offline still works.
+- `/version.json` has an explicit `NetworkOnly` route, and is excluded from precache (the Workbox `globPatterns` deliberately omits `json` — **do not add it**).
+- A `message` handler supports `{type:"SKIP_WAITING"}` and `{type:"CLEAR_CACHES"}` for client-driven activation / hard reset.
+
+### 4. Client version poller (`useVersionGate` → `components/app/VersionGate.tsx`, mounted in `App.tsx`)
+
+Fetches `/version.json` (`cache:"no-store"`) on mount, on tab refocus (`visibilitychange`), and every 15 minutes. On a `buildId` mismatch it applies a **hybrid UX**:
+
+- **Silent reload** when the tab had been backgrounded/idle and the user is *not* typing (no editable element focused) — zero interruption.
+- Otherwise a non-blocking **"New version available — Reload"** toast (Sonner).
+
+Reload-loop protection lives in `src/lib/chunkError.ts` (`versionReloadAlreadyTried` / `markVersionReloadTried` / `clearVersionReloadFlag`), a separate one-shot guard from the reactive stale-chunk guard. Both clear after 8s of healthy runtime (`main.tsx`), so a *second* deploy within the same session can also self-heal.
+
+### Layer composition (defense in depth)
+
+1. **NetworkFirst nav** (structural) — any reload/navigation while online lands on fresh `index.html`.
+2. **`useVersionGate`** (proactive) — detects a deploy before a stale chunk is even requested.
+3. **`chunkError.ts` + `vite:preloadError`** (reactive net) — recovers any stale dynamic import that still slips through; thanks to NetworkFirst the recovery reload reliably lands on the current build. See also the Safari/WebKit notes in [Developer notes](#developer-notes--gotchas).
+
+### Verifying after a deploy
+
+```bash
+# build key is served and never cached
+curl -sI http://127.0.0.1:2525/version.json | grep -i cache-control   # no-store
+curl -s  http://127.0.0.1:2525/version.json                            # {"buildId":...}
+# HTML shell never cached, hashed assets immutable
+curl -sI http://127.0.0.1:2525/            | grep -i cache-control      # no-store
+curl -sI http://127.0.0.1:2525/assets/<hashed>.js | grep -i cache-control  # immutable
+```
+
+End-to-end (real Safari engine) with Playwright WebKit: load the app fresh and confirm no spurious reload; intercept `/version.json` to return a different `buildId` and confirm the prompt/auto-reload fires. (`webkit` browser is bundled; run `sudo npx playwright install-deps` once for the system libs.)
+
+### Recovering a device stuck on a pre-this-code build
+
+This mechanism only takes effect once a device has loaded **one** build that contains it. A device still pinned to an older cached build needs a one-time manual clear:
+
+- If installed to the home screen (PWA), delete that icon first — it caches separately from the browser.
+- iOS Safari: **Settings → Safari → Clear History and Website Data**. Desktop: DevTools → Application → Service Workers → *Unregister*, then *Clear site data*, then hard reload.
+
+### Developer notes / gotchas
+
+- **Don't churn caches needlessly.** Each build re-hashes every chunk (and the Sentry plugin injects a fresh debug id), so rapid back-to-back rebuilds while someone is testing can leave a device's precache half-updated. Batch changes into one build.
+- **Keep `version.json` uncacheable.** Don't add `json` to the SW `globPatterns`, and keep the `NetworkOnly` route + the `no-store` header.
+- **New static assets:** content-hashed output goes under `/assets/**` (immutable) automatically; anything you drop in `tday-web/public/` is non-hashed and gets the 1h default — bump its handling in `cacheControlFor` if it needs different behavior.
+- **Tuning:** poll cadence is `CHECK_INTERVAL_MS` in `useVersionGate.ts`; the toast UX is in `VersionGate.tsx`.
+- **Safari/WebKit:** Safari has never shipped `requestIdleCallback` and only added `structuredClone` in 15.4 — guard browser globals with `typeof x === "function"` fallbacks (see `usePrefetchRoutes.ts`, `mergeInstanceAndTodo.ts`). A WebKit-only crash surfaces as the `RouteErrorPage`/`ErrorBoundary` screen; both expose an "Error details" expander, and both route stale-chunk errors through the auto-reload.
+
+### Key files
+
+| Concern | File |
+|---------|------|
+| Build id + `version.json` emit | `tday-web/vite.config.ts`, `src/vite-env.d.ts` |
+| Cache-Control headers | `tday-backend/src/main/kotlin/com/ohmz/tday/plugins/Routing.kt` (`cacheControlFor`) |
+| SW strategy + messages | `tday-web/src/sw.ts` |
+| Version poller + UX | `tday-web/src/hooks/useVersionGate.ts`, `src/components/app/VersionGate.tsx`, `src/App.tsx` |
+| Reload guards + reactive net | `tday-web/src/lib/chunkError.ts`, `src/main.tsx` |
+| Build-arg for SHA | `Dockerfile.backend` |

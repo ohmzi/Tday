@@ -1,5 +1,10 @@
 FROM node:20-alpine AS frontend
 WORKDIR /web
+# Optional: pass --build-arg GIT_SHA=$(git rev-parse --short HEAD) for build-id
+# traceability (the .git dir isn't copied into this stage). Falls back to a
+# timestamp-only build id otherwise, which is still unique per build.
+ARG GIT_SHA=dev
+ENV GIT_SHA=$GIT_SHA
 COPY tday-web/package*.json ./
 RUN npm ci
 COPY tday-web/ .
