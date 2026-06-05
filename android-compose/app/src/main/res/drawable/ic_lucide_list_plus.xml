@@ -6,31 +6,31 @@
     android:viewportHeight="24">
     <path
         android:pathData="M11 12H3"
-        android:strokeWidth="2"
+        android:strokeWidth="2.6"
         android:strokeColor="#FFFFFFFF"
         android:strokeLineCap="round"
         android:strokeLineJoin="round" />
     <path
         android:pathData="M16 6H3"
-        android:strokeWidth="2"
+        android:strokeWidth="2.6"
         android:strokeColor="#FFFFFFFF"
         android:strokeLineCap="round"
         android:strokeLineJoin="round" />
     <path
         android:pathData="M16 18H3"
-        android:strokeWidth="2"
+        android:strokeWidth="2.6"
         android:strokeColor="#FFFFFFFF"
         android:strokeLineCap="round"
         android:strokeLineJoin="round" />
     <path
         android:pathData="M18 9v6"
-        android:strokeWidth="2"
+        android:strokeWidth="2.6"
         android:strokeColor="#FFFFFFFF"
         android:strokeLineCap="round"
         android:strokeLineJoin="round" />
     <path
         android:pathData="M21 12h-6"
-        android:strokeWidth="2"
+        android:strokeWidth="2.6"
         android:strokeColor="#FFFFFFFF"
         android:strokeLineCap="round"
         android:strokeLineJoin="round" />

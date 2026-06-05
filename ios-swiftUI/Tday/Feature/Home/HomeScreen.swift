@@ -797,8 +797,7 @@ private struct HomeTodayTaskRow: View {
             if listMeta != nil || priorityIcon != nil {
                 HStack(spacing: 8) {
                     if let listMeta {
-                        Image(systemName: homeListSymbolName(for: listMeta.iconKey))
-                            .font(.system(size: 14, weight: .semibold))
+                        TdayListIcon(iconKey: listMeta.iconKey, size: 14)
                             .foregroundStyle(homeListAccentColor(for: listMeta.color))
                     }
                     if let priorityIcon {
@@ -1183,8 +1182,7 @@ private struct HomeListRow: View {
                         )
                     )
 
-                Image(systemName: symbolName)
-                    .font(.system(size: 60, weight: .regular))
+                TdayListIcon(iconKey: iconKey, size: 60)
                     .foregroundStyle(containerColor.blended(with: .white, amount: 0.34).opacity(0.42))
                     .offset(x: 18, y: 8)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
@@ -1192,8 +1190,7 @@ private struct HomeListRow: View {
 
                 HStack {
                     HStack(spacing: 10) {
-                        Image(systemName: symbolName)
-                            .font(.system(size: 22, weight: .semibold))
+                        TdayListIcon(iconKey: iconKey, size: 22)
                             .foregroundStyle(.white)
                             .frame(width: 32, height: 32)
 
@@ -1263,11 +1260,9 @@ private struct HomeSearchResultsOverlay: View {
                         ForEach(Array(todos.enumerated()), id: \.element.id) { index, todo in
                             let list = todo.listId.flatMap { listsByID[$0] }
                             let tint = homeListAccentColor(for: list?.color)
-                            let symbolName = homeListSymbolName(for: list?.iconKey)
 
                             HStack(spacing: 10) {
-                                Image(systemName: symbolName)
-                                    .font(.system(size: 17, weight: .semibold))
+                                TdayListIcon(iconKey: list?.iconKey, size: 17)
                                     .foregroundStyle(tint.opacity(0.92))
                                     .frame(width: 18)
 
@@ -1503,8 +1498,7 @@ struct CreateListSheet: View {
                                     .fill(accentColor)
                                     .frame(width: 86, height: 86)
 
-                                Image(systemName: selectedSymbolName)
-                                    .font(.system(size: 38, weight: .semibold))
+                                TdayListIcon(iconKey: iconKey, size: 38)
                                     .foregroundStyle(.white)
                             }
 
@@ -1585,8 +1579,7 @@ struct CreateListSheet: View {
                                                     )
                                             )
                                             .overlay {
-                                                Image(systemName: option.symbolName)
-                                                    .font(.system(size: 22, weight: .semibold))
+                                                TdayListIcon(iconKey: option.key, size: 22)
                                                     .foregroundStyle(isSelected ? accentColor : colors.onSurfaceVariant)
                                             }
                                     }
