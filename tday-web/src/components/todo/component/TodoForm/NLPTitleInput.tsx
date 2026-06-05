@@ -15,7 +15,6 @@ type NLPTitleInputProps = {
   setTitle: React.Dispatch<SetStateAction<string>>;
   setDateRange: React.Dispatch<SetStateAction<FormDateRange>>;
   setListID?: React.Dispatch<SetStateAction<string | null>>;
-  onSubmit?: () => void;
   className?: string;
 };
 
@@ -24,7 +23,6 @@ export default function NLPTitleInput({
   title,
   setTitle,
   setDateRange,
-  onSubmit,
   className,
 }: NLPTitleInputProps) {
   const locale = useLocale();
@@ -115,8 +113,9 @@ export default function NLPTitleInput({
         onKeyDown={(e) => {
           if (isComposing.current) return;
           if (e.key === "Enter") {
+            // Enter dismisses the keyboard (like native) instead of submitting.
             e.preventDefault();
-            onSubmit?.();
+            titleRef.current?.blur();
           }
         }}
         ref={titleRef}

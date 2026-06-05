@@ -15,6 +15,7 @@ import {
   SelectorRow,
 } from "@/components/ui/sheet-chrome/CenteredSelectorOverlay";
 import { prioritySwatchClass } from "@/components/ui/sheet-chrome/swatches";
+import { getPriorityFlag } from "@/lib/priority";
 import { useToast } from "@/hooks/use-toast";
 import { useCreateFloater } from "@/features/floater/query/create-floater";
 import { useEditFloater } from "@/features/floater/query/update-floater";
@@ -141,10 +142,12 @@ export default function FloaterFormSheet({
             <textarea
               value={title}
               onChange={(event) => setTitle(event.target.value)}
+              enterKeyHint="done"
               onKeyDown={(event) => {
-                if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+                if (event.key === "Enter" && !event.shiftKey) {
+                  // Enter dismisses the keyboard (like native); Shift+Enter adds a newline.
                   event.preventDefault();
-                  handleSubmit();
+                  event.currentTarget.blur();
                 }
               }}
               placeholder={appDict("floaterTitlePlaceholder")}
@@ -190,7 +193,21 @@ export default function FloaterFormSheet({
               priorityOptions.find((option) => option.value === priority)?.labelKey ??
                 "normal",
             )}`}
-            value={null}
+            value={
+              <>
+                {getPriorityFlag(priority) ? (
+                  <Flag
+                    className={`h-3.5 w-3.5 shrink-0 ${getPriorityFlag(priority)!.className}`}
+                  />
+                ) : null}
+                <span className="truncate">
+                  {appDict(
+                    priorityOptions.find((option) => option.value === priority)?.labelKey ??
+                      "normal",
+                  )}
+                </span>
+              </>
+            }
             onClick={() => setActiveSelector("priority")}
           />
         </SheetCard>
