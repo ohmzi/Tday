@@ -38,7 +38,9 @@ import kotlinx.serialization.json.jsonPrimitive
 import org.junit.jupiter.api.Test
 import org.koin.dsl.module
 import org.koin.ktor.plugin.Koin
+import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.ZoneOffset
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -262,9 +264,12 @@ class TodoRoutesTest {
 
     @Test
     fun `summary returns ai source when model responds`() = testApplication {
+        // "today" scope is resolved against LocalDate.now(zoneId) in the route, so
+        // the task must be due *today* (UTC) for the test to be time-independent.
+        val dueToday = LocalDate.now(ZoneOffset.UTC).atTime(13, 0).toString()
         val todoService = RecordingTodoService(
             timeline = listOf(
-                makeTodo(title = "Submit taxes", priority = "High", due = "2026-05-30T13:00:00"),
+                makeTodo(title = "Submit taxes", priority = "High", due = dueToday),
             ),
         )
         val summaryService = FakeTodoSummaryService(response = "You have one important task today.")
