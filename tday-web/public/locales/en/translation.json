@@ -304,6 +304,8 @@
     },
     "descPlaceholder": "description",
     "schedule": "Schedule",
+    "scheduleOnHint": "Task has a due date",
+    "scheduleOffHint": "Floater task",
     "details": "Details",
     "due": "Due",
     "notes": "Notes",

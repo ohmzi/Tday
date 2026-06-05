@@ -78,7 +78,6 @@ export default function CalendarTaskFormBody({
             setTitle={setTitle}
             titleRef={titleRef}
             setDateRange={setDateRange}
-            onSubmit={onSubmit}
           />
         </div>
         <SheetDivider />
