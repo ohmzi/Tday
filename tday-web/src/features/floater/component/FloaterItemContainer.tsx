@@ -146,11 +146,15 @@ export default function FloaterItemContainer({
               setDisplayForm(true);
               closeSwipe();
             }}
-            className="flex items-center justify-center"
+            className="flex flex-col items-center gap-1"
           >
-            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#4C7DDE]">
-              <SquarePen className="h-4 w-4 text-white" strokeWidth={2.2} />
+            <span
+              className="flex h-[34px] w-14 items-center justify-center rounded-[17px]"
+              style={{ backgroundColor: "#4C7DDE" }}
+            >
+              <SquarePen className="h-5 w-5 text-white" strokeWidth={2.2} />
             </span>
+            <span className="text-[11px] font-bold text-muted-foreground">Edit</span>
           </button>
           <button
             type="button"
@@ -161,11 +165,15 @@ export default function FloaterItemContainer({
               deleteMutateFn(floater);
               closeSwipe();
             }}
-            className="flex items-center justify-center"
+            className="flex flex-col items-center gap-1"
           >
-            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#FF453A]">
-              <Trash className="h-4 w-4 text-white" strokeWidth={2.2} />
+            <span
+              className="flex h-[34px] w-14 items-center justify-center rounded-[17px]"
+              style={{ backgroundColor: "#FF453A" }}
+            >
+              <Trash className="h-5 w-5 text-white" strokeWidth={2.2} />
             </span>
+            <span className="text-[11px] font-bold text-muted-foreground">Delete</span>
           </button>
         </div>
 
@@ -237,15 +245,6 @@ export default function FloaterItemContainer({
                 showHandle && "sm:opacity-0",
               )}
             >
-              {priorityFlag ? (
-                <Flag
-                  className={clsx(
-                    "h-4 w-4 shrink-0 sm:h-3.5 sm:w-3.5",
-                    priorityFlag.className,
-                  )}
-                  aria-label={priorityFlag.label}
-                />
-              ) : null}
               {listID ? (
                 <>
                   <FloaterListDot id={listID} className="h-4 w-4 sm:hidden" />
@@ -256,6 +255,15 @@ export default function FloaterItemContainer({
                     </span>
                   </span>
                 </>
+              ) : null}
+              {priorityFlag ? (
+                <Flag
+                  className={clsx(
+                    "h-4 w-4 shrink-0 sm:h-3.5 sm:w-3.5",
+                    priorityFlag.className,
+                  )}
+                  aria-label={priorityFlag.label}
+                />
               ) : null}
             </div>
 

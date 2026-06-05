@@ -30,10 +30,8 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.BorderColor
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.ChevronLeft
-import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.Flag
 import androidx.compose.material.icons.rounded.RadioButtonUnchecked
@@ -628,7 +626,7 @@ private fun CompletedSwipeRow(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     TaskSwipeActionButton(
-                        icon = Icons.Rounded.BorderColor,
+                        icon = R.drawable.ic_lucide_square_pen,
                         contentDescription = stringResource(R.string.action_edit_task),
                         label = stringResource(R.string.action_edit),
                         tint = Color.White,
@@ -645,7 +643,7 @@ private fun CompletedSwipeRow(
                         },
                     )
                     TaskSwipeActionButton(
-                        icon = Icons.Rounded.DeleteOutline,
+                        icon = R.drawable.ic_lucide_trash,
                         contentDescription = stringResource(R.string.action_delete_task),
                         label = stringResource(R.string.action_delete),
                         tint = Color.White,

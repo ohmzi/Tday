@@ -54,7 +54,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.AutoAwesome
-import androidx.compose.material.icons.rounded.BorderColor
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.ChevronLeft
 import androidx.compose.material.icons.rounded.Close
@@ -3750,7 +3749,7 @@ private fun SwipeTaskRow(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     TaskSwipeActionButton(
-                        icon = Icons.Rounded.BorderColor,
+                        icon = R.drawable.ic_lucide_square_pen,
                         contentDescription = stringResource(R.string.action_edit_task),
                         label = stringResource(R.string.action_edit),
                         tint = Color.White,
@@ -3767,7 +3766,7 @@ private fun SwipeTaskRow(
                         },
                     )
                     TaskSwipeActionButton(
-                        icon = Icons.Rounded.DeleteOutline,
+                        icon = R.drawable.ic_lucide_trash,
                         contentDescription = stringResource(R.string.action_delete_task),
                         label = stringResource(R.string.action_delete),
                         tint = Color.White,

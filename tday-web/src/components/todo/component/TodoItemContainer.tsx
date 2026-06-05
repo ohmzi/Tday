@@ -313,12 +313,6 @@ export const TodoItemCard = ({
               showHandle && "sm:opacity-0",
             )}
           >
-            {priorityFlag && (
-              <Flag
-                className={clsx("h-4 w-4 shrink-0 sm:h-3.5 sm:w-3.5", priorityFlag.className)}
-                aria-label={priorityFlag.label}
-              />
-            )}
             {itemListID && (
               <>
                 <ListDot id={itemListID} className="h-4 w-4 sm:hidden" />
@@ -329,6 +323,12 @@ export const TodoItemCard = ({
                   </span>
                 </span>
               </>
+            )}
+            {priorityFlag && (
+              <Flag
+                className={clsx("h-4 w-4 shrink-0 sm:h-3.5 sm:w-3.5", priorityFlag.className)}
+                aria-label={priorityFlag.label}
+              />
             )}
           </div>
 
