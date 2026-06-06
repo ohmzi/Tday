@@ -14,7 +14,7 @@ data class UserResponse(
 data class UserProfileResponse(
     val id: String,
     val name: String?,
-    val email: String,
+    val username: String,
     val image: String?,
     val role: String,
     val approvalStatus: String,
@@ -25,7 +25,7 @@ data class UserProfileResponse(
 data class AdminUserResponse(
     val id: String,
     val name: String?,
-    val email: String,
+    val username: String,
     val role: String,
     val approvalStatus: String,
     val createdAt: String,

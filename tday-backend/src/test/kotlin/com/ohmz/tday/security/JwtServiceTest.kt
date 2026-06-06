@@ -24,7 +24,7 @@ class JwtServiceTest {
         val claims = JwtUserClaims(
             id = JWT_TEST_PRIMARY_USER_ID,
             name = "Test User",
-            email = "test@example.com",
+            username = "testuser",
             role = JWT_TEST_ROLE,
             approvalStatus = JWT_TEST_APPROVAL_STATUS,
             tokenVersion = 1,
@@ -38,7 +38,7 @@ class JwtServiceTest {
         assertNotNull(decoded)
         assertEquals(JWT_TEST_PRIMARY_USER_ID, decoded.id)
         assertEquals("Test User", decoded.name)
-        assertEquals("test@example.com", decoded.email)
+        assertEquals("testuser", decoded.username)
         assertEquals(JWT_TEST_ROLE, decoded.role)
         assertEquals(JWT_TEST_APPROVAL_STATUS, decoded.approvalStatus)
         assertEquals(1, decoded.tokenVersion)

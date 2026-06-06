@@ -12,7 +12,7 @@ class TdayObservabilityTest {
         )
         assertEquals(
             "GET /api/todo/:id",
-            TdayObservability.routeTemplate("get", "/api/todo/cjld2cjxh0000qzrmn831i7rn?email=a@example.com"),
+            TdayObservability.routeTemplate("get", "/api/todo/cjld2cjxh0000qzrmn831i7rn?username=alexsmith"),
         )
     }
 
@@ -54,7 +54,7 @@ class TdayObservabilityTest {
             "/:locale/app/list/:id",
             TdayObservability.safeDataValue("from", "/en/app/list/list-123"),
         )
-        assertEquals("redacted", TdayObservability.safeDataValue("email", "alex@example.com"))
+        assertEquals("redacted", TdayObservability.safeDataValue("username", "alexsmith"))
         assertEquals("redacted", TdayObservability.safeDataValue("authorization", "Bearer secret"))
     }
 }

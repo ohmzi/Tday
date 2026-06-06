@@ -35,7 +35,7 @@ class CredentialEnvelopeTest {
         val symmetricKey = ByteArray(32).also { java.security.SecureRandom().nextBytes(it) }
         val iv = ByteArray(12).also { java.security.SecureRandom().nextBytes(it) }
 
-        val payload = """{"email":"test@example.com","password":"Secret#123"}"""
+        val payload = """{"username":"testuser","password":"Secret#123"}"""
 
         val aesCipher = Cipher.getInstance("AES/GCM/NoPadding")
         aesCipher.init(Cipher.ENCRYPT_MODE, SecretKeySpec(symmetricKey, "AES"), GCMParameterSpec(128, iv))
@@ -63,7 +63,7 @@ class CredentialEnvelopeTest {
         )
 
         val result = envelope.decrypt(input)
-        assertEquals("test@example.com", result.email)
+        assertEquals("testuser", result.username)
         assertEquals("Secret#123", result.password)
     }
 }
