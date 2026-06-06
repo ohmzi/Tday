@@ -700,20 +700,10 @@ final class TodoRepository {
     }
 
     func parseTodoTitleNlp(text: String, referenceDueEpochMs: Int64) async -> TodoTitleNlpResponse? {
-        if syncManager.isLocalMode {
-            return nil
-        }
-
-        let timezoneOffsetMinutes = TimeZone.current.secondsFromGMT() / 60
-        return try? await api.parseTodoTitleNlp(
-            payload: TodoTitleNlpRequest(
-                text: text,
-                locale: Locale.current.identifier,
-                referenceEpochMs: referenceDueEpochMs,
-                timezoneOffsetMinutes: timezoneOffsetMinutes,
-                defaultDurationMinutes: 60
-            )
-        )
+        // Parsed entirely on-device (offline, no AI/network), so it also works in
+        // local mode. `text` is passed raw so the matched span lines up with what's
+        // shown in the title field for the highlight.
+        OnDeviceTitleNlpParser.parse(text: text)
     }
 
     private func withCompletion(_ record: CachedTodoRecord, completed: Bool, updatedAtEpochMs: Int64) -> CachedTodoRecord {
@@ -1043,5 +1033,47 @@ final class TodoRepository {
             return false
         }
         return normalized == "medium" || normalized == "high" || normalized == "important" || normalized == "urgent"
+    }
+}
+
+/// On-device natural-language date parser for the new-task title field.
+///
+/// Fully offline — no AI model, no network. Uses Foundation's `NSDataDetector`
+/// (Apple's built-in date detector) to mirror the web's chrono-node behaviour:
+/// it detects a phrase like "July 29 2030 at 8pm", returning the matched span
+/// (for the in-field highlight), the cleaned title (phrase removed), and the
+/// absolute due instant. `NSDataDetector` resolves relative phrases ("tomorrow")
+/// against the current date. The resulting instant is converted to UTC on save.
+enum OnDeviceTitleNlpParser {
+    private static let detector: NSDataDetector? = {
+        try? NSDataDetector(types: NSTextCheckingResult.CheckingType.date.rawValue)
+    }()
+
+    static func parse(text: String) -> TodoTitleNlpResponse? {
+        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              let detector else {
+            return nil
+        }
+        let fullRange = NSRange(text.startIndex ..< text.endIndex, in: text)
+        guard let match = detector.firstMatch(in: text, options: [], range: fullRange),
+              match.resultType == .date,
+              let date = match.date,
+              let matchedRange = Range(match.range, in: text) else {
+            return nil
+        }
+
+        let matchedText = String(text[matchedRange])
+        var clean = text
+        clean.removeSubrange(matchedRange)
+        let cleanTitle = clean
+            .replacingOccurrences(of: "\\s{2,}", with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        return TodoTitleNlpResponse(
+            cleanTitle: cleanTitle,
+            matchedText: matchedText,
+            matchStart: match.range.location,
+            dueEpochMs: date.epochMilliseconds
+        )
     }
 }
