@@ -4,7 +4,7 @@ import Security
 import UIKit
 
 struct SystemCredential: Equatable {
-    let email: String
+    let username: String
     let password: String
 }
 
@@ -53,7 +53,7 @@ private func makeLoginCredential(user: String, password: String) -> SystemCreden
         return nil
     }
 
-    return SystemCredential(email: normalizedUser, password: password)
+    return SystemCredential(username: normalizedUser, password: password)
 }
 
 @MainActor
@@ -92,7 +92,7 @@ final class SystemCredentialService: SystemCredentialServicing {
     }
 
     func offerSaveOrUpdateCredential(_ credential: SystemCredential) async -> SystemCredentialSaveResult {
-        guard !credential.email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+        guard !credential.username.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
               !credential.password.isEmpty else {
             credentialBreadcrumb(operation: "credential.save", kind: "login", result: "skipped")
             return .skipped
@@ -131,7 +131,7 @@ final class SystemCredentialService: SystemCredentialServicing {
             port: nil,
             path: ""
         )
-        let passwordCredential = ASPasswordCredential(user: credential.email, password: credential.password)
+        let passwordCredential = ASPasswordCredential(user: credential.username, password: credential.password)
 
         do {
             try await ASCredentialDataManager().save(
@@ -156,7 +156,7 @@ final class SystemCredentialService: SystemCredentialServicing {
         return await withCheckedContinuation { (continuation: CheckedContinuation<SystemCredentialSaveResult, Never>) in
             SecAddSharedWebCredential(
                 host as CFString,
-                credential.email as CFString,
+                credential.username as CFString,
                 credential.password as CFString
             ) { error in
                 guard let error else {

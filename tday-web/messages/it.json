@@ -181,9 +181,9 @@
       "discord": "Discord"
     },
     "fields": {
-      "email": {
-        "placeholder": "Email*",
-        "error": "Inserisci un'email valida"
+      "username": {
+        "placeholder": "Nome utente*",
+        "error": "Inserisci un nome utente valido"
       },
       "password": {
         "placeholder": "Inserisci la tua password*",
@@ -200,7 +200,7 @@
     "toasts": {
       "googleError": "Al momento non è stato possibile accedere con Google",
       "discordError": "Al momento non è stato possibile accedere con Discord",
-      "invalidCredentials": "Email o password non valida",
+      "invalidCredentials": "Nome utente o password non validi",
       "genericError": "Non è possibile accedere in questo momento"
     }
   },
@@ -222,9 +222,9 @@
         "placeholder": "Cognome",
         "error": "Inserisci un cognome valido"
       },
-      "email": {
-        "placeholder": "Email*",
-        "error": "Inserisci un'email valida"
+      "username": {
+        "placeholder": "Nome utente*",
+        "error": "Inserisci un nome utente valido"
       },
       "password": {
         "placeholder": "Inserisci la tua password*",
@@ -466,7 +466,7 @@
       "description": "Aggiorna il tuo nome visualizzato",
       "name": "Nome",
       "namePlaceholder": "Inserisci il tuo nome",
-      "email": "Email",
+      "username": "Nome utente",
       "saving": "Salvataggio...",
       "save": "Salva profilo"
     },

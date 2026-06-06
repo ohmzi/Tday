@@ -19,7 +19,7 @@ import java.util.UUID
 data class JwtUserClaims(
     val id: String,
     val name: String? = null,
-    val email: String? = null,
+    val username: String? = null,
     val role: String? = null,
     val approvalStatus: String? = null,
     val tokenVersion: Int? = null,
@@ -64,7 +64,7 @@ class JwtServiceImpl(
             JwtUserClaims(
                 id = claims.getStringClaim("id") ?: claims.subject ?: return null,
                 name = claims.getStringClaim("name"),
-                email = claims.getStringClaim("email"),
+                username = claims.getStringClaim("username"),
                 role = claims.getStringClaim("role"),
                 approvalStatus = claims.getStringClaim("approvalStatus"),
                 tokenVersion = claims.getIntegerClaim("tokenVersion"),
@@ -91,7 +91,7 @@ class JwtServiceImpl(
             .jwtID(UUID.randomUUID().toString())
 
         claims.name?.let { jwtClaims.claim("name", it) }
-        claims.email?.let { jwtClaims.claim("email", it) }
+        claims.username?.let { jwtClaims.claim("username", it) }
         claims.role?.let { jwtClaims.claim("role", it) }
         claims.approvalStatus?.let { jwtClaims.claim("approvalStatus", it) }
         claims.tokenVersion?.let { jwtClaims.claim("tokenVersion", it) }

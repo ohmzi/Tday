@@ -49,7 +49,7 @@ const UserCard = ({
   if (!user) return null;
 
   const initials =
-    (user.name || user.email?.split("@")[0] || "U")
+    (user.name || user.username || "U")
       .split(" ")
       .map((n) => n[0])
       .join("")
@@ -159,7 +159,7 @@ const UserCard = ({
                 </span>
               </span>
               <span className="min-w-0 flex-1 truncate text-left">
-                {user.name || user.email?.split("@")[0] || "User"}
+                {user.name || user.username || "User"}
               </span>
             </button>
           </DropdownMenuTrigger>

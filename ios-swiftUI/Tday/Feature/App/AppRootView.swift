@@ -198,15 +198,15 @@ struct AppRootView: View {
                                     onResetServerTrust: { rawURL in
                                         await appViewModel.resetTrustedServer(rawURL: rawURL)
                                     },
-                                    onLogin: { email, password, source in
-                                        let success = await authViewModel.login(email: email, password: password, source: source)
+                                    onLogin: { username, password, source in
+                                        let success = await authViewModel.login(username: username, password: password, source: source)
                                         if success {
                                             await appViewModel.refreshSession()
                                         }
                                         return success
                                     },
-                                    onRegister: { firstName, email, password in
-                                        let success = await authViewModel.register(firstName: firstName, lastName: "", email: email, password: password)
+                                    onRegister: { firstName, username, password in
+                                        let success = await authViewModel.register(firstName: firstName, lastName: "", username: username, password: password)
                                         if success {
                                             await appViewModel.refreshSession()
                                         }

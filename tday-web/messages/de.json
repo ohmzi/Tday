@@ -181,9 +181,9 @@
       "discord": "Discord"
     },
     "fields": {
-      "email": {
-        "placeholder": "E-Mail*",
-        "error": "Bitte geben Sie eine gültige E-Mail-Adresse ein"
+      "username": {
+        "placeholder": "Benutzername*",
+        "error": "Bitte gib einen gültigen Benutzernamen ein"
       },
       "password": {
         "placeholder": "Passwort eingeben*",
@@ -200,7 +200,7 @@
     "toasts": {
       "googleError": "Wir konnten Sie derzeit nicht bei Google anmelden",
       "discordError": "Wir konnten Sie derzeit nicht bei Discord anmelden",
-      "invalidCredentials": "Ungültige E-Mail-Adresse oder Passwort",
+      "invalidCredentials": "Ungültiger Benutzername oder ungültiges Passwort",
       "genericError": "Wir können Sie derzeit nicht anmelden"
     }
   },
@@ -222,9 +222,9 @@
         "placeholder": "Nachname",
         "error": "Bitte geben Sie einen gültigen Nachnamen ein"
       },
-      "email": {
-        "placeholder": "E-Mail*",
-        "error": "Bitte geben Sie eine gültige E-Mail-Adresse ein"
+      "username": {
+        "placeholder": "Benutzername*",
+        "error": "Bitte gib einen gültigen Benutzernamen ein"
       },
       "password": {
         "placeholder": "Passwort eingeben*",
@@ -466,7 +466,7 @@
       "description": "Aktualisieren Sie Ihren Anzeigenamen",
       "name": "Name",
       "namePlaceholder": "Geben Sie Ihren Namen ein",
-      "email": "E-Mail",
+      "username": "Benutzername",
       "saving": "Speichern...",
       "save": "Profil speichern"
     },

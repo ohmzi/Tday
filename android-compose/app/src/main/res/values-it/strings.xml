@@ -160,7 +160,7 @@
     <string name="onboarding_connecting_title">Connessione al server…</string>
     <string name="onboarding_connecting_subtitle">Verifica di endpoint, TLS e impostazioni dello spazio di lavoro</string>
     <string name="onboarding_use_device_only">Usa solo questo dispositivo</string>
-    <string name="onboarding_email_label">Email</string>
+    <string name="onboarding_username_label">Nome utente</string>
     <string name="onboarding_password_label">Password</string>
     <string name="onboarding_sign_in">Accedi</string>
     <string name="onboarding_login_hero_subtitle">Apri il tuo spazio di lavoro sincronizzato.</string>
@@ -178,8 +178,8 @@
     <string name="onboarding_error_connect_fallback">Impossibile connettersi al server</string>
     <string name="onboarding_error_reset_trust_fallback">Impossibile reimpostare il server attendibile</string>
     <string name="onboarding_validation_first_name_min">Il nome deve contenere almeno 2 caratteri</string>
-    <string name="onboarding_validation_email_required">L\'email è obbligatoria</string>
-    <string name="onboarding_validation_email_invalid">Inserisci un indirizzo email valido</string>
+    <string name="onboarding_validation_username_required">Il nome utente è obbligatorio</string>
+    <string name="onboarding_validation_username_invalid">Inserisci un nome utente valido</string>
     <string name="onboarding_validation_password_required">Password e conferma sono obbligatorie</string>
     <string name="onboarding_validation_password_min">La password deve contenere almeno 8 caratteri</string>
     <string name="onboarding_validation_password_uppercase">La password deve includere almeno una lettera maiuscola</string>
@@ -190,7 +190,7 @@
     <string name="auth_pending_admin_approval">Account in attesa di approvazione dell\'admin.</string>
     <string name="auth_password_manager_save_server_url_failed">Il gestore password di Android non è riuscito a salvare questo URL del server. Verifica che un gestore password sia abilitato.</string>
     <string name="auth_password_manager_save_login_failed">Il gestore password di Android non è riuscito a salvare questo accesso. Verifica che un gestore password sia abilitato.</string>
-    <string name="auth_error_incorrect_credentials">Email o password errate</string>
+    <string name="auth_error_incorrect_credentials">Nome utente o password errati</string>
     <string name="auth_error_server_unreachable">Impossibile raggiungere il server. Controlla l\'URL del server e riprova.</string>
 
     <!-- Todo list screen -->

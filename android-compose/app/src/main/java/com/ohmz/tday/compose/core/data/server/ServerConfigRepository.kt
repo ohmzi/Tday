@@ -33,7 +33,7 @@ class ServerConfigRepository @Inject constructor(
     fun enableLocalMode() {
         secureConfigStore.clearServerUrl()
         secureConfigStore.clearCachedSessionUser()
-        secureConfigStore.clearLastEmail()
+        secureConfigStore.clearLastUsername()
         secureConfigStore.setAppDataMode(AppDataMode.LOCAL)
     }
 

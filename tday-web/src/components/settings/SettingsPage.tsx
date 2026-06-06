@@ -420,8 +420,8 @@ export default function SettingsPage() {
             </div>
           </div>
           <div className="space-y-2">
-            <Label className="px-1 text-sm font-extrabold text-muted-foreground">{t("profile.email")}</Label>
-            <Input value={user?.email ?? ""} disabled className={cn(fieldClass, "opacity-60")} />
+            <Label className="px-1 text-sm font-extrabold text-muted-foreground">{t("profile.username")}</Label>
+            <Input value={user?.username ?? ""} disabled className={cn(fieldClass, "opacity-60")} />
           </div>
           <Button type="submit" disabled={profileLoading} className="h-12 w-full rounded-2xl font-black">
             {profileLoading ? (

@@ -151,7 +151,7 @@ final class ServerConfigRepository {
         serverURLState.currentURL = nil
         secureStore.clearPersistedServerURL()
         secureStore.clearCachedSessionUser()
-        secureStore.clearLastEmail()
+        secureStore.clearLastUsername()
         secureStore.clearPersistedAuthSessionCookie()
         secureStore.setAppDataMode(.local)
     }

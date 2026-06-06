@@ -160,7 +160,7 @@
     <string name="onboarding_connecting_title">サーバーに接続中…</string>
     <string name="onboarding_connecting_subtitle">エンドポイント、TLS、ワークスペース設定を確認中</string>
     <string name="onboarding_use_device_only">このデバイスのみを使用</string>
-    <string name="onboarding_email_label">メールアドレス</string>
+    <string name="onboarding_username_label">ユーザー名</string>
     <string name="onboarding_password_label">パスワード</string>
     <string name="onboarding_sign_in">サインイン</string>
     <string name="onboarding_login_hero_subtitle">同期されたワークスペースを開きます。</string>
@@ -178,8 +178,8 @@
     <string name="onboarding_error_connect_fallback">サーバーに接続できませんでした</string>
     <string name="onboarding_error_reset_trust_fallback">信頼済みサーバーをリセットできませんでした</string>
     <string name="onboarding_validation_first_name_min">名は2文字以上で入力してください</string>
-    <string name="onboarding_validation_email_required">メールアドレスは必須です</string>
-    <string name="onboarding_validation_email_invalid">有効なメールアドレスを入力してください</string>
+    <string name="onboarding_validation_username_required">ユーザー名は必須です</string>
+    <string name="onboarding_validation_username_invalid">有効なユーザー名を入力してください</string>
     <string name="onboarding_validation_password_required">パスワードと確認用パスワードは必須です</string>
     <string name="onboarding_validation_password_min">パスワードは8文字以上で入力してください</string>
     <string name="onboarding_validation_password_uppercase">パスワードには大文字を1文字以上含めてください</string>
@@ -190,7 +190,7 @@
     <string name="auth_pending_admin_approval">アカウントは管理者の承認待ちです。</string>
     <string name="auth_password_manager_save_server_url_failed">Android パスワードマネージャーがこのサーバー URL を保存できませんでした。パスワードマネージャーが有効か確認してください。</string>
     <string name="auth_password_manager_save_login_failed">Android パスワードマネージャーがこのログインを保存できませんでした。パスワードマネージャーが有効か確認してください。</string>
-    <string name="auth_error_incorrect_credentials">メールアドレスまたはパスワードが正しくありません</string>
+    <string name="auth_error_incorrect_credentials">ユーザー名またはパスワードが正しくありません</string>
     <string name="auth_error_server_unreachable">サーバーに接続できません。サーバー URL を確認して再試行してください。</string>
 
     <!-- Todo list screen -->

@@ -1477,6 +1477,65 @@
         }
       }
     },
+    "Changes will sync when connection returns." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Änderungen werden synchronisiert, sobald die Verbindung wiederhergestellt ist."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Los cambios se sincronizarán cuando vuelva la conexión."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les modifications se synchroniseront au retour de la connexion."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le modifiche si sincronizzeranno al ritorno della connessione."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "接続が回復すると変更が同期されます。"
+          }
+        },
+        "ms" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Perubahan akan disegerakkan apabila sambungan kembali."
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "As alterações serão sincronizadas quando a conexão voltar."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Изменения синхронизируются при восстановлении соединения."
+          }
+        },
+        "zh" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "连接恢复后将同步更改。"
+          }
+        }
+      }
+    },
     "Choose whether to move only this task occurrence or the entire repeating series." : {
       "localizations" : {
         "de" : {
@@ -6301,91 +6360,63 @@
         }
       }
     },
-    "Changes will sync when connection returns." : {
+    "Offline" : {
       "extractionState" : "manual",
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Änderungen werden synchronisiert, sobald die Verbindung wiederhergestellt ist."
+            "value" : "Offline"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Los cambios se sincronizarán cuando vuelva la conexión."
+            "value" : "Sin conexión"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Les modifications se synchroniseront au retour de la connexion."
+            "value" : "Hors ligne"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Le modifiche si sincronizzeranno al ritorno della connessione."
+            "value" : "Offline"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "接続が回復すると変更が同期されます。"
+            "value" : "オフライン"
           }
         },
         "ms" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Perubahan akan disegerakkan apabila sambungan kembali."
+            "value" : "Luar talian"
           }
         },
         "pt" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "As alterações serão sincronizadas quando a conexão voltar."
+            "value" : "Offline"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Изменения синхронизируются при восстановлении соединения."
+            "value" : "Не в сети"
           }
         },
         "zh" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "连接恢复后将同步更改。"
+            "value" : "离线"
           }
         }
-      }
-    },
-    "Offline" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : { "stringUnit" : { "state" : "translated", "value" : "Offline" } },
-        "es" : { "stringUnit" : { "state" : "translated", "value" : "Sin conexión" } },
-        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Hors ligne" } },
-        "it" : { "stringUnit" : { "state" : "translated", "value" : "Offline" } },
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "オフライン" } },
-        "ms" : { "stringUnit" : { "state" : "translated", "value" : "Luar talian" } },
-        "pt" : { "stringUnit" : { "state" : "translated", "value" : "Offline" } },
-        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Не в сети" } },
-        "zh" : { "stringUnit" : { "state" : "translated", "value" : "离线" } }
-      }
-    },
-    "Up to date" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : { "stringUnit" : { "state" : "translated", "value" : "Aktuell" } },
-        "es" : { "stringUnit" : { "state" : "translated", "value" : "Actualizado" } },
-        "fr" : { "stringUnit" : { "state" : "translated", "value" : "À jour" } },
-        "it" : { "stringUnit" : { "state" : "translated", "value" : "Aggiornato" } },
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "最新です" } },
-        "ms" : { "stringUnit" : { "state" : "translated", "value" : "Terkini" } },
-        "pt" : { "stringUnit" : { "state" : "translated", "value" : "Atualizado" } },
-        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Актуально" } },
-        "zh" : { "stringUnit" : { "state" : "translated", "value" : "已是最新" } }
       }
     },
     "Offline. Changes will sync when connection returns." : {
@@ -10096,6 +10127,65 @@
         }
       }
     },
+    "Up to date" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aktuell"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Actualizado"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "À jour"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aggiornato"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最新です"
+          }
+        },
+        "ms" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terkini"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Atualizado"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Актуально"
+          }
+        },
+        "zh" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已是最新"
+          }
+        }
+      }
+    },
     "Update Required" : {
       "localizations" : {
         "de" : {
@@ -10386,6 +10476,65 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "使用已保存的服务器网址？"
+          }
+        }
+      }
+    },
+    "Username" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Benutzername"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nombre de usuario"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nom d'utilisateur"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nome utente"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ユーザー名"
+          }
+        },
+        "ms" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nama pengguna"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nome de usuário"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Имя пользователя"
+          }
+        },
+        "zh" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用户名"
           }
         }
       }

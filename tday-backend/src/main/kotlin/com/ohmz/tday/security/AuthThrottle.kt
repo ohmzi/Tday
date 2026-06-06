@@ -20,7 +20,7 @@ import kotlin.math.pow
 
 enum class ThrottleAction { credentials, register, csrf, sessionGet, credentialsKey }
 
-enum class ThrottleDimension { ip, email, device }
+enum class ThrottleDimension { ip, username, device }
 
 data class ThrottleResult(
     val allowed: Boolean,
@@ -180,7 +180,7 @@ class AuthThrottleImpl(
 
     override suspend fun recordSuccessSignal(request: ApplicationRequest, identifier: String?) {
         val normalized = clientSignals.normalizeIdentifier(identifier) ?: return
-        val identifierHash = clientSignals.hashSecurityValue("email:$normalized")
+        val identifierHash = clientSignals.hashSecurityValue("username:$normalized")
         val ipHash = clientSignals.hashSecurityValue("ip:${clientSignals.getClientIp(request)}")
         val deviceHint = clientSignals.getDeviceHint(request)
         val deviceHash = deviceHint?.let { clientSignals.hashSecurityValue("device:$it") }
@@ -246,7 +246,7 @@ class AuthThrottleImpl(
 
         if (action != ThrottleAction.csrf) {
             val norm = clientSignals.normalizeIdentifier(identifier)
-            if (norm != null) subjects.add(makeSubject(action, ThrottleDimension.email, norm))
+            if (norm != null) subjects.add(makeSubject(action, ThrottleDimension.username, norm))
         }
         return subjects
     }
@@ -303,7 +303,7 @@ class AuthThrottleImpl(
             val windowEndsAt = nextWindowStart.plusNanos(policy.windowMs * 1_000_000)
             ThrottleResult(
                 allowed = false,
-                reasonCode = if (subject.dimension == ThrottleDimension.email) "auth_limit_email" else "auth_limit_ip",
+                reasonCode = if (subject.dimension == ThrottleDimension.username) "auth_limit_username" else "auth_limit_ip",
                 retryAfterSeconds = retryAfterFromDateTime(windowEndsAt, now),
                 dimension = subject.dimension,
             )

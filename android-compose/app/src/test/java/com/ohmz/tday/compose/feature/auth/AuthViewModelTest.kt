@@ -42,20 +42,20 @@ class AuthViewModelTest {
     @Before
     fun setUp() {
         every { appContext.getString(any()) } answers { "res-${firstArg<Int>()}" }
-        every { authRepository.getLastEmail() } returns null
+        every { authRepository.getLastUsername() } returns null
         credentialService.reset()
     }
 
     @Test
     fun `manual login saves credential after success`() = runTest {
         coEvery {
-            authRepository.login(email = "user@example.com", password = "newPassword")
+            authRepository.login(username = "user@example.com", password = "newPassword")
         } returns AuthResult.Success
         val viewModel = makeViewModel()
         var didSucceed = false
 
         viewModel.login(
-            email = " User@Example.com ",
+            username = " User@Example.com ",
             password = "newPassword",
             credentialContext = credentialContext,
             source = LoginCredentialSource.MANUAL,
@@ -66,7 +66,7 @@ class AuthViewModelTest {
 
         assertTrue(didSucceed)
         assertEquals(
-            listOf(SystemCredential(email = "user@example.com", password = "newPassword")),
+            listOf(SystemCredential(username = "user@example.com", password = "newPassword")),
             credentialService.savedCredentials,
         )
     }
@@ -74,12 +74,12 @@ class AuthViewModelTest {
     @Test
     fun `password manager login does not save credential again`() = runTest {
         coEvery {
-            authRepository.login(email = "user@example.com", password = "storedPassword")
+            authRepository.login(username = "user@example.com", password = "storedPassword")
         } returns AuthResult.Success
         val viewModel = makeViewModel()
 
         viewModel.login(
-            email = "user@example.com",
+            username = "user@example.com",
             password = "storedPassword",
             credentialContext = credentialContext,
             source = LoginCredentialSource.SYSTEM_PASSWORD_MANAGER,
@@ -92,16 +92,16 @@ class AuthViewModelTest {
     @Test
     fun `failed and pending logins do not save credentials`() = runTest {
         coEvery {
-            authRepository.login(email = "failed@example.com", password = "badPassword")
+            authRepository.login(username = "failed@example.com", password = "badPassword")
         } returns AuthResult.Error("Invalid credentials")
         coEvery {
-            authRepository.login(email = "pending@example.com", password = "goodPassword")
+            authRepository.login(username = "pending@example.com", password = "goodPassword")
         } returns AuthResult.PendingApproval
         val viewModel = makeViewModel()
         var didSucceed = false
 
         viewModel.login(
-            email = "failed@example.com",
+            username = "failed@example.com",
             password = "badPassword",
             credentialContext = credentialContext,
         ) {
@@ -109,7 +109,7 @@ class AuthViewModelTest {
         }
         advanceUntilIdle()
         viewModel.login(
-            email = "pending@example.com",
+            username = "pending@example.com",
             password = "goodPassword",
             credentialContext = credentialContext,
         ) {
@@ -127,7 +127,7 @@ class AuthViewModelTest {
             authRepository.register(
                 firstName = "Taylor",
                 lastName = "",
-                email = "user@example.com",
+                username = "user@example.com",
                 password = "createdPassword",
             )
         } returns RegisterOutcome(
@@ -141,7 +141,7 @@ class AuthViewModelTest {
         viewModel.register(
             firstName = "Taylor",
             lastName = "",
-            email = " User@Example.com ",
+            username = " User@Example.com ",
             password = "createdPassword",
             credentialContext = credentialContext,
         ) {
@@ -151,7 +151,7 @@ class AuthViewModelTest {
 
         assertTrue(didSucceed)
         assertEquals(
-            listOf(SystemCredential(email = "user@example.com", password = "createdPassword")),
+            listOf(SystemCredential(username = "user@example.com", password = "createdPassword")),
             credentialService.savedCredentials,
         )
     }
@@ -196,7 +196,7 @@ private class FakeSystemCredentialService : SystemCredentialServicing {
 
     override suspend fun requestSavedCredential(
         context: Context,
-        preferredEmail: String?,
+        preferredUsername: String?,
     ): SystemCredential? = null
 
     override suspend fun offerSaveOrUpdateCredential(

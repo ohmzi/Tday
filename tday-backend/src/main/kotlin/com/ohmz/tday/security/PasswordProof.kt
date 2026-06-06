@@ -18,9 +18,9 @@ data class PasswordProofChallengePayload(
 )
 
 interface PasswordProof {
-    fun normalizeEmail(value: String?): String?
-    fun issueChallenge(email: String, storedPasswordHash: String?): PasswordProofChallengePayload
-    fun verify(email: String, challengeId: String, proofHex: String, proofVersion: String?, storedPasswordHash: String?): Boolean
+    fun normalizeUsername(value: String?): String?
+    fun issueChallenge(username: String, storedPasswordHash: String?): PasswordProofChallengePayload
+    fun verify(username: String, challengeId: String, proofHex: String, proofVersion: String?, storedPasswordHash: String?): Boolean
     fun consume(challengeId: String)
 }
 
@@ -34,7 +34,7 @@ class PasswordProofImpl(
     private val random = SecureRandom()
 
     private data class ChallengeEntry(
-        val email: String,
+        val username: String,
         val saltHex: String,
         val iterations: Int,
         val expiresAtMs: Long,
@@ -42,14 +42,14 @@ class PasswordProofImpl(
 
     private val challenges = ConcurrentHashMap<String, ChallengeEntry>()
 
-    override fun normalizeEmail(value: String?): String? {
+    override fun normalizeUsername(value: String?): String? {
         if (value == null) return null
         val normalized = value.trim().lowercase()
         return normalized.ifEmpty { null }
     }
 
-    override fun issueChallenge(email: String, storedPasswordHash: String?): PasswordProofChallengePayload {
-        val normalizedEmail = normalizeEmail(email) ?: throw IllegalArgumentException("invalid_challenge_email")
+    override fun issueChallenge(username: String, storedPasswordHash: String?): PasswordProofChallengePayload {
+        val normalizedUsername = normalizeUsername(username) ?: throw IllegalArgumentException("invalid_challenge_username")
 
         val parsedHash = passwordService.parsePasswordHash(storedPasswordHash ?: "")
         val iterations = parsedHash?.iterations ?: config.pbkdf2Iterations
@@ -60,7 +60,7 @@ class PasswordProofImpl(
 
         pruneExpired(now)
         evictOldest()
-        challenges[challengeId] = ChallengeEntry(normalizedEmail, saltHex, iterations, expiresAtMs)
+        challenges[challengeId] = ChallengeEntry(normalizedUsername, saltHex, iterations, expiresAtMs)
 
         return PasswordProofChallengePayload(
             version = version,
@@ -73,13 +73,13 @@ class PasswordProofImpl(
     }
 
     override fun verify(
-        email: String,
+        username: String,
         challengeId: String,
         proofHex: String,
         proofVersion: String?,
         storedPasswordHash: String?,
     ): Boolean {
-        val normalizedEmail = normalizeEmail(email) ?: return false
+        val normalizedUsername = normalizeUsername(username) ?: return false
         val trimmedChallengeId = challengeId.trim()
         if (trimmedChallengeId.isEmpty()) return false
 
@@ -89,7 +89,7 @@ class PasswordProofImpl(
 
         val challenge = challenges.remove(trimmedChallengeId) ?: return false
         if (challenge.expiresAtMs < System.currentTimeMillis()) return false
-        if (challenge.email != normalizedEmail) return false
+        if (challenge.username != normalizedUsername) return false
 
         val parsedHash = passwordService.parsePasswordHash(storedPasswordHash ?: "") ?: return false
         if (parsedHash.saltHex != challenge.saltHex || parsedHash.iterations != challenge.iterations) return false
@@ -97,7 +97,7 @@ class PasswordProofImpl(
         val hashKey = parsedHash.hashHex.hexToBytes() ?: return false
         val mac = Mac.getInstance("HmacSHA256")
         mac.init(SecretKeySpec(hashKey, "HmacSHA256"))
-        val message = "login:$trimmedChallengeId:$normalizedEmail"
+        val message = "login:$trimmedChallengeId:$normalizedUsername"
         val expectedProof = mac.doFinal(message.toByteArray(Charsets.UTF_8))
 
         val providedProof = normalizedProof.hexToBytes() ?: return false

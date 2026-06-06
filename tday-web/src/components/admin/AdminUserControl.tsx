@@ -29,7 +29,7 @@ import { CURRENT_APP_VERSION, formatDisplayVersion } from "@/features/release/li
 type AdminUser = {
   id: string;
   name: string | null;
-  email: string;
+  username: string;
   role: "ADMIN" | "USER";
   approvalStatus: "APPROVED" | "PENDING";
   createdAt: string;
@@ -73,9 +73,9 @@ const PendingApprovalRow = ({
     <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/70 bg-muted/20 px-3 py-2">
       <div className="min-w-0">
         <p className="truncate text-sm font-medium text-foreground">
-          {user.name?.trim() || user.email}
+          {user.name?.trim() || user.username}
         </p>
-        <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+        <p className="truncate text-xs text-muted-foreground">{user.username}</p>
       </div>
       <div className="flex items-center gap-2">
         <Button
@@ -128,9 +128,9 @@ const ApprovedUserRow = ({
     <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/70 bg-muted/20 px-3 py-2">
       <div className="min-w-0">
         <p className="truncate text-sm font-medium text-foreground">
-          {user.name?.trim() || user.email}
+          {user.name?.trim() || user.username}
         </p>
-        <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+        <p className="truncate text-xs text-muted-foreground">{user.username}</p>
         <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
           <span className="rounded-full border border-border/70 px-2 py-0.5">
             {user.role}
@@ -301,7 +301,7 @@ export default function AdminUserControl() {
   const [aiSummaryEnabled, setAiSummaryEnabled] = useState(true);
   const [settingsLoading, setSettingsLoading] = useState(true);
   const [settingsSaving, setSettingsSaving] = useState(false);
-  const [resetResult, setResetResult] = useState<{ email: string; password: string } | null>(null);
+  const [resetResult, setResetResult] = useState<{ username: string; password: string } | null>(null);
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
@@ -372,7 +372,7 @@ export default function AdminUserControl() {
   const rejectUser = async (userId: string) => {
     const target = users.find((u) => u.id === userId);
     const confirmed = window.confirm(
-      `Reject the registration for ${target?.email ?? "this account"}? The account will be permanently removed.`,
+      `Reject the registration for ${target?.username ?? "this account"}? The account will be permanently removed.`,
     );
     if (!confirmed) return;
 
@@ -423,7 +423,7 @@ export default function AdminUserControl() {
   const resetPassword = async (userId: string) => {
     const target = users.find((u) => u.id === userId);
     const confirmed = window.confirm(
-      `Reset the password for ${target?.email ?? "this user"}? Their current sessions will be signed out and they'll be required to set a new password on next sign-in.`,
+      `Reset the password for ${target?.username ?? "this user"}? Their current sessions will be signed out and they'll be required to set a new password on next sign-in.`,
     );
     if (!confirmed) return;
 
@@ -438,7 +438,7 @@ export default function AdminUserControl() {
       if (!body?.password) {
         throw new Error("Server did not return a password");
       }
-      setResetResult({ email: target?.email ?? "", password: body.password });
+      setResetResult({ username: target?.username ?? "", password: body.password });
     } catch (error) {
       toast({
         description: getErrorMessage(error, "Failed to reset password"),
@@ -586,8 +586,8 @@ export default function AdminUserControl() {
           <DialogHeader>
             <DialogTitle>Temporary password</DialogTitle>
             <DialogDescription>
-              {resetResult?.email
-                ? `Share this one-time password with ${resetResult.email}. `
+              {resetResult?.username
+                ? `Share this one-time password with ${resetResult.username}. `
                 : "Share this one-time password with the user. "}
               It is shown only once. They will be required to set a new password the next time they sign in.
             </DialogDescription>

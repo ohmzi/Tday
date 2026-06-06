@@ -181,19 +181,19 @@ class SecureConfigStore @Inject constructor(
         return Result.success(Unit)
     }
 
-    fun getLastEmail(): String? =
-        prefs.getString(KEY_EMAIL, null)?.takeIf { it.isNotBlank() }
+    fun getLastUsername(): String? =
+        prefs.getString(KEY_USERNAME, null)?.takeIf { it.isNotBlank() }
 
-    fun saveLastEmail(email: String) {
+    fun saveLastUsername(username: String) {
         prefs.edit()
-            .putString(KEY_EMAIL, email)
+            .putString(KEY_USERNAME, username)
             .remove("password")
             .apply()
     }
 
-    fun clearLastEmail() {
+    fun clearLastUsername() {
         prefs.edit()
-            .remove(KEY_EMAIL)
+            .remove(KEY_USERNAME)
             .remove("password")
             .apply()
     }
@@ -273,7 +273,7 @@ class SecureConfigStore @Inject constructor(
     private companion object {
         const val PREF_NAME = "tday_secure_config"
         const val KEY_SERVER_URL = "server_url"
-        const val KEY_EMAIL = "email"
+        const val KEY_USERNAME = "username"
         const val KEY_DEVICE_ID = "device_id"
         const val KEY_CERT_FINGERPRINT_PREFIX = "cert_fp_"
         const val KEY_LIST_ICON_MAP = "list_icon_map"

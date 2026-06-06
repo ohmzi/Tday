@@ -9,7 +9,7 @@ class LoginCredentialCoordinator {
 
     suspend fun requestSavedCredentialIfAvailable(
         context: Context,
-        currentEmail: String,
+        currentUsername: String,
         currentPassword: String,
         isCreatingAccount: Boolean,
         isAuthLoading: Boolean,
@@ -30,7 +30,7 @@ class LoginCredentialCoordinator {
         try {
             val credential = requestSavedCredential(
                 context,
-                currentEmail.takeIf { it.isNotBlank() },
+                currentUsername.takeIf { it.isNotBlank() },
             ) ?: return false
             return login(credential)
         } finally {

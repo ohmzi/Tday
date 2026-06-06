@@ -60,7 +60,7 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 private const val TEST_USER_ID = "user_123"
-private const val TEST_USER_EMAIL = "user@example.com"
+private const val TEST_USERNAME = "testuser"
 private const val TEST_ROLE = "USER"
 private const val TEST_APPROVAL_STATUS = "APPROVED"
 private const val TEST_TIME_ZONE = "America/Toronto"
@@ -84,7 +84,7 @@ class SessionAuthFlowTest {
         val userService = FakeUserService(
             loginUser = mapOf(
                 "id" to TEST_USER_ID,
-                "email" to TEST_USER_EMAIL,
+                "username" to TEST_USERNAME,
                 "password" to "stored-hash",
                 "name" to "Test User",
                 "role" to TEST_ROLE,
@@ -104,7 +104,7 @@ class SessionAuthFlowTest {
 
         val response = client.post(AUTH_CALLBACK_PATH) {
             contentType(ContentType.Application.Json)
-            setBody("""{"email":"$TEST_USER_EMAIL","password":"Password123!"}""")
+            setBody("""{"username":"$TEST_USERNAME","password":"Password123!"}""")
         }
 
         assertEquals(HttpStatusCode.OK, response.status)
@@ -128,7 +128,7 @@ class SessionAuthFlowTest {
         val initialToken = initialJwtService.encode(
             JwtUserClaims(
                 id = TEST_USER_ID,
-                email = TEST_USER_EMAIL,
+                username = TEST_USERNAME,
                 tokenVersion = 1,
             ),
         )
@@ -181,7 +181,7 @@ class SessionAuthFlowTest {
         val initialToken = initialJwtService.encode(
             JwtUserClaims(
                 id = TEST_USER_ID,
-                email = TEST_USER_EMAIL,
+                username = TEST_USERNAME,
                 tokenVersion = 1,
             ),
         )
@@ -230,7 +230,7 @@ class SessionAuthFlowTest {
         val initialToken = initialJwtService.encode(
             JwtUserClaims(
                 id = TEST_USER_ID,
-                email = TEST_USER_EMAIL,
+                username = TEST_USERNAME,
                 tokenVersion = 1,
             ),
         )
@@ -309,7 +309,7 @@ class SessionAuthFlowTest {
         val sessionControl = RecordingSessionControl()
         val authUser = JwtUserClaims(
             id = TEST_USER_ID,
-            email = TEST_USER_EMAIL,
+            username = TEST_USERNAME,
             role = TEST_ROLE,
             approvalStatus = TEST_APPROVAL_STATUS,
             tokenVersion = 4,
@@ -537,14 +537,14 @@ class SessionAuthFlowTest {
     }
 
     private class FakePasswordProof : PasswordProof {
-        override fun normalizeEmail(value: String?): String? = value?.trim()?.lowercase()
+        override fun normalizeUsername(value: String?): String? = value?.trim()?.lowercase()
 
-        override fun issueChallenge(email: String, storedPasswordHash: String?): PasswordProofChallengePayload {
+        override fun issueChallenge(username: String, storedPasswordHash: String?): PasswordProofChallengePayload {
             error("password proof challenge is not used in this test")
         }
 
         override fun verify(
-            email: String,
+            username: String,
             challengeId: String,
             proofHex: String,
             proofVersion: String?,
@@ -599,15 +599,15 @@ class SessionAuthFlowTest {
         override suspend fun register(
             fname: String,
             lname: String?,
-            email: String,
+            username: String,
             password: String,
         ): Either<AppError, RegisterResult> = AppError.BadRequest(UNUSED_ERROR_MESSAGE).left()
 
-        override suspend fun findByEmail(email: String): Map<String, Any?>? = loginUser
+        override suspend fun findByUsername(username: String): Map<String, Any?>? = loginUser
 
         override suspend fun isAdmin(userId: String): Boolean = false
 
-        override suspend fun emailExists(email: String): Boolean = false
+        override suspend fun usernameExists(username: String): Boolean = false
 
         override suspend fun updatePasswordHash(userId: String, newHash: String) = Unit
         override suspend fun requiresPasswordChange(userId: String): Boolean = false

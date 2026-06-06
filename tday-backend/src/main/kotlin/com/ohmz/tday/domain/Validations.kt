@@ -94,8 +94,9 @@ val validateRegister = Validation<RegisterRequest> {
     RegisterRequest::fname {
         minLength(2) hint "First name must be at least two characters"
     }
-    RegisterRequest::email {
-        pattern(".+@.+") hint "Email is incorrect"
+    RegisterRequest::username {
+        pattern("^[a-z0-9](?:[a-z0-9._-]{1,28}[a-z0-9])$") hint
+            "Username must be 3-30 characters using letters, numbers, . _ - and start/end alphanumeric"
     }
     RegisterRequest::password {
         minLength(8) hint "Password must be at least 8 characters"
