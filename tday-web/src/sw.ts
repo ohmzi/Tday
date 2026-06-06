@@ -1,11 +1,7 @@
 /// <reference lib="webworker" />
 import { precacheAndRoute, cleanupOutdatedCaches } from "workbox-precaching";
 import { registerRoute, NavigationRoute } from "workbox-routing";
-import {
-  StaleWhileRevalidate,
-  NetworkFirst,
-  NetworkOnly,
-} from "workbox-strategies";
+import { NetworkFirst, NetworkOnly } from "workbox-strategies";
 import { CacheableResponsePlugin } from "workbox-cacheable-response";
 import { ExpirationPlugin } from "workbox-expiration";
 import { createHandlerBoundToURL } from "workbox-precaching";
@@ -67,9 +63,16 @@ registerRoute(
 /* The build-version probe must always hit the origin, never a cache. */
 registerRoute(/^\/version\.json/, new NetworkOnly());
 
-/* ── Runtime API caching (stale-while-revalidate) ── */
+/* ── Runtime API caching ── */
+/* Network-first (not stale-while-revalidate): after a mutation the app           */
+/* refetches these lists, and SWR would hand back the pre-mutation cache first —   */
+/* clobbering the optimistic update so a newly added task/floater appears to       */
+/* "not update right away" on the home and floater screens. Network-first returns  */
+/* fresh data online and only falls back to the cache when the network fails       */
+/* (offline), keeping the PWA usable offline.                                      */
 const apiCacheConfig = {
   cacheName: "tday-api-cache",
+  networkTimeoutSeconds: 4,
   plugins: [
     new CacheableResponsePlugin({ statuses: [0, 200] }),
     new ExpirationPlugin({ maxEntries: 100, maxAgeSeconds: 60 * 60 }),
@@ -81,7 +84,7 @@ registerRoute(
     url.pathname.startsWith("/api/todo") ||
     url.pathname.startsWith("/api/floater") ||
     url.pathname.startsWith("/api/floater-list"),
-  new StaleWhileRevalidate(apiCacheConfig),
+  new NetworkFirst(apiCacheConfig),
 );
 
 /* ── Push notifications ── */

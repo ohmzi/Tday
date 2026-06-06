@@ -610,5 +610,6 @@ class SessionAuthFlowTest {
         override suspend fun emailExists(email: String): Boolean = false
 
         override suspend fun updatePasswordHash(userId: String, newHash: String) = Unit
+        override suspend fun requiresPasswordChange(userId: String): Boolean = false
     }
 }
