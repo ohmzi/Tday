@@ -507,10 +507,7 @@ export default function SettingsPage() {
         </form>
       </SettingsSection>
 
-      <SettingsSection
-        title="Dashboard access"
-        description='Generate a personal API key to connect external dashboards (e.g. the Homarr "Tday" widget). Paste this key with your Tday server URL into the integration. Keep it secret — it grants access to your tasks.'
-      >
+      <SettingsSection title="Dashboard access">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0 text-sm">
             <p className="font-black text-foreground">
