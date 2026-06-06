@@ -18,7 +18,13 @@ import org.jetbrains.exposed.sql.update
 
 interface PreferencesService {
     suspend fun get(userId: String): Either<AppError, PreferencesResponse>
-    suspend fun update(userId: String, sortBy: String?, groupBy: String?, direction: String?): Either<AppError, Unit>
+    suspend fun update(
+        userId: String,
+        sortBy: String?,
+        groupBy: String?,
+        direction: String?,
+        aiSummaryEnabled: Boolean?,
+    ): Either<AppError, Unit>
 }
 
 class PreferencesServiceImpl : PreferencesService {
@@ -29,12 +35,20 @@ class PreferencesServiceImpl : PreferencesService {
                 sortBy = row?.get(UserPreferences.sortBy)?.name,
                 groupBy = row?.get(UserPreferences.groupBy)?.let { GroupBy.toApi(it) },
                 direction = row?.get(UserPreferences.direction)?.name,
+                // NULL (no row / never set) means the feature is on by default.
+                aiSummaryEnabled = row?.get(UserPreferences.aiSummaryEnabled) ?: true,
             )
         }
         return prefs.right()
     }
 
-    override suspend fun update(userId: String, sortBy: String?, groupBy: String?, direction: String?): Either<AppError, Unit> {
+    override suspend fun update(
+        userId: String,
+        sortBy: String?,
+        groupBy: String?,
+        direction: String?,
+        aiSummaryEnabled: Boolean?,
+    ): Either<AppError, Unit> {
         newSuspendedTransaction(Dispatchers.IO) {
             val existing = UserPreferences.selectAll().where { UserPreferences.userID eq userId }.firstOrNull()
             if (existing != null) {
@@ -42,6 +56,7 @@ class PreferencesServiceImpl : PreferencesService {
                     sortBy?.let { s -> it[UserPreferences.sortBy] = SortBy.valueOf(s) }
                     groupBy?.let { g -> it[UserPreferences.groupBy] = GroupBy.fromApi(g) }
                     direction?.let { d -> it[UserPreferences.direction] = Direction.valueOf(d) }
+                    aiSummaryEnabled?.let { v -> it[UserPreferences.aiSummaryEnabled] = v }
                 }
             } else {
                 UserPreferences.insert {
@@ -50,6 +65,7 @@ class PreferencesServiceImpl : PreferencesService {
                     sortBy?.let { s -> it[UserPreferences.sortBy] = SortBy.valueOf(s) }
                     groupBy?.let { g -> it[UserPreferences.groupBy] = GroupBy.fromApi(g) }
                     direction?.let { d -> it[UserPreferences.direction] = Direction.valueOf(d) }
+                    aiSummaryEnabled?.let { v -> it[UserPreferences.aiSummaryEnabled] = v }
                 }
             }
         }

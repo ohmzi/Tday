@@ -530,6 +530,11 @@
       "passwordsDoNotMatch": "As senhas não coincidem",
       "passwordChanged": "Senha alterada com sucesso",
       "passwordChangeFailed": "Falha ao alterar a senha"
+    },
+    "aiSummary": {
+      "title": "AI task summary",
+      "description": "Show a one-tap summary of your tasks.",
+      "toggle": "Show summary button"
     }
   },
   "summary": {
@@ -561,6 +566,11 @@
     "startWith": "Comece com {{task}}.",
     "nextUp": "Em seguida, {{tasks}}.",
     "overdueCatchUp": "Você também tem {{count}} tarefa(s) atrasada(s) para colocar em dia.",
-    "clearForNow": "Por enquanto está tudo em dia. Nenhuma tarefa precisa de atenção nesta visualização."
+    "clearForNow": "Por enquanto está tudo em dia. Nenhuma tarefa precisa de atenção nesta visualização.",
+    "title": "Summary",
+    "loading": "Generating summary…",
+    "error": "Couldn't generate a summary. Please try again.",
+    "sourceServer": "Server model",
+    "sourceLocal": "Local model"
   }
 }

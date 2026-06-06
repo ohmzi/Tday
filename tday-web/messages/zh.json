@@ -530,6 +530,11 @@
       "passwordsDoNotMatch": "密码不匹配",
       "passwordChanged": "密码更改成功",
       "passwordChangeFailed": "更改密码失败"
+    },
+    "aiSummary": {
+      "title": "AI task summary",
+      "description": "Show a one-tap summary of your tasks.",
+      "toggle": "Show summary button"
     }
   },
   "summary": {
@@ -561,6 +566,11 @@
     "startWith": "先从{{task}}开始。",
     "nextUp": "接下来，{{tasks}}。",
     "overdueCatchUp": "您还有 {{count}} 项逾期任务需要处理。",
-    "clearForNow": "目前一切就绪。此视图中没有需要处理的任务。"
+    "clearForNow": "目前一切就绪。此视图中没有需要处理的任务。",
+    "title": "Summary",
+    "loading": "Generating summary…",
+    "error": "Couldn't generate a summary. Please try again.",
+    "sourceServer": "Server model",
+    "sourceLocal": "Local model"
   }
 }

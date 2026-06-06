@@ -239,6 +239,22 @@ class SecureConfigStore @Inject constructor(
         return "$base$normalizedPath"
     }
 
+    fun getAiSummaryConfigured(): Boolean {
+        return prefs.getBoolean(KEY_AI_SUMMARY_CONFIGURED, false)
+    }
+
+    fun setAiSummaryConfigured(configured: Boolean) {
+        prefs.edit().putBoolean(KEY_AI_SUMMARY_CONFIGURED, configured).apply()
+    }
+
+    fun getAiSummaryHealthy(): Boolean {
+        return prefs.getBoolean(KEY_AI_SUMMARY_HEALTHY, false)
+    }
+
+    fun setAiSummaryHealthy(healthy: Boolean) {
+        prefs.edit().putBoolean(KEY_AI_SUMMARY_HEALTHY, healthy).apply()
+    }
+
     fun getOfflineSyncStateRaw(): String? {
         return prefs.getString(KEY_OFFLINE_SYNC_STATE, null)
     }
@@ -280,5 +296,7 @@ class SecureConfigStore @Inject constructor(
         const val KEY_OFFLINE_SYNC_STATE = "offline_sync_state_v1"
         const val KEY_CACHED_SESSION_USER = "cached_session_user_v1"
         const val KEY_APP_DATA_MODE = "app_data_mode_v1"
+        const val KEY_AI_SUMMARY_CONFIGURED = "ai_summary_configured_v1"
+        const val KEY_AI_SUMMARY_HEALTHY = "ai_summary_healthy_v1"
     }
 }

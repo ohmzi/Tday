@@ -17,11 +17,21 @@ interface TodoSummaryService {
     suspend fun generateSummary(prompt: String): String?
     suspend fun isHealthy(): Boolean
     suspend fun warmUp()
+
+    /** True when the AI model was brought up via the `ai` docker-compose profile (OLLAMA_URL set). */
+    fun isConfigured(): Boolean
+
+    /** Cached liveness so capability lookups stay fast; recomputes only when stale. */
+    suspend fun healthyCached(): Boolean
 }
 
 class TodoSummaryServiceImpl(private val config: AppConfig) : TodoSummaryService {
     private val logger = LoggerFactory.getLogger(TodoSummaryServiceImpl::class.java)
     private val json = Json { encodeDefaults = true; ignoreUnknownKeys = true }
+
+    @Volatile private var cachedHealthy = false
+    @Volatile private var lastHealthCheckMs = 0L
+    private val healthTtlMs = 30_000L
 
     private val client = HttpClient(CIO) {
         engine {
@@ -84,6 +94,20 @@ class TodoSummaryServiceImpl(private val config: AppConfig) : TodoSummaryService
     override suspend fun warmUp() {
         if (config.ollamaUrl.isBlank()) return
         generateSummary("Reply with exactly: ready")
+        // Prime the health cache so the first /app-settings call is fast.
+        runCatching { healthyCached() }
+    }
+
+    override fun isConfigured(): Boolean = config.ollamaUrl.isNotBlank()
+
+    override suspend fun healthyCached(): Boolean {
+        if (!isConfigured()) return false
+        val now = System.currentTimeMillis()
+        if (now - lastHealthCheckMs < healthTtlMs) return cachedHealthy
+        val healthy = isHealthy()
+        cachedHealthy = healthy
+        lastHealthCheckMs = now
+        return healthy
     }
 
     private fun cleanModelResponse(value: String?): String? {

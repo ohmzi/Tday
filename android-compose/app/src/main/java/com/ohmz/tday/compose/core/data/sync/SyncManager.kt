@@ -277,11 +277,24 @@ class SyncManager @Inject constructor(
         val aiSummaryEnabled = async {
             runCatching {
                 requireApiBody(
-                    api.getAppSettings(),
-                    "Could not load app settings",
+                    api.getPreferences(),
+                    "Could not load preferences",
                 ).aiSummaryEnabled
             }.getOrElse {
                 cacheManager.loadOfflineState().aiSummaryEnabled
+            }
+        }
+
+        // Capability (configured/healthy) lives in SecureConfigStore, not Room. Refresh it
+        // best-effort alongside the snapshot; failures keep the previously-stored values.
+        val aiCapability = async {
+            runCatching {
+                val settings = requireApiBody(
+                    api.getAppSettings(),
+                    "Could not load app settings",
+                )
+                secureConfigStore.setAiSummaryConfigured(settings.aiSummaryConfigured)
+                secureConfigStore.setAiSummaryHealthy(settings.aiSummaryHealthy)
             }
         }
 
@@ -293,7 +306,7 @@ class SyncManager @Inject constructor(
             lists = lists.await(),
             floaterLists = floaterLists.await(),
             aiSummaryEnabled = aiSummaryEnabled.await(),
-        )
+        ).also { aiCapability.await() }
     }
 
     private suspend fun applyPendingMutations(

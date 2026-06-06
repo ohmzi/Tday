@@ -530,6 +530,11 @@
       "passwordsDoNotMatch": "Пароли не совпадают",
       "passwordChanged": "Пароль успешно изменён",
       "passwordChangeFailed": "Не удалось изменить пароль"
+    },
+    "aiSummary": {
+      "title": "AI task summary",
+      "description": "Show a one-tap summary of your tasks.",
+      "toggle": "Show summary button"
     }
   },
   "summary": {
@@ -561,6 +566,11 @@
     "startWith": "Начните с {{task}}.",
     "nextUp": "Далее — {{tasks}}.",
     "overdueCatchUp": "Также у вас есть просроченные задачи ({{count}}), которые нужно наверстать.",
-    "clearForNow": "Сейчас всё в порядке. В этом разделе нет задач, требующих внимания."
+    "clearForNow": "Сейчас всё в порядке. В этом разделе нет задач, требующих внимания.",
+    "title": "Summary",
+    "loading": "Generating summary…",
+    "error": "Couldn't generate a summary. Please try again.",
+    "sourceServer": "Server model",
+    "sourceLocal": "Local model"
   }
 }
