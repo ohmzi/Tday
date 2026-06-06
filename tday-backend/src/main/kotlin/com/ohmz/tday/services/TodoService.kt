@@ -23,7 +23,6 @@ import java.math.RoundingMode
 import java.sql.Timestamp
 import java.time.Duration
 import java.time.LocalDateTime
-import java.time.ZoneId
 import java.time.ZoneOffset
 
 interface TodoService {
@@ -52,7 +51,7 @@ class TodoServiceImpl(
         rrule: String?, listID: String?,
     ): Either<AppError, TodoResponse> {
         val id = CuidGenerator.newCuid()
-        val now = LocalDateTime.now()
+        val now = LocalDateTime.now(ZoneOffset.UTC)
         val normalizedListID = listID?.trim()?.takeIf { it.isNotEmpty() }
 
         val validList = newSuspendedTransaction(Dispatchers.IO) {
@@ -142,7 +141,7 @@ class TodoServiceImpl(
                 (fields["due"] as? LocalDateTime)?.let { stmt[Todos.due] = it }
                 if (fields.containsKey("rrule")) stmt[Todos.rrule] = fields["rrule"] as? String
                 if (fields.containsKey("listID")) stmt[Todos.listID] = listId
-                stmt[Todos.updatedAt] = LocalDateTime.now()
+                stmt[Todos.updatedAt] = LocalDateTime.now(ZoneOffset.UTC)
             }
             true
         }
@@ -165,7 +164,7 @@ class TodoServiceImpl(
                 (Todos.id eq todoId) and (Todos.userID eq userId)
             }.firstOrNull() ?: return@newSuspendedTransaction
 
-            val now = LocalDateTime.now()
+            val now = LocalDateTime.now(ZoneOffset.UTC)
             val todoDue = todo[Todos.due]
             val daysToComplete = Duration.between(todo[Todos.createdAt], now).toDays().toDouble()
             val list = todo[Todos.listID]?.let { listId ->
@@ -243,7 +242,7 @@ class TodoServiceImpl(
             } else {
                 Todos.update({ (Todos.id eq todoId) and (Todos.userID eq userId) }) {
                     it[Todos.completed] = false
-                    it[Todos.updatedAt] = LocalDateTime.now()
+                    it[Todos.updatedAt] = LocalDateTime.now(ZoneOffset.UTC)
                 }
             }
 
@@ -267,7 +266,7 @@ class TodoServiceImpl(
         newSuspendedTransaction(Dispatchers.IO) {
             Todos.update({ (Todos.id eq todoId) and (Todos.userID eq userId) }) {
                 it[Todos.priority] = Priority.valueOf(priority)
-                it[Todos.updatedAt] = LocalDateTime.now()
+                it[Todos.updatedAt] = LocalDateTime.now(ZoneOffset.UTC)
             }
         }
         cache.invalidateTodoCaches(userId)
@@ -278,7 +277,7 @@ class TodoServiceImpl(
         newSuspendedTransaction(Dispatchers.IO) {
             Todos.update({ (Todos.id eq todoId) and (Todos.userID eq userId) }) {
                 it[Todos.order] = newOrder
-                it[Todos.updatedAt] = LocalDateTime.now()
+                it[Todos.updatedAt] = LocalDateTime.now(ZoneOffset.UTC)
             }
         }
         cache.invalidateTodoCaches(userId)
@@ -286,7 +285,11 @@ class TodoServiceImpl(
     }
 
     override suspend fun getOverdue(userId: String, timeZone: String): Either<AppError, List<TodoResponse>> {
-        val now = LocalDateTime.now(ZoneId.of(timeZone))
+        // `due` is stored as a UTC wall-clock instant, so "overdue" is a pure
+        // instant comparison and must be evaluated in UTC — not the user's local
+        // zone (mixing frames shifted results by the user's UTC offset). The
+        // user's zone only matters for local-day *grouping*, done client-side.
+        val now = LocalDateTime.now(ZoneOffset.UTC)
         val todos = newSuspendedTransaction(Dispatchers.IO) {
             Todos.selectAll().where {
                 (Todos.userID eq userId) and (Todos.completed eq false) and

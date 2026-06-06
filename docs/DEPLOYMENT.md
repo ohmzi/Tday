@@ -96,7 +96,7 @@ home-server platforms, with the symptom and the fix.
 | Container is "running" but the web UI is unreachable from any other device                                        | Default bind is `127.0.0.1` (localhost of the container/VM only)                                             | Either put a reverse proxy / VPN in front (recommended — gives HTTPS), or for a trusted LAN set `TDAY_HOST_BIND=0.0.0.0` in the **root `.env`** and recreate. On Unraid/TrueNAS custom-app UIs, map host port → container `8080` the same way. |
 | Behind a reverse proxy, registration/login throttles trip far too early, or all users share one rate-limit bucket | Proxy isn't forwarding the real client IP, so every request looks like the proxy's IP                        | Configure the proxy to send `X-Forwarded-For` (or `X-Real-IP`; Cloudflare sends `cf-connecting-ip`). T'Day reads these in priority order — no extra "trust proxy" flag needed.                                                                 |
 | Logged out constantly / "secure cookie" warnings when served over a domain                                        | App not in production mode, so cookies aren't marked Secure for an HTTPS origin, or the origin is cross-site | Set `TDAY_ENV=production` in `.env.docker` once you terminate HTTPS at the proxy. Add the external origin to `CORS_ALLOWED_ORIGINS` only if the web app is served from a *different* origin than the API.                                      |
-| Due times / notifications / log timestamps are off by hours                                                       | Container defaults to UTC                                                                                    | Set `TZ` (IANA name) in the root `.env` — it's passed through to the backend container.                                                                                                                                                        |
+| Server **log** timestamps are in UTC, not your local time                                                         | Container defaults to UTC                                                                                    | Optional: set `TZ` (IANA name) in the root `.env` — passed to the backend container. This affects **logs only**. Task due times, overdue, and reminders are always shown in each user's own device timezone and are unaffected by `TZ` (see [Server timezone](#server-timezone)). |
 | Data lost after recreating the container                                                                          | App data lives only in the `postgres_data` named volume                                                      | Keep the named volume (don't `down -v`); back it up with scheduled `pg_dump`. On Unraid/TrueNAS, map the Postgres data path to persistent array storage, not a temp/ephemeral dir.                                                             |
 | New version doesn't appear after pulling                                                                          | NAS UIs use their own update flow                                                                            | Unraid: container → **Force update**. Portainer: **Recreate** → **Re-pull image** (see [Updating in Production](#updating-in-production)). `docker compose pull && up -d` for plain Compose.                                                   |
 
@@ -302,6 +302,35 @@ The native iOS app saves and retrieves Tday credentials under the canonical `tda
 The native Android app can save and retrieve app-scoped password credentials immediately. Sharing
 credentials with the canonical `tday.ohmz.cloud` web scope requires
 `ANDROID_SHA256_CERT_FINGERPRINTS` so the backend can serve `/.well-known/assetlinks.json`.
+
+### Server timezone
+
+**You almost never need to set this, and the server's timezone does not affect anyone's task
+times.** T'Day uses the industry-standard "store UTC, render per-user" model:
+
+- Every task due time is stored in **UTC**. Each client converts the user's local input to a UTC
+  instant when saving, and converts it back to **that user's own device timezone** when displaying.
+- Each user's timezone is detected from their device and synced to the server automatically
+  (`X-User-Timezone` header + `GET /api/timezone`, stored on the user record). It is used for
+  per-user, server-side groupings like the "today / overdue" summary.
+- All server-side time math runs in UTC, so it is **independent of the container clock**. Two users
+  in different timezones see the same task at the correct local time for each of them, on web, iOS,
+  and Android alike.
+- Reminders are scheduled **on each device** and fire at the task's absolute due instant, rendered
+  in that device's local time — also independent of the server timezone.
+
+Because of this, the `TZ` environment variable only changes the **server's log timestamps**. Leave
+it at the default `UTC` unless you specifically want logs in your local zone:
+
+```bash
+# root .env — affects log timestamps only, NOT task due times or reminders
+TZ=America/New_York
+```
+
+`TZ` is read by Docker Compose and passed into the backend container
+(`docker-compose.yaml`: `TZ: ${TZ:-UTC}`). The PostgreSQL service is unaffected — all timestamps
+are stored and compared in UTC. If task times ever appear off for a single user, the cause is that
+user's **device** timezone being wrong, not the server `TZ`.
 
 #### Docker Compose (project-root `.env`)
 

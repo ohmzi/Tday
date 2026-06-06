@@ -24,6 +24,7 @@ import java.math.BigDecimal
 import java.math.RoundingMode
 import java.time.Duration
 import java.time.LocalDateTime
+import java.time.ZoneOffset
 
 interface FloaterService {
     suspend fun create(userId: String, title: String, description: String?, priority: String, listID: String?): Either<AppError, FloaterResponse>
@@ -48,7 +49,7 @@ class FloaterServiceImpl(
         listID: String?,
     ): Either<AppError, FloaterResponse> {
         val id = CuidGenerator.newCuid()
-        val now = LocalDateTime.now()
+        val now = LocalDateTime.now(ZoneOffset.UTC)
         val normalizedListID = listID?.takeIf { it.isNotBlank() }
         val validList = newSuspendedTransaction(Dispatchers.IO) {
             if (normalizedListID != null && !floaterListExists(userId, normalizedListID)) {
@@ -109,7 +110,7 @@ class FloaterServiceImpl(
                 fields["pinned"]?.let { stmt[Floaters.pinned] = it as Boolean }
                 fields["completed"]?.let { stmt[Floaters.completed] = it as Boolean }
                 if (fields.containsKey("listID")) stmt[Floaters.listID] = fields["listID"] as? String
-                stmt[Floaters.updatedAt] = LocalDateTime.now()
+                stmt[Floaters.updatedAt] = LocalDateTime.now(ZoneOffset.UTC)
             }
             true
         }
@@ -135,7 +136,7 @@ class FloaterServiceImpl(
                 (Floaters.id eq floaterId) and (Floaters.userID eq userId)
             }.firstOrNull() ?: return@newSuspendedTransaction
 
-            val now = LocalDateTime.now()
+            val now = LocalDateTime.now(ZoneOffset.UTC)
             val daysToComplete = Duration.between(floater[Floaters.createdAt], now).toDays().toDouble()
             val list = floater[Floaters.listID]?.let { listId ->
                 FloaterLists.selectAll().where {
@@ -175,7 +176,7 @@ class FloaterServiceImpl(
         newSuspendedTransaction(Dispatchers.IO) {
             Floaters.update({ (Floaters.id eq floaterId) and (Floaters.userID eq userId) }) {
                 it[Floaters.completed] = false
-                it[Floaters.updatedAt] = LocalDateTime.now()
+                it[Floaters.updatedAt] = LocalDateTime.now(ZoneOffset.UTC)
             }
             CompletedFloaters.deleteWhere {
                 (CompletedFloaters.userID eq userId) and (CompletedFloaters.originalFloaterID eq floaterId)
@@ -189,7 +190,7 @@ class FloaterServiceImpl(
         newSuspendedTransaction(Dispatchers.IO) {
             Floaters.update({ (Floaters.id eq floaterId) and (Floaters.userID eq userId) }) {
                 it[Floaters.priority] = Priority.valueOf(priority)
-                it[Floaters.updatedAt] = LocalDateTime.now()
+                it[Floaters.updatedAt] = LocalDateTime.now(ZoneOffset.UTC)
             }
         }
         cache.invalidateFloaterCaches(userId)
@@ -200,7 +201,7 @@ class FloaterServiceImpl(
         newSuspendedTransaction(Dispatchers.IO) {
             Floaters.update({ (Floaters.id eq floaterId) and (Floaters.userID eq userId) }) {
                 it[Floaters.order] = newOrder
-                it[Floaters.updatedAt] = LocalDateTime.now()
+                it[Floaters.updatedAt] = LocalDateTime.now(ZoneOffset.UTC)
             }
         }
         cache.invalidateFloaterCaches(userId)

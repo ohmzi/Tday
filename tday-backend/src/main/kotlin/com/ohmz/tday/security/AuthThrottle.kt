@@ -184,7 +184,7 @@ class AuthThrottleImpl(
         val ipHash = clientSignals.hashSecurityValue("ip:${clientSignals.getClientIp(request)}")
         val deviceHint = clientSignals.getDeviceHint(request)
         val deviceHash = deviceHint?.let { clientSignals.hashSecurityValue("device:$it") }
-        val now = LocalDateTime.now()
+        val now = LocalDateTime.now(ZoneOffset.UTC)
         val anomalyWindowMs = config.signalAnomalyWindowSec * 1000L
 
         newSuspendedTransaction(Dispatchers.IO) {
@@ -255,7 +255,7 @@ class AuthThrottleImpl(
         SubjectKey("${action.name}:${dimension.name}", clientSignals.hashSecurityValue("${dimension.name}:$value"), dimension)
 
     private suspend fun consumeRequestQuota(policy: Policy, subject: SubjectKey): ThrottleResult {
-        val now = LocalDateTime.now()
+        val now = LocalDateTime.now(ZoneOffset.UTC)
         return newSuspendedTransaction(Dispatchers.IO) {
             val row = AuthThrottles.selectAll().where {
                 (AuthThrottles.scope eq subject.scope) and (AuthThrottles.bucketKey eq subject.bucketKey)
@@ -311,7 +311,7 @@ class AuthThrottleImpl(
     }
 
     private suspend fun incrementFailureCounter(subject: SubjectKey): Pair<Int, Int> {
-        val now = LocalDateTime.now()
+        val now = LocalDateTime.now(ZoneOffset.UTC)
         val lockoutResetMs = config.lockoutResetSec * 1000L
 
         return newSuspendedTransaction(Dispatchers.IO) {
