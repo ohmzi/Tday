@@ -45,6 +45,14 @@ struct CreateTaskSheet: View {
     // The detected date phrase (e.g. "July 29 at 8pm"). Stays visible & highlighted
     // in the title field as you type; stripped from the saved title on submit.
     @State private var nlpMatchedText: String?
+    // The parser's cleaned title and the exact title it was computed from, so submit
+    // strips the precise matched span rather than the first range(of:) occurrence.
+    @State private var nlpCleanTitle: String?
+    @State private var nlpSourceTitle: String?
+    // User-intent flags so the debounced NLP autofill doesn't fight explicit choices:
+    // don't re-enable schedule the user turned off, don't overwrite a hand-picked due.
+    @State private var userTurnedScheduleOff = false
+    @State private var userPickedDueDate = false
     @State private var activeSelector: CreateTaskSheetSelector?
     @FocusState private var focusedInputField: CreateTaskSheetInputField?
 
@@ -206,7 +214,13 @@ struct CreateTaskSheet: View {
                 TdaySheetSectionTitle(text: "Schedule")
                 TdaySheetCard {
                     CreateTaskSheetScheduleToggleRow(
-                        isOn: $scheduleEnabled
+                        isOn: Binding(
+                            get: { scheduleEnabled },
+                            set: { newValue in
+                                scheduleEnabled = newValue
+                                userTurnedScheduleOff = !newValue
+                            }
+                        )
                     )
 
                     if scheduleEnabled {
@@ -319,7 +333,8 @@ struct CreateTaskSheet: View {
             guard !Task.isCancelled else {
                 return
             }
-            let parsed = await onParseTaskTitleNlp(title, dueDate.epochMilliseconds)
+            let source = title
+            let parsed = await onParseTaskTitleNlp(source, dueDate.epochMilliseconds)
             await MainActor.run {
                 // Keep the full typed text in the field (the phrase stays visible &
                 // highlighted); only set the Due. The phrase is stripped from the
@@ -329,18 +344,46 @@ struct CreateTaskSheet: View {
                       let matched = parsed.matchedText,
                       !matched.isEmpty else {
                     nlpMatchedText = nil
+                    nlpCleanTitle = nil
+                    nlpSourceTitle = nil
                     return
                 }
                 nlpMatchedText = matched
-                dueDate = Date(epochMilliseconds: dueEpochMs)
-                scheduleEnabled = true
+                nlpCleanTitle = parsed.cleanTitle
+                nlpSourceTitle = source
+                // Respect explicit user choices: don't clobber a hand-picked date, and
+                // don't re-enable schedule the user just turned off.
+                if !userPickedDueDate {
+                    dueDate = Date(epochMilliseconds: dueEpochMs)
+                }
+                if !userTurnedScheduleOff {
+                    scheduleEnabled = true
+                }
             }
         }
+    }
+
+    /// Due-date binding for the user-facing pickers; flags that the user set the date
+    /// so the debounced NLP autofill won't overwrite their choice.
+    private var userPickedDueDateBinding: Binding<Date> {
+        Binding(
+            get: { dueDate },
+            set: { newValue in
+                dueDate = newValue
+                userPickedDueDate = true
+            }
+        )
     }
 
     /// The saved title: the typed text with the highlighted date phrase removed
     /// (it stays visible in the field but isn't part of the task name) — same as web.
     private func effectiveTitle() -> String {
+        // Prefer the parser's cleaned title when the field still holds the exact text it
+        // parsed: that removes the precise matched span. The range(of:) fallback below
+        // strips the FIRST occurrence, which mangles titles where the phrase repeats.
+        if let clean = nlpCleanTitle, let source = nlpSourceTitle, source == title {
+            return clean
+        }
         guard let matched = nlpMatchedText, !matched.isEmpty,
               let range = title.range(of: matched) else {
             return title.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -433,12 +476,12 @@ struct CreateTaskSheet: View {
                     }
 
                 case .date:
-                    CreateTaskSheetDateSelectorContent(dueDate: $dueDate) {
+                    CreateTaskSheetDateSelectorContent(dueDate: userPickedDueDateBinding) {
                         activeSelector = nil
                     }
 
                 case .time:
-                    CreateTaskSheetTimeSelectorContent(dueDate: $dueDate) {
+                    CreateTaskSheetTimeSelectorContent(dueDate: userPickedDueDateBinding) {
                         activeSelector = nil
                     }
                 }
