@@ -171,7 +171,7 @@ import com.ohmz.tday.compose.ui.component.TdaySheetHeader
 import com.ohmz.tday.compose.ui.component.TdaySheetSectionTitle
 import com.ohmz.tday.compose.ui.priority.isImportantPriority
 import com.ohmz.tday.compose.ui.priority.isUrgentPriority
-import com.ohmz.tday.compose.ui.priority.priorityDisplayLabel
+import com.ohmz.tday.compose.ui.priority.priorityDisplayLabelRes
 import com.ohmz.tday.compose.ui.theme.TDAY_DEFAULT_LIST_COLOR_KEY
 import com.ohmz.tday.compose.ui.theme.TDAY_DEFAULT_LIST_ICON_KEY
 import com.ohmz.tday.compose.ui.theme.TdayDimens
@@ -1837,7 +1837,8 @@ private fun RootFloaterSearchResultsCard(
                                 fontWeight = FontWeight.ExtraBold,
                             )
                             Text(
-                                text = listMeta?.name ?: priorityDisplayLabel(todo.priority),
+                                text = listMeta?.name
+                                    ?: stringResource(priorityDisplayLabelRes(todo.priority)),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = colorScheme.onSurfaceVariant,
                                 maxLines = 1,
@@ -3352,7 +3353,7 @@ private fun emptyStateMessageForMode(mode: TodoListMode): String {
         TodoListMode.TODAY -> stringResource(R.string.todos_empty_today)
         TodoListMode.OVERDUE -> stringResource(R.string.todos_empty_overdue)
         TodoListMode.PRIORITY -> stringResource(R.string.todos_empty_priority)
-        TodoListMode.FLOATER -> "No floater tasks"
+        TodoListMode.FLOATER -> stringResource(R.string.todos_empty_floater)
         TodoListMode.SCHEDULED -> stringResource(R.string.todos_empty_scheduled)
         TodoListMode.ALL -> stringResource(R.string.todos_empty_all)
         TodoListMode.LIST -> stringResource(R.string.todos_empty_list)
@@ -3392,7 +3393,8 @@ private fun emptyStateIconForMode(
     }
 }
 
-private val SCHEDULED_DAY_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("EEE MMM d")
+private val SCHEDULED_DAY_FORMATTER: DateTimeFormatter =
+    DateTimeFormatter.ofPattern("EEE MMM d", Locale.getDefault())
 
 private fun quickAddDefaultsForDate(
     date: LocalDate,
@@ -3507,9 +3509,10 @@ private val SWIPE_ROW_CONTENT_VERTICAL_PADDING = 2.dp
 private val SWIPE_ROW_HEIGHT = 56.dp
 private val TASK_CHECKMARK_GREEN = TdayTaskCompleteAccent
 private val TODO_DUE_TIME_FORMATTER: DateTimeFormatter =
-    DateTimeFormatter.ofPattern("h:mm a").withZone(ZoneId.systemDefault())
+    DateTimeFormatter.ofPattern("h:mm a", Locale.getDefault()).withZone(ZoneId.systemDefault())
 private val TODO_DUE_DATE_TIME_FORMATTER: DateTimeFormatter =
-    DateTimeFormatter.ofPattern("MMM d, h:mm a").withZone(ZoneId.systemDefault())
+    DateTimeFormatter.ofPattern("MMM d, h:mm a", Locale.getDefault())
+        .withZone(ZoneId.systemDefault())
 
 @Composable
 private fun AllTaskSwipeRow(

@@ -13,19 +13,19 @@ enum TodoListMode: String, Codable, CaseIterable, Hashable {
     var title: String {
         switch self {
         case .today:
-            return "Today"
+            return L("Today")
         case .overdue:
-            return "Overdue"
+            return L("Overdue")
         case .scheduled:
-            return "Scheduled"
+            return L("Scheduled")
         case .all:
-            return "All Tasks"
+            return L("All Tasks")
         case .priority:
-            return "Priority"
+            return L("Priority")
         case .floater:
-            return "Floater"
+            return L("Floater")
         case .list:
-            return "List"
+            return L("List")
         }
     }
 
@@ -68,15 +68,17 @@ enum TaskPriorityDisplay {
     static let importantValue = "Medium"
     static let urgentValue = "High"
 
-    static let normalLabel = "Normal"
-    static let importantLabel = "Important"
-    static let urgentLabel = "Urgent"
+    static var normalLabel: String { L("Normal") }
+    static var importantLabel: String { L("Important") }
+    static var urgentLabel: String { L("Urgent") }
 
-    static let options: [(label: String, value: String)] = [
-        (normalLabel, normalValue),
-        (importantLabel, importantValue),
-        (urgentLabel, urgentValue),
-    ]
+    static var options: [(label: String, value: String)] {
+        [
+            (normalLabel, normalValue),
+            (importantLabel, importantValue),
+            (urgentLabel, urgentValue),
+        ]
+    }
 
     static func canonicalValue(_ priority: String?) -> String {
         switch priority?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
@@ -319,11 +321,11 @@ enum AppThemeMode: String, CaseIterable, Codable, Hashable {
     var label: String {
         switch self {
         case .system:
-            return "System"
+            return L("System")
         case .light:
-            return "Light"
+            return L("Light")
         case .dark:
-            return "Dark"
+            return L("Dark")
         }
     }
 

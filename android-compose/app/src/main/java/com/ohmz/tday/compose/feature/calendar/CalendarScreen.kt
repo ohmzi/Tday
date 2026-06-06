@@ -184,7 +184,7 @@ private const val CALENDAR_TASK_COMPLETION_CHECK_TO_STRIKE_MS = 160L
 private const val CALENDAR_TASK_COMPLETION_STRIKE_TO_FADE_MS = 360L
 private const val CALENDAR_TASK_COMPLETION_FADE_MS = 260L
 private val CalendarTaskDragDueTimeFormatter: DateTimeFormatter =
-    DateTimeFormatter.ofPattern("h:mm a").withZone(ZoneId.systemDefault())
+    DateTimeFormatter.ofPattern("h:mm a", Locale.getDefault()).withZone(ZoneId.systemDefault())
 private const val CalendarMonthPagerPageCount = 240
 private const val CalendarWeekPagerPageCount = 1040
 private const val CalendarDayPagerPageCount = 3650
@@ -618,7 +618,12 @@ fun CalendarScreen(
 
                 item {
                     val tasksDueDateLabel =
-                        selectedDate.format(DateTimeFormatter.ofPattern("EEE, MMM d"))
+                        selectedDate.format(
+                            DateTimeFormatter.ofPattern(
+                                "EEE, MMM d",
+                                Locale.getDefault()
+                            )
+                        )
                     Text(
                         text = stringResource(R.string.calendar_tasks_due, tasksDueDateLabel),
                         style = MaterialTheme.typography.titleLarge,
@@ -1409,7 +1414,12 @@ private fun CalendarDayCard(
                     verticalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
                     Text(
-                        text = displayDate.format(DateTimeFormatter.ofPattern("MMMM d, yyyy")),
+                        text = displayDate.format(
+                            DateTimeFormatter.ofPattern(
+                                "MMMM d, yyyy",
+                                Locale.getDefault()
+                            )
+                        ),
                         style = MaterialTheme.typography.headlineSmall.copy(
                             fontSize = CalendarDaySummaryTitleSize,
                         ),
@@ -2158,7 +2168,10 @@ private fun CalendarTodoRow(
         label = "calendarTaskTitleStrikeProgress",
     )
     val dueText = todo.due
-        ?.let { DateTimeFormatter.ofPattern("h:mm a").withZone(ZoneId.systemDefault()).format(it) }
+        ?.let {
+            DateTimeFormatter.ofPattern("h:mm a", Locale.getDefault())
+                .withZone(ZoneId.systemDefault()).format(it)
+        }
     val listMeta = todo.listId?.let { listId -> lists.firstOrNull { it.id == listId } }
     val showListIndicator = listMeta != null
     val priorityIcon = priorityIconFor(todo.priority)
@@ -2473,7 +2486,10 @@ private fun CalendarCompletedTodoRow(
         label = "calendarCompletedRestoreOffsetY",
     )
     val dueText = item.due
-        ?.let { DateTimeFormatter.ofPattern("h:mm a").withZone(ZoneId.systemDefault()).format(it) }
+        ?.let {
+            DateTimeFormatter.ofPattern("h:mm a", Locale.getDefault())
+                .withZone(ZoneId.systemDefault()).format(it)
+        }
     val listMeta = item.resolveListSummary(lists)
     val listIndicatorColor = listMeta?.color?.let(::tdayListAccentColor)
         ?: item.listColor?.let(::tdayListAccentColor)

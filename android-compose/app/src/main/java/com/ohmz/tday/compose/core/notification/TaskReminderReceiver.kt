@@ -15,7 +15,8 @@ class TaskReminderReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
         val taskId = intent.getStringExtra(EXTRA_TASK_ID) ?: return
-        val title = intent.getStringExtra(EXTRA_TASK_TITLE) ?: "Task reminder"
+        val title = intent.getStringExtra(EXTRA_TASK_TITLE)
+            ?: context.getString(R.string.reminder_notification_default_title)
         val dueMillis = intent.getLongExtra(EXTRA_TASK_DUE_MILLIS, -1L)
         val priority = intent.getStringExtra(EXTRA_TASK_PRIORITY) ?: "Low"
         val instanceDateMillis = intent.getLongExtra(EXTRA_INSTANCE_DATE_MILLIS, -1L)
@@ -30,7 +31,7 @@ class TaskReminderReceiver : BroadcastReceiver() {
         if (preferenceStore.wasNotified(alarmKey)) return
         preferenceStore.markNotified(alarmKey)
 
-        val body = formatDueBody(dueMillis)
+        val body = formatDueBody(context, dueMillis)
         val notificationPriority = mapPriority(priority)
 
         val deepLinkIntent = Intent(context, MainActivity::class.java).apply {
@@ -60,26 +61,41 @@ class TaskReminderReceiver : BroadcastReceiver() {
         notificationManager.notify(taskId.hashCode(), notification)
     }
 
-    private fun formatDueBody(dueMillis: Long): String {
-        if (dueMillis <= 0) return "Task is due"
+    private fun formatDueBody(context: Context, dueMillis: Long): String {
+        if (dueMillis <= 0) return context.getString(R.string.reminder_due_unknown)
 
         val now = System.currentTimeMillis()
         val diffMs = dueMillis - now
 
         return when {
-            diffMs <= 0 -> "Due now"
-            diffMs < 60_000 -> "Due in less than a minute"
+            diffMs <= 0 -> context.getString(R.string.reminder_due_now)
+            diffMs < 60_000 -> context.getString(R.string.reminder_due_less_than_minute)
             diffMs < 3_600_000 -> {
                 val minutes = diffMs / 60_000
-                "Due in $minutes minute${if (minutes != 1L) "s" else ""}"
+                val resId = if (minutes == 1L) {
+                    R.string.reminder_due_in_minutes_one
+                } else {
+                    R.string.reminder_due_in_minutes_other
+                }
+                context.getString(resId, minutes)
             }
             diffMs < 86_400_000 -> {
                 val hours = diffMs / 3_600_000
-                "Due in $hours hour${if (hours != 1L) "s" else ""}"
+                val resId = if (hours == 1L) {
+                    R.string.reminder_due_in_hours_one
+                } else {
+                    R.string.reminder_due_in_hours_other
+                }
+                context.getString(resId, hours)
             }
             else -> {
                 val days = diffMs / 86_400_000
-                "Due in $days day${if (days != 1L) "s" else ""}"
+                val resId = if (days == 1L) {
+                    R.string.reminder_due_in_days_one
+                } else {
+                    R.string.reminder_due_in_days_other
+                }
+                context.getString(resId, days)
             }
         }
     }

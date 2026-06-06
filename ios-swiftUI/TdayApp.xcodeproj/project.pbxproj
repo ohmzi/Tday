@@ -14,6 +14,12 @@
 		041712E33446975E528F050E /* RealtimeClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CC7B17CE45842F8DF7D522B /* RealtimeClient.swift */; };
 		04EFD8B7BFDF9261BE3D88BE /* CacheMappers.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3CD3233C5F5D5FC1E058708 /* CacheMappers.swift */; };
 		0536D5C87C017F1DAC4F316C /* ThemeStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD41A49221B1A947AF8A94D0 /* ThemeStore.swift */; };
+		9F8E7D6C5B4A00000000B101 /* LanguageStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F8E7D6C5B4A00000000F101 /* LanguageStore.swift */; };
+		9F8E7D6C5B4A00000000B102 /* AppLanguage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F8E7D6C5B4A00000000F102 /* AppLanguage.swift */; };
+		B5C6D7E8F9A000000000B201 /* AppLocale.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5C6D7E8F9A000000000F201 /* AppLocale.swift */; };
+		9F8E7D6C5B4A00000000B103 /* Bundle+Language.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F8E7D6C5B4A00000000F103 /* Bundle+Language.swift */; };
+		9F8E7D6C5B4A00000000B104 /* Localization.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F8E7D6C5B4A00000000F104 /* Localization.swift */; };
+		9F8E7D6C5B4A00000000B105 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 9F8E7D6C5B4A00000000F105 /* Localizable.xcstrings */; };
 		07D1F4A0C9434C54853E9D29 /* AppDataMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E4F3B64B40942F48202C32E /* AppDataMode.swift */; };
 		0A6188D6B8C9FC92A9927F1C /* SettingsRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DE0A20E66DEF6FD2146DB10 /* SettingsRepository.swift */; };
 		0BA0A83365B9CF5E63B5A9AA /* SnackbarManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 133161412A6BD2A0C04F745A /* SnackbarManager.swift */; };
@@ -198,6 +204,12 @@
 		AC2B21F3E1A43EAEECA86EE8 /* Colors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Colors.swift; sourceTree = "<group>"; };
 		AC35A6A50C3BFA68468FEDF9 /* OfflineBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineBanner.swift; sourceTree = "<group>"; };
 		AD41A49221B1A947AF8A94D0 /* ThemeStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeStore.swift; sourceTree = "<group>"; };
+		9F8E7D6C5B4A00000000F101 /* LanguageStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LanguageStore.swift; sourceTree = "<group>"; };
+		9F8E7D6C5B4A00000000F102 /* AppLanguage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLanguage.swift; sourceTree = "<group>"; };
+		B5C6D7E8F9A000000000F201 /* AppLocale.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLocale.swift; sourceTree = "<group>"; };
+		9F8E7D6C5B4A00000000F103 /* Bundle+Language.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Bundle+Language.swift"; sourceTree = "<group>"; };
+		9F8E7D6C5B4A00000000F104 /* Localization.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Localization.swift; sourceTree = "<group>"; };
+		9F8E7D6C5B4A00000000F105 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		AE3D896A638869384B4CF1EF /* ErrorRetryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorRetryView.swift; sourceTree = "<group>"; };
 		AEFA6E39FBCB063E54C61AF7 /* CreateTaskSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateTaskSheet.swift; sourceTree = "<group>"; };
 		F2C4D6E8A1B3456790ABCDEF /* TdaySheetChrome.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdaySheetChrome.swift; sourceTree = "<group>"; };
@@ -263,6 +275,7 @@
 		04A2B0C78D99EDD01626D5CB /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				9F8E7D6C5B4A00000000F105 /* Localizable.xcstrings */,
 				2D679EC9EE22239446D1DE67 /* Fonts */,
 			);
 			path = Resources;
@@ -515,6 +528,7 @@
 				E867FA22FEB66EDCE837CF6D /* SecureStore.swift */,
 				D24DBD8CA3EE648D4560B880 /* ServerURLState.swift */,
 				AD41A49221B1A947AF8A94D0 /* ThemeStore.swift */,
+				9F8E7D6C5B4A00000000F101 /* LanguageStore.swift */,
 				0032E16ECBA0642C6108F28D /* Auth */,
 				9B7A416E298DA7E2D5DAD2FC /* Cache */,
 				A4AB62DB656606572D396BB2 /* Completed */,
@@ -614,11 +628,23 @@
 			path = Onboarding;
 			sourceTree = "<group>";
 		};
+		9F8E7D6C5B4A00000000A001 /* Localization */ = {
+			isa = PBXGroup;
+			children = (
+				9F8E7D6C5B4A00000000F102 /* AppLanguage.swift */,
+				B5C6D7E8F9A000000000F201 /* AppLocale.swift */,
+				9F8E7D6C5B4A00000000F103 /* Bundle+Language.swift */,
+				9F8E7D6C5B4A00000000F104 /* Localization.swift */,
+			);
+			path = Localization;
+			sourceTree = "<group>";
+		};
 		DD5065F404F570ED9397862C /* Core */ = {
 			isa = PBXGroup;
 			children = (
 				86E84C14E60D9CBC7F667F1C /* SentryConfiguration.swift */,
 				967A6B5FC45694B849B1972E /* Data */,
+				9F8E7D6C5B4A00000000A001 /* Localization */,
 				703B1885FA053FA502D97DBC /* Domain */,
 				88C7365D1162E02AF8EB4258 /* Model */,
 				6DFF136486536F6077D88A7F /* Navigation */,
@@ -763,6 +789,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				9F8E7D6C5B4A00000000B105 /* Localizable.xcstrings in Resources */,
 				B34A31B1812FC676A3AC1871 /* Assets.xcassets in Resources */,
 				85B5397D25D2A1436CF34394 /* LaunchScreen.storyboard in Resources */,
 				C4E342DFC88BD5C188893628 /* Nunito-OFL.txt in Resources */,
@@ -870,6 +897,11 @@
 				861A548A6A3DDE0A78D35D83 /* TdayApp.swift in Sources */,
 				BA2D51423497337836ADD5E9 /* TdayTheme.swift in Sources */,
 				0536D5C87C017F1DAC4F316C /* ThemeStore.swift in Sources */,
+				9F8E7D6C5B4A00000000B101 /* LanguageStore.swift in Sources */,
+				9F8E7D6C5B4A00000000B102 /* AppLanguage.swift in Sources */,
+				B5C6D7E8F9A000000000B201 /* AppLocale.swift in Sources */,
+				9F8E7D6C5B4A00000000B103 /* Bundle+Language.swift in Sources */,
+				9F8E7D6C5B4A00000000B104 /* Localization.swift in Sources */,
 				72304EA28CF49303A8CCB6B0 /* TodayTasksWidgetSnapshotStore.swift in Sources */,
 				2E1D50F9EEE6B8D7D9B14AEA /* TodoListScreen.swift in Sources */,
 				51A46F8E627C26BF34E91F7B /* TodoListViewModel.swift in Sources */,

@@ -319,7 +319,14 @@
     "newList": "新建列表",
     "editList": "编辑列表",
     "deleteList": "删除列表",
-    "done": "完成"
+    "done": "完成",
+    "previous": "上一个",
+    "next": "下一个",
+    "searchTasks": "搜索任务",
+    "taskCount": "{{count}} 个任务",
+    "tasksDueOn": "{{date}} 到期的任务",
+    "noTasksDueThisDay": "这一天没有到期的任务",
+    "selectAnotherDate": "在日历上选择另一个日期。"
   },
   "today": {
     "saveInstance": "保存实例",
@@ -437,5 +444,123 @@
     "lightRed": "浅红",
     "brick": "砖红",
     "slate": "石板色"
+  },
+  "home": {
+    "tileScheduled": "已安排",
+    "tilePriority": "优先",
+    "tileOverdue": "逾期",
+    "tileAll": "全部",
+    "tileCompleted": "已完成",
+    "tileCalendar": "日历",
+    "searchTasksPlaceholder": "搜索任务...",
+    "noMatchingTasks": "没有匹配的任务",
+    "openList": "打开 {{name}}"
+  },
+  "settings": {
+    "themeLight": "浅色",
+    "themeDark": "深色",
+    "themeSystem": "系统",
+    "systemDefault": "系统默认",
+    "profile": {
+      "title": "个人资料",
+      "description": "更新您的显示名称",
+      "name": "名称",
+      "namePlaceholder": "输入您的名称",
+      "email": "电子邮件",
+      "saving": "保存中...",
+      "save": "保存个人资料"
+    },
+    "appearance": {
+      "title": "外观",
+      "description": "选择浅色、深色，或跟随系统设置。",
+      "descriptionSystem": "跟随设备、浅色或深色。当前使用{{theme}}。"
+    },
+    "language": {
+      "title": "语言",
+      "description": "选择应用语言",
+      "appLanguage": "应用语言"
+    },
+    "notifications": {
+      "title": "通知",
+      "push": "推送通知",
+      "description": "即使应用未打开，也能收到重要事项的通知。",
+      "blocked": "已在浏览器设置中被阻止。请更新浏览器权限以启用。",
+      "toggle": "切换推送通知"
+    },
+    "password": {
+      "title": "更改密码",
+      "description": "更新您的账户密码",
+      "current": "当前密码",
+      "currentPlaceholder": "输入您的当前密码",
+      "new": "新密码",
+      "newPlaceholder": "输入您的新密码",
+      "requirement": "密码长度至少为 8 个字符",
+      "confirm": "确认新密码",
+      "confirmPlaceholder": "确认您的新密码",
+      "changing": "正在更改密码...",
+      "change": "更改密码"
+    },
+    "dashboard": {
+      "title": "仪表板访问",
+      "enabled": "已启用 API 访问",
+      "disabled": "已禁用 API 访问",
+      "activeKeyEnding": "活动密钥以 …{{preview}} 结尾",
+      "activeKeyExists": "存在活动密钥",
+      "noKey": "尚未生成密钥",
+      "revoking": "正在撤销...",
+      "generating": "正在生成...",
+      "revokeKey": "撤销密钥",
+      "generateKey": "生成密钥",
+      "copyNow": "立即复制您的 API 密钥——它不会再次显示。"
+    },
+    "toast": {
+      "apiKeyGenerated": "已生成 API 密钥。立即复制——它不会再次显示。",
+      "apiKeyGenerateFailed": "生成 API 密钥失败",
+      "apiKeyRevoked": "API 密钥已撤销",
+      "apiKeyRevokeFailed": "撤销 API 密钥失败",
+      "apiKeyCopied": "API 密钥已复制到剪贴板",
+      "apiKeyCopyFailed": "复制 API 密钥失败",
+      "pushDisabled": "推送通知已禁用",
+      "pushEnabled": "推送通知已启用",
+      "pushUpdateFailed": "更新通知设置失败",
+      "noChanges": "没有要保存的更改",
+      "nameUpdated": "名称更新成功",
+      "nameUpdateFailed": "更新失败",
+      "passwordTooShort": "新密码长度至少为 8 个字符",
+      "passwordsDoNotMatch": "密码不匹配",
+      "passwordChanged": "密码更改成功",
+      "passwordChangeFailed": "更改密码失败"
+    }
+  },
+  "summary": {
+    "untitledTask": "无标题任务",
+    "and": "和",
+    "windowMorning": "上午",
+    "windowAfternoon": "下午",
+    "windowNight": "晚上",
+    "window_morning": "上午",
+    "window_afternoon": "下午",
+    "night": "晚上",
+    "dueTonight": "今晚到期",
+    "dueTodayWindow": "今天{{window}}到期",
+    "dueTomorrowWindow": "明天{{window}}到期",
+    "dueYesterdayWindow": "昨天{{window}}到期",
+    "targetToday": "今天",
+    "targetTomorrow": "明天",
+    "targetYesterday": "昨天",
+    "targetOnDate": "{{date}}",
+    "dueOnDate": "{{target}}到期",
+    "dueOnDateWindow": "{{target}}{{window}}到期",
+    "taskPhrasePast": "{{title}}，{{due}}",
+    "taskPhrasePresent": "{{title}}，{{due}}",
+    "thenSeparator": "，然后",
+    "qualifierBoth": "两者都",
+    "qualifierAll": "全部",
+    "dayGroupedPast": "{{tasks}}，{{qualifier}}于{{target}}到期",
+    "dayGroupedPresent": "{{tasks}}，{{qualifier}}于{{target}}到期",
+    "startWith": "先从{{task}}开始。",
+    "nextUp": "接下来，{{tasks}}。",
+    "overdueCatchUp": "您还有 {{count}} 项逾期任务需要处理。",
+    "clearForNow": "目前一切就绪。此视图中没有需要处理的任务。"
   }
 }

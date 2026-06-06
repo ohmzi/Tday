@@ -6,7 +6,7 @@ struct ErrorRetryView: View {
     let onRetry: () -> Void
     @Environment(\.tdayColors) private var colors
 
-    init(message: String, retryTitle: String = "Retry", onRetry: @escaping () -> Void) {
+    init(message: String, retryTitle: String = L("Retry"), onRetry: @escaping () -> Void) {
         self.message = message
         self.retryTitle = retryTitle
         self.onRetry = onRetry
@@ -21,7 +21,7 @@ struct ErrorRetryView: View {
                 .font(.tdayRounded(.body, weight: .bold))
                 .foregroundStyle(colors.onSurface)
                 .multilineTextAlignment(.center)
-            Button(retryTitle, action: onRetry)
+            Button(action: onRetry) { Text(retryTitle) }
                 .buttonStyle(.borderedProminent)
         }
         .padding(24)

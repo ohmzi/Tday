@@ -442,4 +442,36 @@
     <string name="settings_language">语言</string>
     <string name="settings_language_system_default">系统默认</string>
     <string name="settings_language_dialog_title">语言</string>
+
+    <!-- Empty state -->
+    <string name="todos_empty_floater">没有浮动任务</string>
+
+    <!-- Theme mode -->
+    <string name="settings_theme_system">跟随系统</string>
+    <string name="settings_theme_light">浅色</string>
+    <string name="settings_theme_dark">深色</string>
+
+    <!-- Reminder options -->
+    <string name="reminder_option_none">无</string>
+    <string name="reminder_option_at_time">到期时</string>
+    <string name="reminder_option_minutes_5">提前5分钟</string>
+    <string name="reminder_option_minutes_10">提前10分钟</string>
+    <string name="reminder_option_minutes_15">提前15分钟</string>
+    <string name="reminder_option_minutes_30">提前30分钟</string>
+    <string name="reminder_option_hours_1">提前1小时</string>
+    <string name="reminder_option_hours_2">提前2小时</string>
+    <string name="reminder_option_days_1">提前1天</string>
+    <string name="reminder_option_days_2">提前2天</string>
+
+    <!-- Reminder notification -->
+    <string name="reminder_notification_default_title">任务提醒</string>
+    <string name="reminder_due_unknown">任务已到期</string>
+    <string name="reminder_due_now">现在到期</string>
+    <string name="reminder_due_less_than_minute">不到一分钟后到期</string>
+    <string name="reminder_due_in_minutes_one">%1$d分钟后到期</string>
+    <string name="reminder_due_in_minutes_other">%1$d分钟后到期</string>
+    <string name="reminder_due_in_hours_one">%1$d小时后到期</string>
+    <string name="reminder_due_in_hours_other">%1$d小时后到期</string>
+    <string name="reminder_due_in_days_one">%1$d天后到期</string>
+    <string name="reminder_due_in_days_other">%1$d天后到期</string>
 </resources>

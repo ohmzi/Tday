@@ -7,6 +7,8 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { format } from "date-fns";
+import i18n from "@/i18n";
+import { getDateFnsLocale } from "@/lib/date/dateFnsLocale";
 import { AlignCenterIcon } from "lucide-react";
 import clsx from "clsx";
 import { Pen, Trash, X } from "lucide-react";
@@ -18,7 +20,8 @@ import EditCalendarFormContainer from "./CalendarForm/EditFormContainer";
 const ConfirmDelete = lazy(() => import("./ConfirmationModals/ConfirmDelete"));
 const ConfirmDeleteAll = lazy(() => import("./ConfirmationModals/ConfirmDeleteAll"));
 
-const formatDueTime = (due: Date) => format(due, "MMM dd hh:mm");
+const formatDueTime = (due: Date) =>
+  format(due, "MMM dd hh:mm", { locale: getDateFnsLocale(i18n.language) });
 
 const CalendarEvent = ({ event: todo }: EventProps<TodoItemType>) => {
   const [open, setOpen] = useState(false);

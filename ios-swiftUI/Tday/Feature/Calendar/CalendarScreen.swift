@@ -198,7 +198,8 @@ struct CalendarScreen: View {
 
     private var selectedDateHeaderText: String {
         let formatter = DateFormatter()
-        formatter.dateFormat = "EEE, MMM d"
+        formatter.locale = AppLocale.current
+        formatter.setLocalizedDateFormatFromTemplate("EEE MMM d")
         return formatter.string(from: selectedDate)
     }
 
@@ -349,8 +350,8 @@ struct CalendarScreen: View {
         .createTaskSheet(isPresented: $showingCreateTask) {
             CreateTaskSheet(
                 lists: viewModel.lists,
-                titleText: "New task",
-                submitText: "Create",
+                titleText: L("New task"),
+                submitText: L("Create"),
                 initialPayload: CreateTaskPayload(title: "", description: nil, priority: TaskPriorityDisplay.normalValue, due: selectedDate, rrule: nil, listId: nil),
                 autofocusTitle: true,
                 onParseTaskTitleNlp: { title, dueRef in
@@ -365,8 +366,8 @@ struct CalendarScreen: View {
         .createTaskSheet(item: $editingTodo) { todo in
             CreateTaskSheet(
                 lists: viewModel.lists,
-                titleText: "Edit task",
-                submitText: "Save",
+                titleText: L("Edit task"),
+                submitText: L("Save"),
                 initialPayload: CreateTaskPayload(title: todo.title, description: todo.description, priority: todo.priority, due: todo.due, rrule: todo.rrule, listId: todo.listId),
                 onParseTaskTitleNlp: { title, dueRef in
                     await viewModel.parseTaskTitleNlp(text: title, referenceDueEpochMs: dueRef)
@@ -823,12 +824,15 @@ private struct CalendarMonthGrid: View {
 
     private func monthTitle(for month: Date) -> String {
         let formatter = DateFormatter()
-        formatter.dateFormat = "MMMM yyyy"
+        formatter.locale = AppLocale.current
+        formatter.setLocalizedDateFormatFromTemplate("MMMM yyyy")
         return formatter.string(from: month)
     }
 
     private var weekdaySymbols: [String] {
-        Calendar.current.veryShortStandaloneWeekdaySymbols.map { $0.uppercased() }
+        var calendar = Calendar.current
+        calendar.locale = AppLocale.current
+        return calendar.veryShortStandaloneWeekdaySymbols.map { $0.uppercased() }
     }
 
     var body: some View {
@@ -1304,7 +1308,8 @@ private struct CalendarWeekDayCell: View {
 
     private var weekdayText: String {
         let formatter = DateFormatter()
-        formatter.dateFormat = "EEE"
+        formatter.locale = AppLocale.current
+        formatter.setLocalizedDateFormatFromTemplate("EEE")
         return formatter.string(from: date)
     }
 
@@ -1718,19 +1723,21 @@ private struct CalendarDayCard: View {
 
     private func weekdayTitle(for date: Date) -> String {
         let formatter = DateFormatter()
-        formatter.dateFormat = "EEEE"
+        formatter.locale = AppLocale.current
+        formatter.setLocalizedDateFormatFromTemplate("EEEE")
         return formatter.string(from: date)
     }
 
     private func dateTitle(for date: Date) -> String {
         let formatter = DateFormatter()
-        formatter.dateFormat = "MMMM d, yyyy"
+        formatter.locale = AppLocale.current
+        formatter.setLocalizedDateFormatFromTemplate("MMMM d yyyy")
         return formatter.string(from: date)
     }
 
     private func taskCountText(for date: Date) -> String {
         let taskCount = tasksByDay[Calendar.current.startOfDay(for: date)].orEmpty.count
-        return taskCount == 1 ? "1 task due" : "\(taskCount) tasks due"
+        return taskCount == 1 ? L("1 task due") : L("%lld tasks due", Int64(taskCount))
     }
 }
 
@@ -1937,13 +1944,16 @@ private func calendarWeekRangeText(from weekStart: Date) -> String {
     let sameYear = calendar.isDate(weekStart, equalTo: weekEnd, toGranularity: .year)
 
     let monthDayFormatter = DateFormatter()
-    monthDayFormatter.dateFormat = "MMM d"
+    monthDayFormatter.locale = AppLocale.current
+    monthDayFormatter.setLocalizedDateFormatFromTemplate("MMM d")
 
     if sameMonth, sameYear {
         let monthFormatter = DateFormatter()
-        monthFormatter.dateFormat = "MMM"
+        monthFormatter.locale = AppLocale.current
+        monthFormatter.setLocalizedDateFormatFromTemplate("MMM")
         let yearFormatter = DateFormatter()
-        yearFormatter.dateFormat = "yyyy"
+        yearFormatter.locale = AppLocale.current
+        yearFormatter.setLocalizedDateFormatFromTemplate("yyyy")
         let month = monthFormatter.string(from: weekStart)
         let startDay = calendar.component(.day, from: weekStart)
         let endDay = calendar.component(.day, from: weekEnd)
@@ -1952,12 +1962,14 @@ private func calendarWeekRangeText(from weekStart: Date) -> String {
 
     if sameYear {
         let yearFormatter = DateFormatter()
-        yearFormatter.dateFormat = "yyyy"
+        yearFormatter.locale = AppLocale.current
+        yearFormatter.setLocalizedDateFormatFromTemplate("yyyy")
         return "\(monthDayFormatter.string(from: weekStart)) - \(monthDayFormatter.string(from: weekEnd)), \(yearFormatter.string(from: weekEnd))"
     }
 
     let fullFormatter = DateFormatter()
-    fullFormatter.dateFormat = "MMM d, yyyy"
+    fullFormatter.locale = AppLocale.current
+    fullFormatter.setLocalizedDateFormatFromTemplate("MMM d yyyy")
     return "\(fullFormatter.string(from: weekStart)) - \(fullFormatter.string(from: weekEnd))"
 }
 
@@ -2659,7 +2671,7 @@ private struct CalendarTaskDragPreview: View {
                     .lineLimit(1)
 
                 if let due = todo.due {
-                    Text(due.formatted(date: .omitted, time: .shortened))
+                    Text(due.formatted(.dateTime.hour().minute().locale(AppLocale.current)))
                         .font(.tdayRounded(size: 12, weight: .semibold))
                         .foregroundStyle(colors.onSurfaceVariant)
                         .lineLimit(1)
@@ -2741,7 +2753,7 @@ private struct CalendarPendingTaskRow: View {
                     )
 
                     if let due = todo.due {
-                        Text(due.formatted(date: .omitted, time: .shortened))
+                        Text(due.formatted(.dateTime.hour().minute().locale(AppLocale.current)))
                             .font(.tdayRounded(size: TodoTimelineMetrics.minimalRowSubtitleSize, weight: .semibold))
                             .foregroundStyle(colors.onSurfaceVariant.opacity(0.8))
                     }

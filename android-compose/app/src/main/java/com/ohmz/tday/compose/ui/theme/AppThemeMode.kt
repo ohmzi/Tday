@@ -1,12 +1,15 @@
 package com.ohmz.tday.compose.ui.theme
 
+import androidx.annotation.StringRes
+import com.ohmz.tday.compose.R
+
 enum class AppThemeMode(
     val storageValue: String,
-    val label: String,
+    @StringRes val labelRes: Int,
 ) {
-    SYSTEM("system", "System"),
-    LIGHT("light", "Light"),
-    DARK("dark", "Dark"),
+    SYSTEM("system", R.string.settings_theme_system),
+    LIGHT("light", R.string.settings_theme_light),
+    DARK("dark", R.string.settings_theme_dark),
     ;
 
     companion object {

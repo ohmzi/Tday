@@ -33,42 +33,42 @@ struct MobileSyncStatus: Equatable {
     }
 
     var title: String {
-        isLocalMode ? "Local workspace" : "Server sync"
+        isLocalMode ? L("Local workspace") : L("Server sync")
     }
 
     var statusText: String {
         if isLocalMode {
-            return "On this device only"
+            return L("On this device only")
         }
         if isManualSyncing {
-            return "Syncing now"
+            return L("Syncing now")
         }
         if isOffline {
-            return "Offline. Changes will sync when connection returns."
+            return L("Offline. Changes will sync when connection returns.")
         }
         if pendingMutationCount > 0 {
-            return "Waiting to sync"
+            return L("Waiting to sync")
         }
         if lastSuccessfulSyncEpochMs > 0 {
-            return "Synced"
+            return L("Synced")
         }
-        return "Ready to sync"
+        return L("Ready to sync")
     }
 
     var pendingText: String {
         switch pendingMutationCount {
         case 0:
-            return "No changes waiting"
+            return L("No changes waiting")
         case 1:
-            return "1 change waiting"
+            return L("1 change waiting")
         default:
-            return "\(pendingMutationCount) changes waiting"
+            return L("%lld changes waiting", Int64(pendingMutationCount))
         }
     }
 
     func lastSyncedText(now: Date = Date(), calendar: Calendar = .current) -> String {
         guard lastSuccessfulSyncEpochMs > 0 else {
-            return "Not yet"
+            return L("Not yet")
         }
         return Self.timestampText(epochMs: lastSuccessfulSyncEpochMs, now: now, calendar: calendar)
     }
@@ -85,9 +85,11 @@ struct MobileSyncStatus: Equatable {
     static func timestampText(epochMs: Int64, now: Date = Date(), calendar: Calendar = .current) -> String {
         let date = Date(timeIntervalSince1970: TimeInterval(epochMs) / 1_000)
         let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.locale = AppLocale.current
         formatter.timeZone = calendar.timeZone
-        formatter.dateFormat = calendar.isDate(date, inSameDayAs: now) ? "h:mm a" : "MMM d, h:mm a"
+        formatter.setLocalizedDateFormatFromTemplate(
+            calendar.isDate(date, inSameDayAs: now) ? "jmm" : "MMMd jmm"
+        )
         return formatter.string(from: date)
     }
 }
