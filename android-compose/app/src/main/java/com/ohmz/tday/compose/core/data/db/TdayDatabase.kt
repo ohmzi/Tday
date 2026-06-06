@@ -15,7 +15,10 @@ import androidx.room.RoomDatabase
         SyncMetadataEntity::class,
     ],
     version = 7,
-    exportSchema = false,
+    // Schema is exported to app/schemas so future version bumps can ship real
+    // Migration objects instead of destroying the DB (which holds unsynced
+    // pending mutations, not just re-fetchable cache). See DatabaseModule.
+    exportSchema = true,
 )
 abstract class TdayDatabase : RoomDatabase() {
     abstract fun todoDao(): TodoDao

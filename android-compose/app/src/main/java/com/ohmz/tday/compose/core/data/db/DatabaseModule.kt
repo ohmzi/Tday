@@ -21,7 +21,14 @@ object DatabaseModule {
             TdayDatabase::class.java,
             "tday_offline_cache.db",
         )
+            // TODO: this destroys the DB (including unsynced pending mutations) on any
+            // schema bump. Schema export is now enabled (see TdayDatabase) — add proper
+            // Migration objects via .addMigrations(...) before the next version bump and
+            // drop this destructive fallback so offline edits survive upgrades.
             .fallbackToDestructiveMigration()
+            // Safety net: callers should run DAO access off the main thread (see
+            // OfflineCacheManager / repositories using Dispatchers.IO). Kept so a missed
+            // path (e.g. a Glance widget) degrades to a slow query rather than crashing.
             .allowMainThreadQueries()
             .build()
     }

@@ -108,7 +108,9 @@ import com.ohmz.tday.compose.ui.theme.tdayListIconForKey
 import com.ohmz.tday.compose.ui.theme.tdayPriorityColor
 import kotlinx.coroutines.delay
 import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneId
+import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -180,6 +182,12 @@ fun CreateTaskBottomSheet(
     var nlpMatchedText by rememberSaveable(editingTask?.id) {
         mutableStateOf<String?>(null)
     }
+    // Authoritative start offset of the matched phrase (from the parser), so highlight
+    // and submit-strip target the exact span the parser consumed instead of the first
+    // indexOf() occurrence (which is wrong when the phrase repeats in the title).
+    var nlpMatchStart by rememberSaveable(editingTask?.id) {
+        mutableStateOf(-1)
+    }
     var notes by rememberSaveable(editingTask?.id) {
         mutableStateOf(editingTask?.description.orEmpty())
     }
@@ -207,6 +215,7 @@ fun CreateTaskBottomSheet(
         val nlpParser = onParseTaskTitleNlp ?: return@LaunchedEffect
         if (title.isBlank()) {
             nlpMatchedText = null
+            nlpMatchStart = -1
             return@LaunchedEffect
         }
 
@@ -219,10 +228,12 @@ fun CreateTaskBottomSheet(
         val matched = parseResult?.matchedText
         if (parseResult == null || parsedDueEpochMs == null || matched.isNullOrEmpty()) {
             nlpMatchedText = null
+            nlpMatchStart = -1
             return@LaunchedEffect
         }
 
         nlpMatchedText = matched
+        nlpMatchStart = parseResult.matchStart ?: -1
         if (showScheduleControls && !scheduleEnabled) {
             scheduleEnabled = true
         }
@@ -315,7 +326,16 @@ fun CreateTaskBottomSheet(
         // in the field but isn't part of the task name) — same as the web.
         val matched = nlpMatchedText
         val effectiveTitle = if (!matched.isNullOrEmpty()) {
-            val idx = title.indexOf(matched)
+            // Prefer the parser's authoritative offset; only fall back to indexOf if the
+            // title changed since the parse so the offset no longer lines up.
+            val start = nlpMatchStart
+            val idx = if (start in 0..(title.length - matched.length) &&
+                title.regionMatches(start, matched, 0, matched.length)
+            ) {
+                start
+            } else {
+                title.indexOf(matched)
+            }
             if (idx >= 0) {
                 (title.substring(0, idx) + title.substring(idx + matched.length))
                     .replace(Regex("\\s{2,}"), " ").trim()
@@ -485,6 +505,7 @@ fun CreateTaskBottomSheet(
                                     title = title,
                                     notes = notes,
                                     titleHighlight = nlpMatchedText,
+                                    titleHighlightStart = nlpMatchStart,
                                     onTitleChange = { title = it },
                                     onNotesChange = { notes = it },
                                     onKeyboardDone = dismissKeyboard,
@@ -654,6 +675,7 @@ private fun TaskTextCard(
     title: String,
     notes: String,
     titleHighlight: String?,
+    titleHighlightStart: Int,
     onTitleChange: (String) -> Unit,
     onNotesChange: (String) -> Unit,
     onKeyboardDone: () -> Unit,
@@ -665,6 +687,7 @@ private fun TaskTextCard(
             onValueChange = onTitleChange,
             onKeyboardDone = onKeyboardDone,
             highlightText = titleHighlight,
+            highlightStart = titleHighlightStart,
         )
         RowDivider()
         TaskField(
@@ -683,20 +706,29 @@ private fun TaskField(
     onValueChange: (String) -> Unit,
     onKeyboardDone: () -> Unit,
     highlightText: String? = null,
+    highlightStart: Int = -1,
 ) {
     val colorScheme = MaterialTheme.colorScheme
 
     // Warm highlight behind the detected date phrase, matching the web's --nlp
     // tint. Translucent so it reads on both light and dark surfaces.
     val nlpHighlightColor = Color(0xFFE0732A).copy(alpha = 0.38f)
-    val highlightTransformation = remember(highlightText, nlpHighlightColor) {
+    val highlightTransformation = remember(highlightText, highlightStart, nlpHighlightColor) {
         val phrase = highlightText
         if (phrase.isNullOrEmpty()) {
             VisualTransformation.None
         } else {
             VisualTransformation { input ->
                 val plain = input.text
-                val idx = plain.indexOf(phrase)
+                // Use the parser's offset when it still aligns with the current text;
+                // otherwise fall back to the first occurrence.
+                val idx = if (highlightStart in 0..(plain.length - phrase.length) &&
+                    plain.regionMatches(highlightStart, phrase, 0, phrase.length)
+                ) {
+                    highlightStart
+                } else {
+                    plain.indexOf(phrase)
+                }
                 if (idx < 0) {
                     TransformedText(input, OffsetMapping.Identity)
                 } else {
@@ -1061,18 +1093,24 @@ private fun ThemedDatePickerDialog(
 ) {
     val zoneId = remember { ZoneId.systemDefault() }
     val now = remember(zoneId) { ZonedDateTime.now(zoneId) }
+    // The Material3 DatePicker represents each calendar day as its UTC-midnight epoch
+    // (both selectedDateMillis and isSelectableDate's argument are UTC). All boundary
+    // math here must therefore use the UTC frame, taking the *local* calendar date but
+    // expressing it as UTC midnight — otherwise users west/east of UTC see an
+    // off-by-one in which days are selectable and which day gets saved.
     val initialDateEpochMs = remember(initialEpochMs, zoneId) {
         ZonedDateTime
             .ofInstant(Instant.ofEpochMilli(initialEpochMs), zoneId)
             .toLocalDate()
-            .atStartOfDay(zoneId)
+            .atStartOfDay(ZoneOffset.UTC)
             .toInstant()
             .toEpochMilli()
     }
     val currentYear = now.year
-    val minMonthStartEpochMs = remember(zoneId, now.year, now.monthValue) {
-        ZonedDateTime
-            .of(now.year, now.monthValue, 1, 0, 0, 0, 0, zoneId)
+    val minMonthStartEpochMs = remember(now.year, now.monthValue) {
+        LocalDate
+            .of(now.year, now.monthValue, 1)
+            .atStartOfDay(ZoneOffset.UTC)
             .toInstant()
             .toEpochMilli()
     }
@@ -1345,7 +1383,11 @@ private fun mergeDateKeepingTime(
     zoneId: ZoneId = ZoneId.systemDefault(),
 ): Long {
     val base = ZonedDateTime.ofInstant(Instant.ofEpochMilli(baseEpochMs), zoneId)
-    val selectedDate = ZonedDateTime.ofInstant(Instant.ofEpochMilli(selectedDateEpochMs), zoneId).toLocalDate()
+    // selectedDateEpochMs comes from the Material3 DatePicker as UTC midnight, so the
+    // picked calendar date must be read in UTC (reading it in a negative-offset zone
+    // would roll back to the previous day). The time-of-day stays in the local zone.
+    val selectedDate =
+        Instant.ofEpochMilli(selectedDateEpochMs).atZone(ZoneOffset.UTC).toLocalDate()
     return ZonedDateTime.of(selectedDate, base.toLocalTime(), zoneId)
         .toInstant()
         .toEpochMilli()
