@@ -9,6 +9,7 @@ object UserPreferences : Table("UserPreferences") {
     val sortBy = pgEnum<SortBy>("sortBy", "\"SortBy\"").nullable()
     val groupBy = pgEnum<GroupBy>("groupBy", "\"GroupBy\"").nullable()
     val direction = pgEnum<Direction>("direction", "\"Direction\"").nullable()
+    val aiSummaryEnabled = bool("aiSummaryEnabled").nullable()
 
     override val primaryKey = PrimaryKey(id)
 }

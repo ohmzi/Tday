@@ -7,6 +7,7 @@ type UserPreferences = {
   sortBy: SortBy | null;
   groupBy: GroupBy | null;
   direction: Direction | null;
+  aiSummaryEnabled: boolean;
 };
 
 type UserPreferencesContextType = {
@@ -26,6 +27,8 @@ function readPreferences(data: Record<string, unknown> | null): UserPreferences 
     sortBy: (data?.sortBy as SortBy | null) ?? null,
     groupBy: (data?.groupBy as GroupBy | null) ?? null,
     direction: (data?.direction as Direction | null) ?? null,
+    // Default ON when absent — the AI summary feature is opt-out.
+    aiSummaryEnabled: (data?.aiSummaryEnabled as boolean | undefined) ?? true,
   };
 }
 

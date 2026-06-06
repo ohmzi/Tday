@@ -5,6 +5,7 @@ import NativePageTitle from "@/components/app/NativePageTitle";
 import ScreenWatermark from "@/components/app/ScreenWatermark";
 import { timelineScopeAccentColors } from "@/components/app/nativeScreenTheme";
 import NativeAppBrandButton from "@/components/app/NativeAppBrandButton";
+import SummaryButton from "@/features/summary/SummaryButton";
 import TodoListLoading from "@/components/todo/component/TodoListLoading";
 import TodoGroup from "@/components/todo/component/TodoGroup";
 import TimelineSections from "@/components/todo/dnd/TimelineSections";
@@ -492,6 +493,7 @@ const AllTasksTimelineContainer = ({
         <header className="sticky top-0 z-40 flex w-full items-center justify-between gap-2.5 bg-background pt-[calc(0.5rem+env(safe-area-inset-top))] pb-1.5 lg:static lg:bg-transparent lg:pt-2 lg:pb-2">
           <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-full h-screen bg-background lg:hidden" />
           <NativeAppBrandButton className="min-w-0 max-w-[58%] sm:max-w-none" />
+          <SummaryButton mode={scope} />
         </header>
 
         <NativePageTitle

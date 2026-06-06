@@ -5,8 +5,6 @@ import kotlinx.serialization.Serializable
 typealias MessageResponse = com.ohmz.tday.shared.model.MessageResponse
 typealias MobileProbeResponse = com.ohmz.tday.shared.model.MobileProbeResponse
 typealias AppSettingsResponse = com.ohmz.tday.shared.model.AppSettingsResponse
-typealias AdminSettingsResponse = com.ohmz.tday.shared.model.AdminSettingsResponse
-typealias UpdateAdminSettingsRequest = com.ohmz.tday.shared.model.UpdateAdminSettingsRequest
 typealias TodosResponse = com.ohmz.tday.shared.model.TodosResponse
 typealias TodoSummaryRequest = com.ohmz.tday.shared.model.TodoSummaryRequest
 typealias TodoSummaryResponse = com.ohmz.tday.shared.model.TodoSummaryResponse

@@ -22,6 +22,7 @@ import {
 } from "@/components/app/nativeRouteConfig";
 import { getDisplayDate } from "@/lib/date/displayDate";
 import NativeAppBrandButton from "@/components/app/NativeAppBrandButton";
+import SummaryButton from "@/features/summary/SummaryButton";
 import { Link, useLocale, usePathname, useRouter } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
 import { getListIcon } from "@/lib/listIcons";
@@ -176,6 +177,7 @@ export default function NativeHomeDashboard() {
           <NativeAppBrandButton className="min-w-0" />
 
           <div className="flex shrink-0 items-center gap-2">
+            <SummaryButton mode="today" className={topButtonClass} />
             <button
               type="button"
               className={topButtonClass}

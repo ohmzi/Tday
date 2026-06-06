@@ -28,10 +28,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ChevronLeft
 import androidx.compose.material.icons.rounded.ChevronRight
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -87,11 +85,7 @@ fun SettingsScreen(
     selectedThemeMode: AppThemeMode,
     selectedReminder: ReminderOption,
     syncStatus: MobileSyncStatus,
-    adminAiSummaryEnabled: Boolean?,
-    isAdminAiSummaryLoading: Boolean,
-    isAdminAiSummarySaving: Boolean,
-    adminAiSummaryError: String?,
-    aiSummaryValidationError: String?,
+    aiSummaryEnabled: Boolean,
     hasUpdate: Boolean = false,
     latestVersionName: String? = null,
     backendVersion: String? = null,
@@ -99,14 +93,12 @@ fun SettingsScreen(
     onThemeModeSelected: (AppThemeMode) -> Unit,
     onReminderSelected: (ReminderOption) -> Unit,
     onSyncNow: () -> Unit,
-    onToggleAdminAiSummary: (Boolean) -> Unit,
-    onDismissAiValidationError: () -> Unit,
+    onToggleAiSummary: (Boolean) -> Unit,
     onBack: () -> Unit,
     onLogout: () -> Unit,
     onOpenLatestRelease: () -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
-    val isAdminUser = user?.role?.equals("ADMIN", ignoreCase = true) == true
     val scrollState = rememberScrollState()
     val titleScrollBehavior = rememberScrollCollapsingTitleScrollBehavior(
         scrollState = scrollState,
@@ -161,57 +153,33 @@ fun SettingsScreen(
                 LanguageSelector()
             }
 
-            if (!isLocalMode && isAdminUser) {
-                SettingsSectionCard {
-                    SettingsSectionTitle(title = stringResource(R.string.settings_feature_toggle))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
+            SettingsSectionCard {
+                SettingsSectionTitle(title = stringResource(R.string.settings_feature_toggle))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
                     ) {
-                        Column(
-                            modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(2.dp),
-                        ) {
-                            Text(
-                                text = stringResource(R.string.settings_ai_task_summary),
-                                style = MaterialTheme.typography.titleMedium,
-                                color = colorScheme.onSurface,
-                                fontWeight = FontWeight.ExtraBold,
-                            )
-                        }
-                        if (adminAiSummaryEnabled == null) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(20.dp),
-                                strokeWidth = 2.dp,
-                            )
-                        } else {
-                            Switch(
-                                checked = adminAiSummaryEnabled,
-                                onCheckedChange = onToggleAdminAiSummary,
-                                enabled = !isAdminAiSummarySaving,
-                                colors = SwitchDefaults.colors(
-                                    checkedThumbColor = Color.White,
-                                    checkedTrackColor = colorScheme.secondary,
-                                    checkedBorderColor = Color.Transparent,
-                                ),
-                            )
-                        }
-                    }
-                    if (isAdminAiSummarySaving) {
                         Text(
-                            text = stringResource(R.string.settings_saving_admin),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = colorScheme.onSurface.copy(alpha = 0.58f),
+                            text = stringResource(R.string.settings_ai_task_summary),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = colorScheme.onSurface,
+                            fontWeight = FontWeight.ExtraBold,
                         )
                     }
-                    if (!adminAiSummaryError.isNullOrBlank() && adminAiSummaryEnabled == true) {
-                        Text(
-                            text = adminAiSummaryError,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = colorScheme.error,
-                        )
-                    }
+                    Switch(
+                        checked = aiSummaryEnabled,
+                        onCheckedChange = onToggleAiSummary,
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = Color.White,
+                            checkedTrackColor = colorScheme.secondary,
+                            checkedBorderColor = Color.Transparent,
+                        ),
+                    )
                 }
             }
 
@@ -287,26 +255,6 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
         }
-    }
-
-    if (aiSummaryValidationError != null) {
-        AlertDialog(
-            onDismissRequest = onDismissAiValidationError,
-            title = {
-                Text(
-                    text = stringResource(R.string.settings_ai_unavailable_title),
-                    fontWeight = FontWeight.ExtraBold,
-                )
-            },
-            text = {
-                Text(text = aiSummaryValidationError)
-            },
-            confirmButton = {
-                TextButton(onClick = onDismissAiValidationError) {
-                    Text(stringResource(R.string.action_ok))
-                }
-            },
-        )
     }
 }
 

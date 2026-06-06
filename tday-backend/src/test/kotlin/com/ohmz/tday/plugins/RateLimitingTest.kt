@@ -5,7 +5,6 @@ import arrow.core.right
 import com.ohmz.tday.config.AppConfig
 import com.ohmz.tday.domain.AppError
 import com.ohmz.tday.domain.withAuth
-import com.ohmz.tday.models.response.AppConfigResponse
 import com.ohmz.tday.models.response.FloaterResponse
 import com.ohmz.tday.models.response.TodoResponse
 import com.ohmz.tday.routes.mobileProbeRoutes
@@ -20,7 +19,6 @@ import com.ohmz.tday.security.RequestRateLimitSubjectType
 import com.ohmz.tday.security.RequestRateLimiter
 import com.ohmz.tday.security.SessionControl
 import com.ohmz.tday.security.testAppConfig
-import com.ohmz.tday.services.AppConfigService
 import com.ohmz.tday.services.FloaterService
 import com.ohmz.tday.services.NlpParseResult
 import com.ohmz.tday.services.TodoNlpService
@@ -172,7 +170,6 @@ class RateLimitingTest {
                     single<FloaterService> { NoOpFloaterService() }
                     single<TodoSummaryService> { todoSummaryService }
                     single<TodoNlpService> { NoOpTodoNlpService() }
-                    single<AppConfigService> { EnabledAppConfigService() }
                 },
             )
         }
@@ -345,6 +342,10 @@ class RateLimitingTest {
         override suspend fun isHealthy(): Boolean = true
 
         override suspend fun warmUp() = Unit
+
+        override fun isConfigured(): Boolean = true
+
+        override suspend fun healthyCached(): Boolean = true
     }
 
     private class NoOpFloaterService : FloaterService {
@@ -412,17 +413,6 @@ class RateLimitingTest {
 
         private fun <T> unsupported(): Either<AppError, T> =
             Either.Left(AppError.Internal("unsupported in rate limit test"))
-    }
-
-    private class EnabledAppConfigService : AppConfigService {
-        override suspend fun getGlobalConfig(): Either<AppError, AppConfigResponse> =
-            AppConfigResponse(aiSummaryEnabled = true, updatedAt = null).right()
-
-        override suspend fun setAiSummaryEnabled(
-            enabled: Boolean,
-            updatedById: String?,
-        ): Either<AppError, AppConfigResponse> =
-            AppConfigResponse(aiSummaryEnabled = enabled, updatedAt = null).right()
     }
 
     private class NoOpTodoNlpService : TodoNlpService {

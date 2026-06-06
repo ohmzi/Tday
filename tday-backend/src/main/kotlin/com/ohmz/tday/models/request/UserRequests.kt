@@ -19,7 +19,5 @@ data class PreferencesPatchRequest(
     val sortBy: String? = null,
     val groupBy: String? = null,
     val direction: String? = null,
+    val aiSummaryEnabled: Boolean? = null,
 )
-
-@Serializable
-data class AdminSettingsPatchRequest(val aiSummaryEnabled: Boolean)

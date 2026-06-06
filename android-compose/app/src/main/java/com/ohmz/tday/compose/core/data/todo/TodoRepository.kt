@@ -21,6 +21,7 @@ import com.ohmz.tday.compose.core.data.cache.orderListsLikeWeb
 import com.ohmz.tday.compose.core.data.cache.todoFromCache
 import com.ohmz.tday.compose.core.data.isLikelyUnrecoverableMutationError
 import com.ohmz.tday.compose.core.data.requireApiBody
+import com.ohmz.tday.compose.core.data.settings.SettingsRepository
 import com.ohmz.tday.compose.core.data.sync.SyncManager
 import com.ohmz.tday.compose.core.model.CreateFloaterRequest
 import com.ohmz.tday.compose.core.model.CreateTaskPayload
@@ -43,12 +44,16 @@ import com.ohmz.tday.compose.core.network.TdayApiService
 import com.ohmz.tday.compose.feature.widget.FloaterTasksWidgetRefresher
 import com.ohmz.tday.compose.feature.widget.TodayTasksWidgetRefresher
 import com.ohmz.tday.compose.ui.priority.canonicalPriorityValue
+import com.ohmz.tday.shared.summary.SummaryEngine
+import com.ohmz.tday.shared.summary.SummaryScope
+import com.ohmz.tday.shared.summary.SummaryTaskInput
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
 import java.time.Instant
 import java.time.ZoneId
 import java.time.ZonedDateTime
+import java.util.Locale
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -58,6 +63,7 @@ class TodoRepository @Inject constructor(
     private val api: TdayApiService,
     private val cacheManager: OfflineCacheManager,
     private val syncManager: SyncManager,
+    private val settingsRepository: SettingsRepository,
     private val todayTasksWidgetRefresher: TodayTasksWidgetRefresher,
     private val floaterTasksWidgetRefresher: FloaterTasksWidgetRefresher,
 ) {
@@ -962,10 +968,6 @@ class TodoRepository @Inject constructor(
         mode: TodoListMode,
         listId: String? = null,
     ): TodoSummaryResponse {
-        if (syncManager.isLocalMode()) {
-            throw IllegalStateException("Summary is unavailable in local mode")
-        }
-
         val modeValue = when (mode) {
             TodoListMode.TODAY -> "today"
             TodoListMode.OVERDUE -> "overdue"
@@ -975,15 +977,94 @@ class TodoRepository @Inject constructor(
             TodoListMode.FLOATER -> "floater"
             TodoListMode.LIST -> "list"
         }
-        return requireApiBody(
-            api.summarizeTodos(
-                TodoSummaryRequest(
-                    mode = modeValue,
-                    listId = listId,
-                    timeZone = ZoneId.systemDefault().id,
-                ),
-            ),
-            "Could not summarize tasks",
+        val timeZoneId = ZoneId.systemDefault().id
+        val locale = Locale.getDefault().toLanguageTag()
+
+        val canUseAi = !syncManager.isLocalMode() &&
+                settingsRepository.aiSummaryConfiguredSnapshot() &&
+                settingsRepository.aiSummaryHealthySnapshot()
+
+        if (canUseAi) {
+            val aiResult = runCatching {
+                requireApiBody(
+                    api.summarizeTodos(
+                        TodoSummaryRequest(
+                            mode = modeValue,
+                            listId = listId,
+                            timeZone = timeZoneId,
+                            locale = locale,
+                        ),
+                    ),
+                    "Could not summarize tasks",
+                )
+            }
+            // A transient AI outage falls back to the on-device engine below.
+            aiResult.getOrNull()?.let { return it }
+        }
+
+        return summarizeLocally(
+            mode = mode,
+            modeValue = modeValue,
+            listId = listId,
+            timeZoneId = timeZoneId,
+            locale = locale,
+        )
+    }
+
+    private suspend fun summarizeLocally(
+        mode: TodoListMode,
+        modeValue: String,
+        listId: String?,
+        timeZoneId: String,
+        locale: String,
+    ): TodoSummaryResponse {
+        val state = cacheManager.loadOfflineState()
+        val inputs = if (mode == TodoListMode.FLOATER) {
+            state.floaters
+                .filterNot { it.completed }
+                .map { floater ->
+                    SummaryTaskInput(
+                        title = floater.title,
+                        priority = floater.priority,
+                        dueEpochMs = null,
+                        pinned = floater.pinned,
+                        recurring = false,
+                        listId = floater.listId,
+                        completed = floater.completed,
+                        kind = "anytime",
+                    )
+                }
+        } else {
+            state.todos
+                .filterNot { it.completed }
+                .map { todo ->
+                    SummaryTaskInput(
+                        title = todo.title,
+                        priority = todo.priority,
+                        dueEpochMs = todo.dueEpochMs,
+                        pinned = todo.pinned,
+                        recurring = !todo.rrule.isNullOrBlank(),
+                        listId = todo.listId,
+                        completed = todo.completed,
+                        kind = "task",
+                    )
+                }
+        }
+
+        val scope = SummaryScope.from(modeValue) ?: SummaryScope.TODAY
+        val summary = SummaryEngine.summarize(
+            tasks = inputs,
+            scope = scope,
+            nowEpochMs = System.currentTimeMillis(),
+            timeZoneId = timeZoneId,
+            locale = locale,
+            listId = listId,
+        )
+        return TodoSummaryResponse(
+            summary = summary,
+            source = "logic",
+            mode = modeValue,
+            taskCount = inputs.size,
         )
     }
 

@@ -1,7 +1,6 @@
 package com.ohmz.tday.compose.feature.app
 
 import android.content.Context
-import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ohmz.tday.compose.R
@@ -64,11 +63,7 @@ data class AppUiState(
     val canResetServerTrust: Boolean = false,
     val pendingApprovalMessage: String? = null,
     val isManualSyncing: Boolean = false,
-    val adminAiSummaryEnabled: Boolean? = null,
-    val isAdminAiSummaryLoading: Boolean = false,
-    val isAdminAiSummarySaving: Boolean = false,
-    val adminAiSummaryError: String? = null,
-    val aiSummaryValidationError: String? = null,
+    val aiSummaryEnabled: Boolean = true,
     val selectedReminder: ReminderOption = ReminderOption.DEFAULT,
     val isOffline: Boolean = false,
     val pendingMutationCount: Int = 0,
@@ -209,10 +204,7 @@ class AppViewModel @Inject constructor(
                         canResetServerTrust = false,
                         pendingApprovalMessage = null,
                         isManualSyncing = false,
-                        adminAiSummaryEnabled = null,
-                        isAdminAiSummaryLoading = false,
-                        isAdminAiSummarySaving = false,
-                        adminAiSummaryError = null,
+                        aiSummaryEnabled = true,
                         isOffline = false,
                         pendingMutationCount = 0,
                         lastSuccessfulSyncEpochMs = 0L,
@@ -236,7 +228,6 @@ class AppViewModel @Inject constructor(
 
             if (sessionResult != null) {
                 val sessionUser = sessionResult.user
-                val adminUser = isAdmin(sessionUser)
                 val shouldShowOfflineNotice = sessionResult.isOffline &&
                         offlineNoticeCooldown.shouldShowNotice()
                 val syncMetadata = syncMetadataSnapshot(AppDataMode.SERVER)
@@ -253,14 +244,7 @@ class AppViewModel @Inject constructor(
                         canResetServerTrust = false,
                         pendingApprovalMessage = null,
                         isManualSyncing = false,
-                        adminAiSummaryEnabled = if (adminUser) {
-                            settingsRepository.isAiSummaryEnabledSnapshot()
-                        } else {
-                            null
-                        },
-                        isAdminAiSummaryLoading = adminUser,
-                        isAdminAiSummarySaving = false,
-                        adminAiSummaryError = null,
+                        aiSummaryEnabled = settingsRepository.isAiSummaryEnabledSnapshot(),
                         isOffline = sessionResult.isOffline,
                         pendingMutationCount = syncMetadata.pendingMutationCount,
                         lastSuccessfulSyncEpochMs = syncMetadata.lastSuccessfulSyncEpochMs,
@@ -277,9 +261,6 @@ class AppViewModel @Inject constructor(
                     )
                 }
                 ensureResyncLoop(authenticated = true)
-                if (adminUser) {
-                    refreshAdminAiSummarySetting()
-                }
                 return@launch
             }
 
@@ -297,10 +278,7 @@ class AppViewModel @Inject constructor(
                         canResetServerTrust = false,
                         pendingApprovalMessage = null,
                         isManualSyncing = false,
-                        adminAiSummaryEnabled = null,
-                        isAdminAiSummaryLoading = false,
-                        isAdminAiSummarySaving = false,
-                        adminAiSummaryError = null,
+                        aiSummaryEnabled = true,
                         versionCheckResult = vs.versionCheckResult,
                         backendVersion = vs.backendVersion,
                         requiredUpdateRelease = vs.requiredUpdateRelease,
@@ -325,10 +303,7 @@ class AppViewModel @Inject constructor(
                     canResetServerTrust = false,
                     pendingApprovalMessage = null,
                     isManualSyncing = false,
-                    adminAiSummaryEnabled = null,
-                    isAdminAiSummaryLoading = false,
-                    isAdminAiSummarySaving = false,
-                    adminAiSummaryError = null,
+                    aiSummaryEnabled = true,
                 )
             }
             ensureResyncLoop(authenticated = false)
@@ -370,11 +345,7 @@ class AppViewModel @Inject constructor(
                 canResetServerTrust = false,
                 pendingApprovalMessage = null,
                 isManualSyncing = false,
-                adminAiSummaryEnabled = null,
-                isAdminAiSummaryLoading = false,
-                isAdminAiSummarySaving = false,
-                adminAiSummaryError = null,
-                aiSummaryValidationError = null,
+                aiSummaryEnabled = true,
                 isOffline = false,
                 pendingMutationCount = 0,
                 lastSuccessfulSyncEpochMs = 0L,
@@ -422,102 +393,28 @@ class AppViewModel @Inject constructor(
 
     fun refreshSession() = bootstrap()
 
-    fun refreshAdminAiSummarySetting() {
-        val current = _uiState.value
-        if (current.isLocalMode || !isAdmin(current.user)) {
-            _uiState.update {
-                it.copy(
-                    adminAiSummaryEnabled = null,
-                    isAdminAiSummaryLoading = false,
-                    isAdminAiSummarySaving = false,
-                    adminAiSummaryError = null,
-                )
-            }
-            return
-        }
-
+    fun refreshAiSummaryPreference() {
+        if (_uiState.value.isLocalMode) return
         viewModelScope.launch {
+            val enabled = settingsRepository.refreshAiSummaryPreference()
             _uiState.update {
-                it.copy(
-                    isAdminAiSummaryLoading = true,
-                    adminAiSummaryError = null,
-                    adminAiSummaryEnabled = it.adminAiSummaryEnabled
-                        ?: settingsRepository.isAiSummaryEnabledSnapshot(),
-                )
+                if (it.aiSummaryEnabled == enabled) it else it.copy(aiSummaryEnabled = enabled)
             }
-            runCatching { settingsRepository.fetchAdminAiSummaryEnabled() }
-                .onSuccess { enabled ->
-                    _uiState.update {
-                        it.copy(
-                            adminAiSummaryEnabled = enabled,
-                            isAdminAiSummaryLoading = false,
-                            adminAiSummaryError = null,
-                        )
-                    }
-                }
-                .onFailure { error ->
-                    _uiState.update {
-                        it.copy(
-                            isAdminAiSummaryLoading = false,
-                            adminAiSummaryError = friendlyAdminError(
-                                error,
-                                R.string.error_load_admin_settings_failed,
-                            ),
-                        )
-                    }
-                }
         }
     }
 
-    fun setAdminAiSummaryEnabled(enabled: Boolean) {
-        val current = _uiState.value
-        if (current.isLocalMode || !isAdmin(current.user) || current.isAdminAiSummarySaving) return
+    fun setAiSummaryEnabled(enabled: Boolean) {
+        val previous = _uiState.value.aiSummaryEnabled
+        if (previous == enabled) return
 
+        _uiState.update { it.copy(aiSummaryEnabled = enabled) }
         viewModelScope.launch {
-            _uiState.update {
-                it.copy(
-                    adminAiSummaryEnabled = enabled,
-                    isAdminAiSummarySaving = true,
-                    adminAiSummaryError = null,
-                )
-            }
-            runCatching { settingsRepository.updateAdminAiSummaryEnabled(enabled) }
-                .onSuccess { response ->
-                    val validationFailed = response.validationError != null
-                    if (validationFailed) {
-                        android.util.Log.e(
-                            "AppViewModel",
-                            "AI summary validation failed: ${response.validationError}",
-                        )
-                    }
-                    _uiState.update {
-                        it.copy(
-                            adminAiSummaryEnabled = response.aiSummaryEnabled,
-                            isAdminAiSummaryLoading = false,
-                            isAdminAiSummarySaving = false,
-                            adminAiSummaryError = null,
-                            aiSummaryValidationError = response.validationError,
-                        )
-                    }
-                }
+            runCatching { settingsRepository.setAiSummaryEnabled(enabled) }
                 .onFailure { error ->
                     android.util.Log.e("AppViewModel", "AI summary toggle failed", error)
-                    _uiState.update {
-                        it.copy(
-                            isAdminAiSummarySaving = false,
-                            adminAiSummaryError = friendlyAdminError(
-                                error,
-                                R.string.error_update_admin_settings_failed,
-                            ),
-                        )
-                    }
-                    refreshAdminAiSummarySetting()
+                    _uiState.update { it.copy(aiSummaryEnabled = previous) }
                 }
         }
-    }
-
-    fun dismissAiSummaryValidationError() {
-        _uiState.update { it.copy(aiSummaryValidationError = null) }
     }
 
     fun saveServerUrl(
@@ -645,11 +542,7 @@ class AppViewModel @Inject constructor(
                     canResetServerTrust = false,
                     pendingApprovalMessage = null,
                     isManualSyncing = false,
-                    adminAiSummaryEnabled = null,
-                    isAdminAiSummaryLoading = false,
-                    isAdminAiSummarySaving = false,
-                    adminAiSummaryError = null,
-                    aiSummaryValidationError = null,
+                    aiSummaryEnabled = true,
                     isOffline = false,
                     pendingMutationCount = 0,
                     lastSuccessfulSyncEpochMs = 0L,
@@ -1110,14 +1003,6 @@ class AppViewModel @Inject constructor(
     override fun onCleared() {
         super.onCleared()
         realtimeClient.disconnect()
-    }
-
-    private fun isAdmin(user: SessionUser?): Boolean {
-        return user?.role?.equals("ADMIN", ignoreCase = true) == true
-    }
-
-    private fun friendlyAdminError(error: Throwable, @StringRes fallbackRes: Int): String {
-        return error.userFacingMessage(appContext, fallbackRes)
     }
 
     private suspend fun probeAndSaveWithAutomaticTrustRecovery(
