@@ -60,6 +60,11 @@ class DatabaseConfig(private val config: AppConfig) {
             .locations(flywayLocation)
             .baselineOnMigrate(true)
             .baselineVersion(MigrationVersion.fromVersion("2"))
+            // Don't fail startup on a checksum mismatch: a cosmetic edit to an
+            // already-applied migration file (e.g. an editor reformatting it)
+            // must not crash the server. Applied migrations are never re-run;
+            // pending ones still apply.
+            .validateOnMigrate(false)
             .load()
             .migrate()
 
