@@ -4,6 +4,7 @@ import { CSS } from "@dnd-kit/utilities";
 import clsx from "clsx";
 import { Check, Flag, GripVertical, SquarePen, Trash } from "lucide-react";
 import TodoCheckbox from "@/components/ui/TodoCheckbox";
+import { TaskActionButtons } from "@/components/ui/TaskActionButtons";
 import FloaterListDot from "@/features/floaterList/component/FloaterListDot";
 import { getPriorityFlag } from "@/lib/priority";
 import { useFloaterListMetaData } from "@/features/floaterList/query/get-floater-list-meta";
@@ -141,6 +142,8 @@ export default function FloaterItemContainer({
             type="button"
             aria-label="Edit floater"
             onPointerDown={(event) => event.stopPropagation()}
+            onMouseDown={(event) => event.stopPropagation()}
+            onTouchStart={(event) => event.stopPropagation()}
             onClick={() => {
               hapticButtonTap();
               setDisplayForm(true);
@@ -160,6 +163,8 @@ export default function FloaterItemContainer({
             type="button"
             aria-label="Delete floater"
             onPointerDown={(event) => event.stopPropagation()}
+            onMouseDown={(event) => event.stopPropagation()}
+            onTouchStart={(event) => event.stopPropagation()}
             onClick={() => {
               hapticButtonTap();
               deleteMutateFn(floater);
@@ -269,28 +274,16 @@ export default function FloaterItemContainer({
 
             <div
               className={clsx(
-                "absolute right-0 top-1/2 hidden -translate-y-1/2 items-center gap-1 transition-opacity sm:flex",
+                "absolute right-0 top-1/2 hidden -translate-y-1/2 transition-opacity sm:block",
                 showHandle ? "sm:opacity-100" : "sm:pointer-events-none sm:opacity-0",
               )}
             >
-              <button
-                type="button"
-                aria-label="Edit floater"
-                onPointerDown={(event) => event.stopPropagation()}
-                onClick={() => { hapticButtonTap(); setDisplayForm(true); }}
-                className="rounded-full bg-card/80 p-1.5 text-muted-foreground backdrop-blur transition-colors hover:bg-muted hover:text-foreground"
-              >
-                <SquarePen className="h-4 w-4" strokeWidth={1.8} />
-              </button>
-              <button
-                type="button"
-                aria-label="Delete floater"
-                onPointerDown={(event) => event.stopPropagation()}
-                onClick={() => { hapticButtonTap(); deleteMutateFn(floater); }}
-                className="rounded-full bg-card/80 p-1.5 text-muted-foreground backdrop-blur transition-colors hover:bg-destructive/10 hover:text-destructive"
-              >
-                <Trash className="h-4 w-4" strokeWidth={1.8} />
-              </button>
+              <TaskActionButtons
+                onEdit={() => { hapticButtonTap(); setDisplayForm(true); }}
+                onDelete={() => { hapticButtonTap(); deleteMutateFn(floater); }}
+                editLabel="Edit floater"
+                deleteLabel="Delete floater"
+              />
             </div>
           </div>
         </div>
