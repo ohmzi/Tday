@@ -149,6 +149,23 @@ categories do not include generic task/calendar productivity apps. The surface d
 switches to Floater with icon-only controls, uses voice capture for the plus action when speech
 recognition is available, and falls back to the existing create-task flow otherwise.
 
+## Natural-language scheduling
+
+The new-task title field recognizes date/time phrases **on-device** with
+[Natty](https://github.com/joestelmach/natty) (`com.joestelmach:natty`) — no network and no AI, so
+it also works in Local Mode. Typing e.g. "pay rent on the 1st at 9am" auto-sets the Due, highlights
+the recognized phrase in place, and strips it from the saved task title.
+
+- `core/data/todo/OnDeviceTitleNlpParser.kt` wraps Natty and returns the matched span, the cleaned
+  title, and the due instant (mirroring the previous backend parser, so a bare "8pm" is never
+  shifted).
+- `TodoRepository.parseTodoTitleNlp` is the single entry point used by every create-task surface
+  (Home, Calendar, List, widget); swapping it to the local parser made them all offline at once.
+- `CreateTaskBottomSheet` keeps the full typed text, highlights the phrase via a Compose
+  `VisualTransformation`, sets the Due, and removes the phrase from the title only on submit.
+- Parsing runs in the device timezone; the due is saved as a UTC instant. Release builds keep
+  Natty/ANTLR via `proguard-rules.pro`.
+
 ## Mobile Parity
 
 For user-facing Android changes, compare the iOS implementation in `ios-swiftUI/Tday/Feature/` and
