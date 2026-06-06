@@ -1,16 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  Bell,
-  BellOff,
-  Check,
   Copy,
   Eye,
   EyeOff,
-  Info,
   Key,
-  Keyboard,
-  Languages,
   Loader2,
   Lock,
   Monitor,
@@ -21,24 +15,10 @@ import {
   User,
 } from "lucide-react";
 import { useTheme } from "next-themes";
-import KeyboardShortcuts from "@/components/KeyboardShortcut";
-import { Link, usePathname, useLocale } from "@/lib/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { SheetCard } from "@/components/ui/sheet-chrome";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/providers/AuthProvider";
 import { useToast } from "@/hooks/use-toast";
@@ -47,51 +27,121 @@ import { nativeScreenAccentColors } from "@/components/app/nativeScreenTheme";
 import NativeAppBrandButton from "@/components/app/NativeAppBrandButton";
 import { api } from "@/lib/api-client";
 import { getErrorMessage } from "@/lib/error-message";
-import { CURRENT_APP_VERSION, formatDisplayVersion } from "@/features/release/lib/release";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
-import type { SupportedLocale } from "@/i18n";
-
-const localeOptions = [
-  { code: "en", label: "English" },
-  { code: "zh", label: "Chinese" },
-  { code: "de", label: "German" },
-  { code: "ja", label: "Japanese" },
-  { code: "ar", label: "Arabic" },
-  { code: "ru", label: "Russian" },
-  { code: "es", label: "Spanish" },
-  { code: "fr", label: "French" },
-  { code: "ms", label: "Malay" },
-  { code: "it", label: "Italian" },
-  { code: "pt", label: "Portuguese" },
-] as const satisfies readonly { code: SupportedLocale; label: string }[];
 
 const themeOptions = [
-  {
-    value: "light",
-    label: "Light",
-    description: "Use the bright T'Day palette.",
-    icon: Sun,
-  },
-  {
-    value: "dark",
-    label: "Dark",
-    description: "Use the low-light T'Day palette.",
-    icon: Moon,
-  },
-  {
-    value: "system",
-    label: "System following",
-    description: "Follow this device's appearance setting.",
-    icon: Monitor,
-  },
+  { value: "light", label: "Light", icon: Sun },
+  { value: "dark", label: "Dark", icon: Moon },
+  { value: "system", label: "System", icon: Monitor },
 ] as const;
 
+/** Rounded grouped section card with a big ExtraBold title — mirrors the
+ * native SettingsSectionCard / SettingsSectionTitle. */
+function SettingsSection({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <SheetCard className="space-y-4 p-[18px]">
+      <div className="space-y-1">
+        <h2 className="text-[1.4rem] font-black leading-tight text-foreground">{title}</h2>
+        {description ? (
+          <p className="text-sm font-extrabold text-muted-foreground">{description}</p>
+        ) : null}
+      </div>
+      {children}
+    </SheetCard>
+  );
+}
+
+/** Pill switch — mirrors the native toggle used across the app. */
+function SettingsSwitch({
+  checked,
+  onClick,
+  disabled,
+  ariaLabel,
+}: {
+  checked: boolean;
+  onClick: () => void;
+  disabled?: boolean;
+  ariaLabel: string;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={ariaLabel}
+      disabled={disabled}
+      onClick={onClick}
+      className={cn(
+        "relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors",
+        checked ? "bg-accent" : "bg-muted-foreground/30",
+        disabled && "opacity-45",
+      )}
+    >
+      <span
+        className={cn(
+          "inline-block h-5 w-5 rounded-full bg-white shadow transition-transform",
+          checked ? "translate-x-[22px]" : "translate-x-[2px]",
+        )}
+      />
+    </button>
+  );
+}
+
+/** Sliding 3-way segmented control — mirrors the native theme selector. */
+function ThemeSegmentedControl({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const index = Math.max(
+    0,
+    themeOptions.findIndex((option) => option.value === value),
+  );
+  return (
+    <div className="relative flex h-14 rounded-[22px] bg-muted/60 p-1.5">
+      <span
+        aria-hidden
+        className="absolute bottom-1.5 left-1.5 top-1.5 w-[calc((100%-0.75rem)/3)] rounded-[16px] bg-card shadow-sm transition-transform duration-200 ease-out"
+        style={{ transform: `translateX(${index * 100}%)` }}
+      />
+      {themeOptions.map((option) => {
+        const Icon = option.icon;
+        const selected = option.value === value;
+        return (
+          <button
+            key={option.value}
+            type="button"
+            onClick={() => onChange(option.value)}
+            aria-pressed={selected}
+            className={cn(
+              "relative z-10 flex flex-1 items-center justify-center gap-1.5 rounded-[16px] text-[0.9rem] font-black transition-colors",
+              selected ? "text-accent" : "text-muted-foreground",
+            )}
+          >
+            <Icon className="h-4 w-4" strokeWidth={2.6} />
+            {option.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+const fieldClass =
+  "h-12 rounded-2xl border-border/70 bg-background/50 font-bold focus-visible:ring-accent/30";
+
 export default function SettingsPage() {
-  const locale = useLocale();
-  const pathname = usePathname();
   const { t: sidebarDict } = useTranslation("sidebar");
-  const { t: shortcutsDict } = useTranslation("shortcuts");
-  const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
   const { theme = "system", resolvedTheme, setTheme } = useTheme();
@@ -213,9 +263,6 @@ export default function SettingsPage() {
     }
   };
 
-  const currentLocaleLabel =
-    localeOptions.find((option) => option.code === locale)?.label || locale;
-
   const handleProfileSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const trimmed = name.trim();
@@ -273,8 +320,13 @@ export default function SettingsPage() {
     }
   };
 
+  const pushSubtitle =
+    push.permission === "denied"
+      ? "Blocked in your browser settings. Update your browser permissions to enable them."
+      : "Get notified about important things, even when the app isn't open.";
+
   return (
-    <div className="w-full space-y-5 pb-10">
+    <div className="w-full space-y-3 pb-10">
       <header className="sticky top-0 z-40 flex w-full items-center justify-between gap-2.5 bg-background pt-[calc(0.5rem+env(safe-area-inset-top))] pb-1.5 lg:static lg:bg-transparent lg:pt-2 lg:pb-2">
         <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-full h-screen bg-background lg:hidden" />
         <NativeAppBrandButton className="min-w-0 max-w-[58%] sm:max-w-none" />
@@ -284,277 +336,242 @@ export default function SettingsPage() {
         title={sidebarDict("settings")}
         accentColor={nativeScreenAccentColors.settings}
         icon={Settings}
-        subtitle="Manage your account settings"
+        className="mb-1"
       />
 
-      <Card className="rounded-2xl border-border/70 bg-card/95 mb-5">
-        <CardHeader className="space-y-1">
-          <CardTitle className="flex items-center gap-2 text-base"><User className="h-4 w-4 text-accent" />Profile</CardTitle>
-          <CardDescription>Update your display name</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleProfileSubmit} className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="name">Name</Label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Enter your name" className="pl-10 h-12 bg-background/50" maxLength={100} />
-              </div>
+      <SettingsSection title="Profile" description="Update your display name">
+        <form onSubmit={handleProfileSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="name" className="px-1 text-sm font-extrabold text-muted-foreground">
+              Name
+            </Label>
+            <div className="relative">
+              <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                id="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Enter your name"
+                className={cn(fieldClass, "pl-10")}
+                maxLength={100}
+              />
             </div>
-            <div className="space-y-2">
-              <Label>Email</Label>
-              <Input value={user?.email ?? ""} disabled className="h-12 bg-background/50 opacity-60" />
-            </div>
-            <Button type="submit" disabled={profileLoading} className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-medium">
-              {profileLoading ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</>) : "Save Profile"}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-
-      <Card className="rounded-2xl border-border/70 bg-card/95 mb-5">
-        <CardHeader className="space-y-1">
-          <CardTitle className="flex items-center gap-2 text-base"><Lock className="h-4 w-4 text-accent" />Change Password</CardTitle>
-          <CardDescription>Update your account password</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handlePasswordSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="currentPassword">Current Password</Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input id="currentPassword" type={showCurrentPassword ? "text" : "password"} autoComplete="current-password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} placeholder="Enter your current password" className="pl-10 pr-10 h-12 bg-background/50" required />
-                {currentPassword && (
-                  <button type="button" onClick={() => setShowCurrentPassword(!showCurrentPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
-                    {showCurrentPassword ? <EyeOff className="h-4 w-4 opacity-40" /> : <Eye className="h-4 w-4 opacity-40" />}
-                  </button>
-                )}
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="newPassword">New Password</Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input id="newPassword" type={showNewPassword ? "text" : "password"} autoComplete="new-password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Enter your new password" className="pl-10 pr-10 h-12 bg-background/50" minLength={8} required />
-                {newPassword && (
-                  <button type="button" onClick={() => setShowNewPassword(!showNewPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
-                    {showNewPassword ? <EyeOff className="h-4 w-4 opacity-40" /> : <Eye className="h-4 w-4 opacity-40" />}
-                  </button>
-                )}
-              </div>
-              <p className="text-xs text-muted-foreground">Password must be at least 8 characters long</p>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="confirmNewPassword">Confirm New Password</Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input id="confirmNewPassword" type={showConfirmPassword ? "text" : "password"} autoComplete="new-password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Confirm your new password" className="pl-10 pr-10 h-12 bg-background/50" minLength={8} required />
-                {confirmPassword && (
-                  <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
-                    {showConfirmPassword ? <EyeOff className="h-4 w-4 opacity-40" /> : <Eye className="h-4 w-4 opacity-40" />}
-                  </button>
-                )}
-              </div>
-            </div>
-            <Button type="submit" disabled={passwordLoading} className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-medium">
-              {passwordLoading ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Changing password...</>) : "Change Password"}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-
-      <Card className="rounded-2xl border-border/70 bg-card/95 mb-5">
-        <CardHeader className="space-y-1">
-          <CardTitle className="flex items-center gap-2 text-base"><Languages className="h-4 w-4 text-accent" />Language</CardTitle>
-          <CardDescription>Choose your app language</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <DropdownMenu modal={false}>
-            <DropdownMenuTrigger asChild>
-              <Button type="button" variant="outline" className="h-10 min-w-[220px] justify-start text-left">
-                <span className="truncate">{currentLocaleLabel}</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-56">
-              {localeOptions.map((option) => {
-                const isActive = option.code === locale;
-                return (
-                  <DropdownMenuItem key={option.code} asChild>
-                    <Link
-                      href={pathname}
-                      locale={option.code}
-                      className={cn("flex w-full items-center justify-between", isActive && "font-medium")}
-                    >
-                      <span>{option.label}</span>
-                      {isActive ? <Check className="h-4 w-4 text-accent" /> : null}
-                    </Link>
-                  </DropdownMenuItem>
-                );
-              })}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </CardContent>
-      </Card>
-
-      <Card className="rounded-2xl border-border/70 bg-card/95 mb-5">
-        <CardHeader className="space-y-1">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Monitor className="h-4 w-4 text-accent" />
-            Appearance
-          </CardTitle>
-          <CardDescription>
-            Choose light, dark, or follow your system setting.
-            {theme === "system" && resolvedTheme ? ` Currently using ${resolvedTheme}.` : ""}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-2 sm:grid-cols-3">
-            {themeOptions.map((option) => {
-              const Icon = option.icon;
-              const selected = theme === option.value;
-
-              return (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => setTheme(option.value)}
-                  className={cn(
-                    "flex min-h-28 flex-col items-start gap-3 rounded-2xl border p-4 text-left transition-colors",
-                    selected
-                      ? "border-accent/55 bg-accent/10 text-foreground ring-2 ring-accent/15"
-                      : "border-border/70 bg-background/50 text-muted-foreground hover:bg-muted/55 hover:text-foreground",
-                  )}
-                  aria-pressed={selected}
-                >
-                  <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-card shadow-sm">
-                    <Icon className={cn("h-5 w-5", selected ? "text-accent" : "text-muted-foreground")} />
-                  </span>
-                  <span>
-                    <span className="block text-sm font-black">{option.label}</span>
-                    <span className="mt-1 block text-xs font-extrabold opacity-75">
-                      {option.description}
-                    </span>
-                  </span>
-                </button>
-              );
-            })}
           </div>
-        </CardContent>
-      </Card>
-
-      <Card className="rounded-2xl border-border/70 bg-card/95 mb-5">
-        <CardHeader className="space-y-1">
-          <CardTitle className="flex items-center gap-2 text-base"><Key className="h-4 w-4 text-accent" />API Key / Dashboard Access</CardTitle>
-          <CardDescription>
-            Generate a personal API key to connect external dashboards (e.g. the Homarr "Tday" widget). Paste this key together with your Tday server URL into the integration. Keep it secret — it grants access to your tasks.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between gap-3">
-            <div className="text-sm">
-              <p className="font-medium">
-                {apiKeyStatus?.enabled ? "API access enabled" : "API access disabled"}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {apiKeyStatus?.enabled
-                  ? apiKeyStatus.keyPreview
-                    ? `Active key ending in …${apiKeyStatus.keyPreview}`
-                    : "An active key exists"
-                  : "No key has been generated"}
-              </p>
-            </div>
-            <Button
-              type="button"
-              variant={apiKeyStatus?.enabled ? "destructive" : "default"}
-              disabled={apiKeyLoading || apiKeyStatus === null}
-              onClick={apiKeyStatus?.enabled ? handleRevokeApiKey : handleGenerateApiKey}
-              className="h-10 shrink-0"
-            >
-              {apiKeyLoading ? (
-                <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{apiKeyStatus?.enabled ? "Revoking..." : "Generating..."}</>
-              ) : apiKeyStatus?.enabled ? (
-                <><Trash2 className="mr-2 h-4 w-4" />Revoke Key</>
-              ) : (
-                <><Key className="mr-2 h-4 w-4" />Generate Key</>
-              )}
-            </Button>
+          <div className="space-y-2">
+            <Label className="px-1 text-sm font-extrabold text-muted-foreground">Email</Label>
+            <Input value={user?.email ?? ""} disabled className={cn(fieldClass, "opacity-60")} />
           </div>
+          <Button type="submit" disabled={profileLoading} className="h-12 w-full rounded-2xl font-black">
+            {profileLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              "Save profile"
+            )}
+          </Button>
+        </form>
+      </SettingsSection>
 
-          {generatedApiKey && (
-            <div className="space-y-2 rounded-xl border border-border/60 bg-muted/40 p-3">
-              <p className="text-xs font-medium text-muted-foreground">
-                Copy your API key now — it won't be shown again.
-              </p>
-              <div className="flex gap-2">
-                <Input
-                  type={showApiKey ? "text" : "password"}
-                  value={generatedApiKey}
-                  readOnly
-                  className="h-10 flex-1 bg-background/50 font-mono text-xs"
-                />
-                <Button type="button" variant="outline" size="icon" className="h-10 w-10 shrink-0" onClick={() => setShowApiKey(!showApiKey)}>
-                  {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </Button>
-                <Button type="button" variant="outline" size="icon" className="h-10 w-10 shrink-0" onClick={handleCopyApiKey}>
-                  <Copy className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <SettingsSection
+        title="Appearance"
+        description={
+          theme === "system" && resolvedTheme
+            ? `Follow your device, light, or dark. Currently using ${resolvedTheme}.`
+            : "Choose light, dark, or follow your system setting."
+        }
+      >
+        <ThemeSegmentedControl value={theme} onChange={setTheme} />
+      </SettingsSection>
 
       {push.isSupported && (
-        <Card className="rounded-2xl border-border/70 bg-card/95 mb-5">
-          <CardHeader className="space-y-1">
-            <CardTitle className="flex items-center gap-2 text-base">
-              {push.isSubscribed ? <Bell className="h-4 w-4 text-accent" /> : <BellOff className="h-4 w-4 text-accent" />}
-              Push Notifications
-            </CardTitle>
-            <CardDescription>
-              {push.permission === "denied"
-                ? "Notifications are blocked in your browser settings. Please update your browser permissions to enable them."
-                : "Receive notifications when important things happen, even when the app isn't open."}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button
-              type="button"
-              variant={push.isSubscribed ? "outline" : "default"}
-              disabled={push.isLoading || push.permission === "denied"}
-              onClick={handlePushToggle}
-              className="h-10"
-            >
-              {push.isLoading ? (
-                <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Updating...</>
-              ) : push.isSubscribed ? (
-                "Disable Notifications"
-              ) : (
-                "Enable Notifications"
-              )}
-            </Button>
-          </CardContent>
-        </Card>
+        <SettingsSection title="Notifications">
+          <div className="flex items-center justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-[1.05rem] font-black text-foreground">Push notifications</p>
+              <p className="mt-0.5 text-sm font-extrabold text-muted-foreground">{pushSubtitle}</p>
+            </div>
+            {push.isLoading ? (
+              <Loader2 className="h-5 w-5 shrink-0 animate-spin text-muted-foreground" />
+            ) : (
+              <SettingsSwitch
+                checked={push.isSubscribed}
+                disabled={push.permission === "denied"}
+                ariaLabel="Toggle push notifications"
+                onClick={handlePushToggle}
+              />
+            )}
+          </div>
+        </SettingsSection>
       )}
 
-      <Card className="rounded-2xl border-border/70 bg-card/95 mb-5">
-        <CardHeader className="space-y-1">
-          <CardTitle className="flex items-center gap-2 text-base"><Keyboard className="h-4 w-4 text-accent" />{shortcutsDict("title")}</CardTitle>
-          <CardDescription>View keyboard shortcuts for creating and navigating tasks</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button type="button" variant="outline" onClick={() => setShortcutsOpen(true)}>Open shortcuts</Button>
-        </CardContent>
-      </Card>
+      <SettingsSection title="Change password" description="Update your account password">
+        <form onSubmit={handlePasswordSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="currentPassword" className="px-1 text-sm font-extrabold text-muted-foreground">
+              Current password
+            </Label>
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                id="currentPassword"
+                type={showCurrentPassword ? "text" : "password"}
+                autoComplete="current-password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                placeholder="Enter your current password"
+                className={cn(fieldClass, "pl-10 pr-10")}
+                required
+              />
+              {currentPassword && (
+                <button
+                  type="button"
+                  onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  {showCurrentPassword ? <EyeOff className="h-4 w-4 opacity-40" /> : <Eye className="h-4 w-4 opacity-40" />}
+                </button>
+              )}
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="newPassword" className="px-1 text-sm font-extrabold text-muted-foreground">
+              New password
+            </Label>
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                id="newPassword"
+                type={showNewPassword ? "text" : "password"}
+                autoComplete="new-password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Enter your new password"
+                className={cn(fieldClass, "pl-10 pr-10")}
+                minLength={8}
+                required
+              />
+              {newPassword && (
+                <button
+                  type="button"
+                  onClick={() => setShowNewPassword(!showNewPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  {showNewPassword ? <EyeOff className="h-4 w-4 opacity-40" /> : <Eye className="h-4 w-4 opacity-40" />}
+                </button>
+              )}
+            </div>
+            <p className="px-1 text-xs font-extrabold text-muted-foreground">
+              Password must be at least 8 characters long
+            </p>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="confirmNewPassword" className="px-1 text-sm font-extrabold text-muted-foreground">
+              Confirm new password
+            </Label>
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                id="confirmNewPassword"
+                type={showConfirmPassword ? "text" : "password"}
+                autoComplete="new-password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Confirm your new password"
+                className={cn(fieldClass, "pl-10 pr-10")}
+                minLength={8}
+                required
+              />
+              {confirmPassword && (
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  {showConfirmPassword ? <EyeOff className="h-4 w-4 opacity-40" /> : <Eye className="h-4 w-4 opacity-40" />}
+                </button>
+              )}
+            </div>
+          </div>
+          <Button type="submit" disabled={passwordLoading} className="h-12 w-full rounded-2xl font-black">
+            {passwordLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Changing password...
+              </>
+            ) : (
+              "Change password"
+            )}
+          </Button>
+        </form>
+      </SettingsSection>
 
-      <KeyboardShortcuts open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
-
-      <div className="flex flex-col items-center gap-1.5 text-xs text-muted-foreground pt-2 pb-4">
-        <div className="flex items-center gap-2">
-          <Info className="h-3.5 w-3.5" />
-          <span>Version {formatDisplayVersion(CURRENT_APP_VERSION) ?? CURRENT_APP_VERSION}</span>
+      <SettingsSection
+        title="Dashboard access"
+        description='Generate a personal API key to connect external dashboards (e.g. the Homarr "Tday" widget). Paste this key with your Tday server URL into the integration. Keep it secret — it grants access to your tasks.'
+      >
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0 text-sm">
+            <p className="font-black text-foreground">
+              {apiKeyStatus?.enabled ? "API access enabled" : "API access disabled"}
+            </p>
+            <p className="text-xs font-extrabold text-muted-foreground">
+              {apiKeyStatus?.enabled
+                ? apiKeyStatus.keyPreview
+                  ? `Active key ending in …${apiKeyStatus.keyPreview}`
+                  : "An active key exists"
+                : "No key has been generated"}
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant={apiKeyStatus?.enabled ? "destructive" : "default"}
+            disabled={apiKeyLoading || apiKeyStatus === null}
+            onClick={apiKeyStatus?.enabled ? handleRevokeApiKey : handleGenerateApiKey}
+            className="h-11 shrink-0 rounded-2xl font-black"
+          >
+            {apiKeyLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                {apiKeyStatus?.enabled ? "Revoking..." : "Generating..."}
+              </>
+            ) : apiKeyStatus?.enabled ? (
+              <>
+                <Trash2 className="mr-2 h-4 w-4" />
+                Revoke key
+              </>
+            ) : (
+              <>
+                <Key className="mr-2 h-4 w-4" />
+                Generate key
+              </>
+            )}
+          </Button>
         </div>
-      </div>
+
+        {generatedApiKey && (
+          <div className="space-y-2 rounded-2xl border border-border/60 bg-muted/40 p-3">
+            <p className="text-xs font-extrabold text-muted-foreground">
+              Copy your API key now — it won't be shown again.
+            </p>
+            <div className="flex gap-2">
+              <Input
+                type={showApiKey ? "text" : "password"}
+                value={generatedApiKey}
+                readOnly
+                className="h-10 flex-1 rounded-xl bg-background/50 font-mono text-xs"
+              />
+              <Button type="button" variant="outline" size="icon" className="h-10 w-10 shrink-0 rounded-xl" onClick={() => setShowApiKey(!showApiKey)}>
+                {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </Button>
+              <Button type="button" variant="outline" size="icon" className="h-10 w-10 shrink-0 rounded-xl" onClick={handleCopyApiKey}>
+                <Copy className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
+      </SettingsSection>
     </div>
   );
 }

@@ -8,7 +8,6 @@ import com.ohmz.tday.domain.withAuth
 import com.ohmz.tday.models.response.AppConfigResponse
 import com.ohmz.tday.models.response.FloaterResponse
 import com.ohmz.tday.models.response.TodoResponse
-import com.ohmz.tday.plugins.AuthUserKey
 import com.ohmz.tday.routes.mobileProbeRoutes
 import com.ohmz.tday.routes.todoRoutes
 import com.ohmz.tday.routes.userRoutes
@@ -408,6 +407,7 @@ class RateLimitingTest {
         override suspend fun emailExists(email: String): Boolean = false
 
         override suspend fun updatePasswordHash(userId: String, newHash: String) = Unit
+        override suspend fun requiresPasswordChange(userId: String): Boolean = false
 
         private fun <T> unsupported(): Either<AppError, T> =
             Either.Left(AppError.Internal("unsupported in rate limit test"))

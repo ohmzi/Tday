@@ -30,7 +30,8 @@ import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
-import io.ktor.server.application.*
+import io.ktor.server.application.Application
+import io.ktor.server.application.install
 import io.ktor.server.routing.route
 import io.ktor.server.routing.routing
 import io.ktor.server.testing.testApplication
@@ -241,6 +242,7 @@ class CaptchaHardeningTest {
         }
 
         override suspend fun updatePasswordHash(userId: String, newHash: String) = Unit
+        override suspend fun requiresPasswordChange(userId: String): Boolean = false
 
         private fun <T> unsupported(): Either<com.ohmz.tday.domain.AppError, T> =
             Either.Left(com.ohmz.tday.domain.AppError.Internal("unsupported in captcha test"))

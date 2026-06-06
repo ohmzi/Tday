@@ -59,6 +59,10 @@ services:
     env_file:
       - .env.docker
     environment:
+      # Container timezone. Defaults to UTC; set TZ in the root .env to your
+      # local zone (e.g. America/New_York) so log timestamps and any
+      # server-local time logic line up with the host. IANA names only.
+      TZ: ${TZ:-UTC}
       APPLE_TEAM_ID: ${APPLE_TEAM_ID:-THT5Z8K3TF}
       IOS_BUNDLE_ID: ${IOS_BUNDLE_ID:-com.ohmz.tday.ios}
       OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen3.5:0.8b}

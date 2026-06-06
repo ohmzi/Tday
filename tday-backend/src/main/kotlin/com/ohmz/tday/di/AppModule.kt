@@ -93,7 +93,7 @@ val serviceModule = module {
     single<TodoSummaryService> { TodoSummaryServiceImpl(get()) }
     single<TodoNlpService> { TodoNlpServiceImpl() }
     single<RealtimeService> { RealtimeServiceImpl() }
-    single<AdminService> { AdminServiceImpl() }
+    single<AdminService> { AdminServiceImpl(get(), get()) }
     single<PushNotificationService> { PushNotificationServiceImpl(get()) }
     single<UserApiKeyService> { UserApiKeyServiceImpl(get()) }
 }

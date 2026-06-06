@@ -86,6 +86,24 @@ When exposing the port externally, set `TDAY_ENV=production` in `.env.docker` so
 
 For detailed instructions on all supported remote access methods — including Cloudflare Tunnel, Tailscale, WireGuard, ZeroTier, SSH tunnels, ngrok, and frp — see **[Remote Access](REMOTE_ACCESS.md)**.
 
+### Self-hosting on a NAS (TrueNAS / Unraid / Synology / Proxmox)
+
+These are the recurring "I deployed it but can't reach it / it behaves oddly" issues on NAS and
+home-server platforms, with the symptom and the fix.
+
+| Symptom                                                                                                           | Cause                                                                                                        | Fix                                                                                                                                                                                                                                            |
+|-------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Container is "running" but the web UI is unreachable from any other device                                        | Default bind is `127.0.0.1` (localhost of the container/VM only)                                             | Either put a reverse proxy / VPN in front (recommended — gives HTTPS), or for a trusted LAN set `TDAY_HOST_BIND=0.0.0.0` in the **root `.env`** and recreate. On Unraid/TrueNAS custom-app UIs, map host port → container `8080` the same way. |
+| Behind a reverse proxy, registration/login throttles trip far too early, or all users share one rate-limit bucket | Proxy isn't forwarding the real client IP, so every request looks like the proxy's IP                        | Configure the proxy to send `X-Forwarded-For` (or `X-Real-IP`; Cloudflare sends `cf-connecting-ip`). T'Day reads these in priority order — no extra "trust proxy" flag needed.                                                                 |
+| Logged out constantly / "secure cookie" warnings when served over a domain                                        | App not in production mode, so cookies aren't marked Secure for an HTTPS origin, or the origin is cross-site | Set `TDAY_ENV=production` in `.env.docker` once you terminate HTTPS at the proxy. Add the external origin to `CORS_ALLOWED_ORIGINS` only if the web app is served from a *different* origin than the API.                                      |
+| Due times / notifications / log timestamps are off by hours                                                       | Container defaults to UTC                                                                                    | Set `TZ` (IANA name) in the root `.env` — it's passed through to the backend container.                                                                                                                                                        |
+| Data lost after recreating the container                                                                          | App data lives only in the `postgres_data` named volume                                                      | Keep the named volume (don't `down -v`); back it up with scheduled `pg_dump`. On Unraid/TrueNAS, map the Postgres data path to persistent array storage, not a temp/ephemeral dir.                                                             |
+| New version doesn't appear after pulling                                                                          | NAS UIs use their own update flow                                                                            | Unraid: container → **Force update**. Portainer: **Recreate** → **Re-pull image** (see [Updating in Production](#updating-in-production)). `docker compose pull && up -d` for plain Compose.                                                   |
+
+For HTTPS without exposing a port at all (and to satisfy the secure-context requirements of PWAs and
+WebCrypto), prefer a tunnel/VPN from [Remote Access](REMOTE_ACCESS.md) over binding `0.0.0.0`
+directly.
+
 ### Health Checks
 
 | Service | Check | Interval |
@@ -386,7 +404,8 @@ Flyway does not support automatic down-migrations. For rollbacks:
 
 ### Monitoring Recommendations
 
-- Monitor `auth_lockout` and `auth_limit_ip` event codes for abuse.
+- Monitor `auth_lockout`, `auth_limit_ip`, and `auth_limit_ip_burst` event codes for abuse (the
+  burst code fires when an IP exceeds the short-window account-creation tier).
 - Set alerts for container restarts.
 - Monitor PostgreSQL connection pool (HikariCP) and disk usage.
 - Check the Ollama health endpoint only when the `ai` profile is enabled. Without Ollama, Summary falls back to backend logic.

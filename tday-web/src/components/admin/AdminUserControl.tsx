@@ -8,7 +8,15 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { ArrowUpRight, Check, Info, Loader2, Trash2, Users } from "lucide-react";
+import { ArrowUpRight, Check, Copy, Info, KeyRound, Loader2, Trash2, Users, X } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import NativePageTitle from "@/components/app/NativePageTitle";
 import { nativeScreenAccentColors } from "@/components/app/nativeScreenTheme";
@@ -36,16 +44,20 @@ type AdminSettingsResponse = {
 type PendingApprovalRowProps = {
   user: AdminUser;
   actionUserId: string | null;
-  actionType: "approve" | "delete" | null;
+  actionType: AdminActionType;
   onApprove: (userId: string) => void;
+  onReject: (userId: string) => void;
 };
+
+type AdminActionType = "approve" | "reject" | "delete" | "reset" | null;
 
 type ApprovedUserRowProps = {
   user: AdminUser;
   sessionUserId: string | null | undefined;
   actionUserId: string | null;
-  actionType: "approve" | "delete" | null;
+  actionType: AdminActionType;
   onDelete: (userId: string) => void;
+  onResetPassword: (userId: string) => void;
 };
 
 /** Renders a pending-user row with the approve action wired to the current request state. */
@@ -54,30 +66,51 @@ const PendingApprovalRow = ({
   actionUserId,
   actionType,
   onApprove,
-}: PendingApprovalRowProps) => (
-  <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/70 bg-muted/20 px-3 py-2">
-    <div className="min-w-0">
-      <p className="truncate text-sm font-medium text-foreground">
-        {user.name?.trim() || user.email}
-      </p>
-      <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+  onReject,
+}: PendingApprovalRowProps) => {
+  const busy = actionUserId === user.id;
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/70 bg-muted/20 px-3 py-2">
+      <div className="min-w-0">
+        <p className="truncate text-sm font-medium text-foreground">
+          {user.name?.trim() || user.email}
+        </p>
+        <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+      </div>
+      <div className="flex items-center gap-2">
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => {
+            onReject(user.id);
+          }}
+          disabled={busy}
+        >
+          {busy && actionType === "reject" ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <X className="mr-2 h-4 w-4" />
+          )}
+          Reject
+        </Button>
+        <Button
+          size="sm"
+          onClick={() => {
+            onApprove(user.id);
+          }}
+          disabled={busy}
+        >
+          {busy && actionType === "approve" ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Check className="mr-2 h-4 w-4" />
+          )}
+          Approve
+        </Button>
+      </div>
     </div>
-    <Button
-      size="sm"
-      onClick={() => {
-        onApprove(user.id);
-      }}
-      disabled={actionUserId === user.id}
-    >
-      {actionUserId === user.id && actionType === "approve" ? (
-        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-      ) : (
-        <Check className="mr-2 h-4 w-4" />
-      )}
-      Approve
-    </Button>
-  </div>
-);
+  );
+};
 
 /** Renders an approved-user row and prevents deleting the current signed-in admin. */
 const ApprovedUserRow = ({
@@ -86,8 +119,10 @@ const ApprovedUserRow = ({
   actionUserId,
   actionType,
   onDelete,
+  onResetPassword,
 }: ApprovedUserRowProps) => {
   const isCurrentUser = sessionUserId === user.id;
+  const busy = actionUserId === user.id;
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/70 bg-muted/20 px-3 py-2">
@@ -107,21 +142,42 @@ const ApprovedUserRow = ({
           ) : null}
         </div>
       </div>
-      <Button
-        size="sm"
-        variant="destructive"
-        onClick={() => {
-          onDelete(user.id);
-        }}
-        disabled={actionUserId === user.id || isCurrentUser}
-      >
-        {actionUserId === user.id && actionType === "delete" ? (
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-        ) : (
-          <Trash2 className="mr-2 h-4 w-4" />
+      <div className="flex items-center gap-2">
+        {/* Admins can't have their password reset from here — they manage it
+            themselves under Settings → Change password. */}
+        {user.role !== "ADMIN" && (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              onResetPassword(user.id);
+            }}
+            disabled={busy}
+          >
+            {busy && actionType === "reset" ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <KeyRound className="mr-2 h-4 w-4" />
+            )}
+            Reset password
+          </Button>
         )}
-        Delete
-      </Button>
+        <Button
+          size="sm"
+          variant="destructive"
+          onClick={() => {
+            onDelete(user.id);
+          }}
+          disabled={busy || isCurrentUser}
+        >
+          {busy && actionType === "delete" ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Trash2 className="mr-2 h-4 w-4" />
+          )}
+          Delete
+        </Button>
+      </div>
     </div>
   );
 };
@@ -159,12 +215,14 @@ const PendingApprovalsContent = ({
   actionUserId,
   actionType,
   onApprove,
+  onReject,
 }: {
   loading: boolean;
   pendingUsers: AdminUser[];
   actionUserId: string | null;
-  actionType: "approve" | "delete" | null;
+  actionType: AdminActionType;
   onApprove: (userId: string) => void;
+  onReject: (userId: string) => void;
 }) => {
   if (loading) {
     return <p className="text-sm text-muted-foreground">Loading users...</p>;
@@ -185,6 +243,7 @@ const PendingApprovalsContent = ({
       actionUserId={actionUserId}
       actionType={actionType}
       onApprove={onApprove}
+      onReject={onReject}
     />
   ));
 };
@@ -197,13 +256,15 @@ const ApprovedUsersContent = ({
   actionUserId,
   actionType,
   onDelete,
+  onResetPassword,
 }: {
   loading: boolean;
   approvedUsers: AdminUser[];
   sessionUserId: string | null | undefined;
   actionUserId: string | null;
-  actionType: "approve" | "delete" | null;
+  actionType: AdminActionType;
   onDelete: (userId: string) => void;
+  onResetPassword: (userId: string) => void;
 }) => {
   if (loading) {
     return <p className="text-sm text-muted-foreground">Loading users...</p>;
@@ -225,6 +286,7 @@ const ApprovedUsersContent = ({
       actionUserId={actionUserId}
       actionType={actionType}
       onDelete={onDelete}
+      onResetPassword={onResetPassword}
     />
   ));
 };
@@ -235,10 +297,11 @@ export default function AdminUserControl() {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionUserId, setActionUserId] = useState<string | null>(null);
-  const [actionType, setActionType] = useState<"approve" | "delete" | null>(null);
+  const [actionType, setActionType] = useState<AdminActionType>(null);
   const [aiSummaryEnabled, setAiSummaryEnabled] = useState(true);
   const [settingsLoading, setSettingsLoading] = useState(true);
   const [settingsSaving, setSettingsSaving] = useState(false);
+  const [resetResult, setResetResult] = useState<{ email: string; password: string } | null>(null);
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
@@ -306,6 +369,34 @@ export default function AdminUserControl() {
     }
   };
 
+  const rejectUser = async (userId: string) => {
+    const target = users.find((u) => u.id === userId);
+    const confirmed = window.confirm(
+      `Reject the registration for ${target?.email ?? "this account"}? The account will be permanently removed.`,
+    );
+    if (!confirmed) return;
+
+    setActionUserId(userId);
+    setActionType("reject");
+    try {
+      await api.POST({
+        url: `/api/admin/users/${userId}/reject`,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      toast({ description: "Registration rejected" });
+      await fetchUsers();
+    } catch (error) {
+      toast({
+        description: getErrorMessage(error, "Failed to reject registration"),
+        variant: "destructive",
+      });
+    } finally {
+      setActionUserId(null);
+      setActionType(null);
+    }
+  };
+
   const deleteUser = async (userId: string) => {
     const confirmed = window.confirm(
       "Delete this user and all of their data permanently?",
@@ -326,6 +417,46 @@ export default function AdminUserControl() {
     } finally {
       setActionUserId(null);
       setActionType(null);
+    }
+  };
+
+  const resetPassword = async (userId: string) => {
+    const target = users.find((u) => u.id === userId);
+    const confirmed = window.confirm(
+      `Reset the password for ${target?.email ?? "this user"}? Their current sessions will be signed out and they'll be required to set a new password on next sign-in.`,
+    );
+    if (!confirmed) return;
+
+    setActionUserId(userId);
+    setActionType("reset");
+    try {
+      const body = (await api.POST({
+        url: `/api/admin/users/${userId}/reset-password`,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      })) as { password?: string } | null;
+      if (!body?.password) {
+        throw new Error("Server did not return a password");
+      }
+      setResetResult({ email: target?.email ?? "", password: body.password });
+    } catch (error) {
+      toast({
+        description: getErrorMessage(error, "Failed to reset password"),
+        variant: "destructive",
+      });
+    } finally {
+      setActionUserId(null);
+      setActionType(null);
+    }
+  };
+
+  const copyPassword = async () => {
+    if (!resetResult) return;
+    try {
+      await navigator.clipboard.writeText(resetResult.password);
+      toast({ description: "Password copied to clipboard" });
+    } catch {
+      toast({ description: "Could not copy — select and copy manually", variant: "destructive" });
     }
   };
 
@@ -392,18 +523,6 @@ export default function AdminUserControl() {
         </CardContent>
       </Card>
 
-      <Card className="rounded-2xl border-border/70 bg-card/95">
-        <CardHeader>
-          <CardTitle>App version</CardTitle>
-          <CardDescription>
-            Review GitHub release notes and update availability for the current deployment.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <VersionLinkRow />
-        </CardContent>
-      </Card>
-
       {loading || pendingUsers.length > 0 ? (
         <Card className="rounded-2xl border-border/70 bg-card/95">
           <CardHeader>
@@ -419,6 +538,7 @@ export default function AdminUserControl() {
               actionUserId={actionUserId}
               actionType={actionType}
               onApprove={approveUser}
+              onReject={rejectUser}
             />
           </CardContent>
         </Card>
@@ -439,9 +559,53 @@ export default function AdminUserControl() {
             actionUserId={actionUserId}
             actionType={actionType}
             onDelete={deleteUser}
+            onResetPassword={resetPassword}
           />
         </CardContent>
       </Card>
+
+      <Card className="rounded-2xl border-border/70 bg-card/95">
+        <CardHeader>
+          <CardTitle>App version</CardTitle>
+          <CardDescription>
+            Review GitHub release notes and update availability for the current deployment.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <VersionLinkRow />
+        </CardContent>
+      </Card>
+
+      <Dialog
+        open={resetResult !== null}
+        onOpenChange={(open) => {
+          if (!open) setResetResult(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Temporary password</DialogTitle>
+            <DialogDescription>
+              {resetResult?.email
+                ? `Share this one-time password with ${resetResult.email}. `
+                : "Share this one-time password with the user. "}
+              It is shown only once. They will be required to set a new password the next time they sign in.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex items-center gap-2 rounded-xl border border-border/70 bg-muted/30 px-3 py-2">
+            <code className="min-w-0 flex-1 break-all font-mono text-sm text-foreground">
+              {resetResult?.password}
+            </code>
+            <Button size="sm" variant="outline" onClick={copyPassword}>
+              <Copy className="mr-2 h-4 w-4" />
+              Copy
+            </Button>
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setResetResult(null)}>Done</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
