@@ -28,6 +28,7 @@ a single product expressed across web, Android, and iOS:
 | Auth             | Rolling JWE cookie sessions, PBKDF2 credentials, credential envelope encryption                                          |
 | Shared Contracts | Kotlin Multiplatform DTOs, enums, validators, and route constants                                                        |
 | AI               | Optional Ollama (local, default `qwen3.5:0.8b`) with backend logic fallback                                              |
+| NLP (scheduling) | On-device natural-language date parsing — web chrono-node, iOS `NSDataDetector`, Android Natty (offline, no AI/network)   |
 | Android          | Kotlin, Jetpack Compose, Hilt, Retrofit, Room, WorkManager, Glance widgets, internal car surface, Material 3             |
 | iOS              | SwiftUI, SwiftData, URLSession, Observation, Keychain/cookie handling, WidgetKit widgets, CarPlay templates, App Intents |
 | Infra            | Docker Compose, GitHub Actions CI/CD, GHCR                                                                               |
@@ -177,6 +178,26 @@ Tday/
 
 The detailed data contract lives in [`docs/DATA_MODEL.md`](docs/DATA_MODEL.md).
 
+## Natural-language scheduling
+
+Typing a date/time phrase in a task title auto-fills the Due. "Buy milk tomorrow at 5pm" sets the
+due to 5:00 PM tomorrow, highlights the recognized phrase as you type, and saves the task as just
+"Buy milk".
+
+This runs **entirely on-device — no AI model and no network** — on every client, each using its
+platform's native date parser:
+
+| Platform | Parser                                                                            |
+|----------|-----------------------------------------------------------------------------------|
+| Web      | [chrono-node](https://github.com/wanasit/chrono) (client-side JavaScript)         |
+| iOS      | Foundation `NSDataDetector` (Apple's built-in date detector)                      |
+| Android  | [Natty](https://github.com/joestelmach/natty) (bundled JVM library)               |
+
+The recognized phrase stays visible with a warm highlight while you type and is stripped from the
+saved title. Parsing uses the device timezone and the result is stored as a UTC instant, so the
+same task shows the correct local time on every device. (This is unrelated to the optional Ollama
+AI, which only powers task *summaries* — not scheduling.)
+
 ## Widgets
 
 Both mobile platforms ship two home-screen widgets, standardized across Android and iOS:
@@ -195,6 +216,47 @@ a "last updated" indicator.
 
 See [`docs/WIDGET_SYNC.md`](docs/WIDGET_SYNC.md) for the full architecture, file layout, and
 per-platform integration checklist.
+
+## In-car surfaces
+
+Both mobile apps expose the Today/Floater task surface for driving contexts, kept intentionally
+minimal — list templates plus icon controls, with voice capture for adding a task.
+
+- **iOS — CarPlay.** A CarPlay template scene (`ios-swiftUI/Tday/Feature/CarPlay/`) built on
+  `CPListTemplate` with bar-button controls for the Today/Floater switch. Adding a task goes through
+  App Intents / Siri voice (the plus action offers a template-compliant iPhone handoff). Real
+  CarPlay deployment is gated on Apple granting the CarPlay entitlement for the app's category; the
+  code stays buildable and entitlement-gated until then.
+- **Android — internal car surface (not Android Auto).** An app-internal adaptive surface at
+  `tday://car` (`android-compose/.../feature/car/`). It deliberately does **not** declare Android
+  Auto / Android Automotive metadata, because Google Play's current car-app categories don't include
+  generic task/productivity apps. It defaults to Today, switches to Floater with icon-only controls,
+  and uses on-device speech recognition for the add action, falling back to the normal create-task
+  flow when speech is unavailable.
+
+Per-platform detail lives in [`ios-swiftUI/README.md`](ios-swiftUI/README.md) (CarPlay) and
+[`android-compose/README.md`](android-compose/README.md) (Car Surface).
+
+## Dashboard widget (Homarr)
+
+T'Day can surface your tasks on a [Homarr](https://homarr.dev) dashboard via a dedicated **Tday
+Tasks** widget. The widget shows a chosen view — **Today, Scheduled, Overdue, or Floater** — and
+lets you complete (with an Undo toast), quick-add (one task per line, with priority/list/due), edit,
+and delete tasks directly from the dashboard.
+
+It is **not** an embedded iframe of the web app (T'Day sends `X-Frame-Options: DENY`). Instead the
+widget talks to T'Day's **token-authenticated REST API** from Homarr's own backend, so no extra
+service is needed. Connecting it up:
+
+1. In T'Day, go to **Settings → API Key / Dashboard Access → Generate Key** and copy the key (shown
+   once).
+2. In Homarr, add the **Tday** integration: paste your T'Day **server URL** and the **API key**.
+3. Add the **Tday Tasks** widget and pick a view.
+
+The widget and integration live in the [`ohmzi/homarr`](https://github.com/ohmzi/homarr) fork, with
+end-user docs in [`ohmzi/documentation`](https://github.com/ohmzi/documentation/tree/develop). To
+build your own integration against the same API, see
+[`docs/API_INTEGRATION.md`](docs/API_INTEGRATION.md).
 
 ## Product Direction
 
@@ -228,6 +290,7 @@ The fuller north star is in [`docs/PRODUCT_DIRECTION.md`](docs/PRODUCT_DIRECTION
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)           | System design, domain boundaries, data flow                                               |
 | [`docs/CODING_STANDARDS.md`](docs/CODING_STANDARDS.md)   | Code quality rules, naming, patterns                                                      |
 | [`docs/API_GUIDELINES.md`](docs/API_GUIDELINES.md)       | REST API contracts and conventions                                                        |
+| [`docs/API_INTEGRATION.md`](docs/API_INTEGRATION.md)     | API-key auth + endpoints for external integrations (e.g. the Homarr Tday Tasks widget)    |
 | [`docs/TESTING.md`](docs/TESTING.md)                     | Testing strategy and expectations                                                         |
 | [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)               | Docker, CI/CD, secrets, releases                                                          |
 | [`docs/REMOTE_ACCESS.md`](docs/REMOTE_ACCESS.md)         | Remote access methods (Cloudflare Tunnel, Tailscale, WireGuard, etc.)                     |
