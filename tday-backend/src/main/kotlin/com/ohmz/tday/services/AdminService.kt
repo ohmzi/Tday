@@ -160,8 +160,9 @@ class AdminServiceImpl(
         }
 
         // Force every existing session for this user to re-authenticate with the
-        // new temporary password.
-        sessionControl.revokeUserSessions(targetId)
+        // new temporary password, and revoke the full-account API key so it can't
+        // outlive the reset.
+        sessionControl.revokeUserSessions(targetId, revokeApiKeys = true)
 
         generatedPassword
     }
