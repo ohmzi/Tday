@@ -1057,9 +1057,18 @@ enum OnDeviceTitleNlpParser {
         let fullRange = NSRange(text.startIndex ..< text.endIndex, in: text)
         guard let match = detector.firstMatch(in: text, options: [], range: fullRange),
               match.resultType == .date,
-              let date = match.date,
+              var date = match.date,
               let matchedRange = Range(match.range, in: text) else {
             return nil
+        }
+
+        // NSDataDetector interprets wall-clock phrases ("8pm", "tomorrow") in GMT when
+        // the text names no explicit zone (match.timeZone == nil). Reinterpret those in
+        // the device's zone so "8pm" means 8pm locally — otherwise the saved instant
+        // (and the calendar day, near midnight) is shifted by the UTC offset.
+        if match.timeZone == nil {
+            let offset = TimeZone.current.secondsFromGMT(for: date)
+            date = date.addingTimeInterval(-Double(offset))
         }
 
         let matchedText = String(text[matchedRange])
