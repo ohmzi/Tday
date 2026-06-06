@@ -1,6 +1,6 @@
 import { createBrowserRouter, Navigate, Outlet } from "react-router-dom";
 import * as Sentry from "@sentry/react";
-import { DEFAULT_LOCALE } from "@/i18n";
+import { resolveInitialLocale } from "@/i18n";
 import ProtectedRoute from "@/pages/ProtectedRoute";
 import { lazy, Suspense } from "react";
 import RouteErrorPage from "@/pages/RouteErrorPage";
@@ -53,7 +53,7 @@ const sentryCreateBrowserRouter =
 export const router = sentryCreateBrowserRouter([
   {
     path: "/",
-    element: <Navigate to={`/${DEFAULT_LOCALE}`} replace />,
+    element: <Navigate to={`/${resolveInitialLocale()}`} replace />,
     errorElement: <RouteErrorPage />,
   },
   {

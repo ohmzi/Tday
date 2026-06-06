@@ -438,4 +438,9 @@
     <string name="release_launch_update_toast">Update %1$s is available.</string>
     <string name="task_deleted_toast">Task deleted</string>
     <string name="release_view_on_github">View on GitHub</string>
+
+    <!-- Language picker -->
+    <string name="settings_language">Language</string>
+    <string name="settings_language_system_default">System default</string>
+    <string name="settings_language_dialog_title">Language</string>
 </resources>

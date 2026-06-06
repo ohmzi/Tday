@@ -1,6 +1,8 @@
 import React, { useState, useEffect, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import {
+  Check,
+  ChevronRight,
   Copy,
   Eye,
   EyeOff,
@@ -15,10 +17,15 @@ import {
   User,
 } from "lucide-react";
 import { useTheme } from "next-themes";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SheetCard } from "@/components/ui/sheet-chrome";
+import {
+  CenteredSelectorOverlay,
+  SelectorDivider,
+} from "@/components/ui/sheet-chrome/CenteredSelectorOverlay";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/providers/AuthProvider";
 import { useToast } from "@/hooks/use-toast";
@@ -28,11 +35,29 @@ import NativeAppBrandButton from "@/components/app/NativeAppBrandButton";
 import { api } from "@/lib/api-client";
 import { getErrorMessage } from "@/lib/error-message";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
+import { usePathname } from "@/lib/navigation";
+import { LANGUAGE_STORAGE_KEY, resolveInitialLocale } from "@/i18n";
 
 const themeOptions = [
   { value: "light", label: "Light", icon: Sun },
   { value: "dark", label: "Dark", icon: Moon },
   { value: "system", label: "System", icon: Monitor },
+] as const;
+
+// Endonyms (each language shown in its own script) + a "System default" option
+// that follows the browser/OS language. Order: system first, then alphabetical.
+const LANGUAGE_OPTIONS = [
+  { code: "system", label: "System default" },
+  { code: "en", label: "English" },
+  { code: "es", label: "Español" },
+  { code: "fr", label: "Français" },
+  { code: "de", label: "Deutsch" },
+  { code: "it", label: "Italiano" },
+  { code: "pt", label: "Português" },
+  { code: "ru", label: "Русский" },
+  { code: "zh", label: "中文" },
+  { code: "ja", label: "日本語" },
+  { code: "ms", label: "Bahasa Melayu" },
 ] as const;
 
 /** Rounded grouped section card with a big ExtraBold title — mirrors the
@@ -141,10 +166,39 @@ const fieldClass =
   "h-12 rounded-2xl border-border/70 bg-background/50 font-bold focus-visible:ring-accent/30";
 
 export default function SettingsPage() {
-  const { t: sidebarDict } = useTranslation("sidebar");
+  const { t: sidebarDict, i18n } = useTranslation("sidebar");
   const { user } = useAuth();
   const { toast } = useToast();
   const { theme = "system", resolvedTheme, setTheme } = useTheme();
+
+  const navigate = useNavigate();
+  const pathname = usePathname();
+  const [languageOpen, setLanguageOpen] = useState(false);
+  const storedLanguage = (() => {
+    try {
+      return localStorage.getItem(LANGUAGE_STORAGE_KEY);
+    } catch {
+      return null;
+    }
+  })();
+  const selectedLanguageCode = storedLanguage ?? "system";
+  const currentLanguageLabel =
+    LANGUAGE_OPTIONS.find((opt) => opt.code === selectedLanguageCode)?.label ??
+    "System default";
+
+  const chooseLanguage = (code: string) => {
+    setLanguageOpen(false);
+    const target = code === "system" ? resolveInitialLocale() : code;
+    try {
+      if (code === "system") localStorage.removeItem(LANGUAGE_STORAGE_KEY);
+      else localStorage.setItem(LANGUAGE_STORAGE_KEY, code);
+    } catch {
+      /* ignore storage failures */
+    }
+    void i18n.changeLanguage(target);
+    // Swap the leading locale segment of the current URL so deep links stay valid.
+    navigate(pathname.replace(/^\/[^/]+/, `/${target}`));
+  };
 
   const [name, setName] = useState("");
   const [profileLoading, setProfileLoading] = useState(false);
@@ -384,6 +438,49 @@ export default function SettingsPage() {
       >
         <ThemeSegmentedControl value={theme} onChange={setTheme} />
       </SettingsSection>
+
+      <SettingsSection title="Language" description="Choose your app language">
+        <button
+          type="button"
+          onClick={() => setLanguageOpen(true)}
+          className="flex w-full items-center justify-between gap-3 rounded-2xl py-1.5 text-left"
+          aria-haspopup="dialog"
+          aria-label={`App language, ${currentLanguageLabel}`}
+        >
+          <span className="text-[1.05rem] font-black text-foreground">App language</span>
+          <span className="flex min-w-0 items-center gap-2">
+            <span className="min-w-0 truncate text-sm font-black text-muted-foreground">
+              {currentLanguageLabel}
+            </span>
+            <ChevronRight className="h-[18px] w-[18px] shrink-0 text-muted-foreground/55" strokeWidth={2.6} />
+          </span>
+        </button>
+      </SettingsSection>
+
+      <CenteredSelectorOverlay open={languageOpen} onOpenChange={setLanguageOpen} title="Language">
+        {LANGUAGE_OPTIONS.map((option, index) => {
+          const active = option.code === selectedLanguageCode;
+          return (
+            <div key={option.code}>
+              {index > 0 ? <SelectorDivider /> : null}
+              <button
+                type="button"
+                onClick={() => chooseLanguage(option.code)}
+                className="flex w-full items-center gap-3.5 px-5 py-3 text-left transition-colors hover:bg-muted-foreground/5"
+              >
+                <span className="min-w-0 flex-1 truncate text-lg font-black text-foreground">
+                  {option.label}
+                </span>
+                {active ? (
+                  <Check className="h-[18px] w-[18px] shrink-0 text-accent" />
+                ) : (
+                  <span className="h-[18px] w-[18px] shrink-0" aria-hidden />
+                )}
+              </button>
+            </div>
+          );
+        })}
+      </CenteredSelectorOverlay>
 
       {push.isSupported && (
         <SettingsSection title="Notifications">

@@ -9,6 +9,7 @@ final class AppContainer {
 
     let secureStore: SecureStore
     let themeStore: ThemeStore
+    let languageStore: LanguageStore
     let reminderPreferenceStore: ReminderPreferenceStore
     let serverURLState: ServerURLState
     let cookieStore: CookieStore
@@ -37,6 +38,7 @@ final class AppContainer {
         secureStore = SecureStore()
         let didClearInstallScopedValues = secureStore.clearInstallScopedValuesIfAppReinstalled()
         themeStore = ThemeStore()
+        languageStore = LanguageStore()
         reminderPreferenceStore = ReminderPreferenceStore()
         serverURLState = ServerURLState(currentURL: secureStore.loadPersistedServerURL())
         cookieStore = CookieStore(

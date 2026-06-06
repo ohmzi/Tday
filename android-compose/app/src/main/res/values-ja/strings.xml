@@ -1,0 +1,445 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">T\'Day</string>
+
+    <!-- Shared / reusable -->
+    <string name="action_back">戻る</string>
+    <string name="action_close">閉じる</string>
+    <string name="action_search">検索</string>
+    <string name="action_close_search">検索を閉じる</string>
+    <string name="action_create_task">タスクを作成</string>
+    <string name="action_create_list">リストを作成</string>
+    <string name="action_edit">編集</string>
+    <string name="action_edit_task">タスクを編集</string>
+    <string name="action_delete_task">タスクを削除</string>
+    <string name="action_delete_list">リストを削除</string>
+    <string name="action_delete">削除</string>
+    <string name="action_complete">完了</string>
+    <string name="action_more">もっと見る</string>
+    <string name="action_more_options">その他のオプション</string>
+    <string name="action_save">保存</string>
+    <string name="action_save_task">タスクを保存</string>
+    <string name="action_cancel">キャンセル</string>
+    <string name="action_done">完了</string>
+    <string name="action_create">作成</string>
+    <string name="action_ok">OK</string>
+    <string name="action_sign_out">サインアウト</string>
+    <string name="action_expand_section">セクションを展開</string>
+    <string name="action_collapse_section">セクションを折りたたむ</string>
+    <string name="label_completed">完了済み</string>
+    <string name="label_mark_complete">完了にする</string>
+    <string name="label_undo_complete">完了を取り消す</string>
+    <string name="label_task_list">タスクリスト</string>
+    <string name="label_priority_task">優先タスク</string>
+    <string name="label_loading">読み込み中…</string>
+    <string name="label_version_name">v%1$s</string>
+    <string name="label_server">サーバー</string>
+
+    <!-- Home screen -->
+    <string name="home_title">T\'Day</string>
+    <string name="home_category_today">今日</string>
+    <string name="home_category_overdue">期限超過</string>
+    <string name="home_category_scheduled">予定</string>
+    <string name="home_category_all">すべて</string>
+    <string name="home_category_priority">優先</string>
+    <string name="home_category_completed">完了済み</string>
+    <string name="home_category_calendar">カレンダー</string>
+    <string name="root_feed_tab_home">ホーム</string>
+    <string name="root_feed_tab_floater">フローター</string>
+    <string name="home_search_placeholder">検索</string>
+    <string name="home_search_no_results">一致するタスクはありません</string>
+    <string name="home_my_lists">マイリスト</string>
+    <string name="home_new_list">新しいリスト</string>
+    <string name="home_list_name_placeholder">リスト名</string>
+    <string name="home_section_list">リスト</string>
+    <string name="home_section_color">色</string>
+    <string name="home_section_icon">アイコン</string>
+    <string name="home_list_icon_option">%1$s のリストアイコンを選択</string>
+    <string name="home_locked_list_name">サインインしてリストを読み込む</string>
+
+    <string-array name="splash_taglines">
+        <item>あなたのサーバーが覚えているから、覚えなくていい</item>
+        <item>自分でホスト、締め切りに追われる</item>
+        <item>「後で覚えてる」はいつも嘘だから</item>
+        <item>セルフホストの正気を、ひとタスクずつ</item>
+        <item>あなた自身のハードウェアから催促</item>
+        <item>あなたのデータ、あなたのサーバー、言い訳無用の領域</item>
+        <item>v0.1 以来、先延ばしを少しだけ難しく</item>
+        <item>あなたのサーバーで稼働、あなたの生活を運営</item>
+        <item>付箋にはプッシュ通知がないから</item>
+        <item>「忘れた」を「やった」に変える</item>
+        <item>あなた専用の催促マシン</item>
+        <item>セルフホスト、自己管理…まあ、近づいてる</item>
+        <item>忘れたタスクが見つかる場所</item>
+        <item>大人の務め、でもセルフホストで</item>
+        <item>近くのサーバーから混沌を手なずける</item>
+        <item>未来のあなたが前もって感謝</item>
+        <item>クラウドは誰かのサーバー。これはあなたのもの。</item>
+        <item>あなたの生活を整理、大家は不要</item>
+        <item>ゼロトラスト…自分のサーバー以外は</item>
+        <item>タスクを同期、優先順位を品定め</item>
+        <item>今日から連絡。計画が欲しいって。</item>
+        <item>「後で」に正式な申請をさせる</item>
+        <item>混沌をチェックボックスに変える</item>
+        <item>あなたのタスクがきれいに並び始めた</item>
+        <item>あなたの優先順位に意見を持つプライベートサーバー</item>
+        <item>頭の中でタブを開きすぎたときに</item>
+        <item>混沌に予定される前に、混沌を予定する</item>
+        <item>あなたのリストが生産的な時代に突入</item>
+        <item>未来のあなたのための小さな司令室</item>
+        <item>雰囲気はタスク戦略ではないから</item>
+        <item>プライベートなタスク。より良い朝。</item>
+        <item>あなたのバックログを見届け、そして整理</item>
+        <item>散らばった考えに席が割り当てられる場所</item>
+        <item>あなたの優先順位に住所ができた</item>
+        <item>まず同期、慌てるのは後</item>
+        <item>カレンダーの修羅場、今や封じ込め付き</item>
+        <item>締め切りが嫌がるセルフホストの裏ワザ</item>
+        <item>あなたの一日のフリーランスをやめさせる</item>
+        <item>あなたのリマインダーは準備万端</item>
+        <item>「やるべき」を「予定済み」に変える</item>
+        <item>あなたのTODOリスト、でもちゃんと現れる</item>
+        <item>「明日やる」を出し抜く</item>
+        <item>記憶力のあるTODOリスト</item>
+        <item>あなたの執行人、セルフホスト</item>
+        <item>先延ばしの最悪の悪夢</item>
+        <item>「いつか」に日付がつく場所</item>
+        <item>生産性を、あなたの条件でホスト</item>
+        <item>一台のサーバー。言い訳ゼロ。</item>
+        <item>あなたの約束を代わりに守る</item>
+        <item>「後で」の列を手なずける</item>
+        <item>あなたのセカンドブレイン、でも頼れる</item>
+        <item>「たぶん」を「予定済み」に格上げ</item>
+        <item>混沌の管理、プライベート版</item>
+        <item>あなたの一日のプロジェクトマネージャー</item>
+        <item>「頭の中」は仕組みではないから</item>
+        <item>タスクの取りまとめを公式に</item>
+        <item>精神的負担をチェックマークに変える</item>
+        <item>良いサーバーらしくタスクを提供</item>
+        <item>あなた専用の説明責任サーバー</item>
+        <item>あなたの代わりに優先順位づけ</item>
+    </string-array>
+
+    <!-- Settings screen -->
+    <string name="settings_title">設定</string>
+    <string name="settings_unknown_user">不明なユーザー</string>
+    <string name="settings_role_label">ロール: %1$s</string>
+    <string name="settings_role_default">USER</string>
+    <string name="settings_appearance">外観</string>
+    <string name="settings_reminders">リマインダー</string>
+    <string name="settings_feature_toggle">機能の切り替え</string>
+    <string name="settings_ai_task_summary">要約</string>
+    <string name="settings_saving_admin">管理者設定を保存中…</string>
+    <string name="settings_ai_unavailable_title">要約は利用できません</string>
+    <string name="settings_default_reminder">デフォルトのリマインダー</string>
+    <string name="settings_update_available_version">v%1$s が利用可能</string>
+    <string name="settings_server_compatible">互換性あり</string>
+    <string name="settings_server_incompatible">互換性なし</string>
+
+    <!-- Onboarding / wizard -->
+    <string name="onboarding_title">T\'Day をセットアップ</string>
+    <string name="onboarding_subtitle">ワークスペースをセットアップ</string>
+    <string name="onboarding_step_mode">モード</string>
+    <string name="onboarding_step_server">サーバー</string>
+    <string name="onboarding_step_login">ログイン</string>
+    <string name="onboarding_mode_title">セットアップを選択</string>
+    <string name="onboarding_mode_subtitle">T\'Day がタスクを保存する場所を選びます。</string>
+    <string name="onboarding_mode_server_title">セルフホストサーバー</string>
+    <string name="onboarding_mode_server_subtitle">アカウント、同期、独自のバックエンドを使用。</string>
+    <string name="onboarding_mode_server_short_title">セルフホスト</string>
+    <string name="onboarding_mode_server_short_subtitle">アカウントと同期</string>
+    <string name="onboarding_mode_local_short_title">このデバイス</string>
+    <string name="onboarding_mode_local_short_subtitle">ログイン不要</string>
+    <string name="onboarding_mode_local_subtitle">ログイン不要。データはアプリ内に保存されます。</string>
+    <string name="onboarding_server_hero_subtitle">T\'Day のエンドポイントに接続します。</string>
+    <string name="onboarding_server_url_label">サーバー URL</string>
+    <string name="onboarding_server_url_placeholder">https://app.example.com</string>
+    <string name="onboarding_reset_trust">信頼済みサーバーをリセット</string>
+    <string name="onboarding_resetting_trust">信頼をリセット中…</string>
+    <string name="onboarding_connect">接続</string>
+    <string name="onboarding_connecting_title">サーバーに接続中…</string>
+    <string name="onboarding_connecting_subtitle">エンドポイント、TLS、ワークスペース設定を確認中</string>
+    <string name="onboarding_use_device_only">このデバイスのみを使用</string>
+    <string name="onboarding_email_label">メールアドレス</string>
+    <string name="onboarding_password_label">パスワード</string>
+    <string name="onboarding_sign_in">サインイン</string>
+    <string name="onboarding_login_hero_subtitle">同期されたワークスペースを開きます。</string>
+    <string name="onboarding_create_account">アカウントを作成</string>
+    <string name="onboarding_register_hero_subtitle">サーバーアカウントを作成します。</string>
+    <string name="onboarding_change_server">サーバーを変更</string>
+    <string name="onboarding_change_setup">セットアップを変更</string>
+    <string name="onboarding_first_name_label">名</string>
+    <string name="onboarding_confirm_password_label">パスワードの確認</string>
+    <string name="onboarding_creating_account">アカウントを作成中…</string>
+    <string name="onboarding_back_to_sign_in">サインインに戻る</string>
+    <string name="onboarding_authenticating_title">認証中…</string>
+    <string name="onboarding_authenticating_register_subtitle">登録を送信し、承認状況を待っています</string>
+    <string name="onboarding_authenticating_login_subtitle">セッションを暗号化し、ワークスペースを読み込み中</string>
+    <string name="onboarding_error_connect_fallback">サーバーに接続できませんでした</string>
+    <string name="onboarding_error_reset_trust_fallback">信頼済みサーバーをリセットできませんでした</string>
+    <string name="onboarding_validation_first_name_min">名は2文字以上で入力してください</string>
+    <string name="onboarding_validation_email_required">メールアドレスは必須です</string>
+    <string name="onboarding_validation_email_invalid">有効なメールアドレスを入力してください</string>
+    <string name="onboarding_validation_password_required">パスワードと確認用パスワードは必須です</string>
+    <string name="onboarding_validation_password_min">パスワードは8文字以上で入力してください</string>
+    <string name="onboarding_validation_password_uppercase">パスワードには大文字を1文字以上含めてください</string>
+    <string name="onboarding_validation_password_special">パスワードには特殊文字を1文字以上含めてください</string>
+    <string name="onboarding_validation_password_mismatch">パスワードが一致しません</string>
+
+    <!-- Authentication / credential messages -->
+    <string name="auth_pending_admin_approval">アカウントは管理者の承認待ちです。</string>
+    <string name="auth_password_manager_save_server_url_failed">Android パスワードマネージャーがこのサーバー URL を保存できませんでした。パスワードマネージャーが有効か確認してください。</string>
+    <string name="auth_password_manager_save_login_failed">Android パスワードマネージャーがこのログインを保存できませんでした。パスワードマネージャーが有効か確認してください。</string>
+    <string name="auth_error_incorrect_credentials">メールアドレスまたはパスワードが正しくありません</string>
+    <string name="auth_error_server_unreachable">サーバーに接続できません。サーバー URL を確認して再試行してください。</string>
+
+    <!-- Todo list screen -->
+    <string name="todos_summarize">タスクを要約</string>
+    <string name="todos_title_tasks">タスク</string>
+    <string name="todos_title_today">今日</string>
+    <string name="todos_title_overdue">期限超過</string>
+    <string name="todos_title_scheduled">予定</string>
+    <string name="todos_title_all_tasks">すべてのタスク</string>
+    <string name="todos_title_priority">優先</string>
+    <string name="todos_title_floater">フローター</string>
+    <string name="todos_title_list">リスト</string>
+    <string name="todos_empty_today">今日のタスクはありません</string>
+    <string name="todos_empty_overdue">期限超過のタスクはありません</string>
+    <string name="todos_empty_priority">優先タスクはありません</string>
+    <string name="todos_empty_scheduled">予定されたタスクはありません</string>
+    <string name="todos_empty_all">まだタスクはありません</string>
+    <string name="todos_empty_list">このリストにタスクはありません</string>
+    <string name="car_surface_title_today">T\'Day</string>
+    <string name="car_surface_title_floater">フローター</string>
+    <string name="car_surface_loading">タスクを読み込み中</string>
+    <string name="car_surface_load_error">タスクを読み込めませんでした</string>
+    <string name="car_voice_prompt_today">T\'Day に追加するタスクを話してください</string>
+    <string name="car_voice_prompt_floater">追加するフローターを話してください</string>
+    <string name="car_voice_empty_result">タスクが聞き取れませんでした</string>
+    <string name="car_complete_dialog_title">このタスクを完了しますか?</string>
+    <string name="car_complete_dialog_confirm">完了</string>
+    <string name="todos_section_morning">午前</string>
+    <string name="todos_section_afternoon">午後</string>
+    <string name="todos_section_tonight">今夜</string>
+    <string name="todos_section_earlier">それ以前</string>
+    <string name="todos_section_today">今日</string>
+    <string name="todos_section_tomorrow">明日</string>
+    <string name="todos_section_rest_of">%1$s の残り</string>
+    <string name="todos_reschedule_recurring_title">繰り返しタスクを移動しますか?</string>
+    <string name="todos_reschedule_recurring_message">このタスクの回のみを移動するか、繰り返しシリーズ全体を移動するか選択してください。</string>
+    <string name="todos_reschedule_this_occurrence">この回のみ</string>
+    <string name="todos_reschedule_entire_series">シリーズ全体</string>
+    <string name="todos_summary_title">要約</string>
+    <string name="todos_summary_close">要約を閉じる</string>
+    <string name="todos_summary_loading">タスクの要約を作成中…</string>
+    <string name="todos_summary_admin_disabled">要約は管理者により無効化されています</string>
+    <string name="todos_summary_modes_unavailable">要約は今日、予定、すべて、優先でのみ利用できます</string>
+    <string name="todos_summary_offline_unavailable">オフライン中は要約を利用できません。</string>
+    <string name="todos_list_settings">リスト設定</string>
+    <string name="todos_save_list_settings">リスト設定を保存</string>
+    <string name="todos_delete_list_title">リストを削除しますか?</string>
+    <string name="todos_delete_list_message">このリスト、その中のすべてのタスク、およびそれらのタスクの完了履歴が削除されます。</string>
+    <string name="todos_due_overdue_text">期限超過、%1$s</string>
+    <string name="todos_due_text">期限 %1$s</string>
+
+    <!-- Create/edit task sheet -->
+    <string name="create_task_title_new">新しいタスク</string>
+    <string name="create_task_title_edit">タスクを編集</string>
+    <string name="create_task_section_schedule">スケジュール</string>
+    <string name="create_task_due">期限</string>
+    <string name="create_task_section_details">詳細</string>
+    <string name="create_task_list">リスト</string>
+    <string name="create_task_no_list">リストなし</string>
+    <string name="create_task_priority">優先度</string>
+    <string name="create_task_priority_normal">通常</string>
+    <string name="create_task_priority_important">重要</string>
+    <string name="create_task_priority_urgent">緊急</string>
+    <string name="create_task_repeat">繰り返し</string>
+    <string name="create_task_repeat_none">繰り返しなし</string>
+    <string name="create_task_repeat_daily">毎日</string>
+    <string name="create_task_repeat_weekly">毎週</string>
+    <string name="create_task_repeat_weekdays">平日</string>
+    <string name="create_task_repeat_monthly">毎月</string>
+    <string name="create_task_repeat_yearly">毎年</string>
+    <string name="create_task_title_placeholder">タイトル</string>
+    <string name="create_task_notes_placeholder">メモ</string>
+    <string name="create_task_schedule_enabled">タスクに期限があります</string>
+    <string name="create_task_schedule_disabled">フロータータスク</string>
+    <string name="create_task_select_date">日付を選択</string>
+    <string name="create_task_select_time">時刻を選択</string>
+
+    <!-- Completed screen -->
+    <string name="completed_title">完了済み</string>
+    <string name="completed_empty">まだ完了したタスクはありません</string>
+    <string name="completed_section_earlier">それ以前</string>
+    <string name="completed_section_today">今日</string>
+    <string name="completed_section_tomorrow">明日</string>
+    <string name="completed_section_rest_of">%1$s の残り</string>
+
+    <!-- Calendar screen -->
+    <string name="calendar_title">カレンダー</string>
+    <string name="calendar_jump_to_today">今日に移動</string>
+    <string name="calendar_tasks_due">%1$s 期限のタスク</string>
+    <string name="calendar_no_pending">この日に期限の未完了タスクはありません</string>
+    <string name="calendar_completed_header">完了済み:</string>
+    <string name="calendar_prev_month">前の月</string>
+    <string name="calendar_next_month">次の月</string>
+    <string name="calendar_prev_week">前の週</string>
+    <string name="calendar_next_week">次の週</string>
+    <string name="calendar_prev_day">前の日</string>
+    <string name="calendar_next_day">次の日</string>
+    <string name="calendar_task_count_one">1件の期限タスク</string>
+    <string name="calendar_task_count_many">%1$d件の期限タスク</string>
+    <string name="calendar_task_count_cap">9+</string>
+
+    <!-- Error handling / retry / offline -->
+    <string name="action_retry">再試行</string>
+    <string name="offline_banner_title">オフラインです</string>
+    <string name="offline_banner">キャッシュされたタスクを利用できます。接続が回復すると変更が同期されます。</string>
+    <string name="offline_banner_pending_one">1件の変更が同期待ちです</string>
+    <string name="offline_banner_pending_many">%1$d件の変更が同期待ちです</string>
+    <string name="settings_workspace">ワークスペース</string>
+    <string name="settings_workspace_local_title">ローカルワークスペース</string>
+    <string name="settings_workspace_local_detail">このデバイスのみ</string>
+    <string name="settings_workspace_server_title">サーバー同期</string>
+    <string name="settings_sync_status_ready">同期の準備完了</string>
+    <string name="settings_sync_status_syncing">同期中</string>
+    <string name="settings_sync_status_offline">オフライン。接続が回復すると変更が同期されます。</string>
+    <string name="settings_sync_status_pending">同期待ち</string>
+    <string name="settings_sync_status_synced">同期済み</string>
+    <string name="settings_sync_last_synced_label">最終同期</string>
+    <string name="settings_sync_last_synced_never">まだありません</string>
+    <string name="settings_sync_last_attempt_label">最終試行</string>
+    <string name="settings_sync_pending_label">保留中</string>
+    <string name="settings_sync_pending_none">変更待ちはありません</string>
+    <string name="settings_sync_pending_one">1件の変更が待機中</string>
+    <string name="settings_sync_pending_many">%1$d件の変更が待機中</string>
+    <string name="settings_sync_now">今すぐ同期</string>
+    <string name="settings_syncing_now">同期中...</string>
+    <string name="error_auth_expired">セッションの有効期限が切れました。もう一度サインインしてください。</string>
+    <string name="error_app_outdated">このバージョンのアプリは古くなっています。続行するには更新してください。</string>
+    <string name="error_server_outdated">このアプリを続行するにはサーバーを更新する必要があります。</string>
+    <string name="error_server">サーバーエラー。後でもう一度お試しください。</string>
+    <string name="error_permission_denied">この操作を行う権限がありません。</string>
+    <string name="error_not_found">要求された項目が見つかりませんでした。</string>
+    <string name="error_connection">接続エラー。インターネットを確認して再試行してください。</string>
+    <string name="error_connectivity_title">インターネット接続がありません</string>
+    <string name="error_connectivity">接続できません。ネットワーク接続を確認して再試行してください。</string>
+    <string name="error_generic">問題が発生しました。もう一度お試しください。</string>
+    <string name="error_load_failed">読み込みに失敗しました。</string>
+    <string name="error_load_dashboard_failed">ダッシュボードの読み込みに失敗しました。</string>
+    <string name="error_load_calendar_failed">カレンダーの読み込みに失敗しました。</string>
+    <string name="error_load_tasks_failed">タスクの読み込みに失敗しました。</string>
+    <string name="error_create_task_failed">タスクを作成できませんでした。</string>
+    <string name="error_update_task_failed">タスクを更新できませんでした。</string>
+    <string name="error_complete_task_failed">タスクを完了できませんでした。</string>
+    <string name="error_delete_task_failed">タスクを削除できませんでした。</string>
+    <string name="error_restore_task_failed">タスクを復元できませんでした。</string>
+    <string name="error_create_list_failed">リストを作成できませんでした。</string>
+    <string name="error_update_list_failed">リストを更新できませんでした。</string>
+    <string name="error_delete_list_failed">リストを削除できませんでした。</string>
+    <string name="error_summarize_tasks_failed">タスクを要約できませんでした。</string>
+    <string name="error_load_admin_settings_failed">管理者設定を読み込めませんでした</string>
+    <string name="error_update_admin_settings_failed">管理者設定を更新できませんでした</string>
+    <string name="error_reset_trusted_server_failed">信頼済みサーバーをリセットできませんでした。</string>
+    <string name="error_connect_server_failed">サーバーに接続できませんでした。</string>
+    <string name="server_setup_error_probe_timeout">サーバーの確認がタイムアウトしました。URL とネットワークを確認して再試行してください。</string>
+    <string name="server_setup_error_invalid_url">無効なサーバー URL です。</string>
+    <string name="server_setup_error_insecure_transport">リモートサーバー URL には HTTPS を使用してください。</string>
+    <string name="server_setup_error_not_tday_server">サーバーに接続できますが、T\'Day サーバーではないようです。</string>
+    <string name="server_setup_trust_refreshing">保存されたサーバーの信頼が変更されました。更新された証明書で再試行します。</string>
+    <string name="server_setup_trust_refresh_failed">保存されたサーバーの信頼の不一致から自動的に回復できませんでした。アプリのストレージを消去するか、アプリを再インストールして再試行してください。</string>
+
+    <string name="notification_channel_task_reminders_name">タスクリマインダー</string>
+    <string name="notification_channel_task_reminders_description">今後のタスク期限のリマインダー</string>
+    <string name="notification_channel_app_updates_name">アプリの更新</string>
+    <string name="notification_channel_app_updates_description">更新のインストール完了後に T\'Day を再起動するための案内</string>
+    <string name="update_notification_title">更新がインストールされました</string>
+    <string name="update_notification_message">タップして T\'Day を再起動。</string>
+
+    <string name="app_update_required_title">更新が必要です</string>
+    <string name="app_update_required_message">続行するには v%1$s への更新が必要です。</string>
+    <string name="app_update_download_not_ready">v%1$s はまだダウンロードできません。管理者に更新のアップロードを依頼してください。</string>
+    <string name="server_update_required_title">サーバーの更新が必要です</string>
+    <string name="server_update_required_message">アプリにはより新しいサーバーバージョンが必要です。サーバーは v%1$s です。サーバーを更新するには管理者に連絡してください。</string>
+    <string name="install_permission_return_to_app">インストール権限を付与してから、アプリに戻ってください。</string>
+    <string name="install_permission_return_here">インストール権限を付与してから、ここに戻ってください。</string>
+    <string name="overlay_install_awaiting_permission">権限を待っています...</string>
+    <string name="overlay_install_downloading_progress">ダウンロード中... %1$d%%</string>
+    <string name="overlay_install_downloading">ダウンロード中...</string>
+    <string name="overlay_install_installing">インストール中...</string>
+    <string name="overlay_install_download_and_install">ダウンロード &amp; インストール</string>
+
+    <string name="widget_today_tasks_description">今日のタスクを一目で表示</string>
+    <string name="widget_today_tasks_title">今日のタスク</string>
+    <string name="widget_today_tasks_title_small">今日のタスク - 小</string>
+    <string name="widget_today_tasks_title_medium">今日のタスク - 中</string>
+    <string name="widget_today_tasks_title_large">今日のタスク - 大</string>
+    <string name="widget_today_tasks_empty">今日期限のタスクはありません</string>
+    <string name="widget_today_tasks_add">今日のタスクを追加</string>
+    <string name="widget_today_tasks_count">%1$d件期限</string>
+    <string name="widget_today_tasks_count_unit">期限</string>
+    <string name="widget_today_tasks_setup_title">T\'Day を開く</string>
+    <string name="widget_today_tasks_setup_message">ワークスペースをセットアップ</string>
+    <string name="widget_floater_tasks_description">フローータスクを一目で表示</string>
+    <string name="widget_floater_tasks_title">フローータスク</string>
+    <string name="widget_floater_tasks_title_small">フローータスク - 小</string>
+    <string name="widget_floater_tasks_title_medium">フローータスク - 中</string>
+    <string name="widget_floater_tasks_title_large">フローータスク - 大</string>
+    <string name="widget_floater_tasks_empty">フローータスクはありません</string>
+    <string name="widget_floater_tasks_add">フローターを追加</string>
+    <string name="widget_floater_tasks_count">%1$d件未完了</string>
+    <string name="widget_floater_tasks_count_unit">未完了</string>
+    <string name="widget_loading">タスクを読み込み中…</string>
+
+    <!-- Settings: updates -->
+    <string name="settings_check_updates">更新を確認</string>
+
+    <!-- Latest release screen -->
+    <string name="release_title">アプリバージョン</string>
+    <string name="release_error">リリース情報を取得できません。接続を確認して再試行してください。</string>
+    <string name="release_installed_version">インストール済みバージョン</string>
+    <string name="release_installed_label">インストール済み</string>
+    <string name="release_server_not_connected">未接続</string>
+    <string name="release_server_version_unavailable">利用不可</string>
+    <string name="release_latest_label">最新</string>
+    <string name="release_update_available">更新あり</string>
+    <string name="release_version_mismatch">バージョンの不一致</string>
+    <string name="release_app_update_required_summary">サーバーは v%1$s を必要としています。続行するにはアプリを更新してください。</string>
+    <string name="release_server_update_required_summary">このアプリはサーバーが v%1$s であることを必要としますが、サーバーは v%2$s です。</string>
+    <string name="release_update_ready_version">バージョン %1$s をインストールする準備ができました。</string>
+    <string name="release_update_ready_generic">より新しいバージョンをインストールする準備ができました。</string>
+    <string name="release_up_to_date">最新</string>
+    <string name="release_up_to_date_message">最新バージョンを実行しています</string>
+    <string name="release_published">公開日 %1$s</string>
+    <string name="release_whats_new_in_version">%1$s の新機能</string>
+    <string name="release_no_notes_for_version">このバージョンのリリースノートはありません</string>
+    <string name="release_download_and_install">更新をダウンロードしてインストール</string>
+    <string name="release_allow_install_permission">インストール権限を許可</string>
+    <string name="release_downloading_apk">更新をダウンロード中…</string>
+    <string name="release_downloading_apk_progress">更新をダウンロード中… %1$d%%</string>
+    <string name="release_preparing_update">更新を準備中…</string>
+    <string name="release_opening_installer">Android インストーラーを開いています…</string>
+    <string name="release_install_permission_required">T\'Day がこのソースから更新をインストールすることを許可してください。</string>
+    <string name="release_install_permission_return_hint">T\'Day が更新をインストールすることを許可し、ここに戻ると自動的に続行します。</string>
+    <string name="release_install_permission_denied">T\'Day のインストール権限がまだ無効です。</string>
+    <string name="release_download_failed">更新をダウンロードできませんでした。もう一度お試しください。</string>
+    <string name="release_install_failed">更新をインストールできませんでした。</string>
+    <string name="release_install_cancelled">インストールがキャンセルされました。「ダウンロード &amp; インストール」をタップして再試行してください。</string>
+    <string name="release_install_blocked">インストールがデバイスによってブロックされました。デバイスの設定を確認して再試行してください。</string>
+    <string name="release_install_storage">ストレージの空き容量が不足しています。空き容量を確保して再試行してください。</string>
+    <string name="release_install_incompatible">この更新はお使いのデバイスと互換性がありません。</string>
+    <string name="release_signature_conflict">インストール済みのバージョンは別のキーで署名されているため、直接更新できません。</string>
+    <string name="release_signature_conflict_hint">先に現在のバージョンをアンインストールしてから、ここに戻って更新をインストールしてください。アプリデータは失われます。</string>
+    <string name="release_uninstall">現在のバージョンをアンインストール</string>
+    <string name="release_install_success">更新がインストールされました。</string>
+    <string name="release_no_apk">このリリースに APK は添付されていません。</string>
+    <string name="release_launch_update_toast">更新 %1$s が利用可能です。</string>
+    <string name="task_deleted_toast">タスクを削除しました</string>
+    <string name="release_view_on_github">GitHub で表示</string>
+
+    <!-- Language picker -->
+    <string name="settings_language">言語</string>
+    <string name="settings_language_system_default">システムのデフォルト</string>
+    <string name="settings_language_dialog_title">言語</string>
+</resources>

@@ -8,6 +8,13 @@ struct TdayApp: App {
     @State private var isLaunchSplashHeld = false
 
     init() {
+        // Apply the persisted in-app language before any view renders so even
+        // the launch splash is localized. nil = follow the system language.
+        LanguageBundle.activate()
+        let storedLanguage = LanguageStore().load()
+        LanguageBundle.setLanguage(
+            storedLanguage == LanguageStore.systemValue ? nil : storedLanguage,
+        )
         TdayFont.applyGlobalAppearances()
         SentryConfiguration.start()
         NotificationDeepLinkDelegate.shared.install()
