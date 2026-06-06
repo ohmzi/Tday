@@ -13,6 +13,7 @@ import com.ohmz.tday.models.response.UserResponse
 import com.ohmz.tday.security.PasswordService
 import kotlinx.coroutines.Dispatchers
 import org.jetbrains.exposed.sql.insert
+import org.jetbrains.exposed.sql.lowerCase
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import org.jetbrains.exposed.sql.update
@@ -150,7 +151,10 @@ class UserServiceImpl(private val passwordService: PasswordService) : UserServic
     }
 
     override suspend fun findByUsername(username: String): Map<String, Any?>? = newSuspendedTransaction(Dispatchers.IO) {
-        Users.selectAll().where { Users.username eq username }.firstOrNull()?.let {
+        // Callers pass an already-lowercased username; match case-insensitively so a
+        // legacy/seeded row stored with different casing is still reachable (and can't
+        // be shadowed by a freshly-registered lowercase duplicate).
+        Users.selectAll().where { Users.username.lowerCase() eq username }.firstOrNull()?.let {
             mapOf(
                 "id" to it[Users.id],
                 "username" to it[Users.username],
@@ -170,7 +174,7 @@ class UserServiceImpl(private val passwordService: PasswordService) : UserServic
     }
 
     override suspend fun usernameExists(username: String): Boolean = newSuspendedTransaction(Dispatchers.IO) {
-        Users.selectAll().where { Users.username eq username }.count() > 0
+        Users.selectAll().where { Users.username.lowerCase() eq username }.count() > 0
     }
 
     override suspend fun updatePasswordHash(userId: String, newHash: String) {

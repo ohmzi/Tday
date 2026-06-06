@@ -435,6 +435,6 @@ class RateLimitingTest {
     }
 
     private class NoOpSessionControl : SessionControl {
-        override suspend fun revokeUserSessions(userId: String) = Unit
+        override suspend fun revokeUserSessions(userId: String, revokeApiKeys: Boolean) = Unit
     }
 }
