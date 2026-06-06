@@ -319,7 +319,14 @@
     "newList": "Nueva lista",
     "editList": "Editar lista",
     "deleteList": "Eliminar lista",
-    "done": "Listo"
+    "done": "Listo",
+    "previous": "Anterior",
+    "next": "Siguiente",
+    "searchTasks": "Buscar tareas",
+    "taskCount": "{{count}} tareas",
+    "tasksDueOn": "Tareas para el {{date}}",
+    "noTasksDueThisDay": "No hay tareas para este día",
+    "selectAnotherDate": "Selecciona otra fecha en el calendario."
   },
   "today": {
     "saveInstance": "Guardar instancia",
@@ -437,5 +444,123 @@
     "lightRed": "Rojo claro",
     "brick": "Ladrillo",
     "slate": "Pizarra"
+  },
+  "home": {
+    "tileScheduled": "Programado",
+    "tilePriority": "Prioridad",
+    "tileOverdue": "Vencido",
+    "tileAll": "Todo",
+    "tileCompleted": "Completado",
+    "tileCalendar": "Calendario",
+    "searchTasksPlaceholder": "Buscar tareas...",
+    "noMatchingTasks": "No hay tareas coincidentes",
+    "openList": "Abrir {{name}}"
+  },
+  "settings": {
+    "themeLight": "Claro",
+    "themeDark": "Oscuro",
+    "themeSystem": "Sistema",
+    "systemDefault": "Predeterminado del sistema",
+    "profile": {
+      "title": "Perfil",
+      "description": "Actualiza tu nombre visible",
+      "name": "Nombre",
+      "namePlaceholder": "Introduce tu nombre",
+      "email": "Correo electrónico",
+      "saving": "Guardando...",
+      "save": "Guardar perfil"
+    },
+    "appearance": {
+      "title": "Apariencia",
+      "description": "Elige claro, oscuro o sigue la configuración de tu sistema.",
+      "descriptionSystem": "Sigue tu dispositivo, claro u oscuro. Actualmente usando {{theme}}."
+    },
+    "language": {
+      "title": "Idioma",
+      "description": "Elige el idioma de la aplicación",
+      "appLanguage": "Idioma de la app"
+    },
+    "notifications": {
+      "title": "Notificaciones",
+      "push": "Notificaciones push",
+      "description": "Recibe notificaciones sobre cosas importantes, incluso cuando la app no está abierta.",
+      "blocked": "Bloqueadas en la configuración de tu navegador. Actualiza los permisos del navegador para activarlas.",
+      "toggle": "Alternar notificaciones push"
+    },
+    "password": {
+      "title": "Cambiar contraseña",
+      "description": "Actualiza la contraseña de tu cuenta",
+      "current": "Contraseña actual",
+      "currentPlaceholder": "Introduce tu contraseña actual",
+      "new": "Nueva contraseña",
+      "newPlaceholder": "Introduce tu nueva contraseña",
+      "requirement": "La contraseña debe tener al menos 8 caracteres",
+      "confirm": "Confirmar nueva contraseña",
+      "confirmPlaceholder": "Confirma tu nueva contraseña",
+      "changing": "Cambiando contraseña...",
+      "change": "Cambiar contraseña"
+    },
+    "dashboard": {
+      "title": "Acceso al panel",
+      "enabled": "Acceso a la API activado",
+      "disabled": "Acceso a la API desactivado",
+      "activeKeyEnding": "Clave activa que termina en …{{preview}}",
+      "activeKeyExists": "Existe una clave activa",
+      "noKey": "No se ha generado ninguna clave",
+      "revoking": "Revocando...",
+      "generating": "Generando...",
+      "revokeKey": "Revocar clave",
+      "generateKey": "Generar clave",
+      "copyNow": "Copia tu clave de API ahora — no se volverá a mostrar."
+    },
+    "toast": {
+      "apiKeyGenerated": "Clave de API generada. Cópiala ahora — no se volverá a mostrar.",
+      "apiKeyGenerateFailed": "No se pudo generar la clave de API",
+      "apiKeyRevoked": "Clave de API revocada",
+      "apiKeyRevokeFailed": "No se pudo revocar la clave de API",
+      "apiKeyCopied": "Clave de API copiada al portapapeles",
+      "apiKeyCopyFailed": "No se pudo copiar la clave de API",
+      "pushDisabled": "Notificaciones push desactivadas",
+      "pushEnabled": "Notificaciones push activadas",
+      "pushUpdateFailed": "No se pudo actualizar la configuración de notificaciones",
+      "noChanges": "No hay cambios que guardar",
+      "nameUpdated": "Nombre actualizado correctamente",
+      "nameUpdateFailed": "No se pudo actualizar",
+      "passwordTooShort": "La nueva contraseña debe tener al menos 8 caracteres",
+      "passwordsDoNotMatch": "Las contraseñas no coinciden",
+      "passwordChanged": "Contraseña cambiada correctamente",
+      "passwordChangeFailed": "No se pudo cambiar la contraseña"
+    }
+  },
+  "summary": {
+    "untitledTask": "Tarea sin título",
+    "and": "y",
+    "windowMorning": "por la mañana",
+    "windowAfternoon": "por la tarde",
+    "windowNight": "por la noche",
+    "window_morning": "mañana",
+    "window_afternoon": "tarde",
+    "night": "noche",
+    "dueTonight": "para esta noche",
+    "dueTodayWindow": "para hoy {{window}}",
+    "dueTomorrowWindow": "para mañana {{window}}",
+    "dueYesterdayWindow": "vencía ayer {{window}}",
+    "targetToday": "hoy",
+    "targetTomorrow": "mañana",
+    "targetYesterday": "ayer",
+    "targetOnDate": "el {{date}}",
+    "dueOnDate": "para {{target}}",
+    "dueOnDateWindow": "para {{target}} {{window}}",
+    "taskPhrasePast": "{{title}}, que estaba {{due}}",
+    "taskPhrasePresent": "{{title}}, que es {{due}}",
+    "thenSeparator": ", luego ",
+    "qualifierBoth": "ambas",
+    "qualifierAll": "todas",
+    "dayGroupedPast": "{{tasks}}, {{qualifier}} vencían {{target}}",
+    "dayGroupedPresent": "{{tasks}}, {{qualifier}} vencen {{target}}",
+    "startWith": "Comienza con {{task}}.",
+    "nextUp": "A continuación, {{tasks}}.",
+    "overdueCatchUp": "También tienes {{count}} tarea(s) atrasada(s) por completar.",
+    "clearForNow": "Por ahora estás al día. No hay tareas que requieran atención en esta vista."
   }
 }

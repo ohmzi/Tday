@@ -1,6 +1,15 @@
 import { TodoItemType } from "@/types";
 import { differenceInCalendarDays, endOfDay, format, startOfDay } from "date-fns";
 import { fromZonedTime, toZonedTime } from "date-fns-tz";
+import i18n from "@/i18n";
+import { getDateFnsLocale } from "@/lib/date/dateFnsLocale";
+
+// Translator for the user-visible summary strings. Defaults to the app's i18n
+// singleton (reads the active language) so callers don't have to thread a `t`
+// through; the `summary` namespace holds these keys.
+function st(key: string, options?: Record<string, unknown>): string {
+  return i18n.t(`summary:${key}`, options ?? {}) as string;
+}
 
 export type TodoSummaryMode = "today" | "scheduled" | "all" | "priority";
 
@@ -116,7 +125,7 @@ function urgencyBand(dayDelta: number): number {
 
 function compactTitle(title: string | null | undefined): string {
   const normalized = (title ?? "").replace(/\s+/g, " ").trim();
-  if (!normalized) return "Untitled task";
+  if (!normalized) return st("untitledTask");
   if (normalized.length <= 46) return normalized;
   return `${normalized.slice(0, 43).trimEnd()}...`;
 }
@@ -124,17 +133,19 @@ function compactTitle(title: string | null | undefined): string {
 function joinTaskTitles(titles: string[]): string {
   if (titles.length === 0) return "";
   if (titles.length === 1) return titles[0];
-  if (titles.length === 2) return `${titles[0]} and ${titles[1]}`;
-  return `${titles.slice(0, -1).join(", ")}, and ${titles[titles.length - 1]}`;
+  const and = st("and");
+  if (titles.length === 2) return `${titles[0]} ${and} ${titles[1]}`;
+  return `${titles.slice(0, -1).join(", ")}, ${and} ${titles[titles.length - 1]}`;
 }
 
 function taskPhrase(task: Pick<SummaryTaskCandidate, "title" | "dueLabel" | "dueDayDelta" | "isOverdue">): string {
-  const duePhrase = task.dueLabel.replace(/^due\s+/i, "").trim();
-  if (duePhrase.toLowerCase() === "tonight" && !task.isOverdue) {
-    return `${task.title} by tonight`;
-  }
+  // `dueLabel` already carries a localized "due …" phrase; we interpolate the
+  // whole thing rather than string-stripping an English "due " prefix.
   const isPast = task.isOverdue || (task.dueDayDelta ?? 0) < 0;
-  return `${task.title}, which ${isPast ? "was" : "is"} due ${duePhrase}`;
+  return st(isPast ? "taskPhrasePast" : "taskPhrasePresent", {
+    title: task.title,
+    due: task.dueLabel,
+  });
 }
 
 function buildGroupedThenPhrase(thenTasks: SummaryTaskCandidate[]): string {
@@ -158,7 +169,8 @@ function buildGroupedThenPhrase(thenTasks: SummaryTaskCandidate[]): string {
     return groupPhrases[0];
   }
 
-  return `${groupPhrases.slice(0, -1).join(", then ")}, then ${groupPhrases[groupPhrases.length - 1]}`;
+  const thenSep = st("thenSeparator");
+  return `${groupPhrases.slice(0, -1).join(thenSep)}${thenSep}${groupPhrases[groupPhrases.length - 1]}`;
 }
 
 function dueWindow(hour: number): "morning" | "afternoon" | "night" {
@@ -170,11 +182,11 @@ function dueWindow(hour: number): "morning" | "afternoon" | "night" {
 function dueWindowPhrase(window: "morning" | "afternoon" | "night"): string {
   switch (window) {
     case "morning":
-      return "in the morning";
+      return st("windowMorning");
     case "afternoon":
-      return "in the afternoon";
+      return st("windowAfternoon");
     case "night":
-      return "at night";
+      return st("windowNight");
   }
 }
 
@@ -192,38 +204,45 @@ function buildDueDescriptor(due: Date, now: Date, timeZone: string): {
   const neutralWindowPhrase = includeWindowPhrase ? dueWindowPhrase(window) : "";
   const dueDayKey = format(zonedDue, "yyyy-MM-dd");
 
+  const windowWord = window === "night" ? st("night") : st(`window_${window}`);
+
   if (dayDelta === 0) {
     return {
-      dueLabel: window === "night" ? "due tonight" : `due today ${neutralWindowPhrase}`,
+      dueLabel:
+        window === "night"
+          ? st("dueTonight")
+          : st("dueTodayWindow", { window: neutralWindowPhrase }).trim(),
       dueDayKey,
-      dueDayTarget: "today",
+      dueDayTarget: st("targetToday"),
       dueWindowPhrase: neutralWindowPhrase,
     };
   }
   if (dayDelta === 1) {
     return {
-      dueLabel: `due tomorrow ${window === "night" ? "night" : window}`,
+      dueLabel: st("dueTomorrowWindow", { window: windowWord }).trim(),
       dueDayKey,
-      dueDayTarget: "tomorrow",
+      dueDayTarget: st("targetTomorrow"),
       dueWindowPhrase: neutralWindowPhrase,
     };
   }
   if (dayDelta === -1) {
     return {
-      dueLabel: `due yesterday ${window === "night" ? "night" : window}`,
+      dueLabel: st("dueYesterdayWindow", { window: windowWord }).trim(),
       dueDayKey,
-      dueDayTarget: "yesterday",
+      dueDayTarget: st("targetYesterday"),
       dueWindowPhrase: neutralWindowPhrase,
     };
   }
 
   const sameYear = zonedDue.getFullYear() === zonedNow.getFullYear();
-  const dayLabel = format(zonedDue, sameYear ? "do MMM" : "do MMM yyyy");
-  const dueDayTarget = `on ${dayLabel}`;
+  const dayLabel = format(zonedDue, sameYear ? "do MMM" : "do MMM yyyy", {
+    locale: getDateFnsLocale(i18n.language),
+  });
+  const dueDayTarget = st("targetOnDate", { date: dayLabel });
   return {
     dueLabel: neutralWindowPhrase
-      ? `due ${dueDayTarget} ${neutralWindowPhrase}`
-      : `due ${dueDayTarget}`,
+      ? st("dueOnDateWindow", { target: dueDayTarget, window: neutralWindowPhrase }).trim()
+      : st("dueOnDate", { target: dueDayTarget }),
     dueDayKey,
     dueDayTarget,
     dueWindowPhrase: neutralWindowPhrase,
@@ -250,10 +269,14 @@ function buildDayGroupedPhrase(tasks: SummaryTaskCandidate[]): string {
     return group.windowPhrase ? `${titles} ${group.windowPhrase}` : titles;
   });
   const joinedTaskPhrases = joinTaskTitles(windowPhrases);
-  const dueTarget = tasks[0].dueDayTarget ?? tasks[0].dueLabel.replace(/^due\s+/, "");
-  const qualifier = tasks.length === 2 ? "both" : "all";
+  const dueTarget = tasks[0].dueDayTarget ?? tasks[0].dueLabel;
+  const qualifier = tasks.length === 2 ? st("qualifierBoth") : st("qualifierAll");
   const isPast = tasks[0].isOverdue || (tasks[0].dueDayDelta ?? 0) < 0;
-  return `${joinedTaskPhrases}, ${qualifier} ${isPast ? "were" : "are"} due ${dueTarget}`;
+  return st(isPast ? "dayGroupedPast" : "dayGroupedPresent", {
+    tasks: joinedTaskPhrases,
+    qualifier,
+    target: dueTarget,
+  });
 }
 
 export type SummaryTaskCandidate = {
@@ -279,16 +302,14 @@ export function buildReadableTaskSummary({
   overdueCount?: number;
 }): string {
   const sentences: string[] = [];
-  sentences.push(`Start with ${taskPhrase(startTask)}.`);
-  if (thenTasks.length === 1) {
-    sentences.push(`Next up, ${buildGroupedThenPhrase(thenTasks)}.`);
-  } else if (thenTasks.length > 1) {
-    sentences.push(`Next up, ${buildGroupedThenPhrase(thenTasks)}.`);
+  sentences.push(st("startWith", { task: taskPhrase(startTask) }));
+  if (thenTasks.length >= 1) {
+    sentences.push(st("nextUp", { tasks: buildGroupedThenPhrase(thenTasks) }));
   }
   if (overdueCount > 0) {
-    sentences.push(
-      `You also have ${overdueCount} overdue task${overdueCount === 1 ? "" : "s"} to catch up on.`,
-    );
+    // Single (non-plural-suffixed) key keeps locale key-parity intact; the
+    // translation reads naturally with the interpolated count.
+    sentences.push(st("overdueCatchUp", { count: overdueCount }));
   }
   return sentences.join(" ");
 }
@@ -399,13 +420,13 @@ export function buildFallbackSummary({
   now = new Date(),
 }: SummaryContext): string {
   if (todos.length === 0) {
-    return "You're clear for now. No tasks need attention in this view.";
+    return st("clearForNow");
   }
 
   const candidates = buildSummaryTaskCandidates(todos, { now, timeZone });
   const focusCandidate = candidates[0];
   if (!focusCandidate) {
-    return "You're clear for now. No tasks need attention in this view.";
+    return st("clearForNow");
   }
   const nextTasks = candidates.slice(1);
   const overdueCount = todos.filter((todo) => todo.due < now).length;

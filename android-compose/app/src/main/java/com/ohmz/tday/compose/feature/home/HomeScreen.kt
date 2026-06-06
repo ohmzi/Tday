@@ -304,7 +304,7 @@ fun HomeScreen(
         }
     }
     val dueFormatter = remember {
-        DateTimeFormatter.ofPattern("EEE h:mm a")
+        DateTimeFormatter.ofPattern("EEE h:mm a", Locale.getDefault())
             .withZone(ZoneId.systemDefault())
     }
     val searchResults = remember(normalizedSearchQuery, uiState.searchableTodos, listById) {
@@ -1486,9 +1486,9 @@ private fun PressableIconButton(
 }
 
 private val HOME_TODAY_DUE_FORMATTER: DateTimeFormatter =
-    DateTimeFormatter.ofPattern("h:mm a").withZone(ZoneId.systemDefault())
+    DateTimeFormatter.ofPattern("h:mm a", Locale.getDefault()).withZone(ZoneId.systemDefault())
 private val HOME_TODAY_DATE_FORMATTER: DateTimeFormatter =
-    DateTimeFormatter.ofPattern("EEE, MMM d").withZone(ZoneId.systemDefault())
+    DateTimeFormatter.ofPattern("EEE, MMM d", Locale.getDefault()).withZone(ZoneId.systemDefault())
 
 @Composable
 private fun HomeTodayCard(
@@ -1969,7 +1969,7 @@ private fun CategoryGrid(
                 color = calendarTileColor(colorScheme),
                 iconRes = R.drawable.ic_lucide_calendar_1,
                 watermarkRes = R.drawable.ic_lucide_calendar_1,
-                title = "Calendar",
+                title = stringResource(R.string.home_category_calendar),
                 count = calendarCount,
                 onClick = onOpenCalendar,
             )

@@ -92,12 +92,12 @@ struct OfflineBanner: View {
 
     private var subtitle: String {
         if pendingMutationCount == 1 {
-            return "1 change waiting to sync"
+            return L("1 change waiting to sync")
         }
         if pendingMutationCount > 1 {
-            return "\(pendingMutationCount) changes waiting to sync"
+            return L("%lld changes waiting to sync", Int64(pendingMutationCount))
         }
-        return "Cached tasks are available. Changes will sync when connection returns."
+        return L("Cached tasks are available. Changes will sync when connection returns.")
     }
 
     private var dragProgress: CGFloat {

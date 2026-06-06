@@ -70,6 +70,8 @@ import { useCompleteCalendarTodoInstance } from "../query/complete-calendar-todo
 import { CalendarDays, Check, ChevronLeft, ChevronRight, Flag, Pen, RefreshCcw, Trash } from "lucide-react";
 import { isToday } from "date-fns";
 import { getPriorityFlag } from "@/lib/priority";
+import i18n from "@/i18n";
+import { getDateFnsLocale } from "@/lib/date/dateFnsLocale";
 
 const ConfirmDelete = lazy(() => import("./ConfirmationModals/ConfirmDelete"));
 const ConfirmDeleteAll = lazy(() => import("./ConfirmationModals/ConfirmDeleteAll"));
@@ -82,6 +84,12 @@ const swipeThreshold = 48;
 
 function dayKey(date: Date) {
   return format(startOfDay(date), "yyyy-MM-dd");
+}
+
+// Active date-fns Locale for the current i18n language, so calendar labels
+// (month/weekday names) render in the selected language.
+function activeDfLocale() {
+  return getDateFnsLocale(i18n.language);
 }
 
 function taskCountText(count: number) {
@@ -235,18 +243,20 @@ function CalendarModeCard({
     onNavigate(delta < 0 ? 1 : -1);
   };
 
+  const { t: appDict } = useTranslation("app");
+  const dfLocale = activeDfLocale();
   const title =
     view === "month"
-      ? format(selectedDate, "MMMM yyyy")
+      ? format(selectedDate, "MMMM yyyy", { locale: dfLocale })
       : view === "week"
-        ? `${format(startOfWeek(selectedDate), "MMM d")} - ${format(endOfWeek(selectedDate), "MMM d")}`
-        : format(selectedDate, "EEEE, MMM d");
+        ? `${format(startOfWeek(selectedDate), "MMM d", { locale: dfLocale })} - ${format(endOfWeek(selectedDate), "MMM d", { locale: dfLocale })}`
+        : format(selectedDate, "EEEE, MMM d", { locale: dfLocale });
 
   return (
     <section className="rounded-[24px] border border-white/70 bg-card/94 p-4 shadow-[0_18px_42px_-34px_hsl(var(--shadow)/0.62)] dark:border-white/10 sm:p-5">
       <div className="mb-4 flex items-center gap-2 sm:gap-3">
         <CalendarNavButton
-          label="Previous"
+          label={appDict("previous")}
           direction="previous"
           disabled={!canGoPrevious}
           onClick={() => onNavigate(-1)}
@@ -257,7 +267,7 @@ function CalendarModeCard({
           </h2>
         </div>
         <CalendarNavButton
-          label="Next"
+          label={appDict("next")}
           direction="next"
           onClick={() => onNavigate(1)}
         />
@@ -324,7 +334,7 @@ function DroppableDayCell({
       type="button"
       disabled={disabled}
       onClick={() => onSelectDate(date)}
-      aria-label={format(date, "PPP")}
+      aria-label={format(date, "PPP", { locale: activeDfLocale() })}
       className={cn(
         className,
         // `isOver` is only true mid-drag, so this highlights the active drop target.
@@ -351,7 +361,7 @@ function MonthCalendarGrid({
   const weekdayLabels = eachDayOfInterval({
     start: startOfWeek(today),
     end: endOfWeek(today),
-  }).map((date) => format(date, "EEEEE"));
+  }).map((date) => format(date, "EEEEE", { locale: activeDfLocale() }));
 
   return (
     <div className="space-y-3">
@@ -388,7 +398,7 @@ function MonthCalendarGrid({
                 !selected && !todayDate && !currentMonth && "text-muted-foreground/45",
               )}
             >
-              <span className="text-lg font-black leading-none">{format(date, "d")}</span>
+              <span className="text-lg font-black leading-none">{format(date, "d", { locale: activeDfLocale() })}</span>
               <span
                 className={cn(
                   "mt-1 flex h-3 items-center gap-1 text-[0.62rem] font-black leading-none",
@@ -442,9 +452,9 @@ function WeekCalendarStrip({
             )}
           >
             <span className="text-[0.65rem] font-black uppercase tracking-wide opacity-70">
-              {format(date, "EEE")}
+              {format(date, "EEE", { locale: activeDfLocale() })}
             </span>
-            <span className="text-xl font-black leading-tight">{format(date, "d")}</span>
+            <span className="text-xl font-black leading-tight">{format(date, "d", { locale: activeDfLocale() })}</span>
             <span className={cn("text-[0.68rem] font-black", count > 0 ? "opacity-90" : "opacity-0")}>
               {taskCountText(count)}
             </span>
@@ -462,16 +472,18 @@ function DayCalendarSummary({
   selectedDate: Date;
   taskCount: number;
 }) {
+  const { t: appDict } = useTranslation("app");
+  const dfLocale = activeDfLocale();
   return (
     <div className="flex min-h-[5.2rem] items-center justify-between rounded-[22px] border border-white/60 bg-muted/45 px-5 py-4 dark:border-white/10">
       <div>
         <p className="text-sm font-black uppercase tracking-[0.18em] text-muted-foreground/70">
-          {format(selectedDate, "EEEE")}
+          {format(selectedDate, "EEEE", { locale: dfLocale })}
         </p>
-        <p className="text-3xl font-black text-foreground">{format(selectedDate, "MMM d")}</p>
+        <p className="text-3xl font-black text-foreground">{format(selectedDate, "MMM d", { locale: dfLocale })}</p>
       </div>
       <div className="rounded-full bg-accent/12 px-4 py-2 text-sm font-black text-accent">
-        {taskCount === 1 ? "1 task" : `${taskCount} tasks`}
+        {appDict("taskCount", { count: taskCount })}
       </div>
     </div>
   );
@@ -571,7 +583,7 @@ function CalendarTaskRow({
             )}
             <div className="mt-2 flex flex-wrap items-center gap-2 text-xs font-black text-muted-foreground">
               <span className="rounded-full border border-border/70 bg-muted/70 px-2 py-[0.2rem] text-foreground/80">
-                {format(todo.due, "h:mm a")}
+                {format(todo.due, "h:mm a", { locale: activeDfLocale() })}
               </span>
               {todo.listID && (
                 <span className="flex items-center gap-1 rounded-full border border-border/70 bg-muted/70 px-2 py-[0.2rem] text-foreground/80">
@@ -667,6 +679,7 @@ function CalendarTodayButton({
 
 export default function CalendarClient() {
   const { t: sidebarDict } = useTranslation("sidebar");
+  const { t: appDict } = useTranslation("app");
   const [mounted, setMounted] = useState(false);
   const [calendarRange, setCalendarRange] = useDateRange();
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -787,7 +800,7 @@ export default function CalendarClient() {
       .map((todo) => ({
         id: todo.id,
         title: todo.title,
-        subtitle: format(todo.due, "EEE, MMM d • h:mm a"),
+        subtitle: format(todo.due, "EEE, MMM d • h:mm a", { locale: activeDfLocale() }),
       }));
   }, [searchQuery, allTimelineTodos, listMetaData]);
 
@@ -977,11 +990,13 @@ export default function CalendarClient() {
               className="text-xl font-black leading-tight sm:text-[1.35rem]"
               style={{ color: nativeScreenAccentColors.calendar }}
             >
-              Tasks due {format(selectedDate, "EEE, MMM d")}
+              {appDict("tasksDueOn", {
+                date: format(selectedDate, "EEE, MMM d", { locale: activeDfLocale() }),
+              })}
             </h2>
             {selectedDayTasks.length > 0 && (
               <p className="mt-1 text-sm font-extrabold text-muted-foreground">
-                {selectedDayTasks.length === 1 ? "1 task" : `${selectedDayTasks.length} tasks`}
+                {appDict("taskCount", { count: selectedDayTasks.length })}
               </p>
             )}
           </div>
@@ -999,9 +1014,9 @@ export default function CalendarClient() {
             </div>
           ) : (
             <div className="rounded-[22px] border border-dashed border-white/70 bg-card/60 px-5 py-8 text-center shadow-[0_12px_30px_-28px_hsl(var(--shadow)/0.45)] dark:border-white/10">
-              <p className="text-base font-black text-foreground">No tasks due this day</p>
+              <p className="text-base font-black text-foreground">{appDict("noTasksDueThisDay")}</p>
               <p className="mt-1 text-sm font-extrabold text-muted-foreground">
-                Select another date on the calendar.
+                {appDict("selectAnotherDate")}
               </p>
             </div>
           )}
@@ -1014,7 +1029,7 @@ export default function CalendarClient() {
                 {activeTodo.title}
               </p>
               <span className="mt-1 inline-flex rounded-full border border-border/70 bg-muted/70 px-2 py-[0.2rem] text-xs font-black text-foreground/80">
-                {format(activeTodo.due, "h:mm a")}
+                {format(activeTodo.due, "h:mm a", { locale: activeDfLocale() })}
               </span>
             </div>
           ) : null}

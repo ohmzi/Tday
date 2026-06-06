@@ -1,7 +1,8 @@
-import { addDays, endOfDay, startOfDay } from "date-fns";
+import { addDays, endOfDay, startOfDay, isSameDay } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import React from "react";
 import { format, nextMonday, differenceInDays } from "date-fns";
+import { getDateFnsLocale } from "@/lib/date/dateFnsLocale";
 import LineSeparator from "@/components/ui/lineSeparator";
 import { Sun } from "lucide-react";
 import { IterationCcw as Tomorrow } from "lucide-react";
@@ -28,6 +29,17 @@ const DateDropdownMenu = () => {
   const nextWeek = startOfDay(nextMonday(dateRange?.from || new Date()));
   const tomorrow = startOfDay(addDays(dateRange?.from || new Date(), 1));
   const [isOpen, setIsOpen] = React.useState(false);
+  const dfLocale = getDateFnsLocale(locale);
+
+  // Color the trigger by how the selected date relates to *now* using date math,
+  // so it stays correct regardless of the active language (previously this
+  // compared the localized label against the English strings "Today"/"Tomorrow").
+  const today = new Date();
+  const triggerColorClass = dateRange.from && isSameDay(dateRange.from, today)
+    ? "text-lime"
+    : dateRange.from && isSameDay(dateRange.from, addDays(today, 1))
+      ? "text-orange"
+      : "text-red";
 
   const itemClass =
     "flex justify-between items-center p-1.5 px-2 rounded w-[96.5%] hover:bg-popover-accent cursor-pointer m-auto text-sm";
@@ -39,11 +51,7 @@ const DateDropdownMenu = () => {
           variant={"outline"}
           className={clsx(
             "cursor-pointer text-xs sm:text-sm font-medium w-fit h-fit p-2! text-muted-foreground bg-inherit",
-            getDisplayDate(dateRange.from, false, "en", userTZ?.timeZone) == "Today"
-              ? "text-lime"
-              : getDisplayDate(dateRange.from, false, "en", userTZ?.timeZone) == "Tomorrow"
-                ? "text-orange"
-                : "text-red",
+            triggerColorClass,
           )}
         >
           <CalenderIcon className="w-4 h-4" />
@@ -83,7 +91,7 @@ const DateDropdownMenu = () => {
             {appDict("today")}
           </div>
           <p className="text-xs text-muted-foreground">
-            {format(new Date(), "EEE")}
+            {format(new Date(), "EEE", { locale: dfLocale })}
           </p>
         </button>
 
@@ -108,7 +116,7 @@ const DateDropdownMenu = () => {
             {appDict("tomorrow")}
           </div>
           <p className="text-xs text-muted-foreground">
-            {format(tomorrow, "EEE")}
+            {format(tomorrow, "EEE", { locale: dfLocale })}
           </p>
         </button>
 
@@ -134,7 +142,7 @@ const DateDropdownMenu = () => {
             <CalenderIcon strokeWidth={1.7} className="w-4 h-4" />
             {appDict("nextWeek")}
           </div>
-          <div className="text-xs text-muted-foreground">Mon</div>
+          <div className="text-xs text-muted-foreground">{format(nextWeek, "EEE", { locale: dfLocale })}</div>
         </button>
 
         {/* --- DURATION --- */}

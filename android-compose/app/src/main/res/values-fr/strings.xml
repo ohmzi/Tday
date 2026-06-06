@@ -442,4 +442,36 @@
     <string name="settings_language">Langue</string>
     <string name="settings_language_system_default">Paramètre du système</string>
     <string name="settings_language_dialog_title">Langue</string>
+
+    <!-- Empty state -->
+    <string name="todos_empty_floater">Aucune tâche flottante</string>
+
+    <!-- Theme mode -->
+    <string name="settings_theme_system">Système</string>
+    <string name="settings_theme_light">Clair</string>
+    <string name="settings_theme_dark">Sombre</string>
+
+    <!-- Reminder options -->
+    <string name="reminder_option_none">Aucun</string>
+    <string name="reminder_option_at_time">À l\'heure d\'échéance</string>
+    <string name="reminder_option_minutes_5">5 minutes avant</string>
+    <string name="reminder_option_minutes_10">10 minutes avant</string>
+    <string name="reminder_option_minutes_15">15 minutes avant</string>
+    <string name="reminder_option_minutes_30">30 minutes avant</string>
+    <string name="reminder_option_hours_1">1 heure avant</string>
+    <string name="reminder_option_hours_2">2 heures avant</string>
+    <string name="reminder_option_days_1">1 jour avant</string>
+    <string name="reminder_option_days_2">2 jours avant</string>
+
+    <!-- Reminder notification -->
+    <string name="reminder_notification_default_title">Rappel de tâche</string>
+    <string name="reminder_due_unknown">La tâche est due</string>
+    <string name="reminder_due_now">Due maintenant</string>
+    <string name="reminder_due_less_than_minute">Due dans moins d\'une minute</string>
+    <string name="reminder_due_in_minutes_one">Due dans %1$d minute</string>
+    <string name="reminder_due_in_minutes_other">Due dans %1$d minutes</string>
+    <string name="reminder_due_in_hours_one">Due dans %1$d heure</string>
+    <string name="reminder_due_in_hours_other">Due dans %1$d heures</string>
+    <string name="reminder_due_in_days_one">Due dans %1$d jour</string>
+    <string name="reminder_due_in_days_other">Due dans %1$d jours</string>
 </resources>

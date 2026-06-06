@@ -46,28 +46,30 @@ struct CreateTaskSheet: View {
     @FocusState private var focusedInputField: CreateTaskSheetInputField?
 
     private let priorityOptions = TaskPriorityDisplay.options
-    private let repeatOptions: [(label: String, value: String?)] = [
-        ("No repeat", nil),
-        ("Daily", "RRULE:FREQ=DAILY;INTERVAL=1"),
-        ("Weekly", "RRULE:FREQ=WEEKLY;INTERVAL=1"),
-        ("Weekdays", "RRULE:FREQ=WEEKLY;INTERVAL=1;BYDAY=MO,TU,WE,TH,FR"),
-        ("Monthly", "RRULE:FREQ=MONTHLY;INTERVAL=1"),
-        ("Yearly", "RRULE:FREQ=YEARLY;INTERVAL=1"),
-    ]
+    private var repeatOptions: [(label: String, value: String?)] {
+        [
+            (L("No repeat"), nil),
+            (L("Daily"), "RRULE:FREQ=DAILY;INTERVAL=1"),
+            (L("Weekly"), "RRULE:FREQ=WEEKLY;INTERVAL=1"),
+            (L("Weekdays"), "RRULE:FREQ=WEEKLY;INTERVAL=1;BYDAY=MO,TU,WE,TH,FR"),
+            (L("Monthly"), "RRULE:FREQ=MONTHLY;INTERVAL=1"),
+            (L("Yearly"), "RRULE:FREQ=YEARLY;INTERVAL=1"),
+        ]
+    }
 
     private var selectedListName: String {
         guard let selectedListID,
               let list = lists.first(where: { $0.id == selectedListID }) else {
-            return "No list"
+            return L("No list")
         }
         return list.name
     }
 
     private var selectedRepeatLabel: String {
         guard scheduleEnabled else {
-            return "No repeat"
+            return L("No repeat")
         }
-        return repeatOptions.first(where: { $0.value == repeatRule })?.label ?? "No repeat"
+        return repeatOptions.first(where: { $0.value == repeatRule })?.label ?? L("No repeat")
     }
 
     private var maximumSheetHeight: CGFloat {
@@ -118,7 +120,7 @@ struct CreateTaskSheet: View {
         self.init(
             lists: lists,
             titleText: title,
-            submitText: "Save",
+            submitText: L("Save"),
             initialPayload: initialPayload,
             showScheduleControls: true,
             autofocusTitle: false,
@@ -134,7 +136,7 @@ struct CreateTaskSheet: View {
         VStack(spacing: 0) {
             TdaySheetHeader(
                 title: titleText,
-                closeAccessibilityLabel: "Cancel",
+                closeAccessibilityLabel: L("Cancel"),
                 confirmAccessibilityLabel: submitText,
                 isConfirmEnabled: !isSubmitting && !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
                 onClose: {
@@ -356,7 +358,7 @@ struct CreateTaskSheet: View {
                 switch selector {
                 case .list:
                     TdayCenteredSelectorRow(
-                        title: "No list",
+                        title: L("No list"),
                         swatchColor: colors.onSurfaceVariant.opacity(0.35),
                         selected: selectedListID == nil
                     ) {
@@ -454,15 +456,15 @@ private enum CreateTaskSheetSelector: String, Identifiable {
     var title: String {
         switch self {
         case .list:
-            return "List"
+            return L("List")
         case .priority:
-            return "Priority"
+            return L("Priority")
         case .recurrence:
-            return "Repeat"
+            return L("Repeat")
         case .date:
-            return "Due date"
+            return L("Due date")
         case .time:
-            return "Due time"
+            return L("Due time")
         }
     }
 
@@ -484,7 +486,7 @@ private struct CreateTaskSheetTextCard: View {
     var body: some View {
         TdaySheetCard {
             CreateTaskSheetTextField(
-                placeholder: "Title",
+                placeholder: L("Title"),
                 text: $title,
                 lineLimit: 1 ... 1,
                 field: .title,
@@ -494,7 +496,7 @@ private struct CreateTaskSheetTextCard: View {
             TdaySheetDivider()
 
             CreateTaskSheetTextField(
-                placeholder: "Notes",
+                placeholder: L("Notes"),
                 text: $notes,
                 lineLimit: 1 ... 1,
                 field: .notes,
@@ -584,7 +586,7 @@ private struct CreateTaskSheetScheduleToggleRow: View {
                     Text("Schedule")
                         .font(.tdayRounded(size: 18, weight: .heavy))
                         .foregroundStyle(colors.onSurface)
-                    Text(isOn ? "Task has a due date" : "Floater task")
+                    Text(isOn ? L("Task has a due date") : L("Floater task"))
                         .font(.tdayRounded(size: 12, weight: .bold))
                         .foregroundStyle(colors.onSurfaceVariant.opacity(0.78))
                 }
@@ -644,11 +646,11 @@ private struct CreateTaskSheetDateTimeControl: View {
     @Environment(\.tdayColors) private var colors
 
     private var dateText: String {
-        dueDate.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())
+        dueDate.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day().locale(AppLocale.current))
     }
 
     private var timeText: String {
-        dueDate.formatted(.dateTime.hour(.defaultDigits(amPM: .abbreviated)).minute())
+        dueDate.formatted(.dateTime.hour(.defaultDigits(amPM: .abbreviated)).minute().locale(AppLocale.current))
     }
 
     var body: some View {
@@ -776,7 +778,7 @@ private struct CreateTaskSheetSelectorTriggerRow: View {
                     .frame(width: 22, height: 22)
                     .foregroundStyle(colors.onSurfaceVariant.opacity(isEnabled ? 1 : 0.42))
 
-                Text(title)
+                Text(L(title))
                     .font(.tdayRounded(size: 18, weight: .heavy))
                     .foregroundStyle(colors.onSurface.opacity(isEnabled ? 1 : 0.5))
 

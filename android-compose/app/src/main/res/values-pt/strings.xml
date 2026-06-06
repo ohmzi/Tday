@@ -442,4 +442,36 @@
     <string name="settings_language">Idioma</string>
     <string name="settings_language_system_default">Padrão do sistema</string>
     <string name="settings_language_dialog_title">Idioma</string>
+
+    <!-- Empty state -->
+    <string name="todos_empty_floater">Nenhuma tarefa flutuante</string>
+
+    <!-- Theme mode -->
+    <string name="settings_theme_system">Sistema</string>
+    <string name="settings_theme_light">Claro</string>
+    <string name="settings_theme_dark">Escuro</string>
+
+    <!-- Reminder options -->
+    <string name="reminder_option_none">Nenhum</string>
+    <string name="reminder_option_at_time">No horário de vencimento</string>
+    <string name="reminder_option_minutes_5">5 minutos antes</string>
+    <string name="reminder_option_minutes_10">10 minutos antes</string>
+    <string name="reminder_option_minutes_15">15 minutos antes</string>
+    <string name="reminder_option_minutes_30">30 minutos antes</string>
+    <string name="reminder_option_hours_1">1 hora antes</string>
+    <string name="reminder_option_hours_2">2 horas antes</string>
+    <string name="reminder_option_days_1">1 dia antes</string>
+    <string name="reminder_option_days_2">2 dias antes</string>
+
+    <!-- Reminder notification -->
+    <string name="reminder_notification_default_title">Lembrete de tarefa</string>
+    <string name="reminder_due_unknown">A tarefa está vencendo</string>
+    <string name="reminder_due_now">Vence agora</string>
+    <string name="reminder_due_less_than_minute">Vence em menos de um minuto</string>
+    <string name="reminder_due_in_minutes_one">Vence em %1$d minuto</string>
+    <string name="reminder_due_in_minutes_other">Vence em %1$d minutos</string>
+    <string name="reminder_due_in_hours_one">Vence em %1$d hora</string>
+    <string name="reminder_due_in_hours_other">Vence em %1$d horas</string>
+    <string name="reminder_due_in_days_one">Vence em %1$d dia</string>
+    <string name="reminder_due_in_days_other">Vence em %1$d dias</string>
 </resources>

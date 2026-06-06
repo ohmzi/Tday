@@ -52,6 +52,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
@@ -713,11 +714,12 @@ private fun ThemeModeSelector(
     selectedThemeMode: AppThemeMode,
     onThemeModeSelected: (AppThemeMode) -> Unit,
 ) {
+    val context = LocalContext.current
     TdaySegmentedSlider(
         options = AppThemeMode.entries,
         selectedOption = selectedThemeMode,
         onOptionSelected = onThemeModeSelected,
-        label = { mode -> mode.label },
+        label = { mode -> context.getString(mode.labelRes) },
     )
 }
 
@@ -728,6 +730,7 @@ private fun ReminderSelector(
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val view = LocalView.current
+    val context = LocalContext.current
     var expanded by remember { mutableStateOf(false) }
 
     Box {
@@ -754,7 +757,7 @@ private fun ReminderSelector(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 Text(
-                    text = selectedReminder.label,
+                    text = stringResource(selectedReminder.labelRes),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.ExtraBold,
                     color = colorScheme.secondary,
@@ -770,9 +773,9 @@ private fun ReminderSelector(
 
         if (expanded) {
             TdayCenteredSelectorDialog(
-                title = "Default reminder",
+                title = stringResource(R.string.settings_default_reminder),
                 options = ReminderOption.entries,
-                optionLabel = { option -> option.label },
+                optionLabel = { option -> context.getString(option.labelRes) },
                 optionSwatchColor = { option -> reminderSwatchColor(option) },
                 isSelected = { option -> option == selectedReminder },
                 onDismiss = { expanded = false },

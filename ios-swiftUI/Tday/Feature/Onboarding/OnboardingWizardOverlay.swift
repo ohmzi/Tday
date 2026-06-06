@@ -306,7 +306,7 @@ struct OnboardingWizardOverlay: View {
             }
 
             if serverCanResetTrust, currentMessageIsError {
-                Button(isConnecting ? "Resetting..." : "Reset saved server trust") {
+                Button(isConnecting ? L("Resetting...") : L("Reset saved server trust")) {
                     Task {
                         await resetServerTrust()
                     }
@@ -425,7 +425,7 @@ struct OnboardingWizardOverlay: View {
             }
 
             HStack(alignment: .center) {
-                Button(isCreatingAccount ? "I already have an account" : "Create account") {
+                Button(isCreatingAccount ? L("I already have an account") : L("Create account")) {
                     localError = nil
                     onClearAuthStatus()
                     isCompletingAuthentication = false
@@ -690,7 +690,7 @@ private struct WizardStepChip: View {
             Image(systemName: systemImage)
                 .font(.system(size: 13, weight: .bold))
 
-            Text(title)
+            Text(L(title))
                 .font(.tdayRounded(size: 13, weight: .bold))
                 .lineLimit(1)
         }
@@ -751,7 +751,7 @@ private struct WizardInputField: View {
             }
             .shadow(color: Color.black.opacity(colors.isDark ? 0.08 : 0.04), radius: 7, x: 0, y: 4)
             .background(PasswordRulesConfigurator(rulesDescriptor: passwordRulesDescriptor))
-            .accessibilityLabel(title)
+            .accessibilityLabel(L(title))
             .frame(maxWidth: .infinity)
     }
 
@@ -761,14 +761,14 @@ private struct WizardInputField: View {
             SecureField(
                 "",
                 text: $text,
-                prompt: Text(title).foregroundStyle(colors.onSurface.opacity(0.42))
+                prompt: Text(L(title)).foregroundStyle(colors.onSurface.opacity(0.42))
             )
             .textContentType(textContentType)
         } else {
             TextField(
                 "",
                 text: $text,
-                prompt: Text(title).foregroundStyle(colors.onSurface.opacity(0.42))
+                prompt: Text(L(title)).foregroundStyle(colors.onSurface.opacity(0.42))
             )
                 .textContentType(textContentType)
                 .textInputAutocapitalization(autocapitalization)
@@ -814,13 +814,13 @@ private struct WizardHeroTile: View {
                     .background(Color.white.opacity(0.18), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
 
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(title)
+                    Text(L(title))
                         .font(.tdayRounded(size: 21, weight: .bold))
                         .foregroundStyle(.white)
                         .lineLimit(1)
                         .minimumScaleFactor(0.82)
 
-                    Text(subtitle)
+                    Text(L(subtitle))
                         .font(.tdayRounded(size: 13, weight: .bold))
                         .foregroundStyle(.white.opacity(0.82))
                         .lineLimit(2)
@@ -883,12 +883,12 @@ private struct WizardModeChoiceButton: View {
 
                     Spacer(minLength: 0)
 
-                    Text(title)
+                    Text(L(title))
                         .font(.tdayRounded(size: 16, weight: .bold))
                         .foregroundStyle(.white)
                         .lineLimit(2)
 
-                    Text(subtitle)
+                    Text(L(subtitle))
                         .font(.tdayRounded(size: 12, weight: .bold))
                         .foregroundStyle(.white.opacity(0.82))
                         .lineLimit(2)
@@ -962,7 +962,7 @@ private struct WizardPrimaryButton: View {
 
     var body: some View {
         Button(action: action) {
-            Text(title)
+            Text(L(title))
                 .font(.tdayRounded(size: 15, weight: .bold))
                 .foregroundStyle(enabled ? colors.onPrimary : colors.onSurfaceVariant.opacity(0.65))
                 .frame(maxWidth: .infinity)
@@ -1026,11 +1026,11 @@ private struct WizardLoadingPanel: View {
             ProgressView()
                 .tint(colors.primary)
 
-            Text(title)
+            Text(L(title))
                 .font(.tdayRounded(size: 22, weight: .bold))
                 .foregroundStyle(colors.onSurface)
 
-            Text(subtitle)
+            Text(L(subtitle))
                 .font(.tdayRounded(size: 14, weight: .bold))
                 .foregroundStyle(colors.onSurface.opacity(0.62))
                 .multilineTextAlignment(.center)

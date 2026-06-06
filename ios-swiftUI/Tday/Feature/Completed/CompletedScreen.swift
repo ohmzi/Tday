@@ -59,7 +59,7 @@ struct CompletedScreen: View {
                         assetName: "TileComplete"
                     )
                     if viewModel.items.isEmpty, !viewModel.isLoading {
-                        EmptyTaskBackgroundMessage(message: "No completed tasks")
+                        EmptyTaskBackgroundMessage(message: L("No completed tasks"))
                     }
                 }
                 .allowsHitTesting(false)
@@ -75,7 +75,7 @@ struct CompletedScreen: View {
             .toolbar(.hidden, for: .navigationBar)
             .safeAreaInset(edge: .top, spacing: 0) {
                 TimelineTopBar(
-                    title: "Completed",
+                    title: L("Completed"),
                     accentColor: completedAccentColor,
                     collapseProgress: titleCollapseProgress,
                     onBack: { dismiss() },
@@ -89,8 +89,8 @@ struct CompletedScreen: View {
             .createTaskSheet(item: $editingItem) { item in
                 CreateTaskSheet(
                     lists: viewModel.lists,
-                    titleText: "Edit task",
-                    submitText: "Save",
+                    titleText: L("Edit task"),
+                    submitText: L("Save"),
                     initialPayload: CreateTaskPayload(title: item.title, description: item.description, priority: item.priority, due: item.due, rrule: item.rrule, listId: nil),
                     onParseTaskTitleNlp: nil,
                     onDismiss: { editingItem = nil },
@@ -147,7 +147,7 @@ struct CompletedScreen: View {
 
     private var timelineHeroTitleRow: some View {
         TimelineExpandedTitleRow(
-            title: "Completed",
+            title: L("Completed"),
             accentColor: completedAccentColor,
             collapseProgress: titleCollapseProgress
         )
@@ -312,7 +312,7 @@ private struct CompletedTimelineRow: View {
 
     var body: some View {
         let completedDate = item.completedAt ?? item.due ?? .distantPast
-        let completedTimeText = completedDate.formatted(date: .omitted, time: .shortened)
+        let completedTimeText = completedDate.formatted(.dateTime.hour().minute().locale(AppLocale.current))
         let showListIndicator = item.listName?.isEmpty == false
         let priorityIcon = priorityIndicatorSymbolName(item.priority)
 
@@ -447,14 +447,14 @@ private func buildCompletedTimelineSections(items: [CompletedItem]) -> [Timeline
 }
 
 private func completedTimelineSectionTitle(for date: Date) -> String {
-    CompletedTimelineFormatters.sectionTitle.string(from: date)
+    CompletedTimelineFormatters.sectionTitle().string(from: date)
 }
 
 private enum CompletedTimelineFormatters {
-    static let sectionTitle: DateFormatter = {
+    static func sectionTitle() -> DateFormatter {
         let formatter = DateFormatter()
-        formatter.locale = Locale.current
-        formatter.dateFormat = "EEEE, MMM d"
+        formatter.locale = AppLocale.current
+        formatter.setLocalizedDateFormatFromTemplate("EEEE MMM d")
         return formatter
-    }()
+    }
 }

@@ -319,7 +319,14 @@
     "newList": "New list",
     "editList": "Edit list",
     "deleteList": "Delete list",
-    "done": "Done"
+    "done": "Done",
+    "previous": "Previous",
+    "next": "Next",
+    "searchTasks": "Search tasks",
+    "taskCount": "{{count}} tasks",
+    "tasksDueOn": "Tasks due {{date}}",
+    "noTasksDueThisDay": "No tasks due this day",
+    "selectAnotherDate": "Select another date on the calendar."
   },
   "today": {
     "saveInstance": "Save instance",
@@ -437,5 +444,123 @@
     "lightRed": "Light Red",
     "brick": "Brick",
     "slate": "Slate"
+  },
+  "home": {
+    "tileScheduled": "Scheduled",
+    "tilePriority": "Priority",
+    "tileOverdue": "Overdue",
+    "tileAll": "All",
+    "tileCompleted": "Completed",
+    "tileCalendar": "Calendar",
+    "searchTasksPlaceholder": "Search tasks...",
+    "noMatchingTasks": "No matching tasks",
+    "openList": "Open {{name}}"
+  },
+  "settings": {
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "themeSystem": "System",
+    "systemDefault": "System default",
+    "profile": {
+      "title": "Profile",
+      "description": "Update your display name",
+      "name": "Name",
+      "namePlaceholder": "Enter your name",
+      "email": "Email",
+      "saving": "Saving...",
+      "save": "Save profile"
+    },
+    "appearance": {
+      "title": "Appearance",
+      "description": "Choose light, dark, or follow your system setting.",
+      "descriptionSystem": "Follow your device, light, or dark. Currently using {{theme}}."
+    },
+    "language": {
+      "title": "Language",
+      "description": "Choose your app language",
+      "appLanguage": "App language"
+    },
+    "notifications": {
+      "title": "Notifications",
+      "push": "Push notifications",
+      "description": "Get notified about important things, even when the app isn't open.",
+      "blocked": "Blocked in your browser settings. Update your browser permissions to enable them.",
+      "toggle": "Toggle push notifications"
+    },
+    "password": {
+      "title": "Change password",
+      "description": "Update your account password",
+      "current": "Current password",
+      "currentPlaceholder": "Enter your current password",
+      "new": "New password",
+      "newPlaceholder": "Enter your new password",
+      "requirement": "Password must be at least 8 characters long",
+      "confirm": "Confirm new password",
+      "confirmPlaceholder": "Confirm your new password",
+      "changing": "Changing password...",
+      "change": "Change password"
+    },
+    "dashboard": {
+      "title": "Dashboard access",
+      "enabled": "API access enabled",
+      "disabled": "API access disabled",
+      "activeKeyEnding": "Active key ending in …{{preview}}",
+      "activeKeyExists": "An active key exists",
+      "noKey": "No key has been generated",
+      "revoking": "Revoking...",
+      "generating": "Generating...",
+      "revokeKey": "Revoke key",
+      "generateKey": "Generate key",
+      "copyNow": "Copy your API key now — it won't be shown again."
+    },
+    "toast": {
+      "apiKeyGenerated": "API key generated. Copy it now — it won't be shown again.",
+      "apiKeyGenerateFailed": "Failed to generate API key",
+      "apiKeyRevoked": "API key revoked",
+      "apiKeyRevokeFailed": "Failed to revoke API key",
+      "apiKeyCopied": "API key copied to clipboard",
+      "apiKeyCopyFailed": "Failed to copy API key",
+      "pushDisabled": "Push notifications disabled",
+      "pushEnabled": "Push notifications enabled",
+      "pushUpdateFailed": "Failed to update notification settings",
+      "noChanges": "No changes to save",
+      "nameUpdated": "Name updated successfully",
+      "nameUpdateFailed": "Failed to update",
+      "passwordTooShort": "New password must be at least 8 characters",
+      "passwordsDoNotMatch": "Passwords do not match",
+      "passwordChanged": "Password changed successfully",
+      "passwordChangeFailed": "Failed to change password"
+    }
+  },
+  "summary": {
+    "untitledTask": "Untitled task",
+    "and": "and",
+    "windowMorning": "in the morning",
+    "windowAfternoon": "in the afternoon",
+    "windowNight": "at night",
+    "window_morning": "morning",
+    "window_afternoon": "afternoon",
+    "night": "night",
+    "dueTonight": "due tonight",
+    "dueTodayWindow": "due today {{window}}",
+    "dueTomorrowWindow": "due tomorrow {{window}}",
+    "dueYesterdayWindow": "due yesterday {{window}}",
+    "targetToday": "today",
+    "targetTomorrow": "tomorrow",
+    "targetYesterday": "yesterday",
+    "targetOnDate": "on {{date}}",
+    "dueOnDate": "due {{target}}",
+    "dueOnDateWindow": "due {{target}} {{window}}",
+    "taskPhrasePast": "{{title}}, which was {{due}}",
+    "taskPhrasePresent": "{{title}}, which is {{due}}",
+    "thenSeparator": ", then ",
+    "qualifierBoth": "both",
+    "qualifierAll": "all",
+    "dayGroupedPast": "{{tasks}}, {{qualifier}} were due {{target}}",
+    "dayGroupedPresent": "{{tasks}}, {{qualifier}} are due {{target}}",
+    "startWith": "Start with {{task}}.",
+    "nextUp": "Next up, {{tasks}}.",
+    "overdueCatchUp": "You also have {{count}} overdue task(s) to catch up on.",
+    "clearForNow": "You're clear for now. No tasks need attention in this view."
   }
 }
