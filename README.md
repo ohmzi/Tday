@@ -85,8 +85,13 @@ For remote access, see [`docs/REMOTE_ACCESS.md`](docs/REMOTE_ACCESS.md) — it c
 Tunnel, Tailscale, WireGuard, ZeroTier, SSH tunnels, ngrok, and frp. Set `TDAY_HOST_BIND=0.0.0.0` in
 the root `.env` to open the port externally (see [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)).
 
-GPU acceleration: `tday_ollama` uses `gpus: all` by default — install the NVIDIA Container Toolkit
-on the Docker host.
+GPU acceleration: `tday_ollama` runs on CPU by default so the stack comes up on any host. For
+NVIDIA GPU acceleration, install the NVIDIA Container Toolkit on the Docker host and layer the GPU
+override on top of every Compose command:
+
+```bash
+docker compose -f docker-compose.yaml -f docker-compose.gpu.yaml --profile ai up -d --build
+```
 
 ### Local Development
 

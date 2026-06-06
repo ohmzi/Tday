@@ -52,6 +52,12 @@ docker compose --profile ai up -d --build
 
 When the `ai` profile is enabled, Compose starts `tday_ollama` plus a one-shot model setup container. The setup container pulls `qwen3.5:0.8b` and attempts to remove the old `qwen2.5:0.5b` model. Pull the Ollama images during updates too; the qwen3.5 model requires a recent Ollama runtime. If the AI profile is not enabled, Summary still works through the backend logic fallback.
 
+Ollama runs on CPU by default. For NVIDIA GPU acceleration, install the NVIDIA Container Toolkit on the host and add the GPU override file to every Compose command:
+
+```bash
+docker compose -f docker-compose.yaml -f docker-compose.gpu.yaml --profile ai up -d --build
+```
+
 ### Docker Security
 
 The `tday_backend` container runs with:

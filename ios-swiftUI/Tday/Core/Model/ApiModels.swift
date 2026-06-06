@@ -514,8 +514,13 @@ struct DeleteCompletedFloaterRequest: Codable {
     let id: String
 }
 
+// GET/PATCH /api/preferences returns the canonical fields at the TOP LEVEL
+// (sortBy/groupBy/direction) — the server does not nest them under a
+// `preferences`/`userPreferences` key. See PreferenceModels.kt in shared.
 struct PreferencesResponse: Codable {
-    let preferences: PreferencesDTO?
+    let sortBy: String?
+    let groupBy: String?
+    let direction: String?
 }
 
 struct PreferencesDTO: Codable, Equatable {

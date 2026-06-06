@@ -17,7 +17,7 @@ class SettingsRepository @Inject constructor(
 ) {
     fun isAiSummaryEnabledSnapshot(): Boolean {
         if (secureConfigStore.isLocalMode()) return false
-        return cacheManager.loadOfflineState().aiSummaryEnabled
+        return cacheManager.loadOfflineStateBlocking().aiSummaryEnabled
     }
 
     suspend fun refreshAiSummaryEnabled(): Boolean {
