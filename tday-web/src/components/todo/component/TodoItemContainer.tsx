@@ -15,6 +15,7 @@ import { getPriorityFlag } from "@/lib/priority";
 import { useUserTimezone } from "@/features/user/query/get-timezone";
 import { getTodoFocusElementId } from "@/lib/todoToastNavigation";
 import TaskFormSheet from "@/components/todo/component/TodoForm/TaskFormSheet";
+import { TaskActionButtons } from "@/components/ui/TaskActionButtons";
 
 
 type TodoItemContainerProps = {
@@ -191,6 +192,8 @@ export const TodoItemCard = ({
             type="button"
             aria-label="Edit task"
             onPointerDown={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
             onClick={() => {
               setDisplayForm(true);
               closeSwipe();
@@ -209,6 +212,8 @@ export const TodoItemCard = ({
             type="button"
             aria-label="Delete task"
             onPointerDown={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
             onClick={() => {
               deleteMutateFn(todoItem);
               closeSwipe();
@@ -335,28 +340,16 @@ export const TodoItemCard = ({
           {/* Desktop hover edit/delete actions, overlaid at the right edge. */}
           <div
             className={clsx(
-              "absolute right-0 top-1/2 hidden -translate-y-1/2 items-center gap-1 transition-opacity sm:flex",
+              "absolute right-0 top-1/2 hidden -translate-y-1/2 transition-opacity sm:block",
               showHandle ? "sm:opacity-100" : "sm:pointer-events-none sm:opacity-0",
             )}
           >
-            <button
-              type="button"
-              aria-label="Edit task"
-              onPointerDown={(e) => e.stopPropagation()}
-              onClick={() => setDisplayForm(true)}
-              className="rounded-full bg-card/80 p-1.5 text-muted-foreground backdrop-blur transition-colors hover:bg-muted hover:text-foreground"
-            >
-              <SquarePen className="h-4 w-4" strokeWidth={1.8} />
-            </button>
-            <button
-              type="button"
-              aria-label="Delete task"
-              onPointerDown={(e) => e.stopPropagation()}
-              onClick={() => deleteMutateFn(todoItem)}
-              className="rounded-full bg-card/80 p-1.5 text-muted-foreground backdrop-blur transition-colors hover:bg-destructive/10 hover:text-destructive"
-            >
-              <Trash className="h-4 w-4" strokeWidth={1.8} />
-            </button>
+            <TaskActionButtons
+              onEdit={() => setDisplayForm(true)}
+              onDelete={() => deleteMutateFn(todoItem)}
+              editLabel="Edit task"
+              deleteLabel="Delete task"
+            />
           </div>
         </div>
         </div>
