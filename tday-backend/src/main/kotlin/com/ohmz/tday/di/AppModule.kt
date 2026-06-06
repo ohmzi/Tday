@@ -76,7 +76,7 @@ val securityModule = module {
     single<CredentialEnvelope> { CredentialEnvelopeImpl(get()) }
     single<RequestRateLimiter> { InMemoryRequestRateLimiter(get(), get()) }
     single { AuthUserCache() }
-    single<SessionControl> { SessionControlImpl(get()) }
+    single<SessionControl> { SessionControlImpl(get(), get()) }
 }
 
 val serviceModule = module {
