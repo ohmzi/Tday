@@ -1,7 +1,9 @@
 import Foundation
 import Security
+import os
 
 final class SecureStore {
+    private static let log = Logger(subsystem: "com.ohmz.tday.ios", category: "SecureStore")
     private let service: String
     private let defaults: UserDefaults
     private let trustedHostsKey = "secure.trusted.hosts"
@@ -319,12 +321,27 @@ final class SecureStore {
 
     private func saveData(_ data: Data, forRawKey key: String) {
         let query = keychainQuery(for: key)
-        let attributes = [kSecValueData as String: data]
-        let status = SecItemUpdate(query as CFDictionary, attributes as CFDictionary)
-        if status == errSecItemNotFound {
+        // AfterFirstUnlock so background contexts (CarPlay intents, widgets, App
+        // Intents) can read the session/cookie on a locked-but-already-unlocked
+        // device; the default (WhenUnlocked) denies those reads. Set on writes only,
+        // not on the search query (which would otherwise fail to match older items).
+        let attributes: [String: Any] = [
+            kSecValueData as String: data,
+            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock,
+        ]
+        let updateStatus = SecItemUpdate(query as CFDictionary, attributes as CFDictionary)
+        if updateStatus == errSecItemNotFound {
             var insertQuery = query
             insertQuery[kSecValueData as String] = data
-            SecItemAdd(insertQuery as CFDictionary, nil)
+            insertQuery[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
+            let addStatus = SecItemAdd(insertQuery as CFDictionary, nil)
+            if addStatus != errSecSuccess {
+                // Don't fail silently: a dropped write means the user looks logged in
+                // now but is signed out on next launch with no diagnostic.
+                Self.log.error("keychain add failed for \(key, privacy: .public): \(addStatus)")
+            }
+        } else if updateStatus != errSecSuccess {
+            Self.log.error("keychain update failed for \(key, privacy: .public): \(updateStatus)")
         }
     }
 
