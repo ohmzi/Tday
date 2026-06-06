@@ -123,6 +123,23 @@ then, the code remains buildable but entitlement-gated for real CarPlay deployme
 Voice creation is exposed through App Intents/App Shortcuts. The CarPlay plus action offers a
 template-compliant iPhone handoff, while Siri can run the same create operation directly by voice.
 
+## Natural-language scheduling
+
+The new-task title field recognizes date/time phrases **on-device** with Foundation's
+`NSDataDetector` (Apple's built-in date detector) — no network and no AI, so it also works in Local
+Mode. Typing e.g. "call mom next monday 9am" auto-sets the Due, highlights the recognized phrase in
+place, and strips it from the saved task title.
+
+- `OnDeviceTitleNlpParser` (in `Core/Data/Todo/TodoRepository.swift`) runs `NSDataDetector` and
+  returns the matched span, the cleaned title, and the due instant. A bare "8pm" is never shifted.
+- `TodoRepository.parseTodoTitleNlp` is the single entry point used by every create-task surface;
+  swapping it to the local parser made them all offline at once.
+- `CreateTaskSheet` keeps the full typed text and overlays the highlight (an `AttributedString` over
+  the `TextField`, so editing/caret behaviour is unchanged), sets the Due, and removes the phrase
+  from the title only on submit.
+- Parsing runs in the device timezone; the due is saved as a UTC instant. `NSDataDetector` resolves
+  relative phrases ("tomorrow") against the current date.
+
 ## Mobile Parity
 
 For user-facing iOS changes, compare the Android implementation in `android-compose/app/src/main/java/com/ohmz/tday/compose/feature/` and `core/`. Match behavior, counts, empty states, Local Mode affordances, and navigation rules while keeping SwiftUI idioms.
