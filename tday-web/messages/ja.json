@@ -319,7 +319,14 @@
     "newList": "新しいリスト",
     "editList": "リストを編集",
     "deleteList": "リストを削除",
-    "done": "完了"
+    "done": "完了",
+    "previous": "前へ",
+    "next": "次へ",
+    "searchTasks": "タスクを検索",
+    "taskCount": "{{count}} 件のタスク",
+    "tasksDueOn": "{{date}} 期限のタスク",
+    "noTasksDueThisDay": "この日に期限のタスクはありません",
+    "selectAnotherDate": "カレンダーで別の日付を選択してください。"
   },
   "today": {
     "saveInstance": "インスタンスを保存",
@@ -437,5 +444,123 @@
     "lightRed": "ライトレッド",
     "brick": "ブリック",
     "slate": "スレート"
+  },
+  "home": {
+    "tileScheduled": "予定",
+    "tilePriority": "優先",
+    "tileOverdue": "期限切れ",
+    "tileAll": "すべて",
+    "tileCompleted": "完了",
+    "tileCalendar": "カレンダー",
+    "searchTasksPlaceholder": "タスクを検索...",
+    "noMatchingTasks": "一致するタスクがありません",
+    "openList": "{{name}} を開く"
+  },
+  "settings": {
+    "themeLight": "ライト",
+    "themeDark": "ダーク",
+    "themeSystem": "システム",
+    "systemDefault": "システムのデフォルト",
+    "profile": {
+      "title": "プロフィール",
+      "description": "表示名を更新",
+      "name": "名前",
+      "namePlaceholder": "名前を入力",
+      "email": "メール",
+      "saving": "保存中...",
+      "save": "プロフィールを保存"
+    },
+    "appearance": {
+      "title": "外観",
+      "description": "ライト、ダーク、またはシステム設定に従うを選択します。",
+      "descriptionSystem": "デバイス、ライト、またはダークに従います。現在は{{theme}}を使用中。"
+    },
+    "language": {
+      "title": "言語",
+      "description": "アプリの言語を選択",
+      "appLanguage": "アプリの言語"
+    },
+    "notifications": {
+      "title": "通知",
+      "push": "プッシュ通知",
+      "description": "アプリを開いていなくても、重要なことを通知します。",
+      "blocked": "ブラウザの設定でブロックされています。有効にするにはブラウザの権限を更新してください。",
+      "toggle": "プッシュ通知を切り替え"
+    },
+    "password": {
+      "title": "パスワードを変更",
+      "description": "アカウントのパスワードを更新",
+      "current": "現在のパスワード",
+      "currentPlaceholder": "現在のパスワードを入力",
+      "new": "新しいパスワード",
+      "newPlaceholder": "新しいパスワードを入力",
+      "requirement": "パスワードは8文字以上である必要があります",
+      "confirm": "新しいパスワードを確認",
+      "confirmPlaceholder": "新しいパスワードを確認してください",
+      "changing": "パスワードを変更中...",
+      "change": "パスワードを変更"
+    },
+    "dashboard": {
+      "title": "ダッシュボードアクセス",
+      "enabled": "APIアクセスが有効",
+      "disabled": "APIアクセスが無効",
+      "activeKeyEnding": "…{{preview}} で終わる有効なキー",
+      "activeKeyExists": "有効なキーが存在します",
+      "noKey": "キーは生成されていません",
+      "revoking": "取り消し中...",
+      "generating": "生成中...",
+      "revokeKey": "キーを取り消す",
+      "generateKey": "キーを生成",
+      "copyNow": "今すぐAPIキーをコピーしてください。二度と表示されません。"
+    },
+    "toast": {
+      "apiKeyGenerated": "APIキーを生成しました。今すぐコピーしてください。二度と表示されません。",
+      "apiKeyGenerateFailed": "APIキーの生成に失敗しました",
+      "apiKeyRevoked": "APIキーを取り消しました",
+      "apiKeyRevokeFailed": "APIキーの取り消しに失敗しました",
+      "apiKeyCopied": "APIキーをクリップボードにコピーしました",
+      "apiKeyCopyFailed": "APIキーのコピーに失敗しました",
+      "pushDisabled": "プッシュ通知を無効にしました",
+      "pushEnabled": "プッシュ通知を有効にしました",
+      "pushUpdateFailed": "通知設定の更新に失敗しました",
+      "noChanges": "保存する変更はありません",
+      "nameUpdated": "名前を正常に更新しました",
+      "nameUpdateFailed": "更新に失敗しました",
+      "passwordTooShort": "新しいパスワードは8文字以上である必要があります",
+      "passwordsDoNotMatch": "パスワードが一致しません",
+      "passwordChanged": "パスワードを正常に変更しました",
+      "passwordChangeFailed": "パスワードの変更に失敗しました"
+    }
+  },
+  "summary": {
+    "untitledTask": "無題のタスク",
+    "and": "と",
+    "windowMorning": "午前中",
+    "windowAfternoon": "午後",
+    "windowNight": "夜に",
+    "window_morning": "午前",
+    "window_afternoon": "午後",
+    "night": "夜",
+    "dueTonight": "今夜が期限",
+    "dueTodayWindow": "今日{{window}}が期限",
+    "dueTomorrowWindow": "明日{{window}}が期限",
+    "dueYesterdayWindow": "昨日{{window}}が期限",
+    "targetToday": "今日",
+    "targetTomorrow": "明日",
+    "targetYesterday": "昨日",
+    "targetOnDate": "{{date}}に",
+    "dueOnDate": "{{target}}が期限",
+    "dueOnDateWindow": "{{target}}{{window}}が期限",
+    "taskPhrasePast": "{{title}}（{{due}}）",
+    "taskPhrasePresent": "{{title}}（{{due}}）",
+    "thenSeparator": "、次に",
+    "qualifierBoth": "両方とも",
+    "qualifierAll": "すべて",
+    "dayGroupedPast": "{{tasks}}、{{qualifier}}{{target}}が期限でした",
+    "dayGroupedPresent": "{{tasks}}、{{qualifier}}{{target}}が期限です",
+    "startWith": "まず{{task}}から始めましょう。",
+    "nextUp": "次に、{{tasks}}。",
+    "overdueCatchUp": "また、{{count}} 件の期限切れタスクに対応する必要があります。",
+    "clearForNow": "今のところ問題ありません。このビューに対応が必要なタスクはありません。"
   }
 }

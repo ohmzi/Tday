@@ -319,7 +319,14 @@
     "newList": "Nuovo elenco",
     "editList": "Modifica elenco",
     "deleteList": "Elimina elenco",
-    "done": "Fatto"
+    "done": "Fatto",
+    "previous": "Precedente",
+    "next": "Successivo",
+    "searchTasks": "Cerca attività",
+    "taskCount": "{{count}} attività",
+    "tasksDueOn": "Attività in scadenza il {{date}}",
+    "noTasksDueThisDay": "Nessuna attività in scadenza in questo giorno",
+    "selectAnotherDate": "Seleziona un'altra data nel calendario."
   },
   "today": {
     "saveInstance": "Salva istanza",
@@ -437,5 +444,123 @@
     "lightRed": "Rosso chiaro",
     "brick": "Mattone",
     "slate": "Ardesia"
+  },
+  "home": {
+    "tileScheduled": "Pianificato",
+    "tilePriority": "Priorità",
+    "tileOverdue": "In ritardo",
+    "tileAll": "Tutto",
+    "tileCompleted": "Completato",
+    "tileCalendar": "Calendario",
+    "searchTasksPlaceholder": "Cerca attività...",
+    "noMatchingTasks": "Nessuna attività corrispondente",
+    "openList": "Apri {{name}}"
+  },
+  "settings": {
+    "themeLight": "Chiaro",
+    "themeDark": "Scuro",
+    "themeSystem": "Sistema",
+    "systemDefault": "Predefinito del sistema",
+    "profile": {
+      "title": "Profilo",
+      "description": "Aggiorna il tuo nome visualizzato",
+      "name": "Nome",
+      "namePlaceholder": "Inserisci il tuo nome",
+      "email": "Email",
+      "saving": "Salvataggio...",
+      "save": "Salva profilo"
+    },
+    "appearance": {
+      "title": "Aspetto",
+      "description": "Scegli chiaro, scuro o segui le impostazioni di sistema.",
+      "descriptionSystem": "Segui il tuo dispositivo, chiaro o scuro. Attualmente {{theme}}."
+    },
+    "language": {
+      "title": "Lingua",
+      "description": "Scegli la lingua dell'app",
+      "appLanguage": "Lingua dell'app"
+    },
+    "notifications": {
+      "title": "Notifiche",
+      "push": "Notifiche push",
+      "description": "Ricevi notifiche sulle cose importanti, anche quando l'app non è aperta.",
+      "blocked": "Bloccate nelle impostazioni del browser. Aggiorna le autorizzazioni del browser per attivarle.",
+      "toggle": "Attiva/disattiva notifiche push"
+    },
+    "password": {
+      "title": "Cambia password",
+      "description": "Aggiorna la password del tuo account",
+      "current": "Password attuale",
+      "currentPlaceholder": "Inserisci la password attuale",
+      "new": "Nuova password",
+      "newPlaceholder": "Inserisci la nuova password",
+      "requirement": "La password deve contenere almeno 8 caratteri",
+      "confirm": "Conferma nuova password",
+      "confirmPlaceholder": "Conferma la nuova password",
+      "changing": "Modifica password...",
+      "change": "Cambia password"
+    },
+    "dashboard": {
+      "title": "Accesso alla dashboard",
+      "enabled": "Accesso API attivato",
+      "disabled": "Accesso API disattivato",
+      "activeKeyEnding": "Chiave attiva che termina con …{{preview}}",
+      "activeKeyExists": "Esiste una chiave attiva",
+      "noKey": "Nessuna chiave è stata generata",
+      "revoking": "Revoca in corso...",
+      "generating": "Generazione...",
+      "revokeKey": "Revoca chiave",
+      "generateKey": "Genera chiave",
+      "copyNow": "Copia ora la tua chiave API — non verrà più mostrata."
+    },
+    "toast": {
+      "apiKeyGenerated": "Chiave API generata. Copiala ora — non verrà più mostrata.",
+      "apiKeyGenerateFailed": "Impossibile generare la chiave API",
+      "apiKeyRevoked": "Chiave API revocata",
+      "apiKeyRevokeFailed": "Impossibile revocare la chiave API",
+      "apiKeyCopied": "Chiave API copiata negli appunti",
+      "apiKeyCopyFailed": "Impossibile copiare la chiave API",
+      "pushDisabled": "Notifiche push disattivate",
+      "pushEnabled": "Notifiche push attivate",
+      "pushUpdateFailed": "Impossibile aggiornare le impostazioni di notifica",
+      "noChanges": "Nessuna modifica da salvare",
+      "nameUpdated": "Nome aggiornato correttamente",
+      "nameUpdateFailed": "Aggiornamento non riuscito",
+      "passwordTooShort": "La nuova password deve contenere almeno 8 caratteri",
+      "passwordsDoNotMatch": "Le password non corrispondono",
+      "passwordChanged": "Password modificata correttamente",
+      "passwordChangeFailed": "Impossibile cambiare la password"
+    }
+  },
+  "summary": {
+    "untitledTask": "Attività senza titolo",
+    "and": "e",
+    "windowMorning": "di mattina",
+    "windowAfternoon": "nel pomeriggio",
+    "windowNight": "di notte",
+    "window_morning": "mattina",
+    "window_afternoon": "pomeriggio",
+    "night": "notte",
+    "dueTonight": "in scadenza stasera",
+    "dueTodayWindow": "in scadenza oggi {{window}}",
+    "dueTomorrowWindow": "in scadenza domani {{window}}",
+    "dueYesterdayWindow": "era in scadenza ieri {{window}}",
+    "targetToday": "oggi",
+    "targetTomorrow": "domani",
+    "targetYesterday": "ieri",
+    "targetOnDate": "il {{date}}",
+    "dueOnDate": "in scadenza {{target}}",
+    "dueOnDateWindow": "in scadenza {{target}} {{window}}",
+    "taskPhrasePast": "{{title}}, che era {{due}}",
+    "taskPhrasePresent": "{{title}}, che è {{due}}",
+    "thenSeparator": ", poi ",
+    "qualifierBoth": "entrambe",
+    "qualifierAll": "tutte",
+    "dayGroupedPast": "{{tasks}}, {{qualifier}} erano in scadenza {{target}}",
+    "dayGroupedPresent": "{{tasks}}, {{qualifier}} sono in scadenza {{target}}",
+    "startWith": "Inizia con {{task}}.",
+    "nextUp": "Poi, {{tasks}}.",
+    "overdueCatchUp": "Hai anche {{count}} attività in ritardo da recuperare.",
+    "clearForNow": "Per ora sei a posto. Nessuna attività richiede attenzione in questa vista."
   }
 }

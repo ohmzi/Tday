@@ -1123,8 +1123,8 @@ struct TodoListScreen: View {
     private var createTaskSheetContent: some View {
         CreateTaskSheet(
             lists: viewModel.lists,
-            titleText: "New task",
-            submitText: "Create",
+            titleText: L("New task"),
+            submitText: L("Create"),
             initialPayload: CreateTaskPayload(title: "", description: nil, priority: viewModel.mode == .priority ? TaskPriorityDisplay.importantValue : TaskPriorityDisplay.normalValue, due: viewModel.mode == .floater ? nil : Date().addingTimeInterval(60 * 60), rrule: nil, listId: viewModel.listId),
             defaultScheduled: viewModel.mode != .floater,
             showScheduleControls: viewModel.mode != .floater,
@@ -1144,8 +1144,8 @@ struct TodoListScreen: View {
     private func editTaskSheetContent(for todo: TodoItem) -> some View {
         CreateTaskSheet(
             lists: viewModel.lists,
-            titleText: "Edit task",
-            submitText: "Save",
+            titleText: L("Edit task"),
+            submitText: L("Save"),
             initialPayload: CreateTaskPayload(title: todo.title, description: todo.description, priority: todo.priority, due: todo.due, rrule: todo.rrule, listId: todo.listId),
             defaultScheduled: viewModel.mode != .floater,
             showScheduleControls: viewModel.mode != .floater,
@@ -1162,8 +1162,8 @@ struct TodoListScreen: View {
     private var summarySheetContent: some View {
         VStack(spacing: 0) {
             TdaySheetHeader(
-                title: "Summary",
-                closeAccessibilityLabel: "Close",
+                title: L("Summary"),
+                closeAccessibilityLabel: L("Close"),
                 confirmSystemName: nil,
                 onClose: { showingSummary = false }
             )
@@ -1178,7 +1178,7 @@ struct TodoListScreen: View {
                                 .font(.tdayRounded(.body, weight: .bold))
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         } else if viewModel.summaryConnectivityError {
-                            ErrorRetryView(message: "Summary needs a network connection.") {
+                            ErrorRetryView(message: L("Summary needs a network connection.")) {
                                 Task { await viewModel.summarizeCurrentMode() }
                             }
                         } else if let summaryError = viewModel.summaryError {
@@ -1831,7 +1831,7 @@ struct TodoListScreen: View {
             }
             if let due = todo.due {
                 HStack(spacing: 6) {
-                    Text(due.formatted(date: .abbreviated, time: .shortened))
+                    Text(due.formatted(.dateTime.month(.abbreviated).day().year().hour().minute().locale(AppLocale.current)))
                         .font(.tdayRounded(size: 12, weight: .semibold))
                         .foregroundStyle(colors.onSurfaceVariant)
                 }
@@ -2214,7 +2214,7 @@ struct TodoListScreen: View {
         guard let due = todo.due else {
             return nil
         }
-        let timeText = due.formatted(date: .omitted, time: .shortened)
+        let timeText = due.formatted(.dateTime.hour().minute().locale(AppLocale.current))
         let dueBodyText = if section.id == "earlier" &&
             (viewModel.mode == .all || viewModel.mode == .priority || viewModel.mode == .list) {
             timelineDateTimeText(due)
@@ -2225,30 +2225,30 @@ struct TodoListScreen: View {
         switch viewModel.mode {
         case .today:
             if !todo.completed && due < Date() {
-                return "Overdue, \(dueBodyText)"
+                return L("Overdue, %@", dueBodyText)
             }
-            return "Due \(dueBodyText)"
+            return L("Due %@", dueBodyText)
         case .overdue:
-            return "Overdue, \(dueBodyText)"
+            return L("Overdue, %@", dueBodyText)
         case .scheduled:
-            return "Due \(dueBodyText)"
+            return L("Due %@", dueBodyText)
         case .all:
             if !todo.completed && due < Date() {
-                return "Overdue, \(dueBodyText)"
+                return L("Overdue, %@", dueBodyText)
             }
-            return "Due \(dueBodyText)"
+            return L("Due %@", dueBodyText)
         case .priority:
             if !todo.completed && due < Date() {
-                return "Overdue, \(dueBodyText)"
+                return L("Overdue, %@", dueBodyText)
             }
-            return "Due \(dueBodyText)"
+            return L("Due %@", dueBodyText)
         case .floater:
             return nil
         case .list:
             if !todo.completed && due < Date() {
-                return "Overdue, \(dueBodyText)"
+                return L("Overdue, %@", dueBodyText)
             }
-            return "Due \(dueBodyText)"
+            return L("Due %@", dueBodyText)
         }
     }
 }
@@ -2712,7 +2712,7 @@ private struct TodoDragPreview: View {
                     .foregroundStyle(colors.onSurface)
                     .lineLimit(1)
                 if let due = todo.due {
-                    Text(due.formatted(date: .omitted, time: .shortened))
+                    Text(due.formatted(.dateTime.hour().minute().locale(AppLocale.current)))
                         .font(.tdayRounded(size: 12, weight: .semibold))
                         .foregroundStyle(colors.onSurfaceVariant)
                         .lineLimit(1)
@@ -3222,7 +3222,7 @@ private struct ListSettingsSheet: View {
     var body: some View {
         VStack(spacing: 0) {
             TdaySheetHeader(
-                title: "List settings",
+                title: L("List settings"),
                 closeAccessibilityLabel: "Cancel",
                 confirmAccessibilityLabel: "Save",
                 isConfirmEnabled: canSave,
@@ -3640,7 +3640,7 @@ private func buildSections(
             sections.append(
                 TodoTimelineSection(
                     id: "today",
-                    title: "Today",
+                    title: L("Today"),
                     items: todaysItems.sorted(by: todoTimelineSortPrecedes),
                     isCollapsible: false,
                     targetDate: nil
@@ -3656,7 +3656,7 @@ private func buildSections(
             contentsOf: pastDates.map { date in
                 TodoTimelineSection(
                     id: "overdue-\(date.timeIntervalSince1970)",
-                    title: date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day()),
+                    title: date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day().locale(AppLocale.current)),
                     items: grouped[date]?.sorted(by: todoTimelineSortPrecedes) ?? [],
                     isCollapsible: false,
                     targetDate: nil
@@ -3751,10 +3751,10 @@ private func floaterPriorityRank(_ priority: String) -> Int {
 
 private func scheduledSectionTitle(for date: Date, calendar: Calendar) -> String {
     if calendar.isDateInToday(date) {
-        return "Today"
+        return L("Today")
     }
     if calendar.isDateInTomorrow(date) {
-        return "Tomorrow"
+        return L("Tomorrow")
     }
     return timelineDayTitle(for: date)
 }
@@ -3798,7 +3798,7 @@ private func buildFutureTimelineSections(
     if !earlierItems.isEmpty || includeEmptyEarlierTarget {
         earlierSection = TodoTimelineSection(
             id: "earlier",
-            title: "Earlier",
+            title: L("Earlier"),
             items: earlierItems,
             isCollapsible: !earlierItems.isEmpty,
             targetDate: timelineRescheduleTargetDate(sectionId: "earlier", today: today, calendar: calendar)
@@ -3811,14 +3811,14 @@ private func buildFutureTimelineSections(
         sections.append(earlierSection)
     }
 
-    sections.append(daySection(for: today, title: "Today"))
+    sections.append(daySection(for: today, title: L("Today")))
 
     if !placesEarlierBeforeToday, let earlierSection {
         sections.append(earlierSection)
     }
 
     if let tomorrow = calendar.date(byAdding: .day, value: 1, to: today) {
-        sections.append(daySection(for: tomorrow, title: "Tomorrow"))
+        sections.append(daySection(for: tomorrow, title: L("Tomorrow")))
     }
 
     for offset in 2...6 {
@@ -3835,7 +3835,7 @@ private func buildFutureTimelineSections(
         sections.append(
             TodoTimelineSection(
                 id: "rest-\(currentMonthIndex)",
-                title: "Rest of \(monthTitle(for: currentMonthStart, currentYear: currentYear, calendar: calendar))",
+                title: L("Rest of %@", monthTitle(for: currentMonthStart, currentYear: currentYear, calendar: calendar)),
                 items: restOfCurrentMonthItems,
                 isCollapsible: false,
                 targetDate: timelineRescheduleTargetDate(
@@ -3893,51 +3893,51 @@ private func buildFutureTimelineSections(
 }
 
 private func timelineDayTitle(for date: Date) -> String {
-    TodoTimelineFormatters.dayTitle.string(from: date)
+    TodoTimelineFormatters.dayTitle().string(from: date)
 }
 
 private func timelineDateTimeText(_ date: Date) -> String {
-    TodoTimelineFormatters.dateTime.string(from: date)
+    TodoTimelineFormatters.dateTime().string(from: date)
 }
 
 private func monthTitle(for date: Date, currentYear: Int, calendar: Calendar) -> String {
     let formatter: DateFormatter
     if calendar.component(.year, from: date) == currentYear {
-        formatter = TodoTimelineFormatters.month
+        formatter = TodoTimelineFormatters.month()
     } else {
-        formatter = TodoTimelineFormatters.monthAndYear
+        formatter = TodoTimelineFormatters.monthAndYear()
     }
     return formatter.string(from: date)
 }
 
 private enum TodoTimelineFormatters {
-    static let dayTitle: DateFormatter = {
+    static func dayTitle() -> DateFormatter {
         let formatter = DateFormatter()
-        formatter.locale = Locale.current
-        formatter.dateFormat = "EEE MMM d"
+        formatter.locale = AppLocale.current
+        formatter.setLocalizedDateFormatFromTemplate("EEE MMM d")
         return formatter
-    }()
+    }
 
-    static let dateTime: DateFormatter = {
+    static func dateTime() -> DateFormatter {
         let formatter = DateFormatter()
-        formatter.locale = Locale.current
-        formatter.dateFormat = "MMM d, h:mm a"
+        formatter.locale = AppLocale.current
+        formatter.setLocalizedDateFormatFromTemplate("MMM d jmm")
         return formatter
-    }()
+    }
 
-    static let month: DateFormatter = {
+    static func month() -> DateFormatter {
         let formatter = DateFormatter()
-        formatter.locale = Locale.current
-        formatter.dateFormat = "LLLL"
+        formatter.locale = AppLocale.current
+        formatter.setLocalizedDateFormatFromTemplate("LLLL")
         return formatter
-    }()
+    }
 
-    static let monthAndYear: DateFormatter = {
+    static func monthAndYear() -> DateFormatter {
         let formatter = DateFormatter()
-        formatter.locale = Locale.current
-        formatter.dateFormat = "LLLL yyyy"
+        formatter.locale = AppLocale.current
+        formatter.setLocalizedDateFormatFromTemplate("LLLL yyyy")
         return formatter
-    }()
+    }
 }
 
 private func monthIndex(for date: Date, calendar: Calendar) -> Int {
@@ -3969,19 +3969,19 @@ func priorityIndicatorSymbolName(_ priority: String) -> String? {
 private func emptyTimelineMessage(for mode: TodoListMode) -> String {
     switch mode {
     case .today:
-        return "No tasks for today"
+        return L("No tasks for today")
     case .overdue:
-        return "No overdue tasks"
+        return L("No overdue tasks")
     case .scheduled:
-        return "No scheduled tasks"
+        return L("No scheduled tasks")
     case .all:
-        return "No tasks yet"
+        return L("No tasks yet")
     case .priority:
-        return "No priority tasks"
+        return L("No priority tasks")
     case .floater:
-        return "No floater tasks"
+        return L("No floater tasks")
     case .list:
-        return "No tasks in this list"
+        return L("No tasks in this list")
     }
 }
 

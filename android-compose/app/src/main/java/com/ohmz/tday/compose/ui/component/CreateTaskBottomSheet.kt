@@ -106,6 +106,7 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 import android.graphics.Color as AndroidColor
 
 private enum class RepeatPreset(
@@ -155,10 +156,12 @@ fun CreateTaskBottomSheet(
         focusManager.clearFocus(force = true)
     }
     val dateOnlyFormatter = remember {
-        DateTimeFormatter.ofPattern("EEE, MMM d").withZone(ZoneId.systemDefault())
+        DateTimeFormatter.ofPattern("EEE, MMM d", Locale.getDefault())
+            .withZone(ZoneId.systemDefault())
     }
     val timeOnlyFormatter = remember {
-        DateTimeFormatter.ofPattern("h:mm a").withZone(ZoneId.systemDefault())
+        DateTimeFormatter.ofPattern("h:mm a", Locale.getDefault())
+            .withZone(ZoneId.systemDefault())
     }
     val listIdsKey = remember(lists) { lists.joinToString(separator = "|") { it.id } }
 

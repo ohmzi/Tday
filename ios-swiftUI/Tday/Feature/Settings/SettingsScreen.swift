@@ -39,7 +39,7 @@ struct SettingsScreen: View {
         .toolbar(.hidden, for: .navigationBar)
         .safeAreaInset(edge: .top, spacing: 0) {
             TimelineTopBar(
-                title: "Settings",
+                title: L("Settings"),
                 accentColor: colors.onSurface,
                 collapseProgress: titleCollapseProgress,
                 onBack: { dismiss() },
@@ -206,7 +206,7 @@ struct SettingsScreen: View {
 
     private var settingsHeroTitleRow: some View {
         TimelineExpandedTitleRow(
-            title: "Settings",
+            title: L("Settings"),
             accentColor: colors.onSurface,
             collapseProgress: titleCollapseProgress
         )
@@ -245,7 +245,7 @@ private struct SettingsProfileCard: View {
 
     var body: some View {
         SettingsSectionCard {
-            Text(user?.name ?? "Unknown user")
+            Text(user?.name ?? L("Unknown user"))
                 .font(.tdayRounded(size: 22, weight: .heavy))
                 .foregroundStyle(colors.onSurface)
 
@@ -286,16 +286,16 @@ private struct SettingsWorkspaceCard: View {
             if !syncStatus.isLocalMode {
                 SettingsDivider()
 
-                SettingsSyncFactRow(label: "Last synced", value: syncStatus.lastSyncedText())
+                SettingsSyncFactRow(label: L("Last synced"), value: syncStatus.lastSyncedText())
 
                 if let lastAttempt = syncStatus.lastAttemptText() {
-                    SettingsSyncFactRow(label: "Last attempt", value: lastAttempt)
+                    SettingsSyncFactRow(label: L("Last attempt"), value: lastAttempt)
                 }
 
-                SettingsSyncFactRow(label: "Pending", value: syncStatus.pendingText)
+                SettingsSyncFactRow(label: L("Pending"), value: syncStatus.pendingText)
 
                 Button(action: onSyncNow) {
-                    Text(syncStatus.isManualSyncing ? "Syncing..." : "Sync now")
+                    Text(syncStatus.isManualSyncing ? L("Syncing...") : L("Sync now"))
                         .font(.tdayRounded(size: 14, weight: .heavy))
                         .foregroundStyle(syncStatus.isManualSyncing ? colors.onSurface.opacity(0.45) : colors.secondary)
                         .frame(maxWidth: .infinity, alignment: .trailing)
@@ -482,7 +482,7 @@ private struct SettingsReminderSelectorOverlay: View {
                 .ignoresSafeArea()
                 .onTapGesture(perform: onDismiss)
 
-            TdayCenteredSelectorCard(title: "Default reminder") {
+            TdayCenteredSelectorCard(title: L("Default reminder")) {
                 ForEach(Array(ReminderOption.allCases.enumerated()), id: \.element.id) { index, option in
                     if index > 0 {
                         TdaySheetDivider(horizontalPadding: 20, opacity: 0.16)
@@ -612,7 +612,7 @@ private struct SettingsServerVersionRow: View {
                 .font(.tdayRounded(size: 13, weight: .bold))
                 .foregroundStyle(colors.onSurface.opacity(0.58))
 
-            Text(versionCheckResult == .compatible ? "Compatible" : "Incompatible")
+            Text(versionCheckResult == .compatible ? L("Compatible") : L("Incompatible"))
                 .font(.tdayRounded(size: 11, weight: .heavy))
                 .foregroundStyle(versionCheckResult == .compatible ? Color.green : colors.error)
         }
@@ -712,7 +712,7 @@ struct LatestReleaseScreen: View {
         .toolbar(.hidden, for: .navigationBar)
         .safeAreaInset(edge: .top, spacing: 0) {
             TimelineTopBar(
-                title: "App Version",
+                title: L("App Version"),
                 accentColor: colors.onSurface,
                 collapseProgress: titleCollapseProgress,
                 onBack: { dismiss() },
@@ -799,7 +799,7 @@ struct LatestReleaseScreen: View {
 
     private var releaseHeroTitleRow: some View {
         TimelineExpandedTitleRow(
-            title: "App Version",
+            title: L("App Version"),
             accentColor: colors.onSurface,
             collapseProgress: titleCollapseProgress
         )
@@ -875,28 +875,28 @@ private struct ReleaseOverviewCard: View {
     private var summary: String {
         switch viewModel.versionCheckResult {
         case let .appUpdateRequired(requiredVersion):
-            return "The server requires v\(requiredVersion). Update the app to continue."
+            return L("The server requires v%@. Update the app to continue.", requiredVersion)
         case let .serverUpdateRequired(serverVersion):
-            return "This app requires the server to be on v\(viewModel.currentVersionName), but the server is on v\(serverVersion)."
+            return L("This app requires the server to be on v%@, but the server is on v%@.", viewModel.currentVersionName, serverVersion)
         case .compatible:
             if viewModel.hasUpdate {
                 if let latestTag = viewModel.latestRelease?.tagName {
-                    return "Version \(latestTag) is ready to install."
+                    return L("Version %@ is ready to install.", latestTag)
                 }
-                return "A newer version is ready to install."
+                return L("A newer version is ready to install.")
             }
-            return "You're running the latest version"
+            return L("You're running the latest version")
         }
     }
 
     private var serverVersionText: String {
         if let backendVersion = viewModel.backendVersion {
-            return "v\(backendVersion)"
+            return L("v%@", backendVersion)
         }
         if viewModel.serverURL == nil {
-            return "Not connected"
+            return L("Not connected")
         }
-        return "Unavailable"
+        return L("Unavailable")
     }
 
     private var serverVersionTint: Color {
@@ -965,7 +965,7 @@ private struct InstalledVersionCard: View {
             ReleaseNotesSection(
                 versionLabel: "v\(currentVersion)",
                 changelog: parseChangelog(currentRelease?.body),
-                emptyMessage: currentRelease == nil ? "No release notes available for this version" : nil
+                emptyMessage: currentRelease == nil ? L("No release notes available for this version") : nil
             )
         }
     }
@@ -1046,7 +1046,7 @@ private struct ReleaseSectionTitle: View {
     }
 
     var body: some View {
-        Text(title)
+        Text(L(title))
             .font(.tdayRounded(size: 22, weight: .heavy))
             .foregroundStyle(color ?? colors.onSurface)
     }
@@ -1195,7 +1195,7 @@ private func formatIsoDate(_ value: String) -> String {
         ?? ReleaseDateFormatters.internetDateTime.date(from: value)
 
     guard let date else { return value }
-    return date.formatted(.dateTime.month(.wide).day().year())
+    return date.formatted(.dateTime.month(.wide).day().year().locale(AppLocale.current))
 }
 
 private enum ReleaseDateFormatters {

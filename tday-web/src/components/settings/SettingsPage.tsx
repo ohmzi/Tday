@@ -39,9 +39,9 @@ import { usePathname } from "@/lib/navigation";
 import { LANGUAGE_STORAGE_KEY, resolveInitialLocale } from "@/i18n";
 
 const themeOptions = [
-  { value: "light", label: "Light", icon: Sun },
-  { value: "dark", label: "Dark", icon: Moon },
-  { value: "system", label: "System", icon: Monitor },
+  { value: "light", labelKey: "themeLight", icon: Sun },
+  { value: "dark", labelKey: "themeDark", icon: Moon },
+  { value: "system", labelKey: "themeSystem", icon: Monitor },
 ] as const;
 
 // Endonyms (each language shown in its own script) + a "System default" option
@@ -124,9 +124,11 @@ function SettingsSwitch({
 function ThemeSegmentedControl({
   value,
   onChange,
+  labelFor,
 }: {
   value: string;
   onChange: (value: string) => void;
+  labelFor: (key: string) => string;
 }) {
   const index = Math.max(
     0,
@@ -154,7 +156,7 @@ function ThemeSegmentedControl({
             )}
           >
             <Icon className="h-4 w-4" strokeWidth={2.6} />
-            {option.label}
+            {labelFor(option.labelKey)}
           </button>
         );
       })}
@@ -167,6 +169,7 @@ const fieldClass =
 
 export default function SettingsPage() {
   const { t: sidebarDict, i18n } = useTranslation("sidebar");
+  const { t } = useTranslation("settings");
   const { user } = useAuth();
   const { toast } = useToast();
   const { theme = "system", resolvedTheme, setTheme } = useTheme();
@@ -182,9 +185,14 @@ export default function SettingsPage() {
     }
   })();
   const selectedLanguageCode = storedLanguage ?? "system";
-  const currentLanguageLabel =
-    LANGUAGE_OPTIONS.find((opt) => opt.code === selectedLanguageCode)?.label ??
-    "System default";
+  // "System default" is the only language-list entry that gets translated; the
+  // rest are endonyms (each language's own name) and stay as-is.
+  const languageLabelFor = (option: (typeof LANGUAGE_OPTIONS)[number]) =>
+    option.code === "system" ? t("systemDefault") : option.label;
+  const currentLanguageLabel = (() => {
+    const found = LANGUAGE_OPTIONS.find((opt) => opt.code === selectedLanguageCode);
+    return found ? languageLabelFor(found) : t("systemDefault");
+  })();
 
   const chooseLanguage = (code: string) => {
     setLanguageOpen(false);
@@ -257,10 +265,10 @@ export default function SettingsPage() {
         keyPreview: created?.keyPreview ?? null,
         createdAt: created?.createdAt ?? null,
       });
-      toast({ description: "API key generated. Copy it now — it won't be shown again." });
+      toast({ description: t("toast.apiKeyGenerated") });
     } catch (err) {
       toast({
-        description: getErrorMessage(err, "Failed to generate API key"),
+        description: getErrorMessage(err, t("toast.apiKeyGenerateFailed")),
         variant: "destructive",
       });
     } finally {
@@ -279,10 +287,10 @@ export default function SettingsPage() {
       setApiKeyStatus({ enabled: false });
       setGeneratedApiKey(null);
       setShowApiKey(false);
-      toast({ description: "API key revoked" });
+      toast({ description: t("toast.apiKeyRevoked") });
     } catch (err) {
       toast({
-        description: getErrorMessage(err, "Failed to revoke API key"),
+        description: getErrorMessage(err, t("toast.apiKeyRevokeFailed")),
         variant: "destructive",
       });
     } finally {
@@ -294,9 +302,9 @@ export default function SettingsPage() {
     if (!generatedApiKey) return;
     try {
       await navigator.clipboard.writeText(generatedApiKey);
-      toast({ description: "API key copied to clipboard" });
+      toast({ description: t("toast.apiKeyCopied") });
     } catch {
-      toast({ description: "Failed to copy API key", variant: "destructive" });
+      toast({ description: t("toast.apiKeyCopyFailed"), variant: "destructive" });
     }
   };
 
@@ -304,14 +312,14 @@ export default function SettingsPage() {
     try {
       if (push.isSubscribed) {
         await push.unsubscribe();
-        toast({ description: "Push notifications disabled" });
+        toast({ description: t("toast.pushDisabled") });
       } else {
         await push.subscribe();
-        toast({ description: "Push notifications enabled" });
+        toast({ description: t("toast.pushEnabled") });
       }
     } catch (err) {
       toast({
-        description: getErrorMessage(err, "Failed to update notification settings"),
+        description: getErrorMessage(err, t("toast.pushUpdateFailed")),
         variant: "destructive",
       });
     }
@@ -322,7 +330,7 @@ export default function SettingsPage() {
     const trimmed = name.trim();
     if (!trimmed) return;
     if (trimmed === user?.name) {
-      toast({ description: "No changes to save" });
+      toast({ description: t("toast.noChanges") });
       return;
     }
     setProfileLoading(true);
@@ -332,10 +340,10 @@ export default function SettingsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: trimmed }),
       });
-      toast({ description: "Name updated successfully" });
+      toast({ description: t("toast.nameUpdated") });
     } catch (err) {
       toast({
-        description: getErrorMessage(err, "Failed to update"),
+        description: getErrorMessage(err, t("toast.nameUpdateFailed")),
         variant: "destructive",
       });
     } finally {
@@ -346,11 +354,11 @@ export default function SettingsPage() {
   const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newPassword.length < 8) {
-      toast({ description: "New password must be at least 8 characters", variant: "destructive" });
+      toast({ description: t("toast.passwordTooShort"), variant: "destructive" });
       return;
     }
     if (newPassword !== confirmPassword) {
-      toast({ description: "Passwords do not match", variant: "destructive" });
+      toast({ description: t("toast.passwordsDoNotMatch"), variant: "destructive" });
       return;
     }
     setPasswordLoading(true);
@@ -360,13 +368,13 @@ export default function SettingsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ currentPassword, newPassword }),
       });
-      toast({ description: "Password changed successfully" });
+      toast({ description: t("toast.passwordChanged") });
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
     } catch (err) {
       toast({
-        description: getErrorMessage(err, "Failed to change password"),
+        description: getErrorMessage(err, t("toast.passwordChangeFailed")),
         variant: "destructive",
       });
     } finally {
@@ -376,8 +384,8 @@ export default function SettingsPage() {
 
   const pushSubtitle =
     push.permission === "denied"
-      ? "Blocked in your browser settings. Update your browser permissions to enable them."
-      : "Get notified about important things, even when the app isn't open.";
+      ? t("notifications.blocked")
+      : t("notifications.description");
 
   return (
     <div className="w-full space-y-3 pb-10">
@@ -393,11 +401,11 @@ export default function SettingsPage() {
         className="mb-1"
       />
 
-      <SettingsSection title="Profile" description="Update your display name">
+      <SettingsSection title={t("profile.title")} description={t("profile.description")}>
         <form onSubmit={handleProfileSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="name" className="px-1 text-sm font-extrabold text-muted-foreground">
-              Name
+              {t("profile.name")}
             </Label>
             <div className="relative">
               <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -405,49 +413,51 @@ export default function SettingsPage() {
                 id="name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Enter your name"
+                placeholder={t("profile.namePlaceholder")}
                 className={cn(fieldClass, "pl-10")}
                 maxLength={100}
               />
             </div>
           </div>
           <div className="space-y-2">
-            <Label className="px-1 text-sm font-extrabold text-muted-foreground">Email</Label>
+            <Label className="px-1 text-sm font-extrabold text-muted-foreground">{t("profile.email")}</Label>
             <Input value={user?.email ?? ""} disabled className={cn(fieldClass, "opacity-60")} />
           </div>
           <Button type="submit" disabled={profileLoading} className="h-12 w-full rounded-2xl font-black">
             {profileLoading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Saving...
+                {t("profile.saving")}
               </>
             ) : (
-              "Save profile"
+              t("profile.save")
             )}
           </Button>
         </form>
       </SettingsSection>
 
       <SettingsSection
-        title="Appearance"
+        title={t("appearance.title")}
         description={
           theme === "system" && resolvedTheme
-            ? `Follow your device, light, or dark. Currently using ${resolvedTheme}.`
-            : "Choose light, dark, or follow your system setting."
+            ? t("appearance.descriptionSystem", {
+                theme: t(resolvedTheme === "dark" ? "themeDark" : "themeLight"),
+              })
+            : t("appearance.description")
         }
       >
-        <ThemeSegmentedControl value={theme} onChange={setTheme} />
+        <ThemeSegmentedControl value={theme} onChange={setTheme} labelFor={t} />
       </SettingsSection>
 
-      <SettingsSection title="Language" description="Choose your app language">
+      <SettingsSection title={t("language.title")} description={t("language.description")}>
         <button
           type="button"
           onClick={() => setLanguageOpen(true)}
           className="flex w-full items-center justify-between gap-3 rounded-2xl py-1.5 text-left"
           aria-haspopup="dialog"
-          aria-label={`App language, ${currentLanguageLabel}`}
+          aria-label={`${t("language.appLanguage")}, ${currentLanguageLabel}`}
         >
-          <span className="text-[1.05rem] font-black text-foreground">App language</span>
+          <span className="text-[1.05rem] font-black text-foreground">{t("language.appLanguage")}</span>
           <span className="flex min-w-0 items-center gap-2">
             <span className="min-w-0 truncate text-sm font-black text-muted-foreground">
               {currentLanguageLabel}
@@ -457,7 +467,7 @@ export default function SettingsPage() {
         </button>
       </SettingsSection>
 
-      <CenteredSelectorOverlay open={languageOpen} onOpenChange={setLanguageOpen} title="Language">
+      <CenteredSelectorOverlay open={languageOpen} onOpenChange={setLanguageOpen} title={t("language.title")}>
         {LANGUAGE_OPTIONS.map((option, index) => {
           const active = option.code === selectedLanguageCode;
           return (
@@ -469,7 +479,7 @@ export default function SettingsPage() {
                 className="flex w-full items-center gap-3.5 px-5 py-3 text-left transition-colors hover:bg-muted-foreground/5"
               >
                 <span className="min-w-0 flex-1 truncate text-lg font-black text-foreground">
-                  {option.label}
+                  {languageLabelFor(option)}
                 </span>
                 {active ? (
                   <Check className="h-[18px] w-[18px] shrink-0 text-accent" />
@@ -483,10 +493,10 @@ export default function SettingsPage() {
       </CenteredSelectorOverlay>
 
       {push.isSupported && (
-        <SettingsSection title="Notifications">
+        <SettingsSection title={t("notifications.title")}>
           <div className="flex items-center justify-between gap-4">
             <div className="min-w-0">
-              <p className="text-[1.05rem] font-black text-foreground">Push notifications</p>
+              <p className="text-[1.05rem] font-black text-foreground">{t("notifications.push")}</p>
               <p className="mt-0.5 text-sm font-extrabold text-muted-foreground">{pushSubtitle}</p>
             </div>
             {push.isLoading ? (
@@ -495,7 +505,7 @@ export default function SettingsPage() {
               <SettingsSwitch
                 checked={push.isSubscribed}
                 disabled={push.permission === "denied"}
-                ariaLabel="Toggle push notifications"
+                ariaLabel={t("notifications.toggle")}
                 onClick={handlePushToggle}
               />
             )}
@@ -503,11 +513,11 @@ export default function SettingsPage() {
         </SettingsSection>
       )}
 
-      <SettingsSection title="Change password" description="Update your account password">
+      <SettingsSection title={t("password.title")} description={t("password.description")}>
         <form onSubmit={handlePasswordSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="currentPassword" className="px-1 text-sm font-extrabold text-muted-foreground">
-              Current password
+              {t("password.current")}
             </Label>
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -517,7 +527,7 @@ export default function SettingsPage() {
                 autoComplete="current-password"
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
-                placeholder="Enter your current password"
+                placeholder={t("password.currentPlaceholder")}
                 className={cn(fieldClass, "pl-10 pr-10")}
                 required
               />
@@ -534,7 +544,7 @@ export default function SettingsPage() {
           </div>
           <div className="space-y-2">
             <Label htmlFor="newPassword" className="px-1 text-sm font-extrabold text-muted-foreground">
-              New password
+              {t("password.new")}
             </Label>
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -544,7 +554,7 @@ export default function SettingsPage() {
                 autoComplete="new-password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="Enter your new password"
+                placeholder={t("password.newPlaceholder")}
                 className={cn(fieldClass, "pl-10 pr-10")}
                 minLength={8}
                 required
@@ -560,12 +570,12 @@ export default function SettingsPage() {
               )}
             </div>
             <p className="px-1 text-xs font-extrabold text-muted-foreground">
-              Password must be at least 8 characters long
+              {t("password.requirement")}
             </p>
           </div>
           <div className="space-y-2">
             <Label htmlFor="confirmNewPassword" className="px-1 text-sm font-extrabold text-muted-foreground">
-              Confirm new password
+              {t("password.confirm")}
             </Label>
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -575,7 +585,7 @@ export default function SettingsPage() {
                 autoComplete="new-password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Confirm your new password"
+                placeholder={t("password.confirmPlaceholder")}
                 className={cn(fieldClass, "pl-10 pr-10")}
                 minLength={8}
                 required
@@ -595,27 +605,27 @@ export default function SettingsPage() {
             {passwordLoading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Changing password...
+                {t("password.changing")}
               </>
             ) : (
-              "Change password"
+              t("password.change")
             )}
           </Button>
         </form>
       </SettingsSection>
 
-      <SettingsSection title="Dashboard access">
+      <SettingsSection title={t("dashboard.title")}>
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0 text-sm">
             <p className="font-black text-foreground">
-              {apiKeyStatus?.enabled ? "API access enabled" : "API access disabled"}
+              {apiKeyStatus?.enabled ? t("dashboard.enabled") : t("dashboard.disabled")}
             </p>
             <p className="text-xs font-extrabold text-muted-foreground">
               {apiKeyStatus?.enabled
                 ? apiKeyStatus.keyPreview
-                  ? `Active key ending in …${apiKeyStatus.keyPreview}`
-                  : "An active key exists"
-                : "No key has been generated"}
+                  ? t("dashboard.activeKeyEnding", { preview: apiKeyStatus.keyPreview })
+                  : t("dashboard.activeKeyExists")
+                : t("dashboard.noKey")}
             </p>
           </div>
           <Button
@@ -628,17 +638,17 @@ export default function SettingsPage() {
             {apiKeyLoading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                {apiKeyStatus?.enabled ? "Revoking..." : "Generating..."}
+                {apiKeyStatus?.enabled ? t("dashboard.revoking") : t("dashboard.generating")}
               </>
             ) : apiKeyStatus?.enabled ? (
               <>
                 <Trash2 className="mr-2 h-4 w-4" />
-                Revoke key
+                {t("dashboard.revokeKey")}
               </>
             ) : (
               <>
                 <Key className="mr-2 h-4 w-4" />
-                Generate key
+                {t("dashboard.generateKey")}
               </>
             )}
           </Button>
@@ -647,7 +657,7 @@ export default function SettingsPage() {
         {generatedApiKey && (
           <div className="space-y-2 rounded-2xl border border-border/60 bg-muted/40 p-3">
             <p className="text-xs font-extrabold text-muted-foreground">
-              Copy your API key now — it won't be shown again.
+              {t("dashboard.copyNow")}
             </p>
             <div className="flex gap-2">
               <Input

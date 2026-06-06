@@ -7,9 +7,9 @@ enum RootFeedTab: Hashable {
     var title: String {
         switch self {
         case .home:
-            return "Home"
+            return L("Home")
         case .floater:
-            return "Floater"
+            return L("Floater")
         }
     }
 

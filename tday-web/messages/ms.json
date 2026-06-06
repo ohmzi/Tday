@@ -319,7 +319,14 @@
     "newList": "Senarai baharu",
     "editList": "Edit senarai",
     "deleteList": "Padam senarai",
-    "done": "Selesai"
+    "done": "Selesai",
+    "previous": "Sebelumnya",
+    "next": "Seterusnya",
+    "searchTasks": "Cari tugasan",
+    "taskCount": "{{count}} tugasan",
+    "tasksDueOn": "Tugasan tamat tempoh {{date}}",
+    "noTasksDueThisDay": "Tiada tugasan tamat tempoh pada hari ini",
+    "selectAnotherDate": "Pilih tarikh lain pada kalendar."
   },
   "today": {
     "saveInstance": "Simpan kejadian",
@@ -437,5 +444,123 @@
     "lightRed": "Merah Muda",
     "brick": "Bata",
     "slate": "Slat"
+  },
+  "home": {
+    "tileScheduled": "Dijadualkan",
+    "tilePriority": "Keutamaan",
+    "tileOverdue": "Tertunggak",
+    "tileAll": "Semua",
+    "tileCompleted": "Selesai",
+    "tileCalendar": "Kalendar",
+    "searchTasksPlaceholder": "Cari tugasan...",
+    "noMatchingTasks": "Tiada tugasan sepadan",
+    "openList": "Buka {{name}}"
+  },
+  "settings": {
+    "themeLight": "Cerah",
+    "themeDark": "Gelap",
+    "themeSystem": "Sistem",
+    "systemDefault": "Lalai sistem",
+    "profile": {
+      "title": "Profil",
+      "description": "Kemas kini nama paparan anda",
+      "name": "Nama",
+      "namePlaceholder": "Masukkan nama anda",
+      "email": "E-mel",
+      "saving": "Menyimpan...",
+      "save": "Simpan profil"
+    },
+    "appearance": {
+      "title": "Penampilan",
+      "description": "Pilih cerah, gelap, atau ikut tetapan sistem anda.",
+      "descriptionSystem": "Ikut peranti anda, cerah, atau gelap. Sedang menggunakan {{theme}}."
+    },
+    "language": {
+      "title": "Bahasa",
+      "description": "Pilih bahasa aplikasi anda",
+      "appLanguage": "Bahasa aplikasi"
+    },
+    "notifications": {
+      "title": "Pemberitahuan",
+      "push": "Pemberitahuan tolak",
+      "description": "Dapatkan pemberitahuan tentang perkara penting, walaupun apl tidak dibuka.",
+      "blocked": "Disekat dalam tetapan pelayar anda. Kemas kini kebenaran pelayar untuk mengaktifkannya.",
+      "toggle": "Togol pemberitahuan tolak"
+    },
+    "password": {
+      "title": "Tukar kata laluan",
+      "description": "Kemas kini kata laluan akaun anda",
+      "current": "Kata laluan semasa",
+      "currentPlaceholder": "Masukkan kata laluan semasa anda",
+      "new": "Kata laluan baharu",
+      "newPlaceholder": "Masukkan kata laluan baharu anda",
+      "requirement": "Kata laluan mestilah sekurang-kurangnya 8 aksara",
+      "confirm": "Sahkan kata laluan baharu",
+      "confirmPlaceholder": "Sahkan kata laluan baharu anda",
+      "changing": "Menukar kata laluan...",
+      "change": "Tukar kata laluan"
+    },
+    "dashboard": {
+      "title": "Akses papan pemuka",
+      "enabled": "Akses API didayakan",
+      "disabled": "Akses API dilumpuhkan",
+      "activeKeyEnding": "Kunci aktif berakhir dengan …{{preview}}",
+      "activeKeyExists": "Kunci aktif wujud",
+      "noKey": "Tiada kunci dijana",
+      "revoking": "Membatalkan...",
+      "generating": "Menjana...",
+      "revokeKey": "Batalkan kunci",
+      "generateKey": "Jana kunci",
+      "copyNow": "Salin kunci API anda sekarang — ia tidak akan ditunjukkan lagi."
+    },
+    "toast": {
+      "apiKeyGenerated": "Kunci API dijana. Salin sekarang — ia tidak akan ditunjukkan lagi.",
+      "apiKeyGenerateFailed": "Gagal menjana kunci API",
+      "apiKeyRevoked": "Kunci API dibatalkan",
+      "apiKeyRevokeFailed": "Gagal membatalkan kunci API",
+      "apiKeyCopied": "Kunci API disalin ke papan keratan",
+      "apiKeyCopyFailed": "Gagal menyalin kunci API",
+      "pushDisabled": "Pemberitahuan tolak dilumpuhkan",
+      "pushEnabled": "Pemberitahuan tolak didayakan",
+      "pushUpdateFailed": "Gagal mengemas kini tetapan pemberitahuan",
+      "noChanges": "Tiada perubahan untuk disimpan",
+      "nameUpdated": "Nama berjaya dikemas kini",
+      "nameUpdateFailed": "Gagal mengemas kini",
+      "passwordTooShort": "Kata laluan baharu mestilah sekurang-kurangnya 8 aksara",
+      "passwordsDoNotMatch": "Kata laluan tidak sepadan",
+      "passwordChanged": "Kata laluan berjaya ditukar",
+      "passwordChangeFailed": "Gagal menukar kata laluan"
+    }
+  },
+  "summary": {
+    "untitledTask": "Tugasan tanpa tajuk",
+    "and": "dan",
+    "windowMorning": "pada waktu pagi",
+    "windowAfternoon": "pada waktu petang",
+    "windowNight": "pada waktu malam",
+    "window_morning": "pagi",
+    "window_afternoon": "petang",
+    "night": "malam",
+    "dueTonight": "tamat tempoh malam ini",
+    "dueTodayWindow": "tamat tempoh hari ini {{window}}",
+    "dueTomorrowWindow": "tamat tempoh esok {{window}}",
+    "dueYesterdayWindow": "tamat tempoh semalam {{window}}",
+    "targetToday": "hari ini",
+    "targetTomorrow": "esok",
+    "targetYesterday": "semalam",
+    "targetOnDate": "pada {{date}}",
+    "dueOnDate": "tamat tempoh {{target}}",
+    "dueOnDateWindow": "tamat tempoh {{target}} {{window}}",
+    "taskPhrasePast": "{{title}}, yang {{due}}",
+    "taskPhrasePresent": "{{title}}, yang {{due}}",
+    "thenSeparator": ", kemudian ",
+    "qualifierBoth": "kedua-duanya",
+    "qualifierAll": "semua",
+    "dayGroupedPast": "{{tasks}}, {{qualifier}} tamat tempoh {{target}}",
+    "dayGroupedPresent": "{{tasks}}, {{qualifier}} tamat tempoh {{target}}",
+    "startWith": "Mulakan dengan {{task}}.",
+    "nextUp": "Seterusnya, {{tasks}}.",
+    "overdueCatchUp": "Anda juga mempunyai {{count}} tugasan tertunggak untuk diselesaikan.",
+    "clearForNow": "Anda sudah selesai buat masa ini. Tiada tugasan memerlukan perhatian dalam paparan ini."
   }
 }

@@ -5,9 +5,10 @@ import android.content.Intent
 import com.ohmz.tday.compose.core.model.TodoItem
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 private val SHARE_DATE_FORMATTER: DateTimeFormatter =
-    DateTimeFormatter.ofPattern("EEE, MMM d 'at' h:mm a")
+    DateTimeFormatter.ofPattern("EEE, MMM d 'at' h:mm a", Locale.getDefault())
         .withZone(ZoneId.systemDefault())
 
 fun shareTask(context: Context, todo: TodoItem) {

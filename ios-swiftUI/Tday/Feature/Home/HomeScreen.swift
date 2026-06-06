@@ -398,8 +398,8 @@ struct HomeScreen: View {
         .createTaskSheet(isPresented: $showingCreateTask) {
             CreateTaskSheet(
                 lists: viewModel.summary.lists,
-                titleText: "New task",
-                submitText: "Create",
+                titleText: L("New task"),
+                submitText: L("Create"),
                 initialPayload: nil,
                 autofocusTitle: true,
                 onParseTaskTitleNlp: { title, dueRef in
@@ -426,8 +426,8 @@ struct HomeScreen: View {
         .createTaskSheet(item: $editingTodo) { todo in
             CreateTaskSheet(
                 lists: viewModel.lists,
-                titleText: "Edit task",
-                submitText: "Save",
+                titleText: L("Edit task"),
+                submitText: L("Save"),
                 initialPayload: CreateTaskPayload(title: todo.title, description: todo.description, priority: todo.priority, due: todo.due, rrule: todo.rrule, listId: todo.listId),
                 onParseTaskTitleNlp: { title, dueRef in
                     await viewModel.parseTaskTitleNlp(text: title, referenceDueEpochMs: dueRef)
@@ -501,8 +501,8 @@ struct HomeScreen: View {
     private var summarySheetContent: some View {
         VStack(spacing: 0) {
             TdaySheetHeader(
-                title: "Summary",
-                closeAccessibilityLabel: "Close",
+                title: L("Summary"),
+                closeAccessibilityLabel: L("Close"),
                 confirmSystemName: nil,
                 onClose: { showingSummary = false }
             )
@@ -736,7 +736,7 @@ private struct HomeTodayTaskRow: View {
 
     private var priorityIcon: String? { priorityIndicatorSymbolName(todo.priority) }
     private var isOverdue: Bool { !todo.completed && (todo.due ?? .distantFuture) < Date() }
-    private var dueText: String? { todo.due?.formatted(date: .omitted, time: .shortened) }
+    private var dueText: String? { todo.due?.formatted(.dateTime.hour().minute().locale(AppLocale.current)) }
     private var subtitleText: String? {
         guard let dueText else { return nil }
         return isOverdue ? "Overdue, \(dueText)" : "Due \(dueText)"
@@ -881,7 +881,7 @@ private struct HomeTodayCard: View {
     let action: () -> Void
 
     private var dateLabel: String {
-        Date.now.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())
+        Date.now.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day().locale(AppLocale.current))
     }
 
     var body: some View {
@@ -946,7 +946,7 @@ private struct HomeCategoryBoard: View {
                     color: Color(hex: 0xD98F4B),
                     icon: "TileScheduled",
                     watermark: "TileScheduled",
-                    title: "Scheduled",
+                    title: L("Scheduled"),
                     count: scheduledCount,
                     action: onOpenScheduled
                 )
@@ -955,7 +955,7 @@ private struct HomeCategoryBoard: View {
                     color: Color(hex: 0xC97880),
                     icon: "TilePriority",
                     watermark: "TilePriority",
-                    title: "Priority",
+                    title: L("Priority"),
                     count: priorityCount,
                     action: onOpenPriority
                 )
@@ -966,7 +966,7 @@ private struct HomeCategoryBoard: View {
                     color: Color(hex: 0xE06F66),
                     icon: "TileOverdue",
                     watermark: "TileOverdue",
-                    title: "Overdue",
+                    title: L("Overdue"),
                     count: overdueCount,
                     action: onOpenOverdue
                 )
@@ -975,7 +975,7 @@ private struct HomeCategoryBoard: View {
                     color: Color(hex: 0x68717A),
                     icon: "TileAll",
                     watermark: "TileAll",
-                    title: "All",
+                    title: L("All"),
                     count: allCount,
                     action: onOpenAll
                 )
@@ -986,7 +986,7 @@ private struct HomeCategoryBoard: View {
                     color: Color(hex: 0x719F84),
                     icon: "TileComplete",
                     watermark: "TileComplete",
-                    title: "Completed",
+                    title: L("Completed"),
                     count: completedCount,
                     action: onOpenCompleted
                 )
@@ -995,7 +995,7 @@ private struct HomeCategoryBoard: View {
                     color: Color(hex: 0x9A89D2),
                     icon: "TileCalendar",
                     watermark: "TileCalendar",
-                    title: "Calendar",
+                    title: L("Calendar"),
                     count: calendarCount,
                     action: onOpenCalendar
                 )
@@ -1239,11 +1239,12 @@ private struct HomeSearchResultsOverlay: View {
         return min(contentHeight, maxResultsHeight)
     }
 
-    private static let dueFormatter: DateFormatter = {
+    private var dueFormatter: DateFormatter {
         let formatter = DateFormatter()
-        formatter.dateFormat = "EEE h:mm a"
+        formatter.locale = AppLocale.current
+        formatter.setLocalizedDateFormatFromTemplate("EEE jmm")
         return formatter
-    }()
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -1272,7 +1273,7 @@ private struct HomeSearchResultsOverlay: View {
                                         .foregroundStyle(colors.onSurface)
                                         .lineLimit(1)
 
-                                    Text(todo.due.map(Self.dueFormatter.string(from:)) ?? "")
+                                    Text(todo.due.map(dueFormatter.string(from:)) ?? "")
                                         .font(.tdayRounded(size: 12, weight: .bold))
                                         .foregroundStyle(colors.onSurfaceVariant)
                                         .lineLimit(1)
@@ -1478,9 +1479,9 @@ struct CreateListSheet: View {
     var body: some View {
         VStack(spacing: 0) {
             TdaySheetHeader(
-                title: "New list",
-                closeAccessibilityLabel: "Close",
-                confirmAccessibilityLabel: "Create list",
+                title: L("New list"),
+                closeAccessibilityLabel: L("Close"),
+                confirmAccessibilityLabel: L("Create list"),
                 isConfirmEnabled: canCreate,
                 onClose: { dismiss() },
                 onConfirm: {

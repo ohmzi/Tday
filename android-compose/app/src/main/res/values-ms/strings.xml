@@ -442,4 +442,36 @@
     <string name="settings_language">Bahasa</string>
     <string name="settings_language_system_default">Lalai sistem</string>
     <string name="settings_language_dialog_title">Bahasa</string>
+
+    <!-- Empty state -->
+    <string name="todos_empty_floater">Tiada tugasan terapung</string>
+
+    <!-- Theme mode -->
+    <string name="settings_theme_system">Sistem</string>
+    <string name="settings_theme_light">Cerah</string>
+    <string name="settings_theme_dark">Gelap</string>
+
+    <!-- Reminder options -->
+    <string name="reminder_option_none">Tiada</string>
+    <string name="reminder_option_at_time">Pada masa tamat tempoh</string>
+    <string name="reminder_option_minutes_5">5 minit sebelum</string>
+    <string name="reminder_option_minutes_10">10 minit sebelum</string>
+    <string name="reminder_option_minutes_15">15 minit sebelum</string>
+    <string name="reminder_option_minutes_30">30 minit sebelum</string>
+    <string name="reminder_option_hours_1">1 jam sebelum</string>
+    <string name="reminder_option_hours_2">2 jam sebelum</string>
+    <string name="reminder_option_days_1">1 hari sebelum</string>
+    <string name="reminder_option_days_2">2 hari sebelum</string>
+
+    <!-- Reminder notification -->
+    <string name="reminder_notification_default_title">Peringatan tugasan</string>
+    <string name="reminder_due_unknown">Tugasan tamat tempoh</string>
+    <string name="reminder_due_now">Tamat tempoh sekarang</string>
+    <string name="reminder_due_less_than_minute">Tamat tempoh dalam kurang seminit</string>
+    <string name="reminder_due_in_minutes_one">Tamat tempoh dalam %1$d minit</string>
+    <string name="reminder_due_in_minutes_other">Tamat tempoh dalam %1$d minit</string>
+    <string name="reminder_due_in_hours_one">Tamat tempoh dalam %1$d jam</string>
+    <string name="reminder_due_in_hours_other">Tamat tempoh dalam %1$d jam</string>
+    <string name="reminder_due_in_days_one">Tamat tempoh dalam %1$d hari</string>
+    <string name="reminder_due_in_days_other">Tamat tempoh dalam %1$d hari</string>
 </resources>

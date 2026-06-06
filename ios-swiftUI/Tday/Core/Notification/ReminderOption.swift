@@ -14,19 +14,19 @@ enum ReminderOption: String, CaseIterable, Codable, Sendable, Identifiable {
     var title: String {
         switch self {
         case .none:
-            return "None"
+            return L("None")
         case .atTime:
-            return "At time of task"
+            return L("At time of task")
         case .fiveMinutes:
-            return "5 minutes before"
+            return L("5 minutes before")
         case .fifteenMinutes:
-            return "15 minutes before"
+            return L("15 minutes before")
         case .oneHour:
-            return "1 hour before"
+            return L("1 hour before")
         case .oneDay:
-            return "1 day before"
+            return L("1 day before")
         case .twoDays:
-            return "2 days before"
+            return L("2 days before")
         }
     }
 

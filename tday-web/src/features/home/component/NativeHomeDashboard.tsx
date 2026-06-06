@@ -1,5 +1,7 @@
 import { useMemo, useState } from "react";
 import { format } from "date-fns";
+import { useTranslation } from "react-i18next";
+import { getDateFnsLocale } from "@/lib/date/dateFnsLocale";
 import {
   Ellipsis,
   ListPlus,
@@ -39,13 +41,18 @@ const topButtonClass =
 
 const todayTileColor = "#6EA8E1";
 
-const homeTileConfig: Partial<Record<NativeRouteId, { color: string; label: string }>> = {
-  scheduled: { color: "#D98F4B", label: "Scheduled" },
-  priority: { color: "#C97880", label: "Priority" },
-  overdue: { color: "#E06F66", label: "Overdue" },
-  all: { color: "#68717A", label: "All" },
-  completed: { color: "#719F84", label: "Completed" },
-  calendar: { color: "#9A89D2", label: "Calendar" },
+// Tile color + the i18n key (in the `home` namespace) for its label. Several of
+// these reuse the same wording as elsewhere in the app, but the home grid uses
+// shorter forms (e.g. "All" rather than "All Tasks"), so they get their own keys.
+const homeTileConfig: Partial<
+  Record<NativeRouteId, { color: string; labelKey: string }>
+> = {
+  scheduled: { color: "#D98F4B", labelKey: "tileScheduled" },
+  priority: { color: "#C97880", labelKey: "tilePriority" },
+  overdue: { color: "#E06F66", labelKey: "tileOverdue" },
+  all: { color: "#68717A", labelKey: "tileAll" },
+  completed: { color: "#719F84", labelKey: "tileCompleted" },
+  calendar: { color: "#9A89D2", labelKey: "tileCalendar" },
 };
 
 const homeTileOrder: NativeRouteId[] = [
@@ -94,6 +101,9 @@ export default function NativeHomeDashboard() {
   const router = useRouter();
   const pathname = usePathname();
   const locale = useLocale();
+  const { t: homeDict } = useTranslation("home");
+  const { t: appDict } = useTranslation("app");
+  const { t: sidebarDict } = useTranslation("sidebar");
   const userTimeZone = useUserTimezone();
   const counts = useNativeRouteCounts();
   const { todos: todayTodos } = useTodo();
@@ -102,7 +112,9 @@ export default function NativeHomeDashboard() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [createListOpen, setCreateListOpen] = useState(false);
-  const titleDate = format(new Date(), "EEE, MMM d");
+  const titleDate = format(new Date(), "EEE, MMM d", {
+    locale: getDateFnsLocale(locale),
+  });
 
   // Per-list active task counts, derived live from the task cache (the server's
   // todoCount can be stale/0). Mirrors native, which shows real counts.
@@ -171,7 +183,7 @@ export default function NativeHomeDashboard() {
                 setSearchOpen((value) => !value);
                 setSearchQuery("");
               }}
-              aria-label="Search"
+              aria-label={appDict("searchTasks")}
             >
               {searchOpen ? <X className="h-6 w-6 stroke-[2.6]" /> : <Search className="h-6 w-6 stroke-[2.6]" />}
             </button>
@@ -179,7 +191,7 @@ export default function NativeHomeDashboard() {
               type="button"
               className={topButtonClass}
               onClick={() => setCreateListOpen(true)}
-              aria-label="Create list"
+              aria-label={appDict("newList")}
             >
               <ListPlus className="h-6 w-6 stroke-[2.6]" />
             </button>
@@ -187,7 +199,7 @@ export default function NativeHomeDashboard() {
               type="button"
               className={topButtonClass}
               onClick={() => router.push("/app/settings")}
-              aria-label="Settings"
+              aria-label={sidebarDict("settings")}
             >
               <Ellipsis className="h-6 w-6 stroke-[2.6]" />
             </button>
@@ -206,7 +218,7 @@ export default function NativeHomeDashboard() {
                 type="search"
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
-                placeholder="Search tasks..."
+                placeholder={homeDict("searchTasksPlaceholder")}
                 className="h-14 w-full rounded-full bg-transparent pl-11 pr-4 text-base font-extrabold outline-none transition-colors md:text-sm"
               />
             </div>
@@ -214,7 +226,7 @@ export default function NativeHomeDashboard() {
               <div className="mt-2 max-h-72 overflow-y-auto">
                 {searchableTodos.length === 0 ? (
                   <p className="px-3 py-4 text-sm font-extrabold text-muted-foreground">
-                    No matching tasks
+                    {homeDict("noMatchingTasks")}
                   </p>
                 ) : (
                   searchableTodos.map((todo) => (
@@ -274,6 +286,7 @@ export default function NativeHomeDashboard() {
             const active = isNativeRouteActive(pathname, route);
             const count = counts[route.id];
             const tile = homeTileConfig[route.id];
+            const tileLabel = tile ? homeDict(tile.labelKey) : route.label;
 
             return (
               <Link
@@ -300,7 +313,7 @@ export default function NativeHomeDashboard() {
                   </div>
                   <div className="min-w-0">
                     <p className="truncate text-[1.28rem] font-black leading-6 tracking-tight">
-                      {tile?.label ?? route.label}
+                      {tileLabel}
                     </p>
                   </div>
                 </div>
@@ -312,7 +325,7 @@ export default function NativeHomeDashboard() {
         {lists.length > 0 && (
           <section className="space-y-2 pb-2 pt-12 sm:pt-0">
             <h2 className="px-1 text-[1.75rem] font-black leading-8 text-foreground">
-              My Lists
+              {appDict("myFloaterLists")}
             </h2>
             <div className="space-y-2">
               {lists.map((list) => {
@@ -323,7 +336,7 @@ export default function NativeHomeDashboard() {
                   <Link
                     key={list.id}
                     href={`/app/list/${list.id}`}
-                    aria-label={`Open ${formatListName(list.name)}`}
+                    aria-label={homeDict("openList", { name: formatListName(list.name) })}
                     className="relative flex h-[70px] items-center gap-3 overflow-hidden rounded-[26px] px-5 text-white shadow-[0_14px_30px_-18px_rgba(60,70,90,0.45)] transition-transform duration-200 hover:-translate-y-0.5 active:translate-y-0.5"
                     style={{
                       background: `color-mix(in srgb, hsl(var(--card-muted)) 34%, ${accent} 66%)`,

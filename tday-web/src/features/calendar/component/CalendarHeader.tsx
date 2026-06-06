@@ -1,10 +1,13 @@
 import { HeaderProps } from "react-big-calendar";
 import { cn } from "@/lib/utils";
 import { format, isToday } from "date-fns";
+import i18n from "@/i18n";
+import { getDateFnsLocale } from "@/lib/date/dateFnsLocale";
 
 /** Month view — day name only (no date number) */
 export default function CalendarHeader({ date }: HeaderProps) {
   const today = isToday(date);
+  const locale = getDateFnsLocale(i18n.language);
 
   return (
     <div
@@ -14,10 +17,10 @@ export default function CalendarHeader({ date }: HeaderProps) {
       )}
     >
       <span className="hidden lg:inline text-sm font-medium text-foreground">
-        {format(date, "EEEE")}
+        {format(date, "EEEE", { locale })}
       </span>
       <span className="lg:hidden text-xs sm:text-sm font-medium text-foreground">
-        {format(date, "EEE")}
+        {format(date, "EEE", { locale })}
       </span>
     </div>
   );
@@ -26,6 +29,7 @@ export default function CalendarHeader({ date }: HeaderProps) {
 /** Week / Day view — day name + circled date number */
 export function TimeViewHeader({ date }: HeaderProps) {
   const today = isToday(date);
+  const locale = getDateFnsLocale(i18n.language);
 
   return (
     <div
@@ -35,10 +39,10 @@ export function TimeViewHeader({ date }: HeaderProps) {
       )}
     >
       <span className="hidden lg:inline text-xs font-medium uppercase tracking-wide text-muted-foreground">
-        {format(date, "EEEE")}
+        {format(date, "EEEE", { locale })}
       </span>
       <span className="lg:hidden text-[0.65rem] sm:text-xs font-medium uppercase tracking-wide text-muted-foreground">
-        {format(date, "EEE")}
+        {format(date, "EEE", { locale })}
       </span>
 
       <span

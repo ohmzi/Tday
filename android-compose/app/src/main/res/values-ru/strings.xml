@@ -442,4 +442,36 @@
     <string name="settings_language">Язык</string>
     <string name="settings_language_system_default">Системный по умолчанию</string>
     <string name="settings_language_dialog_title">Язык</string>
+
+    <!-- Empty state -->
+    <string name="todos_empty_floater">Нет плавающих задач</string>
+
+    <!-- Theme mode -->
+    <string name="settings_theme_system">Системная</string>
+    <string name="settings_theme_light">Светлая</string>
+    <string name="settings_theme_dark">Тёмная</string>
+
+    <!-- Reminder options -->
+    <string name="reminder_option_none">Нет</string>
+    <string name="reminder_option_at_time">В момент срока</string>
+    <string name="reminder_option_minutes_5">За 5 минут</string>
+    <string name="reminder_option_minutes_10">За 10 минут</string>
+    <string name="reminder_option_minutes_15">За 15 минут</string>
+    <string name="reminder_option_minutes_30">За 30 минут</string>
+    <string name="reminder_option_hours_1">За 1 час</string>
+    <string name="reminder_option_hours_2">За 2 часа</string>
+    <string name="reminder_option_days_1">За 1 день</string>
+    <string name="reminder_option_days_2">За 2 дня</string>
+
+    <!-- Reminder notification -->
+    <string name="reminder_notification_default_title">Напоминание о задаче</string>
+    <string name="reminder_due_unknown">Срок задачи наступил</string>
+    <string name="reminder_due_now">Срок сейчас</string>
+    <string name="reminder_due_less_than_minute">Срок менее чем через минуту</string>
+    <string name="reminder_due_in_minutes_one">Срок через %1$d минуту</string>
+    <string name="reminder_due_in_minutes_other">Срок через %1$d минут</string>
+    <string name="reminder_due_in_hours_one">Срок через %1$d час</string>
+    <string name="reminder_due_in_hours_other">Срок через %1$d часов</string>
+    <string name="reminder_due_in_days_one">Срок через %1$d день</string>
+    <string name="reminder_due_in_days_other">Срок через %1$d дней</string>
 </resources>

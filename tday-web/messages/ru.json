@@ -319,7 +319,14 @@
     "newList": "Новый список",
     "editList": "Изменить список",
     "deleteList": "Удалить список",
-    "done": "Готово"
+    "done": "Готово",
+    "previous": "Назад",
+    "next": "Далее",
+    "searchTasks": "Поиск задач",
+    "taskCount": "Задач: {{count}}",
+    "tasksDueOn": "Задачи на {{date}}",
+    "noTasksDueThisDay": "На этот день нет задач",
+    "selectAnotherDate": "Выберите другую дату в календаре."
   },
   "today": {
     "saveInstance": "Сохранить экземпляр",
@@ -437,5 +444,123 @@
     "lightRed": "Светло-красный",
     "brick": "Кирпичный",
     "slate": "Грифельный"
+  },
+  "home": {
+    "tileScheduled": "Запланировано",
+    "tilePriority": "Приоритет",
+    "tileOverdue": "Просрочено",
+    "tileAll": "Все",
+    "tileCompleted": "Завершено",
+    "tileCalendar": "Календарь",
+    "searchTasksPlaceholder": "Поиск задач...",
+    "noMatchingTasks": "Нет подходящих задач",
+    "openList": "Открыть {{name}}"
+  },
+  "settings": {
+    "themeLight": "Светлая",
+    "themeDark": "Тёмная",
+    "themeSystem": "Система",
+    "systemDefault": "Системный по умолчанию",
+    "profile": {
+      "title": "Профиль",
+      "description": "Обновите отображаемое имя",
+      "name": "Имя",
+      "namePlaceholder": "Введите имя",
+      "email": "Эл. почта",
+      "saving": "Сохранение...",
+      "save": "Сохранить профиль"
+    },
+    "appearance": {
+      "title": "Внешний вид",
+      "description": "Выберите светлую, тёмную тему или следуйте настройкам системы.",
+      "descriptionSystem": "Следуйте устройству, светлой или тёмной теме. Сейчас: {{theme}}."
+    },
+    "language": {
+      "title": "Язык",
+      "description": "Выберите язык приложения",
+      "appLanguage": "Язык приложения"
+    },
+    "notifications": {
+      "title": "Уведомления",
+      "push": "Push-уведомления",
+      "description": "Получайте уведомления о важном, даже когда приложение закрыто.",
+      "blocked": "Заблокировано в настройках браузера. Обновите разрешения браузера, чтобы включить их.",
+      "toggle": "Переключить push-уведомления"
+    },
+    "password": {
+      "title": "Изменить пароль",
+      "description": "Обновите пароль вашей учётной записи",
+      "current": "Текущий пароль",
+      "currentPlaceholder": "Введите текущий пароль",
+      "new": "Новый пароль",
+      "newPlaceholder": "Введите новый пароль",
+      "requirement": "Пароль должен содержать не менее 8 символов",
+      "confirm": "Подтвердите новый пароль",
+      "confirmPlaceholder": "Подтвердите новый пароль",
+      "changing": "Изменение пароля...",
+      "change": "Изменить пароль"
+    },
+    "dashboard": {
+      "title": "Доступ к панели",
+      "enabled": "Доступ к API включён",
+      "disabled": "Доступ к API отключён",
+      "activeKeyEnding": "Активный ключ, оканчивающийся на …{{preview}}",
+      "activeKeyExists": "Существует активный ключ",
+      "noKey": "Ключ не был сгенерирован",
+      "revoking": "Отзыв...",
+      "generating": "Генерация...",
+      "revokeKey": "Отозвать ключ",
+      "generateKey": "Сгенерировать ключ",
+      "copyNow": "Скопируйте ключ API сейчас — он больше не будет показан."
+    },
+    "toast": {
+      "apiKeyGenerated": "Ключ API сгенерирован. Скопируйте его сейчас — он больше не будет показан.",
+      "apiKeyGenerateFailed": "Не удалось сгенерировать ключ API",
+      "apiKeyRevoked": "Ключ API отозван",
+      "apiKeyRevokeFailed": "Не удалось отозвать ключ API",
+      "apiKeyCopied": "Ключ API скопирован в буфер обмена",
+      "apiKeyCopyFailed": "Не удалось скопировать ключ API",
+      "pushDisabled": "Push-уведомления отключены",
+      "pushEnabled": "Push-уведомления включены",
+      "pushUpdateFailed": "Не удалось обновить настройки уведомлений",
+      "noChanges": "Нет изменений для сохранения",
+      "nameUpdated": "Имя успешно обновлено",
+      "nameUpdateFailed": "Не удалось обновить",
+      "passwordTooShort": "Новый пароль должен содержать не менее 8 символов",
+      "passwordsDoNotMatch": "Пароли не совпадают",
+      "passwordChanged": "Пароль успешно изменён",
+      "passwordChangeFailed": "Не удалось изменить пароль"
+    }
+  },
+  "summary": {
+    "untitledTask": "Задача без названия",
+    "and": "и",
+    "windowMorning": "утром",
+    "windowAfternoon": "днём",
+    "windowNight": "ночью",
+    "window_morning": "утро",
+    "window_afternoon": "день",
+    "night": "ночь",
+    "dueTonight": "со сроком сегодня вечером",
+    "dueTodayWindow": "со сроком сегодня {{window}}",
+    "dueTomorrowWindow": "со сроком завтра {{window}}",
+    "dueYesterdayWindow": "со сроком вчера {{window}}",
+    "targetToday": "сегодня",
+    "targetTomorrow": "завтра",
+    "targetYesterday": "вчера",
+    "targetOnDate": "{{date}}",
+    "dueOnDate": "со сроком {{target}}",
+    "dueOnDateWindow": "со сроком {{target}} {{window}}",
+    "taskPhrasePast": "{{title}}, {{due}}",
+    "taskPhrasePresent": "{{title}}, {{due}}",
+    "thenSeparator": ", затем ",
+    "qualifierBoth": "обе",
+    "qualifierAll": "все",
+    "dayGroupedPast": "{{tasks}}, {{qualifier}} со сроком {{target}}",
+    "dayGroupedPresent": "{{tasks}}, {{qualifier}} со сроком {{target}}",
+    "startWith": "Начните с {{task}}.",
+    "nextUp": "Далее — {{tasks}}.",
+    "overdueCatchUp": "Также у вас есть просроченные задачи ({{count}}), которые нужно наверстать.",
+    "clearForNow": "Сейчас всё в порядке. В этом разделе нет задач, требующих внимания."
   }
 }

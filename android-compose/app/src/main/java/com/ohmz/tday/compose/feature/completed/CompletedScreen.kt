@@ -986,6 +986,8 @@ private fun buildCompletedTimelineSections(
 }
 
 private val COMPLETED_TITLE_COLOR = TdayCompletedTitleAccent
-private val COMPLETED_SECTION_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("EEEE, MMM d")
-private val COMPLETED_ROW_TIME_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("h:mm a")
+private val COMPLETED_SECTION_FORMATTER: DateTimeFormatter =
+    DateTimeFormatter.ofPattern("EEEE, MMM d", Locale.getDefault())
+private val COMPLETED_ROW_TIME_FORMATTER: DateTimeFormatter =
+    DateTimeFormatter.ofPattern("h:mm a", Locale.getDefault())
 private const val COMPLETED_TITLE_COLLAPSE_DISTANCE_DP = 180f
