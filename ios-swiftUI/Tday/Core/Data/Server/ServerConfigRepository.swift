@@ -192,8 +192,18 @@ final class ServerConfigRepository {
 
     private func probe(rawURL: String) async throws -> (serverURL: URL, response: MobileProbeResponse) {
         let normalizedURL = try normalize(rawURL: rawURL)
-        let response = try await api.probeServer(url: normalizedURL.appending(path: "api/mobile/probe"))
-        return (normalizedURL, response)
+        do {
+            let response = try await api.probeServer(url: normalizedURL.appending(path: "api/mobile/probe"))
+            return (normalizedURL, response)
+        } catch {
+            // The TLS pinning check cancels the request (URLError.cancelled) when the
+            // server's certificate no longer matches the pinned fingerprint. Translate
+            // that into a clear, actionable error instead of a bare "cancelled".
+            if let host = normalizedURL.host, api.consumeTrustFailure(forHost: host) {
+                throw ServerProbeError.certificateChanged
+            }
+            throw error
+        }
     }
 
     private func isLocalAddress(_ host: String) -> Bool {
