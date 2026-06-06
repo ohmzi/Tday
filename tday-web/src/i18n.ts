@@ -1,13 +1,12 @@
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
-import LanguageDetector from "i18next-browser-languagedetector";
 import Backend from "i18next-http-backend";
 
 import en from "../messages/en.json";
 
-export const SUPPORTED_LOCALES = [
-  "en", "zh", "de", "ja", "ar", "ru", "es", "fr", "ms", "it", "pt",
-] as const;
+// The app ships English-only. Keeping a single-locale list means the locale
+// router segment and any stray `/xx/...` URL resolve to English.
+export const SUPPORTED_LOCALES = ["en"] as const;
 export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number];
 export const DEFAULT_LOCALE: SupportedLocale = "en";
 
@@ -52,7 +51,6 @@ function parseTranslationNamespaces(
 
 i18n
   .use(Backend)
-  .use(LanguageDetector)
   .use(initReactI18next)
   .init({
     resources: {
@@ -61,6 +59,9 @@ i18n
         ...createNamespacedResources(en),
       },
     },
+    // English-only: pin the language and skip any locale detection so
+    // localStorage/navigator/path can never switch the app away from English.
+    lng: DEFAULT_LOCALE,
     partialBundledLanguages: true,
     fallbackLng: DEFAULT_LOCALE,
     supportedLngs: SUPPORTED_LOCALES as unknown as string[],
@@ -76,10 +77,6 @@ i18n
       ) => parseTranslationNamespaces(data, namespaces),
     },
     interpolation: { escapeValue: false },
-    detection: {
-      order: ["path", "localStorage", "navigator"],
-      lookupFromPathIndex: 0,
-    },
   });
 
 export default i18n;
