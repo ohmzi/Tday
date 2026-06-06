@@ -224,6 +224,7 @@ class CaptchaHardeningTest {
             lname: String?,
             username: String,
             password: String,
+            securityAnswers: List<com.ohmz.tday.models.request.SecurityAnswerInput>,
         ): Either<com.ohmz.tday.domain.AppError, RegisterResult> {
             registerCalls += 1
             return unsupported()

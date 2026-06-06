@@ -80,6 +80,8 @@ import com.ohmz.tday.compose.core.ui.TdayToastHost
 import com.ohmz.tday.compose.feature.app.AppUiState
 import com.ohmz.tday.compose.feature.app.AppViewModel
 import com.ohmz.tday.compose.feature.auth.AuthViewModel
+import com.ohmz.tday.compose.feature.auth.ForgotPasswordScreen
+import com.ohmz.tday.compose.feature.auth.SetSecurityQuestionsGate
 import com.ohmz.tday.compose.feature.calendar.CalendarScreen
 import com.ohmz.tday.compose.feature.calendar.CalendarViewModel
 import com.ohmz.tday.compose.feature.car.CarTaskMode
@@ -350,6 +352,24 @@ fun TdayApp(
                 }
 
                 composable(
+                    route = AppRoute.ForgotPassword.route,
+                    enterTransition = { settingsEnterTransition() },
+                    exitTransition = { settingsExitTransition() },
+                    popEnterTransition = { settingsEnterTransition() },
+                    popExitTransition = { settingsExitTransition() },
+                ) {
+                    val passwordResetMessage =
+                        stringResource(R.string.forgot_password_reset_success)
+                    ForgotPasswordScreen(
+                        onBackToLogin = { navController.popBackStack() },
+                        onResetComplete = {
+                            navController.popBackStack()
+                            appViewModel.snackbarManager.showSuccess(passwordResetMessage)
+                        },
+                    )
+                }
+
+                composable(
                     route = AppRoute.Home.route,
                     deepLinks = listOf(navDeepLink { uriPattern = "tday://home" }),
                 ) {
@@ -597,16 +617,23 @@ fun TdayApp(
                                                 appViewModel.refreshSession()
                                             }
                                         },
-                                        onRegister = { firstName, username, password, onSuccess ->
+                                        onRegister = { firstName, username, password, securityAnswers, onSuccess ->
                                             authViewModel.register(
                                                 firstName = firstName,
                                                 lastName = "",
                                                 username = username,
                                                 password = password,
+                                                securityAnswers = securityAnswers,
                                                 credentialContext = context,
                                             ) {
                                                 onSuccess()
                                                 appViewModel.refreshSession()
+                                            }
+                                        },
+                                        onFetchSecurityQuestions = authViewModel::fetchAllSecurityQuestions,
+                                        onForgotPassword = {
+                                            navController.navigate(AppRoute.ForgotPassword.route) {
+                                                launchSingleTop = true
                                             }
                                         },
                                         onRequestSavedCredential = authViewModel::requestSavedCredential,
@@ -632,6 +659,25 @@ fun TdayApp(
                                 requiredUpdateRelease = appUiState.requiredUpdateRelease,
                                 isCheckingRelease = appUiState.isCheckingUpdateRelease,
                                 onRetry = { appViewModel.recheckVersion() },
+                            )
+                        }
+
+                        if (appUiState.authenticated &&
+                            !appUiState.isLocalMode &&
+                            appUiState.user?.requireSecurityQuestions == true
+                        ) {
+                            SetSecurityQuestionsGate(
+                                onFetchQuestions = authViewModel::fetchAllSecurityQuestions,
+                                onSubmit = { answers, onSuccess, onError ->
+                                    authViewModel.submitSecurityQuestions(
+                                        answers = answers,
+                                        onSuccess = {
+                                            onSuccess()
+                                            appViewModel.refreshSession()
+                                        },
+                                        onError = onError,
+                                    )
+                                },
                             )
                         }
                     }

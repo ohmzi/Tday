@@ -81,12 +81,18 @@ fun Route.registerRoutes() {
                 return@post
             }
 
+            val securityError = SecurityQuestions.validateSelection(body.securityAnswers)
+            if (securityError != null) {
+                call.respond(HttpStatusCode.BadRequest, mapOf("message" to securityError))
+                return@post
+            }
+
             if (userService.usernameExists(normalizedUsername)) {
                 call.respond(HttpStatusCode.BadRequest, mapOf("message" to "this username is taken"))
                 return@post
             }
 
-            val result = userService.register(body.fname, body.lname, normalizedUsername, body.password)
+            val result = userService.register(body.fname, body.lname, normalizedUsername, body.password, body.securityAnswers.orEmpty())
             result.fold(
                 { error ->
                     call.respond(HttpStatusCode.InternalServerError, mapOf("message" to error.message))

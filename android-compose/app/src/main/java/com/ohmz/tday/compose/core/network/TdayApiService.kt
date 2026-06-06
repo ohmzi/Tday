@@ -40,6 +40,11 @@ import com.ohmz.tday.compose.core.model.PreferencesResponse
 import com.ohmz.tday.compose.core.model.RegisterRequest
 import com.ohmz.tday.compose.core.model.RegisterResponse
 import com.ohmz.tday.compose.core.model.ReorderItemRequest
+import com.ohmz.tday.compose.core.model.RequestAdminResetRequest
+import com.ohmz.tday.compose.core.model.SecurityQuestionStatusResponse
+import com.ohmz.tday.compose.core.model.SecurityQuestionsResponse
+import com.ohmz.tday.compose.core.model.SelfServiceResetRequest
+import com.ohmz.tday.compose.core.model.SetSecurityQuestionsRequest
 import com.ohmz.tday.compose.core.model.TodoCompleteRequest
 import com.ohmz.tday.compose.core.model.TodoInstanceDeleteRequest
 import com.ohmz.tday.compose.core.model.TodoInstanceUpdateRequest
@@ -103,6 +108,32 @@ interface TdayApiService {
     suspend fun register(
         @Body payload: RegisterRequest,
     ): Response<RegisterResponse>
+
+    @GET("/api/auth/security-questions/all")
+    suspend fun getAllSecurityQuestions(): Response<SecurityQuestionsResponse>
+
+    @GET("/api/auth/security-questions")
+    suspend fun getSecurityQuestionsForUsername(
+        @Query("username") username: String,
+    ): Response<SecurityQuestionsResponse>
+
+    @POST("/api/auth/reset-password")
+    suspend fun resetPassword(
+        @Body payload: SelfServiceResetRequest,
+    ): Response<MessageResponse>
+
+    @POST("/api/auth/request-admin-reset")
+    suspend fun requestAdminReset(
+        @Body payload: RequestAdminResetRequest,
+    ): Response<MessageResponse>
+
+    @GET("/api/user/security-questions")
+    suspend fun getUserSecurityQuestionStatus(): Response<SecurityQuestionStatusResponse>
+
+    @POST("/api/user/security-questions")
+    suspend fun setUserSecurityQuestions(
+        @Body payload: SetSecurityQuestionsRequest,
+    ): Response<MessageResponse>
 
     @GET("/api/todo")
     suspend fun getTodos(

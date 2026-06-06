@@ -78,6 +78,8 @@
 		9146B23E1A1F6A3A71DE7A5B /* Colors.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC2B21F3E1A43EAEECA86EE8 /* Colors.swift */; };
 		91660A57CFA826E39338BD33 /* CalendarScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25A90A443440754855071C9D /* CalendarScreen.swift */; };
 		957E83469CA6C09174B1B374 /* LoginCredentialCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5C31F2E171A73F2774E89A1 /* LoginCredentialCoordinator.swift */; };
+		C0DE000000000000000000A1 /* ForgotPasswordView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0DE000000000000000000A0 /* ForgotPasswordView.swift */; };
+		C0DE000000000000000000B1 /* SecurityQuestionsGateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0DE000000000000000000B0 /* SecurityQuestionsGateView.swift */; };
 		9D9B4F301D7261C3F4F95B6D /* HomeViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42749601AFF38EAE17BD3213 /* HomeViewModel.swift */; };
 		A03B553E316CEEDFAB8EBA69 /* OfflineSyncModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB49A43AFEE66EEDB3315F86 /* OfflineSyncModels.swift */; };
 		A316B4B3BB1AEA5FDF9998DF /* AppRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2BFFE8167D3639FF09C033A2 /* AppRootView.swift */; };
@@ -199,6 +201,8 @@
 		9BA781886DCE6963CA364F6F /* CompletedScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompletedScreen.swift; sourceTree = "<group>"; };
 		9CC7B17CE45842F8DF7D522B /* RealtimeClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RealtimeClient.swift; sourceTree = "<group>"; };
 		A5C31F2E171A73F2774E89A1 /* LoginCredentialCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginCredentialCoordinator.swift; sourceTree = "<group>"; };
+		C0DE000000000000000000A0 /* ForgotPasswordView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForgotPasswordView.swift; sourceTree = "<group>"; };
+		C0DE000000000000000000B0 /* SecurityQuestionsGateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecurityQuestionsGateView.swift; sourceTree = "<group>"; };
 		A64D35F145CD4F1CE4B6C558 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
 		AB49A43AFEE66EEDB3315F86 /* OfflineSyncModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineSyncModels.swift; sourceTree = "<group>"; };
 		AC2B21F3E1A43EAEECA86EE8 /* Colors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Colors.swift; sourceTree = "<group>"; };
@@ -368,6 +372,8 @@
 			children = (
 				1DABE0225668571D48D55B96 /* AuthViewModel.swift */,
 				A5C31F2E171A73F2774E89A1 /* LoginCredentialCoordinator.swift */,
+				C0DE000000000000000000A0 /* ForgotPasswordView.swift */,
+				C0DE000000000000000000B0 /* SecurityQuestionsGateView.swift */,
 			);
 			path = Auth;
 			sourceTree = "<group>";
@@ -864,6 +870,8 @@
 				DEA51B1F722372A094C125F9 /* ListRepository.swift in Sources */,
 				F1A2B3C4D5E6F708192A3B4D /* FloaterListRepository.swift in Sources */,
 				957E83469CA6C09174B1B374 /* LoginCredentialCoordinator.swift in Sources */,
+				C0DE000000000000000000A1 /* ForgotPasswordView.swift in Sources */,
+				C0DE000000000000000000B1 /* SecurityQuestionsGateView.swift in Sources */,
 				1618367E71392D77BC8C61B6 /* NavigationBackHistoryTitle.swift in Sources */,
 				C013C84CCBF84A849CE93963 /* NetworkConfiguration.swift in Sources */,
 				4E4F544946444545504C3031 /* NotificationDeepLinkRouter.swift in Sources */,

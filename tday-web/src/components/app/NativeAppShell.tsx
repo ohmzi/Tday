@@ -6,6 +6,7 @@ import RootDock from "./RootDock";
 import TaskFloatingActionButton from "./TaskFloatingActionButton";
 import InstallPromptBanner from "./InstallPromptBanner";
 import ForcePasswordChangeGate from "./ForcePasswordChangeGate";
+import SetSecurityQuestionsGate from "./SetSecurityQuestionsGate";
 import { useNativeRouteCounts } from "./nativeRouteConfig";
 import { usePrefetchRoutes } from "@/hooks/usePrefetchRoutes";
 
@@ -31,6 +32,7 @@ export default function NativeAppShell({
       {showTaskFab && !moreOpen && <TaskFloatingActionButton />}
       <InstallPromptBanner />
       <ForcePasswordChangeGate />
+      <SetSecurityQuestionsGate />
       <MoreNavigationSheet open={moreOpen} onOpenChange={setMoreOpen} counts={counts} />
     </div>
   );

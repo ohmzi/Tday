@@ -3,7 +3,12 @@ import Foundation
 protocol AuthRepositoryServicing: AnyObject {
     func restoreSession() async -> SessionUser?
     func login(username: String, password: String) async -> AuthResult
-    func register(firstName: String, lastName: String, username: String, password: String) async -> RegisterOutcome
+    func register(firstName: String, lastName: String, username: String, password: String, securityAnswers: [SecurityAnswerInput]) async -> RegisterOutcome
+    func fetchAllSecurityQuestions() async throws -> [SecurityQuestion]
+    func fetchQuestionsForUsername(_ username: String) async throws -> [SecurityQuestion]
+    func resetPassword(username: String, answers: [SecurityAnswerInput], newPassword: String) async -> PasswordResetResult
+    func requestAdminReset(_ username: String) async -> Bool
+    func setSecurityQuestions(_ answers: [SecurityAnswerInput]) async -> Bool
     func logout() async
     func syncTimezone() async
     @MainActor func clearSessionOnly()
@@ -150,14 +155,15 @@ final class AuthRepository: AuthRepositoryServicing {
         }
     }
 
-    func register(firstName: String, lastName: String, username: String, password: String) async -> RegisterOutcome {
+    func register(firstName: String, lastName: String, username: String, password: String, securityAnswers: [SecurityAnswerInput]) async -> RegisterOutcome {
         do {
             let response = try await api.register(
                 payload: RegisterRequest(
                     fname: firstName.trimmingCharacters(in: .whitespacesAndNewlines),
                     lname: lastName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : lastName.trimmingCharacters(in: .whitespacesAndNewlines),
                     username: username.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(),
-                    password: password
+                    password: password,
+                    securityAnswers: securityAnswers
                 )
             )
             return RegisterOutcome(
@@ -167,6 +173,67 @@ final class AuthRepository: AuthRepositoryServicing {
             )
         } catch {
             return RegisterOutcome(success: false, requiresApproval: false, message: error.localizedDescription)
+        }
+    }
+
+    func fetchAllSecurityQuestions() async throws -> [SecurityQuestion] {
+        try await api.getAllSecurityQuestions().questions
+    }
+
+    func fetchQuestionsForUsername(_ username: String) async throws -> [SecurityQuestion] {
+        let normalized = username.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return try await api.getSecurityQuestions(username: normalized).questions
+    }
+
+    func resetPassword(username: String, answers: [SecurityAnswerInput], newPassword: String) async -> PasswordResetResult {
+        do {
+            _ = try await api.resetPassword(
+                payload: SelfServiceResetRequest(
+                    username: username.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(),
+                    answers: answers,
+                    newPassword: newPassword
+                )
+            )
+            return .success
+        } catch let apiError as APIError {
+            switch apiError.reason {
+            case "reset_locked":
+                return .locked(apiError.message)
+            case "reset_failed":
+                return .failed(apiError.message)
+            default:
+                if isLikelyConnectivityIssue(apiError) {
+                    return .error(Self.serverUnreachableMessage)
+                }
+                return .error(apiError.message)
+            }
+        } catch {
+            if isLikelyConnectivityIssue(error) {
+                return .error(Self.serverUnreachableMessage)
+            }
+            return .error(error.localizedDescription)
+        }
+    }
+
+    func requestAdminReset(_ username: String) async -> Bool {
+        do {
+            _ = try await api.requestAdminReset(
+                payload: RequestAdminResetRequest(
+                    username: username.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                )
+            )
+            return true
+        } catch {
+            return false
+        }
+    }
+
+    func setSecurityQuestions(_ answers: [SecurityAnswerInput]) async -> Bool {
+        do {
+            _ = try await api.setUserSecurityQuestions(payload: SetSecurityQuestionsRequest(answers: answers))
+            return true
+        } catch {
+            return false
         }
     }
 

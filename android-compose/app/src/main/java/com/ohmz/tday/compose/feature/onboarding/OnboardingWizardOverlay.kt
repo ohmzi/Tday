@@ -39,12 +39,18 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextFieldColors
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -85,6 +91,8 @@ import androidx.compose.ui.unit.dp
 import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.data.auth.LoginCredentialSource
 import com.ohmz.tday.compose.core.data.auth.SystemCredential
+import com.ohmz.tday.compose.core.model.SecurityAnswerInput
+import com.ohmz.tday.compose.core.model.SecurityQuestion
 import com.ohmz.tday.compose.feature.auth.AuthUiState
 import com.ohmz.tday.compose.feature.auth.LoginCredentialCoordinator
 import com.ohmz.tday.compose.ui.theme.TdayTitleIconDayAccent
@@ -108,6 +116,7 @@ private enum class WizardViewState {
 private enum class AuthPanelMode {
     SIGN_IN,
     CREATE_ACCOUNT,
+    CREATE_ACCOUNT_SECURITY,
 }
 
 @OptIn(ExperimentalComposeUiApi::class)
@@ -125,12 +134,15 @@ fun OnboardingWizardOverlay(
         firstName: String,
         username: String,
         password: String,
+        securityAnswers: List<SecurityAnswerInput>,
         onSuccess: () -> Unit,
     ) -> Unit,
+    onFetchSecurityQuestions: suspend () -> List<SecurityQuestion>,
     onRequestSavedCredential: suspend (Context, String?) -> SystemCredential?,
     onRequestSavedServerUrl: suspend (Context) -> String?,
     onSaveServerUrlCredential: suspend (Context, String) -> Unit,
     onUseLocalMode: () -> Unit,
+    onForgotPassword: () -> Unit,
     onClearAuthStatus: () -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
@@ -150,6 +162,11 @@ fun OnboardingWizardOverlay(
     var firstName by rememberSaveable { mutableStateOf("") }
     var registerPassword by rememberSaveable { mutableStateOf("") }
     var confirmRegisterPassword by rememberSaveable { mutableStateOf("") }
+    var securityQuestions by remember { mutableStateOf<List<SecurityQuestion>>(emptyList()) }
+    var securityQuestionId1 by rememberSaveable { mutableStateOf<Int?>(null) }
+    var securityQuestionId2 by rememberSaveable { mutableStateOf<Int?>(null) }
+    var securityAnswer1 by rememberSaveable { mutableStateOf("") }
+    var securityAnswer2 by rememberSaveable { mutableStateOf("") }
     var authMode by rememberSaveable { mutableStateOf(AuthPanelMode.SIGN_IN) }
     var localAuthError by rememberSaveable { mutableStateOf<String?>(null) }
     var serverError by rememberSaveable { mutableStateOf<String?>(null) }
@@ -175,6 +192,10 @@ fun OnboardingWizardOverlay(
     val passwordUppercaseError = stringResource(R.string.onboarding_validation_password_uppercase)
     val passwordSpecialError = stringResource(R.string.onboarding_validation_password_special)
     val passwordMismatchError = stringResource(R.string.onboarding_validation_password_mismatch)
+    val securityQuestionsDistinctError =
+        stringResource(R.string.security_questions_distinct_required)
+    val securityAnswersRequiredError =
+        stringResource(R.string.security_questions_answers_required)
 
     val finishServerConnection: (String) -> Unit = { savedServerUrl ->
         coroutineScope.launch {
@@ -272,18 +293,57 @@ fun OnboardingWizardOverlay(
         keyboardController?.hide()
         focusManager.clearFocus(force = true)
         localAuthError = null
+        onClearAuthStatus()
+        // Advance to the security-questions sub-step; the account is only created
+        // once two distinct questions are chosen and answered.
+        authMode = AuthPanelMode.CREATE_ACCOUNT_SECURITY
+        if (securityQuestions.isEmpty()) {
+            coroutineScope.launch {
+                val fetched = onFetchSecurityQuestions()
+                securityQuestions = fetched
+                if (securityQuestionId1 == null) securityQuestionId1 = fetched.getOrNull(0)?.id
+                if (securityQuestionId2 == null) securityQuestionId2 = fetched.getOrNull(1)?.id
+            }
+        }
+    }
+
+    val submitSecurityAndRegister: () -> Unit = submit@{
+        if (authUiState.isLoading || isRegisterInFlight) return@submit
+        val normalizedFirst = firstName.trim()
+        val normalizedUsername = username.trim().lowercase(java.util.Locale.US)
+        val id1 = securityQuestionId1
+        val id2 = securityQuestionId2
+
+        if (id1 == null || id2 == null || id1 == id2) {
+            localAuthError = securityQuestionsDistinctError
+            return@submit
+        }
+        if (securityAnswer1.isBlank() || securityAnswer2.isBlank()) {
+            localAuthError = securityAnswersRequiredError
+            return@submit
+        }
+
+        keyboardController?.hide()
+        focusManager.clearFocus(force = true)
+        localAuthError = null
         isRegisterInFlight = true
         onClearAuthStatus()
         onRegister(
             normalizedFirst,
             normalizedUsername,
             registerPassword,
+            listOf(
+                SecurityAnswerInput(questionId = id1, answer = securityAnswer1.trim()),
+                SecurityAnswerInput(questionId = id2, answer = securityAnswer2.trim()),
+            ),
         ) {
             isRegisterInFlight = false
             authMode = AuthPanelMode.SIGN_IN
             password = registerPassword
             registerPassword = ""
             confirmRegisterPassword = ""
+            securityAnswer1 = ""
+            securityAnswer2 = ""
         }
     }
 
@@ -777,6 +837,17 @@ fun OnboardingWizardOverlay(
                                                 Text(stringResource(R.string.onboarding_sign_in))
                                             }
 
+                                            TextButton(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                onClick = {
+                                                    localAuthError = null
+                                                    onClearAuthStatus()
+                                                    onForgotPassword()
+                                                },
+                                            ) {
+                                                Text(stringResource(R.string.forgot_password_entry))
+                                            }
+
                                             Row(
                                                 modifier = Modifier.fillMaxWidth(),
                                                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -994,18 +1065,125 @@ fun OnboardingWizardOverlay(
                                                 }
                                             }
                                         }
+
+                                        AuthPanelMode.CREATE_ACCOUNT_SECURITY -> {
+                                            WizardHeroTile(
+                                                title = stringResource(R.string.security_questions_title),
+                                                subtitle = stringResource(R.string.security_questions_subtitle),
+                                                imageVector = Icons.Rounded.Person,
+                                                color = Color(0xFFC97880),
+                                            )
+
+                                            SecurityQuestionPicker(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(top = 10.dp),
+                                                label = stringResource(R.string.security_questions_question_1),
+                                                questions = securityQuestions,
+                                                excludeId = securityQuestionId2,
+                                                selectedId = securityQuestionId1,
+                                                onSelected = {
+                                                    securityQuestionId1 = it
+                                                    localAuthError = null
+                                                },
+                                                answer = securityAnswer1,
+                                                onAnswerChange = {
+                                                    securityAnswer1 = it
+                                                    localAuthError = null
+                                                },
+                                                fieldColors = fieldColors,
+                                            )
+                                            SecurityQuestionPicker(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(top = 10.dp),
+                                                label = stringResource(R.string.security_questions_question_2),
+                                                questions = securityQuestions,
+                                                excludeId = securityQuestionId1,
+                                                selectedId = securityQuestionId2,
+                                                onSelected = {
+                                                    securityQuestionId2 = it
+                                                    localAuthError = null
+                                                },
+                                                answer = securityAnswer2,
+                                                onAnswerChange = {
+                                                    securityAnswer2 = it
+                                                    localAuthError = null
+                                                },
+                                                fieldColors = fieldColors,
+                                            )
+
+                                            localAuthError?.let { message ->
+                                                Text(
+                                                    modifier = Modifier.padding(top = 8.dp),
+                                                    text = message,
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = colorScheme.error,
+                                                )
+                                            }
+                                            authUiState.errorMessage?.let { message ->
+                                                Text(
+                                                    modifier = Modifier.padding(top = 8.dp),
+                                                    text = message,
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = colorScheme.error,
+                                                )
+                                            }
+
+                                            Button(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(top = 4.dp)
+                                                    .height(48.dp),
+                                                enabled = securityQuestionId1 != null &&
+                                                        securityQuestionId2 != null &&
+                                                        securityQuestionId1 != securityQuestionId2 &&
+                                                        securityAnswer1.isNotBlank() &&
+                                                        securityAnswer2.isNotBlank() &&
+                                                        !authUiState.isLoading &&
+                                                        !isRegisterInFlight,
+                                                onClick = submitSecurityAndRegister,
+                                                colors = ButtonDefaults.buttonColors(
+                                                    containerColor = colorScheme.primary,
+                                                    contentColor = colorScheme.onPrimary,
+                                                ),
+                                            ) {
+                                                Text(
+                                                    if (authUiState.isLoading || isRegisterInFlight) {
+                                                        stringResource(R.string.onboarding_creating_account)
+                                                    } else {
+                                                        stringResource(R.string.onboarding_create_account)
+                                                    },
+                                                )
+                                            }
+
+                                            TextButton(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(top = 4.dp),
+                                                onClick = {
+                                                    authMode = AuthPanelMode.CREATE_ACCOUNT
+                                                    localAuthError = null
+                                                    onClearAuthStatus()
+                                                },
+                                            ) {
+                                                Text(stringResource(R.string.security_questions_back))
+                                            }
+                                        }
                                     }
                                 }
                             }
 
                             WizardViewState.AUTHENTICATING -> {
+                                val isRegistering = authMode == AuthPanelMode.CREATE_ACCOUNT ||
+                                        authMode == AuthPanelMode.CREATE_ACCOUNT_SECURITY
                                 WizardLoading(
-                                    title = if (authMode == AuthPanelMode.CREATE_ACCOUNT) {
+                                    title = if (isRegistering) {
                                         stringResource(R.string.onboarding_creating_account)
                                     } else {
                                         stringResource(R.string.onboarding_authenticating_title)
                                     },
-                                    subtitle = if (authMode == AuthPanelMode.CREATE_ACCOUNT) {
+                                    subtitle = if (isRegistering) {
                                         stringResource(R.string.onboarding_authenticating_register_subtitle)
                                     } else {
                                         stringResource(R.string.onboarding_authenticating_login_subtitle)
@@ -1017,6 +1195,71 @@ fun OnboardingWizardOverlay(
                 }
             }
         }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SecurityQuestionPicker(
+    label: String,
+    questions: List<SecurityQuestion>,
+    excludeId: Int?,
+    selectedId: Int?,
+    onSelected: (Int) -> Unit,
+    answer: String,
+    onAnswerChange: (String) -> Unit,
+    fieldColors: TextFieldColors,
+    modifier: Modifier = Modifier,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val selectableQuestions = questions.filter { it.id != excludeId }
+    val selectedText = questions.firstOrNull { it.id == selectedId }?.text.orEmpty()
+
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        ExposedDropdownMenuBox(
+            expanded = expanded,
+            onExpandedChange = { expanded = it },
+        ) {
+            OutlinedTextField(
+                modifier = Modifier
+                    .menuAnchor(MenuAnchorType.PrimaryNotEditable)
+                    .fillMaxWidth(),
+                value = selectedText,
+                onValueChange = {},
+                readOnly = true,
+                label = { Text(label) },
+                trailingIcon = {
+                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                },
+                singleLine = true,
+                shape = RoundedCornerShape(22.dp),
+                colors = fieldColors,
+            )
+            ExposedDropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+            ) {
+                selectableQuestions.forEach { question ->
+                    DropdownMenuItem(
+                        text = { Text(question.text) },
+                        onClick = {
+                            onSelected(question.id)
+                            expanded = false
+                        },
+                    )
+                }
+            }
+        }
+        OutlinedTextField(
+            modifier = Modifier.fillMaxWidth(),
+            value = answer,
+            onValueChange = onAnswerChange,
+            label = { Text(stringResource(R.string.security_questions_answer_label)) },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+            shape = RoundedCornerShape(22.dp),
+            colors = fieldColors,
+        )
     }
 }
 

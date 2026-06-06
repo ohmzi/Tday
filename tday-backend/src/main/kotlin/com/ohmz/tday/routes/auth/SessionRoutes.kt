@@ -46,6 +46,7 @@ fun Route.sessionRoutes() {
                         put("approvalStatus", user.approvalStatus)
                         put("timeZone", user.timeZone)
                         put("requirePasswordChange", user.requirePasswordChange)
+                        put("requireSecurityQuestions", user.requireSecurityQuestions)
                     }
                 },
             )

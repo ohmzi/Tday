@@ -21,6 +21,83 @@ struct SessionUser: Codable, Equatable, Hashable {
     let timeZone: String?
     let role: String?
     let approvalStatus: String?
+    let requireSecurityQuestions: Bool
+
+    init(
+        id: String?,
+        name: String?,
+        username: String?,
+        image: String?,
+        timeZone: String?,
+        role: String?,
+        approvalStatus: String?,
+        requireSecurityQuestions: Bool = false
+    ) {
+        self.id = id
+        self.name = name
+        self.username = username
+        self.image = image
+        self.timeZone = timeZone
+        self.role = role
+        self.approvalStatus = approvalStatus
+        self.requireSecurityQuestions = requireSecurityQuestions
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case name
+        case username
+        case image
+        case timeZone
+        case role
+        case approvalStatus
+        case requireSecurityQuestions
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decodeIfPresent(String.self, forKey: .id)
+        name = try container.decodeIfPresent(String.self, forKey: .name)
+        username = try container.decodeIfPresent(String.self, forKey: .username)
+        image = try container.decodeIfPresent(String.self, forKey: .image)
+        timeZone = try container.decodeIfPresent(String.self, forKey: .timeZone)
+        role = try container.decodeIfPresent(String.self, forKey: .role)
+        approvalStatus = try container.decodeIfPresent(String.self, forKey: .approvalStatus)
+        requireSecurityQuestions = try container.decodeIfPresent(Bool.self, forKey: .requireSecurityQuestions) ?? false
+    }
+}
+
+struct SecurityQuestion: Codable, Equatable, Hashable, Identifiable {
+    let id: Int
+    let text: String
+}
+
+struct SecurityAnswerInput: Codable, Equatable, Hashable {
+    let questionId: Int
+    let answer: String
+}
+
+struct SecurityQuestionsResponse: Codable {
+    let questions: [SecurityQuestion]
+}
+
+struct SecurityQuestionStatusResponse: Codable {
+    let questionIds: [Int]
+    let requireSecurityQuestions: Bool
+}
+
+struct SelfServiceResetRequest: Codable {
+    let username: String
+    let answers: [SecurityAnswerInput]
+    let newPassword: String
+}
+
+struct RequestAdminResetRequest: Codable {
+    let username: String
+}
+
+struct SetSecurityQuestionsRequest: Codable {
+    let answers: [SecurityAnswerInput]
 }
 
 struct RegisterRequest: Codable {
@@ -28,6 +105,7 @@ struct RegisterRequest: Codable {
     let lname: String?
     let username: String
     let password: String
+    let securityAnswers: [SecurityAnswerInput]?
 }
 
 struct RegisterResponse: Codable {

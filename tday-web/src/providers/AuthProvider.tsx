@@ -32,6 +32,7 @@ export type AuthUser = {
   approvalStatus: string | null;
   timeZone: string | null;
   requirePasswordChange?: boolean;
+  requireSecurityQuestions?: boolean;
 };
 
 type AuthContextValue = {

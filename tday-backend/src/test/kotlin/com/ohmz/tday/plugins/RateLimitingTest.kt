@@ -398,6 +398,7 @@ class RateLimitingTest {
             lname: String?,
             username: String,
             password: String,
+            securityAnswers: List<com.ohmz.tday.models.request.SecurityAnswerInput>,
         ): Either<AppError, com.ohmz.tday.services.RegisterResult> = unsupported()
 
         override suspend fun findByUsername(username: String): Map<String, Any?>? = null

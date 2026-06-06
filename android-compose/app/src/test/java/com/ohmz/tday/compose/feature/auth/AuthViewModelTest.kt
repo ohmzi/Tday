@@ -129,6 +129,7 @@ class AuthViewModelTest {
                 lastName = "",
                 username = "user@example.com",
                 password = "createdPassword",
+                securityAnswers = emptyList(),
             )
         } returns RegisterOutcome(
             success = true,
@@ -143,6 +144,7 @@ class AuthViewModelTest {
             lastName = "",
             username = " User@Example.com ",
             password = "createdPassword",
+            securityAnswers = emptyList(),
             credentialContext = credentialContext,
         ) {
             didSucceed = true

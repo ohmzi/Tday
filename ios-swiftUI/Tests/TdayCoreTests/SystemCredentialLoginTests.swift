@@ -120,7 +120,16 @@ final class SystemCredentialLoginTests: XCTestCase {
             systemCredentialService: service
         )
 
-        let success = await viewModel.register(firstName: "Test", lastName: "", username: " USER@example.com ", password: "Password!1")
+        let success = await viewModel.register(
+            firstName: "Test",
+            lastName: "",
+            username: " USER@example.com ",
+            password: "Password!1",
+            securityAnswers: [
+                SecurityAnswerInput(questionId: 1, answer: "a"),
+                SecurityAnswerInput(questionId: 2, answer: "b"),
+            ]
+        )
 
         XCTAssertTrue(success)
         XCTAssertEqual(service.offeredCredentials, [SystemCredential(username: "user@example.com", password: "Password!1")])
@@ -225,8 +234,28 @@ private final class FakeAuthRepository: AuthRepositoryServicing {
         result
     }
 
-    func register(firstName: String, lastName: String, username: String, password: String) async -> RegisterOutcome {
+    func register(firstName: String, lastName: String, username: String, password: String, securityAnswers: [SecurityAnswerInput]) async -> RegisterOutcome {
         RegisterOutcome(success: true, requiresApproval: false, message: "Account created")
+    }
+
+    func fetchAllSecurityQuestions() async throws -> [SecurityQuestion] {
+        []
+    }
+
+    func fetchQuestionsForUsername(_ username: String) async throws -> [SecurityQuestion] {
+        []
+    }
+
+    func resetPassword(username: String, answers: [SecurityAnswerInput], newPassword: String) async -> PasswordResetResult {
+        .success
+    }
+
+    func requestAdminReset(_ username: String) async -> Bool {
+        true
+    }
+
+    func setSecurityQuestions(_ answers: [SecurityAnswerInput]) async -> Bool {
+        true
     }
 
     func logout() async {}

@@ -18,6 +18,11 @@ import { api } from "@/lib/api-client";
 import { getErrorMessage } from "@/lib/error-message";
 import { createClientCredentialEnvelope } from "@/lib/security/clientCredentialEnvelope";
 import PendingApprovalDialog from "@/components/auth/PendingApprovalDialog";
+import { Link } from "@/lib/navigation";
+import {
+  fetchAllSecurityQuestions,
+  type SecurityQuestion,
+} from "@/lib/securityQuestions";
 
 // Fixed tints lifted 1:1 from the native wizard (iOS/Android). These are
 // intentionally theme-independent so the card reads identically across light
@@ -58,6 +63,11 @@ export default function OnboardingWizard({
   const [firstName, setFirstName] = React.useState("");
   const [registerPassword, setRegisterPassword] = React.useState("");
   const [confirmPassword, setConfirmPassword] = React.useState("");
+  const [securityQuestions, setSecurityQuestions] = React.useState<SecurityQuestion[]>([]);
+  const [questionId1, setQuestionId1] = React.useState<number | null>(null);
+  const [answer1, setAnswer1] = React.useState("");
+  const [questionId2, setQuestionId2] = React.useState<number | null>(null);
+  const [answer2, setAnswer2] = React.useState("");
   const [errorMessage, setErrorMessage] = React.useState("");
   const [infoMessage, setInfoMessage] = React.useState("");
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -71,6 +81,22 @@ export default function OnboardingWizard({
       setPendingApprovalOpen(true);
     }
   }, [searchParams]);
+
+  // Load the question catalogue when the user switches to account creation, then
+  // default to the first two distinct questions.
+  React.useEffect(() => {
+    if (!isCreating || securityQuestions.length > 0) return;
+    let cancelled = false;
+    void fetchAllSecurityQuestions().then((questions) => {
+      if (cancelled) return;
+      setSecurityQuestions(questions);
+      if (questions[0]) setQuestionId1((prev) => prev ?? questions[0].id);
+      if (questions[1]) setQuestionId2((prev) => prev ?? questions[1].id);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [isCreating, securityQuestions.length]);
 
   const clearMessages = () => {
     if (errorMessage) setErrorMessage("");
@@ -110,6 +136,18 @@ export default function OnboardingWizard({
     }
     if (registerPassword !== confirmPassword) {
       setErrorMessage("Passwords do not match");
+      return false;
+    }
+    if (questionId1 == null || questionId2 == null) {
+      setErrorMessage("Please choose two security questions");
+      return false;
+    }
+    if (questionId1 === questionId2) {
+      setErrorMessage("Security questions must be different");
+      return false;
+    }
+    if (answer1.trim().length === 0 || answer2.trim().length === 0) {
+      setErrorMessage("Please answer both security questions");
       return false;
     }
     return true;
@@ -168,6 +206,10 @@ export default function OnboardingWizard({
           lname: "",
           username: username.trim().toLowerCase(),
           password: registerPassword,
+          securityAnswers: [
+            { questionId: questionId1, answer: answer1.trim() },
+            { questionId: questionId2, answer: answer2.trim() },
+          ],
         }),
       })) as RegisterResponse | null;
 
@@ -207,7 +249,11 @@ export default function OnboardingWizard({
     firstName.trim().length > 0 &&
     username.trim().length > 0 &&
     registerPassword.length > 0 &&
-    confirmPassword.length > 0;
+    confirmPassword.length > 0 &&
+    questionId1 != null &&
+    questionId2 != null &&
+    answer1.trim().length > 0 &&
+    answer2.trim().length > 0;
   const primaryEnabled = (isCreating ? createEnabled : signInEnabled) && !isSubmitting;
 
   return (
@@ -321,6 +367,48 @@ export default function OnboardingWizard({
                         clearMessages();
                       }}
                     />
+                    <p className="-mb-0.5 mt-0.5 text-[12px] font-bold text-foreground/55">
+                      Security questions — used to reset your password if you
+                      forget it.
+                    </p>
+                    <WizardQuestionSelect
+                      value={questionId1}
+                      questions={securityQuestions.filter(
+                        (q) => q.id !== questionId2,
+                      )}
+                      onChange={(id) => {
+                        setQuestionId1(id);
+                        clearMessages();
+                      }}
+                    />
+                    <WizardInput
+                      placeholder="Answer"
+                      autoComplete="off"
+                      value={answer1}
+                      onChange={(value) => {
+                        setAnswer1(value);
+                        clearMessages();
+                      }}
+                    />
+                    <WizardQuestionSelect
+                      value={questionId2}
+                      questions={securityQuestions.filter(
+                        (q) => q.id !== questionId1,
+                      )}
+                      onChange={(id) => {
+                        setQuestionId2(id);
+                        clearMessages();
+                      }}
+                    />
+                    <WizardInput
+                      placeholder="Answer"
+                      autoComplete="off"
+                      value={answer2}
+                      onChange={(value) => {
+                        setAnswer2(value);
+                        clearMessages();
+                      }}
+                    />
                   </>
                 ) : (
                   <WizardInput
@@ -333,6 +421,15 @@ export default function OnboardingWizard({
                       clearMessages();
                     }}
                   />
+                )}
+
+                {!isCreating && (
+                  <Link
+                    href="/forgot-password"
+                    className="-mt-0.5 self-start text-[13px] font-bold text-primary transition active:opacity-60"
+                  >
+                    Forgot password?
+                  </Link>
                 )}
 
                 {(errorMessage || infoMessage) && (
@@ -483,6 +580,31 @@ function WizardInput({
       aria-label={placeholder}
       className="h-[54px] w-full rounded-[22px] border border-border bg-muted/50 px-4 text-[15px] font-bold text-foreground shadow-sm outline-none transition placeholder:font-bold placeholder:text-foreground/40 focus:border-primary/80 focus:ring-1 focus:ring-primary/40"
     />
+  );
+}
+
+function WizardQuestionSelect({
+  value,
+  questions,
+  onChange,
+}: {
+  value: number | null;
+  questions: SecurityQuestion[];
+  onChange: (id: number) => void;
+}) {
+  return (
+    <select
+      value={value ?? ""}
+      onChange={(event) => onChange(Number(event.target.value))}
+      aria-label="Security question"
+      className="h-[54px] w-full rounded-[22px] border border-border bg-muted/50 px-4 text-[15px] font-bold text-foreground shadow-sm outline-none transition focus:border-primary/80 focus:ring-1 focus:ring-primary/40"
+    >
+      {questions.map((question) => (
+        <option key={question.id} value={question.id}>
+          {question.text}
+        </option>
+      ))}
+    </select>
   );
 }
 
