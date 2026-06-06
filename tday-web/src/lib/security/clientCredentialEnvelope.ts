@@ -41,12 +41,12 @@ type ClientPasswordProof = {
 export type ClientCredentialPayload = ClientCredentialEnvelope | ClientPasswordProof;
 
 export async function createClientCredentialEnvelope(
-  email: string,
+  username: string,
   password: string,
 ): Promise<ClientCredentialPayload> {
-  const normalizedEmail = email.trim().toLowerCase();
-  if (!normalizedEmail || !password) {
-    throw new Error("Email and password are required.");
+  const normalizedUsername = username.trim().toLowerCase();
+  if (!normalizedUsername || !password) {
+    throw new Error("Username and password are required.");
   }
 
   if (typeof window === "undefined") {
@@ -54,14 +54,14 @@ export async function createClientCredentialEnvelope(
   }
 
   if (!window.crypto?.subtle) {
-    return createPasswordProofPayload(normalizedEmail, password);
+    return createPasswordProofPayload(normalizedUsername, password);
   }
 
-  return createEnvelopePayload(normalizedEmail, password);
+  return createEnvelopePayload(normalizedUsername, password);
 }
 
 async function createEnvelopePayload(
-  normalizedEmail: string,
+  normalizedUsername: string,
   password: string,
 ): Promise<ClientCredentialEnvelope> {
   const response = await fetch(CREDENTIAL_KEY_ENDPOINT, {
@@ -103,7 +103,7 @@ async function createEnvelopePayload(
   const iv = window.crypto.getRandomValues(new Uint8Array(12));
   const plaintext = new TextEncoder().encode(
     JSON.stringify({
-      email: normalizedEmail,
+      username: normalizedUsername,
       password,
     }),
   );
@@ -140,7 +140,7 @@ async function createEnvelopePayload(
 }
 
 async function createPasswordProofPayload(
-  normalizedEmail: string,
+  normalizedUsername: string,
   password: string,
 ): Promise<ClientPasswordProof> {
   const response = await fetch(PASSWORD_PROOF_CHALLENGE_ENDPOINT, {
@@ -152,7 +152,7 @@ async function createPasswordProofPayload(
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      email: normalizedEmail,
+      username: normalizedUsername,
     }),
   });
 
@@ -181,7 +181,7 @@ async function createPasswordProofPayload(
     dkLen: PASSWORD_PROOF_DERIVED_KEY_BYTES,
   });
   const proofMessage = new TextEncoder().encode(
-    buildPasswordProofMessage(payload.challengeId, normalizedEmail),
+    buildPasswordProofMessage(payload.challengeId, normalizedUsername),
   );
   const proofBytes = hmac(sha256, derivedKey, proofMessage);
 
@@ -194,9 +194,9 @@ async function createPasswordProofPayload(
 
 function buildPasswordProofMessage(
   challengeId: string,
-  normalizedEmail: string,
+  normalizedUsername: string,
 ): string {
-  return `login:${challengeId}:${normalizedEmail}`;
+  return `login:${challengeId}:${normalizedUsername}`;
 }
 
 async function safeJson(response: Response): Promise<unknown> {

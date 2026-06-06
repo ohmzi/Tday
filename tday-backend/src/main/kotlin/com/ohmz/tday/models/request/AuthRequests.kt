@@ -6,19 +6,19 @@ import kotlinx.serialization.Serializable
 data class RegisterRequest(
     val fname: String,
     val lname: String? = null,
-    val email: String,
+    val username: String,
     val password: String,
     val captchaToken: String? = null,
 )
 
 @Serializable
 data class LoginChallengeRequest(
-    val email: String,
+    val username: String,
 )
 
 @Serializable
 data class CredentialsCallbackRequest(
-    val email: String? = null,
+    val username: String? = null,
     val password: String? = null,
     val encryptedPayload: String? = null,
     val encryptedKey: String? = null,
