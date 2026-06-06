@@ -43,6 +43,7 @@ import com.ohmz.tday.compose.core.network.TdayApiService
 import com.ohmz.tday.compose.feature.widget.FloaterTasksWidgetRefresher
 import com.ohmz.tday.compose.feature.widget.TodayTasksWidgetRefresher
 import com.ohmz.tday.compose.ui.priority.canonicalPriorityValue
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
 import java.time.Instant
@@ -96,8 +97,12 @@ class TodoRepository @Inject constructor(
     }
 
     suspend fun fetchTodosCached(mode: TodoListMode, listId: String? = null): List<TodoItem> {
+        // Reading the whole offline cache is blocking Room I/O; keep it off the caller's
+        // (often Main) dispatcher. fetchTodosSnapshot below is the deliberately-synchronous
+        // variant for widget/Glance contexts that can't suspend.
+        val state = withContext(Dispatchers.IO) { cacheManager.loadOfflineState() }
         return buildTodosForMode(
-            state = cacheManager.loadOfflineState(),
+            state = state,
             mode = mode,
             listId = listId,
         )
@@ -202,7 +207,13 @@ class TodoRepository @Inject constructor(
                     pendingMutations = remapped.pendingMutations.filterNot { it.mutationId == mutationId },
                 )
             }
-        }.onFailure { /* pending mutation will be retried by background sync */ }
+        }.onFailure {
+            // Creates are intentionally never dropped (isLikelyUnrecoverableMutationError
+            // treats CREATE_TODO as recoverable), so the pending mutation is retained for
+            // background-sync replay. Log it so a permanently-rejected create is at least
+            // diagnosable instead of failing completely silently.
+            Log.w(LOG_TAG, "createTodo deferred reason=${it.javaClass.simpleName}")
+        }
     }
 
     suspend fun createFloater(payload: CreateTaskPayload) {
@@ -286,7 +297,11 @@ class TodoRepository @Inject constructor(
                     pendingMutations = remapped.pendingMutations.filterNot { it.mutationId == mutationId },
                 )
             }
-        }.onFailure { /* pending mutation will be retried by background sync */ }
+        }.onFailure {
+            // See createTodo: creates are retained for background-sync replay; log so a
+            // permanently-rejected create is diagnosable rather than silently retried.
+            Log.w(LOG_TAG, "createFloater deferred reason=${it.javaClass.simpleName}")
+        }
     }
 
     suspend fun updateTodo(todo: TodoItem, payload: CreateTaskPayload) {
