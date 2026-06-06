@@ -1504,11 +1504,11 @@ private fun CalendarTopBar(
                     onClick = onBack,
                     isBackButton = true,
                 )
-                CalendarCircleButton(
-                    icon = Icons.Rounded.CalendarMonth,
+                CalendarTodayButton(
+                    collapseProgress = collapseProgress,
+                    label = stringResource(R.string.calendar_today),
                     contentDescription = stringResource(R.string.calendar_jump_to_today),
                     onClick = onJumpToday,
-                    isAccentButton = true,
                 )
             }
             if (collapsedTitleAlpha > 0.001f) {
@@ -1621,6 +1621,92 @@ private fun CalendarCircleButton(
                 tint = iconTint,
                 modifier = Modifier.size(iconSize),
             )
+        }
+    }
+}
+
+/**
+ * Accent "Today" action shown in the calendar top bar. While the title is down
+ * (expanded) it shows the word "Today"; once the title is pulled up (collapsed)
+ * it shrinks to an icon-only circle, matching the native iOS behavior.
+ */
+@Composable
+private fun CalendarTodayButton(
+    collapseProgress: Float,
+    label: String,
+    contentDescription: String,
+    onClick: () -> Unit,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    val view = LocalView.current
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val isDarkTheme = colorScheme.background.luminance() < 0.5f
+    val showLabel = collapseProgress.coerceIn(0f, 1f) < 0.5f
+
+    val containerColor = CalendarAccentPurple.copy(alpha = if (isDarkTheme) 0.22f else 0.12f)
+    val buttonBorder = BorderStroke(
+        1.dp,
+        CalendarAccentPurple.copy(alpha = if (isDarkTheme) 0.62f else 0.48f),
+    )
+    val scale by animateFloatAsState(
+        targetValue = if (pressed) 0.93f else 1f,
+        label = "calendarTodayButtonScale",
+    )
+    val offsetY by animateDpAsState(
+        targetValue = if (pressed) 2.dp else 0.dp,
+        label = "calendarTodayButtonOffsetY",
+    )
+    val horizontalPadding by animateDpAsState(
+        targetValue = if (showLabel) 18.dp else 0.dp,
+        label = "calendarTodayButtonPadding",
+    )
+
+    Card(
+        modifier = Modifier
+            .offset(y = offsetY)
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
+            .animateContentSize(),
+        onClick = {
+            ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+            onClick()
+        },
+        interactionSource = interactionSource,
+        shape = CircleShape,
+        border = buttonBorder,
+        colors = CardDefaults.cardColors(containerColor = containerColor),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 0.dp,
+            pressedElevation = 0.dp,
+        ),
+    ) {
+        Row(
+            modifier = Modifier
+                .height(54.dp)
+                .sizeIn(minWidth = 54.dp)
+                .padding(horizontal = horizontalPadding),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.CalendarMonth,
+                contentDescription = contentDescription,
+                tint = CalendarAccentPurple,
+                modifier = Modifier.size(28.dp),
+            )
+            if (showLabel) {
+                Text(
+                    text = label,
+                    color = CalendarAccentPurple,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    modifier = Modifier.padding(start = 8.dp),
+                )
+            }
         }
     }
 }

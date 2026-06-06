@@ -279,6 +279,7 @@
     <!-- Calendar screen -->
     <string name="calendar_title">Календарь</string>
     <string name="calendar_jump_to_today">Перейти к сегодня</string>
+    <string name="calendar_today">Сегодня</string>
     <string name="calendar_tasks_due">Задачи на %1$s</string>
     <string name="calendar_no_pending">На этот день нет невыполненных задач</string>
     <string name="calendar_completed_header">Завершено:</string>
@@ -315,6 +316,9 @@
     <string name="settings_sync_pending_one">1 изменение ожидает</string>
     <string name="settings_sync_pending_many">%1$d изменений ожидают</string>
     <string name="settings_sync_now">Синхронизировать</string>
+    <string name="settings_sync_up_to_date">Актуально</string>
+    <string name="settings_sync_offline_short">Офлайн</string>
+    <string name="settings_sync_offline_message">Изменения синхронизируются при восстановлении связи.</string>
     <string name="settings_syncing_now">Синхронизация...</string>
     <string name="error_auth_expired">Сессия истекла. Войдите снова.</string>
     <string name="error_app_outdated">Эта версия приложения устарела. Обновите, чтобы продолжить.</string>

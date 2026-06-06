@@ -6301,6 +6301,93 @@
         }
       }
     },
+    "Changes will sync when connection returns." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Änderungen werden synchronisiert, sobald die Verbindung wiederhergestellt ist."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Los cambios se sincronizarán cuando vuelva la conexión."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les modifications se synchroniseront au retour de la connexion."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le modifiche si sincronizzeranno al ritorno della connessione."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "接続が回復すると変更が同期されます。"
+          }
+        },
+        "ms" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Perubahan akan disegerakkan apabila sambungan kembali."
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "As alterações serão sincronizadas quando a conexão voltar."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Изменения синхронизируются при восстановлении соединения."
+          }
+        },
+        "zh" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "连接恢复后将同步更改。"
+          }
+        }
+      }
+    },
+    "Offline" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Offline" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Sin conexión" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Hors ligne" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Offline" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "オフライン" } },
+        "ms" : { "stringUnit" : { "state" : "translated", "value" : "Luar talian" } },
+        "pt" : { "stringUnit" : { "state" : "translated", "value" : "Offline" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Не в сети" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "离线" } }
+      }
+    },
+    "Up to date" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Aktuell" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Actualizado" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "À jour" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Aggiornato" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "最新です" } },
+        "ms" : { "stringUnit" : { "state" : "translated", "value" : "Terkini" } },
+        "pt" : { "stringUnit" : { "state" : "translated", "value" : "Atualizado" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Актуально" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "已是最新" } }
+      }
+    },
     "Offline. Changes will sync when connection returns." : {
       "extractionState" : "stale",
       "localizations" : {

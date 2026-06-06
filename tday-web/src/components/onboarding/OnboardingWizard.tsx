@@ -385,7 +385,10 @@ function StepChip({
   active?: boolean;
   completed?: boolean;
 }) {
-  const filled = active;
+  // On web, Mode and Server are always satisfied (the app is served from, and
+  // talks to, its own backend), so completed chips are filled with their native
+  // tint just like the active Login chip — matching the iOS/Android wizard.
+  const filled = active || completed;
   return (
     <div
       className={cn(

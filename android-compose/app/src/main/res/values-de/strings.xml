@@ -279,6 +279,7 @@
     <!-- Calendar screen -->
     <string name="calendar_title">Kalender</string>
     <string name="calendar_jump_to_today">Zu heute springen</string>
+    <string name="calendar_today">Heute</string>
     <string name="calendar_tasks_due">Fällige Aufgaben %1$s</string>
     <string name="calendar_no_pending">Keine ausstehende Aufgabe für diesen Tag fällig</string>
     <string name="calendar_completed_header">Abgeschlossen:</string>
@@ -315,6 +316,9 @@
     <string name="settings_sync_pending_one">1 Änderung ausstehend</string>
     <string name="settings_sync_pending_many">%1$d Änderungen ausstehend</string>
     <string name="settings_sync_now">Jetzt synchronisieren</string>
+    <string name="settings_sync_up_to_date">Aktuell</string>
+    <string name="settings_sync_offline_short">Offline</string>
+    <string name="settings_sync_offline_message">Änderungen werden synchronisiert, sobald die Verbindung wiederhergestellt ist.</string>
     <string name="settings_syncing_now">Wird synchronisiert...</string>
     <string name="error_auth_expired">Sitzung abgelaufen. Bitte melde dich erneut an.</string>
     <string name="error_app_outdated">Diese Version der App ist veraltet. Bitte aktualisiere sie, um fortzufahren.</string>
