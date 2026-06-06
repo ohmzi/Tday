@@ -29,11 +29,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.NewReleases
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Snackbar
-import androidx.compose.material3.SnackbarDuration
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -75,8 +70,10 @@ import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TodoListMode
 import com.ohmz.tday.compose.core.navigation.AppRoute
 import com.ohmz.tday.compose.core.ui.OfflineBanner
+import com.ohmz.tday.compose.core.ui.SnackbarKind
 import com.ohmz.tday.compose.core.ui.TdayToastData
 import com.ohmz.tday.compose.core.ui.TdayToastHost
+import com.ohmz.tday.compose.core.ui.TdayToastKind
 import com.ohmz.tday.compose.feature.app.AppUiState
 import com.ohmz.tday.compose.feature.app.AppViewModel
 import com.ohmz.tday.compose.feature.auth.AuthViewModel
@@ -178,7 +175,6 @@ fun TdayApp(
     var rootFloaterScrollToTopRequestKey by remember { mutableStateOf(0) }
     var rootDockCollapsed by rememberSaveable { mutableStateOf(false) }
     var rootControlsVisible by rememberSaveable { mutableStateOf(true) }
-    val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
     fun requestRootCreateTask() {
         rootCreateTaskRequestSerial += 1
@@ -218,7 +214,7 @@ fun TdayApp(
 
     CollectAppSnackbars(
         appViewModel = appViewModel,
-        snackbarHostState = snackbarHostState,
+        onShowToast = { activeToast = it },
     )
     OnAppForegroundResume {
         appViewModel.reconnectAfterForeground()
@@ -1035,21 +1031,6 @@ fun TdayApp(
                 modifier = Modifier.align(Alignment.TopCenter),
             )
 
-            SnackbarHost(
-                hostState = snackbarHostState,
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .navigationBarsPadding()
-                    .padding(bottom = 60.dp),
-            ) { data ->
-                Snackbar(
-                    snackbarData = data,
-                    containerColor = MaterialTheme.colorScheme.inverseSurface,
-                    contentColor = MaterialTheme.colorScheme.inverseOnSurface,
-                    actionColor = MaterialTheme.colorScheme.inversePrimary,
-                )
-            }
-
             TdayToastHost(
                 toast = activeToast,
                 onDismiss = { activeToast = null },
@@ -1058,21 +1039,34 @@ fun TdayApp(
     }
 }
 
+private const val TOAST_AUTO_DISMISS_SHORT_MS = 4_000L
+private const val TOAST_AUTO_DISMISS_WITH_ACTION_MS = 8_000L
+
 @Composable
 private fun CollectAppSnackbars(
     appViewModel: AppViewModel,
-    snackbarHostState: SnackbarHostState,
+    onShowToast: (TdayToastData) -> Unit,
 ) {
     LaunchedEffect(Unit) {
         appViewModel.snackbarManager.events.collect { event ->
-            val result = snackbarHostState.showSnackbar(
-                message = event.message,
-                actionLabel = event.actionLabel,
-                duration = if (event.actionLabel != null) SnackbarDuration.Long else SnackbarDuration.Short,
+            onShowToast(
+                TdayToastData(
+                    id = System.currentTimeMillis(),
+                    message = event.message,
+                    kind = when (event.kind) {
+                        SnackbarKind.ERROR -> TdayToastKind.ERROR
+                        SnackbarKind.SUCCESS -> TdayToastKind.SUCCESS
+                        SnackbarKind.INFO -> TdayToastKind.INFO
+                    },
+                    autoDismissMillis = if (event.actionLabel != null) {
+                        TOAST_AUTO_DISMISS_WITH_ACTION_MS
+                    } else {
+                        TOAST_AUTO_DISMISS_SHORT_MS
+                    },
+                    actionLabel = event.actionLabel,
+                    onAction = event.onAction,
+                ),
             )
-            if (result == SnackbarResult.ActionPerformed) {
-                event.onAction?.invoke()
-            }
         }
     }
 }
