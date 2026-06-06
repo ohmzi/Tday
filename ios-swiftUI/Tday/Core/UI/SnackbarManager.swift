@@ -1,20 +1,45 @@
 import Foundation
 import Observation
 
+/// Visual variant of a snackbar — drives the accent colour and the default icon.
+enum SnackbarKind {
+    case error
+    case success
+    case info
+}
+
 @MainActor
 @Observable
 final class SnackbarManager {
-    var message: String?
+    struct Content: Identifiable {
+        let id = UUID()
+        let message: String
+        let kind: SnackbarKind
+        let actionLabel: String?
+        let action: (() -> Void)?
+    }
 
-    func show(_ message: String) {
-        self.message = message
+    private(set) var content: Content?
+
+    func show(
+        _ message: String,
+        kind: SnackbarKind = .error,
+        actionLabel: String? = nil,
+        action: (() -> Void)? = nil
+    ) {
+        content = Content(
+            message: message,
+            kind: kind,
+            actionLabel: actionLabel,
+            action: action
+        )
     }
 
     func show(message: String) {
-        show(message)
+        show(message, kind: .error)
     }
 
     func dismiss() {
-        message = nil
+        content = nil
     }
 }

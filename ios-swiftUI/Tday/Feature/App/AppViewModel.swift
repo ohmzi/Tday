@@ -440,6 +440,19 @@ final class AppViewModel {
         await bootstrap()
     }
 
+    /// Forcibly ends a session whose authentication has expired and returns the user to
+    /// login (the onboarding overlay shows once `authenticated` is false). Reuses the
+    /// logout flow, then surfaces a toast explaining why. No-op if a session is no longer
+    /// active, which dedupes a burst of 401s into a single expiry.
+    func expireSession() async {
+        guard authenticated else { return }
+        await logout()
+        container.snackbarManager.show(
+            "Your session expired — please sign in again.",
+            kind: .error
+        )
+    }
+
     func navigate(to route: AppRoute) {
         switch route {
         case .home, .floaterTodos:
@@ -683,6 +696,12 @@ final class AppViewModel {
         }
 
         guard let restoredSession = await container.authRepository.restoreSessionForBootstrap() else {
+            // A confirmed 401 that silent recovery could not heal, and not a mere
+            // connectivity blip, means the session is truly gone — expire it and send
+            // the user back to login. Connectivity issues stay in offline mode.
+            if !isLikelyConnectivityIssue(error) && !isLocalMode {
+                await expireSession()
+            }
             return result
         }
 

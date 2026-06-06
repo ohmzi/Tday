@@ -1,3 +1,4 @@
+import { ChevronRightIcon, InfoIcon, OctagonXIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type ClickableToastProps = {
@@ -14,40 +15,49 @@ export default function ClickableToast({
   variant = "default",
 }: ClickableToastProps) {
   const hasDescription = Boolean(description);
+  const isDestructive = variant === "destructive";
 
   return (
     <button
       type="button"
       onClick={onClick}
       className={cn(
-        "w-full rounded-xl border px-4 py-3 text-left text-[13px] shadow-[0_4px_12px_rgba(0,0,0,0.1)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/20",
-        variant === "destructive"
-          ? "border-red/25 bg-red/95 text-white hover:bg-red/90"
-          : "border-form-button-accent bg-accent text-accent-foreground hover:bg-accent/95",
+        "flex w-full items-center gap-3 rounded-[24px] border bg-popover/92 px-4 py-3.5 text-left text-popover-foreground backdrop-blur-xl shadow-[0_10px_30px_-12px_hsl(var(--shadow)/0.45)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/20",
+        isDestructive
+          ? "border-destructive/30 hover:bg-popover"
+          : "border-border hover:bg-popover",
       )}
     >
-      <span className="block min-w-0">
+      <span
+        className={cn(
+          "flex size-9 shrink-0 items-center justify-center rounded-full",
+          isDestructive
+            ? "bg-destructive/15 text-destructive"
+            : "bg-accent/15 text-accent",
+        )}
+      >
+        {isDestructive ? (
+          <OctagonXIcon className="size-[18px]" />
+        ) : (
+          <InfoIcon className="size-[18px]" />
+        )}
+      </span>
+      <span className="block min-w-0 flex-1">
         <span
           className={cn(
-            "block leading-[1.5]",
-            hasDescription ? "font-medium" : "font-normal",
+            "block leading-tight",
+            hasDescription ? "font-extrabold" : "font-bold",
           )}
         >
           {title}
         </span>
         {description && (
-          <span
-            className={cn(
-              "mt-0.5 block leading-[1.4]",
-              variant === "destructive"
-                ? "text-white/85"
-                : "text-accent-foreground/90",
-            )}
-          >
+          <span className="mt-0.5 block text-[13px] font-medium leading-snug text-current/75">
             {description}
           </span>
         )}
       </span>
+      <ChevronRightIcon className="size-4 shrink-0 text-current/40" />
     </button>
   );
 }

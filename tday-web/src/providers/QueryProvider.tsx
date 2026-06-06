@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider, QueryCache } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type { ReactNode } from "react";
+import { ApiError } from "@/lib/api-client";
 
 let browserQueryClient: QueryClient | undefined;
 
@@ -9,6 +10,9 @@ function getQueryClient(): QueryClient {
     browserQueryClient = new QueryClient({
       queryCache: new QueryCache({
         onError: (error) => {
+          // 401s are owned by the session-expiry flow (AuthProvider shows a
+          // dedicated toast and redirects to login) — don't double-toast here.
+          if (error instanceof ApiError && error.status === 401) return;
           toast.error(error.message || "An error occurred");
         },
       }),

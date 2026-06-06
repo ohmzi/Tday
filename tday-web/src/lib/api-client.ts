@@ -1,4 +1,5 @@
 import { addApiErrorBreadcrumb } from "@/lib/observability/sentry";
+import { notifySessionExpired } from "@/lib/auth/sessionExpiry";
 
 type fetchOptions = {
   method: string;
@@ -55,6 +56,13 @@ const fetchApi = async (url: string, options: fetchOptions) => {
       status: res.status,
       code: errorCode,
     });
+    // A confirmed 401 on any non-auth request means the session is no longer
+    // valid. Signal the AuthProvider to expire the session and redirect to
+    // login. Auth endpoints (session probe, login, logout) handle their own
+    // 401s and must not self-trigger a global expiry.
+    if (res.status === 401 && !url.startsWith("/api/auth/")) {
+      notifySessionExpired();
+    }
     throw new ApiError(
       message,
       res.status,
