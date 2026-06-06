@@ -35,7 +35,7 @@ class FloaterListRepository @Inject constructor(
         buildListsForState(cacheManager.loadOfflineState())
 
     fun fetchListsSnapshot(): List<ListSummary> =
-        buildListsForState(cacheManager.loadOfflineState())
+        buildListsForState(cacheManager.loadOfflineStateBlocking())
 
     suspend fun createList(name: String, color: String? = null, iconKey: String? = null) {
         val normalizedName = capitalizeFirstListLetter(name).trim()

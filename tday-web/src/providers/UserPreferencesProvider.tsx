@@ -4,8 +4,6 @@ import { SortBy, GroupBy, Direction } from "@/types/enums";
 import { api } from "@/lib/api-client";
 
 type UserPreferences = {
-  id: string;
-  userID: string;
   sortBy: SortBy | null;
   groupBy: GroupBy | null;
   direction: Direction | null;
@@ -13,20 +11,31 @@ type UserPreferences = {
 
 type UserPreferencesContextType = {
   preferences: UserPreferences | null;
-  updatePreferences: (newPrefs: Partial<Omit<UserPreferences, "id" | "userID">>) => void;
+  updatePreferences: (newPrefs: Partial<UserPreferences>) => void;
   isLoading: boolean;
   isPending: boolean;
 };
 
 const UserPreferencesContext = createContext<UserPreferencesContextType | undefined>(undefined);
 
+// The /api/preferences response carries the canonical fields at the TOP LEVEL
+// (sortBy/groupBy/direction). The legacy nested `userPreferences` object is
+// always null — see PreferenceModels.kt — so read the top-level fields here.
+function readPreferences(data: Record<string, unknown> | null): UserPreferences {
+  return {
+    sortBy: (data?.sortBy as SortBy | null) ?? null,
+    groupBy: (data?.groupBy as GroupBy | null) ?? null,
+    direction: (data?.direction as Direction | null) ?? null,
+  };
+}
+
 async function fetchPreferences(): Promise<UserPreferences> {
   const data = await api.GET({ url: "/api/preferences" });
-  return data.userPreferences;
+  return readPreferences(data);
 }
 
 async function updatePreferencesAPI(
-  preferences: Partial<Omit<UserPreferences, "id" | "userID">>,
+  preferences: Partial<UserPreferences>,
 ): Promise<UserPreferences> {
   const cleanedPrefs = Object.fromEntries(
     Object.entries(preferences).map(([key, value]) => [key, value === undefined ? null : value]),
@@ -36,7 +45,7 @@ async function updatePreferencesAPI(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(cleanedPrefs),
   });
-  return data.userPreferences;
+  return readPreferences(data);
 }
 
 function UserPreferencesProviderInner({ children }: { children: React.ReactNode }) {

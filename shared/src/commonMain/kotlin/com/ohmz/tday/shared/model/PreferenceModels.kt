@@ -12,13 +12,15 @@ data class PreferencesDto(
 /**
  * Preferences payload returned by GET/PATCH `/api/preferences`.
  *
- * WARNING: the same three fields appear at the top level AND nested under
- * [userPreferences], with no enforced precedence. Today the backend
- * (PreferencesService) populates ONLY the top-level fields and leaves
- * [userPreferences] null, while the web client reads `data.userPreferences` —
- * so the two disagree. Pick one shape as canonical and make every client read it
- * (and the server emit it). Until then, prefer the top-level fields and treat
- * [userPreferences] as a deprecated mirror.
+ * CANONICAL SHAPE: the top-level [sortBy]/[groupBy]/[direction] fields. The
+ * backend (PreferencesService) emits only these, and every client reads them:
+ * Android via this model, web via the top-level keys, iOS via its flat
+ * PreferencesResponse.
+ *
+ * [userPreferences] is a deprecated nested mirror that the backend never
+ * populates (always null). It is retained only so existing deserializers don't
+ * trip on the field; do not read from or write to it. Remove it once no
+ * persisted/cached payloads reference it.
  */
 @Serializable
 data class PreferencesResponse(

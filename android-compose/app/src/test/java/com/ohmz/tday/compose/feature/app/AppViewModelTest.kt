@@ -88,7 +88,7 @@ class AppViewModelTest {
         every { serverConfigRepository.getAppDataMode() } returns AppDataMode.SERVER
         every { serverConfigRepository.hasServerConfigured() } returns true
         every { serverConfigRepository.getServerUrl() } returns "https://tday.example.com"
-        every { cacheManager.loadOfflineState() } returns OfflineSyncState()
+        every { cacheManager.loadOfflineStateBlocking() } returns OfflineSyncState()
         every { cacheManager.syncMetadataVersion } returns syncMetadataVersion
         every { syncManager.offlineSyncFailures } returns offlineSyncFailures
         every { syncManager.offlineSyncSuccesses } returns offlineSyncSuccesses
@@ -107,7 +107,7 @@ class AppViewModelTest {
     @Test
     fun `local bootstrap opens workspace without server session or sync`() = runTest {
         every { serverConfigRepository.getAppDataMode() } returns AppDataMode.LOCAL
-        every { cacheManager.updateOfflineState(any()) } answers {
+        coEvery { cacheManager.updateOfflineState(any()) } answers {
             firstArg<(OfflineSyncState) -> OfflineSyncState>().invoke(
                 OfflineSyncState(
                     pendingMutations = listOf(
@@ -152,7 +152,7 @@ class AppViewModelTest {
             lastSyncAttemptEpochMs = 2_000L,
             pendingMutations = listOf(pendingMutation("mutation-1")),
         )
-        every { cacheManager.loadOfflineState() } returns cachedState
+        every { cacheManager.loadOfflineStateBlocking() } returns cachedState
         coEvery { authRepository.restoreSessionForBootstrap() } returns restoredSession
         coEvery {
             syncManager.syncCachedData(
@@ -186,7 +186,7 @@ class AppViewModelTest {
             lastSuccessfulSyncEpochMs = 1_000L,
             lastSyncAttemptEpochMs = 1_000L,
         )
-        every { cacheManager.loadOfflineState() } answers { cachedState }
+        every { cacheManager.loadOfflineStateBlocking() } answers { cachedState }
         coEvery { authRepository.restoreSessionForBootstrap() } returns restoredSession
         coEvery {
             syncManager.syncCachedData(

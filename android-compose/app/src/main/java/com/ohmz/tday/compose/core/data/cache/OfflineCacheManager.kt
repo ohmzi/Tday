@@ -10,11 +10,13 @@ import com.ohmz.tday.compose.core.data.db.toEntity
 import com.ohmz.tday.compose.core.data.db.toRecord
 import com.ohmz.tday.compose.feature.widget.FloaterTasksWidgetRefresher
 import com.ohmz.tday.compose.feature.widget.TodayTasksWidgetRefresher
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import java.net.CookieManager
@@ -83,7 +85,16 @@ class OfflineCacheManager @Inject constructor(
         Log.i(LOG_TAG, "Migrated offline cache from SharedPreferences to Room")
     }
 
-    fun loadOfflineState(): OfflineSyncState {
+    /**
+     * Suspend entry point for reading the offline cache. Hops to [Dispatchers.IO]
+     * so callers on the main dispatcher (UI / ViewModels) never block on Room.
+     * Contexts that genuinely cannot suspend (Glance widgets, the deliberately
+     * synchronous *Snapshot helpers) must call [loadOfflineStateBlocking] directly.
+     */
+    suspend fun loadOfflineState(): OfflineSyncState =
+        withContext(Dispatchers.IO) { loadOfflineStateBlocking() }
+
+    fun loadOfflineStateBlocking(): OfflineSyncState {
         ensureMigrated()
         val todos = todoDao.getAll().map { it.toRecord() }
         val floaters = floaterDao.getAll().map { it.toRecord() }
@@ -110,9 +121,12 @@ class OfflineCacheManager @Inject constructor(
         return state
     }
 
-    fun saveOfflineState(state: OfflineSyncState) {
+    suspend fun saveOfflineState(state: OfflineSyncState) =
+        withContext(Dispatchers.IO) { saveOfflineStateBlocking(state) }
+
+    fun saveOfflineStateBlocking(state: OfflineSyncState) {
         ensureMigrated()
-        val previous = lastPersistedState ?: loadOfflineState()
+        val previous = lastPersistedState ?: loadOfflineStateBlocking()
         val normalizedState = if (secureConfigStore.isLocalMode()) {
             state.copy(
                 lastSuccessfulSyncEpochMs = 0L,
@@ -139,9 +153,15 @@ class OfflineCacheManager @Inject constructor(
         }
     }
 
-    fun updateOfflineState(transform: (OfflineSyncState) -> OfflineSyncState): OfflineSyncState {
-        val next = transform(loadOfflineState())
-        saveOfflineState(next)
+    suspend fun updateOfflineState(
+        transform: (OfflineSyncState) -> OfflineSyncState,
+    ): OfflineSyncState = withContext(Dispatchers.IO) { updateOfflineStateBlocking(transform) }
+
+    fun updateOfflineStateBlocking(
+        transform: (OfflineSyncState) -> OfflineSyncState,
+    ): OfflineSyncState {
+        val next = transform(loadOfflineStateBlocking())
+        saveOfflineStateBlocking(next)
         return next
     }
 
@@ -157,7 +177,7 @@ class OfflineCacheManager @Inject constructor(
     }
 
     fun clearAllLocalData() {
-        val previous = lastPersistedState ?: loadOfflineState()
+        val previous = lastPersistedState ?: loadOfflineStateBlocking()
         val cleared = OfflineSyncState()
 
         database.clearAllTables()
@@ -177,7 +197,7 @@ class OfflineCacheManager @Inject constructor(
     }
 
     fun clearSessionOnly() {
-        val previous = lastPersistedState ?: loadOfflineState()
+        val previous = lastPersistedState ?: loadOfflineStateBlocking()
         val cleared = OfflineSyncState()
 
         runCatching { cookieManager.cookieStore?.removeAll() }

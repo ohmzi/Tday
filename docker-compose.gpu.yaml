@@ -1,0 +1,13 @@
+# GPU override for the `ollama` service.
+#
+# The base docker-compose.yaml runs Ollama on CPU so the stack comes up on any
+# host. Layer this file on top to enable NVIDIA GPU acceleration. It requires
+# the NVIDIA Container Toolkit (and a working `nvidia` Docker runtime) on the
+# host — otherwise `docker compose up` will fail to start the container.
+#
+# Usage:
+#   docker compose -f docker-compose.yaml -f docker-compose.gpu.yaml \
+#     --profile ai up -d --build
+services:
+  ollama:
+    gpus: all
