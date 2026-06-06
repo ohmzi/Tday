@@ -176,14 +176,16 @@ struct OnboardingWizardOverlay: View {
                     title: "Mode",
                     systemImage: "iphone",
                     tint: Color(red: 0.5, green: 0.72, blue: 0.54),
-                    active: step == .mode
+                    active: step == .mode,
+                    completed: step == .server || step == .login
                 )
 
                 WizardStepChip(
                     title: "Server",
                     systemImage: "globe",
                     tint: Color(red: 0.43, green: 0.66, blue: 0.88),
-                    active: step == .server
+                    active: step == .server,
+                    completed: step == .login
                 )
 
                 WizardStepChip(
@@ -676,10 +678,14 @@ private struct WizardStepChip: View {
     let systemImage: String
     let tint: Color
     let active: Bool
+    var completed: Bool = false
 
     @Environment(\.tdayColors) private var colors
 
     var body: some View {
+        // A step keeps its color once it is the active step or has been
+        // completed; completed steps swap their glyph for a checkmark.
+        let highlighted = active || completed
         let ringColor = Color(
             red: min(1, tint.components.red * 0.75),
             green: min(1, tint.components.green * 0.75),
@@ -687,26 +693,26 @@ private struct WizardStepChip: View {
         )
 
         HStack(spacing: 8) {
-            Image(systemName: systemImage)
+            Image(systemName: completed ? "checkmark" : systemImage)
                 .font(.system(size: 13, weight: .bold))
 
             Text(L(title))
                 .font(.tdayRounded(size: 13, weight: .bold))
                 .lineLimit(1)
         }
-        .foregroundStyle(active ? .white : colors.onSurface.opacity(0.68))
+        .foregroundStyle(highlighted ? .white : colors.onSurface.opacity(0.68))
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
         .frame(maxWidth: .infinity)
         .background(
             RoundedRectangle(cornerRadius: OnboardingWizardOverlay.Metrics.chipCornerRadius, style: .continuous)
-                .fill(active ? tint : colors.surface)
+                .fill(highlighted ? tint : colors.surface)
         )
         .overlay(
             RoundedRectangle(cornerRadius: OnboardingWizardOverlay.Metrics.chipCornerRadius, style: .continuous)
-                .stroke(active ? ringColor.opacity(0.62) : colors.onSurface.opacity(0.08), lineWidth: 1)
+                .stroke(highlighted ? ringColor.opacity(0.62) : colors.onSurface.opacity(0.08), lineWidth: 1)
         )
-        .shadow(color: tint.opacity(active ? 0.18 : 0), radius: active ? 8 : 0, x: 0, y: 5)
+        .shadow(color: tint.opacity(highlighted ? 0.18 : 0), radius: highlighted ? 8 : 0, x: 0, y: 5)
     }
 }
 

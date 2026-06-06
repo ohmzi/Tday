@@ -362,51 +362,53 @@ private fun SettingsWorkspaceSection(
                 color = colorScheme.onSurface.copy(alpha = 0.62f),
             )
         } else {
-            Text(
-                text = stringResource(R.string.settings_workspace_server_title),
-                style = MaterialTheme.typography.titleMedium,
-                color = colorScheme.onSurface,
-                fontWeight = FontWeight.ExtraBold,
-            )
-            Text(
-                text = syncStatusLabel(syncStatus),
-                style = MaterialTheme.typography.bodySmall,
-                color = if (syncStatus.isOffline) {
-                    colorScheme.error
-                } else {
-                    colorScheme.onSurface.copy(alpha = 0.62f)
-                },
-            )
-            SettingsDivider()
-            SettingsSyncFactRow(
-                label = stringResource(R.string.settings_sync_last_synced_label),
-                value = lastSyncedText(syncStatus.lastSuccessfulSyncEpochMs),
-            )
-            if (syncStatus.lastSyncAttemptEpochMs > 0L &&
-                syncStatus.lastSyncAttemptEpochMs != syncStatus.lastSuccessfulSyncEpochMs
-            ) {
-                SettingsSyncFactRow(
-                    label = stringResource(R.string.settings_sync_last_attempt_label),
-                    value = formatSyncTimestamp(syncStatus.lastSyncAttemptEpochMs),
-                )
-            }
-            SettingsSyncFactRow(
-                label = stringResource(R.string.settings_sync_pending_label),
-                value = pendingChangesText(syncStatus.pendingMutationCount),
-            )
-            TextButton(
-                onClick = onSyncNow,
-                enabled = !syncStatus.isManualSyncing,
-                modifier = Modifier.align(Alignment.End),
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = if (syncStatus.isManualSyncing) {
-                        stringResource(R.string.settings_syncing_now)
-                    } else {
-                        stringResource(R.string.settings_sync_now)
-                    },
+                    text = stringResource(R.string.settings_workspace_server_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = colorScheme.onSurface,
                     fontWeight = FontWeight.ExtraBold,
                 )
+                Text(
+                    text = if (syncStatus.isOffline) {
+                        stringResource(R.string.settings_sync_offline_short)
+                    } else {
+                        stringResource(R.string.settings_sync_up_to_date)
+                    },
+                    style = MaterialTheme.typography.titleSmall,
+                    color = if (syncStatus.isOffline) colorScheme.error else TdayStatusSuccess,
+                    fontWeight = FontWeight.ExtraBold,
+                )
+            }
+            if (syncStatus.isOffline) {
+                SettingsDivider()
+                SettingsSyncFactRow(
+                    label = stringResource(R.string.settings_sync_last_synced_label),
+                    value = lastSyncedText(syncStatus.lastSuccessfulSyncEpochMs),
+                )
+                Text(
+                    text = stringResource(R.string.settings_sync_offline_message),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = colorScheme.onSurface.copy(alpha = 0.62f),
+                )
+                TextButton(
+                    onClick = onSyncNow,
+                    enabled = !syncStatus.isManualSyncing,
+                    modifier = Modifier.align(Alignment.End),
+                ) {
+                    Text(
+                        text = if (syncStatus.isManualSyncing) {
+                            stringResource(R.string.settings_syncing_now)
+                        } else {
+                            stringResource(R.string.settings_sync_now)
+                        },
+                        fontWeight = FontWeight.ExtraBold,
+                    )
+                }
             }
         }
     }
@@ -434,26 +436,6 @@ private fun SettingsSyncFactRow(
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f),
             fontWeight = FontWeight.ExtraBold,
         )
-    }
-}
-
-@Composable
-private fun syncStatusLabel(syncStatus: MobileSyncStatus): String {
-    return when {
-        syncStatus.isManualSyncing -> stringResource(R.string.settings_sync_status_syncing)
-        syncStatus.isOffline -> stringResource(R.string.settings_sync_status_offline)
-        syncStatus.pendingMutationCount > 0 -> stringResource(R.string.settings_sync_status_pending)
-        syncStatus.lastSuccessfulSyncEpochMs > 0L -> stringResource(R.string.settings_sync_status_synced)
-        else -> stringResource(R.string.settings_sync_status_ready)
-    }
-}
-
-@Composable
-private fun pendingChangesText(count: Int): String {
-    return when (count) {
-        0 -> stringResource(R.string.settings_sync_pending_none)
-        1 -> stringResource(R.string.settings_sync_pending_one)
-        else -> stringResource(R.string.settings_sync_pending_many, count)
     }
 }
 

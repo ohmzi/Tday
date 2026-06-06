@@ -410,6 +410,7 @@ struct CalendarScreen: View {
             accentColor: calendarAccentColor,
             collapseProgress: titleCollapseProgress,
             onBack: { dismiss() },
+            actionLabel: L("Today"),
             action: TimelineTopBarAction(
                 systemName: "calendar",
                 tint: calendarAccentColor,
@@ -1988,10 +1989,17 @@ private struct CalendarElasticTopBar: View {
     let accentColor: Color
     let collapseProgress: CGFloat
     let onBack: () -> Void
+    var actionLabel: String?
     let action: TimelineTopBarAction?
 
     private var progress: CGFloat {
         min(max(collapseProgress, 0), 1)
+    }
+
+    // Show the word "Today" while the title is down (expanded); collapse to an
+    // icon-only button once the title is pulled up.
+    private var showActionLabel: Bool {
+        progress < 0.5
     }
 
     private var expandedTitleHeight: CGFloat {
@@ -2036,12 +2044,22 @@ private struct CalendarElasticTopBar: View {
                     CalendarTopBarButton(systemName: "chevron.left", chrome: .filled, action: onBack)
                     Spacer(minLength: 0)
                     if let action {
-                        CalendarTopBarButton(
-                            systemName: action.systemName,
-                            chrome: action.usesCircularChrome ? .outlined : .plain,
-                            tint: action.tint,
-                            action: action.action
-                        )
+                        if let actionLabel {
+                            CalendarTodayActionButton(
+                                systemName: action.systemName,
+                                label: actionLabel,
+                                tint: action.tint,
+                                showLabel: showActionLabel,
+                                action: action.action
+                            )
+                        } else {
+                            CalendarTopBarButton(
+                                systemName: action.systemName,
+                                chrome: action.usesCircularChrome ? .outlined : .plain,
+                                tint: action.tint,
+                                action: action.action
+                            )
+                        }
                     } else {
                         Color.clear
                             .frame(width: TodoTimelineMetrics.topBarButtonFrame, height: TodoTimelineMetrics.topBarButtonFrame)
@@ -2172,6 +2190,63 @@ private struct CalendarTopBarButton: View {
             return tint.opacity(0.48)
         }
         return colors.onSurface.opacity(0.2)
+    }
+}
+
+/// Outlined top-bar action that shows a "Today" label while the calendar title
+/// is expanded and collapses to an icon-only pill once the title is pulled up.
+private struct CalendarTodayActionButton: View {
+    let systemName: String
+    let label: String
+    let tint: Color?
+    let showLabel: Bool
+    let action: () -> Void
+
+    @Environment(\.tdayColors) private var colors
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: showLabel ? 7 : 0) {
+                Image(systemName: systemName)
+                    .font(.system(size: 28, weight: .semibold))
+
+                if showLabel {
+                    Text(label)
+                        .font(.tdayRounded(size: 16, weight: .bold))
+                        .lineLimit(1)
+                        .fixedSize()
+                        .transition(.opacity)
+                }
+            }
+            .padding(.horizontal, showLabel ? 16 : 0)
+            .frame(minWidth: TodoTimelineMetrics.topBarButtonFrame, minHeight: TodoTimelineMetrics.topBarButtonFrame)
+            .background {
+                Capsule(style: .continuous)
+                    .fill(fillColor)
+                    .overlay {
+                        Capsule(style: .continuous)
+                            .stroke(borderColor, lineWidth: 1)
+                    }
+            }
+            .contentShape(Capsule(style: .continuous))
+            .animation(.spring(response: 0.32, dampingFraction: 0.9), value: showLabel)
+        }
+        .buttonStyle(
+            TdayPressButtonStyle(
+                shadowColor: .black,
+                pressedShadowOpacity: 0,
+                normalShadowOpacity: 0
+            )
+        )
+        .foregroundStyle(tint ?? colors.onSurface)
+    }
+
+    private var fillColor: Color {
+        (tint ?? colors.onSurface).opacity(0.12)
+    }
+
+    private var borderColor: Color {
+        (tint ?? colors.onSurface).opacity(0.48)
     }
 }
 

@@ -279,6 +279,7 @@
     <!-- Calendar screen -->
     <string name="calendar_title">Kalendar</string>
     <string name="calendar_jump_to_today">Lompat ke hari ini</string>
+    <string name="calendar_today">Hari ini</string>
     <string name="calendar_tasks_due">Tugasan perlu disiapkan %1$s</string>
     <string name="calendar_no_pending">Tiada tugasan tertangguh untuk hari ini</string>
     <string name="calendar_completed_header">Selesai:</string>
@@ -315,6 +316,9 @@
     <string name="settings_sync_pending_one">1 perubahan menunggu</string>
     <string name="settings_sync_pending_many">%1$d perubahan menunggu</string>
     <string name="settings_sync_now">Segerak sekarang</string>
+    <string name="settings_sync_up_to_date">Terkini</string>
+    <string name="settings_sync_offline_short">Luar talian</string>
+    <string name="settings_sync_offline_message">Perubahan akan disegerakkan apabila sambungan kembali.</string>
     <string name="settings_syncing_now">Menyegerakkan...</string>
     <string name="error_auth_expired">Sesi tamat tempoh. Sila log masuk semula.</string>
     <string name="error_app_outdated">Versi apl ini sudah lapuk. Sila kemas kini untuk meneruskan.</string>
