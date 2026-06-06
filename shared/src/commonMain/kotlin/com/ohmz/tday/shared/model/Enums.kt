@@ -28,9 +28,12 @@ enum class GroupBy {
     project;
 
     companion object {
+        // Unknown/future values fall back to `due` rather than throwing
+        // IllegalArgumentException (valueOf) — a persisted or client-sent string we
+        // don't recognize should degrade gracefully, not crash preference loading.
         fun fromApi(value: String): GroupBy = when (value) {
             "list" -> project
-            else -> valueOf(value)
+            else -> entries.firstOrNull { it.name == value } ?: due
         }
 
         fun toApi(value: GroupBy): String = when (value) {
@@ -50,7 +53,13 @@ enum class Direction {
 enum class Priority {
     Low,
     Medium,
-    High,
+    High;
+
+    companion object {
+        /** Non-throwing parse for the raw `priority` strings carried in DTOs. */
+        fun fromApiOrDefault(value: String?, default: Priority = Low): Priority =
+            entries.firstOrNull { it.name == value } ?: default
+    }
 }
 
 @Serializable
@@ -77,5 +86,11 @@ enum class ListColor {
     ROSE,
     LIGHT_RED,
     BRICK,
-    SLATE,
+    SLATE;
+
+    companion object {
+        /** Non-throwing parse for the raw `color` strings carried in DTOs. */
+        fun fromApiOrNull(value: String?): ListColor? =
+            entries.firstOrNull { it.name == value }
+    }
 }

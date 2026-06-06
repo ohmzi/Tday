@@ -9,9 +9,12 @@ services:
       timeout: 5s
       retries: 10
     environment:
-      POSTGRES_USER: myuser
-      POSTGRES_PASSWORD: mypass
-      POSTGRES_DB: mydb
+      # Overridable via the root .env so production isn't stuck with weak,
+      # source-committed credentials. If you override these, set DATABASE_URL in
+      # .env.docker to match (same user/password/db).
+      POSTGRES_USER: ${POSTGRES_USER:-myuser}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mypass}
+      POSTGRES_DB: ${POSTGRES_DB:-mydb}
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
@@ -42,10 +45,12 @@ services:
         condition: service_healthy
     environment:
       OLLAMA_HOST: http://ollama:11434
-      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen3.5:0.8b}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:0.5b}
+    # Pull the configured model, then drop the previous default — but never delete
+    # the model we just pulled (guard against OLLAMA_MODEL == the old default).
     command: >
       sh -c "ollama pull \"$${OLLAMA_MODEL}\" &&
-      (ollama rm qwen2.5:0.5b || true)"
+      (if [ \"$${OLLAMA_MODEL}\" != \"qwen2.5:0.5b\" ]; then ollama rm qwen2.5:0.5b || true; fi)"
 
   tday-backend:
     build:
@@ -65,7 +70,15 @@ services:
       TZ: ${TZ:-UTC}
       APPLE_TEAM_ID: ${APPLE_TEAM_ID:-THT5Z8K3TF}
       IOS_BUNDLE_ID: ${IOS_BUNDLE_ID:-com.ohmz.tday.ios}
-      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen3.5:0.8b}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:0.5b}
+    # Report real readiness so restart:always and any orchestration can tell a
+    # booted-but-broken backend (DB down, migration failed) from a healthy one.
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
     security_opt:
       - no-new-privileges:true
     cap_drop:
