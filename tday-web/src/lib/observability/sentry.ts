@@ -70,7 +70,7 @@ const SENSITIVE_LABEL_PATTERN =
   /(https?:\/\/|wss?:\/\/|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|bearer\s+|token=|password=|session=|cookie=|csrf)/i;
 
 const SENSITIVE_DATA_KEY_PATTERN =
-  /(authorization|cookie|csrf|token|password|session|secret|email|body|payload|header)/i;
+  /(authorization|cookie|csrf|token|password|session|secret|email|username|body|payload|header)/i;
 
 function parseTelemetryUrl(raw: string): URL | null {
   try {

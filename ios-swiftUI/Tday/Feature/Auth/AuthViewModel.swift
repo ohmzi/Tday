@@ -11,7 +11,7 @@ final class AuthViewModel {
     var errorMessage: String?
     var infoMessage: String?
     var pendingApproval = false
-    var savedEmail = ""
+    var savedUsername = ""
 
     init(
         authRepository: AuthRepositoryServicing,
@@ -19,7 +19,7 @@ final class AuthViewModel {
     ) {
         self.authRepository = authRepository
         self.systemCredentialService = systemCredentialService
-        savedEmail = authRepository.getLastEmail() ?? ""
+        savedUsername = authRepository.getLastUsername() ?? ""
     }
 
     func clearStatus() {
@@ -28,19 +28,19 @@ final class AuthViewModel {
         pendingApproval = false
     }
 
-    func login(email: String, password: String, source: LoginCredentialSource = .manual) async -> Bool {
+    func login(username: String, password: String, source: LoginCredentialSource = .manual) async -> Bool {
         isLoading = true
         clearStatus()
         defer { isLoading = false }
 
-        let result = await authRepository.login(email: email, password: password)
+        let result = await authRepository.login(username: username, password: password)
         switch result {
         case .success:
-            let normalizedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-            savedEmail = normalizedEmail
+            let normalizedUsername = username.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            savedUsername = normalizedUsername
             if source == .manual {
                 _ = await systemCredentialService.offerSaveOrUpdateCredential(
-                    SystemCredential(email: normalizedEmail, password: password)
+                    SystemCredential(username: normalizedUsername, password: password)
                 )
             }
             return true
@@ -54,19 +54,19 @@ final class AuthViewModel {
         }
     }
 
-    func register(firstName: String, lastName: String, email: String, password: String) async -> Bool {
+    func register(firstName: String, lastName: String, username: String, password: String) async -> Bool {
         isLoading = true
         clearStatus()
         defer { isLoading = false }
 
-        let outcome = await authRepository.register(firstName: firstName, lastName: lastName, email: email, password: password)
+        let outcome = await authRepository.register(firstName: firstName, lastName: lastName, username: username, password: password)
         if outcome.success {
             infoMessage = outcome.message
             pendingApproval = outcome.requiresApproval
-            let normalizedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-            savedEmail = normalizedEmail
+            let normalizedUsername = username.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            savedUsername = normalizedUsername
             _ = await systemCredentialService.offerSaveOrUpdateCredential(
-                SystemCredential(email: normalizedEmail, password: password)
+                SystemCredential(username: normalizedUsername, password: password)
             )
             return true
         }
@@ -77,8 +77,8 @@ final class AuthViewModel {
 
     private func friendlyMessage(_ rawValue: String) -> String {
         let lower = rawValue.lowercased()
-        if lower.contains("invalid credentials") || lower.contains("incorrect email or password") {
-            return "Incorrect email or password"
+        if lower.contains("invalid credentials") || lower.contains("incorrect username or password") {
+            return "Incorrect username or password"
         }
         if lower.contains("pending admin approval") || lower.contains("approval required") || lower.contains("pending_approval") {
             return "Account pending admin approval."

@@ -52,7 +52,7 @@ object TdayObservability {
         "session",
         "secret",
         "password",
-        "email",
+        "username",
         "code",
         "key",
         "captcha",
@@ -61,7 +61,7 @@ object TdayObservability {
 
     private val routeLikeDataKeys = setOf("route", "path", "url", "href", "from", "to", "endpoint")
     private val sensitiveDataKeyPattern =
-        Regex("(authorization|cookie|csrf|token|password|session|secret|email|body|payload|header)", RegexOption.IGNORE_CASE)
+        Regex("(authorization|cookie|csrf|token|password|session|secret|username|body|payload|header)", RegexOption.IGNORE_CASE)
     private val sensitiveLabelPattern =
         Regex("(https?://|wss?://|[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}|bearer\\s+|token=|password=|session=|cookie=|csrf)", RegexOption.IGNORE_CASE)
     private val tokenLikeLabelPattern = Regex("^[A-Za-z0-9_.:-]+$")
