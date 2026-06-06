@@ -11,10 +11,9 @@ import com.ohmz.tday.domain.AppError
 import com.ohmz.tday.models.response.UserProfileResponse
 import com.ohmz.tday.models.response.UserResponse
 import com.ohmz.tday.security.PasswordService
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import kotlinx.coroutines.Dispatchers
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.selectAll
-import kotlinx.coroutines.Dispatchers
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import org.jetbrains.exposed.sql.update
 import java.time.LocalDateTime
@@ -33,6 +32,7 @@ interface UserService {
     suspend fun isAdmin(userId: String): Boolean
     suspend fun emailExists(email: String): Boolean
     suspend fun updatePasswordHash(userId: String, newHash: String)
+    suspend fun requiresPasswordChange(userId: String): Boolean
 }
 
 class UserServiceImpl(private val passwordService: PasswordService) : UserService {
@@ -108,6 +108,7 @@ class UserServiceImpl(private val passwordService: PasswordService) : UserServic
             val newHash = passwordService.hashPassword(newPassword)
             Users.update({ Users.id eq userId }) {
                 it[Users.password] = newHash
+                it[Users.requirePasswordChange] = false
                 it[Users.updatedAt] = LocalDateTime.now()
             }
             true
@@ -179,4 +180,10 @@ class UserServiceImpl(private val passwordService: PasswordService) : UserServic
             }
         }
     }
+
+    override suspend fun requiresPasswordChange(userId: String): Boolean =
+        newSuspendedTransaction(Dispatchers.IO) {
+            Users.selectAll().where { Users.id eq userId }.firstOrNull()
+                ?.get(Users.requirePasswordChange) ?: false
+        }
 }

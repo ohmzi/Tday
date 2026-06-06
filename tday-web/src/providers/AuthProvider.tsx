@@ -31,6 +31,7 @@ export type AuthUser = {
   role: string | null;
   approvalStatus: string | null;
   timeZone: string | null;
+  requirePasswordChange?: boolean;
 };
 
 type AuthContextValue = {

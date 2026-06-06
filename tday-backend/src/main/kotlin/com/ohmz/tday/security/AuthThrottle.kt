@@ -5,9 +5,8 @@ import com.ohmz.tday.db.tables.AuthSignals
 import com.ohmz.tday.db.tables.AuthThrottles
 import com.ohmz.tday.db.util.CuidGenerator
 import io.ktor.server.request.ApplicationRequest
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
-import org.jetbrains.exposed.sql.and
 import kotlinx.coroutines.Dispatchers
+import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
@@ -48,6 +47,11 @@ class AuthThrottleImpl(
 ) : AuthThrottle {
     private data class Policy(val windowMs: Long, val maxRequests: Int)
 
+    /** Stricter short-window IP ceiling layered on top of the hourly register cap. */
+    private val registerBurstPolicy by lazy {
+        Policy(config.limitRegisterBurstWindowSec * 1000L, config.limitRegisterBurstMax)
+    }
+
     private val policies by lazy {
         mapOf(
             ThrottleAction.credentials to Policy(config.limitCredentialsWindowSec * 1000L, config.limitCredentialsMax),
@@ -67,6 +71,23 @@ class AuthThrottleImpl(
             val verdict = consumeRequestQuota(policy, subject)
             if (!verdict.allowed) {
                 blocked = pickStronger(blocked, verdict)
+            }
+        }
+
+        // Account creation gets a second, stricter per-IP tier: even before the
+        // hourly cap is reached, a single IP can only burst a few sign-ups in a
+        // short window. The hourly cap above remains the hard ceiling.
+        if (action == ThrottleAction.register) {
+            val ip = clientSignals.getClientIp(request)
+            val burstSubject = SubjectKey(
+                scope = "register_burst:ip",
+                bucketKey = clientSignals.hashSecurityValue("ip:$ip"),
+                dimension = ThrottleDimension.ip,
+            )
+            val burstVerdict = consumeRequestQuota(registerBurstPolicy, burstSubject)
+            if (!burstVerdict.allowed) {
+                blocked =
+                    pickStronger(blocked, burstVerdict.copy(reasonCode = "auth_limit_ip_burst"))
             }
         }
 

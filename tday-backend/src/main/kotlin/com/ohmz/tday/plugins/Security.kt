@@ -85,6 +85,7 @@ fun Application.configureSecurity() {
                             approvalStatus = user.approvalStatus,
                             tokenVersion = user.tokenVersion,
                             timeZone = user.timeZone,
+                            requirePasswordChange = user.requirePasswordChange,
                         ),
                     )
                 }
@@ -118,6 +119,7 @@ fun Application.configureSecurity() {
                             approvalStatus = user.approvalStatus,
                             tokenVersion = user.tokenVersion,
                             timeZone = user.timeZone,
+                            requirePasswordChange = user.requirePasswordChange,
                         )
                         call.attributes.put(AuthUserKey, hydratedClaims)
 
@@ -257,6 +259,7 @@ private suspend fun loadCachedAuthUser(
         approvalStatus = dbUser[Users.approvalStatus].name,
         tokenVersion = dbUser[Users.tokenVersion],
         timeZone = dbUser[Users.timeZone],
+        requirePasswordChange = dbUser[Users.requirePasswordChange],
     )
     authUserCache.put(userId, fetched)
     return fetched
