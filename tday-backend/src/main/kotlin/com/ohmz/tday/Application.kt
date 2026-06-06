@@ -62,7 +62,12 @@ fun Application.module(config: AppConfig = AppConfig.load()) {
     }
 
     val dbConfig by inject<DatabaseConfig>()
-    dbConfig.init()
+    try {
+        dbConfig.init()
+    } catch (e: Throwable) {
+        logger.error("Database initialization failed during startup", e)
+        throw e
+    }
 
     install(WebSockets) {
         pingPeriod = 15.seconds

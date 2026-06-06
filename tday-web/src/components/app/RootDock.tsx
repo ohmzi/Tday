@@ -72,7 +72,16 @@ export default function RootDock({
   }, [activeTab]);
 
   useEffect(() => {
+    // Measure now, then again after the tab width transition (200ms) settles —
+    // when the active tab collapses/expands the immediate rects are mid-anim,
+    // which would otherwise leave the indicator offset.
     updatePill();
+    const raf = requestAnimationFrame(updatePill);
+    const timer = window.setTimeout(updatePill, 260);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.clearTimeout(timer);
+    };
   }, [updatePill]);
 
   return (
@@ -93,7 +102,10 @@ export default function RootDock({
           ref={navRef}
           aria-label="Primary app navigation"
           className={cn(
-            "pointer-events-auto relative h-16 rounded-[25px] border border-white/70 bg-muted/80 p-1.5",
+            // overflow-hidden clips the sliding indicator so it can never poke
+            // out past the dock's right edge from a transient/stale measurement
+            // (e.g. when the More sheet opens and the active tab collapses).
+            "pointer-events-auto relative h-16 overflow-hidden rounded-[25px] border border-white/70 bg-muted/80 p-1.5",
             "shadow-[0_18px_42px_-24px_hsl(var(--shadow)/0.65)] backdrop-blur-xl",
             "dark:border-white/10 dark:bg-muted/80",
           )}
