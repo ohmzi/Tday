@@ -1,0 +1,445 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">T\'Day</string>
+
+    <!-- Shared / reusable -->
+    <string name="action_back">Atrás</string>
+    <string name="action_close">Cerrar</string>
+    <string name="action_search">Buscar</string>
+    <string name="action_close_search">Cerrar búsqueda</string>
+    <string name="action_create_task">Crear tarea</string>
+    <string name="action_create_list">Crear lista</string>
+    <string name="action_edit">Editar</string>
+    <string name="action_edit_task">Editar tarea</string>
+    <string name="action_delete_task">Eliminar tarea</string>
+    <string name="action_delete_list">Eliminar lista</string>
+    <string name="action_delete">Eliminar</string>
+    <string name="action_complete">Completar</string>
+    <string name="action_more">Más</string>
+    <string name="action_more_options">Más opciones</string>
+    <string name="action_save">Guardar</string>
+    <string name="action_save_task">Guardar tarea</string>
+    <string name="action_cancel">Cancelar</string>
+    <string name="action_done">Listo</string>
+    <string name="action_create">Crear</string>
+    <string name="action_ok">Aceptar</string>
+    <string name="action_sign_out">Cerrar sesión</string>
+    <string name="action_expand_section">Expandir sección</string>
+    <string name="action_collapse_section">Contraer sección</string>
+    <string name="label_completed">Completada</string>
+    <string name="label_mark_complete">Marcar como completada</string>
+    <string name="label_undo_complete">Deshacer completada</string>
+    <string name="label_task_list">Lista de tareas</string>
+    <string name="label_priority_task">Tarea prioritaria</string>
+    <string name="label_loading">Cargando…</string>
+    <string name="label_version_name">v%1$s</string>
+    <string name="label_server">Servidor</string>
+
+    <!-- Home screen -->
+    <string name="home_title">T\'Day</string>
+    <string name="home_category_today">Hoy</string>
+    <string name="home_category_overdue">Vencidas</string>
+    <string name="home_category_scheduled">Programadas</string>
+    <string name="home_category_all">Todas</string>
+    <string name="home_category_priority">Prioridad</string>
+    <string name="home_category_completed">Completadas</string>
+    <string name="home_category_calendar">Calendario</string>
+    <string name="root_feed_tab_home">Inicio</string>
+    <string name="root_feed_tab_floater">Flotante</string>
+    <string name="home_search_placeholder">Buscar</string>
+    <string name="home_search_no_results">No hay tareas coincidentes</string>
+    <string name="home_my_lists">Mis listas</string>
+    <string name="home_new_list">Nueva lista</string>
+    <string name="home_list_name_placeholder">Nombre de la lista</string>
+    <string name="home_section_list">Lista</string>
+    <string name="home_section_color">Color</string>
+    <string name="home_section_icon">Icono</string>
+    <string name="home_list_icon_option">Seleccionar icono de la lista %1$s</string>
+    <string name="home_locked_list_name">Inicia sesión para cargar tus listas</string>
+
+    <string-array name="splash_taglines">
+        <item>Tu servidor recuerda, para que tú no tengas que hacerlo</item>
+        <item>Alojado por ti, perseguido por las fechas límite</item>
+        <item>Porque \'lo recordaré después\' siempre es mentira</item>
+        <item>Cordura autoalojada, una tarea a la vez</item>
+        <item>Insistiéndote desde tu propio hardware</item>
+        <item>Tus datos, tu servidor, tu zona sin excusas</item>
+        <item>Haciendo la procrastinación un poco más difícil desde la v0.1</item>
+        <item>Funcionando en tu servidor, organizando tu vida</item>
+        <item>Porque las notas adhesivas no tienen notificaciones push</item>
+        <item>Convirtiendo el \'lo olvidé\' en \'lo tengo controlado\'</item>
+        <item>Tu máquina personal de recordatorios</item>
+        <item>Autoalojado, autoorganizado… bueno, casi</item>
+        <item>Donde las tareas olvidadas vuelven a aparecer</item>
+        <item>Ser adulto, pero autoalojado</item>
+        <item>Domando el caos desde un servidor cercano</item>
+        <item>El tú del futuro te lo agradece de antemano</item>
+        <item>La nube es solo el servidor de otra persona. Este es el tuyo.</item>
+        <item>Organizando tu vida, sin necesidad de casero</item>
+        <item>Confianza cero… excepto en tu propio servidor</item>
+        <item>Sincronizando tus tareas, juzgando tus prioridades</item>
+        <item>Llamó hoy. Quiere un plan.</item>
+        <item>Haciendo que el después presente una solicitud formal</item>
+        <item>Convirtiendo el caos en casillas de verificación</item>
+        <item>Tus tareas se están alineando muy bien</item>
+        <item>Un servidor privado con opiniones sobre tus prioridades</item>
+        <item>Para cuando tu mente abre demasiadas pestañas</item>
+        <item>Programando el caos antes de que él te programe a ti</item>
+        <item>Tus listas han entrado en su era productiva</item>
+        <item>Un pequeño centro de operaciones para el tú del futuro</item>
+        <item>Porque las vibras no son una estrategia de tareas</item>
+        <item>Tareas privadas. Mejores mañanas.</item>
+        <item>Haciendo que tu lista pendiente se sienta vista, y luego ordenada</item>
+        <item>Donde los pensamientos dispersos consiguen un asiento asignado</item>
+        <item>Tus prioridades ahora tienen una dirección</item>
+        <item>Sincroniza primero, entra en pánico después</item>
+        <item>Drama de calendario, ahora con contención</item>
+        <item>Las fechas límite odian este truco autoalojado</item>
+        <item>Ayudando a que tu día deje de improvisar</item>
+        <item>Tus recordatorios vinieron preparados</item>
+        <item>Convirtiendo el \'debería\' en \'programado\'</item>
+        <item>Tu lista de pendientes, pero que sí aparece</item>
+        <item>Superando al \'lo haré mañana\'</item>
+        <item>Una lista de pendientes con memoria</item>
+        <item>Tu ejecutor, autoalojado</item>
+        <item>La peor pesadilla de la procrastinación</item>
+        <item>Donde el \'algún día\' consigue una fecha</item>
+        <item>Productividad, alojada según tus condiciones</item>
+        <item>Un servidor. Cero excusas.</item>
+        <item>Cumpliendo tus promesas por ti</item>
+        <item>La columna del \'después\', domada</item>
+        <item>Tu segundo cerebro, pero confiable</item>
+        <item>Elevando el \'quizás\' a \'programado\'</item>
+        <item>Gestión del caos, edición privada</item>
+        <item>El gestor de proyectos de tu día</item>
+        <item>Porque \'en mi cabeza\' no es un sistema</item>
+        <item>Pastoreo de tareas hecho oficial</item>
+        <item>Convirtiendo la carga mental en marcas de verificación</item>
+        <item>Sirviendo tareas como debe hacerlo un buen servidor</item>
+        <item>Tu servidor personal de responsabilidad</item>
+        <item>Priorizando para que tú no tengas que hacerlo</item>
+    </string-array>
+
+    <!-- Settings screen -->
+    <string name="settings_title">Ajustes</string>
+    <string name="settings_unknown_user">Usuario desconocido</string>
+    <string name="settings_role_label">Rol: %1$s</string>
+    <string name="settings_role_default">USUARIO</string>
+    <string name="settings_appearance">Apariencia</string>
+    <string name="settings_reminders">Recordatorios</string>
+    <string name="settings_feature_toggle">Activar función</string>
+    <string name="settings_ai_task_summary">Resumen</string>
+    <string name="settings_saving_admin">Guardando ajuste de administrador…</string>
+    <string name="settings_ai_unavailable_title">Resumen no disponible</string>
+    <string name="settings_default_reminder">Recordatorio predeterminado</string>
+    <string name="settings_update_available_version">v%1$s disponible</string>
+    <string name="settings_server_compatible">Compatible</string>
+    <string name="settings_server_incompatible">Incompatible</string>
+
+    <!-- Onboarding / wizard -->
+    <string name="onboarding_title">Configurar T\'Day</string>
+    <string name="onboarding_subtitle">Configura tu espacio de trabajo</string>
+    <string name="onboarding_step_mode">Modo</string>
+    <string name="onboarding_step_server">Servidor</string>
+    <string name="onboarding_step_login">Iniciar sesión</string>
+    <string name="onboarding_mode_title">Elige tu configuración</string>
+    <string name="onboarding_mode_subtitle">Elige dónde T\'Day guarda tus tareas.</string>
+    <string name="onboarding_mode_server_title">Servidor autoalojado</string>
+    <string name="onboarding_mode_server_subtitle">Usa cuentas, sincronización y tu backend.</string>
+    <string name="onboarding_mode_server_short_title">Autoalojado</string>
+    <string name="onboarding_mode_server_short_subtitle">Cuentas y sincronización</string>
+    <string name="onboarding_mode_local_short_title">Este dispositivo</string>
+    <string name="onboarding_mode_local_short_subtitle">Sin inicio de sesión</string>
+    <string name="onboarding_mode_local_subtitle">Sin inicio de sesión. Los datos quedan en el almacenamiento de la app.</string>
+    <string name="onboarding_server_hero_subtitle">Conecta tu endpoint de T\'Day.</string>
+    <string name="onboarding_server_url_label">URL del servidor</string>
+    <string name="onboarding_server_url_placeholder">https://app.example.com</string>
+    <string name="onboarding_reset_trust">Restablecer servidor de confianza</string>
+    <string name="onboarding_resetting_trust">Restableciendo confianza…</string>
+    <string name="onboarding_connect">Conectar</string>
+    <string name="onboarding_connecting_title">Conectando al servidor…</string>
+    <string name="onboarding_connecting_subtitle">Comprobando endpoint, TLS y ajustes del espacio de trabajo</string>
+    <string name="onboarding_use_device_only">Usar solo este dispositivo</string>
+    <string name="onboarding_email_label">Correo electrónico</string>
+    <string name="onboarding_password_label">Contraseña</string>
+    <string name="onboarding_sign_in">Iniciar sesión</string>
+    <string name="onboarding_login_hero_subtitle">Abre tu espacio de trabajo sincronizado.</string>
+    <string name="onboarding_create_account">Crear cuenta</string>
+    <string name="onboarding_register_hero_subtitle">Crea tu cuenta del servidor.</string>
+    <string name="onboarding_change_server">Cambiar servidor</string>
+    <string name="onboarding_change_setup">Cambiar configuración</string>
+    <string name="onboarding_first_name_label">Nombre</string>
+    <string name="onboarding_confirm_password_label">Confirmar contraseña</string>
+    <string name="onboarding_creating_account">Creando cuenta…</string>
+    <string name="onboarding_back_to_sign_in">Volver a iniciar sesión</string>
+    <string name="onboarding_authenticating_title">Autenticando…</string>
+    <string name="onboarding_authenticating_register_subtitle">Enviando registro y esperando el estado de aprobación</string>
+    <string name="onboarding_authenticating_login_subtitle">Cifrando sesión y cargando tu espacio de trabajo</string>
+    <string name="onboarding_error_connect_fallback">No se pudo conectar al servidor</string>
+    <string name="onboarding_error_reset_trust_fallback">No se pudo restablecer el servidor de confianza</string>
+    <string name="onboarding_validation_first_name_min">El nombre debe tener al menos 2 caracteres</string>
+    <string name="onboarding_validation_email_required">El correo electrónico es obligatorio</string>
+    <string name="onboarding_validation_email_invalid">Introduce una dirección de correo válida</string>
+    <string name="onboarding_validation_password_required">La contraseña y su confirmación son obligatorias</string>
+    <string name="onboarding_validation_password_min">La contraseña debe tener al menos 8 caracteres</string>
+    <string name="onboarding_validation_password_uppercase">La contraseña debe incluir al menos una letra mayúscula</string>
+    <string name="onboarding_validation_password_special">La contraseña debe incluir al menos un carácter especial</string>
+    <string name="onboarding_validation_password_mismatch">Las contraseñas no coinciden</string>
+
+    <!-- Authentication / credential messages -->
+    <string name="auth_pending_admin_approval">Cuenta pendiente de aprobación del administrador.</string>
+    <string name="auth_password_manager_save_server_url_failed">El gestor de contraseñas de Android no pudo guardar esta URL del servidor. Comprueba que haya un gestor de contraseñas activado.</string>
+    <string name="auth_password_manager_save_login_failed">El gestor de contraseñas de Android no pudo guardar este inicio de sesión. Comprueba que haya un gestor de contraseñas activado.</string>
+    <string name="auth_error_incorrect_credentials">Correo o contraseña incorrectos</string>
+    <string name="auth_error_server_unreachable">No se puede acceder al servidor. Comprueba la URL del servidor e inténtalo de nuevo.</string>
+
+    <!-- Todo list screen -->
+    <string name="todos_summarize">Resumir tareas</string>
+    <string name="todos_title_tasks">Tareas</string>
+    <string name="todos_title_today">Hoy</string>
+    <string name="todos_title_overdue">Vencidas</string>
+    <string name="todos_title_scheduled">Programadas</string>
+    <string name="todos_title_all_tasks">Todas las tareas</string>
+    <string name="todos_title_priority">Prioridad</string>
+    <string name="todos_title_floater">Flotante</string>
+    <string name="todos_title_list">Lista</string>
+    <string name="todos_empty_today">No hay tareas para hoy</string>
+    <string name="todos_empty_overdue">No hay tareas vencidas</string>
+    <string name="todos_empty_priority">No hay tareas prioritarias</string>
+    <string name="todos_empty_scheduled">No hay tareas programadas</string>
+    <string name="todos_empty_all">Aún no hay tareas</string>
+    <string name="todos_empty_list">No hay tareas en esta lista</string>
+    <string name="car_surface_title_today">T\'Day</string>
+    <string name="car_surface_title_floater">Flotante</string>
+    <string name="car_surface_loading">Cargando tareas</string>
+    <string name="car_surface_load_error">No se pudieron cargar las tareas</string>
+    <string name="car_voice_prompt_today">Di la tarea que quieres añadir a T\'Day</string>
+    <string name="car_voice_prompt_floater">Di la tarea flotante que quieres añadir</string>
+    <string name="car_voice_empty_result">No se escuchó ninguna tarea</string>
+    <string name="car_complete_dialog_title">¿Completar esta tarea?</string>
+    <string name="car_complete_dialog_confirm">Completar</string>
+    <string name="todos_section_morning">Mañana</string>
+    <string name="todos_section_afternoon">Tarde</string>
+    <string name="todos_section_tonight">Esta noche</string>
+    <string name="todos_section_earlier">Antes</string>
+    <string name="todos_section_today">Hoy</string>
+    <string name="todos_section_tomorrow">Mañana</string>
+    <string name="todos_section_rest_of">Resto de %1$s</string>
+    <string name="todos_reschedule_recurring_title">¿Mover tarea repetida?</string>
+    <string name="todos_reschedule_recurring_message">Elige si mover solo esta ocurrencia de la tarea o toda la serie repetida.</string>
+    <string name="todos_reschedule_this_occurrence">Esta ocurrencia</string>
+    <string name="todos_reschedule_entire_series">Toda la serie</string>
+    <string name="todos_summary_title">Resumen</string>
+    <string name="todos_summary_close">Cerrar resumen</string>
+    <string name="todos_summary_loading">Creando el resumen de tus tareas…</string>
+    <string name="todos_summary_admin_disabled">El resumen está desactivado por el administrador</string>
+    <string name="todos_summary_modes_unavailable">El resumen solo está disponible para Hoy, Programadas, Todas y Prioridad</string>
+    <string name="todos_summary_offline_unavailable">No hay resumen disponible sin conexión.</string>
+    <string name="todos_list_settings">Ajustes de la lista</string>
+    <string name="todos_save_list_settings">Guardar ajustes de la lista</string>
+    <string name="todos_delete_list_title">¿Eliminar lista?</string>
+    <string name="todos_delete_list_message">Esto eliminará esta lista, todas sus tareas y el historial de las tareas completadas.</string>
+    <string name="todos_due_overdue_text">Vencida, %1$s</string>
+    <string name="todos_due_text">Vence %1$s</string>
+
+    <!-- Create/edit task sheet -->
+    <string name="create_task_title_new">Nueva tarea</string>
+    <string name="create_task_title_edit">Editar tarea</string>
+    <string name="create_task_section_schedule">Programación</string>
+    <string name="create_task_due">Vence</string>
+    <string name="create_task_section_details">Detalles</string>
+    <string name="create_task_list">Lista</string>
+    <string name="create_task_no_list">Sin lista</string>
+    <string name="create_task_priority">Prioridad</string>
+    <string name="create_task_priority_normal">Normal</string>
+    <string name="create_task_priority_important">Importante</string>
+    <string name="create_task_priority_urgent">Urgente</string>
+    <string name="create_task_repeat">Repetir</string>
+    <string name="create_task_repeat_none">Sin repetición</string>
+    <string name="create_task_repeat_daily">Diariamente</string>
+    <string name="create_task_repeat_weekly">Semanalmente</string>
+    <string name="create_task_repeat_weekdays">Días laborables</string>
+    <string name="create_task_repeat_monthly">Mensualmente</string>
+    <string name="create_task_repeat_yearly">Anualmente</string>
+    <string name="create_task_title_placeholder">Título</string>
+    <string name="create_task_notes_placeholder">Notas</string>
+    <string name="create_task_schedule_enabled">La tarea tiene fecha de vencimiento</string>
+    <string name="create_task_schedule_disabled">Tarea flotante</string>
+    <string name="create_task_select_date">Seleccionar fecha</string>
+    <string name="create_task_select_time">Seleccionar hora</string>
+
+    <!-- Completed screen -->
+    <string name="completed_title">Completadas</string>
+    <string name="completed_empty">Aún no hay tareas completadas</string>
+    <string name="completed_section_earlier">Antes</string>
+    <string name="completed_section_today">Hoy</string>
+    <string name="completed_section_tomorrow">Mañana</string>
+    <string name="completed_section_rest_of">Resto de %1$s</string>
+
+    <!-- Calendar screen -->
+    <string name="calendar_title">Calendario</string>
+    <string name="calendar_jump_to_today">Ir a hoy</string>
+    <string name="calendar_tasks_due">Tareas que vencen %1$s</string>
+    <string name="calendar_no_pending">No hay tareas pendientes para este día</string>
+    <string name="calendar_completed_header">Completadas:</string>
+    <string name="calendar_prev_month">Mes anterior</string>
+    <string name="calendar_next_month">Mes siguiente</string>
+    <string name="calendar_prev_week">Semana anterior</string>
+    <string name="calendar_next_week">Semana siguiente</string>
+    <string name="calendar_prev_day">Día anterior</string>
+    <string name="calendar_next_day">Día siguiente</string>
+    <string name="calendar_task_count_one">1 tarea pendiente</string>
+    <string name="calendar_task_count_many">%1$d tareas pendientes</string>
+    <string name="calendar_task_count_cap">9+</string>
+
+    <!-- Error handling / retry / offline -->
+    <string name="action_retry">Reintentar</string>
+    <string name="offline_banner_title">Estás sin conexión</string>
+    <string name="offline_banner">Las tareas en caché están disponibles. Los cambios se sincronizarán cuando vuelva la conexión.</string>
+    <string name="offline_banner_pending_one">1 cambio esperando para sincronizar</string>
+    <string name="offline_banner_pending_many">%1$d cambios esperando para sincronizar</string>
+    <string name="settings_workspace">Espacio de trabajo</string>
+    <string name="settings_workspace_local_title">Espacio de trabajo local</string>
+    <string name="settings_workspace_local_detail">Solo en este dispositivo</string>
+    <string name="settings_workspace_server_title">Sincronización con servidor</string>
+    <string name="settings_sync_status_ready">Listo para sincronizar</string>
+    <string name="settings_sync_status_syncing">Sincronizando ahora</string>
+    <string name="settings_sync_status_offline">Sin conexión. Los cambios se sincronizarán cuando vuelva la conexión.</string>
+    <string name="settings_sync_status_pending">Esperando para sincronizar</string>
+    <string name="settings_sync_status_synced">Sincronizado</string>
+    <string name="settings_sync_last_synced_label">Última sincronización</string>
+    <string name="settings_sync_last_synced_never">Aún no</string>
+    <string name="settings_sync_last_attempt_label">Último intento</string>
+    <string name="settings_sync_pending_label">Pendiente</string>
+    <string name="settings_sync_pending_none">No hay cambios esperando</string>
+    <string name="settings_sync_pending_one">1 cambio esperando</string>
+    <string name="settings_sync_pending_many">%1$d cambios esperando</string>
+    <string name="settings_sync_now">Sincronizar ahora</string>
+    <string name="settings_syncing_now">Sincronizando...</string>
+    <string name="error_auth_expired">La sesión expiró. Inicia sesión de nuevo.</string>
+    <string name="error_app_outdated">Esta versión de la app está desactualizada. Actualízala para continuar.</string>
+    <string name="error_server_outdated">El servidor debe actualizarse antes de que esta app pueda continuar.</string>
+    <string name="error_server">Error del servidor. Inténtalo de nuevo más tarde.</string>
+    <string name="error_permission_denied">No tienes permiso para hacer eso.</string>
+    <string name="error_not_found">No se encontró el elemento solicitado.</string>
+    <string name="error_connection">Error de conexión. Comprueba tu conexión a internet e inténtalo de nuevo.</string>
+    <string name="error_connectivity_title">Sin conexión a internet</string>
+    <string name="error_connectivity">No se puede conectar. Comprueba tu conexión de red e inténtalo de nuevo.</string>
+    <string name="error_generic">Algo salió mal. Inténtalo de nuevo.</string>
+    <string name="error_load_failed">Error al cargar.</string>
+    <string name="error_load_dashboard_failed">Error al cargar el panel.</string>
+    <string name="error_load_calendar_failed">Error al cargar el calendario.</string>
+    <string name="error_load_tasks_failed">Error al cargar las tareas.</string>
+    <string name="error_create_task_failed">No se pudo crear la tarea.</string>
+    <string name="error_update_task_failed">No se pudo actualizar la tarea.</string>
+    <string name="error_complete_task_failed">No se pudo completar la tarea.</string>
+    <string name="error_delete_task_failed">No se pudo eliminar la tarea.</string>
+    <string name="error_restore_task_failed">No se pudo restaurar la tarea.</string>
+    <string name="error_create_list_failed">No se pudo crear la lista.</string>
+    <string name="error_update_list_failed">No se pudo actualizar la lista.</string>
+    <string name="error_delete_list_failed">No se pudo eliminar la lista.</string>
+    <string name="error_summarize_tasks_failed">No se pudieron resumir las tareas.</string>
+    <string name="error_load_admin_settings_failed">No se pudieron cargar los ajustes de administrador</string>
+    <string name="error_update_admin_settings_failed">No se pudieron actualizar los ajustes de administrador</string>
+    <string name="error_reset_trusted_server_failed">No se pudo restablecer el servidor de confianza.</string>
+    <string name="error_connect_server_failed">No se pudo conectar al servidor.</string>
+    <string name="server_setup_error_probe_timeout">Se agotó el tiempo de comprobación del servidor. Verifica la URL y la red, e inténtalo de nuevo.</string>
+    <string name="server_setup_error_invalid_url">URL del servidor no válida.</string>
+    <string name="server_setup_error_insecure_transport">Usa HTTPS para las URL de servidores remotos.</string>
+    <string name="server_setup_error_not_tday_server">Se puede acceder al servidor, pero no parece ser un servidor de T\'Day.</string>
+    <string name="server_setup_trust_refreshing">La confianza del servidor guardada cambió. Reintentando con un certificado actualizado.</string>
+    <string name="server_setup_trust_refresh_failed">La app no pudo recuperarse automáticamente de un conflicto de confianza del servidor guardada. Borra el almacenamiento de la app o reinstálala, e inténtalo de nuevo.</string>
+
+    <string name="notification_channel_task_reminders_name">Recordatorios de tareas</string>
+    <string name="notification_channel_task_reminders_description">Recordatorios de próximas fechas de vencimiento de tareas</string>
+    <string name="notification_channel_app_updates_name">Actualizaciones de la app</string>
+    <string name="notification_channel_app_updates_description">Avisos para reabrir T\'Day cuando termine de instalarse una actualización</string>
+    <string name="update_notification_title">Actualización instalada</string>
+    <string name="update_notification_message">Toca para reabrir T\'Day.</string>
+
+    <string name="app_update_required_title">Actualización necesaria</string>
+    <string name="app_update_required_message">Se requiere una actualización a la v%1$s para continuar.</string>
+    <string name="app_update_download_not_ready">La v%1$s aún no está disponible para descargar. Pide a un administrador que suba la actualización.</string>
+    <string name="server_update_required_title">Actualización del servidor necesaria</string>
+    <string name="server_update_required_message">Tu app requiere una versión más reciente del servidor. El servidor tiene la v%1$s. Contacta a tu administrador para actualizar el servidor.</string>
+    <string name="install_permission_return_to_app">Concede el permiso de instalación y luego vuelve a la app.</string>
+    <string name="install_permission_return_here">Concede el permiso de instalación y luego vuelve aquí.</string>
+    <string name="overlay_install_awaiting_permission">Esperando permiso...</string>
+    <string name="overlay_install_downloading_progress">Descargando... %1$d%%</string>
+    <string name="overlay_install_downloading">Descargando...</string>
+    <string name="overlay_install_installing">Instalando...</string>
+    <string name="overlay_install_download_and_install">Descargar e instalar</string>
+
+    <string name="widget_today_tasks_description">Muestra las tareas de hoy de un vistazo</string>
+    <string name="widget_today_tasks_title">Tareas de hoy</string>
+    <string name="widget_today_tasks_title_small">Tareas de hoy - Pequeño</string>
+    <string name="widget_today_tasks_title_medium">Tareas de hoy - Mediano</string>
+    <string name="widget_today_tasks_title_large">Tareas de hoy - Grande</string>
+    <string name="widget_today_tasks_empty">No hay tareas que venzan hoy</string>
+    <string name="widget_today_tasks_add">Añade una para hoy</string>
+    <string name="widget_today_tasks_count">%1$d pendientes</string>
+    <string name="widget_today_tasks_count_unit">pendientes</string>
+    <string name="widget_today_tasks_setup_title">Abrir T\'Day</string>
+    <string name="widget_today_tasks_setup_message">Configura tu espacio de trabajo</string>
+    <string name="widget_floater_tasks_description">Muestra las tareas flotantes de un vistazo</string>
+    <string name="widget_floater_tasks_title">Tareas flotantes</string>
+    <string name="widget_floater_tasks_title_small">Tareas flotantes - Pequeño</string>
+    <string name="widget_floater_tasks_title_medium">Tareas flotantes - Mediano</string>
+    <string name="widget_floater_tasks_title_large">Tareas flotantes - Grande</string>
+    <string name="widget_floater_tasks_empty">No hay tareas flotantes</string>
+    <string name="widget_floater_tasks_add">Añade una tarea flotante</string>
+    <string name="widget_floater_tasks_count">%1$d abiertas</string>
+    <string name="widget_floater_tasks_count_unit">abiertas</string>
+    <string name="widget_loading">Cargando tareas…</string>
+
+    <!-- Settings: updates -->
+    <string name="settings_check_updates">Buscar actualizaciones</string>
+
+    <!-- Latest release screen -->
+    <string name="release_title">Versión de la app</string>
+    <string name="release_error">No se pudo obtener la información de la versión. Comprueba tu conexión e inténtalo de nuevo.</string>
+    <string name="release_installed_version">Versión instalada</string>
+    <string name="release_installed_label">Instalada</string>
+    <string name="release_server_not_connected">No conectado</string>
+    <string name="release_server_version_unavailable">No disponible</string>
+    <string name="release_latest_label">Última</string>
+    <string name="release_update_available">Actualización disponible</string>
+    <string name="release_version_mismatch">Versiones no coinciden</string>
+    <string name="release_app_update_required_summary">El servidor requiere la v%1$s. Actualiza la app para continuar.</string>
+    <string name="release_server_update_required_summary">Esta app requiere que el servidor tenga la v%1$s, pero el servidor tiene la v%2$s.</string>
+    <string name="release_update_ready_version">La versión %1$s está lista para instalar.</string>
+    <string name="release_update_ready_generic">Hay una versión más reciente lista para instalar.</string>
+    <string name="release_up_to_date">Última</string>
+    <string name="release_up_to_date_message">Estás usando la última versión</string>
+    <string name="release_published">Publicada %1$s</string>
+    <string name="release_whats_new_in_version">Novedades de la %1$s</string>
+    <string name="release_no_notes_for_version">No hay notas de versión disponibles para esta versión</string>
+    <string name="release_download_and_install">Descargar e instalar la actualización</string>
+    <string name="release_allow_install_permission">Permitir el permiso de instalación</string>
+    <string name="release_downloading_apk">Descargando actualización…</string>
+    <string name="release_downloading_apk_progress">Descargando actualización… %1$d%%</string>
+    <string name="release_preparing_update">Preparando actualización…</string>
+    <string name="release_opening_installer">Abriendo el instalador de Android…</string>
+    <string name="release_install_permission_required">Permite que T\'Day instale actualizaciones desde esta fuente.</string>
+    <string name="release_install_permission_return_hint">Permite que T\'Day instale actualizaciones y luego vuelve aquí para continuar automáticamente.</string>
+    <string name="release_install_permission_denied">El permiso de instalación sigue desactivado para T\'Day.</string>
+    <string name="release_download_failed">No se pudo descargar la actualización. Inténtalo de nuevo.</string>
+    <string name="release_install_failed">No se pudo instalar la actualización.</string>
+    <string name="release_install_cancelled">Se canceló la instalación. Toca Descargar e instalar para intentarlo de nuevo.</string>
+    <string name="release_install_blocked">Tu dispositivo bloqueó la instalación. Comprueba los ajustes de tu dispositivo e inténtalo de nuevo.</string>
+    <string name="release_install_storage">No hay suficiente espacio de almacenamiento. Libera espacio e inténtalo de nuevo.</string>
+    <string name="release_install_incompatible">Esta actualización no es compatible con tu dispositivo.</string>
+    <string name="release_signature_conflict">La versión instalada se firmó con una clave diferente y no se puede actualizar directamente.</string>
+    <string name="release_signature_conflict_hint">Desinstala primero la versión actual y luego vuelve aquí para instalar la actualización. Se perderán los datos de la app.</string>
+    <string name="release_uninstall">Desinstalar la versión actual</string>
+    <string name="release_install_success">Actualización instalada.</string>
+    <string name="release_no_apk">No hay ningún APK adjunto a esta versión.</string>
+    <string name="release_launch_update_toast">La actualización %1$s está disponible.</string>
+    <string name="task_deleted_toast">Tarea eliminada</string>
+    <string name="release_view_on_github">Ver en GitHub</string>
+
+    <!-- Language picker -->
+    <string name="settings_language">Idioma</string>
+    <string name="settings_language_system_default">Predeterminado del sistema</string>
+    <string name="settings_language_dialog_title">Idioma</string>
+</resources>

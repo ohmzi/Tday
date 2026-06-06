@@ -1,0 +1,445 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">T\'Day</string>
+
+    <!-- Shared / reusable -->
+    <string name="action_back">Назад</string>
+    <string name="action_close">Закрыть</string>
+    <string name="action_search">Поиск</string>
+    <string name="action_close_search">Закрыть поиск</string>
+    <string name="action_create_task">Создать задачу</string>
+    <string name="action_create_list">Создать список</string>
+    <string name="action_edit">Изменить</string>
+    <string name="action_edit_task">Изменить задачу</string>
+    <string name="action_delete_task">Удалить задачу</string>
+    <string name="action_delete_list">Удалить список</string>
+    <string name="action_delete">Удалить</string>
+    <string name="action_complete">Завершить</string>
+    <string name="action_more">Ещё</string>
+    <string name="action_more_options">Дополнительно</string>
+    <string name="action_save">Сохранить</string>
+    <string name="action_save_task">Сохранить задачу</string>
+    <string name="action_cancel">Отмена</string>
+    <string name="action_done">Готово</string>
+    <string name="action_create">Создать</string>
+    <string name="action_ok">ОК</string>
+    <string name="action_sign_out">Выйти</string>
+    <string name="action_expand_section">Развернуть раздел</string>
+    <string name="action_collapse_section">Свернуть раздел</string>
+    <string name="label_completed">Завершено</string>
+    <string name="label_mark_complete">Отметить выполненной</string>
+    <string name="label_undo_complete">Отменить выполнение</string>
+    <string name="label_task_list">Список задач</string>
+    <string name="label_priority_task">Приоритетная задача</string>
+    <string name="label_loading">Загрузка…</string>
+    <string name="label_version_name">v%1$s</string>
+    <string name="label_server">Сервер</string>
+
+    <!-- Home screen -->
+    <string name="home_title">T\'Day</string>
+    <string name="home_category_today">Сегодня</string>
+    <string name="home_category_overdue">Просроченные</string>
+    <string name="home_category_scheduled">Запланированные</string>
+    <string name="home_category_all">Все</string>
+    <string name="home_category_priority">Приоритет</string>
+    <string name="home_category_completed">Завершённые</string>
+    <string name="home_category_calendar">Календарь</string>
+    <string name="root_feed_tab_home">Главная</string>
+    <string name="root_feed_tab_floater">Без срока</string>
+    <string name="home_search_placeholder">Поиск</string>
+    <string name="home_search_no_results">Совпадений не найдено</string>
+    <string name="home_my_lists">Мои списки</string>
+    <string name="home_new_list">Новый список</string>
+    <string name="home_list_name_placeholder">Название списка</string>
+    <string name="home_section_list">Список</string>
+    <string name="home_section_color">Цвет</string>
+    <string name="home_section_icon">Значок</string>
+    <string name="home_list_icon_option">Выбрать значок списка %1$s</string>
+    <string name="home_locked_list_name">Войдите, чтобы загрузить списки</string>
+
+    <string-array name="splash_taglines">
+        <item>Ваш сервер помнит, чтобы вам не пришлось</item>
+        <item>Хостится вами, преследуется дедлайнами</item>
+        <item>Потому что «вспомню потом» — это всегда ложь</item>
+        <item>Самостоятельный порядок, задача за задачей</item>
+        <item>Напоминания с вашего собственного железа</item>
+        <item>Ваши данные, ваш сервер, зона без отговорок</item>
+        <item>Усложняем прокрастинацию с версии 0.1</item>
+        <item>Работает на вашем сервере, управляет вашей жизнью</item>
+        <item>Потому что у стикеров нет push-уведомлений</item>
+        <item>Превращаем «я забыл» в «я справился»</item>
+        <item>Ваша личная машина напоминаний</item>
+        <item>Сам себе сервер, сам себе порядок… почти</item>
+        <item>Туда, где находятся забытые задачи</item>
+        <item>Взрослая жизнь, но self-hosted</item>
+        <item>Укрощаем хаос с сервера рядом с вами</item>
+        <item>Будущий вы говорит спасибо заранее</item>
+        <item>Облако — это просто чужой сервер. Этот — ваш.</item>
+        <item>Организуем вашу жизнь, без арендодателя</item>
+        <item>Нулевое доверие… кроме вашего сервера</item>
+        <item>Синхронизирует задачи, оценивает приоритеты</item>
+        <item>Звонило сегодня. Хочет план.</item>
+        <item>Заставляем «потом» подавать заявку официально</item>
+        <item>Превращаем хаос в галочки</item>
+        <item>Ваши задачи выстраиваются в ряд</item>
+        <item>Личный сервер с мнением о ваших приоритетах</item>
+        <item>Для тех, у кого мозг открывает слишком много вкладок</item>
+        <item>Планируем хаос, пока он не запланировал вас</item>
+        <item>Ваши списки вступили в продуктивную эпоху</item>
+        <item>Маленький командный пункт для будущего вас</item>
+        <item>Потому что вайбы — не стратегия задач</item>
+        <item>Приватные задачи. Лучшее утро.</item>
+        <item>Замечаем ваш список дел, затем приводим в порядок</item>
+        <item>Где разрозненным мыслям выдают места</item>
+        <item>У ваших приоритетов появился адрес</item>
+        <item>Сначала синхронизация, паника потом</item>
+        <item>Драма календаря, теперь под контролем</item>
+        <item>Дедлайны ненавидят этот self-hosted трюк</item>
+        <item>Помогаем вашему дню перестать халтурить</item>
+        <item>Ваши напоминания пришли подготовленными</item>
+        <item>Превращаем «надо бы» в «запланировано»</item>
+        <item>Ваш список дел, который действительно появляется</item>
+        <item>Перехитрим «сделаю завтра»</item>
+        <item>Список дел с памятью</item>
+        <item>Ваш исполнитель, self-hosted</item>
+        <item>Худший кошмар прокрастинации</item>
+        <item>Где у «когда-нибудь» появляется дата</item>
+        <item>Продуктивность на ваших условиях</item>
+        <item>Один сервер. Ноль отговорок.</item>
+        <item>Держим ваши обещания за вас</item>
+        <item>Колонка «потом» укрощена</item>
+        <item>Ваш второй мозг, но надёжный</item>
+        <item>Повышаем «может быть» до «запланировано»</item>
+        <item>Управление хаосом, приватная версия</item>
+        <item>Менеджер проектов вашего дня</item>
+        <item>Потому что «в голове» — это не система</item>
+        <item>Выпас задач сделан официальным</item>
+        <item>Превращаем умственную нагрузку в галочки</item>
+        <item>Подаём задачи, как и подобает хорошему серверу</item>
+        <item>Ваш личный сервер ответственности</item>
+        <item>Расставляем приоритеты, чтобы вам не пришлось</item>
+    </string-array>
+
+    <!-- Settings screen -->
+    <string name="settings_title">Настройки</string>
+    <string name="settings_unknown_user">Неизвестный пользователь</string>
+    <string name="settings_role_label">Роль: %1$s</string>
+    <string name="settings_role_default">ПОЛЬЗОВАТЕЛЬ</string>
+    <string name="settings_appearance">Оформление</string>
+    <string name="settings_reminders">Напоминания</string>
+    <string name="settings_feature_toggle">Переключатель функций</string>
+    <string name="settings_ai_task_summary">Сводка</string>
+    <string name="settings_saving_admin">Сохранение настройки администратора…</string>
+    <string name="settings_ai_unavailable_title">Сводка недоступна</string>
+    <string name="settings_default_reminder">Напоминание по умолчанию</string>
+    <string name="settings_update_available_version">Доступна v%1$s</string>
+    <string name="settings_server_compatible">Совместим</string>
+    <string name="settings_server_incompatible">Несовместим</string>
+
+    <!-- Onboarding / wizard -->
+    <string name="onboarding_title">Настройка T\'Day</string>
+    <string name="onboarding_subtitle">Настройте своё рабочее пространство</string>
+    <string name="onboarding_step_mode">Режим</string>
+    <string name="onboarding_step_server">Сервер</string>
+    <string name="onboarding_step_login">Вход</string>
+    <string name="onboarding_mode_title">Выберите настройку</string>
+    <string name="onboarding_mode_subtitle">Выберите, где T\'Day хранит ваши задачи.</string>
+    <string name="onboarding_mode_server_title">Собственный сервер</string>
+    <string name="onboarding_mode_server_subtitle">Аккаунты, синхронизация и ваш бэкенд.</string>
+    <string name="onboarding_mode_server_short_title">Self-hosted</string>
+    <string name="onboarding_mode_server_short_subtitle">Аккаунты и синхронизация</string>
+    <string name="onboarding_mode_local_short_title">Это устройство</string>
+    <string name="onboarding_mode_local_short_subtitle">Без входа</string>
+    <string name="onboarding_mode_local_subtitle">Без входа. Данные хранятся в приложении.</string>
+    <string name="onboarding_server_hero_subtitle">Подключите ваш сервер T\'Day.</string>
+    <string name="onboarding_server_url_label">URL сервера</string>
+    <string name="onboarding_server_url_placeholder">https://app.example.com</string>
+    <string name="onboarding_reset_trust">Сбросить доверенный сервер</string>
+    <string name="onboarding_resetting_trust">Сброс доверия…</string>
+    <string name="onboarding_connect">Подключиться</string>
+    <string name="onboarding_connecting_title">Подключение к серверу…</string>
+    <string name="onboarding_connecting_subtitle">Проверка сервера, TLS и настроек рабочего пространства</string>
+    <string name="onboarding_use_device_only">Использовать только это устройство</string>
+    <string name="onboarding_email_label">Эл. почта</string>
+    <string name="onboarding_password_label">Пароль</string>
+    <string name="onboarding_sign_in">Войти</string>
+    <string name="onboarding_login_hero_subtitle">Откройте синхронизированное рабочее пространство.</string>
+    <string name="onboarding_create_account">Создать аккаунт</string>
+    <string name="onboarding_register_hero_subtitle">Создайте аккаунт на сервере.</string>
+    <string name="onboarding_change_server">Сменить сервер</string>
+    <string name="onboarding_change_setup">Изменить настройку</string>
+    <string name="onboarding_first_name_label">Имя</string>
+    <string name="onboarding_confirm_password_label">Подтвердите пароль</string>
+    <string name="onboarding_creating_account">Создание аккаунта…</string>
+    <string name="onboarding_back_to_sign_in">Назад ко входу</string>
+    <string name="onboarding_authenticating_title">Аутентификация…</string>
+    <string name="onboarding_authenticating_register_subtitle">Отправка регистрации и ожидание статуса одобрения</string>
+    <string name="onboarding_authenticating_login_subtitle">Шифрование сессии и загрузка рабочего пространства</string>
+    <string name="onboarding_error_connect_fallback">Не удалось подключиться к серверу</string>
+    <string name="onboarding_error_reset_trust_fallback">Не удалось сбросить доверенный сервер</string>
+    <string name="onboarding_validation_first_name_min">Имя должно содержать не менее 2 символов</string>
+    <string name="onboarding_validation_email_required">Укажите эл. почту</string>
+    <string name="onboarding_validation_email_invalid">Введите корректный адрес эл. почты</string>
+    <string name="onboarding_validation_password_required">Требуются пароль и подтверждение</string>
+    <string name="onboarding_validation_password_min">Пароль должен содержать не менее 8 символов</string>
+    <string name="onboarding_validation_password_uppercase">Пароль должен содержать хотя бы одну заглавную букву</string>
+    <string name="onboarding_validation_password_special">Пароль должен содержать хотя бы один специальный символ</string>
+    <string name="onboarding_validation_password_mismatch">Пароли не совпадают</string>
+
+    <!-- Authentication / credential messages -->
+    <string name="auth_pending_admin_approval">Аккаунт ожидает одобрения администратора.</string>
+    <string name="auth_password_manager_save_server_url_failed">Менеджер паролей Android не смог сохранить этот URL сервера. Убедитесь, что менеджер паролей включён.</string>
+    <string name="auth_password_manager_save_login_failed">Менеджер паролей Android не смог сохранить этот вход. Убедитесь, что менеджер паролей включён.</string>
+    <string name="auth_error_incorrect_credentials">Неверная эл. почта или пароль</string>
+    <string name="auth_error_server_unreachable">Сервер недоступен. Проверьте URL сервера и повторите попытку.</string>
+
+    <!-- Todo list screen -->
+    <string name="todos_summarize">Сводка по задачам</string>
+    <string name="todos_title_tasks">Задачи</string>
+    <string name="todos_title_today">Сегодня</string>
+    <string name="todos_title_overdue">Просроченные</string>
+    <string name="todos_title_scheduled">Запланированные</string>
+    <string name="todos_title_all_tasks">Все задачи</string>
+    <string name="todos_title_priority">Приоритет</string>
+    <string name="todos_title_floater">Без срока</string>
+    <string name="todos_title_list">Список</string>
+    <string name="todos_empty_today">Нет задач на сегодня</string>
+    <string name="todos_empty_overdue">Нет просроченных задач</string>
+    <string name="todos_empty_priority">Нет приоритетных задач</string>
+    <string name="todos_empty_scheduled">Нет запланированных задач</string>
+    <string name="todos_empty_all">Пока нет задач</string>
+    <string name="todos_empty_list">В этом списке нет задач</string>
+    <string name="car_surface_title_today">T\'Day</string>
+    <string name="car_surface_title_floater">Без срока</string>
+    <string name="car_surface_loading">Загрузка задач</string>
+    <string name="car_surface_load_error">Не удалось загрузить задачи</string>
+    <string name="car_voice_prompt_today">Произнесите задачу для добавления в T\'Day</string>
+    <string name="car_voice_prompt_floater">Произнесите задачу без срока для добавления</string>
+    <string name="car_voice_empty_result">Задача не распознана</string>
+    <string name="car_complete_dialog_title">Завершить эту задачу?</string>
+    <string name="car_complete_dialog_confirm">Завершить</string>
+    <string name="todos_section_morning">Утро</string>
+    <string name="todos_section_afternoon">День</string>
+    <string name="todos_section_tonight">Вечер</string>
+    <string name="todos_section_earlier">Ранее</string>
+    <string name="todos_section_today">Сегодня</string>
+    <string name="todos_section_tomorrow">Завтра</string>
+    <string name="todos_section_rest_of">Остаток %1$s</string>
+    <string name="todos_reschedule_recurring_title">Перенести повторяющуюся задачу?</string>
+    <string name="todos_reschedule_recurring_message">Выберите, перенести только это повторение задачи или всю серию повторений.</string>
+    <string name="todos_reschedule_this_occurrence">Это повторение</string>
+    <string name="todos_reschedule_entire_series">Вся серия</string>
+    <string name="todos_summary_title">Сводка</string>
+    <string name="todos_summary_close">Закрыть сводку</string>
+    <string name="todos_summary_loading">Создание сводки по задачам…</string>
+    <string name="todos_summary_admin_disabled">Сводка отключена администратором</string>
+    <string name="todos_summary_modes_unavailable">Сводка доступна только для разделов «Сегодня», «Запланированные», «Все» и «Приоритет»</string>
+    <string name="todos_summary_offline_unavailable">Сводка недоступна в офлайн-режиме.</string>
+    <string name="todos_list_settings">Настройки списка</string>
+    <string name="todos_save_list_settings">Сохранить настройки списка</string>
+    <string name="todos_delete_list_title">Удалить список?</string>
+    <string name="todos_delete_list_message">Это удалит этот список, все задачи в нём и историю выполнения этих задач.</string>
+    <string name="todos_due_overdue_text">Просрочено, %1$s</string>
+    <string name="todos_due_text">Срок %1$s</string>
+
+    <!-- Create/edit task sheet -->
+    <string name="create_task_title_new">Новая задача</string>
+    <string name="create_task_title_edit">Изменить задачу</string>
+    <string name="create_task_section_schedule">Расписание</string>
+    <string name="create_task_due">Срок</string>
+    <string name="create_task_section_details">Подробности</string>
+    <string name="create_task_list">Список</string>
+    <string name="create_task_no_list">Без списка</string>
+    <string name="create_task_priority">Приоритет</string>
+    <string name="create_task_priority_normal">Обычный</string>
+    <string name="create_task_priority_important">Важный</string>
+    <string name="create_task_priority_urgent">Срочный</string>
+    <string name="create_task_repeat">Повтор</string>
+    <string name="create_task_repeat_none">Без повтора</string>
+    <string name="create_task_repeat_daily">Ежедневно</string>
+    <string name="create_task_repeat_weekly">Еженедельно</string>
+    <string name="create_task_repeat_weekdays">По будням</string>
+    <string name="create_task_repeat_monthly">Ежемесячно</string>
+    <string name="create_task_repeat_yearly">Ежегодно</string>
+    <string name="create_task_title_placeholder">Заголовок</string>
+    <string name="create_task_notes_placeholder">Заметки</string>
+    <string name="create_task_schedule_enabled">У задачи есть срок</string>
+    <string name="create_task_schedule_disabled">Задача без срока</string>
+    <string name="create_task_select_date">Выбрать дату</string>
+    <string name="create_task_select_time">Выбрать время</string>
+
+    <!-- Completed screen -->
+    <string name="completed_title">Завершённые</string>
+    <string name="completed_empty">Пока нет завершённых задач</string>
+    <string name="completed_section_earlier">Ранее</string>
+    <string name="completed_section_today">Сегодня</string>
+    <string name="completed_section_tomorrow">Завтра</string>
+    <string name="completed_section_rest_of">Остаток %1$s</string>
+
+    <!-- Calendar screen -->
+    <string name="calendar_title">Календарь</string>
+    <string name="calendar_jump_to_today">Перейти к сегодня</string>
+    <string name="calendar_tasks_due">Задачи на %1$s</string>
+    <string name="calendar_no_pending">На этот день нет невыполненных задач</string>
+    <string name="calendar_completed_header">Завершено:</string>
+    <string name="calendar_prev_month">Предыдущий месяц</string>
+    <string name="calendar_next_month">Следующий месяц</string>
+    <string name="calendar_prev_week">Предыдущая неделя</string>
+    <string name="calendar_next_week">Следующая неделя</string>
+    <string name="calendar_prev_day">Предыдущий день</string>
+    <string name="calendar_next_day">Следующий день</string>
+    <string name="calendar_task_count_one">1 задача</string>
+    <string name="calendar_task_count_many">%1$d задач</string>
+    <string name="calendar_task_count_cap">9+</string>
+
+    <!-- Error handling / retry / offline -->
+    <string name="action_retry">Повторить</string>
+    <string name="offline_banner_title">Вы офлайн</string>
+    <string name="offline_banner">Доступны кэшированные задачи. Изменения синхронизируются при восстановлении связи.</string>
+    <string name="offline_banner_pending_one">1 изменение ожидает синхронизации</string>
+    <string name="offline_banner_pending_many">%1$d изменений ожидают синхронизации</string>
+    <string name="settings_workspace">Рабочее пространство</string>
+    <string name="settings_workspace_local_title">Локальное пространство</string>
+    <string name="settings_workspace_local_detail">Только на этом устройстве</string>
+    <string name="settings_workspace_server_title">Синхронизация с сервером</string>
+    <string name="settings_sync_status_ready">Готово к синхронизации</string>
+    <string name="settings_sync_status_syncing">Синхронизация</string>
+    <string name="settings_sync_status_offline">Офлайн. Изменения синхронизируются при восстановлении связи.</string>
+    <string name="settings_sync_status_pending">Ожидание синхронизации</string>
+    <string name="settings_sync_status_synced">Синхронизировано</string>
+    <string name="settings_sync_last_synced_label">Последняя синхронизация</string>
+    <string name="settings_sync_last_synced_never">Ещё не было</string>
+    <string name="settings_sync_last_attempt_label">Последняя попытка</string>
+    <string name="settings_sync_pending_label">Ожидает</string>
+    <string name="settings_sync_pending_none">Нет ожидающих изменений</string>
+    <string name="settings_sync_pending_one">1 изменение ожидает</string>
+    <string name="settings_sync_pending_many">%1$d изменений ожидают</string>
+    <string name="settings_sync_now">Синхронизировать</string>
+    <string name="settings_syncing_now">Синхронизация...</string>
+    <string name="error_auth_expired">Сессия истекла. Войдите снова.</string>
+    <string name="error_app_outdated">Эта версия приложения устарела. Обновите, чтобы продолжить.</string>
+    <string name="error_server_outdated">Перед продолжением необходимо обновить сервер.</string>
+    <string name="error_server">Ошибка сервера. Повторите попытку позже.</string>
+    <string name="error_permission_denied">У вас нет прав для этого действия.</string>
+    <string name="error_not_found">Запрошенный элемент не найден.</string>
+    <string name="error_connection">Ошибка соединения. Проверьте интернет и повторите попытку.</string>
+    <string name="error_connectivity_title">Нет подключения к интернету</string>
+    <string name="error_connectivity">Не удалось подключиться. Проверьте сетевое подключение и повторите попытку.</string>
+    <string name="error_generic">Что-то пошло не так. Повторите попытку.</string>
+    <string name="error_load_failed">Не удалось загрузить.</string>
+    <string name="error_load_dashboard_failed">Не удалось загрузить панель.</string>
+    <string name="error_load_calendar_failed">Не удалось загрузить календарь.</string>
+    <string name="error_load_tasks_failed">Не удалось загрузить задачи.</string>
+    <string name="error_create_task_failed">Не удалось создать задачу.</string>
+    <string name="error_update_task_failed">Не удалось обновить задачу.</string>
+    <string name="error_complete_task_failed">Не удалось завершить задачу.</string>
+    <string name="error_delete_task_failed">Не удалось удалить задачу.</string>
+    <string name="error_restore_task_failed">Не удалось восстановить задачу.</string>
+    <string name="error_create_list_failed">Не удалось создать список.</string>
+    <string name="error_update_list_failed">Не удалось обновить список.</string>
+    <string name="error_delete_list_failed">Не удалось удалить список.</string>
+    <string name="error_summarize_tasks_failed">Не удалось создать сводку задач.</string>
+    <string name="error_load_admin_settings_failed">Не удалось загрузить настройки администратора</string>
+    <string name="error_update_admin_settings_failed">Не удалось обновить настройки администратора</string>
+    <string name="error_reset_trusted_server_failed">Не удалось сбросить доверенный сервер.</string>
+    <string name="error_connect_server_failed">Не удалось подключиться к серверу.</string>
+    <string name="server_setup_error_probe_timeout">Истекло время проверки сервера. Проверьте URL и сеть, затем повторите попытку.</string>
+    <string name="server_setup_error_invalid_url">Неверный URL сервера.</string>
+    <string name="server_setup_error_insecure_transport">Используйте HTTPS для удалённых URL сервера.</string>
+    <string name="server_setup_error_not_tday_server">Сервер доступен, но, похоже, не является сервером T\'Day.</string>
+    <string name="server_setup_trust_refreshing">Сохранённое доверие к серверу изменилось. Повторная попытка с обновлённым сертификатом.</string>
+    <string name="server_setup_trust_refresh_failed">Приложению не удалось автоматически восстановиться после несоответствия сохранённого доверия к серверу. Очистите хранилище приложения или переустановите его, затем повторите попытку.</string>
+
+    <string name="notification_channel_task_reminders_name">Напоминания о задачах</string>
+    <string name="notification_channel_task_reminders_description">Напоминания о приближающихся сроках задач</string>
+    <string name="notification_channel_app_updates_name">Обновления приложения</string>
+    <string name="notification_channel_app_updates_description">Предложения снова открыть T\'Day после завершения установки обновления</string>
+    <string name="update_notification_title">Обновление установлено</string>
+    <string name="update_notification_message">Нажмите, чтобы снова открыть T\'Day.</string>
+
+    <string name="app_update_required_title">Требуется обновление</string>
+    <string name="app_update_required_message">Для продолжения требуется обновление до v%1$s.</string>
+    <string name="app_update_download_not_ready">v%1$s пока недоступна для загрузки. Попросите администратора загрузить обновление.</string>
+    <string name="server_update_required_title">Нужно обновление сервера</string>
+    <string name="server_update_required_message">Вашему приложению требуется более новая версия сервера. Сервер использует v%1$s. Обратитесь к администратору для обновления сервера.</string>
+    <string name="install_permission_return_to_app">Предоставьте разрешение на установку, затем вернитесь в приложение.</string>
+    <string name="install_permission_return_here">Предоставьте разрешение на установку, затем вернитесь сюда.</string>
+    <string name="overlay_install_awaiting_permission">Ожидание разрешения...</string>
+    <string name="overlay_install_downloading_progress">Загрузка... %1$d%%</string>
+    <string name="overlay_install_downloading">Загрузка...</string>
+    <string name="overlay_install_installing">Установка...</string>
+    <string name="overlay_install_download_and_install">Скачать и установить</string>
+
+    <string name="widget_today_tasks_description">Показывает задачи на сегодня с первого взгляда</string>
+    <string name="widget_today_tasks_title">Задачи на сегодня</string>
+    <string name="widget_today_tasks_title_small">Задачи на сегодня — маленький</string>
+    <string name="widget_today_tasks_title_medium">Задачи на сегодня — средний</string>
+    <string name="widget_today_tasks_title_large">Задачи на сегодня — большой</string>
+    <string name="widget_today_tasks_empty">Нет задач на сегодня</string>
+    <string name="widget_today_tasks_add">Добавьте на сегодня</string>
+    <string name="widget_today_tasks_count">%1$d на сегодня</string>
+    <string name="widget_today_tasks_count_unit">на сегодня</string>
+    <string name="widget_today_tasks_setup_title">Открыть T\'Day</string>
+    <string name="widget_today_tasks_setup_message">Настройте рабочее пространство</string>
+    <string name="widget_floater_tasks_description">Показывает задачи без срока с первого взгляда</string>
+    <string name="widget_floater_tasks_title">Задачи без срока</string>
+    <string name="widget_floater_tasks_title_small">Задачи без срока — маленький</string>
+    <string name="widget_floater_tasks_title_medium">Задачи без срока — средний</string>
+    <string name="widget_floater_tasks_title_large">Задачи без срока — большой</string>
+    <string name="widget_floater_tasks_empty">Нет задач без срока</string>
+    <string name="widget_floater_tasks_add">Добавьте задачу без срока</string>
+    <string name="widget_floater_tasks_count">%1$d открыто</string>
+    <string name="widget_floater_tasks_count_unit">открыто</string>
+    <string name="widget_loading">Загрузка задач…</string>
+
+    <!-- Settings: updates -->
+    <string name="settings_check_updates">Проверить обновления</string>
+
+    <!-- Latest release screen -->
+    <string name="release_title">Версия приложения</string>
+    <string name="release_error">Не удалось получить информацию о релизе. Проверьте подключение и повторите попытку.</string>
+    <string name="release_installed_version">Установленная версия</string>
+    <string name="release_installed_label">Установлено</string>
+    <string name="release_server_not_connected">Не подключено</string>
+    <string name="release_server_version_unavailable">Недоступно</string>
+    <string name="release_latest_label">Последняя</string>
+    <string name="release_update_available">Доступно обновление</string>
+    <string name="release_version_mismatch">Несоответствие версий</string>
+    <string name="release_app_update_required_summary">Серверу требуется v%1$s. Обновите приложение, чтобы продолжить.</string>
+    <string name="release_server_update_required_summary">Этому приложению требуется сервер версии v%1$s, но сервер использует v%2$s.</string>
+    <string name="release_update_ready_version">Версия %1$s готова к установке.</string>
+    <string name="release_update_ready_generic">Более новая версия готова к установке.</string>
+    <string name="release_up_to_date">Последняя</string>
+    <string name="release_up_to_date_message">У вас установлена последняя версия</string>
+    <string name="release_published">Опубликовано %1$s</string>
+    <string name="release_whats_new_in_version">Что нового в %1$s</string>
+    <string name="release_no_notes_for_version">Для этой версии нет примечаний к релизу</string>
+    <string name="release_download_and_install">Скачать и установить обновление</string>
+    <string name="release_allow_install_permission">Разрешить установку</string>
+    <string name="release_downloading_apk">Загрузка обновления…</string>
+    <string name="release_downloading_apk_progress">Загрузка обновления… %1$d%%</string>
+    <string name="release_preparing_update">Подготовка обновления…</string>
+    <string name="release_opening_installer">Открытие установщика Android…</string>
+    <string name="release_install_permission_required">Разрешите T\'Day устанавливать обновления из этого источника.</string>
+    <string name="release_install_permission_return_hint">Разрешите T\'Day устанавливать обновления, затем вернитесь сюда для автоматического продолжения.</string>
+    <string name="release_install_permission_denied">Разрешение на установку для T\'Day всё ещё отключено.</string>
+    <string name="release_download_failed">Не удалось скачать обновление. Повторите попытку.</string>
+    <string name="release_install_failed">Не удалось установить обновление.</string>
+    <string name="release_install_cancelled">Установка была отменена. Нажмите «Скачать и установить», чтобы повторить попытку.</string>
+    <string name="release_install_blocked">Установка заблокирована вашим устройством. Проверьте настройки устройства и повторите попытку.</string>
+    <string name="release_install_storage">Недостаточно места в хранилище. Освободите место и повторите попытку.</string>
+    <string name="release_install_incompatible">Это обновление несовместимо с вашим устройством.</string>
+    <string name="release_signature_conflict">Установленная версия подписана другим ключом и не может быть обновлена напрямую.</string>
+    <string name="release_signature_conflict_hint">Сначала удалите текущую версию, затем вернитесь сюда для установки обновления. Данные приложения будут потеряны.</string>
+    <string name="release_uninstall">Удалить текущую версию</string>
+    <string name="release_install_success">Обновление установлено.</string>
+    <string name="release_no_apk">К этому релизу не прикреплён APK.</string>
+    <string name="release_launch_update_toast">Доступно обновление %1$s.</string>
+    <string name="task_deleted_toast">Задача удалена</string>
+    <string name="release_view_on_github">Посмотреть на GitHub</string>
+
+    <!-- Language picker -->
+    <string name="settings_language">Язык</string>
+    <string name="settings_language_system_default">Системный по умолчанию</string>
+    <string name="settings_language_dialog_title">Язык</string>
+</resources>

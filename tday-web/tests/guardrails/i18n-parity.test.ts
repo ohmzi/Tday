@@ -1,10 +1,11 @@
-import { readdirSync, readFileSync, statSync } from "fs";
+import { readFileSync } from "fs";
 import path from "path";
 import { describe, expect, it } from "vitest";
 
-const ROOT = path.resolve(__dirname, "..", "..");
-const LOCALES_ROOT = path.join(ROOT, "public", "locales");
-const ENGLISH_TRANSLATION = path.join(LOCALES_ROOT, "en", "translation.json");
+// Translations are bundled offline from messages/<locale>.json (imported into
+// src/i18n.ts). Every locale must have exactly the same key set as English.
+const MESSAGES_ROOT = path.resolve(__dirname, "..", "..", "messages");
+const LOCALES = ["en", "es", "fr", "de", "it", "pt", "ru", "zh", "ja", "ms"];
 
 function flattenKeys(
   value: unknown,
@@ -26,27 +27,22 @@ function flattenKeys(
   return keys;
 }
 
-function readTranslation(filePath: string): Record<string, unknown> {
-  return JSON.parse(readFileSync(filePath, "utf-8")) as Record<string, unknown>;
+function readTranslation(locale: string): Record<string, unknown> {
+  return JSON.parse(
+    readFileSync(path.join(MESSAGES_ROOT, `${locale}.json`), "utf-8"),
+  ) as Record<string, unknown>;
 }
 
 describe("i18n locale parity", () => {
-  const englishKeys = new Set(flattenKeys(readTranslation(ENGLISH_TRANSLATION)));
-
-  const localeDirectories = readdirSync(LOCALES_ROOT)
-    .map((name) => path.join(LOCALES_ROOT, name))
-    .filter((directory) => statSync(directory).isDirectory());
+  const englishKeys = [...new Set(flattenKeys(readTranslation("en")))].sort();
 
   it("keeps every locale aligned with english keys", () => {
-    for (const localeDirectory of localeDirectories) {
-      const locale = path.basename(localeDirectory);
-      const translationPath = path.join(localeDirectory, "translation.json");
-      const localeKeys = new Set(flattenKeys(readTranslation(translationPath)));
-
+    for (const locale of LOCALES.filter((l) => l !== "en")) {
+      const localeKeys = [...new Set(flattenKeys(readTranslation(locale)))].sort();
       expect(
-        [...localeKeys].sort(),
+        localeKeys,
         `${locale} should not add or remove translation keys`,
-      ).toEqual([...englishKeys].sort());
+      ).toEqual(englishKeys);
     }
   });
 });
