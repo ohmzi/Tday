@@ -21,7 +21,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 data class SystemCredential(
-    val email: String,
+    val username: String,
     val password: String,
 )
 
@@ -40,7 +40,7 @@ enum class LoginCredentialSource {
 interface SystemCredentialServicing {
     suspend fun requestSavedCredential(
         context: Context,
-        preferredEmail: String? = null,
+        preferredUsername: String? = null,
     ): SystemCredential?
 
     suspend fun offerSaveOrUpdateCredential(
@@ -63,20 +63,20 @@ class SystemCredentialService @Inject constructor(
 ) : SystemCredentialServicing {
     override suspend fun requestSavedCredential(
         context: Context,
-        preferredEmail: String?,
+        preferredUsername: String?,
     ): SystemCredential? {
         credentialBreadcrumb(
             operation = "credential.request",
             kind = "login",
             result = "start",
-            extra = mapOf("preferred_email_present" to !preferredEmail.isNullOrBlank()),
+            extra = mapOf("preferred_username_present" to !preferredUsername.isNullOrBlank()),
         )
         val activity = context.findActivity() ?: run {
             credentialBreadcrumb("credential.request", "login", "no_activity")
             return null
         }
         val credentialManager = CredentialManager.create(activity)
-        val allowedUserIds = preferredEmail
+        val allowedUserIds = preferredUsername
             ?.trim()
             ?.lowercase(Locale.US)
             ?.takeIf { it.isNotBlank() }
@@ -120,8 +120,8 @@ class SystemCredentialService @Inject constructor(
         context: Context,
         credential: SystemCredential,
     ): SystemCredentialSaveResult {
-        val normalizedEmail = credential.email.trim().lowercase(Locale.US)
-        if (normalizedEmail.isBlank() || credential.password.isBlank()) {
+        val normalizedUsername = credential.username.trim().lowercase(Locale.US)
+        if (normalizedUsername.isBlank() || credential.password.isBlank()) {
             credentialBreadcrumb("credential.save", "login", "skipped")
             return SystemCredentialSaveResult.SKIPPED
         }
@@ -133,7 +133,7 @@ class SystemCredentialService @Inject constructor(
         }
         val credentialManager = CredentialManager.create(activity)
         val request = CreatePasswordRequest(
-            id = normalizedEmail,
+            id = normalizedUsername,
             password = credential.password,
         )
 
@@ -282,7 +282,7 @@ internal object SystemCredentialRecords {
         if (normalizedId == SERVER_URL_CREDENTIAL_ID) return null
         if (normalizedId.isBlank() || password.isBlank()) return null
         return SystemCredential(
-            email = normalizedId,
+            username = normalizedId,
             password = password,
         )
     }

@@ -123,7 +123,7 @@ fun OnboardingWizardOverlay(
     onLogin: (String, String, LoginCredentialSource) -> Unit,
     onRegister: (
         firstName: String,
-        email: String,
+        username: String,
         password: String,
         onSuccess: () -> Unit,
     ) -> Unit,
@@ -145,7 +145,7 @@ fun OnboardingWizardOverlay(
         mutableStateOf(if (initialServerUrl.isNullOrBlank()) WizardStep.MODE else WizardStep.LOGIN)
     }
     var serverUrl by rememberSaveable { mutableStateOf(initialServerUrl.orEmpty()) }
-    var email by rememberSaveable { mutableStateOf("") }
+    var username by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
     var firstName by rememberSaveable { mutableStateOf("") }
     var registerPassword by rememberSaveable { mutableStateOf("") }
@@ -168,8 +168,8 @@ fun OnboardingWizardOverlay(
     val resetTrustErrorFallback = stringResource(R.string.onboarding_error_reset_trust_fallback)
     val appOutdatedError = stringResource(R.string.error_app_outdated)
     val firstNameMinError = stringResource(R.string.onboarding_validation_first_name_min)
-    val emailRequiredError = stringResource(R.string.onboarding_validation_email_required)
-    val emailInvalidError = stringResource(R.string.onboarding_validation_email_invalid)
+    val usernameRequiredError = stringResource(R.string.onboarding_validation_username_required)
+    val usernameInvalidError = stringResource(R.string.onboarding_validation_username_invalid)
     val passwordRequiredError = stringResource(R.string.onboarding_validation_password_required)
     val passwordMinError = stringResource(R.string.onboarding_validation_password_min)
     val passwordUppercaseError = stringResource(R.string.onboarding_validation_password_uppercase)
@@ -218,18 +218,18 @@ fun OnboardingWizardOverlay(
     }
     val signIn: () -> Unit = signIn@{
         if (authUiState.isLoading) return@signIn
-        val userEmail = email.trim()
-        if (userEmail.isBlank() || password.isBlank()) return@signIn
+        val userUsername = username.trim()
+        if (userUsername.isBlank() || password.isBlank()) return@signIn
         keyboardController?.hide()
         focusManager.clearFocus(force = true)
         localAuthError = null
         onClearAuthStatus()
-        onLogin(userEmail, password, LoginCredentialSource.MANUAL)
+        onLogin(userUsername, password, LoginCredentialSource.MANUAL)
     }
     val createAccount: () -> Unit = createAccount@{
         if (authUiState.isLoading || isRegisterInFlight) return@createAccount
         val normalizedFirst = firstName.trim()
-        val normalizedEmail = email.trim()
+        val normalizedUsername = username.trim().lowercase(java.util.Locale.US)
         val hasUppercase = registerPassword.any { it.isUpperCase() }
         val hasSpecial = registerPassword.any { !it.isLetterOrDigit() || it == '_' }
 
@@ -238,12 +238,13 @@ fun OnboardingWizardOverlay(
                 localAuthError = firstNameMinError
                 return@createAccount
             }
-            normalizedEmail.isBlank() -> {
-                localAuthError = emailRequiredError
+            normalizedUsername.isBlank() -> {
+                localAuthError = usernameRequiredError
                 return@createAccount
             }
-            !EMAIL_REGEX.matches(normalizedEmail) -> {
-                localAuthError = emailInvalidError
+
+            !USERNAME_REGEX.matches(normalizedUsername) -> {
+                localAuthError = usernameInvalidError
                 return@createAccount
             }
             registerPassword.isBlank() || confirmRegisterPassword.isBlank() -> {
@@ -275,7 +276,7 @@ fun OnboardingWizardOverlay(
         onClearAuthStatus()
         onRegister(
             normalizedFirst,
-            normalizedEmail,
+            normalizedUsername,
             registerPassword,
         ) {
             isRegisterInFlight = false
@@ -302,9 +303,9 @@ fun OnboardingWizardOverlay(
         }
     }
 
-    LaunchedEffect(authUiState.savedEmail) {
-        if (email.isBlank() && authUiState.savedEmail.isNotBlank()) {
-            email = authUiState.savedEmail
+    LaunchedEffect(authUiState.savedUsername) {
+        if (username.isBlank() && authUiState.savedUsername.isNotBlank()) {
+            username = authUiState.savedUsername
         }
     }
 
@@ -341,13 +342,13 @@ fun OnboardingWizardOverlay(
 
         credentialCoordinator.requestSavedCredentialIfAvailable(
             context = context,
-            currentEmail = email,
+            currentUsername = username,
             currentPassword = password,
             isCreatingAccount = false,
             isAuthLoading = authUiState.isLoading,
             requestSavedCredential = onRequestSavedCredential,
         ) { credential ->
-            email = credential.email
+            username = credential.username
             password = credential.password
             keyboardController?.hide()
             focusManager.clearFocus(force = true)
@@ -355,7 +356,7 @@ fun OnboardingWizardOverlay(
             onClearAuthStatus()
             delay(CREDENTIAL_PROMPT_SETTLE_DELAY_MS)
             onLogin(
-                credential.email,
+                credential.username,
                 credential.password,
                 LoginCredentialSource.SYSTEM_PASSWORD_MANAGER,
             )
@@ -676,20 +677,19 @@ fun OnboardingWizardOverlay(
                                                     .tdayAutofill(
                                                         autofillTypes = listOf(
                                                             AutofillType.Username,
-                                                            AutofillType.EmailAddress,
                                                         ),
                                                     ) {
-                                                        email = it
+                                                        username = it
                                                         localAuthError = null
                                                         onClearAuthStatus()
                                                     },
-                                                value = email,
+                                                value = username,
                                                 onValueChange = {
-                                                    email = it
+                                                    username = it
                                                     localAuthError = null
                                                     onClearAuthStatus()
                                                 },
-                                                label = { Text(stringResource(R.string.onboarding_email_label)) },
+                                                label = { Text(stringResource(R.string.onboarding_username_label)) },
                                                 singleLine = true,
                                                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                                                 keyboardActions = KeyboardActions(
@@ -767,7 +767,7 @@ fun OnboardingWizardOverlay(
                                                     .fillMaxWidth()
                                                     .padding(top = 4.dp)
                                                     .height(48.dp),
-                                                enabled = email.isNotBlank() && password.isNotBlank() && !authUiState.isLoading,
+                                                enabled = username.isNotBlank() && password.isNotBlank() && !authUiState.isLoading,
                                                 onClick = signIn,
                                                 colors = ButtonDefaults.buttonColors(
                                                     containerColor = colorScheme.primary,
@@ -838,20 +838,19 @@ fun OnboardingWizardOverlay(
                                                     .tdayAutofill(
                                                         autofillTypes = listOf(
                                                             AutofillType.NewUsername,
-                                                            AutofillType.EmailAddress,
                                                         ),
                                                     ) {
-                                                        email = it
+                                                        username = it
                                                         localAuthError = null
                                                         onClearAuthStatus()
                                                     },
-                                                value = email,
+                                                value = username,
                                                 onValueChange = {
-                                                    email = it
+                                                    username = it
                                                     localAuthError = null
                                                     onClearAuthStatus()
                                                 },
-                                                label = { Text(stringResource(R.string.onboarding_email_label)) },
+                                                label = { Text(stringResource(R.string.onboarding_username_label)) },
                                                 singleLine = true,
                                                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                                                 keyboardActions = KeyboardActions(
@@ -948,7 +947,7 @@ fun OnboardingWizardOverlay(
                                                     .padding(top = 4.dp)
                                                     .height(48.dp),
                                                 enabled = firstName.isNotBlank() &&
-                                                    email.isNotBlank() &&
+                                                        username.isNotBlank() &&
                                                     registerPassword.isNotBlank() &&
                                                     confirmRegisterPassword.isNotBlank() &&
                                                     !authUiState.isLoading &&
@@ -1355,7 +1354,7 @@ private fun WizardStepChip(
 }
 
 private const val CREDENTIAL_PROMPT_SETTLE_DELAY_MS = 600L
-private val EMAIL_REGEX = Regex("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$")
+private val USERNAME_REGEX = Regex("^[a-z0-9](?:[a-z0-9._-]{1,28}[a-z0-9])$")
 private val WIZARD_CARD_MAX_WIDTH = 440.dp
 private val WIZARD_CARD_CONTENT_PADDING = 18.dp
 private val WIZARD_SCREEN_EDGE_PADDING = 20.dp

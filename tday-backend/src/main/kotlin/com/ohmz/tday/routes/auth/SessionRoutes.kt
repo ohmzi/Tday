@@ -41,7 +41,7 @@ fun Route.sessionRoutes() {
                     putJsonObject("user") {
                         put("id", user.id)
                         put("name", user.name)
-                        put("email", user.email)
+                        put("username", user.username)
                         put("role", user.role)
                         put("approvalStatus", user.approvalStatus)
                         put("timeZone", user.timeZone)

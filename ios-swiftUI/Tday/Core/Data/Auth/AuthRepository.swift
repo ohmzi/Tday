@@ -2,14 +2,14 @@ import Foundation
 
 protocol AuthRepositoryServicing: AnyObject {
     func restoreSession() async -> SessionUser?
-    func login(email: String, password: String) async -> AuthResult
-    func register(firstName: String, lastName: String, email: String, password: String) async -> RegisterOutcome
+    func login(username: String, password: String) async -> AuthResult
+    func register(firstName: String, lastName: String, username: String, password: String) async -> RegisterOutcome
     func logout() async
     func syncTimezone() async
     @MainActor func clearSessionOnly()
     @MainActor func clearAllLocalUserDataForUnauthenticatedState()
-    func getLastEmail() -> String?
-    func lastEmail() -> String?
+    func getLastUsername() -> String?
+    func lastUsername() -> String?
 }
 
 struct RestoredSession {
@@ -83,21 +83,21 @@ final class AuthRepository: AuthRepositoryServicing {
         return user
     }
 
-    func login(email: String, password: String) async -> AuthResult {
+    func login(username: String, password: String) async -> AuthResult {
         guard serverConfigRepository.hasServerConfigured() else {
             return .error("Server URL is not configured")
         }
 
         do {
-            let normalizedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            let normalizedUsername = username.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
             let key = try await api.getCredentialKey()
-            let envelope = try CredentialEnvelopeBuilder.build(email: normalizedEmail, password: password, credentialKey: key)
+            let envelope = try CredentialEnvelopeBuilder.build(username: normalizedUsername, password: password, credentialKey: key)
             let csrf = try await api.getCsrfToken().csrfToken
             let callbackURL = serverConfigRepository.buildAbsoluteAppURL("app/tday")?.absoluteString
                 ?? "/app/tday"
             let callback = try await api.signInWithCredentials(
                 payload: CredentialsCallbackRequest(
-                    email: nil,
+                    username: nil,
                     password: nil,
                     encryptedPayload: envelope.encryptedPayload,
                     encryptedKey: envelope.encryptedKey,
@@ -136,7 +136,7 @@ final class AuthRepository: AuthRepositoryServicing {
             }
 
             if let user = await restoreSession(), user.id != nil {
-                secureStore.saveLastEmail(normalizedEmail)
+                secureStore.saveLastUsername(normalizedUsername)
                 serverConfigRepository.persistRuntimeServerURL()
                 await syncTimezone()
                 return .success
@@ -150,13 +150,13 @@ final class AuthRepository: AuthRepositoryServicing {
         }
     }
 
-    func register(firstName: String, lastName: String, email: String, password: String) async -> RegisterOutcome {
+    func register(firstName: String, lastName: String, username: String, password: String) async -> RegisterOutcome {
         do {
             let response = try await api.register(
                 payload: RegisterRequest(
                     fname: firstName.trimmingCharacters(in: .whitespacesAndNewlines),
                     lname: lastName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : lastName.trimmingCharacters(in: .whitespacesAndNewlines),
-                    email: email.trimmingCharacters(in: .whitespacesAndNewlines),
+                    username: username.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(),
                     password: password
                 )
             )
@@ -203,12 +203,12 @@ final class AuthRepository: AuthRepositoryServicing {
         }
     }
 
-    func getLastEmail() -> String? {
-        secureStore.loadLastEmail()
+    func getLastUsername() -> String? {
+        secureStore.loadLastUsername()
     }
 
-    func lastEmail() -> String? {
-        getLastEmail()
+    func lastUsername() -> String? {
+        getLastUsername()
     }
 
     private func cacheSessionUser(_ user: SessionUser?) {
@@ -226,7 +226,7 @@ final class AuthRepository: AuthRepositoryServicing {
     }
 
     private func loadLastKnownOfflineSessionUser() async -> SessionUser? {
-        guard let email = secureStore.loadLastEmail() else {
+        guard let username = secureStore.loadLastUsername() else {
             return nil
         }
         let hasCachedData = await MainActor.run {
@@ -236,9 +236,9 @@ final class AuthRepository: AuthRepositoryServicing {
             return nil
         }
         return SessionUser(
-            id: email,
+            id: username,
             name: nil,
-            email: email,
+            username: username,
             image: nil,
             timeZone: nil,
             role: nil,
@@ -249,9 +249,9 @@ final class AuthRepository: AuthRepositoryServicing {
     private func mapAuthError(_ value: String) -> String {
         switch value {
         case "CredentialsSignin":
-            return "Incorrect email or password"
+            return "Incorrect username or password"
         case "Invalid credentials":
-            return "Incorrect email or password"
+            return "Incorrect username or password"
         case "AccessDenied":
             return "Your account does not have access"
         case "SessionRequired":

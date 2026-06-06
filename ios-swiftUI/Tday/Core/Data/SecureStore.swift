@@ -20,7 +20,7 @@ final class SecureStore {
     enum Key: String {
         case persistedServerURL = "persisted-server-url"
         case deviceID = "device-id"
-        case lastEmail = "last-email"
+        case lastUsername = "last-username"
         case persistedAuthSessionCookie = "persisted-auth-session-cookie"
         case cachedSessionUser = "cached-session-user"
         case savedServerURLSuggestion = "saved-server-url-suggestion"
@@ -84,16 +84,16 @@ final class SecureStore {
         return created
     }
 
-    func saveLastEmail(_ email: String) {
-        saveString(email, for: .lastEmail)
+    func saveLastUsername(_ username: String) {
+        saveString(username, for: .lastUsername)
     }
 
-    func loadLastEmail() -> String? {
-        loadString(for: .lastEmail)
+    func loadLastUsername() -> String? {
+        loadString(for: .lastUsername)
     }
 
-    func clearLastEmail() {
-        deleteValue(for: .lastEmail)
+    func clearLastUsername() {
+        deleteValue(for: .lastUsername)
     }
 
     func loadCachedSessionUserData() -> Data? {
@@ -151,7 +151,7 @@ final class SecureStore {
         }
         clearPersistedAuthSessionCookie()
         clearCachedSessionUser()
-        clearLastEmail()
+        clearLastUsername()
         clearAllTrustedFingerprints()
         defaults.removeObject(forKey: runtimeServerURLKey)
         defaults.removeObject(forKey: listIconsKey)
@@ -192,8 +192,8 @@ final class SecureStore {
         clearAllUserValues()
     }
 
-    func lastEmail() -> String? {
-        loadLastEmail()
+    func lastUsername() -> String? {
+        loadLastUsername()
     }
 
     func loadPersistedAuthSessionCookieData() -> Data? {
@@ -218,7 +218,7 @@ final class SecureStore {
         clearAppDataMode()
         clearPersistedAuthSessionCookie()
         clearCachedSessionUser()
-        clearLastEmail()
+        clearLastUsername()
         clearAllTrustedFingerprints()
         defaults.removeObject(forKey: runtimeServerURLKey)
         defaults.removeObject(forKey: listIconsKey)

@@ -56,12 +56,12 @@ final class ServerURLPersistenceTests: XCTestCase {
     func testUserCleanupCanPreservePersistedServerURL() {
         let url = URL(string: "https://tday.ohmz.cloud")!
         secureStore.savePersistedServerURL(url)
-        secureStore.saveLastEmail("user@example.com")
+        secureStore.saveLastUsername("user@example.com")
 
         secureStore.clearAllUserValues(preservingServerURL: true)
 
         XCTAssertEqual(secureStore.loadPersistedServerURL(), url)
-        XCTAssertNil(secureStore.loadLastEmail())
+        XCTAssertNil(secureStore.loadLastUsername())
     }
 
     func testSavedServerURLSuggestionSurvivesReinstallCleanup() {
@@ -76,13 +76,13 @@ final class ServerURLPersistenceTests: XCTestCase {
     func testReinstallCleanupClearsInstallScopedValues() {
         let url = URL(string: "https://tday.ohmz.cloud")!
         secureStore.savePersistedServerURL(url)
-        secureStore.saveLastEmail("user@example.com")
+        secureStore.saveLastUsername("user@example.com")
         secureStore.savePersistedAuthSessionCookieData(Data("cookie".utf8))
 
         XCTAssertTrue(secureStore.clearInstallScopedValuesIfAppReinstalled())
 
         XCTAssertNil(secureStore.loadPersistedServerURL())
-        XCTAssertNil(secureStore.loadLastEmail())
+        XCTAssertNil(secureStore.loadLastUsername())
         XCTAssertNil(secureStore.loadPersistedAuthSessionCookieData())
     }
 
@@ -91,13 +91,13 @@ final class ServerURLPersistenceTests: XCTestCase {
 
         XCTAssertTrue(secureStore.clearInstallScopedValuesIfAppReinstalled())
         secureStore.savePersistedServerURL(url)
-        secureStore.saveLastEmail("user@example.com")
+        secureStore.saveLastUsername("user@example.com")
         secureStore.savePersistedAuthSessionCookieData(Data("cookie".utf8))
 
         XCTAssertFalse(secureStore.clearInstallScopedValuesIfAppReinstalled())
 
         XCTAssertEqual(secureStore.loadPersistedServerURL(), url)
-        XCTAssertEqual(secureStore.loadLastEmail(), "user@example.com")
+        XCTAssertEqual(secureStore.loadLastUsername(), "user@example.com")
         XCTAssertEqual(secureStore.loadPersistedAuthSessionCookieData(), Data("cookie".utf8))
     }
 

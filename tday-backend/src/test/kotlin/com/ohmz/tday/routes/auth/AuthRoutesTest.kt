@@ -52,7 +52,7 @@ class AuthRoutesTest {
                 authUser = JwtUserClaims(
                     id = "user_123",
                     name = "Test User",
-                    email = "user@example.com",
+                    username = "testuser",
                     role = "ADMIN",
                     approvalStatus = "APPROVED",
                     timeZone = "America/Toronto",
@@ -67,7 +67,7 @@ class AuthRoutesTest {
         val user = payload.getValue("user").jsonObject
         assertEquals("user_123", user.getValue("id").jsonPrimitive.content)
         assertEquals("Test User", user.getValue("name").jsonPrimitive.content)
-        assertEquals("user@example.com", user.getValue("email").jsonPrimitive.content)
+        assertEquals("testuser", user.getValue("username").jsonPrimitive.content)
         assertEquals("ADMIN", user.getValue("role").jsonPrimitive.content)
         assertEquals("APPROVED", user.getValue("approvalStatus").jsonPrimitive.content)
         assertEquals("America/Toronto", user.getValue("timeZone").jsonPrimitive.content)

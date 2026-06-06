@@ -40,7 +40,7 @@ class SecurityEnforcementTest {
                         AuthUserKey,
                         JwtUserClaims(
                             id = "user_pending",
-                            email = "pending@example.com",
+                            username = "pendinguser",
                             role = "USER",
                             approvalStatus = "PENDING",
                             timeZone = "UTC",
@@ -80,7 +80,7 @@ class SecurityEnforcementTest {
                         AuthUserKey,
                         JwtUserClaims(
                             id = "user_pending",
-                            email = "pending@example.com",
+                            username = "pendinguser",
                             role = "USER",
                             approvalStatus = "PENDING",
                             timeZone = "UTC",

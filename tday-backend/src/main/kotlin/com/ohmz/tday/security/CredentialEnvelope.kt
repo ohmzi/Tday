@@ -28,7 +28,7 @@ data class CredentialPublicKeyDescriptor(
     val publicKey: String,
 )
 
-data class DecryptedCredentials(val email: String, val password: String)
+data class DecryptedCredentials(val username: String, val password: String)
 
 data class CredentialEnvelopeInput(
     val encryptedPayload: String,
@@ -102,15 +102,15 @@ class CredentialEnvelopeImpl(private val config: AppConfig) : CredentialEnvelope
         val plaintext = String(aesCipher.doFinal(encryptedPayload), Charsets.UTF_8)
         val parsed = Json.decodeFromString<CredentialPayloadJson>(plaintext)
 
-        val email = parsed.email?.trim()?.lowercase() ?: ""
+        val username = parsed.username?.trim()?.lowercase() ?: ""
         val password = parsed.password ?: ""
-        if (email.isEmpty() || password.isEmpty()) throw IllegalArgumentException("invalid_envelope_credentials")
+        if (username.isEmpty() || password.isEmpty()) throw IllegalArgumentException("invalid_envelope_credentials")
 
-        return DecryptedCredentials(email, password)
+        return DecryptedCredentials(username, password)
     }
 
     @Serializable
-    private data class CredentialPayloadJson(val email: String? = null, val password: String? = null)
+    private data class CredentialPayloadJson(val username: String? = null, val password: String? = null)
 
     private fun loadKeyMaterial(): KeyMaterial {
         val configuredPem = config.credentialsPrivateKeyPem

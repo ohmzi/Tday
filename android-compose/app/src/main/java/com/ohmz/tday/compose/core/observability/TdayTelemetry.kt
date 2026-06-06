@@ -54,7 +54,7 @@ object TdayTelemetry {
 
     private val routeLikeDataKeys = setOf("route", "path", "url", "href", "from", "to", "endpoint")
     private val sensitiveDataKeyPattern = Regex(
-        "(authorization|cookie|csrf|token|password|session|secret|email|body|payload|header)",
+        "(authorization|cookie|csrf|token|password|session|secret|email|username|body|payload|header)",
         RegexOption.IGNORE_CASE,
     )
     private val sensitiveLabelPattern = Regex(

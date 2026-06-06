@@ -27,7 +27,7 @@ export type AuthSessionState =
 export type AuthUser = {
   id: string;
   name: string | null;
-  email: string | null;
+  username: string | null;
   role: string | null;
   approvalStatus: string | null;
   timeZone: string | null;
@@ -39,7 +39,7 @@ type AuthContextValue = {
   authState: AuthSessionState;
   isLoading: boolean;
   isAuthenticated: boolean;
-  login: (email: string, credentialPayload: Record<string, string>) => Promise<{ ok: boolean; code?: string; message?: string }>;
+  login: (username: string, credentialPayload: Record<string, string>) => Promise<{ ok: boolean; code?: string; message?: string }>;
   logout: () => Promise<void>;
   refreshSession: () => Promise<void>;
 };
@@ -116,12 +116,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [authState, fetchSession]);
 
   const login = useCallback(
-    async (email: string, credentialPayload: Record<string, string>) => {
+    async (username: string, credentialPayload: Record<string, string>) => {
       try {
         await api.POST({
           url: "/api/auth/callback/credentials",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, ...credentialPayload }),
+          body: JSON.stringify({ username, ...credentialPayload }),
         });
         markReturningBrowser();
         await fetchSession();

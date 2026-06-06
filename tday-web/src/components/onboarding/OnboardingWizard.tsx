@@ -32,6 +32,8 @@ const TINT = {
 
 type AuthMode = "signin" | "create";
 
+const USERNAME_REGEX = /^[a-z0-9](?:[a-z0-9._-]{1,28}[a-z0-9])$/;
+
 type RegisterResponse = {
   requiresApproval?: boolean;
 };
@@ -51,7 +53,7 @@ export default function OnboardingWizard({
   const [searchParams] = useSearchParams();
 
   const [mode, setMode] = React.useState<AuthMode>(initialMode);
-  const [email, setEmail] = React.useState("");
+  const [username, setUsername] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [firstName, setFirstName] = React.useState("");
   const [registerPassword, setRegisterPassword] = React.useState("");
@@ -85,13 +87,13 @@ export default function OnboardingWizard({
 
   const validateRegistration = (): boolean => {
     const normalizedFirstName = firstName.trim();
-    const normalizedEmail = email.trim();
+    const normalizedUsername = username.trim().toLowerCase();
     if (normalizedFirstName.length < 2) {
       setErrorMessage("First name must be at least 2 characters");
       return false;
     }
-    if (!normalizedEmail.includes("@")) {
-      setErrorMessage("Please enter a valid email address");
+    if (!USERNAME_REGEX.test(normalizedUsername)) {
+      setErrorMessage("Please enter a valid username");
       return false;
     }
     if (registerPassword.length < 8) {
@@ -116,16 +118,16 @@ export default function OnboardingWizard({
   const handleSignIn = async () => {
     setErrorMessage("");
     setInfoMessage("");
-    const normalizedEmail = email.trim().toLowerCase();
-    if (!normalizedEmail || !password) {
-      setErrorMessage("Email and password are required");
+    const normalizedUsername = username.trim().toLowerCase();
+    if (!normalizedUsername || !password) {
+      setErrorMessage("Username and password are required");
       return;
     }
     setIsSubmitting(true);
     try {
-      const credentialPayload = await createClientCredentialEnvelope(email, password);
+      const credentialPayload = await createClientCredentialEnvelope(username, password);
       const result = await login(
-        normalizedEmail,
+        normalizedUsername,
         credentialPayload as unknown as Record<string, string>,
       );
 
@@ -164,7 +166,7 @@ export default function OnboardingWizard({
         body: JSON.stringify({
           fname: firstName.trim(),
           lname: "",
-          email: email.trim(),
+          username: username.trim().toLowerCase(),
           password: registerPassword,
         }),
       })) as RegisterResponse | null;
@@ -175,7 +177,7 @@ export default function OnboardingWizard({
       }
 
       // Account created (no approval needed) — drop back to sign in with the
-      // email prefilled, mirroring the native flow's "open your workspace" step.
+      // username prefilled, mirroring the native flow's "open your workspace" step.
       setMode("signin");
       setPassword("");
       setRegisterPassword("");
@@ -200,10 +202,10 @@ export default function OnboardingWizard({
     }
   };
 
-  const signInEnabled = email.trim().length > 0 && password.length > 0;
+  const signInEnabled = username.trim().length > 0 && password.length > 0;
   const createEnabled =
     firstName.trim().length > 0 &&
-    email.trim().length > 0 &&
+    username.trim().length > 0 &&
     registerPassword.length > 0 &&
     confirmPassword.length > 0;
   const primaryEnabled = (isCreating ? createEnabled : signInEnabled) && !isSubmitting;
@@ -286,13 +288,13 @@ export default function OnboardingWizard({
                 )}
 
                 <WizardInput
-                  placeholder="Email"
-                  type="email"
+                  placeholder="Username"
+                  type="text"
                   autoComplete="username"
                   autoCapitalize="off"
-                  value={email}
+                  value={username}
                   onChange={(value) => {
-                    setEmail(value);
+                    setUsername(value);
                     clearMessages();
                   }}
                 />

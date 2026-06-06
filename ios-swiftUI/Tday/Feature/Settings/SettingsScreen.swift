@@ -249,8 +249,8 @@ private struct SettingsProfileCard: View {
                 .font(.tdayRounded(size: 22, weight: .heavy))
                 .foregroundStyle(colors.onSurface)
 
-            if let email = user?.email, !email.isEmpty {
-                Text(email)
+            if let username = user?.username, !username.isEmpty {
+                Text(username)
                     .font(.tdayRounded(size: 15, weight: .bold))
                     .foregroundStyle(colors.onSurface.opacity(0.72))
             }

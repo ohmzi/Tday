@@ -41,7 +41,7 @@ class AdminServiceImpl(
                     AdminUserResponse(
                         id = row[Users.id],
                         name = row[Users.name],
-                        email = row[Users.email],
+                        username = row[Users.username],
                         role = row[Users.role].name,
                         approvalStatus = row[Users.approvalStatus].name,
                         createdAt = row[Users.createdAt].toString(),

@@ -16,7 +16,7 @@ struct AuthSession: Codable {
 struct SessionUser: Codable, Equatable, Hashable {
     let id: String?
     let name: String?
-    let email: String?
+    let username: String?
     let image: String?
     let timeZone: String?
     let role: String?
@@ -26,7 +26,7 @@ struct SessionUser: Codable, Equatable, Hashable {
 struct RegisterRequest: Codable {
     let fname: String
     let lname: String?
-    let email: String
+    let username: String
     let password: String
 }
 
@@ -53,7 +53,7 @@ struct CredentialKeyResponse: Codable {
 }
 
 struct CredentialsCallbackRequest: Codable {
-    let email: String?
+    let username: String?
     let password: String?
     let encryptedPayload: String?
     let encryptedKey: String?
@@ -532,7 +532,7 @@ struct UserResponse: Codable, Equatable {
 struct UpdateProfileRequest: Codable {
     let fname: String?
     let lname: String?
-    let email: String?
+    let username: String?
     let image: String?
     let timeZone: String?
 }
@@ -562,7 +562,7 @@ extension UpdateProfileRequest {
         self.init(
             fname: name,
             lname: nil,
-            email: nil,
+            username: nil,
             image: nil,
             timeZone: nil
         )

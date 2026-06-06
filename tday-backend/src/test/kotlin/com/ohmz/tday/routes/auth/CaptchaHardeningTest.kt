@@ -63,13 +63,13 @@ class CaptchaHardeningTest {
 
         val response = client.post("/api/auth/callback/credentials") {
             contentType(ContentType.Application.Json)
-            setBody("""{"email":"user@example.com","password":"Password123!"}""")
+            setBody("""{"username":"testuser","password":"Password123!"}""")
         }
 
         assertEquals(HttpStatusCode.ServiceUnavailable, response.status)
         val payload = json.parseToJsonElement(response.bodyAsText()).jsonObject
         assertEquals("captcha_unavailable", payload.getValue("reason").jsonPrimitive.content)
-        assertEquals(0, userService.findByEmailCalls)
+        assertEquals(0, userService.findByUsernameCalls)
         assertEquals(listOf("auth_captcha_misconfigured"), eventLogger.reasonCodes)
     }
 
@@ -95,7 +95,7 @@ class CaptchaHardeningTest {
                 {
                   "fname":"Pending",
                   "lname":"User",
-                  "email":"pending@example.com",
+                  "username":"pendinguser",
                   "password":"Password123!"
                 }
                 """.trimIndent(),
@@ -105,7 +105,7 @@ class CaptchaHardeningTest {
         assertEquals(HttpStatusCode.ServiceUnavailable, response.status)
         val payload = json.parseToJsonElement(response.bodyAsText()).jsonObject
         assertEquals("captcha_unavailable", payload.getValue("reason").jsonPrimitive.content)
-        assertEquals(0, userService.emailExistsCalls)
+        assertEquals(0, userService.usernameExistsCalls)
         assertEquals(0, userService.registerCalls)
         assertEquals(listOf("auth_captcha_misconfigured"), eventLogger.reasonCodes)
     }
@@ -195,8 +195,8 @@ class CaptchaHardeningTest {
     }
 
     private class RecordingUserService : UserService {
-        var findByEmailCalls = 0
-        var emailExistsCalls = 0
+        var findByUsernameCalls = 0
+        var usernameExistsCalls = 0
         var registerCalls = 0
 
         override suspend fun getUser(userId: String): Either<com.ohmz.tday.domain.AppError, UserResponse> = unsupported()
@@ -222,22 +222,22 @@ class CaptchaHardeningTest {
         override suspend fun register(
             fname: String,
             lname: String?,
-            email: String,
+            username: String,
             password: String,
         ): Either<com.ohmz.tday.domain.AppError, RegisterResult> {
             registerCalls += 1
             return unsupported()
         }
 
-        override suspend fun findByEmail(email: String): Map<String, Any?>? {
-            findByEmailCalls += 1
+        override suspend fun findByUsername(username: String): Map<String, Any?>? {
+            findByUsernameCalls += 1
             return null
         }
 
         override suspend fun isAdmin(userId: String): Boolean = false
 
-        override suspend fun emailExists(email: String): Boolean {
-            emailExistsCalls += 1
+        override suspend fun usernameExists(username: String): Boolean {
+            usernameExistsCalls += 1
             return false
         }
 
@@ -262,13 +262,13 @@ class CaptchaHardeningTest {
     }
 
     private class NoOpPasswordProof : PasswordProof {
-        override fun normalizeEmail(email: String?): String? = email?.trim()?.lowercase()
+        override fun normalizeUsername(value: String?): String? = value?.trim()?.lowercase()
 
-        override fun issueChallenge(email: String, storedPasswordHash: String?): PasswordProofChallengePayload =
+        override fun issueChallenge(username: String, storedPasswordHash: String?): PasswordProofChallengePayload =
             error("issueChallenge should not be called in captcha hardening tests")
 
         override fun verify(
-            email: String,
+            username: String,
             challengeId: String,
             proofHex: String,
             proofVersion: String?,

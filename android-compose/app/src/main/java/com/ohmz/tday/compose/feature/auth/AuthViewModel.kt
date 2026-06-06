@@ -3,6 +3,7 @@ package com.ohmz.tday.compose.feature.auth
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.data.auth.AuthRepository
 import com.ohmz.tday.compose.core.data.auth.LoginCredentialSource
 import com.ohmz.tday.compose.core.data.auth.SystemCredential
@@ -10,7 +11,6 @@ import com.ohmz.tday.compose.core.data.auth.SystemCredentialSaveResult
 import com.ohmz.tday.compose.core.data.auth.SystemCredentialServicing
 import com.ohmz.tday.compose.core.model.AuthResult
 import com.ohmz.tday.compose.core.ui.SnackbarManager
-import com.ohmz.tday.compose.R
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,7 +26,7 @@ data class AuthUiState(
     val errorMessage: String? = null,
     val infoMessage: String? = null,
     val pendingApproval: Boolean = false,
-    val savedEmail: String = "",
+    val savedUsername: String = "",
 )
 
 @HiltViewModel
@@ -41,9 +41,9 @@ class AuthViewModel @Inject constructor(
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
 
     init {
-        val lastEmail = authRepository.getLastEmail()
-        if (!lastEmail.isNullOrBlank()) {
-            _uiState.update { it.copy(savedEmail = lastEmail) }
+        val lastUsername = authRepository.getLastUsername()
+        if (!lastUsername.isNullOrBlank()) {
+            _uiState.update { it.copy(savedUsername = lastUsername) }
         }
     }
 
@@ -69,7 +69,7 @@ class AuthViewModel @Inject constructor(
     }
 
     fun login(
-        email: String,
+        username: String,
         password: String,
         credentialContext: Context,
         source: LoginCredentialSource = LoginCredentialSource.MANUAL,
@@ -77,10 +77,10 @@ class AuthViewModel @Inject constructor(
     ) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null, infoMessage = null) }
-            val normalizedEmail = email.trim().lowercase(Locale.US)
+            val normalizedUsername = username.trim().lowercase(Locale.US)
 
             val result = runCatching {
-                authRepository.login(email = normalizedEmail, password = password)
+                authRepository.login(username = normalizedUsername, password = password)
             }.getOrElse { error ->
                 _uiState.update {
                     it.copy(
@@ -98,7 +98,7 @@ class AuthViewModel @Inject constructor(
                         it.copy(
                             isLoading = false,
                             pendingApproval = false,
-                            savedEmail = normalizedEmail,
+                            savedUsername = normalizedUsername,
                         )
                     }
                     if (source == LoginCredentialSource.MANUAL) {
@@ -106,7 +106,7 @@ class AuthViewModel @Inject constructor(
                             systemCredentialService.offerSaveOrUpdateCredential(
                                 context = credentialContext,
                                 credential = SystemCredential(
-                                    email = normalizedEmail,
+                                    username = normalizedUsername,
                                     password = password,
                                 ),
                             ),
@@ -142,20 +142,20 @@ class AuthViewModel @Inject constructor(
     fun register(
         firstName: String,
         lastName: String,
-        email: String,
+        username: String,
         password: String,
         credentialContext: Context,
         onSuccess: () -> Unit,
     ) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null, infoMessage = null) }
-            val normalizedEmail = email.trim().lowercase(Locale.US)
+            val normalizedUsername = username.trim().lowercase(Locale.US)
 
             val outcome = runCatching {
                 authRepository.register(
                     firstName = firstName.trim(),
                     lastName = lastName.trim(),
-                    email = normalizedEmail,
+                    username = normalizedUsername,
                     password = password,
                 )
             }.getOrElse { error ->
@@ -176,7 +176,7 @@ class AuthViewModel @Inject constructor(
                     errorMessage = if (outcome.success) null else toFriendlyMessage(outcome.message),
                     infoMessage = if (outcome.success) outcome.message else null,
                     pendingApproval = outcome.requiresApproval,
-                    savedEmail = if (outcome.success) normalizedEmail else it.savedEmail,
+                    savedUsername = if (outcome.success) normalizedUsername else it.savedUsername,
                 )
             }
 
@@ -185,7 +185,7 @@ class AuthViewModel @Inject constructor(
                     systemCredentialService.offerSaveOrUpdateCredential(
                         context = credentialContext,
                         credential = SystemCredential(
-                            email = normalizedEmail,
+                            username = normalizedUsername,
                             password = password,
                         ),
                     ),
@@ -197,11 +197,11 @@ class AuthViewModel @Inject constructor(
 
     suspend fun requestSavedCredential(
         context: Context,
-        preferredEmail: String?,
+        preferredUsername: String?,
     ): SystemCredential? =
         systemCredentialService.requestSavedCredential(
             context = context,
-            preferredEmail = preferredEmail,
+            preferredUsername = preferredUsername,
         )
 
     suspend fun requestSavedServerUrl(context: Context): String? =
@@ -234,8 +234,8 @@ class AuthViewModel @Inject constructor(
         val raw = message.orEmpty()
         val lower = raw.lowercase()
         return when {
-            lower.contains("invalid email or password") ||
-                    lower.contains("incorrect email or password") ||
+            lower.contains("invalid username or password") ||
+                    lower.contains("incorrect username or password") ||
                     lower.contains("invalid credentials") ->
                 appContext.getString(R.string.auth_error_incorrect_credentials)
 

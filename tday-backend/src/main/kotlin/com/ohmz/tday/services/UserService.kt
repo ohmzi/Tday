@@ -27,10 +27,10 @@ interface UserService {
     suspend fun getProfile(userId: String): Either<AppError, UserProfileResponse>
     suspend fun updateProfile(userId: String, name: String?, image: String?): Either<AppError, Unit>
     suspend fun changePassword(userId: String, currentPassword: String, newPassword: String): Either<AppError, Boolean>
-    suspend fun register(fname: String, lname: String?, email: String, password: String): Either<AppError, RegisterResult>
-    suspend fun findByEmail(email: String): Map<String, Any?>?
+    suspend fun register(fname: String, lname: String?, username: String, password: String): Either<AppError, RegisterResult>
+    suspend fun findByUsername(username: String): Map<String, Any?>?
     suspend fun isAdmin(userId: String): Boolean
-    suspend fun emailExists(email: String): Boolean
+    suspend fun usernameExists(username: String): Boolean
     suspend fun updatePasswordHash(userId: String, newHash: String)
     suspend fun requiresPasswordChange(userId: String): Boolean
 }
@@ -76,7 +76,7 @@ class UserServiceImpl(private val passwordService: PasswordService) : UserServic
                 UserProfileResponse(
                     id = it[Users.id],
                     name = it[Users.name],
-                    email = it[Users.email],
+                    username = it[Users.username],
                     image = it[Users.image],
                     role = it[Users.role].name,
                     approvalStatus = it[Users.approvalStatus].name,
@@ -116,7 +116,7 @@ class UserServiceImpl(private val passwordService: PasswordService) : UserServic
         return result.right()
     }
 
-    override suspend fun register(fname: String, lname: String?, email: String, password: String): Either<AppError, RegisterResult> {
+    override suspend fun register(fname: String, lname: String?, username: String, password: String): Either<AppError, RegisterResult> {
         val hashedPassword = passwordService.hashPassword(password)
         val fullName = listOf(fname.trim(), lname?.trim() ?: "").filter { it.isNotEmpty() }.joinToString(" ")
 
@@ -130,7 +130,7 @@ class UserServiceImpl(private val passwordService: PasswordService) : UserServic
             Users.insert {
                 it[Users.id] = id
                 it[Users.name] = fullName
-                it[Users.email] = email
+                it[Users.username] = username
                 it[Users.password] = hashedPassword
                 it[Users.role] = if (isFirst) UserRole.ADMIN else UserRole.USER
                 it[Users.approvalStatus] = if (isFirst) ApprovalStatus.APPROVED else ApprovalStatus.PENDING
@@ -148,11 +148,11 @@ class UserServiceImpl(private val passwordService: PasswordService) : UserServic
         return result.right()
     }
 
-    override suspend fun findByEmail(email: String): Map<String, Any?>? = newSuspendedTransaction(Dispatchers.IO) {
-        Users.selectAll().where { Users.email eq email }.firstOrNull()?.let {
+    override suspend fun findByUsername(username: String): Map<String, Any?>? = newSuspendedTransaction(Dispatchers.IO) {
+        Users.selectAll().where { Users.username eq username }.firstOrNull()?.let {
             mapOf(
                 "id" to it[Users.id],
-                "email" to it[Users.email],
+                "username" to it[Users.username],
                 "password" to it[Users.password],
                 "name" to it[Users.name],
                 "role" to it[Users.role].name,
@@ -168,8 +168,8 @@ class UserServiceImpl(private val passwordService: PasswordService) : UserServic
         user[Users.role] == UserRole.ADMIN && user[Users.approvalStatus] == ApprovalStatus.APPROVED
     }
 
-    override suspend fun emailExists(email: String): Boolean = newSuspendedTransaction(Dispatchers.IO) {
-        Users.selectAll().where { Users.email eq email }.count() > 0
+    override suspend fun usernameExists(username: String): Boolean = newSuspendedTransaction(Dispatchers.IO) {
+        Users.selectAll().where { Users.username eq username }.count() > 0
     }
 
     override suspend fun updatePasswordHash(userId: String, newHash: String) {

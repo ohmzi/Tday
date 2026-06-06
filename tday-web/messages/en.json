@@ -181,9 +181,9 @@
       "discord": "Discord"
     },
     "fields": {
-      "email": {
-        "placeholder": "Email*",
-        "error": "Please enter a valid email"
+      "username": {
+        "placeholder": "Username*",
+        "error": "Please enter a valid username"
       },
       "password": {
         "placeholder": "Enter your password*",
@@ -200,7 +200,7 @@
     "toasts": {
       "googleError": "We could not sign you in to Google at the moment",
       "discordError": "We could not sign you in to Discord at the moment",
-      "invalidCredentials": "Invalid email or password",
+      "invalidCredentials": "Invalid username or password",
       "genericError": "We cannot log you in at this moment"
     }
   },
@@ -222,9 +222,9 @@
         "placeholder": "Last Name",
         "error": "Please enter a valid last name"
       },
-      "email": {
-        "placeholder": "Email*",
-        "error": "Please enter a valid email"
+      "username": {
+        "placeholder": "Username*",
+        "error": "Please enter a valid username"
       },
       "password": {
         "placeholder": "Enter your password*",
@@ -466,7 +466,7 @@
       "description": "Update your display name",
       "name": "Name",
       "namePlaceholder": "Enter your name",
-      "email": "Email",
+      "username": "Username",
       "saving": "Saving...",
       "save": "Save profile"
     },

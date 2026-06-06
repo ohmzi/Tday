@@ -160,7 +160,7 @@
     <string name="onboarding_connecting_title">Подключение к серверу…</string>
     <string name="onboarding_connecting_subtitle">Проверка сервера, TLS и настроек рабочего пространства</string>
     <string name="onboarding_use_device_only">Использовать только это устройство</string>
-    <string name="onboarding_email_label">Эл. почта</string>
+    <string name="onboarding_username_label">Имя пользователя</string>
     <string name="onboarding_password_label">Пароль</string>
     <string name="onboarding_sign_in">Войти</string>
     <string name="onboarding_login_hero_subtitle">Откройте синхронизированное рабочее пространство.</string>
@@ -178,8 +178,8 @@
     <string name="onboarding_error_connect_fallback">Не удалось подключиться к серверу</string>
     <string name="onboarding_error_reset_trust_fallback">Не удалось сбросить доверенный сервер</string>
     <string name="onboarding_validation_first_name_min">Имя должно содержать не менее 2 символов</string>
-    <string name="onboarding_validation_email_required">Укажите эл. почту</string>
-    <string name="onboarding_validation_email_invalid">Введите корректный адрес эл. почты</string>
+    <string name="onboarding_validation_username_required">Укажите имя пользователя</string>
+    <string name="onboarding_validation_username_invalid">Введите корректное имя пользователя</string>
     <string name="onboarding_validation_password_required">Требуются пароль и подтверждение</string>
     <string name="onboarding_validation_password_min">Пароль должен содержать не менее 8 символов</string>
     <string name="onboarding_validation_password_uppercase">Пароль должен содержать хотя бы одну заглавную букву</string>
@@ -190,7 +190,7 @@
     <string name="auth_pending_admin_approval">Аккаунт ожидает одобрения администратора.</string>
     <string name="auth_password_manager_save_server_url_failed">Менеджер паролей Android не смог сохранить этот URL сервера. Убедитесь, что менеджер паролей включён.</string>
     <string name="auth_password_manager_save_login_failed">Менеджер паролей Android не смог сохранить этот вход. Убедитесь, что менеджер паролей включён.</string>
-    <string name="auth_error_incorrect_credentials">Неверная эл. почта или пароль</string>
+    <string name="auth_error_incorrect_credentials">Неверное имя пользователя или пароль</string>
     <string name="auth_error_server_unreachable">Сервер недоступен. Проверьте URL сервера и повторите попытку.</string>
 
     <!-- Todo list screen -->

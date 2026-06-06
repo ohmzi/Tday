@@ -46,7 +46,7 @@ struct OnboardingWizardOverlay: View {
     @Environment(\.tdayColors) private var colors
     @State private var step: OnboardingStep = .server
     @State private var serverURL = ""
-    @State private var email = ""
+    @State private var username = ""
     @State private var password = ""
     @State private var firstName = ""
     @State private var registerPassword = ""
@@ -60,6 +60,8 @@ struct OnboardingWizardOverlay: View {
     @State private var pendingServerURLUsePrompt: String?
     @State private var pendingServerURLSavePrompt: String?
     @State private var credentialCoordinator = LoginCredentialCoordinator()
+
+    private static let usernamePattern = "^[a-z0-9](?:[a-z0-9._-]{1,28}[a-z0-9])$"
 
     var body: some View {
         ZStack {
@@ -363,9 +365,9 @@ struct OnboardingWizardOverlay: View {
             }
 
             WizardInputField(
-                title: "Email",
-                text: $email,
-                keyboardType: .emailAddress,
+                title: "Username",
+                text: $username,
+                keyboardType: .default,
                 textContentType: .username,
                 autocapitalization: .never,
                 disableAutocorrection: true,
@@ -515,13 +517,13 @@ struct OnboardingWizardOverlay: View {
     private var primaryAuthActionEnabled: Bool {
         if isCreatingAccount {
             return !firstName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
-                !email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+                !username.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
                 !registerPassword.isEmpty &&
                 !confirmPassword.isEmpty &&
                 !isAuthInFlight
         }
 
-        return !email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+        return !username.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
             !password.isEmpty &&
             !isAuthInFlight
     }
@@ -604,7 +606,7 @@ struct OnboardingWizardOverlay: View {
                 credentialService: systemCredentialService
             ) { credential in
                 isCompletingAuthentication = true
-                let didLogin = await onLogin(credential.email, credential.password, .systemPasswordAutoFill)
+                let didLogin = await onLogin(credential.username, credential.password, .systemPasswordAutoFill)
                 if !didLogin || authViewModel.pendingApproval {
                     isCompletingAuthentication = false
                 }
@@ -623,19 +625,19 @@ struct OnboardingWizardOverlay: View {
             isCompletingAuthentication = true
             let didRegister = await onRegister(
                 firstName.trimmingCharacters(in: .whitespacesAndNewlines),
-                email.trimmingCharacters(in: .whitespacesAndNewlines),
+                username.trimmingCharacters(in: .whitespacesAndNewlines),
                 registerPassword
             )
             if !didRegister || authViewModel.pendingApproval {
                 isCompletingAuthentication = false
             }
         } else {
-            guard !email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, !password.isEmpty else {
-                localError = "Email and password are required"
+            guard !username.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, !password.isEmpty else {
+                localError = "Username and password are required"
                 return
             }
             isCompletingAuthentication = true
-            let didLogin = await onLogin(email.trimmingCharacters(in: .whitespacesAndNewlines), password, .manual)
+            let didLogin = await onLogin(username.trimmingCharacters(in: .whitespacesAndNewlines), password, .manual)
             if !didLogin || authViewModel.pendingApproval {
                 isCompletingAuthentication = false
             }
@@ -644,13 +646,13 @@ struct OnboardingWizardOverlay: View {
 
     private func validateRegistration() -> Bool {
         let normalizedFirstName = firstName.trimmingCharacters(in: .whitespacesAndNewlines)
-        let normalizedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
+        let normalizedUsername = username.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard normalizedFirstName.count >= 2 else {
             localError = "First name must be at least 2 characters"
             return false
         }
-        guard normalizedEmail.contains("@") else {
-            localError = "Please enter a valid email address"
+        guard normalizedUsername.range(of: Self.usernamePattern, options: .regularExpression) != nil else {
+            localError = "Please enter a valid username"
             return false
         }
         guard registerPassword.count >= 8 else {

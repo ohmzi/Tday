@@ -11,14 +11,14 @@ struct CredentialEnvelope {
 }
 
 private struct CredentialEnvelopePayload: Codable {
-    let email: String
+    let username: String
     let password: String
 }
 
 enum CredentialEnvelopeBuilder {
     private static let supportedVersion = "1"
 
-    static func build(email: String, password: String, credentialKey: CredentialKeyResponse) throws -> CredentialEnvelope {
+    static func build(username: String, password: String, credentialKey: CredentialKeyResponse) throws -> CredentialEnvelope {
         guard credentialKey.version == supportedVersion else {
             throw APIError(message: "Unsupported secure sign-in version", statusCode: nil)
         }
@@ -40,7 +40,7 @@ enum CredentialEnvelopeBuilder {
         let nonce = try AES.GCM.Nonce(data: nonceData)
         let payload = try JSONEncoder().encode(
             CredentialEnvelopePayload(
-                email: email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(),
+                username: username.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(),
                 password: password
             )
         )

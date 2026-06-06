@@ -160,7 +160,7 @@
     <string name="onboarding_connecting_title">正在连接服务器…</string>
     <string name="onboarding_connecting_subtitle">正在检查端点、TLS 和工作区设置</string>
     <string name="onboarding_use_device_only">仅使用此设备</string>
-    <string name="onboarding_email_label">电子邮箱</string>
+    <string name="onboarding_username_label">用户名</string>
     <string name="onboarding_password_label">密码</string>
     <string name="onboarding_sign_in">登录</string>
     <string name="onboarding_login_hero_subtitle">打开你已同步的工作区。</string>
@@ -178,8 +178,8 @@
     <string name="onboarding_error_connect_fallback">无法连接到服务器</string>
     <string name="onboarding_error_reset_trust_fallback">无法重置受信任的服务器</string>
     <string name="onboarding_validation_first_name_min">名字至少需要 2 个字符</string>
-    <string name="onboarding_validation_email_required">请填写电子邮箱</string>
-    <string name="onboarding_validation_email_invalid">请输入有效的电子邮箱地址</string>
+    <string name="onboarding_validation_username_required">请填写用户名</string>
+    <string name="onboarding_validation_username_invalid">请输入有效的用户名</string>
     <string name="onboarding_validation_password_required">请填写密码和确认密码</string>
     <string name="onboarding_validation_password_min">密码至少需要 8 个字符</string>
     <string name="onboarding_validation_password_uppercase">密码必须包含至少一个大写字母</string>
@@ -190,7 +190,7 @@
     <string name="auth_pending_admin_approval">账户正在等待管理员审批。</string>
     <string name="auth_password_manager_save_server_url_failed">Android 密码管理器无法保存此服务器网址。请检查是否已启用密码管理器。</string>
     <string name="auth_password_manager_save_login_failed">Android 密码管理器无法保存此登录信息。请检查是否已启用密码管理器。</string>
-    <string name="auth_error_incorrect_credentials">电子邮箱或密码不正确</string>
+    <string name="auth_error_incorrect_credentials">用户名或密码不正确</string>
     <string name="auth_error_server_unreachable">无法连接到服务器。请检查服务器网址后重试。</string>
 
     <!-- Todo list screen -->
