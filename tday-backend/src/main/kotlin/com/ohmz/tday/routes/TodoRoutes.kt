@@ -410,7 +410,11 @@ private fun buildSummaryTasks(
             .asSequence()
             .filterNot { it.completed }
             .mapNotNull { todo ->
-                val due = parseTodoDateTime(todo.due) ?: return@mapNotNull null
+                // `due` is stored as a UTC wall-clock; convert it to the user's
+                // zone so the TODAY / OVERDUE / SCHEDULED buckets (which use the
+                // user-local now/today above) compare in the same frame.
+                val dueUtc = parseTodoDateTime(todo.due) ?: return@mapNotNull null
+                val due = dueUtc.atOffset(ZoneOffset.UTC).atZoneSameInstant(zoneId).toLocalDateTime()
                 SummaryTask(
                     title = todo.title,
                     priority = todo.priority,

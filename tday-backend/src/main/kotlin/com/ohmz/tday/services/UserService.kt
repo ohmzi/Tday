@@ -17,6 +17,7 @@ import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import org.jetbrains.exposed.sql.update
 import java.time.LocalDateTime
+import java.time.ZoneOffset
 
 data class RegisterResult(val userId: String, val requiresApproval: Boolean, val isBootstrapAdmin: Boolean)
 
@@ -54,7 +55,7 @@ class UserServiceImpl(private val passwordService: PasswordService) : UserServic
         newSuspendedTransaction(Dispatchers.IO) {
             Users.update({ Users.id eq userId }) {
                 it[Users.enableEncryption] = enable
-                it[Users.updatedAt] = LocalDateTime.now()
+                it[Users.updatedAt] = LocalDateTime.now(ZoneOffset.UTC)
             }
         }
         return Unit.right()
@@ -64,7 +65,7 @@ class UserServiceImpl(private val passwordService: PasswordService) : UserServic
         newSuspendedTransaction(Dispatchers.IO) {
             Users.update({ Users.id eq userId }) {
                 it[Users.protectedSymmetricKey] = key
-                it[Users.updatedAt] = LocalDateTime.now()
+                it[Users.updatedAt] = LocalDateTime.now(ZoneOffset.UTC)
             }
         }
         return Unit.right()
@@ -92,7 +93,7 @@ class UserServiceImpl(private val passwordService: PasswordService) : UserServic
             Users.update({ Users.id eq userId }) {
                 name?.let { n -> it[Users.name] = n }
                 image?.let { i -> it[Users.image] = i }
-                it[Users.updatedAt] = LocalDateTime.now()
+                it[Users.updatedAt] = LocalDateTime.now(ZoneOffset.UTC)
             }
         }
         return Unit.right()
@@ -109,7 +110,7 @@ class UserServiceImpl(private val passwordService: PasswordService) : UserServic
             Users.update({ Users.id eq userId }) {
                 it[Users.password] = newHash
                 it[Users.requirePasswordChange] = false
-                it[Users.updatedAt] = LocalDateTime.now()
+                it[Users.updatedAt] = LocalDateTime.now(ZoneOffset.UTC)
             }
             true
         }
@@ -125,7 +126,7 @@ class UserServiceImpl(private val passwordService: PasswordService) : UserServic
             val isFirst = userCount == 0L
 
             val id = CuidGenerator.newCuid()
-            val now = LocalDateTime.now()
+            val now = LocalDateTime.now(ZoneOffset.UTC)
 
             Users.insert {
                 it[Users.id] = id
@@ -176,7 +177,7 @@ class UserServiceImpl(private val passwordService: PasswordService) : UserServic
         newSuspendedTransaction(Dispatchers.IO) {
             Users.update({ Users.id eq userId }) {
                 it[Users.password] = newHash
-                it[Users.updatedAt] = LocalDateTime.now()
+                it[Users.updatedAt] = LocalDateTime.now(ZoneOffset.UTC)
             }
         }
     }

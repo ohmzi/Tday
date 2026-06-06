@@ -23,6 +23,7 @@ import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransacti
 import org.slf4j.LoggerFactory
 import java.security.Security
 import java.time.LocalDateTime
+import java.time.ZoneOffset
 
 interface PushNotificationService {
     suspend fun subscribe(userId: String, endpoint: String, p256dh: String, auth: String): Either<AppError, Unit>
@@ -72,7 +73,7 @@ class PushNotificationServiceImpl(private val config: AppConfig) : PushNotificat
                 it[PushSubscriptions.endpoint] = endpoint
                 it[PushSubscriptions.p256dh] = p256dh
                 it[PushSubscriptions.auth] = auth
-                it[PushSubscriptions.createdAt] = LocalDateTime.now()
+                it[PushSubscriptions.createdAt] = LocalDateTime.now(ZoneOffset.UTC)
             }
         }
         return Unit.right()

@@ -3,7 +3,6 @@ import { setCaretOffset } from "@/components/todo/lib/setCaretOffset";
 import { useLocale } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
 import * as chrono from "chrono-node";
-import { addHours } from "date-fns";
 import React, { SetStateAction, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -73,8 +72,12 @@ export default function NLPTitleInput({
     const idx = parsed.index as number;
     const matched = parsed.text as string;
 
+    // Use the time the user actually named (parsed.start). Only fall back to an
+    // explicit end when the text gave a range ("8pm to 10pm"); a single time
+    // like "8pm" has no end and must NOT be shifted. This mirrors the backend
+    // NLP (Natty) used by iOS/Android: dueDate = dates.size > 1 ? dates[1] : start.
     const from = parsed.start.date();
-    const due = parsed.end?.date() ?? addHours(from, 3);
+    const due = parsed.end?.date() ?? from;
     setDateRange({ from: due, to: due });
 
     const before = text.slice(0, idx);

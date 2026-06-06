@@ -18,6 +18,7 @@ import org.jetbrains.exposed.sql.update
 import org.slf4j.LoggerFactory
 import java.security.SecureRandom
 import java.time.LocalDateTime
+import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.util.Base64
 
@@ -69,7 +70,7 @@ class UserApiKeyServiceImpl(
     override suspend fun generate(userId: String): Either<AppError, GeneratedApiKey> {
         val id = CuidGenerator.newCuid()
         val secret = randomSecret()
-        val createdAt = LocalDateTime.now()
+        val createdAt = LocalDateTime.now(ZoneOffset.UTC)
         val hash = passwordService.hashPassword(secret)
         val preview = secret.takeLast(PREVIEW_LENGTH)
 
@@ -136,7 +137,7 @@ class UserApiKeyServiceImpl(
 
                 val userId = row[UserApiKeys.userID]
                 UserApiKeys.update({ UserApiKeys.id eq keyId }) {
-                    it[UserApiKeys.lastUsedAt] = LocalDateTime.now()
+                    it[UserApiKeys.lastUsedAt] = LocalDateTime.now(ZoneOffset.UTC)
                 }
                 userId
             }

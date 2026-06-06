@@ -9,6 +9,7 @@ import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.jetbrains.exposed.sql.update
 import java.time.LocalDateTime
+import java.time.ZoneOffset
 import java.time.ZoneId
 
 fun Route.timezoneRoutes() {
@@ -30,7 +31,7 @@ fun Route.timezoneRoutes() {
                         transaction {
                             Users.update({ Users.id eq user.id }) {
                                 it[Users.timeZone] = clientTz
-                                it[Users.updatedAt] = LocalDateTime.now()
+                                it[Users.updatedAt] = LocalDateTime.now(ZoneOffset.UTC)
                             }
                         }
                     }

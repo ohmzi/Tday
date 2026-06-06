@@ -17,6 +17,7 @@ import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import java.security.SecureRandom
 import java.time.LocalDateTime
+import java.time.ZoneOffset
 import kotlin.random.asKotlinRandom
 
 interface AdminService {
@@ -65,9 +66,9 @@ class AdminServiceImpl(
         newSuspendedTransaction(Dispatchers.IO) {
             Users.update({ Users.id eq targetId }) {
                 it[Users.approvalStatus] = ApprovalStatus.APPROVED
-                it[Users.approvedAt] = LocalDateTime.now()
+                it[Users.approvedAt] = LocalDateTime.now(ZoneOffset.UTC)
                 it[Users.approvedById] = admin.id
-                it[Users.updatedAt] = LocalDateTime.now()
+                it[Users.updatedAt] = LocalDateTime.now(ZoneOffset.UTC)
             }
         }
         "user approved"
@@ -154,7 +155,7 @@ class AdminServiceImpl(
             Users.update({ Users.id eq target[Users.id] }) {
                 it[Users.password] = newHash
                 it[Users.requirePasswordChange] = true
-                it[Users.updatedAt] = LocalDateTime.now()
+                it[Users.updatedAt] = LocalDateTime.now(ZoneOffset.UTC)
             }
         }
 
