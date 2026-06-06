@@ -26,8 +26,9 @@
         <meta-data android:name="io.sentry.auto-init" android:value="false" />
 
         <!-- Persists the in-app language override across restarts on API 26–32
-             (the framework handles this natively on API 33+). Lets MainActivity
-             stay a plain ComponentActivity. -->
+             (the framework handles this natively on API 33+). Requires the
+             activities to extend AppCompatActivity so AppCompat's delegate
+             applies the stored locale and recreates the UI on change. -->
         <service
             android:name="androidx.appcompat.app.AppLocalesMetadataHolderService"
             android:enabled="false"
