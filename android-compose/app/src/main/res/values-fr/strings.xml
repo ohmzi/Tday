@@ -160,7 +160,7 @@
     <string name="onboarding_connecting_title">Connexion au serveur…</string>
     <string name="onboarding_connecting_subtitle">Vérification du point d\'accès, du TLS et des paramètres de l\'espace de travail</string>
     <string name="onboarding_use_device_only">Utiliser cet appareil uniquement</string>
-    <string name="onboarding_email_label">E-mail</string>
+    <string name="onboarding_username_label">Nom d\'utilisateur</string>
     <string name="onboarding_password_label">Mot de passe</string>
     <string name="onboarding_sign_in">Se connecter</string>
     <string name="onboarding_login_hero_subtitle">Ouvrez votre espace de travail synchronisé.</string>
@@ -178,8 +178,8 @@
     <string name="onboarding_error_connect_fallback">Impossible de se connecter au serveur</string>
     <string name="onboarding_error_reset_trust_fallback">Impossible de réinitialiser le serveur de confiance</string>
     <string name="onboarding_validation_first_name_min">Le prénom doit comporter au moins 2 caractères</string>
-    <string name="onboarding_validation_email_required">L\'e-mail est requis</string>
-    <string name="onboarding_validation_email_invalid">Veuillez saisir une adresse e-mail valide</string>
+    <string name="onboarding_validation_username_required">Le nom d\'utilisateur est requis</string>
+    <string name="onboarding_validation_username_invalid">Veuillez saisir un nom d\'utilisateur valide</string>
     <string name="onboarding_validation_password_required">Le mot de passe et la confirmation sont requis</string>
     <string name="onboarding_validation_password_min">Le mot de passe doit comporter au moins 8 caractères</string>
     <string name="onboarding_validation_password_uppercase">Le mot de passe doit inclure au moins une majuscule</string>
@@ -190,7 +190,7 @@
     <string name="auth_pending_admin_approval">Compte en attente d\'approbation par l\'administrateur.</string>
     <string name="auth_password_manager_save_server_url_failed">Le gestionnaire de mots de passe Android n\'a pas pu enregistrer cette URL de serveur. Vérifiez qu\'un gestionnaire de mots de passe est activé.</string>
     <string name="auth_password_manager_save_login_failed">Le gestionnaire de mots de passe Android n\'a pas pu enregistrer cette connexion. Vérifiez qu\'un gestionnaire de mots de passe est activé.</string>
-    <string name="auth_error_incorrect_credentials">E-mail ou mot de passe incorrect</string>
+    <string name="auth_error_incorrect_credentials">Nom d\'utilisateur ou mot de passe incorrect</string>
     <string name="auth_error_server_unreachable">Serveur inaccessible. Vérifiez l\'URL de votre serveur et réessayez.</string>
 
     <!-- Todo list screen -->

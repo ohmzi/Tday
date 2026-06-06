@@ -33,7 +33,7 @@ enum SentryConfiguration {
 
 enum TdayTelemetry {
     private static let sensitiveLabelPattern = #"(?i)(https?://|wss?://|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|bearer\s+|token=|password=|session=|cookie=|csrf)"#
-    private static let sensitiveDataKeyPattern = #"(?i)(authorization|cookie|csrf|token|password|session|secret|email|body|payload|header)"#
+    private static let sensitiveDataKeyPattern = #"(?i)(authorization|cookie|csrf|token|password|session|secret|email|username|body|payload|header)"#
     private static let routeLikeDataKeys: Set<String> = ["route", "path", "url", "href", "from", "to", "endpoint"]
     private static let staticSegments: Set<String> = [
         "api", "app", "auth", "callback", "credentials", "credentials-key",

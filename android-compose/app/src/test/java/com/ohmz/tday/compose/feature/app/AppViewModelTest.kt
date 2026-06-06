@@ -74,7 +74,7 @@ class AppViewModelTest {
     private val restoredUser = SessionUser(
         id = "user-1",
         name = "Taylor",
-        email = "user@example.com",
+        username = "user@example.com",
         role = "USER",
     )
 

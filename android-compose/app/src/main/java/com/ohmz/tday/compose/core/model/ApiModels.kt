@@ -74,7 +74,7 @@ data class AuthSession(
 data class SessionUser(
     val id: String? = null,
     val name: String? = null,
-    val email: String? = null,
+    val username: String? = null,
     val image: String? = null,
     val timeZone: String? = null,
     val role: String? = null,
@@ -85,7 +85,7 @@ data class SessionUser(
 data class RegisterRequest(
     val fname: String,
     val lname: String? = null,
-    val email: String,
+    val username: String,
     val password: String,
 )
 
@@ -106,7 +106,7 @@ data class CredentialKeyResponse(
 
 @Serializable
 data class CredentialsCallbackRequest(
-    val email: String? = null,
+    val username: String? = null,
     val password: String? = null,
     val encryptedPayload: String? = null,
     val encryptedKey: String? = null,

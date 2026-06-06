@@ -15,13 +15,13 @@ class LoginCredentialCoordinatorTest {
     @Test
     fun `requests saved credential only once`() = runTest {
         val coordinator = LoginCredentialCoordinator()
-        val credential = SystemCredential(email = "test@example.com", password = "password")
+        val credential = SystemCredential(username = "test@example.com", password = "password")
         var requestCount = 0
         var loginCount = 0
 
         val firstResult = coordinator.requestSavedCredentialIfAvailable(
             context = context,
-            currentEmail = "test@example.com",
+            currentUsername = "test@example.com",
             currentPassword = "",
             isCreatingAccount = false,
             isAuthLoading = false,
@@ -37,7 +37,7 @@ class LoginCredentialCoordinatorTest {
 
         val secondResult = coordinator.requestSavedCredentialIfAvailable(
             context = context,
-            currentEmail = "test@example.com",
+            currentUsername = "test@example.com",
             currentPassword = "",
             isCreatingAccount = false,
             isAuthLoading = false,
@@ -64,13 +64,13 @@ class LoginCredentialCoordinatorTest {
 
         val result = coordinator.requestSavedCredentialIfAvailable(
             context = context,
-            currentEmail = "",
+            currentUsername = "",
             currentPassword = "",
             isCreatingAccount = true,
             isAuthLoading = false,
             requestSavedCredential = { _, _ ->
                 requestCount += 1
-                SystemCredential(email = "test@example.com", password = "password")
+                SystemCredential(username = "test@example.com", password = "password")
             },
             login = { true },
         )
@@ -86,13 +86,13 @@ class LoginCredentialCoordinatorTest {
 
         val result = coordinator.requestSavedCredentialIfAvailable(
             context = context,
-            currentEmail = "",
+            currentUsername = "",
             currentPassword = "",
             isCreatingAccount = false,
             isAuthLoading = true,
             requestSavedCredential = { _, _ ->
                 requestCount += 1
-                SystemCredential(email = "test@example.com", password = "password")
+                SystemCredential(username = "test@example.com", password = "password")
             },
             login = { true },
         )
@@ -108,13 +108,13 @@ class LoginCredentialCoordinatorTest {
 
         val result = coordinator.requestSavedCredentialIfAvailable(
             context = context,
-            currentEmail = "",
+            currentUsername = "",
             currentPassword = "typed",
             isCreatingAccount = false,
             isAuthLoading = false,
             requestSavedCredential = { _, _ ->
                 requestCount += 1
-                SystemCredential(email = "test@example.com", password = "password")
+                SystemCredential(username = "test@example.com", password = "password")
             },
             login = { true },
         )
@@ -126,12 +126,12 @@ class LoginCredentialCoordinatorTest {
     @Test
     fun `passes current email as preferred credential id`() = runTest {
         val coordinator = LoginCredentialCoordinator()
-        val credential = SystemCredential(email = "test@example.com", password = "password")
+        val credential = SystemCredential(username = "test@example.com", password = "password")
         var requestedEmail: String? = null
 
         val result = coordinator.requestSavedCredentialIfAvailable(
             context = context,
-            currentEmail = "test@example.com",
+            currentUsername = "test@example.com",
             currentPassword = "",
             isCreatingAccount = false,
             isAuthLoading = false,

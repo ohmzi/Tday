@@ -116,18 +116,18 @@ class AuthRepository @Inject constructor(
     }
 
     private fun loadLastKnownOfflineSessionUser(): SessionUser? {
-        val email = secureConfigStore.getLastEmail() ?: return null
+        val username = secureConfigStore.getLastUsername() ?: return null
         if (!cacheManager.hasCachedData()) return null
-        return SessionUser(id = email, email = email)
+        return SessionUser(id = username, username = username)
     }
 
-    suspend fun login(email: String, password: String): AuthResult {
+    suspend fun login(username: String, password: String): AuthResult {
         if (!secureConfigStore.hasServerUrl()) {
             return AuthResult.Error("Server URL is not configured")
         }
 
         val credentialEnvelope = runCatching {
-            createCredentialEnvelope(email, password)
+            createCredentialEnvelope(username, password)
         }.getOrElse {
             return AuthResult.Error(it.loginErrorMessage("Could not prepare secure sign-in flow"))
         }
@@ -188,7 +188,7 @@ class AuthRepository @Inject constructor(
         return if (user?.id != null) {
             syncTimezone()
             runCatching { secureConfigStore.persistRuntimeServerUrl() }
-            secureConfigStore.saveLastEmail(email)
+            secureConfigStore.saveLastUsername(username)
             AuthResult.Success
         } else {
             val sessionError = sessionResult.exceptionOrNull()
@@ -202,7 +202,7 @@ class AuthRepository @Inject constructor(
     suspend fun register(
         firstName: String,
         lastName: String,
-        email: String,
+        username: String,
         password: String,
     ): RegisterOutcome {
         val response = runCatching {
@@ -210,7 +210,7 @@ class AuthRepository @Inject constructor(
                 RegisterRequest(
                     fname = firstName,
                     lname = lastName.ifBlank { null },
-                    email = email,
+                    username = username,
                     password = password,
                 ),
             )
@@ -263,10 +263,10 @@ class AuthRepository @Inject constructor(
         cacheManager.clearAllLocalData()
     }
 
-    fun getLastEmail(): String? = secureConfigStore.getLastEmail()
+    fun getLastUsername(): String? = secureConfigStore.getLastUsername()
 
     private suspend fun createCredentialEnvelope(
-        email: String,
+        username: String,
         password: String,
     ): CredentialEnvelope {
         val credentialKey = requireApiBody(
@@ -287,7 +287,7 @@ class AuthRepository @Inject constructor(
         val credentialPayload = json.encodeToString(
             kotlinx.serialization.serializer<CredentialEnvelopePayload>(),
             CredentialEnvelopePayload(
-                email = email.trim().lowercase(Locale.US),
+                username = username.trim().lowercase(Locale.US),
                 password = password,
             ),
         ).toByteArray(Charsets.UTF_8)
@@ -338,7 +338,7 @@ class AuthRepository @Inject constructor(
 
     private fun mapAuthError(errorCode: String): String {
         return when (errorCode.lowercase()) {
-            "credentialssignin" -> "Invalid email or password"
+            "credentialssignin" -> "Invalid username or password"
             "configuration" -> "Sign in failed on server. Check credentials or reset password."
             "accessdenied" -> "Access denied"
             else -> "Sign in failed: $errorCode"
@@ -381,7 +381,7 @@ class AuthRepository @Inject constructor(
 
     @kotlinx.serialization.Serializable
     private data class CredentialEnvelopePayload(
-        val email: String,
+        val username: String,
         val password: String,
     )
 

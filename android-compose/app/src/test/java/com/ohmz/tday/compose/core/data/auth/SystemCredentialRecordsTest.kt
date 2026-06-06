@@ -23,7 +23,7 @@ class SystemCredentialRecordsTest {
         )
 
         assertEquals(
-            SystemCredential(email = "User@Example.com", password = "Password!1"),
+            SystemCredential(username = "User@Example.com", password = "Password!1"),
             credential,
         )
     }

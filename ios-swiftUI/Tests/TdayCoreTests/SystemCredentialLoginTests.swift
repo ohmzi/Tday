@@ -29,7 +29,7 @@ final class SystemCredentialLoginTests: XCTestCase {
     }
 
     func testSavedCredentialSubmitsLogin() async {
-        let credential = SystemCredential(email: "user@example.com", password: "Password!1")
+        let credential = SystemCredential(username: "user@example.com", password: "Password!1")
         let service = FakeSystemCredentialService(nextCredential: credential)
         let coordinator = LoginCredentialCoordinator()
         var submittedCredentials: [SystemCredential] = []
@@ -75,10 +75,10 @@ final class SystemCredentialLoginTests: XCTestCase {
             systemCredentialService: service
         )
 
-        let success = await viewModel.login(email: " USER@example.com ", password: "Password!1", source: .manual)
+        let success = await viewModel.login(username: " USER@example.com ", password: "Password!1", source: .manual)
 
         XCTAssertTrue(success)
-        XCTAssertEqual(service.offeredCredentials, [SystemCredential(email: "user@example.com", password: "Password!1")])
+        XCTAssertEqual(service.offeredCredentials, [SystemCredential(username: "user@example.com", password: "Password!1")])
     }
 
     func testManualLoginOffersUpdateWhenEmailMatchesExistingSavedEmail() async {
@@ -89,11 +89,11 @@ final class SystemCredentialLoginTests: XCTestCase {
             systemCredentialService: service
         )
 
-        let success = await viewModel.login(email: "user@example.com", password: "NewPassword!1", source: .manual)
+        let success = await viewModel.login(username: "user@example.com", password: "NewPassword!1", source: .manual)
 
         XCTAssertTrue(success)
-        XCTAssertEqual(viewModel.savedEmail, "user@example.com")
-        XCTAssertEqual(service.offeredCredentials, [SystemCredential(email: "user@example.com", password: "NewPassword!1")])
+        XCTAssertEqual(viewModel.savedUsername, "user@example.com")
+        XCTAssertEqual(service.offeredCredentials, [SystemCredential(username: "user@example.com", password: "NewPassword!1")])
     }
 
     func testManualLoginKeepsPasswordSaveFailureNonBlocking() async {
@@ -104,12 +104,12 @@ final class SystemCredentialLoginTests: XCTestCase {
             systemCredentialService: service
         )
 
-        let success = await viewModel.login(email: "user@example.com", password: "Password!1", source: .manual)
+        let success = await viewModel.login(username: "user@example.com", password: "Password!1", source: .manual)
 
         XCTAssertTrue(success)
         XCTAssertNil(viewModel.errorMessage)
         XCTAssertNil(viewModel.infoMessage)
-        XCTAssertEqual(service.offeredCredentials, [SystemCredential(email: "user@example.com", password: "Password!1")])
+        XCTAssertEqual(service.offeredCredentials, [SystemCredential(username: "user@example.com", password: "Password!1")])
     }
 
     func testRegistrationOffersSaveOrUpdateCredentialAfterSuccess() async {
@@ -120,10 +120,10 @@ final class SystemCredentialLoginTests: XCTestCase {
             systemCredentialService: service
         )
 
-        let success = await viewModel.register(firstName: "Test", lastName: "", email: " USER@example.com ", password: "Password!1")
+        let success = await viewModel.register(firstName: "Test", lastName: "", username: " USER@example.com ", password: "Password!1")
 
         XCTAssertTrue(success)
-        XCTAssertEqual(service.offeredCredentials, [SystemCredential(email: "user@example.com", password: "Password!1")])
+        XCTAssertEqual(service.offeredCredentials, [SystemCredential(username: "user@example.com", password: "Password!1")])
     }
 
     func testFailedLoginDoesNotOfferSaveOrUpdateCredential() async {
@@ -134,7 +134,7 @@ final class SystemCredentialLoginTests: XCTestCase {
             systemCredentialService: service
         )
 
-        let success = await viewModel.login(email: "user@example.com", password: "Password!1", source: .manual)
+        let success = await viewModel.login(username: "user@example.com", password: "Password!1", source: .manual)
 
         XCTAssertFalse(success)
         XCTAssertTrue(service.offeredCredentials.isEmpty)
@@ -148,7 +148,7 @@ final class SystemCredentialLoginTests: XCTestCase {
             systemCredentialService: service
         )
 
-        let success = await viewModel.login(email: "user@example.com", password: "Password!1", source: .manual)
+        let success = await viewModel.login(username: "user@example.com", password: "Password!1", source: .manual)
 
         XCTAssertFalse(success)
         XCTAssertTrue(service.offeredCredentials.isEmpty)
@@ -162,7 +162,7 @@ final class SystemCredentialLoginTests: XCTestCase {
             systemCredentialService: service
         )
 
-        let success = await viewModel.login(email: "user@example.com", password: "Password!1", source: .systemPasswordAutoFill)
+        let success = await viewModel.login(username: "user@example.com", password: "Password!1", source: .systemPasswordAutoFill)
 
         XCTAssertTrue(success)
         XCTAssertTrue(service.offeredCredentials.isEmpty)
@@ -221,11 +221,11 @@ private final class FakeAuthRepository: AuthRepositoryServicing {
         nil
     }
 
-    func login(email: String, password: String) async -> AuthResult {
+    func login(username: String, password: String) async -> AuthResult {
         result
     }
 
-    func register(firstName: String, lastName: String, email: String, password: String) async -> RegisterOutcome {
+    func register(firstName: String, lastName: String, username: String, password: String) async -> RegisterOutcome {
         RegisterOutcome(success: true, requiresApproval: false, message: "Account created")
     }
 
@@ -239,11 +239,11 @@ private final class FakeAuthRepository: AuthRepositoryServicing {
     @MainActor
     func clearAllLocalUserDataForUnauthenticatedState() {}
 
-    func getLastEmail() -> String? {
+    func getLastUsername() -> String? {
         storedLastEmail
     }
 
-    func lastEmail() -> String? {
+    func lastUsername() -> String? {
         storedLastEmail
     }
 }

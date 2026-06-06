@@ -69,7 +69,7 @@ class PreferencesRoutesTest {
                     JwtUserClaims(
                         id = "user_123",
                         name = "Test User",
-                        email = "user@example.com",
+                        username = "testuser",
                         role = "ADMIN",
                         approvalStatus = "APPROVED",
                         timeZone = "UTC",

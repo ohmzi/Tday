@@ -19,13 +19,13 @@ fun Route.loginChallengeRoutes() {
     route("/login-challenge") {
         post {
             val body = call.receive<LoginChallengeRequest>()
-            val email = passwordProof.normalizeEmail(body.email)
-            if (email.isNullOrBlank()) {
-                call.respond(HttpStatusCode.BadRequest, mapOf("message" to "Email is required."))
+            val username = passwordProof.normalizeUsername(body.username)
+            if (username.isNullOrBlank()) {
+                call.respond(HttpStatusCode.BadRequest, mapOf("message" to "Username is required."))
                 return@post
             }
 
-            val throttle = authThrottle.enforceRateLimit(ThrottleAction.credentials, call.request, email)
+            val throttle = authThrottle.enforceRateLimit(ThrottleAction.credentials, call.request, username)
             if (!throttle.allowed) {
                 call.respond(HttpStatusCode.TooManyRequests, mapOf(
                     "message" to "Too many authentication requests. Try again in ${authThrottle.formatRetryWait(throttle.retryAfterSeconds)}.",
@@ -35,10 +35,10 @@ fun Route.loginChallengeRoutes() {
                 return@post
             }
 
-            val user = userService.findByEmail(email)
+            val user = userService.findByUsername(username)
             val storedHash = user?.get("password") as? String
 
-            val payload = passwordProof.issueChallenge(email, storedHash)
+            val payload = passwordProof.issueChallenge(username, storedHash)
             call.respond(
                 HttpStatusCode.OK,
                 buildJsonObject {

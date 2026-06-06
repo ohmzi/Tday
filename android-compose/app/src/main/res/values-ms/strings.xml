@@ -160,7 +160,7 @@
     <string name="onboarding_connecting_title">Menyambung ke pelayan…</string>
     <string name="onboarding_connecting_subtitle">Memeriksa titik akhir, TLS, dan tetapan ruang kerja</string>
     <string name="onboarding_use_device_only">Guna peranti ini sahaja</string>
-    <string name="onboarding_email_label">E-mel</string>
+    <string name="onboarding_username_label">Nama pengguna</string>
     <string name="onboarding_password_label">Kata laluan</string>
     <string name="onboarding_sign_in">Log masuk</string>
     <string name="onboarding_login_hero_subtitle">Buka ruang kerja tersegerak anda.</string>
@@ -178,8 +178,8 @@
     <string name="onboarding_error_connect_fallback">Tidak dapat menyambung ke pelayan</string>
     <string name="onboarding_error_reset_trust_fallback">Tidak dapat menetapkan semula pelayan dipercayai</string>
     <string name="onboarding_validation_first_name_min">Nama pertama mestilah sekurang-kurangnya 2 aksara</string>
-    <string name="onboarding_validation_email_required">E-mel diperlukan</string>
-    <string name="onboarding_validation_email_invalid">Sila masukkan alamat e-mel yang sah</string>
+    <string name="onboarding_validation_username_required">Nama pengguna diperlukan</string>
+    <string name="onboarding_validation_username_invalid">Sila masukkan nama pengguna yang sah</string>
     <string name="onboarding_validation_password_required">Kata laluan dan pengesahan diperlukan</string>
     <string name="onboarding_validation_password_min">Kata laluan mestilah sekurang-kurangnya 8 aksara</string>
     <string name="onboarding_validation_password_uppercase">Kata laluan mesti mengandungi sekurang-kurangnya satu huruf besar</string>
@@ -190,7 +190,7 @@
     <string name="auth_pending_admin_approval">Akaun menunggu kelulusan admin.</string>
     <string name="auth_password_manager_save_server_url_failed">Pengurus Kata Laluan Android tidak dapat menyimpan URL pelayan ini. Pastikan pengurus kata laluan didayakan.</string>
     <string name="auth_password_manager_save_login_failed">Pengurus Kata Laluan Android tidak dapat menyimpan log masuk ini. Pastikan pengurus kata laluan didayakan.</string>
-    <string name="auth_error_incorrect_credentials">E-mel atau kata laluan salah</string>
+    <string name="auth_error_incorrect_credentials">Nama pengguna atau kata laluan salah</string>
     <string name="auth_error_server_unreachable">Tidak dapat mencapai pelayan. Periksa URL pelayan anda dan cuba lagi.</string>
 
     <!-- Todo list screen -->

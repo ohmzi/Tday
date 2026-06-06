@@ -8,8 +8,7 @@ import java.math.BigDecimal
 object Users : Table("User") {
     val id = varchar("id", 30)
     val name = varchar("name", 255).nullable()
-    val email = varchar("email", 255).uniqueIndex()
-    val emailVerified = datetime("emailVerified").nullable()
+    val username = varchar("username", 255).uniqueIndex()
     val password = text("password").nullable()
     val image = text("image").nullable()
     val createdAt = datetime("createdAt")

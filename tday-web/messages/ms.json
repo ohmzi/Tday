@@ -181,9 +181,9 @@
       "discord": "Discord"
     },
     "fields": {
-      "email": {
-        "placeholder": "E-mel*",
-        "error": "Sila masukkan e-mel yang sah"
+      "username": {
+        "placeholder": "Nama pengguna*",
+        "error": "Sila masukkan nama pengguna yang sah"
       },
       "password": {
         "placeholder": "Masukkan kata laluan anda*",
@@ -200,7 +200,7 @@
     "toasts": {
       "googleError": "Kami tidak dapat melog masuk anda ke Google pada masa ini",
       "discordError": "Kami tidak dapat melog masuk anda ke Discord pada masa ini",
-      "invalidCredentials": "E-mel atau kata laluan tidak sah",
+      "invalidCredentials": "Nama pengguna atau kata laluan salah",
       "genericError": "Kami tidak dapat melog masuk anda pada masa ini"
     }
   },
@@ -222,9 +222,9 @@
         "placeholder": "Nama Belakang",
         "error": "Sila masukkan nama belakang yang sah"
       },
-      "email": {
-        "placeholder": "E-mel*",
-        "error": "Sila masukkan e-mel yang sah"
+      "username": {
+        "placeholder": "Nama pengguna*",
+        "error": "Sila masukkan nama pengguna yang sah"
       },
       "password": {
         "placeholder": "Masukkan kata laluan anda*",
@@ -466,7 +466,7 @@
       "description": "Kemas kini nama paparan anda",
       "name": "Nama",
       "namePlaceholder": "Masukkan nama anda",
-      "email": "E-mel",
+      "username": "Nama pengguna",
       "saving": "Menyimpan...",
       "save": "Simpan profil"
     },

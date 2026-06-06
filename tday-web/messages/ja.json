@@ -181,9 +181,9 @@
       "discord": "Discord"
     },
     "fields": {
-      "email": {
-        "placeholder": "メールアドレス*",
-        "error": "有効なメールアドレスを入力してください"
+      "username": {
+        "placeholder": "ユーザー名*",
+        "error": "有効なユーザー名を入力してください"
       },
       "password": {
         "placeholder": "パスワードを入力してください*",
@@ -200,7 +200,7 @@
     "toasts": {
       "googleError": "現在、Googleでサインインできませんでした",
       "discordError": "現在、Discordでサインインできませんでした",
-      "invalidCredentials": "メールアドレスまたはパスワードが無効です",
+      "invalidCredentials": "ユーザー名またはパスワードが正しくありません",
       "genericError": "現在ログインできません"
     }
   },
@@ -222,9 +222,9 @@
         "placeholder": "苗字（姓）",
         "error": "有効な苗字を入力してください"
       },
-      "email": {
-        "placeholder": "メールアドレス*",
-        "error": "有効なメールアドレスを入力してください"
+      "username": {
+        "placeholder": "ユーザー名*",
+        "error": "有効なユーザー名を入力してください"
       },
       "password": {
         "placeholder": "パスワードを入力してください*",
@@ -466,7 +466,7 @@
       "description": "表示名を更新",
       "name": "名前",
       "namePlaceholder": "名前を入力",
-      "email": "メール",
+      "username": "ユーザー名",
       "saving": "保存中...",
       "save": "プロフィールを保存"
     },

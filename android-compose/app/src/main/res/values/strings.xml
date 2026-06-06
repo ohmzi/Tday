@@ -161,7 +161,7 @@
     <string name="onboarding_connecting_title">Connecting to server…</string>
     <string name="onboarding_connecting_subtitle">Checking endpoint, TLS, and workspace settings</string>
     <string name="onboarding_use_device_only">Use this device only</string>
-    <string name="onboarding_email_label">Email</string>
+    <string name="onboarding_username_label">Username</string>
     <string name="onboarding_password_label">Password</string>
     <string name="onboarding_sign_in">Sign in</string>
     <string name="onboarding_login_hero_subtitle">Open your synced workspace.</string>
@@ -179,8 +179,8 @@
     <string name="onboarding_error_connect_fallback">Could not connect to server</string>
     <string name="onboarding_error_reset_trust_fallback">Could not reset trusted server</string>
     <string name="onboarding_validation_first_name_min">First name must be at least 2 characters</string>
-    <string name="onboarding_validation_email_required">Email is required</string>
-    <string name="onboarding_validation_email_invalid">Please enter a valid email address</string>
+    <string name="onboarding_validation_username_required">Username is required</string>
+    <string name="onboarding_validation_username_invalid">Please enter a valid username</string>
     <string name="onboarding_validation_password_required">Password and confirmation are required</string>
     <string name="onboarding_validation_password_min">Password must be at least 8 characters</string>
     <string name="onboarding_validation_password_uppercase">Password must include at least one uppercase letter</string>
@@ -191,7 +191,7 @@
     <string name="auth_pending_admin_approval">Account pending admin approval.</string>
     <string name="auth_password_manager_save_server_url_failed">Android Password Manager could not save this server URL. Check that a password manager is enabled.</string>
     <string name="auth_password_manager_save_login_failed">Android Password Manager could not save this login. Check that a password manager is enabled.</string>
-    <string name="auth_error_incorrect_credentials">Incorrect email or password</string>
+    <string name="auth_error_incorrect_credentials">Incorrect username or password</string>
     <string name="auth_error_server_unreachable">Cannot reach server. Check your server URL and try again.</string>
 
     <!-- Todo list screen -->

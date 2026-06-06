@@ -323,9 +323,9 @@ private fun SettingsProfileCard(
             fontWeight = FontWeight.ExtraBold,
             color = colorScheme.onSurface,
         )
-        if (!user?.email.isNullOrBlank()) {
+        if (!user?.username.isNullOrBlank()) {
             Text(
-                text = user?.email.orEmpty(),
+                text = user?.username.orEmpty(),
                 style = MaterialTheme.typography.bodyMedium,
                 color = colorScheme.onSurface.copy(alpha = 0.72f),
             )

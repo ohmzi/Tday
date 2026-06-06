@@ -217,7 +217,7 @@ class RateLimitingTest {
     private fun approvedUser(): JwtUserClaims =
         JwtUserClaims(
             id = "user_123",
-            email = "user@example.com",
+            username = "testuser",
             role = "USER",
             approvalStatus = "APPROVED",
             timeZone = "UTC",
@@ -396,15 +396,15 @@ class RateLimitingTest {
         override suspend fun register(
             fname: String,
             lname: String?,
-            email: String,
+            username: String,
             password: String,
         ): Either<AppError, com.ohmz.tday.services.RegisterResult> = unsupported()
 
-        override suspend fun findByEmail(email: String): Map<String, Any?>? = null
+        override suspend fun findByUsername(username: String): Map<String, Any?>? = null
 
         override suspend fun isAdmin(userId: String): Boolean = false
 
-        override suspend fun emailExists(email: String): Boolean = false
+        override suspend fun usernameExists(username: String): Boolean = false
 
         override suspend fun updatePasswordHash(userId: String, newHash: String) = Unit
         override suspend fun requiresPasswordChange(userId: String): Boolean = false

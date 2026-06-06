@@ -587,9 +587,9 @@ fun TdayApp(
                                                 },
                                             )
                                         },
-                                        onLogin = { email, password, source ->
+                                        onLogin = { username, password, source ->
                                             authViewModel.login(
-                                                email = email,
+                                                username = username,
                                                 password = password,
                                                 credentialContext = context,
                                                 source = source,
@@ -597,11 +597,11 @@ fun TdayApp(
                                                 appViewModel.refreshSession()
                                             }
                                         },
-                                        onRegister = { firstName, email, password, onSuccess ->
+                                        onRegister = { firstName, username, password, onSuccess ->
                                             authViewModel.register(
                                                 firstName = firstName,
                                                 lastName = "",
-                                                email = email,
+                                                username = username,
                                                 password = password,
                                                 credentialContext = context,
                                             ) {

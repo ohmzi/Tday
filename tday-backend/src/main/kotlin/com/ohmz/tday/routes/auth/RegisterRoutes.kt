@@ -11,6 +11,8 @@ import com.ohmz.tday.di.inject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
+private val USERNAME_REGEX = Regex("^[a-z0-9](?:[a-z0-9._-]{1,28}[a-z0-9])$")
+
 fun Route.registerRoutes() {
     val userService by inject<UserService>()
     val authThrottle by inject<AuthThrottle>()
@@ -21,7 +23,7 @@ fun Route.registerRoutes() {
         post {
             val body = call.receive<RegisterRequest>()
 
-            val throttle = authThrottle.enforceRateLimit(ThrottleAction.register, call.request, body.email)
+            val throttle = authThrottle.enforceRateLimit(ThrottleAction.register, call.request, body.username)
             if (!throttle.allowed) {
                 call.respond(HttpStatusCode.TooManyRequests, mapOf(
                     "message" to "Too many authentication requests. Try again in ${authThrottle.formatRetryWait(throttle.retryAfterSeconds)}.",
@@ -31,7 +33,7 @@ fun Route.registerRoutes() {
                 return@post
             }
 
-            if (authThrottle.requiresCaptcha(ThrottleAction.register, call.request, body.email)) {
+            if (authThrottle.requiresCaptcha(ThrottleAction.register, call.request, body.username)) {
                 if (!captchaService.isConfigured()) {
                     eventLogger.log(
                         "auth_captcha_misconfigured",
@@ -61,8 +63,9 @@ fun Route.registerRoutes() {
                 call.respond(HttpStatusCode.BadRequest, mapOf("message" to "first name is at least two characters"))
                 return@post
             }
-            if (body.email.isBlank() || !body.email.contains("@")) {
-                call.respond(HttpStatusCode.BadRequest, mapOf("message" to "email is incorrect"))
+            val normalizedUsername = body.username.trim().lowercase()
+            if (!USERNAME_REGEX.matches(normalizedUsername)) {
+                call.respond(HttpStatusCode.BadRequest, mapOf("message" to "username is incorrect"))
                 return@post
             }
             if (body.password.length < 8) {
@@ -78,12 +81,12 @@ fun Route.registerRoutes() {
                 return@post
             }
 
-            if (userService.emailExists(body.email.trim().lowercase())) {
-                call.respond(HttpStatusCode.BadRequest, mapOf("message" to "this email is taken"))
+            if (userService.usernameExists(normalizedUsername)) {
+                call.respond(HttpStatusCode.BadRequest, mapOf("message" to "this username is taken"))
                 return@post
             }
 
-            val result = userService.register(body.fname, body.lname, body.email.trim().lowercase(), body.password)
+            val result = userService.register(body.fname, body.lname, normalizedUsername, body.password)
             result.fold(
                 { error ->
                     call.respond(HttpStatusCode.InternalServerError, mapOf("message" to error.message))

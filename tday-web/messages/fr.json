@@ -181,9 +181,9 @@
       "discord": "Discord"
     },
     "fields": {
-      "email": {
-        "placeholder": "E-mail*",
-        "error": "Veuillez entrer un e-mail valide"
+      "username": {
+        "placeholder": "Nom d'utilisateur*",
+        "error": "Veuillez saisir un nom d'utilisateur valide"
       },
       "password": {
         "placeholder": "Entrez votre mot de passe*",
@@ -200,7 +200,7 @@
     "toasts": {
       "googleError": "Nous n'avons pas pu vous connecter à Google pour le moment",
       "discordError": "Nous n'avons pas pu vous connecter à Discord pour le moment",
-      "invalidCredentials": "E-mail ou mot de passe invalide",
+      "invalidCredentials": "Nom d'utilisateur ou mot de passe incorrect",
       "genericError": "Nous ne pouvons pas vous connecter pour le moment"
     }
   },
@@ -222,9 +222,9 @@
         "placeholder": "Nom",
         "error": "Veuillez entrer un nom valide"
       },
-      "email": {
-        "placeholder": "E-mail*",
-        "error": "Veuillez entrer un e-mail valide"
+      "username": {
+        "placeholder": "Nom d'utilisateur*",
+        "error": "Veuillez saisir un nom d'utilisateur valide"
       },
       "password": {
         "placeholder": "Entrez votre mot de passe*",
@@ -466,7 +466,7 @@
       "description": "Mettez à jour votre nom affiché",
       "name": "Nom",
       "namePlaceholder": "Saisissez votre nom",
-      "email": "E-mail",
+      "username": "Nom d'utilisateur",
       "saving": "Enregistrement...",
       "save": "Enregistrer le profil"
     },

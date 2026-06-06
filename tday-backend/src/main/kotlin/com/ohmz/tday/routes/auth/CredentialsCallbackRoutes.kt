@@ -25,7 +25,7 @@ fun Route.credentialsCallbackRoutes() {
         post {
             val body = call.receive<CredentialsCallbackRequest>()
 
-            var email: String? = null
+            var username: String? = null
             var password: String? = null
 
             if (!body.encryptedPayload.isNullOrBlank() && !body.encryptedKey.isNullOrBlank() && !body.encryptedIv.isNullOrBlank()) {
@@ -37,17 +37,17 @@ fun Route.credentialsCallbackRoutes() {
                         keyId = body.credentialKeyId,
                         version = body.credentialEnvelopeVersion,
                     ))
-                    email = decrypted.email
+                    username = decrypted.username
                     password = decrypted.password
                 } catch (e: Exception) {
                     eventLogger.log("auth_credential_envelope_invalid", mapOf("error" to e.message))
                 }
             }
 
-            if (email == null) email = body.email?.trim()?.lowercase()
+            if (username == null) username = body.username?.trim()?.lowercase()
             if (password == null) password = body.password
 
-            val identifier = email
+            val identifier = username
 
             if (authThrottle.requiresCaptcha(ThrottleAction.credentials, call.request, identifier)) {
                 if (!captchaService.isConfigured()) {
@@ -89,12 +89,12 @@ fun Route.credentialsCallbackRoutes() {
                 return@post
             }
 
-            if (email.isNullOrBlank()) {
+            if (username.isNullOrBlank()) {
                 call.respond(HttpStatusCode.Unauthorized, mapOf("message" to "Invalid credentials"))
                 return@post
             }
 
-            val user = userService.findByEmail(email)
+            val user = userService.findByUsername(username)
             if (user == null) {
                 body.passwordProofChallengeId?.let { passwordProof.consume(it) }
                 authThrottle.recordFailure(call.request, identifier)
@@ -118,7 +118,7 @@ fun Route.credentialsCallbackRoutes() {
                 !submittedProofHex.isNullOrBlank()
             ) {
                 passwordProof.verify(
-                    email = email,
+                    username = username,
                     challengeId = submittedChallengeId,
                     proofHex = submittedProofHex,
                     proofVersion = body.passwordProofVersion,
@@ -156,7 +156,7 @@ fun Route.credentialsCallbackRoutes() {
             call.issueSessionCookie(config, jwtService, JwtUserClaims(
                 id = user["id"] as String,
                 name = user["name"] as? String,
-                email = email,
+                username = username,
                 role = user["role"] as? String,
                 approvalStatus = approvalStatus,
                 tokenVersion = user["tokenVersion"] as? Int,
