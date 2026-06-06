@@ -79,6 +79,47 @@ data class SessionUser(
     val timeZone: String? = null,
     val role: String? = null,
     val approvalStatus: String? = null,
+    val requireSecurityQuestions: Boolean = false,
+)
+
+@Serializable
+data class SecurityQuestion(
+    val id: Int,
+    val text: String,
+)
+
+@Serializable
+data class SecurityAnswerInput(
+    val questionId: Int,
+    val answer: String,
+)
+
+@Serializable
+data class SecurityQuestionsResponse(
+    val questions: List<SecurityQuestion> = emptyList(),
+)
+
+@Serializable
+data class SecurityQuestionStatusResponse(
+    val questionIds: List<Int> = emptyList(),
+    val requireSecurityQuestions: Boolean = false,
+)
+
+@Serializable
+data class SelfServiceResetRequest(
+    val username: String,
+    val answers: List<SecurityAnswerInput> = emptyList(),
+    val newPassword: String,
+)
+
+@Serializable
+data class RequestAdminResetRequest(
+    val username: String,
+)
+
+@Serializable
+data class SetSecurityQuestionsRequest(
+    val answers: List<SecurityAnswerInput> = emptyList(),
 )
 
 @Serializable
@@ -87,6 +128,7 @@ data class RegisterRequest(
     val lname: String? = null,
     val username: String,
     val password: String,
+    val securityAnswers: List<SecurityAnswerInput>? = null,
 )
 
 @Serializable

@@ -22,6 +22,10 @@ object Users : Table("User") {
     val approvalStatus = pgEnum<ApprovalStatus>("approvalStatus", "\"ApprovalStatus\"")
     val tokenVersion = integer("tokenVersion").default(0)
     val requirePasswordChange = bool("requirePasswordChange").default(false)
+    val securityQuestionFailCount = integer("securityQuestionFailCount").default(0)
+    val pendingAdminReset = bool("pendingAdminReset").default(false)
+    val adminResetRequestedAt = datetime("adminResetRequestedAt").nullable()
+    val requireSecurityQuestions = bool("requireSecurityQuestions").default(true)
     val approvedAt = datetime("approvedAt").nullable()
     val approvedById = varchar("approvedById", 30).references(id).nullable()
 

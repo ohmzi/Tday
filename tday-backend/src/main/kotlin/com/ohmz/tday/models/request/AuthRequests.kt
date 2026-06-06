@@ -3,12 +3,37 @@ package com.ohmz.tday.models.request
 import kotlinx.serialization.Serializable
 
 @Serializable
+data class SecurityAnswerInput(
+    val questionId: Int,
+    val answer: String,
+)
+
+@Serializable
 data class RegisterRequest(
     val fname: String,
     val lname: String? = null,
     val username: String,
     val password: String,
+    val securityAnswers: List<SecurityAnswerInput>? = null,
     val captchaToken: String? = null,
+)
+
+@Serializable
+data class SelfServiceResetRequest(
+    val username: String,
+    val answers: List<SecurityAnswerInput> = emptyList(),
+    val newPassword: String,
+    val captchaToken: String? = null,
+)
+
+@Serializable
+data class RequestAdminResetRequest(
+    val username: String,
+)
+
+@Serializable
+data class SetSecurityQuestionsRequest(
+    val answers: List<SecurityAnswerInput> = emptyList(),
 )
 
 @Serializable

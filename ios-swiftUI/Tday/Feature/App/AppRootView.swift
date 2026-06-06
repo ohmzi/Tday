@@ -153,6 +153,17 @@ struct AppRootView: View {
                             SettingsScreen(viewModel: appViewModel)
                         case .latestRelease:
                             LatestReleaseScreen(viewModel: appViewModel)
+                        case .forgotPassword:
+                            ForgotPasswordView(
+                                authViewModel: authViewModel,
+                                initialUsername: authViewModel.savedUsername,
+                                onDismiss: {
+                                    appViewModel.goBack()
+                                },
+                                onResetComplete: { _ in
+                                    appViewModel.goBack()
+                                }
+                            )
                         }
                     }
                     .onChange(of: appViewModel.navigationPath) { _, path in
@@ -205,12 +216,15 @@ struct AppRootView: View {
                                         }
                                         return success
                                     },
-                                    onRegister: { firstName, username, password in
-                                        let success = await authViewModel.register(firstName: firstName, lastName: "", username: username, password: password)
+                                    onRegister: { firstName, username, password, securityAnswers in
+                                        let success = await authViewModel.register(firstName: firstName, lastName: "", username: username, password: password, securityAnswers: securityAnswers)
                                         if success {
                                             await appViewModel.refreshSession()
                                         }
                                         return success
+                                    },
+                                    onLoadSecurityQuestions: {
+                                        await authViewModel.loadAllSecurityQuestions()
                                     },
                                     onUseLocalMode: {
                                         authViewModel.clearStatus()
@@ -230,6 +244,18 @@ struct AppRootView: View {
                                 versionCheckResult: appViewModel.versionCheckResult,
                                 onRetry: {
                                     Task { await appViewModel.recheckVersion() }
+                                }
+                            )
+                        }
+
+                        if appViewModel.authenticated,
+                           !appViewModel.isLocalMode,
+                           appViewModel.versionCheckResult == .compatible,
+                           appViewModel.user?.requireSecurityQuestions == true {
+                            SecurityQuestionsGateView(
+                                authViewModel: authViewModel,
+                                onSaved: {
+                                    await appViewModel.refreshSession()
                                 }
                             )
                         }

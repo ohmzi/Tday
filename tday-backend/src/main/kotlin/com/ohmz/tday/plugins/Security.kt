@@ -86,6 +86,7 @@ fun Application.configureSecurity() {
                             tokenVersion = user.tokenVersion,
                             timeZone = user.timeZone,
                             requirePasswordChange = user.requirePasswordChange,
+                            requireSecurityQuestions = user.requireSecurityQuestions,
                         ),
                     )
                 }
@@ -120,6 +121,7 @@ fun Application.configureSecurity() {
                             tokenVersion = user.tokenVersion,
                             timeZone = user.timeZone,
                             requirePasswordChange = user.requirePasswordChange,
+                            requireSecurityQuestions = user.requireSecurityQuestions,
                         )
                         call.attributes.put(AuthUserKey, hydratedClaims)
 
@@ -260,6 +262,7 @@ private suspend fun loadCachedAuthUser(
         tokenVersion = dbUser[Users.tokenVersion],
         timeZone = dbUser[Users.timeZone],
         requirePasswordChange = dbUser[Users.requirePasswordChange],
+        requireSecurityQuestions = dbUser[Users.requireSecurityQuestions],
     )
     authUserCache.put(userId, fetched)
     return fetched

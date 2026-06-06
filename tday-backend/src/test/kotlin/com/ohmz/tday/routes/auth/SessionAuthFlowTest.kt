@@ -601,6 +601,7 @@ class SessionAuthFlowTest {
             lname: String?,
             username: String,
             password: String,
+            securityAnswers: List<com.ohmz.tday.models.request.SecurityAnswerInput>,
         ): Either<AppError, RegisterResult> = AppError.BadRequest(UNUSED_ERROR_MESSAGE).left()
 
         override suspend fun findByUsername(username: String): Map<String, Any?>? = loginUser

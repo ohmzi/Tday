@@ -25,6 +25,7 @@ data class JwtUserClaims(
     val tokenVersion: Int? = null,
     val timeZone: String? = null,
     val requirePasswordChange: Boolean = false,
+    val requireSecurityQuestions: Boolean = false,
     val sessionStartedAtEpochSec: Long? = null,
     val expiresAtEpochSec: Long? = null,
 )

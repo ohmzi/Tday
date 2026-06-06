@@ -37,7 +37,11 @@ class AdminServiceImpl(
         admin.requireAdminAccess().bind()
         newSuspendedTransaction(Dispatchers.IO) {
             Users.selectAll()
-                .orderBy(Users.approvalStatus to SortOrder.DESC, Users.createdAt to SortOrder.DESC)
+                .orderBy(
+                    Users.pendingAdminReset to SortOrder.DESC,
+                    Users.approvalStatus to SortOrder.DESC,
+                    Users.createdAt to SortOrder.DESC,
+                )
                 .map { row ->
                     AdminUserResponse(
                         id = row[Users.id],
@@ -47,6 +51,8 @@ class AdminServiceImpl(
                         approvalStatus = row[Users.approvalStatus].name,
                         createdAt = row[Users.createdAt].toString(),
                         approvedAt = row[Users.approvedAt]?.toString(),
+                        pendingAdminReset = row[Users.pendingAdminReset],
+                        adminResetRequestedAt = row[Users.adminResetRequestedAt]?.toString(),
                     )
                 }
         }
@@ -128,6 +134,7 @@ class AdminServiceImpl(
             Floaters.deleteWhere { Floaters.userID eq targetId }
             Lists.deleteWhere { Lists.userID eq targetId }
             UserPreferences.deleteWhere { UserPreferences.userID eq targetId }
+            UserSecurityQuestions.deleteWhere { UserSecurityQuestions.userID eq targetId }
             Users.deleteWhere { Users.id eq targetId }
         }
     }
@@ -155,6 +162,11 @@ class AdminServiceImpl(
             Users.update({ Users.id eq target[Users.id] }) {
                 it[Users.password] = newHash
                 it[Users.requirePasswordChange] = true
+                // An admin reset clears any self-service lockout and the pending request,
+                // so the user is no longer flagged on the admin panel afterwards.
+                it[Users.securityQuestionFailCount] = 0
+                it[Users.pendingAdminReset] = false
+                it[Users.adminResetRequestedAt] = null
                 it[Users.updatedAt] = LocalDateTime.now(ZoneOffset.UTC)
             }
         }

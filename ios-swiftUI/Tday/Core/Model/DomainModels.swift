@@ -313,6 +313,16 @@ enum AuthResult: Equatable, Hashable {
     case error(String)
 }
 
+enum PasswordResetResult: Equatable, Hashable {
+    case success
+    /// Answers did not match (server reason "reset_failed").
+    case failed(String)
+    /// Too many failed attempts (server reason "reset_locked").
+    case locked(String)
+    /// Any other failure (validation, connectivity, etc.).
+    case error(String)
+}
+
 enum AppThemeMode: String, CaseIterable, Codable, Hashable {
     case system
     case light

@@ -34,6 +34,8 @@ type AdminUser = {
   approvalStatus: "APPROVED" | "PENDING";
   createdAt: string;
   approvedAt: string | null;
+  pendingAdminReset?: boolean;
+  adminResetRequestedAt?: string | null;
 };
 
 type AdminSettingsResponse = {
@@ -123,6 +125,7 @@ const ApprovedUserRow = ({
 }: ApprovedUserRowProps) => {
   const isCurrentUser = sessionUserId === user.id;
   const busy = actionUserId === user.id;
+  const resetRequested = Boolean(user.pendingAdminReset);
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/70 bg-muted/20 px-3 py-2">
@@ -140,6 +143,11 @@ const ApprovedUserRow = ({
               You
             </span>
           ) : null}
+          {resetRequested ? (
+            <span className="rounded-full border border-destructive/40 bg-destructive/10 px-2 py-0.5 font-medium text-destructive">
+              Reset requested
+            </span>
+          ) : null}
         </div>
       </div>
       <div className="flex items-center gap-2">
@@ -148,7 +156,8 @@ const ApprovedUserRow = ({
         {user.role !== "ADMIN" && (
           <Button
             size="sm"
-            variant="outline"
+            // Turns red when the user has asked an admin to reset their password.
+            variant={resetRequested ? "destructive" : "outline"}
             onClick={() => {
               onResetPassword(user.id);
             }}
