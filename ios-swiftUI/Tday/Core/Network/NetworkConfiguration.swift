@@ -7,6 +7,14 @@ final class NetworkConfiguration: NSObject, URLSessionDelegate {
     private let serverURLState: ServerURLState
     private let cookieStore: CookieStore
 
+    // The TLS pinning challenge can only be cancelled, not failed with a typed
+    // error — so we record the host whose pinned fingerprint mismatched here and
+    // let the probe layer translate the resulting URLError.cancelled into a clear
+    // "certificate changed" error (which surfaces the "Reset saved server trust"
+    // affordance). Accessed from the URLSession delegate queue and async callers.
+    private let trustFailureLock = NSLock()
+    private var trustFailureHosts: Set<String> = []
+
     lazy var session: URLSession = {
         let configuration = URLSessionConfiguration.default
         configuration.httpCookieStorage = HTTPCookieStorage.shared
@@ -99,8 +107,25 @@ final class NetworkConfiguration: NSObject, URLSessionDelegate {
             return
         }
 
+        // Certificates that already validate against the system (public CA) trust
+        // store use standard CA validation — no pinning. This is the common case and
+        // means routine renewals (e.g. Let's Encrypt rotating to a new key) never
+        // false-trip. Any previously stored TOFU pin for this host is cleared so the
+        // app doesn't keep enforcing a now-irrelevant fingerprint.
+        if isSystemTrusted(trust, host: host) {
+            if secureStore.trustedFingerprint(for: host) != nil {
+                secureStore.clearTrustedFingerprint(for: host)
+            }
+            completionHandler(.performDefaultHandling, nil)
+            return
+        }
+
+        // Otherwise the certificate is self-signed / privately issued: the system
+        // can't vouch for it, so we trust it on first use, pin its key, and enforce
+        // that pin thereafter to guard against MITM on self-hosted servers.
         let fingerprint = fingerprintForTrust(trust)
         if let stored = secureStore.trustedFingerprint(for: host), let fingerprint, stored != fingerprint {
+            recordTrustFailure(host: host)
             completionHandler(.cancelAuthenticationChallenge, nil)
             return
         }
@@ -109,6 +134,20 @@ final class NetworkConfiguration: NSObject, URLSessionDelegate {
         }
 
         completionHandler(.useCredential, URLCredential(trust: trust))
+    }
+
+    private func recordTrustFailure(host: String) {
+        trustFailureLock.lock()
+        defer { trustFailureLock.unlock() }
+        trustFailureHosts.insert(host.lowercased())
+    }
+
+    /// Returns true (and clears the record) if the most recent connection to `host`
+    /// was cancelled because its pinned certificate fingerprint no longer matches.
+    func consumeTrustFailure(host: String) -> Bool {
+        trustFailureLock.lock()
+        defer { trustFailureLock.unlock() }
+        return trustFailureHosts.remove(host.lowercased()) != nil
     }
 
     func clearCookies() {
@@ -124,6 +163,15 @@ final class NetworkConfiguration: NSObject, URLSessionDelegate {
             return true
         }
         return !isLocalAddress(host: host)
+    }
+
+    /// True if the server trust chains up to a system-trusted (public CA) anchor and
+    /// passes hostname validation. Such certificates are left to standard CA
+    /// validation rather than TOFU pinning.
+    private func isSystemTrusted(_ trust: SecTrust, host: String) -> Bool {
+        let policy = SecPolicyCreateSSL(true, host as CFString)
+        SecTrustSetPolicies(trust, policy)
+        return SecTrustEvaluateWithError(trust, nil)
     }
 
     private func isLocalAddress(host: String) -> Bool {

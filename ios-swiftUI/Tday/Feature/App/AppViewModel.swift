@@ -751,6 +751,9 @@ final class AppViewModel {
         if lower.contains("ssl") || lower.contains("certificate") || lower.contains("secure connection") {
             return "Could not verify this server's secure connection. Reset saved server trust only if you recognize this server."
         }
+        if lower == "cancelled" || lower == "canceled" || lower.contains("cancelled") || lower.contains("canceled") {
+            return "The connection was interrupted before it finished. Check the URL and try again."
+        }
 
         return message.isEmpty ? "Could not reach that server. Check the URL and try again." : message
     }

@@ -112,6 +112,12 @@ final class TdayAPIService {
         self.configuration = configuration
     }
 
+    /// True (and clears the record) if the last connection to `host` was cancelled
+    /// by the TLS pinning check because its certificate fingerprint changed.
+    func consumeTrustFailure(forHost host: String) -> Bool {
+        configuration.consumeTrustFailure(host: host)
+    }
+
     func probeServer(at url: URL) async throws -> MobileProbeResponse {
         try await probeServer(url: url)
     }
@@ -581,48 +587,88 @@ final class TdayAPIService {
             request.setValue(contentType, forHTTPHeaderField: "Content-Type")
         }
 
-        do {
-            let urlSession = session ?? configuration.session
-            let (data, response) = try await urlSession.data(for: request)
-            guard let httpResponse = response as? HTTPURLResponse else {
-                throw APIError(message: "Unexpected server response", statusCode: nil)
-            }
-            configuration.syncPersistedAuthCookie()
-            let bodyString = String(data: data, encoding: .utf8) ?? ""
-            guard !validateStatus || (200 ..< 300).contains(httpResponse.statusCode) else {
-                let serverError = decodeServerError(from: bodyString)
-                let serverMessage = serverError?.message ?? HTTPURLResponse.localizedString(forStatusCode: httpResponse.statusCode)
+        let urlSession = session ?? configuration.session
+        // iOS routinely hands back a dead pooled keep-alive connection as
+        // .networkConnectionLost (and occasionally a one-off .timedOut / DNS blip on a
+        // network switch). A single immediate retry on a fresh connection almost always
+        // succeeds, instead of falsely flipping the whole app to "offline". Only
+        // idempotent (GET/HEAD) requests are retried so mutations are never double-applied.
+        let upperMethod = method.uppercased()
+        let isIdempotent = upperMethod == "GET" || upperMethod == "HEAD"
+        let maxTransportAttempts = isIdempotent ? 2 : 1
+        var transportAttempt = 0
+
+        while true {
+            transportAttempt += 1
+            do {
+                let (data, response) = try await urlSession.data(for: request)
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    throw APIError(message: "Unexpected server response", statusCode: nil)
+                }
+                configuration.syncPersistedAuthCookie()
+                let bodyString = String(data: data, encoding: .utf8) ?? ""
+                guard !validateStatus || (200 ..< 300).contains(httpResponse.statusCode) else {
+                    let serverError = decodeServerError(from: bodyString)
+                    let serverMessage = serverError?.message ?? HTTPURLResponse.localizedString(forStatusCode: httpResponse.statusCode)
+                    TdayTelemetry.addBreadcrumb(
+                        "api.request",
+                        category: "api",
+                        level: .error,
+                        data: [
+                            "method": method,
+                            "route": TdayTelemetry.sanitizePath(url.path),
+                            "status": httpResponse.statusCode
+                        ]
+                    )
+                    throw APIError(
+                        message: serverMessage,
+                        statusCode: httpResponse.statusCode,
+                        reason: serverError?.reason ?? serverError?.code,
+                        field: serverError?.field,
+                        retryAfterSeconds: serverError?.retryAfterSeconds
+                    )
+                }
+                return (bodyString, httpResponse)
+            } catch let error as APIError {
+                throw error
+            } catch let urlError as URLError where isIdempotent
+                && transportAttempt < maxTransportAttempts
+                && Self.isRetriableTransportError(urlError) {
                 TdayTelemetry.addBreadcrumb(
-                    "api.request",
+                    "api.transport.retry",
                     category: "api",
-                    level: .error,
                     data: [
                         "method": method,
                         "route": TdayTelemetry.sanitizePath(url.path),
-                        "status": httpResponse.statusCode
+                        "code": urlError.code.rawValue
                     ]
                 )
-                throw APIError(
-                    message: serverMessage,
-                    statusCode: httpResponse.statusCode,
-                    reason: serverError?.reason ?? serverError?.code,
-                    field: serverError?.field,
-                    retryAfterSeconds: serverError?.retryAfterSeconds
+                try? await Task.sleep(nanoseconds: 250_000_000)
+                continue
+            } catch {
+                TdayTelemetry.capture(
+                    error,
+                    operation: "api.transport",
+                    data: [
+                        "method": method,
+                        "route": TdayTelemetry.sanitizePath(url.path)
+                    ]
                 )
+                throw APIError(message: error.localizedDescription, statusCode: nil)
             }
-            return (bodyString, httpResponse)
-        } catch let error as APIError {
-            throw error
-        } catch {
-            TdayTelemetry.capture(
-                error,
-                operation: "api.transport",
-                data: [
-                    "method": method,
-                    "route": TdayTelemetry.sanitizePath(url.path)
-                ]
-            )
-            throw APIError(message: error.localizedDescription, statusCode: nil)
+        }
+    }
+
+    /// Transport-level errors that are usually transient (stale pooled connection,
+    /// brief timeout, DNS blip on a network switch) and worth one retry on a fresh
+    /// connection. `.notConnectedToInternet` is intentionally excluded — there is no
+    /// route, so retrying only delays the legitimate offline result.
+    private static func isRetriableTransportError(_ error: URLError) -> Bool {
+        switch error.code {
+        case .networkConnectionLost, .timedOut, .cannotConnectToHost, .cannotFindHost, .dnsLookupFailed:
+            return true
+        default:
+            return false
         }
     }
 
