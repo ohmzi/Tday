@@ -239,6 +239,11 @@ struct AppRootView: View {
             }
         }
         .tdayAppTheme(themeMode: appViewModel.themeMode)
+        // In-app language override: changing the locale (and reading the
+        // generation token) re-resolves every Text against the selected
+        // language bundle instantly, no restart.
+        .environment(\.locale, Locale(identifier: appViewModel.resolvedLocaleIdentifier))
+        .id(appViewModel.localizationGeneration)
         .background(
             TdayKeyboardPrewarmView(
                 isEnabled: scenePhase == .active

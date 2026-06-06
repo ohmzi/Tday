@@ -20,9 +20,22 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.Tday"
+        android:localeConfig="@xml/locales_config"
         android:usesCleartextTraffic="${usesCleartextTraffic}">
 
         <meta-data android:name="io.sentry.auto-init" android:value="false" />
+
+        <!-- Persists the in-app language override across restarts on API 26–32
+             (the framework handles this natively on API 33+). Lets MainActivity
+             stay a plain ComponentActivity. -->
+        <service
+            android:name="androidx.appcompat.app.AppLocalesMetadataHolderService"
+            android:enabled="false"
+            android:exported="false">
+            <meta-data
+                android:name="autoStoreLocales"
+                android:value="true" />
+        </service>
         <meta-data
             android:name="asset_statements"
             android:resource="@string/asset_statements" />

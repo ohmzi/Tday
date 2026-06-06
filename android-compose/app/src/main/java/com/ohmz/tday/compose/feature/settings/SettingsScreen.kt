@@ -1,5 +1,6 @@
 package com.ohmz.tday.compose.feature.settings
 
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
@@ -57,6 +58,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
+import androidx.core.os.LocaleListCompat
 import androidx.core.view.HapticFeedbackConstantsCompat
 import androidx.core.view.ViewCompat
 import com.ohmz.tday.compose.BuildConfig
@@ -153,6 +155,9 @@ fun SettingsScreen(
                     selectedReminder = selectedReminder,
                     onReminderSelected = onReminderSelected,
                 )
+                SettingsDivider()
+                SettingsSectionTitle(title = stringResource(R.string.settings_language))
+                LanguageSelector()
             }
 
             if (!isLocalMode && isAdminUser) {
@@ -777,6 +782,96 @@ private fun ReminderSelector(
                         HapticFeedbackConstantsCompat.CLOCK_TICK,
                     )
                     onReminderSelected(option)
+                    expanded = false
+                },
+            )
+        }
+    }
+}
+
+/** Supported in-app languages (endonyms). `tag == null` = follow the device. */
+private enum class AppLanguage(val tag: String?, val endonym: String) {
+    SYSTEM(null, ""),
+    EN("en", "English"),
+    ES("es", "Español"),
+    FR("fr", "Français"),
+    DE("de", "Deutsch"),
+    IT("it", "Italiano"),
+    PT("pt", "Português"),
+    RU("ru", "Русский"),
+    ZH("zh", "中文"),
+    JA("ja", "日本語"),
+    MS("ms", "Bahasa Melayu"),
+}
+
+@Composable
+private fun LanguageSelector() {
+    val colorScheme = MaterialTheme.colorScheme
+    val view = LocalView.current
+    var expanded by remember { mutableStateOf(false) }
+    val systemLabel = stringResource(R.string.settings_language_system_default)
+
+    // AppCompatDelegate is the persisted source of truth (no extra store needed).
+    val currentTag = AppCompatDelegate.getApplicationLocales().toLanguageTags()
+    val current = AppLanguage.entries.firstOrNull {
+        it.tag != null && currentTag.startsWith(it.tag!!)
+    } ?: AppLanguage.SYSTEM
+
+    fun labelFor(lang: AppLanguage) = if (lang == AppLanguage.SYSTEM) systemLabel else lang.endonym
+
+    Box {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .clickable {
+                    ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+                    expanded = true
+                }
+                .padding(vertical = 2.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = stringResource(R.string.settings_language),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.ExtraBold,
+                color = colorScheme.onSurface,
+            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                Text(
+                    text = labelFor(current),
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = colorScheme.secondary,
+                )
+                Icon(
+                    imageVector = Icons.Rounded.ChevronRight,
+                    contentDescription = null,
+                    tint = colorScheme.onSurface.copy(alpha = 0.42f),
+                    modifier = Modifier.size(18.dp),
+                )
+            }
+        }
+
+        if (expanded) {
+            TdayCenteredSelectorDialog(
+                title = stringResource(R.string.settings_language_dialog_title),
+                options = AppLanguage.entries,
+                optionLabel = { labelFor(it) },
+                optionSwatchColor = { Color.Transparent },
+                isSelected = { it == current },
+                onDismiss = { expanded = false },
+                onOptionSelected = { lang ->
+                    ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+                    val locales = lang.tag
+                        ?.let { LocaleListCompat.forLanguageTags(it) }
+                        ?: LocaleListCompat.getEmptyLocaleList()
+                    // Persists + recreates the activity instantly.
+                    AppCompatDelegate.setApplicationLocales(locales)
                     expanded = false
                 },
             )

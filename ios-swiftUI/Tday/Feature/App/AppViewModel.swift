@@ -37,6 +37,10 @@ final class AppViewModel {
     var serverURL: String?
     var dataMode: AppDataMode = .unset
     var themeMode: AppThemeMode
+    /// Stored language choice: a supported code or LanguageStore.systemValue.
+    var appLanguage: String
+    /// Bumped on every language change to force SwiftUI to re-resolve strings.
+    var localizationGeneration: Int = 0
     var user: SessionUser?
     var error: String?
     var canResetServerTrust = false
@@ -108,6 +112,7 @@ final class AppViewModel {
     init(container: AppContainer) {
         self.container = container
         themeMode = container.themeStore.load()
+        appLanguage = container.languageStore.load()
         selectedReminder = container.reminderPreferenceStore.getDefaultReminder()
         observeCacheChanges()
         observeOfflineSyncFailures()
@@ -379,6 +384,19 @@ final class AppViewModel {
     func setThemeMode(_ mode: AppThemeMode) {
         themeMode = mode
         container.themeStore.save(mode)
+    }
+
+    /// Concrete locale identifier to apply (resolves "system" to the device language).
+    var resolvedLocaleIdentifier: String {
+        container.languageStore.resolvedCode()
+    }
+
+    func setAppLanguage(_ value: String) {
+        appLanguage = value
+        container.languageStore.save(value)
+        // nil = follow system (clears the bundle override).
+        LanguageBundle.setLanguage(value == LanguageStore.systemValue ? nil : value)
+        localizationGeneration += 1
     }
 
     func setDefaultReminder(_ option: ReminderOption) {

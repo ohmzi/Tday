@@ -9,6 +9,7 @@ struct SettingsScreen: View {
     @Environment(\.tdayColors) private var colors
     @State private var settingsScrollOffset: CGFloat = 0
     @State private var showingReminderSelector = false
+    @State private var showingLanguageSelector = false
 
     private var isAdminUser: Bool {
         !viewModel.isLocalMode && (viewModel.user?.role ?? "").uppercased() == "ADMIN"
@@ -57,6 +58,18 @@ struct SettingsScreen: View {
                 .transition(.opacity.combined(with: .scale(scale: 0.97)))
             }
         }
+        .overlay {
+            if showingLanguageSelector {
+                SettingsLanguageSelectorOverlay(
+                    current: viewModel.appLanguage,
+                    onSelect: viewModel.setAppLanguage,
+                    onDismiss: {
+                        showingLanguageSelector = false
+                    }
+                )
+                .transition(.opacity.combined(with: .scale(scale: 0.97)))
+            }
+        }
         .task {
             viewModel.refreshSyncStatusFromCache()
             await viewModel.refreshAdminAiSummarySetting()
@@ -80,6 +93,7 @@ struct SettingsScreen: View {
             Text(viewModel.aiSummaryValidationError ?? "")
         }
         .animation(.spring(response: 0.24, dampingFraction: 0.9), value: showingReminderSelector)
+        .animation(.spring(response: 0.24, dampingFraction: 0.9), value: showingLanguageSelector)
     }
 
     private var settingsContent: some View {
@@ -114,6 +128,14 @@ struct SettingsScreen: View {
                         selectedReminder: viewModel.selectedReminder,
                         onOpen: {
                             showingReminderSelector = true
+                        }
+                    )
+                    SettingsDivider()
+                    SettingsSectionTitle("Language")
+                    SettingsLanguageSelector(
+                        currentLanguage: viewModel.appLanguage,
+                        onOpen: {
+                            showingLanguageSelector = true
                         }
                     )
                 }
@@ -339,7 +361,9 @@ private struct SettingsSectionTitle: View {
     }
 
     var body: some View {
-        Text(title)
+        // L() routes the literal through the in-app language bundle; non-catalog
+        // (dynamic) strings pass through unchanged.
+        Text(L(title))
             .font(.tdayRounded(size: 22, weight: .heavy))
             .foregroundStyle(colors.onSurface)
     }
@@ -365,6 +389,64 @@ private struct SettingsThemeSelector: View {
         )
         .frame(maxWidth: .infinity)
         .frame(height: TdayNativeSegmentedControlMetrics.height)
+    }
+}
+
+private struct SettingsLanguageSelector: View {
+    let currentLanguage: String
+    let onOpen: () -> Void
+
+    @Environment(\.tdayColors) private var colors
+
+    var body: some View {
+        Button(action: onOpen) {
+            SettingsRowLabel(
+                title: "Language",
+                value: Self.label(for: currentLanguage),
+                valueColor: colors.secondary,
+                showChevron: true
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    static func label(for stored: String) -> String {
+        let lang = AppLanguage(rawValue: stored) ?? .system
+        return lang == .system ? L("System default") : lang.endonym
+    }
+}
+
+private struct SettingsLanguageSelectorOverlay: View {
+    let current: String
+    let onSelect: (String) -> Void
+    let onDismiss: () -> Void
+
+    @Environment(\.tdayColors) private var colors
+
+    var body: some View {
+        ZStack {
+            colors.bottomSheetScrim
+                .ignoresSafeArea()
+                .onTapGesture(perform: onDismiss)
+
+            TdayCenteredSelectorCard(title: L("Language")) {
+                ForEach(Array(AppLanguage.allCases.enumerated()), id: \.element.id) { index, lang in
+                    if index > 0 {
+                        TdaySheetDivider(horizontalPadding: 20, opacity: 0.16)
+                    }
+
+                    TdayCenteredSelectorRow(
+                        title: lang == .system ? L("System default") : lang.endonym,
+                        swatchColor: .clear,
+                        selected: lang.rawValue == current
+                    ) {
+                        onSelect(lang.rawValue)
+                        onDismiss()
+                    }
+                }
+            }
+            .padding(.horizontal, 54)
+        }
     }
 }
 
@@ -563,14 +645,14 @@ private struct SettingsRowLabel: View {
 
     var body: some View {
         HStack {
-            Text(title)
+            Text(L(title))
                 .font(.tdayRounded(size: 17, weight: .heavy))
                 .foregroundStyle(titleColor ?? colors.onSurface)
 
             Spacer(minLength: 12)
 
             if let value {
-                Text(value)
+                Text(L(value))
                     .font(.tdayRounded(size: 13, weight: .heavy))
                     .foregroundStyle(valueColor ?? colors.onSurface.opacity(0.58))
                     .lineLimit(1)

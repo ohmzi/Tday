@@ -1,0 +1,445 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">T\'Day</string>
+
+    <!-- Shared / reusable -->
+    <string name="action_back">返回</string>
+    <string name="action_close">关闭</string>
+    <string name="action_search">搜索</string>
+    <string name="action_close_search">关闭搜索</string>
+    <string name="action_create_task">创建任务</string>
+    <string name="action_create_list">创建列表</string>
+    <string name="action_edit">编辑</string>
+    <string name="action_edit_task">编辑任务</string>
+    <string name="action_delete_task">删除任务</string>
+    <string name="action_delete_list">删除列表</string>
+    <string name="action_delete">删除</string>
+    <string name="action_complete">完成</string>
+    <string name="action_more">更多</string>
+    <string name="action_more_options">更多选项</string>
+    <string name="action_save">保存</string>
+    <string name="action_save_task">保存任务</string>
+    <string name="action_cancel">取消</string>
+    <string name="action_done">完成</string>
+    <string name="action_create">创建</string>
+    <string name="action_ok">确定</string>
+    <string name="action_sign_out">退出登录</string>
+    <string name="action_expand_section">展开此区块</string>
+    <string name="action_collapse_section">收起此区块</string>
+    <string name="label_completed">已完成</string>
+    <string name="label_mark_complete">标记为完成</string>
+    <string name="label_undo_complete">撤销完成</string>
+    <string name="label_task_list">任务列表</string>
+    <string name="label_priority_task">优先任务</string>
+    <string name="label_loading">加载中…</string>
+    <string name="label_version_name">v%1$s</string>
+    <string name="label_server">服务器</string>
+
+    <!-- Home screen -->
+    <string name="home_title">T\'Day</string>
+    <string name="home_category_today">今天</string>
+    <string name="home_category_overdue">逾期</string>
+    <string name="home_category_scheduled">已安排</string>
+    <string name="home_category_all">全部</string>
+    <string name="home_category_priority">优先</string>
+    <string name="home_category_completed">已完成</string>
+    <string name="home_category_calendar">日历</string>
+    <string name="root_feed_tab_home">主页</string>
+    <string name="root_feed_tab_floater">浮动任务</string>
+    <string name="home_search_placeholder">搜索</string>
+    <string name="home_search_no_results">没有匹配的任务</string>
+    <string name="home_my_lists">我的列表</string>
+    <string name="home_new_list">新建列表</string>
+    <string name="home_list_name_placeholder">列表名称</string>
+    <string name="home_section_list">列表</string>
+    <string name="home_section_color">颜色</string>
+    <string name="home_section_icon">图标</string>
+    <string name="home_list_icon_option">选择 %1$s 列表图标</string>
+    <string name="home_locked_list_name">登录以加载你的列表</string>
+
+    <string-array name="splash_taglines">
+        <item>你的服务器记着，所以你不必记</item>
+        <item>由你托管，被截止日期纠缠</item>
+        <item>因为“我待会儿会记得”永远是个谎言</item>
+        <item>自托管的清醒，一次一个任务</item>
+        <item>用你自己的硬件唠叨你</item>
+        <item>你的数据，你的服务器，你的无借口专区</item>
+        <item>自 v0.1 起让拖延稍微更难一点</item>
+        <item>运行在你的服务器上，管理你的生活</item>
+        <item>因为便利贴没有推送通知</item>
+        <item>把“我忘了”变成“我搞定了”</item>
+        <item>你的私人提醒机器</item>
+        <item>自托管，自整理……嗯，快了</item>
+        <item>被遗忘的任务在这里被找回</item>
+        <item>当个成年人，不过要自托管</item>
+        <item>从离你不远的服务器驯服混乱</item>
+        <item>未来的你提前道谢</item>
+        <item>云不过是别人的服务器。这一个是你的。</item>
+        <item>整理你的生活，无需房东</item>
+        <item>零信任……除了你自己的服务器</item>
+        <item>同步你的任务，评判你的优先级</item>
+        <item>今天来电了。它想要一个计划。</item>
+        <item>让“待会儿”提交正式申请</item>
+        <item>把混乱变成勾选框</item>
+        <item>你的任务正乖乖排好队</item>
+        <item>一台对你的优先级有看法的私人服务器</item>
+        <item>当你的大脑打开太多标签页时</item>
+        <item>在混乱安排你之前先安排好它</item>
+        <item>你的列表已进入高效时代</item>
+        <item>为未来的你设的小小指挥台</item>
+        <item>因为“感觉”不是任务策略</item>
+        <item>私密任务。更好的早晨。</item>
+        <item>让你的待办被看见，然后被整理</item>
+        <item>散乱的念头在这里对号入座</item>
+        <item>你的优先级有了固定住址</item>
+        <item>先同步，后慌张</item>
+        <item>日历的戏码，如今得到控制</item>
+        <item>截止日期讨厌这个自托管的小技巧</item>
+        <item>帮你的一天别再打零工</item>
+        <item>你的提醒事项有备而来</item>
+        <item>把“我应该”变成“已安排”</item>
+        <item>你的待办清单，但它真的会出现</item>
+        <item>识破“我明天再做”</item>
+        <item>一份有记性的待办清单</item>
+        <item>你的执行者，自托管</item>
+        <item>拖延症最大的噩梦</item>
+        <item>让“某天”有了日期</item>
+        <item>高效，按你的方式托管</item>
+        <item>一台服务器。零借口。</item>
+        <item>替你信守承诺</item>
+        <item>被驯服的“以后”那一栏</item>
+        <item>你的第二大脑，但靠谱</item>
+        <item>把“也许”升级为“已安排”</item>
+        <item>混乱管理，私人版</item>
+        <item>你这一天的项目经理</item>
+        <item>因为“在我脑子里”不是一套系统</item>
+        <item>任务放牧正式上线</item>
+        <item>把心理负担变成勾选标记</item>
+        <item>像好服务器那样奉上任务</item>
+        <item>你的私人问责服务器</item>
+        <item>替你确定优先级</item>
+    </string-array>
+
+    <!-- Settings screen -->
+    <string name="settings_title">设置</string>
+    <string name="settings_unknown_user">未知用户</string>
+    <string name="settings_role_label">角色：%1$s</string>
+    <string name="settings_role_default">用户</string>
+    <string name="settings_appearance">外观</string>
+    <string name="settings_reminders">提醒</string>
+    <string name="settings_feature_toggle">功能开关</string>
+    <string name="settings_ai_task_summary">摘要</string>
+    <string name="settings_saving_admin">正在保存管理员设置…</string>
+    <string name="settings_ai_unavailable_title">摘要不可用</string>
+    <string name="settings_default_reminder">默认提醒</string>
+    <string name="settings_update_available_version">v%1$s 可用</string>
+    <string name="settings_server_compatible">兼容</string>
+    <string name="settings_server_incompatible">不兼容</string>
+
+    <!-- Onboarding / wizard -->
+    <string name="onboarding_title">设置 T\'Day</string>
+    <string name="onboarding_subtitle">设置你的工作区</string>
+    <string name="onboarding_step_mode">模式</string>
+    <string name="onboarding_step_server">服务器</string>
+    <string name="onboarding_step_login">登录</string>
+    <string name="onboarding_mode_title">选择你的设置方式</string>
+    <string name="onboarding_mode_subtitle">选择 T\'Day 在哪里保存你的任务。</string>
+    <string name="onboarding_mode_server_title">自托管服务器</string>
+    <string name="onboarding_mode_server_subtitle">使用账户、同步和你的后端。</string>
+    <string name="onboarding_mode_server_short_title">自托管</string>
+    <string name="onboarding_mode_server_short_subtitle">账户与同步</string>
+    <string name="onboarding_mode_local_short_title">此设备</string>
+    <string name="onboarding_mode_local_short_subtitle">无需登录</string>
+    <string name="onboarding_mode_local_subtitle">无需登录。数据保存在应用存储中。</string>
+    <string name="onboarding_server_hero_subtitle">连接你的 T\'Day 端点。</string>
+    <string name="onboarding_server_url_label">服务器网址</string>
+    <string name="onboarding_server_url_placeholder">https://app.example.com</string>
+    <string name="onboarding_reset_trust">重置受信任的服务器</string>
+    <string name="onboarding_resetting_trust">正在重置信任…</string>
+    <string name="onboarding_connect">连接</string>
+    <string name="onboarding_connecting_title">正在连接服务器…</string>
+    <string name="onboarding_connecting_subtitle">正在检查端点、TLS 和工作区设置</string>
+    <string name="onboarding_use_device_only">仅使用此设备</string>
+    <string name="onboarding_email_label">电子邮箱</string>
+    <string name="onboarding_password_label">密码</string>
+    <string name="onboarding_sign_in">登录</string>
+    <string name="onboarding_login_hero_subtitle">打开你已同步的工作区。</string>
+    <string name="onboarding_create_account">创建账户</string>
+    <string name="onboarding_register_hero_subtitle">创建你的服务器账户。</string>
+    <string name="onboarding_change_server">更改服务器</string>
+    <string name="onboarding_change_setup">更改设置</string>
+    <string name="onboarding_first_name_label">名字</string>
+    <string name="onboarding_confirm_password_label">确认密码</string>
+    <string name="onboarding_creating_account">正在创建账户…</string>
+    <string name="onboarding_back_to_sign_in">返回登录</string>
+    <string name="onboarding_authenticating_title">正在验证身份…</string>
+    <string name="onboarding_authenticating_register_subtitle">正在提交注册并等待审批状态</string>
+    <string name="onboarding_authenticating_login_subtitle">正在加密会话并加载你的工作区</string>
+    <string name="onboarding_error_connect_fallback">无法连接到服务器</string>
+    <string name="onboarding_error_reset_trust_fallback">无法重置受信任的服务器</string>
+    <string name="onboarding_validation_first_name_min">名字至少需要 2 个字符</string>
+    <string name="onboarding_validation_email_required">请填写电子邮箱</string>
+    <string name="onboarding_validation_email_invalid">请输入有效的电子邮箱地址</string>
+    <string name="onboarding_validation_password_required">请填写密码和确认密码</string>
+    <string name="onboarding_validation_password_min">密码至少需要 8 个字符</string>
+    <string name="onboarding_validation_password_uppercase">密码必须包含至少一个大写字母</string>
+    <string name="onboarding_validation_password_special">密码必须包含至少一个特殊字符</string>
+    <string name="onboarding_validation_password_mismatch">两次输入的密码不一致</string>
+
+    <!-- Authentication / credential messages -->
+    <string name="auth_pending_admin_approval">账户正在等待管理员审批。</string>
+    <string name="auth_password_manager_save_server_url_failed">Android 密码管理器无法保存此服务器网址。请检查是否已启用密码管理器。</string>
+    <string name="auth_password_manager_save_login_failed">Android 密码管理器无法保存此登录信息。请检查是否已启用密码管理器。</string>
+    <string name="auth_error_incorrect_credentials">电子邮箱或密码不正确</string>
+    <string name="auth_error_server_unreachable">无法连接到服务器。请检查服务器网址后重试。</string>
+
+    <!-- Todo list screen -->
+    <string name="todos_summarize">汇总任务</string>
+    <string name="todos_title_tasks">任务</string>
+    <string name="todos_title_today">今天</string>
+    <string name="todos_title_overdue">逾期</string>
+    <string name="todos_title_scheduled">已安排</string>
+    <string name="todos_title_all_tasks">所有任务</string>
+    <string name="todos_title_priority">优先</string>
+    <string name="todos_title_floater">浮动任务</string>
+    <string name="todos_title_list">列表</string>
+    <string name="todos_empty_today">今天没有任务</string>
+    <string name="todos_empty_overdue">没有逾期任务</string>
+    <string name="todos_empty_priority">没有优先任务</string>
+    <string name="todos_empty_scheduled">没有已安排的任务</string>
+    <string name="todos_empty_all">还没有任务</string>
+    <string name="todos_empty_list">此列表中没有任务</string>
+    <string name="car_surface_title_today">T\'Day</string>
+    <string name="car_surface_title_floater">浮动任务</string>
+    <string name="car_surface_loading">正在加载任务</string>
+    <string name="car_surface_load_error">无法加载任务</string>
+    <string name="car_voice_prompt_today">说出要添加到 T\'Day 的任务</string>
+    <string name="car_voice_prompt_floater">说出要添加的浮动任务</string>
+    <string name="car_voice_empty_result">未听到任务</string>
+    <string name="car_complete_dialog_title">完成此任务？</string>
+    <string name="car_complete_dialog_confirm">完成</string>
+    <string name="todos_section_morning">上午</string>
+    <string name="todos_section_afternoon">下午</string>
+    <string name="todos_section_tonight">今晚</string>
+    <string name="todos_section_earlier">更早</string>
+    <string name="todos_section_today">今天</string>
+    <string name="todos_section_tomorrow">明天</string>
+    <string name="todos_section_rest_of">%1$s 的剩余时间</string>
+    <string name="todos_reschedule_recurring_title">移动重复任务？</string>
+    <string name="todos_reschedule_recurring_message">请选择仅移动此次任务，还是整个重复系列。</string>
+    <string name="todos_reschedule_this_occurrence">此次任务</string>
+    <string name="todos_reschedule_entire_series">整个系列</string>
+    <string name="todos_summary_title">摘要</string>
+    <string name="todos_summary_close">关闭摘要</string>
+    <string name="todos_summary_loading">正在生成你的任务摘要…</string>
+    <string name="todos_summary_admin_disabled">摘要已被管理员禁用</string>
+    <string name="todos_summary_modes_unavailable">摘要仅适用于今天、已安排、全部和优先</string>
+    <string name="todos_summary_offline_unavailable">离线时无法提供摘要。</string>
+    <string name="todos_list_settings">列表设置</string>
+    <string name="todos_save_list_settings">保存列表设置</string>
+    <string name="todos_delete_list_title">删除列表？</string>
+    <string name="todos_delete_list_message">这将删除此列表、其中的所有任务，以及这些任务的完成历史记录。</string>
+    <string name="todos_due_overdue_text">逾期，%1$s</string>
+    <string name="todos_due_text">截止 %1$s</string>
+
+    <!-- Create/edit task sheet -->
+    <string name="create_task_title_new">新任务</string>
+    <string name="create_task_title_edit">编辑任务</string>
+    <string name="create_task_section_schedule">安排</string>
+    <string name="create_task_due">截止</string>
+    <string name="create_task_section_details">详情</string>
+    <string name="create_task_list">列表</string>
+    <string name="create_task_no_list">无列表</string>
+    <string name="create_task_priority">优先级</string>
+    <string name="create_task_priority_normal">普通</string>
+    <string name="create_task_priority_important">重要</string>
+    <string name="create_task_priority_urgent">紧急</string>
+    <string name="create_task_repeat">重复</string>
+    <string name="create_task_repeat_none">不重复</string>
+    <string name="create_task_repeat_daily">每天</string>
+    <string name="create_task_repeat_weekly">每周</string>
+    <string name="create_task_repeat_weekdays">工作日</string>
+    <string name="create_task_repeat_monthly">每月</string>
+    <string name="create_task_repeat_yearly">每年</string>
+    <string name="create_task_title_placeholder">标题</string>
+    <string name="create_task_notes_placeholder">备注</string>
+    <string name="create_task_schedule_enabled">任务有截止日期</string>
+    <string name="create_task_schedule_disabled">浮动任务</string>
+    <string name="create_task_select_date">选择日期</string>
+    <string name="create_task_select_time">选择时间</string>
+
+    <!-- Completed screen -->
+    <string name="completed_title">已完成</string>
+    <string name="completed_empty">还没有已完成的任务</string>
+    <string name="completed_section_earlier">更早</string>
+    <string name="completed_section_today">今天</string>
+    <string name="completed_section_tomorrow">明天</string>
+    <string name="completed_section_rest_of">%1$s 的剩余时间</string>
+
+    <!-- Calendar screen -->
+    <string name="calendar_title">日历</string>
+    <string name="calendar_jump_to_today">跳到今天</string>
+    <string name="calendar_tasks_due">%1$s 到期的任务</string>
+    <string name="calendar_no_pending">这一天没有待办任务到期</string>
+    <string name="calendar_completed_header">已完成：</string>
+    <string name="calendar_prev_month">上个月</string>
+    <string name="calendar_next_month">下个月</string>
+    <string name="calendar_prev_week">上一周</string>
+    <string name="calendar_next_week">下一周</string>
+    <string name="calendar_prev_day">前一天</string>
+    <string name="calendar_next_day">后一天</string>
+    <string name="calendar_task_count_one">1 个任务到期</string>
+    <string name="calendar_task_count_many">%1$d 个任务到期</string>
+    <string name="calendar_task_count_cap">9+</string>
+
+    <!-- Error handling / retry / offline -->
+    <string name="action_retry">重试</string>
+    <string name="offline_banner_title">你已离线</string>
+    <string name="offline_banner">缓存的任务仍可使用。恢复连接后更改将自动同步。</string>
+    <string name="offline_banner_pending_one">1 项更改等待同步</string>
+    <string name="offline_banner_pending_many">%1$d 项更改等待同步</string>
+    <string name="settings_workspace">工作区</string>
+    <string name="settings_workspace_local_title">本地工作区</string>
+    <string name="settings_workspace_local_detail">仅在此设备上</string>
+    <string name="settings_workspace_server_title">服务器同步</string>
+    <string name="settings_sync_status_ready">准备同步</string>
+    <string name="settings_sync_status_syncing">正在同步</string>
+    <string name="settings_sync_status_offline">离线。恢复连接后更改将自动同步。</string>
+    <string name="settings_sync_status_pending">等待同步</string>
+    <string name="settings_sync_status_synced">已同步</string>
+    <string name="settings_sync_last_synced_label">上次同步</string>
+    <string name="settings_sync_last_synced_never">尚未同步</string>
+    <string name="settings_sync_last_attempt_label">上次尝试</string>
+    <string name="settings_sync_pending_label">待处理</string>
+    <string name="settings_sync_pending_none">没有等待同步的更改</string>
+    <string name="settings_sync_pending_one">1 项更改等待中</string>
+    <string name="settings_sync_pending_many">%1$d 项更改等待中</string>
+    <string name="settings_sync_now">立即同步</string>
+    <string name="settings_syncing_now">正在同步...</string>
+    <string name="error_auth_expired">会话已过期。请重新登录。</string>
+    <string name="error_app_outdated">此应用版本已过时。请更新后继续。</string>
+    <string name="error_server_outdated">需要先更新服务器，此应用才能继续。</string>
+    <string name="error_server">服务器错误。请稍后重试。</string>
+    <string name="error_permission_denied">你没有执行此操作的权限。</string>
+    <string name="error_not_found">未找到所请求的项目。</string>
+    <string name="error_connection">连接错误。请检查网络后重试。</string>
+    <string name="error_connectivity_title">无网络连接</string>
+    <string name="error_connectivity">无法连接。请检查网络连接后重试。</string>
+    <string name="error_generic">出现了问题。请重试。</string>
+    <string name="error_load_failed">加载失败。</string>
+    <string name="error_load_dashboard_failed">加载仪表板失败。</string>
+    <string name="error_load_calendar_failed">加载日历失败。</string>
+    <string name="error_load_tasks_failed">加载任务失败。</string>
+    <string name="error_create_task_failed">无法创建任务。</string>
+    <string name="error_update_task_failed">无法更新任务。</string>
+    <string name="error_complete_task_failed">无法完成任务。</string>
+    <string name="error_delete_task_failed">无法删除任务。</string>
+    <string name="error_restore_task_failed">无法恢复任务。</string>
+    <string name="error_create_list_failed">无法创建列表。</string>
+    <string name="error_update_list_failed">无法更新列表。</string>
+    <string name="error_delete_list_failed">无法删除列表。</string>
+    <string name="error_summarize_tasks_failed">无法汇总任务。</string>
+    <string name="error_load_admin_settings_failed">无法加载管理员设置</string>
+    <string name="error_update_admin_settings_failed">无法更新管理员设置</string>
+    <string name="error_reset_trusted_server_failed">无法重置受信任的服务器。</string>
+    <string name="error_connect_server_failed">无法连接到服务器。</string>
+    <string name="server_setup_error_probe_timeout">服务器探测超时。请检查网址和网络后重试。</string>
+    <string name="server_setup_error_invalid_url">服务器网址无效。</string>
+    <string name="server_setup_error_insecure_transport">远程服务器网址请使用 HTTPS。</string>
+    <string name="server_setup_error_not_tday_server">服务器可以访问，但似乎不是 T\'Day 服务器。</string>
+    <string name="server_setup_trust_refreshing">已保存的服务器信任发生变化。正在使用刷新后的证书重试。</string>
+    <string name="server_setup_trust_refresh_failed">应用无法自动从已保存的服务器信任不匹配中恢复。请清除应用存储或重新安装应用，然后重试。</string>
+
+    <string name="notification_channel_task_reminders_name">任务提醒</string>
+    <string name="notification_channel_task_reminders_description">即将到期任务的提醒</string>
+    <string name="notification_channel_app_updates_name">应用更新</string>
+    <string name="notification_channel_app_updates_description">更新安装完成后提示重新打开 T\'Day</string>
+    <string name="update_notification_title">更新已安装</string>
+    <string name="update_notification_message">点按以重新打开 T\'Day。</string>
+
+    <string name="app_update_required_title">需要更新</string>
+    <string name="app_update_required_message">需要更新到 v%1$s 才能继续。</string>
+    <string name="app_update_download_not_ready">v%1$s 尚不可下载。请联系管理员上传更新。</string>
+    <string name="server_update_required_title">需要更新服务器</string>
+    <string name="server_update_required_message">你的应用需要更新的服务器版本。服务器当前为 v%1$s。请联系管理员更新服务器。</string>
+    <string name="install_permission_return_to_app">授予安装权限，然后返回应用。</string>
+    <string name="install_permission_return_here">授予安装权限，然后返回此处。</string>
+    <string name="overlay_install_awaiting_permission">正在等待权限...</string>
+    <string name="overlay_install_downloading_progress">正在下载... %1$d%%</string>
+    <string name="overlay_install_downloading">正在下载...</string>
+    <string name="overlay_install_installing">正在安装...</string>
+    <string name="overlay_install_download_and_install">下载并安装</string>
+
+    <string name="widget_today_tasks_description">一目了然地显示今天的任务</string>
+    <string name="widget_today_tasks_title">今天的任务</string>
+    <string name="widget_today_tasks_title_small">今天的任务 - 小</string>
+    <string name="widget_today_tasks_title_medium">今天的任务 - 中</string>
+    <string name="widget_today_tasks_title_large">今天的任务 - 大</string>
+    <string name="widget_today_tasks_empty">今天没有到期任务</string>
+    <string name="widget_today_tasks_add">添加一个今天的任务</string>
+    <string name="widget_today_tasks_count">%1$d 个到期</string>
+    <string name="widget_today_tasks_count_unit">个到期</string>
+    <string name="widget_today_tasks_setup_title">打开 T\'Day</string>
+    <string name="widget_today_tasks_setup_message">设置你的工作区</string>
+    <string name="widget_floater_tasks_description">一目了然地显示浮动任务</string>
+    <string name="widget_floater_tasks_title">浮动任务</string>
+    <string name="widget_floater_tasks_title_small">浮动任务 - 小</string>
+    <string name="widget_floater_tasks_title_medium">浮动任务 - 中</string>
+    <string name="widget_floater_tasks_title_large">浮动任务 - 大</string>
+    <string name="widget_floater_tasks_empty">没有浮动任务</string>
+    <string name="widget_floater_tasks_add">添加一个浮动任务</string>
+    <string name="widget_floater_tasks_count">%1$d 个未完成</string>
+    <string name="widget_floater_tasks_count_unit">个未完成</string>
+    <string name="widget_loading">正在加载任务…</string>
+
+    <!-- Settings: updates -->
+    <string name="settings_check_updates">检查更新</string>
+
+    <!-- Latest release screen -->
+    <string name="release_title">应用版本</string>
+    <string name="release_error">无法获取发布信息。请检查网络连接后重试。</string>
+    <string name="release_installed_version">已安装版本</string>
+    <string name="release_installed_label">已安装</string>
+    <string name="release_server_not_connected">未连接</string>
+    <string name="release_server_version_unavailable">不可用</string>
+    <string name="release_latest_label">最新</string>
+    <string name="release_update_available">有可用更新</string>
+    <string name="release_version_mismatch">版本不匹配</string>
+    <string name="release_app_update_required_summary">服务器要求 v%1$s。请更新应用以继续。</string>
+    <string name="release_server_update_required_summary">此应用要求服务器为 v%1$s，但服务器当前为 v%2$s。</string>
+    <string name="release_update_ready_version">版本 %1$s 已准备好安装。</string>
+    <string name="release_update_ready_generic">已有较新版本可供安装。</string>
+    <string name="release_up_to_date">最新</string>
+    <string name="release_up_to_date_message">你正在运行最新版本</string>
+    <string name="release_published">发布于 %1$s</string>
+    <string name="release_whats_new_in_version">%1$s 的新增内容</string>
+    <string name="release_no_notes_for_version">此版本没有可用的发布说明</string>
+    <string name="release_download_and_install">下载并安装更新</string>
+    <string name="release_allow_install_permission">允许安装权限</string>
+    <string name="release_downloading_apk">正在下载更新…</string>
+    <string name="release_downloading_apk_progress">正在下载更新… %1$d%%</string>
+    <string name="release_preparing_update">正在准备更新…</string>
+    <string name="release_opening_installer">正在打开 Android 安装程序…</string>
+    <string name="release_install_permission_required">允许 T\'Day 从此来源安装更新。</string>
+    <string name="release_install_permission_return_hint">允许 T\'Day 安装更新，然后返回此处自动继续。</string>
+    <string name="release_install_permission_denied">T\'Day 的安装权限仍处于禁用状态。</string>
+    <string name="release_download_failed">无法下载更新。请重试。</string>
+    <string name="release_install_failed">无法安装更新。</string>
+    <string name="release_install_cancelled">安装已取消。点按“下载并安装”重试。</string>
+    <string name="release_install_blocked">安装被你的设备阻止。请检查设备设置后重试。</string>
+    <string name="release_install_storage">存储空间不足。请释放一些空间后重试。</string>
+    <string name="release_install_incompatible">此更新与你的设备不兼容。</string>
+    <string name="release_signature_conflict">已安装的版本使用了不同的密钥签名，无法直接更新。</string>
+    <string name="release_signature_conflict_hint">请先卸载当前版本，然后返回此处安装更新。应用数据将会丢失。</string>
+    <string name="release_uninstall">卸载当前版本</string>
+    <string name="release_install_success">更新已安装。</string>
+    <string name="release_no_apk">此版本未附带 APK。</string>
+    <string name="release_launch_update_toast">更新 %1$s 已可用。</string>
+    <string name="task_deleted_toast">任务已删除</string>
+    <string name="release_view_on_github">在 GitHub 上查看</string>
+
+    <!-- Language picker -->
+    <string name="settings_language">语言</string>
+    <string name="settings_language_system_default">系统默认</string>
+    <string name="settings_language_dialog_title">语言</string>
+</resources>
