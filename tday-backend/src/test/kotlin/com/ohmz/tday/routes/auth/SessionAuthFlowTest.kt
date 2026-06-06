@@ -566,7 +566,7 @@ class SessionAuthFlowTest {
     private class RecordingSessionControl : SessionControl {
         val revokedUserIds = mutableListOf<String>()
 
-        override suspend fun revokeUserSessions(userId: String) {
+        override suspend fun revokeUserSessions(userId: String, revokeApiKeys: Boolean) {
             revokedUserIds += userId
         }
     }

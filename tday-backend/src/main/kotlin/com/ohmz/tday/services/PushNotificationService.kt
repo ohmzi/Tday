@@ -8,6 +8,7 @@ import com.ohmz.tday.db.tables.PushSubscriptions
 import com.ohmz.tday.db.util.CuidGenerator
 import com.ohmz.tday.domain.AppError
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import nl.martijndwars.webpush.Notification
@@ -113,18 +114,23 @@ class PushNotificationServiceImpl(private val config: AppConfig) : PushNotificat
 
         val staleIds = mutableListOf<String>()
 
-        for ((subId, endpoint, keys) in subscriptions) {
-            try {
-                val sub = Subscription(endpoint, keys)
-                val notification = Notification(sub, payload)
-                val response = svc.send(notification)
-                val statusCode = response.statusLine.statusCode
-                if (statusCode in listOf(404, 410)) {
-                    staleIds.add(subId)
-                    logger.debug("Push endpoint gone ({}), marking stale: {}", statusCode, endpoint.take(60))
+        // svc.send() is a synchronous, blocking Apache HttpClient call; running the
+        // loop on the request coroutine would tie up a dispatcher/event-loop thread
+        // per slow endpoint. Push it onto the IO dispatcher.
+        withContext(Dispatchers.IO) {
+            for ((subId, endpoint, keys) in subscriptions) {
+                try {
+                    val sub = Subscription(endpoint, keys)
+                    val notification = Notification(sub, payload)
+                    val response = svc.send(notification)
+                    val statusCode = response.statusLine.statusCode
+                    if (statusCode in listOf(404, 410)) {
+                        staleIds.add(subId)
+                        logger.debug("Push endpoint gone ({}), marking stale: {}", statusCode, endpoint.take(60))
+                    }
+                } catch (e: Exception) {
+                    logger.warn("Failed to send push to {}: {}", endpoint.take(60), e.message)
                 }
-            } catch (e: Exception) {
-                logger.warn("Failed to send push to {}: {}", endpoint.take(60), e.message)
             }
         }
 
