@@ -53,7 +53,12 @@ class PasswordProofImpl(
 
         val parsedHash = passwordService.parsePasswordHash(storedPasswordHash ?: "")
         val iterations = parsedHash?.iterations ?: config.pbkdf2Iterations
-        val saltHex = parsedHash?.saltHex ?: ByteArray(saltBytes).also { random.nextBytes(it) }.toHex()
+        // For a real user the salt is the stored PBKDF2 salt (stable across calls).
+        // For an unknown user we must return a salt that is ALSO stable across calls
+        // and across restarts, otherwise comparing two challenge responses leaks
+        // account existence (real => identical salt, unknown => random each time).
+        // Derive it deterministically from the username under the server secret.
+        val saltHex = parsedHash?.saltHex ?: deterministicSaltHex(normalizedUsername)
         val challengeId = ByteArray(24).also { random.nextBytes(it) }.toBase64Url()
         val now = System.currentTimeMillis()
         val expiresAtMs = now + config.passwordProofChallengeTtlSec * 1000L
@@ -109,6 +114,18 @@ class PasswordProofImpl(
     override fun consume(challengeId: String) {
         val normalized = challengeId.trim()
         if (normalized.isNotEmpty()) challenges.remove(normalized)
+    }
+
+    /**
+     * Stable, non-reversible salt for usernames with no account, keyed by the
+     * server secret so it can't be precomputed and stays constant across calls
+     * and restarts — making an unknown user indistinguishable from a real one.
+     */
+    private fun deterministicSaltHex(username: String): String {
+        val mac = Mac.getInstance("HmacSHA256")
+        mac.init(SecretKeySpec(config.authSecret.toByteArray(Charsets.UTF_8), "HmacSHA256"))
+        val digest = mac.doFinal("login-challenge-salt:$username".toByteArray(Charsets.UTF_8))
+        return digest.copyOf(saltBytes).toHex()
     }
 
     private fun normalizeProofHex(raw: String): String? {
