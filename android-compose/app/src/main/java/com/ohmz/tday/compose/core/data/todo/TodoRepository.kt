@@ -36,7 +36,6 @@ import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.model.TodoListMode
 import com.ohmz.tday.compose.core.model.TodoSummaryRequest
 import com.ohmz.tday.compose.core.model.TodoSummaryResponse
-import com.ohmz.tday.compose.core.model.TodoTitleNlpRequest
 import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
 import com.ohmz.tday.compose.core.model.UpdateFloaterRequest
 import com.ohmz.tday.compose.core.model.UpdateTodoRequest
@@ -49,7 +48,6 @@ import kotlinx.coroutines.withContext
 import java.time.Instant
 import java.time.ZoneId
 import java.time.ZonedDateTime
-import java.util.Locale
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -978,28 +976,12 @@ class TodoRepository @Inject constructor(
         text: String,
         referenceDueEpochMs: Long,
     ): TodoTitleNlpResponse? {
-        val trimmedText = text.trim()
-        if (trimmedText.isBlank()) return null
-        if (syncManager.isLocalMode()) return null
-
-        val timezoneOffsetMinutes = ZoneId.systemDefault()
-            .rules
-            .getOffset(Instant.ofEpochMilli(referenceDueEpochMs))
-            .totalSeconds / 60
-
+        if (text.isBlank()) return null
+        // Parsed entirely on-device (offline, no AI/network), so it also works in
+        // local mode. `text` is passed raw so the matched-span offsets line up with
+        // the title shown in the field for the highlight.
         return runCatching {
-            requireApiBody(
-                api.parseTodoTitleNlp(
-                    TodoTitleNlpRequest(
-                        text = trimmedText,
-                        locale = Locale.getDefault().toLanguageTag(),
-                        referenceEpochMs = referenceDueEpochMs,
-                        timezoneOffsetMinutes = timezoneOffsetMinutes,
-                        defaultDurationMinutes = 60,
-                    ),
-                ),
-                "Could not parse task title",
-            )
+            OnDeviceTitleNlpParser.parse(text, referenceDueEpochMs)
         }.getOrNull()
     }
 

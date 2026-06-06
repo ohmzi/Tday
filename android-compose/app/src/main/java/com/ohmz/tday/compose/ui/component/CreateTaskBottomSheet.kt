@@ -79,8 +79,13 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.OffsetMapping
+import androidx.compose.ui.text.input.TransformedText
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -169,6 +174,12 @@ fun CreateTaskBottomSheet(
     var title by rememberSaveable(editingTask?.id) {
         mutableStateOf(editingTask?.title.orEmpty())
     }
+    // The natural-language date phrase detected in the title (e.g. "July 29 at
+    // 8pm"). Kept visible & highlighted in the field as you type, and stripped
+    // from the saved title on submit — mirroring the web.
+    var nlpMatchedText by rememberSaveable(editingTask?.id) {
+        mutableStateOf<String?>(null)
+    }
     var notes by rememberSaveable(editingTask?.id) {
         mutableStateOf(editingTask?.description.orEmpty())
     }
@@ -194,23 +205,24 @@ fun CreateTaskBottomSheet(
     }
     LaunchedEffect(title, onParseTaskTitleNlp) {
         val nlpParser = onParseTaskTitleNlp ?: return@LaunchedEffect
-        val inputTitle = title.trim()
-        if (inputTitle.isBlank()) return@LaunchedEffect
+        if (title.isBlank()) {
+            nlpMatchedText = null
+            return@LaunchedEffect
+        }
 
         delay(260)
-        val parseResult = runCatching {
-            nlpParser(
-                inputTitle,
-                dueEpochMs,
-            )
-        }.getOrNull() ?: return@LaunchedEffect
-
-        val parsedDueEpochMs = parseResult.dueEpochMs ?: return@LaunchedEffect
-
-        val cleanTitle = parseResult.cleanTitle
-        if (cleanTitle != title) {
-            title = cleanTitle
+        // Pass the raw title so the matched phrase aligns with what's shown in the
+        // field (used to highlight it). The phrase stays in the field; it's only
+        // removed from the saved title on submit.
+        val parseResult = runCatching { nlpParser(title, dueEpochMs) }.getOrNull()
+        val parsedDueEpochMs = parseResult?.dueEpochMs
+        val matched = parseResult?.matchedText
+        if (parseResult == null || parsedDueEpochMs == null || matched.isNullOrEmpty()) {
+            nlpMatchedText = null
+            return@LaunchedEffect
         }
+
+        nlpMatchedText = matched
         if (showScheduleControls && !scheduleEnabled) {
             scheduleEnabled = true
         }
@@ -299,8 +311,23 @@ fun CreateTaskBottomSheet(
         val due =
             if (scheduleEnabled && showScheduleControls) Instant.ofEpochMilli(dueEpochMs) else null
 
+        // Strip the highlighted date phrase from the saved title (it stays visible
+        // in the field but isn't part of the task name) — same as the web.
+        val matched = nlpMatchedText
+        val effectiveTitle = if (!matched.isNullOrEmpty()) {
+            val idx = title.indexOf(matched)
+            if (idx >= 0) {
+                (title.substring(0, idx) + title.substring(idx + matched.length))
+                    .replace(Regex("\\s{2,}"), " ").trim()
+            } else {
+                title.trim()
+            }
+        } else {
+            title.trim()
+        }
+
         val payload = CreateTaskPayload(
-            title = title.trim(),
+            title = effectiveTitle,
             description = notes.trim().ifBlank { null },
             priority = selectedPriority,
             due = due,
@@ -457,6 +484,7 @@ fun CreateTaskBottomSheet(
                                 TaskTextCard(
                                     title = title,
                                     notes = notes,
+                                    titleHighlight = nlpMatchedText,
                                     onTitleChange = { title = it },
                                     onNotesChange = { notes = it },
                                     onKeyboardDone = dismissKeyboard,
@@ -625,6 +653,7 @@ private fun GroupCard(content: @Composable ColumnScope.() -> Unit) {
 private fun TaskTextCard(
     title: String,
     notes: String,
+    titleHighlight: String?,
     onTitleChange: (String) -> Unit,
     onNotesChange: (String) -> Unit,
     onKeyboardDone: () -> Unit,
@@ -635,6 +664,7 @@ private fun TaskTextCard(
             placeholder = stringResource(R.string.create_task_title_placeholder),
             onValueChange = onTitleChange,
             onKeyboardDone = onKeyboardDone,
+            highlightText = titleHighlight,
         )
         RowDivider()
         TaskField(
@@ -652,13 +682,43 @@ private fun TaskField(
     placeholder: String,
     onValueChange: (String) -> Unit,
     onKeyboardDone: () -> Unit,
+    highlightText: String? = null,
 ) {
     val colorScheme = MaterialTheme.colorScheme
+
+    // Warm highlight behind the detected date phrase, matching the web's --nlp
+    // tint. Translucent so it reads on both light and dark surfaces.
+    val nlpHighlightColor = Color(0xFFE0732A).copy(alpha = 0.38f)
+    val highlightTransformation = remember(highlightText, nlpHighlightColor) {
+        val phrase = highlightText
+        if (phrase.isNullOrEmpty()) {
+            VisualTransformation.None
+        } else {
+            VisualTransformation { input ->
+                val plain = input.text
+                val idx = plain.indexOf(phrase)
+                if (idx < 0) {
+                    TransformedText(input, OffsetMapping.Identity)
+                } else {
+                    val styled = buildAnnotatedString {
+                        append(plain.substring(0, idx))
+                        pushStyle(SpanStyle(background = nlpHighlightColor))
+                        append(plain.substring(idx, idx + phrase.length))
+                        pop()
+                        append(plain.substring(idx + phrase.length))
+                    }
+                    // Text length is unchanged (styling only), so offsets map 1:1.
+                    TransformedText(styled, OffsetMapping.Identity)
+                }
+            }
+        }
+    }
 
     BasicTextField(
         value = value,
         onValueChange = { onValueChange(it.replace('\n', ' ').replace('\r', ' ')) },
         singleLine = true,
+        visualTransformation = highlightTransformation,
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
         keyboardActions = KeyboardActions(
             onDone = {

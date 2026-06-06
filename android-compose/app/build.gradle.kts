@@ -142,6 +142,10 @@ dependencies {
 
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 
+    // On-device natural-language date parsing for the task-title field (offline,
+    // no AI/network). Same engine the backend uses, so behaviour matches.
+    implementation("com.joestelmach:natty:0.13")
+
     implementation("androidx.core:core-ktx:1.15.0")
     // Per-app language override (AppCompatDelegate.setApplicationLocales); works
     // back to API 21 via the AppLocalesMetadataHolderService manifest hook.

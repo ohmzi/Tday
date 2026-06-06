@@ -53,6 +53,15 @@
 -keep class io.sentry.** { *; }
 -dontwarn io.sentry.**
 
+# ── Natty (on-device NLP date parsing) + ANTLR runtime ──────────────
+# Natty loads its generated ANTLR grammar/lexer/parser reflectively, so the
+# whole package and the ANTLR runtime must survive R8 shrinking/obfuscation.
+-keep class com.joestelmach.natty.** { *; }
+-keep class org.antlr.** { *; }
+-dontwarn com.joestelmach.natty.**
+-dontwarn org.antlr.**
+-dontwarn org.apache.commons.**
+
 # ── General ─────────────────────────────────────────────────────────
 -keepattributes SourceFile,LineNumberTable
 -renamesourcefileattribute SourceFile
