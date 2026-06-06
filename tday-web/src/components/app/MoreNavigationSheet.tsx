@@ -73,14 +73,14 @@ export default function MoreNavigationSheet({
                     onClick={() => onOpenChange(false)}
                     aria-current={active ? "page" : undefined}
                     className={cn(
-                      "flex h-12 items-center gap-3 rounded-2xl px-3 text-sm font-black transition-colors",
+                      "flex h-12 items-center gap-3 rounded-2xl px-2 text-base font-black transition-colors",
                       active
                         ? "bg-card text-foreground shadow-sm"
                         : "text-muted-foreground hover:bg-card/70 hover:text-foreground",
                     )}
                   >
                     <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-muted/70">
-                      <Icon className={cn("h-4.5 w-4.5 stroke-[2.4]", route.accentClass)} />
+                      <Icon className={cn("h-5 w-5 stroke-[2.4]", route.accentClass)} />
                     </span>
                     <span className="min-w-0 flex-1 truncate">{route.label}</span>
                     {count != null && (
