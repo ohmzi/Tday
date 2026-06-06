@@ -96,11 +96,14 @@ class TodoServiceImpl(
                     (Todos.due lessEq dateRangeEnd)
             }.orderBy(Todos.createdAt, SortOrder.DESC).map { it.toTodoResponse() }
 
-            val recurring = Todos.join(TodoInstances, JoinType.LEFT, Todos.id, TodoInstances.todoId)
-                .selectAll().where {
-                    (Todos.userID eq userId) and Todos.rrule.isNotNull() and
-                        (Todos.completed eq false)
-                }.map { it.toTodoResponse() }
+            // One row per recurring template. The client expands occurrences from
+            // rrule/exdates/instances itself, and toTodoResponse() reads no
+            // TodoInstances columns, so joining instances here only fanned the
+            // same todo out once per instance row (duplicate timeline entries).
+            val recurring = Todos.selectAll().where {
+                (Todos.userID eq userId) and Todos.rrule.isNotNull() and
+                    (Todos.completed eq false)
+            }.map { it.toTodoResponse() }
 
             oneOff + recurring
         }
@@ -114,10 +117,11 @@ class TodoServiceImpl(
                 (Todos.userID eq userId) and Todos.rrule.isNull() and (Todos.completed eq false)
             }.orderBy(Todos.due to SortOrder.ASC, Todos.order to SortOrder.ASC).map { it.toTodoResponse() }
 
-            val recurring = Todos.join(TodoInstances, JoinType.LEFT, Todos.id, TodoInstances.todoId)
-                .selectAll().where {
-                    (Todos.userID eq userId) and Todos.rrule.isNotNull() and (Todos.completed eq false)
-                }.map { it.toTodoResponse() }
+            // See getByDateRange: emit one row per recurring template, not one per
+            // persisted instance, to avoid duplicate entries in the timeline.
+            val recurring = Todos.selectAll().where {
+                (Todos.userID eq userId) and Todos.rrule.isNotNull() and (Todos.completed eq false)
+            }.map { it.toTodoResponse() }
 
             oneOff + recurring
         }
@@ -235,6 +239,15 @@ class TodoServiceImpl(
 
     override suspend fun uncompleteTodo(userId: String, todoId: String, instanceDate: LocalDateTime?): Either<AppError, Unit> {
         newSuspendedTransaction(Dispatchers.IO) {
+            // TodoInstances has no userID column, so verify ownership against the
+            // parent Todos row before touching any instance state (mirrors
+            // completeTodo/patchInstance/deleteInstance). Without this, another
+            // user could clear an instance's completion by todoId+instanceDate.
+            val ownsTodo = Todos.selectAll().where {
+                (Todos.id eq todoId) and (Todos.userID eq userId)
+            }.limit(1).any()
+            if (!ownsTodo) return@newSuspendedTransaction
+
             if (instanceDate != null) {
                 TodoInstances.update({
                     (TodoInstances.todoId eq todoId) and (TodoInstances.instanceDate eq instanceDate)
@@ -355,10 +368,14 @@ class TodoServiceImpl(
                 (TodoInstances.todoId eq todoId) and (TodoInstances.instanceDate eq instanceDate)
             }
 
-            val tsLiteral = Timestamp.valueOf(instanceDate).toString().replace("'", "''")
-            val idLiteral = todoId.replace("'", "''")
+            // Parameter-bound, not string-interpolated: array_append has no Exposed
+            // DSL equivalent, but the values must still be bound, not escaped by hand.
             exec(
-                "UPDATE todos SET exdates = array_append(exdates, '$tsLiteral'::timestamp) WHERE id = '$idLiteral'",
+                "UPDATE todos SET exdates = array_append(exdates, ?::timestamp) WHERE id = ?",
+                args = listOf(
+                    TextColumnType() to Timestamp.valueOf(instanceDate).toString(),
+                    TextColumnType() to todoId,
+                ),
             )
         }
         cache.invalidateTodoCaches(userId)

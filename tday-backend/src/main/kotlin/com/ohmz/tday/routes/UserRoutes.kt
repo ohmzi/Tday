@@ -82,7 +82,8 @@ fun Route.userRoutes() {
                         if (!success) raise(AppError.BadRequest("current password is incorrect"))
 
                         val currentClaims = call.authUser() ?: raise(AppError.Unauthorized())
-                        sessionControl.revokeUserSessions(user.id)
+                        // Password rotation invalidates the full-account API key too.
+                        sessionControl.revokeUserSessions(user.id, revokeApiKeys = true)
                         val refreshedClaims = currentClaims.copy(
                             tokenVersion = (currentClaims.tokenVersion ?: 0) + 1,
                         )
