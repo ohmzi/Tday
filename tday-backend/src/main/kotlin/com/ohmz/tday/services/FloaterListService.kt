@@ -16,6 +16,7 @@ import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import java.time.LocalDateTime
+import java.time.ZoneOffset
 
 interface FloaterListService {
     suspend fun getAll(userId: String): Either<AppError, List<FloaterListResponse>>
@@ -83,7 +84,7 @@ class FloaterListServiceImpl(private val cache: CacheService) : FloaterListServi
 
     override suspend fun create(userId: String, name: String, color: String?, iconKey: String?): Either<AppError, FloaterListResponse> {
         val id = CuidGenerator.newCuid()
-        val now = LocalDateTime.now()
+        val now = LocalDateTime.now(ZoneOffset.UTC)
         newSuspendedTransaction(Dispatchers.IO) {
             FloaterLists.insert {
                 it[FloaterLists.id] = id
@@ -113,7 +114,7 @@ class FloaterListServiceImpl(private val cache: CacheService) : FloaterListServi
                 name?.let { n -> it[FloaterLists.name] = n }
                 color?.let { c -> it[FloaterLists.color] = ListColor.valueOf(c) }
                 iconKey?.let { k -> it[FloaterLists.iconKey] = k }
-                it[FloaterLists.updatedAt] = LocalDateTime.now()
+                it[FloaterLists.updatedAt] = LocalDateTime.now(ZoneOffset.UTC)
             }
         }
         cache.invalidateFloaterListCaches(userId)

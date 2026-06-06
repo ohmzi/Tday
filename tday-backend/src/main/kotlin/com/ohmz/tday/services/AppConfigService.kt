@@ -12,6 +12,7 @@ import kotlinx.coroutines.Dispatchers
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import org.jetbrains.exposed.sql.update
 import java.time.LocalDateTime
+import java.time.ZoneOffset
 
 interface AppConfigService {
     suspend fun getGlobalConfig(): Either<AppError, AppConfigResponse>
@@ -30,7 +31,7 @@ class AppConfigServiceImpl : AppConfigService {
                     updatedAt = existing[AppConfigs.updatedAt].toString(),
                 )
             } else {
-                val now = LocalDateTime.now()
+                val now = LocalDateTime.now(ZoneOffset.UTC)
                 AppConfigs.insert {
                     it[AppConfigs.id] = globalId
                     it[AppConfigs.aiSummaryEnabled] = true
@@ -45,7 +46,7 @@ class AppConfigServiceImpl : AppConfigService {
 
     override suspend fun setAiSummaryEnabled(enabled: Boolean, updatedById: String?): Either<AppError, AppConfigResponse> {
         val config = newSuspendedTransaction(Dispatchers.IO) {
-            val now = LocalDateTime.now()
+            val now = LocalDateTime.now(ZoneOffset.UTC)
             val existing = AppConfigs.selectAll().where { AppConfigs.id eq globalId }.firstOrNull()
             if (existing != null) {
                 AppConfigs.update({ AppConfigs.id eq globalId }) {

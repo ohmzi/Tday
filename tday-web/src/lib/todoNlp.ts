@@ -1,9 +1,4 @@
 import * as chrono from "chrono-node";
-import { addMinutes } from "date-fns";
-
-const DEFAULT_DURATION_MINUTES = 180;
-const MIN_DURATION_MINUTES = 1;
-const MAX_DURATION_MINUTES = 24 * 60;
 
 export type ParseTodoTitleInput = {
   text: string;
@@ -62,16 +57,6 @@ function normalizeLocale(rawLocale?: string | null): string {
   return firstToken.split("-")[0] ?? "en";
 }
 
-function sanitizeDurationMinutes(rawDuration?: number | null): number {
-  if (typeof rawDuration !== "number" || !Number.isFinite(rawDuration)) {
-    return DEFAULT_DURATION_MINUTES;
-  }
-  return Math.min(
-    Math.max(Math.floor(rawDuration), MIN_DURATION_MINUTES),
-    MAX_DURATION_MINUTES,
-  );
-}
-
 function sanitizeTimezoneOffset(rawOffset?: number | null): number | undefined {
   if (typeof rawOffset !== "number" || !Number.isFinite(rawOffset)) {
     return undefined;
@@ -120,9 +105,11 @@ export function parseTodoTitle(input: ParseTodoTitleInput): ParseTodoTitleOutput
   const parsed = parsedResults[0];
   const matchStart = Math.max(0, parsed.index ?? rawText.indexOf(parsed.text));
   const matchedText = parsed.text ?? "";
+  // Due is the time the user named (parsed.start); only use an explicit end when
+  // the text gave a range. Matches the backend NLP (Natty), which ignores any
+  // default duration: dueDate = dates.size > 1 ? dates[1] : start.
   const startDate = parsed.start.date();
-  const durationMinutes = sanitizeDurationMinutes(input.defaultDurationMinutes);
-  const dueDate = parsed.end?.date() ?? addMinutes(startDate, durationMinutes);
+  const dueDate = parsed.end?.date() ?? startDate;
 
   const before = rawText.slice(0, matchStart);
   const after = rawText.slice(matchStart + matchedText.length);

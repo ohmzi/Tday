@@ -17,6 +17,7 @@ import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import kotlinx.coroutines.Dispatchers
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import java.time.LocalDateTime
+import java.time.ZoneOffset
 
 interface ListService {
     suspend fun getAll(userId: String): Either<AppError, List<ListResponse>>
@@ -71,7 +72,7 @@ class ListServiceImpl(private val cache: CacheService) : ListService {
 
     override suspend fun create(userId: String, name: String, color: String?, iconKey: String?): Either<AppError, ListResponse> {
         val id = CuidGenerator.newCuid()
-        val now = LocalDateTime.now()
+        val now = LocalDateTime.now(ZoneOffset.UTC)
         newSuspendedTransaction(Dispatchers.IO) {
             Lists.insert {
                 it[Lists.id] = id
@@ -96,7 +97,7 @@ class ListServiceImpl(private val cache: CacheService) : ListService {
                 name?.let { n -> it[Lists.name] = n }
                 color?.let { c -> it[Lists.color] = ListColor.valueOf(c) }
                 iconKey?.let { k -> it[Lists.iconKey] = k }
-                it[Lists.updatedAt] = LocalDateTime.now()
+                it[Lists.updatedAt] = LocalDateTime.now(ZoneOffset.UTC)
             }
         }
         cache.invalidateListCaches(userId)

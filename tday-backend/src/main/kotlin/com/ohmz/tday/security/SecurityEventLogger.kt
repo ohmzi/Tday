@@ -12,6 +12,7 @@ import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import org.slf4j.LoggerFactory
 import java.time.LocalDateTime
+import java.time.ZoneOffset
 
 interface SecurityEventLogger {
     suspend fun log(reasonCode: String, details: Map<String, Any?> = emptyMap())
@@ -42,7 +43,7 @@ class SecurityEventLoggerImpl : SecurityEventLogger {
             newSuspendedTransaction(Dispatchers.IO) {
                 EventLogs.insert {
                     it[id] = CuidGenerator.newCuid()
-                    it[capturedTime] = LocalDateTime.now()
+                    it[capturedTime] = LocalDateTime.now(ZoneOffset.UTC)
                     it[eventName] = reasonCode
                     it[log] = serialized
                 }
