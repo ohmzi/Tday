@@ -137,6 +137,13 @@ android {
     }
 }
 
+// Export the Room schema so future version bumps can ship real Migration objects
+// (the offline cache also stores unsynced pending mutations, which destructive
+// migration would lose). Commit the generated app/schemas/*.json files.
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
+}
+
 dependencies {
     implementation(project(":shared"))
 

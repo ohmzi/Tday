@@ -32,12 +32,35 @@ object OnDeviceTitleNlpParser {
         if (dates.isNullOrEmpty()) return null
 
         val matchedText = group.text ?: ""
-        val matchStart = text.indexOf(matchedText).coerceAtLeast(0)
         // Use the time the user named: the start for a single time, the end only
         // when an explicit range ("8pm to 10pm") was given — matching the backend
         // and web, so a bare "8pm" is never shifted.
         val startDate = dates[0]
         val dueDate = if (dates.size > 1) dates[1] else startDate
+
+        // Locate the matched phrase authoritatively. Natty reports a 1-based position
+        // in the input; prefer it, since group.text can be normalized/re-cased and
+        // would make indexOf() return -1 (which, coerced to 0, strips the wrong leading
+        // characters). If we can't confirm the span verbatim, keep the title intact and
+        // skip the highlight — still surfacing the parsed due — rather than mangling it.
+        val nattyStart = group.position - 1
+        val matchStart = when {
+            matchedText.isNotEmpty() &&
+                    nattyStart in 0..(text.length - matchedText.length) &&
+                    text.regionMatches(nattyStart, matchedText, 0, matchedText.length) -> nattyStart
+
+            matchedText.isNotEmpty() -> text.indexOf(matchedText)
+            else -> -1
+        }
+
+        if (matchStart < 0) {
+            return TodoTitleNlpResponse(
+                cleanTitle = trimmed,
+                matchedText = null,
+                matchStart = 0,
+                dueEpochMs = dueDate.time,
+            )
+        }
 
         val before = text.substring(0, matchStart)
         val after = text.substring((matchStart + matchedText.length).coerceAtMost(text.length))
