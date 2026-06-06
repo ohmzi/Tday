@@ -38,19 +38,20 @@ type ListSidebarSectionProps = {
 };
 
 const expandedItemBase =
-  "group flex h-10 w-full min-w-0 items-center gap-0 overflow-hidden rounded-xl pl-0 pr-3 text-sm font-medium transition-colors duration-200";
+  "group flex h-12 w-full min-w-0 items-center gap-3 overflow-hidden rounded-2xl px-2 text-base font-black transition-colors duration-200";
 
 const expandedItemIdle =
-  "text-sidebar-foreground/70 transition-colors duration-200 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground";
+  "text-muted-foreground transition-colors duration-200 hover:bg-card/70 hover:text-foreground";
 
 const expandedItemActive =
-  "bg-sidebar-accent text-sidebar-accent-foreground";
+  "bg-card text-foreground shadow-sm";
 
 const collapsedItemBase =
   "group flex h-10 min-h-10 w-10 items-center justify-center rounded-xl text-sidebar-foreground/70 transition-colors duration-200 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground";
 
-const listIconSlot = "flex h-10 w-10 shrink-0 items-center justify-center";
-const listDotClass = "pr-0 text-base leading-none";
+const listIconSlot =
+  "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-muted/70";
+const listDotClass = "text-[1.05rem] leading-none";
 
 type SidebarListItem = {
   id: string;
@@ -323,13 +324,13 @@ export default function ListSidebarSection({
 
   return (
     <>
-      <div className="px-3 pb-1 pt-3">
+      <div className="px-2 pb-1 pt-2">
         <div className="flex items-center justify-between px-1">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-medium uppercase tracking-wide text-sidebar-foreground/40">
+            <span className="text-xs font-black uppercase tracking-wide text-muted-foreground">
               Lists
             </span>
-            <span className="rounded-full bg-sidebar-accent/45 px-2 py-0.5 text-[11px] font-medium text-sidebar-foreground/50">
+            <span className="rounded-full bg-muted/70 px-2 py-0.5 text-[11px] font-black text-muted-foreground">
               {lists.length}
             </span>
           </div>
@@ -337,7 +338,7 @@ export default function ListSidebarSection({
             type="button"
             variant="ghost"
             size="sm"
-            className="h-7 rounded-lg px-2 text-xs text-sidebar-foreground/60 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+            className="h-7 rounded-lg px-2 text-xs font-black text-accent hover:bg-card/70 hover:text-accent"
             onClick={() => {
               setBulkDeleteSelection([]);
               setBulkDeleteDialogOpen(true);
@@ -348,7 +349,7 @@ export default function ListSidebarSection({
         </div>
       </div>
 
-      <div className="space-y-1 overflow-x-hidden px-3 pb-2 pt-1">
+      <div className="space-y-1.5 overflow-x-hidden px-2 pb-2 pt-1">
         {lists.map((list) => {
           const listName = formatListName(list.name);
           const active =
@@ -373,7 +374,7 @@ export default function ListSidebarSection({
                   });
                   onNavigate?.();
                 }}
-                className="flex min-w-0 flex-1 items-center gap-0"
+                className="flex min-w-0 flex-1 items-center gap-3"
                 aria-current={active ? "page" : undefined}
               >
                 <span className={listIconSlot}>
@@ -390,11 +391,11 @@ export default function ListSidebarSection({
                     variant="ghost"
                     size="icon"
                     className={cn(
-                      "h-6 w-6 opacity-0 transition-opacity group-hover:opacity-100 data-[state=open]:opacity-100",
-                      "text-sidebar-foreground/50 hover:text-sidebar-foreground",
+                      "h-7 w-7 opacity-0 transition-opacity group-hover:opacity-100 data-[state=open]:opacity-100",
+                      "text-muted-foreground hover:text-foreground",
                     )}
                   >
-                    <MoreVertical className="h-3 w-3" />
+                    <MoreVertical className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" side="right">
@@ -421,8 +422,8 @@ export default function ListSidebarSection({
 
               <span
                 className={clsx(
-                  "text-xs font-medium",
-                  active ? "text-sidebar-accent-foreground/80" : "text-sidebar-foreground/40",
+                  "rounded-full px-2 py-0.5 text-xs font-black",
+                  active ? "bg-muted text-foreground" : "bg-muted/70 text-muted-foreground",
                 )}
               >
                 {list.todoCount}
