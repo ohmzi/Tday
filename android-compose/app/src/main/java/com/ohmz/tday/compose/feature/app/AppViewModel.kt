@@ -344,7 +344,7 @@ class AppViewModel @Inject constructor(
         }
     }
 
-    private fun enterLocalWorkspace() {
+    private suspend fun enterLocalWorkspace() {
         ensureResyncLoop(authenticated = false)
         runCatching {
             cacheManager.updateOfflineState { state ->
@@ -1049,7 +1049,7 @@ class AppViewModel @Inject constructor(
                 lastSyncAttemptEpochMs = 0L,
             )
         }
-        val state = runCatching { cacheManager.loadOfflineState() }.getOrNull()
+        val state = runCatching { cacheManager.loadOfflineStateBlocking() }.getOrNull()
         return SyncMetadataSnapshot(
             pendingMutationCount = state?.pendingMutations?.size
                 ?: _uiState.value.pendingMutationCount,

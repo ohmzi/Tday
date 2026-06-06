@@ -31,7 +31,7 @@ class CompletedRepository @Inject constructor(
     }
 
     fun fetchCompletedItemsSnapshot(): List<CompletedItem> {
-        return cacheManager.loadOfflineState().completedItems.map(::completedFromCache)
+        return cacheManager.loadOfflineStateBlocking().completedItems.map(::completedFromCache)
     }
 
     suspend fun uncomplete(item: CompletedItem) {

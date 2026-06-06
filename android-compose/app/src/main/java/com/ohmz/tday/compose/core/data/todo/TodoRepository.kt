@@ -85,7 +85,7 @@ class TodoRepository @Inject constructor(
     }
 
     fun fetchDashboardSummarySnapshot(): DashboardSummary {
-        return buildDashboardSummary(cacheManager.loadOfflineState())
+        return buildDashboardSummary(cacheManager.loadOfflineStateBlocking())
     }
 
     suspend fun fetchTodos(mode: TodoListMode, listId: String? = null): List<TodoItem> {
@@ -110,7 +110,7 @@ class TodoRepository @Inject constructor(
 
     fun fetchTodosSnapshot(mode: TodoListMode, listId: String? = null): List<TodoItem> {
         return buildTodosForMode(
-            state = cacheManager.loadOfflineState(),
+            state = cacheManager.loadOfflineStateBlocking(),
             mode = mode,
             listId = listId,
         )

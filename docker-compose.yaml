@@ -24,7 +24,10 @@ services:
     container_name: tday_ollama
     profiles: ["ai"]
     restart: always
-    gpus: all
+    # CPU by default so `up` works on any host. For NVIDIA GPU acceleration,
+    # add the override: `docker compose -f docker-compose.yaml
+    # -f docker-compose.gpu.yaml --profile ai up` (requires the NVIDIA
+    # Container Toolkit). See docker-compose.gpu.yaml.
     environment:
       OLLAMA_HOST: 0.0.0.0:11434
     healthcheck:

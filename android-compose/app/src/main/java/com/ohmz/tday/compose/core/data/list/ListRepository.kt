@@ -36,7 +36,7 @@ class ListRepository @Inject constructor(
     }
 
     fun fetchListsSnapshot(): List<ListSummary> {
-        return buildListsForState(cacheManager.loadOfflineState())
+        return buildListsForState(cacheManager.loadOfflineStateBlocking())
     }
 
     suspend fun createList(

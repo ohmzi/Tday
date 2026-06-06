@@ -82,7 +82,7 @@ class SyncManager @Inject constructor(
     val offlineSyncSuccesses: SharedFlow<Unit> = offlineSyncSuccessMutable.asSharedFlow()
 
     fun hasPendingMutations(): Boolean =
-        !isLocalMode() && cacheManager.loadOfflineState().pendingMutations.isNotEmpty()
+        !isLocalMode() && cacheManager.loadOfflineStateBlocking().pendingMutations.isNotEmpty()
 
     fun isLocalMode(): Boolean = secureConfigStore.isLocalMode()
 
