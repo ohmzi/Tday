@@ -1,5 +1,6 @@
 package com.ohmz.tday.models.response
 
+import com.ohmz.tday.security.SecurityQuestion
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -30,4 +31,17 @@ data class AdminUserResponse(
     val approvalStatus: String,
     val createdAt: String,
     val approvedAt: String?,
+    val pendingAdminReset: Boolean = false,
+    val adminResetRequestedAt: String? = null,
+)
+
+@Serializable
+data class SecurityQuestionsResponse(
+    val questions: List<SecurityQuestion>,
+)
+
+@Serializable
+data class SecurityQuestionStatusResponse(
+    val questionIds: List<Int>,
+    val requireSecurityQuestions: Boolean,
 )

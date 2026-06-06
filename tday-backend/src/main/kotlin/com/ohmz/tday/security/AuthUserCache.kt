@@ -8,6 +8,7 @@ data class AuthCachedUser(
     val tokenVersion: Int,
     val timeZone: String?,
     val requirePasswordChange: Boolean = false,
+    val requireSecurityQuestions: Boolean = false,
 )
 
 class AuthUserCache(private val ttlMs: Long = 30_000L) {

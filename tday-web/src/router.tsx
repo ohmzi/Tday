@@ -9,6 +9,7 @@ import AppShellSkeleton from "@/components/app/AppShellSkeleton";
 const LandingPage = lazy(() => import("@/pages/LandingPage"));
 const LoginPage = lazy(() => import("@/pages/LoginPage"));
 const RegisterPage = lazy(() => import("@/pages/RegisterPage"));
+const ForgotPasswordPage = lazy(() => import("@/pages/ForgotPasswordPage"));
 const PrivacyPage = lazy(() => import("@/pages/PrivacyPage"));
 const TermsPage = lazy(() => import("@/pages/TermsPage"));
 const BlogsPage = lazy(() => import("@/pages/BlogsPage"));
@@ -67,6 +68,7 @@ export const router = sentryCreateBrowserRouter([
         children: [
           { path: "login", element: <LoginPage /> },
           { path: "register", element: <RegisterPage /> },
+          { path: "forgot-password", element: <ForgotPasswordPage /> },
         ],
       },
       { path: "privacy", element: <PrivacyPage /> },

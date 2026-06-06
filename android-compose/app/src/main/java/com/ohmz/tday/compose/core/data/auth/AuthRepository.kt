@@ -4,6 +4,7 @@ import android.util.Base64
 import com.ohmz.tday.compose.core.data.ApiCallException
 import com.ohmz.tday.compose.core.data.SecureConfigStore
 import com.ohmz.tday.compose.core.data.cache.OfflineCacheManager
+import com.ohmz.tday.compose.core.data.extractApiErrorDetails
 import com.ohmz.tday.compose.core.data.extractApiErrorMessage
 import com.ohmz.tday.compose.core.data.isLikelyConnectivityIssue
 import com.ohmz.tday.compose.core.data.isLikelyServerUnavailableStatus
@@ -11,9 +12,15 @@ import com.ohmz.tday.compose.core.data.requireApiBody
 import com.ohmz.tday.compose.core.model.AuthResult
 import com.ohmz.tday.compose.core.model.AuthSession
 import com.ohmz.tday.compose.core.model.CredentialsCallbackRequest
+import com.ohmz.tday.compose.core.model.PasswordResetOutcome
 import com.ohmz.tday.compose.core.model.RegisterOutcome
 import com.ohmz.tday.compose.core.model.RegisterRequest
+import com.ohmz.tday.compose.core.model.RequestAdminResetRequest
+import com.ohmz.tday.compose.core.model.SecurityAnswerInput
+import com.ohmz.tday.compose.core.model.SecurityQuestion
+import com.ohmz.tday.compose.core.model.SelfServiceResetRequest
 import com.ohmz.tday.compose.core.model.SessionUser
+import com.ohmz.tday.compose.core.model.SetSecurityQuestionsRequest
 import com.ohmz.tday.compose.core.network.TdayApiService
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonNull
@@ -204,6 +211,7 @@ class AuthRepository @Inject constructor(
         lastName: String,
         username: String,
         password: String,
+        securityAnswers: List<SecurityAnswerInput>,
     ): RegisterOutcome {
         val response = runCatching {
             api.register(
@@ -212,6 +220,7 @@ class AuthRepository @Inject constructor(
                     lname = lastName.ifBlank { null },
                     username = username,
                     password = password,
+                    securityAnswers = securityAnswers.ifEmpty { null },
                 ),
             )
         }.getOrElse { error ->
@@ -237,6 +246,84 @@ class AuthRepository @Inject constructor(
             requiresApproval = body?.requiresApproval ?: false,
             message = body?.message ?: "Account created",
         )
+    }
+
+    suspend fun fetchAllSecurityQuestions(): List<SecurityQuestion> {
+        val response = api.getAllSecurityQuestions()
+        if (!response.isSuccessful) {
+            throw ApiCallException(
+                statusCode = response.code(),
+                message = extractApiErrorMessage(response, "Unable to load security questions"),
+            )
+        }
+        return response.body()?.questions.orEmpty()
+    }
+
+    suspend fun fetchQuestionsForUsername(username: String): List<SecurityQuestion> {
+        val response = api.getSecurityQuestionsForUsername(username.trim().lowercase(Locale.US))
+        if (!response.isSuccessful) {
+            throw ApiCallException(
+                statusCode = response.code(),
+                message = extractApiErrorMessage(response, "Unable to load security questions"),
+            )
+        }
+        return response.body()?.questions.orEmpty()
+    }
+
+    suspend fun resetPassword(
+        username: String,
+        answers: List<SecurityAnswerInput>,
+        newPassword: String,
+    ): PasswordResetOutcome {
+        val response = runCatching {
+            api.resetPassword(
+                SelfServiceResetRequest(
+                    username = username.trim().lowercase(Locale.US),
+                    answers = answers,
+                    newPassword = newPassword,
+                ),
+            )
+        }.getOrElse { error ->
+            return PasswordResetOutcome.Failed(
+                error.message ?: "Unable to reset password",
+            )
+        }
+
+        if (response.isSuccessful) {
+            return PasswordResetOutcome.Success
+        }
+
+        val details =
+            extractApiErrorDetails(response, "Unable to reset password. Check your answers.")
+        return if (response.code() == 403 && details.reason == "reset_locked") {
+            PasswordResetOutcome.Locked
+        } else {
+            PasswordResetOutcome.Failed(details.message)
+        }
+    }
+
+    suspend fun requestAdminReset(username: String) {
+        val response = api.requestAdminReset(
+            RequestAdminResetRequest(username = username.trim().lowercase(Locale.US)),
+        )
+        if (!response.isSuccessful) {
+            throw ApiCallException(
+                statusCode = response.code(),
+                message = extractApiErrorMessage(response, "Unable to send request"),
+            )
+        }
+    }
+
+    suspend fun setSecurityQuestions(answers: List<SecurityAnswerInput>) {
+        val response = api.setUserSecurityQuestions(
+            SetSecurityQuestionsRequest(answers = answers),
+        )
+        if (!response.isSuccessful) {
+            throw ApiCallException(
+                statusCode = response.code(),
+                message = extractApiErrorMessage(response, "Failed to save security questions"),
+            )
+        }
     }
 
     suspend fun logout() {

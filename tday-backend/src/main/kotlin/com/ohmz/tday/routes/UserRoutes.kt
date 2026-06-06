@@ -7,13 +7,17 @@ import com.ohmz.tday.di.inject
 import com.ohmz.tday.domain.AppError
 import com.ohmz.tday.domain.withAuth
 import com.ohmz.tday.models.request.ChangePasswordRequest
+import com.ohmz.tday.models.request.SetSecurityQuestionsRequest
 import com.ohmz.tday.models.request.UserPatchKeyRequest
 import com.ohmz.tday.models.request.UserProfilePatchRequest
+import com.ohmz.tday.models.response.SecurityQuestionStatusResponse
 import com.ohmz.tday.plugins.authUser
 import com.ohmz.tday.security.JwtService
+import com.ohmz.tday.security.SecurityQuestions
 import com.ohmz.tday.security.SessionControl
 import com.ohmz.tday.security.issueSessionCookie
 import com.ohmz.tday.services.CreateApiKeyResponse
+import com.ohmz.tday.services.SecurityQuestionService
 import com.ohmz.tday.services.UserApiKeyService
 import com.ohmz.tday.services.UserService
 import io.ktor.server.request.receive
@@ -32,6 +36,7 @@ fun Route.userRoutes() {
     val sessionControl by inject<SessionControl>()
     val userService by inject<UserService>()
     val userApiKeyService by inject<UserApiKeyService>()
+    val securityQuestionService by inject<SecurityQuestionService>()
 
     route("/user") {
         get {
@@ -89,6 +94,31 @@ fun Route.userRoutes() {
                         )
                         call.issueSessionCookie(config, jwtService, refreshedClaims)
                         mapOf("message" to "password changed")
+                    }
+                }
+            }
+        }
+
+        route("/security-questions") {
+            get {
+                call.withAuth { user ->
+                    val status = securityQuestionService.statusFor(user.id)
+                    Either.Right(
+                        SecurityQuestionStatusResponse(
+                            questionIds = status.questionIds,
+                            requireSecurityQuestions = status.requireSecurityQuestions,
+                        ),
+                    )
+                }
+            }
+
+            post {
+                call.withAuth { user ->
+                    either<AppError, Map<String, String>> {
+                        val body = call.receive<SetSecurityQuestionsRequest>()
+                        SecurityQuestions.validateSelection(body.answers)?.let { raise(AppError.BadRequest(it)) }
+                        securityQuestionService.setQuestions(user.id, body.answers)
+                        mapOf("message" to "security questions updated")
                     }
                 }
             }

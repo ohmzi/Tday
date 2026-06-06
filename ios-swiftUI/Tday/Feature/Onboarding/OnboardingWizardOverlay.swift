@@ -39,7 +39,8 @@ struct OnboardingWizardOverlay: View {
     let onConnectServer: (String) async -> Result<Void, MessageError>
     let onResetServerTrust: (String) async -> Result<Void, MessageError>
     let onLogin: (String, String, LoginCredentialSource) async -> Bool
-    let onRegister: (String, String, String) async -> Bool
+    let onRegister: (String, String, String, [SecurityAnswerInput]) async -> Bool
+    let onLoadSecurityQuestions: () async -> [SecurityQuestion]
     let onUseLocalMode: () async -> Void
     let onClearAuthStatus: () -> Void
 
@@ -52,6 +53,13 @@ struct OnboardingWizardOverlay: View {
     @State private var registerPassword = ""
     @State private var confirmPassword = ""
     @State private var isCreatingAccount = false
+    @State private var isChoosingSecurityQuestions = false
+    @State private var securityQuestions: [SecurityQuestion] = []
+    @State private var isLoadingSecurityQuestions = false
+    @State private var securityQuestionId1: Int?
+    @State private var securityQuestionId2: Int?
+    @State private var securityAnswer1 = ""
+    @State private var securityAnswer2 = ""
     @State private var localError: String?
     @State private var isConnecting = false
     @State private var isCompletingAuthentication = false
@@ -59,6 +67,7 @@ struct OnboardingWizardOverlay: View {
     @State private var hasRequestedSavedServerURL = false
     @State private var pendingServerURLUsePrompt: String?
     @State private var pendingServerURLSavePrompt: String?
+    @State private var isShowingForgotPassword = false
     @State private var credentialCoordinator = LoginCredentialCoordinator()
 
     private static let usernamePattern = "^[a-z0-9](?:[a-z0-9._-]{1,28}[a-z0-9])$"
@@ -140,6 +149,22 @@ struct OnboardingWizardOverlay: View {
         } message: {
             Text("T'Day found a server URL saved on this device.")
         }
+        .sheet(isPresented: $isShowingForgotPassword) {
+            ForgotPasswordView(
+                authViewModel: authViewModel,
+                initialUsername: username.trimmingCharacters(in: .whitespacesAndNewlines),
+                onDismiss: {
+                    isShowingForgotPassword = false
+                },
+                onResetComplete: { resetUsername in
+                    isShowingForgotPassword = false
+                    username = resetUsername
+                    password = ""
+                    localError = nil
+                    onClearAuthStatus()
+                }
+            )
+        }
     }
 
     private var stableCardLayout: some View {
@@ -220,6 +245,8 @@ struct OnboardingWizardOverlay: View {
                     modeStepContent
                 } else if step == .server {
                     serverStepContent
+                } else if isChoosingSecurityQuestions {
+                    securityQuestionsStepContent
                 } else {
                     loginStepContent
                 }
@@ -428,11 +455,25 @@ struct OnboardingWizardOverlay: View {
                 }
             }
 
+            if !isCreatingAccount {
+                Button("Forgot password?") {
+                    localError = nil
+                    onClearAuthStatus()
+                    isShowingForgotPassword = true
+                }
+                .buttonStyle(WizardTextButtonStyle())
+                .font(.tdayRounded(size: 15, weight: .bold))
+                .foregroundStyle(colors.primary)
+                .frame(maxWidth: .infinity, alignment: .center)
+                .padding(.top, 2)
+            }
+
             HStack(alignment: .center) {
                 Button(isCreatingAccount ? L("I already have an account") : L("Create account")) {
                     localError = nil
                     onClearAuthStatus()
                     isCompletingAuthentication = false
+                    isChoosingSecurityQuestions = false
                     isCreatingAccount.toggle()
                 }
                 .buttonStyle(WizardTextButtonStyle())
@@ -446,12 +487,89 @@ struct OnboardingWizardOverlay: View {
                     onClearAuthStatus()
                     isCompletingAuthentication = false
                     isCreatingAccount = false
+                    isChoosingSecurityQuestions = false
                     step = .mode
                 }
                 .buttonStyle(WizardTextButtonStyle())
                 .font(.tdayRounded(size: 15, weight: .bold))
                 .foregroundStyle(colors.primary)
             }
+            .padding(.top, 6)
+        }
+    }
+
+    private var securityQuestionsStepContent: some View {
+        VStack(alignment: .leading, spacing: 11) {
+            WizardHeroTile(
+                title: "Security questions",
+                subtitle: "Used to verify it's you if you reset your password.",
+                systemImage: "lock.shield.fill",
+                tint: Color(red: 0.5, green: 0.62, blue: 0.86)
+            )
+
+            if isLoadingSecurityQuestions {
+                WizardLoadingPanel(
+                    systemImage: "lock.shield.fill",
+                    title: "Loading questions",
+                    subtitle: "Fetching available security questions."
+                )
+            } else {
+                WizardSecurityQuestionPicker(
+                    title: "Question 1",
+                    selection: $securityQuestionId1,
+                    options: securityQuestions.filter { $0.id != securityQuestionId2 }
+                )
+                WizardInputField(
+                    title: "Answer",
+                    text: $securityAnswer1,
+                    autocapitalization: .never,
+                    disableAutocorrection: true,
+                    submitLabel: .next
+                )
+
+                WizardSecurityQuestionPicker(
+                    title: "Question 2",
+                    selection: $securityQuestionId2,
+                    options: securityQuestions.filter { $0.id != securityQuestionId1 }
+                )
+                WizardInputField(
+                    title: "Answer",
+                    text: $securityAnswer2,
+                    autocapitalization: .never,
+                    disableAutocorrection: true,
+                    submitLabel: .done,
+                    onSubmit: {
+                        Task { await submitRegistration() }
+                    }
+                )
+            }
+
+            if let message = currentMessage {
+                Text(message)
+                    .font(.tdayRounded(size: 14, weight: .bold))
+                    .foregroundStyle(currentMessageColor)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            WizardPrimaryButton(
+                title: "Create account",
+                enabled: securityQuestionsValid && !isAuthInFlight && !isLoadingSecurityQuestions
+            ) {
+                Task {
+                    await submitRegistration()
+                }
+            }
+
+            Button("Back") {
+                localError = nil
+                onClearAuthStatus()
+                isChoosingSecurityQuestions = false
+            }
+            .buttonStyle(WizardTextButtonStyle())
+            .font(.tdayRounded(size: 15, weight: .bold))
+            .foregroundStyle(colors.primary)
+            .frame(maxWidth: .infinity, alignment: .center)
+            .disabled(isAuthInFlight)
             .padding(.top, 6)
         }
     }
@@ -622,15 +740,7 @@ struct OnboardingWizardOverlay: View {
             guard validateRegistration() else {
                 return
             }
-            isCompletingAuthentication = true
-            let didRegister = await onRegister(
-                firstName.trimmingCharacters(in: .whitespacesAndNewlines),
-                username.trimmingCharacters(in: .whitespacesAndNewlines),
-                registerPassword
-            )
-            if !didRegister || authViewModel.pendingApproval {
-                isCompletingAuthentication = false
-            }
+            await beginSecurityQuestionsStep()
         } else {
             guard !username.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, !password.isEmpty else {
                 localError = "Username and password are required"
@@ -672,6 +782,71 @@ struct OnboardingWizardOverlay: View {
             return false
         }
         return true
+    }
+
+    private func beginSecurityQuestionsStep() async {
+        localError = nil
+        isChoosingSecurityQuestions = true
+        if securityQuestions.isEmpty {
+            isLoadingSecurityQuestions = true
+            let loaded = await onLoadSecurityQuestions()
+            isLoadingSecurityQuestions = false
+            securityQuestions = loaded
+            if securityQuestionId1 == nil, loaded.indices.contains(0) {
+                securityQuestionId1 = loaded[0].id
+            }
+            if securityQuestionId2 == nil, loaded.indices.contains(1) {
+                securityQuestionId2 = loaded[1].id
+            }
+            if loaded.isEmpty {
+                localError = "Could not load security questions. Please try again."
+            }
+        }
+    }
+
+    private var securityQuestionsValid: Bool {
+        guard let id1 = securityQuestionId1, let id2 = securityQuestionId2, id1 != id2 else {
+            return false
+        }
+        return !securityAnswer1.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+            !securityAnswer2.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private func submitRegistration() async {
+        localError = nil
+        onClearAuthStatus()
+        guard let id1 = securityQuestionId1, let id2 = securityQuestionId2 else {
+            localError = "Please choose two security questions"
+            return
+        }
+        guard id1 != id2 else {
+            localError = "Choose two different questions"
+            return
+        }
+        let trimmedAnswer1 = securityAnswer1.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedAnswer2 = securityAnswer2.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedAnswer1.isEmpty, !trimmedAnswer2.isEmpty else {
+            localError = "Please answer both questions"
+            return
+        }
+
+        isCompletingAuthentication = true
+        let didRegister = await onRegister(
+            firstName.trimmingCharacters(in: .whitespacesAndNewlines),
+            username.trimmingCharacters(in: .whitespacesAndNewlines),
+            registerPassword,
+            [
+                SecurityAnswerInput(questionId: id1, answer: trimmedAnswer1),
+                SecurityAnswerInput(questionId: id2, answer: trimmedAnswer2),
+            ]
+        )
+        if !didRegister || authViewModel.pendingApproval {
+            isCompletingAuthentication = false
+        }
+        if !didRegister {
+            // Stay on the questions step so the user can correct and retry.
+            isChoosingSecurityQuestions = true
+        }
     }
 }
 
@@ -788,6 +963,65 @@ private struct WizardInputField: View {
 
 private enum TdayPasswordRules {
     static let descriptor = "allowed: ascii-printable; minlength: 8; required: upper; required: special;"
+}
+
+private struct WizardSecurityQuestionPicker: View {
+    let title: String
+    @Binding var selection: Int?
+    let options: [SecurityQuestion]
+
+    @Environment(\.tdayColors) private var colors
+
+    private var selectedText: String {
+        guard let selection, let match = options.first(where: { $0.id == selection }) else {
+            return L("Choose a question")
+        }
+        return match.text
+    }
+
+    var body: some View {
+        Menu {
+            ForEach(options) { question in
+                Button {
+                    selection = question.id
+                } label: {
+                    if selection == question.id {
+                        Label(question.text, systemImage: "checkmark")
+                    } else {
+                        Text(question.text)
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: 10) {
+                Text(selectedText)
+                    .font(.tdayRounded(size: 15, weight: .bold))
+                    .foregroundStyle(selection == nil ? colors.onSurface.opacity(0.42) : colors.onSurface)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+
+                Spacer(minLength: 0)
+
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(colors.onSurface.opacity(0.5))
+            }
+            .padding(.horizontal, 16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(minHeight: OnboardingWizardOverlay.Metrics.inputHeight)
+            .background {
+                RoundedRectangle(cornerRadius: OnboardingWizardOverlay.Metrics.inputCornerRadius, style: .continuous)
+                    .fill(colors.surface)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: OnboardingWizardOverlay.Metrics.inputCornerRadius, style: .continuous)
+                            .stroke(colors.onSurface.opacity(0.14), lineWidth: 1)
+                    )
+            }
+            .shadow(color: Color.black.opacity(colors.isDark ? 0.08 : 0.04), radius: 7, x: 0, y: 4)
+        }
+        .accessibilityLabel(L(title))
+        .frame(maxWidth: .infinity)
+    }
 }
 
 private struct WizardHeroTile: View {

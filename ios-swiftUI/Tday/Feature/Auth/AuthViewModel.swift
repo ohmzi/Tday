@@ -54,12 +54,12 @@ final class AuthViewModel {
         }
     }
 
-    func register(firstName: String, lastName: String, username: String, password: String) async -> Bool {
+    func register(firstName: String, lastName: String, username: String, password: String, securityAnswers: [SecurityAnswerInput]) async -> Bool {
         isLoading = true
         clearStatus()
         defer { isLoading = false }
 
-        let outcome = await authRepository.register(firstName: firstName, lastName: lastName, username: username, password: password)
+        let outcome = await authRepository.register(firstName: firstName, lastName: lastName, username: username, password: password, securityAnswers: securityAnswers)
         if outcome.success {
             infoMessage = outcome.message
             pendingApproval = outcome.requiresApproval
@@ -73,6 +73,32 @@ final class AuthViewModel {
 
         errorMessage = friendlyMessage(outcome.message)
         return false
+    }
+
+    // MARK: - Security questions catalogue
+
+    func loadAllSecurityQuestions() async -> [SecurityQuestion] {
+        (try? await authRepository.fetchAllSecurityQuestions()) ?? []
+    }
+
+    // MARK: - Forgot password
+
+    func fetchQuestionsForUsername(_ username: String) async -> [SecurityQuestion]? {
+        try? await authRepository.fetchQuestionsForUsername(username)
+    }
+
+    func resetPassword(username: String, answers: [SecurityAnswerInput], newPassword: String) async -> PasswordResetResult {
+        await authRepository.resetPassword(username: username, answers: answers, newPassword: newPassword)
+    }
+
+    func requestAdminReset(_ username: String) async -> Bool {
+        await authRepository.requestAdminReset(username)
+    }
+
+    // MARK: - Set security questions gate
+
+    func setSecurityQuestions(_ answers: [SecurityAnswerInput]) async -> Bool {
+        await authRepository.setSecurityQuestions(answers)
     }
 
     private func friendlyMessage(_ rawValue: String) -> String {

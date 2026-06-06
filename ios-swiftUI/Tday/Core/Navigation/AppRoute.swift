@@ -16,6 +16,7 @@ enum AppRoute: Hashable {
     case calendar
     case settings
     case latestRelease
+    case forgotPassword
 
     var deepLinkPath: String {
         switch self {
@@ -52,6 +53,8 @@ enum AppRoute: Hashable {
             return "settings"
         case .latestRelease:
             return "latest-release"
+        case .forgotPassword:
+            return "forgot-password"
         }
     }
 
@@ -79,6 +82,8 @@ enum AppRoute: Hashable {
             return .settings
         case "latest-release":
             return .latestRelease
+        case "forgot-password":
+            return .forgotPassword
         case "todos":
             let second = components.dropFirst().first ?? ""
             switch second {

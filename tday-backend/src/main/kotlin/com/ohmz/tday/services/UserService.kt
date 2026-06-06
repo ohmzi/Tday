@@ -5,12 +5,15 @@ import arrow.core.left
 import arrow.core.right
 import com.ohmz.tday.db.enums.ApprovalStatus
 import com.ohmz.tday.db.enums.UserRole
+import com.ohmz.tday.db.tables.UserSecurityQuestions
 import com.ohmz.tday.db.tables.Users
 import com.ohmz.tday.db.util.CuidGenerator
 import com.ohmz.tday.domain.AppError
+import com.ohmz.tday.models.request.SecurityAnswerInput
 import com.ohmz.tday.models.response.UserProfileResponse
 import com.ohmz.tday.models.response.UserResponse
 import com.ohmz.tday.security.PasswordService
+import com.ohmz.tday.security.SecurityQuestions
 import kotlinx.coroutines.Dispatchers
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.lowerCase
@@ -29,7 +32,7 @@ interface UserService {
     suspend fun getProfile(userId: String): Either<AppError, UserProfileResponse>
     suspend fun updateProfile(userId: String, name: String?, image: String?): Either<AppError, Unit>
     suspend fun changePassword(userId: String, currentPassword: String, newPassword: String): Either<AppError, Boolean>
-    suspend fun register(fname: String, lname: String?, username: String, password: String): Either<AppError, RegisterResult>
+    suspend fun register(fname: String, lname: String?, username: String, password: String, securityAnswers: List<SecurityAnswerInput>): Either<AppError, RegisterResult>
     suspend fun findByUsername(username: String): Map<String, Any?>?
     suspend fun isAdmin(userId: String): Boolean
     suspend fun usernameExists(username: String): Boolean
@@ -118,7 +121,7 @@ class UserServiceImpl(private val passwordService: PasswordService) : UserServic
         return result.right()
     }
 
-    override suspend fun register(fname: String, lname: String?, username: String, password: String): Either<AppError, RegisterResult> {
+    override suspend fun register(fname: String, lname: String?, username: String, password: String, securityAnswers: List<SecurityAnswerInput>): Either<AppError, RegisterResult> {
         val hashedPassword = passwordService.hashPassword(password)
         val fullName = listOf(fname.trim(), lname?.trim() ?: "").filter { it.isNotEmpty() }.joinToString(" ")
 
@@ -137,8 +140,22 @@ class UserServiceImpl(private val passwordService: PasswordService) : UserServic
                 it[Users.role] = if (isFirst) UserRole.ADMIN else UserRole.USER
                 it[Users.approvalStatus] = if (isFirst) ApprovalStatus.APPROVED else ApprovalStatus.PENDING
                 it[Users.approvedAt] = if (isFirst) now else null
+                // Questions are supplied inline at signup, so the user is never prompted later.
+                it[Users.requireSecurityQuestions] = false
                 it[Users.createdAt] = now
                 it[Users.updatedAt] = now
+            }
+
+            for (answer in securityAnswers) {
+                UserSecurityQuestions.insert {
+                    it[UserSecurityQuestions.id] = CuidGenerator.newCuid()
+                    it[UserSecurityQuestions.userID] = id
+                    it[UserSecurityQuestions.questionId] = answer.questionId
+                    it[UserSecurityQuestions.answerHash] =
+                        passwordService.hashPassword(SecurityQuestions.normalizeAnswer(answer.answer))
+                    it[UserSecurityQuestions.createdAt] = now
+                    it[UserSecurityQuestions.updatedAt] = now
+                }
             }
 
             RegisterResult(

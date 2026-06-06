@@ -186,3 +186,10 @@ sealed interface AuthResult {
     data object PendingApproval : AuthResult
     data class Error(val message: String) : AuthResult
 }
+
+@Stable
+sealed interface PasswordResetOutcome {
+    data object Success : PasswordResetOutcome
+    data class Failed(val message: String) : PasswordResetOutcome
+    data object Locked : PasswordResetOutcome
+}

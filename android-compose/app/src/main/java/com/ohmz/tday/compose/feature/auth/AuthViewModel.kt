@@ -10,6 +10,8 @@ import com.ohmz.tday.compose.core.data.auth.SystemCredential
 import com.ohmz.tday.compose.core.data.auth.SystemCredentialSaveResult
 import com.ohmz.tday.compose.core.data.auth.SystemCredentialServicing
 import com.ohmz.tday.compose.core.model.AuthResult
+import com.ohmz.tday.compose.core.model.SecurityAnswerInput
+import com.ohmz.tday.compose.core.model.SecurityQuestion
 import com.ohmz.tday.compose.core.ui.SnackbarManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -144,6 +146,7 @@ class AuthViewModel @Inject constructor(
         lastName: String,
         username: String,
         password: String,
+        securityAnswers: List<SecurityAnswerInput>,
         credentialContext: Context,
         onSuccess: () -> Unit,
     ) {
@@ -157,6 +160,7 @@ class AuthViewModel @Inject constructor(
                     lastName = lastName.trim(),
                     username = normalizedUsername,
                     password = password,
+                    securityAnswers = securityAnswers,
                 )
             }.getOrElse { error ->
                 _uiState.update {
@@ -191,6 +195,32 @@ class AuthViewModel @Inject constructor(
                     ),
                 )
                 onSuccess()
+            }
+        }
+    }
+
+    suspend fun fetchAllSecurityQuestions(): List<SecurityQuestion> =
+        runCatching { authRepository.fetchAllSecurityQuestions() }.getOrElse { emptyList() }
+
+    /**
+     * Posts the chosen security questions for the signed-in user (the forced gate).
+     * Invokes [onSuccess] only when the server accepts them so the caller can
+     * refresh the session and dismiss the gate.
+     */
+    fun submitSecurityQuestions(
+        answers: List<SecurityAnswerInput>,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit,
+    ) {
+        viewModelScope.launch {
+            runCatching {
+                authRepository.setSecurityQuestions(answers)
+            }.onSuccess {
+                onSuccess()
+            }.onFailure { error ->
+                onError(
+                    error.message ?: appContext.getString(R.string.security_questions_save_failed)
+                )
             }
         }
     }

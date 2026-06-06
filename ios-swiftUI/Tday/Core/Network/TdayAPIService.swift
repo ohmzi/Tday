@@ -194,6 +194,37 @@ final class TdayAPIService {
         try await request(path: "/api/auth/register", method: "POST", body: payload, responseType: RegisterResponse.self)
     }
 
+    func getAllSecurityQuestions() async throws -> SecurityQuestionsResponse {
+        try await request(path: "/api/auth/security-questions/all", method: "GET", responseType: SecurityQuestionsResponse.self)
+    }
+
+    func getSecurityQuestions(username: String) async throws -> SecurityQuestionsResponse {
+        try await request(
+            path: "/api/auth/security-questions",
+            method: "GET",
+            queryItems: [URLQueryItem(name: "username", value: username)],
+            responseType: SecurityQuestionsResponse.self
+        )
+    }
+
+    // The error body (HTTP status + `reason`, e.g. "reset_failed" / "reset_locked")
+    // is surfaced through the thrown APIError so the caller can branch on the outcome.
+    func resetPassword(payload: SelfServiceResetRequest) async throws -> MessageResponse {
+        try await request(path: "/api/auth/reset-password", method: "POST", body: payload, responseType: MessageResponse.self)
+    }
+
+    func requestAdminReset(payload: RequestAdminResetRequest) async throws -> MessageResponse {
+        try await request(path: "/api/auth/request-admin-reset", method: "POST", body: payload, responseType: MessageResponse.self)
+    }
+
+    func getUserSecurityQuestions() async throws -> SecurityQuestionStatusResponse {
+        try await request(path: "/api/user/security-questions", method: "GET", responseType: SecurityQuestionStatusResponse.self)
+    }
+
+    func setUserSecurityQuestions(payload: SetSecurityQuestionsRequest) async throws -> MessageResponse {
+        try await request(path: "/api/user/security-questions", method: "POST", body: payload, responseType: MessageResponse.self)
+    }
+
     func getTodos(start: Int64? = nil, end: Int64? = nil, timeline: Bool? = nil, recurringFutureDays: Int? = nil) async throws -> TodosResponse {
         var queryItems: [URLQueryItem] = []
         if let start {

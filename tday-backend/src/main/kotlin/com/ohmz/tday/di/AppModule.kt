@@ -47,6 +47,8 @@ import com.ohmz.tday.services.PushNotificationService
 import com.ohmz.tday.services.PushNotificationServiceImpl
 import com.ohmz.tday.services.RealtimeService
 import com.ohmz.tday.services.RealtimeServiceImpl
+import com.ohmz.tday.services.SecurityQuestionService
+import com.ohmz.tday.services.SecurityQuestionServiceImpl
 import com.ohmz.tday.services.TodoNlpService
 import com.ohmz.tday.services.TodoNlpServiceImpl
 import com.ohmz.tday.services.TodoService
@@ -86,6 +88,7 @@ val serviceModule = module {
     single<ListService> { ListServiceImpl(get()) }
     single<FloaterListService> { FloaterListServiceImpl(get()) }
     single<UserService> { UserServiceImpl(get()) }
+    single<SecurityQuestionService> { SecurityQuestionServiceImpl(get(), get(), get(), get()) }
     single<CompletedTodoService> { CompletedTodoServiceImpl(get(), get()) }
     single<CompletedFloaterService> { CompletedFloaterServiceImpl(get(), get()) }
     single<PreferencesService> { PreferencesServiceImpl() }

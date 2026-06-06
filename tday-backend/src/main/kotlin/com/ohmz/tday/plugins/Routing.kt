@@ -53,6 +53,7 @@ fun Application.configureRouting() {
                 credentialsKeyRoutes()
                 credentialsCallbackRoutes()
                 sessionRoutes()
+                securityQuestionRoutes()
                 logoutRoutes()
             }
         }
