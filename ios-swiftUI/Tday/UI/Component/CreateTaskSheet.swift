@@ -42,6 +42,9 @@ struct CreateTaskSheet: View {
     @State private var repeatRule: String?
     @State private var isSubmitting = false
     @State private var parserTask: Task<Void, Never>?
+    // The detected date phrase (e.g. "July 29 at 8pm"). Stays visible & highlighted
+    // in the title field as you type; stripped from the saved title on submit.
+    @State private var nlpMatchedText: String?
     @State private var activeSelector: CreateTaskSheetSelector?
     @FocusState private var focusedInputField: CreateTaskSheetInputField?
 
@@ -195,6 +198,7 @@ struct CreateTaskSheet: View {
             CreateTaskSheetTextCard(
                 title: $title,
                 notes: $notes,
+                titleHighlight: nlpMatchedText,
                 focusedInputField: $focusedInputField
             )
 
@@ -315,24 +319,44 @@ struct CreateTaskSheet: View {
             guard !Task.isCancelled else {
                 return
             }
-            guard let parsed = await onParseTaskTitleNlp(title, dueDate.epochMilliseconds) else {
-                return
-            }
+            let parsed = await onParseTaskTitleNlp(title, dueDate.epochMilliseconds)
             await MainActor.run {
-                title = parsed.cleanTitle
-                if let dueEpochMs = parsed.dueEpochMs {
-                    dueDate = Date(epochMilliseconds: dueEpochMs)
-                    scheduleEnabled = true
+                // Keep the full typed text in the field (the phrase stays visible &
+                // highlighted); only set the Due. The phrase is stripped from the
+                // saved title at submit. Clear the highlight when no date is found.
+                guard let parsed,
+                      let dueEpochMs = parsed.dueEpochMs,
+                      let matched = parsed.matchedText,
+                      !matched.isEmpty else {
+                    nlpMatchedText = nil
+                    return
                 }
+                nlpMatchedText = matched
+                dueDate = Date(epochMilliseconds: dueEpochMs)
+                scheduleEnabled = true
             }
         }
+    }
+
+    /// The saved title: the typed text with the highlighted date phrase removed
+    /// (it stays visible in the field but isn't part of the task name) — same as web.
+    private func effectiveTitle() -> String {
+        guard let matched = nlpMatchedText, !matched.isEmpty,
+              let range = title.range(of: matched) else {
+            return title.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        var stripped = title
+        stripped.removeSubrange(range)
+        return stripped
+            .replacingOccurrences(of: "\\s{2,}", with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private func submit() async {
         HapticManager.sheetConfirm()
         isSubmitting = true
         let payload = CreateTaskPayload(
-            title: title.trimmingCharacters(in: .whitespacesAndNewlines),
+            title: effectiveTitle(),
             description: notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : notes.trimmingCharacters(in: .whitespacesAndNewlines),
             priority: TaskPriorityDisplay.canonicalValue(priority),
             due: showScheduleControls && scheduleEnabled ? dueDate : nil,
@@ -481,6 +505,7 @@ private enum CreateTaskSheetSelector: String, Identifiable {
 private struct CreateTaskSheetTextCard: View {
     @Binding var title: String
     @Binding var notes: String
+    let titleHighlight: String?
     var focusedInputField: FocusState<CreateTaskSheetInputField?>.Binding
 
     var body: some View {
@@ -490,7 +515,8 @@ private struct CreateTaskSheetTextCard: View {
                 text: $title,
                 lineLimit: 1 ... 1,
                 field: .title,
-                focusedInputField: focusedInputField
+                focusedInputField: focusedInputField,
+                highlightText: titleHighlight
             )
 
             TdaySheetDivider()
@@ -512,8 +538,15 @@ private struct CreateTaskSheetTextField: View {
     let lineLimit: ClosedRange<Int>
     let field: CreateTaskSheetInputField
     var focusedInputField: FocusState<CreateTaskSheetInputField?>.Binding
+    // When set and present in `text`, the detected date phrase is shown with a
+    // warm highlight (matching the web). The TextField's own glyphs are hidden and
+    // an attributed overlay is drawn so editing/caret behaviour is unchanged.
+    var highlightText: String? = nil
 
     @Environment(\.tdayColors) private var colors
+
+    // Matches the web's --nlp tint; translucent so it reads on light & dark.
+    private static let nlpHighlightColor = Color(red: 0.88, green: 0.45, blue: 0.16).opacity(0.38)
 
     private var normalizedText: Binding<String> {
         Binding(
@@ -526,7 +559,25 @@ private struct CreateTaskSheetTextField: View {
         )
     }
 
+    /// The text rendered with the matched phrase highlighted, or nil when there's
+    /// no active highlight (then the TextField draws its glyphs normally).
+    private var highlightedText: AttributedString? {
+        guard let highlightText, !highlightText.isEmpty,
+              let range = text.range(of: highlightText) else {
+            return nil
+        }
+        var before = AttributedString(String(text[text.startIndex ..< range.lowerBound]))
+        before.foregroundColor = colors.onSurface
+        var matched = AttributedString(String(text[range]))
+        matched.foregroundColor = colors.onSurface
+        matched.backgroundColor = Self.nlpHighlightColor
+        var after = AttributedString(String(text[range.upperBound...]))
+        after.foregroundColor = colors.onSurface
+        return before + matched + after
+    }
+
     var body: some View {
+        let highlighted = highlightedText
         TextField(
             "",
             text: normalizedText,
@@ -547,8 +598,18 @@ private struct CreateTaskSheetTextField: View {
         }
         .textInputAutocapitalization(.sentences)
         .font(.tdayRounded(size: 18, weight: .heavy))
-        .foregroundStyle(colors.onSurface)
+        // Hide the field's own glyphs while highlighting; the overlay draws them.
+        .foregroundStyle(highlighted == nil ? AnyShapeStyle(colors.onSurface) : AnyShapeStyle(Color.clear))
         .tint(colors.primary)
+        .overlay(alignment: .leading) {
+            if let highlighted {
+                Text(highlighted)
+                    .font(.tdayRounded(size: 18, weight: .heavy))
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .allowsHitTesting(false)
+            }
+        }
         .padding(.horizontal, 18)
         .padding(.vertical, CreateTaskSheetMetrics.textFieldVerticalPadding)
         .frame(minHeight: CreateTaskSheetMetrics.textFieldMinHeight)
