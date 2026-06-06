@@ -7,21 +7,18 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import io.sentry.okhttp.SentryOkHttpInterceptor
 import kotlinx.serialization.json.Json
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+import okhttp3.JavaNetCookieJar
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
-import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import java.net.CookieManager
 import java.net.CookiePolicy
-import java.security.MessageDigest
-import java.security.cert.X509Certificate
 import java.util.TimeZone
 import javax.inject.Singleton
-import okhttp3.JavaNetCookieJar
-import io.sentry.okhttp.SentryOkHttpInterceptor
-import javax.net.ssl.SSLPeerUnverifiedException
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -85,31 +82,13 @@ object NetworkModule {
                     .header("X-Tday-App-Version", BuildConfig.VERSION_NAME)
                     .header("X-Tday-Device-Id", secureConfigStore.getOrCreateDeviceId())
                     .build()
-                val response = chain.proceed(updated)
-
-                if (updated.url.isHttps) {
-                    val trustKey = secureConfigStore.serverTrustKeyForUrl(updated.url.toString())
-                    val serverCertificate = response.handshake
-                        ?.peerCertificates
-                        ?.firstOrNull() as? X509Certificate
-                    if (!trustKey.isNullOrBlank() && serverCertificate != null) {
-                        val observedFingerprint = certificatePublicKeyFingerprint(serverCertificate)
-                        val trustedFingerprint = secureConfigStore.getTrustedServerFingerprint(trustKey)
-                        if (trustedFingerprint.isNullOrBlank()) {
-                            secureConfigStore.saveTrustedServerFingerprint(
-                                serverTrustKey = trustKey,
-                                fingerprint = observedFingerprint,
-                            )
-                        } else if (!trustedFingerprint.equals(observedFingerprint, ignoreCase = true)) {
-                            response.close()
-                            throw SSLPeerUnverifiedException(
-                                "Pinned certificate mismatch for $trustKey",
-                            )
-                        }
-                    }
-                }
-
-                response
+                // TLS trust is enforced by OkHttp's default trust manager during the
+                // handshake (system/public CA validation + hostname check), so any cert
+                // that reaches here is already CA-validated. We deliberately do NOT add a
+                // post-handshake public-key pin: it was redundant with CA validation and
+                // false-tripped on routine renewals (e.g. Let's Encrypt rotating to a new
+                // key), surfacing a bogus "certificate changed" during URL validation.
+                chain.proceed(updated)
             }
             .addInterceptor(SentryOkHttpInterceptor())
             .addInterceptor(logging)
@@ -134,10 +113,4 @@ object NetworkModule {
     @Singleton
     fun provideApiService(retrofit: Retrofit): TdayApiService =
         retrofit.create(TdayApiService::class.java)
-
-    private fun certificatePublicKeyFingerprint(certificate: X509Certificate): String {
-        val digest = MessageDigest.getInstance("SHA-256")
-            .digest(certificate.publicKey.encoded)
-        return digest.joinToString(":") { "%02X".format(it) }
-    }
 }
