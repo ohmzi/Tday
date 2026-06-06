@@ -11,10 +11,11 @@ import i18n from "@/i18n";
 import { getDateFnsLocale } from "@/lib/date/dateFnsLocale";
 import { AlignCenterIcon } from "lucide-react";
 import clsx from "clsx";
-import { Pen, Trash, X } from "lucide-react";
+import { X } from "lucide-react";
 import LineSeparator from "@/components/ui/lineSeparator";
 import CompleteButton from "./CompleteButton";
 import { Button } from "@/components/ui/button";
+import { TaskActionButtons } from "@/components/ui/TaskActionButtons";
 import EditCalendarFormContainer from "./CalendarForm/EditFormContainer";
 
 const ConfirmDelete = lazy(() => import("./ConfirmationModals/ConfirmDelete"));
@@ -59,26 +60,16 @@ const CalendarEvent = ({ event: todo }: EventProps<TodoItemType>) => {
 
         <PopoverContent className="w-screen rounded-[24px] border border-white/70 bg-popover p-0 shadow-[0_24px_60px_-30px_hsl(var(--shadow)/0.72)] dark:border-white/10 sm:w-120 md:w-100 lg:w-120" onMouseDown={(e) => e.stopPropagation()}>
           {/* Header */}
-          <div className="flex gap-0 md:gap-2 p-2 justify-end ">
-            {/* EDIT */}
-            <Button
-              variant={"ghost"}
-              size={"icon"}
-              className="rounded-full p-2 text-muted-foreground hover:bg-popover-accent hover:text-foreground"
-              onClick={() => {
+          <div className="flex gap-1 md:gap-2 p-2 justify-end items-center">
+            {/* EDIT + DELETE — shared app-wide action buttons */}
+            <TaskActionButtons
+              editLabel="Edit task"
+              deleteLabel="Delete task"
+              onEdit={() => {
                 setOpen(false);
                 setDisplayForm(true);
               }}
-            >
-              <Pen className="w-3 h-3 sm:h-4 sm:w-4" />
-            </Button>
-
-            {/* DELETE  */}
-            <Button
-              variant={"destructive"}
-              size={"icon"}
-              className="rounded-full bg-popover p-2 text-muted-foreground hover:bg-popover-accent hover:text-foreground"
-              onClick={() => {
+              onDelete={() => {
                 setOpen(false);
                 if (todo.rrule) {
                   setDeleteAllDialogOpen(true);
@@ -86,9 +77,7 @@ const CalendarEvent = ({ event: todo }: EventProps<TodoItemType>) => {
                   setDeleteDialogOpen(true);
                 }
               }}
-            >
-              <Trash className="w-3 h-3 sm:h-4 sm:w-4" />
-            </Button>
+            />
 
             {/* Close */}
             <Button
