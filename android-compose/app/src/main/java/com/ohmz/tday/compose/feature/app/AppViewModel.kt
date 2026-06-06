@@ -27,6 +27,8 @@ import com.ohmz.tday.compose.core.notification.ReminderOption
 import com.ohmz.tday.compose.core.notification.ReminderPreferenceStore
 import com.ohmz.tday.compose.core.notification.TaskReminderScheduler
 import com.ohmz.tday.compose.core.observability.TdayTelemetry
+import com.ohmz.tday.compose.core.ui.SnackbarEvent
+import com.ohmz.tday.compose.core.ui.SnackbarKind
 import com.ohmz.tday.compose.core.ui.SnackbarManager
 import com.ohmz.tday.compose.core.ui.userFacingMessage
 import com.ohmz.tday.compose.feature.release.GitHubRelease
@@ -661,6 +663,42 @@ class AppViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Forcibly ends a server session whose authentication has expired and routes the
+     * user back to login. Unlike [logout] this keeps the configured server so the
+     * onboarding overlay lands on the sign-in step rather than server setup. No-op if a
+     * session is no longer active, which dedupes a burst of 401s into a single expiry.
+     */
+    private fun expireSession() {
+        if (!_uiState.value.authenticated) return
+        viewModelScope.launch {
+            runCatching { authRepository.logout() }
+            runCatching { systemCredentialService.clearCredentialState() }
+            runCatching { reminderScheduler.cancelAll() }
+            ensureResyncLoop(authenticated = false)
+            _uiState.update {
+                it.copy(
+                    authenticated = false,
+                    requiresLogin = true,
+                    requiresServerSetup = false,
+                    user = null,
+                    error = null,
+                    loading = false,
+                    pendingApprovalMessage = null,
+                    isManualSyncing = false,
+                    isOffline = false,
+                    pendingMutationCount = 0,
+                )
+            }
+            snackbarManager.show(
+                SnackbarEvent(
+                    message = appContext.getString(R.string.error_auth_expired),
+                    kind = SnackbarKind.ERROR,
+                ),
+            )
+        }
+    }
+
     fun syncNow() {
         if (!_uiState.value.authenticated || _uiState.value.isLocalMode) return
         if (_uiState.value.isManualSyncing) return
@@ -870,7 +908,16 @@ class AppViewModel @Inject constructor(
         val error = after.exceptionOrNull() ?: return after
         if (!isSessionAuthenticationIssue(error)) return after
 
-        val restoredSession = authRepository.restoreSessionForBootstrap() ?: return after
+        val restoredSession = authRepository.restoreSessionForBootstrap()
+        if (restoredSession == null) {
+            // A confirmed 401 that silent recovery could not heal, and not a mere
+            // connectivity blip, means the session is truly gone — expire it and send
+            // the user back to login. Connectivity issues stay in offline mode.
+            if (!isLikelyConnectivityIssue(error) && !_uiState.value.isLocalMode) {
+                expireSession()
+            }
+            return after
+        }
         _uiState.update {
             it.copy(
                 authenticated = true,

@@ -9,8 +9,10 @@ import {
   type ReactNode,
 } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { api, ApiError } from "@/lib/api-client";
 import { clearClientUserData } from "@/lib/security/clearClientUserData";
+import { onSessionExpired } from "@/lib/auth/sessionExpiry";
 import {
   markReturningBrowser,
   RETURNING_BROWSER_STORAGE_KEY,
@@ -99,6 +101,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSessionAvailability("unavailable");
     }
   }, [applySessionState, queryClient, setSessionAvailability]);
+
+  const handleSessionExpired = useCallback(async () => {
+    // Only react while a session is (or was) live. Once unauthenticated this is
+    // a no-op, which also dedupes a burst of 401s into a single expiry/redirect.
+    const hadAuthenticatedSession =
+      authStateRef.current === "authenticated" || userRef.current !== null;
+    if (!hadAuthenticatedSession) return;
+
+    queryClient.clear();
+    await clearClientUserData({
+      preserveLocalStorageKeys: [RETURNING_BROWSER_STORAGE_KEY],
+    });
+    applySessionState("unauthenticated", null);
+    toast.error("Your session expired — please sign in again.");
+  }, [applySessionState, queryClient]);
+
+  useEffect(() => {
+    return onSessionExpired(() => {
+      void handleSessionExpired();
+    });
+  }, [handleSessionExpired]);
 
   useEffect(() => {
     void fetchSession();

@@ -1,6 +1,7 @@
 package com.ohmz.tday.compose.core.ui
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.tween
@@ -21,11 +22,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.ErrorOutline
+import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -38,15 +44,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.animation.core.Animatable
 import kotlinx.coroutines.launch
 
 private const val TOAST_ENTER_FADE_DURATION_MS = 180
@@ -58,12 +63,22 @@ private const val TOAST_FADE_DISTANCE_DP = 96
 private val TOAST_CORNER_RADIUS = 24.dp
 private val TOAST_BOTTOM_PADDING = 88.dp
 
+// Success accent — the Material scheme has no dedicated "success" role, so we use a
+// calm green that reads well on both the dark and light card surfaces.
+private val TOAST_SUCCESS_ACCENT = Color(0xFF2FA56A)
+
+/** Visual variant of a toast — drives the accent colour and the default icon. */
+enum class TdayToastKind { ERROR, SUCCESS, INFO }
+
 data class TdayToastData(
     val id: Long,
     val message: String,
+    val kind: TdayToastKind = TdayToastKind.INFO,
     val icon: ImageVector? = null,
     val autoDismissMillis: Long? = null,
     val onTap: (() -> Unit)? = null,
+    val actionLabel: String? = null,
+    val onAction: (() -> Unit)? = null,
 )
 
 @Composable
@@ -129,10 +144,18 @@ private fun TdayToastCard(
     } else {
         lerp(colorScheme.surfaceVariant, colorScheme.primary, 0.10f)
     }
-    val iconContainerColor = if (isDark) {
-        lerp(colorScheme.primaryContainer, colorScheme.primary, 0.16f)
-    } else {
-        lerp(colorScheme.primaryContainer, colorScheme.surface, 0.16f)
+    // The variant colour cue lives in the icon chip + action label; the card surface
+    // itself stays neutral, matching the app's card design language.
+    val accentColor = when (toast.kind) {
+        TdayToastKind.ERROR -> colorScheme.error
+        TdayToastKind.SUCCESS -> TOAST_SUCCESS_ACCENT
+        TdayToastKind.INFO -> colorScheme.primary
+    }
+    val iconContainerColor = accentColor.copy(alpha = if (isDark) 0.22f else 0.14f)
+    val toastIcon = toast.icon ?: when (toast.kind) {
+        TdayToastKind.ERROR -> Icons.Rounded.ErrorOutline
+        TdayToastKind.SUCCESS -> Icons.Rounded.CheckCircle
+        TdayToastKind.INFO -> Icons.Rounded.Info
     }
     val scope = rememberCoroutineScope()
     val onDismissState by rememberUpdatedState(onDismiss)
@@ -166,7 +189,8 @@ private fun TdayToastCard(
                     },
                     onDrag = { change, dragAmount ->
                         change.consume()
-                        dragOffsetY = (dragOffsetY + (dragAmount.y * TOAST_DRAG_GAIN)).coerceAtLeast(0f)
+                        dragOffsetY =
+                            (dragOffsetY + (dragAmount.y * TOAST_DRAG_GAIN)).coerceAtLeast(0f)
                     },
                     onDragCancel = {
                         scope.launch {
@@ -222,21 +246,19 @@ private fun TdayToastCard(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            toast.icon?.let { icon ->
-                Box(
-                    modifier = Modifier
-                        .size(38.dp)
-                        .clip(CircleShape)
-                        .background(iconContainerColor, CircleShape),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        modifier = Modifier.size(20.dp),
-                        tint = colorScheme.onPrimaryContainer,
-                    )
-                }
+            Box(
+                modifier = Modifier
+                    .size(38.dp)
+                    .clip(CircleShape)
+                    .background(iconContainerColor, CircleShape),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = toastIcon,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp),
+                    tint = accentColor,
+                )
             }
             Box(
                 modifier = Modifier
@@ -248,6 +270,22 @@ private fun TdayToastCard(
                     color = colorScheme.onSurface,
                     style = MaterialTheme.typography.titleMedium,
                 )
+            }
+            val actionLabel = toast.actionLabel
+            val onAction = toast.onAction
+            if (actionLabel != null && onAction != null) {
+                TextButton(
+                    onClick = {
+                        onAction()
+                        onDismiss()
+                    },
+                ) {
+                    Text(
+                        text = actionLabel,
+                        color = accentColor,
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                }
             }
         }
     }

@@ -178,12 +178,14 @@ struct AppRootView: View {
                         .padding(.top, 8)
                     }
                     .overlay(alignment: .bottom) {
-                        if let message = container.snackbarManager.message {
-                            AppSnackbar(message: message) {
+                        if let content = container.snackbarManager.content {
+                            AppSnackbar(content: content) {
                                 container.snackbarManager.dismiss()
                             }
+                            .transition(.move(edge: .bottom).combined(with: .opacity))
                         }
                     }
+                    .animation(.snappy(duration: 0.3), value: container.snackbarManager.content?.id)
                     .overlay {
                         if !appViewModel.isWorkspaceAvailable {
                             let isVersionBlocking = appViewModel.versionCheckResult != .compatible
@@ -492,18 +494,74 @@ struct AppRootView: View {
 }
 
 private struct AppSnackbar: View {
-    let message: String
+    let content: SnackbarManager.Content
     let onDismiss: () -> Void
 
+    @Environment(\.tdayColors) private var colors
+
+    // The variant colour cue lives in the icon chip + action label; the card surface
+    // stays neutral, matching the app's card design language (see TdayCardModifier).
+    private var accent: Color {
+        switch content.kind {
+        case .error: return colors.error
+        case .success: return .tdayFloaterGreen
+        case .info: return colors.primary
+        }
+    }
+
+    private var iconName: String {
+        switch content.kind {
+        case .error: return "exclamationmark.triangle.fill"
+        case .success: return "checkmark.circle.fill"
+        case .info: return "info.circle.fill"
+        }
+    }
+
     var body: some View {
-        Text(message)
-            .font(.tdayRounded(.footnote, weight: .bold))
-            .foregroundStyle(.white)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .background(Color.black.opacity(0.78), in: Capsule())
-            .padding(.bottom, 18)
-            .onTapGesture(perform: onDismiss)
+        HStack(spacing: 12) {
+            ZStack {
+                Circle()
+                    .fill(accent.opacity(colors.isDark ? 0.22 : 0.14))
+                    .frame(width: 38, height: 38)
+                Image(systemName: iconName)
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundStyle(accent)
+            }
+
+            Text(content.message)
+                .font(.tdayRounded(.subheadline, weight: .bold))
+                .foregroundStyle(colors.onSurface)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            if let label = content.actionLabel, let action = content.action {
+                Button {
+                    action()
+                    onDismiss()
+                } label: {
+                    Text(label)
+                        .font(.tdayRounded(.subheadline, weight: .heavy))
+                        .foregroundStyle(accent)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(colors.cardStroke, lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(colors.isDark ? 0.35 : 0.18), radius: 18, y: 10)
+        .padding(.horizontal, 20)
+        .padding(.bottom, 18)
+        .contentShape(Rectangle())
+        .onTapGesture(perform: onDismiss)
+        .task(id: content.id) {
+            let seconds: UInt64 = content.action == nil ? 4 : 8
+            try? await Task.sleep(nanoseconds: seconds * 1_000_000_000)
+            onDismiss()
+        }
     }
 }
 
