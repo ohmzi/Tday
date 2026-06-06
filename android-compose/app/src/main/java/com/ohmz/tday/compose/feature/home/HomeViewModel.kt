@@ -5,7 +5,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.data.cache.OfflineCacheManager
-import com.ohmz.tday.compose.core.data.isLikelyConnectivityIssue
 import com.ohmz.tday.compose.core.data.list.ListRepository
 import com.ohmz.tday.compose.core.data.settings.SettingsRepository
 import com.ohmz.tday.compose.core.data.sync.SyncManager
@@ -45,6 +44,7 @@ data class HomeUiState(
     val todayTodos: List<TodoItem> = emptyList(),
     val errorMessage: String? = null,
     val aiSummaryEnabled: Boolean = true,
+    val aiSummaryConfigured: Boolean = false,
     val summaryText: String? = null,
     val summarySource: String? = null,
     val summaryGeneratedAt: String? = null,
@@ -57,6 +57,7 @@ private data class HomeSnapshot(
     val searchableTodos: List<TodoItem>,
     val todayTodos: List<TodoItem>,
     val aiSummaryEnabled: Boolean,
+    val aiSummaryConfigured: Boolean,
 )
 
 @HiltViewModel
@@ -80,6 +81,7 @@ class HomeViewModel @Inject constructor(
                 todayTodos = todoRepository.fetchTodosSnapshot(mode = TodoListMode.TODAY),
                 errorMessage = null,
                 aiSummaryEnabled = settingsRepository.isAiSummaryEnabledSnapshot(),
+                aiSummaryConfigured = settingsRepository.aiSummaryConfiguredSnapshot(),
             )
         }.getOrElse { HomeUiState() },
     )
@@ -105,6 +107,7 @@ class HomeViewModel @Inject constructor(
                 searchableTodos = todoRepository.fetchTodosSnapshot(mode = TodoListMode.ALL),
                 todayTodos = todoRepository.fetchTodosSnapshot(mode = TodoListMode.TODAY),
                 aiSummaryEnabled = settingsRepository.isAiSummaryEnabledSnapshot(),
+                aiSummaryConfigured = settingsRepository.aiSummaryConfiguredSnapshot(),
             )
         }.onSuccess { snapshot ->
             _uiState.update { current ->
@@ -118,6 +121,7 @@ class HomeViewModel @Inject constructor(
                     },
                     todayTodos = if (current.todayTodos == snapshot.todayTodos) current.todayTodos else snapshot.todayTodos,
                     aiSummaryEnabled = snapshot.aiSummaryEnabled,
+                    aiSummaryConfigured = snapshot.aiSummaryConfigured,
                     errorMessage = null,
                 )
             }
@@ -163,6 +167,7 @@ class HomeViewModel @Inject constructor(
                         searchableTodos = todoRepository.fetchTodos(mode = TodoListMode.ALL),
                         todayTodos = todoRepository.fetchTodos(mode = TodoListMode.TODAY),
                         aiSummaryEnabled = settingsRepository.isAiSummaryEnabledSnapshot(),
+                        aiSummaryConfigured = settingsRepository.aiSummaryConfiguredSnapshot(),
                     )
                 }.onSuccess { snapshot ->
                     _uiState.update { current ->
@@ -177,6 +182,7 @@ class HomeViewModel @Inject constructor(
                             },
                             todayTodos = if (current.todayTodos == snapshot.todayTodos) current.todayTodos else snapshot.todayTodos,
                             aiSummaryEnabled = snapshot.aiSummaryEnabled,
+                            aiSummaryConfigured = snapshot.aiSummaryConfigured,
                             errorMessage = null,
                         )
                     }
@@ -231,14 +237,10 @@ class HomeViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         isSummarizing = false,
-                        summaryError = if (isLikelyConnectivityIssue(error)) {
-                            appContext.getString(R.string.todos_summary_offline_unavailable)
-                        } else {
-                            error.userFacingMessage(
-                                appContext,
-                                R.string.error_summarize_tasks_failed
-                            )
-                        },
+                        summaryError = error.userFacingMessage(
+                            appContext,
+                            R.string.error_summarize_tasks_failed,
+                        ),
                     )
                 }
             }

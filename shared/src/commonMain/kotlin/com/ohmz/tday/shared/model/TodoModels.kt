@@ -12,6 +12,7 @@ data class TodoSummaryRequest(
     val mode: String = "today",
     val listId: String? = null,
     val timeZone: String? = null,
+    val locale: String? = null,
 )
 
 @Serializable

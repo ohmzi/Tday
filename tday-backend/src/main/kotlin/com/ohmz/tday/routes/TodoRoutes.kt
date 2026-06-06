@@ -12,7 +12,6 @@ import com.ohmz.tday.domain.withAuth
 import com.ohmz.tday.models.request.*
 import com.ohmz.tday.models.response.FloaterResponse
 import com.ohmz.tday.models.response.TodoResponse
-import com.ohmz.tday.services.AppConfigService
 import com.ohmz.tday.services.FloaterService
 import com.ohmz.tday.services.TodoNlpService
 import com.ohmz.tday.services.TodoService
@@ -23,6 +22,9 @@ import com.ohmz.tday.di.inject
 import com.ohmz.tday.shared.model.CreateTodoResponse
 import com.ohmz.tday.shared.model.Priority
 import com.ohmz.tday.shared.model.TodoSummaryResponse
+import com.ohmz.tday.shared.summary.SummaryEngine
+import com.ohmz.tday.shared.summary.SummaryTaskInput
+import com.ohmz.tday.shared.summary.SummaryScope as SharedSummaryScope
 import java.time.*
 import java.util.Locale
 
@@ -30,7 +32,6 @@ private const val MSG = "message"
 private const val TODOS = "todos"
 private const val SOURCE_AI = "ai"
 private const val SOURCE_LOGIC = "logic"
-private const val REASON_DISABLED = "disabled"
 private const val REASON_EMPTY = "empty"
 private const val REASON_AI_UNAVAILABLE = "ai_unavailable"
 private const val ERR_INVALID_DUE = "due must be a valid ISO-8601 datetime"
@@ -43,7 +44,6 @@ fun Route.todoRoutes() {
     val todoService by inject<TodoService>()
     val floaterService by inject<FloaterService>()
     val todoNlpService by inject<TodoNlpService>()
-    val appConfigService by inject<AppConfigService>()
     val todoSummaryService by inject<TodoSummaryService>()
 
     route("/todo") {
@@ -53,7 +53,7 @@ fun Route.todoRoutes() {
         todoDeleteRoute(todoService)
         todoCompleteRoutes(todoService)
         todoInstanceRoutes(todoService)
-        todoUtilityRoutes(todoService, floaterService, todoNlpService, appConfigService, todoSummaryService)
+        todoUtilityRoutes(todoService, floaterService, todoNlpService, todoSummaryService)
     }
 }
 
@@ -242,7 +242,6 @@ private fun Route.todoUtilityRoutes(
     todoService: TodoService,
     floaterService: FloaterService,
     todoNlpService: TodoNlpService,
-    appConfigService: AppConfigService,
     todoSummaryService: TodoSummaryService,
 ) {
     route("/overdue") {
@@ -285,17 +284,8 @@ private fun Route.todoUtilityRoutes(
                 val scope = SummaryScope.from(body.mode)
                     ?: return@withAuth arrow.core.Either.Left(AppError.BadRequest("summary mode is invalid", "mode"))
 
-                val config = appConfigService.getGlobalConfig().getOrNull()
-                if (config != null && !config.aiSummaryEnabled) {
-                    return@withAuth TodoSummaryResponse(
-                        summary = null,
-                        source = SOURCE_LOGIC,
-                        mode = scope.responseMode,
-                        taskCount = 0,
-                        fallbackReason = REASON_DISABLED,
-                        reason = REASON_DISABLED,
-                    ).right()
-                }
+                val locale = body.locale
+                val nowMs = Instant.now().toEpochMilli()
 
                 val todos = todoService.getTimeline(user.id, timeZone, 365).getOrNull() ?: emptyList()
                 val floaters = if (scope.usesFloaters) {
@@ -312,7 +302,8 @@ private fun Route.todoUtilityRoutes(
                 )
                 if (tasks.isEmpty()) {
                     return@withAuth TodoSummaryResponse(
-                        summary = "You're clear for now. No tasks need attention in this view.",
+                        // Empty list -> the shared engine returns the localized "clear for now" line.
+                        summary = SummaryEngine.summarize(emptyList(), SharedSummaryScope.ALL, nowMs, timeZone, locale),
                         source = SOURCE_LOGIC,
                         mode = scope.responseMode,
                         taskCount = 0,
@@ -325,8 +316,19 @@ private fun Route.todoUtilityRoutes(
                 val prompt = buildSummaryPrompt(scope, tasks, zoneId)
                 val summaryText = todoSummaryService.generateSummary(prompt)
                 val usedAi = !summaryText.isNullOrBlank()
+                // Deterministic fallback comes from the single shared engine. `tasks` is already
+                // scoped, so pass SummaryScope.ALL to let the engine rank+render without re-filtering.
+                val logicSummary = {
+                    SummaryEngine.summarize(
+                        tasks.map { it.toSummaryInput(zoneId) },
+                        SharedSummaryScope.ALL,
+                        nowMs,
+                        timeZone,
+                        locale,
+                    )
+                }
                 TodoSummaryResponse(
-                    summary = summaryText ?: buildLogicSummary(scope, tasks, zoneId),
+                    summary = summaryText ?: logicSummary(),
                     source = if (usedAi) SOURCE_AI else SOURCE_LOGIC,
                     mode = scope.responseMode,
                     taskCount = tasks.size,
@@ -478,39 +480,21 @@ private fun buildSummaryPrompt(
     """.trimIndent()
 }
 
-private fun buildLogicSummary(
-    scope: SummaryScope,
-    tasks: List<SummaryTask>,
-    zoneId: ZoneId,
-): String {
-    val now = LocalDateTime.now(zoneId)
-    val highPriority = tasks.count { priorityWeight(it.priority) >= priorityWeight("High") }
-    val overdue = tasks.count { it.due?.isBefore(now) == true }
-    val dueToday = tasks.count { it.due?.toLocalDate() == now.toLocalDate() }
-    val recurring = tasks.count { it.recurring }
-    val pinned = tasks.count { it.pinned }
-    val firstTask = tasks.firstOrNull()?.title?.let(::boundedSummaryTitle)
-
-    val opening = when (scope) {
-        SummaryScope.FLOATER -> "You have ${tasks.size} anytime ${pluralize("task", tasks.size)}."
-        SummaryScope.LIST -> "This list has ${tasks.size} active ${pluralize("task", tasks.size)}."
-        else -> "This view has ${tasks.size} active ${pluralize("task", tasks.size)}."
-    }
-
-    val details = mutableListOf<String>()
-    if (overdue > 0) details += "$overdue overdue"
-    if (dueToday > 0) details += "$dueToday due today"
-    if (highPriority > 0) details += "$highPriority high priority"
-    if (pinned > 0) details += "$pinned pinned"
-    if (recurring > 0) details += "$recurring recurring"
-
-    val focus = firstTask?.let { " Start with \"$it\"." }.orEmpty()
-    return if (details.isEmpty()) {
-        "$opening Nothing looks urgent.$focus"
-    } else {
-        "$opening Key focus: ${details.joinToString(", ")}.$focus"
-    }
-}
+/**
+ * Maps an already-scoped backend [SummaryTask] into the shared engine's input. The
+ * backend stores `due` as a zoned LocalDateTime; convert it back to an absolute
+ * instant so the shared engine re-zones it identically to the native client.
+ */
+private fun SummaryTask.toSummaryInput(zoneId: ZoneId): SummaryTaskInput = SummaryTaskInput(
+    title = title,
+    priority = priority,
+    dueEpochMs = due?.atZone(zoneId)?.toInstant()?.toEpochMilli(),
+    pinned = pinned,
+    recurring = recurring,
+    listId = listId,
+    completed = false,
+    kind = kind,
+)
 
 private fun isPrioritySummaryTask(priority: String?): Boolean {
     return priorityWeight(priority) >= priorityWeight("Medium")
@@ -532,10 +516,6 @@ private fun boundedSummaryTitle(title: String): String {
     } else {
         normalized.take(MAX_SUMMARY_TITLE_LENGTH - 3).trimEnd() + "..."
     }
-}
-
-private fun pluralize(word: String, count: Int): String {
-    return if (count == 1) word else "${word}s"
 }
 
 internal fun parseTodoDateTime(value: String?): LocalDateTime? {

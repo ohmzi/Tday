@@ -455,7 +455,7 @@ fun TdayApp(
                                                     )
                                                 },
                                                 onSummarize = homeViewModel::summarizeToday,
-                                                summaryAvailable = !appUiState.isLocalMode && !appUiState.isOffline,
+                                                summaryAvailable = !appUiState.isLocalMode,
                                                 showRootFeedDock = false,
                                                 showCreateTaskButton = false,
                                                 createTaskRequestKey = rootCreateTaskRequestKey,
@@ -476,7 +476,7 @@ fun TdayApp(
                                                 onBack = { rootFeedTab = RootFeedTab.HOME },
                                                 onTaskDeleted = ::showTaskDeletedToast,
                                                 pullRefreshEnabled = !appUiState.isLocalMode,
-                                                summaryAvailable = !appUiState.isLocalMode && !appUiState.isOffline,
+                                                summaryAvailable = !appUiState.isLocalMode,
                                                 onOpenFloaterList = { id, name ->
                                                     navController.navigate(
                                                         AppRoute.FloaterListTodos.create(
@@ -702,7 +702,7 @@ fun TdayApp(
                         onBack = { navController.popBackStack() },
                         onTaskDeleted = ::showTaskDeletedToast,
                         pullRefreshEnabled = !appUiState.isLocalMode,
-                        summaryAvailable = !appUiState.isLocalMode && !appUiState.isOffline,
+                        summaryAvailable = !appUiState.isLocalMode,
                     )
                 }
 
@@ -753,7 +753,7 @@ fun TdayApp(
                             openCreateTaskOnStart = true,
                             onCreateTaskFlowFinished = finishCreateTodayFlow,
                             pullRefreshEnabled = !appUiState.isLocalMode,
-                            summaryAvailable = !appUiState.isLocalMode && !appUiState.isOffline,
+                            summaryAvailable = !appUiState.isLocalMode,
                         )
                     }
                 }
@@ -767,7 +767,7 @@ fun TdayApp(
                         onBack = { navController.popBackStack() },
                         onTaskDeleted = ::showTaskDeletedToast,
                         pullRefreshEnabled = !appUiState.isLocalMode,
-                        summaryAvailable = !appUiState.isLocalMode && !appUiState.isOffline,
+                        summaryAvailable = !appUiState.isLocalMode,
                     )
                 }
 
@@ -780,7 +780,7 @@ fun TdayApp(
                         onBack = { navController.popBackStack() },
                         onTaskDeleted = ::showTaskDeletedToast,
                         pullRefreshEnabled = !appUiState.isLocalMode,
-                        summaryAvailable = !appUiState.isLocalMode && !appUiState.isOffline,
+                        summaryAvailable = !appUiState.isLocalMode,
                     )
                 }
 
@@ -812,7 +812,7 @@ fun TdayApp(
                         onBack = { navController.popBackStack() },
                         onTaskDeleted = ::showTaskDeletedToast,
                         pullRefreshEnabled = !appUiState.isLocalMode,
-                        summaryAvailable = !appUiState.isLocalMode && !appUiState.isOffline,
+                        summaryAvailable = !appUiState.isLocalMode,
                     )
                 }
 
@@ -825,7 +825,7 @@ fun TdayApp(
                         onBack = { navController.popBackStack() },
                         onTaskDeleted = ::showTaskDeletedToast,
                         pullRefreshEnabled = !appUiState.isLocalMode,
-                        summaryAvailable = !appUiState.isLocalMode && !appUiState.isOffline,
+                        summaryAvailable = !appUiState.isLocalMode,
                     )
                 }
 
@@ -848,7 +848,7 @@ fun TdayApp(
                         onBack = { navController.popBackStack() },
                         onTaskDeleted = ::showTaskDeletedToast,
                         pullRefreshEnabled = !appUiState.isLocalMode,
-                        summaryAvailable = !appUiState.isLocalMode && !appUiState.isOffline,
+                        summaryAvailable = !appUiState.isLocalMode,
                         onListDeleted = {
                             navController.navigate(AppRoute.Home.route) {
                                 popUpTo(AppRoute.Home.route) { inclusive = false }
@@ -877,7 +877,7 @@ fun TdayApp(
                         onBack = { navController.popBackStack() },
                         onTaskDeleted = ::showTaskDeletedToast,
                         pullRefreshEnabled = !appUiState.isLocalMode,
-                        summaryAvailable = !appUiState.isLocalMode && !appUiState.isOffline,
+                        summaryAvailable = !appUiState.isLocalMode,
                         onListDeleted = {
                             rootFeedTab = RootFeedTab.FLOATER
                             navController.navigate(AppRoute.Home.route) {
@@ -977,7 +977,7 @@ fun TdayApp(
                     },
                 ) {
                     OnRouteResume {
-                        appViewModel.refreshAdminAiSummarySetting()
+                        appViewModel.refreshAiSummaryPreference()
                         appViewModel.refreshVersionInfo()
                     }
                     SettingsScreen(
@@ -986,11 +986,7 @@ fun TdayApp(
                         selectedThemeMode = appUiState.themeMode,
                         selectedReminder = appUiState.selectedReminder,
                         syncStatus = appUiState.syncStatus,
-                        adminAiSummaryEnabled = appUiState.adminAiSummaryEnabled,
-                        isAdminAiSummaryLoading = appUiState.isAdminAiSummaryLoading,
-                        isAdminAiSummarySaving = appUiState.isAdminAiSummarySaving,
-                        adminAiSummaryError = appUiState.adminAiSummaryError,
-                        aiSummaryValidationError = appUiState.aiSummaryValidationError,
+                        aiSummaryEnabled = appUiState.aiSummaryEnabled,
                         hasUpdate = releaseUiState.hasUpdate,
                         latestVersionName = releaseUiState.latestRelease?.version,
                         backendVersion = appUiState.backendVersion,
@@ -998,8 +994,7 @@ fun TdayApp(
                         onThemeModeSelected = appViewModel::setThemeMode,
                         onReminderSelected = appViewModel::setDefaultReminder,
                         onSyncNow = appViewModel::syncNow,
-                        onToggleAdminAiSummary = appViewModel::setAdminAiSummaryEnabled,
-                        onDismissAiValidationError = appViewModel::dismissAiSummaryValidationError,
+                        onToggleAiSummary = appViewModel::setAiSummaryEnabled,
                         onBack = { navController.popBackStack() },
                         onLogout = { appViewModel.logout() },
                         onOpenLatestRelease = { navController.navigate(AppRoute.LatestRelease.route) },

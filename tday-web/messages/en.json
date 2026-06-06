@@ -530,6 +530,11 @@
       "passwordsDoNotMatch": "Passwords do not match",
       "passwordChanged": "Password changed successfully",
       "passwordChangeFailed": "Failed to change password"
+    },
+    "aiSummary": {
+      "title": "AI task summary",
+      "description": "Show a one-tap summary of your tasks.",
+      "toggle": "Show summary button"
     }
   },
   "summary": {
@@ -561,6 +566,11 @@
     "startWith": "Start with {{task}}.",
     "nextUp": "Next up, {{tasks}}.",
     "overdueCatchUp": "You also have {{count}} overdue task(s) to catch up on.",
-    "clearForNow": "You're clear for now. No tasks need attention in this view."
+    "clearForNow": "You're clear for now. No tasks need attention in this view.",
+    "title": "Summary",
+    "loading": "Generating summary…",
+    "error": "Couldn't generate a summary. Please try again.",
+    "sourceServer": "Server model",
+    "sourceLocal": "Local model"
   }
 }

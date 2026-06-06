@@ -90,7 +90,7 @@ class DatabaseConfig(private val config: AppConfig) {
 
             SchemaUtils.createMissingTablesAndColumns(
                 Users, Accounts, VerificationTokens, Lists, FloaterLists, Todos, TodoInstances,
-                CompletedTodos, Floaters, CompletedFloaters, Files, UserPreferences, AppConfigs,
+                CompletedTodos, Floaters, CompletedFloaters, Files, UserPreferences,
                 EventLogs, CronLogs, AuthThrottles, AuthSignals, PushSubscriptions,
             )
         }

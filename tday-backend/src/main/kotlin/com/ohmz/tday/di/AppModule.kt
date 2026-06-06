@@ -27,8 +27,6 @@ import com.ohmz.tday.security.SessionControl
 import com.ohmz.tday.security.SessionControlImpl
 import com.ohmz.tday.services.AdminService
 import com.ohmz.tday.services.AdminServiceImpl
-import com.ohmz.tday.services.AppConfigService
-import com.ohmz.tday.services.AppConfigServiceImpl
 import com.ohmz.tday.services.CacheService
 import com.ohmz.tday.services.CacheServiceImpl
 import com.ohmz.tday.services.CompletedFloaterService
@@ -92,7 +90,6 @@ val serviceModule = module {
     single<CompletedTodoService> { CompletedTodoServiceImpl(get(), get()) }
     single<CompletedFloaterService> { CompletedFloaterServiceImpl(get(), get()) }
     single<PreferencesService> { PreferencesServiceImpl() }
-    single<AppConfigService> { AppConfigServiceImpl() }
     single<TodoSummaryService> { TodoSummaryServiceImpl(get()) }
     single<TodoNlpService> { TodoNlpServiceImpl() }
     single<RealtimeService> { RealtimeServiceImpl() }

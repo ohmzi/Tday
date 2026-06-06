@@ -530,6 +530,11 @@
       "passwordsDoNotMatch": "Le password non corrispondono",
       "passwordChanged": "Password modificata correttamente",
       "passwordChangeFailed": "Impossibile cambiare la password"
+    },
+    "aiSummary": {
+      "title": "AI task summary",
+      "description": "Show a one-tap summary of your tasks.",
+      "toggle": "Show summary button"
     }
   },
   "summary": {
@@ -561,6 +566,11 @@
     "startWith": "Inizia con {{task}}.",
     "nextUp": "Poi, {{tasks}}.",
     "overdueCatchUp": "Hai anche {{count}} attività in ritardo da recuperare.",
-    "clearForNow": "Per ora sei a posto. Nessuna attività richiede attenzione in questa vista."
+    "clearForNow": "Per ora sei a posto. Nessuna attività richiede attenzione in questa vista.",
+    "title": "Summary",
+    "loading": "Generating summary…",
+    "error": "Couldn't generate a summary. Please try again.",
+    "sourceServer": "Server model",
+    "sourceLocal": "Local model"
   }
 }

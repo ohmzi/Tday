@@ -530,6 +530,11 @@
       "passwordsDoNotMatch": "Kata laluan tidak sepadan",
       "passwordChanged": "Kata laluan berjaya ditukar",
       "passwordChangeFailed": "Gagal menukar kata laluan"
+    },
+    "aiSummary": {
+      "title": "AI task summary",
+      "description": "Show a one-tap summary of your tasks.",
+      "toggle": "Show summary button"
     }
   },
   "summary": {
@@ -561,6 +566,11 @@
     "startWith": "Mulakan dengan {{task}}.",
     "nextUp": "Seterusnya, {{tasks}}.",
     "overdueCatchUp": "Anda juga mempunyai {{count}} tugasan tertunggak untuk diselesaikan.",
-    "clearForNow": "Anda sudah selesai buat masa ini. Tiada tugasan memerlukan perhatian dalam paparan ini."
+    "clearForNow": "Anda sudah selesai buat masa ini. Tiada tugasan memerlukan perhatian dalam paparan ini.",
+    "title": "Summary",
+    "loading": "Generating summary…",
+    "error": "Couldn't generate a summary. Please try again.",
+    "sourceServer": "Server model",
+    "sourceLocal": "Local model"
   }
 }

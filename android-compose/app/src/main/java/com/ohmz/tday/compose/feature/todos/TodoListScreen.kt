@@ -1284,6 +1284,8 @@ fun TodoListScreen(
         SummaryBottomSheet(
             isLoading = uiState.isSummarizing,
             summaryText = uiState.summaryText,
+            summarySource = uiState.summarySource,
+            aiSummaryConfigured = uiState.aiSummaryConfigured,
             errorMessage = uiState.summaryError,
             onDismiss = { showSummarySheet = false },
         )
@@ -2182,6 +2184,8 @@ private fun TodayHeaderButton(
 private fun SummaryBottomSheet(
     isLoading: Boolean,
     summaryText: String?,
+    summarySource: String?,
+    aiSummaryConfigured: Boolean,
     errorMessage: String?,
     onDismiss: () -> Unit,
 ) {
@@ -2229,12 +2233,27 @@ private fun SummaryBottomSheet(
                 TdaySheetCard(
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text(
+                    Column(
                         modifier = Modifier.padding(horizontal = 14.dp, vertical = 14.dp),
-                        text = summaryText,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = colorScheme.onSurface,
-                    )
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Text(
+                            text = summaryText,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = colorScheme.onSurface,
+                        )
+                        if (aiSummaryConfigured) {
+                            Text(
+                                text = if (summarySource == "ai") {
+                                    stringResource(R.string.summary_source_server)
+                                } else {
+                                    stringResource(R.string.summary_source_local)
+                                },
+                                style = MaterialTheme.typography.labelSmall,
+                                color = colorScheme.onSurface.copy(alpha = 0.58f),
+                            )
+                        }
+                    }
                 }
             }
 

@@ -90,13 +90,17 @@ class PreferencesRoutesTest {
         override suspend fun get(userId: String): Either<AppError, PreferencesResponse> =
             PreferencesResponse().right()
 
+        var lastAiSummaryEnabled: Boolean? = null
+
         override suspend fun update(
             userId: String,
             sortBy: String?,
             groupBy: String?,
             direction: String?,
+            aiSummaryEnabled: Boolean?,
         ): Either<AppError, Unit> {
             lastGroupBy = groupBy
+            lastAiSummaryEnabled = aiSummaryEnabled
             return Unit.right()
         }
     }

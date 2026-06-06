@@ -2,14 +2,12 @@ package com.ohmz.tday.routes
 
 import arrow.core.Either
 import arrow.core.right
-import com.ohmz.tday.models.response.AppConfigResponse
 import com.ohmz.tday.models.response.FloaterResponse
 import com.ohmz.tday.models.response.TodoResponse
 import com.ohmz.tday.plugins.AuthUserKey
 import com.ohmz.tday.plugins.configureSerialization
 import com.ohmz.tday.plugins.configureStatusPages
 import com.ohmz.tday.security.JwtUserClaims
-import com.ohmz.tday.services.AppConfigService
 import com.ohmz.tday.services.FloaterService
 import com.ohmz.tday.services.NlpParseResult
 import com.ohmz.tday.services.TodoNlpService
@@ -369,26 +367,6 @@ class TodoRoutesTest {
     }
 
     @Test
-    fun `summary returns disabled response when setting is off`() = testApplication {
-        val appConfigService = FakeAppConfigService(enabled = false)
-
-        application {
-            configureTodoRoutesTestApp(
-                todoService = RecordingTodoService(timeline = listOf(makeTodo())),
-                appConfigService = appConfigService,
-            )
-        }
-
-        val response = client.postSummary(TodoSummaryRequest(mode = "all"))
-
-        assertEquals(HttpStatusCode.OK, response.status)
-        val body = json.decodeFromString<TodoSummaryResponse>(response.bodyAsText())
-        assertNull(body.summary)
-        assertEquals("disabled", body.fallbackReason)
-        assertEquals("disabled", body.reason)
-    }
-
-    @Test
     fun `summary returns empty logic response for empty scope`() = testApplication {
         application {
             configureTodoRoutesTestApp(RecordingTodoService())
@@ -403,6 +381,29 @@ class TodoRoutesTest {
         assertEquals(0, body.taskCount)
     }
 
+    @Test
+    fun `summary fallback is localized by request locale`() = testApplication {
+        application {
+            configureTodoRoutesTestApp(
+                todoService = RecordingTodoService(timeline = listOf(makeTodo(title = "Pay rent"))),
+                summaryService = FakeTodoSummaryService(response = null),
+            )
+        }
+
+        val en = json.decodeFromString<TodoSummaryResponse>(
+            client.postSummary(TodoSummaryRequest(mode = "all", timeZone = "UTC", locale = "en")).bodyAsText(),
+        )
+        val fr = json.decodeFromString<TodoSummaryResponse>(
+            client.postSummary(TodoSummaryRequest(mode = "all", timeZone = "UTC", locale = "fr")).bodyAsText(),
+        )
+
+        assertEquals("logic", en.source)
+        assertEquals("logic", fr.source)
+        assertTrue(en.summary.orEmpty().contains("Pay rent"))
+        assertTrue(fr.summary.orEmpty().contains("Pay rent"))
+        assertTrue(fr.summary != en.summary, "expected localized difference: ${fr.summary} vs ${en.summary}")
+    }
+
     private suspend fun io.ktor.client.HttpClient.postSummary(
         payload: TodoSummaryRequest,
     ) = post("/api/todo/summary") {
@@ -413,7 +414,6 @@ class TodoRoutesTest {
     private fun Application.configureTodoRoutesTestApp(
         todoService: TodoService,
         floaterService: FloaterService = RecordingFloaterService(),
-        appConfigService: AppConfigService = FakeAppConfigService(),
         summaryService: TodoSummaryService = FakeTodoSummaryService(),
     ) {
         install(Koin) {
@@ -422,7 +422,6 @@ class TodoRoutesTest {
                     single<TodoService> { todoService }
                     single<FloaterService> { floaterService }
                     single<TodoNlpService> { FakeTodoNlpService() }
-                    single<AppConfigService> { appConfigService }
                     single<TodoSummaryService> { summaryService }
                 },
             )
@@ -572,15 +571,6 @@ class TodoRoutesTest {
         )
     }
 
-    private class FakeAppConfigService(
-        private val enabled: Boolean = true,
-    ) : AppConfigService {
-        override suspend fun getGlobalConfig() = AppConfigResponse(aiSummaryEnabled = enabled).right()
-
-        override suspend fun setAiSummaryEnabled(enabled: Boolean, updatedById: String?) =
-            AppConfigResponse(aiSummaryEnabled = enabled).right()
-    }
-
     private class FakeTodoSummaryService(
         private val response: String? = null,
     ) : TodoSummaryService {
@@ -594,6 +584,10 @@ class TodoRoutesTest {
         override suspend fun isHealthy(): Boolean = true
 
         override suspend fun warmUp() = Unit
+
+        override fun isConfigured(): Boolean = true
+
+        override suspend fun healthyCached(): Boolean = true
     }
 
     private companion object {

@@ -6,7 +6,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.data.cache.OfflineCacheManager
-import com.ohmz.tday.compose.core.data.isLikelyConnectivityIssue
 import com.ohmz.tday.compose.core.data.list.FloaterListRepository
 import com.ohmz.tday.compose.core.data.list.ListRepository
 import com.ohmz.tday.compose.core.data.settings.SettingsRepository
@@ -46,12 +45,20 @@ data class TodoListUiState(
     val items: List<TodoItem> = emptyList(),
     val errorMessage: String? = null,
     val aiSummaryEnabled: Boolean = true,
+    val aiSummaryConfigured: Boolean = false,
     val summaryText: String? = null,
     val summarySource: String? = null,
     val summaryGeneratedAt: String? = null,
     val summaryError: String? = null,
     val summaryConnectivityError: Boolean = false,
     val isSummarizing: Boolean = false,
+)
+
+private data class HydrateSnapshot(
+    val todos: List<TodoItem>,
+    val lists: List<ListSummary>,
+    val aiSummaryEnabled: Boolean,
+    val aiSummaryConfigured: Boolean,
 )
 
 @HiltViewModel
@@ -115,6 +122,7 @@ class TodoListViewModel @Inject constructor(
                     TodoListMode.LIST -> listName ?: appContext.getString(R.string.todos_title_list)
                 },
                 aiSummaryEnabled = settingsRepository.isAiSummaryEnabledSnapshot(),
+                aiSummaryConfigured = settingsRepository.aiSummaryConfiguredSnapshot(),
                 summaryText = null,
                 summarySource = null,
                 summaryGeneratedAt = null,
@@ -162,20 +170,13 @@ class TodoListViewModel @Inject constructor(
                 }
             }.onFailure { error ->
                 _uiState.update {
-                    if (isLikelyConnectivityIssue(error)) {
-                        it.copy(
-                            isSummarizing = false,
-                            summaryError = appContext.getString(R.string.todos_summary_offline_unavailable),
-                        )
-                    } else {
-                        it.copy(
-                            isSummarizing = false,
-                            summaryError = error.userFacingMessage(
-                                appContext,
-                                R.string.error_summarize_tasks_failed,
-                            ),
-                        )
-                    }
+                    it.copy(
+                        isSummarizing = false,
+                        summaryError = error.userFacingMessage(
+                            appContext,
+                            R.string.error_summarize_tasks_failed,
+                        ),
+                    )
                 }
             }
         }
@@ -208,14 +209,16 @@ class TodoListViewModel @Inject constructor(
             val todos = todoRepository.fetchTodosSnapshot(mode = mode, listId = listId)
             val lists = fetchListsSnapshotForMode(mode)
             val aiSummaryEnabled = settingsRepository.isAiSummaryEnabledSnapshot()
-            Triple(todos, lists, aiSummaryEnabled)
-        }.onSuccess { (todos, lists, aiSummaryEnabled) ->
+            val aiSummaryConfigured = settingsRepository.aiSummaryConfiguredSnapshot()
+            HydrateSnapshot(todos, lists, aiSummaryEnabled, aiSummaryConfigured)
+        }.onSuccess { snapshot ->
             _uiState.update { current ->
                 current.copy(
                     hasHydratedSnapshot = true,
-                    lists = if (current.lists == lists) current.lists else lists,
-                    items = if (current.items == todos) current.items else todos,
-                    aiSummaryEnabled = aiSummaryEnabled,
+                    lists = if (current.lists == snapshot.lists) current.lists else snapshot.lists,
+                    items = if (current.items == snapshot.todos) current.items else snapshot.todos,
+                    aiSummaryEnabled = snapshot.aiSummaryEnabled,
+                    aiSummaryConfigured = snapshot.aiSummaryConfigured,
                     errorMessage = null,
                 )
             }
@@ -277,10 +280,15 @@ class TodoListViewModel @Inject constructor(
 
     private fun refreshAiSummaryAvailability() {
         viewModelScope.launch {
-            val enabled = settingsRepository.refreshAiSummaryEnabled()
+            val enabled = settingsRepository.refreshAiSummaryPreference()
+            settingsRepository.refreshAiCapability()
+            val configured = settingsRepository.aiSummaryConfiguredSnapshot()
             _uiState.update { current ->
-                if (current.aiSummaryEnabled == enabled) current
-                else current.copy(aiSummaryEnabled = enabled)
+                if (current.aiSummaryEnabled == enabled && current.aiSummaryConfigured == configured) {
+                    current
+                } else {
+                    current.copy(aiSummaryEnabled = enabled, aiSummaryConfigured = configured)
+                }
             }
         }
     }

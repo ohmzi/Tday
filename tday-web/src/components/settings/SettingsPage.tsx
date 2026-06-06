@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/sheet-chrome/CenteredSelectorOverlay";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/providers/AuthProvider";
+import { useUserPreferences } from "@/providers/UserPreferencesProvider";
 import { useToast } from "@/hooks/use-toast";
 import NativePageTitle from "@/components/app/NativePageTitle";
 import { nativeScreenAccentColors } from "@/components/app/nativeScreenTheme";
@@ -171,6 +172,7 @@ export default function SettingsPage() {
   const { t: sidebarDict, i18n } = useTranslation("sidebar");
   const { t } = useTranslation("settings");
   const { user } = useAuth();
+  const { preferences, updatePreferences } = useUserPreferences();
   const { toast } = useToast();
   const { theme = "system", resolvedTheme, setTheme } = useTheme();
 
@@ -491,6 +493,23 @@ export default function SettingsPage() {
           );
         })}
       </CenteredSelectorOverlay>
+
+      <SettingsSection title={t("aiSummary.title")} description={t("aiSummary.description")}>
+        <div className="flex items-center justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-[1.05rem] font-black text-foreground">{t("aiSummary.toggle")}</p>
+          </div>
+          <SettingsSwitch
+            checked={preferences?.aiSummaryEnabled !== false}
+            ariaLabel={t("aiSummary.toggle")}
+            onClick={() =>
+              updatePreferences({
+                aiSummaryEnabled: !(preferences?.aiSummaryEnabled !== false),
+              })
+            }
+          />
+        </div>
+      </SettingsSection>
 
       {push.isSupported && (
         <SettingsSection title={t("notifications.title")}>

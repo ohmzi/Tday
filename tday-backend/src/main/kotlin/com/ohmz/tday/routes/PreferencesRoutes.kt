@@ -31,7 +31,7 @@ fun Route.preferencesRoutes() {
                     val sortBy = validateOptionalEnumValue<SortBy>(body.sortBy, "sortBy").bind()
                     val groupBy = validateOptionalValue(body.groupBy, "groupBy", ALLOWED_GROUP_BY_VALUES).bind()
                     val direction = validateOptionalEnumValue<Direction>(body.direction, "direction").bind()
-                    preferencesService.update(user.id, sortBy, groupBy, direction).bind()
+                    preferencesService.update(user.id, sortBy, groupBy, direction, body.aiSummaryEnabled).bind()
                     mapOf("message" to "preferences updated")
                 }
             }

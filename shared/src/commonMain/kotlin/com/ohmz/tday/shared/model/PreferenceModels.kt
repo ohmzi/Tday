@@ -7,6 +7,7 @@ data class PreferencesDto(
     val sortBy: String? = null,
     val groupBy: String? = null,
     val direction: String? = null,
+    val aiSummaryEnabled: Boolean? = null,
 )
 
 /**
@@ -27,5 +28,6 @@ data class PreferencesResponse(
     val sortBy: String? = null,
     val groupBy: String? = null,
     val direction: String? = null,
+    val aiSummaryEnabled: Boolean = true,
     val userPreferences: PreferencesDto? = null,
 )

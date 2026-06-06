@@ -1,6 +1,5 @@
 package com.ohmz.tday.compose.core.network
 
-import com.ohmz.tday.compose.core.model.AdminSettingsResponse
 import com.ohmz.tday.compose.core.model.AppSettingsResponse
 import com.ohmz.tday.compose.core.model.ChangePasswordRequest
 import com.ohmz.tday.compose.core.model.CompletedFloatersResponse
@@ -55,7 +54,6 @@ import com.ohmz.tday.compose.core.model.TodoTitleNlpRequest
 import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
 import com.ohmz.tday.compose.core.model.TodoUncompleteRequest
 import com.ohmz.tday.compose.core.model.TodosResponse
-import com.ohmz.tday.compose.core.model.UpdateAdminSettingsRequest
 import com.ohmz.tday.compose.core.model.UpdateCompletedFloaterRequest
 import com.ohmz.tday.compose.core.model.UpdateCompletedTodoRequest
 import com.ohmz.tday.compose.core.model.UpdateFloaterListRequest
@@ -145,14 +143,6 @@ interface TdayApiService {
 
     @GET("/api/app-settings")
     suspend fun getAppSettings(): Response<AppSettingsResponse>
-
-    @GET("/api/admin/settings")
-    suspend fun getAdminSettings(): Response<AdminSettingsResponse>
-
-    @PATCH("/api/admin/settings")
-    suspend fun patchAdminSettings(
-        @Body payload: UpdateAdminSettingsRequest,
-    ): Response<AdminSettingsResponse>
 
     @POST("/api/todo/summary")
     suspend fun summarizeTodos(

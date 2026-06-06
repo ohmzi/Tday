@@ -530,6 +530,11 @@
       "passwordsDoNotMatch": "パスワードが一致しません",
       "passwordChanged": "パスワードを正常に変更しました",
       "passwordChangeFailed": "パスワードの変更に失敗しました"
+    },
+    "aiSummary": {
+      "title": "AI task summary",
+      "description": "Show a one-tap summary of your tasks.",
+      "toggle": "Show summary button"
     }
   },
   "summary": {
@@ -561,6 +566,11 @@
     "startWith": "まず{{task}}から始めましょう。",
     "nextUp": "次に、{{tasks}}。",
     "overdueCatchUp": "また、{{count}} 件の期限切れタスクに対応する必要があります。",
-    "clearForNow": "今のところ問題ありません。このビューに対応が必要なタスクはありません。"
+    "clearForNow": "今のところ問題ありません。このビューに対応が必要なタスクはありません。",
+    "title": "Summary",
+    "loading": "Generating summary…",
+    "error": "Couldn't generate a summary. Please try again.",
+    "sourceServer": "Server model",
+    "sourceLocal": "Local model"
   }
 }
