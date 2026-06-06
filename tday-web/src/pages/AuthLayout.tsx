@@ -24,13 +24,13 @@ export default function AuthLayout() {
     return <Navigate to={`/${loc}/app/tday`} replace />;
   }
 
+  // The onboarding wizard rendered by /login and /register owns the full-screen
+  // layout (background + centered card), so AuthLayout only handles auth gating
+  // here and lets the wizard control its own presentation.
   return (
-    <div className="relative flex min-h-screen items-center justify-center bg-background">
-      <div className="absolute inset-0 bg-gradient-to-br from-background via-background to-muted/30" />
-      <div className="relative z-10 mx-4 w-full max-w-md">
-        <Outlet />
-      </div>
+    <>
+      <Outlet />
       <SonnerToaster />
-    </div>
+    </>
   );
 }
