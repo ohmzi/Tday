@@ -29,6 +29,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.PhoneAndroid
@@ -463,6 +464,7 @@ fun OnboardingWizardOverlay(
                             imageVector = Icons.Rounded.PhoneAndroid,
                             color = Color(0xFF7FB78A),
                             active = step == WizardStep.MODE,
+                            completed = step == WizardStep.SERVER || step == WizardStep.LOGIN,
                         )
                         WizardStepChip(
                             modifier = Modifier.weight(1f),
@@ -470,6 +472,7 @@ fun OnboardingWizardOverlay(
                             imageVector = Icons.Rounded.Language,
                             color = Color(0xFF6EA8E1),
                             active = step == WizardStep.SERVER,
+                            completed = step == WizardStep.LOGIN,
                         )
                         WizardStepChip(
                             modifier = Modifier.weight(1f),
@@ -1299,7 +1302,11 @@ private fun WizardStepChip(
     imageVector: ImageVector,
     color: Color,
     active: Boolean,
+    completed: Boolean = false,
 ) {
+    // A step keeps its color once it is the active step or has been completed;
+    // completed steps swap their glyph for a checkmark.
+    val highlighted = active || completed
     val scale by animateFloatAsState(
         targetValue = if (active) 1.02f else 1f,
         animationSpec = tween(durationMillis = 180),
@@ -1312,6 +1319,7 @@ private fun WizardStepChip(
     )
     val colorScheme = MaterialTheme.colorScheme
     val ringColor = lerp(color, MaterialTheme.colorScheme.onSurface, 0.35f)
+    val contentColor = if (highlighted) Color.White else colorScheme.onSurface.copy(alpha = 0.68f)
 
     Card(
         modifier = modifier.graphicsLayer(
@@ -1319,24 +1327,24 @@ private fun WizardStepChip(
             scaleY = scale,
         ),
         shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = if (active) color else colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = if (active) 8.dp else 0.dp),
+        colors = CardDefaults.cardColors(containerColor = if (highlighted) color else colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = if (highlighted) 8.dp else 0.dp),
         border = BorderStroke(
             borderWidth,
-            if (active) ringColor.copy(alpha = 0.62f) else colorScheme.onSurface.copy(alpha = 0.08f),
+            if (highlighted) ringColor.copy(alpha = 0.62f) else colorScheme.onSurface.copy(alpha = 0.08f),
         ),
     ) {
         Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
-                    imageVector = imageVector,
+                    imageVector = if (completed) Icons.Rounded.Check else imageVector,
                     contentDescription = null,
-                    tint = if (active) Color.White else colorScheme.onSurface.copy(alpha = 0.68f),
+                    tint = contentColor,
                     modifier = Modifier.size(13.dp),
                 )
                 Text(
                     text = title,
-                    color = if (active) Color.White else colorScheme.onSurface.copy(alpha = 0.68f),
+                    color = contentColor,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(start = 6.dp),

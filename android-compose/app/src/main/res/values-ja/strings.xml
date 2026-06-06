@@ -279,6 +279,7 @@
     <!-- Calendar screen -->
     <string name="calendar_title">カレンダー</string>
     <string name="calendar_jump_to_today">今日に移動</string>
+    <string name="calendar_today">今日</string>
     <string name="calendar_tasks_due">%1$s 期限のタスク</string>
     <string name="calendar_no_pending">この日に期限の未完了タスクはありません</string>
     <string name="calendar_completed_header">完了済み:</string>
@@ -315,6 +316,9 @@
     <string name="settings_sync_pending_one">1件の変更が待機中</string>
     <string name="settings_sync_pending_many">%1$d件の変更が待機中</string>
     <string name="settings_sync_now">今すぐ同期</string>
+    <string name="settings_sync_up_to_date">最新です</string>
+    <string name="settings_sync_offline_short">オフライン</string>
+    <string name="settings_sync_offline_message">接続が回復すると変更が同期されます。</string>
     <string name="settings_syncing_now">同期中...</string>
     <string name="error_auth_expired">セッションの有効期限が切れました。もう一度サインインしてください。</string>
     <string name="error_app_outdated">このバージョンのアプリは古くなっています。続行するには更新してください。</string>

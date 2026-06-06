@@ -272,36 +272,50 @@ private struct SettingsWorkspaceCard: View {
         SettingsSectionCard {
             SettingsSectionTitle("Workspace")
 
-            VStack(alignment: .leading, spacing: 6) {
-                Text(syncStatus.title)
-                    .font(.tdayRounded(size: 17, weight: .heavy))
-                    .foregroundStyle(colors.onSurface)
+            if syncStatus.isLocalMode {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(syncStatus.title)
+                        .font(.tdayRounded(size: 17, weight: .heavy))
+                        .foregroundStyle(colors.onSurface)
 
-                Text(syncStatus.statusText)
-                    .font(.tdayRounded(size: 13, weight: .bold))
-                    .foregroundStyle(syncStatus.isOffline ? colors.error : colors.onSurface.opacity(0.62))
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
-            if !syncStatus.isLocalMode {
-                SettingsDivider()
-
-                SettingsSyncFactRow(label: L("Last synced"), value: syncStatus.lastSyncedText())
-
-                if let lastAttempt = syncStatus.lastAttemptText() {
-                    SettingsSyncFactRow(label: L("Last attempt"), value: lastAttempt)
+                    Text(syncStatus.statusText)
+                        .font(.tdayRounded(size: 13, weight: .bold))
+                        .foregroundStyle(colors.onSurface.opacity(0.62))
+                        .fixedSize(horizontal: false, vertical: true)
                 }
+            } else {
+                HStack(spacing: 12) {
+                    Text(syncStatus.title)
+                        .font(.tdayRounded(size: 17, weight: .heavy))
+                        .foregroundStyle(colors.onSurface)
 
-                SettingsSyncFactRow(label: L("Pending"), value: syncStatus.pendingText)
+                    Spacer(minLength: 12)
 
-                Button(action: onSyncNow) {
-                    Text(syncStatus.isManualSyncing ? L("Syncing...") : L("Sync now"))
+                    Text(syncStatus.isOffline ? L("Offline") : L("Up to date"))
                         .font(.tdayRounded(size: 14, weight: .heavy))
-                        .foregroundStyle(syncStatus.isManualSyncing ? colors.onSurface.opacity(0.45) : colors.secondary)
-                        .frame(maxWidth: .infinity, alignment: .trailing)
+                        .foregroundStyle(syncStatus.isOffline ? colors.error : Color.tdayFloaterGreen)
                 }
-                .buttonStyle(.plain)
-                .disabled(syncStatus.isManualSyncing)
+
+                if syncStatus.isOffline {
+                    SettingsDivider()
+
+                    SettingsSyncFactRow(label: L("Last synced"), value: syncStatus.lastSyncedText())
+
+                    Text(L("Changes will sync when connection returns."))
+                        .font(.tdayRounded(size: 13, weight: .bold))
+                        .foregroundStyle(colors.onSurface.opacity(0.62))
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                    Button(action: onSyncNow) {
+                        Text(syncStatus.isManualSyncing ? L("Syncing...") : L("Sync now"))
+                            .font(.tdayRounded(size: 14, weight: .heavy))
+                            .foregroundStyle(syncStatus.isManualSyncing ? colors.onSurface.opacity(0.45) : colors.secondary)
+                            .frame(maxWidth: .infinity, alignment: .trailing)
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(syncStatus.isManualSyncing)
+                }
             }
         }
     }

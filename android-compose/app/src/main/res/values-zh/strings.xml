@@ -279,6 +279,7 @@
     <!-- Calendar screen -->
     <string name="calendar_title">日历</string>
     <string name="calendar_jump_to_today">跳到今天</string>
+    <string name="calendar_today">今天</string>
     <string name="calendar_tasks_due">%1$s 到期的任务</string>
     <string name="calendar_no_pending">这一天没有待办任务到期</string>
     <string name="calendar_completed_header">已完成：</string>
@@ -315,6 +316,9 @@
     <string name="settings_sync_pending_one">1 项更改等待中</string>
     <string name="settings_sync_pending_many">%1$d 项更改等待中</string>
     <string name="settings_sync_now">立即同步</string>
+    <string name="settings_sync_up_to_date">已是最新</string>
+    <string name="settings_sync_offline_short">离线</string>
+    <string name="settings_sync_offline_message">恢复连接后更改将自动同步。</string>
     <string name="settings_syncing_now">正在同步...</string>
     <string name="error_auth_expired">会话已过期。请重新登录。</string>
     <string name="error_app_outdated">此应用版本已过时。请更新后继续。</string>
