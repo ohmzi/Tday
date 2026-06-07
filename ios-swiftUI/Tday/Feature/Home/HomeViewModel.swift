@@ -85,7 +85,7 @@ final class HomeViewModel {
     func summarizeToday() async {
         guard !isSummarizing else { return }
         guard aiSummaryEnabled else {
-            summaryError = "Summary is disabled by admin"
+            summaryError = "Summary is turned off in Settings."
             return
         }
         isSummarizing = true

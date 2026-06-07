@@ -120,10 +120,10 @@ struct SettingsScreen: View {
                 }
             }
 
-            if isAdminUser {
+            if !viewModel.isLocalMode {
                 settingsListRow {
                     SettingsSectionCard {
-                        SettingsSectionTitle("Feature toggle")
+                        SettingsSectionTitle("AI task summary")
                         SettingsAiSummaryRow(viewModel: viewModel)
                     }
                 }
@@ -956,37 +956,24 @@ private struct SettingsAiSummaryRow: View {
 
                 Spacer()
 
-                if viewModel.adminAiSummaryEnabled == nil {
-                    ProgressView()
-                        .controlSize(.small)
-                } else {
-                    Toggle(
-                        "",
-                        isOn: Binding(
-                            get: { viewModel.adminAiSummaryEnabled ?? false },
-                            set: { newValue in
-                                Task { await viewModel.setAdminAiSummaryEnabled(newValue) }
-                            }
-                        )
+                Toggle(
+                    "",
+                    isOn: Binding(
+                        get: { viewModel.aiSummaryEnabled },
+                        set: { newValue in
+                            Task { await viewModel.setAiSummaryEnabled(newValue) }
+                        }
                     )
-                    .labelsHidden()
-                    .disabled(viewModel.isAdminAiSummaryLoading || viewModel.isAdminAiSummarySaving)
-                    .tint(colors.secondary)
-                }
+                )
+                .labelsHidden()
+                .disabled(viewModel.isAiSummarySaving)
+                .tint(colors.secondary)
             }
 
-            if viewModel.isAdminAiSummarySaving {
-                Text("Saving admin setting...")
-                    .font(.tdayRounded(size: 12, weight: .bold))
-                    .foregroundStyle(colors.onSurface.opacity(0.58))
-            }
-
-            if let error = viewModel.adminAiSummaryError,
-               viewModel.adminAiSummaryEnabled == true {
-                Text(error)
-                    .font(.tdayRounded(size: 12, weight: .bold))
-                    .foregroundStyle(colors.error)
-            }
+            Text("Summarize your day with one tap. Turn it off to hide the summary button.")
+                .font(.tdayRounded(size: 12, weight: .bold))
+                .foregroundStyle(colors.onSurface.opacity(0.58))
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 }
