@@ -18,6 +18,11 @@ import { api } from "@/lib/api-client";
 import { getErrorMessage } from "@/lib/error-message";
 import { createClientCredentialEnvelope } from "@/lib/security/clientCredentialEnvelope";
 import PendingApprovalDialog from "@/components/auth/PendingApprovalDialog";
+import {
+  clearPendingApproval,
+  getPendingApproval,
+  setPendingApproval,
+} from "@/lib/pendingApproval";
 import { Link } from "@/lib/navigation";
 import {
   fetchAllSecurityQuestions,
@@ -68,6 +73,8 @@ export default function OnboardingWizard({
   const [answer1, setAnswer1] = React.useState("");
   const [questionId2, setQuestionId2] = React.useState<number | null>(null);
   const [answer2, setAnswer2] = React.useState("");
+  const [questionId3, setQuestionId3] = React.useState<number | null>(null);
+  const [answer3, setAnswer3] = React.useState("");
   const [errorMessage, setErrorMessage] = React.useState("");
   const [infoMessage, setInfoMessage] = React.useState("");
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -76,8 +83,10 @@ export default function OnboardingWizard({
   const isCreating = mode === "create";
   const daytime = isDaytime();
 
+  // Reopen the holding screen on load whenever a pending marker is present (survives
+  // reload) or the post-redirect ?pending=1 hint is set.
   React.useEffect(() => {
-    if (searchParams.get("pending") === "1") {
+    if (searchParams.get("pending") === "1" || getPendingApproval()) {
       setPendingApprovalOpen(true);
     }
   }, [searchParams]);
@@ -92,6 +101,7 @@ export default function OnboardingWizard({
       setSecurityQuestions(questions);
       if (questions[0]) setQuestionId1((prev) => prev ?? questions[0].id);
       if (questions[1]) setQuestionId2((prev) => prev ?? questions[1].id);
+      if (questions[2]) setQuestionId3((prev) => prev ?? questions[2].id);
     });
     return () => {
       cancelled = true;
@@ -138,16 +148,20 @@ export default function OnboardingWizard({
       setErrorMessage("Passwords do not match");
       return false;
     }
-    if (questionId1 == null || questionId2 == null) {
-      setErrorMessage("Please choose two security questions");
+    if (questionId1 == null || questionId2 == null || questionId3 == null) {
+      setErrorMessage("Please choose three security questions");
       return false;
     }
-    if (questionId1 === questionId2) {
+    if (new Set([questionId1, questionId2, questionId3]).size !== 3) {
       setErrorMessage("Security questions must be different");
       return false;
     }
-    if (answer1.trim().length === 0 || answer2.trim().length === 0) {
-      setErrorMessage("Please answer both security questions");
+    if (
+      answer1.trim().length === 0 ||
+      answer2.trim().length === 0 ||
+      answer3.trim().length === 0
+    ) {
+      setErrorMessage("Please answer all three security questions");
       return false;
     }
     return true;
@@ -171,6 +185,7 @@ export default function OnboardingWizard({
 
       if (!result.ok) {
         if (result.code === "pending_approval") {
+          setPendingApproval(normalizedUsername);
           setPendingApprovalOpen(true);
           return;
         }
@@ -178,6 +193,8 @@ export default function OnboardingWizard({
         return;
       }
 
+      // Approved sign-in: drop any lingering holding-screen marker.
+      clearPendingApproval();
       router.replace("/app/tday");
     } catch (error) {
       console.error(error);
@@ -209,11 +226,13 @@ export default function OnboardingWizard({
           securityAnswers: [
             { questionId: questionId1, answer: answer1.trim() },
             { questionId: questionId2, answer: answer2.trim() },
+            { questionId: questionId3, answer: answer3.trim() },
           ],
         }),
       })) as RegisterResponse | null;
 
       if (body?.requiresApproval) {
+        setPendingApproval(username.trim().toLowerCase());
         setPendingApprovalOpen(true);
         return;
       }
@@ -252,8 +271,11 @@ export default function OnboardingWizard({
     confirmPassword.length > 0 &&
     questionId1 != null &&
     questionId2 != null &&
+    questionId3 != null &&
+    new Set([questionId1, questionId2, questionId3]).size === 3 &&
     answer1.trim().length > 0 &&
-    answer2.trim().length > 0;
+    answer2.trim().length > 0 &&
+    answer3.trim().length > 0;
   const primaryEnabled = (isCreating ? createEnabled : signInEnabled) && !isSubmitting;
 
   return (
@@ -393,7 +415,7 @@ export default function OnboardingWizard({
                     <WizardQuestionSelect
                       value={questionId2}
                       questions={securityQuestions.filter(
-                        (q) => q.id !== questionId1,
+                        (q) => q.id !== questionId1 && q.id !== questionId3,
                       )}
                       onChange={(id) => {
                         setQuestionId2(id);
@@ -406,6 +428,25 @@ export default function OnboardingWizard({
                       value={answer2}
                       onChange={(value) => {
                         setAnswer2(value);
+                        clearMessages();
+                      }}
+                    />
+                    <WizardQuestionSelect
+                      value={questionId3}
+                      questions={securityQuestions.filter(
+                        (q) => q.id !== questionId1 && q.id !== questionId2,
+                      )}
+                      onChange={(id) => {
+                        setQuestionId3(id);
+                        clearMessages();
+                      }}
+                    />
+                    <WizardInput
+                      placeholder="Answer"
+                      autoComplete="off"
+                      value={answer3}
+                      onChange={(value) => {
+                        setAnswer3(value);
                         clearMessages();
                       }}
                     />
@@ -466,6 +507,13 @@ export default function OnboardingWizard({
       <PendingApprovalDialog
         open={pendingApprovalOpen}
         onOpenChange={setPendingApprovalOpen}
+        username={getPendingApproval()}
+        onUseDifferentAccount={() => {
+          clearPendingApproval();
+          setPendingApprovalOpen(false);
+          setMode("signin");
+          setPassword("");
+        }}
       />
     </main>
   );

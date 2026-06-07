@@ -18,6 +18,7 @@ import com.ohmz.tday.compose.core.data.server.ServerConfigRepository
 import com.ohmz.tday.compose.core.data.server.VersionCheckResult
 import com.ohmz.tday.compose.core.data.settings.SettingsRepository
 import com.ohmz.tday.compose.core.data.sync.SyncManager
+import com.ohmz.tday.compose.core.model.AuthResult
 import com.ohmz.tday.compose.core.model.SessionUser
 import com.ohmz.tday.compose.core.network.ConnectivityObserver
 import com.ohmz.tday.compose.core.network.RealtimeClient
@@ -62,6 +63,11 @@ data class AppUiState(
     val error: String? = null,
     val canResetServerTrust: Boolean = false,
     val pendingApprovalMessage: String? = null,
+    // Persistent "waiting for admin approval" holding screen (survives relaunch via the
+    // secure pending marker; cleared once approved or signed out).
+    val pendingApproval: Boolean = false,
+    val pendingApprovalUsername: String? = null,
+    val isCheckingApproval: Boolean = false,
     val isManualSyncing: Boolean = false,
     val aiSummaryEnabled: Boolean = true,
     val selectedReminder: ReminderOption = ReminderOption.DEFAULT,
@@ -296,12 +302,47 @@ class AppViewModel @Inject constructor(
 
             authRepository.clearSessionOnly()
 
+            // No active session. If a pending-approval marker exists, silently re-attempt
+            // login: an approved account falls through to a fresh authenticated bootstrap;
+            // otherwise show the persistent holding screen.
+            val pending = authRepository.loadPendingApproval()
+            if (pending != null) {
+                val (pendingUser, pendingPass) = pending
+                if (authRepository.login(pendingUser, pendingPass) is AuthResult.Success) {
+                    authRepository.clearPendingApproval()
+                    bootstrap()
+                    return@launch
+                }
+                _uiState.update {
+                    it.copy(
+                        loading = false,
+                        authenticated = false,
+                        requiresServerSetup = false,
+                        requiresLogin = false,
+                        pendingApproval = true,
+                        pendingApprovalUsername = pendingUser,
+                        isCheckingApproval = false,
+                        serverUrl = serverConfigRepository.getServerUrl(),
+                        dataMode = AppDataMode.SERVER,
+                        user = null,
+                        error = null,
+                        canResetServerTrust = false,
+                        pendingApprovalMessage = null,
+                        isManualSyncing = false,
+                        aiSummaryEnabled = true,
+                    )
+                }
+                ensureResyncLoop(authenticated = false)
+                return@launch
+            }
+
             _uiState.update {
                 it.copy(
                     loading = false,
                     authenticated = false,
                     requiresServerSetup = false,
                     requiresLogin = true,
+                    pendingApproval = false,
                     serverUrl = serverConfigRepository.getServerUrl(),
                     dataMode = AppDataMode.SERVER,
                     user = null,
@@ -313,6 +354,56 @@ class AppViewModel @Inject constructor(
                 )
             }
             ensureResyncLoop(authenticated = false)
+        }
+    }
+
+    /** Persist the pending marker and switch to the holding screen after a register/login
+     *  that returned "pending approval". */
+    fun enterPendingApproval(username: String, password: String) {
+        authRepository.savePendingApproval(username, password)
+        _uiState.update {
+            it.copy(
+                pendingApproval = true,
+                pendingApprovalUsername = username,
+                authenticated = false,
+                requiresLogin = false,
+                isCheckingApproval = false,
+            )
+        }
+    }
+
+    /** Re-attempt login with the stored pending credentials; on approval, route to Home
+     *  via a fresh bootstrap. */
+    fun checkPendingApproval() {
+        if (_uiState.value.isCheckingApproval) return
+        val pending = authRepository.loadPendingApproval() ?: run {
+            _uiState.update { it.copy(pendingApproval = false) }
+            return
+        }
+        viewModelScope.launch {
+            _uiState.update { it.copy(isCheckingApproval = true) }
+            val result = authRepository.login(pending.first, pending.second)
+            if (result is AuthResult.Success) {
+                authRepository.clearPendingApproval()
+                _uiState.update {
+                    it.copy(
+                        pendingApproval = false,
+                        pendingApprovalUsername = null,
+                        isCheckingApproval = false
+                    )
+                }
+                bootstrap()
+            } else {
+                _uiState.update { it.copy(isCheckingApproval = false) }
+            }
+        }
+    }
+
+    /** Abandon the pending account and return to sign-in / onboarding. */
+    fun cancelPendingApproval() {
+        authRepository.clearPendingApproval()
+        _uiState.update {
+            it.copy(pendingApproval = false, pendingApprovalUsername = null, requiresLogin = true)
         }
     }
 
