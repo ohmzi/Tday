@@ -1152,7 +1152,6 @@ struct TodoListScreen: View {
             initialPayload: CreateTaskPayload(title: "", description: nil, priority: viewModel.mode == .priority ? TaskPriorityDisplay.importantValue : TaskPriorityDisplay.normalValue, due: viewModel.mode == .floater ? nil : Date().addingTimeInterval(60 * 60), rrule: nil, listId: viewModel.listId),
             defaultScheduled: viewModel.mode != .floater,
             showScheduleControls: viewModel.mode != .floater,
-            autofocusTitle: true,
             onParseTaskTitleNlp: viewModel.mode == .floater ? nil : { title, dueRef in
                 await viewModel.parseTaskTitleNlp(text: title, referenceDueEpochMs: dueRef)
             },
