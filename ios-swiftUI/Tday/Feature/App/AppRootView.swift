@@ -190,7 +190,19 @@ struct AppRootView: View {
                         if !appViewModel.isWorkspaceAvailable {
                             let isVersionBlocking = appViewModel.versionCheckResult != .compatible
 
-                            if isVersionBlocking {
+                            if appViewModel.pendingApproval {
+                                PendingApprovalView(
+                                    username: appViewModel.pendingApprovalUsername,
+                                    isChecking: appViewModel.isCheckingApproval,
+                                    onCheckStatus: {
+                                        await appViewModel.checkPendingApproval()
+                                    },
+                                    onUseDifferentAccount: {
+                                        authViewModel.clearStatus()
+                                        appViewModel.cancelPendingApproval()
+                                    }
+                                )
+                            } else if isVersionBlocking {
                                 UpdateRequiredView(
                                     versionCheckResult: appViewModel.versionCheckResult,
                                     onRetry: {
@@ -215,13 +227,19 @@ struct AppRootView: View {
                                         let success = await authViewModel.login(username: username, password: password, source: source)
                                         if success {
                                             await appViewModel.refreshSession()
+                                        } else if authViewModel.pendingApproval {
+                                            appViewModel.enterPendingApproval(username: username, password: password)
                                         }
                                         return success
                                     },
                                     onRegister: { firstName, username, password, securityAnswers in
                                         let success = await authViewModel.register(firstName: firstName, lastName: "", username: username, password: password, securityAnswers: securityAnswers)
                                         if success {
-                                            await appViewModel.refreshSession()
+                                            if authViewModel.pendingApproval {
+                                                appViewModel.enterPendingApproval(username: username, password: password)
+                                            } else {
+                                                await appViewModel.refreshSession()
+                                            }
                                         }
                                         return success
                                     },
@@ -878,6 +896,92 @@ private struct SplashTdayLogoMark: View {
             }
         }
         .aspectRatio(1, contentMode: .fit)
+    }
+}
+
+/// Persistent "waiting for admin approval" holding screen. Shown on every launch while a
+/// registered account is still PENDING; a silent re-login (on launch and via "Check
+/// status") advances to Home the moment approval lands.
+private struct PendingApprovalView: View {
+    let username: String?
+    let isChecking: Bool
+    let onCheckStatus: () async -> Void
+    let onUseDifferentAccount: () -> Void
+
+    @Environment(\.tdayColors) private var colors
+
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.45)
+                .ignoresSafeArea()
+
+            VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "hourglass")
+                            .font(.system(size: 20, weight: .semibold))
+                            .foregroundStyle(colors.primary)
+                        Text(L("Waiting for approval"))
+                            .font(.tdayRounded(size: 20, weight: .heavy))
+                            .foregroundStyle(colors.onSurface)
+                    }
+
+                    Text(pendingMessage)
+                        .font(.tdayRounded(size: 14, weight: .bold))
+                        .foregroundStyle(colors.onSurface.opacity(0.62))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Button {
+                    Task { await onCheckStatus() }
+                } label: {
+                    HStack(spacing: 8) {
+                        if isChecking {
+                            ProgressView().tint(colors.onPrimary)
+                        }
+                        Text(L(isChecking ? "Checking..." : "Check approval status"))
+                            .font(.tdayRounded(size: 15, weight: .bold))
+                            .foregroundStyle(colors.onPrimary)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 48)
+                    .background {
+                        Capsule(style: .continuous).fill(colors.primary)
+                    }
+                }
+                .buttonStyle(.plain)
+                .opacity(isChecking ? 0.72 : 1)
+                .disabled(isChecking)
+
+                Button(action: onUseDifferentAccount) {
+                    Text(L("Use a different account"))
+                        .font(.tdayRounded(size: 15, weight: .bold))
+                        .foregroundStyle(colors.primary)
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.plain)
+                .disabled(isChecking)
+            }
+            .padding(20)
+            .frame(maxWidth: 430, alignment: .leading)
+            .background {
+                RoundedRectangle(cornerRadius: 30, style: .continuous)
+                    .fill(colors.background)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 30, style: .continuous)
+                            .stroke(colors.onSurface.opacity(colors.isDark ? 0.12 : 0.08), lineWidth: 1)
+                    )
+            }
+            .shadow(color: Color.black.opacity(colors.isDark ? 0.34 : 0.14), radius: 18, x: 0, y: 10)
+            .padding(18)
+        }
+    }
+
+    private var pendingMessage: String {
+        if let username, !username.isEmpty {
+            return L("Your account (%@) is waiting for an administrator to approve it. We'll let you in as soon as it's approved.", username)
+        }
+        return L("Your account is waiting for an administrator to approve it. We'll let you in as soon as it's approved.")
     }
 }
 

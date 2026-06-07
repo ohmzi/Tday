@@ -58,8 +58,10 @@ struct OnboardingWizardOverlay: View {
     @State private var isLoadingSecurityQuestions = false
     @State private var securityQuestionId1: Int?
     @State private var securityQuestionId2: Int?
+    @State private var securityQuestionId3: Int?
     @State private var securityAnswer1 = ""
     @State private var securityAnswer2 = ""
+    @State private var securityAnswer3 = ""
     @State private var localError: String?
     @State private var isConnecting = false
     @State private var isCompletingAuthentication = false
@@ -514,33 +516,25 @@ struct OnboardingWizardOverlay: View {
                     subtitle: "Fetching available security questions."
                 )
             } else {
-                WizardSecurityQuestionPicker(
-                    title: "Question 1",
+                WizardSecurityQuestionRow(
+                    index: 1,
                     selection: $securityQuestionId1,
-                    options: securityQuestions.filter { $0.id != securityQuestionId2 }
+                    answer: $securityAnswer1,
+                    options: securityQuestions.filter { $0.id != securityQuestionId2 && $0.id != securityQuestionId3 }
                 )
-                WizardInputField(
-                    title: "Answer",
-                    text: $securityAnswer1,
-                    autocapitalization: .never,
-                    disableAutocorrection: true,
-                    submitLabel: .next
-                )
-
-                WizardSecurityQuestionPicker(
-                    title: "Question 2",
+                WizardSecurityQuestionRow(
+                    index: 2,
                     selection: $securityQuestionId2,
-                    options: securityQuestions.filter { $0.id != securityQuestionId1 }
+                    answer: $securityAnswer2,
+                    options: securityQuestions.filter { $0.id != securityQuestionId1 && $0.id != securityQuestionId3 }
                 )
-                WizardInputField(
-                    title: "Answer",
-                    text: $securityAnswer2,
-                    autocapitalization: .never,
-                    disableAutocorrection: true,
+                WizardSecurityQuestionRow(
+                    index: 3,
+                    selection: $securityQuestionId3,
+                    answer: $securityAnswer3,
+                    options: securityQuestions.filter { $0.id != securityQuestionId1 && $0.id != securityQuestionId2 },
                     submitLabel: .done,
-                    onSubmit: {
-                        Task { await submitRegistration() }
-                    }
+                    onSubmit: { Task { await submitRegistration() } }
                 )
             }
 
@@ -798,6 +792,9 @@ struct OnboardingWizardOverlay: View {
             if securityQuestionId2 == nil, loaded.indices.contains(1) {
                 securityQuestionId2 = loaded[1].id
             }
+            if securityQuestionId3 == nil, loaded.indices.contains(2) {
+                securityQuestionId3 = loaded[2].id
+            }
             if loaded.isEmpty {
                 localError = "Could not load security questions. Please try again."
             }
@@ -805,28 +802,31 @@ struct OnboardingWizardOverlay: View {
     }
 
     private var securityQuestionsValid: Bool {
-        guard let id1 = securityQuestionId1, let id2 = securityQuestionId2, id1 != id2 else {
+        guard let id1 = securityQuestionId1, let id2 = securityQuestionId2, let id3 = securityQuestionId3,
+              Set([id1, id2, id3]).count == 3 else {
             return false
         }
         return !securityAnswer1.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
-            !securityAnswer2.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            !securityAnswer2.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+            !securityAnswer3.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     private func submitRegistration() async {
         localError = nil
         onClearAuthStatus()
-        guard let id1 = securityQuestionId1, let id2 = securityQuestionId2 else {
-            localError = "Please choose two security questions"
+        guard let id1 = securityQuestionId1, let id2 = securityQuestionId2, let id3 = securityQuestionId3 else {
+            localError = "Please choose three security questions"
             return
         }
-        guard id1 != id2 else {
-            localError = "Choose two different questions"
+        guard Set([id1, id2, id3]).count == 3 else {
+            localError = "Choose three different questions"
             return
         }
         let trimmedAnswer1 = securityAnswer1.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedAnswer2 = securityAnswer2.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedAnswer1.isEmpty, !trimmedAnswer2.isEmpty else {
-            localError = "Please answer both questions"
+        let trimmedAnswer3 = securityAnswer3.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedAnswer1.isEmpty, !trimmedAnswer2.isEmpty, !trimmedAnswer3.isEmpty else {
+            localError = "Please answer all three questions"
             return
         }
 
@@ -838,6 +838,7 @@ struct OnboardingWizardOverlay: View {
             [
                 SecurityAnswerInput(questionId: id1, answer: trimmedAnswer1),
                 SecurityAnswerInput(questionId: id2, answer: trimmedAnswer2),
+                SecurityAnswerInput(questionId: id3, answer: trimmedAnswer3),
             ]
         )
         if !didRegister || authViewModel.pendingApproval {
@@ -963,6 +964,45 @@ private struct WizardInputField: View {
 
 private enum TdayPasswordRules {
     static let descriptor = "allowed: ascii-printable; minlength: 8; required: upper; required: special;"
+}
+
+/// One security-question group: a "Question N" caption, the question picker, and its
+/// answer field — tightly grouped and sharing the exact same width/inset so all rows
+/// line up identically.
+private struct WizardSecurityQuestionRow: View {
+    let index: Int
+    @Binding var selection: Int?
+    @Binding var answer: String
+    let options: [SecurityQuestion]
+    var submitLabel: SubmitLabel = .next
+    var onSubmit: (() -> Void)? = nil
+
+    @Environment(\.tdayColors) private var colors
+
+    var body: some View {
+        let questionTitle = L("Question %d", index)
+        return VStack(alignment: .leading, spacing: 8) {
+            Text(verbatim: questionTitle)
+                .font(.tdayRounded(size: 13, weight: .heavy))
+                .foregroundStyle(colors.onSurface.opacity(0.5))
+                .padding(.leading, 4)
+
+            WizardSecurityQuestionPicker(
+                title: questionTitle,
+                selection: $selection,
+                options: options
+            )
+            WizardInputField(
+                title: "Answer",
+                text: $answer,
+                autocapitalization: .never,
+                disableAutocorrection: true,
+                submitLabel: submitLabel,
+                onSubmit: onSubmit
+            )
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
 }
 
 private struct WizardSecurityQuestionPicker: View {

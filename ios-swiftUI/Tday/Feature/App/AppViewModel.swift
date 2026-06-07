@@ -41,6 +41,12 @@ final class AppViewModel {
     var authenticated = false
     var requiresServerSetup = false
     var requiresLogin = false
+    /// Drives the persistent "waiting for admin approval" holding screen. True when a
+    /// registered/attempted account is still PENDING; survives relaunch via the secure
+    /// pending marker and clears once the account is approved (or the user signs out).
+    var pendingApproval = false
+    var pendingApprovalUsername: String?
+    var isCheckingApproval = false
     var serverURL: String?
     var dataMode: AppDataMode = .unset
     var themeMode: AppThemeMode
@@ -210,9 +216,41 @@ final class AppViewModel {
         }
 
         container.authRepository.clearSessionOnly()
+
+        // No active session. If a pending-approval marker exists, silently re-attempt
+        // login: if the account was approved we fall through to a fresh authenticated
+        // bootstrap; otherwise we show the persistent holding screen.
+        if let creds = container.authRepository.loadPendingApproval() {
+            let result = await container.authRepository.login(username: creds.username, password: creds.password)
+            if case .success = result {
+                container.authRepository.clearPendingApproval()
+                pendingApproval = false
+                pendingApprovalUsername = nil
+                await bootstrap()
+                return
+            }
+            authenticated = false
+            requiresServerSetup = false
+            requiresLogin = false
+            pendingApproval = true
+            pendingApprovalUsername = creds.username
+            dataMode = .server
+            user = nil
+            error = nil
+            pendingApprovalMessage = nil
+            canResetServerTrust = true
+            adminAiSummaryEnabled = nil
+            refreshSyncStatusFromCache()
+            finishBootstrap()
+            stopRealtime()
+            stopSyncLoop()
+            return
+        }
+
         authenticated = false
         requiresServerSetup = false
         requiresLogin = true
+        pendingApproval = false
         dataMode = .server
         user = nil
         error = nil
@@ -226,6 +264,48 @@ final class AppViewModel {
         finishBootstrap()
         stopRealtime()
         stopSyncLoop()
+    }
+
+    // MARK: - Pending admin approval (holding screen)
+
+    /// Persist the pending marker and switch to the holding screen after a register/login
+    /// that returned "pending approval".
+    func enterPendingApproval(username: String, password: String) {
+        container.authRepository.savePendingApproval(username: username, password: password)
+        pendingApprovalUsername = username
+        pendingApproval = true
+        authenticated = false
+        requiresLogin = false
+    }
+
+    /// Re-attempt login with the stored pending credentials. Returns true once the account
+    /// is approved (and routes to Home via a fresh bootstrap); false while still pending.
+    @discardableResult
+    func checkPendingApproval() async -> Bool {
+        guard !isCheckingApproval else { return false }
+        guard let creds = container.authRepository.loadPendingApproval() else {
+            pendingApproval = false
+            return false
+        }
+        isCheckingApproval = true
+        let result = await container.authRepository.login(username: creds.username, password: creds.password)
+        isCheckingApproval = false
+        if case .success = result {
+            container.authRepository.clearPendingApproval()
+            pendingApproval = false
+            pendingApprovalUsername = nil
+            await bootstrap()
+            return true
+        }
+        return false
+    }
+
+    /// Abandon the pending account and return to the sign-in / onboarding flow.
+    func cancelPendingApproval() {
+        container.authRepository.clearPendingApproval()
+        pendingApproval = false
+        pendingApprovalUsername = nil
+        requiresLogin = true
     }
 
     func refreshSession() async {

@@ -316,6 +316,13 @@ class AuthRepository @Inject constructor(
         }
     }
 
+    fun savePendingApproval(username: String, password: String) =
+        secureConfigStore.savePendingApproval(username, password)
+
+    fun loadPendingApproval(): Pair<String, String>? = secureConfigStore.getPendingApproval()
+
+    fun clearPendingApproval() = secureConfigStore.clearPendingApproval()
+
     suspend fun updateProfileName(name: String) {
         val response = api.patchUserProfile(UpdateProfileRequest(name = name.trim()))
         if (!response.isSuccessful) {

@@ -203,17 +203,23 @@
 
     <!-- Security questions -->
     <string name="security_questions_title">Security questions</string>
-    <string name="security_questions_subtitle">Choose two questions to verify it\'s you if you ever need to reset your password.</string>
+    <string name="security_questions_subtitle">Choose three questions to verify it\'s you if you ever need to reset your password.</string>
     <string name="security_questions_question_1">Question 1</string>
     <string name="security_questions_question_2">Question 2</string>
+    <string name="security_questions_question_3">Question 3</string>
+    <string name="pending_approval_title">Waiting for approval</string>
+    <string name="pending_approval_message">Your account (%1$s) is waiting for an administrator to approve it. We\'ll let you in as soon as it\'s approved.</string>
+    <string name="pending_approval_message_generic">Your account is waiting for an administrator to approve it. We\'ll let you in as soon as it\'s approved.</string>
+    <string name="pending_approval_check">Check approval status</string>
+    <string name="pending_approval_use_different_account">Use a different account</string>
     <string name="security_questions_answer_label">Answer</string>
     <string name="security_questions_back">Back</string>
-    <string name="security_questions_distinct_required">Choose two different questions</string>
-    <string name="security_questions_answers_required">Please answer both questions</string>
+    <string name="security_questions_distinct_required">Choose three different questions</string>
+    <string name="security_questions_answers_required">Please answer all three questions</string>
     <string name="security_questions_save">Save security questions</string>
     <string name="security_questions_save_failed">Failed to save security questions</string>
     <string name="security_questions_gate_title">Set up security questions</string>
-    <string name="security_questions_gate_subtitle">Choose two security questions. We\'ll use them to verify it\'s you if you ever need to reset your password.</string>
+    <string name="security_questions_gate_subtitle">Choose three security questions. We\'ll use them to verify it\'s you if you ever need to reset your password.</string>
 
     <!-- Forgot password -->
     <string name="forgot_password_entry">Forgot password?</string>
