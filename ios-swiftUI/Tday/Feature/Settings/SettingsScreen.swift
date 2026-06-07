@@ -116,15 +116,6 @@ struct SettingsScreen: View {
             }
 
             settingsListRow {
-                SettingsWorkspaceCard(
-                    syncStatus: viewModel.syncStatus,
-                    onSyncNow: {
-                        Task { await viewModel.manualSync() }
-                    }
-                )
-            }
-
-            settingsListRow {
                 SettingsSectionCard {
                     SettingsSectionTitle("Appearance")
                     SettingsThemeSelector(
@@ -157,6 +148,15 @@ struct SettingsScreen: View {
                         SettingsAiSummaryRow(viewModel: viewModel)
                     }
                 }
+            }
+
+            settingsListRow {
+                SettingsWorkspaceCard(
+                    syncStatus: viewModel.syncStatus,
+                    onSyncNow: {
+                        Task { await viewModel.manualSync() }
+                    }
+                )
             }
 
             settingsListRow {
