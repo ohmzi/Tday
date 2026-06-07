@@ -310,9 +310,9 @@ private struct RootFeedSearchTitleRow: View {
                 .allowsHitTesting(false)
 
                 HStack(spacing: buttonGap) {
-                    RootFeedHeaderIconButton(icon: "text.badge.plus", action: onCreateList)
+                    RootFeedHeaderIconButton(icon: "NavListPlus", action: onCreateList)
                         .accessibilityLabel("Create list")
-                    RootFeedHeaderIconButton(icon: "ellipsis", action: onOpenSettings)
+                    RootFeedHeaderIconButton(icon: "NavEllipsis", action: onOpenSettings)
                         .accessibilityLabel("More")
                 }
                 .opacity(searchExpanded ? 0 : 1)
@@ -325,8 +325,11 @@ private struct RootFeedSearchTitleRow: View {
                             searchExpanded = true
                         }
                     } label: {
-                        Image(systemName: "magnifyingglass")
-                            .font(.system(size: 22, weight: .semibold))
+                        Image("NavSearch")
+                            .renderingMode(.template)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 22, height: 22)
                             .foregroundStyle(colors.onSurface)
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                     }
@@ -338,8 +341,11 @@ private struct RootFeedSearchTitleRow: View {
                     .accessibilityLabel("Search")
 
                     HStack(spacing: 10) {
-                        Image(systemName: "magnifyingglass")
-                            .font(.system(size: 20, weight: .semibold))
+                        Image("NavSearch")
+                            .renderingMode(.template)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 20, height: 20)
                             .foregroundStyle(colors.onSurface)
                             .frame(width: 30, height: 30)
 
@@ -353,8 +359,11 @@ private struct RootFeedSearchTitleRow: View {
                             .disabled(!searchExpanded)
 
                         Button(action: { HapticManager.sheetDismiss(); onSearchClose() }) {
-                            Image(systemName: "xmark.circle.fill")
-                                .font(.system(size: 18, weight: .semibold))
+                            Image("NavClose")
+                                .renderingMode(.template)
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 18, height: 18)
                                 .foregroundStyle(colors.onSurfaceVariant.opacity(0.78))
                         }
                         .buttonStyle(
@@ -386,6 +395,7 @@ private struct RootFeedSearchTitleRow: View {
 }
 
 private struct RootFeedHeaderIconButton: View {
+    /// Asset-catalog name of the lucide template glyph (shared with home/web/Android).
     let icon: String
     let action: () -> Void
 
@@ -393,8 +403,11 @@ private struct RootFeedHeaderIconButton: View {
 
     var body: some View {
         Button(action: action) {
-            Image(systemName: icon)
-                .font(.system(size: 22, weight: .semibold))
+            Image(icon)
+                .renderingMode(.template)
+                .resizable()
+                .scaledToFit()
+                .frame(width: 22, height: 22)
                 .foregroundStyle(colors.onSurface)
                 .frame(
                     width: TodoTimelineMetrics.topBarButtonFrame,
