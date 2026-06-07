@@ -762,7 +762,10 @@ struct TodoListScreen: View {
     }
 
     private var canSummarizeCurrentMode: Bool {
-        summaryAvailable && viewModel.aiSummaryEnabled && !viewModel.items.isEmpty
+        // Summary button is intentionally hidden on the root floater screen; it
+        // remains available on the per-mode screens (today/all/scheduled/etc.)
+        // and list detail.
+        summaryAvailable && viewModel.aiSummaryEnabled && !viewModel.items.isEmpty && !isRootFloaterScreen
     }
 
     private var heroTopBarActions: [TimelineTopBarAction] {
