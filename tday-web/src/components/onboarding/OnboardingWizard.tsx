@@ -78,7 +78,11 @@ export default function OnboardingWizard({
   const [errorMessage, setErrorMessage] = React.useState("");
   const [infoMessage, setInfoMessage] = React.useState("");
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const [pendingApprovalOpen, setPendingApprovalOpen] = React.useState(false);
+  // Initialise from the persisted marker synchronously so the holding screen is up on
+  // the first paint — the bare login form never flashes behind it on a pending reload.
+  const [pendingApprovalOpen, setPendingApprovalOpen] = React.useState(
+    () => getPendingApproval() != null,
+  );
 
   const isCreating = mode === "create";
   const daytime = isDaytime();

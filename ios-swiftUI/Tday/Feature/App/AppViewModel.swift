@@ -191,6 +191,10 @@ final class AppViewModel {
             authenticated = true
             requiresServerSetup = false
             requiresLogin = false
+            // Approval came through: drop the holding-screen state in the same render
+            // pass that flips `authenticated`, so we never flash the login screen.
+            pendingApproval = false
+            pendingApprovalUsername = nil
             dataMode = .server
             user = session
             error = nil
@@ -220,8 +224,10 @@ final class AppViewModel {
             let result = await container.authRepository.login(username: creds.username, password: creds.password)
             if case .success = result {
                 container.authRepository.clearPendingApproval()
-                pendingApproval = false
-                pendingApprovalUsername = nil
+                // Keep the holding screen up through the re-bootstrap; the authenticated
+                // branch clears it the instant the session is restored — no login flash.
+                pendingApproval = true
+                pendingApprovalUsername = creds.username
                 await bootstrap()
                 return
             }
@@ -282,14 +288,15 @@ final class AppViewModel {
         }
         isCheckingApproval = true
         let result = await container.authRepository.login(username: creds.username, password: creds.password)
-        isCheckingApproval = false
         if case .success = result {
             container.authRepository.clearPendingApproval()
-            pendingApproval = false
-            pendingApprovalUsername = nil
+            // Stay on the holding screen through the re-bootstrap; the authenticated
+            // branch flips straight to Home without flashing the login screen.
             await bootstrap()
+            isCheckingApproval = false
             return true
         }
+        isCheckingApproval = false
         return false
     }
 
