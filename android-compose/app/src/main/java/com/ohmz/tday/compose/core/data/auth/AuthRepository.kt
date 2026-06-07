@@ -11,6 +11,7 @@ import com.ohmz.tday.compose.core.data.isLikelyServerUnavailableStatus
 import com.ohmz.tday.compose.core.data.requireApiBody
 import com.ohmz.tday.compose.core.model.AuthResult
 import com.ohmz.tday.compose.core.model.AuthSession
+import com.ohmz.tday.compose.core.model.ChangePasswordRequest
 import com.ohmz.tday.compose.core.model.CredentialsCallbackRequest
 import com.ohmz.tday.compose.core.model.PasswordResetOutcome
 import com.ohmz.tday.compose.core.model.RegisterOutcome
@@ -21,6 +22,7 @@ import com.ohmz.tday.compose.core.model.SecurityQuestion
 import com.ohmz.tday.compose.core.model.SelfServiceResetRequest
 import com.ohmz.tday.compose.core.model.SessionUser
 import com.ohmz.tday.compose.core.model.SetSecurityQuestionsRequest
+import com.ohmz.tday.compose.core.model.UpdateProfileRequest
 import com.ohmz.tday.compose.core.network.TdayApiService
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonNull
@@ -310,6 +312,28 @@ class AuthRepository @Inject constructor(
             throw ApiCallException(
                 statusCode = response.code(),
                 message = extractApiErrorMessage(response, "Unable to send request"),
+            )
+        }
+    }
+
+    suspend fun updateProfileName(name: String) {
+        val response = api.patchUserProfile(UpdateProfileRequest(name = name.trim()))
+        if (!response.isSuccessful) {
+            throw ApiCallException(
+                statusCode = response.code(),
+                message = extractApiErrorMessage(response, "Unable to update name"),
+            )
+        }
+    }
+
+    suspend fun changePassword(currentPassword: String, newPassword: String) {
+        val response = api.changePassword(
+            ChangePasswordRequest(currentPassword = currentPassword, newPassword = newPassword),
+        )
+        if (!response.isSuccessful) {
+            throw ApiCallException(
+                statusCode = response.code(),
+                message = extractApiErrorMessage(response, "Unable to change password"),
             )
         }
     }

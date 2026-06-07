@@ -468,7 +468,9 @@
       "namePlaceholder": "名前を入力",
       "username": "ユーザー名",
       "saving": "保存中...",
-      "save": "プロフィールを保存"
+      "save": "プロフィールを保存",
+      "edit": "編集",
+      "cancel": "キャンセル"
     },
     "appearance": {
       "title": "外観",
@@ -498,7 +500,10 @@
       "confirm": "新しいパスワードを確認",
       "confirmPlaceholder": "新しいパスワードを確認してください",
       "changing": "パスワードを変更中...",
-      "change": "パスワードを変更"
+      "change": "パスワードを変更",
+      "changeAction": "変更",
+      "cancel": "キャンセル",
+      "forgot": "パスワードをお忘れですか？"
     },
     "dashboard": {
       "title": "ダッシュボードアクセス",

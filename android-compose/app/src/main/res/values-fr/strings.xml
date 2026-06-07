@@ -125,6 +125,20 @@
     <string name="settings_unknown_user">Utilisateur inconnu</string>
     <string name="settings_role_label">Rôle : %1$s</string>
     <string name="settings_role_default">UTILISATEUR</string>
+    <!-- Account settings (profile name + password change) -->
+    <string name="settings_account_name_label">Nom</string>
+    <string name="settings_account_username_label">Nom d\'utilisateur</string>
+    <string name="settings_account_password_label">Mot de passe</string>
+    <string name="settings_account_change_password">Modifier</string>
+    <string name="settings_account_current_password">Mot de passe actuel</string>
+    <string name="settings_account_forgot_password">Mot de passe oublié ?</string>
+    <string name="settings_account_password_requirement">Le mot de passe doit comporter au moins 8 caractères, avec une majuscule et un caractère spécial.</string>
+    <string name="settings_account_show_password">Afficher le mot de passe</string>
+    <string name="settings_account_hide_password">Masquer le mot de passe</string>
+    <string name="settings_account_not_signed_in">Vous n\'êtes pas connecté.</string>
+    <string name="settings_account_name_required">Le nom ne peut pas être vide.</string>
+    <string name="error_update_name_failed">Impossible de mettre à jour votre nom. Veuillez réessayer.</string>
+    <string name="error_change_password_failed">Impossible de modifier votre mot de passe. Veuillez réessayer.</string>
     <string name="settings_appearance">Apparence</string>
     <string name="settings_reminders">Rappels</string>
     <string name="settings_feature_toggle">Activation de fonctionnalité</string>

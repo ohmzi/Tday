@@ -468,7 +468,9 @@
       "namePlaceholder": "Introduce tu nombre",
       "username": "Nombre de usuario",
       "saving": "Guardando...",
-      "save": "Guardar perfil"
+      "save": "Guardar perfil",
+      "edit": "Editar",
+      "cancel": "Cancelar"
     },
     "appearance": {
       "title": "Apariencia",
@@ -498,7 +500,10 @@
       "confirm": "Confirmar nueva contraseña",
       "confirmPlaceholder": "Confirma tu nueva contraseña",
       "changing": "Cambiando contraseña...",
-      "change": "Cambiar contraseña"
+      "change": "Cambiar contraseña",
+      "changeAction": "Cambiar",
+      "cancel": "Cancelar",
+      "forgot": "¿Olvidaste tu contraseña?"
     },
     "dashboard": {
       "title": "Acceso al panel",

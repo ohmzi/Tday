@@ -24,6 +24,13 @@ struct GitHubRelease: Codable, Equatable, Identifiable {
     }
 }
 
+/// Outcome of an inline account edit (display name / password change) so the
+/// Settings editors can show a localized error without owning the API call.
+enum ProfileEditResult: Equatable {
+    case success
+    case failure(String)
+}
+
 @MainActor
 @Observable
 final class AppViewModel {
@@ -379,6 +386,53 @@ final class AppViewModel {
 
     func dismissAiSummaryValidationError() {
         aiSummaryValidationError = nil
+    }
+
+    // MARK: - Account (profile name + password)
+
+    /// Lightweight session re-fetch: re-pulls the user from the server and
+    /// re-caches it, without the heavy full `bootstrap()` resync. Updating
+    /// `user` propagates the new display name everywhere it's shown.
+    func refreshSessionUser() async {
+        if let refreshed = await container.authRepository.restoreSession() {
+            user = refreshed
+        }
+    }
+
+    /// Saves a new display name, then re-fetches the session so the change is
+    /// confirmed by the server and reflected app-wide.
+    func updateDisplayName(_ newName: String) async -> ProfileEditResult {
+        let trimmed = newName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !isLocalMode, authenticated else {
+            return .failure(L("You're not signed in."))
+        }
+        guard !trimmed.isEmpty else {
+            return .failure(L("Name cannot be empty."))
+        }
+        do {
+            _ = try await container.apiService.patchUserProfile(payload: .init(name: trimmed))
+            await refreshSessionUser()
+            return .success
+        } catch {
+            return .failure(userFacingMessage(for: error, fallback: "Could not update your name."))
+        }
+    }
+
+    /// Changes the password (server enforces the strength rules), then re-fetches
+    /// the session — the backend rotates the cookie on the same response.
+    func changePassword(currentPassword: String, newPassword: String) async -> ProfileEditResult {
+        guard !isLocalMode, authenticated else {
+            return .failure(L("You're not signed in."))
+        }
+        do {
+            _ = try await container.apiService.changePassword(
+                payload: .init(currentPassword: currentPassword, newPassword: newPassword)
+            )
+            await refreshSessionUser()
+            return .success
+        } catch {
+            return .failure(userFacingMessage(for: error, fallback: "Could not change your password."))
+        }
     }
 
     func setThemeMode(_ mode: AppThemeMode) {

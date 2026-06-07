@@ -125,6 +125,20 @@
     <string name="settings_unknown_user">Неизвестный пользователь</string>
     <string name="settings_role_label">Роль: %1$s</string>
     <string name="settings_role_default">ПОЛЬЗОВАТЕЛЬ</string>
+    <!-- Account settings (profile name + password change) -->
+    <string name="settings_account_name_label">Имя</string>
+    <string name="settings_account_username_label">Имя пользователя</string>
+    <string name="settings_account_password_label">Пароль</string>
+    <string name="settings_account_change_password">Изменить</string>
+    <string name="settings_account_current_password">Текущий пароль</string>
+    <string name="settings_account_forgot_password">Забыли пароль?</string>
+    <string name="settings_account_password_requirement">Пароль должен содержать не менее 8 символов, заглавную букву и специальный символ.</string>
+    <string name="settings_account_show_password">Показать пароль</string>
+    <string name="settings_account_hide_password">Скрыть пароль</string>
+    <string name="settings_account_not_signed_in">Вы не вошли в систему.</string>
+    <string name="settings_account_name_required">Имя не может быть пустым.</string>
+    <string name="error_update_name_failed">Не удалось обновить имя. Повторите попытку.</string>
+    <string name="error_change_password_failed">Не удалось изменить пароль. Повторите попытку.</string>
     <string name="settings_appearance">Оформление</string>
     <string name="settings_reminders">Напоминания</string>
     <string name="settings_feature_toggle">Переключатель функций</string>

@@ -468,7 +468,9 @@
       "namePlaceholder": "Masukkan nama anda",
       "username": "Nama pengguna",
       "saving": "Menyimpan...",
-      "save": "Simpan profil"
+      "save": "Simpan profil",
+      "edit": "Edit",
+      "cancel": "Batal"
     },
     "appearance": {
       "title": "Penampilan",
@@ -498,7 +500,10 @@
       "confirm": "Sahkan kata laluan baharu",
       "confirmPlaceholder": "Sahkan kata laluan baharu anda",
       "changing": "Menukar kata laluan...",
-      "change": "Tukar kata laluan"
+      "change": "Tukar kata laluan",
+      "changeAction": "Tukar",
+      "cancel": "Batal",
+      "forgot": "Lupa kata laluan?"
     },
     "dashboard": {
       "title": "Akses papan pemuka",

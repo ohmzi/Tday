@@ -468,7 +468,9 @@
       "namePlaceholder": "Inserisci il tuo nome",
       "username": "Nome utente",
       "saving": "Salvataggio...",
-      "save": "Salva profilo"
+      "save": "Salva profilo",
+      "edit": "Modifica",
+      "cancel": "Annulla"
     },
     "appearance": {
       "title": "Aspetto",
@@ -498,7 +500,10 @@
       "confirm": "Conferma nuova password",
       "confirmPlaceholder": "Conferma la nuova password",
       "changing": "Modifica password...",
-      "change": "Cambia password"
+      "change": "Cambia password",
+      "changeAction": "Modifica",
+      "cancel": "Annulla",
+      "forgot": "Password dimenticata?"
     },
     "dashboard": {
       "title": "Accesso alla dashboard",

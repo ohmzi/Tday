@@ -613,11 +613,11 @@ struct UserResponse: Codable, Equatable {
 }
 
 struct UpdateProfileRequest: Codable {
-    let fname: String?
-    let lname: String?
-    let username: String?
+    // The backend `/user/profile` endpoint only reads `name` and `image`
+    // (UserProfilePatchRequest). Synthesized Codable omits nil optionals, so
+    // `UpdateProfileRequest(name:)` serializes to exactly `{"name":"..."}`.
+    let name: String?
     let image: String?
-    let timeZone: String?
 }
 
 struct ChangePasswordRequest: Codable {
@@ -642,12 +642,6 @@ typealias AuthCallbackResponse = AuthRedirectResponse
 
 extension UpdateProfileRequest {
     init(name: String) {
-        self.init(
-            fname: name,
-            lname: nil,
-            username: nil,
-            image: nil,
-            timeZone: nil
-        )
+        self.init(name: name, image: nil)
     }
 }
