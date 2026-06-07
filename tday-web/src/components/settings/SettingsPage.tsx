@@ -13,6 +13,7 @@ import {
   Moon,
   Pencil,
   Settings,
+  Shield,
   Sun,
   Trash2,
   User,
@@ -848,6 +849,24 @@ export default function SettingsPage() {
         )}
 
         <CardDivider />
+
+        {/* Admin entry point — only for admins. Opens the same admin screen as the
+            desktop sidebar's Admin link (the route is already mobile-responsive). */}
+        {user?.role === "ADMIN" && (
+          <>
+            <Link
+              href="/app/admin"
+              className="flex w-full items-center gap-3 py-1.5 text-left transition active:opacity-60"
+            >
+              <Shield className="h-5 w-5 shrink-0 text-accent" />
+              <span className="min-w-0 flex-1 truncate text-[1.05rem] font-black text-foreground">
+                {sidebarDict("admin")}
+              </span>
+              <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" />
+            </Link>
+            <CardDivider />
+          </>
+        )}
 
         {/* Sign out — last row of the last card, matching the native settings design. */}
         <button
