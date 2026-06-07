@@ -519,6 +519,15 @@ struct HomeScreen: View {
                             Text(summaryText)
                                 .font(.tdayRounded(.body, weight: .bold))
                                 .frame(maxWidth: .infinity, alignment: .leading)
+
+                            if let source = viewModel.summarySource {
+                                Text(source == "ai" ? L("Server model") : L("Local model"))
+                                    .font(.tdayRounded(size: 11, weight: .heavy))
+                                    .foregroundStyle(colors.onSurface.opacity(0.5))
+                                    .textCase(.uppercase)
+                                    .frame(maxWidth: .infinity, alignment: .center)
+                                    .padding(.top, 4)
+                            }
                         } else if let summaryError = viewModel.summaryError {
                             Text(summaryError)
                                 .foregroundStyle(colors.error)
