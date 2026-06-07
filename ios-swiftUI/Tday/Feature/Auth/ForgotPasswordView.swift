@@ -31,6 +31,7 @@ struct ForgotPasswordView: View {
     @State private var errorMessage: String?
     @State private var infoMessage: String?
     @State private var isBusy = false
+    @State private var failedAttempts = 0
 
     var body: some View {
         NavigationStack {
@@ -280,7 +281,12 @@ struct ForgotPasswordView: View {
         case .locked:
             step = .locked
         case let .failed(message):
-            errorMessage = message.isEmpty ? "Those answers didn't match. Please try again." : message
+            failedAttempts += 1
+            let base = message.isEmpty ? "Those answers didn't match. Please try again." : message
+            // After more than two failed attempts, point the user to an admin reset.
+            errorMessage = failedAttempts > 2
+                ? "\(base) Please contact an administrator to reset your password."
+                : base
         case let .error(message):
             errorMessage = message.isEmpty ? "Unable to reset password. Please try again." : message
         }

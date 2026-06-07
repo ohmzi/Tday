@@ -18,16 +18,16 @@ export default function VersionGate() {
             toast.dismiss(id);
             reload();
           }}
-          className="flex w-[min(calc(100vw-2rem),24rem)] items-start gap-3 rounded-2xl border border-border/80 bg-card/95 p-4 text-left shadow-[0_20px_45px_-24px_hsl(var(--shadow)/0.45)] backdrop-blur-2xl transition hover:border-accent/35"
+          className="flex w-[min(calc(100vw-2rem),24rem)] items-center gap-3 rounded-[24px] border border-border bg-popover/92 px-4 py-3.5 text-left text-popover-foreground backdrop-blur-xl shadow-[0_10px_30px_-12px_hsl(var(--shadow)/0.45)] transition-colors hover:bg-popover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/20"
         >
-          <span className="mt-0.5 rounded-2xl bg-accent/12 p-2.5 text-accent">
-            <DownloadCloud className="h-4 w-4" />
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#E06F66]/15 text-[#E06F66]">
+            <DownloadCloud className="size-[18px]" />
           </span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-sm font-semibold text-foreground">
+          <span className="block min-w-0 flex-1">
+            <span className="block font-extrabold leading-tight">
               New version available
             </span>
-            <span className="mt-1 block text-sm leading-5 text-muted-foreground">
+            <span className="mt-0.5 block text-[13px] font-medium leading-snug text-current/75">
               Reload to get the latest update.
             </span>
           </span>
