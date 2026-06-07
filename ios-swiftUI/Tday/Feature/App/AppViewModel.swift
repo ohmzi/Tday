@@ -217,19 +217,22 @@ final class AppViewModel {
 
         container.authRepository.clearSessionOnly()
 
-        // No active session. If a pending-approval marker exists, silently re-attempt
-        // login: if the account was approved we fall through to a fresh authenticated
-        // bootstrap; otherwise we show the persistent holding screen.
+        // No active session. If a pending-approval marker exists, show the persistent
+        // holding screen. We only SILENTLY re-attempt login on the very first launch —
+        // never on a later bootstrap (e.g. the one logout triggers), so an explicit
+        // logout can never be undone by a lingering marker.
         if let creds = container.authRepository.loadPendingApproval() {
-            let result = await container.authRepository.login(username: creds.username, password: creds.password)
-            if case .success = result {
-                container.authRepository.clearPendingApproval()
-                // Keep the holding screen up through the re-bootstrap; the authenticated
-                // branch clears it the instant the session is restored — no login flash.
-                pendingApproval = true
-                pendingApprovalUsername = creds.username
-                await bootstrap()
-                return
+            if !hasCompletedInitialBootstrap {
+                let result = await container.authRepository.login(username: creds.username, password: creds.password)
+                if case .success = result {
+                    container.authRepository.clearPendingApproval()
+                    // Keep the holding screen up through the re-bootstrap; the authenticated
+                    // branch clears it the instant the session is restored — no login flash.
+                    pendingApproval = true
+                    pendingApprovalUsername = creds.username
+                    await bootstrap()
+                    return
+                }
             }
             authenticated = false
             requiresServerSetup = false
@@ -548,6 +551,13 @@ final class AppViewModel {
 
     func logout() async {
         await container.authRepository.logout()
+        // Hard-reset auth + holding-screen state so a stale marker or pending flag can
+        // never resurrect the session or leave a touch-blocking overlay on the login screen.
+        container.authRepository.clearPendingApproval()
+        pendingApproval = false
+        pendingApprovalUsername = nil
+        isCheckingApproval = false
+        authenticated = false
         navigationPath = []
         await bootstrap()
     }

@@ -8,9 +8,6 @@ export function useTodoFormFocusAndAutosize(displayForm: boolean) {
 
   useEffect(() => {
     adjustHeight(textareaRef);
-    if (displayForm) {
-      titleRef.current?.focus();
-    }
   }, [displayForm]);
 
   return { titleRef, textareaRef };
