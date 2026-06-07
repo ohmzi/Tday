@@ -63,9 +63,10 @@ private const val TOAST_FADE_DISTANCE_DP = 96
 private val TOAST_CORNER_RADIUS = 24.dp
 private val TOAST_BOTTOM_PADDING = 88.dp
 
-// Success accent — the Material scheme has no dedicated "success" role, so we use a
-// calm green that reads well on both the dark and light card surfaces.
-private val TOAST_SUCCESS_ACCENT = Color(0xFF2FA56A)
+// Brand accent — the coral used by the overdue tile on the home screen. Non-error
+// toasts share it so the toast accent matches the rest of the app; errors keep the
+// Material error red so the danger cue survives.
+private val TOAST_BRAND_ACCENT = Color(0xFFE06F66)
 
 /** Visual variant of a toast — drives the accent colour and the default icon. */
 enum class TdayToastKind { ERROR, SUCCESS, INFO }
@@ -148,8 +149,8 @@ private fun TdayToastCard(
     // itself stays neutral, matching the app's card design language.
     val accentColor = when (toast.kind) {
         TdayToastKind.ERROR -> colorScheme.error
-        TdayToastKind.SUCCESS -> TOAST_SUCCESS_ACCENT
-        TdayToastKind.INFO -> colorScheme.primary
+        TdayToastKind.SUCCESS -> TOAST_BRAND_ACCENT
+        TdayToastKind.INFO -> TOAST_BRAND_ACCENT
     }
     val iconContainerColor = accentColor.copy(alpha = if (isDark) 0.22f else 0.14f)
     val toastIcon = toast.icon ?: when (toast.kind) {
