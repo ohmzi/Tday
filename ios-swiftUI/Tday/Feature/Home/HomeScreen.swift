@@ -401,7 +401,6 @@ struct HomeScreen: View {
                 titleText: L("New task"),
                 submitText: L("Create"),
                 initialPayload: nil,
-                autofocusTitle: true,
                 onParseTaskTitleNlp: { title, dueRef in
                     await viewModel.parseTaskTitleNlp(text: title, referenceDueEpochMs: dueRef)
                 },

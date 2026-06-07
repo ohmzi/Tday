@@ -25,7 +25,6 @@ struct CreateTaskSheet: View {
     let initialPayload: CreateTaskPayload?
     let defaultScheduled: Bool
     let showScheduleControls: Bool
-    let autofocusTitle: Bool
     let onParseTaskTitleNlp: ((String, Int64) async -> TodoTitleNlpResponse?)?
     let onDismiss: () -> Void
     let onSubmit: (CreateTaskPayload) async -> Void
@@ -104,7 +103,6 @@ struct CreateTaskSheet: View {
         initialPayload: CreateTaskPayload?,
         defaultScheduled: Bool = true,
         showScheduleControls: Bool = true,
-        autofocusTitle: Bool = false,
         onParseTaskTitleNlp: ((String, Int64) async -> TodoTitleNlpResponse?)?,
         onDismiss: @escaping () -> Void,
         onSubmit: @escaping (CreateTaskPayload) async -> Void
@@ -115,7 +113,6 @@ struct CreateTaskSheet: View {
         self.initialPayload = initialPayload
         self.defaultScheduled = defaultScheduled
         self.showScheduleControls = showScheduleControls
-        self.autofocusTitle = autofocusTitle
         self.onParseTaskTitleNlp = onParseTaskTitleNlp
         self.onDismiss = onDismiss
         self.onSubmit = onSubmit
@@ -134,7 +131,6 @@ struct CreateTaskSheet: View {
             submitText: L("Save"),
             initialPayload: initialPayload,
             showScheduleControls: true,
-            autofocusTitle: false,
             onParseTaskTitleNlp: onParseTaskTitleNlp,
             onDismiss: {},
             onSubmit: { payload in
@@ -181,7 +177,6 @@ struct CreateTaskSheet: View {
         }
         .task {
             hydrateFromInitialPayload()
-            focusTitleIfNeeded()
         }
         .onChange(of: title) { _, _ in
             scheduleNlpParse()
@@ -305,21 +300,6 @@ struct CreateTaskSheet: View {
         } else {
             scheduleEnabled = false
             repeatRule = nil
-        }
-    }
-
-    private func focusTitleIfNeeded() {
-        guard autofocusTitle else {
-            return
-        }
-
-        Task { @MainActor in
-            await Task.yield()
-            try? await Task.sleep(for: .milliseconds(80))
-            guard autofocusTitle, activeSelector == nil else {
-                return
-            }
-            focusedInputField = .title
         }
     }
 
