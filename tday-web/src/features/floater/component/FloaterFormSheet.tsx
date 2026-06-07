@@ -152,7 +152,6 @@ export default function FloaterFormSheet({
               }}
               placeholder={appDict("floaterTitlePlaceholder")}
               className="min-h-12 w-full resize-none bg-transparent text-lg font-black text-foreground placeholder:text-muted-foreground/60 focus:outline-hidden"
-              autoFocus
             />
           </div>
           <SheetDivider />
