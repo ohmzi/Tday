@@ -83,6 +83,10 @@ export default function OnboardingWizard({
   const [pendingApprovalOpen, setPendingApprovalOpen] = React.useState(
     () => getPendingApproval() != null,
   );
+  // Held in memory only (never persisted) so "Check approval status" can silently
+  // re-attempt the login while the user stays on the holding screen this session.
+  const [pendingPassword, setPendingPassword] = React.useState("");
+  const [checkingApproval, setCheckingApproval] = React.useState(false);
 
   const isCreating = mode === "create";
   const daytime = isDaytime();
@@ -190,6 +194,7 @@ export default function OnboardingWizard({
       if (!result.ok) {
         if (result.code === "pending_approval") {
           setPendingApproval(normalizedUsername);
+          setPendingPassword(password);
           setPendingApprovalOpen(true);
           return;
         }
@@ -237,6 +242,7 @@ export default function OnboardingWizard({
 
       if (body?.requiresApproval) {
         setPendingApproval(username.trim().toLowerCase());
+        setPendingPassword(registerPassword);
         setPendingApprovalOpen(true);
         return;
       }
@@ -255,6 +261,42 @@ export default function OnboardingWizard({
       );
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  // Re-attempt the credentials login (the only way to detect approval — pending
+  // accounts get no session). On success the user is approved → go to the app.
+  const handleCheckApprovalStatus = async () => {
+    const pendingUsername = getPendingApproval();
+    // After a reload the in-memory password is gone; fall back to the sign-in form
+    // (prefilled) so the user can re-enter it — we never persist the password.
+    if (!pendingUsername || !pendingPassword) {
+      setPendingApprovalOpen(false);
+      setMode("signin");
+      if (pendingUsername) setUsername(pendingUsername);
+      setInfoMessage("Sign in to check your approval status.");
+      return;
+    }
+    setCheckingApproval(true);
+    try {
+      const credentialPayload = await createClientCredentialEnvelope(
+        pendingUsername,
+        pendingPassword,
+      );
+      const result = await login(
+        pendingUsername,
+        credentialPayload as unknown as Record<string, string>,
+      );
+      if (result.ok) {
+        clearPendingApproval();
+        router.replace("/app/tday");
+        return;
+      }
+      // Still pending (or a transient failure) — keep the holding screen up.
+    } catch {
+      // Swallow and stay on the holding screen; the user can retry.
+    } finally {
+      setCheckingApproval(false);
     }
   };
 
@@ -510,10 +552,12 @@ export default function OnboardingWizard({
 
       <PendingApprovalDialog
         open={pendingApprovalOpen}
-        onOpenChange={setPendingApprovalOpen}
         username={getPendingApproval()}
+        isChecking={checkingApproval}
+        onCheckStatus={handleCheckApprovalStatus}
         onUseDifferentAccount={() => {
           clearPendingApproval();
+          setPendingPassword("");
           setPendingApprovalOpen(false);
           setMode("signin");
           setPassword("");
