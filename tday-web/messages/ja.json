@@ -536,6 +536,7 @@
       "passwordChanged": "パスワードを正常に変更しました",
       "passwordChangeFailed": "パスワードの変更に失敗しました"
     },
+    "signOut": "ログアウト",
     "aiSummary": {
       "title": "AI task summary",
       "description": "Show a one-tap summary of your tasks.",
