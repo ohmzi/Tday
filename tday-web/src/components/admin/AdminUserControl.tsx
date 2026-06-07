@@ -38,11 +38,6 @@ type AdminUser = {
   adminResetRequestedAt?: string | null;
 };
 
-type AdminSettingsResponse = {
-  aiSummaryEnabled: boolean;
-  updatedAt?: string;
-};
-
 type PendingApprovalRowProps = {
   user: AdminUser;
   actionUserId: string | null;
@@ -307,9 +302,6 @@ export default function AdminUserControl() {
   const [loading, setLoading] = useState(true);
   const [actionUserId, setActionUserId] = useState<string | null>(null);
   const [actionType, setActionType] = useState<AdminActionType>(null);
-  const [aiSummaryEnabled, setAiSummaryEnabled] = useState(true);
-  const [settingsLoading, setSettingsLoading] = useState(true);
-  const [settingsSaving, setSettingsSaving] = useState(false);
   const [resetResult, setResetResult] = useState<{ username: string; password: string } | null>(null);
 
   const fetchUsers = useCallback(async () => {
@@ -329,27 +321,9 @@ export default function AdminUserControl() {
     }
   }, [toast]);
 
-  const fetchAdminSettings = useCallback(async () => {
-    setSettingsLoading(true);
-    try {
-      const body = (await api.GET({
-        url: "/api/admin/settings",
-      })) as AdminSettingsResponse | null;
-      setAiSummaryEnabled(Boolean(body?.aiSummaryEnabled));
-    } catch (error) {
-      toast({
-        description: getErrorMessage(error, "Failed to load admin settings"),
-        variant: "destructive",
-      });
-    } finally {
-      setSettingsLoading(false);
-    }
-  }, [toast]);
-
   useEffect(() => {
     fetchUsers();
-    fetchAdminSettings();
-  }, [fetchUsers, fetchAdminSettings]);
+  }, [fetchUsers]);
 
   const pendingUsers = useMemo(
     () => users.filter((user) => user.approvalStatus === "PENDING"),
@@ -469,31 +443,6 @@ export default function AdminUserControl() {
     }
   };
 
-  const toggleAiSummary = async () => {
-    const nextValue = !aiSummaryEnabled;
-    setSettingsSaving(true);
-    try {
-      const body = (await api.PATCH({
-        url: "/api/admin/settings",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ aiSummaryEnabled: nextValue }),
-      })) as AdminSettingsResponse;
-      setAiSummaryEnabled(Boolean(body.aiSummaryEnabled));
-      toast({
-        description: body.aiSummaryEnabled
-          ? "AI summaries enabled for all users"
-          : "AI summaries disabled for all users",
-      });
-    } catch (error) {
-      toast({
-        description: getErrorMessage(error, "Failed to update admin settings"),
-        variant: "destructive",
-      });
-    } finally {
-      setSettingsSaving(false);
-    }
-  };
-
   return (
     <div className="w-full space-y-5 pb-10">
       <header className="sticky top-0 z-40 flex w-full items-center justify-between gap-2.5 bg-background pt-[calc(0.5rem+env(safe-area-inset-top))] pb-1.5 lg:static lg:bg-transparent lg:pt-2 lg:pb-2">
@@ -502,35 +451,6 @@ export default function AdminUserControl() {
       </header>
 
       <AdminPageHeader />
-
-      <Card className="rounded-2xl border-border/70 bg-card/95">
-        <CardHeader>
-          <CardTitle>Feature toggle</CardTitle>
-          <CardDescription>
-            Global controls applied to every user account.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/70 bg-muted/20 px-3 py-3">
-            <div className="min-w-0">
-              <p className="text-sm font-medium text-foreground">AI task summary</p>
-            </div>
-            <Button
-              size="sm"
-              variant={aiSummaryEnabled ? "default" : "outline"}
-              onClick={() => {
-                toggleAiSummary();
-              }}
-              disabled={settingsLoading || settingsSaving}
-            >
-              {settingsSaving ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : null}
-              {aiSummaryEnabled ? "Enabled" : "Disabled"}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
 
       {loading || pendingUsers.length > 0 ? (
         <Card className="rounded-2xl border-border/70 bg-card/95">

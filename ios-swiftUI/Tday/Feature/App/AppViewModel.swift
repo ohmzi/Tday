@@ -59,11 +59,10 @@ final class AppViewModel {
     var canResetServerTrust = false
     var pendingApprovalMessage: String?
     var isManualSyncing = false
-    var adminAiSummaryEnabled: Bool?
-    var isAdminAiSummaryLoading = false
-    var isAdminAiSummarySaving = false
-    var adminAiSummaryError: String?
-    var aiSummaryValidationError: String?
+    /// The user's own AI-summary on/off preference (default ON). Per-user now — the
+    /// old global admin toggle is gone.
+    var aiSummaryEnabled = true
+    var isAiSummarySaving = false
     var selectedReminder: ReminderOption
     var isOffline = false
     var pendingMutationCount = 0
@@ -162,10 +161,7 @@ final class AppViewModel {
             error = nil
             canResetServerTrust = false
             pendingApprovalMessage = nil
-            adminAiSummaryEnabled = nil
-            isAdminAiSummaryLoading = false
-            isAdminAiSummarySaving = false
-            adminAiSummaryError = nil
+            isAiSummarySaving = false
             pendingMutationCount = 0
             lastSuccessfulSyncEpochMs = 0
             lastSyncAttemptEpochMs = 0
@@ -205,7 +201,7 @@ final class AppViewModel {
                 offlineNoticeID += 1
             }
             finishBootstrap()
-            await refreshAdminAiSummarySetting()
+            await refreshAiSummarySetting()
             refreshSyncStatusFromCache()
             startRealtime()
             startSyncLoop()
@@ -239,7 +235,7 @@ final class AppViewModel {
             error = nil
             pendingApprovalMessage = nil
             canResetServerTrust = true
-            adminAiSummaryEnabled = nil
+            isAiSummarySaving = false
             refreshSyncStatusFromCache()
             finishBootstrap()
             stopRealtime()
@@ -256,10 +252,7 @@ final class AppViewModel {
         error = nil
         pendingApprovalMessage = nil
         canResetServerTrust = true
-        adminAiSummaryEnabled = nil
-        isAdminAiSummaryLoading = false
-        isAdminAiSummarySaving = false
-        adminAiSummaryError = nil
+        isAiSummarySaving = false
         refreshSyncStatusFromCache()
         finishBootstrap()
         stopRealtime()
@@ -339,11 +332,7 @@ final class AppViewModel {
         canResetServerTrust = false
         pendingApprovalMessage = nil
         isManualSyncing = false
-        adminAiSummaryEnabled = nil
-        isAdminAiSummaryLoading = false
-        isAdminAiSummarySaving = false
-        adminAiSummaryError = nil
-        aiSummaryValidationError = nil
+        isAiSummarySaving = false
         isOffline = false
         pendingMutationCount = 0
         lastSuccessfulSyncEpochMs = 0
@@ -425,47 +414,29 @@ final class AppViewModel {
         pendingApprovalMessage = nil
     }
 
-    func refreshAdminAiSummarySetting() async {
-        guard !isLocalMode, isAdmin(user) else {
-            adminAiSummaryEnabled = nil
-            isAdminAiSummaryLoading = false
-            isAdminAiSummarySaving = false
-            adminAiSummaryError = nil
-            return
-        }
-
-        isAdminAiSummaryLoading = true
-        adminAiSummaryError = nil
-        adminAiSummaryEnabled = adminAiSummaryEnabled ?? container.settingsRepository.isAiSummaryEnabledSnapshot()
-        do {
-            adminAiSummaryEnabled = try await container.settingsRepository.fetchAdminAiSummaryEnabled()
-            adminAiSummaryError = nil
-        } catch {
-            adminAiSummaryError = userFacingMessage(for: error, fallback: "Could not load admin settings.")
-        }
-        isAdminAiSummaryLoading = false
+    /// Loads the user's own AI-summary preference (cache first, then server).
+    func refreshAiSummarySetting() async {
+        guard !isLocalMode else { return }
+        aiSummaryEnabled = container.settingsRepository.isAiSummaryEnabledSnapshot()
+        aiSummaryEnabled = await container.settingsRepository.refreshAiSummaryEnabled()
     }
 
-    func setAdminAiSummaryEnabled(_ enabled: Bool) async {
-        guard !isLocalMode, isAdmin(user), !isAdminAiSummarySaving else {
-            return
-        }
-        isAdminAiSummarySaving = true
-        adminAiSummaryError = nil
-        adminAiSummaryEnabled = enabled
+    /// Toggles the user's own AI-summary preference (optimistic, reverts on failure).
+    func setAiSummaryEnabled(_ enabled: Bool) async {
+        guard !isLocalMode, !isAiSummarySaving else { return }
+        let previous = aiSummaryEnabled
+        aiSummaryEnabled = enabled
+        isAiSummarySaving = true
         do {
-            let response = try await container.settingsRepository.updateAdminAiSummaryEnabled(enabled)
-            adminAiSummaryEnabled = response.aiSummaryEnabled
-            aiSummaryValidationError = response.validationError
+            aiSummaryEnabled = try await container.settingsRepository.setAiSummaryEnabled(enabled)
         } catch {
-            adminAiSummaryError = userFacingMessage(for: error, fallback: "Could not update admin settings.")
-            await refreshAdminAiSummarySetting()
+            aiSummaryEnabled = previous
+            container.snackbarManager.show(
+                userFacingMessage(for: error, fallback: "Could not update your settings."),
+                kind: .error
+            )
         }
-        isAdminAiSummarySaving = false
-    }
-
-    func dismissAiSummaryValidationError() {
-        aiSummaryValidationError = nil
+        isAiSummarySaving = false
     }
 
     // MARK: - Account (profile name + password)
@@ -855,9 +826,6 @@ final class AppViewModel {
         )
     }
 
-    private func isAdmin(_ user: SessionUser?) -> Bool {
-        user?.role?.uppercased() == "ADMIN"
-    }
 
     private func serverConnectionMessage(for error: Error) -> String {
         if let probeError = error as? ServerProbeError {
