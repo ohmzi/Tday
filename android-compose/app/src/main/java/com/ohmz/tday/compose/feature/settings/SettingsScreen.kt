@@ -158,11 +158,6 @@ fun SettingsScreen(
                 )
             }
 
-            SettingsWorkspaceSection(
-                syncStatus = syncStatus,
-                onSyncNow = onSyncNow,
-            )
-
             SettingsSectionCard {
                 SettingsSectionTitle(title = stringResource(R.string.settings_appearance))
                 ThemeModeSelector(
@@ -209,6 +204,11 @@ fun SettingsScreen(
                     )
                 }
             }
+
+            SettingsWorkspaceSection(
+                syncStatus = syncStatus,
+                onSyncNow = onSyncNow,
+            )
 
             SettingsSectionCard {
                 SettingsListRow(

@@ -6949,6 +6949,9 @@
         }
       }
     },
+    "Password must be at least 8 characters, with an uppercase letter and a special character." : {
+
+    },
     "Pending" : {
       "extractionState" : "stale",
       "localizations" : {
