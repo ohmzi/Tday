@@ -167,6 +167,10 @@ class AppViewModel @Inject constructor(
     private var foregroundReconnectJob: Job? = null
     private val offlineNoticeCooldown = OfflineNoticeCooldown()
 
+    // The silent pending-approval re-login runs at most once per process (first launch),
+    // so an explicit logout is never undone by a later bootstrap.
+    private var hasAttemptedLaunchReauth = false
+
     init {
         _uiState.update {
             it.copy(
@@ -313,15 +317,20 @@ class AppViewModel @Inject constructor(
             val pending = authRepository.loadPendingApproval()
             if (pending != null) {
                 val (pendingUser, pendingPass) = pending
-                if (authRepository.login(pendingUser, pendingPass) is AuthResult.Success) {
-                    authRepository.clearPendingApproval()
-                    // Keep the holding screen visible through the re-bootstrap; the
-                    // authenticated branch clears it on session restore (no login flash).
-                    _uiState.update {
-                        it.copy(pendingApproval = true, pendingApprovalUsername = pendingUser)
+                // Only silently re-attempt login on the first launch this process —
+                // never on a later bootstrap, so an explicit logout can't be undone.
+                if (!hasAttemptedLaunchReauth) {
+                    hasAttemptedLaunchReauth = true
+                    if (authRepository.login(pendingUser, pendingPass) is AuthResult.Success) {
+                        authRepository.clearPendingApproval()
+                        // Keep the holding screen visible through the re-bootstrap; the
+                        // authenticated branch clears it on session restore (no login flash).
+                        _uiState.update {
+                            it.copy(pendingApproval = true, pendingApprovalUsername = pendingUser)
+                        }
+                        bootstrap()
+                        return@launch
                     }
-                    bootstrap()
-                    return@launch
                 }
                 _uiState.update {
                     it.copy(
@@ -681,6 +690,9 @@ class AppViewModel @Inject constructor(
     fun logout() {
         viewModelScope.launch {
             runCatching { authRepository.logout() }
+            // Hard-clear the pending-approval marker + holding state so an explicit
+            // logout can never be undone by the silent re-login on the next launch.
+            runCatching { authRepository.clearPendingApproval() }
             runCatching { systemCredentialService.clearCredentialState() }
             runCatching { reminderScheduler.cancelAll() }
             ensureResyncLoop(authenticated = false)
@@ -689,6 +701,9 @@ class AppViewModel @Inject constructor(
                     authenticated = false,
                     requiresServerSetup = true,
                     requiresLogin = false,
+                    pendingApproval = false,
+                    pendingApprovalUsername = null,
+                    isCheckingApproval = false,
                     serverUrl = null,
                     dataMode = AppDataMode.UNSET,
                     user = null,

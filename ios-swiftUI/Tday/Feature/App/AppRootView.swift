@@ -519,11 +519,13 @@ private struct AppSnackbar: View {
 
     // The variant colour cue lives in the icon chip + action label; the card surface
     // stays neutral, matching the app's card design language (see TdayCardModifier).
+    // Non-error toasts share the brand coral (the overdue tile colour); errors keep the
+    // theme error red so the danger cue survives.
     private var accent: Color {
         switch content.kind {
         case .error: return colors.error
-        case .success: return .tdayFloaterGreen
-        case .info: return colors.primary
+        case .success: return Color(hex: 0xE06F66)
+        case .info: return Color(hex: 0xE06F66)
         }
     }
 
