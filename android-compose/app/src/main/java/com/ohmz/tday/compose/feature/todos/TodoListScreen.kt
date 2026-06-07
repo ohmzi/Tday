@@ -527,7 +527,10 @@ fun TodoListScreen(
     val canSummarizeCurrentMode =
         summaryAvailable &&
                 uiState.aiSummaryEnabled &&
-                uiState.items.isNotEmpty()
+                uiState.items.isNotEmpty() &&
+                // Hidden on the root floater screen; kept on the per-mode screens
+                // (today/all/scheduled/etc.) and list detail.
+                !isRootFloaterScreen
     val topBarActions = listOfNotNull(
         if (canSummarizeCurrentMode) {
             TodoTopBarAction(
