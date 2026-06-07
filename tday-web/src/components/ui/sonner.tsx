@@ -42,13 +42,15 @@ const SonnerToaster = ({ ...props }: ToasterProps) => {
           cancelButton:
             "group-[.toast]:rounded-full group-[.toast]:bg-muted group-[.toast]:px-3 group-[.toast]:font-bold group-[.toast]:text-muted-foreground",
           // Per-variant icon-chip tint (the toast surface itself stays neutral).
+          // Non-error variants share the brand coral (matches the overdue tile);
+          // errors keep the destructive red so the danger cue survives.
           error:
             "[&_[data-icon]]:bg-destructive/15 [&_[data-icon]]:text-destructive",
           success:
-            "[&_[data-icon]]:bg-accent-lime/15 [&_[data-icon]]:text-accent-lime",
-          info: "[&_[data-icon]]:bg-accent/15 [&_[data-icon]]:text-accent",
+            "[&_[data-icon]]:bg-[#E06F66]/15 [&_[data-icon]]:text-[#E06F66]",
+          info: "[&_[data-icon]]:bg-[#E06F66]/15 [&_[data-icon]]:text-[#E06F66]",
           warning:
-            "[&_[data-icon]]:bg-accent-orange/15 [&_[data-icon]]:text-accent-orange",
+            "[&_[data-icon]]:bg-[#E06F66]/15 [&_[data-icon]]:text-[#E06F66]",
           loading: "[&_[data-icon]]:bg-muted [&_[data-icon]]:text-muted-foreground",
         },
       }}

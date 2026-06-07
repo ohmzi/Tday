@@ -1,7 +1,6 @@
 package com.ohmz.tday.compose
 
 import android.net.Uri
-import android.widget.Toast
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
@@ -221,7 +220,7 @@ fun TdayApp(
     }
 
     fun showTaskDeletedToast() {
-        showSystemToast(context, taskDeletedToastMessage)
+        appViewModel.snackbarManager.showSuccess(taskDeletedToastMessage)
     }
 
     fun handleRootFeedTabSelection(tab: RootFeedTab) {
@@ -1368,14 +1367,6 @@ private fun settingsExitTransition(): ExitTransition =
             easing = FastOutLinearInEasing,
         ),
     )
-
-private fun showSystemToast(
-    context: android.content.Context,
-    message: String,
-    duration: Int = Toast.LENGTH_SHORT,
-) {
-    Toast.makeText(context.applicationContext, message, duration).show()
-}
 
 @Composable
 private fun SplashScreen(

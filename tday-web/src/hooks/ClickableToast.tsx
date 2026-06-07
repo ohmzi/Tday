@@ -33,7 +33,7 @@ export default function ClickableToast({
           "flex size-9 shrink-0 items-center justify-center rounded-full",
           isDestructive
             ? "bg-destructive/15 text-destructive"
-            : "bg-accent/15 text-accent",
+            : "bg-[#E06F66]/15 text-[#E06F66]",
         )}
       >
         {isDestructive ? (
