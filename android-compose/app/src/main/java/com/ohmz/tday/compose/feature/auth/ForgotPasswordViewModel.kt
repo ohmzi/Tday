@@ -42,6 +42,8 @@ class ForgotPasswordViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(ForgotPasswordUiState())
     val uiState: StateFlow<ForgotPasswordUiState> = _uiState.asStateFlow()
 
+    private var failedAttempts = 0
+
     fun clearError() {
         _uiState.update { it.copy(errorMessage = null) }
     }
@@ -131,11 +133,19 @@ class ForgotPasswordViewModel @Inject constructor(
                 }
 
                 is PasswordResetOutcome.Failed -> {
-                    _uiState.update {
-                        it.copy(
-                            isBusy = false,
-                            errorMessage = appContext.getString(R.string.forgot_password_reset_failed),
+                    failedAttempts += 1
+                    val baseMessage = appContext.getString(R.string.forgot_password_reset_failed)
+                    // After more than two failed attempts, point the user to an admin reset.
+                    val message = if (failedAttempts > 2) {
+                        appContext.getString(
+                            R.string.forgot_password_reset_failed_contact_admin,
+                            baseMessage,
                         )
+                    } else {
+                        baseMessage
+                    }
+                    _uiState.update {
+                        it.copy(isBusy = false, errorMessage = message)
                     }
                 }
             }
