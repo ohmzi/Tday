@@ -536,6 +536,7 @@
       "passwordChanged": "Senha alterada com sucesso",
       "passwordChangeFailed": "Falha ao alterar a senha"
     },
+    "signOut": "Sair",
     "aiSummary": {
       "title": "AI task summary",
       "description": "Show a one-tap summary of your tasks.",
