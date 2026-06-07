@@ -19,13 +19,14 @@ final class SettingsRepository {
         return cacheManager.loadOfflineState().aiSummaryEnabled
     }
 
+    /// Refreshes the user's AI-summary preference from the server (per-user, default ON).
     func refreshAiSummaryEnabled() async -> Bool {
         if secureStore.isLocalMode() {
             return false
         }
 
         do {
-            let enabled = try await api.getAppSettings().aiSummaryEnabled
+            let enabled = try await api.getPreferences().aiSummaryEnabled ?? true
             _ = try await cacheManager.updateOfflineState { state in
                 var nextState = state
                 nextState.aiSummaryEnabled = enabled
@@ -33,35 +34,29 @@ final class SettingsRepository {
             }
             return enabled
         } catch {
-            return (try? await cacheManager.loadOfflineState().aiSummaryEnabled) ?? false
+            return (try? await cacheManager.loadOfflineState().aiSummaryEnabled) ?? true
         }
     }
 
-    func fetchAdminAiSummaryEnabled() async throws -> Bool {
-        if secureStore.isLocalMode() {
-            return false
-        }
-
-        let enabled = try await api.getAdminSettings().aiSummaryEnabled
+    /// Persists the user's AI-summary on/off preference and mirrors it into the offline
+    /// cache so the dashboard gate reflects it immediately.
+    @discardableResult
+    func setAiSummaryEnabled(_ enabled: Bool) async throws -> Bool {
         _ = try await cacheManager.updateOfflineState { state in
             var nextState = state
             nextState.aiSummaryEnabled = enabled
             return nextState
         }
-        return enabled
-    }
-
-    func updateAdminAiSummaryEnabled(_ enabled: Bool) async throws -> AdminSettingsResponse {
         if secureStore.isLocalMode() {
-            throw APIError(message: "Admin settings are unavailable in local mode", statusCode: nil)
+            return enabled
         }
-
-        let response = try await api.patchAdminSettings(payload: UpdateAdminSettingsRequest(aiSummaryEnabled: enabled))
-        _ = try await cacheManager.updateOfflineState { state in
-            var nextState = state
-            nextState.aiSummaryEnabled = response.aiSummaryEnabled
-            return nextState
-        }
-        return response
+        let response = try await api.patchPreferences(payload: PreferencesDTO(
+            direction: nil,
+            sortBy: nil,
+            groupBy: nil,
+            rrule: nil,
+            aiSummaryEnabled: enabled
+        ))
+        return response.aiSummaryEnabled ?? enabled
     }
 }
