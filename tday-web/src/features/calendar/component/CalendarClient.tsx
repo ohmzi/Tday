@@ -25,6 +25,7 @@ import { useTodoTimeline } from "@/features/todayTodos/query/get-todo-timeline";
 import {
   lazy,
   type PointerEvent as ReactPointerEvent,
+  type TouchEvent as ReactTouchEvent,
   Suspense,
   useCallback,
   useEffect,
@@ -61,13 +62,13 @@ import NativeAppBrandButton from "@/components/app/NativeAppBrandButton";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import { useRegisterCalendarCreateAction } from "@/features/calendar/context/CalendarCreateActionContext";
-import { Button } from "@/components/ui/button";
 import TodoCheckbox from "@/components/ui/TodoCheckbox";
+import { TaskActionButtons } from "@/components/ui/TaskActionButtons";
 import ListDot from "@/components/ListDot";
 import EditCalendarFormContainer from "./CalendarForm/EditFormContainer";
 import { useCompleteCalendarTodo } from "../query/complete-calendar-todo";
 import { useCompleteCalendarTodoInstance } from "../query/complete-calendar-todo-instance";
-import { CalendarDays, Check, ChevronLeft, ChevronRight, Flag, Pen, RefreshCcw, SquarePen, Trash } from "lucide-react";
+import { CalendarDays, Check, ChevronLeft, ChevronRight, Flag, GripVertical, SquarePen, Trash } from "lucide-react";
 import { isToday } from "date-fns";
 import { getPriorityFlag } from "@/lib/priority";
 import i18n from "@/i18n";
@@ -502,7 +503,7 @@ function CalendarTaskRow({
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteAllDialogOpen, setDeleteAllDialogOpen] = useState(false);
   const [itemElement, setItemElement] = useState<HTMLElement | null>(null);
-  const { t: appDict } = useTranslation("app");
+  const [showHandle, setShowHandle] = useState(false);
   const { t: todayDict } = useTranslation("today");
   const { mutateComplete } = useCompleteCalendarTodo();
   const { mutateComplete: mutateInstanceComplete } = useCompleteCalendarTodoInstance();
@@ -512,10 +513,45 @@ function CalendarTaskRow({
   });
   const priorityFlag = getPriorityFlag(todo.priority);
 
+  // Staged "checking off" sequence — identical to the home/scheduled row.
+  const [completePhase, setCompletePhase] = useState<
+    "checked" | "struck" | "removing" | null
+  >(null);
+  const completeTimers = useRef<number[]>([]);
+  const completing = completePhase !== null;
+
+  // Mobile swipe-to-reveal Edit + Delete — mirrors the home row exactly (same
+  // 140px slide distance, same pills) so the calendar matches it.
+  const ACTIONS_WIDTH = 140;
+  const [swipeX, setSwipeX] = useState(0);
+  const [swiping, setSwiping] = useState(false);
+  const swipeTouch = useRef<
+    { x: number; y: number; startX: number; axis: "x" | "y" | null } | null
+  >(null);
+  const closeSwipe = () => setSwipeX(0);
+
   const setCombinedRef = (node: HTMLElement | null) => {
     setItemElement(node);
     setNodeRef(node);
   };
+
+  useEffect(() => {
+    const timers = completeTimers.current;
+    return () => {
+      timers.forEach((id) => window.clearTimeout(id));
+    };
+  }, []);
+
+  // Close this row's swipe actions when another calendar row is swiped open.
+  useEffect(() => {
+    const onOpen = (event: Event) => {
+      const id = (event as CustomEvent<string>).detail;
+      if (id !== todo.id) setSwipeX(0);
+    };
+    window.addEventListener("tday-calendar-swipe-open", onOpen as EventListener);
+    return () =>
+      window.removeEventListener("tday-calendar-swipe-open", onOpen as EventListener);
+  }, [todo.id]);
 
   useEffect(() => {
     if (!highlighted || !itemElement) return;
@@ -530,6 +566,60 @@ function CalendarTaskRow({
     mutateComplete({ todoItem: todo });
   };
 
+  const handleToggleComplete = () => {
+    if (todo.completed) {
+      completeTask();
+      return;
+    }
+    if (completing) return;
+    setCompletePhase("checked"); // 1. green tick + pop
+    completeTimers.current.push(
+      window.setTimeout(() => setCompletePhase("struck"), 280), // 2. strike the title
+      window.setTimeout(() => setCompletePhase("removing"), 620), // 3. start fading
+      window.setTimeout(() => completeTask(), 960), // 4. remove from cache
+    );
+  };
+
+  const requestDelete = () => {
+    if (todo.rrule) {
+      setDeleteAllDialogOpen(true);
+    } else {
+      setDeleteDialogOpen(true);
+    }
+  };
+
+  const handleTouchStart = (event: ReactTouchEvent) => {
+    const touch = event.touches[0];
+    swipeTouch.current = { x: touch.clientX, y: touch.clientY, startX: swipeX, axis: null };
+    setSwiping(true);
+  };
+  const handleTouchMove = (event: ReactTouchEvent) => {
+    const data = swipeTouch.current;
+    if (!data) return;
+    const touch = event.touches[0];
+    const dx = touch.clientX - data.x;
+    const dy = touch.clientY - data.y;
+    if (data.axis === null && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) {
+      data.axis = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
+      if (data.axis === "x") {
+        window.dispatchEvent(
+          new CustomEvent("tday-calendar-swipe-open", { detail: todo.id }),
+        );
+      }
+    }
+    if (data.axis === "x") {
+      setSwipeX(Math.min(0, Math.max(-ACTIONS_WIDTH, data.startX + dx)));
+    }
+  };
+  const handleTouchEnd = () => {
+    const data = swipeTouch.current;
+    setSwiping(false);
+    swipeTouch.current = null;
+    if (data?.axis === "x") {
+      setSwipeX((prev) => (prev < -ACTIONS_WIDTH / 2 ? -ACTIONS_WIDTH : 0));
+    }
+  };
+
   return (
     <>
       {displayForm && (
@@ -539,76 +629,39 @@ function CalendarTaskRow({
           setDisplayForm={setDisplayForm}
         />
       )}
-      <article
+      {/* Layout mirrors the home/scheduled row (TodoItemCard): flat transparent
+          row, swipe-to-reveal Edit/Delete on mobile, hover actions on desktop,
+          flag + list dot right-aligned. Drag-to-reschedule + the recurring delete
+          dialogs stay calendar-specific. */}
+      <div
         ref={setCombinedRef}
         {...attributes}
         {...listeners}
+        style={
+          completePhase === "removing"
+            ? { opacity: 0, transition: "opacity 300ms ease" }
+            : undefined
+        }
         className={cn(
-          "group flex cursor-grab touch-none items-start justify-between gap-2 rounded-[20px] border border-white/70 bg-card/92 px-2 py-3 shadow-[0_12px_30px_-28px_hsl(var(--shadow)/0.45)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-card hover:shadow-[0_16px_36px_-28px_hsl(var(--shadow)/0.5)] active:cursor-grabbing dark:border-white/10 sm:px-3",
-          highlighted && "border-accent/55 ring-2 ring-accent/20 shadow-[0_14px_30px_-20px_hsl(var(--accent)/0.65)]",
+          "group relative max-w-full overflow-hidden sm:overflow-visible",
           isDragging && "opacity-40",
         )}
       >
-        <div className="flex min-w-0 items-start gap-2 sm:gap-3">
-          <div className="pt-0.5">
-            <TodoCheckbox
-              icon={Check}
-              complete={todo.completed}
-              onChange={completeTask}
-              checked={todo.completed}
-              variant={todo.rrule ? "repeat" : "outline-solid"}
-            />
-          </div>
-
-          <button
-            type="button"
-            className="min-w-0 text-left"
-            onClick={() => setDisplayForm(true)}
-          >
-            <div className="flex items-center gap-1.5">
-              {priorityFlag && (
-                <Flag
-                  className={cn("h-3.5 w-3.5 shrink-0", priorityFlag.className)}
-                  aria-label={priorityFlag.label}
-                />
-              )}
-              <p className="line-clamp-2 text-[0.98rem] font-black leading-5 text-foreground">
-                {todo.title}
-              </p>
-            </div>
-            {todo.description && (
-              <p className="mt-1 line-clamp-2 text-xs font-extrabold leading-4 text-muted-foreground">
-                {todo.description}
-              </p>
-            )}
-            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs font-black text-muted-foreground">
-              <span className="rounded-full border border-border/70 bg-muted/70 px-2 py-[0.2rem] text-foreground/80">
-                {format(todo.due, "h:mm a", { locale: activeDfLocale() })}
-              </span>
-              {todo.listID && (
-                <span className="flex items-center gap-1 rounded-full border border-border/70 bg-muted/70 px-2 py-[0.2rem] text-foreground/80">
-                  <ListDot id={todo.listID} className="h-3 w-3" />
-                  <span className="max-w-32 truncate">{listName}</span>
-                </span>
-              )}
-              {todo.rrule && (
-                <span className="flex items-center gap-1 rounded-full border border-border/70 bg-muted/70 px-2 py-[0.2rem] text-foreground/80">
-                  <RefreshCcw className="h-3 w-3" />
-                  {appDict("repeat")}
-                </span>
-              )}
-            </div>
-          </button>
-        </div>
-
-        {/* Mobile: blue Edit + red Delete pills with labels — matches the home
-            screen's swipe actions so edit/delete look consistent app-wide. */}
-        <div className="flex shrink-0 items-center gap-3 self-center sm:hidden">
+        {/* Mobile: Edit + Delete revealed behind the row by a left swipe. */}
+        <div
+          className="absolute inset-y-0 right-0 z-0 flex items-center gap-3 pr-3 sm:hidden"
+          style={{ opacity: Math.min(1, Math.abs(swipeX) / ACTIONS_WIDTH) }}
+        >
           <button
             type="button"
             aria-label={todayDict("menu.edit")}
             onPointerDown={(e) => e.stopPropagation()}
-            onClick={() => setDisplayForm(true)}
+            onMouseDown={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
+            onClick={() => {
+              setDisplayForm(true);
+              closeSwipe();
+            }}
             className="flex flex-col items-center gap-1"
           >
             <span
@@ -623,12 +676,11 @@ function CalendarTaskRow({
             type="button"
             aria-label={todayDict("menu.delete")}
             onPointerDown={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
             onClick={() => {
-              if (todo.rrule) {
-                setDeleteAllDialogOpen(true);
-              } else {
-                setDeleteDialogOpen(true);
-              }
+              requestDelete();
+              closeSwipe();
             }}
             className="flex flex-col items-center gap-1"
           >
@@ -642,38 +694,120 @@ function CalendarTaskRow({
           </button>
         </div>
 
-        {/* Desktop: subtle hover-revealed icons (matches home/floater desktop). */}
-        <div className="hidden shrink-0 items-center gap-1 sm:flex sm:opacity-0 sm:transition-opacity sm:duration-200 sm:group-hover:opacity-100">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-9 w-9 rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
-            aria-label={todayDict("menu.edit")}
-            onPointerDown={(e) => e.stopPropagation()}
-            onClick={() => setDisplayForm(true)}
+        {/* Foreground row — slides left on swipe to reveal the actions. */}
+        <div
+          onDoubleClick={() => setDisplayForm(true)}
+          onMouseOver={() => setShowHandle(true)}
+          onMouseOut={() => setShowHandle(false)}
+          onClick={() => {
+            if (swipeX !== 0) closeSwipe();
+          }}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          style={{
+            transform: `translateX(${swipeX}px)`,
+            transition: swiping
+              ? "none"
+              : "transform 220ms ease, background-color 150ms ease",
+            touchAction: "pan-y",
+          }}
+          className={cn(
+            "relative z-10 flex items-center justify-between gap-3 px-1 py-2.5",
+            "sm:cursor-grab sm:rounded-lg sm:active:cursor-grabbing sm:hover:bg-muted/40",
+            highlighted && "rounded-lg ring-2 ring-accent/25 sm:bg-accent/5 sm:ring-0",
+          )}
+        >
+          <div
+            className={cn(
+              "absolute bottom-1/2 -left-5 hidden translate-y-1/2 p-1 transition-colors sm:block",
+              showHandle ? "text-muted-foreground" : "text-transparent",
+            )}
           >
-            <Pen className="h-4 w-4" />
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-9 w-9 rounded-full text-muted-foreground hover:bg-red/10 hover:text-red"
-            aria-label={todayDict("menu.delete")}
-            onPointerDown={(e) => e.stopPropagation()}
-            onClick={() => {
-              if (todo.rrule) {
-                setDeleteAllDialogOpen(true);
-              } else {
-                setDeleteDialogOpen(true);
-              }
-            }}
-          >
-            <Trash className="h-4 w-4" />
-          </Button>
+            <GripVertical className="h-4 w-4" />
+          </div>
+
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="shrink-0">
+              <TodoCheckbox
+                icon={Check}
+                complete={todo.completed}
+                onChange={handleToggleComplete}
+                checked={todo.completed || completing}
+                variant={todo.rrule ? "repeat" : "outline-solid"}
+              />
+            </div>
+
+            <div className="max-w-full">
+              <div className="mb-1.5 flex items-center gap-1.5">
+                <p
+                  className={cn(
+                    "select-none text-[0.98rem] font-black leading-5 text-foreground transition-colors duration-300",
+                    (completePhase === "struck" || completePhase === "removing") &&
+                      "text-muted-foreground line-through",
+                  )}
+                >
+                  {todo.title}
+                </p>
+              </div>
+              {todo.description && (
+                <pre className="w-48 whitespace-pre-wrap pb-2 text-xs font-extrabold leading-4 text-muted-foreground sm:w-full">
+                  {todo.description}
+                </pre>
+              )}
+              <div className="flex flex-wrap items-center justify-start gap-2 text-xs font-black">
+                <p className="font-bold text-muted-foreground">
+                  {`Due ${format(todo.due, "h:mm a", { locale: activeDfLocale() })}`}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="relative flex shrink-0 items-center gap-2 pr-1 sm:pr-0">
+            {/* Priority flag + list, right-aligned (native layout). Mobile shows
+                just the list dot; desktop shows the full name pill and fades the
+                meta out on hover to reveal edit/delete. */}
+            <div
+              className={cn(
+                "flex items-center gap-2 transition-opacity",
+                showHandle && "sm:opacity-0",
+              )}
+            >
+              {todo.listID && (
+                <>
+                  <ListDot id={todo.listID} className="h-4 w-4 sm:hidden" />
+                  <span className="hidden items-center gap-1 rounded-full border border-border/70 bg-muted/70 px-2 py-[0.2rem] text-xs font-black text-foreground/80 sm:flex">
+                    <ListDot id={todo.listID} className="shrink-0 text-sm" />
+                    <span className="max-w-24 truncate md:max-w-52 lg:max-w-none">
+                      {listName}
+                    </span>
+                  </span>
+                </>
+              )}
+              {priorityFlag && (
+                <Flag
+                  className={cn("h-4 w-4 shrink-0 sm:h-3.5 sm:w-3.5", priorityFlag.className)}
+                  aria-label={priorityFlag.label}
+                />
+              )}
+            </div>
+
+            <div
+              className={cn(
+                "absolute right-0 top-1/2 hidden -translate-y-1/2 transition-opacity sm:block",
+                showHandle ? "sm:opacity-100" : "sm:pointer-events-none sm:opacity-0",
+              )}
+            >
+              <TaskActionButtons
+                onEdit={() => setDisplayForm(true)}
+                onDelete={requestDelete}
+                editLabel={todayDict("menu.edit")}
+                deleteLabel={todayDict("menu.delete")}
+              />
+            </div>
+          </div>
         </div>
-      </article>
+      </div>
 
       <Suspense fallback={null}>
         <ConfirmDelete
@@ -1044,7 +1178,7 @@ export default function CalendarClient() {
           </div>
 
           {selectedDayTasks.length > 0 ? (
-            <div className="space-y-2">
+            <div className="space-y-0">
               {selectedDayTasks.map((todo) => (
                 <CalendarTaskRow
                   key={todo.id}
