@@ -9,6 +9,7 @@ import {
   Key,
   Loader2,
   Lock,
+  LogOut,
   Monitor,
   Moon,
   Pencil,
@@ -205,7 +206,7 @@ function Collapse({ open, children }: { open: boolean; children: ReactNode }) {
 export default function SettingsPage() {
   const { t: sidebarDict, i18n } = useTranslation("sidebar");
   const { t } = useTranslation("settings");
-  const { user, refreshSession } = useAuth();
+  const { user, refreshSession, logout } = useAuth();
   const { preferences, updatePreferences } = useUserPreferences();
   const { toast } = useToast();
   const { theme = "system", resolvedTheme, setTheme } = useTheme();
@@ -273,6 +274,7 @@ export default function SettingsPage() {
   const [generatedApiKey, setGeneratedApiKey] = useState<string | null>(null);
   const [apiKeyLoading, setApiKeyLoading] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -335,6 +337,25 @@ export default function SettingsPage() {
       });
     } finally {
       setApiKeyLoading(false);
+    }
+  };
+
+  // Mirrors the sidebar UserCard logout: on success logout() redirects away, so we
+  // only need to clear the busy state when it fails.
+  const handleLogout = async () => {
+    if (signingOut) return;
+    setSigningOut(true);
+    try {
+      await logout();
+    } catch (error) {
+      setSigningOut(false);
+      toast({
+        variant: "destructive",
+        description:
+          error instanceof Error && error.message
+            ? error.message
+            : "Unable to log out. Please try again.",
+      });
     }
   };
 
@@ -836,6 +857,22 @@ export default function SettingsPage() {
           </div>
         )}
       </SettingsSection>
+
+      {/* Sign out — last action on the page, mirrored in the desktop sidebar. */}
+      <Button
+        type="button"
+        variant="destructive"
+        disabled={signingOut}
+        onClick={handleLogout}
+        className="h-11 w-full rounded-2xl font-black"
+      >
+        {signingOut ? (
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+        ) : (
+          <LogOut className="mr-2 h-4 w-4" />
+        )}
+        {sidebarDict("settingMenu.logout")}
+      </Button>
     </div>
   );
 }

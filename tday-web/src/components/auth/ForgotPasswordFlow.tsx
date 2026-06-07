@@ -34,6 +34,7 @@ export default function ForgotPasswordFlow() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [failedAttempts, setFailedAttempts] = useState(0);
 
   const lookupQuestions = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -100,8 +101,17 @@ export default function ForgotPasswordFlow() {
         setStep("locked");
         return;
       }
+      const nextFailedAttempts = failedAttempts + 1;
+      setFailedAttempts(nextFailedAttempts);
+      const baseMessage = getErrorMessage(
+        error,
+        "Those answers didn't match. Please try again.",
+      );
+      // After more than two failed attempts, point the user to an admin reset.
       setErrorMessage(
-        getErrorMessage(error, "Those answers didn't match. Please try again."),
+        nextFailedAttempts > 2
+          ? `${baseMessage} Please contact an administrator to reset your password.`
+          : baseMessage,
       );
     } finally {
       setBusy(false);
