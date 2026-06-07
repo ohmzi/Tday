@@ -28,7 +28,6 @@ export function useClearInput(
       });
       setPriority("Low");
       setRruleOptions(null);
-      titleRef.current?.focus();
       if (titleRef.current) {
         titleRef.current.textContent = "";
       }

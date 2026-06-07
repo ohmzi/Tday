@@ -229,7 +229,6 @@ export default function FloaterListFormSheet({
                 "h-14 w-full rounded-2xl border-transparent bg-muted/60 text-center text-xl font-extrabold focus-visible:ring-0",
                 nameColorClass,
               )}
-              autoFocus
             />
           </div>
         </SheetCard>
