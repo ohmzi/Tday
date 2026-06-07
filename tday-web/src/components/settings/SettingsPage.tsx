@@ -505,6 +505,155 @@ export default function SettingsPage() {
             <Label className="px-1 text-sm font-extrabold text-muted-foreground">{t("profile.username")}</Label>
             <p className="px-1 text-[1.05rem] font-black text-foreground">{user?.username ?? ""}</p>
           </div>
+
+          <div className="h-px bg-border/60" />
+
+          {/* Password — collapsed summary with a Change affordance; expands to the change-password form. */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <Label className="px-1 text-sm font-extrabold text-muted-foreground">{t("password.title")}</Label>
+                <p className="px-1 text-[1.05rem] font-black tracking-[0.18em] text-foreground">••••••••</p>
+              </div>
+              {editing !== "password" ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="shrink-0 rounded-xl font-black text-accent hover:text-accent"
+                  onClick={() => setEditing("password")}
+                >
+                  <Key className="mr-1.5 h-3.5 w-3.5" />
+                  {t("password.changeAction")}
+                </Button>
+              ) : null}
+            </div>
+            <Collapse open={editing === "password"}>
+              <form onSubmit={handlePasswordSubmit} className="space-y-4 pt-1">
+                <div className="space-y-2">
+                  <Label htmlFor="currentPassword" className="px-1 text-sm font-extrabold text-muted-foreground">
+                    {t("password.current")}
+                  </Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      id="currentPassword"
+                      type={showCurrentPassword ? "text" : "password"}
+                      autoComplete="current-password"
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      placeholder={t("password.currentPlaceholder")}
+                      className={cn(fieldClass, "pl-10 pr-10")}
+                      required
+                    />
+                    {currentPassword && (
+                      <button
+                        type="button"
+                        onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+                      >
+                        {showCurrentPassword ? <EyeOff className="h-4 w-4 opacity-40" /> : <Eye className="h-4 w-4 opacity-40" />}
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="newPassword" className="px-1 text-sm font-extrabold text-muted-foreground">
+                    {t("password.new")}
+                  </Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      id="newPassword"
+                      type={showNewPassword ? "text" : "password"}
+                      autoComplete="new-password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder={t("password.newPlaceholder")}
+                      className={cn(fieldClass, "pl-10 pr-10")}
+                      minLength={8}
+                      required
+                    />
+                    {newPassword && (
+                      <button
+                        type="button"
+                        onClick={() => setShowNewPassword(!showNewPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+                      >
+                        {showNewPassword ? <EyeOff className="h-4 w-4 opacity-40" /> : <Eye className="h-4 w-4 opacity-40" />}
+                      </button>
+                    )}
+                  </div>
+                  <p className="px-1 text-xs font-extrabold text-muted-foreground">
+                    {t("password.requirement")}
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="confirmNewPassword" className="px-1 text-sm font-extrabold text-muted-foreground">
+                    {t("password.confirm")}
+                  </Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      id="confirmNewPassword"
+                      type={showConfirmPassword ? "text" : "password"}
+                      autoComplete="new-password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder={t("password.confirmPlaceholder")}
+                      className={cn(fieldClass, "pl-10 pr-10")}
+                      minLength={8}
+                      required
+                    />
+                    {confirmPassword && (
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+                      >
+                        {showConfirmPassword ? <EyeOff className="h-4 w-4 opacity-40" /> : <Eye className="h-4 w-4 opacity-40" />}
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <Link
+                  href="/forgot-password"
+                  className="block px-1 text-[13px] font-bold text-accent transition active:opacity-60"
+                >
+                  {t("password.forgot")}
+                </Link>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="h-12 flex-1 rounded-2xl font-black"
+                    disabled={passwordLoading}
+                    onClick={() => {
+                      setCurrentPassword("");
+                      setNewPassword("");
+                      setConfirmPassword("");
+                      setShowCurrentPassword(false);
+                      setShowNewPassword(false);
+                      setShowConfirmPassword(false);
+                      setEditing(null);
+                    }}
+                  >
+                    {t("password.cancel")}
+                  </Button>
+                  <Button type="submit" disabled={passwordLoading} className="h-12 flex-1 rounded-2xl font-black">
+                    {passwordLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        {t("password.changing")}
+                      </>
+                    ) : (
+                      t("password.change")
+                    )}
+                  </Button>
+                </div>
+              </form>
+            </Collapse>
+          </div>
         </div>
       </SettingsSection>
 
@@ -601,153 +750,6 @@ export default function SettingsPage() {
           </div>
         </SettingsSection>
       )}
-
-      <SettingsSection title={t("password.title")} description={t("password.description")}>
-        {/* Collapsed summary with a Change affordance; expands to the change-password form. */}
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-2.5">
-            <Lock className="h-4 w-4 shrink-0 text-muted-foreground" />
-            <span className="text-[1.05rem] font-black tracking-[0.18em] text-foreground">••••••••</span>
-          </div>
-          {editing !== "password" ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="shrink-0 rounded-xl font-black text-accent hover:text-accent"
-              onClick={() => setEditing("password")}
-            >
-              <Key className="mr-1.5 h-3.5 w-3.5" />
-              {t("password.changeAction")}
-            </Button>
-          ) : null}
-        </div>
-        <Collapse open={editing === "password"}>
-          <form onSubmit={handlePasswordSubmit} className="space-y-4 pt-3">
-          <div className="space-y-2">
-            <Label htmlFor="currentPassword" className="px-1 text-sm font-extrabold text-muted-foreground">
-              {t("password.current")}
-            </Label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                id="currentPassword"
-                type={showCurrentPassword ? "text" : "password"}
-                autoComplete="current-password"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                placeholder={t("password.currentPlaceholder")}
-                className={cn(fieldClass, "pl-10 pr-10")}
-                required
-              />
-              {currentPassword && (
-                <button
-                  type="button"
-                  onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
-                >
-                  {showCurrentPassword ? <EyeOff className="h-4 w-4 opacity-40" /> : <Eye className="h-4 w-4 opacity-40" />}
-                </button>
-              )}
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="newPassword" className="px-1 text-sm font-extrabold text-muted-foreground">
-              {t("password.new")}
-            </Label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                id="newPassword"
-                type={showNewPassword ? "text" : "password"}
-                autoComplete="new-password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                placeholder={t("password.newPlaceholder")}
-                className={cn(fieldClass, "pl-10 pr-10")}
-                minLength={8}
-                required
-              />
-              {newPassword && (
-                <button
-                  type="button"
-                  onClick={() => setShowNewPassword(!showNewPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
-                >
-                  {showNewPassword ? <EyeOff className="h-4 w-4 opacity-40" /> : <Eye className="h-4 w-4 opacity-40" />}
-                </button>
-              )}
-            </div>
-            <p className="px-1 text-xs font-extrabold text-muted-foreground">
-              {t("password.requirement")}
-            </p>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="confirmNewPassword" className="px-1 text-sm font-extrabold text-muted-foreground">
-              {t("password.confirm")}
-            </Label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                id="confirmNewPassword"
-                type={showConfirmPassword ? "text" : "password"}
-                autoComplete="new-password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder={t("password.confirmPlaceholder")}
-                className={cn(fieldClass, "pl-10 pr-10")}
-                minLength={8}
-                required
-              />
-              {confirmPassword && (
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
-                >
-                  {showConfirmPassword ? <EyeOff className="h-4 w-4 opacity-40" /> : <Eye className="h-4 w-4 opacity-40" />}
-                </button>
-              )}
-            </div>
-          </div>
-          <Link
-            href="/forgot-password"
-            className="block px-1 text-[13px] font-bold text-accent transition active:opacity-60"
-          >
-            {t("password.forgot")}
-          </Link>
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="secondary"
-              className="h-12 flex-1 rounded-2xl font-black"
-              disabled={passwordLoading}
-              onClick={() => {
-                setCurrentPassword("");
-                setNewPassword("");
-                setConfirmPassword("");
-                setShowCurrentPassword(false);
-                setShowNewPassword(false);
-                setShowConfirmPassword(false);
-                setEditing(null);
-              }}
-            >
-              {t("password.cancel")}
-            </Button>
-            <Button type="submit" disabled={passwordLoading} className="h-12 flex-1 rounded-2xl font-black">
-              {passwordLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  {t("password.changing")}
-                </>
-              ) : (
-                t("password.change")
-              )}
-            </Button>
-          </div>
-          </form>
-        </Collapse>
-      </SettingsSection>
 
       <SettingsSection title={t("dashboard.title")}>
         <div className="flex items-center justify-between gap-3">
