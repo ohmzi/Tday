@@ -7836,6 +7836,7 @@
       }
     },
     "Saving admin setting..." : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -8654,6 +8655,9 @@
           }
         }
       }
+    },
+    "Summarize your day with one tap. Turn it off to hide the summary button." : {
+
     },
     "Summary" : {
       "localizations" : {
