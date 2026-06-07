@@ -246,17 +246,6 @@ final class TdayAPIService {
         try await request(path: "/api/floater", method: "GET", responseType: FloatersResponse.self)
     }
 
-    func getAppSettings() async throws -> AppSettingsResponse {
-        try await request(path: "/api/app-settings", method: "GET", responseType: AppSettingsResponse.self)
-    }
-
-    func getAdminSettings() async throws -> AdminSettingsResponse {
-        try await request(path: "/api/admin/settings", method: "GET", responseType: AdminSettingsResponse.self)
-    }
-
-    func patchAdminSettings(payload: UpdateAdminSettingsRequest) async throws -> AdminSettingsResponse {
-        try await request(path: "/api/admin/settings", method: "PATCH", body: payload, responseType: AdminSettingsResponse.self)
-    }
 
     func summarizeTodos(payload: TodoSummaryRequest) async throws -> TodoSummaryResponse {
         try await request(path: "/api/todo/summary", method: "POST", body: payload, responseType: TodoSummaryResponse.self)

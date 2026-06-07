@@ -147,21 +147,6 @@ struct CredentialsCallbackRequest: Codable {
     let callbackUrl: String?
 }
 
-struct AppSettingsResponse: Codable, Equatable {
-    let aiSummaryEnabled: Bool
-    let updatedAt: String?
-}
-
-struct AdminSettingsResponse: Codable, Equatable {
-    let aiSummaryEnabled: Bool
-    let updatedAt: String?
-    let validationError: String?
-}
-
-struct UpdateAdminSettingsRequest: Codable {
-    let aiSummaryEnabled: Bool
-}
-
 struct TodosResponse: Codable {
     let todos: [TodoDTO]
 }
@@ -599,6 +584,7 @@ struct PreferencesResponse: Codable {
     let sortBy: String?
     let groupBy: String?
     let direction: String?
+    let aiSummaryEnabled: Bool?
 }
 
 struct PreferencesDTO: Codable, Equatable {
@@ -606,6 +592,7 @@ struct PreferencesDTO: Codable, Equatable {
     let sortBy: String?
     let groupBy: String?
     let rrule: String?
+    var aiSummaryEnabled: Bool? = nil
 }
 
 struct UserResponse: Codable, Equatable {

@@ -205,7 +205,8 @@ final class SyncManager {
         async let completedFloatersTask = api.getCompletedFloaters()
         async let listsTask = api.getLists()
         async let floaterListsTask = api.getFloaterLists()
-        async let appSettingsTask = api.getAppSettings()
+        // AI summary is a per-user preference now (the old global app-settings flag is gone).
+        async let preferencesTask = api.getPreferences()
 
         let todosResponse = try await todosTask
         let floatersResponse = try await floatersTask
@@ -213,14 +214,15 @@ final class SyncManager {
         let completedFloatersResponse = try await completedFloatersTask
         let listsResponse = try await listsTask
         let floaterListsResponse = try await floaterListsTask
-        let appSettingsResponse = try await appSettingsTask
+        let preferencesResponse = try await preferencesTask
         let todos = todosResponse.todos.map(mapTodoDTO)
         let floaters = floatersResponse.floaters.map(mapFloaterDTO)
         let completedItems = completedResponse.completedTodos.map(mapCompletedDTO)
         let completedFloaters = completedFloatersResponse.completedFloaters.map(mapCompletedFloaterDTO)
         let lists = listsResponse.lists.map { mapListDTO($0) }
         let floaterLists = floaterListsResponse.lists.map { mapFloaterListDTO($0) }
-        let aiSummaryEnabled = appSettingsResponse.aiSummaryEnabled
+        // NULL preference is treated as enabled (default ON), matching the backend.
+        let aiSummaryEnabled = preferencesResponse.aiSummaryEnabled ?? true
         return RemoteSnapshot(
             todos: todos,
             floaters: floaters,

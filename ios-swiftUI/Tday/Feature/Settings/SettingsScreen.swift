@@ -19,10 +19,6 @@ struct SettingsScreen: View {
     @State private var showingLanguageSelector = false
     @State private var profileEditor: ProfileEditorExpansion = .none
 
-    private var isAdminUser: Bool {
-        !viewModel.isLocalMode && (viewModel.user?.role ?? "").uppercased() == "ADMIN"
-    }
-
     private var titleCollapseProgress: CGFloat {
         rawTitleCollapseProgress
     }
@@ -80,25 +76,8 @@ struct SettingsScreen: View {
         }
         .task {
             viewModel.refreshSyncStatusFromCache()
-            await viewModel.refreshAdminAiSummarySetting()
+            await viewModel.refreshAiSummarySetting()
             await viewModel.refreshVersionInfo()
-        }
-        .alert(
-            "Summary unavailable",
-            isPresented: Binding(
-                get: { viewModel.aiSummaryValidationError != nil },
-                set: { visible in
-                    if !visible {
-                        viewModel.dismissAiSummaryValidationError()
-                    }
-                }
-            )
-        ) {
-            Button("OK", role: .cancel) {
-                viewModel.dismissAiSummaryValidationError()
-            }
-        } message: {
-            Text(viewModel.aiSummaryValidationError ?? "")
         }
         .animation(.spring(response: 0.24, dampingFraction: 0.9), value: showingReminderSelector)
         .animation(.spring(response: 0.24, dampingFraction: 0.9), value: showingLanguageSelector)
