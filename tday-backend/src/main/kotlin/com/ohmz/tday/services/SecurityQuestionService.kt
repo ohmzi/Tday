@@ -62,18 +62,20 @@ class SecurityQuestionServiceImpl(
 
     override suspend fun questionsForUsername(rawUsername: String): List<SecurityQuestion> {
         val username = normalize(rawUsername)
+        val hashHex = clientSignals.hashSecurityValue("secq:$username")
         val ids = newSuspendedTransaction(Dispatchers.IO) {
             val userId = findUserId(username)
             if (userId != null) {
                 val rows = UserSecurityQuestions.selectAll()
                     .where { UserSecurityQuestions.userID eq userId }
                     .map { it[UserSecurityQuestions.questionId] }
-                    .sorted()
-                if (rows.size == 2) rows else null
+                // Ask a stable 2 of the user's stored questions (handles legacy
+                // 2-question accounts and current 3-question accounts alike).
+                if (rows.size >= 2) SecurityQuestions.stableSubset(rows, hashHex, 2) else null
             } else {
                 null
             }
-        } ?: SecurityQuestions.decoyPair(clientSignals.hashSecurityValue("secq:$username"))
+        } ?: SecurityQuestions.decoyPair(hashHex)
         return SecurityQuestions.questionsFor(ids)
     }
 

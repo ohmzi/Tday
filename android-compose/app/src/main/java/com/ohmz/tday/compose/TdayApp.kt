@@ -373,6 +373,16 @@ fun TdayApp(
                     val authUiState by authViewModel.uiState.collectAsStateWithLifecycle()
                     val showOnboardingWizard = !appUiState.isWorkspaceAvailable
 
+                    // Remember the last attempted credentials so a pending-approval result
+                    // can be persisted into the holding screen (which re-attempts login).
+                    var lastAuthUsername by remember { mutableStateOf("") }
+                    var lastAuthPassword by remember { mutableStateOf("") }
+                    LaunchedEffect(authUiState.pendingApproval) {
+                        if (authUiState.pendingApproval && lastAuthPassword.isNotBlank()) {
+                            appViewModel.enterPendingApproval(lastAuthUsername, lastAuthPassword)
+                        }
+                    }
+
                     Box(modifier = Modifier.fillMaxSize()) {
                         Box(
                             modifier = Modifier
@@ -561,7 +571,17 @@ fun TdayApp(
                         }
 
                         if (showOnboardingWizard) {
-                            when (val versionResult = appUiState.versionCheckResult) {
+                            if (appUiState.pendingApproval) {
+                                com.ohmz.tday.compose.feature.app.PendingApprovalOverlay(
+                                    username = appUiState.pendingApprovalUsername,
+                                    isChecking = appUiState.isCheckingApproval,
+                                    onCheckStatus = { appViewModel.checkPendingApproval() },
+                                    onUseDifferentAccount = {
+                                        authViewModel.clearStatus()
+                                        appViewModel.cancelPendingApproval()
+                                    },
+                                )
+                            } else when (val versionResult = appUiState.versionCheckResult) {
                                 is com.ohmz.tday.compose.core.data.server.VersionCheckResult.AppUpdateRequired,
                                 is com.ohmz.tday.compose.core.data.server.VersionCheckResult.ServerUpdateRequired -> {
                                     com.ohmz.tday.compose.feature.app.UpdateRequiredOverlay(
@@ -604,6 +624,8 @@ fun TdayApp(
                                             )
                                         },
                                         onLogin = { username, password, source ->
+                                            lastAuthUsername = username
+                                            lastAuthPassword = password
                                             authViewModel.login(
                                                 username = username,
                                                 password = password,
@@ -614,6 +636,8 @@ fun TdayApp(
                                             }
                                         },
                                         onRegister = { firstName, username, password, securityAnswers, onSuccess ->
+                                            lastAuthUsername = username
+                                            lastAuthPassword = password
                                             authViewModel.register(
                                                 firstName = firstName,
                                                 lastName = "",

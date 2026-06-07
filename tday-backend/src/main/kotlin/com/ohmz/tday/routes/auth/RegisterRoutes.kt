@@ -81,7 +81,7 @@ fun Route.registerRoutes() {
                 return@post
             }
 
-            val securityError = SecurityQuestions.validateSelection(body.securityAnswers)
+            val securityError = SecurityQuestions.validateSelection(body.securityAnswers, required = 3)
             if (securityError != null) {
                 call.respond(HttpStatusCode.BadRequest, mapOf("message" to securityError))
                 return@post

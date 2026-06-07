@@ -13,18 +13,22 @@ struct SecurityQuestionsGateView: View {
     @State private var questions: [SecurityQuestion] = []
     @State private var questionId1: Int?
     @State private var questionId2: Int?
+    @State private var questionId3: Int?
     @State private var answer1 = ""
     @State private var answer2 = ""
+    @State private var answer3 = ""
     @State private var isLoading = true
     @State private var isSaving = false
     @State private var errorMessage: String?
 
     private var canSubmit: Bool {
-        guard let id1 = questionId1, let id2 = questionId2, id1 != id2 else {
+        guard let id1 = questionId1, let id2 = questionId2, let id3 = questionId3,
+              Set([id1, id2, id3]).count == 3 else {
             return false
         }
         return !answer1.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
             !answer2.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+            !answer3.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
             !isSaving
     }
 
@@ -45,7 +49,7 @@ struct SecurityQuestionsGateView: View {
                                 .foregroundStyle(colors.onSurface)
                         }
 
-                        Text(L("Choose two security questions. We'll use them to verify it's you if you ever need to reset your password."))
+                        Text(L("Choose three security questions. We'll use them to verify it's you if you ever need to reset your password."))
                             .font(.tdayRounded(size: 14, weight: .bold))
                             .foregroundStyle(colors.onSurface.opacity(0.62))
                             .fixedSize(horizontal: false, vertical: true)
@@ -60,16 +64,23 @@ struct SecurityQuestionsGateView: View {
                         SecurityQuestionMenu(
                             title: "Question 1",
                             selection: $questionId1,
-                            options: questions.filter { $0.id != questionId2 }
+                            options: questions.filter { $0.id != questionId2 && $0.id != questionId3 }
                         )
                         SecurityGateField(title: "Answer", text: $answer1)
 
                         SecurityQuestionMenu(
                             title: "Question 2",
                             selection: $questionId2,
-                            options: questions.filter { $0.id != questionId1 }
+                            options: questions.filter { $0.id != questionId1 && $0.id != questionId3 }
                         )
                         SecurityGateField(title: "Answer", text: $answer2)
+
+                        SecurityQuestionMenu(
+                            title: "Question 3",
+                            selection: $questionId3,
+                            options: questions.filter { $0.id != questionId1 && $0.id != questionId2 }
+                        )
+                        SecurityGateField(title: "Answer", text: $answer3)
                     }
 
                     if let errorMessage {
@@ -129,6 +140,9 @@ struct SecurityQuestionsGateView: View {
         if questionId2 == nil, loaded.indices.contains(1) {
             questionId2 = loaded[1].id
         }
+        if questionId3 == nil, loaded.indices.contains(2) {
+            questionId3 = loaded[2].id
+        }
         if loaded.isEmpty {
             errorMessage = "Could not load security questions. Please try again."
         }
@@ -136,18 +150,16 @@ struct SecurityQuestionsGateView: View {
 
     private func save() async {
         errorMessage = nil
-        guard let id1 = questionId1, let id2 = questionId2 else {
-            errorMessage = "Choose two different questions"
-            return
-        }
-        guard id1 != id2 else {
-            errorMessage = "Choose two different questions"
+        guard let id1 = questionId1, let id2 = questionId2, let id3 = questionId3,
+              Set([id1, id2, id3]).count == 3 else {
+            errorMessage = "Choose three different questions"
             return
         }
         let trimmed1 = answer1.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmed2 = answer2.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed1.isEmpty, !trimmed2.isEmpty else {
-            errorMessage = "Please answer both questions"
+        let trimmed3 = answer3.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed1.isEmpty, !trimmed2.isEmpty, !trimmed3.isEmpty else {
+            errorMessage = "Please answer all three questions"
             return
         }
 
@@ -155,6 +167,7 @@ struct SecurityQuestionsGateView: View {
         let didSave = await authViewModel.setSecurityQuestions([
             SecurityAnswerInput(questionId: id1, answer: trimmed1),
             SecurityAnswerInput(questionId: id2, answer: trimmed2),
+            SecurityAnswerInput(questionId: id3, answer: trimmed3),
         ])
         isSaving = false
         if didSave {

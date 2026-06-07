@@ -11,6 +11,9 @@ protocol AuthRepositoryServicing: AnyObject {
     func setSecurityQuestions(_ answers: [SecurityAnswerInput]) async -> Bool
     func logout() async
     func syncTimezone() async
+    func savePendingApproval(username: String, password: String)
+    func loadPendingApproval() -> (username: String, password: String)?
+    func clearPendingApproval()
     @MainActor func clearSessionOnly()
     @MainActor func clearAllLocalUserDataForUnauthenticatedState()
     func getLastUsername() -> String?
@@ -247,6 +250,18 @@ final class AuthRepository: AuthRepositoryServicing {
     }
 
     @MainActor
+    func savePendingApproval(username: String, password: String) {
+        secureStore.savePendingApproval(username: username, password: password)
+    }
+
+    func loadPendingApproval() -> (username: String, password: String)? {
+        secureStore.loadPendingApproval()
+    }
+
+    func clearPendingApproval() {
+        secureStore.clearPendingApproval()
+    }
+
     func clearSessionOnly() {
         secureStore.clearCachedSessionUser()
         cacheManager.clearSessionOnly()

@@ -105,7 +105,7 @@ fun Route.securityQuestionRoutes() {
 
             // The selection itself is validated before any account lookup so a malformed
             // request never reaches the (timing-sensitive) verification path.
-            if (SecurityQuestions.validateSelection(body.answers) != null) {
+            if (SecurityQuestions.validateSelection(body.answers, required = 2) != null) {
                 call.respond(
                     HttpStatusCode.BadRequest,
                     mapOf("message" to "Unable to reset password. Check your answers.", "reason" to "reset_failed"),

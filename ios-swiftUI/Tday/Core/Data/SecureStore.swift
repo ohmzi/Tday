@@ -27,6 +27,31 @@ final class SecureStore {
         case cachedSessionUser = "cached-session-user"
         case savedServerURLSuggestion = "saved-server-url-suggestion"
         case appDataMode = "app-data-mode-v1"
+        case pendingApprovalUsername = "pending-approval-username"
+        case pendingApprovalPassword = "pending-approval-password"
+    }
+
+    // MARK: - Pending admin approval
+
+    /// Credentials kept after a registration/login that is awaiting admin approval, so
+    /// the holding screen survives app relaunch and can silently re-attempt login until
+    /// the account is approved. Cleared on approval, sign-out, or uninstall.
+    func savePendingApproval(username: String, password: String) {
+        saveString(username, for: .pendingApprovalUsername)
+        saveString(password, for: .pendingApprovalPassword)
+    }
+
+    func loadPendingApproval() -> (username: String, password: String)? {
+        guard let username = loadString(for: .pendingApprovalUsername),
+              let password = loadString(for: .pendingApprovalPassword) else {
+            return nil
+        }
+        return (username, password)
+    }
+
+    func clearPendingApproval() {
+        deleteValue(for: .pendingApprovalUsername)
+        deleteValue(for: .pendingApprovalPassword)
     }
 
     func appDataMode() -> AppDataMode {
@@ -153,6 +178,7 @@ final class SecureStore {
         }
         clearPersistedAuthSessionCookie()
         clearCachedSessionUser()
+        clearPendingApproval()
         clearLastUsername()
         clearAllTrustedFingerprints()
         defaults.removeObject(forKey: runtimeServerURLKey)
@@ -220,6 +246,7 @@ final class SecureStore {
         clearAppDataMode()
         clearPersistedAuthSessionCookie()
         clearCachedSessionUser()
+        clearPendingApproval()
         clearLastUsername()
         clearAllTrustedFingerprints()
         defaults.removeObject(forKey: runtimeServerURLKey)

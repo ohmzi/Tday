@@ -165,8 +165,10 @@ fun OnboardingWizardOverlay(
     var securityQuestions by remember { mutableStateOf<List<SecurityQuestion>>(emptyList()) }
     var securityQuestionId1 by rememberSaveable { mutableStateOf<Int?>(null) }
     var securityQuestionId2 by rememberSaveable { mutableStateOf<Int?>(null) }
+    var securityQuestionId3 by rememberSaveable { mutableStateOf<Int?>(null) }
     var securityAnswer1 by rememberSaveable { mutableStateOf("") }
     var securityAnswer2 by rememberSaveable { mutableStateOf("") }
+    var securityAnswer3 by rememberSaveable { mutableStateOf("") }
     var authMode by rememberSaveable { mutableStateOf(AuthPanelMode.SIGN_IN) }
     var localAuthError by rememberSaveable { mutableStateOf<String?>(null) }
     var serverError by rememberSaveable { mutableStateOf<String?>(null) }
@@ -303,6 +305,7 @@ fun OnboardingWizardOverlay(
                 securityQuestions = fetched
                 if (securityQuestionId1 == null) securityQuestionId1 = fetched.getOrNull(0)?.id
                 if (securityQuestionId2 == null) securityQuestionId2 = fetched.getOrNull(1)?.id
+                if (securityQuestionId3 == null) securityQuestionId3 = fetched.getOrNull(2)?.id
             }
         }
     }
@@ -313,12 +316,13 @@ fun OnboardingWizardOverlay(
         val normalizedUsername = username.trim().lowercase(java.util.Locale.US)
         val id1 = securityQuestionId1
         val id2 = securityQuestionId2
+        val id3 = securityQuestionId3
 
-        if (id1 == null || id2 == null || id1 == id2) {
+        if (id1 == null || id2 == null || id3 == null || setOf(id1, id2, id3).size != 3) {
             localAuthError = securityQuestionsDistinctError
             return@submit
         }
-        if (securityAnswer1.isBlank() || securityAnswer2.isBlank()) {
+        if (securityAnswer1.isBlank() || securityAnswer2.isBlank() || securityAnswer3.isBlank()) {
             localAuthError = securityAnswersRequiredError
             return@submit
         }
@@ -335,6 +339,7 @@ fun OnboardingWizardOverlay(
             listOf(
                 SecurityAnswerInput(questionId = id1, answer = securityAnswer1.trim()),
                 SecurityAnswerInput(questionId = id2, answer = securityAnswer2.trim()),
+                SecurityAnswerInput(questionId = id3, answer = securityAnswer3.trim()),
             ),
         ) {
             isRegisterInFlight = false
@@ -344,6 +349,7 @@ fun OnboardingWizardOverlay(
             confirmRegisterPassword = ""
             securityAnswer1 = ""
             securityAnswer2 = ""
+            securityAnswer3 = ""
         }
     }
 
@@ -1080,7 +1086,10 @@ fun OnboardingWizardOverlay(
                                                     .padding(top = 10.dp),
                                                 label = stringResource(R.string.security_questions_question_1),
                                                 questions = securityQuestions,
-                                                excludeId = securityQuestionId2,
+                                                excludeIds = setOfNotNull(
+                                                    securityQuestionId2,
+                                                    securityQuestionId3
+                                                ),
                                                 selectedId = securityQuestionId1,
                                                 onSelected = {
                                                     securityQuestionId1 = it
@@ -1099,7 +1108,10 @@ fun OnboardingWizardOverlay(
                                                     .padding(top = 10.dp),
                                                 label = stringResource(R.string.security_questions_question_2),
                                                 questions = securityQuestions,
-                                                excludeId = securityQuestionId1,
+                                                excludeIds = setOfNotNull(
+                                                    securityQuestionId1,
+                                                    securityQuestionId3
+                                                ),
                                                 selectedId = securityQuestionId2,
                                                 onSelected = {
                                                     securityQuestionId2 = it
@@ -1108,6 +1120,28 @@ fun OnboardingWizardOverlay(
                                                 answer = securityAnswer2,
                                                 onAnswerChange = {
                                                     securityAnswer2 = it
+                                                    localAuthError = null
+                                                },
+                                                fieldColors = fieldColors,
+                                            )
+                                            SecurityQuestionPicker(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(top = 10.dp),
+                                                label = stringResource(R.string.security_questions_question_3),
+                                                questions = securityQuestions,
+                                                excludeIds = setOfNotNull(
+                                                    securityQuestionId1,
+                                                    securityQuestionId2
+                                                ),
+                                                selectedId = securityQuestionId3,
+                                                onSelected = {
+                                                    securityQuestionId3 = it
+                                                    localAuthError = null
+                                                },
+                                                answer = securityAnswer3,
+                                                onAnswerChange = {
+                                                    securityAnswer3 = it
                                                     localAuthError = null
                                                 },
                                                 fieldColors = fieldColors,
@@ -1137,9 +1171,15 @@ fun OnboardingWizardOverlay(
                                                     .height(48.dp),
                                                 enabled = securityQuestionId1 != null &&
                                                         securityQuestionId2 != null &&
-                                                        securityQuestionId1 != securityQuestionId2 &&
+                                                        securityQuestionId3 != null &&
+                                                        setOfNotNull(
+                                                            securityQuestionId1,
+                                                            securityQuestionId2,
+                                                            securityQuestionId3
+                                                        ).size == 3 &&
                                                         securityAnswer1.isNotBlank() &&
                                                         securityAnswer2.isNotBlank() &&
+                                                        securityAnswer3.isNotBlank() &&
                                                         !authUiState.isLoading &&
                                                         !isRegisterInFlight,
                                                 onClick = submitSecurityAndRegister,
@@ -1203,7 +1243,7 @@ fun OnboardingWizardOverlay(
 private fun SecurityQuestionPicker(
     label: String,
     questions: List<SecurityQuestion>,
-    excludeId: Int?,
+    excludeIds: Set<Int>,
     selectedId: Int?,
     onSelected: (Int) -> Unit,
     answer: String,
@@ -1212,7 +1252,7 @@ private fun SecurityQuestionPicker(
     modifier: Modifier = Modifier,
 ) {
     var expanded by remember { mutableStateOf(false) }
-    val selectableQuestions = questions.filter { it.id != excludeId }
+    val selectableQuestions = questions.filter { it.id == selectedId || it.id !in excludeIds }
     val selectedText = questions.firstOrNull { it.id == selectedId }?.text.orEmpty()
 
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {

@@ -116,7 +116,7 @@ fun Route.userRoutes() {
                 call.withAuth { user ->
                     either<AppError, Map<String, String>> {
                         val body = call.receive<SetSecurityQuestionsRequest>()
-                        SecurityQuestions.validateSelection(body.answers)?.let { raise(AppError.BadRequest(it)) }
+                        SecurityQuestions.validateSelection(body.answers, required = 3)?.let { raise(AppError.BadRequest(it)) }
                         securityQuestionService.setQuestions(user.id, body.answers)
                         mapOf("message" to "security questions updated")
                     }

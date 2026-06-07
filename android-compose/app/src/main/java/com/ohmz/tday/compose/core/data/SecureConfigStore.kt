@@ -209,6 +209,33 @@ class SecureConfigStore @Inject constructor(
         prefs.edit().remove(KEY_CACHED_SESSION_USER).apply()
     }
 
+    /**
+     * Credentials kept after a registration/login awaiting admin approval, so the holding
+     * screen survives relaunch and can silently re-attempt login until approved. App data
+     * (including this) is wiped on uninstall, satisfying "cleared on reinstall".
+     */
+    fun savePendingApproval(username: String, password: String) {
+        prefs.edit()
+            .putString(KEY_PENDING_APPROVAL_USERNAME, username)
+            .putString(KEY_PENDING_APPROVAL_PASSWORD, password)
+            .apply()
+    }
+
+    fun getPendingApproval(): Pair<String, String>? {
+        val username =
+            prefs.getString(KEY_PENDING_APPROVAL_USERNAME, null)?.takeIf { it.isNotBlank() }
+        val password =
+            prefs.getString(KEY_PENDING_APPROVAL_PASSWORD, null)?.takeIf { it.isNotBlank() }
+        return if (username != null && password != null) username to password else null
+    }
+
+    fun clearPendingApproval() {
+        prefs.edit()
+            .remove(KEY_PENDING_APPROVAL_USERNAME)
+            .remove(KEY_PENDING_APPROVAL_PASSWORD)
+            .apply()
+    }
+
     fun clearListIconCache() {
         prefs.edit().remove(KEY_LIST_ICON_MAP).apply()
     }
@@ -295,6 +322,8 @@ class SecureConfigStore @Inject constructor(
         const val KEY_LIST_ICON_MAP = "list_icon_map"
         const val KEY_OFFLINE_SYNC_STATE = "offline_sync_state_v1"
         const val KEY_CACHED_SESSION_USER = "cached_session_user_v1"
+        const val KEY_PENDING_APPROVAL_USERNAME = "pending_approval_username_v1"
+        const val KEY_PENDING_APPROVAL_PASSWORD = "pending_approval_password_v1"
         const val KEY_APP_DATA_MODE = "app_data_mode_v1"
         const val KEY_AI_SUMMARY_CONFIGURED = "ai_summary_configured_v1"
         const val KEY_AI_SUMMARY_HEALTHY = "ai_summary_healthy_v1"

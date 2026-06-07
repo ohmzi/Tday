@@ -60,8 +60,10 @@ fun SetSecurityQuestionsGate(
     var questions by remember { mutableStateOf<List<SecurityQuestion>>(emptyList()) }
     var questionId1 by rememberSaveable { mutableStateOf<Int?>(null) }
     var questionId2 by rememberSaveable { mutableStateOf<Int?>(null) }
+    var questionId3 by rememberSaveable { mutableStateOf<Int?>(null) }
     var answer1 by rememberSaveable { mutableStateOf("") }
     var answer2 by rememberSaveable { mutableStateOf("") }
+    var answer3 by rememberSaveable { mutableStateOf("") }
     var saving by rememberSaveable { mutableStateOf(false) }
     var errorMessage by rememberSaveable { mutableStateOf<String?>(null) }
 
@@ -74,6 +76,7 @@ fun SetSecurityQuestionsGate(
             questions = fetched
             if (questionId1 == null) questionId1 = fetched.getOrNull(0)?.id
             if (questionId2 == null) questionId2 = fetched.getOrNull(1)?.id
+            if (questionId3 == null) questionId3 = fetched.getOrNull(2)?.id
         }
     }
 
@@ -118,7 +121,7 @@ fun SetSecurityQuestionsGate(
                 GateQuestionPicker(
                     label = stringResource(R.string.security_questions_question_1),
                     questions = questions,
-                    excludeId = questionId2,
+                    excludeIds = setOfNotNull(questionId2, questionId3),
                     selectedId = questionId1,
                     onSelected = {
                         questionId1 = it
@@ -133,7 +136,7 @@ fun SetSecurityQuestionsGate(
                 GateQuestionPicker(
                     label = stringResource(R.string.security_questions_question_2),
                     questions = questions,
-                    excludeId = questionId1,
+                    excludeIds = setOfNotNull(questionId1, questionId3),
                     selectedId = questionId2,
                     onSelected = {
                         questionId2 = it
@@ -142,6 +145,21 @@ fun SetSecurityQuestionsGate(
                     answer = answer2,
                     onAnswerChange = {
                         answer2 = it
+                        errorMessage = null
+                    },
+                )
+                GateQuestionPicker(
+                    label = stringResource(R.string.security_questions_question_3),
+                    questions = questions,
+                    excludeIds = setOfNotNull(questionId1, questionId2),
+                    selectedId = questionId3,
+                    onSelected = {
+                        questionId3 = it
+                        errorMessage = null
+                    },
+                    answer = answer3,
+                    onAnswerChange = {
+                        answer3 = it
                         errorMessage = null
                     },
                 )
@@ -160,16 +178,22 @@ fun SetSecurityQuestionsGate(
                         .height(48.dp),
                     enabled = questionId1 != null &&
                             questionId2 != null &&
-                            questionId1 != questionId2 &&
+                            questionId3 != null &&
+                            setOfNotNull(questionId1, questionId2, questionId3).size == 3 &&
                             answer1.isNotBlank() &&
                             answer2.isNotBlank() &&
+                            answer3.isNotBlank() &&
                             !saving,
                     onClick = {
                         val id1 = questionId1
                         val id2 = questionId2
+                        val id3 = questionId3
                         when {
-                            id1 == null || id2 == null || id1 == id2 -> errorMessage = distinctError
-                            answer1.isBlank() || answer2.isBlank() -> errorMessage = answersError
+                            id1 == null || id2 == null || id3 == null ||
+                                    setOf(id1, id2, id3).size != 3 -> errorMessage = distinctError
+
+                            answer1.isBlank() || answer2.isBlank() || answer3.isBlank() -> errorMessage =
+                                answersError
                             else -> {
                                 errorMessage = null
                                 saving = true
@@ -182,6 +206,10 @@ fun SetSecurityQuestionsGate(
                                         SecurityAnswerInput(
                                             questionId = id2,
                                             answer = answer2.trim()
+                                        ),
+                                        SecurityAnswerInput(
+                                            questionId = id3,
+                                            answer = answer3.trim()
                                         ),
                                     ),
                                     { saving = false },
@@ -218,14 +246,14 @@ fun SetSecurityQuestionsGate(
 private fun GateQuestionPicker(
     label: String,
     questions: List<SecurityQuestion>,
-    excludeId: Int?,
+    excludeIds: Set<Int>,
     selectedId: Int?,
     onSelected: (Int) -> Unit,
     answer: String,
     onAnswerChange: (String) -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
-    val selectable = questions.filter { it.id != excludeId }
+    val selectable = questions.filter { it.id == selectedId || it.id !in excludeIds }
     val selectedText = questions.firstOrNull { it.id == selectedId }?.text.orEmpty()
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {

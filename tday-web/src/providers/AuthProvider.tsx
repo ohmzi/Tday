@@ -12,6 +12,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { api, ApiError } from "@/lib/api-client";
 import { clearClientUserData } from "@/lib/security/clearClientUserData";
+import { clearPendingApproval } from "@/lib/pendingApproval";
 import { onSessionExpired } from "@/lib/auth/sessionExpiry";
 import {
   markReturningBrowser,
@@ -75,6 +76,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (nextUser) {
         markReturningBrowser();
+        // An authenticated session means approval came through — drop the
+        // holding-screen marker so it doesn't reappear on the next load.
+        clearPendingApproval();
         applySessionState("authenticated", nextUser);
         return;
       }
