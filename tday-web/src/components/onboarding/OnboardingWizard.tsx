@@ -17,7 +17,7 @@ import { useAuth } from "@/providers/AuthProvider";
 import { api } from "@/lib/api-client";
 import { getErrorMessage } from "@/lib/error-message";
 import { createClientCredentialEnvelope } from "@/lib/security/clientCredentialEnvelope";
-import PendingApprovalDialog from "@/components/auth/PendingApprovalDialog";
+import PendingApprovalScreen from "@/components/auth/PendingApprovalScreen";
 import {
   clearPendingApproval,
   getPendingApproval,
@@ -550,7 +550,7 @@ export default function OnboardingWizard({
         </div>
       </div>
 
-      <PendingApprovalDialog
+      <PendingApprovalScreen
         open={pendingApprovalOpen}
         username={getPendingApproval()}
         isChecking={checkingApproval}
