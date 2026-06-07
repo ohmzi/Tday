@@ -249,6 +249,11 @@ class AppViewModel @Inject constructor(
                         authenticated = true,
                         requiresServerSetup = false,
                         requiresLogin = false,
+                        // Approval came through: clear the holding screen in the same
+                        // update that flips `authenticated`, so login never flashes.
+                        pendingApproval = false,
+                        pendingApprovalUsername = null,
+                        isCheckingApproval = false,
                         serverUrl = serverConfigRepository.getServerUrl(),
                         dataMode = AppDataMode.SERVER,
                         user = sessionUser,
@@ -310,6 +315,11 @@ class AppViewModel @Inject constructor(
                 val (pendingUser, pendingPass) = pending
                 if (authRepository.login(pendingUser, pendingPass) is AuthResult.Success) {
                     authRepository.clearPendingApproval()
+                    // Keep the holding screen visible through the re-bootstrap; the
+                    // authenticated branch clears it on session restore (no login flash).
+                    _uiState.update {
+                        it.copy(pendingApproval = true, pendingApprovalUsername = pendingUser)
+                    }
                     bootstrap()
                     return@launch
                 }
@@ -385,13 +395,9 @@ class AppViewModel @Inject constructor(
             val result = authRepository.login(pending.first, pending.second)
             if (result is AuthResult.Success) {
                 authRepository.clearPendingApproval()
-                _uiState.update {
-                    it.copy(
-                        pendingApproval = false,
-                        pendingApprovalUsername = null,
-                        isCheckingApproval = false
-                    )
-                }
+                // Keep the holding screen up through the re-bootstrap; the authenticated
+                // branch clears it on session restore, so login never flashes.
+                _uiState.update { it.copy(isCheckingApproval = false) }
                 bootstrap()
             } else {
                 _uiState.update { it.copy(isCheckingApproval = false) }
