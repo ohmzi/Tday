@@ -203,7 +203,10 @@ export default function FloaterItemContainer({
             touchAction: "pan-y",
           }}
           className={clsx(
-            "relative z-10 flex items-center justify-between gap-3 px-1 py-2.5",
+            // min-h on mobile keeps the swipe-revealed Edit/Delete pills
+            // (34px pill + label ≈ 52px) from being clipped by the row's
+            // overflow-hidden on a single-line floater. Desktop is unaffected.
+            "relative z-10 flex min-h-[54px] items-center justify-between gap-3 px-1 py-2.5 sm:min-h-0",
             "sm:cursor-grab sm:rounded-lg sm:active:cursor-grabbing sm:hover:bg-muted/40",
             highlighted && "rounded-lg ring-2 ring-accent/25 sm:bg-accent/5 sm:ring-0",
           )}
@@ -228,35 +231,24 @@ export default function FloaterItemContainer({
               />
             </div>
 
-            {/* Layout mirrors the home/scheduled row (TodoItemCard) exactly so the
-                first floater overlaps the first task on the home screen. */}
-            <div className="max-w-full">
-              <div className="mb-1.5 flex items-center gap-1.5">
-                <p
-                  className={clsx(
-                    "select-none text-[0.98rem] font-black leading-5 text-foreground transition-colors duration-300",
-                    (completePhase === "struck" || completePhase === "removing") &&
-                      "text-muted-foreground line-through",
-                  )}
-                >
-                  {title}
-                </p>
-              </div>
+            {/* Floaters have no due time, so the title is vertically centered on
+                the check circle (intentionally offset from the home/scheduled row,
+                which has a "Due …" line beneath the title). */}
+            <div className="min-w-0">
+              <p
+                className={clsx(
+                  "select-none text-[0.98rem] font-black leading-5 text-foreground transition-colors duration-300",
+                  (completePhase === "struck" || completePhase === "removing") &&
+                    "text-muted-foreground line-through",
+                )}
+              >
+                {title}
+              </p>
               {description ? (
-                <pre className="w-48 whitespace-pre-wrap pb-2 text-xs font-extrabold leading-4 text-muted-foreground sm:w-full">
+                <pre className="w-48 whitespace-pre-wrap pt-1 text-xs font-extrabold leading-4 text-muted-foreground sm:w-full">
                   {description}
                 </pre>
               ) : null}
-              {/* Floaters have no due time, but the home/scheduled row renders a
-                  "Due …" line in this slot. Reserve the same (empty) line height so
-                  the checkbox, title, flag and list dot align with the home screen's
-                  first task. */}
-              <div
-                aria-hidden
-                className="flex flex-wrap items-center justify-start gap-2 text-xs font-black"
-              >
-                <p className="font-bold text-transparent">&nbsp;</p>
-              </div>
             </div>
           </div>
 
