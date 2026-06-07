@@ -67,7 +67,7 @@ import ListDot from "@/components/ListDot";
 import EditCalendarFormContainer from "./CalendarForm/EditFormContainer";
 import { useCompleteCalendarTodo } from "../query/complete-calendar-todo";
 import { useCompleteCalendarTodoInstance } from "../query/complete-calendar-todo-instance";
-import { CalendarDays, Check, ChevronLeft, ChevronRight, Flag, Pen, RefreshCcw, Trash } from "lucide-react";
+import { CalendarDays, Check, ChevronLeft, ChevronRight, Flag, Pen, RefreshCcw, SquarePen, Trash } from "lucide-react";
 import { isToday } from "date-fns";
 import { getPriorityFlag } from "@/lib/priority";
 import i18n from "@/i18n";
@@ -601,7 +601,49 @@ function CalendarTaskRow({
           </button>
         </div>
 
-        <div className="flex shrink-0 items-center gap-1 opacity-100 sm:opacity-0 sm:transition-opacity sm:duration-200 sm:group-hover:opacity-100">
+        {/* Mobile: blue Edit + red Delete pills with labels — matches the home
+            screen's swipe actions so edit/delete look consistent app-wide. */}
+        <div className="flex shrink-0 items-center gap-3 self-center sm:hidden">
+          <button
+            type="button"
+            aria-label={todayDict("menu.edit")}
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={() => setDisplayForm(true)}
+            className="flex flex-col items-center gap-1"
+          >
+            <span
+              className="flex h-[34px] w-14 items-center justify-center rounded-[17px]"
+              style={{ backgroundColor: "#4C7DDE" }}
+            >
+              <SquarePen className="h-5 w-5 text-white" strokeWidth={2.2} />
+            </span>
+            <span className="text-[11px] font-bold text-muted-foreground">{todayDict("menu.edit")}</span>
+          </button>
+          <button
+            type="button"
+            aria-label={todayDict("menu.delete")}
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={() => {
+              if (todo.rrule) {
+                setDeleteAllDialogOpen(true);
+              } else {
+                setDeleteDialogOpen(true);
+              }
+            }}
+            className="flex flex-col items-center gap-1"
+          >
+            <span
+              className="flex h-[34px] w-14 items-center justify-center rounded-[17px]"
+              style={{ backgroundColor: "#FF453A" }}
+            >
+              <Trash className="h-5 w-5 text-white" strokeWidth={2.2} />
+            </span>
+            <span className="text-[11px] font-bold text-muted-foreground">{todayDict("menu.delete")}</span>
+          </button>
+        </div>
+
+        {/* Desktop: subtle hover-revealed icons (matches home/floater desktop). */}
+        <div className="hidden shrink-0 items-center gap-1 sm:flex sm:opacity-0 sm:transition-opacity sm:duration-200 sm:group-hover:opacity-100">
           <Button
             type="button"
             variant="ghost"

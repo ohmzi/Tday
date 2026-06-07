@@ -200,7 +200,10 @@ export default function FloaterItemContainer({
             touchAction: "pan-y",
           }}
           className={clsx(
-            "relative z-10 flex items-center justify-between gap-3 px-1 py-2.5",
+            // min-h on mobile guarantees the swipe-revealed Edit/Delete pills
+            // (34px pill + label ≈ 52px) are never clipped by the row's
+            // overflow-hidden, even for single-line floaters. Desktop is unaffected.
+            "relative z-10 flex min-h-[54px] items-center justify-between gap-3 px-1 py-2.5 sm:min-h-0",
             "sm:cursor-grab sm:rounded-lg sm:active:cursor-grabbing sm:hover:bg-muted/40",
             highlighted && "rounded-lg ring-2 ring-accent/25 sm:bg-accent/5 sm:ring-0",
           )}
