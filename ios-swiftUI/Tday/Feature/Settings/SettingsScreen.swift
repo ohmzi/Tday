@@ -151,16 +151,16 @@ struct SettingsScreen: View {
             }
 
             settingsListRow {
-                SettingsWorkspaceCard(
-                    syncStatus: viewModel.syncStatus,
-                    onSyncNow: {
-                        Task { await viewModel.manualSync() }
-                    }
-                )
-            }
-
-            settingsListRow {
                 SettingsSectionCard {
+                    SettingsWorkspaceContent(
+                        syncStatus: viewModel.syncStatus,
+                        onSyncNow: {
+                            Task { await viewModel.manualSync() }
+                        }
+                    )
+
+                    SettingsDivider()
+
                     SettingsListRow(
                         title: "App Version",
                         value: "v\(viewModel.currentVersionName)",
@@ -688,14 +688,14 @@ private struct SettingsEditField: View {
     }
 }
 
-private struct SettingsWorkspaceCard: View {
+private struct SettingsWorkspaceContent: View {
     let syncStatus: MobileSyncStatus
     let onSyncNow: () -> Void
 
     @Environment(\.tdayColors) private var colors
 
     var body: some View {
-        SettingsSectionCard {
+        VStack(alignment: .leading, spacing: 16) {
             SettingsSectionTitle("Workspace")
 
             if syncStatus.isLocalMode {
@@ -744,6 +744,7 @@ private struct SettingsWorkspaceCard: View {
                 }
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 

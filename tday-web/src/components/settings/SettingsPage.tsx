@@ -86,6 +86,24 @@ function SettingsSection({
   );
 }
 
+/** Sub-section heading used inside a combined card (e.g. Appearance + Language
+ * grouped together) — matches the SettingsSection header styling. */
+function SectionHeading({ title, description }: { title: string; description?: ReactNode }) {
+  return (
+    <div className="space-y-1">
+      <h2 className="text-[1.4rem] font-black leading-tight text-foreground">{title}</h2>
+      {description ? (
+        <p className="text-sm font-extrabold text-muted-foreground">{description}</p>
+      ) : null}
+    </div>
+  );
+}
+
+/** Thin divider between sub-sections within a combined card. */
+function CardDivider() {
+  return <div className="h-px bg-border/60" />;
+}
+
 /** Pill switch — mirrors the native toggle used across the app. */
 function SettingsSwitch({
   checked,
@@ -657,20 +675,22 @@ export default function SettingsPage() {
         </div>
       </SettingsSection>
 
-      <SettingsSection
-        title={t("appearance.title")}
-        description={
-          theme === "system" && resolvedTheme
-            ? t("appearance.descriptionSystem", {
-                theme: t(resolvedTheme === "dark" ? "themeDark" : "themeLight"),
-              })
-            : t("appearance.description")
-        }
-      >
+      <SheetCard className="space-y-4 p-[18px]">
+        <SectionHeading
+          title={t("appearance.title")}
+          description={
+            theme === "system" && resolvedTheme
+              ? t("appearance.descriptionSystem", {
+                  theme: t(resolvedTheme === "dark" ? "themeDark" : "themeLight"),
+                })
+              : t("appearance.description")
+          }
+        />
         <ThemeSegmentedControl value={theme} onChange={setTheme} labelFor={t} />
-      </SettingsSection>
 
-      <SettingsSection title={t("language.title")} description={t("language.description")}>
+        <CardDivider />
+
+        <SectionHeading title={t("language.title")} description={t("language.description")} />
         <button
           type="button"
           onClick={() => setLanguageOpen(true)}
@@ -686,7 +706,7 @@ export default function SettingsPage() {
             <ChevronRight className="h-[18px] w-[18px] shrink-0 text-muted-foreground/55" strokeWidth={2.6} />
           </span>
         </button>
-      </SettingsSection>
+      </SheetCard>
 
       <CenteredSelectorOverlay open={languageOpen} onOpenChange={setLanguageOpen} title={t("language.title")}>
         {LANGUAGE_OPTIONS.map((option, index) => {
@@ -713,7 +733,8 @@ export default function SettingsPage() {
         })}
       </CenteredSelectorOverlay>
 
-      <SettingsSection title={t("aiSummary.title")} description={t("aiSummary.description")}>
+      <SheetCard className="space-y-4 p-[18px]">
+        <SectionHeading title={t("aiSummary.title")} description={t("aiSummary.description")} />
         <div className="flex items-center justify-between gap-4">
           <div className="min-w-0">
             <p className="text-[1.05rem] font-black text-foreground">{t("aiSummary.toggle")}</p>
@@ -728,28 +749,30 @@ export default function SettingsPage() {
             }
           />
         </div>
-      </SettingsSection>
 
-      {push.isSupported && (
-        <SettingsSection title={t("notifications.title")}>
-          <div className="flex items-center justify-between gap-4">
-            <div className="min-w-0">
-              <p className="text-[1.05rem] font-black text-foreground">{t("notifications.push")}</p>
-              <p className="mt-0.5 text-sm font-extrabold text-muted-foreground">{pushSubtitle}</p>
+        {push.isSupported && (
+          <>
+            <CardDivider />
+            <SectionHeading title={t("notifications.title")} />
+            <div className="flex items-center justify-between gap-4">
+              <div className="min-w-0">
+                <p className="text-[1.05rem] font-black text-foreground">{t("notifications.push")}</p>
+                <p className="mt-0.5 text-sm font-extrabold text-muted-foreground">{pushSubtitle}</p>
+              </div>
+              {push.isLoading ? (
+                <Loader2 className="h-5 w-5 shrink-0 animate-spin text-muted-foreground" />
+              ) : (
+                <SettingsSwitch
+                  checked={push.isSubscribed}
+                  disabled={push.permission === "denied"}
+                  ariaLabel={t("notifications.toggle")}
+                  onClick={handlePushToggle}
+                />
+              )}
             </div>
-            {push.isLoading ? (
-              <Loader2 className="h-5 w-5 shrink-0 animate-spin text-muted-foreground" />
-            ) : (
-              <SettingsSwitch
-                checked={push.isSubscribed}
-                disabled={push.permission === "denied"}
-                ariaLabel={t("notifications.toggle")}
-                onClick={handlePushToggle}
-              />
-            )}
-          </div>
-        </SettingsSection>
-      )}
+          </>
+        )}
+      </SheetCard>
 
       <SettingsSection title={t("dashboard.title")}>
         <div className="flex items-center justify-between gap-3">

@@ -205,12 +205,14 @@ fun SettingsScreen(
                 }
             }
 
-            SettingsWorkspaceSection(
-                syncStatus = syncStatus,
-                onSyncNow = onSyncNow,
-            )
-
             SettingsSectionCard {
+                SettingsWorkspaceContent(
+                    syncStatus = syncStatus,
+                    onSyncNow = onSyncNow,
+                )
+
+                SettingsDivider()
+
                 SettingsListRow(
                     title = stringResource(R.string.release_title),
                     value = stringResource(R.string.label_version_name, BuildConfig.VERSION_NAME),
@@ -711,12 +713,15 @@ private fun AccountErrorText(message: String) {
 }
 
 @Composable
-private fun SettingsWorkspaceSection(
+private fun SettingsWorkspaceContent(
     syncStatus: MobileSyncStatus,
     onSyncNow: () -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
-    SettingsSectionCard {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
         SettingsSectionTitle(title = stringResource(R.string.settings_workspace))
         if (syncStatus.isLocalMode) {
             Text(
