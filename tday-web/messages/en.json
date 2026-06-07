@@ -468,7 +468,9 @@
       "namePlaceholder": "Enter your name",
       "username": "Username",
       "saving": "Saving...",
-      "save": "Save profile"
+      "save": "Save profile",
+      "edit": "Edit",
+      "cancel": "Cancel"
     },
     "appearance": {
       "title": "Appearance",
@@ -498,7 +500,10 @@
       "confirm": "Confirm new password",
       "confirmPlaceholder": "Confirm your new password",
       "changing": "Changing password...",
-      "change": "Change password"
+      "change": "Change password",
+      "changeAction": "Change",
+      "cancel": "Cancel",
+      "forgot": "Forgot password?"
     },
     "dashboard": {
       "title": "Dashboard access",

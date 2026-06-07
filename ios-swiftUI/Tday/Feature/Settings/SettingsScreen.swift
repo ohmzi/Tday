@@ -2,6 +2,13 @@ import SwiftUI
 
 private let settingsSegmentedControlAccentColor = Color.tdayTodayBlue
 
+/// Which inline account editor is expanded. Only one may be open at a time.
+private enum ProfileEditorExpansion: Equatable {
+    case none
+    case name
+    case password
+}
+
 struct SettingsScreen: View {
     let viewModel: AppViewModel
 
@@ -10,6 +17,7 @@ struct SettingsScreen: View {
     @State private var settingsScrollOffset: CGFloat = 0
     @State private var showingReminderSelector = false
     @State private var showingLanguageSelector = false
+    @State private var profileEditor: ProfileEditorExpansion = .none
 
     private var isAdminUser: Bool {
         !viewModel.isLocalMode && (viewModel.user?.role ?? "").uppercased() == "ADMIN"
@@ -94,6 +102,7 @@ struct SettingsScreen: View {
         }
         .animation(.spring(response: 0.24, dampingFraction: 0.9), value: showingReminderSelector)
         .animation(.spring(response: 0.24, dampingFraction: 0.9), value: showingLanguageSelector)
+        .animation(.spring(response: 0.28, dampingFraction: 0.9), value: profileEditor)
     }
 
     private var settingsContent: some View {
@@ -102,7 +111,7 @@ struct SettingsScreen: View {
 
             if !viewModel.isLocalMode {
                 settingsListRow {
-                    SettingsProfileCard(user: viewModel.user)
+                    SettingsProfileCard(viewModel: viewModel, expansion: $profileEditor)
                 }
             }
 
@@ -239,26 +248,443 @@ struct SettingsScreen: View {
 }
 
 private struct SettingsProfileCard: View {
-    let user: SessionUser?
+    let viewModel: AppViewModel
+    @Binding var expansion: ProfileEditorExpansion
 
     @Environment(\.tdayColors) private var colors
 
     var body: some View {
         SettingsSectionCard {
-            Text(user?.name ?? L("Unknown user"))
-                .font(.tdayRounded(size: 22, weight: .heavy))
-                .foregroundStyle(colors.onSurface)
+            SettingsNameSection(viewModel: viewModel, expansion: $expansion)
 
-            if let username = user?.username, !username.isEmpty {
-                Text(username)
-                    .font(.tdayRounded(size: 15, weight: .bold))
-                    .foregroundStyle(colors.onSurface.opacity(0.72))
+            if let username = viewModel.user?.username, !username.isEmpty {
+                SettingsDivider()
+                SettingsUsernameRow(username: username)
             }
 
-            Text("Role: \(user?.role ?? "USER")")
+            SettingsDivider()
+            SettingsPasswordSection(viewModel: viewModel, expansion: $expansion)
+
+            SettingsDivider()
+            Text("Role: \(viewModel.user?.role ?? "USER")")
                 .font(.tdayRounded(size: 13, weight: .bold))
                 .foregroundStyle(colors.onSurface.opacity(0.58))
         }
+    }
+}
+
+// MARK: - Account editors
+
+private struct SettingsNameSection: View {
+    let viewModel: AppViewModel
+    @Binding var expansion: ProfileEditorExpansion
+
+    @Environment(\.tdayColors) private var colors
+
+    @State private var draft = ""
+    @State private var isBusy = false
+    @State private var errorMessage: String?
+
+    private var isEditing: Bool { expansion == .name }
+    private var trimmed: String { draft.trimmingCharacters(in: .whitespacesAndNewlines) }
+    private var canSave: Bool {
+        !isBusy && !trimmed.isEmpty && trimmed != (viewModel.user?.name ?? "")
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .center, spacing: 12) {
+                VStack(alignment: .leading, spacing: 2) {
+                    SettingsFieldLabel("Name")
+                    Text(viewModel.user?.name ?? L("Unknown user"))
+                        .font(.tdayRounded(size: 20, weight: .heavy))
+                        .foregroundStyle(colors.onSurface)
+                }
+
+                Spacer(minLength: 12)
+
+                if !isEditing {
+                    SettingsInlineEditButton(title: "Edit", systemImage: "pencil") {
+                        beginEditing()
+                    }
+                }
+            }
+
+            if isEditing {
+                VStack(alignment: .leading, spacing: 12) {
+                    SettingsEditField(
+                        title: "Name",
+                        text: $draft,
+                        submitLabel: .done,
+                        onSubmit: { save() }
+                    )
+
+                    if let errorMessage {
+                        SettingsEditorError(message: errorMessage)
+                    }
+
+                    SettingsEditorActions(
+                        saveTitle: isBusy ? "Saving..." : "Save",
+                        isBusy: isBusy,
+                        canSave: canSave,
+                        onCancel: cancel,
+                        onSave: save
+                    )
+                }
+            }
+        }
+    }
+
+    private func beginEditing() {
+        draft = viewModel.user?.name ?? ""
+        errorMessage = nil
+        expansion = .name
+    }
+
+    private func cancel() {
+        errorMessage = nil
+        expansion = .none
+    }
+
+    private func save() {
+        guard canSave else { return }
+        Task {
+            isBusy = true
+            errorMessage = nil
+            let result = await viewModel.updateDisplayName(trimmed)
+            isBusy = false
+            switch result {
+            case .success:
+                expansion = .none
+            case let .failure(message):
+                errorMessage = message
+            }
+        }
+    }
+}
+
+private struct SettingsUsernameRow: View {
+    let username: String
+
+    @Environment(\.tdayColors) private var colors
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            SettingsFieldLabel("Username")
+            Text(username)
+                .font(.tdayRounded(size: 16, weight: .bold))
+                .foregroundStyle(colors.onSurface.opacity(0.72))
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+private struct SettingsPasswordSection: View {
+    let viewModel: AppViewModel
+    @Binding var expansion: ProfileEditorExpansion
+
+    @Environment(\.tdayColors) private var colors
+
+    @State private var currentPassword = ""
+    @State private var newPassword = ""
+    @State private var confirmPassword = ""
+    @State private var isBusy = false
+    @State private var errorMessage: String?
+
+    private var isEditing: Bool { expansion == .password }
+    private var fieldsFilled: Bool {
+        !currentPassword.isEmpty && !newPassword.isEmpty && !confirmPassword.isEmpty
+    }
+    private var canSave: Bool { !isBusy && fieldsFilled }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .center, spacing: 12) {
+                VStack(alignment: .leading, spacing: 2) {
+                    SettingsFieldLabel("Password")
+                    Text(verbatim: "••••••••")
+                        .font(.tdayRounded(size: 20, weight: .heavy))
+                        .foregroundStyle(colors.onSurface.opacity(0.8))
+                }
+
+                Spacer(minLength: 12)
+
+                if !isEditing {
+                    SettingsInlineEditButton(title: "Change", systemImage: "key.fill") {
+                        beginEditing()
+                    }
+                }
+            }
+
+            if isEditing {
+                VStack(alignment: .leading, spacing: 12) {
+                    SettingsEditField(
+                        title: "Current password",
+                        text: $currentPassword,
+                        isSecure: true,
+                        textContentType: .password,
+                        submitLabel: .next
+                    )
+                    SettingsEditField(
+                        title: "New password",
+                        text: $newPassword,
+                        isSecure: true,
+                        textContentType: .newPassword,
+                        submitLabel: .next
+                    )
+                    SettingsEditField(
+                        title: "Confirm new password",
+                        text: $confirmPassword,
+                        isSecure: true,
+                        textContentType: .newPassword,
+                        submitLabel: .done,
+                        onSubmit: { save() }
+                    )
+
+                    Text("Password must be at least 8 characters, with an uppercase letter and a special character.")
+                        .font(.tdayRounded(size: 12, weight: .bold))
+                        .foregroundStyle(colors.onSurface.opacity(0.5))
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    if let errorMessage {
+                        SettingsEditorError(message: errorMessage)
+                    }
+
+                    Button {
+                        viewModel.navigate(to: .forgotPassword)
+                    } label: {
+                        Text(L("Forgot password?"))
+                            .font(.tdayRounded(size: 13, weight: .heavy))
+                            .foregroundStyle(colors.secondary)
+                    }
+                    .buttonStyle(.plain)
+
+                    SettingsEditorActions(
+                        saveTitle: isBusy ? "Saving..." : "Save",
+                        isBusy: isBusy,
+                        canSave: canSave,
+                        onCancel: cancel,
+                        onSave: save
+                    )
+                }
+            }
+        }
+    }
+
+    private func beginEditing() {
+        resetFields()
+        expansion = .password
+    }
+
+    private func cancel() {
+        resetFields()
+        expansion = .none
+    }
+
+    private func resetFields() {
+        currentPassword = ""
+        newPassword = ""
+        confirmPassword = ""
+        errorMessage = nil
+    }
+
+    /// Client-side mirror of the server password rules (≥8 chars, ≥1 uppercase,
+    /// ≥1 special character) plus the confirmation match.
+    private func validationError() -> String? {
+        guard newPassword.count >= 8 else {
+            return L("Password must be at least 8 characters")
+        }
+        guard newPassword.contains(where: \.isUppercase) else {
+            return L("Password must include at least one uppercase letter")
+        }
+        guard newPassword.contains(where: { !$0.isLetter && !$0.isNumber }) else {
+            return L("Password must include at least one special character")
+        }
+        guard newPassword == confirmPassword else {
+            return L("Passwords do not match")
+        }
+        return nil
+    }
+
+    private func save() {
+        guard canSave else { return }
+        if let validation = validationError() {
+            errorMessage = validation
+            return
+        }
+        Task {
+            isBusy = true
+            errorMessage = nil
+            let result = await viewModel.changePassword(
+                currentPassword: currentPassword,
+                newPassword: newPassword
+            )
+            isBusy = false
+            switch result {
+            case .success:
+                resetFields()
+                expansion = .none
+            case let .failure(message):
+                errorMessage = message
+            }
+        }
+    }
+}
+
+// MARK: - Account editor building blocks
+
+private struct SettingsFieldLabel: View {
+    let title: String
+
+    @Environment(\.tdayColors) private var colors
+
+    init(_ title: String) {
+        self.title = title
+    }
+
+    var body: some View {
+        Text(L(title))
+            .font(.tdayRounded(size: 13, weight: .heavy))
+            .foregroundStyle(colors.onSurface.opacity(0.5))
+    }
+}
+
+private struct SettingsInlineEditButton: View {
+    let title: String
+    let systemImage: String
+    let action: () -> Void
+
+    @Environment(\.tdayColors) private var colors
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 5) {
+                Image(systemName: systemImage)
+                    .font(.system(size: 12, weight: .heavy))
+                Text(L(title))
+                    .font(.tdayRounded(size: 14, weight: .heavy))
+            }
+            .foregroundStyle(colors.secondary)
+            .padding(.horizontal, 14)
+            .frame(height: 34)
+            .background(Capsule(style: .continuous).fill(colors.secondary.opacity(0.12)))
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+private struct SettingsEditorError: View {
+    let message: String
+
+    @Environment(\.tdayColors) private var colors
+
+    var body: some View {
+        Text(message)
+            .font(.tdayRounded(size: 13, weight: .bold))
+            .foregroundStyle(colors.error)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+private struct SettingsEditorActions: View {
+    let saveTitle: String
+    let isBusy: Bool
+    let canSave: Bool
+    let onCancel: () -> Void
+    let onSave: () -> Void
+
+    @Environment(\.tdayColors) private var colors
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Button(action: onCancel) {
+                Text(L("Cancel"))
+                    .font(.tdayRounded(size: 15, weight: .heavy))
+                    .foregroundStyle(colors.onSurface.opacity(0.7))
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 46)
+                    .background(Capsule(style: .continuous).fill(colors.onSurface.opacity(0.06)))
+            }
+            .buttonStyle(.plain)
+            .disabled(isBusy)
+
+            Button(action: onSave) {
+                Text(L(saveTitle))
+                    .font(.tdayRounded(size: 15, weight: .heavy))
+                    .foregroundStyle(canSave ? colors.onPrimary : colors.onSurfaceVariant.opacity(0.65))
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 46)
+                    .background(Capsule(style: .continuous).fill(canSave ? colors.primary : colors.surfaceVariant.opacity(0.95)))
+            }
+            .buttonStyle(.plain)
+            .opacity(canSave ? 1 : 0.72)
+            .disabled(!canSave)
+        }
+    }
+}
+
+private struct SettingsEditField: View {
+    let title: String
+    @Binding var text: String
+    var isSecure = false
+    var textContentType: UITextContentType?
+    var submitLabel: SubmitLabel = .done
+    var onSubmit: (() -> Void)? = nil
+
+    @Environment(\.tdayColors) private var colors
+    @FocusState private var isFocused: Bool
+    @State private var isRevealed = false
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Group {
+                if isSecure && !isRevealed {
+                    SecureField("", text: $text, prompt: prompt)
+                        .textContentType(textContentType)
+                } else {
+                    TextField("", text: $text, prompt: prompt)
+                        .textContentType(textContentType)
+                        .textInputAutocapitalization(isSecure ? .never : .words)
+                        .autocorrectionDisabled(isSecure)
+                }
+            }
+            .focused($isFocused)
+            .submitLabel(submitLabel)
+            .onSubmit { onSubmit?() }
+            .font(.tdayRounded(size: 15, weight: .bold))
+            .foregroundStyle(colors.onSurface)
+            .tint(colors.primary)
+
+            if isSecure && !text.isEmpty {
+                Button {
+                    isRevealed.toggle()
+                } label: {
+                    Image(systemName: isRevealed ? "eye.slash" : "eye")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(colors.onSurface.opacity(0.4))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 16)
+        .frame(height: 50)
+        .background {
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(colors.onSurface.opacity(0.04))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .stroke(
+                            isFocused ? colors.primary.opacity(0.82) : colors.onSurface.opacity(0.12),
+                            lineWidth: isFocused ? 1.1 : 1
+                        )
+                )
+        }
+        .accessibilityLabel(L(title))
+    }
+
+    private var prompt: Text {
+        Text(L(title)).foregroundStyle(colors.onSurface.opacity(0.42))
     }
 }
 

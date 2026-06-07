@@ -468,7 +468,9 @@
       "namePlaceholder": "输入您的名称",
       "username": "用户名",
       "saving": "保存中...",
-      "save": "保存个人资料"
+      "save": "保存个人资料",
+      "edit": "编辑",
+      "cancel": "取消"
     },
     "appearance": {
       "title": "外观",
@@ -498,7 +500,10 @@
       "confirm": "确认新密码",
       "confirmPlaceholder": "确认您的新密码",
       "changing": "正在更改密码...",
-      "change": "更改密码"
+      "change": "更改密码",
+      "changeAction": "更改",
+      "cancel": "取消",
+      "forgot": "忘记密码？"
     },
     "dashboard": {
       "title": "仪表板访问",

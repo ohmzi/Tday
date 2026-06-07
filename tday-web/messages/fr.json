@@ -468,7 +468,9 @@
       "namePlaceholder": "Saisissez votre nom",
       "username": "Nom d'utilisateur",
       "saving": "Enregistrement...",
-      "save": "Enregistrer le profil"
+      "save": "Enregistrer le profil",
+      "edit": "Modifier",
+      "cancel": "Annuler"
     },
     "appearance": {
       "title": "Apparence",
@@ -498,7 +500,10 @@
       "confirm": "Confirmer le nouveau mot de passe",
       "confirmPlaceholder": "Confirmez votre nouveau mot de passe",
       "changing": "Changement du mot de passe...",
-      "change": "Changer le mot de passe"
+      "change": "Changer le mot de passe",
+      "changeAction": "Modifier",
+      "cancel": "Annuler",
+      "forgot": "Mot de passe oublié ?"
     },
     "dashboard": {
       "title": "Accès au tableau de bord",
