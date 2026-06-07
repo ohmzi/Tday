@@ -468,7 +468,9 @@
       "namePlaceholder": "Geben Sie Ihren Namen ein",
       "username": "Benutzername",
       "saving": "Speichern...",
-      "save": "Profil speichern"
+      "save": "Profil speichern",
+      "edit": "Bearbeiten",
+      "cancel": "Abbrechen"
     },
     "appearance": {
       "title": "Darstellung",
@@ -498,7 +500,10 @@
       "confirm": "Neues Passwort bestätigen",
       "confirmPlaceholder": "Bestätigen Sie Ihr neues Passwort",
       "changing": "Passwort wird geändert...",
-      "change": "Passwort ändern"
+      "change": "Passwort ändern",
+      "changeAction": "Ändern",
+      "cancel": "Abbrechen",
+      "forgot": "Passwort vergessen?"
     },
     "dashboard": {
       "title": "Dashboard-Zugriff",

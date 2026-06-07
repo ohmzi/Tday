@@ -125,6 +125,20 @@
     <string name="settings_unknown_user">Pengguna tidak diketahui</string>
     <string name="settings_role_label">Peranan: %1$s</string>
     <string name="settings_role_default">PENGGUNA</string>
+    <!-- Account settings (profile name + password change) -->
+    <string name="settings_account_name_label">Nama</string>
+    <string name="settings_account_username_label">Nama pengguna</string>
+    <string name="settings_account_password_label">Kata laluan</string>
+    <string name="settings_account_change_password">Tukar</string>
+    <string name="settings_account_current_password">Kata laluan semasa</string>
+    <string name="settings_account_forgot_password">Lupa kata laluan?</string>
+    <string name="settings_account_password_requirement">Kata laluan mesti sekurang-kurangnya 8 aksara, dengan satu huruf besar dan satu aksara khas.</string>
+    <string name="settings_account_show_password">Tunjukkan kata laluan</string>
+    <string name="settings_account_hide_password">Sembunyikan kata laluan</string>
+    <string name="settings_account_not_signed_in">Anda belum log masuk.</string>
+    <string name="settings_account_name_required">Nama tidak boleh kosong.</string>
+    <string name="error_update_name_failed">Gagal mengemas kini nama anda. Sila cuba lagi.</string>
+    <string name="error_change_password_failed">Gagal menukar kata laluan anda. Sila cuba lagi.</string>
     <string name="settings_appearance">Penampilan</string>
     <string name="settings_reminders">Peringatan</string>
     <string name="settings_feature_toggle">Togol ciri</string>

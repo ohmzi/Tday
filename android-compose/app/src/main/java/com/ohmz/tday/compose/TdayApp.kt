@@ -998,6 +998,13 @@ fun TdayApp(
                         onBack = { navController.popBackStack() },
                         onLogout = { appViewModel.logout() },
                         onOpenLatestRelease = { navController.navigate(AppRoute.LatestRelease.route) },
+                        onUpdateName = appViewModel::updateDisplayName,
+                        onChangePassword = appViewModel::changePassword,
+                        onForgotPassword = {
+                            navController.navigate(AppRoute.ForgotPassword.route) {
+                                launchSingleTop = true
+                            }
+                        },
                     )
                 }
 

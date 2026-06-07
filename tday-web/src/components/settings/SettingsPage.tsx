@@ -11,6 +11,7 @@ import {
   Lock,
   Monitor,
   Moon,
+  Pencil,
   Settings,
   Sun,
   Trash2,
@@ -36,7 +37,7 @@ import NativeAppBrandButton from "@/components/app/NativeAppBrandButton";
 import { api } from "@/lib/api-client";
 import { getErrorMessage } from "@/lib/error-message";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
-import { usePathname } from "@/lib/navigation";
+import { Link, usePathname } from "@/lib/navigation";
 import { LANGUAGE_STORAGE_KEY, resolveInitialLocale } from "@/i18n";
 
 const themeOptions = [
@@ -168,10 +169,25 @@ function ThemeSegmentedControl({
 const fieldClass =
   "h-12 rounded-2xl border-border/70 bg-background/50 font-bold focus-visible:ring-accent/30";
 
+/** Inline expand/collapse that animates height via the grid-rows trick — used
+ * for the hidden-until-edit account editors. */
+function Collapse({ open, children }: { open: boolean; children: ReactNode }) {
+  return (
+    <div
+      className={cn(
+        "grid transition-[grid-template-rows] duration-200 ease-out",
+        open ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
+      )}
+    >
+      <div className="overflow-hidden">{children}</div>
+    </div>
+  );
+}
+
 export default function SettingsPage() {
   const { t: sidebarDict, i18n } = useTranslation("sidebar");
   const { t } = useTranslation("settings");
-  const { user } = useAuth();
+  const { user, refreshSession } = useAuth();
   const { preferences, updatePreferences } = useUserPreferences();
   const { toast } = useToast();
   const { theme = "system", resolvedTheme, setTheme } = useTheme();
@@ -209,6 +225,10 @@ export default function SettingsPage() {
     // Swap the leading locale segment of the current URL so deep links stay valid.
     navigate(pathname.replace(/^\/[^/]+/, `/${target}`));
   };
+
+  // Which inline account editor is open ("one at a time" is structurally
+  // guaranteed by this single state value).
+  const [editing, setEditing] = useState<"name" | "password" | null>(null);
 
   const [name, setName] = useState("");
   const [profileLoading, setProfileLoading] = useState(false);
@@ -333,6 +353,7 @@ export default function SettingsPage() {
     if (!trimmed) return;
     if (trimmed === user?.name) {
       toast({ description: t("toast.noChanges") });
+      setEditing(null);
       return;
     }
     setProfileLoading(true);
@@ -343,6 +364,10 @@ export default function SettingsPage() {
         body: JSON.stringify({ name: trimmed }),
       });
       toast({ description: t("toast.nameUpdated") });
+      // Re-fetch the session so the new name is confirmed by the server and
+      // propagated to every consumer of useAuth(); then collapse the editor.
+      await refreshSession();
+      setEditing(null);
     } catch (err) {
       toast({
         description: getErrorMessage(err, t("toast.nameUpdateFailed")),
@@ -374,6 +399,10 @@ export default function SettingsPage() {
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
+      setShowCurrentPassword(false);
+      setShowNewPassword(false);
+      setShowConfirmPassword(false);
+      setEditing(null);
     } catch (err) {
       toast({
         description: getErrorMessage(err, t("toast.passwordChangeFailed")),
@@ -404,38 +433,79 @@ export default function SettingsPage() {
       />
 
       <SettingsSection title={t("profile.title")} description={t("profile.description")}>
-        <form onSubmit={handleProfileSubmit} className="space-y-4">
+        <div className="space-y-4">
+          {/* Name — collapsed summary with an Edit affordance, expands to an inline editor. */}
           <div className="space-y-2">
-            <Label htmlFor="name" className="px-1 text-sm font-extrabold text-muted-foreground">
-              {t("profile.name")}
-            </Label>
-            <div className="relative">
-              <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder={t("profile.namePlaceholder")}
-                className={cn(fieldClass, "pl-10")}
-                maxLength={100}
-              />
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <Label className="px-1 text-sm font-extrabold text-muted-foreground">{t("profile.name")}</Label>
+                <p className="px-1 text-[1.05rem] font-black text-foreground truncate">
+                  {user?.name || t("profile.namePlaceholder")}
+                </p>
+              </div>
+              {editing !== "name" ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="shrink-0 rounded-xl font-black text-accent hover:text-accent"
+                  onClick={() => {
+                    setName(user?.name ?? "");
+                    setEditing("name");
+                  }}
+                >
+                  <Pencil className="mr-1.5 h-3.5 w-3.5" />
+                  {t("profile.edit")}
+                </Button>
+              ) : null}
             </div>
+            <Collapse open={editing === "name"}>
+              <form onSubmit={handleProfileSubmit} className="space-y-3 pt-1">
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    id="name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder={t("profile.namePlaceholder")}
+                    className={cn(fieldClass, "pl-10")}
+                    maxLength={100}
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="h-11 flex-1 rounded-2xl font-black"
+                    disabled={profileLoading}
+                    onClick={() => {
+                      setName(user?.name ?? "");
+                      setEditing(null);
+                    }}
+                  >
+                    {t("profile.cancel")}
+                  </Button>
+                  <Button type="submit" disabled={profileLoading} className="h-11 flex-1 rounded-2xl font-black">
+                    {profileLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        {t("profile.saving")}
+                      </>
+                    ) : (
+                      t("profile.save")
+                    )}
+                  </Button>
+                </div>
+              </form>
+            </Collapse>
           </div>
-          <div className="space-y-2">
+
+          {/* Username — read-only, cannot be changed. */}
+          <div className="space-y-1">
             <Label className="px-1 text-sm font-extrabold text-muted-foreground">{t("profile.username")}</Label>
-            <Input value={user?.username ?? ""} disabled className={cn(fieldClass, "opacity-60")} />
+            <p className="px-1 text-[1.05rem] font-black text-foreground">{user?.username ?? ""}</p>
           </div>
-          <Button type="submit" disabled={profileLoading} className="h-12 w-full rounded-2xl font-black">
-            {profileLoading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                {t("profile.saving")}
-              </>
-            ) : (
-              t("profile.save")
-            )}
-          </Button>
-        </form>
+        </div>
       </SettingsSection>
 
       <SettingsSection
@@ -533,7 +603,27 @@ export default function SettingsPage() {
       )}
 
       <SettingsSection title={t("password.title")} description={t("password.description")}>
-        <form onSubmit={handlePasswordSubmit} className="space-y-4">
+        {/* Collapsed summary with a Change affordance; expands to the change-password form. */}
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <Lock className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <span className="text-[1.05rem] font-black tracking-[0.18em] text-foreground">••••••••</span>
+          </div>
+          {editing !== "password" ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="shrink-0 rounded-xl font-black text-accent hover:text-accent"
+              onClick={() => setEditing("password")}
+            >
+              <Key className="mr-1.5 h-3.5 w-3.5" />
+              {t("password.changeAction")}
+            </Button>
+          ) : null}
+        </div>
+        <Collapse open={editing === "password"}>
+          <form onSubmit={handlePasswordSubmit} className="space-y-4 pt-3">
           <div className="space-y-2">
             <Label htmlFor="currentPassword" className="px-1 text-sm font-extrabold text-muted-foreground">
               {t("password.current")}
@@ -620,17 +710,43 @@ export default function SettingsPage() {
               )}
             </div>
           </div>
-          <Button type="submit" disabled={passwordLoading} className="h-12 w-full rounded-2xl font-black">
-            {passwordLoading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                {t("password.changing")}
-              </>
-            ) : (
-              t("password.change")
-            )}
-          </Button>
-        </form>
+          <Link
+            href="/forgot-password"
+            className="block px-1 text-[13px] font-bold text-accent transition active:opacity-60"
+          >
+            {t("password.forgot")}
+          </Link>
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              className="h-12 flex-1 rounded-2xl font-black"
+              disabled={passwordLoading}
+              onClick={() => {
+                setCurrentPassword("");
+                setNewPassword("");
+                setConfirmPassword("");
+                setShowCurrentPassword(false);
+                setShowNewPassword(false);
+                setShowConfirmPassword(false);
+                setEditing(null);
+              }}
+            >
+              {t("password.cancel")}
+            </Button>
+            <Button type="submit" disabled={passwordLoading} className="h-12 flex-1 rounded-2xl font-black">
+              {passwordLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {t("password.changing")}
+                </>
+              ) : (
+                t("password.change")
+              )}
+            </Button>
+          </div>
+          </form>
+        </Collapse>
       </SettingsSection>
 
       <SettingsSection title={t("dashboard.title")}>

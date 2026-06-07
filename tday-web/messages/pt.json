@@ -468,7 +468,9 @@
       "namePlaceholder": "Digite seu nome",
       "username": "Nome de usuário",
       "saving": "Salvando...",
-      "save": "Salvar perfil"
+      "save": "Salvar perfil",
+      "edit": "Editar",
+      "cancel": "Cancelar"
     },
     "appearance": {
       "title": "Aparência",
@@ -498,7 +500,10 @@
       "confirm": "Confirmar nova senha",
       "confirmPlaceholder": "Confirme sua nova senha",
       "changing": "Alterando senha...",
-      "change": "Alterar senha"
+      "change": "Alterar senha",
+      "changeAction": "Alterar",
+      "cancel": "Cancelar",
+      "forgot": "Esqueceu a senha?"
     },
     "dashboard": {
       "title": "Acesso ao painel",

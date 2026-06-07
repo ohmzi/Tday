@@ -129,6 +129,12 @@ internal class OfflineNoticeCooldown(
     }
 }
 
+/** Outcome of an inline account edit (display name / password change). */
+sealed interface ProfileEditResult {
+    data object Success : ProfileEditResult
+    data class Error(val message: String) : ProfileEditResult
+}
+
 @HiltViewModel
 class AppViewModel @Inject constructor(
     private val authRepository: AuthRepository,
@@ -415,6 +421,58 @@ class AppViewModel @Inject constructor(
                     _uiState.update { it.copy(aiSummaryEnabled = previous) }
                 }
         }
+    }
+
+    // MARK: Account (profile name + password)
+
+    /// Saves a new display name, then re-fetches the session so the change is
+    /// confirmed by the server and reflected app-wide (the profile card observes
+    /// `uiState.user`).
+    suspend fun updateDisplayName(newName: String): ProfileEditResult {
+        val trimmed = newName.trim()
+        val state = _uiState.value
+        if (state.isLocalMode || !state.authenticated) {
+            return ProfileEditResult.Error(appContext.getString(R.string.settings_account_not_signed_in))
+        }
+        if (trimmed.isEmpty()) {
+            return ProfileEditResult.Error(appContext.getString(R.string.settings_account_name_required))
+        }
+        return runCatching {
+            authRepository.updateProfileName(trimmed)
+            val refreshed = runCatching { authRepository.restoreSession() }.getOrNull()
+            _uiState.update { it.copy(user = refreshed ?: it.user?.copy(name = trimmed)) }
+            ProfileEditResult.Success
+        }.getOrElse { error ->
+            ProfileEditResult.Error(error.accountEditMessage(R.string.error_update_name_failed))
+        }
+    }
+
+    /// Changes the password (the server enforces the strength rules and rotates
+    /// the session cookie on the same response), then re-fetches the session.
+    suspend fun changePassword(currentPassword: String, newPassword: String): ProfileEditResult {
+        val state = _uiState.value
+        if (state.isLocalMode || !state.authenticated) {
+            return ProfileEditResult.Error(appContext.getString(R.string.settings_account_not_signed_in))
+        }
+        return runCatching {
+            authRepository.changePassword(currentPassword, newPassword)
+            runCatching { authRepository.restoreSession() }.getOrNull()?.let { refreshed ->
+                _uiState.update { it.copy(user = refreshed) }
+            }
+            ProfileEditResult.Success
+        }.getOrElse { error ->
+            ProfileEditResult.Error(error.accountEditMessage(R.string.error_change_password_failed))
+        }
+    }
+
+    /// Prefers the server-supplied validation message for client-correctable
+    /// (4xx) errors — e.g. "current password is incorrect" — and otherwise maps
+    /// to a generic user-facing message.
+    private fun Throwable.accountEditMessage(@androidx.annotation.StringRes fallbackRes: Int): String {
+        if (this is ApiCallException && (statusCode == 400 || statusCode == 422) && !message.isNullOrBlank()) {
+            return message!!
+        }
+        return userFacingMessage(appContext, fallbackRes)
     }
 
     fun saveServerUrl(

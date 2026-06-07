@@ -1,8 +1,11 @@
 package com.ohmz.tday.compose.feature.settings
 
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -24,23 +27,36 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ChevronLeft
 import androidx.compose.material.icons.rounded.ChevronRight
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.Visibility
+import androidx.compose.material.icons.rounded.VisibilityOff
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -55,6 +71,9 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
 import androidx.core.os.LocaleListCompat
@@ -67,11 +86,13 @@ import com.ohmz.tday.compose.core.model.SessionUser
 import com.ohmz.tday.compose.core.notification.ReminderOption
 import com.ohmz.tday.compose.core.ui.rememberScrollCollapsingTitleScrollBehavior
 import com.ohmz.tday.compose.feature.app.MobileSyncStatus
+import com.ohmz.tday.compose.feature.app.ProfileEditResult
 import com.ohmz.tday.compose.ui.component.TdayCenteredSelectorDialog
 import com.ohmz.tday.compose.ui.component.TdaySegmentedSlider
 import com.ohmz.tday.compose.ui.theme.AppThemeMode
 import com.ohmz.tday.compose.ui.theme.TdayDimens
 import com.ohmz.tday.compose.ui.theme.TdayStatusSuccess
+import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -97,6 +118,9 @@ fun SettingsScreen(
     onBack: () -> Unit,
     onLogout: () -> Unit,
     onOpenLatestRelease: () -> Unit,
+    onUpdateName: suspend (String) -> ProfileEditResult,
+    onChangePassword: suspend (String, String) -> ProfileEditResult,
+    onForgotPassword: () -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val scrollState = rememberScrollState()
@@ -128,6 +152,9 @@ fun SettingsScreen(
             if (!isLocalMode) {
                 SettingsProfileCard(
                     user = user,
+                    onUpdateName = onUpdateName,
+                    onChangePassword = onChangePassword,
+                    onForgotPassword = onForgotPassword,
                 )
             }
 
@@ -258,26 +285,42 @@ fun SettingsScreen(
     }
 }
 
+private enum class SettingsAccountEditor { None, Name, Password }
+
 @Composable
 private fun SettingsProfileCard(
     user: SessionUser?,
+    onUpdateName: suspend (String) -> ProfileEditResult,
+    onChangePassword: suspend (String, String) -> ProfileEditResult,
+    onForgotPassword: () -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
+    var activeEditor by rememberSaveable { mutableStateOf(SettingsAccountEditor.None) }
 
     SettingsSectionCard {
-        Text(
-            text = user?.name ?: stringResource(R.string.settings_unknown_user),
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.ExtraBold,
-            color = colorScheme.onSurface,
+        AccountNameSection(
+            user = user,
+            isEditing = activeEditor == SettingsAccountEditor.Name,
+            onBeginEdit = { activeEditor = SettingsAccountEditor.Name },
+            onDone = { activeEditor = SettingsAccountEditor.None },
+            onUpdateName = onUpdateName,
         )
+
         if (!user?.username.isNullOrBlank()) {
-            Text(
-                text = user?.username.orEmpty(),
-                style = MaterialTheme.typography.bodyMedium,
-                color = colorScheme.onSurface.copy(alpha = 0.72f),
-            )
+            SettingsDivider()
+            AccountUsernameRow(username = user?.username.orEmpty())
         }
+
+        SettingsDivider()
+        AccountPasswordSection(
+            isEditing = activeEditor == SettingsAccountEditor.Password,
+            onBeginEdit = { activeEditor = SettingsAccountEditor.Password },
+            onDone = { activeEditor = SettingsAccountEditor.None },
+            onChangePassword = onChangePassword,
+            onForgotPassword = onForgotPassword,
+        )
+
+        SettingsDivider()
         Text(
             text = stringResource(
                 R.string.settings_role_label,
@@ -287,6 +330,384 @@ private fun SettingsProfileCard(
             color = colorScheme.onSurface.copy(alpha = 0.58f),
         )
     }
+}
+
+@Composable
+private fun AccountNameSection(
+    user: SessionUser?,
+    isEditing: Boolean,
+    onBeginEdit: () -> Unit,
+    onDone: () -> Unit,
+    onUpdateName: suspend (String) -> ProfileEditResult,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    val scope = rememberCoroutineScope()
+
+    var draft by remember(user?.name) { mutableStateOf(user?.name.orEmpty()) }
+    var busy by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                AccountFieldLabel(stringResource(R.string.settings_account_name_label))
+                Text(
+                    text = user?.name ?: stringResource(R.string.settings_unknown_user),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = colorScheme.onSurface,
+                )
+            }
+            if (!isEditing) {
+                AccountInlineButton(
+                    text = stringResource(R.string.action_edit),
+                    icon = Icons.Rounded.Edit,
+                    onClick = {
+                        draft = user?.name.orEmpty()
+                        error = null
+                        onBeginEdit()
+                    },
+                )
+            }
+        }
+
+        AnimatedVisibility(
+            visible = isEditing,
+            enter = expandVertically(),
+            exit = shrinkVertically(),
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(
+                    modifier = Modifier.fillMaxWidth(),
+                    value = draft,
+                    onValueChange = {
+                        draft = it
+                        error = null
+                    },
+                    label = { Text(stringResource(R.string.settings_account_name_label)) },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    shape = RoundedCornerShape(22.dp),
+                )
+                error?.let { AccountErrorText(it) }
+                AccountEditorActions(
+                    busy = busy,
+                    canSave = !busy && draft.trim().isNotEmpty() && draft.trim() != user?.name,
+                    onCancel = {
+                        error = null
+                        onDone()
+                    },
+                    onSave = {
+                        scope.launch {
+                            busy = true
+                            error = null
+                            when (val result = onUpdateName(draft.trim())) {
+                                is ProfileEditResult.Success -> onDone()
+                                is ProfileEditResult.Error -> error = result.message
+                            }
+                            busy = false
+                        }
+                    },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AccountUsernameRow(username: String) {
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        AccountFieldLabel(stringResource(R.string.settings_account_username_label))
+        Text(
+            text = username,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f),
+        )
+    }
+}
+
+@Composable
+private fun AccountPasswordSection(
+    isEditing: Boolean,
+    onBeginEdit: () -> Unit,
+    onDone: () -> Unit,
+    onChangePassword: suspend (String, String) -> ProfileEditResult,
+    onForgotPassword: () -> Unit,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    val scope = rememberCoroutineScope()
+
+    var current by remember { mutableStateOf("") }
+    var newPassword by remember { mutableStateOf("") }
+    var confirm by remember { mutableStateOf("") }
+    var busy by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+
+    val passwordMinError = stringResource(R.string.onboarding_validation_password_min)
+    val passwordUppercaseError = stringResource(R.string.onboarding_validation_password_uppercase)
+    val passwordSpecialError = stringResource(R.string.onboarding_validation_password_special)
+    val passwordMismatchError = stringResource(R.string.onboarding_validation_password_mismatch)
+
+    // Clear the sensitive fields whenever the editor collapses.
+    LaunchedEffect(isEditing) {
+        if (!isEditing) {
+            current = ""
+            newPassword = ""
+            confirm = ""
+            error = null
+        }
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                AccountFieldLabel(stringResource(R.string.settings_account_password_label))
+                Text(
+                    text = "••••••••",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = colorScheme.onSurface.copy(alpha = 0.8f),
+                )
+            }
+            if (!isEditing) {
+                AccountInlineButton(
+                    text = stringResource(R.string.settings_account_change_password),
+                    icon = Icons.Rounded.Lock,
+                    onClick = onBeginEdit,
+                )
+            }
+        }
+
+        AnimatedVisibility(
+            visible = isEditing,
+            enter = expandVertically(),
+            exit = shrinkVertically(),
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                AccountPasswordField(
+                    value = current,
+                    onValueChange = {
+                        current = it
+                        error = null
+                    },
+                    label = stringResource(R.string.settings_account_current_password),
+                    imeAction = ImeAction.Next,
+                )
+                AccountPasswordField(
+                    value = newPassword,
+                    onValueChange = {
+                        newPassword = it
+                        error = null
+                    },
+                    label = stringResource(R.string.forgot_password_new_password),
+                    imeAction = ImeAction.Next,
+                )
+                AccountPasswordField(
+                    value = confirm,
+                    onValueChange = {
+                        confirm = it
+                        error = null
+                    },
+                    label = stringResource(R.string.onboarding_confirm_password_label),
+                    imeAction = ImeAction.Done,
+                )
+                Text(
+                    text = stringResource(R.string.settings_account_password_requirement),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = colorScheme.onSurface.copy(alpha = 0.5f),
+                )
+                error?.let { AccountErrorText(it) }
+                TextButton(
+                    onClick = onForgotPassword,
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp),
+                ) {
+                    Text(
+                        text = stringResource(R.string.settings_account_forgot_password),
+                        fontWeight = FontWeight.ExtraBold,
+                        color = colorScheme.secondary,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+                AccountEditorActions(
+                    busy = busy,
+                    canSave = !busy && current.isNotBlank() && newPassword.isNotBlank() && confirm.isNotBlank(),
+                    onCancel = onDone,
+                    onSave = {
+                        val validation = when {
+                            newPassword.length < 8 -> passwordMinError
+                            !newPassword.any { it.isUpperCase() } -> passwordUppercaseError
+                            !newPassword.any { !it.isLetterOrDigit() } -> passwordSpecialError
+                            newPassword != confirm -> passwordMismatchError
+                            else -> null
+                        }
+                        if (validation != null) {
+                            error = validation
+                        } else {
+                            scope.launch {
+                                busy = true
+                                error = null
+                                when (val result = onChangePassword(current, newPassword)) {
+                                    is ProfileEditResult.Success -> onDone()
+                                    is ProfileEditResult.Error -> error = result.message
+                                }
+                                busy = false
+                            }
+                        }
+                    },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AccountPasswordField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    imeAction: ImeAction,
+) {
+    var revealed by remember { mutableStateOf(false) }
+    OutlinedTextField(
+        modifier = Modifier.fillMaxWidth(),
+        value = value,
+        onValueChange = onValueChange,
+        label = { Text(label) },
+        singleLine = true,
+        visualTransformation = if (revealed) VisualTransformation.None else PasswordVisualTransformation(),
+        keyboardOptions = KeyboardOptions(imeAction = imeAction),
+        shape = RoundedCornerShape(22.dp),
+        trailingIcon = {
+            IconButton(onClick = { revealed = !revealed }) {
+                Icon(
+                    imageVector = if (revealed) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility,
+                    contentDescription = stringResource(
+                        if (revealed) {
+                            R.string.settings_account_hide_password
+                        } else {
+                            R.string.settings_account_show_password
+                        },
+                    ),
+                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                )
+            }
+        },
+    )
+}
+
+@Composable
+private fun AccountInlineButton(
+    text: String,
+    icon: ImageVector,
+    onClick: () -> Unit,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    val view = LocalView.current
+    TextButton(
+        onClick = {
+            ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+            onClick()
+        },
+        colors = androidx.compose.material3.ButtonDefaults.textButtonColors(
+            contentColor = colorScheme.secondary,
+        ),
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            modifier = Modifier.size(16.dp),
+        )
+        Spacer(modifier = Modifier.size(4.dp))
+        Text(
+            text = text,
+            fontWeight = FontWeight.ExtraBold,
+            style = MaterialTheme.typography.bodyMedium,
+        )
+    }
+}
+
+@Composable
+private fun AccountEditorActions(
+    busy: Boolean,
+    canSave: Boolean,
+    onCancel: () -> Unit,
+    onSave: () -> Unit,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        TextButton(
+            onClick = onCancel,
+            enabled = !busy,
+            modifier = Modifier.weight(1f),
+        ) {
+            Text(
+                text = stringResource(R.string.action_cancel),
+                fontWeight = FontWeight.ExtraBold,
+            )
+        }
+        Button(
+            onClick = onSave,
+            enabled = canSave,
+            modifier = Modifier
+                .weight(1f)
+                .height(48.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = colorScheme.primary,
+                contentColor = colorScheme.onPrimary,
+            ),
+        ) {
+            if (busy) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(18.dp),
+                    strokeWidth = 2.dp,
+                    color = colorScheme.onPrimary,
+                )
+            } else {
+                Text(
+                    text = stringResource(R.string.action_save),
+                    fontWeight = FontWeight.ExtraBold,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AccountFieldLabel(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelMedium,
+        fontWeight = FontWeight.ExtraBold,
+        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+    )
+}
+
+@Composable
+private fun AccountErrorText(message: String) {
+    Text(
+        text = message,
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.error,
+        fontWeight = FontWeight.Bold,
+    )
 }
 
 @Composable

@@ -125,6 +125,20 @@
     <string name="settings_unknown_user">不明なユーザー</string>
     <string name="settings_role_label">ロール: %1$s</string>
     <string name="settings_role_default">USER</string>
+    <!-- Account settings (profile name + password change) -->
+    <string name="settings_account_name_label">名前</string>
+    <string name="settings_account_username_label">ユーザー名</string>
+    <string name="settings_account_password_label">パスワード</string>
+    <string name="settings_account_change_password">変更</string>
+    <string name="settings_account_current_password">現在のパスワード</string>
+    <string name="settings_account_forgot_password">パスワードをお忘れですか？</string>
+    <string name="settings_account_password_requirement">パスワードは8文字以上で、大文字と特殊文字を含める必要があります。</string>
+    <string name="settings_account_show_password">パスワードを表示</string>
+    <string name="settings_account_hide_password">パスワードを非表示</string>
+    <string name="settings_account_not_signed_in">サインインしていません。</string>
+    <string name="settings_account_name_required">名前を入力してください。</string>
+    <string name="error_update_name_failed">名前を更新できませんでした。もう一度お試しください。</string>
+    <string name="error_change_password_failed">パスワードを変更できませんでした。もう一度お試しください。</string>
     <string name="settings_appearance">外観</string>
     <string name="settings_reminders">リマインダー</string>
     <string name="settings_feature_toggle">機能の切り替え</string>

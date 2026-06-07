@@ -125,6 +125,20 @@
     <string name="settings_unknown_user">未知用户</string>
     <string name="settings_role_label">角色：%1$s</string>
     <string name="settings_role_default">用户</string>
+    <!-- Account settings (profile name + password change) -->
+    <string name="settings_account_name_label">姓名</string>
+    <string name="settings_account_username_label">用户名</string>
+    <string name="settings_account_password_label">密码</string>
+    <string name="settings_account_change_password">更改</string>
+    <string name="settings_account_current_password">当前密码</string>
+    <string name="settings_account_forgot_password">忘记密码？</string>
+    <string name="settings_account_password_requirement">密码至少需要 8 个字符，并包含一个大写字母和一个特殊字符。</string>
+    <string name="settings_account_show_password">显示密码</string>
+    <string name="settings_account_hide_password">隐藏密码</string>
+    <string name="settings_account_not_signed_in">您尚未登录。</string>
+    <string name="settings_account_name_required">姓名不能为空。</string>
+    <string name="error_update_name_failed">无法更新您的姓名，请重试。</string>
+    <string name="error_change_password_failed">无法更改您的密码，请重试。</string>
     <string name="settings_appearance">外观</string>
     <string name="settings_reminders">提醒</string>
     <string name="settings_feature_toggle">功能开关</string>

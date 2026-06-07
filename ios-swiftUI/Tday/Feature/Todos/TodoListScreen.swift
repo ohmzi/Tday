@@ -820,27 +820,6 @@ struct TodoListScreen: View {
         .onPreferenceChange(TodoDropTargetFramePreferenceKey.self) { frames in
             dropTargetFrames = frames
         }
-        .overlay {
-            TimelineView(.periodic(from: .now, by: 60)) { context in
-                ZStack {
-                    EmptyTaskWatermark(
-                        systemName: emptyWatermarkSystemName(for: context.date),
-                        accentColor: modeAccentColor,
-                        assetName: emptyTimelineAssetName(
-                            for: viewModel.mode,
-                            listIconKey: viewModel.lists.first(where: { $0.id == viewModel.listId })?.iconKey
-                        )
-                    )
-                    if viewModel.items.isEmpty, !viewModel.isLoading, !isRootFloaterScreen {
-                        EmptyTaskBackgroundMessage(
-                            message: emptyTimelineMessage(for: viewModel.mode)
-                        )
-                    }
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .allowsHitTesting(false)
-            }
-        }
         .overlay(alignment: .topLeading) {
             GeometryReader { proxy in
                 if let inAppDrag {
@@ -995,14 +974,43 @@ struct TodoListScreen: View {
                     await viewModel.refresh()
                 }
             ) {
-                modeContent
+                watermarkedModeContent
             }
         } else {
-            modeContent
+            watermarkedModeContent
                 .tdayPullToRefresh(isRefreshing: viewModel.isLoading, isEnabled: pullRefreshEnabled) {
                     await viewModel.refresh()
                 }
         }
+    }
+
+    // The watermark is overlaid on `modeContent` *before* the pull-to-refresh
+    // wrapper is applied, so the loading/refresh pill (added as an overlay by the
+    // pull-to-refresh container on top of this content) renders in front of the
+    // watermark rather than behind it.
+    private var watermarkedModeContent: some View {
+        modeContent
+            .overlay {
+                TimelineView(.periodic(from: .now, by: 60)) { context in
+                    ZStack {
+                        EmptyTaskWatermark(
+                            systemName: emptyWatermarkSystemName(for: context.date),
+                            accentColor: modeAccentColor,
+                            assetName: emptyTimelineAssetName(
+                                for: viewModel.mode,
+                                listIconKey: viewModel.lists.first(where: { $0.id == viewModel.listId })?.iconKey
+                            )
+                        )
+                        if viewModel.items.isEmpty, !viewModel.isLoading, !isRootFloaterScreen {
+                            EmptyTaskBackgroundMessage(
+                                message: emptyTimelineMessage(for: viewModel.mode)
+                            )
+                        }
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .allowsHitTesting(false)
+                }
+            }
     }
 
     @ToolbarContentBuilder
