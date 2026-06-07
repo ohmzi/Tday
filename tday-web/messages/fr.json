@@ -536,6 +536,7 @@
       "passwordChanged": "Mot de passe changé avec succès",
       "passwordChangeFailed": "Échec du changement de mot de passe"
     },
+    "signOut": "Déconnexion",
     "aiSummary": {
       "title": "AI task summary",
       "description": "Show a one-tap summary of your tasks.",

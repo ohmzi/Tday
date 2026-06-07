@@ -536,6 +536,7 @@
       "passwordChanged": "密码更改成功",
       "passwordChangeFailed": "更改密码失败"
     },
+    "signOut": "退出登录",
     "aiSummary": {
       "title": "AI task summary",
       "description": "Show a one-tap summary of your tasks.",

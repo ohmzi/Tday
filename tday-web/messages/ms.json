@@ -536,6 +536,7 @@
       "passwordChanged": "Kata laluan berjaya ditukar",
       "passwordChangeFailed": "Gagal menukar kata laluan"
     },
+    "signOut": "Log keluar",
     "aiSummary": {
       "title": "AI task summary",
       "description": "Show a one-tap summary of your tasks.",

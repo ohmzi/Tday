@@ -9,7 +9,6 @@ import {
   Key,
   Loader2,
   Lock,
-  LogOut,
   Monitor,
   Moon,
   Pencil,
@@ -209,7 +208,7 @@ export default function SettingsPage() {
   const { user, refreshSession, logout } = useAuth();
   const { preferences, updatePreferences } = useUserPreferences();
   const { toast } = useToast();
-  const { theme = "system", resolvedTheme, setTheme } = useTheme();
+  const { theme = "system", setTheme } = useTheme();
 
   const navigate = useNavigate();
   const pathname = usePathname();
@@ -452,10 +451,6 @@ export default function SettingsPage() {
     }
   };
 
-  const pushSubtitle =
-    push.permission === "denied"
-      ? t("notifications.blocked")
-      : t("notifications.description");
 
   return (
     <div className="w-full space-y-3 pb-10">
@@ -471,7 +466,7 @@ export default function SettingsPage() {
         className="mb-1"
       />
 
-      <SettingsSection title={t("profile.title")} description={t("profile.description")}>
+      <SettingsSection title={t("profile.title")}>
         <div className="space-y-4">
           {/* Name — collapsed summary with an Edit affordance, expands to an inline editor. */}
           <div className="space-y-2">
@@ -697,21 +692,12 @@ export default function SettingsPage() {
       </SettingsSection>
 
       <SheetCard className="space-y-4 p-[18px]">
-        <SectionHeading
-          title={t("appearance.title")}
-          description={
-            theme === "system" && resolvedTheme
-              ? t("appearance.descriptionSystem", {
-                  theme: t(resolvedTheme === "dark" ? "themeDark" : "themeLight"),
-                })
-              : t("appearance.description")
-          }
-        />
+        <SectionHeading title={t("appearance.title")} />
         <ThemeSegmentedControl value={theme} onChange={setTheme} labelFor={t} />
 
         <CardDivider />
 
-        <SectionHeading title={t("language.title")} description={t("language.description")} />
+        <SectionHeading title={t("language.title")} />
         <button
           type="button"
           onClick={() => setLanguageOpen(true)}
@@ -755,7 +741,7 @@ export default function SettingsPage() {
       </CenteredSelectorOverlay>
 
       <SheetCard className="space-y-4 p-[18px]">
-        <SectionHeading title={t("aiSummary.title")} description={t("aiSummary.description")} />
+        <SectionHeading title={t("aiSummary.title")} />
         <div className="flex items-center justify-between gap-4">
           <div className="min-w-0">
             <p className="text-[1.05rem] font-black text-foreground">{t("aiSummary.toggle")}</p>
@@ -778,7 +764,11 @@ export default function SettingsPage() {
             <div className="flex items-center justify-between gap-4">
               <div className="min-w-0">
                 <p className="text-[1.05rem] font-black text-foreground">{t("notifications.push")}</p>
-                <p className="mt-0.5 text-sm font-extrabold text-muted-foreground">{pushSubtitle}</p>
+                {push.permission === "denied" && (
+                  <p className="mt-0.5 text-sm font-extrabold text-muted-foreground">
+                    {t("notifications.blocked")}
+                  </p>
+                )}
               </div>
               {push.isLoading ? (
                 <Loader2 className="h-5 w-5 shrink-0 animate-spin text-muted-foreground" />
@@ -856,23 +846,19 @@ export default function SettingsPage() {
             </div>
           </div>
         )}
-      </SettingsSection>
 
-      {/* Sign out — last action on the page, mirrored in the desktop sidebar. */}
-      <Button
-        type="button"
-        variant="destructive"
-        disabled={signingOut}
-        onClick={handleLogout}
-        className="h-11 w-full rounded-2xl font-black"
-      >
-        {signingOut ? (
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-        ) : (
-          <LogOut className="mr-2 h-4 w-4" />
-        )}
-        {sidebarDict("settingMenu.logout")}
-      </Button>
+        <CardDivider />
+
+        {/* Sign out — last row of the last card, matching the native settings design. */}
+        <button
+          type="button"
+          onClick={handleLogout}
+          disabled={signingOut}
+          className="flex w-full items-center py-1.5 text-left text-[1.05rem] font-black text-destructive transition active:opacity-60 disabled:opacity-50"
+        >
+          {t("signOut")}
+        </button>
+      </SettingsSection>
     </div>
   );
 }
