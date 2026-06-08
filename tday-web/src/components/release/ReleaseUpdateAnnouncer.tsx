@@ -1,5 +1,4 @@
 import { useEffect, useRef } from "react";
-import { DownloadCloud } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { useLocale } from "@/lib/navigation";
@@ -62,9 +61,6 @@ export default function ReleaseUpdateAnnouncer() {
           }}
           className="flex w-[min(calc(100vw-2rem),24rem)] items-center gap-3 rounded-[24px] border border-border bg-popover/92 px-4 py-3.5 text-left text-popover-foreground backdrop-blur-xl shadow-[0_10px_30px_-12px_hsl(var(--shadow)/0.45)] transition-colors hover:bg-popover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/20"
         >
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#E06F66]/15 text-[#E06F66]">
-            <DownloadCloud className="size-[18px]" />
-          </span>
           <span className="block min-w-0 flex-1">
             <span className="block font-extrabold leading-tight">
               Update available

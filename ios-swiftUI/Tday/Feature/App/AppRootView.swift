@@ -506,7 +506,7 @@ struct AppRootView: View {
         guard appViewModel.authenticated, !appViewModel.isLocalMode, appViewModel.isOffline else {
             return
         }
-        container.snackbarManager.show(offlineToastMessage, kind: .info)
+        container.snackbarManager.show(offlineToastMessage, kind: .error)
     }
 
     /// Transient "back online" toast, fired when connectivity is restored.
@@ -553,10 +553,10 @@ private struct AppSnackbar: View {
 
     @Environment(\.tdayColors) private var colors
 
-    // The variant colour cue lives in the icon chip + action label; the card surface
-    // stays neutral, matching the app's card design language (see TdayCardModifier).
-    // Non-error toasts share the brand coral (the overdue tile colour); errors keep the
-    // theme error red so the danger cue survives.
+    // Icons are removed app-wide; the variant cue now lives in the card surface
+    // itself. Issue/error toasts get a red translucent shade layered over the
+    // material; info/success keep the plain neutral material. The action label
+    // still uses the accent colour.
     private var accent: Color {
         switch content.kind {
         case .error: return colors.error
@@ -565,25 +565,10 @@ private struct AppSnackbar: View {
         }
     }
 
-    private var iconName: String {
-        switch content.kind {
-        case .error: return "exclamationmark.triangle.fill"
-        case .success: return "checkmark.circle.fill"
-        case .info: return "info.circle.fill"
-        }
-    }
+    private var isError: Bool { content.kind == .error }
 
     var body: some View {
         HStack(spacing: 12) {
-            ZStack {
-                Circle()
-                    .fill(accent.opacity(colors.isDark ? 0.22 : 0.14))
-                    .frame(width: 38, height: 38)
-                Image(systemName: iconName)
-                    .font(.system(size: 18, weight: .bold))
-                    .foregroundStyle(accent)
-            }
-
             Text(content.message)
                 .font(.tdayRounded(.subheadline, weight: .bold))
                 .foregroundStyle(colors.onSurface)
@@ -603,6 +588,12 @@ private struct AppSnackbar: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
+        // Red tint sits in front of the frosted material (between it and the text)
+        // so the error shade reads clearly over the blurred backdrop.
+        .background(
+            colors.error.opacity(isError ? (colors.isDark ? 0.30 : 0.20) : 0),
+            in: RoundedRectangle(cornerRadius: 24, style: .continuous)
+        )
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 24, style: .continuous)

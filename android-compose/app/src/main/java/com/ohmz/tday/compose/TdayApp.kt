@@ -73,6 +73,8 @@ import com.ohmz.tday.compose.core.ui.SnackbarKind
 import com.ohmz.tday.compose.core.ui.TdayToastData
 import com.ohmz.tday.compose.core.ui.TdayToastHost
 import com.ohmz.tday.compose.core.ui.TdayToastKind
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.haze
 import com.ohmz.tday.compose.feature.app.AppUiState
 import com.ohmz.tday.compose.feature.app.AppViewModel
 import com.ohmz.tday.compose.feature.app.ProfileEditResult
@@ -1170,7 +1172,11 @@ private fun CollectConnectivityToasts(
             context.getString(R.string.online_toast)
         }
         appViewModel.snackbarManager.show(
-            SnackbarEvent(message = message, kind = SnackbarKind.INFO),
+            SnackbarEvent(
+                // Offline is an "issue" → red shade; back-online stays neutral.
+                message = message,
+                kind = if (isOffline) SnackbarKind.ERROR else SnackbarKind.INFO,
+            ),
         )
     }
 }
@@ -1327,6 +1333,7 @@ private fun TodosRoute(
         onParseTaskTitleNlp = viewModel::parseTaskTitleNlp,
         onUpdateTask = viewModel::updateTask,
         onMoveTask = viewModel::moveTask,
+        onMoveTaskToTimeOfDay = viewModel::moveTaskToTimeOfDay,
         onComplete = viewModel::toggleComplete,
         onDelete = { todo ->
             viewModel.delete(todo) {

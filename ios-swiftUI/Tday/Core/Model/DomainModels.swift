@@ -143,9 +143,9 @@ struct TodoItem: Identifiable, Equatable, Hashable, Codable {
 extension TodoListMode {
     var supportsTaskReschedule: Bool {
         switch self {
-        case .scheduled, .all, .priority, .list:
+        case .today, .scheduled, .all, .priority, .list:
             return true
-        case .today, .overdue, .floater:
+        case .overdue, .floater:
             return false
         }
     }
@@ -188,6 +188,23 @@ func movedDuePreservingTime(
     targetComponents.second = dueComponents.second
     targetComponents.nanosecond = dueComponents.nanosecond
     return calendar.date(from: targetComponents)
+}
+
+// Keep the task's date, set its time-of-day to `hour`:00. The inverse of
+// `movedDuePreservingTime`; used by the Today screen's drag-between-time-buckets
+// interaction (Morning / Afternoon / Tonight).
+func movedDueToTimeOfDay(
+    due: Date,
+    hour: Int,
+    calendar: Calendar = .current
+) -> Date? {
+    var components = calendar.dateComponents([.year, .month, .day], from: due)
+    components.timeZone = calendar.timeZone
+    components.hour = hour
+    components.minute = 0
+    components.second = 0
+    components.nanosecond = 0
+    return calendar.date(from: components)
 }
 
 func movedTaskPayload(
