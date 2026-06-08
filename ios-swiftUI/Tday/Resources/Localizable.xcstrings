@@ -8422,6 +8422,7 @@
       }
     },
     "Set up your workspace" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
