@@ -17,6 +17,7 @@ import com.ohmz.tday.compose.core.model.TodoListMode
 import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
 import com.ohmz.tday.compose.core.model.capitalizeFirstListLetter
 import com.ohmz.tday.compose.core.notification.TaskReminderScheduler
+import com.ohmz.tday.compose.core.ui.SnackbarManager
 import com.ohmz.tday.compose.core.ui.userFacingMessage
 import com.ohmz.tday.compose.ui.priority.canonicalPriorityValue
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -68,9 +69,25 @@ class HomeViewModel @Inject constructor(
     private val syncManager: SyncManager,
     private val cacheManager: OfflineCacheManager,
     private val reminderScheduler: TaskReminderScheduler,
+    private val snackbarManager: SnackbarManager,
     @ApplicationContext private val appContext: Context,
 ) : ViewModel() {
     private var activeLoadingRefreshes = 0
+
+    /// Resolves the user-facing message for a failed mutation and surfaces it as
+    /// an error toast (in addition to the inline error state callers still set).
+    /**
+     * Surfaces a failed user action as an error toast only — matching the unified
+     * toast policy (and the iOS app). Returns null so callers clear the inline
+     * error card; the toast is the single surface for action failures.
+     */
+    private fun mutationFailureMessage(
+        error: Throwable,
+        @androidx.annotation.StringRes fallbackRes: Int,
+    ): String? {
+        snackbarManager.showError(error.userFacingMessage(appContext, fallbackRes))
+        return null
+    }
 
     private val _uiState = MutableStateFlow(
         runCatching {
@@ -255,7 +272,12 @@ class HomeViewModel @Inject constructor(
                 .onSuccess { refreshInternal(forceSync = false, showLoading = false) }
                 .onFailure { error ->
                     _uiState.update {
-                        it.copy(errorMessage = error.userFacingMessage(appContext, R.string.error_create_list_failed))
+                        it.copy(
+                            errorMessage = mutationFailureMessage(
+                                error,
+                                R.string.error_create_list_failed
+                            )
+                        )
                     }
                 }
         }
@@ -288,7 +310,12 @@ class HomeViewModel @Inject constructor(
                 }
                 .onFailure { error ->
                     _uiState.update {
-                        it.copy(errorMessage = error.userFacingMessage(appContext, R.string.error_create_task_failed))
+                        it.copy(
+                            errorMessage = mutationFailureMessage(
+                                error,
+                                R.string.error_create_task_failed
+                            )
+                        )
                     }
                 }
         }
@@ -336,7 +363,7 @@ class HomeViewModel @Inject constructor(
                 refreshAfterMutation()
             }.onFailure { error ->
                 _uiState.value = previousState.copy(
-                    errorMessage = error.userFacingMessage(appContext, R.string.error_update_task_failed),
+                    errorMessage = mutationFailureMessage(error, R.string.error_update_task_failed),
                 )
             }
         }
@@ -359,7 +386,10 @@ class HomeViewModel @Inject constructor(
                 refreshAfterMutation()
             }.onFailure { error ->
                 _uiState.value = previousState.copy(
-                    errorMessage = error.userFacingMessage(appContext, R.string.error_complete_task_failed),
+                    errorMessage = mutationFailureMessage(
+                        error,
+                        R.string.error_complete_task_failed
+                    ),
                 )
             }
         }
@@ -383,7 +413,7 @@ class HomeViewModel @Inject constructor(
                 refreshAfterMutation()
             }.onFailure { error ->
                 _uiState.value = previousState.copy(
-                    errorMessage = error.userFacingMessage(appContext, R.string.error_delete_task_failed),
+                    errorMessage = mutationFailureMessage(error, R.string.error_delete_task_failed),
                 )
             }
         }
@@ -414,7 +444,12 @@ class HomeViewModel @Inject constructor(
                 .onSuccess { refreshInternal(forceSync = false, showLoading = false) }
                 .onFailure { error ->
                     _uiState.update {
-                        it.copy(errorMessage = error.userFacingMessage(appContext, R.string.error_complete_task_failed))
+                        it.copy(
+                            errorMessage = mutationFailureMessage(
+                                error,
+                                R.string.error_complete_task_failed
+                            )
+                        )
                     }
                     refreshFromCache()
                 }
@@ -430,7 +465,12 @@ class HomeViewModel @Inject constructor(
                 .onSuccess { refreshInternal(forceSync = false, showLoading = false) }
                 .onFailure { error ->
                     _uiState.update {
-                        it.copy(errorMessage = error.userFacingMessage(appContext, R.string.error_delete_task_failed))
+                        it.copy(
+                            errorMessage = mutationFailureMessage(
+                                error,
+                                R.string.error_delete_task_failed
+                            )
+                        )
                     }
                     refreshFromCache()
                 }

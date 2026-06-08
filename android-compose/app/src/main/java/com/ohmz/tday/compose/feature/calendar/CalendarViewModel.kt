@@ -20,6 +20,7 @@ import com.ohmz.tday.compose.core.model.movedDuePreservingTime
 import com.ohmz.tday.compose.core.model.repositoryTargetForReschedule
 import com.ohmz.tday.compose.core.notification.TaskReminderScheduler
 import com.ohmz.tday.compose.core.observability.TdayTelemetry
+import com.ohmz.tday.compose.core.ui.SnackbarManager
 import com.ohmz.tday.compose.core.ui.userFacingMessage
 import com.ohmz.tday.compose.ui.priority.canonicalPriorityValue
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -49,8 +50,24 @@ class CalendarViewModel @Inject constructor(
     private val syncManager: SyncManager,
     private val cacheManager: OfflineCacheManager,
     private val reminderScheduler: TaskReminderScheduler,
+    private val snackbarManager: SnackbarManager,
     @ApplicationContext private val appContext: Context,
 ) : ViewModel() {
+
+    /// Resolves the user-facing message for a failed mutation and surfaces it as
+    /// an error toast (in addition to the inline error state callers still set).
+    /**
+     * Surfaces a failed user action as an error toast only — matching the unified
+     * toast policy (and the iOS app). Returns null so callers clear the inline
+     * error card; the toast is the single surface for action failures.
+     */
+    private fun mutationFailureMessage(
+        error: Throwable,
+        @androidx.annotation.StringRes fallbackRes: Int,
+    ): String? {
+        snackbarManager.showError(error.userFacingMessage(appContext, fallbackRes))
+        return null
+    }
 
     private val _uiState = MutableStateFlow(
         runCatching {
@@ -193,7 +210,12 @@ class CalendarViewModel @Inject constructor(
                 loadInternal(forceSync = false, showLoading = false)
             }.onFailure { error ->
                 _uiState.update { current ->
-                    current.copy(errorMessage = error.userFacingMessage(appContext, R.string.error_create_task_failed))
+                    current.copy(
+                        errorMessage = mutationFailureMessage(
+                            error,
+                            R.string.error_create_task_failed
+                        )
+                    )
                 }
             }
         }
@@ -218,7 +240,10 @@ class CalendarViewModel @Inject constructor(
                 _uiState.update { current ->
                     current.copy(
                         items = previousItems,
-                        errorMessage = error.userFacingMessage(appContext, R.string.error_complete_task_failed),
+                        errorMessage = mutationFailureMessage(
+                            error,
+                            R.string.error_complete_task_failed
+                        ),
                     )
                 }
             }
@@ -244,7 +269,10 @@ class CalendarViewModel @Inject constructor(
                 _uiState.update { current ->
                     current.copy(
                         completedItems = previousCompletedItems,
-                        errorMessage = error.userFacingMessage(appContext, R.string.error_restore_task_failed),
+                        errorMessage = mutationFailureMessage(
+                            error,
+                            R.string.error_restore_task_failed
+                        ),
                     )
                 }
             }
@@ -293,7 +321,7 @@ class CalendarViewModel @Inject constructor(
                 loadInternal(forceSync = false, showLoading = false)
             }.onFailure { error ->
                 _uiState.value = previousState.copy(
-                    errorMessage = error.userFacingMessage(appContext, R.string.error_update_task_failed),
+                    errorMessage = mutationFailureMessage(error, R.string.error_update_task_failed),
                 )
             }
         }
@@ -349,7 +377,7 @@ class CalendarViewModel @Inject constructor(
                 loadInternal(forceSync = false, showLoading = false)
             }.onFailure { error ->
                 _uiState.value = previousState.copy(
-                    errorMessage = error.userFacingMessage(appContext, R.string.error_update_task_failed),
+                    errorMessage = mutationFailureMessage(error, R.string.error_update_task_failed),
                 )
             }
         }
@@ -375,7 +403,10 @@ class CalendarViewModel @Inject constructor(
                 _uiState.update { current ->
                     current.copy(
                         items = previousItems,
-                        errorMessage = error.userFacingMessage(appContext, R.string.error_delete_task_failed),
+                        errorMessage = mutationFailureMessage(
+                            error,
+                            R.string.error_delete_task_failed
+                        ),
                     )
                 }
             }

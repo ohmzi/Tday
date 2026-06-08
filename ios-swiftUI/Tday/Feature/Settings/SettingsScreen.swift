@@ -335,6 +335,7 @@ private struct SettingsNameSection: View {
             switch result {
             case .success:
                 expansion = .none
+                viewModel.container.snackbarManager.show(L("Name updated successfully"), kind: .success)
             case let .failure(message):
                 errorMessage = message
             }
@@ -503,6 +504,7 @@ private struct SettingsPasswordSection: View {
             case .success:
                 resetFields()
                 expansion = .none
+                viewModel.container.snackbarManager.show(L("Password changed successfully"), kind: .success)
             case let .failure(message):
                 errorMessage = message
             }

@@ -26,20 +26,23 @@ export default function ForcePasswordChangeGate() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   if (!user?.requirePasswordChange) return null;
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+    // Validation errors render inline; only the save failure below toasts.
     if (newPassword.length < 8) {
-      toast({ description: "New password must be at least 8 characters", variant: "destructive" });
+      setFormError("New password must be at least 8 characters");
       return;
     }
     if (newPassword !== confirmPassword) {
-      toast({ description: "Passwords do not match", variant: "destructive" });
+      setFormError("Passwords do not match");
       return;
     }
+    setFormError(null);
     setSaving(true);
     try {
       await api.POST({
@@ -97,7 +100,10 @@ export default function ForcePasswordChangeGate() {
               type="password"
               autoComplete="new-password"
               value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
+              onChange={(e) => {
+                setNewPassword(e.target.value);
+                setFormError(null);
+              }}
               minLength={8}
               required
             />
@@ -109,11 +115,17 @@ export default function ForcePasswordChangeGate() {
               type="password"
               autoComplete="new-password"
               value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
+              onChange={(e) => {
+                setConfirmPassword(e.target.value);
+                setFormError(null);
+              }}
               minLength={8}
               required
             />
           </div>
+          {formError ? (
+            <p className="text-sm font-medium text-destructive">{formError}</p>
+          ) : null}
           <Button type="submit" disabled={saving} className="w-full">
             {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
             Update password

@@ -7,6 +7,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { SonnerToaster } from "@/components/ui/sonner";
 import VersionGate from "@/components/app/VersionGate";
+import ConnectivityGate from "@/components/app/ConnectivityGate";
 import { useThemeColor } from "@/hooks/useThemeColor";
 
 function ThemeColorSync() {
@@ -28,6 +29,7 @@ export default function App() {
         </AuthProvider>
       </QueryProvider>
       <VersionGate />
+      <ConnectivityGate />
       <SonnerToaster />
     </ThemeProvider>
   );
