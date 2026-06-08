@@ -334,10 +334,10 @@ export default function OnboardingWizard({
           pending-approval and reset screens use (desktop layout on wide screens, the
           mobile home view when narrow). */}
       <div className="absolute inset-0 overflow-hidden" aria-hidden>
-        <div className="h-full w-full scale-[1.04] blur-xl">
+        <div className="h-full w-full scale-[1.06] blur-lg">
           <MockHomeBackdrop />
         </div>
-        <div className="absolute inset-0 bg-background/60" />
+        <div className="absolute inset-0 bg-background/45" />
       </div>
 
       <div className="relative z-10 flex min-h-screen items-center justify-center px-4 py-10">
