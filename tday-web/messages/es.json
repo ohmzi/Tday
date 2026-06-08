@@ -534,13 +534,30 @@
       "passwordTooShort": "La nueva contraseña debe tener al menos 8 caracteres",
       "passwordsDoNotMatch": "Las contraseñas no coinciden",
       "passwordChanged": "Contraseña cambiada correctamente",
-      "passwordChangeFailed": "No se pudo cambiar la contraseña"
+      "passwordChangeFailed": "No se pudo cambiar la contraseña",
+      "securityQuestionsUpdated": "Security questions updated",
+      "securityQuestionsUpdateFailed": "Could not update security questions",
+      "securityQuestionsLoadFailed": "Could not load security questions"
     },
     "signOut": "Cerrar sesión",
     "aiSummary": {
       "title": "AI task summary",
       "description": "Show a one-tap summary of your tasks.",
       "toggle": "Show summary button"
+    },
+    "securityQuestions": {
+      "title": "Security questions",
+      "changeAction": "Change",
+      "configured": "{{count}} questions configured",
+      "notConfigured": "Not configured",
+      "questionLabel": "Question {{index}}",
+      "answerPlaceholder": "Your answer",
+      "save": "Save questions",
+      "saving": "Saving...",
+      "errorSelectAll": "Please choose three questions",
+      "errorDistinct": "Security questions must be different",
+      "errorAnswersRequired": "Please answer all three questions",
+      "errorPasswordRequired": "Enter your current password"
     }
   },
   "summary": {

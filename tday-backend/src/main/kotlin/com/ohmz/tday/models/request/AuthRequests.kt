@@ -41,6 +41,9 @@ data class RequestAdminResetRequest(
 @Serializable
 data class SetSecurityQuestionsRequest(
     val answers: List<SecurityAnswerInput> = emptyList(),
+    // Required when changing already-configured questions from settings; the first-time
+    // gate (requireSecurityQuestions = true) leaves this null.
+    val currentPassword: String? = null,
 )
 
 @Serializable

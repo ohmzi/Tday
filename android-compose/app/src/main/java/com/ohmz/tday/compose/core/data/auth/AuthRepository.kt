@@ -19,6 +19,7 @@ import com.ohmz.tday.compose.core.model.RegisterRequest
 import com.ohmz.tday.compose.core.model.RequestAdminResetRequest
 import com.ohmz.tday.compose.core.model.SecurityAnswerInput
 import com.ohmz.tday.compose.core.model.SecurityQuestion
+import com.ohmz.tday.compose.core.model.SecurityQuestionStatusResponse
 import com.ohmz.tday.compose.core.model.SelfServiceResetRequest
 import com.ohmz.tday.compose.core.model.SessionUser
 import com.ohmz.tday.compose.core.model.SetSecurityQuestionsRequest
@@ -379,9 +380,12 @@ class AuthRepository @Inject constructor(
         }
     }
 
-    suspend fun setSecurityQuestions(answers: List<SecurityAnswerInput>) {
+    suspend fun setSecurityQuestions(
+        answers: List<SecurityAnswerInput>,
+        currentPassword: String? = null,
+    ) {
         val response = api.setUserSecurityQuestions(
-            SetSecurityQuestionsRequest(answers = answers),
+            SetSecurityQuestionsRequest(answers = answers, currentPassword = currentPassword),
         )
         if (!response.isSuccessful) {
             throw ApiCallException(
@@ -389,6 +393,17 @@ class AuthRepository @Inject constructor(
                 message = extractApiErrorMessage(response, "Failed to save security questions"),
             )
         }
+    }
+
+    suspend fun getUserSecurityQuestionStatus(): SecurityQuestionStatusResponse {
+        val response = api.getUserSecurityQuestionStatus()
+        if (!response.isSuccessful) {
+            throw ApiCallException(
+                statusCode = response.code(),
+                message = extractApiErrorMessage(response, "Unable to load security questions"),
+            )
+        }
+        return response.body() ?: SecurityQuestionStatusResponse()
     }
 
     suspend fun logout() {

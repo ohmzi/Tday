@@ -167,6 +167,8 @@ fun TdayApp(
     val listDeletedToastMessage = stringResource(R.string.list_deleted_toast)
     val passwordChangedToastMessage = stringResource(R.string.password_changed_toast)
     val profileNameUpdatedToastMessage = stringResource(R.string.profile_name_updated_toast)
+    val securityQuestionsUpdatedToastMessage =
+        stringResource(R.string.settings_account_security_questions_updated)
     var activeToast by remember { mutableStateOf<TdayToastData?>(null) }
     var hasShownLaunchUpdateToast by rememberSaveable { mutableStateOf(false) }
     var isStartupSplashHeld by remember { mutableStateOf(false) }
@@ -1054,6 +1056,17 @@ fun TdayApp(
                         onForgotPassword = {
                             navController.navigate(AppRoute.ForgotPassword.route) {
                                 launchSingleTop = true
+                            }
+                        },
+                        onLoadSecurityQuestionStatus = { appViewModel.securityQuestionStatus() },
+                        onFetchSecurityQuestions = { appViewModel.fetchSecurityQuestions() },
+                        onUpdateSecurityQuestions = { current, answers ->
+                            appViewModel.updateSecurityQuestions(current, answers).also { result ->
+                                if (result is ProfileEditResult.Success) {
+                                    appViewModel.snackbarManager.showSuccess(
+                                        securityQuestionsUpdatedToastMessage,
+                                    )
+                                }
                             }
                         },
                     )

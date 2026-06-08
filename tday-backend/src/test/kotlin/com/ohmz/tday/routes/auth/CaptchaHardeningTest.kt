@@ -219,6 +219,8 @@ class CaptchaHardeningTest {
             newPassword: String,
         ): Either<com.ohmz.tday.domain.AppError, Boolean> = unsupported()
 
+        override suspend fun verifyCurrentPassword(userId: String, password: String): Either<com.ohmz.tday.domain.AppError, Boolean> = unsupported()
+
         override suspend fun register(
             fname: String,
             lname: String?,

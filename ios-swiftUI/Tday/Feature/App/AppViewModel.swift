@@ -496,6 +496,39 @@ final class AppViewModel {
         }
     }
 
+    /// The signed-in user's security-question status (chosen ids + whether they still
+    /// need to be set), or nil when unavailable / not in server mode.
+    func securityQuestionStatus() async -> SecurityQuestionStatusResponse? {
+        guard !isLocalMode, authenticated else { return nil }
+        return try? await container.apiService.getUserSecurityQuestions()
+    }
+
+    /// The full catalogue of security questions for the settings pickers.
+    func loadAllSecurityQuestions() async -> [SecurityQuestion] {
+        (try? await container.apiService.getAllSecurityQuestions().questions) ?? []
+    }
+
+    /// Replaces the user's security questions. Already-configured accounts must supply
+    /// the current password (the server validates it); a blank password is sent as nil
+    /// so the first-time path still works.
+    func updateSecurityQuestions(currentPassword: String, answers: [SecurityAnswerInput]) async -> ProfileEditResult {
+        guard !isLocalMode, authenticated else {
+            return .failure(L("You're not signed in."))
+        }
+        let trimmed = currentPassword.trimmingCharacters(in: .whitespacesAndNewlines)
+        do {
+            _ = try await container.apiService.setUserSecurityQuestions(
+                payload: SetSecurityQuestionsRequest(
+                    answers: answers,
+                    currentPassword: trimmed.isEmpty ? nil : trimmed
+                )
+            )
+            return .success
+        } catch {
+            return .failure(userFacingMessage(for: error, fallback: "Could not update your security questions."))
+        }
+    }
+
     func setThemeMode(_ mode: AppThemeMode) {
         themeMode = mode
         container.themeStore.save(mode)
