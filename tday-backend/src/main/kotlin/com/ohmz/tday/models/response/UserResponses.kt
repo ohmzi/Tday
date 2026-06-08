@@ -45,3 +45,15 @@ data class SecurityQuestionStatusResponse(
     val questionIds: List<Int>,
     val requireSecurityQuestions: Boolean,
 )
+
+@Serializable
+data class SecurityAnswerResult(
+    val questionId: Int,
+    val correct: Boolean,
+)
+
+@Serializable
+data class VerifySecurityAnswersResponse(
+    val valid: Boolean,
+    val results: List<SecurityAnswerResult>,
+)
