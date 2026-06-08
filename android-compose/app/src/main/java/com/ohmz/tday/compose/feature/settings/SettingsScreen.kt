@@ -76,11 +76,15 @@ import androidx.core.view.ViewCompat
 import com.ohmz.tday.compose.BuildConfig
 import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.data.server.VersionCheckResult
+import com.ohmz.tday.compose.core.model.SecurityAnswerInput
+import com.ohmz.tday.compose.core.model.SecurityQuestion
+import com.ohmz.tday.compose.core.model.SecurityQuestionStatusResponse
 import com.ohmz.tday.compose.core.model.SessionUser
 import com.ohmz.tday.compose.core.notification.ReminderOption
 import com.ohmz.tday.compose.core.ui.rememberScrollCollapsingTitleScrollBehavior
 import com.ohmz.tday.compose.feature.app.MobileSyncStatus
 import com.ohmz.tday.compose.feature.app.ProfileEditResult
+import com.ohmz.tday.compose.feature.auth.SecurityQuestionPicker
 import com.ohmz.tday.compose.ui.component.TdayCenteredSelectorDialog
 import com.ohmz.tday.compose.ui.component.TdaySegmentedSlider
 import com.ohmz.tday.compose.ui.theme.AppThemeMode
@@ -115,6 +119,9 @@ fun SettingsScreen(
     onUpdateName: suspend (String) -> ProfileEditResult,
     onChangePassword: suspend (String, String) -> ProfileEditResult,
     onForgotPassword: () -> Unit,
+    onLoadSecurityQuestionStatus: suspend () -> SecurityQuestionStatusResponse?,
+    onFetchSecurityQuestions: suspend () -> List<SecurityQuestion>,
+    onUpdateSecurityQuestions: suspend (String, List<SecurityAnswerInput>) -> ProfileEditResult,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val scrollState = rememberScrollState()
@@ -149,6 +156,9 @@ fun SettingsScreen(
                     onUpdateName = onUpdateName,
                     onChangePassword = onChangePassword,
                     onForgotPassword = onForgotPassword,
+                    onLoadSecurityQuestionStatus = onLoadSecurityQuestionStatus,
+                    onFetchSecurityQuestions = onFetchSecurityQuestions,
+                    onUpdateSecurityQuestions = onUpdateSecurityQuestions,
                 )
             }
 
@@ -281,7 +291,7 @@ fun SettingsScreen(
     }
 }
 
-private enum class SettingsAccountEditor { None, Name, Password }
+private enum class SettingsAccountEditor { None, Name, Password, SecurityQuestions }
 
 @Composable
 private fun SettingsProfileCard(
@@ -289,6 +299,9 @@ private fun SettingsProfileCard(
     onUpdateName: suspend (String) -> ProfileEditResult,
     onChangePassword: suspend (String, String) -> ProfileEditResult,
     onForgotPassword: () -> Unit,
+    onLoadSecurityQuestionStatus: suspend () -> SecurityQuestionStatusResponse?,
+    onFetchSecurityQuestions: suspend () -> List<SecurityQuestion>,
+    onUpdateSecurityQuestions: suspend (String, List<SecurityAnswerInput>) -> ProfileEditResult,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     var activeEditor by rememberSaveable { mutableStateOf(SettingsAccountEditor.None) }
@@ -314,6 +327,16 @@ private fun SettingsProfileCard(
             onDone = { activeEditor = SettingsAccountEditor.None },
             onChangePassword = onChangePassword,
             onForgotPassword = onForgotPassword,
+        )
+
+        SettingsDivider()
+        AccountSecurityQuestionsSection(
+            isEditing = activeEditor == SettingsAccountEditor.SecurityQuestions,
+            onBeginEdit = { activeEditor = SettingsAccountEditor.SecurityQuestions },
+            onDone = { activeEditor = SettingsAccountEditor.None },
+            onLoadStatus = onLoadSecurityQuestionStatus,
+            onFetchQuestions = onFetchSecurityQuestions,
+            onSubmit = onUpdateSecurityQuestions,
         )
 
         SettingsDivider()
@@ -558,6 +581,193 @@ private fun AccountPasswordSection(
                                 error = null
                                 when (val result = onChangePassword(current, newPassword)) {
                                     is ProfileEditResult.Success -> onDone()
+                                    is ProfileEditResult.Error -> error = result.message
+                                }
+                                busy = false
+                            }
+                        }
+                    },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AccountSecurityQuestionsSection(
+    isEditing: Boolean,
+    onBeginEdit: () -> Unit,
+    onDone: () -> Unit,
+    onLoadStatus: suspend () -> SecurityQuestionStatusResponse?,
+    onFetchQuestions: suspend () -> List<SecurityQuestion>,
+    onSubmit: suspend (String, List<SecurityAnswerInput>) -> ProfileEditResult,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    val scope = rememberCoroutineScope()
+
+    var status by remember { mutableStateOf<SecurityQuestionStatusResponse?>(null) }
+    var questions by remember { mutableStateOf<List<SecurityQuestion>>(emptyList()) }
+    var questionId1 by remember { mutableStateOf<Int?>(null) }
+    var questionId2 by remember { mutableStateOf<Int?>(null) }
+    var questionId3 by remember { mutableStateOf<Int?>(null) }
+    var answer1 by remember { mutableStateOf("") }
+    var answer2 by remember { mutableStateOf("") }
+    var answer3 by remember { mutableStateOf("") }
+    var current by remember { mutableStateOf("") }
+    var busy by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+
+    val distinctError = stringResource(R.string.security_questions_distinct_required)
+    val answersError = stringResource(R.string.security_questions_answers_required)
+    val passwordRequiredError = stringResource(R.string.settings_account_current_password_required)
+
+    // Already-configured accounts must confirm with their password; legacy accounts
+    // that never set questions can do so here without one.
+    val configured = status?.let { !it.requireSecurityQuestions } ?: false
+
+    LaunchedEffect(Unit) {
+        if (status == null) status = onLoadStatus()
+    }
+
+    // On open: load the catalogue once, then seed the three selects from the user's
+    // existing questions (filling gaps with the first unused entries). On close: wipe
+    // the sensitive draft.
+    LaunchedEffect(isEditing) {
+        if (isEditing) {
+            if (questions.isEmpty()) questions = onFetchQuestions()
+            val preferred =
+                status?.questionIds.orEmpty().filter { id -> questions.any { it.id == id } }
+            val filler = questions.map { it.id }.filter { it !in preferred }
+            val seeded = (preferred + filler).distinct().take(3)
+            questionId1 = seeded.getOrNull(0)
+            questionId2 = seeded.getOrNull(1)
+            questionId3 = seeded.getOrNull(2)
+        } else {
+            current = ""
+            answer1 = ""
+            answer2 = ""
+            answer3 = ""
+            error = null
+        }
+    }
+
+    val canSave = !busy &&
+            questionId1 != null && questionId2 != null && questionId3 != null &&
+            setOfNotNull(questionId1, questionId2, questionId3).size == 3 &&
+            answer1.isNotBlank() && answer2.isNotBlank() && answer3.isNotBlank() &&
+            (!configured || current.isNotBlank())
+
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                AccountFieldLabel(stringResource(R.string.settings_account_security_questions_label))
+                Text(
+                    text = when {
+                        status == null -> "—"
+                        configured -> stringResource(R.string.settings_account_security_questions_configured)
+                        else -> stringResource(R.string.settings_account_security_questions_not_configured)
+                    },
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = colorScheme.onSurface.copy(alpha = 0.8f),
+                )
+            }
+            if (!isEditing) {
+                AccountInlineButton(
+                    text = stringResource(R.string.settings_account_change_security_questions),
+                    icon = ImageVector.vectorResource(R.drawable.ic_lucide_shield),
+                    onClick = onBeginEdit,
+                )
+            }
+        }
+
+        AnimatedVisibility(
+            visible = isEditing,
+            enter = expandVertically(),
+            exit = shrinkVertically(),
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                if (configured) {
+                    AccountPasswordField(
+                        value = current,
+                        onValueChange = {
+                            current = it
+                            error = null
+                        },
+                        label = stringResource(R.string.settings_account_current_password),
+                        imeAction = ImeAction.Next,
+                    )
+                }
+                SecurityQuestionPicker(
+                    label = stringResource(R.string.security_questions_question_1),
+                    questions = questions,
+                    excludeIds = setOfNotNull(questionId2, questionId3),
+                    selectedId = questionId1,
+                    onSelected = { questionId1 = it; error = null },
+                    answer = answer1,
+                    onAnswerChange = { answer1 = it; error = null },
+                )
+                SecurityQuestionPicker(
+                    label = stringResource(R.string.security_questions_question_2),
+                    questions = questions,
+                    excludeIds = setOfNotNull(questionId1, questionId3),
+                    selectedId = questionId2,
+                    onSelected = { questionId2 = it; error = null },
+                    answer = answer2,
+                    onAnswerChange = { answer2 = it; error = null },
+                )
+                SecurityQuestionPicker(
+                    label = stringResource(R.string.security_questions_question_3),
+                    questions = questions,
+                    excludeIds = setOfNotNull(questionId1, questionId2),
+                    selectedId = questionId3,
+                    onSelected = { questionId3 = it; error = null },
+                    answer = answer3,
+                    onAnswerChange = { answer3 = it; error = null },
+                )
+                error?.let { AccountErrorText(it) }
+                AccountEditorActions(
+                    busy = busy,
+                    canSave = canSave,
+                    onCancel = onDone,
+                    onSave = {
+                        val id1 = questionId1
+                        val id2 = questionId2
+                        val id3 = questionId3
+                        when {
+                            id1 == null || id2 == null || id3 == null ||
+                                    setOf(id1, id2, id3).size != 3 -> error = distinctError
+
+                            answer1.isBlank() || answer2.isBlank() || answer3.isBlank() ->
+                                error = answersError
+
+                            configured && current.isBlank() -> error = passwordRequiredError
+
+                            else -> scope.launch {
+                                busy = true
+                                error = null
+                                val answers = listOf(
+                                    SecurityAnswerInput(questionId = id1, answer = answer1.trim()),
+                                    SecurityAnswerInput(questionId = id2, answer = answer2.trim()),
+                                    SecurityAnswerInput(questionId = id3, answer = answer3.trim()),
+                                )
+                                when (val result =
+                                    onSubmit(if (configured) current else "", answers)) {
+                                    is ProfileEditResult.Success -> {
+                                        status = SecurityQuestionStatusResponse(
+                                            questionIds = listOf(id1, id2, id3),
+                                            requireSecurityQuestions = false,
+                                        )
+                                        onDone()
+                                    }
+
                                     is ProfileEditResult.Error -> error = result.message
                                 }
                                 busy = false

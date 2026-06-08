@@ -246,6 +246,8 @@ Floater lists group floaters.
 | PATCH | `/api/user` | Update user (encryption settings) |
 | PATCH | `/api/user/profile` | Update profile |
 | POST | `/api/user/change-password` | Change password |
+| GET | `/api/user/security-questions` | Get the user's chosen question ids + whether they still need to be set (`requireSecurityQuestions`) |
+| POST | `/api/user/security-questions` | Set/replace the user's security questions (exactly 3 distinct). When the account already has questions configured (`requireSecurityQuestions = false`), the body must include a valid `currentPassword` — otherwise `400 "current password is required"` / `"current password is incorrect"`. The first-time setup gate (`requireSecurityQuestions = true`) omits the password. |
 
 ### Admin
 

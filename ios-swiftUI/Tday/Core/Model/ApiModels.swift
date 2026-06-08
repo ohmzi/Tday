@@ -113,6 +113,9 @@ struct RequestAdminResetRequest: Codable {
 
 struct SetSecurityQuestionsRequest: Codable {
     let answers: [SecurityAnswerInput]
+    // Required when changing already-configured questions from settings; the first-time
+    // gate leaves this nil (omitted from the encoded body).
+    var currentPassword: String? = nil
 }
 
 struct RegisterRequest: Codable {

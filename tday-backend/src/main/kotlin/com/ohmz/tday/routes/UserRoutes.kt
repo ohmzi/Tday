@@ -117,6 +117,15 @@ fun Route.userRoutes() {
                     either<AppError, Map<String, String>> {
                         val body = call.receive<SetSecurityQuestionsRequest>()
                         SecurityQuestions.validateSelection(body.answers, required = 3)?.let { raise(AppError.BadRequest(it)) }
+                        // Changing already-configured questions (from settings) requires the
+                        // current password; the first-time gate leaves them unset and skips this.
+                        val status = securityQuestionService.statusFor(user.id)
+                        if (!status.requireSecurityQuestions) {
+                            val password = body.currentPassword?.takeIf { it.isNotBlank() }
+                                ?: raise(AppError.BadRequest("current password is required"))
+                            val valid = userService.verifyCurrentPassword(user.id, password).bind()
+                            if (!valid) raise(AppError.BadRequest("current password is incorrect"))
+                        }
                         securityQuestionService.setQuestions(user.id, body.answers)
                         mapOf("message" to "security questions updated")
                     }
