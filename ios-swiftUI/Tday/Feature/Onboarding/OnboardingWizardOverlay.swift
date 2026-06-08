@@ -115,6 +115,7 @@ struct OnboardingWizardOverlay: View {
         }
         .animation(.spring(response: 0.28, dampingFraction: 0.86), value: step)
         .animation(.spring(response: 0.28, dampingFraction: 0.86), value: isCreatingAccount)
+        .animation(.spring(response: 0.28, dampingFraction: 0.86), value: isShowingForgotPassword)
         .animation(.easeInOut(duration: 0.2), value: isConnecting)
         .animation(.easeInOut(duration: 0.2), value: authViewModel.isLoading)
         .animation(.easeInOut(duration: 0.2), value: isCompletingAuthentication)
@@ -151,25 +152,26 @@ struct OnboardingWizardOverlay: View {
         } message: {
             Text("T'Day found a server URL saved on this device.")
         }
-        .sheet(isPresented: $isShowingForgotPassword) {
-            ForgotPasswordView(
-                authViewModel: authViewModel,
-                initialUsername: username.trimmingCharacters(in: .whitespacesAndNewlines),
-                onDismiss: {
-                    isShowingForgotPassword = false
-                },
-                onResetComplete: { resetUsername in
-                    isShowingForgotPassword = false
-                    username = resetUsername
-                    password = ""
-                    localError = nil
-                    onClearAuthStatus()
-                }
-            )
-            // Transparent sheet so the blurred home + login card show behind the reset
-            // card, matching the rest of the auth UI instead of a flat sheet surface.
-            .presentationBackground(.clear)
-        }
+    }
+
+    // Reset reuses the login card itself (like the create-account panel) — rendered as
+    // bare content inside the wizard card rather than a separate sheet/screen.
+    private var forgotPasswordPanel: some View {
+        ForgotPasswordView(
+            authViewModel: authViewModel,
+            initialUsername: username.trimmingCharacters(in: .whitespacesAndNewlines),
+            onDismiss: {
+                isShowingForgotPassword = false
+            },
+            onResetComplete: { resetUsername in
+                isShowingForgotPassword = false
+                username = resetUsername
+                password = ""
+                localError = nil
+                onClearAuthStatus()
+            },
+            embedded: true
+        )
     }
 
     private var stableCardLayout: some View {
@@ -247,6 +249,8 @@ struct OnboardingWizardOverlay: View {
                     serverStepContent
                 } else if isChoosingSecurityQuestions {
                     securityQuestionsStepContent
+                } else if isShowingForgotPassword {
+                    forgotPasswordPanel
                 } else {
                     loginStepContent
                 }

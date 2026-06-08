@@ -2,6 +2,7 @@ package com.ohmz.tday.compose.feature.onboarding
 
 import android.content.Context
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloat
@@ -89,6 +90,7 @@ import com.ohmz.tday.compose.core.data.auth.SystemCredential
 import com.ohmz.tday.compose.core.model.SecurityAnswerInput
 import com.ohmz.tday.compose.core.model.SecurityQuestion
 import com.ohmz.tday.compose.feature.auth.AuthUiState
+import com.ohmz.tday.compose.feature.auth.ForgotPasswordPanel
 import com.ohmz.tday.compose.feature.auth.LoginCredentialCoordinator
 import com.ohmz.tday.compose.ui.theme.TdayTitleIconDayAccent
 import kotlinx.coroutines.delay
@@ -112,6 +114,7 @@ private enum class AuthPanelMode {
     SIGN_IN,
     CREATE_ACCOUNT,
     CREATE_ACCOUNT_SECURITY,
+    FORGOT_PASSWORD,
 }
 
 @OptIn(ExperimentalComposeUiApi::class)
@@ -137,7 +140,6 @@ fun OnboardingWizardOverlay(
     onRequestSavedServerUrl: suspend (Context) -> String?,
     onSaveServerUrlCredential: suspend (Context, String) -> Unit,
     onUseLocalMode: () -> Unit,
-    onForgotPassword: () -> Unit,
     onClearAuthStatus: () -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
@@ -715,7 +717,7 @@ fun OnboardingWizardOverlay(
                             }
 
                             WizardViewState.LOGIN -> {
-                                Column {
+                                Column(modifier = Modifier.animateContentSize()) {
                                     when (authMode) {
                                         AuthPanelMode.SIGN_IN -> {
                                             WizardHeroTile(
@@ -835,7 +837,7 @@ fun OnboardingWizardOverlay(
                                                 onClick = {
                                                     localAuthError = null
                                                     onClearAuthStatus()
-                                                    onForgotPassword()
+                                                    authMode = AuthPanelMode.FORGOT_PASSWORD
                                                 },
                                             ) {
                                                 Text(stringResource(R.string.forgot_password_entry))
@@ -866,6 +868,24 @@ fun OnboardingWizardOverlay(
                                                     Text(stringResource(R.string.onboarding_change_setup))
                                                 }
                                             }
+                                        }
+
+                                        AuthPanelMode.FORGOT_PASSWORD -> {
+                                            ForgotPasswordPanel(
+                                                initialUsername = username,
+                                                onBackToLogin = {
+                                                    authMode = AuthPanelMode.SIGN_IN
+                                                    localAuthError = null
+                                                    onClearAuthStatus()
+                                                },
+                                                onResetComplete = { resetUsername ->
+                                                    authMode = AuthPanelMode.SIGN_IN
+                                                    username = resetUsername
+                                                    password = ""
+                                                    localAuthError = null
+                                                    onClearAuthStatus()
+                                                },
+                                            )
                                         }
 
                                         AuthPanelMode.CREATE_ACCOUNT -> {
@@ -1392,7 +1412,7 @@ private fun WizardLoading(
 }
 
 @Composable
-private fun WizardHeroTile(
+internal fun WizardHeroTile(
     title: String,
     subtitle: String? = null,
     imageVector: ImageVector,

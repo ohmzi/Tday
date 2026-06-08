@@ -92,6 +92,21 @@ struct SelfServiceResetRequest: Codable {
     let newPassword: String
 }
 
+struct VerifySecurityAnswersRequest: Codable {
+    let username: String
+    let answers: [SecurityAnswerInput]
+}
+
+struct SecurityAnswerResult: Codable, Equatable, Hashable {
+    let questionId: Int
+    let correct: Bool
+}
+
+struct VerifySecurityAnswersResponse: Codable {
+    let valid: Bool
+    let results: [SecurityAnswerResult]
+}
+
 struct RequestAdminResetRequest: Codable {
     let username: String
 }

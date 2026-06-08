@@ -665,11 +665,6 @@ fun TdayApp(
                                             }
                                         },
                                         onFetchSecurityQuestions = authViewModel::fetchAllSecurityQuestions,
-                                        onForgotPassword = {
-                                            navController.navigate(AppRoute.ForgotPassword.route) {
-                                                launchSingleTop = true
-                                            }
-                                        },
                                         onRequestSavedCredential = authViewModel::requestSavedCredential,
                                         onRequestSavedServerUrl = authViewModel::requestSavedServerUrl,
                                         onSaveServerUrlCredential = authViewModel::offerSaveOrUpdateServerUrl,
@@ -1195,7 +1190,11 @@ private fun HandleStartupNavigation(
             return@LaunchedEffect
         }
 
-        if (currentRoute != AppRoute.Home.route) {
+        // The reset-password screen is reachable while logged out — don't bounce it
+        // back to the login/home overlay.
+        if (currentRoute != AppRoute.Home.route &&
+            currentRoute != AppRoute.ForgotPassword.route
+        ) {
             navigateHome(navController, currentRoute)
         }
     }

@@ -87,6 +87,14 @@ final class AuthViewModel {
         try? await authRepository.fetchQuestionsForUsername(username)
     }
 
+    func lookupQuestions(_ username: String) async -> LookupQuestionsOutcome {
+        await authRepository.lookupQuestions(username)
+    }
+
+    func verifyAnswers(username: String, answers: [SecurityAnswerInput]) async -> VerifyAnswersOutcome {
+        await authRepository.verifyAnswers(username: username, answers: answers)
+    }
+
     func resetPassword(username: String, answers: [SecurityAnswerInput], newPassword: String) async -> PasswordResetResult {
         await authRepository.resetPassword(username: username, answers: answers, newPassword: newPassword)
     }

@@ -323,6 +323,21 @@ enum PasswordResetResult: Equatable, Hashable {
     case error(String)
 }
 
+/// Result of looking up a username's security questions for the reset wizard.
+enum LookupQuestionsOutcome: Equatable {
+    case found([SecurityQuestion])
+    case notFound
+    case error(String)
+}
+
+/// Result of verifying security answers without resetting (the staged wizard's gate).
+enum VerifyAnswersOutcome: Equatable {
+    case valid
+    case invalid([SecurityAnswerResult])
+    case locked
+    case error(String)
+}
+
 enum AppThemeMode: String, CaseIterable, Codable, Hashable {
     case system
     case light
