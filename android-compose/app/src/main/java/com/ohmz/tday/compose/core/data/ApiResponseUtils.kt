@@ -63,18 +63,43 @@ internal fun extractApiErrorDetails(response: Response<*>, fallback: String): Ap
     }.getOrElse { ApiErrorDetails(message = fallback) }
 }
 
-internal fun isLikelyConnectivityIssue(error: Throwable): Boolean {
-    if (error is TimeoutCancellationException) {
-        return true
-    }
+/** Stable, non-localized codes the repository emits so the UI layer can map each
+ *  failure to a specific, localized, user-readable message instead of one
+ *  catch-all. Never shown to the user directly — [AuthViewModel] maps them. */
+internal object AuthErrorCode {
+    const val CANNOT_REACH = "tday.err.cannot_reach"
+    const val SERVER_UNAVAILABLE = "tday.err.server_unavailable"
+    const val APP_OUTDATED = "tday.err.app_outdated"
+    const val SERVER_OUTDATED = "tday.err.server_outdated"
+}
+
+internal enum class ConnectionFailureKind { CANNOT_REACH, SERVER_UNAVAILABLE, NONE }
+
+/**
+ * Distinguishes "couldn't reach the server at all" (transport: no network, DNS,
+ * refused, timeout) from "the server answered but is unhealthy" (5xx / gateway /
+ * origin-down), so the UI can tell the user whether to check their own connection
+ * or report the server as down to an admin.
+ */
+internal fun classifyConnectionFailure(error: Throwable): ConnectionFailureKind {
+    if (error is TimeoutCancellationException) return ConnectionFailureKind.CANNOT_REACH
 
     var current: Throwable? = error
     while (current != null) {
         if (current is ApiCallException && isLikelyServerUnavailableStatus(current.statusCode)) {
-            return true
+            return ConnectionFailureKind.SERVER_UNAVAILABLE
         }
 
         val message = current.message.orEmpty().lowercase()
+        if (
+            message.contains("bad gateway") ||
+            message.contains("service unavailable") ||
+            message.contains("gateway timeout") ||
+            message.contains("origin unreachable") ||
+            message.contains("web server is down")
+        ) {
+            return ConnectionFailureKind.SERVER_UNAVAILABLE
+        }
         if (
             message.contains("failed to connect") ||
             message.contains("econnrefused") ||
@@ -88,18 +113,34 @@ internal fun isLikelyConnectivityIssue(error: Throwable): Boolean {
             message.contains("broken pipe") ||
             message.contains("software caused connection abort") ||
             message.contains("no route to host") ||
-            message.contains("connection refused") ||
-            message.contains("bad gateway") ||
-            message.contains("service unavailable") ||
-            message.contains("gateway timeout") ||
-            message.contains("origin unreachable") ||
-            message.contains("web server is down")
+            message.contains("connection refused")
         ) {
-            return true
+            return ConnectionFailureKind.CANNOT_REACH
         }
         current = current.cause?.takeIf { it !== current }
     }
-    return false
+    return ConnectionFailureKind.NONE
+}
+
+internal fun isLikelyConnectivityIssue(error: Throwable): Boolean =
+    classifyConnectionFailure(error) != ConnectionFailureKind.NONE
+
+/** Maps a backend version-gate response (HTTP 426 / `app_update_required` /
+ *  `server_update_required`) to the matching [AuthErrorCode], or null. */
+internal fun versionMismatchAuthCode(error: Throwable): String? {
+    var current: Throwable? = error
+    while (current != null) {
+        if (current is ApiCallException) {
+            if (current.statusCode == 426 || current.reason == "app_update_required") {
+                return AuthErrorCode.APP_OUTDATED
+            }
+            if (current.reason == "server_update_required") {
+                return AuthErrorCode.SERVER_OUTDATED
+            }
+        }
+        current = current.cause?.takeIf { it !== current }
+    }
+    return null
 }
 
 internal fun isSessionAuthenticationIssue(error: Throwable): Boolean {

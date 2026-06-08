@@ -135,7 +135,7 @@ final class AuthRepository: AuthRepositoryServicing {
             }
             if !(200 ..< 300).contains(callback.statusCode) && !(300 ..< 400).contains(callback.statusCode) {
                 if isLikelyServerUnavailableStatusCode(callback.statusCode) {
-                    return .error(Self.serverUnreachableMessage)
+                    return .error(ConnectionFailureMessage.serverUnavailable)
                 }
                 let responseMessage = callback.response.message?.trimmingCharacters(in: .whitespacesAndNewlines)
                 if let responseMessage, !responseMessage.isEmpty {
@@ -152,10 +152,7 @@ final class AuthRepository: AuthRepositoryServicing {
             }
             return .error("Sign in failed. Please check backend URL and credentials.")
         } catch {
-            if isLikelyConnectivityIssue(error) {
-                return .error(Self.serverUnreachableMessage)
-            }
-            return .error(error.localizedDescription)
+            return .error(connectionFailureMessage(for: error) ?? mapAuthError(error.localizedDescription))
         }
     }
 
@@ -176,7 +173,7 @@ final class AuthRepository: AuthRepositoryServicing {
                 message: response.message ?? "Account created"
             )
         } catch {
-            return RegisterOutcome(success: false, requiresApproval: false, message: error.localizedDescription)
+            return RegisterOutcome(success: false, requiresApproval: false, message: connectionFailureMessage(for: error) ?? mapAuthError(error.localizedDescription))
         }
     }
 
@@ -206,16 +203,10 @@ final class AuthRepository: AuthRepositoryServicing {
             case "reset_failed":
                 return .failed(apiError.message)
             default:
-                if isLikelyConnectivityIssue(apiError) {
-                    return .error(Self.serverUnreachableMessage)
-                }
-                return .error(apiError.message)
+                return .error(connectionFailureMessage(for: apiError) ?? apiError.message)
             }
         } catch {
-            if isLikelyConnectivityIssue(error) {
-                return .error(Self.serverUnreachableMessage)
-            }
-            return .error(error.localizedDescription)
+            return .error(connectionFailureMessage(for: error) ?? error.localizedDescription)
         }
     }
 
@@ -227,11 +218,9 @@ final class AuthRepository: AuthRepositoryServicing {
             return .found(questions)
         } catch let apiError as APIError {
             if apiError.reason == "user_not_found" { return .notFound }
-            if isLikelyConnectivityIssue(apiError) { return .error(Self.serverUnreachableMessage) }
-            return .error(apiError.message)
+            return .error(connectionFailureMessage(for: apiError) ?? apiError.message)
         } catch {
-            if isLikelyConnectivityIssue(error) { return .error(Self.serverUnreachableMessage) }
-            return .error(error.localizedDescription)
+            return .error(connectionFailureMessage(for: error) ?? error.localizedDescription)
         }
     }
 
@@ -246,11 +235,9 @@ final class AuthRepository: AuthRepositoryServicing {
             return response.valid ? .valid : .invalid(response.results)
         } catch let apiError as APIError {
             if apiError.reason == "reset_locked" { return .locked }
-            if isLikelyConnectivityIssue(apiError) { return .error(Self.serverUnreachableMessage) }
-            return .error(apiError.message)
+            return .error(connectionFailureMessage(for: apiError) ?? apiError.message)
         } catch {
-            if isLikelyConnectivityIssue(error) { return .error(Self.serverUnreachableMessage) }
-            return .error(error.localizedDescription)
+            return .error(connectionFailureMessage(for: error) ?? error.localizedDescription)
         }
     }
 
@@ -380,6 +367,4 @@ final class AuthRepository: AuthRepositoryServicing {
             return value
         }
     }
-
-    private static let serverUnreachableMessage = "Cannot reach server. Check your server URL and try again."
 }
