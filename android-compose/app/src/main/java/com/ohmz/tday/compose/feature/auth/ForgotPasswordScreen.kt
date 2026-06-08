@@ -103,7 +103,7 @@ fun ForgotPasswordScreen(
                     color = colorScheme.onSurface,
                 )
                 val subtitleText = when (uiState.step) {
-                    ForgotPasswordStep.USERNAME -> stringResource(R.string.forgot_password_subtitle_username)
+                    ForgotPasswordStep.USERNAME -> null
                     ForgotPasswordStep.CHALLENGE -> null
                     ForgotPasswordStep.LOCKED -> stringResource(R.string.forgot_password_subtitle_locked)
                     ForgotPasswordStep.REQUESTED -> stringResource(R.string.forgot_password_subtitle_requested)

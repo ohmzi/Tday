@@ -3,7 +3,10 @@ package com.ohmz.tday.routes.auth
 import com.ohmz.tday.di.inject
 import com.ohmz.tday.models.request.RequestAdminResetRequest
 import com.ohmz.tday.models.request.SelfServiceResetRequest
+import com.ohmz.tday.models.request.VerifySecurityAnswersRequest
+import com.ohmz.tday.models.response.SecurityAnswerResult
 import com.ohmz.tday.models.response.SecurityQuestionsResponse
+import com.ohmz.tday.models.response.VerifySecurityAnswersResponse
 import com.ohmz.tday.security.AuthThrottle
 import com.ohmz.tday.security.CaptchaService
 import com.ohmz.tday.security.SecurityEventLogger
@@ -31,9 +34,9 @@ fun Route.securityQuestionRoutes() {
             call.respond(HttpStatusCode.OK, SecurityQuestionsResponse(SecurityQuestions.ALL))
         }
 
-        // The two questions to challenge for a given username. Always returns two
-        // questions (a stable decoy pair for unknown/unconfigured accounts) so the
-        // response can't be used to enumerate usernames.
+        // The reset wizard's first step: returns the account's stored questions (2–3) so
+        // the client can validate the username and cycle questions. 404s when the account
+        // doesn't exist — this intentionally reveals account existence (admin-accepted).
         get {
             val username = call.request.queryParameters["username"]?.trim()
             if (username.isNullOrEmpty()) {
@@ -54,8 +57,71 @@ fun Route.securityQuestionRoutes() {
                 return@get
             }
 
-            val questions = service.questionsForUsername(username)
+            val questions = service.lookupQuestionsForUsername(username)
+            if (questions == null) {
+                call.respond(
+                    HttpStatusCode.NotFound,
+                    mapOf(
+                        "message" to "We couldn't find an account with that username.",
+                        "reason" to "user_not_found",
+                    ),
+                )
+                return@get
+            }
             call.respond(HttpStatusCode.OK, SecurityQuestionsResponse(questions))
+        }
+    }
+
+    // Verify security answers WITHOUT resetting the password — gates the new-password
+    // screen and reports which answer was wrong so the client can swap in another question.
+    route("/verify-security-answers") {
+        post {
+            val body = call.receive<VerifySecurityAnswersRequest>()
+
+            val throttle = authThrottle.enforceRateLimit(ThrottleAction.credentials, call.request, body.username)
+            if (!throttle.allowed) {
+                call.respond(
+                    HttpStatusCode.TooManyRequests,
+                    mapOf(
+                        "message" to "Too many requests. Try again in ${authThrottle.formatRetryWait(throttle.retryAfterSeconds)}.",
+                        "reason" to (throttle.reasonCode ?: "auth_limit"),
+                        "retryAfterSeconds" to throttle.retryAfterSeconds,
+                    ),
+                )
+                return@post
+            }
+
+            if (SecurityQuestions.validateSelection(body.answers, required = 2) != null) {
+                call.respond(
+                    HttpStatusCode.BadRequest,
+                    mapOf("message" to "Unable to verify your answers.", "reason" to "reset_failed"),
+                )
+                return@post
+            }
+
+            val result = service.verifyAnswers(body.username, body.answers)
+            if (result.locked) {
+                call.respond(
+                    HttpStatusCode.Forbidden,
+                    mapOf(
+                        "message" to "Too many attempts. Please request a reset from an administrator.",
+                        "reason" to "reset_locked",
+                    ),
+                )
+                return@post
+            }
+            if (result.valid) {
+                authThrottle.clearFailures(call.request, body.username)
+            } else {
+                authThrottle.recordFailure(call.request, body.username)
+            }
+            call.respond(
+                HttpStatusCode.OK,
+                VerifySecurityAnswersResponse(
+                    valid = result.valid,
+                    results = result.results.map { SecurityAnswerResult(it.questionId, it.correct) },
+                ),
+            )
         }
     }
 
