@@ -1,10 +1,3 @@
-import {
-  CircleCheckIcon,
-  InfoIcon,
-  Loader2Icon,
-  OctagonXIcon,
-  TriangleAlertIcon,
-} from "lucide-react"
 import { useTheme } from "next-themes"
 import { Toaster as Sonner, type ToasterProps } from "sonner"
 
@@ -15,24 +8,17 @@ const SonnerToaster = ({ ...props }: ToasterProps) => {
     <Sonner
       theme={theme as ToasterProps["theme"]}
       className="toaster group"
-      position="top-center"
-      icons={{
-        success: <CircleCheckIcon className="size-[18px]" />,
-        info: <InfoIcon className="size-[18px]" />,
-        warning: <TriangleAlertIcon className="size-[18px]" />,
-        error: <OctagonXIcon className="size-[18px]" />,
-        loading: <Loader2Icon className="size-[18px] animate-spin" />,
-      }}
+      position="bottom-center"
       toastOptions={{
         classNames: {
           // Floating, on-brand card: rounded-24, translucent blurred surface,
-          // subtle border, generous padding. Text stays on-surface; the variant
-          // colour lives in the leading icon chip (see per-type classes below).
+          // subtle border, generous padding. Icons are removed app-wide; the
+          // variant cue now lives in the card surface itself (issue/error/warning
+          // get a red translucent shade — see the per-type --*-bg vars below).
           toast:
             "group toast group-[.toaster]:flex group-[.toaster]:items-center group-[.toaster]:gap-3 group-[.toaster]:rounded-[24px] group-[.toaster]:border group-[.toaster]:px-4 group-[.toaster]:py-3.5 group-[.toaster]:backdrop-blur-xl group-[.toaster]:shadow-[0_10px_30px_-12px_hsl(var(--shadow)/0.45)]",
-          // The icon is rendered inside a tinted circular chip.
-          icon:
-            "group-[.toast]:m-0 group-[.toast]:flex group-[.toast]:size-9 group-[.toast]:shrink-0 group-[.toast]:items-center group-[.toast]:justify-center group-[.toast]:rounded-full",
+          // No icon — hide Sonner's default per-variant icon slot entirely.
+          icon: "group-[.toast]:hidden",
           content: "group-[.toast]:min-w-0",
           title: "group-[.toast]:font-extrabold group-[.toast]:leading-tight",
           description:
@@ -41,24 +27,14 @@ const SonnerToaster = ({ ...props }: ToasterProps) => {
             "group-[.toast]:rounded-full group-[.toast]:bg-primary group-[.toast]:px-3 group-[.toast]:font-bold group-[.toast]:text-primary-foreground",
           cancelButton:
             "group-[.toast]:rounded-full group-[.toast]:bg-muted group-[.toast]:px-3 group-[.toast]:font-bold group-[.toast]:text-muted-foreground",
-          // Per-variant icon-chip tint (the toast surface itself stays neutral).
-          // Non-error variants share the brand coral (matches the overdue tile);
-          // errors keep the destructive red so the danger cue survives.
-          error:
-            "[&_[data-icon]]:bg-destructive/15 [&_[data-icon]]:text-destructive",
-          success:
-            "[&_[data-icon]]:bg-[#E06F66]/15 [&_[data-icon]]:text-[#E06F66]",
-          info: "[&_[data-icon]]:bg-[#E06F66]/15 [&_[data-icon]]:text-[#E06F66]",
-          warning:
-            "[&_[data-icon]]:bg-[#E06F66]/15 [&_[data-icon]]:text-[#E06F66]",
-          loading: "[&_[data-icon]]:bg-muted [&_[data-icon]]:text-muted-foreground",
         },
       }}
       style={
         {
-          // All variants share the same neutral, slightly-translucent card
-          // surface; the colour cue comes from the icon chip, matching the
-          // app's card design language.
+          // Normal / success / info share the neutral, slightly-translucent card
+          // surface. Error + warning ("issue") toasts get a red translucent shade
+          // (still backdrop-blurred); text stays on the popover foreground so it
+          // remains legible over the tint.
           "--normal-bg": "hsl(var(--popover) / 0.92)",
           "--normal-text": "hsl(var(--popover-foreground))",
           "--normal-border": "hsl(var(--border))",
@@ -68,12 +44,12 @@ const SonnerToaster = ({ ...props }: ToasterProps) => {
           "--info-bg": "hsl(var(--popover) / 0.92)",
           "--info-text": "hsl(var(--popover-foreground))",
           "--info-border": "hsl(var(--border))",
-          "--warning-bg": "hsl(var(--popover) / 0.92)",
+          "--warning-bg": "hsl(var(--destructive) / 0.18)",
           "--warning-text": "hsl(var(--popover-foreground))",
-          "--warning-border": "hsl(var(--border))",
-          "--error-bg": "hsl(var(--popover) / 0.92)",
+          "--warning-border": "hsl(var(--destructive) / 0.30)",
+          "--error-bg": "hsl(var(--destructive) / 0.18)",
           "--error-text": "hsl(var(--popover-foreground))",
-          "--error-border": "hsl(var(--border))",
+          "--error-border": "hsl(var(--destructive) / 0.30)",
         } as React.CSSProperties
       }
       {...props}

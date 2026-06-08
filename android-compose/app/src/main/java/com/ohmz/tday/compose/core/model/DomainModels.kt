@@ -4,6 +4,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import java.time.Instant
 import java.time.LocalDate
+import java.time.LocalTime
 import java.time.YearMonth
 import java.time.ZoneId
 import java.time.ZonedDateTime
@@ -57,6 +58,7 @@ data class TodoItem(
 
 fun TodoListMode.supportsTaskReschedule(): Boolean {
     return when (this) {
+        TodoListMode.TODAY,
         TodoListMode.SCHEDULED,
         TodoListMode.ALL,
         TodoListMode.PRIORITY,
@@ -64,7 +66,6 @@ fun TodoListMode.supportsTaskReschedule(): Boolean {
             -> true
 
         TodoListMode.FLOATER,
-        TodoListMode.TODAY,
         TodoListMode.OVERDUE,
             -> false
     }
@@ -84,6 +85,18 @@ fun movedDuePreservingTime(
 ): Instant {
     val dueTime = due.atZone(zoneId).toLocalTime()
     return ZonedDateTime.of(targetDate, dueTime, zoneId).toInstant()
+}
+
+// Keep the task's date, set its time-of-day to [hour]:00. The inverse of
+// [movedDuePreservingTime]; used by the Today screen's drag-between-time-buckets
+// interaction (Morning / Afternoon / Tonight).
+fun movedDueToTimeOfDay(
+    due: Instant,
+    hour: Int,
+    zoneId: ZoneId = ZoneId.systemDefault(),
+): Instant {
+    val date = due.atZone(zoneId).toLocalDate()
+    return ZonedDateTime.of(date, LocalTime.of(hour, 0), zoneId).toInstant()
 }
 
 fun createMovedTaskPayload(

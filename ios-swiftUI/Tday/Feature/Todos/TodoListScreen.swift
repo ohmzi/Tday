@@ -805,7 +805,9 @@ struct TodoListScreen: View {
 
     private var modeContent: AnyView {
         if isTodayMode {
-            return AnyView(todayModeContent)
+            // Today reuses the drop-capable minimal-timeline content so tasks can
+            // be dragged between the Morning / Afternoon / Tonight buckets.
+            return AnyView(minimalTimelineModeContent)
         }
         if isMinimalTimelineMode {
             return AnyView(minimalTimelineModeContent)
@@ -1277,9 +1279,51 @@ struct TodoListScreen: View {
 
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
         if todo.isRecurring {
-            pendingRescheduleDrop = TodoRescheduleDrop(todo: todo, targetDate: targetDay)
+            pendingRescheduleDrop = TodoRescheduleDrop(todo: todo, targetDate: targetDay, targetHour: nil)
         } else {
             Task { await viewModel.moveTask(todo, toDay: targetDay, scope: .occurrence) }
+        }
+    }
+
+    // Routes a drop to the right reschedule: Today buckets change the time of day,
+    // every other section changes the date.
+    private func performDrop(_ todo: TodoItem, into section: TodoTimelineSection) {
+        if let hour = section.targetHour {
+            requestRescheduleTime(todo, toHour: hour)
+        } else if let targetDate = section.targetDate {
+            requestReschedule(todo, to: targetDate)
+        }
+    }
+
+    private func todayBucketLabel(forHour hour: Int) -> String {
+        if hour < 12 { return "Morning" }
+        if hour < 18 { return "Afternoon" }
+        return "Tonight"
+    }
+
+    // Today screen: set a task's time of day to a bucket's hour (date unchanged).
+    // Mirrors `requestReschedule` but for the Morning / Afternoon / Tonight move.
+    private func requestRescheduleTime(_ todo: TodoItem, toHour hour: Int) {
+        setActiveDropSection(nil)
+        draggedTodo = nil
+        inAppDrag = nil
+        dropTargetFrames = [:]
+        TodoTaskDragSession.shared.todo = nil
+        let dropSignature = "\(todo.id)|hour-\(hour)"
+        guard TodoTaskDragSession.shared.handledDropSignature != dropSignature else {
+            return
+        }
+        TodoTaskDragSession.shared.handledDropSignature = dropSignature
+        guard let due = todo.due,
+              todayBucketLabel(forHour: Calendar.current.component(.hour, from: due)) != todayBucketLabel(forHour: hour) else {
+            return
+        }
+
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        if todo.isRecurring {
+            pendingRescheduleDrop = TodoRescheduleDrop(todo: todo, targetDate: nil, targetHour: hour)
+        } else {
+            Task { await viewModel.moveTask(todo, toTimeOfDay: hour, scope: .occurrence) }
         }
     }
 
@@ -1307,6 +1351,11 @@ struct TodoListScreen: View {
         }
         guard let due = todo.due else {
             return false
+        }
+        // Today time-buckets: a same-day move between Morning / Afternoon /
+        // Tonight. The same-section check above already blocks dropping in place.
+        if section.targetHour != nil {
+            return true
         }
         return !Calendar.current.isDate(due, inSameDayAs: targetDate)
     }
@@ -1344,14 +1393,14 @@ struct TodoListScreen: View {
                 }
                 return sectionID
             }
-        let targetDate = targetSectionID
-            .flatMap { sectionID in groupedSections.first { $0.id == sectionID }?.targetDate }
+        let targetSection = targetSectionID
+            .flatMap { sectionID in groupedSections.first { $0.id == sectionID } }
         setActiveDropSection(nil)
         draggedTodo = nil
         inAppDrag = nil
         dropTargetFrames = [:]
-        if let targetDate {
-            requestReschedule(todo, to: targetDate)
+        if let targetSection {
+            performDrop(todo, into: targetSection)
         } else {
             TodoTaskDragSession.shared.todo = nil
         }
@@ -1386,7 +1435,11 @@ struct TodoListScreen: View {
         }
         pendingRescheduleDrop = nil
         Task {
-            await viewModel.moveTask(drop.todo, toDay: drop.targetDate, scope: scope)
+            if let hour = drop.targetHour {
+                await viewModel.moveTask(drop.todo, toTimeOfDay: hour, scope: scope)
+            } else if let targetDate = drop.targetDate {
+                await viewModel.moveTask(drop.todo, toDay: targetDate, scope: scope)
+            }
         }
     }
 
@@ -2008,8 +2061,8 @@ struct TodoListScreen: View {
             section: section,
             draggedTodo: draggedTodo,
             resolveTodo: resolveTodoForDrop,
-            onMove: { droppedTodo, targetDate in
-                requestReschedule(droppedTodo, to: targetDate)
+            onMove: { droppedTodo, _ in
+                performDrop(droppedTodo, into: section)
             },
             canMoveTodo: canDropTodo,
             onSectionChange: { sectionId in
@@ -2084,8 +2137,8 @@ struct TodoListScreen: View {
                         section: section,
                         draggedTodo: draggedTodo,
                         resolveTodo: resolveTodoForDrop,
-                        onMove: { todo, targetDate in
-                            requestReschedule(todo, to: targetDate)
+                        onMove: { todo, _ in
+                            performDrop(todo, into: section)
                         },
                         canMoveTodo: canDropTodo,
                         onSectionChange: { sectionId in
@@ -2137,8 +2190,8 @@ struct TodoListScreen: View {
                     section: section,
                     draggedTodo: draggedTodo,
                     resolveTodo: resolveTodoForDrop,
-                    onMove: { todo, targetDate in
-                        requestReschedule(todo, to: targetDate)
+                    onMove: { todo, _ in
+                        performDrop(todo, into: section)
                     },
                     canMoveTodo: canDropTodo,
                     onSectionChange: { sectionId in
@@ -3471,11 +3524,16 @@ private struct TodoTimelineSection: Identifiable, Hashable {
     let items: [TodoItem]
     let isCollapsible: Bool
     let targetDate: Date?
+    // Today buckets only: the hour a task is set to when dropped here (Morning 9 /
+    // Afternoon 15 / Tonight 20). nil for normal date sections, which reschedule
+    // by date instead.
+    var targetHour: Int? = nil
 }
 
 private struct TodoRescheduleDrop: Equatable {
     let todo: TodoItem
-    let targetDate: Date
+    let targetDate: Date?
+    let targetHour: Int?
 }
 
 private struct ScheduledDragModifier: ViewModifier {
@@ -3633,6 +3691,7 @@ private func buildSections(
     let calendar = Calendar.current
     switch mode {
     case .today:
+        let startOfToday = calendar.startOfDay(for: Date())
         let grouped = Dictionary(grouping: items.compactMap { item -> TodoItem? in
             item.due == nil ? nil : item
         }) { item -> String in
@@ -3641,13 +3700,17 @@ private func buildSections(
             if hour < 18 { return "Afternoon" }
             return "Tonight"
         }
+        // Canonical drop hour per bucket — lands inside the display boundaries
+        // (Morning < 12, Afternoon 12–18, Tonight ≥ 18). Matches web/Android.
+        let bucketHours: [String: Int] = ["Morning": 9, "Afternoon": 15, "Tonight": 20]
         return ["Morning", "Afternoon", "Tonight"].map { key in
             return TodoTimelineSection(
                 id: key,
                 title: key,
                 items: grouped[key, default: []].sorted(by: todoTimelineSortPrecedes),
                 isCollapsible: false,
-                targetDate: nil
+                targetDate: startOfToday,
+                targetHour: bucketHours[key]
             )
         }
     case .overdue:

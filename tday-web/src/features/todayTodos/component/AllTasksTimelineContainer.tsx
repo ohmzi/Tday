@@ -10,6 +10,12 @@ import TodoListLoading from "@/components/todo/component/TodoListLoading";
 import TodoGroup from "@/components/todo/component/TodoGroup";
 import TimelineSections from "@/components/todo/dnd/TimelineSections";
 import {
+  TODAY_BUCKETS,
+  TodayBucketDndContext,
+  TodayBucketDroppable,
+  DraggableTodayTask,
+} from "@/components/todo/dnd/TodayBucketDnd";
+import {
   headerToBodyGap,
   sectionTopGapFilled,
   sectionTopGapFirst,
@@ -598,28 +604,29 @@ const AllTasksTimelineContainer = ({
             </section>
           ))}
 
-        {scope === "today" &&
-          todayBuckets.map((bucket, index) => (
-            <section
-              key={bucket.label}
-              className={cn("scroll-mt-24", index === 0 ? sectionTopGapFirst : sectionTopGapFilled)}
-            >
-              <div className={cn(headerToBodyGap, "flex items-center gap-2")}>
-                <h3 className="select-none text-2xl font-black tracking-tight text-muted-foreground">
-                  {bucket.label}
-                </h3>
-              </div>
-              {bucket.todos.length > 0 && (
-                <TodoGroup
-                  todos={bucket.todos}
-                  overdue={false}
-                  perTaskOverdue
-                  highlightedTodoId={focusedTaskId}
-                  showOverdueTag={false}
-                />
-              )}
-            </section>
-          ))}
+        {scope === "today" && (
+          <TodayBucketDndContext timeZone={userTZ?.timeZone}>
+            {todayBuckets.map((bucket, index) => (
+              <TodayBucketDroppable
+                key={bucket.label}
+                bucket={bucket.label}
+                targetHour={
+                  TODAY_BUCKETS.find((b) => b.label === bucket.label)?.targetHour ?? 9
+                }
+                isFirst={index === 0}
+              >
+                {bucket.todos.map((todo) => (
+                  <DraggableTodayTask
+                    key={todo.id}
+                    todo={todo}
+                    currentBucket={bucket.label}
+                    highlighted={focusedTaskId === todo.id}
+                  />
+                ))}
+              </TodayBucketDroppable>
+            ))}
+          </TodayBucketDndContext>
+        )}
 
         {/* Native-style centered empty message — for Today it sits below the
             Morning/Afternoon/Tonight headers; for other scopes it's the only body. */}

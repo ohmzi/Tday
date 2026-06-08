@@ -221,6 +221,7 @@ fun TodoListScreen(
     onParseTaskTitleNlp: suspend (title: String, referenceDueEpochMs: Long) -> TodoTitleNlpResponse?,
     onUpdateTask: (todo: TodoItem, payload: CreateTaskPayload) -> Unit,
     onMoveTask: (todo: TodoItem, targetDate: LocalDate, scope: TaskRescheduleScope) -> Unit,
+    onMoveTaskToTimeOfDay: (todo: TodoItem, hour: Int, scope: TaskRescheduleScope) -> Unit,
     onComplete: (todo: TodoItem) -> Unit,
     onDelete: (todo: TodoItem) -> Unit,
     onUpdateListSettings: (listId: String, name: String, color: String?, iconKey: String?) -> Unit,
@@ -508,6 +509,29 @@ fun TodoListScreen(
             }
         }
     }
+    // Today screen: drop onto a Morning / Afternoon / Tonight bucket sets the time
+    // of day (date unchanged). Sibling of requestTaskReschedule.
+    val requestTaskRescheduleTime: (TodoItem, Int) -> Unit =
+        requestTaskRescheduleTime@{ todo, hour ->
+            draggedScheduledTodoId = null
+            activeDropSectionKey = null
+            activeTimelineDrag = null
+            timelineDropTargetBounds.clear()
+            val currentDue = todo.due ?: return@requestTaskRescheduleTime
+            val movedDue = ZonedDateTime.of(
+                LocalDate.ofInstant(currentDue, zoneId),
+                LocalTime.of(hour, 0),
+                zoneId,
+            ).toInstant()
+            if (movedDue != currentDue) {
+                ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CONFIRM)
+                if (todo.isRecurring) {
+                    pendingRescheduleDrop = TaskRescheduleDrop(todo = todo, targetHour = hour)
+                } else {
+                    onMoveTaskToTimeOfDay(todo, hour, TaskRescheduleScope.OCCURRENCE)
+                }
+            }
+        }
     val canSummarizeCurrentMode =
         summaryAvailable &&
                 uiState.aiSummaryEnabled &&
@@ -668,6 +692,9 @@ fun TodoListScreen(
         val targetDate = section.targetDate ?: return false
         if (originSectionKeyFor(todo) == section.key) return false
         val due = todo.due ?: return false
+        // Today time-buckets: a same-day move between Morning / Afternoon /
+        // Tonight (the same-section check above already blocks dropping in place).
+        if (section.targetHour != null) return true
         return LocalDate.ofInstant(due, zoneId) != targetDate
     }
 
@@ -696,16 +723,20 @@ fun TodoListScreen(
         val targetKey = position
             ?.let { dropPosition -> drag?.let { timelineDropSectionKeyAt(dropPosition, it.todo) } }
             ?: activeDropSectionKey
-        val targetDate = targetKey
+        val targetSection = targetKey
             ?.let(::timelineSectionForKey)
             ?.takeIf { section -> drag?.let { canDropTodoInTimelineSection(it.todo, section) } == true }
-            ?.targetDate
         activeTimelineDrag = null
         draggedScheduledTodoId = null
         activeDropSectionKey = null
         timelineDropTargetBounds.clear()
-        if (drag != null && targetDate != null) {
-            requestTaskReschedule(drag.todo, targetDate)
+        if (drag != null && targetSection != null) {
+            val hour = targetSection.targetHour
+            if (hour != null) {
+                requestTaskRescheduleTime(drag.todo, hour)
+            } else if (targetSection.targetDate != null) {
+                requestTaskReschedule(drag.todo, targetSection.targetDate)
+            }
         }
     }
 
@@ -793,6 +824,9 @@ fun TodoListScreen(
                             },
                         ),
                     state = listState,
+                    // Freeze list scrolling while a task is being dragged so the
+                    // drop target stays put under the finger (matches Calendar).
+                    userScrollEnabled = activeTimelineDrag == null,
                     contentPadding = when {
                         usesRootFeedChrome -> PaddingValues(18.dp)
                         usesTodayStyle -> PaddingValues(horizontal = 18.dp, vertical = 2.dp)
@@ -1327,13 +1361,23 @@ fun TodoListScreen(
                 Row {
                     TextButton(onClick = {
                         pendingRescheduleDrop = null
-                        onMoveTask(drop.todo, drop.targetDate, TaskRescheduleScope.OCCURRENCE)
+                        val hour = drop.targetHour
+                        if (hour != null) {
+                            onMoveTaskToTimeOfDay(drop.todo, hour, TaskRescheduleScope.OCCURRENCE)
+                        } else if (drop.targetDate != null) {
+                            onMoveTask(drop.todo, drop.targetDate, TaskRescheduleScope.OCCURRENCE)
+                        }
                     }) {
                         Text(stringResource(R.string.todos_reschedule_this_occurrence))
                     }
                     TextButton(onClick = {
                         pendingRescheduleDrop = null
-                        onMoveTask(drop.todo, drop.targetDate, TaskRescheduleScope.SERIES)
+                        val hour = drop.targetHour
+                        if (hour != null) {
+                            onMoveTaskToTimeOfDay(drop.todo, hour, TaskRescheduleScope.SERIES)
+                        } else if (drop.targetDate != null) {
+                            onMoveTask(drop.todo, drop.targetDate, TaskRescheduleScope.SERIES)
+                        }
                     }) {
                         Text(stringResource(R.string.todos_reschedule_entire_series))
                     }
@@ -2975,11 +3019,15 @@ private data class TodoSection(
     val items: List<TodoItem>,
     val quickAddDefaults: Long? = null,
     val targetDate: LocalDate? = null,
+    // Today buckets only: the hour a task is set to when dropped here (Morning 9 /
+    // Afternoon 15 / Tonight 20). null for normal date sections.
+    val targetHour: Int? = null,
 )
 
 private data class TaskRescheduleDrop(
     val todo: TodoItem,
-    val targetDate: LocalDate,
+    val targetDate: LocalDate? = null,
+    val targetHour: Int? = null,
 )
 
 private fun shouldShowDateDivider(
@@ -3110,6 +3158,7 @@ private fun buildTodaySections(
     zoneId: ZoneId,
 ): List<TodoSection> {
     val sorted = items.filter { it.due != null }.sortedBy { it.due ?: Instant.MAX }
+    val today = LocalDate.now(zoneId)
     val noon = LocalTime.NOON
     val eveningStartBoundary = LocalTime.of(18, 0)
 
@@ -3135,6 +3184,8 @@ private fun buildTodaySections(
                 slot = TodaySectionSlot.MORNING,
                 zoneId = zoneId,
             ),
+            targetDate = today,
+            targetHour = 9,
         ),
         TodoSection(
             key = "today-afternoon",
@@ -3144,6 +3195,8 @@ private fun buildTodaySections(
                 slot = TodaySectionSlot.AFTERNOON,
                 zoneId = zoneId,
             ),
+            targetDate = today,
+            targetHour = 15,
         ),
         TodoSection(
             key = "today-tonight",
@@ -3153,6 +3206,8 @@ private fun buildTodaySections(
                 slot = TodaySectionSlot.TONIGHT,
                 zoneId = zoneId,
             ),
+            targetDate = today,
+            targetHour = 20,
         ),
     )
 }
