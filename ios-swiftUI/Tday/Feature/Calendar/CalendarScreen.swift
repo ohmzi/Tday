@@ -460,7 +460,7 @@ struct CalendarScreen: View {
                             Task { await viewModel.complete(todo) }
                         }
                     )
-                    .opacity(draggedTodo?.id == todo.id && activeDropDate != nil ? 0.55 : 1)
+                    .opacity(draggedTodo?.id == todo.id && activeDropDate != nil ? 0.7 : 1)
                     .background(colors.background)
                     .modifier(
                         CalendarInAppDragModifier(
