@@ -8,6 +8,8 @@ struct ForgotPasswordView: View {
     enum Step: Equatable {
         case username
         case challenge
+        case password
+        case success
         case locked
         case requested
     }
@@ -18,12 +20,18 @@ struct ForgotPasswordView: View {
     /// Called after a successful reset; passes the normalized username so the
     /// caller can prefill the sign-in field.
     let onResetComplete: (String) -> Void
+    /// When true the content is rendered bare (no card/scrim) so it can be dropped into
+    /// the login wizard's own card — reusing the login dialog, like the create-account
+    /// panel does. Standalone (Settings) usage keeps its own card.
+    var embedded: Bool = false
 
     @Environment(\.tdayColors) private var colors
 
     @State private var step: Step = .username
     @State private var username = ""
     @State private var questions: [SecurityQuestion] = []
+    @State private var shown: [SecurityQuestion] = []
+    @State private var verifiedAnswers: [SecurityAnswerInput] = []
     @State private var answer1 = ""
     @State private var answer2 = ""
     @State private var newPassword = ""
@@ -32,24 +40,28 @@ struct ForgotPasswordView: View {
     @State private var infoMessage: String?
     @State private var isBusy = false
     @State private var failedAttempts = 0
+    @State private var didComplete = false
 
-    // Mirrors the login wizard: a centered card floating over the (blurred) home, rather
-    // than a flat full-screen sheet. The login sheet is presented with a clear background
-    // so the blurred home shows through behind this scrim.
     var body: some View {
-        ZStack {
-            Color.black.opacity(0.18).ignoresSafeArea()
-
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: 0) {
-                    Spacer(minLength: 18)
-                    card
-                    Spacer(minLength: 18)
+        Group {
+            if embedded {
+                // Dropped straight into the login wizard's card — no own chrome.
+                content
+            } else {
+                ZStack {
+                    Color.black.opacity(0.18).ignoresSafeArea()
+                    ScrollView(showsIndicators: false) {
+                        VStack(spacing: 0) {
+                            Spacer(minLength: 18)
+                            card
+                            Spacer(minLength: 18)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.horizontal, 18)
+                    }
+                    .scrollBounceBehavior(.basedOnSize)
                 }
-                .frame(maxWidth: .infinity)
-                .padding(.horizontal, 18)
             }
-            .scrollBounceBehavior(.basedOnSize)
         }
         .onAppear {
             if username.isEmpty {
@@ -58,7 +70,9 @@ struct ForgotPasswordView: View {
         }
     }
 
-    private var card: some View {
+    // The reset content, designed to live inside a card — either the login wizard's
+    // (embedded) or this view's own card (standalone, from Settings).
+    private var content: some View {
         VStack(alignment: .leading, spacing: 16) {
             header
 
@@ -67,6 +81,10 @@ struct ForgotPasswordView: View {
                 usernameStep
             case .challenge:
                 challengeStep
+            case .password:
+                passwordStep
+            case .success:
+                successStep
             case .locked:
                 lockedStep
             case .requested:
@@ -85,7 +103,7 @@ struct ForgotPasswordView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
 
-            if step != .requested {
+            if step != .requested && step != .success {
                 Button {
                     onDismiss()
                 } label: {
@@ -98,54 +116,36 @@ struct ForgotPasswordView: View {
                 .padding(.top, 2)
             }
         }
-        .frame(maxWidth: 430, alignment: .leading)
-        .padding(18)
-        .background {
-            RoundedRectangle(cornerRadius: 34, style: .continuous)
-                .fill(colors.background)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 34, style: .continuous)
-                        .fill(Color.white.opacity(colors.isDark ? 0.035 : 0.34))
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 34, style: .continuous)
-                        .stroke(colors.onSurface.opacity(colors.isDark ? 0.12 : 0.08), lineWidth: 1)
-                )
-        }
-        .shadow(color: Color.black.opacity(colors.isDark ? 0.34 : 0.14), radius: 14, x: 0, y: 10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .animation(.spring(response: 0.28, dampingFraction: 0.86), value: step)
     }
 
+    private var card: some View {
+        content
+            .frame(maxWidth: 430, alignment: .leading)
+            .padding(18)
+            .background {
+                RoundedRectangle(cornerRadius: 34, style: .continuous)
+                    .fill(colors.background)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 34, style: .continuous)
+                            .fill(Color.white.opacity(colors.isDark ? 0.035 : 0.34))
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 34, style: .continuous)
+                            .stroke(colors.onSurface.opacity(colors.isDark ? 0.12 : 0.08), lineWidth: 1)
+                    )
+            }
+            .shadow(color: Color.black.opacity(colors.isDark ? 0.34 : 0.14), radius: 14, x: 0, y: 10)
+    }
+
+    // Same red hero tile the Sign in panel uses, so the reset flow reads as the same dialog.
     private var header: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 8) {
-                Image(systemName: "lock.shield.fill")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(colors.primary)
-                Text(L("Reset your password"))
-                    .font(.tdayRounded(size: 20, weight: .heavy))
-                    .foregroundStyle(colors.onSurface)
-            }
-
-            if let stepSubtitle {
-                Text(L(stepSubtitle))
-                    .font(.tdayRounded(size: 14, weight: .bold))
-                    .foregroundStyle(colors.onSurface.opacity(0.62))
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        }
-    }
-
-    private var stepSubtitle: String? {
-        switch step {
-        case .username:
-            return nil
-        case .challenge:
-            return nil
-        case .locked:
-            return "Too many incorrect attempts. You can request a password reset from an administrator."
-        case .requested:
-            return "Your request has been sent. An administrator will reset your password and share a temporary one with you."
-        }
+        ForgotPasswordHeroTile(
+            title: "Reset your password",
+            systemImage: "lock.shield.fill",
+            tint: Color(red: 0.79, green: 0.47, blue: 0.50)
+        )
     }
 
     private var usernameStep: some View {
@@ -169,10 +169,11 @@ struct ForgotPasswordView: View {
         }
     }
 
+    // Step 2: answer the two security questions only. Verified before the password step.
     private var challengeStep: some View {
         VStack(alignment: .leading, spacing: 14) {
-            if let first = questions.first {
-                Text(first.text)
+            if shown.indices.contains(0) {
+                Text(shown[0].text)
                     .font(.tdayRounded(size: 15, weight: .bold))
                     .foregroundStyle(colors.onSurface)
                 ForgotPasswordField(
@@ -184,8 +185,8 @@ struct ForgotPasswordView: View {
                 )
             }
 
-            if questions.count > 1 {
-                Text(questions[1].text)
+            if shown.indices.contains(1) {
+                Text(shown[1].text)
                     .font(.tdayRounded(size: 15, weight: .bold))
                     .foregroundStyle(colors.onSurface)
                 ForgotPasswordField(
@@ -193,10 +194,23 @@ struct ForgotPasswordView: View {
                     text: $answer2,
                     autocapitalization: .never,
                     disableAutocorrection: true,
-                    submitLabel: .next
+                    submitLabel: .done,
+                    onSubmit: { Task { await verifyChallenge() } }
                 )
             }
 
+            ForgotPasswordPrimaryButton(
+                title: isBusy ? "Checking..." : "Verify answers",
+                enabled: challengeFilled && !isBusy
+            ) {
+                Task { await verifyChallenge() }
+            }
+        }
+    }
+
+    // Step 3: only reachable once the answers verify.
+    private var passwordStep: some View {
+        VStack(alignment: .leading, spacing: 14) {
             ForgotPasswordField(
                 title: "New password",
                 text: $newPassword,
@@ -216,7 +230,7 @@ struct ForgotPasswordView: View {
 
             ForgotPasswordPrimaryButton(
                 title: isBusy ? "Resetting..." : "Reset password",
-                enabled: challengeFieldsFilled && !isBusy
+                enabled: passwordFilled && !isBusy
             ) {
                 Task { await submitReset() }
             }
@@ -224,29 +238,74 @@ struct ForgotPasswordView: View {
     }
 
     private var lockedStep: some View {
-        ForgotPasswordPrimaryButton(
-            title: isBusy ? "Sending..." : "Request reset from an administrator",
-            enabled: !isBusy,
-            tint: colors.error
-        ) {
-            Task { await requestAdminReset() }
+        VStack(alignment: .leading, spacing: 14) {
+            Text(L("Too many incorrect attempts. You can request a password reset from an administrator."))
+                .font(.tdayRounded(size: 14, weight: .bold))
+                .foregroundStyle(colors.onSurface.opacity(0.62))
+                .fixedSize(horizontal: false, vertical: true)
+
+            ForgotPasswordPrimaryButton(
+                title: isBusy ? "Sending..." : "Request reset from an administrator",
+                enabled: !isBusy,
+                tint: colors.error
+            ) {
+                Task { await requestAdminReset() }
+            }
         }
     }
 
     private var requestedStep: some View {
-        ForgotPasswordPrimaryButton(
-            title: "Back to sign in",
-            enabled: true
-        ) {
-            onDismiss()
+        VStack(alignment: .leading, spacing: 14) {
+            Text(L("Your request has been sent. An administrator will reset your password and share a temporary one with you."))
+                .font(.tdayRounded(size: 14, weight: .bold))
+                .foregroundStyle(colors.onSurface.opacity(0.62))
+                .fixedSize(horizontal: false, vertical: true)
+
+            ForgotPasswordPrimaryButton(
+                title: "Back to sign in",
+                enabled: true
+            ) {
+                onDismiss()
+            }
         }
     }
 
-    private var challengeFieldsFilled: Bool {
+    // Step 4: confirmation. Auto-returns to sign in after a short pause; OK skips the wait.
+    private var successStep: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 8) {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(colors.primary)
+                Text(L("Password changed"))
+                    .font(.tdayRounded(size: 16, weight: .heavy))
+                    .foregroundStyle(colors.onSurface)
+            }
+
+            ForgotPasswordPrimaryButton(title: "OK", enabled: true) {
+                completeReset()
+            }
+        }
+        .task {
+            try? await Task.sleep(nanoseconds: 2_000_000_000)
+            completeReset()
+        }
+    }
+
+    // Fires the reset-complete callback exactly once, whether by the 2s timer or the OK button.
+    private func completeReset() {
+        guard !didComplete else { return }
+        didComplete = true
+        onResetComplete(username)
+    }
+
+    private var challengeFilled: Bool {
         !answer1.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
-            !answer2.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
-            !newPassword.isEmpty &&
-            !confirmPassword.isEmpty
+            !answer2.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private var passwordFilled: Bool {
+        !newPassword.isEmpty && !confirmPassword.isEmpty
     }
 
     private func lookupQuestions() async {
@@ -259,26 +318,72 @@ struct ForgotPasswordView: View {
         }
         isBusy = true
         defer { isBusy = false }
-        guard let fetched = await authViewModel.fetchQuestionsForUsername(normalized) else {
-            errorMessage = "Unable to load security questions."
-            return
+        switch await authViewModel.lookupQuestions(normalized) {
+        case let .found(fetched):
+            guard fetched.count >= 2 else {
+                errorMessage = "Security questions are unavailable for this account."
+                return
+            }
+            questions = fetched
+            shown = Array(fetched.prefix(2))
+            answer1 = ""
+            answer2 = ""
+            username = normalized
+            step = .challenge
+        case .notFound:
+            errorMessage = "We couldn't find an account with that username."
+        case let .error(message):
+            errorMessage = message.isEmpty ? "Unable to load security questions." : message
         }
-        guard fetched.count >= 2 else {
-            errorMessage = "Security questions are unavailable for this account."
-            return
+    }
+
+    private func verifyChallenge() async {
+        errorMessage = nil
+        guard shown.count >= 2 else { return }
+        isBusy = true
+        defer { isBusy = false }
+        let answers = [
+            SecurityAnswerInput(questionId: shown[0].id, answer: answer1.trimmingCharacters(in: .whitespacesAndNewlines)),
+            SecurityAnswerInput(questionId: shown[1].id, answer: answer2.trimmingCharacters(in: .whitespacesAndNewlines)),
+        ]
+        switch await authViewModel.verifyAnswers(username: username, answers: answers) {
+        case .valid:
+            verifiedAnswers = answers
+            newPassword = ""
+            confirmPassword = ""
+            step = .password
+        case let .invalid(results):
+            let wrongIds = Set(results.filter { !$0.correct }.map { $0.questionId })
+            cycleFailedQuestions(wrongIds: wrongIds.isEmpty ? Set(shown.map { $0.id }) : wrongIds)
+            failedAttempts += 1
+            errorMessage = failedAttempts > 2
+                ? "Those answers didn't match. Please contact an administrator to reset your password."
+                : "Those answers didn't match. Please try again."
+        case .locked:
+            step = .locked
+        case let .error(message):
+            errorMessage = message.isEmpty ? "Unable to verify your answers." : message
         }
-        questions = fetched
-        username = normalized
-        step = .challenge
+    }
+
+    // Swap each wrongly-answered question for a random not-yet-shown one (cycling the 3rd
+    // question in). With only two stored questions there's nothing to swap.
+    private func cycleFailedQuestions(wrongIds: Set<Int>) {
+        var pool = questions.filter { q in !shown.contains(where: { $0.id == q.id }) }
+        answer1 = ""
+        answer2 = ""
+        guard !pool.isEmpty else { return }
+        shown = shown.map { question in
+            if wrongIds.contains(question.id), let idx = pool.indices.randomElement() {
+                return pool.remove(at: idx)
+            }
+            return question
+        }
     }
 
     private func submitReset() async {
         errorMessage = nil
         infoMessage = nil
-        guard questions.count >= 2 else {
-            errorMessage = "Security questions are unavailable for this account."
-            return
-        }
         guard newPassword.count >= 8 else {
             errorMessage = "Password must be at least 8 characters"
             return
@@ -299,28 +404,22 @@ struct ForgotPasswordView: View {
         isBusy = true
         defer { isBusy = false }
 
-        let answers = [
-            SecurityAnswerInput(questionId: questions[0].id, answer: answer1.trimmingCharacters(in: .whitespacesAndNewlines)),
-            SecurityAnswerInput(questionId: questions[1].id, answer: answer2.trimmingCharacters(in: .whitespacesAndNewlines)),
-        ]
-
         let result = await authViewModel.resetPassword(
             username: username,
-            answers: answers,
+            answers: verifiedAnswers,
             newPassword: newPassword
         )
         switch result {
         case .success:
-            onResetComplete(username)
+            step = .success
         case .locked:
             step = .locked
-        case let .failed(message):
-            failedAttempts += 1
-            let base = message.isEmpty ? "Those answers didn't match. Please try again." : message
-            // After more than two failed attempts, point the user to an admin reset.
-            errorMessage = failedAttempts > 2
-                ? "\(base) Please contact an administrator to reset your password."
-                : base
+        case .failed:
+            // Answers no longer line up (e.g. cycled mid-flight) — back to the questions.
+            step = .challenge
+            answer1 = ""
+            answer2 = ""
+            errorMessage = "Please re-enter your security answers."
         case let .error(message):
             errorMessage = message.isEmpty ? "Unable to reset password. Please try again." : message
         }
@@ -337,6 +436,54 @@ struct ForgotPasswordView: View {
         } else {
             errorMessage = "Unable to send request. Please try again."
         }
+    }
+}
+
+// Mirrors the login wizard's WizardHeroTile so the reset flow shares the same dialog look.
+private struct ForgotPasswordHeroTile: View {
+    let title: String
+    let systemImage: String
+    let tint: Color
+
+    var body: some View {
+        ZStack(alignment: .trailing) {
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .fill(tint)
+                .overlay(
+                    RadialGradient(
+                        colors: [Color.white.opacity(0.24), Color.white.opacity(0.08), .clear],
+                        center: UnitPoint(x: 0.18, y: 0.18),
+                        startRadius: 0,
+                        endRadius: 210
+                    )
+                )
+
+            Image(systemName: systemImage)
+                .font(.system(size: 82, weight: .regular))
+                .foregroundStyle(Color.white.opacity(0.2))
+                .offset(x: 20, y: 12)
+
+            HStack(spacing: 12) {
+                Image(systemName: systemImage)
+                    .font(.system(size: 23, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 42, height: 42)
+                    .background(Color.white.opacity(0.18), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+
+                Text(L(title))
+                    .font(.tdayRounded(size: 21, weight: .bold))
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.82)
+
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 14)
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: 78)
+        .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
+        .shadow(color: tint.opacity(0.16), radius: 9, x: 0, y: 7)
     }
 }
 

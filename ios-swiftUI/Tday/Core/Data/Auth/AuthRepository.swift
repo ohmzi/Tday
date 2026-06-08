@@ -6,6 +6,8 @@ protocol AuthRepositoryServicing: AnyObject {
     func register(firstName: String, lastName: String, username: String, password: String, securityAnswers: [SecurityAnswerInput]) async -> RegisterOutcome
     func fetchAllSecurityQuestions() async throws -> [SecurityQuestion]
     func fetchQuestionsForUsername(_ username: String) async throws -> [SecurityQuestion]
+    func lookupQuestions(_ username: String) async -> LookupQuestionsOutcome
+    func verifyAnswers(username: String, answers: [SecurityAnswerInput]) async -> VerifyAnswersOutcome
     func resetPassword(username: String, answers: [SecurityAnswerInput], newPassword: String) async -> PasswordResetResult
     func requestAdminReset(_ username: String) async -> Bool
     func setSecurityQuestions(_ answers: [SecurityAnswerInput]) async -> Bool
@@ -214,6 +216,41 @@ final class AuthRepository: AuthRepositoryServicing {
             if isLikelyConnectivityIssue(error) {
                 return .error(Self.serverUnreachableMessage)
             }
+            return .error(error.localizedDescription)
+        }
+    }
+
+    func lookupQuestions(_ username: String) async -> LookupQuestionsOutcome {
+        do {
+            let questions = try await api.getSecurityQuestions(
+                username: username.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            ).questions
+            return .found(questions)
+        } catch let apiError as APIError {
+            if apiError.reason == "user_not_found" { return .notFound }
+            if isLikelyConnectivityIssue(apiError) { return .error(Self.serverUnreachableMessage) }
+            return .error(apiError.message)
+        } catch {
+            if isLikelyConnectivityIssue(error) { return .error(Self.serverUnreachableMessage) }
+            return .error(error.localizedDescription)
+        }
+    }
+
+    func verifyAnswers(username: String, answers: [SecurityAnswerInput]) async -> VerifyAnswersOutcome {
+        do {
+            let response = try await api.verifySecurityAnswers(
+                payload: VerifySecurityAnswersRequest(
+                    username: username.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(),
+                    answers: answers
+                )
+            )
+            return response.valid ? .valid : .invalid(response.results)
+        } catch let apiError as APIError {
+            if apiError.reason == "reset_locked" { return .locked }
+            if isLikelyConnectivityIssue(apiError) { return .error(Self.serverUnreachableMessage) }
+            return .error(apiError.message)
+        } catch {
+            if isLikelyConnectivityIssue(error) { return .error(Self.serverUnreachableMessage) }
             return .error(error.localizedDescription)
         }
     }
