@@ -1859,6 +1859,9 @@ struct TodoListScreen: View {
                 .listRowSpacing(0)
                 .listSectionSpacing(0)
                 .scrollBounceBehavior(pullRefreshEnabled ? .always : .basedOnSize, axes: .vertical)
+                // Freeze list scrolling while a task is being dragged so the drop
+                // target stays put under the finger (matches Calendar).
+                .scrollDisabled(inAppDrag != nil)
                 .environment(\.defaultMinListRowHeight, 1)
                 .disableVerticalScrollBounce(!pullRefreshEnabled)
                 .animation(todoDropPlaceholderAnimation, value: activeDropSectionId)

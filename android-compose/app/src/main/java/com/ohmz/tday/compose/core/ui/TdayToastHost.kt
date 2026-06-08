@@ -8,8 +8,8 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -19,12 +19,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -40,16 +35,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.dp
-import com.ohmz.tday.compose.R
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.hazeChild
 import kotlinx.coroutines.launch
 
 private const val TOAST_ENTER_FADE_DURATION_MS = 180
@@ -84,6 +79,7 @@ data class TdayToastData(
 fun TdayToastHost(
     toast: TdayToastData?,
     onDismiss: () -> Unit,
+    hazeState: HazeState,
     modifier: Modifier = Modifier,
 ) {
     LaunchedEffect(toast?.id, toast?.autoDismissMillis) {
@@ -125,6 +121,7 @@ fun TdayToastHost(
             TdayToastCard(
                 toast = visibleToast,
                 onDismiss = onDismiss,
+                hazeState = hazeState,
             )
         }
     }
@@ -134,27 +131,23 @@ fun TdayToastHost(
 private fun TdayToastCard(
     toast: TdayToastData,
     onDismiss: () -> Unit,
+    hazeState: HazeState,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val isDark = colorScheme.background.luminance() < 0.5f
     val fadeDistancePx = with(LocalDensity.current) { TOAST_FADE_DISTANCE_DP.dp.toPx() }
-    val containerColor = if (isDark) {
-        lerp(colorScheme.surfaceVariant, colorScheme.primary, 0.16f)
-    } else {
-        lerp(colorScheme.surfaceVariant, colorScheme.primary, 0.10f)
+    // Icons are removed app-wide; the variant cue now lives in the card surface. The
+    // card is translucent — the frosted backdrop comes from Haze (hazeChild below).
+    // Issue/error toasts get a red translucent shade; info/success get a neutral one.
+    val containerColor = when (toast.kind) {
+        TdayToastKind.ERROR -> colorScheme.error.copy(alpha = if (isDark) 0.32f else 0.22f)
+        else -> colorScheme.surface.copy(alpha = if (isDark) 0.45f else 0.60f)
     }
-    // The variant colour cue lives in the icon chip + action label; the card surface
-    // itself stays neutral, matching the app's card design language.
+    // The accent now only colours the optional action-label button.
     val accentColor = when (toast.kind) {
         TdayToastKind.ERROR -> colorScheme.error
         TdayToastKind.SUCCESS -> TOAST_BRAND_ACCENT
         TdayToastKind.INFO -> TOAST_BRAND_ACCENT
-    }
-    val iconContainerColor = accentColor.copy(alpha = if (isDark) 0.22f else 0.14f)
-    val toastIcon = toast.icon ?: when (toast.kind) {
-        TdayToastKind.ERROR -> ImageVector.vectorResource(R.drawable.ic_lucide_circle_alert)
-        TdayToastKind.SUCCESS -> ImageVector.vectorResource(R.drawable.ic_lucide_circle_check_big)
-        TdayToastKind.INFO -> ImageVector.vectorResource(R.drawable.ic_lucide_info)
     }
     val scope = rememberCoroutineScope()
     val onDismissState by rememberUpdatedState(onDismiss)
@@ -169,7 +162,8 @@ private fun TdayToastCard(
     val toastAlpha = 1f - (dragProgress * 0.55f)
     val toastScale = 1f - (dragProgress * 0.03f)
 
-    Card(
+    val toastShape = RoundedCornerShape(TOAST_CORNER_RADIUS)
+    Box(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 20.dp)
@@ -179,6 +173,17 @@ private fun TdayToastCard(
                 scaleX = toastScale
                 scaleY = toastScale
             }
+            // Drop shadow (matches the old Card elevation) + clip so the frosted
+            // Haze backdrop and the translucent tint round to the toast shape.
+            .shadow(elevation = if (isDark) 8.dp else 6.dp, shape = toastShape)
+            .clip(toastShape)
+            .hazeChild(state = hazeState)
+            .background(containerColor)
+            .border(
+                width = 1.dp,
+                color = colorScheme.outlineVariant.copy(alpha = if (isDark) 0.52f else 0.72f),
+                shape = toastShape,
+            )
             .pointerInput(toast.id) {
                 detectDragGestures(
                     onDragStart = {
@@ -232,33 +237,12 @@ private fun TdayToastCard(
                 )
             }
             .then(tapModifier),
-        shape = RoundedCornerShape(TOAST_CORNER_RADIUS),
-        colors = CardDefaults.cardColors(containerColor = containerColor),
-        border = BorderStroke(
-            width = 1.dp,
-            color = colorScheme.outlineVariant.copy(alpha = if (isDark) 0.52f else 0.72f),
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = if (isDark) 8.dp else 6.dp),
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box(
-                modifier = Modifier
-                    .size(38.dp)
-                    .clip(CircleShape)
-                    .background(iconContainerColor, CircleShape),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = toastIcon,
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp),
-                    tint = accentColor,
-                )
-            }
             Box(
                 modifier = Modifier
                     .weight(1f)

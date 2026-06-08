@@ -73,8 +73,6 @@ import com.ohmz.tday.compose.core.ui.SnackbarKind
 import com.ohmz.tday.compose.core.ui.TdayToastData
 import com.ohmz.tday.compose.core.ui.TdayToastHost
 import com.ohmz.tday.compose.core.ui.TdayToastKind
-import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.haze
 import com.ohmz.tday.compose.feature.app.AppUiState
 import com.ohmz.tday.compose.feature.app.AppViewModel
 import com.ohmz.tday.compose.feature.app.ProfileEditResult
@@ -106,6 +104,8 @@ import com.ohmz.tday.compose.ui.theme.TdayDimens
 import com.ohmz.tday.compose.ui.theme.TdayFloaterAccent
 import com.ohmz.tday.compose.ui.theme.TdayTheme
 import com.ohmz.tday.compose.ui.theme.TdayTodayBlue
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.haze
 import io.sentry.android.navigation.SentryNavigationListener
 import kotlin.math.roundToInt
 
@@ -278,10 +278,14 @@ fun TdayApp(
     )
 
     TdayTheme(themeMode = appUiState.themeMode) {
+        // Blur source for the bottom toast: the whole nav content is captured so the
+        // toast's hazeChild can render a translucent frosted backdrop (matches iOS).
+        val hazeState = remember { HazeState() }
         Box(modifier = Modifier.fillMaxSize()) {
             NavHost(
                 navController = navController,
                 startDestination = AppRoute.Splash.route,
+                modifier = Modifier.haze(hazeState),
                 enterTransition = {
                     fadeIn(
                         animationSpec = tween(
@@ -1095,6 +1099,7 @@ fun TdayApp(
             TdayToastHost(
                 toast = activeToast,
                 onDismiss = { activeToast = null },
+                hazeState = hazeState,
             )
         }
     }
