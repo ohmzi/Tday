@@ -1200,7 +1200,7 @@ export default function CalendarClient() {
       </div>
         <DragOverlay dropAnimation={null}>
           {activeTodo ? (
-            <div className="pointer-events-none w-[min(20rem,80vw)] rounded-[20px] border border-white/70 bg-card px-4 py-3 shadow-[0_24px_48px_-20px_hsl(var(--shadow)/0.6)] dark:border-white/10">
+            <div className="pointer-events-none w-[min(20rem,80vw)] rounded-[20px] border border-white/70 bg-card px-4 py-3 opacity-70 shadow-[0_24px_48px_-20px_hsl(var(--shadow)/0.6)] dark:border-white/10">
               <p className="line-clamp-1 text-[0.98rem] font-black leading-5 text-foreground">
                 {activeTodo.title}
               </p>
