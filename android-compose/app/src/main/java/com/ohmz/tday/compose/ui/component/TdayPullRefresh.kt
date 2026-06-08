@@ -88,6 +88,14 @@ fun TdayPullToRefreshBox(
         }
     }
 
+    // PullToRefreshBox only moves the indicator; translate the content too so the
+    // whole screen follows the pull (and rests under the pill while refreshing),
+    // mirroring the indicator's own offset math below.
+    val refreshingContentOffset by animateDpAsState(
+        targetValue = if (effectiveRefreshing) TdayDimens.PullRefreshRefreshingOffset else 0.dp,
+        label = "pullRefreshContentOffset",
+    )
+
     PullToRefreshBox(
         isRefreshing = effectiveRefreshing,
         onRefresh = {
@@ -108,7 +116,16 @@ fun TdayPullToRefreshBox(
         },
         content = {
             Box(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        translationY = if (effectiveRefreshing) {
+                            refreshingContentOffset.toPx()
+                        } else {
+                            state.distanceFraction *
+                                    PullToRefreshDefaults.PositionalThreshold.toPx()
+                        }
+                    },
                 contentAlignment = contentAlignment,
                 content = content,
             )
