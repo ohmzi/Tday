@@ -136,13 +136,10 @@ private fun TdayToastCard(
     val colorScheme = MaterialTheme.colorScheme
     val isDark = colorScheme.background.luminance() < 0.5f
     val fadeDistancePx = with(LocalDensity.current) { TOAST_FADE_DISTANCE_DP.dp.toPx() }
-    // Icons are removed app-wide; the variant cue now lives in the card surface. The
-    // card is translucent — the frosted backdrop comes from Haze (hazeChild below).
-    // Issue/error toasts get a red translucent shade; info/success get a neutral one.
-    val containerColor = when (toast.kind) {
-        TdayToastKind.ERROR -> colorScheme.error.copy(alpha = if (isDark) 0.32f else 0.22f)
-        else -> colorScheme.surface.copy(alpha = if (isDark) 0.45f else 0.60f)
-    }
+    // Icons are removed app-wide. Every toast shares one neutral frosted surface
+    // (matches iOS/web) — no per-variant red tint, just text over the Haze blur
+    // (hazeChild below).
+    val containerColor = colorScheme.surface.copy(alpha = if (isDark) 0.45f else 0.60f)
     // The accent now only colours the optional action-label button.
     val accentColor = when (toast.kind) {
         TdayToastKind.ERROR -> colorScheme.error
