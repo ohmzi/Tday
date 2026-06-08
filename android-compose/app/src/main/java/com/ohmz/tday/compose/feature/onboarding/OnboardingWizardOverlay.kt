@@ -172,6 +172,12 @@ fun OnboardingWizardOverlay(
     var isConnecting by rememberSaveable { mutableStateOf(false) }
     var isResettingTrust by rememberSaveable { mutableStateOf(false) }
     var isRegisterInFlight by rememberSaveable { mutableStateOf(false) }
+    // Held true from login submit until the app authenticates (overlay unmounts),
+    // so the loading panel stays up through the gap between authViewModel.isLoading
+    // flipping false and AppViewModel.authenticated flipping true — otherwise the
+    // sign-in form flashes for a frame. Reset on failure/pending so the form
+    // returns. Transient (not saveable) to avoid a stuck spinner after process death.
+    var isCompletingAuthentication by remember { mutableStateOf(false) }
     var hasRequestedSavedServerUrl by rememberSaveable { mutableStateOf(false) }
     var serverUrlLoadedFromSystemCredential by rememberSaveable { mutableStateOf(false) }
     var canRequestSavedLoginCredential by rememberSaveable(initialServerUrl) {
@@ -244,6 +250,7 @@ fun OnboardingWizardOverlay(
         focusManager.clearFocus(force = true)
         localAuthError = null
         onClearAuthStatus()
+        isCompletingAuthentication = true
         onLogin(userUsername, password, LoginCredentialSource.MANUAL)
     }
     val createAccount: () -> Unit = createAccount@{
@@ -418,6 +425,7 @@ fun OnboardingWizardOverlay(
             localAuthError = null
             onClearAuthStatus()
             delay(CREDENTIAL_PROMPT_SETTLE_DELAY_MS)
+            isCompletingAuthentication = true
             onLogin(
                 credential.username,
                 credential.password,
@@ -427,9 +435,18 @@ fun OnboardingWizardOverlay(
         }
     }
 
+    // A failed or pending login drops back to the form (so the error shows). On
+    // success this flag stays true, holding the loading panel until the overlay
+    // unmounts to home — no sign-in form flash. Mirrors iOS.
+    LaunchedEffect(authUiState.errorMessage, authUiState.pendingApproval) {
+        if (authUiState.errorMessage != null || authUiState.pendingApproval) {
+            isCompletingAuthentication = false
+        }
+    }
+
     val viewState = when {
         isConnecting -> WizardViewState.CONNECTING
-        authUiState.isLoading -> WizardViewState.AUTHENTICATING
+        authUiState.isLoading || isCompletingAuthentication -> WizardViewState.AUTHENTICATING
         step == WizardStep.LOGIN -> WizardViewState.LOGIN
         step == WizardStep.SERVER -> WizardViewState.SERVER
         else -> WizardViewState.MODE

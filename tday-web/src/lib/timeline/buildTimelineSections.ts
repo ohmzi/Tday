@@ -62,7 +62,7 @@ const dayLabel = (dayKey: string, locale: string) =>
     .formatToParts(new Date(`${dayKey}T12:00:00Z`))
     .filter((part) => !(part.type === "literal" && /,/.test(part.value)))
     .map((part) => (part.type === "literal" ? part.value.replace(/,/g, "") : part.value))
-    .join("")
+    .join(" ")
     .replace(/\s+/g, " ")
     .trim();
 

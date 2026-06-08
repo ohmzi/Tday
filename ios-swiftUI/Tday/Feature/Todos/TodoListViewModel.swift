@@ -164,6 +164,33 @@ final class TodoListViewModel {
         }
     }
 
+    // Today screen: set a task's time-of-day (Morning / Afternoon / Tonight)
+    // without changing its date. Sibling of `moveTask(toDay:)`.
+    func moveTask(_ todo: TodoItem, toTimeOfDay hour: Int, scope: TaskRescheduleScope) async {
+        let calendar = Calendar.current
+        guard let due = todo.due,
+              let movedDue = movedDueToTimeOfDay(due: due, hour: hour, calendar: calendar),
+              movedDue != due else {
+            return
+        }
+
+        var telemetryData = taskTelemetryData(mode: mode, scope: scope)
+        telemetryData["source"] = "todo_list"
+        TdayTelemetry.addBreadcrumb("task.reschedule", data: telemetryData)
+        do {
+            try await container.todoRepository.moveTodo(
+                todo.repositoryTargetForReschedule(scope: scope),
+                due: movedDue
+            )
+            hydrateFromCache()
+        } catch {
+            container.snackbarManager.show(
+                userFacingMessage(for: error, fallback: "Could not update task."),
+                kind: .error
+            )
+        }
+    }
+
     func complete(_ todo: TodoItem) async {
         TdayTelemetry.addBreadcrumb("task.complete", data: taskTelemetryData(mode: mode))
         do {

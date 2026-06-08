@@ -19,6 +19,7 @@ import com.ohmz.tday.compose.core.model.TodoListMode
 import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
 import com.ohmz.tday.compose.core.model.capitalizeFirstListLetter
 import com.ohmz.tday.compose.core.model.movedDuePreservingTime
+import com.ohmz.tday.compose.core.model.movedDueToTimeOfDay
 import com.ohmz.tday.compose.core.model.repositoryTargetForReschedule
 import com.ohmz.tday.compose.core.notification.TaskReminderScheduler
 import com.ohmz.tday.compose.core.observability.TdayTelemetry
@@ -351,9 +352,26 @@ class TodoListViewModel @Inject constructor(
         )
     }
 
+    // Today screen: set a task's time of day (Morning / Afternoon / Tonight)
+    // without changing its date. Sibling of [moveTask].
+    fun moveTaskToTimeOfDay(todo: TodoItem, hour: Int, scope: TaskRescheduleScope) {
+        val due = todo.due ?: return
+        val movedDue = movedDueToTimeOfDay(due, hour)
+        if (movedDue == due) return
+        applyMovedDue(todo, movedDue, scope)
+    }
+
     fun moveTask(todo: TodoItem, targetDate: LocalDate, scope: TaskRescheduleScope) {
         val due = todo.due ?: return
         val movedDue = movedDuePreservingTime(due, targetDate)
+        applyMovedDue(todo, movedDue, scope)
+    }
+
+    private fun applyMovedDue(
+        todo: TodoItem,
+        movedDue: java.time.Instant,
+        scope: TaskRescheduleScope
+    ) {
         val previousState = _uiState.value
         val mode = previousState.mode
         val currentListId = previousState.listId

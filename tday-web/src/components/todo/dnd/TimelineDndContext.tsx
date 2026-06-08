@@ -14,7 +14,6 @@ import {
 } from "@dnd-kit/core";
 import { format } from "date-fns";
 import { TodoItemType } from "@/types";
-import { useUserPreferences } from "@/providers/UserPreferencesProvider";
 import { useTimelineReschedule } from "./useTimelineReschedule";
 import { overlayCardClass } from "./timelineDndClasses";
 import { hapticDragStart, hapticDragOver, hapticDrop } from "@/lib/haptics";
@@ -49,7 +48,6 @@ export default function TimelineDndContext({
   timeZone?: string;
   children: React.ReactNode;
 }) {
-  const { preferences } = useUserPreferences();
   const reschedule = useTimelineReschedule(timeZone);
   const [activeTodo, setActiveTodo] = useState<TodoItemType | null>(null);
   const [overSectionKey, setOverSectionKey] = useState<string | null>(null);
@@ -79,25 +77,17 @@ export default function TimelineDndContext({
     setOverSectionKey(null);
   }, []);
 
-  const handleDragStart = useCallback(
-    (event: DragStartEvent) => {
-      if (preferences?.sortBy) {
-        // A global sort is active — silently block the drag (no toast).
-        return;
-      }
-      const data = event.active.data.current as TimelineDraggableData | undefined;
-      setActiveTodo(data?.todo ?? null);
-      hapticDragStart();
-    },
-    [preferences?.sortBy],
-  );
+  const handleDragStart = useCallback((event: DragStartEvent) => {
+    const data = event.active.data.current as TimelineDraggableData | undefined;
+    setActiveTodo(data?.todo ?? null);
+    hapticDragStart();
+  }, []);
 
   const handleDragOver = useCallback(
     (event: DragOverEvent) => {
       const over = event.over?.data.current as TimelineDroppableData | undefined;
       const active = event.active.data.current as TimelineDraggableData | undefined;
       if (
-        preferences?.sortBy ||
         !over ||
         over.targetDayKey == null ||
         over.targetDayKey === active?.currentDayKey
@@ -108,7 +98,7 @@ export default function TimelineDndContext({
       setOverSectionKey(over.sectionKey);
       hapticDragOver();
     },
-    [preferences?.sortBy],
+    [],
   );
 
   const handleDragEnd = useCallback(
@@ -116,14 +106,13 @@ export default function TimelineDndContext({
       const active = event.active.data.current as TimelineDraggableData | undefined;
       const over = event.over?.data.current as TimelineDroppableData | undefined;
       clear();
-      if (preferences?.sortBy) return;
       if (!active?.todo || !over) return;
       const { targetDayKey } = over;
       if (targetDayKey == null || targetDayKey === active.currentDayKey) return;
       hapticDrop();
       reschedule(active.todo, targetDayKey);
     },
-    [clear, preferences?.sortBy, reschedule],
+    [clear, reschedule],
   );
 
   return (
