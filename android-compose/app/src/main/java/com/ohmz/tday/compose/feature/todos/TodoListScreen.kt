@@ -3789,7 +3789,7 @@ private fun SwipeTaskRow(
         modifier = Modifier
             .fillMaxWidth()
             .graphicsLayer {
-                alpha = if (dragging) completionAlpha * 0.55f else completionAlpha
+                alpha = if (dragging) completionAlpha * 0.7f else completionAlpha
                 translationY = completionOffsetY.toPx()
             },
         verticalArrangement = Arrangement.spacedBy(4.dp),

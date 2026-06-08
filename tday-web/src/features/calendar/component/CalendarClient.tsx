@@ -644,7 +644,7 @@ function CalendarTaskRow({
         }
         className={cn(
           "group relative max-w-full overflow-hidden sm:overflow-visible",
-          isDragging && "opacity-40",
+          isDragging && "opacity-70",
         )}
       >
         {/* Mobile: Edit + Delete revealed behind the row by a left swipe. */}

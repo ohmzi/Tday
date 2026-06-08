@@ -134,7 +134,7 @@ export default function FloaterItemContainer({
         {...listeners}
         className={clsx(
           "group relative max-w-full overflow-hidden sm:overflow-visible",
-          isDragging && "opacity-80",
+          isDragging && "opacity-70",
         )}
       >
         <div
