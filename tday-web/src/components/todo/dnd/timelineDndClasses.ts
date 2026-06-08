@@ -27,6 +27,8 @@ export const placeholderRestClass = "h-6 opacity-60";
 export const placeholderActiveClass =
   "h-14 border-solid border-destructive/60 bg-destructive/[0.06] opacity-100 animate-in fade-in";
 
-// The lifted card rendered inside the DragOverlay.
+// The lifted card rendered inside the DragOverlay. Kept at 70% opacity so the
+// dragged task reads as 30% transparent while moving — matches the lifted-row
+// dimming on iOS/Android and the in-place ghost left behind in the list.
 export const overlayCardClass =
-  "pointer-events-none w-[min(20rem,80vw)] rounded-[20px] border border-white/70 bg-card px-4 py-3 shadow-[0_24px_48px_-20px_hsl(var(--shadow)/0.6)] ring-1 ring-destructive/25 dark:border-white/10";
+  "pointer-events-none w-[min(20rem,80vw)] rounded-[20px] border border-white/70 bg-card px-4 py-3 opacity-70 shadow-[0_24px_48px_-20px_hsl(var(--shadow)/0.6)] ring-1 ring-destructive/25 dark:border-white/10";
