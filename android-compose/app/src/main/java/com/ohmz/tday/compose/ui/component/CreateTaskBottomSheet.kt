@@ -124,7 +124,6 @@ private enum class RepeatPreset(
 }
 
 private const val DEFAULT_TASK_DURATION_MS = 60L * 60L * 1000L
-private const val CREATE_TASK_SHEET_CREATE_HEIGHT_FRACTION = 0.74f
 private const val CREATE_TASK_SHEET_FLOATER_CREATE_HEIGHT_FRACTION = 0.54f
 private const val CREATE_TASK_SHEET_EDIT_HEIGHT_FRACTION = 0.76f
 private const val CREATE_TASK_SHEET_FLOATER_EDIT_HEIGHT_FRACTION = 0.54f
@@ -288,8 +287,6 @@ fun CreateTaskBottomSheet(
             usesFloaterCreateModal ||
             usesScheduledEditModal ||
             usesFloaterEditModal
-    val createSheetHeight = (screenHeight * CREATE_TASK_SHEET_CREATE_HEIGHT_FRACTION)
-        .coerceAtMost(maxSheetHeight)
     val floaterCreateSheetHeight = (screenHeight * CREATE_TASK_SHEET_FLOATER_CREATE_HEIGHT_FRACTION)
         .coerceAtMost(maxSheetHeight)
     val editSheetHeight = (screenHeight * CREATE_TASK_SHEET_EDIT_HEIGHT_FRACTION)
@@ -405,7 +402,17 @@ fun CreateTaskBottomSheet(
                             if (reserveKeyboardLayout) {
                                 Modifier.height(keyboardSheetHeight)
                             } else if (usesTallCreateModal) {
-                                Modifier.height(createSheetHeight)
+                                // Wrap content (like the floater create sheet) so the
+                                // bottom padding under the last row matches; a fixed
+                                // height left extra space below Repeat.
+                                Modifier
+                                    .animateContentSize(
+                                        animationSpec = tween(
+                                            durationMillis = CREATE_TASK_SHEET_MOTION_MS,
+                                            easing = FastOutSlowInEasing,
+                                        ),
+                                    )
+                                    .heightIn(min = floaterCreateSheetHeight, max = maxSheetHeight)
                             } else if (usesScheduledEditModal) {
                                 Modifier.height(editSheetHeight)
                             } else if (usesFloaterCreateModal) {
