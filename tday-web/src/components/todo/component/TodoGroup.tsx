@@ -11,7 +11,6 @@ import { useCallback, useEffect, useState } from "react";
 import { TodoItemContainer } from "./TodoItemContainer";
 import { useTodoMutation } from "@/providers/TodoMutationProvider";
 import { useUserPreferences } from "@/providers/UserPreferencesProvider";
-import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
 const TodoGroup = ({
@@ -31,7 +30,6 @@ const TodoGroup = ({
   reorderable?: boolean;
   showOverdueTag?: boolean;
 }) => {
-  const { toast } = useToast()
   const { preferences } = useUserPreferences();
   const { useReorderTodo } = useTodoMutation();
   const { reorderMutateFn } = useReorderTodo();
@@ -119,8 +117,9 @@ const TodoGroup = ({
             onDragStart={
               showDragDisabledToast
                 ? (e) => {
+                    // A global sort/filter is active — silently block the drag
+                    // (no toast, per the unified toast policy).
                     e.preventDefault();
-                    toast({ title: "Drag disabled; a global filter is active" });
                   }
                 : undefined
             }

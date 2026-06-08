@@ -35,7 +35,6 @@
 		2D4CE01CFE08086ACC160F8B /* TdayAPIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78690CB92403D76DCA200972 /* TdayAPIService.swift */; };
 		2E1D50F9EEE6B8D7D9B14AEA /* TodoListScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62AD2C2DD2233FCBB4611E95 /* TodoListScreen.swift */; };
 		3172D88F15D3395465E578E3 /* TaskReminderScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D7ACBCBA57903A93BEC3BFA /* TaskReminderScheduler.swift */; };
-		3667E1D45490DE558553F39F /* OfflineBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC35A6A50C3BFA68468FEDF9 /* OfflineBanner.swift */; };
 		384B88FF643D87A6157C76C2 /* Nunito.ttf in Resources */ = {isa = PBXBuildFile; fileRef = D9D2A99D6C098B63352D4FB8 /* Nunito.ttf */; };
 		3E0BE8F327DB1A2EE5B101C4 /* ReminderPreferenceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3407352DB3FED037D2A26BF /* ReminderPreferenceStore.swift */; };
 		434143484D41505045525300 /* CacheMappersDateParsingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 434143484D41505045525301 /* CacheMappersDateParsingTests.swift */; };
@@ -206,7 +205,6 @@
 		A64D35F145CD4F1CE4B6C558 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
 		AB49A43AFEE66EEDB3315F86 /* OfflineSyncModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineSyncModels.swift; sourceTree = "<group>"; };
 		AC2B21F3E1A43EAEECA86EE8 /* Colors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Colors.swift; sourceTree = "<group>"; };
-		AC35A6A50C3BFA68468FEDF9 /* OfflineBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineBanner.swift; sourceTree = "<group>"; };
 		AD41A49221B1A947AF8A94D0 /* ThemeStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeStore.swift; sourceTree = "<group>"; };
 		9F8E7D6C5B4A00000000F101 /* LanguageStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LanguageStore.swift; sourceTree = "<group>"; };
 		9F8E7D6C5B4A00000000F102 /* AppLanguage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLanguage.swift; sourceTree = "<group>"; };
@@ -669,7 +667,6 @@
 				AE3D896A638869384B4CF1EF /* ErrorRetryView.swift */,
 				A1B2C3D4E5F6A7B8C9D0E1F2 /* HapticManager.swift */,
 				15B9BC191869EBEA7E8340E6 /* NavigationBackHistoryTitle.swift */,
-				AC35A6A50C3BFA68468FEDF9 /* OfflineBanner.swift */,
 				A9F10101A9F10101A9F10101 /* RootFeedDock.swift */,
 				B2C3D4E5F6A7B8C9D0E1F2A3 /* ShareSheet.swift */,
 				133161412A6BD2A0C04F745A /* SnackbarManager.swift */,
@@ -875,7 +872,6 @@
 				1618367E71392D77BC8C61B6 /* NavigationBackHistoryTitle.swift in Sources */,
 				C013C84CCBF84A849CE93963 /* NetworkConfiguration.swift in Sources */,
 				4E4F544946444545504C3031 /* NotificationDeepLinkRouter.swift in Sources */,
-				3667E1D45490DE558553F39F /* OfflineBanner.swift in Sources */,
 				DCD00FC940427B88E235F7F4 /* OfflineCacheManager.swift in Sources */,
 				A03B553E316CEEDFAB8EBA69 /* OfflineSyncModels.swift in Sources */,
 				846AE66C58EF435FB506E3E6 /* OnboardingWizardOverlay.swift in Sources */,

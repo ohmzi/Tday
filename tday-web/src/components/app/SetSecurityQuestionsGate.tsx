@@ -32,6 +32,7 @@ export default function SetSecurityQuestionsGate() {
   const [answer1, setAnswer1] = useState("");
   const [questionId2, setQuestionId2] = useState<number | null>(null);
   const [answer2, setAnswer2] = useState("");
+  const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   const active = Boolean(user?.requireSecurityQuestions);
@@ -54,14 +55,16 @@ export default function SetSecurityQuestionsGate() {
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+    // Validation errors render inline; only the save failure below toasts.
     if (questionId1 == null || questionId2 == null || questionId1 === questionId2) {
-      toast({ description: "Choose two different questions", variant: "destructive" });
+      setFormError("Choose two different questions");
       return;
     }
     if (answer1.trim().length === 0 || answer2.trim().length === 0) {
-      toast({ description: "Please answer both questions", variant: "destructive" });
+      setFormError("Please answer both questions");
       return;
     }
+    setFormError(null);
     setSaving(true);
     try {
       await api.POST({
@@ -74,7 +77,6 @@ export default function SetSecurityQuestionsGate() {
           ],
         }),
       });
-      toast({ description: "Security questions saved" });
       await refreshSession();
     } catch (error) {
       toast({
@@ -153,6 +155,9 @@ export default function SetSecurityQuestionsGate() {
               required
             />
           </div>
+          {formError ? (
+            <p className="text-sm font-medium text-destructive">{formError}</p>
+          ) : null}
           <Button type="submit" disabled={saving} className="w-full">
             {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
             Save security questions

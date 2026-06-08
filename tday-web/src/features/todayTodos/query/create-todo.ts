@@ -1,5 +1,4 @@
 import { useToast } from "@/hooks/use-toast";
-import { useTodoActionToast } from "@/hooks/use-todo-action-toast";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { todoSchema } from "@/schema";
 import { api } from "@/lib/api-client";
@@ -47,7 +46,6 @@ async function postTodo({ todo }: { todo: TodoItemType }) {
 
 export const useCreateTodo = () => {
   const { toast } = useToast();
-  const { showTodoCreatedToast } = useTodoActionToast();
   const queryClient = useQueryClient();
   const { mutate: createMutateFn, status: createStatus } = useMutation({
     mutationFn: (todo: TodoItemType) => postTodo({ todo }),
@@ -117,7 +115,6 @@ export const useCreateTodo = () => {
             old.map((t) => (t.id === newTodo.id ? createdTodo : t)),
         );
       }
-      showTodoCreatedToast(createdTodo);
     },
   });
   return { createMutateFn, createStatus };

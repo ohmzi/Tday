@@ -6,11 +6,9 @@ import {
 } from "@/lib/todo/patch-todo";
 import { TodoItemType } from "@/types";
 import { endOfDay } from "date-fns";
-import { useTodoActionToast } from "@/hooks/use-todo-action-toast";
 
 export const useEditListTodo = () => {
   const { toast } = useToast();
-  const { showTodoUpdatedToast } = useTodoActionToast();
   const queryClient = useQueryClient();
 
   const { mutate: editTodoMutateFn, status: editTodoStatus } = useMutation({
@@ -88,9 +86,6 @@ export const useEditListTodo = () => {
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["calendarTodo"] });
       queryClient.invalidateQueries({ queryKey: ["todoTimeline"] });
-    },
-    onSuccess: (_data, updatedTodo) => {
-      showTodoUpdatedToast(updatedTodo);
     },
   });
 

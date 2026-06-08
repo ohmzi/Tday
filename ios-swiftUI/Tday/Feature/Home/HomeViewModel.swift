@@ -113,7 +113,10 @@ final class HomeViewModel {
             try await container.listRepository.createList(name: name, color: color, iconKey: iconKey)
             refreshFromCache()
         } catch {
-            errorMessage = userFacingMessage(for: error, fallback: "Could not create list.")
+            container.snackbarManager.show(
+                userFacingMessage(for: error, fallback: "Could not create list."),
+                kind: .error
+            )
         }
     }
 
@@ -122,7 +125,10 @@ final class HomeViewModel {
             try await container.createTodo(payload)
             refreshFromCache()
         } catch {
-            errorMessage = userFacingMessage(for: error, fallback: "Could not create task.")
+            container.snackbarManager.show(
+                userFacingMessage(for: error, fallback: "Could not create task."),
+                kind: .error
+            )
         }
     }
 
@@ -132,7 +138,10 @@ final class HomeViewModel {
             try await container.completeTodo(todo)
             refreshFromCache()
         } catch {
-            errorMessage = userFacingMessage(for: error, fallback: "Could not complete task.")
+            container.snackbarManager.show(
+                userFacingMessage(for: error, fallback: "Could not complete task."),
+                kind: .error
+            )
             refreshFromCache()
         }
     }
@@ -142,8 +151,12 @@ final class HomeViewModel {
         do {
             try await container.todoRepository.deleteTodo(todo)
             refreshFromCache()
+            container.snackbarManager.show(L("Task deleted"), kind: .success)
         } catch {
-            errorMessage = userFacingMessage(for: error, fallback: "Could not delete task.")
+            container.snackbarManager.show(
+                userFacingMessage(for: error, fallback: "Could not delete task."),
+                kind: .error
+            )
             refreshFromCache()
         }
     }
@@ -153,7 +166,10 @@ final class HomeViewModel {
             try await container.todoRepository.updateTodo(todo, payload: payload)
             refreshFromCache()
         } catch {
-            errorMessage = userFacingMessage(for: error, fallback: "Could not update task.")
+            container.snackbarManager.show(
+                userFacingMessage(for: error, fallback: "Could not update task."),
+                kind: .error
+            )
         }
     }
 
