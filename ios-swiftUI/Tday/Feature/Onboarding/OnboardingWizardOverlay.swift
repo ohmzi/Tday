@@ -166,6 +166,9 @@ struct OnboardingWizardOverlay: View {
                     onClearAuthStatus()
                 }
             )
+            // Transparent sheet so the blurred home + login card show behind the reset
+            // card, matching the rest of the auth UI instead of a flat sheet surface.
+            .presentationBackground(.clear)
         }
     }
 
