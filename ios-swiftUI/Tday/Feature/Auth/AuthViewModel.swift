@@ -110,6 +110,12 @@ final class AuthViewModel {
     }
 
     private func friendlyMessage(_ rawValue: String) -> String {
+        // AuthRepository already classifies connection/version/availability failures
+        // into final messages — pass those through untouched.
+        if ConnectionFailureMessage.all.contains(rawValue) {
+            return rawValue
+        }
+
         let lower = rawValue.lowercased()
         if lower.contains("invalid credentials") || lower.contains("incorrect username or password") {
             return "Incorrect username or password"
@@ -117,22 +123,26 @@ final class AuthViewModel {
         if lower.contains("pending admin approval") || lower.contains("approval required") || lower.contains("pending_approval") {
             return "Account pending admin approval."
         }
+        // Server answered but is unhealthy (proxy / gateway / origin-down signals) —
+        // distinct from a genuine "can't reach it at all" so the user knows whether
+        // to check their connection or tell an admin the server is down.
+        if lower.contains("bad gateway") || lower.contains("service unavailable") ||
+           lower.contains("gateway timeout") || lower.contains("origin unreachable") ||
+           lower.contains("web server is down") {
+            return ConnectionFailureMessage.serverUnavailable
+        }
         if lower.contains("127.0.0.1") || lower.contains("localhost") || lower.contains("econnrefused") ||
            lower.contains("timed out") || lower.contains("network") || lower.contains("cannot connect") ||
            lower.contains("could not connect") || lower.contains("not connected") ||
-           lower.contains("connection refused") || lower.contains("bad gateway") ||
-           lower.contains("service unavailable") || lower.contains("gateway timeout") ||
-           lower.contains("origin unreachable") || lower.contains("web server is down") {
-            return Self.serverUnreachableMessage
+           lower.contains("connection refused") {
+            return ConnectionFailureMessage.cannotReach
         }
         if lower.contains("serial name") || lower.contains("codingkeys") ||
            lower.contains("decodingerror") || lower.contains("no value associated with key") ||
            lower.contains("unsupported secure sign-in version") {
-            return "This version of the app is out of date. Please update to continue."
+            return ConnectionFailureMessage.appOutdated
         }
         let trimmed = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? "Something went wrong. Please try again." : trimmed
+        return trimmed.isEmpty ? ConnectionFailureMessage.generic : trimmed
     }
-
-    private static let serverUnreachableMessage = "Cannot reach server. Check your server URL and try again."
 }

@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ohmz.tday.compose.R
+import com.ohmz.tday.compose.core.data.AuthErrorCode
 import com.ohmz.tday.compose.core.data.auth.AuthRepository
 import com.ohmz.tday.compose.core.data.auth.LoginCredentialSource
 import com.ohmz.tday.compose.core.data.auth.SystemCredential
@@ -261,6 +262,15 @@ class AuthViewModel @Inject constructor(
     }
 
     private fun toFriendlyMessage(message: String?): String {
+        // Codes emitted by AuthRepository map 1:1 to a specific localized message
+        // so the user knows exactly what's wrong (and what to tell an admin).
+        when (message) {
+            AuthErrorCode.CANNOT_REACH -> return appContext.getString(R.string.error_cannot_reach)
+            AuthErrorCode.SERVER_UNAVAILABLE -> return appContext.getString(R.string.error_server_unavailable)
+            AuthErrorCode.APP_OUTDATED -> return appContext.getString(R.string.error_app_outdated)
+            AuthErrorCode.SERVER_OUTDATED -> return appContext.getString(R.string.error_server_outdated)
+        }
+
         val raw = message.orEmpty()
         val lower = raw.lowercase()
         return when {
@@ -269,6 +279,15 @@ class AuthViewModel @Inject constructor(
                     lower.contains("invalid credentials") ->
                 appContext.getString(R.string.auth_error_incorrect_credentials)
 
+            // Server answered but is unhealthy (proxy / gateway / origin down).
+            lower.contains("bad gateway") ||
+                    lower.contains("service unavailable") ||
+                    lower.contains("gateway timeout") ||
+                    lower.contains("origin unreachable") ||
+                    lower.contains("web server is down") ->
+                appContext.getString(R.string.error_server_unavailable)
+
+            // Genuine transport failures — the request never reached the server.
             lower.contains("127.0.0.1") ||
                     lower.contains("localhost") ||
                     lower.contains("econnrefused") ||
@@ -277,13 +296,8 @@ class AuthViewModel @Inject constructor(
                     lower.contains("timed out") ||
                     lower.contains("network is unreachable") ||
                     lower.contains("not connected") ||
-                    lower.contains("connection refused") ||
-                    lower.contains("bad gateway") ||
-                    lower.contains("service unavailable") ||
-                    lower.contains("gateway timeout") ||
-                    lower.contains("origin unreachable") ||
-                    lower.contains("web server is down") ->
-                serverUnreachableMessage
+                    lower.contains("connection refused") ->
+                appContext.getString(R.string.error_cannot_reach)
 
             lower.contains("serial name") || lower.contains("serializationexception") ||
                     lower.contains("required for type") ->
@@ -291,7 +305,4 @@ class AuthViewModel @Inject constructor(
             else -> appContext.getString(R.string.error_generic)
         }
     }
-
-    private val serverUnreachableMessage: String
-        get() = appContext.getString(R.string.auth_error_server_unreachable)
 }
