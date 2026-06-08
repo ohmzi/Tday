@@ -37,9 +37,6 @@ Structured security reason codes now emitted to logs/event table:
 - `auth_limit_ip`
 - `auth_limit_email`
 - `auth_lockout`
-- `auth_captcha_failed`
-- `register_captcha_failed`
-- `auth_captcha_misconfigured`
 - `auth_credential_envelope_invalid`
 - `auth_alert_ip_concentration`
 - `auth_alert_lockout_burst`

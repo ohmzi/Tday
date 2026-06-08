@@ -5,8 +5,6 @@ import com.ohmz.tday.config.DatabaseConfig
 import com.ohmz.tday.security.AuthThrottle
 import com.ohmz.tday.security.AuthThrottleImpl
 import com.ohmz.tday.security.AuthUserCache
-import com.ohmz.tday.security.CaptchaService
-import com.ohmz.tday.security.CaptchaServiceImpl
 import com.ohmz.tday.security.ClientSignals
 import com.ohmz.tday.security.ClientSignalsImpl
 import com.ohmz.tday.security.CredentialEnvelope
@@ -72,7 +70,6 @@ val securityModule = module {
     single<PasswordService> { PasswordServiceImpl(get()) }
     single<PasswordProof> { PasswordProofImpl(get(), get()) }
     single<AuthThrottle> { AuthThrottleImpl(get(), get(), get()) }
-    single<CaptchaService> { CaptchaServiceImpl(get(), get()) }
     single<CredentialEnvelope> { CredentialEnvelopeImpl(get()) }
     single<RequestRateLimiter> { InMemoryRequestRateLimiter(get(), get()) }
     single { AuthUserCache() }

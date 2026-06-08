@@ -84,7 +84,7 @@ npm run observability:smoke                 # no-dependency Sentry/privacy smoke
 | Every private API route is protected | All non-public endpoints require authentication |
 | Security headers are configured | CSP, HSTS, X-Frame-Options, CORP, etc. |
 | No sensitive data patterns in `console.log`/`console.info` | Passwords, tokens, secrets must never be logged |
-| `.env.example` documents rate limit, lockout, and CAPTCHA vars | Auth hardening config is discoverable |
+| `.env.example` documents rate limit and lockout vars | Auth hardening config is discoverable |
 | Security monitoring docs list emitted event codes | Operational alerting stays aligned with backend emitters |
 | Database schema has `tokenVersion`, `AuthThrottle`, `eventLog` | Session revocation, rate limiting, and audit trail support |
 

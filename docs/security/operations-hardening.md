@@ -6,7 +6,7 @@ These controls protect Server Mode infrastructure. Local Mode mobile data remain
 
 ## Secrets Management
 
-1. Store `AUTH_SECRET`, `DATABASE_URL`, `AUTH_CAPTCHA_SECRET`, and `AUTH_CREDENTIALS_PRIVATE_KEY` in a secret manager.
+1. Store `AUTH_SECRET`, `DATABASE_URL`, and `AUTH_CREDENTIALS_PRIVATE_KEY` in a secret manager.
 2. Inject secrets via environment variables or mounted files (`*_FILE` vars).
 3. Never commit real secrets in `.env` files.
 4. Rotate secrets on a fixed schedule (recommended: every 60-90 days).
@@ -16,14 +16,10 @@ These controls protect Server Mode infrastructure. Local Mode mobile data remain
 1. Keep `AUTH_SESSION_MAX_AGE_SEC` between 7 and 30 days for browser convenience, and keep `AUTH_SESSION_ABSOLUTE_MAX_AGE_SEC` at or below 90 days.
 2. Keep `AUTH_SESSION_RENEW_THRESHOLD_SEC` between 1 and 7 days so active sessions renew predictably without rewriting the cookie on every request.
 3. Keep auth throttling + lockout variables enabled.
-4. Configure `AUTH_CAPTCHA_SECRET` so CAPTCHA is enforced after repeated failures.
-5. Monitor security event codes:
+4. Monitor security event codes:
    - `auth_lockout`
    - `auth_limit_ip`
    - `auth_limit_email`
-   - `auth_captcha_failed`
-   - `register_captcha_failed`
-   - `auth_captcha_misconfigured`
    - `auth_credential_envelope_invalid`
    - `auth_alert_ip_concentration`
    - `auth_alert_lockout_burst`

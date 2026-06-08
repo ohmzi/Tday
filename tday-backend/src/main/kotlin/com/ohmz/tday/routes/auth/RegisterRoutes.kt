@@ -16,8 +16,6 @@ private val USERNAME_REGEX = Regex("^[a-z0-9](?:[a-z0-9._-]{1,28}[a-z0-9])$")
 fun Route.registerRoutes() {
     val userService by inject<UserService>()
     val authThrottle by inject<AuthThrottle>()
-    val captchaService by inject<CaptchaService>()
-    val eventLogger by inject<SecurityEventLogger>()
 
     route("/register") {
         post {
@@ -31,21 +29,6 @@ fun Route.registerRoutes() {
                     "retryAfterSeconds" to throttle.retryAfterSeconds,
                 ))
                 return@post
-            }
-
-            // Only enforce captcha when a provider is configured; otherwise fall back to
-            // the rate-limit + lockout above instead of hard-blocking with a 503 (which
-            // would brick self-host registration). See CredentialsCallbackRoutes.
-            if (captchaService.isConfigured() && authThrottle.requiresCaptcha(ThrottleAction.register, call.request, body.username)) {
-                val captchaResult = captchaService.verify(body.captchaToken, call.request, "register")
-                if (!captchaResult.ok) {
-                    eventLogger.log("register_captcha_failed", mapOf("reason" to captchaResult.reason))
-                    call.respond(HttpStatusCode.Forbidden, mapOf(
-                        "message" to "Additional verification required.",
-                        "reason" to "captcha_required",
-                    ))
-                    return@post
-                }
             }
 
             if (body.fname.trim().length < 2) {

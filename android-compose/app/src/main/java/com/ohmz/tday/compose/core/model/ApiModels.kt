@@ -177,7 +177,6 @@ data class CredentialsCallbackRequest(
     val passwordProof: String? = null,
     val passwordProofChallengeId: String? = null,
     val passwordProofVersion: String? = null,
-    val captchaToken: String? = null,
     val csrfToken: String? = null,
     val redirect: String? = null,
     val callbackUrl: String? = null,

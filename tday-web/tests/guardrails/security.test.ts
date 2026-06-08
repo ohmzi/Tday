@@ -10,9 +10,6 @@ const SECURITY_EVENT_CODES = [
   "auth_limit_ip",
   "auth_limit_email",
   "auth_lockout",
-  "auth_captcha_failed",
-  "register_captcha_failed",
-  "auth_captcha_misconfigured",
   "auth_credential_envelope_invalid",
   "auth_alert_ip_concentration",
   "auth_alert_lockout_burst",
@@ -190,10 +187,6 @@ describe("security guardrails", () => {
       expect(envExample).toContain("AUTH_LOCKOUT_MAX_SEC");
     });
 
-    it(".env.example should document CAPTCHA variables", () => {
-      expect(envExample).toContain("AUTH_CAPTCHA_TRIGGER_FAILURES");
-      expect(envExample).toContain("AUTH_CAPTCHA_SECRET");
-    });
   });
 
   describe("security event monitoring documentation", () => {

@@ -123,19 +123,6 @@ Cloudflare's dashboard allows you to add rate-limiting and challenge rules at th
 - Rate-limit `/api/auth/csrf` (40 req / 1 min per IP).
 - Managed Challenge action on all auth endpoints.
 
-## Cloudflare Turnstile (Adaptive CAPTCHA)
-
-T'Day supports Cloudflare Turnstile for adaptive CAPTCHA on authentication endpoints after repeated failures:
-
-```bash
-# .env.docker
-AUTH_CAPTCHA_SECRET=<your-turnstile-secret-key>
-AUTH_CAPTCHA_SITE_KEY=<your-turnstile-site-key>
-AUTH_CAPTCHA_TRIGGER_FAILURES=3
-```
-
-See [Cloudflare Turnstile docs](https://developers.cloudflare.com/turnstile/) for creating a site key.
-
 ## Mobile App Configuration
 
 Set the server URL in the Android/iOS app to:

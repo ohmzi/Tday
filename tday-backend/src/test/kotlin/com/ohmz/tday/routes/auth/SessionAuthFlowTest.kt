@@ -14,8 +14,6 @@ import com.ohmz.tday.routes.userRoutes
 import com.ohmz.tday.security.AuthCachedUser
 import com.ohmz.tday.security.AuthThrottle
 import com.ohmz.tday.security.AuthUserCache
-import com.ohmz.tday.security.CaptchaResult
-import com.ohmz.tday.security.CaptchaService
 import com.ohmz.tday.security.CredentialEnvelope
 import com.ohmz.tday.security.CredentialEnvelopeInput
 import com.ohmz.tday.security.CredentialPublicKeyDescriptor
@@ -353,7 +351,6 @@ class SessionAuthFlowTest {
                     single<JwtService> { jwtService }
                     single<UserService> { userService }
                     single<AuthThrottle> { AllowAllAuthThrottle() }
-                    single<CaptchaService> { AllowAllCaptchaService() }
                     single<SecurityEventLogger> { NoOpSecurityEventLogger() }
                     single<CredentialEnvelope> { FakeCredentialEnvelope() }
                     single<PasswordProof> { FakePasswordProof() }
@@ -491,30 +488,12 @@ class SessionAuthFlowTest {
             identifier: String?,
         ) = Unit
 
-        override suspend fun requiresCaptcha(
-            action: ThrottleAction,
-            request: io.ktor.server.request.ApplicationRequest,
-            identifier: String?,
-        ): Boolean = false
-
         override suspend fun recordSuccessSignal(
             request: io.ktor.server.request.ApplicationRequest,
             identifier: String?,
         ) = Unit
 
         override fun formatRetryWait(seconds: Int): String = "${seconds}s"
-    }
-
-    private class AllowAllCaptchaService : CaptchaService {
-        override fun isConfigured(): Boolean = false
-
-        override suspend fun verify(
-            token: String?,
-            request: io.ktor.server.request.ApplicationRequest,
-            action: String,
-        ): CaptchaResult = CaptchaResult(ok = true)
-
-        override fun extractTokenFromJson(body: kotlinx.serialization.json.JsonObject?): String? = null
     }
 
     private class NoOpSecurityEventLogger : SecurityEventLogger {
