@@ -1870,7 +1870,7 @@ struct TodoListScreen: View {
         .scaleEffect(isFading ? 0.985 : 1, anchor: .center)
         .offset(y: isFading ? -10 : 0)
         .animation(.easeInOut(duration: 0.26), value: isFading)
-        .opacity(draggedTodo?.id == todo.id && activeDropSectionId != nil ? 0.7 : 1)
+        .opacity(draggedTodo?.id == todo.id ? 0.7 : 1)
         .allowsHitTesting(!isCompleting)
         .todoTrailingSwipeActions(
             rowID: todo.id,
@@ -1986,7 +1986,7 @@ struct TodoListScreen: View {
             .padding(.vertical, TodoTimelineMetrics.minimalRowVerticalPadding)
             .contentShape(Rectangle())
         }
-        .opacity(isFading ? 0 : (draggedTodo?.id == todo.id && activeDropSectionId != nil ? 0.7 : 1))
+        .opacity(isFading ? 0 : (draggedTodo?.id == todo.id ? 0.7 : 1))
         .scaleEffect(isFading ? 0.985 : 1, anchor: .center)
         .offset(y: isFading ? -10 : 0)
         .animation(.easeInOut(duration: 0.26), value: isFading)
