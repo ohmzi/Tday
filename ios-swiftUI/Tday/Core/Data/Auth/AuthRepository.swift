@@ -117,7 +117,6 @@ final class AuthRepository: AuthRepositoryServicing {
                     passwordProof: nil,
                     passwordProofChallengeId: nil,
                     passwordProofVersion: nil,
-                    captchaToken: nil,
                     csrfToken: csrf,
                     redirect: "false",
                     callbackUrl: callbackURL

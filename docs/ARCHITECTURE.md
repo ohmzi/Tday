@@ -156,7 +156,7 @@ tday-backend/src/main/kotlin/com/ohmz/tday/
 │   └── StatusPages.kt      # AppError → JSON ApiError mapping
 ├── routes/                 # HTTP route handlers by domain
 │   └── auth/               # Auth-specific routes
-├── security/               # JWT, passwords, throttling, captcha, encryption
+├── security/               # JWT, passwords, throttling, encryption
 └── services/               # Business logic (todo, list, user, admin, etc.)
 ```
 
@@ -402,7 +402,6 @@ Client → GET /api/auth/csrf (fetch CSRF token)
        → POST /api/auth/callback/credentials
               │
               ├── Rate limit check (AuthThrottle)
-              ├── Optional CAPTCHA verification
               ├── Optional credential envelope decryption (RSA)
               ├── PBKDF2 password verification (or rehash if iterations changed)
               ├── Approval status check

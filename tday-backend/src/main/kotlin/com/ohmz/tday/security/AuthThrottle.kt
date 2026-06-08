@@ -35,7 +35,6 @@ interface AuthThrottle {
     suspend fun enforceRateLimit(action: ThrottleAction, request: ApplicationRequest, identifier: String? = null): ThrottleResult
     suspend fun recordFailure(request: ApplicationRequest, identifier: String? = null)
     suspend fun clearFailures(request: ApplicationRequest, identifier: String? = null)
-    suspend fun requiresCaptcha(action: ThrottleAction, request: ApplicationRequest, identifier: String? = null): Boolean
     suspend fun recordSuccessSignal(request: ApplicationRequest, identifier: String? = null)
     fun formatRetryWait(seconds: Int): String
 }
@@ -141,40 +140,6 @@ class AuthThrottleImpl(
                     it[lastFailureAt] = null
                 }
             }
-        }
-    }
-
-    override suspend fun requiresCaptcha(action: ThrottleAction, request: ApplicationRequest, identifier: String?): Boolean {
-        val subjects = buildSubjects(action, request, identifier)
-        val now = System.currentTimeMillis()
-
-        return newSuspendedTransaction(Dispatchers.IO) {
-            for (subject in subjects) {
-                val row = AuthThrottles.selectAll().where {
-                    (AuthThrottles.scope eq subject.scope) and (AuthThrottles.bucketKey eq subject.bucketKey)
-                }.firstOrNull() ?: continue
-
-                val lastFailure = row[AuthThrottles.lastFailureAt]
-                val failureCount = row[AuthThrottles.failureCount]
-                val requestCount = row[AuthThrottles.requestCount]
-                val resetMs = config.lockoutResetSec * 1000L
-
-                val activeFailures = if (lastFailure != null &&
-                    now - lastFailure.toInstant(ZoneOffset.UTC).toEpochMilli() <= resetMs
-                ) {
-                    failureCount
-                } else {
-                    0
-                }
-
-                if (activeFailures >= config.captchaTriggerFailures) return@newSuspendedTransaction true
-
-                if (action == ThrottleAction.register) {
-                    val registerPolicy = policies[ThrottleAction.register] ?: continue
-                    if (requestCount >= max(3, registerPolicy.maxRequests / 2)) return@newSuspendedTransaction true
-                }
-            }
-            false
         }
     }
 

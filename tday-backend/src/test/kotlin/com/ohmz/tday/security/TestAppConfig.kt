@@ -65,8 +65,6 @@ fun testAppConfig(
     lockoutBaseSec = 30,
     lockoutMaxSec = 1800,
     lockoutResetSec = 86400,
-    captchaTriggerFailures = 3,
-    captchaSecret = null,
     alertIpFailureThreshold = 12,
     alertLockoutBurstSec = 900,
     signalAnomalyWindowSec = 86400,
