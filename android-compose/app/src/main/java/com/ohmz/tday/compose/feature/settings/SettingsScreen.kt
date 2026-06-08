@@ -29,13 +29,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.ChevronLeft
-import androidx.compose.material.icons.rounded.ChevronRight
-import androidx.compose.material.icons.rounded.Edit
-import androidx.compose.material.icons.rounded.Lock
-import androidx.compose.material.icons.rounded.Visibility
-import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -70,6 +63,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -370,7 +364,7 @@ private fun AccountNameSection(
             if (!isEditing) {
                 AccountInlineButton(
                     text = stringResource(R.string.action_edit),
-                    icon = Icons.Rounded.Edit,
+                    icon = ImageVector.vectorResource(R.drawable.ic_lucide_square_pen),
                     onClick = {
                         draft = user?.name.orEmpty()
                         error = null
@@ -488,7 +482,7 @@ private fun AccountPasswordSection(
             if (!isEditing) {
                 AccountInlineButton(
                     text = stringResource(R.string.settings_account_change_password),
-                    icon = Icons.Rounded.Lock,
+                    icon = ImageVector.vectorResource(R.drawable.ic_lucide_lock),
                     onClick = onBeginEdit,
                 )
             }
@@ -596,7 +590,9 @@ private fun AccountPasswordField(
         trailingIcon = {
             IconButton(onClick = { revealed = !revealed }) {
                 Icon(
-                    imageVector = if (revealed) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility,
+                    imageVector = if (revealed) ImageVector.vectorResource(R.drawable.ic_lucide_eye_off) else ImageVector.vectorResource(
+                        R.drawable.ic_lucide_eye
+                    ),
                     contentDescription = stringResource(
                         if (revealed) {
                             R.string.settings_account_hide_password
@@ -904,7 +900,7 @@ private fun SettingsListRow(
             }
             if (showChevron) {
                 Icon(
-                    imageVector = Icons.Rounded.ChevronRight,
+                    imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_chevron_right),
                     contentDescription = null,
                     tint = trailingTint,
                     modifier = Modifier.size(18.dp),
@@ -949,7 +945,7 @@ private fun SettingsTopBar(
     ) {
         Box(modifier = Modifier.fillMaxWidth()) {
             SettingsHeaderButton(
-                icon = Icons.Rounded.ChevronLeft,
+                icon = ImageVector.vectorResource(R.drawable.ic_lucide_chevron_left),
                 contentDescription = stringResource(R.string.action_back),
                 onClick = onBack,
                 isBackButton = true,
@@ -1119,7 +1115,7 @@ private fun ReminderSelector(
                     color = colorScheme.secondary,
                 )
                 Icon(
-                    imageVector = Icons.Rounded.ChevronRight,
+                    imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_chevron_right),
                     contentDescription = null,
                     tint = colorScheme.onSurface.copy(alpha = 0.42f),
                     modifier = Modifier.size(18.dp),
@@ -1208,7 +1204,7 @@ private fun LanguageSelector() {
                     color = colorScheme.secondary,
                 )
                 Icon(
-                    imageVector = Icons.Rounded.ChevronRight,
+                    imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_chevron_right),
                     contentDescription = null,
                     tint = colorScheme.onSurface.copy(alpha = 0.42f),
                     modifier = Modifier.size(18.dp),

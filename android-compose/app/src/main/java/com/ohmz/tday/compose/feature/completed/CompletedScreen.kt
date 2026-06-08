@@ -29,13 +29,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.CheckCircle
-import androidx.compose.material.icons.rounded.ChevronLeft
-import androidx.compose.material.icons.rounded.ExpandMore
-import androidx.compose.material.icons.rounded.Flag
-import androidx.compose.material.icons.rounded.RadioButtonUnchecked
-import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -66,6 +59,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -342,7 +336,7 @@ private fun CompletedTopBar(
                 CompletedHeaderButton(
                     modifier = Modifier.align(Alignment.CenterVertically),
                     onClick = onBack,
-                    icon = Icons.Rounded.ChevronLeft,
+                    icon = ImageVector.vectorResource(R.drawable.ic_lucide_chevron_left),
                     contentDescription = stringResource(R.string.action_back),
                 )
             }
@@ -489,7 +483,7 @@ private fun CompletedTimelineSectionHeader(
                 fontWeight = FontWeight.ExtraBold,
             )
             Icon(
-                imageVector = Icons.Rounded.ExpandMore,
+                imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_chevron_down),
                 contentDescription = if (isCollapsed) {
                     stringResource(R.string.action_expand_section)
                 } else {
@@ -713,9 +707,9 @@ private fun CompletedSwipeRow(
                     ) {
                         CompletedCircularToggleIcon(
                             imageVector = if (showCompletedCheckmark) {
-                                Icons.Rounded.CheckCircle
+                                ImageVector.vectorResource(R.drawable.ic_lucide_circle_check_big)
                             } else {
-                                Icons.Rounded.RadioButtonUnchecked
+                                ImageVector.vectorResource(R.drawable.ic_lucide_circle)
                             },
                             contentDescription = stringResource(R.string.label_undo_complete),
                             tint = if (showCompletedCheckmark) {
@@ -777,7 +771,7 @@ private fun CompletedSwipeRow(
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Icon(
-                                    imageVector = Icons.Rounded.Schedule,
+                                    imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_clock),
                                     contentDescription = null,
                                     tint = colorScheme.onSurfaceVariant.copy(alpha = 0.74f),
                                     modifier = Modifier.size(13.dp),
@@ -806,7 +800,8 @@ private fun CompletedSwipeRow(
                                     )
                                 }
                                 Icon(
-                                    imageVector = priorityIcon ?: Icons.Rounded.Flag,
+                                    imageVector = priorityIcon
+                                        ?: ImageVector.vectorResource(R.drawable.ic_lucide_flag),
                                     contentDescription = stringResource(R.string.label_priority_task),
                                     tint = tdayPriorityColor(item.priority),
                                     modifier = Modifier.size(18.dp),
@@ -888,10 +883,11 @@ private fun EmptyCompletedState(
     }
 }
 
+@Composable
 private fun priorityIconFor(priority: String): ImageVector? {
     return when (priority.trim().lowercase(Locale.getDefault())) {
-        "medium" -> Icons.Rounded.Flag
-        "high", "urgent", "important" -> Icons.Rounded.Flag
+        "medium" -> ImageVector.vectorResource(R.drawable.ic_lucide_flag)
+        "high", "urgent", "important" -> ImageVector.vectorResource(R.drawable.ic_lucide_flag)
         else -> null
     }
 }

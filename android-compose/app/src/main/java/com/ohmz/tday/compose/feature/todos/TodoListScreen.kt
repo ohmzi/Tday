@@ -50,26 +50,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
-import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.AutoAwesome
-import androidx.compose.material.icons.rounded.CheckCircle
-import androidx.compose.material.icons.rounded.ChevronLeft
-import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.Delete
-import androidx.compose.material.icons.rounded.DeleteOutline
-import androidx.compose.material.icons.rounded.Eco
-import androidx.compose.material.icons.rounded.ErrorOutline
-import androidx.compose.material.icons.rounded.ExpandMore
-import androidx.compose.material.icons.rounded.Flag
-import androidx.compose.material.icons.rounded.Inbox
-import androidx.compose.material.icons.rounded.MoreHoriz
-import androidx.compose.material.icons.rounded.NightsStay
-import androidx.compose.material.icons.rounded.RadioButtonUnchecked
-import androidx.compose.material.icons.rounded.Schedule
-import androidx.compose.material.icons.rounded.Search
-import androidx.compose.material.icons.rounded.WbSunny
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -128,6 +108,7 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.font.FontWeight
@@ -270,7 +251,10 @@ fun TodoListScreen(
     val selectedList = uiState.lists.firstOrNull { it.id == uiState.listId }
     val selectedListColorKey = selectedList?.color
     val isTodayDaytime = rememberTodoRootIsDaytime()
-    val todayTimeIcon = if (isTodayDaytime) Icons.Rounded.WbSunny else Icons.Rounded.NightsStay
+    val todayTimeIcon =
+        if (isTodayDaytime) ImageVector.vectorResource(R.drawable.ic_lucide_sun) else ImageVector.vectorResource(
+            R.drawable.ic_lucide_moon
+        )
     val todayTimeIconTint = if (isTodayDaytime) TdayTitleIconDayAccent else TdayTitleIconNightAccent
     val usesTodayStyle =
         uiState.mode == TodoListMode.TODAY || uiState.mode == TodoListMode.OVERDUE || uiState.mode == TodoListMode.SCHEDULED || uiState.mode == TodoListMode.ALL || uiState.mode == TodoListMode.PRIORITY || uiState.mode == TodoListMode.FLOATER || uiState.mode == TodoListMode.LIST
@@ -534,7 +518,7 @@ fun TodoListScreen(
     val topBarActions = listOfNotNull(
         if (canSummarizeCurrentMode) {
             TodoTopBarAction(
-                icon = Icons.Rounded.AutoAwesome,
+                icon = ImageVector.vectorResource(R.drawable.ic_lucide_sparkles),
                 contentDescription = stringResource(R.string.todos_summarize),
                 onClick = { showSummarySheet = true },
             )
@@ -543,7 +527,7 @@ fun TodoListScreen(
         },
         if (isListDetailScreen && selectedList != null) {
             TodoTopBarAction(
-                icon = Icons.Rounded.MoreHoriz,
+                icon = ImageVector.vectorResource(R.drawable.ic_lucide_ellipsis),
                 contentDescription = stringResource(R.string.action_more_options),
                 onClick = {
                     listSettingsTargetId = selectedList.id
@@ -755,7 +739,7 @@ fun TodoListScreen(
                         navigationIcon = {
                             TodayHeaderButton(
                                 onClick = onBack,
-                                icon = Icons.Rounded.ChevronLeft,
+                                icon = ImageVector.vectorResource(R.drawable.ic_lucide_chevron_left),
                                 contentDescription = stringResource(R.string.action_back),
                                 isBackButton = true,
                             )
@@ -1559,7 +1543,10 @@ private fun RootFeedTitleRow(
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val isDaytime = rememberTodoRootIsDaytime()
-    val titleIcon = if (isDaytime) Icons.Rounded.WbSunny else Icons.Rounded.NightsStay
+    val titleIcon =
+        if (isDaytime) ImageVector.vectorResource(R.drawable.ic_lucide_sun) else ImageVector.vectorResource(
+            R.drawable.ic_lucide_moon
+        )
     val titleIconTint = if (isDaytime) TdayTitleIconDayAccent else TdayTitleIconNightAccent
 
     Box(
@@ -1607,7 +1594,10 @@ private fun RootFeedSearchHeaderRow(
     val focusRequester = remember { FocusRequester() }
     val density = LocalDensity.current
     val isDaytime = rememberTodoRootIsDaytime()
-    val titleIcon = if (isDaytime) Icons.Rounded.WbSunny else Icons.Rounded.NightsStay
+    val titleIcon =
+        if (isDaytime) ImageVector.vectorResource(R.drawable.ic_lucide_sun) else ImageVector.vectorResource(
+            R.drawable.ic_lucide_moon
+        )
     val titleIconTint = if (isDaytime) TdayTitleIconDayAccent else TdayTitleIconNightAccent
     var containerWidth by remember { mutableStateOf(0.dp) }
 
@@ -1685,13 +1675,15 @@ private fun RootFeedSearchHeaderRow(
         ) {
             TodayHeaderButton(
                 onClick = onCreateList,
-                icon = Icons.AutoMirrored.Rounded.PlaylistAdd,
+                icon = ImageVector.vectorResource(R.drawable.ic_lucide_list_plus),
                 contentDescription = stringResource(R.string.action_create_list),
+                iconSize = 22.dp,
             )
             TodayHeaderButton(
                 onClick = onOpenSettings,
-                icon = Icons.Rounded.MoreHoriz,
+                icon = ImageVector.vectorResource(R.drawable.ic_lucide_ellipsis),
                 contentDescription = stringResource(R.string.action_more),
+                iconSize = 22.dp,
             )
         }
 
@@ -1719,11 +1711,11 @@ private fun RootFeedSearchHeaderRow(
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
-                    imageVector = Icons.Rounded.Search,
+                    imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_search),
                     contentDescription = stringResource(R.string.action_search),
                     tint = colorScheme.onSurface,
                     modifier = Modifier
-                        .size(30.dp)
+                        .size(22.dp)
                         .graphicsLayer { alpha = if (searchExpanded) 0f else 1f },
                 )
 
@@ -1736,7 +1728,7 @@ private fun RootFeedSearchHeaderRow(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Icon(
-                        imageVector = Icons.Rounded.Search,
+                        imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_search),
                         contentDescription = null,
                         tint = colorScheme.onSurface,
                         modifier = Modifier.size(24.dp),
@@ -1771,7 +1763,7 @@ private fun RootFeedSearchHeaderRow(
                     )
                     IconButton(onClick = onSearchClose) {
                         Icon(
-                            imageVector = Icons.Rounded.Close,
+                            imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_x),
                             contentDescription = stringResource(R.string.action_close),
                             tint = colorScheme.onSurfaceVariant.copy(alpha = 0.78f),
                         )
@@ -2024,7 +2016,7 @@ private fun TodayTopBar(
             ) {
                 TodayHeaderButton(
                     onClick = onBack,
-                    icon = Icons.Rounded.ChevronLeft,
+                    icon = ImageVector.vectorResource(R.drawable.ic_lucide_chevron_left),
                     contentDescription = stringResource(R.string.action_back),
                     isBackButton = true,
                 )
@@ -2125,6 +2117,7 @@ private fun TodayHeaderButton(
     icon: ImageVector,
     contentDescription: String,
     isBackButton: Boolean = false,
+    iconSize: Dp = 30.dp,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val view = LocalView.current
@@ -2138,7 +2131,7 @@ private fun TodayHeaderButton(
     }
     val buttonBorder = if (isBackButton) null else BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.38f))
     val buttonSize = if (isBackButton) TdayDimens.FabSize else 56.dp
-    val iconSize = if (isBackButton) 36.dp else 30.dp
+    val resolvedIconSize = if (isBackButton) 36.dp else iconSize
     val scale by animateFloatAsState(
         targetValue = if (pressed) 0.93f else 1f,
         label = "todayHeaderButtonScale",
@@ -2176,7 +2169,7 @@ private fun TodayHeaderButton(
                 imageVector = icon,
                 contentDescription = contentDescription,
                 tint = colorScheme.onSurface,
-                modifier = Modifier.size(iconSize),
+                modifier = Modifier.size(resolvedIconSize),
             )
         }
     }
@@ -2208,7 +2201,7 @@ private fun SummaryBottomSheet(
         ) {
             TdaySheetHeader(
                 title = stringResource(R.string.todos_summary_title),
-                leftIcon = Icons.Rounded.Close,
+                leftIcon = ImageVector.vectorResource(R.drawable.ic_lucide_x),
                 leftContentDescription = stringResource(R.string.todos_summary_close),
                 onLeftClick = onDismiss,
                 showConfirmAction = false,
@@ -2300,7 +2293,7 @@ private fun CreateTaskButton(
             contentAlignment = Alignment.Center,
         ) {
             Icon(
-                imageVector = Icons.Rounded.Add,
+                imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_plus),
                 contentDescription = stringResource(R.string.action_create_task),
                 tint = Color.White,
                 modifier = Modifier.size(40.dp),
@@ -2350,7 +2343,7 @@ private fun ListSettingsBottomSheet(
             ) {
                 TdaySheetHeader(
                     title = title,
-                    leftIcon = Icons.Rounded.Close,
+                    leftIcon = ImageVector.vectorResource(R.drawable.ic_lucide_x),
                     leftContentDescription = stringResource(R.string.action_close),
                     onLeftClick = {
                         focusManager.clearFocus(force = true)
@@ -2608,7 +2601,7 @@ private fun ListSettingsDeleteButton(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
-                imageVector = Icons.Rounded.DeleteOutline,
+                imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_trash_2),
                 contentDescription = null,
                 tint = colorScheme.error,
             )
@@ -2711,7 +2704,7 @@ private fun TimelineSectionHeader(
             )
             if (onHeaderClick != null) {
                 Icon(
-                    imageVector = Icons.Rounded.ExpandMore,
+                    imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_chevron_down),
                     contentDescription = if (isCollapsed) {
                         stringResource(R.string.action_expand_section)
                     } else {
@@ -2797,7 +2790,7 @@ private fun TimelineTaskDragPreview(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
-                imageVector = Icons.Rounded.RadioButtonUnchecked,
+                imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_circle),
                 contentDescription = null,
                 tint = colorScheme.onSurfaceVariant.copy(alpha = 0.76f),
                 modifier = Modifier.size(22.dp),
@@ -3404,13 +3397,19 @@ private fun emptyStateIconForMode(
     isTodayDaytime: Boolean,
 ): ImageVector {
     return when (mode) {
-        TodoListMode.TODAY -> if (isTodayDaytime) Icons.Rounded.WbSunny else Icons.Rounded.NightsStay
-        TodoListMode.OVERDUE -> Icons.Rounded.ErrorOutline
-        TodoListMode.PRIORITY -> Icons.Rounded.Flag
+        TodoListMode.TODAY -> if (isTodayDaytime) ImageVector.vectorResource(R.drawable.ic_lucide_sun) else ImageVector.vectorResource(
+            R.drawable.ic_lucide_moon
+        )
+
+        TodoListMode.OVERDUE -> ImageVector.vectorResource(R.drawable.ic_lucide_circle_alert)
+        TodoListMode.PRIORITY -> ImageVector.vectorResource(R.drawable.ic_lucide_flag)
         TodoListMode.FLOATER ->
-            if (listIconKey.isNullOrBlank()) Icons.Rounded.Eco else tdayListIconForKey(listIconKey)
-        TodoListMode.SCHEDULED -> Icons.Rounded.Schedule
-        TodoListMode.ALL -> Icons.Rounded.Inbox
+            if (listIconKey.isNullOrBlank()) ImageVector.vectorResource(R.drawable.ic_lucide_leaf) else tdayListIconForKey(
+                listIconKey
+            )
+
+        TodoListMode.SCHEDULED -> ImageVector.vectorResource(R.drawable.ic_lucide_clock)
+        TodoListMode.ALL -> ImageVector.vectorResource(R.drawable.ic_lucide_inbox)
         TodoListMode.LIST -> tdayListIconForKey(listIconKey)
     }
 }
@@ -3948,9 +3947,9 @@ private fun SwipeTaskRow(
                         ) {
                             CircularCheckToggleIcon(
                                 imageVector = if (!visuallyChecked) {
-                                    Icons.Rounded.RadioButtonUnchecked
+                                    ImageVector.vectorResource(R.drawable.ic_lucide_circle)
                                 } else {
-                                    Icons.Rounded.CheckCircle
+                                    ImageVector.vectorResource(R.drawable.ic_lucide_circle_check_big)
                                 },
                                 contentDescription = if (visuallyChecked) {
                                     stringResource(R.string.label_completed)
@@ -4098,7 +4097,7 @@ private fun TodayTodoRow(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 CircularCheckToggleIcon(
-                    imageVector = Icons.Rounded.CheckCircle,
+                    imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_circle_check_big),
                     contentDescription = stringResource(R.string.action_complete),
                     tint = TASK_CHECKMARK_GREEN,
                     onClick = onComplete,
@@ -4129,7 +4128,7 @@ private fun TodayTodoRow(
 
             IconButton(onClick = onDelete) {
                 Icon(
-                    imageVector = Icons.Rounded.Delete,
+                    imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_trash_2),
                     contentDescription = stringResource(R.string.action_delete),
                     tint = colorScheme.error,
                 )
@@ -4172,7 +4171,7 @@ private fun TodoRow(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 CircularCheckToggleIcon(
-                    imageVector = Icons.Rounded.CheckCircle,
+                    imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_circle_check_big),
                     contentDescription = stringResource(R.string.action_complete),
                     tint = TASK_CHECKMARK_GREEN,
                     onClick = onComplete,
@@ -4197,7 +4196,7 @@ private fun TodoRow(
 
             IconButton(onClick = onDelete) {
                 Icon(
-                    imageVector = Icons.Rounded.Delete,
+                    imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_trash_2),
                     contentDescription = stringResource(R.string.action_delete),
                     tint = colorScheme.error,
                 )
@@ -4240,10 +4239,11 @@ private fun CircularCheckToggleIcon(
     }
 }
 
+@Composable
 private fun priorityIconFor(priority: String): ImageVector? {
     return when (priority.trim().lowercase(Locale.getDefault())) {
-        "medium" -> Icons.Rounded.Flag
-        "high", "urgent", "important" -> Icons.Rounded.Flag
+        "medium" -> ImageVector.vectorResource(R.drawable.ic_lucide_flag)
+        "high", "urgent", "important" -> ImageVector.vectorResource(R.drawable.ic_lucide_flag)
         else -> null
     }
 }

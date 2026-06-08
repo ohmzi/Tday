@@ -11192,6 +11192,7 @@
       }
     },
     "You're offline" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {

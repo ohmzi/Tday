@@ -59,14 +59,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.CheckCircle
-import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.Flag
-import androidx.compose.material.icons.rounded.NightsStay
-import androidx.compose.material.icons.rounded.RadioButtonUnchecked
-import androidx.compose.material.icons.rounded.WbSunny
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -119,6 +111,7 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.font.FontWeight
@@ -394,7 +387,9 @@ fun HomeScreen(
         Box(modifier = Modifier.fillMaxSize()) {
             val isDaytime = rememberIsDaytime()
             EmptyTaskWatermark(
-                imageVector = if (isDaytime) Icons.Rounded.WbSunny else Icons.Rounded.NightsStay,
+                imageVector = if (isDaytime) ImageVector.vectorResource(R.drawable.ic_lucide_sun) else ImageVector.vectorResource(
+                    R.drawable.ic_lucide_moon
+                ),
                 accentColor = TdayTitleIconDayAccent,
             )
 
@@ -806,7 +801,7 @@ private fun HomeSummaryBottomSheet(
         ) {
             TdaySheetHeader(
                 title = stringResource(R.string.todos_summary_title),
-                leftIcon = Icons.Rounded.Close,
+                leftIcon = ImageVector.vectorResource(R.drawable.ic_lucide_x),
                 leftContentDescription = stringResource(R.string.todos_summary_close),
                 onLeftClick = onDismiss,
                 showConfirmAction = false,
@@ -994,7 +989,7 @@ private fun CreateListBottomSheet(
                         ) {
                             TdaySheetHeader(
                                 title = stringResource(R.string.home_new_list),
-                                leftIcon = Icons.Rounded.Close,
+                                leftIcon = ImageVector.vectorResource(R.drawable.ic_lucide_x),
                                 leftContentDescription = stringResource(R.string.action_close),
                                 onLeftClick = {
                                 dismissKeyboard()
@@ -1203,7 +1198,7 @@ private fun CreateTaskButton(
             contentAlignment = Alignment.Center,
         ) {
             Icon(
-                imageVector = Icons.Rounded.Add,
+                imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_plus),
                 contentDescription = stringResource(R.string.action_create_task),
                 tint = Color.White,
                 modifier = Modifier.size(40.dp),
@@ -1228,7 +1223,10 @@ private fun TopSearchBar(
     val focusManager = LocalFocusManager.current
     val focusRequester = remember { FocusRequester() }
     val isDaytime = rememberIsDaytime()
-    val homeTitleIcon = if (isDaytime) Icons.Rounded.WbSunny else Icons.Rounded.NightsStay
+    val homeTitleIcon =
+        if (isDaytime) ImageVector.vectorResource(R.drawable.ic_lucide_sun) else ImageVector.vectorResource(
+            R.drawable.ic_lucide_moon
+        )
     val homeTitleIconTint = if (isDaytime) TdayTitleIconDayAccent else TdayTitleIconNightAccent
 
     LaunchedEffect(searchExpanded) {
@@ -1819,7 +1817,9 @@ private fun HomeTodayTaskRow(
                         contentAlignment = Alignment.Center,
                     ) {
                         Icon(
-                            imageVector = if (localChecked) Icons.Rounded.CheckCircle else Icons.Rounded.RadioButtonUnchecked,
+                            imageVector = if (localChecked) ImageVector.vectorResource(R.drawable.ic_lucide_circle_check_big) else ImageVector.vectorResource(
+                                R.drawable.ic_lucide_circle
+                            ),
                             contentDescription = if (localChecked) {
                                 stringResource(R.string.label_completed)
                             } else {
@@ -2299,10 +2299,11 @@ private fun performGentleHaptic(view: android.view.View) {
     ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
 }
 
+@Composable
 private fun priorityIconFor(priority: String): ImageVector? {
     return when (priority.trim().lowercase(Locale.getDefault())) {
-        "medium" -> Icons.Rounded.Flag
-        "high", "urgent", "important" -> Icons.Rounded.Flag
+        "medium" -> ImageVector.vectorResource(R.drawable.ic_lucide_flag)
+        "high", "urgent", "important" -> ImageVector.vectorResource(R.drawable.ic_lucide_flag)
         else -> null
     }
 }

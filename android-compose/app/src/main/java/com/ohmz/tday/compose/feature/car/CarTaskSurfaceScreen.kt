@@ -36,10 +36,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.CheckCircle
-import androidx.compose.material.icons.rounded.Eco
-import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -58,7 +54,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -290,7 +288,9 @@ private fun CarModeButton(
         modifier = modifier.fillMaxHeight(),
     ) {
         Icon(
-            imageVector = if (mode == CarTaskMode.TODAY) Icons.Rounded.Home else Icons.Rounded.Eco,
+            imageVector = if (mode == CarTaskMode.TODAY) ImageVector.vectorResource(R.drawable.ic_lucide_house) else ImageVector.vectorResource(
+                R.drawable.ic_lucide_leaf
+            ),
             contentDescription = stringResource(mode.titleRes),
             tint = if (selected) {
                 MaterialTheme.colorScheme.onSurface
@@ -408,7 +408,7 @@ private fun CarTaskRow(
                 )
             }
             Icon(
-                imageVector = Icons.Rounded.CheckCircle,
+                imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_circle_check_big),
                 contentDescription = stringResource(R.string.car_complete_dialog_confirm),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.74f),
                 modifier = Modifier.size(24.dp),
