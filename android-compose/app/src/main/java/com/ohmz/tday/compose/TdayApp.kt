@@ -68,13 +68,14 @@ import com.ohmz.tday.compose.core.model.DashboardSummary
 import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TodoListMode
 import com.ohmz.tday.compose.core.navigation.AppRoute
-import com.ohmz.tday.compose.core.ui.OfflineBanner
+import com.ohmz.tday.compose.core.ui.SnackbarEvent
 import com.ohmz.tday.compose.core.ui.SnackbarKind
 import com.ohmz.tday.compose.core.ui.TdayToastData
 import com.ohmz.tday.compose.core.ui.TdayToastHost
 import com.ohmz.tday.compose.core.ui.TdayToastKind
 import com.ohmz.tday.compose.feature.app.AppUiState
 import com.ohmz.tday.compose.feature.app.AppViewModel
+import com.ohmz.tday.compose.feature.app.ProfileEditResult
 import com.ohmz.tday.compose.feature.auth.AuthViewModel
 import com.ohmz.tday.compose.feature.auth.ForgotPasswordScreen
 import com.ohmz.tday.compose.feature.auth.SetSecurityQuestionsGate
@@ -163,6 +164,9 @@ fun TdayApp(
         stringResource(R.string.release_launch_update_toast, versionLabel)
     }
     val taskDeletedToastMessage = stringResource(R.string.task_deleted_toast)
+    val listDeletedToastMessage = stringResource(R.string.list_deleted_toast)
+    val passwordChangedToastMessage = stringResource(R.string.password_changed_toast)
+    val profileNameUpdatedToastMessage = stringResource(R.string.profile_name_updated_toast)
     var activeToast by remember { mutableStateOf<TdayToastData?>(null) }
     var hasShownLaunchUpdateToast by rememberSaveable { mutableStateOf(false) }
     var isStartupSplashHeld by remember { mutableStateOf(false) }
@@ -215,12 +219,23 @@ fun TdayApp(
         appViewModel = appViewModel,
         onShowToast = { activeToast = it },
     )
+    CollectConnectivityToasts(
+        appViewModel = appViewModel,
+        isOffline = appUiState.isOffline &&
+                appUiState.authenticated &&
+                !appUiState.isLocalMode,
+        pendingMutationCount = appUiState.pendingMutationCount,
+    )
     OnAppForegroundResume {
         appViewModel.reconnectAfterForeground()
     }
 
     fun showTaskDeletedToast() {
         appViewModel.snackbarManager.showSuccess(taskDeletedToastMessage)
+    }
+
+    fun showListDeletedToast() {
+        appViewModel.snackbarManager.showSuccess(listDeletedToastMessage)
     }
 
     fun handleRootFeedTabSelection(tab: RootFeedTab) {
@@ -877,6 +892,7 @@ fun TdayApp(
                                 popUpTo(AppRoute.Home.route) { inclusive = false }
                                 launchSingleTop = true
                             }
+                            showListDeletedToast()
                         },
                     )
                 }
@@ -907,6 +923,7 @@ fun TdayApp(
                                 popUpTo(AppRoute.Home.route) { inclusive = false }
                                 launchSingleTop = true
                             }
+                            showListDeletedToast()
                         },
                     )
                 }
@@ -1021,8 +1038,24 @@ fun TdayApp(
                         onBack = { navController.popBackStack() },
                         onLogout = { appViewModel.logout() },
                         onOpenLatestRelease = { navController.navigate(AppRoute.LatestRelease.route) },
-                        onUpdateName = appViewModel::updateDisplayName,
-                        onChangePassword = appViewModel::changePassword,
+                        onUpdateName = { newName ->
+                            appViewModel.updateDisplayName(newName).also { result ->
+                                if (result is ProfileEditResult.Success) {
+                                    appViewModel.snackbarManager.showSuccess(
+                                        profileNameUpdatedToastMessage,
+                                    )
+                                }
+                            }
+                        },
+                        onChangePassword = { current, newPassword ->
+                            appViewModel.changePassword(current, newPassword).also { result ->
+                                if (result is ProfileEditResult.Success) {
+                                    appViewModel.snackbarManager.showSuccess(
+                                        passwordChangedToastMessage,
+                                    )
+                                }
+                            }
+                        },
                         onForgotPassword = {
                             navController.navigate(AppRoute.ForgotPassword.route) {
                                 launchSingleTop = true
@@ -1048,13 +1081,6 @@ fun TdayApp(
                     )
                 }
             }
-
-            OfflineBanner(
-                visible = appUiState.isOffline && appUiState.authenticated && !appUiState.isLocalMode,
-                pendingMutationCount = appUiState.pendingMutationCount,
-                noticeKey = appUiState.offlineNoticeId,
-                modifier = Modifier.align(Alignment.TopCenter),
-            )
 
             TdayToastHost(
                 toast = activeToast,
@@ -1093,6 +1119,51 @@ private fun CollectAppSnackbars(
                 ),
             )
         }
+    }
+}
+
+/**
+ * Surfaces connectivity changes as transient toasts (replacing the persistent
+ * offline banner): an INFO toast when the app drops offline and a "Back online"
+ * toast when the same gated signal flips back. Drives off the same
+ * `isOffline` condition the banner used so behaviour stays in sync.
+ */
+@Composable
+private fun CollectConnectivityToasts(
+    appViewModel: AppViewModel,
+    isOffline: Boolean,
+    pendingMutationCount: Int,
+) {
+    val context = LocalContext.current
+    // Tracks whether we have already announced the current offline state so we
+    // emit exactly one toast per transition (and skip the initial composition).
+    var wasOffline by remember { mutableStateOf<Boolean?>(null) }
+
+    LaunchedEffect(isOffline, pendingMutationCount) {
+        val previous = wasOffline
+        if (previous == isOffline) return@LaunchedEffect
+        wasOffline = isOffline
+
+        // Skip the very first observation so a cold start that is already online
+        // does not flash a spurious "Back online" toast.
+        if (previous == null) return@LaunchedEffect
+
+        val message = if (isOffline) {
+            when {
+                pendingMutationCount == 1 ->
+                    context.getString(R.string.offline_toast_pending_one)
+
+                pendingMutationCount > 1 ->
+                    context.getString(R.string.offline_toast_pending_many, pendingMutationCount)
+
+                else -> context.getString(R.string.offline_toast)
+            }
+        } else {
+            context.getString(R.string.online_toast)
+        }
+        appViewModel.snackbarManager.show(
+            SnackbarEvent(message = message, kind = SnackbarKind.INFO),
+        )
     }
 }
 

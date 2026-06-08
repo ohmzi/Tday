@@ -259,6 +259,7 @@ export default function SettingsPage() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordLoading, setPasswordLoading] = useState(false);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
@@ -373,10 +374,8 @@ export default function SettingsPage() {
     try {
       if (push.isSubscribed) {
         await push.unsubscribe();
-        toast({ description: t("toast.pushDisabled") });
       } else {
         await push.subscribe();
-        toast({ description: t("toast.pushEnabled") });
       }
     } catch (err) {
       toast({
@@ -391,7 +390,6 @@ export default function SettingsPage() {
     const trimmed = name.trim();
     if (!trimmed) return;
     if (trimmed === user?.name) {
-      toast({ description: t("toast.noChanges") });
       setEditing(null);
       return;
     }
@@ -419,14 +417,16 @@ export default function SettingsPage() {
 
   const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    // Validation errors render inline under the field, not as toasts.
     if (newPassword.length < 8) {
-      toast({ description: t("toast.passwordTooShort"), variant: "destructive" });
+      setPasswordError(t("toast.passwordTooShort"));
       return;
     }
     if (newPassword !== confirmPassword) {
-      toast({ description: t("toast.passwordsDoNotMatch"), variant: "destructive" });
+      setPasswordError(t("toast.passwordsDoNotMatch"));
       return;
     }
+    setPasswordError(null);
     setPasswordLoading(true);
     try {
       await api.POST({
@@ -603,7 +603,10 @@ export default function SettingsPage() {
                       type={showNewPassword ? "text" : "password"}
                       autoComplete="new-password"
                       value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
+                      onChange={(e) => {
+                        setNewPassword(e.target.value);
+                        setPasswordError(null);
+                      }}
                       placeholder={t("password.newPlaceholder")}
                       className={cn(fieldClass, "pl-10 pr-10")}
                       minLength={8}
@@ -634,7 +637,10 @@ export default function SettingsPage() {
                       type={showConfirmPassword ? "text" : "password"}
                       autoComplete="new-password"
                       value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      onChange={(e) => {
+                        setConfirmPassword(e.target.value);
+                        setPasswordError(null);
+                      }}
                       placeholder={t("password.confirmPlaceholder")}
                       className={cn(fieldClass, "pl-10 pr-10")}
                       minLength={8}
@@ -650,6 +656,9 @@ export default function SettingsPage() {
                       </button>
                     )}
                   </div>
+                  {passwordError ? (
+                    <p className="px-1 text-xs font-extrabold text-destructive">{passwordError}</p>
+                  ) : null}
                 </div>
                 <Link
                   href="/forgot-password"
@@ -667,6 +676,7 @@ export default function SettingsPage() {
                       setCurrentPassword("");
                       setNewPassword("");
                       setConfirmPassword("");
+                      setPasswordError(null);
                       setShowCurrentPassword(false);
                       setShowNewPassword(false);
                       setShowConfirmPassword(false);

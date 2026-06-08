@@ -355,6 +355,10 @@
     <string name="offline_banner">Cached tasks are available. Changes will sync when connection returns.</string>
     <string name="offline_banner_pending_one">1 change waiting to sync</string>
     <string name="offline_banner_pending_many">%1$d changes waiting to sync</string>
+    <string name="offline_toast">You\'re offline. Changes will sync when your connection returns.</string>
+    <string name="offline_toast_pending_one">You\'re offline. 1 change will sync when your connection returns.</string>
+    <string name="offline_toast_pending_many">You\'re offline. %1$d changes will sync when your connection returns.</string>
+    <string name="online_toast">Back online. Syncing your latest changes…</string>
     <string name="settings_workspace">Workspace</string>
     <string name="settings_workspace_local_title">Local workspace</string>
     <string name="settings_workspace_local_detail">On this device only</string>
@@ -496,6 +500,9 @@
     <string name="release_no_apk">No APK attached to this release.</string>
     <string name="release_launch_update_toast">Update %1$s is available.</string>
     <string name="task_deleted_toast">Task deleted</string>
+    <string name="list_deleted_toast">List deleted</string>
+    <string name="password_changed_toast">Password changed</string>
+    <string name="profile_name_updated_toast">Name updated</string>
     <string name="release_view_on_github">View on GitHub</string>
 
     <!-- Language picker -->

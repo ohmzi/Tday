@@ -162,6 +162,10 @@ struct AppRootView: View {
                                 },
                                 onResetComplete: { _ in
                                     appViewModel.goBack()
+                                    container.snackbarManager.show(
+                                        L("Password reset. Sign in with your new password."),
+                                        kind: .success
+                                    )
                                 }
                             )
                         }
@@ -169,13 +173,13 @@ struct AppRootView: View {
                     .onChange(of: appViewModel.navigationPath) { _, path in
                         normalizeRootNavigationPath(path)
                     }
-                    .overlay(alignment: .top) {
-                        OfflineBanner(
-                            visible: appViewModel.authenticated && !appViewModel.isLocalMode && appViewModel.isOffline,
-                            pendingMutationCount: appViewModel.pendingMutationCount,
-                            noticeID: appViewModel.offlineNoticeID
-                        )
-                        .padding(.top, 8)
+                    .onChange(of: appViewModel.offlineNoticeID) { _, _ in
+                        showOfflineToast()
+                    }
+                    .onChange(of: appViewModel.isOffline) { wasOffline, isOffline in
+                        if wasOffline && !isOffline {
+                            showBackOnlineToast()
+                        }
                     }
                     .overlay(alignment: .bottom) {
                         if let content = container.snackbarManager.content {
@@ -493,6 +497,38 @@ struct AppRootView: View {
 
     private var rootCreateTaskFillColor: Color {
         rootFeedTab == .floater ? .tdayFloaterGreen : .tdayTodayBlue
+    }
+
+    /// Transient "you're offline" toast, gated the same way the old OfflineBanner was
+    /// (signed in, not local-mode). Driven by `offlineNoticeID`, which the AppViewModel
+    /// already bumps with a cooldown, so this won't spam on every failed sync.
+    private func showOfflineToast() {
+        guard appViewModel.authenticated, !appViewModel.isLocalMode, appViewModel.isOffline else {
+            return
+        }
+        container.snackbarManager.show(offlineToastMessage, kind: .info)
+    }
+
+    /// Transient "back online" toast, fired when connectivity is restored.
+    private func showBackOnlineToast() {
+        guard appViewModel.authenticated, !appViewModel.isLocalMode else {
+            return
+        }
+        container.snackbarManager.show(
+            L("Back online — syncing your latest changes…"),
+            kind: .info
+        )
+    }
+
+    private var offlineToastMessage: String {
+        let count = appViewModel.pendingMutationCount
+        if count == 1 {
+            return L("You're offline — 1 change waiting to sync.")
+        }
+        if count > 1 {
+            return L("You're offline — %lld changes waiting to sync.", Int64(count))
+        }
+        return L("You're offline — changes will sync when your connection returns.")
     }
 
     private func handleDeepLink(_ url: URL) {

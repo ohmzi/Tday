@@ -1,13 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useAuth } from "@/providers/AuthProvider";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { SheetCard } from "@/components/ui/sheet-chrome";
 import { ArrowUpRight, Check, Copy, Info, KeyRound, Loader2, Trash2, Users, X } from "lucide-react";
 import {
   Dialog,
@@ -57,6 +51,15 @@ type ApprovedUserRowProps = {
   onResetPassword: (userId: string) => void;
 };
 
+/** Rounded grouped section card with a big ExtraBold title — mirrors the
+ * native settings cards so the admin page feels at home on mobile. */
+const SectionCard = ({ title, children }: { title: string; children: ReactNode }) => (
+  <SheetCard className="space-y-4 p-[18px]">
+    <h2 className="text-[1.4rem] font-black leading-tight text-foreground">{title}</h2>
+    {children}
+  </SheetCard>
+);
+
 /** Renders a pending-user row with the approve action wired to the current request state. */
 const PendingApprovalRow = ({
   user,
@@ -67,21 +70,21 @@ const PendingApprovalRow = ({
 }: PendingApprovalRowProps) => {
   const busy = actionUserId === user.id;
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/70 bg-muted/20 px-3 py-2">
+    <div className="flex flex-col gap-3 rounded-2xl border border-border/70 bg-muted/20 p-3.5 sm:flex-row sm:items-center sm:justify-between">
       <div className="min-w-0">
-        <p className="truncate text-sm font-medium text-foreground">
+        <p className="truncate text-[1.05rem] font-black text-foreground">
           {user.name?.trim() || user.username}
         </p>
-        <p className="truncate text-xs text-muted-foreground">{user.username}</p>
+        <p className="truncate text-sm font-extrabold text-muted-foreground">{user.username}</p>
       </div>
       <div className="flex items-center gap-2">
         <Button
-          size="sm"
           variant="outline"
           onClick={() => {
             onReject(user.id);
           }}
           disabled={busy}
+          className="h-11 flex-1 rounded-2xl font-black sm:flex-none"
         >
           {busy && actionType === "reject" ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -91,11 +94,11 @@ const PendingApprovalRow = ({
           Reject
         </Button>
         <Button
-          size="sm"
           onClick={() => {
             onApprove(user.id);
           }}
           disabled={busy}
+          className="h-11 flex-1 rounded-2xl font-black sm:flex-none"
         >
           {busy && actionType === "approve" ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -123,13 +126,13 @@ const ApprovedUserRow = ({
   const resetRequested = Boolean(user.pendingAdminReset);
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/70 bg-muted/20 px-3 py-2">
+    <div className="flex flex-col gap-3 rounded-2xl border border-border/70 bg-muted/20 p-3.5 sm:flex-row sm:items-center sm:justify-between">
       <div className="min-w-0">
-        <p className="truncate text-sm font-medium text-foreground">
+        <p className="truncate text-[1.05rem] font-black text-foreground">
           {user.name?.trim() || user.username}
         </p>
-        <p className="truncate text-xs text-muted-foreground">{user.username}</p>
-        <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+        <p className="truncate text-sm font-extrabold text-muted-foreground">{user.username}</p>
+        <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs font-extrabold text-muted-foreground">
           <span className="rounded-full border border-border/70 px-2 py-0.5">
             {user.role}
           </span>
@@ -139,7 +142,7 @@ const ApprovedUserRow = ({
             </span>
           ) : null}
           {resetRequested ? (
-            <span className="rounded-full border border-destructive/40 bg-destructive/10 px-2 py-0.5 font-medium text-destructive">
+            <span className="rounded-full border border-destructive/40 bg-destructive/10 px-2 py-0.5 text-destructive">
               Reset requested
             </span>
           ) : null}
@@ -150,13 +153,13 @@ const ApprovedUserRow = ({
             themselves under Settings → Change password. */}
         {user.role !== "ADMIN" && (
           <Button
-            size="sm"
             // Turns red when the user has asked an admin to reset their password.
             variant={resetRequested ? "destructive" : "outline"}
             onClick={() => {
               onResetPassword(user.id);
             }}
             disabled={busy}
+            className="h-11 flex-1 rounded-2xl font-black sm:flex-none"
           >
             {busy && actionType === "reset" ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -167,12 +170,12 @@ const ApprovedUserRow = ({
           </Button>
         )}
         <Button
-          size="sm"
           variant="destructive"
           onClick={() => {
             onDelete(user.id);
           }}
           disabled={busy || isCurrentUser}
+          className="h-11 flex-1 rounded-2xl font-black sm:flex-none"
         >
           {busy && actionType === "delete" ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -192,7 +195,6 @@ const AdminPageHeader = () => (
     title="Admin"
     accentColor={nativeScreenAccentColors.settings}
     icon={Users}
-    subtitle="Approve pending registrations and manage user access."
   />
 );
 
@@ -200,15 +202,15 @@ const AdminPageHeader = () => (
 const VersionLinkRow = () => (
   <Link
     href="/app/admin/version"
-    className="group flex items-center justify-between gap-4 rounded-xl border border-border/70 bg-muted/20 px-4 py-4 transition-colors hover:border-accent/35 hover:bg-muted/30"
+    className="group flex items-center justify-between gap-4 rounded-2xl border border-border/70 bg-muted/20 px-4 py-4 transition-colors hover:border-accent/35 hover:bg-muted/30 active:opacity-70"
   >
     <div className="min-w-0">
-      <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-        <Info className="h-4 w-4 text-accent" />
+      <div className="flex items-center gap-2 text-[1.05rem] font-black text-foreground">
+        <Info className="h-5 w-5 shrink-0 text-accent" />
         <span>Version {formatDisplayVersion(CURRENT_APP_VERSION) ?? CURRENT_APP_VERSION}</span>
       </div>
     </div>
-    <ArrowUpRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+    <ArrowUpRight className="h-5 w-5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
   </Link>
 );
 
@@ -229,12 +231,12 @@ const PendingApprovalsContent = ({
   onReject: (userId: string) => void;
 }) => {
   if (loading) {
-    return <p className="text-sm text-muted-foreground">Loading users...</p>;
+    return <p className="text-sm font-extrabold text-muted-foreground">Loading users...</p>;
   }
 
   if (pendingUsers.length === 0) {
     return (
-      <p className="rounded-xl border border-border/70 bg-muted/25 px-3 py-2 text-sm text-muted-foreground">
+      <p className="rounded-2xl border border-border/70 bg-muted/25 px-3.5 py-3 text-sm font-extrabold text-muted-foreground">
         No pending users.
       </p>
     );
@@ -271,12 +273,12 @@ const ApprovedUsersContent = ({
   onResetPassword: (userId: string) => void;
 }) => {
   if (loading) {
-    return <p className="text-sm text-muted-foreground">Loading users...</p>;
+    return <p className="text-sm font-extrabold text-muted-foreground">Loading users...</p>;
   }
 
   if (approvedUsers.length === 0) {
     return (
-      <p className="rounded-xl border border-border/70 bg-muted/25 px-3 py-2 text-sm text-muted-foreground">
+      <p className="rounded-2xl border border-border/70 bg-muted/25 px-3.5 py-3 text-sm font-extrabold text-muted-foreground">
         No approved users.
       </p>
     );
@@ -453,14 +455,8 @@ export default function AdminUserControl() {
       <AdminPageHeader />
 
       {loading || pendingUsers.length > 0 ? (
-        <Card className="rounded-2xl border-border/70 bg-card/95">
-          <CardHeader>
-            <CardTitle>Pending approvals</CardTitle>
-            <CardDescription>
-              New accounts can sign in only after approval.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
+        <SectionCard title="Pending approvals">
+          <div className="space-y-2.5">
             <PendingApprovalsContent
               loading={loading}
               pendingUsers={pendingUsers}
@@ -469,18 +465,12 @@ export default function AdminUserControl() {
               onApprove={approveUser}
               onReject={rejectUser}
             />
-          </CardContent>
-        </Card>
+          </div>
+        </SectionCard>
       ) : null}
 
-      <Card className="rounded-2xl border-border/70 bg-card/95">
-        <CardHeader>
-          <CardTitle>Approved users</CardTitle>
-          <CardDescription>
-            Tasks remain private. Admin can only manage account access.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
+      <SectionCard title="Approved users">
+        <div className="space-y-2.5">
           <ApprovedUsersContent
             loading={loading}
             approvedUsers={approvedUsers}
@@ -490,20 +480,12 @@ export default function AdminUserControl() {
             onDelete={deleteUser}
             onResetPassword={resetPassword}
           />
-        </CardContent>
-      </Card>
+        </div>
+      </SectionCard>
 
-      <Card className="rounded-2xl border-border/70 bg-card/95">
-        <CardHeader>
-          <CardTitle>App version</CardTitle>
-          <CardDescription>
-            Review GitHub release notes and update availability for the current deployment.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <VersionLinkRow />
-        </CardContent>
-      </Card>
+      <SectionCard title="App version">
+        <VersionLinkRow />
+      </SectionCard>
 
       <Dialog
         open={resetResult !== null}

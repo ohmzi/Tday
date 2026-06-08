@@ -6,13 +6,11 @@ import {
 } from "@/lib/todo/patch-todo";
 import { TodoItemType } from "@/types";
 import { endOfDay } from "date-fns";
-import { useTodoActionToast } from "@/hooks/use-todo-action-toast";
 
 export type { TodoItemTypeWithDateChecksum } from "@/lib/todo/patch-todo";
 
 export const useEditTodo = () => {
   const { toast } = useToast();
-  const { showTodoUpdatedToast } = useTodoActionToast();
   const queryClient = useQueryClient();
 
   const { mutate: editTodoMutateFn, status: editTodoStatus } = useMutation({
@@ -80,9 +78,6 @@ export const useEditTodo = () => {
       queryClient.setQueryData(["todo"], context?.oldTodos);
       queryClient.setQueryData(["todoTimeline"], context?.oldTimelineTodos);
       toast({ description: error.message, variant: "destructive" });
-    },
-    onSuccess: (_data, updatedTodo) => {
-      showTodoUpdatedToast(updatedTodo);
     },
   });
 

@@ -14,13 +14,10 @@ import {
 } from "@dnd-kit/core";
 import { format } from "date-fns";
 import { TodoItemType } from "@/types";
-import { useToast } from "@/hooks/use-toast";
 import { useUserPreferences } from "@/providers/UserPreferencesProvider";
 import { useTimelineReschedule } from "./useTimelineReschedule";
 import { overlayCardClass } from "./timelineDndClasses";
 import { hapticDragStart, hapticDragOver, hapticDrop } from "@/lib/haptics";
-
-const DRAG_DISABLED_MESSAGE = "Drag disabled; a global filter is active";
 
 export type TimelineDraggableData = {
   todo: TodoItemType;
@@ -52,7 +49,6 @@ export default function TimelineDndContext({
   timeZone?: string;
   children: React.ReactNode;
 }) {
-  const { toast } = useToast();
   const { preferences } = useUserPreferences();
   const reschedule = useTimelineReschedule(timeZone);
   const [activeTodo, setActiveTodo] = useState<TodoItemType | null>(null);
@@ -86,14 +82,14 @@ export default function TimelineDndContext({
   const handleDragStart = useCallback(
     (event: DragStartEvent) => {
       if (preferences?.sortBy) {
-        toast({ title: DRAG_DISABLED_MESSAGE });
+        // A global sort is active — silently block the drag (no toast).
         return;
       }
       const data = event.active.data.current as TimelineDraggableData | undefined;
       setActiveTodo(data?.todo ?? null);
       hapticDragStart();
     },
-    [preferences?.sortBy, toast],
+    [preferences?.sortBy],
   );
 
   const handleDragOver = useCallback(

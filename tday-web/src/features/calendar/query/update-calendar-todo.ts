@@ -5,13 +5,11 @@ import {
   type TodoItemPatchInput,
 } from "@/lib/todo/patch-todo";
 import { TodoItemType } from "@/types";
-import { useTodoActionToast } from "@/hooks/use-todo-action-toast";
 
 type TodoItemTypeWithChecksum = TodoItemPatchInput;
 
 export const useEditCalendarTodo = () => {
   const { toast } = useToast();
-  const { showTodoUpdatedToast } = useTodoActionToast();
   const queryClient = useQueryClient();
 
   const { mutate: editCalendarTodo, status: editTodoStatus } = useMutation({
@@ -68,9 +66,6 @@ export const useEditCalendarTodo = () => {
     onError: (error, _newTodo, context) => {
       queryClient.setQueryData(["calendarTodo"], context?.oldTodos);
       toast({ description: error.message, variant: "destructive" });
-    },
-    onSuccess: (_data, updatedTodo) => {
-      showTodoUpdatedToast(updatedTodo);
     },
   });
 

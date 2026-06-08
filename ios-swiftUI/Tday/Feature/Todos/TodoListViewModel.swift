@@ -112,7 +112,10 @@ final class TodoListViewModel {
             }
             hydrateFromCache()
         } catch {
-            errorMessage = userFacingMessage(for: error, fallback: "Could not create task.")
+            container.snackbarManager.show(
+                userFacingMessage(for: error, fallback: "Could not create task."),
+                kind: .error
+            )
         }
     }
 
@@ -126,7 +129,10 @@ final class TodoListViewModel {
             }
             hydrateFromCache()
         } catch {
-            errorMessage = userFacingMessage(for: error, fallback: "Could not update task.")
+            container.snackbarManager.show(
+                userFacingMessage(for: error, fallback: "Could not update task."),
+                kind: .error
+            )
         }
     }
 
@@ -151,7 +157,10 @@ final class TodoListViewModel {
             )
             hydrateFromCache()
         } catch {
-            errorMessage = userFacingMessage(for: error, fallback: "Could not update task.")
+            container.snackbarManager.show(
+                userFacingMessage(for: error, fallback: "Could not update task."),
+                kind: .error
+            )
         }
     }
 
@@ -165,7 +174,10 @@ final class TodoListViewModel {
             }
             hydrateFromCache()
         } catch {
-            errorMessage = userFacingMessage(for: error, fallback: "Could not complete task.")
+            container.snackbarManager.show(
+                userFacingMessage(for: error, fallback: "Could not complete task."),
+                kind: .error
+            )
         }
     }
 
@@ -178,8 +190,12 @@ final class TodoListViewModel {
                 try await container.todoRepository.deleteTodo(todo)
             }
             hydrateFromCache()
+            container.snackbarManager.show(L("Task deleted"), kind: .success)
         } catch {
-            errorMessage = userFacingMessage(for: error, fallback: "Could not delete task.")
+            container.snackbarManager.show(
+                userFacingMessage(for: error, fallback: "Could not delete task."),
+                kind: .error
+            )
         }
     }
 
@@ -195,7 +211,10 @@ final class TodoListViewModel {
             hydrateFromCache()
             title = name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? (listName ?? mode.title) : name
         } catch {
-            errorMessage = userFacingMessage(for: error, fallback: "Could not update list.")
+            container.snackbarManager.show(
+                userFacingMessage(for: error, fallback: "Could not update list."),
+                kind: .error
+            )
         }
     }
 
@@ -209,7 +228,10 @@ final class TodoListViewModel {
             }
             hydrateFromCache()
         } catch {
-            errorMessage = userFacingMessage(for: error, fallback: "Could not create list.")
+            container.snackbarManager.show(
+                userFacingMessage(for: error, fallback: "Could not create list."),
+                kind: .error
+            )
         }
     }
 
@@ -234,8 +256,12 @@ final class TodoListViewModel {
                     onOptimisticDelete: optimisticDelete
                 )
             }
+            container.snackbarManager.show(L("List deleted"), kind: .success)
         } catch {
-            errorMessage = userFacingMessage(for: error, fallback: "Could not delete list.")
+            container.snackbarManager.show(
+                userFacingMessage(for: error, fallback: "Could not delete list."),
+                kind: .error
+            )
             hydrateFromCache()
         }
     }
