@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react
 import { useAuth } from "@/providers/AuthProvider";
 import { Button } from "@/components/ui/button";
 import { SheetCard } from "@/components/ui/sheet-chrome";
-import { ArrowUpRight, Check, Copy, Info, KeyRound, Loader2, Trash2, Users, X } from "lucide-react";
+import { ArrowUpRight, Check, Copy, KeyRound, Loader2, Trash2, Users, X } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -223,7 +223,6 @@ const VersionLinkRow = () => (
   >
     <div className="min-w-0">
       <div className="flex items-center gap-2 text-[1.05rem] font-black text-foreground">
-        <Info className="h-5 w-5 shrink-0 text-accent" />
         <span>Version {formatDisplayVersion(CURRENT_APP_VERSION) ?? CURRENT_APP_VERSION}</span>
       </div>
     </div>

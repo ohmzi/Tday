@@ -13,7 +13,6 @@ import {
   Moon,
   Pencil,
   Settings,
-  Shield,
   ShieldQuestion,
   Sun,
   Trash2,
@@ -1127,7 +1126,6 @@ export default function SettingsPage() {
               href="/app/admin"
               className="flex w-full items-center gap-3 py-1.5 text-left transition active:opacity-60"
             >
-              <Shield className="h-5 w-5 shrink-0 text-accent" />
               <span className="min-w-0 flex-1 truncate text-[1.05rem] font-black text-foreground">
                 {sidebarDict("admin")}
               </span>
