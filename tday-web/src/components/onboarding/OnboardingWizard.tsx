@@ -361,10 +361,6 @@ export default function OnboardingWizard({
               <StepChip title="Login" Icon={User} tint={TINT.loginRose} active />
             </div>
 
-            <p className="-mt-1 text-[13px] font-bold text-foreground/60">
-              Set up your workspace
-            </p>
-
             {isSubmitting ? (
               <WizardLoadingPanel
                 Icon={isCreating ? UserPlus : Lock}
@@ -379,11 +375,6 @@ export default function OnboardingWizard({
               <form onSubmit={handleSubmit} className="flex flex-col gap-[11px]">
                 <HeroTile
                   title={isCreating ? "Create account" : "Sign in"}
-                  subtitle={
-                    isCreating
-                      ? "Create your server account."
-                      : "Open your synced workspace."
-                  }
                   Icon={isCreating ? UserPlus : User}
                   tint={TINT.heroRose}
                 />
@@ -436,8 +427,7 @@ export default function OnboardingWizard({
                       }}
                     />
                     <p className="-mb-0.5 mt-0.5 text-[12px] font-bold text-foreground/55">
-                      Security questions — used to reset your password if you
-                      forget it.
+                      Security questions
                     </p>
                     <WizardQuestionSelect
                       value={questionId1}
@@ -608,12 +598,10 @@ function StepChip({
 
 function HeroTile({
   title,
-  subtitle,
   Icon,
   tint,
 }: {
   title: string;
-  subtitle: string;
   Icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
   tint: string;
 }) {
@@ -640,9 +628,6 @@ function HeroTile({
         <div className="min-w-0">
           <p className="truncate text-[21px] font-bold leading-tight text-white">
             {title}
-          </p>
-          <p className="line-clamp-2 text-[13px] font-bold leading-snug text-white/80">
-            {subtitle}
           </p>
         </div>
       </div>

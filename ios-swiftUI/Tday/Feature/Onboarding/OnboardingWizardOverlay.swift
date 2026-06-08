@@ -225,11 +225,6 @@ struct OnboardingWizardOverlay: View {
                 )
             }
 
-            Text("Set up your workspace")
-                .font(.tdayRounded(size: 13, weight: .bold))
-                .foregroundStyle(colors.onSurface.opacity(0.62))
-                .padding(.top, -4)
-
             Group {
                 if isConnecting {
                     WizardLoadingPanel(
@@ -384,7 +379,6 @@ struct OnboardingWizardOverlay: View {
         VStack(alignment: .leading, spacing: 11) {
             WizardHeroTile(
                 title: isCreatingAccount ? "Create account" : "Sign in",
-                subtitle: isCreatingAccount ? "Create your server account." : "Open your synced workspace.",
                 systemImage: isCreatingAccount ? "person.badge.plus.fill" : "person.fill",
                 tint: Color(red: 0.79, green: 0.47, blue: 0.50)
             )
@@ -504,7 +498,6 @@ struct OnboardingWizardOverlay: View {
         VStack(alignment: .leading, spacing: 11) {
             WizardHeroTile(
                 title: "Security questions",
-                subtitle: "Used to verify it's you if you reset your password.",
                 systemImage: "lock.shield.fill",
                 tint: Color(red: 0.5, green: 0.62, blue: 0.86)
             )
@@ -1066,7 +1059,7 @@ private struct WizardSecurityQuestionPicker: View {
 
 private struct WizardHeroTile: View {
     let title: String
-    let subtitle: String
+    var subtitle: String? = nil
     let systemImage: String
     let tint: Color
 
@@ -1102,10 +1095,12 @@ private struct WizardHeroTile: View {
                         .lineLimit(1)
                         .minimumScaleFactor(0.82)
 
-                    Text(L(subtitle))
-                        .font(.tdayRounded(size: 13, weight: .bold))
-                        .foregroundStyle(.white.opacity(0.82))
-                        .lineLimit(2)
+                    if let subtitle, !subtitle.isEmpty {
+                        Text(L(subtitle))
+                            .font(.tdayRounded(size: 13, weight: .bold))
+                            .foregroundStyle(.white.opacity(0.82))
+                            .lineLimit(2)
+                    }
                 }
 
                 Spacer(minLength: 0)
