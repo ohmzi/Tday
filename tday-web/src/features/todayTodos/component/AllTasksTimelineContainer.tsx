@@ -107,12 +107,21 @@ const getDayLabel = ({
 }) => {
   if (dayDiff === 0) return appDict("today");
   if (dayDiff === 1) return appDict("tomorrow");
+  // Weekday + month + day, no year — matches the timeline section headers (and
+  // Android/iOS) so Overdue dates read the same everywhere. Commas dropped to
+  // mirror the native header style ("Mon Jun 8").
   return new Intl.DateTimeFormat(locale, {
+    weekday: "short",
     month: "short",
     day: "numeric",
-    year: "numeric",
     timeZone: timeZone || "UTC",
-  }).format(date);
+  })
+    .formatToParts(date)
+    .filter((part) => !(part.type === "literal" && /,/.test(part.value)))
+    .map((part) => (part.type === "literal" ? part.value.replace(/,/g, "") : part.value))
+    .join(" ")
+    .replace(/\s+/g, " ")
+    .trim();
 };
 
 const getTimelinePriority = (dayDiff: number) => {
