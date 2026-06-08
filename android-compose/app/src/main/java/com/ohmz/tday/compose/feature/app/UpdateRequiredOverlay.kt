@@ -4,10 +4,10 @@ import android.content.Context
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,9 +17,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.SystemUpdate
-import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -42,8 +39,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -171,7 +170,7 @@ fun UpdateRequiredOverlay(
                                 installState is OverlayInstallState.Installing
 
                         Icon(
-                            imageVector = Icons.Rounded.SystemUpdate,
+                            imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_download),
                             contentDescription = null,
                             tint = colorScheme.primary,
                             modifier = Modifier.size(48.dp),
@@ -259,7 +258,7 @@ fun UpdateRequiredOverlay(
 
                     is VersionCheckResult.ServerUpdateRequired -> {
                         Icon(
-                            imageVector = Icons.Rounded.Warning,
+                            imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_triangle_alert),
                             contentDescription = null,
                             tint = colorScheme.error,
                             modifier = Modifier.size(48.dp),

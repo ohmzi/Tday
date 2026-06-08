@@ -42,16 +42,6 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.BorderColor
-import androidx.compose.material.icons.rounded.CalendarMonth
-import androidx.compose.material.icons.rounded.CheckCircle
-import androidx.compose.material.icons.rounded.ChevronLeft
-import androidx.compose.material.icons.rounded.ChevronRight
-import androidx.compose.material.icons.rounded.DeleteOutline
-import androidx.compose.material.icons.rounded.Flag
-import androidx.compose.material.icons.rounded.RadioButtonUnchecked
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -103,6 +93,7 @@ import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.font.FontWeight
@@ -817,7 +808,7 @@ private fun CalendarCreateTaskFab(
         ),
     ) {
         Icon(
-            imageVector = Icons.Rounded.Add,
+            imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_plus),
             contentDescription = stringResource(R.string.action_create_task),
             modifier = Modifier.size(40.dp),
         )
@@ -989,7 +980,7 @@ private fun CalendarWeekCard(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 MiniCalendarNavButton(
-                    icon = Icons.Rounded.ChevronLeft,
+                    icon = ImageVector.vectorResource(R.drawable.ic_lucide_chevron_left),
                     contentDescription = stringResource(R.string.calendar_prev_week),
                     enabled = canGoPrevWeek && isPagingAtRest,
                     onClick = { requestPage(-1) },
@@ -1008,7 +999,7 @@ private fun CalendarWeekCard(
                     )
                 }
                 MiniCalendarNavButton(
-                    icon = Icons.Rounded.ChevronRight,
+                    icon = ImageVector.vectorResource(R.drawable.ic_lucide_chevron_right),
                     contentDescription = stringResource(R.string.calendar_next_week),
                     enabled = isPagingAtRest,
                     onClick = { requestPage(1) },
@@ -1362,7 +1353,7 @@ private fun CalendarDayCard(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 MiniCalendarNavButton(
-                    icon = Icons.Rounded.ChevronLeft,
+                    icon = ImageVector.vectorResource(R.drawable.ic_lucide_chevron_left),
                     contentDescription = stringResource(R.string.calendar_prev_day),
                     enabled = canGoPrevDay && isPagingAtRest,
                     onClick = { requestPage(-1) },
@@ -1381,7 +1372,7 @@ private fun CalendarDayCard(
                     )
                 }
                 MiniCalendarNavButton(
-                    icon = Icons.Rounded.ChevronRight,
+                    icon = ImageVector.vectorResource(R.drawable.ic_lucide_chevron_right),
                     contentDescription = stringResource(R.string.calendar_next_day),
                     enabled = isPagingAtRest,
                     onClick = { requestPage(1) },
@@ -1499,7 +1490,7 @@ private fun CalendarTopBar(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 CalendarCircleButton(
-                    icon = Icons.Rounded.ChevronLeft,
+                    icon = ImageVector.vectorResource(R.drawable.ic_lucide_chevron_left),
                     contentDescription = stringResource(R.string.action_back),
                     onClick = onBack,
                     isBackButton = true,
@@ -1692,7 +1683,7 @@ private fun CalendarTodayButton(
             horizontalArrangement = Arrangement.Center,
         ) {
             Icon(
-                imageVector = Icons.Rounded.CalendarMonth,
+                imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_calendar),
                 contentDescription = contentDescription,
                 tint = CalendarAccentPurple,
                 modifier = Modifier.size(28.dp),
@@ -1807,7 +1798,7 @@ private fun CalendarMonthCard(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 MiniCalendarNavButton(
-                    icon = Icons.Rounded.ChevronLeft,
+                    icon = ImageVector.vectorResource(R.drawable.ic_lucide_chevron_left),
                     contentDescription = stringResource(R.string.calendar_prev_month),
                     enabled = canGoPrevMonth && isPagingAtRest,
                     onClick = { requestPage(-1) },
@@ -1827,7 +1818,7 @@ private fun CalendarMonthCard(
                     )
                 }
                 MiniCalendarNavButton(
-                    icon = Icons.Rounded.ChevronRight,
+                    icon = ImageVector.vectorResource(R.drawable.ic_lucide_chevron_right),
                     contentDescription = stringResource(R.string.calendar_next_month),
                     enabled = isPagingAtRest,
                     onClick = { requestPage(1) },
@@ -2133,7 +2124,7 @@ private fun CalendarTaskDragPreview(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
-                imageVector = Icons.Rounded.RadioButtonUnchecked,
+                imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_circle),
                 contentDescription = null,
                 tint = colorScheme.onSurfaceVariant.copy(alpha = 0.76f),
                 modifier = Modifier.size(22.dp),
@@ -2296,7 +2287,7 @@ private fun CalendarTodoRow(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 CalendarSwipeActionButton(
-                    icon = Icons.Rounded.BorderColor,
+                    icon = ImageVector.vectorResource(R.drawable.ic_lucide_square_pen),
                     contentDescription = stringResource(R.string.action_edit_task),
                     label = stringResource(R.string.action_edit),
                     tint = Color.White,
@@ -2310,7 +2301,7 @@ private fun CalendarTodoRow(
                     },
                 )
                 CalendarSwipeActionButton(
-                    icon = Icons.Rounded.DeleteOutline,
+                    icon = ImageVector.vectorResource(R.drawable.ic_lucide_trash_2),
                     contentDescription = stringResource(R.string.action_delete_task),
                     label = stringResource(R.string.action_delete),
                     tint = Color.White,
@@ -2430,9 +2421,9 @@ private fun CalendarTodoRow(
                 ) {
                     CalendarCompletionToggleIcon(
                         imageVector = if (localChecked) {
-                            Icons.Rounded.CheckCircle
+                            ImageVector.vectorResource(R.drawable.ic_lucide_circle_check_big)
                         } else {
-                            Icons.Rounded.RadioButtonUnchecked
+                            ImageVector.vectorResource(R.drawable.ic_lucide_circle)
                         },
                         contentDescription = if (localChecked) {
                             stringResource(R.string.label_completed)
@@ -2611,9 +2602,9 @@ private fun CalendarCompletedTodoRow(
             ) {
                 CalendarCompletionToggleIcon(
                     imageVector = if (showCompletedState) {
-                        Icons.Rounded.CheckCircle
+                        ImageVector.vectorResource(R.drawable.ic_lucide_circle_check_big)
                     } else {
-                        Icons.Rounded.RadioButtonUnchecked
+                        ImageVector.vectorResource(R.drawable.ic_lucide_circle)
                     },
                     contentDescription = stringResource(R.string.label_undo_complete),
                     tint = if (showCompletedState) {
@@ -2680,7 +2671,8 @@ private fun CalendarCompletedTodoRow(
                             )
                         }
                         Icon(
-                            imageVector = priorityIcon ?: Icons.Rounded.Flag,
+                            imageVector = priorityIcon
+                                ?: ImageVector.vectorResource(R.drawable.ic_lucide_flag),
                             contentDescription = stringResource(R.string.label_priority_task),
                             tint = tdayPriorityColor(item.priority),
                             modifier = Modifier.size(18.dp),
@@ -2848,10 +2840,11 @@ private fun buildMonthCells(month: YearMonth): List<CalendarDayCellModel> {
     }
 }
 
+@Composable
 private fun priorityIconFor(priority: String): ImageVector? {
     return when (priority.trim().lowercase(Locale.getDefault())) {
-        "medium" -> Icons.Rounded.Flag
-        "high", "urgent", "important" -> Icons.Rounded.Flag
+        "medium" -> ImageVector.vectorResource(R.drawable.ic_lucide_flag)
+        "high", "urgent", "important" -> ImageVector.vectorResource(R.drawable.ic_lucide_flag)
         else -> null
     }
 }

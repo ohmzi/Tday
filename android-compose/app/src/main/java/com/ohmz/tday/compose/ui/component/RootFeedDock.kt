@@ -27,10 +27,6 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.Eco
-import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -54,6 +50,7 @@ import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -91,10 +88,11 @@ private fun RootFeedTab.labelRes(): Int {
     }
 }
 
+@Composable
 private fun RootFeedTab.icon(): ImageVector {
     return when (this) {
-        RootFeedTab.HOME -> Icons.Rounded.Home
-        RootFeedTab.FLOATER -> Icons.Rounded.Eco
+        RootFeedTab.HOME -> ImageVector.vectorResource(R.drawable.ic_lucide_house)
+        RootFeedTab.FLOATER -> ImageVector.vectorResource(R.drawable.ic_lucide_leaf)
     }
 }
 
@@ -134,7 +132,7 @@ fun RootCreateTaskButton(
             contentAlignment = Alignment.Center,
         ) {
             Icon(
-                imageVector = Icons.Rounded.Add,
+                imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_plus),
                 contentDescription = stringResource(R.string.action_create_task),
                 tint = Color.White,
                 modifier = Modifier.size(TdayDimens.FabIconSize),
