@@ -106,7 +106,7 @@ struct ForgotPasswordView: View {
     private var stepSubtitle: String? {
         switch step {
         case .username:
-            return "Enter your username to answer your security questions."
+            return nil
         case .challenge:
             return nil
         case .locked:

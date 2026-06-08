@@ -27,6 +27,16 @@ const val SECURITY_QUESTION_FAIL_LIMIT = 3
 
 enum class ResetOutcome { SUCCESS, FAILED, LOCKED }
 
+/** Per-answer verification result for the staged reset wizard. */
+data class AnswerResult(val questionId: Int, val correct: Boolean)
+
+/** Outcome of verifying answers without resetting. `locked` short-circuits the rest. */
+data class VerifyAnswersResult(
+    val locked: Boolean,
+    val valid: Boolean,
+    val results: List<AnswerResult>,
+)
+
 data class SecurityQuestionStatus(
     val questionIds: List<Int>,
     val requireSecurityQuestions: Boolean,
@@ -35,6 +45,21 @@ data class SecurityQuestionStatus(
 interface SecurityQuestionService {
     /** Always returns exactly two questions: the user's real pair, or a stable decoy pair. */
     suspend fun questionsForUsername(rawUsername: String): List<SecurityQuestion>
+
+    /**
+     * The account's full set of stored questions (2–3), or null when the username
+     * doesn't exist / hasn't configured questions. Used by the reset wizard to (a)
+     * validate the username up front and (b) cycle in a not-yet-asked question after a
+     * wrong answer. Reveals account existence by design (admin-accepted tradeoff).
+     */
+    suspend fun lookupQuestionsForUsername(rawUsername: String): List<SecurityQuestion>?
+
+    /**
+     * Verifies the supplied answers WITHOUT resetting the password, returning per-answer
+     * correctness so the wizard can gate the new-password screen and swap the failed
+     * question. Increments the server fail-count (and can lock out) just like a reset.
+     */
+    suspend fun verifyAnswers(rawUsername: String, answers: List<SecurityAnswerInput>): VerifyAnswersResult
 
     /** Verifies both answers and, on success, resets the password and revokes sessions. */
     suspend fun verifyAndReset(rawUsername: String, answers: List<SecurityAnswerInput>, newPassword: String): ResetOutcome
@@ -77,6 +102,77 @@ class SecurityQuestionServiceImpl(
             }
         } ?: SecurityQuestions.decoyPair(hashHex)
         return SecurityQuestions.questionsFor(ids)
+    }
+
+    override suspend fun lookupQuestionsForUsername(rawUsername: String): List<SecurityQuestion>? {
+        val username = normalize(rawUsername)
+        val ids = newSuspendedTransaction(Dispatchers.IO) {
+            val userRow = Users.selectAll().where { Users.username.lowerCase() eq username }.firstOrNull()
+            if (userRow == null || userRow[Users.requireSecurityQuestions]) return@newSuspendedTransaction null
+            val userId = userRow[Users.id]
+            UserSecurityQuestions.selectAll()
+                .where { UserSecurityQuestions.userID eq userId }
+                .map { it[UserSecurityQuestions.questionId] }
+                .takeIf { it.size >= 2 }
+        } ?: return null
+        return SecurityQuestions.questionsFor(ids)
+    }
+
+    override suspend fun verifyAnswers(
+        rawUsername: String,
+        answers: List<SecurityAnswerInput>,
+    ): VerifyAnswersResult {
+        val username = normalize(rawUsername)
+        return newSuspendedTransaction(Dispatchers.IO) {
+            val userRow = Users.selectAll().where { Users.username.lowerCase() eq username }.firstOrNull()
+
+            // Unknown / not-yet-configured: equalise timing, report every answer wrong.
+            if (userRow == null || userRow[Users.requireSecurityQuestions]) {
+                passwordService.verifyPassword("x", dummyHash)
+                return@newSuspendedTransaction VerifyAnswersResult(
+                    locked = false,
+                    valid = false,
+                    results = answers.map { AnswerResult(it.questionId, false) },
+                )
+            }
+
+            val userId = userRow[Users.id]
+            val locked = userRow[Users.securityQuestionFailCount] > SECURITY_QUESTION_FAIL_LIMIT ||
+                userRow[Users.pendingAdminReset]
+            if (locked) {
+                passwordService.verifyPassword("x", dummyHash)
+                return@newSuspendedTransaction VerifyAnswersResult(locked = true, valid = false, results = emptyList())
+            }
+
+            val storedHashes = UserSecurityQuestions.selectAll()
+                .where { UserSecurityQuestions.userID eq userId }
+                .associate { it[UserSecurityQuestions.questionId] to it[UserSecurityQuestions.answerHash] }
+
+            // Per-answer result (the wizard needs to know which one to swap); a missing
+            // question still pays the PBKDF2 cost so timing stays uniform.
+            val results = answers.map { answer ->
+                val hash = storedHashes[answer.questionId]
+                val correct = if (hash != null) {
+                    passwordService.verifyPassword(SecurityQuestions.normalizeAnswer(answer.answer), hash).valid
+                } else {
+                    passwordService.verifyPassword("x", dummyHash)
+                    false
+                }
+                AnswerResult(answer.questionId, correct)
+            }
+            val distinctIds = answers.map { it.questionId }.toSet()
+            val valid = results.size == 2 && distinctIds.size == 2 && results.all { it.correct }
+
+            if (!valid) {
+                Users.update({ Users.id eq userId }) {
+                    with(SqlExpressionBuilder) {
+                        it[Users.securityQuestionFailCount] = Users.securityQuestionFailCount + 1
+                    }
+                    it[Users.updatedAt] = LocalDateTime.now(ZoneOffset.UTC)
+                }
+            }
+            VerifyAnswersResult(locked = false, valid = valid, results = results)
+        }
     }
 
     override suspend fun verifyAndReset(

@@ -27,6 +27,13 @@ data class SelfServiceResetRequest(
 )
 
 @Serializable
+data class VerifySecurityAnswersRequest(
+    val username: String,
+    val answers: List<SecurityAnswerInput> = emptyList(),
+    val captchaToken: String? = null,
+)
+
+@Serializable
 data class RequestAdminResetRequest(
     val username: String,
 )

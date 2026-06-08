@@ -17,7 +17,19 @@ import { nativeScreenAccentColors } from "@/components/app/nativeScreenTheme";
 import NativeAppBrandButton from "@/components/app/NativeAppBrandButton";
 import { api } from "@/lib/api-client";
 import { getErrorMessage } from "@/lib/error-message";
+import { cn } from "@/lib/utils";
 import { Link } from "@/lib/navigation";
+
+// Cohesive action-button styling shared by every row button (approve/deny/reset/
+// delete) so they read as one family: same height, radius, weight, and icon gap —
+// full-width on mobile, auto-width from sm up. Colour conveys intent.
+const ACTION_BUTTON_BASE =
+  "h-10 flex-1 gap-2 rounded-xl text-sm font-bold transition-colors sm:flex-none sm:px-4";
+const ACTION_PRIMARY = "bg-primary text-primary-foreground hover:bg-primary/90";
+const ACTION_NEUTRAL =
+  "border border-border/60 bg-muted/50 text-foreground hover:bg-muted";
+const ACTION_DESTRUCTIVE =
+  "border border-destructive/30 bg-destructive/10 text-destructive hover:bg-destructive/20";
 import { CURRENT_APP_VERSION, formatDisplayVersion } from "@/features/release/lib/release";
 
 type AdminUser = {
@@ -77,33 +89,32 @@ const PendingApprovalRow = ({
         </p>
         <p className="truncate text-sm font-extrabold text-muted-foreground">{user.username}</p>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 sm:shrink-0">
         <Button
-          variant="outline"
           onClick={() => {
             onReject(user.id);
           }}
           disabled={busy}
-          className="h-11 flex-1 rounded-2xl font-black sm:flex-none"
+          className={cn(ACTION_BUTTON_BASE, ACTION_DESTRUCTIVE)}
         >
           {busy && actionType === "reject" ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
-            <X className="mr-2 h-4 w-4" />
+            <X className="h-4 w-4" />
           )}
-          Reject
+          Deny
         </Button>
         <Button
           onClick={() => {
             onApprove(user.id);
           }}
           disabled={busy}
-          className="h-11 flex-1 rounded-2xl font-black sm:flex-none"
+          className={cn(ACTION_BUTTON_BASE, ACTION_PRIMARY)}
         >
           {busy && actionType === "approve" ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
-            <Check className="mr-2 h-4 w-4" />
+            <Check className="h-4 w-4" />
           )}
           Approve
         </Button>
@@ -132,55 +143,61 @@ const ApprovedUserRow = ({
           {user.name?.trim() || user.username}
         </p>
         <p className="truncate text-sm font-extrabold text-muted-foreground">{user.username}</p>
-        <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs font-extrabold text-muted-foreground">
-          <span className="rounded-full border border-border/70 px-2 py-0.5">
-            {user.role}
-          </span>
-          {isCurrentUser ? (
-            <span className="rounded-full border border-border/70 px-2 py-0.5">
-              You
-            </span>
-          ) : null}
-          {resetRequested ? (
-            <span className="rounded-full border border-destructive/40 bg-destructive/10 px-2 py-0.5 text-destructive">
-              Reset requested
-            </span>
-          ) : null}
-        </div>
+        {/* Only meaningful tags are shown — the implicit "USER" role is dropped. */}
+        {(user.role === "ADMIN" || isCurrentUser || resetRequested) && (
+          <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs font-extrabold">
+            {user.role === "ADMIN" ? (
+              <span className="rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-primary">
+                Admin
+              </span>
+            ) : null}
+            {isCurrentUser ? (
+              <span className="rounded-full border border-border/70 px-2 py-0.5 text-muted-foreground">
+                You
+              </span>
+            ) : null}
+            {resetRequested ? (
+              <span className="rounded-full border border-destructive/40 bg-destructive/10 px-2 py-0.5 text-destructive">
+                Reset requested
+              </span>
+            ) : null}
+          </div>
+        )}
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 sm:shrink-0">
         {/* Admins can't have their password reset from here — they manage it
             themselves under Settings → Change password. */}
         {user.role !== "ADMIN" && (
           <Button
-            // Turns red when the user has asked an admin to reset their password.
-            variant={resetRequested ? "destructive" : "outline"}
             onClick={() => {
               onResetPassword(user.id);
             }}
             disabled={busy}
-            className="h-11 flex-1 rounded-2xl font-black sm:flex-none"
+            // Turns red when the user has asked an admin to reset their password.
+            className={cn(
+              ACTION_BUTTON_BASE,
+              resetRequested ? ACTION_DESTRUCTIVE : ACTION_NEUTRAL,
+            )}
           >
             {busy && actionType === "reset" ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
-              <KeyRound className="mr-2 h-4 w-4" />
+              <KeyRound className="h-4 w-4" />
             )}
             Reset password
           </Button>
         )}
         <Button
-          variant="destructive"
           onClick={() => {
             onDelete(user.id);
           }}
           disabled={busy || isCurrentUser}
-          className="h-11 flex-1 rounded-2xl font-black sm:flex-none"
+          className={cn(ACTION_BUTTON_BASE, ACTION_DESTRUCTIVE)}
         >
           {busy && actionType === "delete" ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
-            <Trash2 className="mr-2 h-4 w-4" />
+            <Trash2 className="h-4 w-4" />
           )}
           Delete
         </Button>
