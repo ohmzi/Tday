@@ -545,13 +545,6 @@ fun OnboardingWizardOverlay(
                         )
                     }
 
-                    Text(
-                        text = stringResource(R.string.onboarding_subtitle),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = colorScheme.onSurface.copy(alpha = 0.62f),
-                        fontWeight = FontWeight.Bold,
-                    )
-
                     AnimatedContent(targetState = viewState, label = "wizardState") { state ->
                         when (state) {
                             WizardViewState.MODE -> {
@@ -727,7 +720,6 @@ fun OnboardingWizardOverlay(
                                         AuthPanelMode.SIGN_IN -> {
                                             WizardHeroTile(
                                                 title = stringResource(R.string.onboarding_sign_in),
-                                                subtitle = stringResource(R.string.onboarding_login_hero_subtitle),
                                                 imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_user),
                                                 color = Color(0xFFC97880),
                                             )
@@ -879,7 +871,6 @@ fun OnboardingWizardOverlay(
                                         AuthPanelMode.CREATE_ACCOUNT -> {
                                             WizardHeroTile(
                                                 title = stringResource(R.string.onboarding_create_account),
-                                                subtitle = stringResource(R.string.onboarding_register_hero_subtitle),
                                                 imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_user),
                                                 color = Color(0xFFC97880),
                                             )
@@ -1070,7 +1061,6 @@ fun OnboardingWizardOverlay(
                                         AuthPanelMode.CREATE_ACCOUNT_SECURITY -> {
                                             WizardHeroTile(
                                                 title = stringResource(R.string.security_questions_title),
-                                                subtitle = stringResource(R.string.security_questions_subtitle),
                                                 imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_user),
                                                 color = Color(0xFFC97880),
                                             )
@@ -1404,7 +1394,7 @@ private fun WizardLoading(
 @Composable
 private fun WizardHeroTile(
     title: String,
-    subtitle: String,
+    subtitle: String? = null,
     imageVector: ImageVector,
     color: Color,
     modifier: Modifier = Modifier,
@@ -1476,13 +1466,15 @@ private fun WizardHeroTile(
                         color = Color.White,
                         maxLines = 1,
                     )
-                    Text(
-                        text = subtitle,
-                        style = MaterialTheme.typography.bodySmall,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White.copy(alpha = 0.82f),
-                        maxLines = 2,
-                    )
+                    if (!subtitle.isNullOrBlank()) {
+                        Text(
+                            text = subtitle,
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White.copy(alpha = 0.82f),
+                            maxLines = 2,
+                        )
+                    }
                 }
             }
         }

@@ -94,19 +94,21 @@ struct ForgotPasswordView: View {
                     .foregroundStyle(colors.onSurface)
             }
 
-            Text(L(stepSubtitle))
-                .font(.tdayRounded(size: 14, weight: .bold))
-                .foregroundStyle(colors.onSurface.opacity(0.62))
-                .fixedSize(horizontal: false, vertical: true)
+            if let stepSubtitle {
+                Text(L(stepSubtitle))
+                    .font(.tdayRounded(size: 14, weight: .bold))
+                    .foregroundStyle(colors.onSurface.opacity(0.62))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
     }
 
-    private var stepSubtitle: String {
+    private var stepSubtitle: String? {
         switch step {
         case .username:
             return "Enter your username to answer your security questions."
         case .challenge:
-            return "Answer your security questions and choose a new password."
+            return nil
         case .locked:
             return "Too many incorrect attempts. You can request a password reset from an administrator."
         case .requested:

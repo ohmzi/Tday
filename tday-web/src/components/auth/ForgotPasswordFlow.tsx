@@ -148,8 +148,6 @@ export default function ForgotPasswordFlow() {
           <CardDescription>
             {step === "username" &&
               "Enter your username to answer your security questions."}
-            {step === "challenge" &&
-              "Answer your security questions and choose a new password."}
             {step === "locked" &&
               "Too many incorrect attempts. You can request a password reset from an administrator."}
             {step === "requested" &&
