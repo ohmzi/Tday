@@ -31,25 +31,25 @@ const SonnerToaster = ({ ...props }: ToasterProps) => {
       }}
       style={
         {
-          // Normal / success / info share the neutral, slightly-translucent card
-          // surface. Error + warning ("issue") toasts get a red translucent shade
-          // (still backdrop-blurred); text stays on the popover foreground so it
-          // remains legible over the tint.
-          "--normal-bg": "hsl(var(--popover) / 0.92)",
+          // Every toast is the same frosted-glass pill (matches iOS): a light,
+          // translucent surface over a backdrop blur — soft, not the old opaque
+          // white pill. All variants share one neutral surface (no per-type red
+          // tint, no icon) so offline/error/success/normal all look identical.
+          "--normal-bg": "hsl(var(--popover) / 0.55)",
           "--normal-text": "hsl(var(--popover-foreground))",
-          "--normal-border": "hsl(var(--border))",
-          "--success-bg": "hsl(var(--popover) / 0.92)",
+          "--normal-border": "hsl(var(--border) / 0.6)",
+          "--success-bg": "hsl(var(--popover) / 0.55)",
           "--success-text": "hsl(var(--popover-foreground))",
-          "--success-border": "hsl(var(--border))",
-          "--info-bg": "hsl(var(--popover) / 0.92)",
+          "--success-border": "hsl(var(--border) / 0.6)",
+          "--info-bg": "hsl(var(--popover) / 0.55)",
           "--info-text": "hsl(var(--popover-foreground))",
-          "--info-border": "hsl(var(--border))",
-          "--warning-bg": "hsl(var(--destructive) / 0.18)",
+          "--info-border": "hsl(var(--border) / 0.6)",
+          "--warning-bg": "hsl(var(--popover) / 0.55)",
           "--warning-text": "hsl(var(--popover-foreground))",
-          "--warning-border": "hsl(var(--destructive) / 0.30)",
-          "--error-bg": "hsl(var(--destructive) / 0.18)",
+          "--warning-border": "hsl(var(--border) / 0.6)",
+          "--error-bg": "hsl(var(--popover) / 0.55)",
           "--error-text": "hsl(var(--popover-foreground))",
-          "--error-border": "hsl(var(--destructive) / 0.30)",
+          "--error-border": "hsl(var(--border) / 0.6)",
         } as React.CSSProperties
       }
       {...props}
