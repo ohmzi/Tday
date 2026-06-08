@@ -1,6 +1,5 @@
 import React from "react";
-import EyeClosed from "@/components/icons/EyeClosed";
-import Eye from "@/components/icons/Eye";
+import { Eye, EyeOff } from "lucide-react";
 import clsx from "clsx";
 import { cn } from "@/lib/utils";
 const EyeToggle = ({
@@ -45,7 +44,7 @@ const EyeToggle = ({
           setShow(!show);
         }}
       >
-        <EyeClosed className="stroke-form-label hover:stroke-form-label-accent transition-all duration-300" />
+        <EyeOff className="stroke-form-label hover:stroke-form-label-accent transition-all duration-300" />
       </button>
     </>
   );

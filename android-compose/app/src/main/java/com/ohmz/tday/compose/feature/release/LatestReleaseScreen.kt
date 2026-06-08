@@ -30,10 +30,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.OpenInNew
-import androidx.compose.material.icons.rounded.ChevronLeft
-import androidx.compose.material.icons.rounded.CloudDownload
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -62,11 +58,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
@@ -284,7 +282,7 @@ private fun ReleaseTopBar(
         Box(modifier = Modifier.fillMaxWidth()) {
             ReleaseHeaderButton(
                 onClick = onBack,
-                icon = Icons.Rounded.ChevronLeft,
+                icon = ImageVector.vectorResource(R.drawable.ic_lucide_chevron_left),
                 contentDescription = stringResource(R.string.action_back),
                 isBackButton = true,
             )
@@ -789,7 +787,7 @@ private fun ApkAssetCard(apk: GitHubAsset) {
                 )
             }
             Icon(
-                imageVector = Icons.Rounded.CloudDownload,
+                imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_cloud_download),
                 contentDescription = null,
                 tint = colorScheme.onSurface.copy(alpha = 0.5f),
                 modifier = Modifier.size(20.dp),
@@ -815,7 +813,7 @@ private fun ApkInstallButton(
         colors = ButtonDefaults.buttonColors(containerColor = colorScheme.primary),
     ) {
         Icon(
-            imageVector = Icons.Rounded.CloudDownload,
+            imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_cloud_download),
             contentDescription = null,
             modifier = Modifier.size(20.dp),
         )
@@ -965,7 +963,7 @@ private fun ReleaseBrowserButton(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
-                imageVector = Icons.AutoMirrored.Rounded.OpenInNew,
+                imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_square_arrow_out_up_right),
                 contentDescription = null,
                 tint = colorScheme.primary,
                 modifier = Modifier.size(18.dp),
@@ -978,7 +976,7 @@ private fun ReleaseBrowserButton(
                 color = colorScheme.onSurface,
             )
             Icon(
-                imageVector = Icons.AutoMirrored.Rounded.OpenInNew,
+                imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_square_arrow_out_up_right),
                 contentDescription = null,
                 tint = colorScheme.primary,
                 modifier = Modifier.size(18.dp),

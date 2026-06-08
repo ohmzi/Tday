@@ -36,11 +36,6 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.CalendarMonth
-import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.ExpandMore
-import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DatePicker
@@ -466,7 +461,7 @@ fun CreateTaskBottomSheet(
                                         R.string.create_task_title_new
                                     },
                                 ),
-                                leftIcon = Icons.Rounded.Close,
+                                leftIcon = ImageVector.vectorResource(R.drawable.ic_lucide_x),
                                 leftContentDescription = stringResource(R.string.action_close),
                                 onLeftClick = {
                                     dismissKeyboard()
@@ -1013,7 +1008,7 @@ private fun SheetRow(
             Spacer(modifier = Modifier.width(2.dp))
 
             Icon(
-                imageVector = Icons.Rounded.ExpandMore,
+                imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_chevron_down),
                 contentDescription = null,
                 tint = colorScheme.onSurfaceVariant,
             )
@@ -1167,7 +1162,7 @@ private fun ThemedDatePickerDialog(
     SpectrumPickerDialog(
         onDismiss = onDismiss,
         title = stringResource(R.string.create_task_select_date),
-        titleIcon = Icons.Rounded.CalendarMonth,
+        titleIcon = ImageVector.vectorResource(R.drawable.ic_lucide_calendar),
         accent = pickerAccent,
         primaryText = primaryText,
         mutedText = mutedText,
@@ -1245,7 +1240,7 @@ private fun ThemedTimePickerDialog(
     SpectrumPickerDialog(
         onDismiss = onDismiss,
         title = stringResource(R.string.create_task_select_time),
-        titleIcon = Icons.Rounded.Schedule,
+        titleIcon = ImageVector.vectorResource(R.drawable.ic_lucide_clock),
         accent = pickerAccent,
         primaryText = primaryText,
         mutedText = mutedText,

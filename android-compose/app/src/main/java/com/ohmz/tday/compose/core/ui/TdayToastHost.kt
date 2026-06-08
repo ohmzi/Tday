@@ -22,10 +22,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.CheckCircle
-import androidx.compose.material.icons.rounded.ErrorOutline
-import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -51,7 +47,9 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.dp
+import com.ohmz.tday.compose.R
 import kotlinx.coroutines.launch
 
 private const val TOAST_ENTER_FADE_DURATION_MS = 180
@@ -154,9 +152,9 @@ private fun TdayToastCard(
     }
     val iconContainerColor = accentColor.copy(alpha = if (isDark) 0.22f else 0.14f)
     val toastIcon = toast.icon ?: when (toast.kind) {
-        TdayToastKind.ERROR -> Icons.Rounded.ErrorOutline
-        TdayToastKind.SUCCESS -> Icons.Rounded.CheckCircle
-        TdayToastKind.INFO -> Icons.Rounded.Info
+        TdayToastKind.ERROR -> ImageVector.vectorResource(R.drawable.ic_lucide_circle_alert)
+        TdayToastKind.SUCCESS -> ImageVector.vectorResource(R.drawable.ic_lucide_circle_check_big)
+        TdayToastKind.INFO -> ImageVector.vectorResource(R.drawable.ic_lucide_info)
     }
     val scope = rememberCoroutineScope()
     val onDismissState by rememberUpdatedState(onDismiss)

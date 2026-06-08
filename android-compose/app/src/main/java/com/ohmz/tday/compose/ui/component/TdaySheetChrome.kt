@@ -25,8 +25,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -46,6 +44,7 @@ import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -55,6 +54,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.view.HapticFeedbackConstantsCompat
 import androidx.core.view.ViewCompat
+import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.ui.theme.TdayDimens
 
 object TdaySheetDefaults {
@@ -288,7 +288,7 @@ private fun TdayCenteredSelectorRow(
 
         if (selected) {
             Icon(
-                imageVector = Icons.Rounded.Check,
+                imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_check),
                 contentDescription = null,
                 tint = colorScheme.primary,
                 modifier = Modifier.size(20.dp),
@@ -309,7 +309,7 @@ fun TdaySheetHeader(
     onConfirm: () -> Unit = {},
     confirmEnabled: Boolean = false,
     modifier: Modifier = Modifier,
-    confirmIcon: ImageVector = Icons.Rounded.Check,
+    confirmIcon: ImageVector = ImageVector.vectorResource(R.drawable.ic_lucide_check),
     showConfirmAction: Boolean = true,
 ) {
     Box(

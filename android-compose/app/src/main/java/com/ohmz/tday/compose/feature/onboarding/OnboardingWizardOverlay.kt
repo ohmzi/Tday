@@ -28,12 +28,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.Language
-import androidx.compose.material.icons.rounded.Person
-import androidx.compose.material.icons.rounded.PhoneAndroid
-import androidx.compose.material.icons.rounded.WbSunny
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -84,6 +78,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -511,7 +506,7 @@ fun OnboardingWizardOverlay(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Icon(
-                            imageVector = Icons.Rounded.WbSunny,
+                            imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_sun),
                             contentDescription = null,
                             tint = TdayTitleIconDayAccent,
                             modifier = Modifier.size(27.dp),
@@ -528,7 +523,7 @@ fun OnboardingWizardOverlay(
                         WizardStepChip(
                             modifier = Modifier.weight(1f),
                             title = stringResource(R.string.onboarding_step_mode),
-                            imageVector = Icons.Rounded.PhoneAndroid,
+                            imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_smartphone),
                             color = Color(0xFF7FB78A),
                             active = step == WizardStep.MODE,
                             completed = step == WizardStep.SERVER || step == WizardStep.LOGIN,
@@ -536,7 +531,7 @@ fun OnboardingWizardOverlay(
                         WizardStepChip(
                             modifier = Modifier.weight(1f),
                             title = stringResource(R.string.onboarding_step_server),
-                            imageVector = Icons.Rounded.Language,
+                            imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_languages),
                             color = Color(0xFF6EA8E1),
                             active = step == WizardStep.SERVER,
                             completed = step == WizardStep.LOGIN,
@@ -544,7 +539,7 @@ fun OnboardingWizardOverlay(
                         WizardStepChip(
                             modifier = Modifier.weight(1f),
                             title = stringResource(R.string.onboarding_step_login),
-                            imageVector = Icons.Rounded.Person,
+                            imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_user),
                             color = Color(0xFFD48A8C),
                             active = step == WizardStep.LOGIN,
                         )
@@ -564,7 +559,7 @@ fun OnboardingWizardOverlay(
                                     WizardHeroTile(
                                         title = stringResource(R.string.onboarding_mode_title),
                                         subtitle = stringResource(R.string.onboarding_mode_subtitle),
-                                        imageVector = Icons.Rounded.PhoneAndroid,
+                                        imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_smartphone),
                                         color = Color(0xFF6EA8E1),
                                     )
                                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -572,7 +567,7 @@ fun OnboardingWizardOverlay(
                                             modifier = Modifier.weight(1f),
                                             title = stringResource(R.string.onboarding_mode_server_short_title),
                                             subtitle = stringResource(R.string.onboarding_mode_server_short_subtitle),
-                                            imageVector = Icons.Rounded.Language,
+                                            imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_languages),
                                             color = Color(0xFF6EA8E1),
                                             enabled = !isResettingTrust,
                                             onClick = {
@@ -586,7 +581,7 @@ fun OnboardingWizardOverlay(
                                             modifier = Modifier.weight(1f),
                                             title = stringResource(R.string.onboarding_mode_local_short_title),
                                             subtitle = stringResource(R.string.onboarding_mode_local_short_subtitle),
-                                            imageVector = Icons.Rounded.PhoneAndroid,
+                                            imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_smartphone),
                                             color = Color(0xFF719F84),
                                             enabled = !isResettingTrust,
                                             onClick = {
@@ -607,7 +602,7 @@ fun OnboardingWizardOverlay(
                                     WizardHeroTile(
                                         title = stringResource(R.string.onboarding_mode_server_title),
                                         subtitle = stringResource(R.string.onboarding_server_hero_subtitle),
-                                        imageVector = Icons.Rounded.Language,
+                                        imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_languages),
                                         color = Color(0xFF6EA8E1),
                                     )
                                     OutlinedTextField(
@@ -733,7 +728,7 @@ fun OnboardingWizardOverlay(
                                             WizardHeroTile(
                                                 title = stringResource(R.string.onboarding_sign_in),
                                                 subtitle = stringResource(R.string.onboarding_login_hero_subtitle),
-                                                imageVector = Icons.Rounded.Person,
+                                                imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_user),
                                                 color = Color(0xFFC97880),
                                             )
                                             OutlinedTextField(
@@ -885,7 +880,7 @@ fun OnboardingWizardOverlay(
                                             WizardHeroTile(
                                                 title = stringResource(R.string.onboarding_create_account),
                                                 subtitle = stringResource(R.string.onboarding_register_hero_subtitle),
-                                                imageVector = Icons.Rounded.Person,
+                                                imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_user),
                                                 color = Color(0xFFC97880),
                                             )
                                             OutlinedTextField(
@@ -1076,7 +1071,7 @@ fun OnboardingWizardOverlay(
                                             WizardHeroTile(
                                                 title = stringResource(R.string.security_questions_title),
                                                 subtitle = stringResource(R.string.security_questions_subtitle),
-                                                imageVector = Icons.Rounded.Person,
+                                                imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_user),
                                                 color = Color(0xFFC97880),
                                             )
 
@@ -1380,7 +1375,7 @@ private fun WizardLoading(
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Icon(
-                imageVector = Icons.Rounded.Language,
+                imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_languages),
                 contentDescription = null,
                 tint = colorScheme.primary,
                 modifier = Modifier
@@ -1619,7 +1614,7 @@ private fun WizardStepChip(
         Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
-                    imageVector = if (completed) Icons.Rounded.Check else imageVector,
+                    imageVector = if (completed) ImageVector.vectorResource(R.drawable.ic_lucide_check) else imageVector,
                     contentDescription = null,
                     tint = contentColor,
                     modifier = Modifier.size(13.dp),
