@@ -577,7 +577,7 @@ fun CreateTaskBottomSheet(
                                     )
                                     RowDivider()
                                     SheetDropdownRow(
-                                        icon = ImageVector.vectorResource(R.drawable.ic_lucide_flag),
+                                        icon = ImageVector.vectorResource(R.drawable.ic_lucide_flag_filled),
                                         title = stringResource(R.string.create_task_priority),
                                         value = priorityLabels.getValue(selectedPriority),
                                         options = priorityOptions,
@@ -587,7 +587,7 @@ fun CreateTaskBottomSheet(
                                         onOptionSelected = { option -> selectedPriority = option },
                                         valueLeading = {
                                             Icon(
-                                                imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_flag),
+                                                imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_flag_filled),
                                                 contentDescription = null,
                                                 tint = tdayPriorityColor(selectedPriority),
                                                 modifier = Modifier.size(16.dp),

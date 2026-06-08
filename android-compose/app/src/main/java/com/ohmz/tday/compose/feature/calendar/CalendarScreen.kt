@@ -407,7 +407,7 @@ fun CalendarScreen(
             pendingRescheduleDrop = CalendarTaskRescheduleDrop(todo = todo, targetDate = targetDate)
         } else {
             onMoveTask(todo, targetDate, TaskRescheduleScope.OCCURRENCE)
-            selectDate(targetDate)
+            // Keep the user on the date they're viewing; don't jump to the drop target.
         }
     }
 
@@ -754,14 +754,12 @@ fun CalendarScreen(
                     TextButton(onClick = {
                         pendingRescheduleDrop = null
                         onMoveTask(drop.todo, drop.targetDate, TaskRescheduleScope.OCCURRENCE)
-                        selectDate(drop.targetDate)
                     }) {
                         Text(stringResource(R.string.todos_reschedule_this_occurrence))
                     }
                     TextButton(onClick = {
                         pendingRescheduleDrop = null
                         onMoveTask(drop.todo, drop.targetDate, TaskRescheduleScope.SERIES)
-                        selectDate(drop.targetDate)
                     }) {
                         Text(stringResource(R.string.todos_reschedule_entire_series))
                     }
@@ -2843,8 +2841,8 @@ private fun buildMonthCells(month: YearMonth): List<CalendarDayCellModel> {
 @Composable
 private fun priorityIconFor(priority: String): ImageVector? {
     return when (priority.trim().lowercase(Locale.getDefault())) {
-        "medium" -> ImageVector.vectorResource(R.drawable.ic_lucide_flag)
-        "high", "urgent", "important" -> ImageVector.vectorResource(R.drawable.ic_lucide_flag)
+        "medium" -> ImageVector.vectorResource(R.drawable.ic_lucide_flag_filled)
+        "high", "urgent", "important" -> ImageVector.vectorResource(R.drawable.ic_lucide_flag_filled)
         else -> null
     }
 }

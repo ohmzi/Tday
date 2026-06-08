@@ -697,10 +697,8 @@ struct CalendarScreen: View {
             pendingRescheduleDrop = CalendarTaskRescheduleDrop(todo: todo, targetDate: targetDay)
         } else {
             Task {
+                // Keep the user on the date they're viewing; don't jump to the drop target.
                 await viewModel.moveTask(todo, toDay: targetDay, scope: .occurrence)
-                await MainActor.run {
-                    selectDate(targetDay)
-                }
             }
         }
     }
@@ -767,10 +765,8 @@ struct CalendarScreen: View {
         }
         pendingRescheduleDrop = nil
         Task {
+            // Keep the user on the date they're viewing; don't jump to the drop target.
             await viewModel.moveTask(drop.todo, toDay: drop.targetDate, scope: scope)
-            await MainActor.run {
-                selectDate(drop.targetDate)
-            }
         }
     }
 }
