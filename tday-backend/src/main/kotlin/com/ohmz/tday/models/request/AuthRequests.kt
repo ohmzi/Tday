@@ -15,7 +15,6 @@ data class RegisterRequest(
     val username: String,
     val password: String,
     val securityAnswers: List<SecurityAnswerInput>? = null,
-    val captchaToken: String? = null,
 )
 
 @Serializable
@@ -23,14 +22,12 @@ data class SelfServiceResetRequest(
     val username: String,
     val answers: List<SecurityAnswerInput> = emptyList(),
     val newPassword: String,
-    val captchaToken: String? = null,
 )
 
 @Serializable
 data class VerifySecurityAnswersRequest(
     val username: String,
     val answers: List<SecurityAnswerInput> = emptyList(),
-    val captchaToken: String? = null,
 )
 
 @Serializable
@@ -63,5 +60,4 @@ data class CredentialsCallbackRequest(
     val passwordProof: String? = null,
     val passwordProofChallengeId: String? = null,
     val passwordProofVersion: String? = null,
-    val captchaToken: String? = null,
 )

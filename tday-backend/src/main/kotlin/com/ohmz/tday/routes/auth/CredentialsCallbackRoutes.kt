@@ -13,7 +13,6 @@ import com.ohmz.tday.di.inject
 fun Route.credentialsCallbackRoutes() {
     val userService by inject<UserService>()
     val authThrottle by inject<AuthThrottle>()
-    val captchaService by inject<CaptchaService>()
     val eventLogger by inject<SecurityEventLogger>()
     val credentialEnvelope by inject<CredentialEnvelope>()
     val passwordProof by inject<PasswordProof>()
@@ -48,24 +47,6 @@ fun Route.credentialsCallbackRoutes() {
             if (password == null) password = body.password
 
             val identifier = username
-
-            // Captcha is an optional extra layer that only kicks in once the failure
-            // threshold is tripped. When no captcha provider is configured (the common
-            // self-host case) we must NOT hard-block: the rate-limit + exponential
-            // lockout enforced above already guard against brute force. Returning 503
-            // here would brick login with a misleading "Cannot reach server" the moment
-            // a user fat-fingers their password a few times.
-            if (captchaService.isConfigured() && authThrottle.requiresCaptcha(ThrottleAction.credentials, call.request, identifier)) {
-                val captchaResult = captchaService.verify(body.captchaToken, call.request, "credentials")
-                if (!captchaResult.ok) {
-                    eventLogger.log("auth_captcha_failed", mapOf("action" to "credentials", "reason" to captchaResult.reason))
-                    call.respond(HttpStatusCode.Forbidden, mapOf(
-                        "message" to "Additional verification required.",
-                        "reason" to "captcha_required",
-                    ))
-                    return@post
-                }
-            }
 
             val throttle = authThrottle.enforceRateLimit(ThrottleAction.credentials, call.request, identifier)
             if (!throttle.allowed) {

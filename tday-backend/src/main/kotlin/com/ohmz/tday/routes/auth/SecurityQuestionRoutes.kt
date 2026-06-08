@@ -8,8 +8,6 @@ import com.ohmz.tday.models.response.SecurityAnswerResult
 import com.ohmz.tday.models.response.SecurityQuestionsResponse
 import com.ohmz.tday.models.response.VerifySecurityAnswersResponse
 import com.ohmz.tday.security.AuthThrottle
-import com.ohmz.tday.security.CaptchaService
-import com.ohmz.tday.security.SecurityEventLogger
 import com.ohmz.tday.security.SecurityQuestions
 import com.ohmz.tday.security.ThrottleAction
 import com.ohmz.tday.services.ResetOutcome
@@ -25,8 +23,6 @@ import io.ktor.server.routing.route
 fun Route.securityQuestionRoutes() {
     val service by inject<SecurityQuestionService>()
     val authThrottle by inject<AuthThrottle>()
-    val captchaService by inject<CaptchaService>()
-    val eventLogger by inject<SecurityEventLogger>()
 
     route("/security-questions") {
         // The static catalogue, for the signup form's question pickers.
@@ -141,21 +137,6 @@ fun Route.securityQuestionRoutes() {
                     ),
                 )
                 return@post
-            }
-
-            // Only enforce captcha when a provider is configured; otherwise fall back to
-            // the rate-limit + lockout above instead of hard-blocking with a 503 (which
-            // would brick self-host password reset). See CredentialsCallbackRoutes.
-            if (captchaService.isConfigured() && authThrottle.requiresCaptcha(ThrottleAction.credentials, call.request, body.username)) {
-                val captchaResult = captchaService.verify(body.captchaToken, call.request, "self_service_reset")
-                if (!captchaResult.ok) {
-                    eventLogger.log("self_service_reset_captcha_failed", mapOf("reason" to captchaResult.reason))
-                    call.respond(
-                        HttpStatusCode.Forbidden,
-                        mapOf("message" to "Additional verification required.", "reason" to "captcha_required"),
-                    )
-                    return@post
-                }
             }
 
             // The selection itself is validated before any account lookup so a malformed

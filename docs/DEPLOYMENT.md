@@ -296,7 +296,6 @@ The Ktor backend (`AppConfig.kt`) loads all settings from environment variables 
 | `AUTH_SESSION_ABSOLUTE_MAX_AGE_SEC` | Absolute session cap from original login time in seconds (default: 7,776,000)                                                  |
 | `AUTH_SESSION_RENEW_THRESHOLD_SEC`  | Renewal threshold in seconds before expiry (default: 604,800)                                                                  |
 | `AUTH_CREDENTIALS_PRIVATE_KEY`      | RSA key for credential envelope encryption; recommended in production to avoid ephemeral startup keys                          |
-| `AUTH_CAPTCHA_SECRET`               | Cloudflare Turnstile secret; recommended in production so adaptive CAPTCHA does not fail closed when triggered                 |
 | `APPLE_TEAM_ID`                     | Apple Developer Team ID used in Tday's canonical `apple-app-site-association` webcredentials payload for iOS Password AutoFill |
 | `IOS_BUNDLE_ID`                     | iOS app bundle identifier for webcredentials association (default: `com.ohmz.tday.ios`)                                        |
 | `ANDROID_PACKAGE_NAME`              | Android app package name for Digital Asset Links credential sharing (default: `com.ohmz.tday.compose`)                         |
@@ -369,7 +368,6 @@ For Docker/Kubernetes secret mounts, append `_FILE` to any sensitive variable:
 ```bash
 AUTH_SECRET_FILE=/run/secrets/auth_secret
 DATABASE_URL_FILE=/run/secrets/database_url
-AUTH_CAPTCHA_SECRET_FILE=/run/secrets/auth_captcha_secret
 ```
 
 The Ktor backend's `AppConfig` reads file contents into the corresponding variable at startup when `_FILE` variants are present.

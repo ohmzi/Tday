@@ -45,7 +45,6 @@ We aim to acknowledge reports within 48 hours and provide a fix or mitigation pl
 - Auth endpoints are rate-limited per IP and per email (configurable windows and thresholds).
 - App-layer request throttling protects `/api/**`, `/health`, `/api/mobile/probe`, `POST /api/todo/summary`, `POST /api/user/change-password`, and `/ws`.
 - Exponential lockout activates after repeated credential failures (`AUTH_LOCKOUT_*` settings).
-- **Adaptive CAPTCHA** (Cloudflare Turnstile) triggers after configurable failure count and now fails closed if required but `AUTH_CAPTCHA_SECRET` is missing.
 - Rate limit and lockout state is stored in the database (`AuthThrottle` model).
 
 ### Admin Access
@@ -107,7 +106,7 @@ Every response includes (via `SecurityHeaders.kt`):
 
 - Production secrets should come from a secrets manager or mounted files.
 - The Ktor backend (`AppConfig.kt`) supports `_FILE` suffix for all sensitive variables:
-  `AUTH_SECRET`, `DATABASE_URL`, `AUTH_CAPTCHA_SECRET`, `DATA_ENCRYPTION_KEY`, `DATA_ENCRYPTION_KEYS`, `DATA_ENCRYPTION_AAD`.
+  `AUTH_SECRET`, `DATABASE_URL`, `DATA_ENCRYPTION_KEY`, `DATA_ENCRYPTION_KEYS`, `DATA_ENCRYPTION_AAD`.
 - Never commit real secrets. `.env.example` contains placeholder values only; `.env.docker` is a local ignored runtime file created from that template.
 - Rotate secrets on a fixed schedule (recommended: 60-90 days).
 
@@ -127,9 +126,6 @@ Structured security event codes are emitted to the `eventLog` database table:
 | `auth_limit_ip` | IP-based rate limit triggered |
 | `auth_limit_email` | Email-based rate limit triggered |
 | `auth_lockout` | Account locked out after repeated failures |
-| `auth_captcha_failed` | CAPTCHA verification failed |
-| `register_captcha_failed` | Registration CAPTCHA failed |
-| `auth_captcha_misconfigured` | CAPTCHA should have been enforced but the server secret was missing |
 | `auth_credential_envelope_invalid` | Encrypted credential envelope could not be decrypted |
 | `auth_alert_ip_concentration` | Suspicious IP concentration detected |
 | `auth_alert_lockout_burst` | Burst of lockouts in a short window |

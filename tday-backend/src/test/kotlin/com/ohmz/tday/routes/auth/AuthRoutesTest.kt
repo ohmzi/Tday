@@ -205,12 +205,6 @@ class AuthRoutesTest {
             identifier: String?,
         ) = Unit
 
-        override suspend fun requiresCaptcha(
-            action: ThrottleAction,
-            request: io.ktor.server.request.ApplicationRequest,
-            identifier: String?,
-        ): Boolean = false
-
         override suspend fun recordSuccessSignal(
             request: io.ktor.server.request.ApplicationRequest,
             identifier: String?,

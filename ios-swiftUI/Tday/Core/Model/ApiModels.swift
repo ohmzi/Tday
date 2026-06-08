@@ -159,7 +159,6 @@ struct CredentialsCallbackRequest: Codable {
     let passwordProof: String?
     let passwordProofChallengeId: String?
     let passwordProofVersion: String?
-    let captchaToken: String?
     let csrfToken: String?
     let redirect: String?
     let callbackUrl: String?
