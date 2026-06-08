@@ -14,7 +14,7 @@ const val TDAY_DEFAULT_LIST_COLOR_KEY = "PINK"
 
 val TdayPriorityHigh = Color(0xFFFF3B30)
 val TdayPriorityMedium = Color(0xFFFF9500)
-val TdayPriorityLow = Color(0xFF007AFF)
+val TdayPriorityLow = Color(0xFF6FBF86) // green for normal priority (matches iOS)
 val TdayFloaterAccent = Color(0xFF4D8F83)
 val TdayTodoModeTodayAccent = Color(0xFF5C9FE7)
 val TdayTodoModeOverdueAccent = Color(0xFFDA7661)
