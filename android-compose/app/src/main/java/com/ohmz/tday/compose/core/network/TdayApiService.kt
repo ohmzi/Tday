@@ -62,6 +62,8 @@ import com.ohmz.tday.compose.core.model.UpdateListRequest
 import com.ohmz.tday.compose.core.model.UpdateProfileRequest
 import com.ohmz.tday.compose.core.model.UpdateTodoRequest
 import com.ohmz.tday.compose.core.model.UserResponse
+import com.ohmz.tday.compose.core.model.VerifySecurityAnswersRequest
+import com.ohmz.tday.compose.core.model.VerifySecurityAnswersResponse
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import retrofit2.Response
@@ -119,6 +121,11 @@ interface TdayApiService {
     suspend fun resetPassword(
         @Body payload: SelfServiceResetRequest,
     ): Response<MessageResponse>
+
+    @POST("/api/auth/verify-security-answers")
+    suspend fun verifySecurityAnswers(
+        @Body payload: VerifySecurityAnswersRequest,
+    ): Response<VerifySecurityAnswersResponse>
 
     @POST("/api/auth/request-admin-reset")
     suspend fun requestAdminReset(

@@ -116,6 +116,24 @@ data class RequestAdminResetRequest(
 )
 
 @Serializable
+data class VerifySecurityAnswersRequest(
+    val username: String,
+    val answers: List<SecurityAnswerInput> = emptyList(),
+)
+
+@Serializable
+data class SecurityAnswerResult(
+    val questionId: Int,
+    val correct: Boolean,
+)
+
+@Serializable
+data class VerifySecurityAnswersResponse(
+    val valid: Boolean = false,
+    val results: List<SecurityAnswerResult> = emptyList(),
+)
+
+@Serializable
 data class SetSecurityQuestionsRequest(
     val answers: List<SecurityAnswerInput> = emptyList(),
 )

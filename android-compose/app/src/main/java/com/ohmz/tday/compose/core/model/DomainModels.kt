@@ -193,3 +193,12 @@ sealed interface PasswordResetOutcome {
     data class Failed(val message: String) : PasswordResetOutcome
     data object Locked : PasswordResetOutcome
 }
+
+/** Result of verifying security answers without resetting (the staged reset wizard's gate). */
+@Stable
+sealed interface VerifyAnswersOutcome {
+    data object Valid : VerifyAnswersOutcome
+    data class Invalid(val results: List<SecurityAnswerResult>) : VerifyAnswersOutcome
+    data object Locked : VerifyAnswersOutcome
+    data class Error(val message: String) : VerifyAnswersOutcome
+}

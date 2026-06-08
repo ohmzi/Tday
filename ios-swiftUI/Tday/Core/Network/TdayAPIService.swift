@@ -213,6 +213,10 @@ final class TdayAPIService {
         try await request(path: "/api/auth/reset-password", method: "POST", body: payload, responseType: MessageResponse.self)
     }
 
+    func verifySecurityAnswers(payload: VerifySecurityAnswersRequest) async throws -> VerifySecurityAnswersResponse {
+        try await request(path: "/api/auth/verify-security-answers", method: "POST", body: payload, responseType: VerifySecurityAnswersResponse.self)
+    }
+
     func requestAdminReset(payload: RequestAdminResetRequest) async throws -> MessageResponse {
         try await request(path: "/api/auth/request-admin-reset", method: "POST", body: payload, responseType: MessageResponse.self)
     }

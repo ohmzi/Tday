@@ -23,11 +23,11 @@ import {
   getPendingApproval,
   setPendingApproval,
 } from "@/lib/pendingApproval";
-import { Link } from "@/lib/navigation";
 import {
   fetchAllSecurityQuestions,
   type SecurityQuestion,
 } from "@/lib/securityQuestions";
+import ForgotPasswordPanel from "@/components/auth/ForgotPasswordPanel";
 
 // Fixed tints lifted 1:1 from the native wizard (iOS/Android). These are
 // intentionally theme-independent so the card reads identically across light
@@ -40,7 +40,7 @@ const TINT = {
   sun: "rgb(245, 196, 66)",
 } as const;
 
-type AuthMode = "signin" | "create";
+type AuthMode = "signin" | "create" | "forgot";
 
 const USERNAME_REGEX = /^[a-z0-9](?:[a-z0-9._-]{1,28}[a-z0-9])$/;
 
@@ -341,6 +341,7 @@ export default function OnboardingWizard({
         <div className="relative w-full max-w-[440px] overflow-hidden rounded-[34px] border border-border bg-background/95 p-[18px] shadow-2xl backdrop-blur-md">
           <div className="pointer-events-none absolute inset-0 rounded-[34px] bg-gradient-to-br from-white/10 to-transparent dark:from-white/[0.04]" />
 
+          <AnimatedHeight>
           <div className="relative flex flex-col gap-3.5">
             {/* Header */}
             <div className="flex items-center gap-2">
@@ -361,7 +362,17 @@ export default function OnboardingWizard({
               <StepChip title="Login" Icon={User} tint={TINT.loginRose} active />
             </div>
 
-            {isSubmitting ? (
+            {mode === "forgot" ? (
+              <ForgotPasswordPanel
+                initialUsername={username}
+                onBackToLogin={(resetUsername) => {
+                  setMode("signin");
+                  if (resetUsername) setUsername(resetUsername);
+                  setPassword("");
+                  clearMessages();
+                }}
+              />
+            ) : isSubmitting ? (
               <WizardLoadingPanel
                 Icon={isCreating ? UserPlus : Lock}
                 title={isCreating ? "Creating account" : "Authenticating"}
@@ -501,12 +512,16 @@ export default function OnboardingWizard({
                 )}
 
                 {!isCreating && (
-                  <Link
-                    href="/forgot-password"
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMode("forgot");
+                      clearMessages();
+                    }}
                     className="-mt-0.5 self-start text-[13px] font-bold text-primary transition active:opacity-60"
                   >
                     Forgot password?
-                  </Link>
+                  </button>
                 )}
 
                 {(errorMessage || infoMessage) && (
@@ -537,6 +552,7 @@ export default function OnboardingWizard({
               </form>
             )}
           </div>
+          </AnimatedHeight>
         </div>
       </div>
 
@@ -554,6 +570,35 @@ export default function OnboardingWizard({
         }}
       />
     </main>
+  );
+}
+
+// Smoothly animates its own height as the content inside changes (mode switches and
+// the staged forgot-password steps), so the dialog grows/shrinks instead of snapping.
+function AnimatedHeight({ children }: { children: React.ReactNode }) {
+  const ref = React.useRef<HTMLDivElement>(null);
+  const [height, setHeight] = React.useState<number | undefined>(undefined);
+
+  React.useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const update = () => setHeight(el.scrollHeight);
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div
+      className="overflow-hidden"
+      style={{
+        height: height != null ? `${height}px` : undefined,
+        transition: "height 280ms cubic-bezier(0.22, 0.61, 0.36, 1)",
+      }}
+    >
+      <div ref={ref}>{children}</div>
+    </div>
   );
 }
 

@@ -23,6 +23,8 @@ import com.ohmz.tday.compose.core.model.SelfServiceResetRequest
 import com.ohmz.tday.compose.core.model.SessionUser
 import com.ohmz.tday.compose.core.model.SetSecurityQuestionsRequest
 import com.ohmz.tday.compose.core.model.UpdateProfileRequest
+import com.ohmz.tday.compose.core.model.VerifyAnswersOutcome
+import com.ohmz.tday.compose.core.model.VerifySecurityAnswersRequest
 import com.ohmz.tday.compose.core.network.TdayApiService
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonNull
@@ -270,6 +272,38 @@ class AuthRepository @Inject constructor(
             )
         }
         return response.body()?.questions.orEmpty()
+    }
+
+    suspend fun verifyAnswers(
+        username: String,
+        answers: List<SecurityAnswerInput>,
+    ): VerifyAnswersOutcome {
+        val response = runCatching {
+            api.verifySecurityAnswers(
+                VerifySecurityAnswersRequest(
+                    username = username.trim().lowercase(Locale.US),
+                    answers = answers,
+                ),
+            )
+        }.getOrElse { error ->
+            return VerifyAnswersOutcome.Error(error.message ?: "Unable to verify your answers.")
+        }
+
+        if (response.isSuccessful) {
+            val body = response.body()
+            return if (body?.valid == true) {
+                VerifyAnswersOutcome.Valid
+            } else {
+                VerifyAnswersOutcome.Invalid(body?.results.orEmpty())
+            }
+        }
+
+        val details = extractApiErrorDetails(response, "Unable to verify your answers.")
+        return if (response.code() == 403 && details.reason == "reset_locked") {
+            VerifyAnswersOutcome.Locked
+        } else {
+            VerifyAnswersOutcome.Error(details.message)
+        }
     }
 
     suspend fun resetPassword(
