@@ -2,13 +2,17 @@ package com.ohmz.tday.compose.core.data.auth
 
 import android.util.Base64
 import com.ohmz.tday.compose.core.data.ApiCallException
+import com.ohmz.tday.compose.core.data.AuthErrorCode
+import com.ohmz.tday.compose.core.data.ConnectionFailureKind
 import com.ohmz.tday.compose.core.data.SecureConfigStore
 import com.ohmz.tday.compose.core.data.cache.OfflineCacheManager
+import com.ohmz.tday.compose.core.data.classifyConnectionFailure
 import com.ohmz.tday.compose.core.data.extractApiErrorDetails
 import com.ohmz.tday.compose.core.data.extractApiErrorMessage
 import com.ohmz.tday.compose.core.data.isLikelyConnectivityIssue
 import com.ohmz.tday.compose.core.data.isLikelyServerUnavailableStatus
 import com.ohmz.tday.compose.core.data.requireApiBody
+import com.ohmz.tday.compose.core.data.versionMismatchAuthCode
 import com.ohmz.tday.compose.core.model.AuthResult
 import com.ohmz.tday.compose.core.model.AuthSession
 import com.ohmz.tday.compose.core.model.ChangePasswordRequest
@@ -190,7 +194,7 @@ class AuthRepository @Inject constructor(
 
         if (!callback.isSuccessful && callback.code() !in 300..399) {
             if (isLikelyServerUnavailableStatus(callback.code())) {
-                return AuthResult.Error(SERVER_UNREACHABLE_MESSAGE)
+                return AuthResult.Error(AuthErrorCode.SERVER_UNAVAILABLE)
             }
             return AuthResult.Error(extractApiErrorMessage(callback, "Unable to sign in"))
         }
@@ -205,7 +209,7 @@ class AuthRepository @Inject constructor(
         } else {
             val sessionError = sessionResult.exceptionOrNull()
             if (sessionError != null && isLikelyConnectivityIssue(sessionError)) {
-                return AuthResult.Error(SERVER_UNREACHABLE_MESSAGE)
+                return AuthResult.Error(sessionError.loginErrorMessage(SERVER_UNREACHABLE_MESSAGE))
             }
             AuthResult.Error("Sign in failed. Please check backend URL and credentials.")
         }
@@ -530,10 +534,11 @@ class AuthRepository @Inject constructor(
     }
 
     private fun Throwable.loginErrorMessage(fallback: String): String {
-        return if (isLikelyConnectivityIssue(this)) {
-            SERVER_UNREACHABLE_MESSAGE
-        } else {
-            message ?: fallback
+        versionMismatchAuthCode(this)?.let { return it }
+        return when (classifyConnectionFailure(this)) {
+            ConnectionFailureKind.CANNOT_REACH -> AuthErrorCode.CANNOT_REACH
+            ConnectionFailureKind.SERVER_UNAVAILABLE -> AuthErrorCode.SERVER_UNAVAILABLE
+            ConnectionFailureKind.NONE -> message ?: fallback
         }
     }
 
