@@ -167,6 +167,9 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview:1.7.6")
     implementation("androidx.compose.material3:material3:1.3.1")
     implementation("androidx.compose.material:material-icons-extended:1.7.6")
+    // Backdrop blur for the bottom toast so it matches iOS's translucent
+    // .ultraThinMaterial look (RenderEffect on API 31+, translucent fallback below).
+    implementation("dev.chrisbanes.haze:haze:1.2.2")
     implementation("androidx.navigation:navigation-compose:2.8.5")
     implementation("com.google.android.material:material:1.12.0")
     implementation("androidx.credentials:credentials:1.6.0")
