@@ -33,54 +33,86 @@ struct ForgotPasswordView: View {
     @State private var isBusy = false
     @State private var failedAttempts = 0
 
+    // Mirrors the login wizard: a centered card floating over the (blurred) home, rather
+    // than a flat full-screen sheet. The login sheet is presented with a clear background
+    // so the blurred home shows through behind this scrim.
     var body: some View {
-        NavigationStack {
+        ZStack {
+            Color.black.opacity(0.18).ignoresSafeArea()
+
             ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 16) {
-                    header
-
-                    switch step {
-                    case .username:
-                        usernameStep
-                    case .challenge:
-                        challengeStep
-                    case .locked:
-                        lockedStep
-                    case .requested:
-                        requestedStep
-                    }
-
-                    if let message = errorMessage {
-                        Text(message)
-                            .font(.tdayRounded(size: 14, weight: .bold))
-                            .foregroundStyle(colors.error)
-                            .fixedSize(horizontal: false, vertical: true)
-                    } else if let infoMessage {
-                        Text(infoMessage)
-                            .font(.tdayRounded(size: 14, weight: .bold))
-                            .foregroundStyle(colors.tertiary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
+                VStack(spacing: 0) {
+                    Spacer(minLength: 18)
+                    card
+                    Spacer(minLength: 18)
                 }
-                .padding(20)
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, 18)
             }
-            .background(colors.background.ignoresSafeArea())
-            .navigationTitle(Text(L("Reset password")))
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button(L("Back to sign in")) {
-                        onDismiss()
-                    }
-                }
-            }
+            .scrollBounceBehavior(.basedOnSize)
         }
         .onAppear {
             if username.isEmpty {
                 username = initialUsername
             }
         }
+    }
+
+    private var card: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            header
+
+            switch step {
+            case .username:
+                usernameStep
+            case .challenge:
+                challengeStep
+            case .locked:
+                lockedStep
+            case .requested:
+                requestedStep
+            }
+
+            if let message = errorMessage {
+                Text(message)
+                    .font(.tdayRounded(size: 14, weight: .bold))
+                    .foregroundStyle(colors.error)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else if let infoMessage {
+                Text(infoMessage)
+                    .font(.tdayRounded(size: 14, weight: .bold))
+                    .foregroundStyle(colors.tertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            if step != .requested {
+                Button {
+                    onDismiss()
+                } label: {
+                    Text(L("Back to sign in"))
+                        .font(.tdayRounded(size: 14, weight: .heavy))
+                        .foregroundStyle(colors.primary)
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.plain)
+                .padding(.top, 2)
+            }
+        }
+        .frame(maxWidth: 430, alignment: .leading)
+        .padding(18)
+        .background {
+            RoundedRectangle(cornerRadius: 34, style: .continuous)
+                .fill(colors.background)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 34, style: .continuous)
+                        .fill(Color.white.opacity(colors.isDark ? 0.035 : 0.34))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 34, style: .continuous)
+                        .stroke(colors.onSurface.opacity(colors.isDark ? 0.12 : 0.08), lineWidth: 1)
+                )
+        }
+        .shadow(color: Color.black.opacity(colors.isDark ? 0.34 : 0.14), radius: 14, x: 0, y: 10)
     }
 
     private var header: some View {
