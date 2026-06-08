@@ -140,6 +140,14 @@
     <string name="settings_account_name_required">Name cannot be empty.</string>
     <string name="error_update_name_failed">Couldn\'t update your name. Please try again.</string>
     <string name="error_change_password_failed">Couldn\'t change your password. Please try again.</string>
+    <string name="error_update_security_questions_failed">Couldn\'t update your security questions. Please try again.</string>
+    <string name="settings_account_security_questions_label">Security questions</string>
+    <string name="settings_account_change_security_questions">Change</string>
+    <string name="settings_account_security_questions_configured">Configured</string>
+    <string name="settings_account_security_questions_not_configured">Not configured</string>
+    <string name="settings_account_security_questions_save">Save questions</string>
+    <string name="settings_account_current_password_required">Enter your current password</string>
+    <string name="settings_account_security_questions_updated">Security questions updated</string>
     <string name="settings_appearance">Appearance</string>
     <string name="settings_reminders">Reminders</string>
     <string name="settings_feature_toggle">Feature toggle</string>

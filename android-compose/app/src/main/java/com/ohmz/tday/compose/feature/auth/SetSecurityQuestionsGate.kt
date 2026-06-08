@@ -8,21 +8,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MenuAnchorType
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -36,7 +30,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -118,7 +111,7 @@ fun SetSecurityQuestionsGate(
                     color = colorScheme.onSurface.copy(alpha = 0.7f),
                 )
 
-                GateQuestionPicker(
+                SecurityQuestionPicker(
                     label = stringResource(R.string.security_questions_question_1),
                     questions = questions,
                     excludeIds = setOfNotNull(questionId2, questionId3),
@@ -133,7 +126,7 @@ fun SetSecurityQuestionsGate(
                         errorMessage = null
                     },
                 )
-                GateQuestionPicker(
+                SecurityQuestionPicker(
                     label = stringResource(R.string.security_questions_question_2),
                     questions = questions,
                     excludeIds = setOfNotNull(questionId1, questionId3),
@@ -148,7 +141,7 @@ fun SetSecurityQuestionsGate(
                         errorMessage = null
                     },
                 )
-                GateQuestionPicker(
+                SecurityQuestionPicker(
                     label = stringResource(R.string.security_questions_question_3),
                     questions = questions,
                     excludeIds = setOfNotNull(questionId1, questionId2),
@@ -241,61 +234,3 @@ fun SetSecurityQuestionsGate(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun GateQuestionPicker(
-    label: String,
-    questions: List<SecurityQuestion>,
-    excludeIds: Set<Int>,
-    selectedId: Int?,
-    onSelected: (Int) -> Unit,
-    answer: String,
-    onAnswerChange: (String) -> Unit,
-) {
-    var expanded by remember { mutableStateOf(false) }
-    val selectable = questions.filter { it.id == selectedId || it.id !in excludeIds }
-    val selectedText = questions.firstOrNull { it.id == selectedId }?.text.orEmpty()
-
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        ExposedDropdownMenuBox(
-            expanded = expanded,
-            onExpandedChange = { expanded = it },
-        ) {
-            OutlinedTextField(
-                modifier = Modifier
-                    .menuAnchor(MenuAnchorType.PrimaryNotEditable)
-                    .fillMaxWidth(),
-                value = selectedText,
-                onValueChange = {},
-                readOnly = true,
-                label = { Text(label) },
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                singleLine = true,
-                shape = RoundedCornerShape(22.dp),
-            )
-            ExposedDropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false },
-            ) {
-                selectable.forEach { question ->
-                    DropdownMenuItem(
-                        text = { Text(question.text) },
-                        onClick = {
-                            onSelected(question.id)
-                            expanded = false
-                        },
-                    )
-                }
-            }
-        }
-        OutlinedTextField(
-            modifier = Modifier.fillMaxWidth(),
-            value = answer,
-            onValueChange = onAnswerChange,
-            label = { Text(stringResource(R.string.security_questions_answer_label)) },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-            shape = RoundedCornerShape(22.dp),
-        )
-    }
-}

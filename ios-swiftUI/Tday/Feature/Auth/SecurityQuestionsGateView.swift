@@ -178,7 +178,8 @@ struct SecurityQuestionsGateView: View {
     }
 }
 
-private struct SecurityQuestionMenu: View {
+/// Shared by the first-time gate and the settings "change security questions" editor.
+struct SecurityQuestionMenu: View {
     let title: String
     @Binding var selection: Int?
     let options: [SecurityQuestion]

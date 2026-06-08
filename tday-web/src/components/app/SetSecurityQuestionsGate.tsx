@@ -19,19 +19,24 @@ import {
   type SecurityQuestion,
 } from "@/lib/securityQuestions";
 
+const SELECT_CLASS =
+  "h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus:border-ring focus:ring-[3px] focus:ring-ring/50";
+
 /**
  * Blocking prompt shown to accounts created before security questions existed.
- * They must choose two questions before continuing so self-service password
+ * They must choose three questions before continuing so self-service password
  * reset works for them. Backend clears the flag on success.
  */
 export default function SetSecurityQuestionsGate() {
   const { user, refreshSession } = useAuth();
   const { toast } = useToast();
   const [questions, setQuestions] = useState<SecurityQuestion[]>([]);
-  const [questionId1, setQuestionId1] = useState<number | null>(null);
-  const [answer1, setAnswer1] = useState("");
-  const [questionId2, setQuestionId2] = useState<number | null>(null);
-  const [answer2, setAnswer2] = useState("");
+  const [questionIds, setQuestionIds] = useState<[number | null, number | null, number | null]>([
+    null,
+    null,
+    null,
+  ]);
+  const [answers, setAnswers] = useState<[string, string, string]>(["", "", ""]);
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -43,8 +48,11 @@ export default function SetSecurityQuestionsGate() {
     void fetchAllSecurityQuestions().then((fetched) => {
       if (cancelled) return;
       setQuestions(fetched);
-      if (fetched[0]) setQuestionId1(fetched[0].id);
-      if (fetched[1]) setQuestionId2(fetched[1].id);
+      setQuestionIds([
+        fetched[0]?.id ?? null,
+        fetched[1]?.id ?? null,
+        fetched[2]?.id ?? null,
+      ]);
     });
     return () => {
       cancelled = true;
@@ -56,12 +64,16 @@ export default function SetSecurityQuestionsGate() {
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     // Validation errors render inline; only the save failure below toasts.
-    if (questionId1 == null || questionId2 == null || questionId1 === questionId2) {
-      setFormError("Choose two different questions");
+    if (questionIds.some((id) => id == null)) {
+      setFormError("Choose three questions");
       return;
     }
-    if (answer1.trim().length === 0 || answer2.trim().length === 0) {
-      setFormError("Please answer both questions");
+    if (new Set(questionIds).size !== 3) {
+      setFormError("Choose three different questions");
+      return;
+    }
+    if (answers.some((a) => a.trim().length === 0)) {
+      setFormError("Please answer all three questions");
       return;
     }
     setFormError(null);
@@ -71,10 +83,10 @@ export default function SetSecurityQuestionsGate() {
         url: "/api/user/security-questions",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          answers: [
-            { questionId: questionId1, answer: answer1.trim() },
-            { questionId: questionId2, answer: answer2.trim() },
-          ],
+          answers: questionIds.map((id, i) => ({
+            questionId: id as number,
+            answer: answers[i].trim(),
+          })),
         }),
       });
       await refreshSession();
@@ -100,61 +112,48 @@ export default function SetSecurityQuestionsGate() {
             Set up security questions
           </DialogTitle>
           <DialogDescription>
-            Choose two security questions. We'll use them to verify it's you if you
+            Choose three security questions. We'll use them to verify it's you if you
             ever need to reset your password.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-3">
-          <div className="space-y-1.5">
-            <Label htmlFor="sq1">Question 1</Label>
-            <select
-              id="sq1"
-              value={questionId1 ?? ""}
-              onChange={(e) => setQuestionId1(Number(e.target.value))}
-              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus:border-ring focus:ring-[3px] focus:ring-ring/50"
-            >
-              {questions
-                .filter((q) => q.id !== questionId2)
-                .map((q) => (
-                  <option key={q.id} value={q.id}>
-                    {q.text}
-                  </option>
-                ))}
-            </select>
-            <Input
-              aria-label="Answer 1"
-              autoComplete="off"
-              placeholder="Answer"
-              value={answer1}
-              onChange={(e) => setAnswer1(e.target.value)}
-              required
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="sq2">Question 2</Label>
-            <select
-              id="sq2"
-              value={questionId2 ?? ""}
-              onChange={(e) => setQuestionId2(Number(e.target.value))}
-              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus:border-ring focus:ring-[3px] focus:ring-ring/50"
-            >
-              {questions
-                .filter((q) => q.id !== questionId1)
-                .map((q) => (
-                  <option key={q.id} value={q.id}>
-                    {q.text}
-                  </option>
-                ))}
-            </select>
-            <Input
-              aria-label="Answer 2"
-              autoComplete="off"
-              placeholder="Answer"
-              value={answer2}
-              onChange={(e) => setAnswer2(e.target.value)}
-              required
-            />
-          </div>
+          {[0, 1, 2].map((i) => {
+            const otherIds = questionIds.filter((_, idx) => idx !== i);
+            const options = questions.filter((q) => !otherIds.includes(q.id));
+            return (
+              <div key={i} className="space-y-1.5">
+                <Label htmlFor={`sq${i + 1}`}>{`Question ${i + 1}`}</Label>
+                <select
+                  id={`sq${i + 1}`}
+                  value={questionIds[i] ?? ""}
+                  onChange={(e) => {
+                    const next = [...questionIds] as [number | null, number | null, number | null];
+                    next[i] = Number(e.target.value);
+                    setQuestionIds(next);
+                  }}
+                  className={SELECT_CLASS}
+                >
+                  {options.map((q) => (
+                    <option key={q.id} value={q.id}>
+                      {q.text}
+                    </option>
+                  ))}
+                </select>
+                <Input
+                  aria-label={`Answer ${i + 1}`}
+                  autoComplete="off"
+                  placeholder="Answer"
+                  value={answers[i]}
+                  onChange={(e) => {
+                    const next = [...answers] as [string, string, string];
+                    next[i] = e.target.value;
+                    setAnswers(next);
+                  }}
+                  required
+                />
+              </div>
+            );
+          })}
           {formError ? (
             <p className="text-sm font-medium text-destructive">{formError}</p>
           ) : null}

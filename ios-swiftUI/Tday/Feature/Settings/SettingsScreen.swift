@@ -7,6 +7,7 @@ private enum ProfileEditorExpansion: Equatable {
     case none
     case name
     case password
+    case securityQuestions
 }
 
 struct SettingsScreen: View {
@@ -243,6 +244,9 @@ private struct SettingsProfileCard: View {
 
             SettingsDivider()
             SettingsPasswordSection(viewModel: viewModel, expansion: $expansion)
+
+            SettingsDivider()
+            SettingsSecurityQuestionsSection(viewModel: viewModel, expansion: $expansion)
 
             SettingsDivider()
             Text("Role: \(viewModel.user?.role ?? "USER")")
@@ -505,6 +509,201 @@ private struct SettingsPasswordSection: View {
                 resetFields()
                 expansion = .none
                 viewModel.container.snackbarManager.show(L("Password changed successfully"), kind: .success)
+            case let .failure(message):
+                errorMessage = message
+            }
+        }
+    }
+}
+
+private struct SettingsSecurityQuestionsSection: View {
+    let viewModel: AppViewModel
+    @Binding var expansion: ProfileEditorExpansion
+
+    @Environment(\.tdayColors) private var colors
+
+    @State private var status: SecurityQuestionStatusResponse?
+    @State private var questions: [SecurityQuestion] = []
+    @State private var questionId1: Int?
+    @State private var questionId2: Int?
+    @State private var questionId3: Int?
+    @State private var answer1 = ""
+    @State private var answer2 = ""
+    @State private var answer3 = ""
+    @State private var currentPassword = ""
+    @State private var isBusy = false
+    @State private var errorMessage: String?
+
+    private var isEditing: Bool { expansion == .securityQuestions }
+    // Already-configured accounts confirm with their password; legacy accounts that
+    // never set questions can do so here without one.
+    private var configured: Bool { status.map { !$0.requireSecurityQuestions } ?? false }
+
+    private var summary: String {
+        guard let status else { return "—" }
+        return status.requireSecurityQuestions ? L("Not configured") : L("Configured")
+    }
+
+    private var canSave: Bool {
+        guard let id1 = questionId1, let id2 = questionId2, let id3 = questionId3,
+              Set([id1, id2, id3]).count == 3 else {
+            return false
+        }
+        let answersFilled = ![answer1, answer2, answer3].contains {
+            $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        }
+        let passwordOk = !configured || !currentPassword.isEmpty
+        return !isBusy && answersFilled && passwordOk
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .center, spacing: 12) {
+                VStack(alignment: .leading, spacing: 2) {
+                    SettingsFieldLabel("Security questions")
+                    Text(summary)
+                        .font(.tdayRounded(size: 20, weight: .heavy))
+                        .foregroundStyle(colors.onSurface.opacity(0.8))
+                }
+
+                Spacer(minLength: 12)
+
+                if !isEditing {
+                    SettingsInlineEditButton(title: "Change", systemImage: "lock.shield.fill") {
+                        beginEditing()
+                    }
+                }
+            }
+
+            if isEditing {
+                VStack(alignment: .leading, spacing: 12) {
+                    if configured {
+                        SettingsEditField(
+                            title: "Current password",
+                            text: $currentPassword,
+                            isSecure: true,
+                            textContentType: .password,
+                            submitLabel: .next
+                        )
+                    }
+
+                    SecurityQuestionMenu(
+                        title: "Question 1",
+                        selection: $questionId1,
+                        options: questions.filter { $0.id != questionId2 && $0.id != questionId3 }
+                    )
+                    SettingsEditField(title: "Answer", text: $answer1, submitLabel: .next)
+
+                    SecurityQuestionMenu(
+                        title: "Question 2",
+                        selection: $questionId2,
+                        options: questions.filter { $0.id != questionId1 && $0.id != questionId3 }
+                    )
+                    SettingsEditField(title: "Answer", text: $answer2, submitLabel: .next)
+
+                    SecurityQuestionMenu(
+                        title: "Question 3",
+                        selection: $questionId3,
+                        options: questions.filter { $0.id != questionId1 && $0.id != questionId2 }
+                    )
+                    SettingsEditField(title: "Answer", text: $answer3, submitLabel: .done, onSubmit: { save() })
+
+                    if let errorMessage {
+                        SettingsEditorError(message: errorMessage)
+                    }
+
+                    SettingsEditorActions(
+                        saveTitle: isBusy ? "Saving..." : "Save",
+                        isBusy: isBusy,
+                        canSave: canSave,
+                        onCancel: cancel,
+                        onSave: save
+                    )
+                }
+            }
+        }
+        .task { await loadStatus() }
+    }
+
+    private func loadStatus() async {
+        if status == nil {
+            status = await viewModel.securityQuestionStatus()
+        }
+    }
+
+    private func beginEditing() {
+        Task {
+            if questions.isEmpty {
+                questions = await viewModel.loadAllSecurityQuestions()
+            }
+            seedSelections()
+            currentPassword = ""
+            answer1 = ""
+            answer2 = ""
+            answer3 = ""
+            errorMessage = nil
+            expansion = .securityQuestions
+        }
+    }
+
+    // Seed the three selects from the user's existing questions, filling gaps with the
+    // first unused catalogue entries.
+    private func seedSelections() {
+        let preferred = (status?.questionIds ?? []).filter { id in questions.contains { $0.id == id } }
+        let filler = questions.map(\.id).filter { !preferred.contains($0) }
+        var seeded: [Int] = []
+        for id in preferred + filler where !seeded.contains(id) {
+            seeded.append(id)
+            if seeded.count == 3 { break }
+        }
+        questionId1 = seeded.indices.contains(0) ? seeded[0] : nil
+        questionId2 = seeded.indices.contains(1) ? seeded[1] : nil
+        questionId3 = seeded.indices.contains(2) ? seeded[2] : nil
+    }
+
+    private func cancel() {
+        currentPassword = ""
+        answer1 = ""
+        answer2 = ""
+        answer3 = ""
+        errorMessage = nil
+        expansion = .none
+    }
+
+    private func save() {
+        guard canSave else { return }
+        guard let id1 = questionId1, let id2 = questionId2, let id3 = questionId3,
+              Set([id1, id2, id3]).count == 3 else {
+            errorMessage = L("Choose three different questions")
+            return
+        }
+        let t1 = answer1.trimmingCharacters(in: .whitespacesAndNewlines)
+        let t2 = answer2.trimmingCharacters(in: .whitespacesAndNewlines)
+        let t3 = answer3.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !t1.isEmpty, !t2.isEmpty, !t3.isEmpty else {
+            errorMessage = L("Please answer all three questions")
+            return
+        }
+        Task {
+            isBusy = true
+            errorMessage = nil
+            let result = await viewModel.updateSecurityQuestions(
+                currentPassword: configured ? currentPassword : "",
+                answers: [
+                    SecurityAnswerInput(questionId: id1, answer: t1),
+                    SecurityAnswerInput(questionId: id2, answer: t2),
+                    SecurityAnswerInput(questionId: id3, answer: t3),
+                ]
+            )
+            isBusy = false
+            switch result {
+            case .success:
+                status = SecurityQuestionStatusResponse(
+                    questionIds: [id1, id2, id3],
+                    requireSecurityQuestions: false
+                )
+                cancel()
+                viewModel.container.snackbarManager.show(L("Security questions updated"), kind: .success)
             case let .failure(message):
                 errorMessage = message
             }

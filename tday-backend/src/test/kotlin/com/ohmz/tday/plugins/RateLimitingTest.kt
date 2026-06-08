@@ -394,6 +394,8 @@ class RateLimitingTest {
             return true.right()
         }
 
+        override suspend fun verifyCurrentPassword(userId: String, password: String): Either<AppError, Boolean> = true.right()
+
         override suspend fun register(
             fname: String,
             lname: String?,

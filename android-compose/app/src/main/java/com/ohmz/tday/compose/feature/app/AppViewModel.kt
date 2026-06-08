@@ -19,6 +19,9 @@ import com.ohmz.tday.compose.core.data.server.VersionCheckResult
 import com.ohmz.tday.compose.core.data.settings.SettingsRepository
 import com.ohmz.tday.compose.core.data.sync.SyncManager
 import com.ohmz.tday.compose.core.model.AuthResult
+import com.ohmz.tday.compose.core.model.SecurityAnswerInput
+import com.ohmz.tday.compose.core.model.SecurityQuestion
+import com.ohmz.tday.compose.core.model.SecurityQuestionStatusResponse
 import com.ohmz.tday.compose.core.model.SessionUser
 import com.ohmz.tday.compose.core.network.ConnectivityObserver
 import com.ohmz.tday.compose.core.network.RealtimeClient
@@ -568,6 +571,37 @@ class AppViewModel @Inject constructor(
             ProfileEditResult.Success
         }.getOrElse { error ->
             ProfileEditResult.Error(error.accountEditMessage(R.string.error_change_password_failed))
+        }
+    }
+
+    /// The signed-in user's security-question status (chosen ids + whether they
+    /// still need to be set), or null when unavailable / not in server mode.
+    suspend fun securityQuestionStatus(): SecurityQuestionStatusResponse? {
+        val state = _uiState.value
+        if (state.isLocalMode || !state.authenticated) return null
+        return runCatching { authRepository.getUserSecurityQuestionStatus() }.getOrNull()
+    }
+
+    /// The full catalogue of security questions for the settings pickers.
+    suspend fun fetchSecurityQuestions(): List<SecurityQuestion> =
+        runCatching { authRepository.fetchAllSecurityQuestions() }.getOrElse { emptyList() }
+
+    /// Replaces the user's security questions. When they're already configured the
+    /// server requires the current password (passed through here); a blank password
+    /// is sent as null so the first-time path still works.
+    suspend fun updateSecurityQuestions(
+        currentPassword: String,
+        answers: List<SecurityAnswerInput>,
+    ): ProfileEditResult {
+        val state = _uiState.value
+        if (state.isLocalMode || !state.authenticated) {
+            return ProfileEditResult.Error(appContext.getString(R.string.settings_account_not_signed_in))
+        }
+        return runCatching {
+            authRepository.setSecurityQuestions(answers, currentPassword.ifBlank { null })
+            ProfileEditResult.Success
+        }.getOrElse { error ->
+            ProfileEditResult.Error(error.accountEditMessage(R.string.error_update_security_questions_failed))
         }
     }
 

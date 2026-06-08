@@ -14,6 +14,7 @@ import {
   Pencil,
   Settings,
   Shield,
+  ShieldQuestion,
   Sun,
   Trash2,
   User,
@@ -40,6 +41,13 @@ import { getErrorMessage } from "@/lib/error-message";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { Link, usePathname } from "@/lib/navigation";
 import { LANGUAGE_STORAGE_KEY, resolveInitialLocale } from "@/i18n";
+import {
+  fetchAllSecurityQuestions,
+  fetchSecurityQuestionStatus,
+  updateSecurityQuestions,
+  type SecurityQuestion,
+  type SecurityQuestionStatus,
+} from "@/lib/securityQuestions";
 
 const themeOptions = [
   { value: "light", labelKey: "themeLight", icon: Sun },
@@ -247,7 +255,9 @@ export default function SettingsPage() {
 
   // Which inline account editor is open ("one at a time" is structurally
   // guaranteed by this single state value).
-  const [editing, setEditing] = useState<"name" | "password" | null>(null);
+  const [editing, setEditing] = useState<
+    "name" | "password" | "securityQuestions" | null
+  >(null);
 
   const [name, setName] = useState("");
   const [profileLoading, setProfileLoading] = useState(false);
@@ -265,6 +275,24 @@ export default function SettingsPage() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  // Security questions — collapsed summary uses the status (fetched on mount); the
+  // catalogue is lazy-loaded when the editor first opens.
+  const [sqStatus, setSqStatus] = useState<SecurityQuestionStatus | null>(null);
+  const [sqCatalogue, setSqCatalogue] = useState<SecurityQuestion[]>([]);
+  const [sqQuestionIds, setSqQuestionIds] = useState<[number | null, number | null, number | null]>([
+    null,
+    null,
+    null,
+  ]);
+  const [sqAnswers, setSqAnswers] = useState<[string, string, string]>(["", "", ""]);
+  const [sqCurrentPassword, setSqCurrentPassword] = useState("");
+  const [showSqPassword, setShowSqPassword] = useState(false);
+  const [sqError, setSqError] = useState<string | null>(null);
+  const [sqLoading, setSqLoading] = useState(false);
+  // Already-configured accounts must re-enter their password to change questions;
+  // legacy not-configured accounts set them for the first time without one.
+  const sqConfigured = sqStatus != null && !sqStatus.requireSecurityQuestions;
+
   const push = usePushNotifications();
 
   const [apiKeyStatus, setApiKeyStatus] = useState<{
@@ -276,6 +304,20 @@ export default function SettingsPage() {
   const [apiKeyLoading, setApiKeyLoading] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchSecurityQuestionStatus()
+      .then((status) => {
+        if (!cancelled) setSqStatus(status);
+      })
+      .catch(() => {
+        if (!cancelled) setSqStatus({ questionIds: [], requireSecurityQuestions: true });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -449,6 +491,91 @@ export default function SettingsPage() {
       });
     } finally {
       setPasswordLoading(false);
+    }
+  };
+
+  // Seed three distinct question selections — the user's existing ones first, then the
+  // first unused catalogue entries to fill any gaps.
+  const seedQuestionIds = (
+    preferred: number[],
+    catalogue: SecurityQuestion[],
+  ): [number | null, number | null, number | null] => {
+    const chosen: number[] = [];
+    for (const id of preferred) {
+      if (catalogue.some((q) => q.id === id) && !chosen.includes(id)) chosen.push(id);
+      if (chosen.length === 3) break;
+    }
+    for (const q of catalogue) {
+      if (chosen.length === 3) break;
+      if (!chosen.includes(q.id)) chosen.push(q.id);
+    }
+    return [chosen[0] ?? null, chosen[1] ?? null, chosen[2] ?? null];
+  };
+
+  const openSecurityQuestions = async () => {
+    setEditing("securityQuestions");
+    setSqError(null);
+    setSqCurrentPassword("");
+    setShowSqPassword(false);
+    setSqAnswers(["", "", ""]);
+    let catalogue = sqCatalogue;
+    if (catalogue.length === 0) {
+      try {
+        catalogue = await fetchAllSecurityQuestions();
+        setSqCatalogue(catalogue);
+      } catch (err) {
+        toast({
+          description: getErrorMessage(err, t("toast.securityQuestionsLoadFailed")),
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+    setSqQuestionIds(seedQuestionIds(sqStatus?.questionIds ?? [], catalogue));
+  };
+
+  const closeSecurityQuestions = () => {
+    setSqCurrentPassword("");
+    setShowSqPassword(false);
+    setSqAnswers(["", "", ""]);
+    setSqError(null);
+    setEditing(null);
+  };
+
+  const handleSecurityQuestionsSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const ids = sqQuestionIds;
+    if (ids.some((id) => id == null)) {
+      setSqError(t("securityQuestions.errorSelectAll"));
+      return;
+    }
+    if (new Set(ids).size !== 3) {
+      setSqError(t("securityQuestions.errorDistinct"));
+      return;
+    }
+    if (sqAnswers.some((a) => a.trim().length === 0)) {
+      setSqError(t("securityQuestions.errorAnswersRequired"));
+      return;
+    }
+    if (sqConfigured && !sqCurrentPassword) {
+      setSqError(t("securityQuestions.errorPasswordRequired"));
+      return;
+    }
+    setSqError(null);
+    setSqLoading(true);
+    try {
+      const answers = ids.map((id, i) => ({ questionId: id as number, answer: sqAnswers[i].trim() }));
+      await updateSecurityQuestions(answers, sqConfigured ? sqCurrentPassword : undefined);
+      toast({ description: t("toast.securityQuestionsUpdated") });
+      setSqStatus({ questionIds: ids as number[], requireSecurityQuestions: false });
+      closeSecurityQuestions();
+    } catch (err) {
+      toast({
+        description: getErrorMessage(err, t("toast.securityQuestionsUpdateFailed")),
+        variant: "destructive",
+      });
+    } finally {
+      setSqLoading(false);
     }
   };
 
@@ -693,6 +820,138 @@ export default function SettingsPage() {
                       </>
                     ) : (
                       t("password.change")
+                    )}
+                  </Button>
+                </div>
+              </form>
+            </Collapse>
+          </div>
+
+          <div className="h-px bg-border/60" />
+
+          {/* Security questions — collapsed summary with a Change affordance; expands to selects + answers. */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <Label className="px-1 text-sm font-extrabold text-muted-foreground">{t("securityQuestions.title")}</Label>
+                <p className="px-1 text-[1.05rem] font-black text-foreground">
+                  {sqStatus == null
+                    ? "—"
+                    : sqConfigured
+                      ? t("securityQuestions.configured", { count: sqStatus.questionIds.length || 3 })
+                      : t("securityQuestions.notConfigured")}
+                </p>
+              </div>
+              {editing !== "securityQuestions" ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="shrink-0 rounded-xl font-black text-accent hover:text-accent"
+                  onClick={openSecurityQuestions}
+                >
+                  <ShieldQuestion className="mr-1.5 h-3.5 w-3.5" />
+                  {t("securityQuestions.changeAction")}
+                </Button>
+              ) : null}
+            </div>
+            <Collapse open={editing === "securityQuestions"}>
+              <form onSubmit={handleSecurityQuestionsSubmit} className="space-y-4 pt-1">
+                {sqConfigured ? (
+                  <div className="space-y-2">
+                    <Label htmlFor="sqCurrentPassword" className="px-1 text-sm font-extrabold text-muted-foreground">
+                      {t("password.current")}
+                    </Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        id="sqCurrentPassword"
+                        type={showSqPassword ? "text" : "password"}
+                        autoComplete="current-password"
+                        value={sqCurrentPassword}
+                        onChange={(e) => {
+                          setSqCurrentPassword(e.target.value);
+                          setSqError(null);
+                        }}
+                        placeholder={t("password.currentPlaceholder")}
+                        className={cn(fieldClass, "pl-10 pr-10")}
+                      />
+                      {sqCurrentPassword && (
+                        <button
+                          type="button"
+                          onClick={() => setShowSqPassword(!showSqPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+                        >
+                          {showSqPassword ? <EyeOff className="h-4 w-4 opacity-40" /> : <Eye className="h-4 w-4 opacity-40" />}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ) : null}
+
+                {[0, 1, 2].map((i) => {
+                  const otherIds = sqQuestionIds.filter((_, idx) => idx !== i);
+                  const options = sqCatalogue.filter((q) => !otherIds.includes(q.id));
+                  return (
+                    <div key={i} className="space-y-2">
+                      <Label className="px-1 text-sm font-extrabold text-muted-foreground">
+                        {t("securityQuestions.questionLabel", { index: i + 1 })}
+                      </Label>
+                      <select
+                        value={sqQuestionIds[i] ?? ""}
+                        onChange={(e) => {
+                          const next = [...sqQuestionIds] as [number | null, number | null, number | null];
+                          next[i] = Number(e.target.value);
+                          setSqQuestionIds(next);
+                          setSqError(null);
+                        }}
+                        aria-label={t("securityQuestions.questionLabel", { index: i + 1 })}
+                        className={cn(fieldClass, "w-full px-3 text-foreground")}
+                      >
+                        {options.map((q) => (
+                          <option key={q.id} value={q.id}>
+                            {q.text}
+                          </option>
+                        ))}
+                      </select>
+                      <Input
+                        value={sqAnswers[i]}
+                        onChange={(e) => {
+                          const next = [...sqAnswers] as [string, string, string];
+                          next[i] = e.target.value;
+                          setSqAnswers(next);
+                          setSqError(null);
+                        }}
+                        placeholder={t("securityQuestions.answerPlaceholder")}
+                        className={fieldClass}
+                        autoComplete="off"
+                      />
+                    </div>
+                  );
+                })}
+
+                {sqError ? (
+                  <p className="px-1 text-xs font-extrabold text-destructive">{sqError}</p>
+                ) : null}
+
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="h-12 flex-1 rounded-2xl font-black"
+                    disabled={sqLoading}
+                    onClick={closeSecurityQuestions}
+                  >
+                    {t("password.cancel")}
+                  </Button>
+                  <Button type="submit" disabled={sqLoading} className="h-12 flex-1 rounded-2xl font-black">
+                    {sqLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        {t("securityQuestions.saving")}
+                      </>
+                    ) : (
+                      t("securityQuestions.save")
                     )}
                   </Button>
                 </div>

@@ -32,6 +32,7 @@ interface UserService {
     suspend fun getProfile(userId: String): Either<AppError, UserProfileResponse>
     suspend fun updateProfile(userId: String, name: String?, image: String?): Either<AppError, Unit>
     suspend fun changePassword(userId: String, currentPassword: String, newPassword: String): Either<AppError, Boolean>
+    suspend fun verifyCurrentPassword(userId: String, password: String): Either<AppError, Boolean>
     suspend fun register(fname: String, lname: String?, username: String, password: String, securityAnswers: List<SecurityAnswerInput>): Either<AppError, RegisterResult>
     suspend fun findByUsername(username: String): Map<String, Any?>?
     suspend fun isAdmin(userId: String): Boolean
@@ -117,6 +118,15 @@ class UserServiceImpl(private val passwordService: PasswordService) : UserServic
                 it[Users.updatedAt] = LocalDateTime.now(ZoneOffset.UTC)
             }
             true
+        }
+        return result.right()
+    }
+
+    override suspend fun verifyCurrentPassword(userId: String, password: String): Either<AppError, Boolean> {
+        val result = newSuspendedTransaction(Dispatchers.IO) {
+            val user = Users.selectAll().where { Users.id eq userId }.firstOrNull() ?: return@newSuspendedTransaction false
+            val storedHash = user[Users.password] ?: return@newSuspendedTransaction false
+            passwordService.verifyPassword(password, storedHash).valid
         }
         return result.right()
     }
