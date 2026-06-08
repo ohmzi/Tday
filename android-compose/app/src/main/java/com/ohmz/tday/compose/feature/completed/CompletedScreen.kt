@@ -886,8 +886,8 @@ private fun EmptyCompletedState(
 @Composable
 private fun priorityIconFor(priority: String): ImageVector? {
     return when (priority.trim().lowercase(Locale.getDefault())) {
-        "medium" -> ImageVector.vectorResource(R.drawable.ic_lucide_flag)
-        "high", "urgent", "important" -> ImageVector.vectorResource(R.drawable.ic_lucide_flag)
+        "medium" -> ImageVector.vectorResource(R.drawable.ic_lucide_flag_filled)
+        "high", "urgent", "important" -> ImageVector.vectorResource(R.drawable.ic_lucide_flag_filled)
         else -> null
     }
 }

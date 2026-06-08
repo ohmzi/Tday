@@ -249,11 +249,11 @@ struct CreateTaskSheet: View {
                 TdaySheetDivider()
 
                 CreateTaskSheetSelectorTriggerRow(
-                    iconName: "LucideFlag",
+                    iconName: "LucideFlagFilled",
                     title: "Priority",
                     value: TaskPriorityDisplay.label(for: priority),
                     valueLeading: AnyView(
-                        Image("LucideFlag")
+                        Image("LucideFlagFilled")
                             .renderingMode(.template)
                             .resizable()
                             .scaledToFit()
