@@ -143,21 +143,10 @@ fun Route.securityQuestionRoutes() {
                 return@post
             }
 
-            if (authThrottle.requiresCaptcha(ThrottleAction.credentials, call.request, body.username)) {
-                if (!captchaService.isConfigured()) {
-                    eventLogger.log(
-                        "auth_captcha_misconfigured",
-                        mapOf("action" to "self_service_reset", "reason" to "captcha_secret_missing"),
-                    )
-                    call.respond(
-                        HttpStatusCode.ServiceUnavailable,
-                        mapOf(
-                            "message" to "Additional verification is temporarily unavailable.",
-                            "reason" to "captcha_unavailable",
-                        ),
-                    )
-                    return@post
-                }
+            // Only enforce captcha when a provider is configured; otherwise fall back to
+            // the rate-limit + lockout above instead of hard-blocking with a 503 (which
+            // would brick self-host password reset). See CredentialsCallbackRoutes.
+            if (captchaService.isConfigured() && authThrottle.requiresCaptcha(ThrottleAction.credentials, call.request, body.username)) {
                 val captchaResult = captchaService.verify(body.captchaToken, call.request, "self_service_reset")
                 if (!captchaResult.ok) {
                     eventLogger.log("self_service_reset_captcha_failed", mapOf("reason" to captchaResult.reason))

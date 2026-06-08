@@ -49,21 +49,13 @@ fun Route.credentialsCallbackRoutes() {
 
             val identifier = username
 
-            if (authThrottle.requiresCaptcha(ThrottleAction.credentials, call.request, identifier)) {
-                if (!captchaService.isConfigured()) {
-                    eventLogger.log(
-                        "auth_captcha_misconfigured",
-                        mapOf("action" to "credentials", "reason" to "captcha_secret_missing"),
-                    )
-                    call.respond(
-                        HttpStatusCode.ServiceUnavailable,
-                        mapOf(
-                            "message" to "Additional verification is temporarily unavailable.",
-                            "reason" to "captcha_unavailable",
-                        ),
-                    )
-                    return@post
-                }
+            // Captcha is an optional extra layer that only kicks in once the failure
+            // threshold is tripped. When no captcha provider is configured (the common
+            // self-host case) we must NOT hard-block: the rate-limit + exponential
+            // lockout enforced above already guard against brute force. Returning 503
+            // here would brick login with a misleading "Cannot reach server" the moment
+            // a user fat-fingers their password a few times.
+            if (captchaService.isConfigured() && authThrottle.requiresCaptcha(ThrottleAction.credentials, call.request, identifier)) {
                 val captchaResult = captchaService.verify(body.captchaToken, call.request, "credentials")
                 if (!captchaResult.ok) {
                     eventLogger.log("auth_captcha_failed", mapOf("action" to "credentials", "reason" to captchaResult.reason))
