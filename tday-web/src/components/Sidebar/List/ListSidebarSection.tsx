@@ -191,6 +191,8 @@ export default function ListSidebarSection({
       await handleDeletedListsSuccess(resolvedDeletedIds);
       setDeleteDialogOpen(false);
       setSelectedList(null);
+      // Match bulk delete + the mobile apps: a single list delete confirms too.
+      toast({ description: "List deleted" });
     },
     onError: (error) => {
       toast({

@@ -21,7 +21,7 @@ export function useTodoActionToast() {
   // shows a success toast (failures are surfaced as error toasts at the mutation).
   const showTodoDeletedToast = useCallback((todo: TodoDateTarget) => {
     toast({
-      description: "Task Deleted",
+      description: "Task deleted",
       duration: 5000,
       onClick: () => openScheduledDate(todo),
     });

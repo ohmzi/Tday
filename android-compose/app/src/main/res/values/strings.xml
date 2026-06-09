@@ -395,7 +395,7 @@
     <string name="settings_sync_offline_short">Offline</string>
     <string name="settings_sync_offline_message">Changes will sync when connection returns.</string>
     <string name="settings_syncing_now">Syncing...</string>
-    <string name="error_auth_expired">Session expired. Please sign in again.</string>
+    <string name="error_auth_expired">Your session expired — please sign in again.</string>
     <string name="error_app_outdated">This version of the app is out of date. Please update to continue.</string>
     <string name="error_server_outdated">The server needs to be updated before this app can continue.</string>
     <string name="error_server">Server error. Please try again later.</string>
@@ -516,8 +516,8 @@
     <string name="release_launch_update_toast">Update %1$s is available.</string>
     <string name="task_deleted_toast">Task deleted</string>
     <string name="list_deleted_toast">List deleted</string>
-    <string name="password_changed_toast">Password changed</string>
-    <string name="profile_name_updated_toast">Name updated</string>
+    <string name="password_changed_toast">Password changed successfully</string>
+    <string name="profile_name_updated_toast">Name updated successfully</string>
     <string name="release_view_on_github">View on GitHub</string>
 
     <!-- Language picker -->
