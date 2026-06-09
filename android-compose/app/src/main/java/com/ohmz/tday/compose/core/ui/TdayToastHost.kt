@@ -43,6 +43,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
+import dev.chrisbanes.haze.HazeDefaults
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeChild
 import kotlinx.coroutines.launch
@@ -174,7 +175,13 @@ private fun TdayToastCard(
             // Haze backdrop and the translucent tint round to the toast shape.
             .shadow(elevation = if (isDark) 8.dp else 6.dp, shape = toastShape)
             .clip(toastShape)
-            .hazeChild(state = hazeState)
+            // Haze needs an explicit backgroundColor; without it the blur crashes
+            // ("backgroundColor not specified") when a toast draws over content
+            // that has no opaque backing (e.g. the offline toast).
+            .hazeChild(
+                state = hazeState,
+                style = HazeDefaults.style(backgroundColor = colorScheme.background),
+            )
             .background(containerColor)
             .border(
                 width = 1.dp,
