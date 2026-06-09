@@ -370,10 +370,10 @@
     <string name="offline_banner">Cached tasks are available. Changes will sync when connection returns.</string>
     <string name="offline_banner_pending_one">1 change waiting to sync</string>
     <string name="offline_banner_pending_many">%1$d changes waiting to sync</string>
-    <string name="offline_toast">You\'re offline. Changes will sync when your connection returns.</string>
-    <string name="offline_toast_pending_one">You\'re offline. 1 change will sync when your connection returns.</string>
-    <string name="offline_toast_pending_many">You\'re offline. %1$d changes will sync when your connection returns.</string>
-    <string name="online_toast">Back online. Syncing your latest changes…</string>
+    <string name="offline_toast">You\'re offline — changes will sync when your connection returns.</string>
+    <string name="offline_toast_pending_one">You\'re offline — 1 change waiting to sync.</string>
+    <string name="offline_toast_pending_many">You\'re offline — %1$d changes waiting to sync.</string>
+    <string name="online_toast">Back online — syncing your latest changes…</string>
     <string name="settings_workspace">Workspace</string>
     <string name="settings_workspace_local_title">Local workspace</string>
     <string name="settings_workspace_local_detail">On this device only</string>

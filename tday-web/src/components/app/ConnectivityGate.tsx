@@ -12,17 +12,19 @@ const OFFLINE_TOAST_ID = "connectivity-offline";
 export default function ConnectivityGate() {
   useEffect(() => {
     const showOffline = () => {
-      sonnerToast.error("You're offline", {
-        id: OFFLINE_TOAST_ID,
-        description: "Changes will sync when your connection returns.",
-        duration: Infinity,
-      });
+      // Single-line wording, matching iOS verbiage exactly (the canonical source).
+      sonnerToast.error(
+        "You're offline — changes will sync when your connection returns.",
+        {
+          id: OFFLINE_TOAST_ID,
+          duration: Infinity,
+        },
+      );
     };
 
     const showOnline = () => {
       sonnerToast.dismiss(OFFLINE_TOAST_ID);
-      sonnerToast.success("Back online", {
-        description: "Syncing your latest changes…",
+      sonnerToast.success("Back online — syncing your latest changes…", {
         duration: 3000,
       });
     };
