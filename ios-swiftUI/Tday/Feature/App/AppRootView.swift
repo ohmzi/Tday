@@ -572,7 +572,8 @@ private struct AppSnackbar: View {
             Text(content.message)
                 .font(.tdayRounded(.subheadline, weight: .bold))
                 .foregroundStyle(colors.onSurface)
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity, alignment: .center)
 
             if let label = content.actionLabel, let action = content.action {
                 Button {

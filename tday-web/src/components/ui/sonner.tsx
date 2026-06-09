@@ -20,17 +20,23 @@ const SonnerToaster = ({ ...props }: ToasterProps) => {
           // which render with data-styled="false" and therefore skip sonner's
           // own background rule. Without this the outer <li> would be a
           // transparent bordered box wrapping the inner card → a double box.
+          //
+          // The explicit `text-[13px]` base is required so custom/clickable toasts
+          // match plain ones: custom toasts render data-styled="false", so sonner's
+          // own `font-size:13px` rule (gated on [data-styled=true]) never applies and
+          // they'd otherwise fall back to the document's larger size.
           toast:
-            "group toast group-[.toaster]:flex group-[.toaster]:items-center group-[.toaster]:gap-3 group-[.toaster]:rounded-full group-[.toaster]:border group-[.toaster]:border-border/60 group-[.toaster]:bg-popover/55 group-[.toaster]:px-4 group-[.toaster]:py-3.5 group-[.toaster]:backdrop-blur-xl group-[.toaster]:shadow-[0_10px_30px_-12px_hsl(var(--shadow)/0.45)]",
+            "group toast group-[.toaster]:flex group-[.toaster]:items-center group-[.toaster]:gap-3 group-[.toaster]:rounded-full group-[.toaster]:border group-[.toaster]:border-border/60 group-[.toaster]:bg-popover/55 group-[.toaster]:px-4 group-[.toaster]:py-3.5 group-[.toaster]:text-[13px] group-[.toaster]:backdrop-blur-xl group-[.toaster]:shadow-[0_10px_30px_-12px_hsl(var(--shadow)/0.45)]",
           // No icon — hide Sonner's default per-variant icon slot entirely.
           // !important is required: the plain `hidden` ties specificity with
           // sonner's runtime-injected `[data-styled=true] [data-icon]{display:flex}`
           // and loses on source order, so the icon would otherwise still show.
           icon: "group-[.toast]:!hidden",
-          content: "group-[.toast]:min-w-0",
-          title: "group-[.toast]:font-extrabold group-[.toast]:leading-tight",
+          // Content fills the pill and centers its text horizontally.
+          content: "group-[.toast]:min-w-0 group-[.toast]:flex-1 group-[.toast]:text-center",
+          title: "group-[.toast]:font-extrabold group-[.toast]:leading-tight group-[.toast]:text-center",
           description:
-            "group-[.toast]:mt-0.5 group-[.toast]:text-current/75 group-[.toast]:font-medium group-[.toast]:leading-snug",
+            "group-[.toast]:mt-0.5 group-[.toast]:text-current/75 group-[.toast]:font-medium group-[.toast]:leading-snug group-[.toast]:text-center",
           actionButton:
             "group-[.toast]:rounded-full group-[.toast]:bg-primary group-[.toast]:px-3 group-[.toast]:font-bold group-[.toast]:text-primary-foreground",
           cancelButton:

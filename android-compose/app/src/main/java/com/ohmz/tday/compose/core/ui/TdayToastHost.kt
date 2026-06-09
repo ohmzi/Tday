@@ -42,6 +42,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.chrisbanes.haze.HazeDefaults
@@ -269,7 +270,10 @@ private fun TdayToastCard(
             ) {
                 Text(
                     text = toast.message,
+                    modifier = Modifier.fillMaxWidth(),
                     color = colorScheme.onSurface,
+                    // Centered horizontally to match iOS/web.
+                    textAlign = TextAlign.Center,
                     // Match iOS's `.tdayRounded(.subheadline, weight: .bold)` — the
                     // app's rounded family at ~15sp bold, rather than the larger
                     // ExtraBold titleMedium which read heavier than iOS/web.
