@@ -46,7 +46,7 @@ final class CalendarViewModel {
             try await container.createTodo(payload)
             hydrateFromCache()
         } catch {
-            errorMessage = userFacingMessage(for: error, fallback: "Could not create task.")
+            container.snackbarManager.show(userFacingMessage(for: error, fallback: "Could not create task."), kind: .error)
         }
     }
 
@@ -56,7 +56,7 @@ final class CalendarViewModel {
             try await container.completeTodo(todo)
             hydrateFromCache()
         } catch {
-            errorMessage = userFacingMessage(for: error, fallback: "Could not complete task.")
+            container.snackbarManager.show(userFacingMessage(for: error, fallback: "Could not complete task."), kind: .error)
         }
     }
 
@@ -66,7 +66,7 @@ final class CalendarViewModel {
             try await container.completedRepository.uncomplete(item)
             hydrateFromCache()
         } catch {
-            errorMessage = userFacingMessage(for: error, fallback: "Could not restore task.")
+            container.snackbarManager.show(userFacingMessage(for: error, fallback: "Could not restore task."), kind: .error)
         }
     }
 
@@ -76,7 +76,7 @@ final class CalendarViewModel {
             try await container.todoRepository.updateTodo(todo, payload: payload)
             hydrateFromCache()
         } catch {
-            errorMessage = userFacingMessage(for: error, fallback: "Could not update task.")
+            container.snackbarManager.show(userFacingMessage(for: error, fallback: "Could not update task."), kind: .error)
         }
     }
 
@@ -98,7 +98,7 @@ final class CalendarViewModel {
             )
             hydrateFromCache()
         } catch {
-            errorMessage = userFacingMessage(for: error, fallback: "Could not update task.")
+            container.snackbarManager.show(userFacingMessage(for: error, fallback: "Could not update task."), kind: .error)
         }
     }
 
@@ -107,8 +107,9 @@ final class CalendarViewModel {
         do {
             try await container.todoRepository.deleteTodo(todo)
             hydrateFromCache()
+            container.snackbarManager.show(L("Task deleted"), kind: .success)
         } catch {
-            errorMessage = userFacingMessage(for: error, fallback: "Could not delete task.")
+            container.snackbarManager.show(userFacingMessage(for: error, fallback: "Could not delete task."), kind: .error)
         }
     }
 
