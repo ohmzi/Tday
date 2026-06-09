@@ -813,11 +813,34 @@ final class AppViewModel {
                         return
                     }
                     await self.reconnectWithServer(showOfflineNotice: false)
+                } else {
+                    // Connection lost. React the instant the OS tells us, instead of
+                    // waiting for a sync to fail and an 8s server probe
+                    // (userRefreshConnectionTimeoutSeconds) to time out before we
+                    // discover we're offline — that delay reads to the user as a
+                    // 5-10s freeze with no feedback.
+                    self.markOfflineFromConnectivityLoss()
                 }
             }
         }
         monitor.start(queue: networkMonitorQueue)
         networkMonitor = monitor
+    }
+
+    /// Flips the app into the offline state immediately when `NWPathMonitor` reports
+    /// the link is down, and surfaces the offline toast (subject to the same cooldown
+    /// as a probe-detected outage). The pending probe/sync still runs and is harmless:
+    /// on failure it re-confirms `isOffline` (deduped by the cooldown), and a later
+    /// `.satisfied` path triggers `reconnectWithServer`, which clears the state and
+    /// shows the "back online" toast.
+    private func markOfflineFromConnectivityLoss() {
+        guard !isLocalMode, !isOffline else {
+            return
+        }
+        isOffline = true
+        if shouldShowOfflineNotice() {
+            offlineNoticeID += 1
+        }
     }
 
     private func reconnectWithServer(showOfflineNotice: Bool) async {
