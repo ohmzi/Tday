@@ -602,7 +602,10 @@ private struct AppSnackbar: View {
         )
         .shadow(color: Color.black.opacity(colors.isDark ? 0.35 : 0.18), radius: 18, y: 10)
         .padding(.horizontal, 20)
-        .padding(.bottom, 18)
+        // Sit above the bottom RootFeedDock (height 60 + 8/8 vertical padding ≈
+        // 76pt above the safe area) with a ~12pt gap, instead of overlapping it.
+        // Matches Android's 88dp bottom inset.
+        .padding(.bottom, 88)
         .contentShape(Rectangle())
         .onTapGesture(perform: onDismiss)
         .task(id: content.id) {

@@ -9,6 +9,11 @@ const SonnerToaster = ({ ...props }: ToasterProps) => {
       theme={theme as ToasterProps["theme"]}
       className="toaster group"
       position="bottom-center"
+      // Lift the toast above the bottom RootDock (fixed at 18px + safe-area,
+      // h-16 = 64px tall, so its top is ~82px up) so it never overlaps the
+      // Home/Floater dock + FAB. ~12px gap above the dock.
+      offset={{ bottom: "calc(env(safe-area-inset-bottom) + 94px)" }}
+      mobileOffset={{ bottom: "calc(env(safe-area-inset-bottom) + 94px)" }}
       toastOptions={{
         classNames: {
           // Floating, on-brand pill (matches iOS): fully-rounded, translucent
@@ -21,12 +26,14 @@ const SonnerToaster = ({ ...props }: ToasterProps) => {
           // own background rule. Without this the outer <li> would be a
           // transparent bordered box wrapping the inner card → a double box.
           //
-          // The explicit `text-[13px]` base is required so custom/clickable toasts
+          // The explicit `text-[15px]` base is required so custom/clickable toasts
           // match plain ones: custom toasts render data-styled="false", so sonner's
-          // own `font-size:13px` rule (gated on [data-styled=true]) never applies and
-          // they'd otherwise fall back to the document's larger size.
+          // own font-size rule (gated on [data-styled=true]) never applies and they'd
+          // otherwise fall back to the document's size. 15px + py-3.5 matches iOS's
+          // toast height (subheadline ~15pt + 14pt vertical padding) for cross-platform
+          // parity.
           toast:
-            "group toast group-[.toaster]:flex group-[.toaster]:items-center group-[.toaster]:gap-3 group-[.toaster]:rounded-full group-[.toaster]:border group-[.toaster]:border-border/60 group-[.toaster]:bg-popover/55 group-[.toaster]:px-4 group-[.toaster]:py-3.5 group-[.toaster]:text-[13px] group-[.toaster]:backdrop-blur-xl group-[.toaster]:shadow-[0_10px_30px_-12px_hsl(var(--shadow)/0.45)]",
+            "group toast group-[.toaster]:flex group-[.toaster]:items-center group-[.toaster]:gap-3 group-[.toaster]:rounded-full group-[.toaster]:border group-[.toaster]:border-border/60 group-[.toaster]:bg-popover/55 group-[.toaster]:px-4 group-[.toaster]:py-3.5 group-[.toaster]:text-[15px] group-[.toaster]:backdrop-blur-xl group-[.toaster]:shadow-[0_10px_30px_-12px_hsl(var(--shadow)/0.45)]",
           // No icon — hide Sonner's default per-variant icon slot entirely.
           // !important is required: the plain `hidden` ties specificity with
           // sonner's runtime-injected `[data-styled=true] [data-icon]{display:flex}`
