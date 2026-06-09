@@ -80,6 +80,17 @@ enum TdayTelemetry {
         level: SentryLevel = .info,
         data: [String: Any] = [:]
     ) {
+        // No-op unless the SDK actually started (it doesn't when SENTRY_DSN is
+        // empty, e.g. debug builds). Without this guard, every call still reaches
+        // into SentrySDK, which lazily builds its hub/dependency-container on
+        // whatever thread calls first — a background network thread inside
+        // `performRequestRaw` — and that init touches `UIApplication.applicationState`,
+        // a main-thread-only API. When connectivity drops, the burst of failing
+        // requests/retries fires breadcrumbs from many threads at once (and the
+        // @MainActor SyncManager logs `server.probe`/`sync.replay`), so the main
+        // actor stalls behind Sentry's off-main init/locks — the 5-10s freeze.
+        guard SentrySDK.isEnabled else { return }
+
         let breadcrumb = Breadcrumb(level: level, category: category)
         breadcrumb.message = safeLabel(operation)
         breadcrumb.data = Dictionary(uniqueKeysWithValues: data.map { key, value in
@@ -89,6 +100,7 @@ enum TdayTelemetry {
     }
 
     static func capture(_ error: Error, operation: String, data: [String: Any] = [:]) {
+        guard SentrySDK.isEnabled else { return }
         addBreadcrumb(operation, category: "error", level: .error, data: data)
         SentrySDK.capture(error: error)
     }
