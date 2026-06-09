@@ -11,14 +11,22 @@ const SonnerToaster = ({ ...props }: ToasterProps) => {
       position="bottom-center"
       toastOptions={{
         classNames: {
-          // Floating, on-brand card: rounded-24, translucent blurred surface,
-          // subtle border, generous padding. Icons are removed app-wide; the
-          // variant cue now lives in the card surface itself (issue/error/warning
-          // get a red translucent shade — see the per-type --*-bg vars below).
+          // Floating, on-brand pill (matches iOS): fully-rounded, translucent
+          // blurred surface, subtle border, generous padding. Icons are removed
+          // app-wide; all variants share one neutral surface.
+          //
+          // The background is set here as a Tailwind utility (not only via the
+          // sonner --*-bg vars) so it also applies to custom/clickable toasts,
+          // which render with data-styled="false" and therefore skip sonner's
+          // own background rule. Without this the outer <li> would be a
+          // transparent bordered box wrapping the inner card → a double box.
           toast:
-            "group toast group-[.toaster]:flex group-[.toaster]:items-center group-[.toaster]:gap-3 group-[.toaster]:rounded-[24px] group-[.toaster]:border group-[.toaster]:px-4 group-[.toaster]:py-3.5 group-[.toaster]:backdrop-blur-xl group-[.toaster]:shadow-[0_10px_30px_-12px_hsl(var(--shadow)/0.45)]",
+            "group toast group-[.toaster]:flex group-[.toaster]:items-center group-[.toaster]:gap-3 group-[.toaster]:rounded-full group-[.toaster]:border group-[.toaster]:border-border/60 group-[.toaster]:bg-popover/55 group-[.toaster]:px-4 group-[.toaster]:py-3.5 group-[.toaster]:backdrop-blur-xl group-[.toaster]:shadow-[0_10px_30px_-12px_hsl(var(--shadow)/0.45)]",
           // No icon — hide Sonner's default per-variant icon slot entirely.
-          icon: "group-[.toast]:hidden",
+          // !important is required: the plain `hidden` ties specificity with
+          // sonner's runtime-injected `[data-styled=true] [data-icon]{display:flex}`
+          // and loses on source order, so the icon would otherwise still show.
+          icon: "group-[.toast]:!hidden",
           content: "group-[.toast]:min-w-0",
           title: "group-[.toast]:font-extrabold group-[.toast]:leading-tight",
           description:

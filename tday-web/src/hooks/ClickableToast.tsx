@@ -11,39 +11,32 @@ export default function ClickableToast({
   title,
   description,
   onClick,
-  variant = "default",
 }: ClickableToastProps) {
   const hasDescription = Boolean(description);
-  const isDestructive = variant === "destructive";
 
+  // Content only — no box of its own. The surrounding sonner <li> supplies the
+  // frosted, fully-rounded pill (surface, border, padding, blur) so clickable
+  // toasts look identical to plain ones. Carrying its own card here would nest
+  // a second box inside the sonner pill (the old "Task Deleted" double-box).
   return (
     <button
       type="button"
       onClick={onClick}
-      className={cn(
-        // Icon-free, translucent blurred card. The destructive ("issue") variant
-        // gets a red translucent shade; default stays the neutral popover surface.
-        "flex w-full items-center gap-3 rounded-[24px] border px-4 py-3.5 text-left text-popover-foreground backdrop-blur-xl shadow-[0_10px_30px_-12px_hsl(var(--shadow)/0.45)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/20",
-        isDestructive
-          ? "border-destructive/30 bg-destructive/15 hover:bg-destructive/20"
-          : "border-border bg-popover/92 hover:bg-popover",
-      )}
+      className="block w-full min-w-0 text-left text-popover-foreground focus-visible:outline-none"
     >
-      <span className="block min-w-0 flex-1">
-        <span
-          className={cn(
-            "block leading-tight",
-            hasDescription ? "font-extrabold" : "font-bold",
-          )}
-        >
-          {title}
-        </span>
-        {description && (
-          <span className="mt-0.5 block text-[13px] font-medium leading-snug text-current/75">
-            {description}
-          </span>
+      <span
+        className={cn(
+          "block leading-tight",
+          hasDescription ? "font-extrabold" : "font-bold",
         )}
+      >
+        {title}
       </span>
+      {description && (
+        <span className="mt-0.5 block text-[13px] font-medium leading-snug text-current/75">
+          {description}
+        </span>
+      )}
     </button>
   );
 }
