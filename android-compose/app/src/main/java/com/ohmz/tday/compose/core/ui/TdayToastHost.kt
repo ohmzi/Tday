@@ -8,7 +8,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -42,9 +41,12 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import dev.chrisbanes.haze.HazeDefaults
 import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.HazeTint
 import dev.chrisbanes.haze.hazeChild
 import kotlinx.coroutines.launch
 
@@ -138,9 +140,16 @@ private fun TdayToastCard(
     val isDark = colorScheme.background.luminance() < 0.5f
     val fadeDistancePx = with(LocalDensity.current) { TOAST_FADE_DISTANCE_DP.dp.toPx() }
     // Icons are removed app-wide. Every toast shares one neutral frosted surface
-    // (matches iOS/web) — no per-variant red tint, just text over the Haze blur
-    // (hazeChild below).
-    val containerColor = colorScheme.surface.copy(alpha = if (isDark) 0.45f else 0.60f)
+    // (matches iOS's `.ultraThinMaterial`) — no per-variant red tint, just text
+    // over a strong Haze blur (hazeChild below).
+    //
+    // iOS uses `.ultraThinMaterial`: a strong blur with a *light, translucent*
+    // tint that lets the colourful content behind bleed through. The Haze default
+    // tint is the background colour at 70% alpha, which here is the near-black app
+    // background — that's why the toast used to read as a flat opaque card. We
+    // instead pass an explicit low-alpha surface tint and a larger blur radius so
+    // the frost is translucent and the content shows through, exactly like iOS.
+    val frostTint = HazeTint(colorScheme.surface.copy(alpha = if (isDark) 0.38f else 0.55f))
     // The accent now only colours the optional action-label button.
     val accentColor = when (toast.kind) {
         TdayToastKind.ERROR -> colorScheme.error
@@ -177,12 +186,18 @@ private fun TdayToastCard(
             .clip(toastShape)
             // Haze needs an explicit backgroundColor; without it the blur crashes
             // ("backgroundColor not specified") when a toast draws over content
-            // that has no opaque backing (e.g. the offline toast).
+            // that has no opaque backing (e.g. the offline toast). The light
+            // `frostTint` + larger blur emulate iOS's `.ultraThinMaterial`; we no
+            // longer paint an opaque surface fill on top (that flattened the blur
+            // into a solid dark card).
             .hazeChild(
                 state = hazeState,
-                style = HazeDefaults.style(backgroundColor = colorScheme.background),
+                style = HazeDefaults.style(
+                    backgroundColor = colorScheme.background,
+                    tint = frostTint,
+                    blurRadius = 30.dp,
+                ),
             )
-            .background(containerColor)
             .border(
                 width = 1.dp,
                 color = colorScheme.outlineVariant.copy(alpha = if (isDark) 0.52f else 0.72f),
@@ -255,7 +270,14 @@ private fun TdayToastCard(
                 Text(
                     text = toast.message,
                     color = colorScheme.onSurface,
-                    style = MaterialTheme.typography.titleMedium,
+                    // Match iOS's `.tdayRounded(.subheadline, weight: .bold)` — the
+                    // app's rounded family at ~15sp bold, rather than the larger
+                    // ExtraBold titleMedium which read heavier than iOS/web.
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontSize = 15.sp,
+                        lineHeight = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                    ),
                 )
             }
             val actionLabel = toast.actionLabel
