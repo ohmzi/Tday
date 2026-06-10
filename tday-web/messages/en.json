@@ -322,6 +322,7 @@
     "undo": "Undo",
     "taskDeleted": "Task deleted",
     "listDeleted": "List deleted",
+    "listsDeleted": "{{count}} lists deleted",
     "done": "Done",
     "previous": "Previous",
     "next": "Next",

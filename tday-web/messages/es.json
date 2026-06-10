@@ -322,6 +322,7 @@
     "undo": "Deshacer",
     "taskDeleted": "Tarea eliminada",
     "listDeleted": "Lista eliminada",
+    "listsDeleted": "{{count}} listas eliminadas",
     "done": "Listo",
     "previous": "Anterior",
     "next": "Siguiente",

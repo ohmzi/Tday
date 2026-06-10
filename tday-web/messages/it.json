@@ -322,6 +322,7 @@
     "undo": "Annulla",
     "taskDeleted": "Attività eliminata",
     "listDeleted": "Elenco eliminato",
+    "listsDeleted": "{{count}} elenchi eliminati",
     "done": "Fatto",
     "previous": "Precedente",
     "next": "Successivo",

@@ -2,7 +2,6 @@ import React, { useMemo, useState } from "react";
 import clsx from "clsx";
 import { Link } from "@/lib/navigation";
 import { usePathname } from "@/lib/navigation";
-import { useRouter } from "@/lib/navigation";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { useMenu } from "@/providers/MenuProvider";
@@ -26,10 +25,8 @@ import {
 } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AlertTriangle, MoreVertical, Pencil, Trash2 } from "lucide-react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@/lib/api-client";
 import type { ListColor } from "@/types";
-import { useToast } from "@/hooks/use-toast";
+import { useUndoableListDelete } from "@/hooks/use-undoable-list-delete";
 import ListFormSheet from "@/components/Sidebar/List/ListFormSheet";
 
 type ListSidebarSectionProps = {
@@ -61,37 +58,14 @@ type SidebarListItem = {
   todoCount: number;
 };
 
-type DeleteListsResponse = {
-  message?: string | null;
-  deletedIds?: string[];
-};
-
-async function deleteLists(ids: string[]) {
-  const normalizedIds = ids.map(normalizeListName).filter(Boolean);
-  if (normalizedIds.length === 0) {
-    throw new Error("Select at least one list to delete");
-  }
-
-  return (await api.DELETE({
-    url: "/api/list",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      id: normalizedIds.length === 1 ? normalizedIds[0] : undefined,
-      ids: normalizedIds,
-    }),
-  })) as DeleteListsResponse | null;
-}
-
 export default function ListSidebarSection({
   mode,
   onNavigate,
 }: ListSidebarSectionProps) {
   const pathname = usePathname();
-  const router = useRouter();
   const { listMetaData } = useListMetaData();
   const { activeMenu, setActiveMenu } = useMenu();
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
+  const stageListDelete = useUndoableListDelete();
 
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -138,105 +112,24 @@ export default function ListSidebarSection({
     );
   }, [lists]);
 
-  const invalidateListQueries = React.useCallback(async () => {
-    await Promise.all([
-      queryClient.invalidateQueries({ queryKey: ["listMetaData"] }),
-      queryClient.invalidateQueries({ queryKey: ["todo"] }),
-      queryClient.invalidateQueries({ queryKey: ["todoTimeline"] }),
-      queryClient.invalidateQueries({ queryKey: ["overdueTodo"] }),
-      queryClient.invalidateQueries({ queryKey: ["completedTodo"] }),
-    ]);
-  }, [queryClient]);
+  // Stage the delete (cache prune + undo toast) and close the dialog right
+  // away — the real DELETE only fires if the toast closes without undo.
+  const handleConfirmDelete = () => {
+    if (!selectedList) {
+      return;
+    }
+    const deletedListId = selectedList.id;
+    setDeleteDialogOpen(false);
+    setSelectedList(null);
+    stageListDelete([deletedListId]);
+  };
 
-  const cancelListQueries = React.useCallback(
-    async (listIds: string[]) => {
-      await Promise.all(
-        listIds.map((listId) =>
-          queryClient.cancelQueries({ queryKey: ["list", listId] })
-        ),
-      );
-    },
-    [queryClient],
-  );
-
-  const handleDeletedListsSuccess = React.useCallback(
-    async (deletedListIds: string[]) => {
-      await invalidateListQueries();
-
-      if (
-        activeListIdFromPath &&
-        deletedListIds.includes(activeListIdFromPath)
-      ) {
-        setActiveMenu({ name: "Todo" });
-        router.push("/app/tday");
-      }
-    },
-    [activeListIdFromPath, invalidateListQueries, router, setActiveMenu],
-  );
-
-  const deleteListMutation = useMutation({
-    mutationFn: async (deletedListId: string) => {
-      const response = await deleteLists([deletedListId]);
-      return {
-        requestedIds: [deletedListId],
-        deletedIds: response?.deletedIds ?? [],
-      };
-    },
-    onMutate: async (deletedListId) => {
-      await cancelListQueries([deletedListId]);
-    },
-    onSuccess: async ({ requestedIds, deletedIds }) => {
-      const resolvedDeletedIds =
-        deletedIds.length > 0 ? deletedIds : requestedIds;
-      await handleDeletedListsSuccess(resolvedDeletedIds);
-      setDeleteDialogOpen(false);
-      setSelectedList(null);
-      // Match bulk delete + the mobile apps: a single list delete confirms too.
-      toast({ description: "List deleted" });
-    },
-    onError: (error) => {
-      toast({
-        description:
-          error instanceof Error ? error.message : "Failed to delete list",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const bulkDeleteListsMutation = useMutation({
-    mutationFn: async (listIds: string[]) => {
-      const response = await deleteLists(listIds);
-      return {
-        requestedIds: listIds,
-        deletedIds: response?.deletedIds ?? [],
-        message: response?.message,
-      };
-    },
-    onMutate: async (listIds) => {
-      await cancelListQueries(listIds);
-    },
-    onSuccess: async ({ requestedIds, deletedIds, message }) => {
-      const resolvedDeletedIds =
-        deletedIds.length > 0 ? deletedIds : requestedIds;
-      await handleDeletedListsSuccess(resolvedDeletedIds);
-      setBulkDeleteDialogOpen(false);
-      setBulkDeleteSelection([]);
-      toast({
-        description:
-          message ??
-          (resolvedDeletedIds.length === 1
-            ? "List deleted"
-            : `${resolvedDeletedIds.length} lists deleted`),
-      });
-    },
-    onError: (error) => {
-      toast({
-        description:
-          error instanceof Error ? error.message : "Failed to delete lists",
-        variant: "destructive",
-      });
-    },
-  });
+  const handleConfirmBulkDelete = () => {
+    const deletedListIds = bulkDeleteSelection;
+    setBulkDeleteDialogOpen(false);
+    setBulkDeleteSelection([]);
+    stageListDelete(deletedListIds);
+  };
 
   const handleRenameClick = (list: SidebarListItem) => {
     setSelectedList(list);
@@ -482,15 +375,10 @@ export default function ListSidebarSection({
             </Button>
             <Button
               variant="destructive"
-              onClick={() => {
-                if (!selectedList) {
-                  return;
-                }
-                deleteListMutation.mutate(selectedList.id);
-              }}
-              disabled={deleteListMutation.isPending || !selectedList}
+              onClick={handleConfirmDelete}
+              disabled={!selectedList}
             >
-              {deleteListMutation.isPending ? "Deleting..." : "Delete"}
+              Delete
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -641,21 +529,12 @@ export default function ListSidebarSection({
             </Button>
             <Button
               variant="destructive"
-              onClick={() => {
-                bulkDeleteListsMutation.mutate(bulkDeleteSelection);
-              }}
-              disabled={
-                bulkDeleteListsMutation.isPending ||
-                selectedBulkLists.length === 0
-              }
+              onClick={handleConfirmBulkDelete}
+              disabled={selectedBulkLists.length === 0}
             >
-              {bulkDeleteListsMutation.isPending
-                ? selectedBulkLists.length === 1
-                  ? "Deleting list..."
-                  : "Deleting lists..."
-                : selectedBulkLists.length <= 1
-                  ? "Delete selected"
-                  : `Delete ${selectedBulkLists.length} lists`}
+              {selectedBulkLists.length <= 1
+                ? "Delete selected"
+                : `Delete ${selectedBulkLists.length} lists`}
             </Button>
           </DialogFooter>
         </DialogContent>
