@@ -14,6 +14,7 @@ import com.ohmz.tday.security.SessionControl
 import kotlinx.coroutines.Dispatchers
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.inList
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import java.security.SecureRandom
 import java.time.LocalDateTime
@@ -127,12 +128,33 @@ class AdminServiceImpl(
     /** Deletes a user and every record they own. */
     private suspend fun purgeUser(targetId: String) {
         newSuspendedTransaction(Dispatchers.IO) {
+            // Share rows have no DB-level cascade (see ListShares), so clean up
+            // memberships the user holds AND memberships on lists they own —
+            // before the list rows themselves go away.
+            val ownedListIds = Lists
+                .select(Lists.id)
+                .where { Lists.userID eq targetId }
+                .map { it[Lists.id] }
+            if (ownedListIds.isNotEmpty()) {
+                ListShares.deleteWhere { ListShares.listID inList ownedListIds }
+            }
+            ListShares.deleteWhere { ListShares.userID eq targetId }
+            val ownedFloaterListIds = FloaterLists
+                .select(FloaterLists.id)
+                .where { FloaterLists.userID eq targetId }
+                .map { it[FloaterLists.id] }
+            if (ownedFloaterListIds.isNotEmpty()) {
+                FloaterListShares.deleteWhere { FloaterListShares.listID inList ownedFloaterListIds }
+            }
+            FloaterListShares.deleteWhere { FloaterListShares.userID eq targetId }
+
             CompletedTodos.deleteWhere { CompletedTodos.userID eq targetId }
             CompletedFloaters.deleteWhere { CompletedFloaters.userID eq targetId }
             Files.deleteWhere { Files.userID eq targetId }
             Todos.deleteWhere { Todos.userID eq targetId }
             Floaters.deleteWhere { Floaters.userID eq targetId }
             Lists.deleteWhere { Lists.userID eq targetId }
+            FloaterLists.deleteWhere { FloaterLists.userID eq targetId }
             UserPreferences.deleteWhere { UserPreferences.userID eq targetId }
             UserSecurityQuestions.deleteWhere { UserSecurityQuestions.userID eq targetId }
             Users.deleteWhere { Users.id eq targetId }

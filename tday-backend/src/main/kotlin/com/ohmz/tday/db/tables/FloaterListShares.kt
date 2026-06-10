@@ -6,11 +6,16 @@ import org.jetbrains.exposed.sql.javatime.datetime
 /**
  * EDITOR/VIEWER membership on a floater list. The owner is implicit on
  * [FloaterLists.userID] and never has a row here.
+ *
+ * Deliberately no FK columns: on Prisma-era databases the parent tables can
+ * live outside the schema migrations run against, so referential cleanup is
+ * owned by the services (FloaterListService.deleteMany, ListShareService,
+ * AdminService.purgeUser).
  */
 object FloaterListShares : Table("floater_list_shares") {
     val id = varchar("id", 30)
-    val listID = varchar("listID", 30).references(FloaterLists.id)
-    val userID = varchar("userID", 30).references(Users.id).index()
+    val listID = varchar("listID", 30)
+    val userID = varchar("userID", 30).index()
     val role = varchar("role", 16)
     val createdAt = datetime("createdAt")
     val updatedAt = datetime("updatedAt")
