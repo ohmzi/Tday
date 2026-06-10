@@ -4,11 +4,15 @@ import { api } from "@/lib/api-client";
 import { canonicalTodoId } from "@/lib/todo/todo-id";
 import { TodoItemType } from "@/types";
 import { useTodoActionToast } from "@/hooks/use-todo-action-toast";
+
+// Delayed-commit delete: `deleteMutate` only stages the delete (prunes the
+// caches and shows an undoable toast). The DELETE request fires when the toast
+// closes without undo; undo just refetches since the server never saw it.
 export const useDeleteCalendarTodo = () => {
   const { toast } = useToast();
   const { showTodoDeletedToast } = useTodoActionToast();
   const queryClient = useQueryClient();
-  const { mutate: deleteMutate, isPending: deletePending } = useMutation({
+  const { mutate: commitDelete, isPending: deletePending } = useMutation({
     mutationFn: async (todo: TodoItemType) => {
       await api.DELETE({
         url: "/api/todo",
@@ -16,23 +20,10 @@ export const useDeleteCalendarTodo = () => {
         body: JSON.stringify({ id: canonicalTodoId(todo.id) }),
       });
     },
-    onMutate: async (todo: TodoItemType) => {
-      await queryClient.cancelQueries({
-        queryKey: ["calendarTodo"],
-      });
-      const oldTodos = queryClient.getQueriesData({
-        queryKey: ["calendarTodo"],
-      });
-
-      queryClient.setQueriesData<TodoItemType[]>(
-        { queryKey: ["calendarTodo"] },
-        (old) => old?.filter((oldTodo) => oldTodo.id !== todo.id),
-      );
-      return { oldTodos };
-    },
     mutationKey: ["calendarTodo"],
-    onError: (error, _, context) => {
-      queryClient.setQueryData(["todo"], context?.oldTodos);
+    onError: (error) => {
+      // No cache rollback needed: onSettled's invalidations refetch the still
+      // existing rows from the server.
       toast({
         description:
           error.message === "Failed to fetch"
@@ -52,9 +43,27 @@ export const useDeleteCalendarTodo = () => {
         queryKey: ["todoTimeline"],
       });
     },
-    onSuccess: (_data, deletedTodo) => {
-      showTodoDeletedToast(deletedTodo);
-    },
   });
+
+  // Stage: prune the caches now, but DON'T send the DELETE yet — the undo
+  // toast decides whether the request ever fires.
+  const deleteMutate = (todo: TodoItemType) => {
+    void queryClient.cancelQueries({
+      queryKey: ["calendarTodo"],
+    });
+    queryClient.setQueriesData<TodoItemType[]>(
+      { queryKey: ["calendarTodo"] },
+      (old) => old?.filter((oldTodo) => oldTodo.id !== todo.id),
+    );
+
+    showTodoDeletedToast(todo, {
+      commit: () => commitDelete(todo),
+      undo: () => {
+        // The server still has the row — a refetch restores the cache.
+        void queryClient.invalidateQueries({ queryKey: ["calendarTodo"] });
+      },
+    });
+  };
+
   return { deleteMutate, deletePending };
 };

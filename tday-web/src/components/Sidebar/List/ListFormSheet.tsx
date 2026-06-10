@@ -21,8 +21,9 @@ import {
   normalizeListIconKey,
 } from "@/lib/listIcons";
 import { useToast } from "@/hooks/use-toast";
+import { useUndoableDelete } from "@/hooks/use-undoable-delete";
 import { useCreateList } from "@/components/Sidebar/List/query/create-list";
-import type { ListColor, ListItemMetaType } from "@/types";
+import type { ListColor, ListItemMetaMapType, ListItemMetaType } from "@/types";
 
 type EditableList = {
   id: string;
@@ -83,6 +84,7 @@ export default function ListFormSheet({
   const { t: appDict } = useTranslation("app");
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const showUndoableDelete = useUndoableDelete();
   const router = useRouter();
   const pathname = usePathname();
   const { createMutateAsync, createLoading } = useCreateList();
@@ -136,26 +138,48 @@ export default function ListFormSheet({
     },
   });
 
-  const deleteListMutation = useMutation({
-    mutationFn: deleteList,
-    onSuccess: async (_data, deletedId) => {
-      await invalidateListQueries();
-      onOpenChange(false);
-      if (pathname.includes(`/app/list/${deletedId}`)) {
-        router.push("/app/tday");
-      }
-    },
-    onError: (mutationError) => {
+  // Commit half of the delayed-commit delete: fires the real DELETE once the
+  // undo toast has closed without undo. Runs from a toast callback, possibly
+  // after this sheet unmounted, so it only touches the queryClient and the
+  // imperative toast (both safe after unmount).
+  const commitDeleteList = async (id: string) => {
+    try {
+      await deleteList(id);
+    } catch (mutationError) {
       const message =
         mutationError instanceof Error ? mutationError.message : "Failed to delete list";
-      setError(message);
       toast({ description: message, variant: "destructive" });
-    },
-  });
+    } finally {
+      // Success: refresh caches around the cascade (list + its tasks).
+      // Failure: the same refetch restores the staged pruning.
+      await invalidateListQueries();
+    }
+  };
 
-  const deleting = deleteListMutation.isPending;
+  // Stage: prune the list from the sidebar cache, close the sheet and leave
+  // the deleted list's page immediately — but DON'T send the DELETE yet; the
+  // undo toast decides whether the request ever fires.
+  const handleDeleteList = (id: string) => {
+    void queryClient.cancelQueries({ queryKey: ["listMetaData"] });
+    queryClient.setQueryData<ListItemMetaMapType>(["listMetaData"], (old = {}) => {
+      const next = { ...old };
+      delete next[id];
+      return next;
+    });
+    onOpenChange(false);
+    if (pathname.includes(`/app/list/${id}`)) {
+      router.push("/app/tday");
+    }
+    showUndoableDelete({
+      message: appDict("listDeleted"),
+      commit: () => void commitDeleteList(id),
+      // The server still has the list — a refetch restores the pruned cache.
+      undo: () => void invalidateListQueries(),
+    });
+  };
+
   const saving = createLoading || updateListMutation.isPending;
-  const canSubmit = Boolean(normalizeListName(name)) && !saving && !deleting;
+  const canSubmit = Boolean(normalizeListName(name)) && !saving;
 
   const handleSubmit = async () => {
     const normalizedName = normalizeListName(name);
@@ -303,7 +327,6 @@ export default function ListFormSheet({
                   type="button"
                   variant="outline"
                   onClick={() => { hapticConfirm(); setConfirmingDelete(false); }}
-                  disabled={deleting}
                   className="rounded-2xl border-border/70 bg-card px-5 font-black"
                 >
                   Keep list
@@ -311,11 +334,10 @@ export default function ListFormSheet({
                 <Button
                   type="button"
                   variant="destructive"
-                  onClick={() => deleteListMutation.mutate(list.id)}
-                  disabled={deleting}
+                  onClick={() => handleDeleteList(list.id)}
                   className="rounded-2xl px-5 font-black"
                 >
-                  {deleting ? "Deleting..." : appDict("deleteList")}
+                  {appDict("deleteList")}
                 </Button>
               </div>
             </div>
