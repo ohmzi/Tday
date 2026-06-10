@@ -329,6 +329,8 @@
     "searchTasks": "Cari tugasan",
     "taskCount": "{{count}} tugasan",
     "shareList": "Kongsi senarai",
+    "sharing": "Perkongsian",
+    "share": "Kongsi",
     "shareListCopied": "Senarai disalin ke papan keratan",
     "shareDueLabel": "Tarikh akhir: {{date}}",
     "shareTaskCount_one": "{{count}} tugasan",

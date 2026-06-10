@@ -598,6 +598,7 @@ struct TodoListScreen: View {
     @State private var showingSummary = false
     @State private var showingListSettings = false
     @State private var showingMembers = false
+    @State private var pendingMembersAfterSettings = false
     @State private var showingDeleteListConfirmation = false
     @State private var draggedTodo: TodoItem?
     @State private var inAppDrag: TodoInAppDrag?
@@ -810,18 +811,18 @@ struct TodoListScreen: View {
         }
 
         if isListDetailScreen {
-            actions.append(TimelineTopBarAction(
-                systemName: "person.2",
-                usesCircularChrome: true,
-                action: { showingMembers = true }
-            ))
-        }
-
-        if isListDetailScreen, selectedListSummary?.isOwner != false {
+            // One entry point per role: owners get list settings (which hosts
+            // the Sharing section); members go straight to the members sheet.
             actions.append(TimelineTopBarAction(
                 systemName: "ellipsis",
                 usesCircularChrome: true,
-                action: { showingListSettings = true }
+                action: {
+                    if selectedListSummary?.isOwner == false {
+                        showingMembers = true
+                    } else {
+                        showingListSettings = true
+                    }
+                }
             ))
         }
 
@@ -967,7 +968,14 @@ struct TodoListScreen: View {
         .sheet(isPresented: $showingSummary) {
             summarySheetContent
         }
-        .sheet(isPresented: $showingListSettings) {
+        .sheet(isPresented: $showingListSettings, onDismiss: {
+            // Sheet swap requested from the settings sheet's Sharing section:
+            // present members only after settings has fully dismissed.
+            if pendingMembersAfterSettings {
+                pendingMembersAfterSettings = false
+                showingMembers = true
+            }
+        }) {
             listSettingsSheetContent
         }
         .sheet(isPresented: $showingMembers) {
@@ -1059,18 +1067,15 @@ struct TodoListScreen: View {
                 }
             }
             if isListDetailScreen {
+                // One entry point per role: owners get list settings (which
+                // hosts the Sharing section); members the members sheet.
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
-                        showingMembers = true
-                    } label: {
-                        Image(systemName: "person.2")
-                    }
-                }
-            }
-            if isListDetailScreen, selectedListSummary?.isOwner != false {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        showingListSettings = true
+                        if selectedListSummary?.isOwner == false {
+                            showingMembers = true
+                        } else {
+                            showingListSettings = true
+                        }
                     } label: {
                         Image(systemName: "slider.horizontal.3")
                     }
@@ -1297,6 +1302,10 @@ struct TodoListScreen: View {
         return ListSettingsSheet(
             list: selectedList,
             shareText: selectedList.map { listShareText(listName: $0.name, items: viewModel.items) },
+            onMembersRequest: {
+                pendingMembersAfterSettings = true
+                showingListSettings = false
+            },
             onSubmit: { name, color, iconKey in
                 Task { await viewModel.updateListSettings(name: name, color: color, iconKey: iconKey) }
             },
@@ -3344,6 +3353,7 @@ private enum ListSettingsSheetMetrics {
 private struct ListSettingsSheet: View {
     let list: ListSummary?
     var shareText: String? = nil
+    var onMembersRequest: (() -> Void)? = nil
     let onSubmit: (String, String?, String?) -> Void
     let onDeleteRequest: () -> Void
     @Environment(\.dismiss) private var dismiss
@@ -3508,9 +3518,43 @@ private struct ListSettingsSheet: View {
                         }
                     }
 
-                    if let list, let shareText {
-                        ListSettingsSheetShareButton(text: shareText, subject: list.name)
-                            .padding(.top, 2)
+                    if list != nil, shareText != nil || onMembersRequest != nil {
+                        TdaySheetSectionTitle(text: L("Sharing"))
+                        HStack(spacing: 10) {
+                            if let onMembersRequest {
+                                Button {
+                                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                    onMembersRequest()
+                                } label: {
+                                    ListSettingsSheetActionTileLabel(
+                                        systemName: "person.2",
+                                        label: L("Members")
+                                    )
+                                }
+                                .buttonStyle(
+                                    TdayPressButtonStyle(
+                                        shadowColor: Color.black,
+                                        pressedShadowOpacity: 0.03,
+                                        normalShadowOpacity: 0
+                                    )
+                                )
+                            }
+                            if let list, let shareText {
+                                ShareLink(item: shareText, subject: Text(list.name)) {
+                                    ListSettingsSheetActionTileLabel(
+                                        systemName: "square.and.arrow.up",
+                                        label: L("Share")
+                                    )
+                                }
+                                .buttonStyle(
+                                    TdayPressButtonStyle(
+                                        shadowColor: Color.black,
+                                        pressedShadowOpacity: 0.03,
+                                        normalShadowOpacity: 0
+                                    )
+                                )
+                            }
+                        }
                     }
 
                     if list != nil {
@@ -3560,47 +3604,40 @@ private struct ListSettingsSheet: View {
     }
 }
 
-private struct ListSettingsSheetShareButton: View {
-    let text: String
-    let subject: String
+/// Half-width tile used by the Sharing section of the list settings sheet —
+/// "Members" (collaboration) and "Share" (external share sheet) side by side.
+private struct ListSettingsSheetActionTileLabel: View {
+    let systemName: String
+    let label: String
 
     @Environment(\.tdayColors) private var colors
 
     var body: some View {
-        ShareLink(item: text, subject: Text(subject)) {
-            HStack(spacing: 12) {
-                Image(systemName: "square.and.arrow.up")
-                    .font(.system(size: 22, weight: .semibold))
-                    .frame(width: 28, height: 28)
+        HStack(spacing: 10) {
+            Image(systemName: systemName)
+                .font(.system(size: 20, weight: .semibold))
+                .frame(width: 26, height: 26)
 
-                Text("Share list")
-                    .font(.tdayRounded(size: 18, weight: .heavy))
-
-                Spacer(minLength: 0)
-            }
-            .foregroundStyle(colors.onSurface)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 14)
-            .frame(maxWidth: .infinity)
-            .background(
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .fill(colors.bottomSheetControlSurface)
-            )
-            .overlay {
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .stroke(colors.onSurfaceVariant.opacity(0.3), lineWidth: 1.5)
-            }
+            Text(label)
+                .font(.tdayRounded(size: 17, weight: .heavy))
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
         }
-        .buttonStyle(
-            TdayPressButtonStyle(
-                shadowColor: Color.black,
-                pressedShadowOpacity: 0.03,
-                normalShadowOpacity: 0
-            )
+        .foregroundStyle(colors.onSurface)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 14)
+        .frame(maxWidth: .infinity)
+        .background(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(colors.bottomSheetControlSurface)
         )
-        .accessibilityLabel(L("Share list"))
+        .overlay {
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(colors.onSurfaceVariant.opacity(0.3), lineWidth: 1.5)
+        }
     }
 }
+
 
 private struct ListSettingsSheetDeleteButton: View {
     let action: () -> Void

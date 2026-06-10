@@ -329,6 +329,8 @@
     "searchTasks": "Buscar tareas",
     "taskCount": "{{count}} tareas",
     "shareList": "Compartir lista",
+    "sharing": "Compartir",
+    "share": "Compartir",
     "shareListCopied": "Lista copiada al portapapeles",
     "shareDueLabel": "Vence: {{date}}",
     "shareTaskCount_one": "{{count}} tarea",

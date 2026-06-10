@@ -284,6 +284,9 @@ private fun AddButton(
     }
 }
 
+// ColorProvider(resourceId) is Glance's documented way to use a color
+// resource; the overload is only lint-restricted, not actually internal.
+@android.annotation.SuppressLint("RestrictedApi")
 @Composable
 private fun HeaderText(
     text: String,
