@@ -99,15 +99,36 @@ const DrawerContent = React.forwardRef<
     : style ?? {};
 
   // With vaul's own input repositioning disabled, make sure the focused field
-  // is scrolled into the visible part of the sheet's scroll area.
+  // is scrolled into the visible part of the sheet's scroll area. Scroll ONLY
+  // the sheet's scrollable body: scrollIntoView (and the browser's native
+  // focus scrolling) also scrolls overflow-hidden ancestors — including the
+  // sheet container itself — which clips the drag handle and header off the
+  // top with no way to drag them back (first seen with the members sheet,
+  // whose search field sits low in the sheet).
   const handleFocus = React.useCallback(
     (event: React.FocusEvent<HTMLDivElement>) => {
+      const container = event.currentTarget;
       const target = event.target as HTMLElement | null;
       if (!target?.matches("input, textarea, select, [contenteditable='true']")) {
         return;
       }
       window.requestAnimationFrame(() => {
-        target.scrollIntoView({ block: "center" });
+        // Undo any container scroll the browser applied on focus.
+        container.scrollTop = 0;
+
+        let body: HTMLElement | null = target.parentElement;
+        while (body && body !== container) {
+          const overflowY = window.getComputedStyle(body).overflowY;
+          if (overflowY === "auto" || overflowY === "scroll") break;
+          body = body.parentElement;
+        }
+        if (!body || body === container) return;
+
+        const bodyRect = body.getBoundingClientRect();
+        const targetRect = target.getBoundingClientRect();
+        const delta =
+          targetRect.top - bodyRect.top - (body.clientHeight - targetRect.height) / 2;
+        body.scrollBy({ top: delta, behavior: "smooth" });
       });
     },
     [],
