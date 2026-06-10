@@ -60,7 +60,6 @@ object TdayDimens {
     val PullRefreshDotSpacing: Dp = 10.dp
     val PullRefreshContainerCornerRadius: Dp = 29.dp
     val PullRefreshContentOffset: Dp = 132.dp
-    val PullRefreshRefreshingOffset: Dp = 78.dp
     val PullRefreshElevation: Dp = 18.dp
     val PullRefreshSweepInset: Dp = 11.dp
     val PullRefreshSweepHeight: Dp = 40.dp
