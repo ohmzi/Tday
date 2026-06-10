@@ -1,7 +1,7 @@
 import { getCaretOffset } from "@/components/todo/lib/getCaretOffset";
 import { setCaretOffset } from "@/components/todo/lib/setCaretOffset";
 import { useLocale } from "@/lib/navigation";
-import { cn } from "@/lib/utils";
+import { cn, isDesktopPointer } from "@/lib/utils";
 import * as chrono from "chrono-node";
 import React, { SetStateAction, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
@@ -15,6 +15,7 @@ type NLPTitleInputProps = {
   setDateRange: React.Dispatch<SetStateAction<FormDateRange>>;
   setListID?: React.Dispatch<SetStateAction<string | null>>;
   className?: string;
+  onSubmit?: () => void;
 };
 
 export default function NLPTitleInput({
@@ -23,6 +24,7 @@ export default function NLPTitleInput({
   setTitle,
   setDateRange,
   className,
+  onSubmit,
 }: NLPTitleInputProps) {
   const locale = useLocale();
   const { t: todayDict } = useTranslation("today");
@@ -116,6 +118,16 @@ export default function NLPTitleInput({
         onKeyDown={(e) => {
           if (isComposing.current) return;
           if (e.key === "Enter") {
+            const plainEnter =
+              !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey;
+            const nativeComposing =
+              e.nativeEvent.isComposing || e.keyCode === 229;
+            if (onSubmit && plainEnter && !nativeComposing && isDesktopPointer()) {
+              // Desktop: plain Enter submits the form.
+              e.preventDefault();
+              onSubmit();
+              return;
+            }
             // Enter dismisses the keyboard (like native) instead of submitting.
             e.preventDefault();
             titleRef.current?.blur();
@@ -136,7 +148,7 @@ export default function NLPTitleInput({
   );
 }
 
-function moveCursorToEnd(node: Node) {
+export function moveCursorToEnd(node: Node) {
   const range = document.createRange();
   range.selectNodeContents(node);
   range.collapse(false);

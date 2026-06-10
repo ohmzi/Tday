@@ -128,6 +128,7 @@ const TodoForm = ({
             setTitle={setTitle}
             titleRef={titleRef}
             setDateRange={setDateRange}
+            onSubmit={() => handleForm()}
           />
         </div>
         <SheetDivider />
