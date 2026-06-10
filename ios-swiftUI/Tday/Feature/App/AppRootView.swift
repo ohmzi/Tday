@@ -181,15 +181,6 @@ struct AppRootView: View {
                             showBackOnlineToast()
                         }
                     }
-                    .overlay(alignment: .bottom) {
-                        if let content = container.snackbarManager.content {
-                            AppSnackbar(content: content) {
-                                container.snackbarManager.dismiss()
-                            }
-                            .transition(.move(edge: .bottom).combined(with: .opacity))
-                        }
-                    }
-                    .animation(.snappy(duration: 0.3), value: container.snackbarManager.content?.id)
                     .overlay {
                         if !appViewModel.isWorkspaceAvailable {
                             let isVersionBlocking = appViewModel.versionCheckResult != .compatible
@@ -286,6 +277,21 @@ struct AppRootView: View {
                     }
                 }
                 .navigationInteractivePopGesture()
+                // The snackbar overlays the NavigationStack itself, not the
+                // stack's root content: toasts scheduled while a destination
+                // is pushed (deleting a list or task from a pushed screen)
+                // must stay visible across pushes and pops. Attached to the
+                // root content they render into a covered view and never
+                // appear after navigating back.
+                .overlay(alignment: .bottom) {
+                    if let content = container.snackbarManager.content {
+                        AppSnackbar(content: content) {
+                            container.snackbarManager.dismiss()
+                        }
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                    }
+                }
+                .animation(.snappy(duration: 0.3), value: container.snackbarManager.content?.id)
             }
         }
         .tdayAppTheme(themeMode: appViewModel.themeMode)
