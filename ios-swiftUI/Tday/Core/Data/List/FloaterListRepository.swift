@@ -1,5 +1,16 @@
 import Foundation
 
+/// Snapshot of everything `stageDeleteList(listId:)` pruned from the local
+/// cache — the floater list, its floaters, completed history for those
+/// floaters, and any pending mutations — so `undoStagedList(_:)` can restore
+/// the exact pre-delete state.
+struct StagedFloaterListDeletion {
+    let floaterLists: [CachedFloaterListRecord]
+    let floaters: [CachedFloaterRecord]
+    let completedFloaters: [CachedCompletedFloaterRecord]
+    let pendingMutations: [PendingMutationRecord]
+}
+
 @MainActor
 final class FloaterListRepository {
     private let api: TdayAPIService
@@ -209,6 +220,71 @@ final class FloaterListRepository {
         let result = await syncManager.syncCachedData(force: true, replayPendingMutations: true)
         if case let .failure(error) = result, isLikelyUnrecoverableMutationError(error) {
             throw error
+        }
+    }
+
+    /// First half of a delayed-commit delete: prunes the floater list, its
+    /// floaters, their completed history, and related pending mutations from
+    /// the local cache without queueing the server delete. Commit later by
+    /// calling `deleteList(listId:onOptimisticDelete:)` — its prune half
+    /// re-runs as a no-op — or restore with `undoStagedList(_:)`.
+    func stageDeleteList(listId: String) -> StagedFloaterListDeletion {
+        let normalizedListID = listId.trimmingCharacters(in: .whitespacesAndNewlines)
+        var staged = StagedFloaterListDeletion(floaterLists: [], floaters: [], completedFloaters: [], pendingMutations: [])
+        guard !normalizedListID.isEmpty else {
+            return staged
+        }
+
+        cacheManager.updateOfflineState { state in
+            var nextState = state
+            let deletedFloaterIDs = Set(state.floaters.filter { $0.listId == normalizedListID }.map(\.canonicalId))
+            let isRemovedCompleted: (CachedCompletedFloaterRecord) -> Bool = { completed in
+                completed.listId == normalizedListID ||
+                    completed.originalFloaterId.map { deletedFloaterIDs.contains($0) } == true
+            }
+            let isRemovedMutation: (PendingMutationRecord) -> Bool = { mutation in
+                mutation.targetId == normalizedListID ||
+                    mutation.listId == normalizedListID ||
+                    mutation.targetId.map { deletedFloaterIDs.contains($0) } == true
+            }
+            staged = StagedFloaterListDeletion(
+                floaterLists: state.floaterLists.filter { $0.id == normalizedListID },
+                floaters: state.floaters.filter { $0.listId == normalizedListID },
+                completedFloaters: state.completedFloaters.filter(isRemovedCompleted),
+                pendingMutations: state.pendingMutations.filter(isRemovedMutation)
+            )
+            nextState.floaterLists.removeAll { $0.id == normalizedListID }
+            nextState.floaters.removeAll { $0.listId == normalizedListID }
+            nextState.completedFloaters.removeAll(where: isRemovedCompleted)
+            nextState.pendingMutations.removeAll(where: isRemovedMutation)
+            return nextState
+        }
+        return staged
+    }
+
+    /// Restores the local state captured by `stageDeleteList(listId:)`.
+    /// Idempotent: records that already exist again (e.g. re-added by a sync
+    /// pull during the undo window) are left untouched.
+    func undoStagedList(_ staged: StagedFloaterListDeletion) {
+        cacheManager.updateOfflineState { state in
+            var nextState = state
+            for list in staged.floaterLists where !nextState.floaterLists.contains(where: { $0.id == list.id }) {
+                nextState.floaterLists.append(list)
+            }
+            for floater in staged.floaters where !nextState.floaters.contains(where: {
+                $0.canonicalId == floater.canonicalId
+            }) {
+                nextState.floaters.append(floater)
+            }
+            for completed in staged.completedFloaters where !nextState.completedFloaters.contains(where: { $0.id == completed.id }) {
+                nextState.completedFloaters.append(completed)
+            }
+            for mutation in staged.pendingMutations where !nextState.pendingMutations.contains(where: {
+                $0.mutationId == mutation.mutationId
+            }) {
+                nextState.pendingMutations.append(mutation)
+            }
+            return nextState
         }
     }
 

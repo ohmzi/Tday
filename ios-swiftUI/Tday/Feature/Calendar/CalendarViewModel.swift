@@ -102,15 +102,29 @@ final class CalendarViewModel {
         }
     }
 
+    /// Delayed-commit delete: the task is staged out of the local cache
+    /// immediately, an undoable toast is shown, and the real (server) delete
+    /// only commits once the undo window expires. The closures capture
+    /// `container` rather than `self` so a pending commit survives this
+    /// view model being deallocated.
     func delete(_ todo: TodoItem) async {
         TdayTelemetry.addBreadcrumb("calendar.task.delete", data: calendarTelemetryData())
-        do {
-            try await container.todoRepository.deleteTodo(todo)
-            hydrateFromCache()
-            container.snackbarManager.show(L("Task deleted"), kind: .success)
-        } catch {
-            container.snackbarManager.show(userFacingMessage(for: error, fallback: "Could not delete task."), kind: .error)
-        }
+        let container = container
+        let staged = container.todoRepository.stageDeleteTodo(todo)
+        hydrateFromCache()
+        container.undoableDeleteScheduler.schedule(
+            message: L("Task deleted"),
+            restore: {
+                container.todoRepository.undoStagedTodo(staged)
+            },
+            commit: {
+                do {
+                    try await container.todoRepository.deleteTodo(todo)
+                } catch {
+                    container.snackbarManager.show(userFacingMessage(for: error, fallback: "Could not delete task."), kind: .error)
+                }
+            }
+        )
     }
 
     func parseTaskTitleNlp(text: String, referenceDueEpochMs: Int64) async -> TodoTitleNlpResponse? {
