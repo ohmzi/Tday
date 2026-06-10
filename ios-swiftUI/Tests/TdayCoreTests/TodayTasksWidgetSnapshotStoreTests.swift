@@ -114,6 +114,56 @@ final class TodayTasksWidgetSnapshotStoreTests: XCTestCase {
         XCTAssertEqual(snapshot.status, .tasks)
         XCTAssertEqual(snapshot.taskCount, 1)
         XCTAssertEqual(snapshot.tasks.first?.id, "legacy")
+        XCTAssertNil(snapshot.tasks.first?.description)
+    }
+
+    func testSnapshotIncludesTaskDescriptions() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let now = Date(timeIntervalSince1970: 1_764_072_600)
+        let startOfDay = calendar.startOfDay(for: now)
+        let due = startOfDay.addingTimeInterval(9 * 3_600).epochMs
+
+        let state = OfflineSyncState(
+            todos: [
+                todo(id: "with-note", title: "With note", dueEpochMs: due, description: "Bring the receipts"),
+                todo(id: "without-note", title: "Without note", dueEpochMs: due + 1)
+            ]
+        )
+
+        let snapshot = TodayTasksWidgetSnapshotStore.makeSnapshot(
+            from: state,
+            now: now,
+            calendar: calendar
+        )
+
+        XCTAssertEqual(snapshot.tasks.map(\.id), ["with-note", "without-note"])
+        XCTAssertEqual(snapshot.tasks.first?.description, "Bring the receipts")
+        XCTAssertNil(snapshot.tasks.last?.description)
+    }
+
+    func testSnapshotRoundTripsTaskDescriptions() throws {
+        let snapshot = TodayTasksWidgetSnapshot(
+            generatedAtEpochMs: 1_764_072_600_000,
+            title: "Today's Tasks",
+            status: .tasks,
+            taskCount: 1,
+            tasks: [
+                TodayTasksWidgetTaskSnapshot(
+                    id: "task",
+                    title: "Task",
+                    dueEpochMs: 1_764_076_200_000,
+                    priority: "low",
+                    description: "Two-line widget note"
+                )
+            ]
+        )
+
+        let data = try JSONEncoder().encode(snapshot)
+        let decoded = try JSONDecoder().decode(TodayTasksWidgetSnapshot.self, from: data)
+
+        XCTAssertEqual(decoded, snapshot)
+        XCTAssertEqual(decoded.tasks.first?.description, "Two-line widget note")
     }
 
     func testWidgetConstantsStayAlignedWithExtension() {
@@ -229,13 +279,14 @@ final class TodayTasksWidgetSnapshotStoreTests: XCTestCase {
         id: String,
         title: String,
         dueEpochMs: Int64,
-        completed: Bool = false
+        completed: Bool = false,
+        description: String? = nil
     ) -> CachedTodoRecord {
         CachedTodoRecord(
             id: id,
             canonicalId: id,
             title: title,
-            description: nil,
+            description: description,
             priority: "low",
             dueEpochMs: dueEpochMs,
             rrule: nil,

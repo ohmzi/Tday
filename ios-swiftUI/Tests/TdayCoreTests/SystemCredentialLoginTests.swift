@@ -246,9 +246,25 @@ private final class FakeAuthRepository: AuthRepositoryServicing {
         []
     }
 
+    func lookupQuestions(_ username: String) async -> LookupQuestionsOutcome {
+        .notFound
+    }
+
+    func verifyAnswers(username: String, answers: [SecurityAnswerInput]) async -> VerifyAnswersOutcome {
+        .valid
+    }
+
     func resetPassword(username: String, answers: [SecurityAnswerInput], newPassword: String) async -> PasswordResetResult {
         .success
     }
+
+    func savePendingApproval(username: String, password: String) {}
+
+    func loadPendingApproval() -> (username: String, password: String)? {
+        nil
+    }
+
+    func clearPendingApproval() {}
 
     func requestAdminReset(_ username: String) async -> Bool {
         true
