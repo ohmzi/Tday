@@ -329,6 +329,8 @@
     "searchTasks": "搜索任务",
     "taskCount": "{{count}} 个任务",
     "shareList": "分享列表",
+    "sharing": "共享",
+    "share": "分享",
     "shareListCopied": "列表已复制到剪贴板",
     "shareDueLabel": "截止：{{date}}",
     "shareTaskCount_one": "{{count}}个任务",

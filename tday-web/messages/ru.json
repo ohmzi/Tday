@@ -329,6 +329,8 @@
     "searchTasks": "Поиск задач",
     "taskCount": "Задач: {{count}}",
     "shareList": "Поделиться списком",
+    "sharing": "Совместный доступ",
+    "share": "Поделиться",
     "shareListCopied": "Список скопирован в буфер обмена",
     "shareDueLabel": "Срок: {{date}}",
     "shareTaskCount_one": "{{count}} задача",

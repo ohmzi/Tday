@@ -329,6 +329,8 @@
     "searchTasks": "Cerca attività",
     "taskCount": "{{count}} attività",
     "shareList": "Condividi elenco",
+    "sharing": "Condivisione",
+    "share": "Condividi",
     "shareListCopied": "Elenco copiato negli appunti",
     "shareDueLabel": "Scadenza: {{date}}",
     "shareTaskCount_one": "{{count}} attività",
