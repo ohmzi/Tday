@@ -705,7 +705,7 @@ class TodoListViewModel @Inject constructor(
 
     fun deleteList(
         listId: String,
-        onOptimisticDelete: () -> Unit,
+        onDeleted: () -> Unit,
     ) {
         val currentState = _uiState.value
         val resolvedListId = when {
@@ -728,7 +728,6 @@ class TodoListViewModel @Inject constructor(
                             errorMessage = null,
                         )
                     }
-                    onOptimisticDelete()
                 }
 
                 if (currentState.mode == TodoListMode.FLOATER) {
@@ -743,6 +742,11 @@ class TodoListViewModel @Inject constructor(
                     )
                 }
             }.onSuccess {
+                // Navigate only after the delete flow completes, exactly once.
+                // Invoking this from inside the repository's mid-operation
+                // optimistic callback could drop the navigation or navigate
+                // away from a delete that then fails hard.
+                onDeleted()
                 if (currentState.mode != TodoListMode.FLOATER) rescheduleReminders()
             }.onFailure { error ->
                 Log.e(TAG, "deleteList failed", error)
