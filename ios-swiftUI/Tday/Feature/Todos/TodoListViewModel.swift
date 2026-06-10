@@ -208,20 +208,51 @@ final class TodoListViewModel {
         }
     }
 
+    /// Delayed-commit delete: the task is staged out of the local cache
+    /// immediately, an undoable toast is shown, and the real (server) delete
+    /// only commits once the undo window expires. The closures capture
+    /// `container` rather than `self` so a pending commit survives this
+    /// view model being deallocated.
     func delete(_ todo: TodoItem) async {
         TdayTelemetry.addBreadcrumb("task.delete", data: taskTelemetryData(mode: mode))
-        do {
-            if mode == .floater {
-                try await container.todoRepository.deleteFloater(todo)
-            } else {
-                try await container.todoRepository.deleteTodo(todo)
-            }
+        let container = container
+        if mode == .floater {
+            let staged = container.todoRepository.stageDeleteFloater(todo)
             hydrateFromCache()
-            container.snackbarManager.show(L("Task deleted"), kind: .success)
-        } catch {
-            container.snackbarManager.show(
-                userFacingMessage(for: error, fallback: "Could not delete task."),
-                kind: .error
+            container.undoableDeleteScheduler.schedule(
+                message: L("Task deleted"),
+                restore: {
+                    container.todoRepository.undoStagedFloater(staged)
+                },
+                commit: {
+                    do {
+                        try await container.todoRepository.deleteFloater(todo)
+                    } catch {
+                        container.snackbarManager.show(
+                            userFacingMessage(for: error, fallback: "Could not delete task."),
+                            kind: .error
+                        )
+                    }
+                }
+            )
+        } else {
+            let staged = container.todoRepository.stageDeleteTodo(todo)
+            hydrateFromCache()
+            container.undoableDeleteScheduler.schedule(
+                message: L("Task deleted"),
+                restore: {
+                    container.todoRepository.undoStagedTodo(staged)
+                },
+                commit: {
+                    do {
+                        try await container.todoRepository.deleteTodo(todo)
+                    } catch {
+                        container.snackbarManager.show(
+                            userFacingMessage(for: error, fallback: "Could not delete task."),
+                            kind: .error
+                        )
+                    }
+                }
             )
         }
     }
@@ -266,36 +297,58 @@ final class TodoListViewModel {
     /// drive navigation deterministically after the await completes, instead of
     /// from the repository's mid-await optimistic-delete callback (which raced
     /// with the delete-confirmation overlay dismissal and dropped navigation).
+    ///
+    /// Delayed-commit delete: `true` means *staging* succeeded — the list is
+    /// already pruned from the local cache and the screen navigates away
+    /// immediately, while the real (server) delete only commits once the undo
+    /// window expires. Tapping Undo restores the list (and its tasks) even
+    /// though the user has navigated away, so the closures capture `container`
+    /// rather than `self`.
     func deleteList() async -> Bool {
         guard let listId else { return false }
         TdayTelemetry.addBreadcrumb("list.delete", data: listTelemetryData(color: nil, iconKey: nil))
-        do {
-            let optimisticDelete = {
-                self.lists.removeAll { $0.id == listId }
-                self.items.removeAll { $0.listId == listId }
-                self.errorMessage = nil
-            }
-            if mode == .floater {
-                try await container.floaterListRepository.deleteList(
-                    listId: listId,
-                    onOptimisticDelete: optimisticDelete
-                )
-            } else {
-                try await container.listRepository.deleteList(
-                    listId: listId,
-                    onOptimisticDelete: optimisticDelete
-                )
-            }
-            container.snackbarManager.show(L("List deleted"), kind: .success)
-            return true
-        } catch {
-            container.snackbarManager.show(
-                userFacingMessage(for: error, fallback: "Could not delete list."),
-                kind: .error
+        let container = container
+        if mode == .floater {
+            let staged = container.floaterListRepository.stageDeleteList(listId: listId)
+            container.undoableDeleteScheduler.schedule(
+                message: L("List deleted"),
+                restore: {
+                    container.floaterListRepository.undoStagedList(staged)
+                },
+                commit: {
+                    do {
+                        try await container.floaterListRepository.deleteList(listId: listId)
+                    } catch {
+                        container.snackbarManager.show(
+                            userFacingMessage(for: error, fallback: "Could not delete list."),
+                            kind: .error
+                        )
+                    }
+                }
             )
-            hydrateFromCache()
-            return false
+        } else {
+            let staged = container.listRepository.stageDeleteList(listId: listId)
+            container.undoableDeleteScheduler.schedule(
+                message: L("List deleted"),
+                restore: {
+                    container.listRepository.undoStagedList(staged)
+                },
+                commit: {
+                    do {
+                        try await container.listRepository.deleteList(listId: listId)
+                    } catch {
+                        container.snackbarManager.show(
+                            userFacingMessage(for: error, fallback: "Could not delete list."),
+                            kind: .error
+                        )
+                    }
+                }
+            )
         }
+        lists.removeAll { $0.id == listId }
+        items.removeAll { $0.listId == listId }
+        errorMessage = nil
+        return true
     }
 
     func parseTaskTitleNlp(text: String, referenceDueEpochMs: Int64) async -> TodoTitleNlpResponse? {

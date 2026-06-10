@@ -146,19 +146,32 @@ final class HomeViewModel {
         }
     }
 
+    /// Delayed-commit delete: the task is staged out of the local cache
+    /// immediately, an undoable toast is shown, and the real (server) delete
+    /// only commits once the undo window expires. The closures capture
+    /// `container` rather than `self` so a pending commit survives this
+    /// view model being deallocated.
     func delete(_ todo: TodoItem) async {
         todayTodos.removeAll { $0.id == todo.id }
-        do {
-            try await container.todoRepository.deleteTodo(todo)
-            refreshFromCache()
-            container.snackbarManager.show(L("Task deleted"), kind: .success)
-        } catch {
-            container.snackbarManager.show(
-                userFacingMessage(for: error, fallback: "Could not delete task."),
-                kind: .error
-            )
-            refreshFromCache()
-        }
+        let container = container
+        let staged = container.todoRepository.stageDeleteTodo(todo)
+        refreshFromCache()
+        container.undoableDeleteScheduler.schedule(
+            message: L("Task deleted"),
+            restore: {
+                container.todoRepository.undoStagedTodo(staged)
+            },
+            commit: {
+                do {
+                    try await container.todoRepository.deleteTodo(todo)
+                } catch {
+                    container.snackbarManager.show(
+                        userFacingMessage(for: error, fallback: "Could not delete task."),
+                        kind: .error
+                    )
+                }
+            }
+        )
     }
 
     func updateTask(_ todo: TodoItem, payload: CreateTaskPayload) async {
