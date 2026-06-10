@@ -64,6 +64,7 @@ class FloaterTasksWidget : GlanceAppWidget() {
                             key = task.id.hashCode().toLong(),
                             title = task.title,
                             priority = task.priority,
+                            description = task.description,
                         )
                     },
                     visuals = FloaterWidgetVisuals,

@@ -74,6 +74,7 @@ internal data class TaskWidgetRow(
     val title: String,
     val priority: String,
     val trailingText: String? = null,
+    val description: String? = null,
 )
 
 private enum class TaskWidgetTextColor(@ColorRes val resourceId: Int) {
@@ -449,32 +450,48 @@ private fun TaskWidgetRow(
     metrics: TaskWidgetMetrics,
     openAction: Action,
 ) {
-    val modifier = GlanceModifier
-        .fillMaxWidth()
-        .height(metrics.rowHeight)
-        .clickable(openAction)
-        .padding(start = 2.dp, end = 2.dp)
+    val description = row.description?.takeIf { it.isNotBlank() }
 
-    Row(
-        modifier = modifier,
-        verticalAlignment = Alignment.CenterVertically,
+    Column(
+        modifier = GlanceModifier
+            .fillMaxWidth()
+            .clickable(openAction)
+            .padding(start = 2.dp, end = 2.dp),
     ) {
-        PriorityDot(
-            priority = row.priority,
-            size = 7.dp,
-        )
-        Spacer(modifier = GlanceModifier.width(7.dp))
-        WidgetText(
-            modifier = GlanceModifier.defaultWeight(),
-            text = row.title,
-            color = TaskWidgetTextColor.PRIMARY,
-            fontSize = metrics.rowFontSize,
-            maxLines = 1,
-            fillBounds = true,
-        )
-        if (taskWidgetShowsTrailingText(layout) && row.trailingText != null) {
-            Spacer(modifier = GlanceModifier.width(6.dp))
-            TimeChip(text = row.trailingText)
+        Row(
+            modifier = GlanceModifier
+                .fillMaxWidth()
+                .height(metrics.rowHeight),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            PriorityDot(
+                priority = row.priority,
+                size = 7.dp,
+            )
+            Spacer(modifier = GlanceModifier.width(7.dp))
+            WidgetText(
+                modifier = GlanceModifier.defaultWeight(),
+                text = row.title,
+                color = TaskWidgetTextColor.PRIMARY,
+                fontSize = metrics.rowFontSize,
+                maxLines = 1,
+                fillBounds = true,
+            )
+            if (taskWidgetShowsTrailingText(layout) && row.trailingText != null) {
+                Spacer(modifier = GlanceModifier.width(6.dp))
+                TimeChip(text = row.trailingText)
+            }
+        }
+        if (description != null) {
+            WidgetText(
+                modifier = GlanceModifier
+                    .fillMaxWidth()
+                    .padding(start = 14.dp),
+                text = description,
+                color = TaskWidgetTextColor.SECONDARY,
+                fontSize = 11.sp,
+                maxLines = 2,
+            )
         }
     }
 }

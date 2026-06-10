@@ -37,6 +37,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -1690,7 +1691,8 @@ private fun HomeTodayTaskRow(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(58.dp),
+                .heightIn(min = 58.dp)
+                .height(IntrinsicSize.Min),
         ) {
             Row(
                 modifier = Modifier
@@ -1880,6 +1882,17 @@ private fun HomeTodayTaskRow(
                                 fontWeight = FontWeight.Bold,
                                 lineHeight = 18.sp,
                                 color = subtitleColor,
+                            )
+                        }
+                        todo.description?.takeIf { it.isNotBlank() }?.let { note ->
+                            Text(
+                                text = note,
+                                style = MaterialTheme.typography.bodySmall,
+                                fontFamily = TdayFontFamily,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                lineHeight = 18.sp,
+                                color = colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                             )
                         }
                     }
