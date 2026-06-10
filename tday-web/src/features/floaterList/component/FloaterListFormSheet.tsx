@@ -18,8 +18,13 @@ import {
   normalizeListIconKey,
 } from "@/lib/listIcons";
 import { useToast } from "@/hooks/use-toast";
+import { useUndoableDelete } from "@/hooks/use-undoable-delete";
 import { useCreateFloaterList } from "@/features/floaterList/query/create-floater-list";
-import type { FloaterListItemMetaType, ListColor } from "@/types";
+import type {
+  FloaterListItemMetaMapType,
+  FloaterListItemMetaType,
+  ListColor,
+} from "@/types";
 
 type EditableFloaterList = {
   id: string;
@@ -80,6 +85,7 @@ export default function FloaterListFormSheet({
   const { t: appDict } = useTranslation("app");
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const showUndoableDelete = useUndoableDelete();
   const router = useRouter();
   const pathname = usePathname();
   const { createMutateAsync, createLoading } = useCreateFloaterList();
@@ -133,28 +139,53 @@ export default function FloaterListFormSheet({
     },
   });
 
-  const deleteListMutation = useMutation({
-    mutationFn: deleteFloaterList,
-    onSuccess: async (_data, deletedId) => {
-      await invalidateFloaterListQueries();
-      onOpenChange(false);
-      if (pathname.includes(`/app/floater-list/${deletedId}`)) {
-        router.push("/app/floater");
-      }
-    },
-    onError: (mutationError) => {
+  // Commit half of the delayed-commit delete: fires the real DELETE once the
+  // undo toast has closed without undo. Runs from a toast callback, possibly
+  // after this sheet unmounted, so it only touches the queryClient and the
+  // imperative toast (both safe after unmount).
+  const commitDeleteList = async (id: string) => {
+    try {
+      await deleteFloaterList(id);
+    } catch (mutationError) {
       const message =
         mutationError instanceof Error
           ? mutationError.message
           : "Failed to delete floater list";
-      setError(message);
       toast({ description: message, variant: "destructive" });
-    },
-  });
+    } finally {
+      // Success: refresh caches around the cascade (list + its floaters).
+      // Failure: the same refetch restores the staged pruning.
+      await invalidateFloaterListQueries();
+    }
+  };
 
-  const deleting = deleteListMutation.isPending;
+  // Stage: prune the list from the cached metadata, close the sheet and leave
+  // the deleted list's page immediately — but DON'T send the DELETE yet; the
+  // undo toast decides whether the request ever fires.
+  const handleDeleteList = (id: string) => {
+    void queryClient.cancelQueries({ queryKey: ["floaterListMeta"] });
+    queryClient.setQueryData<FloaterListItemMetaMapType>(
+      ["floaterListMeta"],
+      (old = {}) => {
+        const next = { ...old };
+        delete next[id];
+        return next;
+      },
+    );
+    onOpenChange(false);
+    if (pathname.includes(`/app/floater-list/${id}`)) {
+      router.push("/app/floater");
+    }
+    showUndoableDelete({
+      message: appDict("listDeleted"),
+      commit: () => void commitDeleteList(id),
+      // The server still has the list — a refetch restores the pruned cache.
+      undo: () => void invalidateFloaterListQueries(),
+    });
+  };
+
   const saving = createLoading || updateListMutation.isPending;
-  const canSubmit = Boolean(normalizeListName(name)) && !saving && !deleting;
+  const canSubmit = Boolean(normalizeListName(name)) && !saving;
 
   const handleSubmit = async () => {
     const normalizedName = normalizeListName(name);
@@ -297,7 +328,6 @@ export default function FloaterListFormSheet({
                   type="button"
                   variant="outline"
                   onClick={() => { hapticConfirm(); setConfirmingDelete(false); }}
-                  disabled={deleting}
                   className="rounded-2xl border-border/70 bg-card px-5 font-black"
                 >
                   Keep list
@@ -305,11 +335,10 @@ export default function FloaterListFormSheet({
                 <Button
                   type="button"
                   variant="destructive"
-                  onClick={() => deleteListMutation.mutate(list.id)}
-                  disabled={deleting}
+                  onClick={() => handleDeleteList(list.id)}
                   className="rounded-2xl px-5 font-black"
                 >
-                  {deleting ? "Deleting..." : appDict("deleteFloaterList")}
+                  {appDict("deleteFloaterList")}
                 </Button>
               </div>
             </div>
