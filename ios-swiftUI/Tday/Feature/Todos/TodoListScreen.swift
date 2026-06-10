@@ -2495,7 +2495,12 @@ struct TimelineTopBar: View {
                 .opacity(revealProgress)
                 .offset(y: titleOffsetY)
                 .scaleEffect(0.985 + (0.015 * revealProgress))
-                .padding(.horizontal, max(TodoTimelineMetrics.topBarButtonFrame, trailingActionReservedWidth) + 12)
+                // Reserve each side for what actually sits there (back button
+                // left, action cluster right) instead of the larger side twice:
+                // with three actions a symmetric reserve exceeds the screen
+                // width and stretches the whole layout edge-to-edge.
+                .padding(.leading, TodoTimelineMetrics.topBarButtonFrame + 12)
+                .padding(.trailing, trailingActionReservedWidth + 12)
                 .frame(maxWidth: .infinity)
                 .allowsHitTesting(false)
         }
