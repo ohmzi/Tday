@@ -2089,8 +2089,14 @@ private fun TodayTopBar(
         ((progress - titleHandoffPoint) / (1f - titleHandoffPoint)).coerceIn(0f, 1f)
     val collapsedTitleShiftY = with(density) { (12.dp * (1f - collapsedTitleAlpha)).toPx() }
     val expandedTitleShiftY = with(density) { (-10.dp * (1f - expandedTitleAlpha)).toPx() }
-    val collapsedTitleHorizontalPadding =
-        maxOf(TdayDimens.FabSize, (actions.size.coerceAtLeast(1) * 56).dp) + 12.dp
+    // Reserve each side for what actually sits there (back button start,
+    // action cluster end, including the 8dp gaps) instead of the larger side
+    // twice — with three actions a symmetric reserve leaves the collapsed
+    // title no room at all.
+    val collapsedTitleStartPadding = TdayDimens.FabSize + 12.dp
+    val actionCount = actions.size.coerceAtLeast(1)
+    val collapsedTitleEndPadding =
+        (actionCount * 56).dp + ((actionCount - 1).coerceAtLeast(0) * 8).dp + 12.dp
 
     Column(
         modifier = Modifier
@@ -2133,7 +2139,7 @@ private fun TodayTopBar(
                     modifier = Modifier
                         .align(Alignment.Center)
                         .fillMaxWidth()
-                        .padding(horizontal = collapsedTitleHorizontalPadding)
+                        .padding(start = collapsedTitleStartPadding, end = collapsedTitleEndPadding)
                         .wrapContentSize(Alignment.Center)
                         .graphicsLayer {
                             alpha = collapsedTitleAlpha
