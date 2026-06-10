@@ -558,6 +558,7 @@ private struct AppSnackbar: View {
     let onDismiss: () -> Void
 
     @Environment(\.tdayColors) private var colors
+    @State private var dragOffset: CGFloat = 0
 
     // Icons are removed app-wide; the variant cue now lives in the card surface
     // itself. Issue/error toasts get a red translucent shade layered over the
@@ -607,14 +608,37 @@ private struct AppSnackbar: View {
                 .stroke(colors.cardStroke, lineWidth: 1)
         )
         .shadow(color: Color.black.opacity(colors.isDark ? 0.35 : 0.18), radius: 18, y: 10)
+        // Hit area is the card itself — applied before the outer paddings so
+        // the invisible margin over the RootFeedDock doesn't swallow taps
+        // meant for the dock while a toast is showing.
+        .contentShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .onTapGesture(perform: onDismiss)
+        .gesture(
+            // Global space keeps the translation stable while the card itself
+            // moves with the finger — measured locally, the card's own offset
+            // feeds back into the translation and the drag oscillates.
+            DragGesture(minimumDistance: 10, coordinateSpace: .global)
+                .onChanged { value in
+                    dragOffset = max(0, value.translation.height)
+                }
+                .onEnded { value in
+                    if value.translation.height > 30 || value.predictedEndTranslation.height > 90 {
+                        onDismiss()
+                    } else {
+                        withAnimation(.snappy(duration: 0.25)) {
+                            dragOffset = 0
+                        }
+                    }
+                }
+        )
+        .offset(y: dragOffset)
         .padding(.horizontal, 20)
         // Sit above the bottom RootFeedDock (height 60 + 8/8 vertical padding ≈
         // 76pt above the safe area) with a ~12pt gap, instead of overlapping it.
         // Matches Android's 88dp bottom inset.
         .padding(.bottom, 88)
-        .contentShape(Rectangle())
-        .onTapGesture(perform: onDismiss)
         .task(id: content.id) {
+            dragOffset = 0
             let seconds: UInt64 = content.action == nil ? 4 : 8
             try? await Task.sleep(nanoseconds: seconds * 1_000_000_000)
             onDismiss()
