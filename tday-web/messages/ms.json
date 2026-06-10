@@ -322,6 +322,7 @@
     "undo": "Buat asal",
     "taskDeleted": "Tugas dipadamkan",
     "listDeleted": "Senarai dipadamkan",
+    "listsDeleted": "{{count}} senarai dipadamkan",
     "done": "Selesai",
     "previous": "Sebelumnya",
     "next": "Seterusnya",

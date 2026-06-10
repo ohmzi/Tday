@@ -322,6 +322,7 @@
     "undo": "Desfazer",
     "taskDeleted": "Tarefa excluída",
     "listDeleted": "Lista excluída",
+    "listsDeleted": "{{count}} listas excluídas",
     "done": "Concluído",
     "previous": "Anterior",
     "next": "Próximo",

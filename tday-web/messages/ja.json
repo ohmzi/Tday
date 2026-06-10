@@ -322,6 +322,7 @@
     "undo": "元に戻す",
     "taskDeleted": "タスクを削除しました",
     "listDeleted": "リストを削除しました",
+    "listsDeleted": "{{count}} 件のリストを削除しました",
     "done": "完了",
     "previous": "前へ",
     "next": "次へ",
