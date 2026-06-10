@@ -150,6 +150,10 @@ fun CreateTaskBottomSheet(
     onCreateTask: (CreateTaskPayload) -> Unit,
     onUpdateTask: ((todo: TodoItem, payload: CreateTaskPayload) -> Unit)? = null,
 ) {
+    // Viewers can't create or move tasks into a shared list, so those lists are
+    // not offered as targets (the task being edited keeps its current list).
+    @Suppress("NAME_SHADOWING")
+    val lists = lists.filter { !it.isViewer || it.id == editingTask?.listId }
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
     val dismissKeyboard = {

@@ -307,6 +307,25 @@
     <string name="summary_source_server">Server model</string>
     <string name="summary_source_local">Local model</string>
     <string name="todos_list_settings">List settings</string>
+    <string name="share_list_action">Share list</string>
+    <string name="members_title">Members</string>
+    <string name="members_add_section">Add member</string>
+    <string name="members_add_action">Add</string>
+    <string name="members_search_placeholder">Search by username</string>
+    <string name="members_no_results">No users found</string>
+    <string name="members_remove">Remove member</string>
+    <string name="members_leave_list">Leave list</string>
+    <string name="members_shared_by">Shared by %1$s</string>
+    <string name="share_role_owner">Owner</string>
+    <string name="share_role_editor">Editor</string>
+    <string name="share_role_viewer">Viewer</string>
+    <string name="share_task_chooser_title">Share task</string>
+    <string name="share_due_label">Due: %1$s</string>
+    <string name="share_priority_label">Priority: %1$s</string>
+    <plurals name="share_task_count">
+        <item quantity="one">%d task</item>
+        <item quantity="other">%d tasks</item>
+    </plurals>
     <string name="todos_save_list_settings">Save list settings</string>
     <string name="todos_delete_list_title">Delete list?</string>
     <string name="todos_delete_list_message">This will delete this list, every task in it, and completed history for those tasks.</string>

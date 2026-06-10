@@ -291,6 +291,61 @@ struct ListSummary: Identifiable, Equatable, Hashable, Codable {
     let todoCount: Int
     let updatedAt: Date?
     let createdAt: Date?
+    // Sharing metadata; defaults describe an unshared, self-owned list.
+    var myRole: String = "OWNER"
+    var isShared: Bool = false
+    var memberCount: Int = 0
+    var ownerUsername: String?
+
+    var isViewer: Bool { myRole.caseInsensitiveCompare("VIEWER") == .orderedSame }
+    var isOwner: Bool { myRole.caseInsensitiveCompare("OWNER") == .orderedSame }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, name, color, iconKey, todoCount, updatedAt, createdAt
+        case myRole, isShared, memberCount, ownerUsername
+    }
+
+    init(
+        id: String,
+        name: String,
+        color: String?,
+        iconKey: String?,
+        todoCount: Int,
+        updatedAt: Date?,
+        createdAt: Date?,
+        myRole: String = "OWNER",
+        isShared: Bool = false,
+        memberCount: Int = 0,
+        ownerUsername: String? = nil
+    ) {
+        self.id = id
+        self.name = name
+        self.color = color
+        self.iconKey = iconKey
+        self.todoCount = todoCount
+        self.updatedAt = updatedAt
+        self.createdAt = createdAt
+        self.myRole = myRole
+        self.isShared = isShared
+        self.memberCount = memberCount
+        self.ownerUsername = ownerUsername
+    }
+
+    // Tolerates payloads persisted before sharing existed (widget snapshots).
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        name = try container.decode(String.self, forKey: .name)
+        color = try container.decodeIfPresent(String.self, forKey: .color)
+        iconKey = try container.decodeIfPresent(String.self, forKey: .iconKey)
+        todoCount = try container.decode(Int.self, forKey: .todoCount)
+        updatedAt = try container.decodeIfPresent(Date.self, forKey: .updatedAt)
+        createdAt = try container.decodeIfPresent(Date.self, forKey: .createdAt)
+        myRole = try container.decodeIfPresent(String.self, forKey: .myRole) ?? "OWNER"
+        isShared = try container.decodeIfPresent(Bool.self, forKey: .isShared) ?? false
+        memberCount = try container.decodeIfPresent(Int.self, forKey: .memberCount) ?? 0
+        ownerUsername = try container.decodeIfPresent(String.self, forKey: .ownerUsername)
+    }
 }
 
 struct DashboardSummary: Equatable, Hashable, Codable {

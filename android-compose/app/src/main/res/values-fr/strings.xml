@@ -250,6 +250,25 @@
     <string name="todos_summary_modes_unavailable">Le résumé est disponible uniquement pour Aujourd\'hui, Planifiées, Toutes et Priorité</string>
     <string name="todos_summary_offline_unavailable">Aucun résumé disponible hors ligne.</string>
     <string name="todos_list_settings">Paramètres de la liste</string>
+    <string name="share_list_action">Partager la liste</string>
+    <string name="members_title">Membres</string>
+    <string name="members_add_section">Ajouter un membre</string>
+    <string name="members_add_action">Ajouter</string>
+    <string name="members_search_placeholder">Rechercher par nom d\'utilisateur</string>
+    <string name="members_no_results">Aucun utilisateur trouvé</string>
+    <string name="members_remove">Retirer le membre</string>
+    <string name="members_leave_list">Quitter la liste</string>
+    <string name="members_shared_by">Partagée par %1$s</string>
+    <string name="share_role_owner">Propriétaire</string>
+    <string name="share_role_editor">Éditeur</string>
+    <string name="share_role_viewer">Lecteur</string>
+    <string name="share_task_chooser_title">Partager la tâche</string>
+    <string name="share_due_label">Échéance : %1$s</string>
+    <string name="share_priority_label">Priorité : %1$s</string>
+    <plurals name="share_task_count">
+        <item quantity="one">%d tâche</item>
+        <item quantity="other">%d tâches</item>
+    </plurals>
     <string name="todos_save_list_settings">Enregistrer les paramètres de la liste</string>
     <string name="todos_delete_list_title">Supprimer la liste ?</string>
     <string name="todos_delete_list_message">Cela supprimera cette liste, toutes les tâches qu\'elle contient et l\'historique des tâches terminées.</string>

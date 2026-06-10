@@ -37,6 +37,9 @@ import com.ohmz.tday.services.FloaterService
 import com.ohmz.tday.services.FloaterServiceImpl
 import com.ohmz.tday.services.ListService
 import com.ohmz.tday.services.ListServiceImpl
+import com.ohmz.tday.services.ListShareService
+import com.ohmz.tday.services.ListShareServiceImpl
+import com.ohmz.tday.services.RealtimePublisher
 import com.ohmz.tday.services.PreferencesService
 import com.ohmz.tday.services.PreferencesServiceImpl
 import com.ohmz.tday.services.PushNotificationService
@@ -78,10 +81,12 @@ val securityModule = module {
 
 val serviceModule = module {
     single<CacheService> { CacheServiceImpl() }
-    single<TodoService> { TodoServiceImpl(get(), get()) }
-    single<FloaterService> { FloaterServiceImpl(get(), get()) }
-    single<ListService> { ListServiceImpl(get()) }
-    single<FloaterListService> { FloaterListServiceImpl(get()) }
+    single<ListShareService> { ListShareServiceImpl(get(), get()) }
+    single { RealtimePublisher(get(), get(), get()) }
+    single<TodoService> { TodoServiceImpl(get(), get(), get(), get()) }
+    single<FloaterService> { FloaterServiceImpl(get(), get(), get(), get()) }
+    single<ListService> { ListServiceImpl(get(), get(), get()) }
+    single<FloaterListService> { FloaterListServiceImpl(get(), get(), get()) }
     single<UserService> { UserServiceImpl(get()) }
     single<SecurityQuestionService> { SecurityQuestionServiceImpl(get(), get(), get(), get()) }
     single<CompletedTodoService> { CompletedTodoServiceImpl(get(), get()) }

@@ -10,7 +10,11 @@ struct RealtimeEvent: Equatable {
             normalizedName.contains("todocreated") ||
             normalizedName.contains("todoupdated") ||
             normalizedName.contains("tododeleted") ||
+            // "list.members" (membership changes) intentionally matches the
+            // "list." prefix; floater events fan in here too.
             normalizedName.hasPrefix("list.") ||
+            normalizedName.hasPrefix("floater.") ||
+            normalizedName.hasPrefix("floaterlist.") ||
             normalizedName.contains("listchanged") ||
             normalizedName.hasPrefix("completed.") ||
             normalizedName.hasPrefix("completedtodo.") ||

@@ -40,15 +40,18 @@ type TodoMutaionProviderProps = {
     useReorderTodo: UseReorderTodoType,
     useEditTodoInstance: UseEditTodoInstanceType,
     useEditTodo: UseEditTodoType,
+    // True when the current screen shows a shared list where the user is a
+    // VIEWER — task rows hide their mutation affordances.
+    readOnly?: boolean,
     children: React.ReactNode
 }
 
 const TodoMutationContext = createContext<Omit<TodoMutaionProviderProps, "children"> | null>(null)
 
 
-export default function TodoMutationProvider({ useDeleteTodo, useCompleteTodo, usePrioritizeTodo, useReorderTodo, useEditTodo, useEditTodoInstance, children }: TodoMutaionProviderProps) {
+export default function TodoMutationProvider({ useDeleteTodo, useCompleteTodo, usePrioritizeTodo, useReorderTodo, useEditTodo, useEditTodoInstance, readOnly = false, children }: TodoMutaionProviderProps) {
     return (
-        <TodoMutationContext.Provider value={{ useDeleteTodo, useCompleteTodo, usePrioritizeTodo, useReorderTodo, useEditTodo, useEditTodoInstance }}>
+        <TodoMutationContext.Provider value={{ useDeleteTodo, useCompleteTodo, usePrioritizeTodo, useReorderTodo, useEditTodo, useEditTodoInstance, readOnly }}>
             {children}
         </TodoMutationContext.Provider>
     )

@@ -250,6 +250,24 @@
     <string name="todos_summary_modes_unavailable">摘要仅适用于今天、已安排、全部和优先</string>
     <string name="todos_summary_offline_unavailable">离线时无法提供摘要。</string>
     <string name="todos_list_settings">列表设置</string>
+    <string name="share_list_action">分享列表</string>
+    <string name="members_title">成员</string>
+    <string name="members_add_section">添加成员</string>
+    <string name="members_add_action">添加</string>
+    <string name="members_search_placeholder">按用户名搜索</string>
+    <string name="members_no_results">未找到用户</string>
+    <string name="members_remove">移除成员</string>
+    <string name="members_leave_list">退出列表</string>
+    <string name="members_shared_by">由 %1$s 分享</string>
+    <string name="share_role_owner">所有者</string>
+    <string name="share_role_editor">编辑者</string>
+    <string name="share_role_viewer">查看者</string>
+    <string name="share_task_chooser_title">分享任务</string>
+    <string name="share_due_label">截止：%1$s</string>
+    <string name="share_priority_label">优先级：%1$s</string>
+    <plurals name="share_task_count">
+        <item quantity="other">%d个任务</item>
+    </plurals>
     <string name="todos_save_list_settings">保存列表设置</string>
     <string name="todos_delete_list_title">删除列表？</string>
     <string name="todos_delete_list_message">这将删除此列表、其中的所有任务，以及这些任务的完成历史记录。</string>

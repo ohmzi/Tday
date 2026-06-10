@@ -596,6 +596,7 @@ struct TodoListScreen: View {
     @State private var editingTodo: TodoItem?
     @State private var showingSummary = false
     @State private var showingListSettings = false
+    @State private var showingMembers = false
     @State private var showingDeleteListConfirmation = false
     @State private var draggedTodo: TodoItem?
     @State private var inAppDrag: TodoInAppDrag?
@@ -690,6 +691,21 @@ struct TodoListScreen: View {
     private var isListDetailScreen: Bool {
         viewModel.mode == .list ||
             (viewModel.mode == .floater && !(viewModel.listId?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true))
+    }
+
+    private var selectedListSummary: ListSummary? {
+        guard let listId = viewModel.listId else { return nil }
+        return viewModel.lists.first(where: { $0.id == listId })
+    }
+
+    // VIEWER members of a shared list get a read-only screen: no create FAB,
+    // no swipe edit/delete, no complete taps, no drag.
+    private var isViewerList: Bool {
+        isListDetailScreen && selectedListSummary?.isViewer == true
+    }
+
+    private var currentShareKind: ShareListKind {
+        viewModel.mode == .floater ? .floater : .scheduled
     }
 
     private var floaterListByID: [String: ListSummary] {
@@ -793,6 +809,14 @@ struct TodoListScreen: View {
         }
 
         if isListDetailScreen {
+            actions.append(TimelineTopBarAction(
+                systemName: "person.2",
+                usesCircularChrome: true,
+                action: { showingMembers = true }
+            ))
+        }
+
+        if isListDetailScreen, selectedListSummary?.isOwner != false {
             actions.append(TimelineTopBarAction(
                 systemName: "ellipsis",
                 usesCircularChrome: true,
@@ -945,6 +969,9 @@ struct TodoListScreen: View {
         .sheet(isPresented: $showingListSettings) {
             listSettingsSheetContent
         }
+        .sheet(isPresented: $showingMembers) {
+            membersSheetContent
+        }
         .confirmationDialog(
             "Move repeating task?",
             isPresented: Binding(
@@ -1031,6 +1058,15 @@ struct TodoListScreen: View {
                 }
             }
             if isListDetailScreen {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        showingMembers = true
+                    } label: {
+                        Image(systemName: "person.2")
+                    }
+                }
+            }
+            if isListDetailScreen, selectedListSummary?.isOwner != false {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         showingListSettings = true
@@ -1142,12 +1178,14 @@ struct TodoListScreen: View {
 
             Spacer(minLength: 12)
 
-            TaskFloatingActionButton(fillColor: modeAccentColor) {
-                HapticManager.buttonTap()
-                showingCreateTask = true
+            if !isViewerList {
+                TaskFloatingActionButton(fillColor: modeAccentColor) {
+                    HapticManager.buttonTap()
+                    showingCreateTask = true
+                }
+                .padding(.trailing, 18)
+                .padding(.vertical, 8)
             }
-            .padding(.trailing, 18)
-            .padding(.vertical, 8)
         }
     }
 
@@ -1236,9 +1274,28 @@ struct TodoListScreen: View {
         }
     }
 
+    @ViewBuilder
+    private var membersSheetContent: some View {
+        if let selectedList = selectedListSummary {
+            ManageMembersSheet(
+                listId: selectedList.id,
+                listName: selectedList.name,
+                kind: currentShareKind,
+                myRole: selectedList.myRole,
+                shareText: listShareText(listName: selectedList.name, items: viewModel.items),
+                onLeftList: {
+                    Task { await viewModel.refresh() }
+                    dismiss()
+                }
+            )
+        }
+    }
+
     private var listSettingsSheetContent: some View {
-        ListSettingsSheet(
-            list: viewModel.lists.first(where: { $0.id == viewModel.listId }),
+        let selectedList = viewModel.lists.first(where: { $0.id == viewModel.listId })
+        return ListSettingsSheet(
+            list: selectedList,
+            shareText: selectedList.map { listShareText(listName: $0.name, items: viewModel.items) },
             onSubmit: { name, color, iconKey in
                 Task { await viewModel.updateListSettings(name: name, color: color, iconKey: iconKey) }
             },
@@ -1607,7 +1664,7 @@ struct TodoListScreen: View {
                             .todoInAppDropTargetFrame(
                                 targetID: "standard-row-\(section.id)-\(todo.id)",
                                 section: section,
-                                enabled: viewModel.mode.supportsTaskReschedule && isDropEligibleSection
+                                enabled: viewModel.mode.supportsTaskReschedule && !isViewerList && isDropEligibleSection
                             )
                             .listRowBackground(todo.id == highlightedTodoId ? colors.surfaceVariant : colors.surface)
                     }
@@ -1669,7 +1726,7 @@ struct TodoListScreen: View {
                             .todoInAppDropTargetFrame(
                                 targetID: "standard-header-\(section.id)",
                                 section: section,
-                                enabled: viewModel.mode.supportsTaskReschedule && isDropEligibleSection
+                                enabled: viewModel.mode.supportsTaskReschedule && !isViewerList && isDropEligibleSection
                             )
                             .timelinePinnedSectionHeaderBackground()
                             .scheduledTodoDropTarget(
@@ -1935,7 +1992,7 @@ struct TodoListScreen: View {
         .todoTrailingSwipeActions(
             rowID: todo.id,
             openRowID: $openSwipeTaskID,
-            enabled: !isCompleting,
+            enabled: !isCompleting && !isViewerList,
             onEdit: {
                 editingTodo = todo
             },
@@ -1968,7 +2025,7 @@ struct TodoListScreen: View {
             )
             .modifier(
                 TodoInAppDragModifier(
-                    enabled: viewModel.mode.supportsTaskReschedule,
+                    enabled: viewModel.mode.supportsTaskReschedule && !isViewerList,
                     todo: todo,
                     onStart: beginInAppDrag,
                     onMove: updateInAppDrag,
@@ -2062,7 +2119,7 @@ struct TodoListScreen: View {
         .todoTrailingSwipeActions(
             rowID: todo.id,
             openRowID: $openSwipeTaskID,
-            enabled: !isCompleting,
+            enabled: !isCompleting && !isViewerList,
             onEdit: {
                 editingTodo = todo
             },
@@ -2084,7 +2141,7 @@ struct TodoListScreen: View {
         )
         .modifier(
             TodoInAppDragModifier(
-                enabled: viewModel.mode.supportsTaskReschedule,
+                enabled: viewModel.mode.supportsTaskReschedule && !isViewerList,
                 todo: todo,
                 onStart: beginInAppDrag,
                 onMove: updateInAppDrag,
@@ -2095,6 +2152,7 @@ struct TodoListScreen: View {
     }
 
     private func completeTodoWithoutReflow(_ todo: TodoItem) {
+        guard !isViewerList else { return }
         guard completionPhases[todo.id] == nil else {
             return
         }
@@ -2166,7 +2224,7 @@ struct TodoListScreen: View {
                         .todoInAppDropTargetFrame(
                             targetID: "minimal-row-\(section.id)-\(todo.id)",
                             section: section,
-                            enabled: viewModel.mode.supportsTaskReschedule && isDropEligibleSection
+                            enabled: viewModel.mode.supportsTaskReschedule && !isViewerList && isDropEligibleSection
                         )
                         .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
                         .listRowBackground(colors.background)
@@ -2196,7 +2254,7 @@ struct TodoListScreen: View {
                 .todoInAppDropTargetFrame(
                     targetID: "minimal-header-\(section.id)",
                     section: section,
-                    enabled: viewModel.mode.supportsTaskReschedule && isDropEligibleSection
+                    enabled: viewModel.mode.supportsTaskReschedule && !isViewerList && isDropEligibleSection
                 )
                 .timelinePinnedSectionHeaderBackground()
                 .scheduledTodoDropTarget(
@@ -3275,6 +3333,7 @@ private enum ListSettingsSheetMetrics {
 
 private struct ListSettingsSheet: View {
     let list: ListSummary?
+    var shareText: String? = nil
     let onSubmit: (String, String?, String?) -> Void
     let onDeleteRequest: () -> Void
     @Environment(\.dismiss) private var dismiss
@@ -3439,12 +3498,16 @@ private struct ListSettingsSheet: View {
                         }
                     }
 
+                    if let list, let shareText {
+                        ListSettingsSheetShareButton(text: shareText, subject: list.name)
+                            .padding(.top, 2)
+                    }
+
                     if list != nil {
                         ListSettingsSheetDeleteButton {
                             dismiss()
                             onDeleteRequest()
                         }
-                        .padding(.top, 2)
                     }
                 }
                 .padding(.horizontal, 18)
@@ -3484,6 +3547,48 @@ private struct ListSettingsSheet: View {
             .split(separator: " ")
             .map { $0.capitalized }
             .joined(separator: " ")
+    }
+}
+
+private struct ListSettingsSheetShareButton: View {
+    let text: String
+    let subject: String
+
+    @Environment(\.tdayColors) private var colors
+
+    var body: some View {
+        ShareLink(item: text, subject: Text(subject)) {
+            HStack(spacing: 12) {
+                Image(systemName: "square.and.arrow.up")
+                    .font(.system(size: 22, weight: .semibold))
+                    .frame(width: 28, height: 28)
+
+                Text("Share list")
+                    .font(.tdayRounded(size: 18, weight: .heavy))
+
+                Spacer(minLength: 0)
+            }
+            .foregroundStyle(colors.onSurface)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+            .frame(maxWidth: .infinity)
+            .background(
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .fill(colors.bottomSheetControlSurface)
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .stroke(colors.onSurfaceVariant.opacity(0.3), lineWidth: 1.5)
+            }
+        }
+        .buttonStyle(
+            TdayPressButtonStyle(
+                shadowColor: Color.black,
+                pressedShadowOpacity: 0.03,
+                normalShadowOpacity: 0
+            )
+        )
+        .accessibilityLabel(L("Share list"))
     }
 }
 

@@ -24,11 +24,13 @@ export default function FloaterGroup({
   className,
   highlightedFloaterId,
   reorderable = true,
+  readOnly = false,
 }: {
   floaters: FloaterItemType[];
   className?: string;
   highlightedFloaterId?: string | null;
   reorderable?: boolean;
+  readOnly?: boolean;
 }) {
   const { reorderMutateFn } = useReorderFloater();
   const [items, setItems] = useState(floaters);
@@ -80,7 +82,7 @@ export default function FloaterGroup({
     }
   }
 
-  if (!mounted || !reorderable) {
+  if (!mounted || !reorderable || readOnly) {
     return (
       <div className={cn("space-y-0", className)}>
         {items.map((item) => (
@@ -88,6 +90,7 @@ export default function FloaterGroup({
             key={item.id}
             floater={item}
             highlighted={highlightedFloaterId === item.id}
+            readOnly={readOnly}
           />
         ))}
       </div>

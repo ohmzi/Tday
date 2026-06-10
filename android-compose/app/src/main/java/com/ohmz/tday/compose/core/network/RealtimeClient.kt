@@ -22,6 +22,7 @@ import javax.inject.Singleton
 
 sealed interface RealtimeEvent {
     data object TodoChanged : RealtimeEvent
+    data object FloaterChanged : RealtimeEvent
     data object ListChanged : RealtimeEvent
     data object CompletedChanged : RealtimeEvent
     data class Unknown(val type: String) : RealtimeEvent
@@ -118,6 +119,9 @@ internal fun parseRealtimeEvent(raw: String): RealtimeEvent? {
             type.contains("todocreated") ||
             type.contains("todoupdated") ||
             type.contains("tododeleted") -> RealtimeEvent.TodoChanged
+        type.startsWith("floaterlist.") -> RealtimeEvent.ListChanged
+        type.startsWith("floater.") -> RealtimeEvent.FloaterChanged
+        // "list.members" (membership changes) intentionally lands here too.
         type.startsWith("list.") ||
             type.contains("listchanged") -> RealtimeEvent.ListChanged
         type.startsWith("completed.") ||

@@ -56,6 +56,15 @@ typealias UpdateCompletedFloaterRequest = com.ohmz.tday.shared.model.UpdateCompl
 typealias DeleteCompletedFloaterRequest = com.ohmz.tday.shared.model.DeleteCompletedFloaterRequest
 typealias PreferencesResponse = com.ohmz.tday.shared.model.PreferencesResponse
 typealias PreferencesDto = com.ohmz.tday.shared.model.PreferencesDto
+typealias ShareRole = com.ohmz.tday.shared.model.ShareRole
+typealias ListMemberDto = com.ohmz.tday.shared.model.ListMemberDto
+typealias ListMembersResponse = com.ohmz.tday.shared.model.ListMembersResponse
+typealias AddMemberRequest = com.ohmz.tday.shared.model.AddMemberRequest
+typealias AddMemberResponse = com.ohmz.tday.shared.model.AddMemberResponse
+typealias UpdateMemberRoleRequest = com.ohmz.tday.shared.model.UpdateMemberRoleRequest
+typealias RemoveMemberRequest = com.ohmz.tday.shared.model.RemoveMemberRequest
+typealias UserSearchResponse = com.ohmz.tday.shared.model.UserSearchResponse
+typealias UserSearchResultDto = com.ohmz.tday.shared.model.UserSearchResultDto
 
 @Serializable
 data class CsrfResponse(

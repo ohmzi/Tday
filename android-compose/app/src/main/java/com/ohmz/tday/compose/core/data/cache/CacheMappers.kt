@@ -109,6 +109,10 @@ internal fun listToCache(list: ListSummary): CachedListRecord {
         todoCount = list.todoCount,
         updatedAtEpochMs = list.updatedAt?.toEpochMilli() ?: 0L,
         createdAtEpochMs = list.createdAt?.toEpochMilli() ?: 0L,
+        myRole = list.myRole,
+        isShared = list.isShared,
+        memberCount = list.memberCount,
+        ownerUsername = list.ownerUsername,
     )
 }
 
@@ -152,6 +156,10 @@ internal fun listFromCache(
         } else {
             null
         },
+        myRole = cache.myRole,
+        isShared = cache.isShared,
+        memberCount = cache.memberCount,
+        ownerUsername = cache.ownerUsername,
     )
 }
 
@@ -164,6 +172,10 @@ internal fun floaterListToCache(list: ListSummary): CachedFloaterListRecord {
         todoCount = list.todoCount,
         updatedAtEpochMs = list.updatedAt?.toEpochMilli() ?: 0L,
         createdAtEpochMs = list.createdAt?.toEpochMilli() ?: 0L,
+        myRole = list.myRole,
+        isShared = list.isShared,
+        memberCount = list.memberCount,
+        ownerUsername = list.ownerUsername,
     )
 }
 
@@ -179,6 +191,10 @@ internal fun floaterListFromCache(
         todoCount = todoCountOverride,
         updatedAt = if (cache.updatedAtEpochMs > 0L) Instant.ofEpochMilli(cache.updatedAtEpochMs) else null,
         createdAt = if (cache.createdAtEpochMs > 0L) Instant.ofEpochMilli(cache.createdAtEpochMs) else null,
+        myRole = cache.myRole,
+        isShared = cache.isShared,
+        memberCount = cache.memberCount,
+        ownerUsername = cache.ownerUsername,
     )
 }
 
@@ -338,6 +354,10 @@ internal fun mapListDto(dto: ListDto, iconFallback: String? = null): ListSummary
         todoCount = dto.todoCount,
         updatedAt = parseOptionalInstant(dto.updatedAt),
         createdAt = parseOptionalInstant(dto.createdAt),
+        myRole = dto.myRole ?: "OWNER",
+        isShared = dto.isShared,
+        memberCount = dto.memberCount,
+        ownerUsername = dto.ownerUsername,
     )
 }
 
@@ -350,6 +370,10 @@ internal fun mapFloaterListDto(dto: FloaterListDto, iconFallback: String? = null
         todoCount = dto.todoCount,
         updatedAt = parseOptionalInstant(dto.updatedAt),
         createdAt = parseOptionalInstant(dto.createdAt),
+        myRole = dto.myRole ?: "OWNER",
+        isShared = dto.isShared,
+        memberCount = dto.memberCount,
+        ownerUsername = dto.ownerUsername,
     )
 }
 
