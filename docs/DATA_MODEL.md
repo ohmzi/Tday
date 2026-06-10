@@ -23,7 +23,7 @@ This document describes the durable and local data structures that define T'Day.
 | Todo instance | `TodoInstances` | `TodoInstancePatchRequest`, `TodoInstanceDeleteRequest` | Per-occurrence overrides/deletions for recurring tasks. |
 | Completed todo | `CompletedTodos` | `CompletedTodoDto` | Completion history preserving original task/list details where possible. |
 | List | `Lists` | `ListDto`, `ListDetailResponse` | Scheduled-task project/group with color and icon metadata. `ListDto` carries sharing metadata (`myRole`, `isShared`, `memberCount`, `ownerUsername`). |
-| List share | `ListShares` (`list_shares`) | `ListMemberDto`, `ListMembersResponse`, `AddMemberRequest`, `UpdateMemberRoleRequest`, `RemoveMemberRequest` | EDITOR/VIEWER membership on a scheduled list. The owner is implicit on `Lists.userID` and never has a share row. |
+| List share | `ListShares` (`list_shares`) | `ListMemberDto`, `ListMembersResponse`, `AddMemberRequest`, `UpdateMemberRoleRequest`, `RemoveMemberRequest` | EDITOR/VIEWER membership on a scheduled list. The owner is implicit on `Lists.userID` and never has a share row. No DB-level FKs (Prisma-era databases keep the parent tables outside the schema Flyway migrates); referential cleanup is owned by the services. |
 | Floater | `Floaters` | `FloaterDto`, `CreateFloaterRequest`, `UpdateFloaterRequest` | Unscheduled task for Anytime/Floater planning. No `due`. |
 | Floater list | `FloaterLists` / `FloaterProject` | `FloaterListDto`, `FloaterListDetailResponse` | Project/group for floaters. Keep separate from scheduled-task lists. Carries the same sharing metadata as `ListDto`. |
 | Floater list share | `FloaterListShares` (`floater_list_shares`) | Same share DTOs as scheduled lists | EDITOR/VIEWER membership on a floater list. |
@@ -167,7 +167,7 @@ The single sanctioned exception is list sharing: queries guarded by `ListShareSe
 - Shared tasks ride the normal feed queries (`/api/todo?timeline=true`, `/api/floater`), so they appear in members' Today/timeline feeds and mobile offline snapshots.
 - Completion history stays per-user in v1: completing a shared task writes a `CompletedTodos`/`CompletedFloaters` row under the completer's `userID`; other members just see the task disappear.
 - Membership management is online-only on mobile (no pending mutations); task edits in shared lists stay offline-capable. A member demoted/removed while offline gets 403/no-op on replay, which the sync managers drop.
-- Deleting a list removes every member's todos and completion history for that list (the list-scoped cascades are deliberately not user-filtered).
+- Deleting a list removes every member's todos and completion history for that list (the list-scoped cascades are deliberately not user-filtered). Share rows are cleaned up explicitly by `ListService`/`FloaterListService.deleteMany` and `AdminService.purgeUser` — there is no DB-level `ON DELETE CASCADE` on the share tables.
 - Realtime: every successful mutation emits a `DomainEvent` over `/ws` to the actor plus all share-connected collaborators (`RealtimePublisher`); events are lightweight "refetch" signals (`todo.changed`, `floater.changed`, `list.changed`, `floaterList.changed`, `list.members`, `completed.changed`).
 
 ## Data Change Checklist

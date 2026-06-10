@@ -92,6 +92,7 @@ class DatabaseConfig(private val config: AppConfig) {
                 Users, Accounts, VerificationTokens, Lists, FloaterLists, Todos, TodoInstances,
                 CompletedTodos, Floaters, CompletedFloaters, Files, UserPreferences,
                 EventLogs, CronLogs, AuthThrottles, AuthSignals, PushSubscriptions,
+                ListShares, FloaterListShares,
             )
         }
 
