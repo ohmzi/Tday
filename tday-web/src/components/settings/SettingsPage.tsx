@@ -195,6 +195,12 @@ function ThemeSegmentedControl({
 const fieldClass =
   "h-12 rounded-2xl border-border/70 bg-background/50 font-bold focus-visible:ring-accent/30";
 
+/** Editor action buttons, matching the native SettingsEditorActions capsules:
+ * Cancel = subdued onSurface text on a faint onSurface capsule, Save = primary capsule. */
+const editorCancelClass =
+  "h-12 flex-1 rounded-full font-black bg-foreground/[0.06] text-foreground/70 hover:bg-foreground/10 hover:text-foreground/80 active:opacity-80";
+const editorSaveClass = "h-12 flex-1 rounded-full font-black";
+
 /** Inline expand/collapse that animates height via the grid-rows trick — used
  * for the hidden-until-edit account editors. */
 function Collapse({ open, children }: { open: boolean; children: ReactNode }) {
@@ -636,8 +642,8 @@ export default function SettingsPage() {
                 <div className="flex gap-2">
                   <Button
                     type="button"
-                    variant="secondary"
-                    className="h-11 flex-1 rounded-2xl font-black"
+                    variant="ghost"
+                    className={editorCancelClass}
                     disabled={profileLoading}
                     onClick={() => {
                       setName(user?.name ?? "");
@@ -646,7 +652,7 @@ export default function SettingsPage() {
                   >
                     {t("profile.cancel")}
                   </Button>
-                  <Button type="submit" disabled={profileLoading} className="h-11 flex-1 rounded-2xl font-black">
+                  <Button type="submit" disabled={profileLoading} className={editorSaveClass}>
                     {profileLoading ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -795,8 +801,8 @@ export default function SettingsPage() {
                 <div className="flex gap-2">
                   <Button
                     type="button"
-                    variant="secondary"
-                    className="h-12 flex-1 rounded-2xl font-black"
+                    variant="ghost"
+                    className={editorCancelClass}
                     disabled={passwordLoading}
                     onClick={() => {
                       setCurrentPassword("");
@@ -811,7 +817,7 @@ export default function SettingsPage() {
                   >
                     {t("password.cancel")}
                   </Button>
-                  <Button type="submit" disabled={passwordLoading} className="h-12 flex-1 rounded-2xl font-black">
+                  <Button type="submit" disabled={passwordLoading} className={editorSaveClass}>
                     {passwordLoading ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -936,14 +942,14 @@ export default function SettingsPage() {
                 <div className="flex gap-2">
                   <Button
                     type="button"
-                    variant="secondary"
-                    className="h-12 flex-1 rounded-2xl font-black"
+                    variant="ghost"
+                    className={editorCancelClass}
                     disabled={sqLoading}
                     onClick={closeSecurityQuestions}
                   >
                     {t("password.cancel")}
                   </Button>
-                  <Button type="submit" disabled={sqLoading} className="h-12 flex-1 rounded-2xl font-black">
+                  <Button type="submit" disabled={sqLoading} className={editorSaveClass}>
                     {sqLoading ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
