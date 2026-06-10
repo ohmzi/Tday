@@ -17,6 +17,14 @@ This document covers everything a developer needs to know before writing code, o
 
 ## Development Setup
 
+### Git Hooks (all platforms)
+
+```bash
+bash scripts/install-hooks.sh   # required, one-time after cloning
+```
+
+This installs the `commit-msg` hook that strips AI attribution trailers (see [Commit Messages](#commit-messages)). The hook works on both macOS (BSD userland) and Linux (GNU), and CI verifies it on macOS.
+
 ### Frontend (Vite SPA)
 
 ```bash
@@ -32,10 +40,6 @@ npm run dev              # http://localhost:5173 (Vite HMR)
 ```
 
 The Ktor backend requires a running PostgreSQL instance and applies Flyway migrations automatically on startup. Configure the connection via environment variables (see `.env.example`).
-
-```bash
-bash scripts/install-hooks.sh  # install git hooks (required, one-time)
-```
 
 ### Android (Compose)
 
