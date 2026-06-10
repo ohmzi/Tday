@@ -29,6 +29,13 @@ struct ManageMembersSheet: View {
         myRole.caseInsensitiveCompare("OWNER") == .orderedSame
     }
 
+    // Display name matches the screen title's capitalization (the stored list
+    // name may be lowercase).
+    private var displayListName: String {
+        guard let first = listName.first else { return listName }
+        return first.uppercased() + listName.dropFirst()
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             TdaySheetHeader(
@@ -40,7 +47,7 @@ struct ManageMembersSheet: View {
 
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 14) {
-                    TdaySheetSectionTitle(text: listName)
+                    TdaySheetSectionTitle(text: displayListName)
                     TdaySheetCard {
                         VStack(alignment: .leading, spacing: 0) {
                             if isLoading {
@@ -59,8 +66,8 @@ struct ManageMembersSheet: View {
                                 }
                             }
                         }
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 8)
+                        .padding(.horizontal, 18)
+                        .padding(.vertical, 10)
                     }
 
                     if let errorMessage {
@@ -106,8 +113,8 @@ struct ManageMembersSheet: View {
                                     }
                                 }
                             }
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 14)
+                            .padding(.horizontal, 18)
+                            .padding(.vertical, 18)
                         }
                     } else {
                         actionButton(
@@ -215,6 +222,10 @@ struct ManageMembersSheet: View {
         let label = Text(text)
             .font(.tdayRounded(size: 13, weight: .heavy))
             .foregroundStyle(selected ? colors.primary : colors.onSurfaceVariant)
+            .lineLimit(1)
+            // Never wrap the role label ("Viewer" → "Viewe\nr"); the member
+            // name column truncates instead.
+            .fixedSize(horizontal: true, vertical: false)
             .padding(.horizontal, 10)
             .padding(.vertical, 5)
             .background(

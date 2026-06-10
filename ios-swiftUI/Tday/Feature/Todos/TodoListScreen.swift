@@ -62,6 +62,7 @@ enum TodoTimelineMetrics {
     static let rootDockCollapseThreshold: CGFloat = 44
     static let topBarRowHeight: CGFloat = 56
     static let topBarButtonFrame: CGFloat = 56
+    static let topBarButtonSpacing: CGFloat = 8
     static let topBarButtonIconSize: CGFloat = 24
     static let expandedTitleHeight: CGFloat = 56
     static let expandedTitleLiftDistance: CGFloat = 14
@@ -2460,7 +2461,9 @@ struct TimelineTopBar: View {
     }
 
     private var trailingActionReservedWidth: CGFloat {
-        CGFloat(max(1, actions.count)) * TodoTimelineMetrics.topBarButtonFrame
+        let count = CGFloat(max(1, actions.count))
+        return count * TodoTimelineMetrics.topBarButtonFrame +
+            max(0, count - 1) * TodoTimelineMetrics.topBarButtonSpacing
     }
 
     var body: some View {
@@ -2472,7 +2475,9 @@ struct TimelineTopBar: View {
                     Color.clear
                         .frame(width: TodoTimelineMetrics.topBarButtonFrame, height: TodoTimelineMetrics.topBarButtonFrame)
                 } else {
-                    HStack(spacing: 0) {
+                    // Same gap as the web list header's action cluster (gap-2
+                    // between the circular buttons).
+                    HStack(spacing: TodoTimelineMetrics.topBarButtonSpacing) {
                         ForEach(actions.indices, id: \.self) { index in
                             let action = actions[index]
                             TimelineTopBarButton(
