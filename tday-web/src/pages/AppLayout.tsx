@@ -5,6 +5,7 @@ import CreateTaskProvider from "@/providers/CreateTaskProvider";
 import CreateFloaterProvider from "@/providers/CreateFloaterProvider";
 import ReleaseUpdateAnnouncer from "@/components/release/ReleaseUpdateAnnouncer";
 import NativeAppShell from "@/components/app/NativeAppShell";
+import RealtimeInvalidator from "@/lib/realtime";
 
 export default function AppLayout() {
   return (
@@ -12,6 +13,7 @@ export default function AppLayout() {
       <UserPreferencesProvider>
         <CreateTaskProvider>
           <CreateFloaterProvider>
+            <RealtimeInvalidator />
             <NativeAppShell>
               <div className="relative z-0 flex min-w-0 flex-1 flex-col overflow-hidden">
                 <ReleaseUpdateAnnouncer />

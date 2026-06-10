@@ -370,6 +370,11 @@ struct ListDTO: Codable, Equatable {
     let iconKey: String?
     let updatedAt: String?
     let createdAt: String?
+    // Sharing metadata; nil on responses from servers that predate sharing.
+    var myRole: String?
+    var isShared: Bool?
+    var memberCount: Int?
+    var ownerUsername: String?
 }
 
 struct FloaterListDTO: Codable, Equatable {
@@ -381,6 +386,75 @@ struct FloaterListDTO: Codable, Equatable {
     let userID: String?
     let updatedAt: String?
     let createdAt: String?
+    // Sharing metadata; nil on responses from servers that predate sharing.
+    var myRole: String?
+    var isShared: Bool?
+    var memberCount: Int?
+    var ownerUsername: String?
+}
+
+struct ListMemberDTO: Codable, Equatable, Identifiable {
+    let userId: String
+    let username: String
+    let name: String?
+    let role: String
+    let addedAt: String?
+
+    var id: String { userId }
+}
+
+struct ListMembersResponse: Codable {
+    let owner: ListMemberDTO
+    let members: [ListMemberDTO]
+
+    private enum CodingKeys: String, CodingKey {
+        case owner
+        case members
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        owner = try container.decode(ListMemberDTO.self, forKey: .owner)
+        members = try container.decodeIfPresent([ListMemberDTO].self, forKey: .members) ?? []
+    }
+}
+
+struct AddMemberRequest: Codable {
+    let username: String
+    let role: String
+}
+
+struct AddMemberResponse: Codable {
+    let message: String?
+    let member: ListMemberDTO?
+}
+
+struct UpdateMemberRoleRequest: Codable {
+    let userId: String
+    let role: String
+}
+
+struct RemoveMemberRequest: Codable {
+    let userId: String
+}
+
+struct UserSearchResultDTO: Codable, Equatable, Identifiable {
+    let id: String
+    let username: String
+    let name: String?
+}
+
+struct UserSearchResponse: Codable {
+    let users: [UserSearchResultDTO]
+
+    private enum CodingKeys: String, CodingKey {
+        case users
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        users = try container.decodeIfPresent([UserSearchResultDTO].self, forKey: .users) ?? []
+    }
 }
 
 struct CreateListResponse: Codable {

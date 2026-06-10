@@ -151,6 +151,37 @@ struct CachedListRecord: Identifiable, Equatable, Codable {
     let todoCount: Int
     let updatedAtEpochMs: Int64
     let createdAtEpochMs: Int64
+    // Optional so state persisted before sharing existed still decodes.
+    var myRole: String?
+    var isShared: Bool?
+    var memberCount: Int?
+    var ownerUsername: String?
+
+    init(
+        id: String,
+        name: String,
+        color: String?,
+        iconKey: String?,
+        todoCount: Int,
+        updatedAtEpochMs: Int64,
+        createdAtEpochMs: Int64,
+        myRole: String? = nil,
+        isShared: Bool? = nil,
+        memberCount: Int? = nil,
+        ownerUsername: String? = nil
+    ) {
+        self.id = id
+        self.name = name
+        self.color = color
+        self.iconKey = iconKey
+        self.todoCount = todoCount
+        self.updatedAtEpochMs = updatedAtEpochMs
+        self.createdAtEpochMs = createdAtEpochMs
+        self.myRole = myRole
+        self.isShared = isShared
+        self.memberCount = memberCount
+        self.ownerUsername = ownerUsername
+    }
 }
 
 struct CachedFloaterListRecord: Identifiable, Equatable, Codable {
@@ -161,6 +192,37 @@ struct CachedFloaterListRecord: Identifiable, Equatable, Codable {
     let todoCount: Int
     let updatedAtEpochMs: Int64
     let createdAtEpochMs: Int64
+    // Optional so state persisted before sharing existed still decodes.
+    var myRole: String?
+    var isShared: Bool?
+    var memberCount: Int?
+    var ownerUsername: String?
+
+    init(
+        id: String,
+        name: String,
+        color: String?,
+        iconKey: String?,
+        todoCount: Int,
+        updatedAtEpochMs: Int64,
+        createdAtEpochMs: Int64,
+        myRole: String? = nil,
+        isShared: Bool? = nil,
+        memberCount: Int? = nil,
+        ownerUsername: String? = nil
+    ) {
+        self.id = id
+        self.name = name
+        self.color = color
+        self.iconKey = iconKey
+        self.todoCount = todoCount
+        self.updatedAtEpochMs = updatedAtEpochMs
+        self.createdAtEpochMs = createdAtEpochMs
+        self.myRole = myRole
+        self.isShared = isShared
+        self.memberCount = memberCount
+        self.ownerUsername = ownerUsername
+    }
 }
 
 struct CachedCompletedRecord: Identifiable, Equatable, Codable {

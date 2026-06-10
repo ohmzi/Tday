@@ -34,6 +34,7 @@
 		2C1549AFC2F29218C879306C /* SwipeActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84798381A9E2DF3C9468ED8F /* SwipeActions.swift */; };
 		2D4CE01CFE08086ACC160F8B /* TdayAPIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78690CB92403D76DCA200972 /* TdayAPIService.swift */; };
 		2E1D50F9EEE6B8D7D9B14AEA /* TodoListScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62AD2C2DD2233FCBB4611E95 /* TodoListScreen.swift */; };
+		A1C0FFEE000000000000B001 /* ListShareText.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE000000000000F001 /* ListShareText.swift */; };
 		3172D88F15D3395465E578E3 /* TaskReminderScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D7ACBCBA57903A93BEC3BFA /* TaskReminderScheduler.swift */; };
 		384B88FF643D87A6157C76C2 /* Nunito.ttf in Resources */ = {isa = PBXBuildFile; fileRef = D9D2A99D6C098B63352D4FB8 /* Nunito.ttf */; };
 		3E0BE8F327DB1A2EE5B101C4 /* ReminderPreferenceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3407352DB3FED037D2A26BF /* ReminderPreferenceStore.swift */; };
@@ -102,6 +103,8 @@
 		DCD00FC940427B88E235F7F4 /* OfflineCacheManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85ADE7E6DE0AADEF0E503DE5 /* OfflineCacheManager.swift */; };
 		DEA51B1F722372A094C125F9 /* ListRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = D19AB4B0B909242B323D5ABF /* ListRepository.swift */; };
 		F1A2B3C4D5E6F708192A3B4D /* FloaterListRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A2B3C4D5E6F708192A3B4C /* FloaterListRepository.swift */; };
+		A1C0FFEE000000000000B002 /* ListShareRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE000000000000F002 /* ListShareRepository.swift */; };
+		A1C0FFEE000000000000B003 /* ManageMembersSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE000000000000F003 /* ManageMembersSheet.swift */; };
 		E1BD58F3802B8806874A2E29 /* AuthViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DABE0225668571D48D55B96 /* AuthViewModel.swift */; };
 		EF64B4D7E0FB06A86DA86E0C /* TaskFloatingActionButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DE4A047CF237AD9F605D02E /* TaskFloatingActionButton.swift */; };
 		F5D16EE508D6244152B8E4B2 /* ServerURLState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D24DBD8CA3EE648D4560B880 /* ServerURLState.swift */; };
@@ -180,6 +183,7 @@
 		6049166B683EE082F8C551DD /* ApiModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApiModels.swift; sourceTree = "<group>"; };
 		629820F1BA29236313992076 /* ApiModelContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApiModelContractTests.swift; sourceTree = "<group>"; };
 		62AD2C2DD2233FCBB4611E95 /* TodoListScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodoListScreen.swift; sourceTree = "<group>"; };
+		A1C0FFEE000000000000F001 /* ListShareText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListShareText.swift; sourceTree = "<group>"; };
 		6CF6FD5D2845A10D7052467D /* AppContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppContainer.swift; sourceTree = "<group>"; };
 		6D0FD6CA5EE999F99D54CF94 /* SyncAndRefreshUseCase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncAndRefreshUseCase.swift; sourceTree = "<group>"; };
 		70A4E591B572A2A9980EC6B7 /* TdayApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdayApp.swift; sourceTree = "<group>"; };
@@ -225,6 +229,8 @@
 		D0ACC8B538184310B385746A /* ServerConfigRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServerConfigRepository.swift; sourceTree = "<group>"; };
 		D19AB4B0B909242B323D5ABF /* ListRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListRepository.swift; sourceTree = "<group>"; };
 		F1A2B3C4D5E6F708192A3B4C /* FloaterListRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloaterListRepository.swift; sourceTree = "<group>"; };
+		A1C0FFEE000000000000F002 /* ListShareRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListShareRepository.swift; sourceTree = "<group>"; };
+		A1C0FFEE000000000000F003 /* ManageMembersSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManageMembersSheet.swift; sourceTree = "<group>"; };
 		D206496BC88FF6272CFC286C /* ServerURLPersistenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServerURLPersistenceTests.swift; sourceTree = "<group>"; };
 		D24DBD8CA3EE648D4560B880 /* ServerURLState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServerURLState.swift; sourceTree = "<group>"; };
 		D26B48A87B57A0417CC3F578 /* TdayTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TdayTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -288,6 +294,7 @@
 			children = (
 				D19AB4B0B909242B323D5ABF /* ListRepository.swift */,
 				F1A2B3C4D5E6F708192A3B4C /* FloaterListRepository.swift */,
+				A1C0FFEE000000000000F002 /* ListShareRepository.swift */,
 			);
 			path = List;
 			sourceTree = "<group>";
@@ -312,6 +319,8 @@
 		0D57A85AA8A54CBA3AB77925 /* Todos */ = {
 			isa = PBXGroup;
 			children = (
+				A1C0FFEE000000000000F001 /* ListShareText.swift */,
+				A1C0FFEE000000000000F003 /* ManageMembersSheet.swift */,
 				62AD2C2DD2233FCBB4611E95 /* TodoListScreen.swift */,
 				AF0DB445B9FEE9B047FBB708 /* TodoListViewModel.swift */,
 			);
@@ -866,6 +875,8 @@
 				9D9B4F301D7261C3F4F95B6D /* HomeViewModel.swift in Sources */,
 				DEA51B1F722372A094C125F9 /* ListRepository.swift in Sources */,
 				F1A2B3C4D5E6F708192A3B4D /* FloaterListRepository.swift in Sources */,
+				A1C0FFEE000000000000B002 /* ListShareRepository.swift in Sources */,
+				A1C0FFEE000000000000B003 /* ManageMembersSheet.swift in Sources */,
 				957E83469CA6C09174B1B374 /* LoginCredentialCoordinator.swift in Sources */,
 				C0DE000000000000000000A1 /* ForgotPasswordView.swift in Sources */,
 				C0DE000000000000000000B1 /* SecurityQuestionsGateView.swift in Sources */,
@@ -907,6 +918,7 @@
 				9F8E7D6C5B4A00000000B103 /* Bundle+Language.swift in Sources */,
 				9F8E7D6C5B4A00000000B104 /* Localization.swift in Sources */,
 				72304EA28CF49303A8CCB6B0 /* TodayTasksWidgetSnapshotStore.swift in Sources */,
+				A1C0FFEE000000000000B001 /* ListShareText.swift in Sources */,
 				2E1D50F9EEE6B8D7D9B14AEA /* TodoListScreen.swift in Sources */,
 				51A46F8E627C26BF34E91F7B /* TodoListViewModel.swift in Sources */,
 				C1B29C5E4D5D247E8D0B5C0C /* TodoRepository.swift in Sources */,

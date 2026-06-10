@@ -31,9 +31,14 @@ export default function ListDropdownMenu({
   const setSelectedList = setListID ?? (() => {});
 
   const filteredLists = useMemo(() => {
-    if (!search.trim()) return Object.entries(listMetaData);
+    // Viewers can't create or move tasks into a shared list, so those lists
+    // are not offered as targets.
+    const writableLists = Object.entries(listMetaData).filter(
+      ([, value]) => value.myRole !== "VIEWER",
+    );
+    if (!search.trim()) return writableLists;
     const lowerSearch = search.toLowerCase();
-    return Object.entries(listMetaData).filter(([, value]) =>
+    return writableLists.filter(([, value]) =>
       value.name.toLowerCase().includes(lowerSearch),
     );
   }, [search, listMetaData]);

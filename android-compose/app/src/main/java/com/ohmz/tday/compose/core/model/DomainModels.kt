@@ -157,7 +157,18 @@ data class ListSummary(
     val todoCount: Int,
     val updatedAt: Instant? = null,
     val createdAt: Instant? = null,
-)
+    // Sharing metadata; legacy servers omit it, in which case the user owns the list.
+    val myRole: String = "OWNER",
+    val isShared: Boolean = false,
+    val memberCount: Int = 0,
+    val ownerUsername: String? = null,
+) {
+    val isViewer: Boolean
+        get() = myRole.equals("VIEWER", ignoreCase = true)
+
+    val isOwner: Boolean
+        get() = myRole.equals("OWNER", ignoreCase = true)
+}
 
 @Immutable
 data class DashboardSummary(

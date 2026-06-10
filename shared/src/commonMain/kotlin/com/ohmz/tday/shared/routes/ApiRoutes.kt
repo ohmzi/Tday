@@ -28,6 +28,9 @@ object ApiRoutes {
 
     object List {
         const val Base = "$ApiPrefix/list"
+
+        fun members(listId: String) = "$Base/$listId/members"
+        fun leave(listId: String) = "$Base/$listId/leave"
     }
 
     object Floater {
@@ -40,6 +43,9 @@ object ApiRoutes {
 
     object FloaterList {
         const val Base = "$ApiPrefix/floaterList"
+
+        fun members(listId: String) = "$Base/$listId/members"
+        fun leave(listId: String) = "$Base/$listId/leave"
     }
 
     object Completed {
@@ -58,6 +64,7 @@ object ApiRoutes {
         const val Base = "$ApiPrefix/user"
         const val Profile = "$Base/profile"
         const val ChangePassword = "$Base/change-password"
+        const val Search = "$Base/search"
     }
 
     object Timezone {

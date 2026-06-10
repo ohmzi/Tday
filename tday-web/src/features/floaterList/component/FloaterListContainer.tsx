@@ -1,9 +1,11 @@
 import { useMemo, useState } from "react";
-import { Pencil, Search, X } from "lucide-react";
+import { Pencil, Search, Users, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import ManageMembersSheet from "@/features/list/component/ManageMembersSheet";
 import NativePageTitle from "@/components/app/NativePageTitle";
 import ScreenWatermark from "@/components/app/ScreenWatermark";
 import MobileSearchHeader from "@/components/ui/MobileSearchHeader";
+import ShareListButton from "@/components/ui/ShareListButton";
 import { Button } from "@/components/ui/button";
 import { getListIcon } from "@/lib/listIcons";
 import { listColorAccentColors, nativeScreenAccentColors } from "@/components/app/nativeScreenTheme";
@@ -20,6 +22,7 @@ export default function FloaterListContainer({ id }: { id: string }) {
   const { floaterList, floaterListTodos, floaterListLoading } = useFloaterList({ id });
   const [searchQuery, setSearchQuery] = useState("");
   const [editListOpen, setEditListOpen] = useState(false);
+  const [membersOpen, setMembersOpen] = useState(false);
 
   const listMeta = floaterListMetaData[id] ?? floaterList;
   const listName = listMeta?.name?.trim() || "";
@@ -36,6 +39,10 @@ export default function FloaterListContainer({ id }: { id: string }) {
         iconKey: listMeta.iconKey,
       }
     : null;
+  const myRole = listMeta && "myRole" in listMeta ? (listMeta.myRole ?? "OWNER") : "OWNER";
+  const isViewer = myRole === "VIEWER";
+  const sharedByLabel =
+    listMeta && "ownerUsername" in listMeta ? listMeta.ownerUsername : null;
 
   const filteredFloaters = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -66,23 +73,49 @@ export default function FloaterListContainer({ id }: { id: string }) {
       />
 
       <div className="flex items-start justify-between gap-3">
-        <NativePageTitle
-          title={listName}
-          accentColor={listAccent}
-          iconNode={<FloaterListDot id={id} className="h-7 w-7 shrink-0" />}
-          className="min-w-0 flex-1"
-        />
+        <div className="min-w-0 flex-1">
+          <NativePageTitle
+            title={listName}
+            accentColor={listAccent}
+            iconNode={<FloaterListDot id={id} className="h-7 w-7 shrink-0" />}
+          />
+          {sharedByLabel ? (
+            <p className="mt-1 flex items-center gap-1.5 px-1 text-xs font-black text-muted-foreground">
+              <Users className="h-3.5 w-3.5" />
+              {appDict("sharedBy", { name: sharedByLabel })}
+            </p>
+          ) : null}
+        </div>
         {editableList ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="mt-4 h-12 w-12 shrink-0 rounded-full border border-white/70 bg-card/90 text-foreground shadow-[0_12px_28px_-22px_hsl(var(--shadow)/0.55)] hover:bg-card dark:border-white/10"
-            onClick={() => setEditListOpen(true)}
-            aria-label={`${appDict("editFloaterList")} ${listName}`}
-          >
-            <Pencil className="h-5 w-5" />
-          </Button>
+          <div className="flex shrink-0 items-center gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="mt-4 h-12 w-12 shrink-0 rounded-full border border-white/70 bg-card/90 text-foreground shadow-[0_12px_28px_-22px_hsl(var(--shadow)/0.55)] hover:bg-card dark:border-white/10"
+              onClick={() => setMembersOpen(true)}
+              aria-label={appDict("members")}
+            >
+              <Users className="h-5 w-5" />
+            </Button>
+            <ShareListButton
+              listName={listName}
+              todos={floaterListTodos}
+              className="mt-4 h-12 w-12 shrink-0 rounded-full border border-white/70 bg-card/90 text-foreground shadow-[0_12px_28px_-22px_hsl(var(--shadow)/0.55)] hover:bg-card dark:border-white/10"
+            />
+            {myRole === "OWNER" ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="mt-4 h-12 w-12 shrink-0 rounded-full border border-white/70 bg-card/90 text-foreground shadow-[0_12px_28px_-22px_hsl(var(--shadow)/0.55)] hover:bg-card dark:border-white/10"
+                onClick={() => setEditListOpen(true)}
+                aria-label={`${appDict("editFloaterList")} ${listName}`}
+              >
+                <Pencil className="h-5 w-5" />
+              </Button>
+            ) : null}
+          </div>
         ) : null}
       </div>
 
@@ -131,7 +164,7 @@ export default function FloaterListContainer({ id }: { id: string }) {
               <h2 className="px-1 text-[1.75rem] font-black leading-8 text-foreground">
                 {appDict(section.labelKey)}
               </h2>
-              <FloaterGroup floaters={section.items} />
+              <FloaterGroup floaters={section.items} readOnly={isViewer} />
             </section>
           ))}
         </div>
@@ -141,6 +174,14 @@ export default function FloaterListContainer({ id }: { id: string }) {
         open={editListOpen}
         onOpenChange={setEditListOpen}
         list={editableList}
+      />
+      <ManageMembersSheet
+        open={membersOpen}
+        onOpenChange={setMembersOpen}
+        listId={id}
+        listType="floaterList"
+        listName={listName}
+        myRole={myRole}
       />
     </div>
   );

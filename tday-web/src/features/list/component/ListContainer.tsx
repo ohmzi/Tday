@@ -19,10 +19,12 @@ import { listColorAccentColors, nativeScreenAccentColors } from "@/components/ap
 import NativeAppBrandButton from "@/components/app/NativeAppBrandButton";
 import ListDot from "@/components/ListDot";
 import ListFormSheet from "@/components/Sidebar/List/ListFormSheet";
+import ManageMembersSheet from "@/features/list/component/ManageMembersSheet";
+import ShareListButton from "@/components/ui/ShareListButton";
 import { Button } from "@/components/ui/button";
 import { useLocale } from "@/lib/navigation";
 import { useUserTimezone } from "@/features/user/query/get-timezone";
-import { Pencil, Search, X } from "lucide-react";
+import { Pencil, Search, Users, X } from "lucide-react";
 
 const ListContainer = ({ id }: { id: string }) => {
     const locale = useLocale();
@@ -32,6 +34,7 @@ const ListContainer = ({ id }: { id: string }) => {
     const { listTodos, listTodosLoading } = useList({ id });
     const [searchQuery, setSearchQuery] = useState("");
     const [editListOpen, setEditListOpen] = useState(false);
+    const [membersOpen, setMembersOpen] = useState(false);
     const [earlierExpanded, setEarlierExpanded] = useState(false);
 
     const filteredTodos = useMemo(() => {
@@ -73,6 +76,9 @@ const ListContainer = ({ id }: { id: string }) => {
             iconKey: listMetaData[id].iconKey,
         }
         : null;
+    const myRole = listMetaData[id]?.myRole ?? "OWNER";
+    const isViewer = myRole === "VIEWER";
+    const sharedByLabel = listMetaData[id]?.ownerUsername;
 
     return (
         <TodoMutationProvider
@@ -82,6 +88,7 @@ const ListContainer = ({ id }: { id: string }) => {
             useEditTodoInstance={useEditListTodoInstance}
             usePrioritizeTodo={usePrioritizeListTodo}
             useReorderTodo={useReorderListTodo}
+            readOnly={isViewer}
         >
             <div className="mb-20">
                 <ScreenWatermark icon={getListIcon(listMetaData[id]?.iconKey)} color={listAccent} />
@@ -91,23 +98,49 @@ const ListContainer = ({ id }: { id: string }) => {
                 </header>
 
                 <div className="flex items-start justify-between gap-3">
-                    <NativePageTitle
-                        title={listName}
-                        accentColor={listAccent}
-                        iconNode={<ListDot id={id} className="h-7 w-7 shrink-0" />}
-                        className="min-w-0 flex-1"
-                    />
+                    <div className="min-w-0 flex-1">
+                        <NativePageTitle
+                            title={listName}
+                            accentColor={listAccent}
+                            iconNode={<ListDot id={id} className="h-7 w-7 shrink-0" />}
+                        />
+                        {sharedByLabel ? (
+                            <p className="mt-1 flex items-center gap-1.5 px-1 text-xs font-black text-muted-foreground">
+                                <Users className="h-3.5 w-3.5" />
+                                {appDict("sharedBy", { name: sharedByLabel })}
+                            </p>
+                        ) : null}
+                    </div>
                     {editableList ? (
-                        <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="mt-4 h-14 w-14 shrink-0 rounded-full border border-white/70 bg-card/90 text-foreground shadow-[0_12px_28px_-22px_hsl(var(--shadow)/0.55)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-card dark:border-white/10"
-                            onClick={() => setEditListOpen(true)}
-                            aria-label={`Edit ${listName || "list"}`}
-                        >
-                            <Pencil className="h-5 w-5" />
-                        </Button>
+                        <div className="flex shrink-0 items-center gap-2">
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="mt-4 h-14 w-14 shrink-0 rounded-full border border-white/70 bg-card/90 text-foreground shadow-[0_12px_28px_-22px_hsl(var(--shadow)/0.55)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-card dark:border-white/10"
+                                onClick={() => setMembersOpen(true)}
+                                aria-label={appDict("members")}
+                            >
+                                <Users className="h-5 w-5" />
+                            </Button>
+                            <ShareListButton
+                                listName={listName}
+                                todos={listTodos}
+                                className="mt-4 h-14 w-14 shrink-0 rounded-full border border-white/70 bg-card/90 text-foreground shadow-[0_12px_28px_-22px_hsl(var(--shadow)/0.55)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-card dark:border-white/10"
+                            />
+                            {myRole === "OWNER" ? (
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="mt-4 h-14 w-14 shrink-0 rounded-full border border-white/70 bg-card/90 text-foreground shadow-[0_12px_28px_-22px_hsl(var(--shadow)/0.55)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-card dark:border-white/10"
+                                    onClick={() => setEditListOpen(true)}
+                                    aria-label={`Edit ${listName || "list"}`}
+                                >
+                                    <Pencil className="h-5 w-5" />
+                                </Button>
+                            ) : null}
+                        </div>
                     ) : null}
                 </div>
 
@@ -164,6 +197,14 @@ const ListContainer = ({ id }: { id: string }) => {
                 open={editListOpen}
                 onOpenChange={setEditListOpen}
                 list={editableList}
+            />
+            <ManageMembersSheet
+                open={membersOpen}
+                onOpenChange={setMembersOpen}
+                listId={id}
+                listType="list"
+                listName={listName}
+                myRole={myRole}
             />
         </TodoMutationProvider>
     );

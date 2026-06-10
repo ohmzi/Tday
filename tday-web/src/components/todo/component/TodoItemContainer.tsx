@@ -45,7 +45,7 @@ export const TodoItemCard = ({
   setDragNodeRef,
 }: TodoItemCardProps) => {
   const { listMetaData } = useListMetaData();
-  const { useCompleteTodo, useDeleteTodo } = useTodoMutation();
+  const { useCompleteTodo, useDeleteTodo, readOnly = false } = useTodoMutation();
   const { completeMutateFn } = useCompleteTodo();
   const { deleteMutateFn } = useDeleteTodo();
   const locale = useLocale();
@@ -81,6 +81,7 @@ export const TodoItemCard = ({
   const closeSwipe = () => setSwipeX(0);
 
   const handleTouchStart = (e: React.TouchEvent) => {
+    if (readOnly) return;
     const t = e.touches[0];
     swipeTouch.current = { x: t.clientX, y: t.clientY, startX: swipeX, axis: null };
     setSwiping(true);
@@ -119,6 +120,7 @@ export const TodoItemCard = ({
   };
 
   const handleToggleComplete = () => {
+    if (readOnly) return;
     if (completed) {
       completeMutateFn(todoItem);
       return;
@@ -232,7 +234,9 @@ export const TodoItemCard = ({
 
         {/* Foreground row — slides left on swipe to reveal the actions. */}
         <div
-          onDoubleClick={() => setDisplayForm(true)}
+          onDoubleClick={() => {
+            if (!readOnly) setDisplayForm(true);
+          }}
           onMouseOver={() => setShowHandle(true)}
           onMouseOut={() => setShowHandle(false)}
           onClick={() => {
@@ -338,19 +342,21 @@ export const TodoItemCard = ({
           </div>
 
           {/* Desktop hover edit/delete actions, overlaid at the right edge. */}
-          <div
-            className={clsx(
-              "absolute right-0 top-1/2 hidden -translate-y-1/2 transition-opacity sm:block",
-              showHandle ? "sm:opacity-100" : "sm:pointer-events-none sm:opacity-0",
-            )}
-          >
-            <TaskActionButtons
-              onEdit={() => setDisplayForm(true)}
-              onDelete={() => deleteMutateFn(todoItem)}
-              editLabel="Edit task"
-              deleteLabel="Delete task"
-            />
-          </div>
+          {!readOnly && (
+            <div
+              className={clsx(
+                "absolute right-0 top-1/2 hidden -translate-y-1/2 transition-opacity sm:block",
+                showHandle ? "sm:opacity-100" : "sm:pointer-events-none sm:opacity-0",
+              )}
+            >
+              <TaskActionButtons
+                onEdit={() => setDisplayForm(true)}
+                onDelete={() => deleteMutateFn(todoItem)}
+                editLabel="Edit task"
+                deleteLabel="Delete task"
+              />
+            </div>
+          )}
         </div>
         </div>
       </div>

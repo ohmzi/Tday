@@ -17,9 +17,11 @@ import com.ohmz.tday.security.SecurityQuestions
 import com.ohmz.tday.security.SessionControl
 import com.ohmz.tday.security.issueSessionCookie
 import com.ohmz.tday.services.CreateApiKeyResponse
+import com.ohmz.tday.services.ListShareService
 import com.ohmz.tday.services.SecurityQuestionService
 import com.ohmz.tday.services.UserApiKeyService
 import com.ohmz.tday.services.UserService
+import com.ohmz.tday.shared.model.UserSearchResponse
 import io.ktor.server.request.receive
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.delete
@@ -37,12 +39,22 @@ fun Route.userRoutes() {
     val userService by inject<UserService>()
     val userApiKeyService by inject<UserApiKeyService>()
     val securityQuestionService by inject<SecurityQuestionService>()
+    val listShareService by inject<ListShareService>()
 
     route("/user") {
         get {
             call.withAuth { user ->
                 userService.getUser(user.id)
                     .map { mapOf("message" to "user found", "queriedUser" to it) }
+            }
+        }
+
+        // Username typeahead for the share-list member picker.
+        get("/search") {
+            call.withAuth { user ->
+                val query = call.request.queryParameters["q"].orEmpty()
+                listShareService.searchUsers(user.id, query)
+                    .map { UserSearchResponse(users = it) }
             }
         }
 

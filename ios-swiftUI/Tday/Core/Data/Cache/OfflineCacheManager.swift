@@ -52,7 +52,11 @@ final class OfflineCacheManager {
                 iconKey: $0.iconKey,
                 todoCount: $0.todoCount,
                 updatedAtEpochMs: $0.updatedAtEpochMs,
-                createdAtEpochMs: $0.createdAtEpochMs ?? 0
+                createdAtEpochMs: $0.createdAtEpochMs ?? 0,
+                myRole: $0.myRole,
+                isShared: $0.isShared,
+                memberCount: $0.memberCount,
+                ownerUsername: $0.ownerUsername
             )
         }
 
@@ -64,7 +68,11 @@ final class OfflineCacheManager {
                 iconKey: $0.iconKey,
                 todoCount: $0.todoCount,
                 updatedAtEpochMs: $0.updatedAtEpochMs,
-                createdAtEpochMs: $0.createdAtEpochMs ?? 0
+                createdAtEpochMs: $0.createdAtEpochMs ?? 0,
+                myRole: $0.myRole,
+                isShared: $0.isShared,
+                memberCount: $0.memberCount,
+                ownerUsername: $0.ownerUsername
             )
         }
 

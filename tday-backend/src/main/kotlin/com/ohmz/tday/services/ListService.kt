@@ -1,17 +1,22 @@
 package com.ohmz.tday.services
 
 import arrow.core.Either
+import arrow.core.left
 import arrow.core.right
 import arrow.core.raise.either
 import com.ohmz.tday.db.tables.CompletedTodos
 import com.ohmz.tday.db.enums.ListColor
+import com.ohmz.tday.db.tables.ListShares
 import com.ohmz.tday.db.tables.Lists
 import com.ohmz.tday.db.tables.TodoInstances
 import com.ohmz.tday.db.tables.Todos
+import com.ohmz.tday.db.tables.Users
 import com.ohmz.tday.db.util.CuidGenerator
 import com.ohmz.tday.domain.AppError
+import com.ohmz.tday.domain.DomainEvent
 import com.ohmz.tday.models.response.ListResponse
 import com.ohmz.tday.models.response.ListTodoResponse
+import com.ohmz.tday.shared.model.ShareRole
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import kotlinx.coroutines.Dispatchers
@@ -34,28 +39,88 @@ interface ListService {
     }
 }
 
-class ListServiceImpl(private val cache: CacheService) : ListService {
+class ListServiceImpl(
+    private val cache: CacheService,
+    private val shareService: ListShareService,
+    private val publisher: RealtimePublisher,
+) : ListService {
     override suspend fun getAll(userId: String): Either<AppError, List<ListResponse>> {
         val lists = newSuspendedTransaction(Dispatchers.IO) {
-            Lists.selectAll().where { Lists.userID eq userId }
-                .orderBy(Lists.createdAt, SortOrder.DESC)
-                .map { it.toListResponse() }
+            // Lists shared with me, keyed by list id → my role.
+            val myShareRoles = ListShares.selectAll().where { ListShares.userID eq userId }
+                .associate { it[ListShares.listID] to it[ListShares.role] }
+
+            val rows = Lists.selectAll().where {
+                if (myShareRoles.isEmpty()) {
+                    Lists.userID eq userId
+                } else {
+                    (Lists.userID eq userId) or (Lists.id inList myShareRoles.keys.toList())
+                }
+            }.orderBy(Lists.createdAt, SortOrder.DESC).toList()
+
+            val listIds = rows.map { it[Lists.id] }
+            val memberCounts: Map<String, Int> = if (listIds.isEmpty()) {
+                emptyMap()
+            } else {
+                ListShares.selectAll().where { ListShares.listID inList listIds }
+                    .groupingBy { it[ListShares.listID] }
+                    .eachCount()
+            }
+            val ownerIds = rows.map { it[Lists.userID] }.filter { it != userId }.distinct()
+            val ownerUsernames: Map<String, String> = if (ownerIds.isEmpty()) {
+                emptyMap()
+            } else {
+                Users.selectAll().where { Users.id inList ownerIds }
+                    .associate { it[Users.id] to it[Users.username] }
+            }
+
+            rows.map { row ->
+                val listId = row[Lists.id]
+                val ownerId = row[Lists.userID]
+                val isOwner = ownerId == userId
+                val memberCount = memberCounts[listId] ?: 0
+                row.toListResponse().copy(
+                    myRole = if (isOwner) ShareRole.OWNER.name else (myShareRoles[listId] ?: ShareRole.VIEWER.name),
+                    isShared = memberCount > 0,
+                    memberCount = memberCount,
+                    ownerUsername = if (isOwner) null else ownerUsernames[ownerId],
+                )
+            }
         }
         return lists.right()
     }
 
     override suspend fun getById(userId: String, listId: String): Either<AppError, ListResponse> {
+        val role = shareService.accessFor(userId, listId, ListType.SCHEDULED)
+            ?: return AppError.NotFound("list not found").left()
         val list = newSuspendedTransaction(Dispatchers.IO) {
-            Lists.selectAll().where { (Lists.id eq listId) and (Lists.userID eq userId) }
-                .firstOrNull()?.toListResponse()
+            val row = Lists.selectAll().where { Lists.id eq listId }.firstOrNull()
+                ?: return@newSuspendedTransaction null
+            val memberCount = ListShares.selectAll().where { ListShares.listID eq listId }.count().toInt()
+            val ownerId = row[Lists.userID]
+            val ownerUsername = if (ownerId == userId) {
+                null
+            } else {
+                Users.selectAll().where { Users.id eq ownerId }.firstOrNull()?.get(Users.username)
+            }
+            row.toListResponse().copy(
+                myRole = role.name,
+                isShared = memberCount > 0,
+                memberCount = memberCount,
+                ownerUsername = ownerUsername,
+            )
         }
         return list?.right() ?: Either.Left(AppError.NotFound("list not found"))
     }
 
     override suspend fun getTodosForList(userId: String, listId: String): Either<AppError, List<ListTodoResponse>> {
+        shareService.accessFor(userId, listId, ListType.SCHEDULED)
+            ?: return AppError.NotFound("list not found").left()
+        // Access verified above; members see every collaborator's todos in the
+        // list, so this query is deliberately not filtered by userID.
         val todos = newSuspendedTransaction(Dispatchers.IO) {
             Todos.selectAll().where {
-                (Todos.userID eq userId) and (Todos.listID eq listId) and (Todos.completed eq false)
+                (Todos.listID eq listId) and (Todos.completed eq false)
             }.orderBy(Todos.order, SortOrder.ASC).map { row ->
                 ListTodoResponse(
                     id = row[Todos.id],
@@ -85,13 +150,20 @@ class ListServiceImpl(private val cache: CacheService) : ListService {
             }
         }
         cache.invalidateListCaches(userId)
+        publisher.publishToCollaborators(userId, DomainEvent.ListChanged(id))
         return ListResponse(
             id = id, name = name, color = color, iconKey = iconKey,
             userID = userId, createdAt = now.toString(), updatedAt = now.toString(),
+            myRole = ShareRole.OWNER.name,
         ).right()
     }
 
     override suspend fun update(userId: String, id: String, name: String?, color: String?, iconKey: String?): Either<AppError, Unit> {
+        when (shareService.accessFor(userId, id, ListType.SCHEDULED)) {
+            null -> return AppError.NotFound("list not found").left()
+            ShareRole.OWNER -> Unit
+            else -> return AppError.Forbidden("only the list owner can update the list").left()
+        }
         newSuspendedTransaction(Dispatchers.IO) {
             Lists.update({ (Lists.id eq id) and (Lists.userID eq userId) }) {
                 name?.let { n -> it[Lists.name] = n }
@@ -101,6 +173,7 @@ class ListServiceImpl(private val cache: CacheService) : ListService {
             }
         }
         cache.invalidateListCaches(userId)
+        publisher.publishToCollaborators(userId, DomainEvent.ListChanged(id))
         return Unit.right()
     }
 
@@ -113,7 +186,16 @@ class ListServiceImpl(private val cache: CacheService) : ListService {
             return emptyList<String>().right()
         }
 
+        // Snapshot the fanout set before the share rows cascade away with the
+        // lists, so members still hear about the deletion.
+        val recipients = buildSet {
+            add(userId)
+            addAll(shareService.collaboratorIdsFor(userId))
+        }
+
         val deletedIds = newSuspendedTransaction(Dispatchers.IO) {
+            // Owner-only: deletion (and its cascades below) covers every
+            // member's todos, so a non-owner must never get this far.
             val existingIds = Lists
                 .select(Lists.id)
                 .where { (Lists.userID eq userId) and (Lists.id inList normalizedIds) }
@@ -123,15 +205,17 @@ class ListServiceImpl(private val cache: CacheService) : ListService {
                 return@newSuspendedTransaction emptyList()
             }
 
+            // List-scoped cascades are intentionally NOT filtered by userID:
+            // shared lists hold todos and completion history from every member,
+            // and deleting the list removes all of it.
             val todoIds = Todos
                 .select(Todos.id)
-                .where { (Todos.userID eq userId) and (Todos.listID inList existingIds) }
+                .where { Todos.listID inList existingIds }
                 .map { it[Todos.id] }
             if (todoIds.isNotEmpty()) {
                 CompletedTodos.deleteWhere {
                     SqlExpressionBuilder.run {
-                        (CompletedTodos.userID eq userId) and
-                            ((CompletedTodos.listID inList existingIds) or (CompletedTodos.originalTodoID inList todoIds))
+                        (CompletedTodos.listID inList existingIds) or (CompletedTodos.originalTodoID inList todoIds)
                     }
                 }
                 TodoInstances.deleteWhere {
@@ -141,17 +225,22 @@ class ListServiceImpl(private val cache: CacheService) : ListService {
                 }
                 Todos.deleteWhere {
                     SqlExpressionBuilder.run {
-                        (Todos.userID eq userId) and (Todos.id inList todoIds)
+                        Todos.id inList todoIds
                     }
                 }
             } else {
                 CompletedTodos.deleteWhere {
                     SqlExpressionBuilder.run {
-                        (CompletedTodos.userID eq userId) and (CompletedTodos.listID inList existingIds)
+                        CompletedTodos.listID inList existingIds
                     }
                 }
             }
 
+            ListShares.deleteWhere {
+                SqlExpressionBuilder.run {
+                    ListShares.listID inList existingIds
+                }
+            }
             Lists.deleteWhere {
                 SqlExpressionBuilder.run {
                     (Lists.userID eq userId) and (Lists.id inList existingIds)
@@ -164,6 +253,7 @@ class ListServiceImpl(private val cache: CacheService) : ListService {
             cache.invalidateListCaches(userId)
             cache.invalidateTodoCaches(userId)
             cache.invalidateCompletedCaches(userId)
+            publisher.publishTo(userId, recipients, DomainEvent.ListChanged())
         }
 
         return deletedIds.right()

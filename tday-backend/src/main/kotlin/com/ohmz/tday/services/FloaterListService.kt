@@ -1,16 +1,21 @@
 package com.ohmz.tday.services
 
 import arrow.core.Either
+import arrow.core.left
 import arrow.core.right
 import arrow.core.raise.either
 import com.ohmz.tday.db.enums.ListColor
 import com.ohmz.tday.db.tables.CompletedFloaters
+import com.ohmz.tday.db.tables.FloaterListShares
 import com.ohmz.tday.db.tables.FloaterLists
 import com.ohmz.tday.db.tables.Floaters
+import com.ohmz.tday.db.tables.Users
 import com.ohmz.tday.db.util.CuidGenerator
 import com.ohmz.tday.domain.AppError
+import com.ohmz.tday.domain.DomainEvent
 import com.ohmz.tday.models.response.FloaterListResponse
 import com.ohmz.tday.models.response.FloaterListTodoResponse
+import com.ohmz.tday.shared.model.ShareRole
 import kotlinx.coroutines.Dispatchers
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
@@ -33,41 +38,103 @@ interface FloaterListService {
     }
 }
 
-class FloaterListServiceImpl(private val cache: CacheService) : FloaterListService {
+class FloaterListServiceImpl(
+    private val cache: CacheService,
+    private val shareService: ListShareService,
+    private val publisher: RealtimePublisher,
+) : FloaterListService {
     override suspend fun getAll(userId: String): Either<AppError, List<FloaterListResponse>> {
         val lists = newSuspendedTransaction(Dispatchers.IO) {
-            val counts = Floaters
-                .select(Floaters.listID)
-                .where { (Floaters.userID eq userId) and (Floaters.completed eq false) }
-                .mapNotNull { it[Floaters.listID] }
-                .groupingBy { it }
-                .eachCount()
+            // Lists shared with me, keyed by list id → my role.
+            val myShareRoles = FloaterListShares.selectAll().where { FloaterListShares.userID eq userId }
+                .associate { it[FloaterListShares.listID] to it[FloaterListShares.role] }
 
-            FloaterLists.selectAll().where { FloaterLists.userID eq userId }
-                .orderBy(FloaterLists.createdAt, SortOrder.DESC)
-                .map { it.toFloaterListResponse(counts[it[FloaterLists.id]] ?: 0) }
+            val rows = FloaterLists.selectAll().where {
+                if (myShareRoles.isEmpty()) {
+                    FloaterLists.userID eq userId
+                } else {
+                    (FloaterLists.userID eq userId) or (FloaterLists.id inList myShareRoles.keys.toList())
+                }
+            }.orderBy(FloaterLists.createdAt, SortOrder.DESC).toList()
+
+            val listIds = rows.map { it[FloaterLists.id] }
+            // Counts cover every member's floaters in shared lists, so no userID
+            // filter — the visible-list filter is the access boundary.
+            val counts: Map<String, Int> = if (listIds.isEmpty()) {
+                emptyMap()
+            } else {
+                Floaters
+                    .select(Floaters.listID)
+                    .where { (Floaters.listID inList listIds) and (Floaters.completed eq false) }
+                    .mapNotNull { it[Floaters.listID] }
+                    .groupingBy { it }
+                    .eachCount()
+            }
+            val memberCounts: Map<String, Int> = if (listIds.isEmpty()) {
+                emptyMap()
+            } else {
+                FloaterListShares.selectAll().where { FloaterListShares.listID inList listIds }
+                    .groupingBy { it[FloaterListShares.listID] }
+                    .eachCount()
+            }
+            val ownerIds = rows.map { it[FloaterLists.userID] }.filter { it != userId }.distinct()
+            val ownerUsernames: Map<String, String> = if (ownerIds.isEmpty()) {
+                emptyMap()
+            } else {
+                Users.selectAll().where { Users.id inList ownerIds }
+                    .associate { it[Users.id] to it[Users.username] }
+            }
+
+            rows.map { row ->
+                val listId = row[FloaterLists.id]
+                val ownerId = row[FloaterLists.userID]
+                val isOwner = ownerId == userId
+                val memberCount = memberCounts[listId] ?: 0
+                row.toFloaterListResponse(counts[listId] ?: 0).copy(
+                    myRole = if (isOwner) ShareRole.OWNER.name else (myShareRoles[listId] ?: ShareRole.VIEWER.name),
+                    isShared = memberCount > 0,
+                    memberCount = memberCount,
+                    ownerUsername = if (isOwner) null else ownerUsernames[ownerId],
+                )
+            }
         }
         return lists.right()
     }
 
     override suspend fun getById(userId: String, listId: String): Either<AppError, FloaterListResponse> {
+        val role = shareService.accessFor(userId, listId, ListType.FLOATER)
+            ?: return AppError.NotFound("floater list not found").left()
         val list = newSuspendedTransaction(Dispatchers.IO) {
+            val row = FloaterLists.selectAll().where { FloaterLists.id eq listId }.firstOrNull()
+                ?: return@newSuspendedTransaction null
             val count = Floaters.selectAll().where {
-                (Floaters.userID eq userId) and
-                    (Floaters.listID eq listId) and
-                    (Floaters.completed eq false)
+                (Floaters.listID eq listId) and (Floaters.completed eq false)
             }.count().toInt()
-
-            FloaterLists.selectAll().where { (FloaterLists.id eq listId) and (FloaterLists.userID eq userId) }
-                .firstOrNull()?.toFloaterListResponse(count)
+            val memberCount = FloaterListShares.selectAll().where { FloaterListShares.listID eq listId }.count().toInt()
+            val ownerId = row[FloaterLists.userID]
+            val ownerUsername = if (ownerId == userId) {
+                null
+            } else {
+                Users.selectAll().where { Users.id eq ownerId }.firstOrNull()?.get(Users.username)
+            }
+            row.toFloaterListResponse(count).copy(
+                myRole = role.name,
+                isShared = memberCount > 0,
+                memberCount = memberCount,
+                ownerUsername = ownerUsername,
+            )
         }
         return list?.right() ?: Either.Left(AppError.NotFound("floater list not found"))
     }
 
     override suspend fun getFloatersForList(userId: String, listId: String): Either<AppError, List<FloaterListTodoResponse>> {
+        shareService.accessFor(userId, listId, ListType.FLOATER)
+            ?: return AppError.NotFound("floater list not found").left()
+        // Access verified above; members see every collaborator's floaters in
+        // the list, so this query is deliberately not filtered by userID.
         val floaters = newSuspendedTransaction(Dispatchers.IO) {
             Floaters.selectAll().where {
-                (Floaters.userID eq userId) and (Floaters.listID eq listId) and (Floaters.completed eq false)
+                (Floaters.listID eq listId) and (Floaters.completed eq false)
             }.orderBy(Floaters.priority to SortOrder.DESC, Floaters.pinned to SortOrder.DESC, Floaters.order to SortOrder.ASC)
                 .map { row ->
                     FloaterListTodoResponse(
@@ -97,6 +164,7 @@ class FloaterListServiceImpl(private val cache: CacheService) : FloaterListServi
             }
         }
         cache.invalidateFloaterListCaches(userId)
+        publisher.publishToCollaborators(userId, DomainEvent.FloaterListChanged(id))
         return FloaterListResponse(
             id = id,
             name = name,
@@ -105,10 +173,16 @@ class FloaterListServiceImpl(private val cache: CacheService) : FloaterListServi
             userID = userId,
             createdAt = now.toString(),
             updatedAt = now.toString(),
+            myRole = ShareRole.OWNER.name,
         ).right()
     }
 
     override suspend fun update(userId: String, id: String, name: String?, color: String?, iconKey: String?): Either<AppError, Unit> {
+        when (shareService.accessFor(userId, id, ListType.FLOATER)) {
+            null -> return AppError.NotFound("floater list not found").left()
+            ShareRole.OWNER -> Unit
+            else -> return AppError.Forbidden("only the list owner can update the list").left()
+        }
         newSuspendedTransaction(Dispatchers.IO) {
             FloaterLists.update({ (FloaterLists.id eq id) and (FloaterLists.userID eq userId) }) {
                 name?.let { n -> it[FloaterLists.name] = n }
@@ -118,6 +192,7 @@ class FloaterListServiceImpl(private val cache: CacheService) : FloaterListServi
             }
         }
         cache.invalidateFloaterListCaches(userId)
+        publisher.publishToCollaborators(userId, DomainEvent.FloaterListChanged(id))
         return Unit.right()
     }
 
@@ -128,7 +203,16 @@ class FloaterListServiceImpl(private val cache: CacheService) : FloaterListServi
         val normalizedIds = ids.map(String::trim).filter(String::isNotEmpty).distinct()
         if (normalizedIds.isEmpty()) return emptyList<String>().right()
 
+        // Snapshot the fanout set before the share rows cascade away with the
+        // lists, so members still hear about the deletion.
+        val recipients = buildSet {
+            add(userId)
+            addAll(shareService.collaboratorIdsFor(userId))
+        }
+
         val deletedIds = newSuspendedTransaction(Dispatchers.IO) {
+            // Owner-only: deletion (and its cascades below) covers every
+            // member's floaters, so a non-owner must never get this far.
             val existingIds = FloaterLists
                 .select(FloaterLists.id)
                 .where { (FloaterLists.userID eq userId) and (FloaterLists.id inList normalizedIds) }
@@ -136,31 +220,38 @@ class FloaterListServiceImpl(private val cache: CacheService) : FloaterListServi
 
             if (existingIds.isEmpty()) return@newSuspendedTransaction emptyList()
 
+            // List-scoped cascades are intentionally NOT filtered by userID:
+            // shared lists hold floaters and completion history from every
+            // member, and deleting the list removes all of it.
             val floaterIds = Floaters
                 .select(Floaters.id)
-                .where { (Floaters.userID eq userId) and (Floaters.listID inList existingIds) }
+                .where { Floaters.listID inList existingIds }
                 .map { it[Floaters.id] }
 
             if (floaterIds.isNotEmpty()) {
                 CompletedFloaters.deleteWhere {
                     SqlExpressionBuilder.run {
-                        (CompletedFloaters.userID eq userId) and
-                            ((CompletedFloaters.listID inList existingIds) or (CompletedFloaters.originalFloaterID inList floaterIds))
+                        (CompletedFloaters.listID inList existingIds) or (CompletedFloaters.originalFloaterID inList floaterIds)
                     }
                 }
                 Floaters.deleteWhere {
                     SqlExpressionBuilder.run {
-                        (Floaters.userID eq userId) and (Floaters.id inList floaterIds)
+                        Floaters.id inList floaterIds
                     }
                 }
             } else {
                 CompletedFloaters.deleteWhere {
                     SqlExpressionBuilder.run {
-                        (CompletedFloaters.userID eq userId) and (CompletedFloaters.listID inList existingIds)
+                        CompletedFloaters.listID inList existingIds
                     }
                 }
             }
 
+            FloaterListShares.deleteWhere {
+                SqlExpressionBuilder.run {
+                    FloaterListShares.listID inList existingIds
+                }
+            }
             FloaterLists.deleteWhere {
                 SqlExpressionBuilder.run {
                     (FloaterLists.userID eq userId) and (FloaterLists.id inList existingIds)
@@ -171,6 +262,7 @@ class FloaterListServiceImpl(private val cache: CacheService) : FloaterListServi
 
         if (deletedIds.isNotEmpty()) {
             cache.invalidateFloaterListCaches(userId)
+            publisher.publishTo(userId, recipients, DomainEvent.FloaterListChanged())
         }
 
         return deletedIds.right()

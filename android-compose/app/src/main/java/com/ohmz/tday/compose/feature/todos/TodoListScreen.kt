@@ -24,13 +24,13 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -103,6 +103,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -127,6 +128,7 @@ import androidx.compose.ui.zIndex
 import androidx.core.view.HapticFeedbackConstantsCompat
 import androidx.core.view.ViewCompat
 import com.ohmz.tday.compose.R
+import com.ohmz.tday.compose.core.data.list.ShareListKind
 import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TaskRescheduleScope
@@ -142,6 +144,7 @@ import com.ohmz.tday.compose.core.ui.TaskSwipeActionButton
 import com.ohmz.tday.compose.core.ui.animateTaskSwipeOffsetAsState
 import com.ohmz.tday.compose.core.ui.rememberLazyListCollapsingTitleScrollBehavior
 import com.ohmz.tday.compose.core.ui.rememberTaskSwipeRevealState
+import com.ohmz.tday.compose.core.ui.shareList
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.component.RootFeedDock
 import com.ohmz.tday.compose.ui.component.RootFeedTab
@@ -249,6 +252,7 @@ fun TodoListScreen(
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val view = LocalView.current
+    val context = LocalContext.current
     val zoneId = remember { ZoneId.systemDefault() }
     val selectedList = uiState.lists.firstOrNull { it.id == uiState.listId }
     val selectedListColorKey = selectedList?.color
@@ -265,6 +269,9 @@ fun TodoListScreen(
     val isListDetailScreen =
         uiState.mode == TodoListMode.LIST ||
                 (uiState.mode == TodoListMode.FLOATER && !uiState.listId.isNullOrBlank())
+    // VIEWER members of a shared list get a read-only screen: no create FAB,
+    // no swipe edit/delete, no complete taps, no drag.
+    val isViewerList = isListDetailScreen && selectedList?.isViewer == true
     val usesRootFeedChrome =
         usesRootFeedHeader || isRootFloaterScreen
     val titleColor = modeAccentColor(
@@ -472,6 +479,7 @@ fun TodoListScreen(
         }
     }
     var showListSettingsSheet by rememberSaveable { mutableStateOf(false) }
+    var showMembersSheet by rememberSaveable { mutableStateOf(false) }
     var showCreateListSheet by rememberSaveable { mutableStateOf(false) }
     var showDeleteListConfirmation by rememberSaveable { mutableStateOf(false) }
     var showSummarySheet by rememberSaveable(uiState.mode) { mutableStateOf(false) }
@@ -551,6 +559,15 @@ fun TodoListScreen(
             null
         },
         if (isListDetailScreen && selectedList != null) {
+            TodoTopBarAction(
+                icon = ImageVector.vectorResource(R.drawable.ic_lucide_users_round),
+                contentDescription = stringResource(R.string.members_title),
+                onClick = { showMembersSheet = true },
+            )
+        } else {
+            null
+        },
+        if (isListDetailScreen && selectedList != null && selectedList.isOwner) {
             TodoTopBarAction(
                 icon = ImageVector.vectorResource(R.drawable.ic_lucide_ellipsis),
                 contentDescription = stringResource(R.string.action_more_options),
@@ -781,7 +798,7 @@ fun TodoListScreen(
             }
         },
         floatingActionButton = {
-            if (showCreateTaskButton) {
+            if (showCreateTaskButton && !isViewerList) {
                 CreateTaskButton(
                     modifier = Modifier
                         .offset(y = fabOffsetY)
@@ -1075,6 +1092,7 @@ fun TodoListScreen(
                                             flashHighlight = flashTodoId == todo.id || flashTodoId == todo.canonicalId,
                                             showEarlierDateTimeSubtitle = showEarlierDateTimeSubtitle,
                                             showDateDivider = showTimelineDateDivider,
+                                            readOnly = isViewerList,
                                             onComplete = { onComplete(todo) },
                                             onDelete = { onDelete(todo) },
                                             onInfo = {
@@ -1447,6 +1465,13 @@ fun TodoListScreen(
                 listSettingsIconKey = it
                 listSettingsIconTouched = true
             },
+            onShare = {
+                showListSettingsSheet = false
+                listSettingsTargetId = null
+                selectedList?.let { list ->
+                    shareList(context, list.name, uiState.items)
+                }
+            },
             onDismiss = {
                 showListSettingsSheet = false
                 listSettingsTargetId = null
@@ -1464,6 +1489,26 @@ fun TodoListScreen(
             onDelete = {
                 showListSettingsSheet = false
                 showDeleteListConfirmation = true
+            },
+        )
+    }
+
+    if (showMembersSheet && isListDetailScreen && selectedList != null) {
+        ManageMembersSheet(
+            listId = selectedList.id,
+            listName = selectedList.name,
+            kind = if (uiState.mode == TodoListMode.FLOATER) {
+                ShareListKind.FLOATER
+            } else {
+                ShareListKind.SCHEDULED
+            },
+            myRole = selectedList.myRole,
+            onShareAsText = { shareList(context, selectedList.name, uiState.items) },
+            onDismiss = { showMembersSheet = false },
+            onLeftList = {
+                showMembersSheet = false
+                onRefresh()
+                onBack()
             },
         )
     }
@@ -2358,6 +2403,7 @@ private fun ListSettingsBottomSheet(
     listIconKey: String,
     onListIconChange: (String) -> Unit,
     showDelete: Boolean = true,
+    onShare: (() -> Unit)? = null,
     onDismiss: () -> Unit,
     onSave: () -> Unit,
     onDelete: () -> Unit,
@@ -2596,10 +2642,67 @@ private fun ListSettingsBottomSheet(
                 }
 
                 Spacer(Modifier.height(2.dp))
+                if (onShare != null) {
+                    ListSettingsShareButton(onClick = onShare)
+                }
                 if (showDelete) {
                     ListSettingsDeleteButton(onClick = onDelete)
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun ListSettingsShareButton(
+    onClick: () -> Unit,
+) {
+    val view = LocalView.current
+    val colorScheme = MaterialTheme.colorScheme
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (pressed) 0.97f else 1f,
+        label = "listSettingsShareButtonScale",
+    )
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            },
+        onClick = {
+            ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+            onClick()
+        },
+        interactionSource = interactionSource,
+        shape = RoundedCornerShape(24.dp),
+        border = BorderStroke(1.5.dp, colorScheme.onSurfaceVariant.copy(alpha = 0.3f)),
+        colors = CardDefaults.cardColors(
+            containerColor = TdaySheetDefaults.controlSurfaceColor(),
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_share_2),
+                contentDescription = null,
+                tint = colorScheme.onSurface,
+            )
+            Text(
+                text = stringResource(R.string.share_list_action),
+                style = MaterialTheme.typography.titleMedium,
+                color = colorScheme.onSurface,
+                fontWeight = FontWeight.ExtraBold,
+            )
         }
     }
 }
@@ -2891,6 +2994,7 @@ private fun TimelineTaskRow(
     flashHighlight: Boolean,
     showEarlierDateTimeSubtitle: Boolean,
     showDateDivider: Boolean,
+    readOnly: Boolean = false,
     onComplete: () -> Unit,
     onDelete: () -> Unit,
     onInfo: () -> Unit,
@@ -2941,6 +3045,7 @@ private fun TimelineTaskRow(
                 mode = mode,
                 lists = lists,
                 flashHighlight = flashHighlight,
+                readOnly = readOnly,
                 onComplete = onComplete,
                 onDelete = onDelete,
                 onInfo = onInfo,
@@ -3642,6 +3747,7 @@ private fun TodayTaskSwipeRow(
     mode: TodoListMode,
     lists: List<ListSummary>,
     flashHighlight: Boolean = false,
+    readOnly: Boolean = false,
     onComplete: () -> Unit,
     onDelete: () -> Unit,
     onInfo: () -> Unit,
@@ -3666,12 +3772,13 @@ private fun TodayTaskSwipeRow(
         mode = mode,
         lists = lists,
         flashHighlight = flashHighlight,
+        readOnly = readOnly,
         showDueText = true,
         showDuePrefix = showDuePrefix,
         showDueDateInSubtitle = showDueDateInSubtitle,
         showDateDivider = showDateDivider,
         useDelayedFadeCompletion = mode != TodoListMode.TODAY,
-        dragEnabled = dragEnabled,
+        dragEnabled = dragEnabled && !readOnly,
         dragging = dragging,
         onDragStart = onDragStart,
         onDragMove = onDragMove,
@@ -3693,6 +3800,7 @@ private fun SwipeTaskRow(
     mode: TodoListMode = TodoListMode.ALL,
     lists: List<ListSummary> = emptyList(),
     flashHighlight: Boolean = false,
+    readOnly: Boolean = false,
     showDueText: Boolean,
     showDuePrefix: Boolean,
     showDueDateInSubtitle: Boolean = false,
@@ -3942,30 +4050,38 @@ private fun SwipeTaskRow(
                                 Modifier
                             },
                         )
-                        .draggable(
-                            orientation = Orientation.Horizontal,
-                            state = rememberDraggableState { delta ->
-                                if (delta < 0f || swipeRevealState.isOpenOrDragging) {
-                                    claimSwipeSlot()
-                                }
-                                swipeRevealState.dragBy(delta)
-                                if (!swipeRevealState.isOpenOrDragging && latestOpenSwipeTaskId.value == todo.id) {
-                                    onOpenSwipeTaskIdChange(null)
-                                }
-                            },
-                            onDragStopped = { velocity ->
-                                swipeRevealState.settle(velocity)
-                                if (swipeRevealState.isOpenOrDragging) {
-                                    claimSwipeSlot()
-                                } else if (latestOpenSwipeTaskId.value == todo.id) {
-                                    onOpenSwipeTaskIdChange(null)
-                                }
+                        .then(
+                            if (readOnly) {
+                                // Viewer role: no swipe-to-reveal edit/delete.
+                                Modifier
+                            } else {
+                                Modifier.draggable(
+                                    orientation = Orientation.Horizontal,
+                                    state = rememberDraggableState { delta ->
+                                        if (delta < 0f || swipeRevealState.isOpenOrDragging) {
+                                            claimSwipeSlot()
+                                        }
+                                        swipeRevealState.dragBy(delta)
+                                        if (!swipeRevealState.isOpenOrDragging && latestOpenSwipeTaskId.value == todo.id) {
+                                            onOpenSwipeTaskIdChange(null)
+                                        }
+                                    },
+                                    onDragStopped = { velocity ->
+                                        swipeRevealState.settle(velocity)
+                                        if (swipeRevealState.isOpenOrDragging) {
+                                            claimSwipeSlot()
+                                        } else if (latestOpenSwipeTaskId.value == todo.id) {
+                                            onOpenSwipeTaskIdChange(null)
+                                        }
+                                    },
+                                )
                             },
                         )
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null,
                         ) {
+                            if (readOnly) return@clickable
                             if (swipeRevealState.isOpenOrDragging) {
                                 closeSwipeSlot()
                             } else if (!swipeRevealState.isHinting && !pendingCompletion && !dragging) {
@@ -4018,7 +4134,7 @@ private fun SwipeTaskRow(
                                 } else {
                                     TASK_CHECKMARK_GREEN
                                 },
-                                enabled = !visuallyChecked && !pendingCompletion,
+                                enabled = !visuallyChecked && !pendingCompletion && !readOnly,
                                 onClick = {
                                     ViewCompat.performHapticFeedback(
                                         view,
