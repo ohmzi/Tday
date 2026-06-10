@@ -12,6 +12,7 @@ import com.ohmz.tday.compose.core.model.CompletedItem
 import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.notification.TaskReminderScheduler
+import com.ohmz.tday.compose.core.ui.SnackbarManager
 import com.ohmz.tday.compose.core.ui.userFacingMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -37,6 +38,7 @@ class CompletedViewModel @Inject constructor(
     private val syncManager: SyncManager,
     private val cacheManager: OfflineCacheManager,
     private val reminderScheduler: TaskReminderScheduler,
+    private val snackbarManager: SnackbarManager,
     @ApplicationContext private val appContext: Context,
 ) : ViewModel() {
 
@@ -137,11 +139,16 @@ class CompletedViewModel @Inject constructor(
         }
     }
 
-    fun delete(item: CompletedItem, onDeleted: (() -> Unit)? = null) {
+    fun delete(item: CompletedItem) {
         viewModelScope.launch {
             runCatching { completedRepository.deleteCompletedTodo(item) }
                 .onSuccess {
-                    onDeleted?.invoke()
+                    // Completed-history deletes stay immediate (no staged undo
+                    // window); the toast is shown here so the screen does not
+                    // depend on navigation-layer wiring.
+                    snackbarManager.showSuccess(
+                        appContext.getString(R.string.task_deleted_toast),
+                    )
                     loadInternal(forceSync = false, showLoading = false)
                 }
                 .onFailure { error ->

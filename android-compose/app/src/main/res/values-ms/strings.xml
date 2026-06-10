@@ -309,6 +309,7 @@
 
     <!-- Error handling / retry / offline -->
     <string name="action_retry">Cuba lagi</string>
+    <string name="action_undo">Buat asal</string>
     <string name="offline_banner_title">Anda di luar talian</string>
     <string name="offline_banner">Tugasan tercache tersedia. Perubahan akan disegerakkan apabila sambungan kembali.</string>
     <string name="offline_banner_pending_one">1 perubahan menunggu untuk disegerakkan</string>
@@ -454,6 +455,7 @@
     <string name="release_no_apk">Tiada APK dilampirkan pada keluaran ini.</string>
     <string name="release_launch_update_toast">Kemas kini %1$s tersedia.</string>
     <string name="task_deleted_toast">Tugasan dipadam</string>
+    <string name="list_deleted_toast">Senarai dipadam</string>
     <string name="release_view_on_github">Lihat di GitHub</string>
 
     <!-- Language picker -->

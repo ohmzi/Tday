@@ -21,6 +21,7 @@ import com.ohmz.tday.compose.core.model.repositoryTargetForReschedule
 import com.ohmz.tday.compose.core.notification.TaskReminderScheduler
 import com.ohmz.tday.compose.core.observability.TdayTelemetry
 import com.ohmz.tday.compose.core.ui.SnackbarManager
+import com.ohmz.tday.compose.core.ui.UndoableDeleteCoordinator
 import com.ohmz.tday.compose.core.ui.userFacingMessage
 import com.ohmz.tday.compose.ui.priority.canonicalPriorityValue
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -51,6 +52,7 @@ class CalendarViewModel @Inject constructor(
     private val cacheManager: OfflineCacheManager,
     private val reminderScheduler: TaskReminderScheduler,
     private val snackbarManager: SnackbarManager,
+    private val undoableDeleteCoordinator: UndoableDeleteCoordinator,
     @ApplicationContext private val appContext: Context,
 ) : ViewModel() {
 
@@ -383,7 +385,7 @@ class CalendarViewModel @Inject constructor(
         }
     }
 
-    fun delete(todo: TodoItem, onDeleted: (() -> Unit)? = null) {
+    fun delete(todo: TodoItem) {
         val previousItems = _uiState.value.items
         TdayTelemetry.addBreadcrumb("calendar.task.delete", data = calendarTelemetryData())
         _uiState.update { current ->
@@ -393,10 +395,22 @@ class CalendarViewModel @Inject constructor(
             )
         }
         viewModelScope.launch {
+            // Delayed-commit delete: stage now (local-only removal), show the
+            // undoable toast, and let the coordinator run the real delete after
+            // the toast window — or restore the staged state on Undo.
             runCatching {
-                todoRepository.deleteTodo(todo)
-            }.onSuccess {
-                onDeleted?.invoke()
+                todoRepository.stageDeleteTodo(todo)
+            }.onSuccess { staged ->
+                undoableDeleteCoordinator.showUndoableDelete(
+                    message = appContext.getString(R.string.task_deleted_toast),
+                    onCommit = { todoRepository.deleteTodo(todo) },
+                    onUndo = {
+                        todoRepository.undoStagedTodoDeletion(staged)
+                        // Runs on the coordinator scope: this ViewModel may be gone
+                        // by the time Undo restores a reminder-bearing task.
+                        runCatching { reminderScheduler.rescheduleAll() }
+                    },
+                )
                 rescheduleReminders()
                 loadInternal(forceSync = false, showLoading = false)
             }.onFailure { error ->

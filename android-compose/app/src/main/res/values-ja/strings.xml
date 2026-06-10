@@ -309,6 +309,7 @@
 
     <!-- Error handling / retry / offline -->
     <string name="action_retry">再試行</string>
+    <string name="action_undo">元に戻す</string>
     <string name="offline_banner_title">オフラインです</string>
     <string name="offline_banner">キャッシュされたタスクを利用できます。接続が回復すると変更が同期されます。</string>
     <string name="offline_banner_pending_one">1件の変更が同期待ちです</string>
@@ -454,6 +455,7 @@
     <string name="release_no_apk">このリリースに APK は添付されていません。</string>
     <string name="release_launch_update_toast">更新 %1$s が利用可能です。</string>
     <string name="task_deleted_toast">タスクを削除しました</string>
+    <string name="list_deleted_toast">リストを削除しました</string>
     <string name="release_view_on_github">GitHub で表示</string>
 
     <!-- Language picker -->

@@ -366,6 +366,7 @@
 
     <!-- Error handling / retry / offline -->
     <string name="action_retry">Retry</string>
+    <string name="action_undo">Undo</string>
     <string name="offline_banner_title">You\'re offline</string>
     <string name="offline_banner">Cached tasks are available. Changes will sync when connection returns.</string>
     <string name="offline_banner_pending_one">1 change waiting to sync</string>
