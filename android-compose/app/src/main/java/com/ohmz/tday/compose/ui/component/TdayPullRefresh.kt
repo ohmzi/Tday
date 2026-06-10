@@ -1,7 +1,7 @@
 package com.ohmz.tday.compose.ui.component
 
+import android.os.SystemClock
 import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
@@ -46,7 +46,7 @@ import kotlin.math.PI
 import kotlin.math.sin
 
 private const val RefreshBarCount = 5
-private const val RefreshHandoffHoldMillis = 1_500L
+private const val RefreshMinVisibleMillis = 600L
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -68,38 +68,35 @@ fun TdayPullToRefreshBox(
     }
 
     val state = rememberPullToRefreshState()
-    var localRefreshInFlight by remember { mutableStateOf(false) }
-    var hasSeenExternalRefresh by remember { mutableStateOf(false) }
-    val effectiveRefreshing = isRefreshing || localRefreshInFlight
+    // Single source of truth for whether the indicator is shown as refreshing.
+    // Raised when a refresh starts (locally triggered or signalled externally)
+    // and lowered exactly once, after the external signal ends and the
+    // indicator has been visible for a minimum time — never re-raised.
+    var displayRefreshing by remember { mutableStateOf(false) }
+    var shownAtMs by remember { mutableStateOf(0L) }
 
-    LaunchedEffect(isRefreshing) {
+    LaunchedEffect(isRefreshing, displayRefreshing) {
         if (isRefreshing) {
-            hasSeenExternalRefresh = true
-        } else if (hasSeenExternalRefresh) {
-            localRefreshInFlight = false
-            hasSeenExternalRefresh = false
+            if (!displayRefreshing) {
+                displayRefreshing = true
+                shownAtMs = SystemClock.uptimeMillis()
+            }
+        } else if (displayRefreshing) {
+            val remaining = RefreshMinVisibleMillis - (SystemClock.uptimeMillis() - shownAtMs)
+            if (remaining > 0) {
+                delay(remaining)
+            }
+            displayRefreshing = false
         }
     }
-
-    LaunchedEffect(localRefreshInFlight, isRefreshing, hasSeenExternalRefresh) {
-        if (localRefreshInFlight && !isRefreshing && !hasSeenExternalRefresh) {
-            delay(RefreshHandoffHoldMillis)
-            localRefreshInFlight = false
-        }
-    }
-
-    // PullToRefreshBox only moves the indicator; translate the content too so the
-    // whole screen follows the pull (and rests under the pill while refreshing),
-    // mirroring the indicator's own offset math below.
-    val refreshingContentOffset by animateDpAsState(
-        targetValue = if (effectiveRefreshing) TdayDimens.PullRefreshRefreshingOffset else 0.dp,
-        label = "pullRefreshContentOffset",
-    )
 
     PullToRefreshBox(
-        isRefreshing = effectiveRefreshing,
+        isRefreshing = displayRefreshing,
         onRefresh = {
-            localRefreshInFlight = true
+            if (!displayRefreshing) {
+                displayRefreshing = true
+                shownAtMs = SystemClock.uptimeMillis()
+            }
             onRefresh()
         },
         modifier = modifier,
@@ -110,21 +107,21 @@ fun TdayPullToRefreshBox(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .zIndex(1f),
-                isRefreshing = effectiveRefreshing,
+                isRefreshing = displayRefreshing,
                 state = state,
             )
         },
         content = {
+            // PullToRefreshBox only moves the indicator; translate the content too
+            // so the whole screen follows the pull. The state's distanceFraction is
+            // already animated to the hold position while refreshing and back to 0
+            // when done, so this single animator covers pull, hold and settle.
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .graphicsLayer {
-                        translationY = if (effectiveRefreshing) {
-                            refreshingContentOffset.toPx()
-                        } else {
-                            state.distanceFraction *
-                                    PullToRefreshDefaults.PositionalThreshold.toPx()
-                        }
+                        translationY = state.distanceFraction *
+                                PullToRefreshDefaults.PositionalThreshold.toPx()
                     },
                 contentAlignment = contentAlignment,
                 content = content,
@@ -147,11 +144,6 @@ private fun TdayPullToRefreshIndicator(
         targetValue = if (visible) 1f else 0f,
         animationSpec = tween(durationMillis = 220),
         label = "pullRefreshAlpha",
-    )
-    val refreshingBottomOffset by animateDpAsState(
-        targetValue = if (isRefreshing) TdayDimens.PullRefreshRefreshingOffset else 0.dp,
-        animationSpec = tween(durationMillis = 220),
-        label = "pullRefreshRefreshingOffset",
     )
     val spin = if (isRefreshing) {
         val refreshTransition = rememberInfiniteTransition(label = "pullRefreshSpin")
@@ -190,12 +182,9 @@ private fun TdayPullToRefreshIndicator(
             }
             .graphicsLayer {
                 val showElevation = state.distanceFraction > 0f || isRefreshing
-                val pullBottomOffset =
-                    state.distanceFraction * PullToRefreshDefaults.PositionalThreshold.roundToPx()
-                translationY = maxOf(
-                    pullBottomOffset,
-                    refreshingBottomOffset.toPx(),
-                ) - size.height
+                // Same single fraction-driven animator as the content offset.
+                translationY = state.distanceFraction *
+                        PullToRefreshDefaults.PositionalThreshold.toPx() - size.height
                 shadowElevation = if (showElevation) TdayDimens.PullRefreshElevation.toPx() else 0f
                 shape = indicatorShape
                 clip = true
