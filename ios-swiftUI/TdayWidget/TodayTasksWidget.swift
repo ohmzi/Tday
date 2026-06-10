@@ -481,22 +481,50 @@ private struct TdayTasksWidgetContent: View {
 
     private var taskList: some View {
         // WidgetKit system-family widgets do not support true in-widget scrolling, so iOS keeps a best-fit row set plus overflow text.
-        let rowCapacity = metrics.visibleRowCapacity
         let totalCount = max(taskCount, rows.count)
-        let hasOverflow = totalCount > rowCapacity || rows.count < totalCount
-        let visibleCapacity = hasOverflow && rowCapacity > 1 ? rowCapacity - 1 : rowCapacity
-        let visibleRows = Array(rows.prefix(visibleCapacity))
+        let visibleRows = visibleTaskRows(totalCount: totalCount)
         let overflowCount = max(0, totalCount - visibleRows.count)
 
         return VStack(alignment: .leading, spacing: metrics.rowSpacing) {
             ForEach(visibleRows) { row in
                 taskRow(row)
             }
-            if overflowCount > 0 && rowCapacity > 1 {
+            if overflowCount > 0 {
                 overflowRow(count: overflowCount)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    private func rowUnitCost(_ row: WidgetTaskRowModel) -> Int {
+        metrics.showsNotes && row.note != nil ? 2 : 1
+    }
+
+    private func visibleTaskRows(totalCount: Int) -> [WidgetTaskRowModel] {
+        let capacity = metrics.rowUnitCapacity
+
+        // If every task is available and fits within the unit budget, show
+        // them all and skip the overflow row entirely.
+        if rows.count >= totalCount {
+            let totalUnits = rows.reduce(0) { $0 + rowUnitCost($1) }
+            if totalUnits <= capacity {
+                return rows
+            }
+        }
+
+        // Otherwise reserve 1 unit for the "+X more" row and fill rows
+        // greedily in order until the next row would no longer fit.
+        var visible: [WidgetTaskRowModel] = []
+        var usedUnits = 0
+        for row in rows {
+            let cost = rowUnitCost(row)
+            guard usedUnits + cost + 1 <= capacity else {
+                break
+            }
+            visible.append(row)
+            usedUnits += cost
+        }
+        return visible
     }
 
     private func message(title: String, subtitle: String) -> some View {
@@ -526,7 +554,7 @@ private struct TdayTasksWidgetContent: View {
                     .font(.system(size: metrics.rowFontSize, weight: .bold, design: .rounded))
                     .lineLimit(1)
                     .minimumScaleFactor(0.85)
-                if let note = row.note {
+                if metrics.showsNotes, let note = row.note {
                     Text(note)
                         .font(.system(size: metrics.rowFontSize - 2, weight: .semibold, design: .rounded))
                         .foregroundStyle(secondaryTextColor)
@@ -605,7 +633,10 @@ private struct WidgetLayoutMetrics {
     let rowHeight: CGFloat
     let rowSpacing: CGFloat
     let rowFontSize: CGFloat
-    let visibleRowCapacity: Int
+    // Vertical budget in row units: a noteless row costs 1 unit, a row with a
+    // visible note costs 2 units, and the "+X more" overflow row costs 1 unit.
+    let rowUnitCapacity: Int
+    let showsNotes: Bool
     let watermarkSize: CGFloat
     let watermarkTrailingOffset: CGFloat
     let watermarkVerticalFraction: CGFloat
@@ -620,7 +651,8 @@ private struct WidgetLayoutMetrics {
             rowHeight = 21
             rowSpacing = 2
             rowFontSize = 12
-            visibleRowCapacity = 2
+            rowUnitCapacity = 2
+            showsNotes = false
             watermarkSize = 116
             watermarkTrailingOffset = 18
             watermarkVerticalFraction = 0.70
@@ -632,7 +664,9 @@ private struct WidgetLayoutMetrics {
             rowHeight = 24
             rowSpacing = 4
             rowFontSize = 13
-            visibleRowCapacity = 6
+            // ~306pt usable - 45pt header - 8pt spacing ~= 253pt; 9 x 28pt units - 4 ~= 248pt.
+            rowUnitCapacity = 9
+            showsNotes = true
             watermarkSize = 224
             watermarkTrailingOffset = 28
             watermarkVerticalFraction = 0.68
@@ -644,7 +678,8 @@ private struct WidgetLayoutMetrics {
             rowHeight = 22
             rowSpacing = 3
             rowFontSize = 12
-            visibleRowCapacity = 3
+            rowUnitCapacity = 3
+            showsNotes = true
             watermarkSize = 164
             watermarkTrailingOffset = 22
             watermarkVerticalFraction = 0.68
