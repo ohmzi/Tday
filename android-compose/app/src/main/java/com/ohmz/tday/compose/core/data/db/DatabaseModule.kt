@@ -2,6 +2,8 @@ package com.ohmz.tday.compose.core.data.db
 
 import android.content.Context
 import androidx.room.Room
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -13,6 +15,18 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
 
+    // v8: sharing metadata on cached lists (myRole/isShared/memberCount/ownerUsername).
+    private val MIGRATION_7_8 = object : Migration(7, 8) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            for (table in listOf("cached_lists", "cached_floater_lists")) {
+                db.execSQL("ALTER TABLE $table ADD COLUMN myRole TEXT NOT NULL DEFAULT 'OWNER'")
+                db.execSQL("ALTER TABLE $table ADD COLUMN isShared INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE $table ADD COLUMN memberCount INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE $table ADD COLUMN ownerUsername TEXT")
+            }
+        }
+    }
+
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): TdayDatabase {
@@ -21,11 +35,11 @@ object DatabaseModule {
             TdayDatabase::class.java,
             "tday_offline_cache.db",
         )
-            // TODO: this destroys the DB (including unsynced pending mutations) on any
-            // schema bump. Schema export is now enabled (see TdayDatabase) — add proper
-            // Migration objects via .addMigrations(...) before the next version bump and
-            // drop this destructive fallback so offline edits survive upgrades.
-            .fallbackToDestructiveMigration()
+            // The DB holds unsynced pending mutations, not just re-fetchable
+            // cache, so schema bumps must ship a real Migration. Pre-v7 schemas
+            // (no exported history) still fall back destructively.
+            .addMigrations(MIGRATION_7_8)
+            .fallbackToDestructiveMigrationFrom(1, 2, 3, 4, 5, 6)
             // Safety net: callers should run DAO access off the main thread (see
             // OfflineCacheManager / repositories using Dispatchers.IO). Kept so a missed
             // path (e.g. a Glance widget) degrades to a slow query rather than crashing.

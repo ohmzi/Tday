@@ -17,11 +17,14 @@ import { hapticButtonTap } from "@/lib/haptics";
 type FloaterItemContainerProps = {
   floater: FloaterItemType;
   highlighted?: boolean;
+  // True when the floater belongs to a shared list where the user is a VIEWER.
+  readOnly?: boolean;
 };
 
 export default function FloaterItemContainer({
   floater,
   highlighted = false,
+  readOnly = false,
 }: FloaterItemContainerProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: floater.id });
@@ -54,6 +57,7 @@ export default function FloaterItemContainer({
   const closeSwipe = () => setSwipeX(0);
 
   const handleToggleComplete = () => {
+    if (readOnly) return;
     if (completed) {
       completeMutateFn(floater);
       return;
@@ -85,6 +89,7 @@ export default function FloaterItemContainer({
   }, [floater.id]);
 
   const handleTouchStart = (event: React.TouchEvent) => {
+    if (readOnly) return;
     const touch = event.touches[0];
     swipeTouch.current = {
       x: touch.clientX,
@@ -186,7 +191,9 @@ export default function FloaterItemContainer({
         </div>
 
         <div
-          onDoubleClick={() => setDisplayForm(true)}
+          onDoubleClick={() => {
+            if (!readOnly) setDisplayForm(true);
+          }}
           onMouseOver={() => setShowHandle(true)}
           onMouseOut={() => setShowHandle(false)}
           onClick={() => {
@@ -281,19 +288,21 @@ export default function FloaterItemContainer({
               ) : null}
             </div>
 
-            <div
-              className={clsx(
-                "absolute right-0 top-1/2 hidden -translate-y-1/2 transition-opacity sm:block",
-                showHandle ? "sm:opacity-100" : "sm:pointer-events-none sm:opacity-0",
-              )}
-            >
-              <TaskActionButtons
-                onEdit={() => { hapticButtonTap(); setDisplayForm(true); }}
-                onDelete={() => { hapticButtonTap(); deleteMutateFn(floater); }}
-                editLabel="Edit floater"
-                deleteLabel="Delete floater"
-              />
-            </div>
+            {!readOnly && (
+              <div
+                className={clsx(
+                  "absolute right-0 top-1/2 hidden -translate-y-1/2 transition-opacity sm:block",
+                  showHandle ? "sm:opacity-100" : "sm:pointer-events-none sm:opacity-0",
+                )}
+              >
+                <TaskActionButtons
+                  onEdit={() => { hapticButtonTap(); setDisplayForm(true); }}
+                  onDelete={() => { hapticButtonTap(); deleteMutateFn(floater); }}
+                  editLabel="Edit floater"
+                  deleteLabel="Delete floater"
+                />
+              </div>
+            )}
           </div>
         </div>
       </div>

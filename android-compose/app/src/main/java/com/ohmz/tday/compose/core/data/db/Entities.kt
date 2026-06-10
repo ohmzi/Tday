@@ -1,5 +1,6 @@
 package com.ohmz.tday.compose.core.data.db
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
@@ -55,6 +56,10 @@ data class CachedListEntity(
     val todoCount: Int,
     val updatedAtEpochMs: Long,
     val createdAtEpochMs: Long,
+    @ColumnInfo(defaultValue = "OWNER") val myRole: String = "OWNER",
+    @ColumnInfo(defaultValue = "0") val isShared: Boolean = false,
+    @ColumnInfo(defaultValue = "0") val memberCount: Int = 0,
+    val ownerUsername: String? = null,
 )
 
 @Entity(tableName = "cached_floater_lists")
@@ -66,6 +71,10 @@ data class CachedFloaterListEntity(
     val todoCount: Int,
     val updatedAtEpochMs: Long,
     val createdAtEpochMs: Long,
+    @ColumnInfo(defaultValue = "OWNER") val myRole: String = "OWNER",
+    @ColumnInfo(defaultValue = "0") val isShared: Boolean = false,
+    @ColumnInfo(defaultValue = "0") val memberCount: Int = 0,
+    val ownerUsername: String? = null,
 )
 
 @Entity(

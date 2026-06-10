@@ -36,6 +36,7 @@ fun Application.configureRouting() {
             floaterRoutes()
             listRoutes()
             floaterListRoutes()
+            listShareRoutes()
             userRoutes()
             preferencesRoutes()
             completedTodoRoutes()

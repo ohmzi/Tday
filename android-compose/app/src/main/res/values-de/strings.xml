@@ -250,6 +250,25 @@
     <string name="todos_summary_modes_unavailable">Zusammenfassung ist nur für Heute, Geplant, Alle und Priorität verfügbar</string>
     <string name="todos_summary_offline_unavailable">Offline ist keine Zusammenfassung verfügbar.</string>
     <string name="todos_list_settings">Listeneinstellungen</string>
+    <string name="share_list_action">Liste teilen</string>
+    <string name="members_title">Mitglieder</string>
+    <string name="members_add_section">Mitglied hinzufügen</string>
+    <string name="members_add_action">Hinzufügen</string>
+    <string name="members_search_placeholder">Nach Benutzername suchen</string>
+    <string name="members_no_results">Keine Benutzer gefunden</string>
+    <string name="members_remove">Mitglied entfernen</string>
+    <string name="members_leave_list">Liste verlassen</string>
+    <string name="members_shared_by">Geteilt von %1$s</string>
+    <string name="share_role_owner">Inhaber</string>
+    <string name="share_role_editor">Bearbeiter</string>
+    <string name="share_role_viewer">Betrachter</string>
+    <string name="share_task_chooser_title">Aufgabe teilen</string>
+    <string name="share_due_label">Fällig: %1$s</string>
+    <string name="share_priority_label">Priorität: %1$s</string>
+    <plurals name="share_task_count">
+        <item quantity="one">%d Aufgabe</item>
+        <item quantity="other">%d Aufgaben</item>
+    </plurals>
     <string name="todos_save_list_settings">Listeneinstellungen speichern</string>
     <string name="todos_delete_list_title">Liste löschen?</string>
     <string name="todos_delete_list_message">Dadurch werden diese Liste, jede Aufgabe darin und der abgeschlossene Verlauf dieser Aufgaben gelöscht.</string>

@@ -1092,6 +1092,7 @@ class AppViewModel @Inject constructor(
                         }
                     }
                     is RealtimeEvent.TodoChanged,
+                    is RealtimeEvent.FloaterChanged,
                     is RealtimeEvent.ListChanged,
                     is RealtimeEvent.CompletedChanged,
                     -> {

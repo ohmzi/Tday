@@ -250,6 +250,24 @@
     <string name="todos_summary_modes_unavailable">要約は今日、予定、すべて、優先でのみ利用できます</string>
     <string name="todos_summary_offline_unavailable">オフライン中は要約を利用できません。</string>
     <string name="todos_list_settings">リスト設定</string>
+    <string name="share_list_action">リストを共有</string>
+    <string name="members_title">メンバー</string>
+    <string name="members_add_section">メンバーを追加</string>
+    <string name="members_add_action">追加</string>
+    <string name="members_search_placeholder">ユーザー名で検索</string>
+    <string name="members_no_results">ユーザーが見つかりません</string>
+    <string name="members_remove">メンバーを削除</string>
+    <string name="members_leave_list">リストから退出</string>
+    <string name="members_shared_by">%1$s が共有</string>
+    <string name="share_role_owner">オーナー</string>
+    <string name="share_role_editor">編集者</string>
+    <string name="share_role_viewer">閲覧者</string>
+    <string name="share_task_chooser_title">タスクを共有</string>
+    <string name="share_due_label">期限: %1$s</string>
+    <string name="share_priority_label">優先度: %1$s</string>
+    <plurals name="share_task_count">
+        <item quantity="other">%d件のタスク</item>
+    </plurals>
     <string name="todos_save_list_settings">リスト設定を保存</string>
     <string name="todos_delete_list_title">リストを削除しますか?</string>
     <string name="todos_delete_list_message">このリスト、その中のすべてのタスク、およびそれらのタスクの完了履歴が削除されます。</string>

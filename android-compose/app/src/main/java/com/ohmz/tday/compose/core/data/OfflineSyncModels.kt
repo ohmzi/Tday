@@ -54,6 +54,10 @@ data class CachedListRecord(
     val todoCount: Int = 0,
     val updatedAtEpochMs: Long = 0L,
     val createdAtEpochMs: Long = 0L,
+    val myRole: String = "OWNER",
+    val isShared: Boolean = false,
+    val memberCount: Int = 0,
+    val ownerUsername: String? = null,
 )
 
 @Serializable
@@ -65,6 +69,10 @@ data class CachedFloaterListRecord(
     val todoCount: Int = 0,
     val updatedAtEpochMs: Long = 0L,
     val createdAtEpochMs: Long = 0L,
+    val myRole: String = "OWNER",
+    val isShared: Boolean = false,
+    val memberCount: Int = 0,
+    val ownerUsername: String? = null,
 )
 
 @Serializable

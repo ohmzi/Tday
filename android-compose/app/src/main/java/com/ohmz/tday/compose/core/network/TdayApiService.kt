@@ -1,5 +1,7 @@
 package com.ohmz.tday.compose.core.network
 
+import com.ohmz.tday.compose.core.model.AddMemberRequest
+import com.ohmz.tday.compose.core.model.AddMemberResponse
 import com.ohmz.tday.compose.core.model.AppSettingsResponse
 import com.ohmz.tday.compose.core.model.ChangePasswordRequest
 import com.ohmz.tday.compose.core.model.CompletedFloatersResponse
@@ -31,6 +33,7 @@ import com.ohmz.tday.compose.core.model.FloaterReorderRequest
 import com.ohmz.tday.compose.core.model.FloaterUncompleteRequest
 import com.ohmz.tday.compose.core.model.FloatersResponse
 import com.ohmz.tday.compose.core.model.ListDetailResponse
+import com.ohmz.tday.compose.core.model.ListMembersResponse
 import com.ohmz.tday.compose.core.model.ListsResponse
 import com.ohmz.tday.compose.core.model.MessageResponse
 import com.ohmz.tday.compose.core.model.MobileProbeResponse
@@ -38,6 +41,7 @@ import com.ohmz.tday.compose.core.model.PreferencesDto
 import com.ohmz.tday.compose.core.model.PreferencesResponse
 import com.ohmz.tday.compose.core.model.RegisterRequest
 import com.ohmz.tday.compose.core.model.RegisterResponse
+import com.ohmz.tday.compose.core.model.RemoveMemberRequest
 import com.ohmz.tday.compose.core.model.ReorderItemRequest
 import com.ohmz.tday.compose.core.model.RequestAdminResetRequest
 import com.ohmz.tday.compose.core.model.SecurityQuestionStatusResponse
@@ -59,9 +63,11 @@ import com.ohmz.tday.compose.core.model.UpdateCompletedTodoRequest
 import com.ohmz.tday.compose.core.model.UpdateFloaterListRequest
 import com.ohmz.tday.compose.core.model.UpdateFloaterRequest
 import com.ohmz.tday.compose.core.model.UpdateListRequest
+import com.ohmz.tday.compose.core.model.UpdateMemberRoleRequest
 import com.ohmz.tday.compose.core.model.UpdateProfileRequest
 import com.ohmz.tday.compose.core.model.UpdateTodoRequest
 import com.ohmz.tday.compose.core.model.UserResponse
+import com.ohmz.tday.compose.core.model.UserSearchResponse
 import com.ohmz.tday.compose.core.model.VerifySecurityAnswersRequest
 import com.ohmz.tday.compose.core.model.VerifySecurityAnswersResponse
 import kotlinx.serialization.json.JsonElement
@@ -301,6 +307,34 @@ interface TdayApiService {
         @Body payload: DeleteListRequest,
     ): Response<DeleteListResponse>
 
+    @GET("/api/list/{id}/members")
+    suspend fun getListMembers(
+        @Path("id") listId: String,
+    ): Response<ListMembersResponse>
+
+    @POST("/api/list/{id}/members")
+    suspend fun addListMember(
+        @Path("id") listId: String,
+        @Body payload: AddMemberRequest,
+    ): Response<AddMemberResponse>
+
+    @PATCH("/api/list/{id}/members")
+    suspend fun updateListMemberRole(
+        @Path("id") listId: String,
+        @Body payload: UpdateMemberRoleRequest,
+    ): Response<MessageResponse>
+
+    @HTTP(method = "DELETE", path = "/api/list/{id}/members", hasBody = true)
+    suspend fun removeListMember(
+        @Path("id") listId: String,
+        @Body payload: RemoveMemberRequest,
+    ): Response<MessageResponse>
+
+    @POST("/api/list/{id}/leave")
+    suspend fun leaveList(
+        @Path("id") listId: String,
+    ): Response<MessageResponse>
+
     @GET("/api/floaterList")
     suspend fun getFloaterLists(): Response<FloaterListsResponse>
 
@@ -323,6 +357,39 @@ interface TdayApiService {
     suspend fun deleteFloaterListByBody(
         @Body payload: DeleteFloaterListRequest,
     ): Response<DeleteFloaterListResponse>
+
+    @GET("/api/floaterList/{id}/members")
+    suspend fun getFloaterListMembers(
+        @Path("id") listId: String,
+    ): Response<ListMembersResponse>
+
+    @POST("/api/floaterList/{id}/members")
+    suspend fun addFloaterListMember(
+        @Path("id") listId: String,
+        @Body payload: AddMemberRequest,
+    ): Response<AddMemberResponse>
+
+    @PATCH("/api/floaterList/{id}/members")
+    suspend fun updateFloaterListMemberRole(
+        @Path("id") listId: String,
+        @Body payload: UpdateMemberRoleRequest,
+    ): Response<MessageResponse>
+
+    @HTTP(method = "DELETE", path = "/api/floaterList/{id}/members", hasBody = true)
+    suspend fun removeFloaterListMember(
+        @Path("id") listId: String,
+        @Body payload: RemoveMemberRequest,
+    ): Response<MessageResponse>
+
+    @POST("/api/floaterList/{id}/leave")
+    suspend fun leaveFloaterList(
+        @Path("id") listId: String,
+    ): Response<MessageResponse>
+
+    @GET("/api/user/search")
+    suspend fun searchUsers(
+        @Query("q") query: String,
+    ): Response<UserSearchResponse>
 
     @GET("/api/preferences")
     suspend fun getPreferences(): Response<PreferencesResponse>

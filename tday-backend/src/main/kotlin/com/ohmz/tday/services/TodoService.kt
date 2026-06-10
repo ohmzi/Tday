@@ -1,6 +1,7 @@
 package com.ohmz.tday.services
 
 import arrow.core.Either
+import arrow.core.left
 import arrow.core.right
 import com.ohmz.tday.db.enums.Priority
 import com.ohmz.tday.db.tables.CompletedTodos
@@ -9,6 +10,7 @@ import com.ohmz.tday.db.tables.TodoInstances
 import com.ohmz.tday.db.tables.Todos
 import com.ohmz.tday.db.util.CuidGenerator
 import com.ohmz.tday.domain.AppError
+import com.ohmz.tday.domain.DomainEvent
 import com.ohmz.tday.models.response.TodoResponse
 import com.ohmz.tday.security.FieldEncryption
 import org.jetbrains.exposed.sql.*
@@ -43,6 +45,8 @@ interface TodoService {
 class TodoServiceImpl(
     private val fieldEncryption: FieldEncryption,
     private val cache: CacheService,
+    private val shareService: ListShareService,
+    private val publisher: RealtimePublisher,
 ) : TodoService {
 
     override suspend fun create(
@@ -54,10 +58,10 @@ class TodoServiceImpl(
         val now = LocalDateTime.now(ZoneOffset.UTC)
         val normalizedListID = listID?.trim()?.takeIf { it.isNotEmpty() }
 
-        val validList = newSuspendedTransaction(Dispatchers.IO) {
-            if (normalizedListID != null && !scheduledListExists(userId, normalizedListID)) {
-                return@newSuspendedTransaction false
-            }
+        if (normalizedListID != null && !shareService.canEditList(userId, normalizedListID, ListType.SCHEDULED)) {
+            return Either.Left(AppError.BadRequest("list not found", "listID"))
+        }
+        newSuspendedTransaction(Dispatchers.IO) {
             Todos.insert {
                 it[Todos.id] = id
                 it[Todos.title] = title
@@ -71,10 +75,9 @@ class TodoServiceImpl(
                 it[Todos.updatedAt] = now
                 it[Todos.exdates] = emptyList()
             }
-            true
         }
-        if (!validList) return Either.Left(AppError.BadRequest("list not found", "listID"))
         cache.invalidateTodoCaches(userId)
+        publisher.publishToCollaborators(userId, DomainEvent.TodoChanged(normalizedListID))
         return TodoResponse(
             id = id, title = title, description = description,
             priority = priority, due = due.toString(),
@@ -88,10 +91,11 @@ class TodoServiceImpl(
     override suspend fun getByDateRange(userId: String, start: Long, end: Long, timeZone: String): Either<AppError, List<TodoResponse>> {
         val dateRangeStart = LocalDateTime.ofInstant(java.time.Instant.ofEpochMilli(start), ZoneOffset.UTC)
         val dateRangeEnd = LocalDateTime.ofInstant(java.time.Instant.ofEpochMilli(end), ZoneOffset.UTC)
+        val visibleListIds = shareService.sharedListIdsFor(userId, ListType.SCHEDULED)
 
         val todos = newSuspendedTransaction(Dispatchers.IO) {
             val oneOff = Todos.selectAll().where {
-                (Todos.userID eq userId) and Todos.rrule.isNull() and
+                visibleTodos(userId, visibleListIds) and Todos.rrule.isNull() and
                     (Todos.completed eq false) and Todos.due.isNotNull() and (Todos.due greaterEq dateRangeStart) and
                     (Todos.due lessEq dateRangeEnd)
             }.orderBy(Todos.createdAt, SortOrder.DESC).map { it.toTodoResponse() }
@@ -101,7 +105,7 @@ class TodoServiceImpl(
             // TodoInstances columns, so joining instances here only fanned the
             // same todo out once per instance row (duplicate timeline entries).
             val recurring = Todos.selectAll().where {
-                (Todos.userID eq userId) and Todos.rrule.isNotNull() and
+                visibleTodos(userId, visibleListIds) and Todos.rrule.isNotNull() and
                     (Todos.completed eq false)
             }.map { it.toTodoResponse() }
 
@@ -112,15 +116,16 @@ class TodoServiceImpl(
 
     @Suppress("UNUSED_PARAMETER")
     override suspend fun getTimeline(userId: String, timeZone: String, recurringFutureDays: Int): Either<AppError, List<TodoResponse>> {
+        val visibleListIds = shareService.sharedListIdsFor(userId, ListType.SCHEDULED)
         val todos = newSuspendedTransaction(Dispatchers.IO) {
             val oneOff = Todos.selectAll().where {
-                (Todos.userID eq userId) and Todos.rrule.isNull() and (Todos.completed eq false)
+                visibleTodos(userId, visibleListIds) and Todos.rrule.isNull() and (Todos.completed eq false)
             }.orderBy(Todos.due to SortOrder.ASC, Todos.order to SortOrder.ASC).map { it.toTodoResponse() }
 
             // See getByDateRange: emit one row per recurring template, not one per
             // persisted instance, to avoid duplicate entries in the timeline.
             val recurring = Todos.selectAll().where {
-                (Todos.userID eq userId) and Todos.rrule.isNotNull() and (Todos.completed eq false)
+                visibleTodos(userId, visibleListIds) and Todos.rrule.isNotNull() and (Todos.completed eq false)
             }.map { it.toTodoResponse() }
 
             oneOff + recurring
@@ -129,12 +134,15 @@ class TodoServiceImpl(
     }
 
     override suspend fun update(userId: String, id: String, fields: Map<String, Any?>): Either<AppError, Unit> {
-        val validList = newSuspendedTransaction(Dispatchers.IO) {
-            val listId = (fields["listID"] as? String)?.trim()?.takeIf { it.isNotEmpty() }
-            if (fields.containsKey("listID") && listId != null && !scheduledListExists(userId, listId)) {
-                return@newSuspendedTransaction false
-            }
-            Todos.update({ (Todos.id eq id) and (Todos.userID eq userId) }) { stmt ->
+        val targetListId = (fields["listID"] as? String)?.trim()?.takeIf { it.isNotEmpty() }
+        if (fields.containsKey("listID") && targetListId != null &&
+            !shareService.canEditList(userId, targetListId, ListType.SCHEDULED)
+        ) {
+            return Either.Left(AppError.BadRequest("list not found", "listID"))
+        }
+        val editableListIds = editableListIdsFor(userId)
+        newSuspendedTransaction(Dispatchers.IO) {
+            Todos.update({ (Todos.id eq id) and mutableTodos(userId, editableListIds) }) { stmt ->
                 fields["title"]?.let { stmt[Todos.title] = it as String }
                 fields["description"]?.let {
                     stmt[Todos.description] = fieldEncryption.encryptIfSensitive("description", it as? String)
@@ -144,37 +152,40 @@ class TodoServiceImpl(
                 fields["completed"]?.let { stmt[Todos.completed] = it as Boolean }
                 (fields["due"] as? LocalDateTime)?.let { stmt[Todos.due] = it }
                 if (fields.containsKey("rrule")) stmt[Todos.rrule] = fields["rrule"] as? String
-                if (fields.containsKey("listID")) stmt[Todos.listID] = listId
+                if (fields.containsKey("listID")) stmt[Todos.listID] = targetListId
                 stmt[Todos.updatedAt] = LocalDateTime.now(ZoneOffset.UTC)
             }
-            true
         }
-        if (!validList) return Either.Left(AppError.BadRequest("list not found", "listID"))
         cache.invalidateTodoCaches(userId)
+        publisher.publishToCollaborators(userId, DomainEvent.TodoChanged(targetListId))
         return Unit.right()
     }
 
     override suspend fun delete(userId: String, id: String): Either<AppError, Int> {
+        val editableListIds = editableListIdsFor(userId)
         val count = newSuspendedTransaction(Dispatchers.IO) {
-            Todos.deleteWhere { (Todos.id eq id) and (Todos.userID eq userId) }
+            Todos.deleteWhere { (Todos.id eq id) and mutableTodos(userId, editableListIds) }
         }
         cache.invalidateTodoCaches(userId)
+        publisher.publishToCollaborators(userId, DomainEvent.TodoChanged())
         return count.right()
     }
 
     override suspend fun completeTodo(userId: String, todoId: String, instanceDate: LocalDateTime?): Either<AppError, Unit> {
+        val editableListIds = editableListIdsFor(userId)
         newSuspendedTransaction(Dispatchers.IO) {
             val todo = Todos.selectAll().where {
-                (Todos.id eq todoId) and (Todos.userID eq userId)
+                (Todos.id eq todoId) and mutableTodos(userId, editableListIds)
             }.firstOrNull() ?: return@newSuspendedTransaction
 
             val now = LocalDateTime.now(ZoneOffset.UTC)
             val todoDue = todo[Todos.due]
             val daysToComplete = Duration.between(todo[Todos.createdAt], now).toDays().toDouble()
+            // Access was already checked against the todo; the list row is only
+            // denormalized metadata, so no owner filter here (shared lists belong
+            // to another user).
             val list = todo[Todos.listID]?.let { listId ->
-                Lists.selectAll().where {
-                    (Lists.id eq listId) and (Lists.userID eq userId)
-                }.firstOrNull()
+                Lists.selectAll().where { Lists.id eq listId }.firstOrNull()
             }
             val existingCompleted = CompletedTodos.selectAll().where {
                 if (instanceDate != null) {
@@ -234,26 +245,29 @@ class TodoServiceImpl(
             }
         }
         cache.invalidateTodoCaches(userId)
+        publisher.publishToCollaborators(userId, DomainEvent.TodoChanged())
+        publisher.publishToCollaborators(userId, DomainEvent.CompletedChanged())
         return Unit.right()
     }
 
     override suspend fun uncompleteTodo(userId: String, todoId: String, instanceDate: LocalDateTime?): Either<AppError, Unit> {
+        val editableListIds = editableListIdsFor(userId)
         newSuspendedTransaction(Dispatchers.IO) {
-            // TodoInstances has no userID column, so verify ownership against the
+            // TodoInstances has no userID column, so verify access against the
             // parent Todos row before touching any instance state (mirrors
             // completeTodo/patchInstance/deleteInstance). Without this, another
             // user could clear an instance's completion by todoId+instanceDate.
-            val ownsTodo = Todos.selectAll().where {
-                (Todos.id eq todoId) and (Todos.userID eq userId)
+            val canMutate = Todos.selectAll().where {
+                (Todos.id eq todoId) and mutableTodos(userId, editableListIds)
             }.limit(1).any()
-            if (!ownsTodo) return@newSuspendedTransaction
+            if (!canMutate) return@newSuspendedTransaction
 
             if (instanceDate != null) {
                 TodoInstances.update({
                     (TodoInstances.todoId eq todoId) and (TodoInstances.instanceDate eq instanceDate)
                 }) { it[TodoInstances.completedAt] = null }
             } else {
-                Todos.update({ (Todos.id eq todoId) and (Todos.userID eq userId) }) {
+                Todos.update({ Todos.id eq todoId }) {
                     it[Todos.completed] = false
                     it[Todos.updatedAt] = LocalDateTime.now(ZoneOffset.UTC)
                 }
@@ -272,28 +286,34 @@ class TodoServiceImpl(
             }
         }
         cache.invalidateTodoCaches(userId)
+        publisher.publishToCollaborators(userId, DomainEvent.TodoChanged())
+        publisher.publishToCollaborators(userId, DomainEvent.CompletedChanged())
         return Unit.right()
     }
 
     override suspend fun prioritize(userId: String, todoId: String, priority: String): Either<AppError, Unit> {
+        val editableListIds = editableListIdsFor(userId)
         newSuspendedTransaction(Dispatchers.IO) {
-            Todos.update({ (Todos.id eq todoId) and (Todos.userID eq userId) }) {
+            Todos.update({ (Todos.id eq todoId) and mutableTodos(userId, editableListIds) }) {
                 it[Todos.priority] = Priority.valueOf(priority)
                 it[Todos.updatedAt] = LocalDateTime.now(ZoneOffset.UTC)
             }
         }
         cache.invalidateTodoCaches(userId)
+        publisher.publishToCollaborators(userId, DomainEvent.TodoChanged())
         return Unit.right()
     }
 
     override suspend fun reorder(userId: String, todoId: String, newOrder: Int): Either<AppError, Unit> {
+        val editableListIds = editableListIdsFor(userId)
         newSuspendedTransaction(Dispatchers.IO) {
-            Todos.update({ (Todos.id eq todoId) and (Todos.userID eq userId) }) {
+            Todos.update({ (Todos.id eq todoId) and mutableTodos(userId, editableListIds) }) {
                 it[Todos.order] = newOrder
                 it[Todos.updatedAt] = LocalDateTime.now(ZoneOffset.UTC)
             }
         }
         cache.invalidateTodoCaches(userId)
+        publisher.publishToCollaborators(userId, DomainEvent.TodoChanged())
         return Unit.right()
     }
 
@@ -303,9 +323,10 @@ class TodoServiceImpl(
         // zone (mixing frames shifted results by the user's UTC offset). The
         // user's zone only matters for local-day *grouping*, done client-side.
         val now = LocalDateTime.now(ZoneOffset.UTC)
+        val visibleListIds = shareService.sharedListIdsFor(userId, ListType.SCHEDULED)
         val todos = newSuspendedTransaction(Dispatchers.IO) {
             Todos.selectAll().where {
-                (Todos.userID eq userId) and (Todos.completed eq false) and
+                visibleTodos(userId, visibleListIds) and (Todos.completed eq false) and
                     Todos.rrule.isNull() and Todos.due.isNotNull() and (Todos.due less now)
             }.orderBy(Todos.due, SortOrder.ASC).map { it.toTodoResponse() }
         }
@@ -313,9 +334,10 @@ class TodoServiceImpl(
     }
 
     override suspend fun patchInstance(userId: String, todoId: String, instanceDate: LocalDateTime, fields: Map<String, Any?>): Either<AppError, Unit> {
+        val editableListIds = editableListIdsFor(userId)
         newSuspendedTransaction(Dispatchers.IO) {
             Todos.selectAll().where {
-                (Todos.id eq todoId) and (Todos.userID eq userId)
+                (Todos.id eq todoId) and mutableTodos(userId, editableListIds)
             }.firstOrNull() ?: return@newSuspendedTransaction
 
             val existing = TodoInstances.selectAll().where {
@@ -355,13 +377,15 @@ class TodoServiceImpl(
             }
         }
         cache.invalidateTodoCaches(userId)
+        publisher.publishToCollaborators(userId, DomainEvent.TodoChanged())
         return Unit.right()
     }
 
     override suspend fun deleteInstance(userId: String, todoId: String, instanceDate: LocalDateTime): Either<AppError, Unit> {
+        val editableListIds = editableListIdsFor(userId)
         newSuspendedTransaction(Dispatchers.IO) {
             Todos.selectAll().where {
-                (Todos.id eq todoId) and (Todos.userID eq userId)
+                (Todos.id eq todoId) and mutableTodos(userId, editableListIds)
             }.firstOrNull() ?: return@newSuspendedTransaction
 
             TodoInstances.deleteWhere {
@@ -379,6 +403,7 @@ class TodoServiceImpl(
             )
         }
         cache.invalidateTodoCaches(userId)
+        publisher.publishToCollaborators(userId, DomainEvent.TodoChanged())
         return Unit.right()
     }
 
@@ -399,9 +424,30 @@ class TodoServiceImpl(
         listID = this[Todos.listID],
     )
 
-    private fun scheduledListExists(userId: String, listId: String): Boolean {
-        return Lists.selectAll().where {
-            (Lists.id eq listId) and (Lists.userID eq userId)
-        }.limit(1).any()
-    }
+    private suspend fun editableListIdsFor(userId: String): List<String> =
+        shareService.sharedListIdsFor(userId, ListType.SCHEDULED, editorOnly = true)
+
+    /** Todos the user can see: their own, plus everything in lists shared with them. */
+    private fun visibleTodos(userId: String, sharedListIds: List<String>): Op<Boolean> =
+        Op.build {
+            if (sharedListIds.isEmpty()) {
+                Todos.userID eq userId
+            } else {
+                (Todos.userID eq userId) or (Todos.listID inList sharedListIds)
+            }
+        }
+
+    /**
+     * Todos the user can mutate: their own, plus everything in lists where they
+     * are an EDITOR. Viewers fail closed here (0 rows matched, existing no-op
+     * behavior).
+     */
+    private fun mutableTodos(userId: String, editableListIds: List<String>): Op<Boolean> =
+        Op.build {
+            if (editableListIds.isEmpty()) {
+                Todos.userID eq userId
+            } else {
+                (Todos.userID eq userId) or (Todos.listID inList editableListIds)
+            }
+        }
 }

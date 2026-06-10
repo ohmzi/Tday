@@ -250,6 +250,27 @@
     <string name="todos_summary_modes_unavailable">Сводка доступна только для разделов «Сегодня», «Запланированные», «Все» и «Приоритет»</string>
     <string name="todos_summary_offline_unavailable">Сводка недоступна в офлайн-режиме.</string>
     <string name="todos_list_settings">Настройки списка</string>
+    <string name="share_list_action">Поделиться списком</string>
+    <string name="members_title">Участники</string>
+    <string name="members_add_section">Добавить участника</string>
+    <string name="members_add_action">Добавить</string>
+    <string name="members_search_placeholder">Поиск по имени пользователя</string>
+    <string name="members_no_results">Пользователи не найдены</string>
+    <string name="members_remove">Удалить участника</string>
+    <string name="members_leave_list">Покинуть список</string>
+    <string name="members_shared_by">Поделился(-ась) %1$s</string>
+    <string name="share_role_owner">Владелец</string>
+    <string name="share_role_editor">Редактор</string>
+    <string name="share_role_viewer">Читатель</string>
+    <string name="share_task_chooser_title">Поделиться задачей</string>
+    <string name="share_due_label">Срок: %1$s</string>
+    <string name="share_priority_label">Приоритет: %1$s</string>
+    <plurals name="share_task_count">
+        <item quantity="one">%d задача</item>
+        <item quantity="few">%d задачи</item>
+        <item quantity="many">%d задач</item>
+        <item quantity="other">%d задачи</item>
+    </plurals>
     <string name="todos_save_list_settings">Сохранить настройки списка</string>
     <string name="todos_delete_list_title">Удалить список?</string>
     <string name="todos_delete_list_message">Это удалит этот список, все задачи в нём и историю выполнения этих задач.</string>

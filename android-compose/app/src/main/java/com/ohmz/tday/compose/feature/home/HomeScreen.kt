@@ -35,9 +35,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -559,6 +559,10 @@ fun HomeScreen(
                                 colorKey = list.color,
                                 iconKey = list.iconKey,
                                 count = list.todoCount,
+                                isShared = list.isShared,
+                                sharedByLabel = list.ownerUsername?.let {
+                                    stringResource(R.string.members_shared_by, it)
+                                },
                                 onClick = {
                                     closeSearch()
                                     onOpenList(list.id, capitalizeFirstListLetter(list.name))
@@ -2161,6 +2165,8 @@ private fun ListRow(
     colorKey: String?,
     iconKey: String?,
     count: Int,
+    isShared: Boolean = false,
+    sharedByLabel: String? = null,
     onClick: () -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
@@ -2279,14 +2285,38 @@ private fun ListRow(
                             modifier = Modifier.size(24.dp),
                         )
                     }
-                    Text(
-                        text = displayName,
-                        style = MaterialTheme.typography.titleLarge,
-                        color = Color.White,
-                        fontWeight = FontWeight.ExtraBold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                    Column {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = displayName,
+                                style = MaterialTheme.typography.titleLarge,
+                                color = Color.White,
+                                fontWeight = FontWeight.ExtraBold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            if (isShared || sharedByLabel != null) {
+                                Icon(
+                                    imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_users_round),
+                                    contentDescription = stringResource(R.string.members_title),
+                                    tint = Color.White.copy(alpha = 0.85f),
+                                    modifier = Modifier
+                                        .padding(start = 8.dp)
+                                        .size(16.dp),
+                                )
+                            }
+                        }
+                        sharedByLabel?.let { label ->
+                            Text(
+                                text = label,
+                                style = MaterialTheme.typography.labelMedium,
+                                color = Color.White.copy(alpha = 0.85f),
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                    }
                 }
 
                 Text(

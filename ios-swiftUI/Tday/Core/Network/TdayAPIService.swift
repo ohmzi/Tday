@@ -447,6 +447,37 @@ final class TdayAPIService {
         try await deleteListByBody(payload: payload)
     }
 
+    // MARK: List sharing (membersBase = "list" or "floaterList")
+
+    func getListMembers(base: String, listID: String) async throws -> ListMembersResponse {
+        try await request(path: "/api/\(base)/\(listID)/members", method: "GET", responseType: ListMembersResponse.self)
+    }
+
+    func addListMember(base: String, listID: String, payload: AddMemberRequest) async throws -> AddMemberResponse {
+        try await request(path: "/api/\(base)/\(listID)/members", method: "POST", body: payload, responseType: AddMemberResponse.self)
+    }
+
+    func updateListMemberRole(base: String, listID: String, payload: UpdateMemberRoleRequest) async throws -> MessageResponse {
+        try await request(path: "/api/\(base)/\(listID)/members", method: "PATCH", body: payload, responseType: MessageResponse.self)
+    }
+
+    func removeListMember(base: String, listID: String, payload: RemoveMemberRequest) async throws -> MessageResponse {
+        try await request(path: "/api/\(base)/\(listID)/members", method: "DELETE", body: payload, responseType: MessageResponse.self)
+    }
+
+    func leaveList(base: String, listID: String) async throws -> MessageResponse {
+        try await request(path: "/api/\(base)/\(listID)/leave", method: "POST", responseType: MessageResponse.self)
+    }
+
+    func searchUsers(query: String) async throws -> UserSearchResponse {
+        try await request(
+            path: "/api/user/search",
+            method: "GET",
+            queryItems: [URLQueryItem(name: "q", value: query)],
+            responseType: UserSearchResponse.self
+        )
+    }
+
     func getPreferences() async throws -> PreferencesResponse {
         try await request(path: "/api/preferences", method: "GET", responseType: PreferencesResponse.self)
     }

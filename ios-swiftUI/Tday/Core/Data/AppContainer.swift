@@ -24,6 +24,7 @@ final class AppContainer {
     let todoRepository: TodoRepository
     let listRepository: ListRepository
     let floaterListRepository: FloaterListRepository
+    let listShareRepository: ListShareRepository
     let completedRepository: CompletedRepository
     let settingsRepository: SettingsRepository
     let realtimeClient: RealtimeClient
@@ -82,6 +83,7 @@ final class AppContainer {
         todoRepository = TodoRepository(api: apiService, cacheManager: cacheManager, syncManager: syncManager)
         listRepository = ListRepository(api: apiService, cacheManager: cacheManager, syncManager: syncManager)
         floaterListRepository = FloaterListRepository(api: apiService, cacheManager: cacheManager, syncManager: syncManager)
+        listShareRepository = ListShareRepository(api: apiService)
         completedRepository = CompletedRepository(api: apiService, cacheManager: cacheManager, syncManager: syncManager)
         settingsRepository = SettingsRepository(api: apiService, cacheManager: cacheManager, secureStore: secureStore)
         realtimeClient = RealtimeClient(configuration: networkConfiguration)

@@ -256,7 +256,11 @@ func mapListDTO(_ dto: ListDTO, iconFallback: String? = nil) -> ListSummary {
         iconKey: dto.iconKey ?? iconFallback,
         todoCount: dto.todoCount,
         updatedAt: parseOptionalDate(dto.updatedAt),
-        createdAt: parseOptionalDate(dto.createdAt)
+        createdAt: parseOptionalDate(dto.createdAt),
+        myRole: dto.myRole ?? "OWNER",
+        isShared: dto.isShared ?? false,
+        memberCount: dto.memberCount ?? 0,
+        ownerUsername: dto.ownerUsername
     )
 }
 
@@ -268,7 +272,11 @@ func mapFloaterListDTO(_ dto: FloaterListDTO, iconFallback: String? = nil) -> Li
         iconKey: dto.iconKey ?? iconFallback,
         todoCount: dto.todoCount,
         updatedAt: parseOptionalDate(dto.updatedAt),
-        createdAt: parseOptionalDate(dto.createdAt)
+        createdAt: parseOptionalDate(dto.createdAt),
+        myRole: dto.myRole ?? "OWNER",
+        isShared: dto.isShared ?? false,
+        memberCount: dto.memberCount ?? 0,
+        ownerUsername: dto.ownerUsername
     )
 }
 
@@ -280,7 +288,11 @@ func listToCache(_ list: ListSummary) -> CachedListRecord {
         iconKey: list.iconKey,
         todoCount: list.todoCount,
         updatedAtEpochMs: list.updatedAt.map { Int64($0.timeIntervalSince1970 * 1000.0) } ?? 0,
-        createdAtEpochMs: list.createdAt.map { Int64($0.timeIntervalSince1970 * 1000.0) } ?? 0
+        createdAtEpochMs: list.createdAt.map { Int64($0.timeIntervalSince1970 * 1000.0) } ?? 0,
+        myRole: list.myRole,
+        isShared: list.isShared,
+        memberCount: list.memberCount,
+        ownerUsername: list.ownerUsername
     )
 }
 
@@ -292,7 +304,11 @@ func floaterListToCache(_ list: ListSummary) -> CachedFloaterListRecord {
         iconKey: list.iconKey,
         todoCount: list.todoCount,
         updatedAtEpochMs: list.updatedAt.map { Int64($0.timeIntervalSince1970 * 1000.0) } ?? 0,
-        createdAtEpochMs: list.createdAt.map { Int64($0.timeIntervalSince1970 * 1000.0) } ?? 0
+        createdAtEpochMs: list.createdAt.map { Int64($0.timeIntervalSince1970 * 1000.0) } ?? 0,
+        myRole: list.myRole,
+        isShared: list.isShared,
+        memberCount: list.memberCount,
+        ownerUsername: list.ownerUsername
     )
 }
 
@@ -332,7 +348,11 @@ func listFromCache(_ record: CachedListRecord, todoCountOverride: Int? = nil) ->
         iconKey: record.iconKey,
         todoCount: todoCountOverride ?? record.todoCount,
         updatedAt: record.updatedAtEpochMs > 0 ? Date(timeIntervalSince1970: TimeInterval(record.updatedAtEpochMs) / 1000.0) : nil,
-        createdAt: record.createdAtEpochMs > 0 ? Date(timeIntervalSince1970: TimeInterval(record.createdAtEpochMs) / 1000.0) : nil
+        createdAt: record.createdAtEpochMs > 0 ? Date(timeIntervalSince1970: TimeInterval(record.createdAtEpochMs) / 1000.0) : nil,
+        myRole: record.myRole ?? "OWNER",
+        isShared: record.isShared ?? false,
+        memberCount: record.memberCount ?? 0,
+        ownerUsername: record.ownerUsername
     )
 }
 
@@ -344,7 +364,11 @@ func floaterListFromCache(_ record: CachedFloaterListRecord, todoCountOverride: 
         iconKey: record.iconKey,
         todoCount: todoCountOverride ?? record.todoCount,
         updatedAt: record.updatedAtEpochMs > 0 ? Date(timeIntervalSince1970: TimeInterval(record.updatedAtEpochMs) / 1000.0) : nil,
-        createdAt: record.createdAtEpochMs > 0 ? Date(timeIntervalSince1970: TimeInterval(record.createdAtEpochMs) / 1000.0) : nil
+        createdAt: record.createdAtEpochMs > 0 ? Date(timeIntervalSince1970: TimeInterval(record.createdAtEpochMs) / 1000.0) : nil,
+        myRole: record.myRole ?? "OWNER",
+        isShared: record.isShared ?? false,
+        memberCount: record.memberCount ?? 0,
+        ownerUsername: record.ownerUsername
     )
 }
 

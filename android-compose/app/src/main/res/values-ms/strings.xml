@@ -250,6 +250,24 @@
     <string name="todos_summary_modes_unavailable">Ringkasan hanya tersedia untuk Hari ini, Dijadualkan, Semua, dan Keutamaan</string>
     <string name="todos_summary_offline_unavailable">Tiada ringkasan tersedia semasa luar talian.</string>
     <string name="todos_list_settings">Tetapan senarai</string>
+    <string name="share_list_action">Kongsi senarai</string>
+    <string name="members_title">Ahli</string>
+    <string name="members_add_section">Tambah ahli</string>
+    <string name="members_add_action">Tambah</string>
+    <string name="members_search_placeholder">Cari mengikut nama pengguna</string>
+    <string name="members_no_results">Tiada pengguna ditemui</string>
+    <string name="members_remove">Buang ahli</string>
+    <string name="members_leave_list">Tinggalkan senarai</string>
+    <string name="members_shared_by">Dikongsi oleh %1$s</string>
+    <string name="share_role_owner">Pemilik</string>
+    <string name="share_role_editor">Penyunting</string>
+    <string name="share_role_viewer">Pelihat</string>
+    <string name="share_task_chooser_title">Kongsi tugasan</string>
+    <string name="share_due_label">Tarikh akhir: %1$s</string>
+    <string name="share_priority_label">Keutamaan: %1$s</string>
+    <plurals name="share_task_count">
+        <item quantity="other">%d tugasan</item>
+    </plurals>
     <string name="todos_save_list_settings">Simpan tetapan senarai</string>
     <string name="todos_delete_list_title">Padam senarai?</string>
     <string name="todos_delete_list_message">Ini akan memadam senarai ini, setiap tugasan di dalamnya, dan sejarah selesai bagi tugasan tersebut.</string>

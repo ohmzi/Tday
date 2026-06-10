@@ -250,6 +250,25 @@
     <string name="todos_summary_modes_unavailable">El resumen solo está disponible para Hoy, Programadas, Todas y Prioridad</string>
     <string name="todos_summary_offline_unavailable">No hay resumen disponible sin conexión.</string>
     <string name="todos_list_settings">Ajustes de la lista</string>
+    <string name="share_list_action">Compartir lista</string>
+    <string name="members_title">Miembros</string>
+    <string name="members_add_section">Añadir miembro</string>
+    <string name="members_add_action">Añadir</string>
+    <string name="members_search_placeholder">Buscar por nombre de usuario</string>
+    <string name="members_no_results">No se encontraron usuarios</string>
+    <string name="members_remove">Quitar miembro</string>
+    <string name="members_leave_list">Salir de la lista</string>
+    <string name="members_shared_by">Compartida por %1$s</string>
+    <string name="share_role_owner">Propietario</string>
+    <string name="share_role_editor">Editor</string>
+    <string name="share_role_viewer">Lector</string>
+    <string name="share_task_chooser_title">Compartir tarea</string>
+    <string name="share_due_label">Vence: %1$s</string>
+    <string name="share_priority_label">Prioridad: %1$s</string>
+    <plurals name="share_task_count">
+        <item quantity="one">%d tarea</item>
+        <item quantity="other">%d tareas</item>
+    </plurals>
     <string name="todos_save_list_settings">Guardar ajustes de la lista</string>
     <string name="todos_delete_list_title">¿Eliminar lista?</string>
     <string name="todos_delete_list_message">Esto eliminará esta lista, todas sus tareas y el historial de las tareas completadas.</string>

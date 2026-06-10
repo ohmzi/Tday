@@ -225,6 +225,11 @@ Lists group scheduled tasks.
 | PATCH | `/api/list` | Update a list |
 | DELETE | `/api/list` | Delete a list |
 | GET | `/api/list/{id}` | Get list with its todos |
+| GET | `/api/list/{id}/members` | Get the list owner and members with roles |
+| POST | `/api/list/{id}/members` | Add a member by username with role EDITOR or VIEWER (owner only) |
+| PATCH | `/api/list/{id}/members` | Change a member's role (owner only) |
+| DELETE | `/api/list/{id}/members` | Remove a member (owner only) |
+| POST | `/api/list/{id}/leave` | Leave a shared list (non-owner members) |
 
 ### Floater Lists
 
@@ -237,12 +242,18 @@ Floater lists group floaters.
 | PATCH | `/api/floaterList` | Update a floater list |
 | DELETE | `/api/floaterList` | Delete one or many floater lists |
 | GET | `/api/floaterList/{id}` | Get floater list with its floaters |
+| GET | `/api/floaterList/{id}/members` | Get the list owner and members with roles |
+| POST | `/api/floaterList/{id}/members` | Add a member by username with role EDITOR or VIEWER (owner only) |
+| PATCH | `/api/floaterList/{id}/members` | Change a member's role (owner only) |
+| DELETE | `/api/floaterList/{id}/members` | Remove a member (owner only) |
+| POST | `/api/floaterList/{id}/leave` | Leave a shared floater list (non-owner members) |
 
 ### User
 
 | Method | Path | Purpose |
 |--------|------|---------|
 | GET | `/api/user` | Get current user profile |
+| GET | `/api/user/search?q=` | Username typeahead for the share-member picker (min 2 chars, APPROVED users, excludes self, max 10) |
 | PATCH | `/api/user` | Update user (encryption settings) |
 | PATCH | `/api/user/profile` | Update profile |
 | POST | `/api/user/change-password` | Change password |

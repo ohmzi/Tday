@@ -22,9 +22,11 @@ This document describes the durable and local data structures that define T'Day.
 | Todo | `Todos` | `TodoDto`, `CreateTodoRequest`, `UpdateTodoRequest` | Scheduled task with required `due`, optional `rrule`, priority, pinning, ordering, and optional scheduled-task list. |
 | Todo instance | `TodoInstances` | `TodoInstancePatchRequest`, `TodoInstanceDeleteRequest` | Per-occurrence overrides/deletions for recurring tasks. |
 | Completed todo | `CompletedTodos` | `CompletedTodoDto` | Completion history preserving original task/list details where possible. |
-| List | `Lists` | `ListDto`, `ListDetailResponse` | Scheduled-task project/group with color and icon metadata. |
+| List | `Lists` | `ListDto`, `ListDetailResponse` | Scheduled-task project/group with color and icon metadata. `ListDto` carries sharing metadata (`myRole`, `isShared`, `memberCount`, `ownerUsername`). |
+| List share | `ListShares` (`list_shares`) | `ListMemberDto`, `ListMembersResponse`, `AddMemberRequest`, `UpdateMemberRoleRequest`, `RemoveMemberRequest` | EDITOR/VIEWER membership on a scheduled list. The owner is implicit on `Lists.userID` and never has a share row. |
 | Floater | `Floaters` | `FloaterDto`, `CreateFloaterRequest`, `UpdateFloaterRequest` | Unscheduled task for Anytime/Floater planning. No `due`. |
-| Floater list | `FloaterLists` / `FloaterProject` | `FloaterListDto`, `FloaterListDetailResponse` | Project/group for floaters. Keep separate from scheduled-task lists. |
+| Floater list | `FloaterLists` / `FloaterProject` | `FloaterListDto`, `FloaterListDetailResponse` | Project/group for floaters. Keep separate from scheduled-task lists. Carries the same sharing metadata as `ListDto`. |
+| Floater list share | `FloaterListShares` (`floater_list_shares`) | Same share DTOs as scheduled lists | EDITOR/VIEWER membership on a floater list. |
 | Completed floater | `CompletedFloaters` | `CompletedFloaterDto` | Completion history for floaters. |
 | Preferences | `UserPreferences` | `PreferencesDto`, `PreferencesResponse` | Per-user sorting/grouping/direction preferences. |
 | App config | `AppConfigs` | `AppSettingsResponse`, `AdminSettingsResponse` | Public/admin app settings such as Summary availability. |
@@ -155,6 +157,18 @@ Server Mode replays pending mutations through `SyncManager`. Local Mode clears/i
 ## Tenant Isolation
 
 Every backend query that reads or writes private data must filter by the authenticated `userID`. Admin-only operations that touch other users must be behind centralized admin checks and should avoid returning private task content unless the endpoint explicitly requires it.
+
+The single sanctioned exception is list sharing: queries guarded by `ListShareService` (`accessFor`/`sharedListIdsFor`) may widen the `userID` filter to "own rows OR rows in lists shared with me". Visibility includes VIEWER members; mutations require OWNER/EDITOR (viewers fail closed by matching zero rows). List rename/recolor/delete and member management are owner-only. Any new widened `where` clause must go through `ListShareService` — never inline share-table checks elsewhere.
+
+## List Sharing
+
+- Roles: OWNER (the list's `userID`), EDITOR (full task CRUD in the list), VIEWER (read-only). Share rows store only EDITOR/VIEWER.
+- Members are added directly by username (closed, admin-approved server); members can leave at any time.
+- Shared tasks ride the normal feed queries (`/api/todo?timeline=true`, `/api/floater`), so they appear in members' Today/timeline feeds and mobile offline snapshots.
+- Completion history stays per-user in v1: completing a shared task writes a `CompletedTodos`/`CompletedFloaters` row under the completer's `userID`; other members just see the task disappear.
+- Membership management is online-only on mobile (no pending mutations); task edits in shared lists stay offline-capable. A member demoted/removed while offline gets 403/no-op on replay, which the sync managers drop.
+- Deleting a list removes every member's todos and completion history for that list (the list-scoped cascades are deliberately not user-filtered).
+- Realtime: every successful mutation emits a `DomainEvent` over `/ws` to the actor plus all share-connected collaborators (`RealtimePublisher`); events are lightweight "refetch" signals (`todo.changed`, `floater.changed`, `list.changed`, `floaterList.changed`, `list.members`, `completed.changed`).
 
 ## Data Change Checklist
 

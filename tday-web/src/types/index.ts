@@ -3,12 +3,26 @@ export type ListColor =
   | "PINK" | "TEAL" | "CORAL" | "GOLD" | "DEEP_BLUE" | "ROSE"
   | "LIGHT_RED" | "BRICK" | "SLATE";
 
+export type ShareRoleType = "OWNER" | "EDITOR" | "VIEWER";
+
+export interface ListMemberType {
+  userId: string;
+  username: string;
+  name?: string | null;
+  role: ShareRoleType;
+  addedAt?: string | null;
+}
+
 export interface ListItemMetaType {
   id: string;
   name: string;
   color?: ListColor;
   iconKey?: string | null;
   todoCount?: number;
+  myRole?: ShareRoleType | null;
+  isShared?: boolean;
+  memberCount?: number;
+  ownerUsername?: string | null;
 }
 
 export type ListItemMetaMapType = {
@@ -24,6 +38,10 @@ export interface FloaterListItemMetaType {
   userID?: string | null;
   createdAt?: Date | null;
   updatedAt?: Date | null;
+  myRole?: ShareRoleType | null;
+  isShared?: boolean;
+  memberCount?: number;
+  ownerUsername?: string | null;
 }
 
 export type FloaterListItemMetaMapType = {

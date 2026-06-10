@@ -24,6 +24,12 @@ data class ListDto(
     val userID: String? = null,
     val updatedAt: String? = null,
     val createdAt: String? = null,
+    // Sharing metadata. myRole is null on responses from servers that predate
+    // sharing; treat null as OWNER.
+    val myRole: String? = null,
+    val isShared: Boolean = false,
+    val memberCount: Int = 0,
+    val ownerUsername: String? = null,
 )
 
 @Serializable
@@ -90,6 +96,12 @@ data class FloaterListDto(
     val userID: String? = null,
     val updatedAt: String? = null,
     val createdAt: String? = null,
+    // Sharing metadata. myRole is null on responses from servers that predate
+    // sharing; treat null as OWNER.
+    val myRole: String? = null,
+    val isShared: Boolean = false,
+    val memberCount: Int = 0,
+    val ownerUsername: String? = null,
 )
 
 @Serializable

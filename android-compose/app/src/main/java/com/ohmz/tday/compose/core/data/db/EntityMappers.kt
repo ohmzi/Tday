@@ -71,6 +71,10 @@ fun CachedListRecord.toEntity() = CachedListEntity(
     todoCount = todoCount,
     updatedAtEpochMs = updatedAtEpochMs,
     createdAtEpochMs = createdAtEpochMs,
+    myRole = myRole,
+    isShared = isShared,
+    memberCount = memberCount,
+    ownerUsername = ownerUsername,
 )
 
 fun CachedListEntity.toRecord() = CachedListRecord(
@@ -81,6 +85,10 @@ fun CachedListEntity.toRecord() = CachedListRecord(
     todoCount = todoCount,
     updatedAtEpochMs = updatedAtEpochMs,
     createdAtEpochMs = createdAtEpochMs,
+    myRole = myRole,
+    isShared = isShared,
+    memberCount = memberCount,
+    ownerUsername = ownerUsername,
 )
 
 fun CachedFloaterListRecord.toEntity() = CachedFloaterListEntity(
@@ -91,6 +99,10 @@ fun CachedFloaterListRecord.toEntity() = CachedFloaterListEntity(
     todoCount = todoCount,
     updatedAtEpochMs = updatedAtEpochMs,
     createdAtEpochMs = createdAtEpochMs,
+    myRole = myRole,
+    isShared = isShared,
+    memberCount = memberCount,
+    ownerUsername = ownerUsername,
 )
 
 fun CachedFloaterListEntity.toRecord() = CachedFloaterListRecord(
@@ -101,6 +113,10 @@ fun CachedFloaterListEntity.toRecord() = CachedFloaterListRecord(
     todoCount = todoCount,
     updatedAtEpochMs = updatedAtEpochMs,
     createdAtEpochMs = createdAtEpochMs,
+    myRole = myRole,
+    isShared = isShared,
+    memberCount = memberCount,
+    ownerUsername = ownerUsername,
 )
 
 fun CachedCompletedRecord.toEntity() = CachedCompletedEntity(

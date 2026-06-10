@@ -66,6 +66,11 @@ final class CachedListEntity {
     var todoCount: Int
     var updatedAtEpochMs: Int64
     var createdAtEpochMs: Int64?
+    // Optional so SwiftData lightweight migration covers pre-sharing stores.
+    var myRole: String?
+    var isShared: Bool?
+    var memberCount: Int?
+    var ownerUsername: String?
 
     init(from record: CachedListRecord) {
         id = record.id
@@ -75,6 +80,10 @@ final class CachedListEntity {
         todoCount = record.todoCount
         updatedAtEpochMs = record.updatedAtEpochMs
         createdAtEpochMs = record.createdAtEpochMs
+        myRole = record.myRole
+        isShared = record.isShared
+        memberCount = record.memberCount
+        ownerUsername = record.ownerUsername
     }
 }
 
@@ -87,6 +96,11 @@ final class CachedFloaterListEntity {
     var todoCount: Int
     var updatedAtEpochMs: Int64
     var createdAtEpochMs: Int64?
+    // Optional so SwiftData lightweight migration covers pre-sharing stores.
+    var myRole: String?
+    var isShared: Bool?
+    var memberCount: Int?
+    var ownerUsername: String?
 
     init(from record: CachedFloaterListRecord) {
         id = record.id
@@ -96,6 +110,10 @@ final class CachedFloaterListEntity {
         todoCount = record.todoCount
         updatedAtEpochMs = record.updatedAtEpochMs
         createdAtEpochMs = record.createdAtEpochMs
+        myRole = record.myRole
+        isShared = record.isShared
+        memberCount = record.memberCount
+        ownerUsername = record.ownerUsername
     }
 }
 

@@ -250,6 +250,25 @@
     <string name="todos_summary_modes_unavailable">Il riepilogo è disponibile solo per Oggi, Programmate, Tutte e Priorità</string>
     <string name="todos_summary_offline_unavailable">Nessun riepilogo disponibile offline.</string>
     <string name="todos_list_settings">Impostazioni elenco</string>
+    <string name="share_list_action">Condividi elenco</string>
+    <string name="members_title">Membri</string>
+    <string name="members_add_section">Aggiungi membro</string>
+    <string name="members_add_action">Aggiungi</string>
+    <string name="members_search_placeholder">Cerca per nome utente</string>
+    <string name="members_no_results">Nessun utente trovato</string>
+    <string name="members_remove">Rimuovi membro</string>
+    <string name="members_leave_list">Abbandona elenco</string>
+    <string name="members_shared_by">Condiviso da %1$s</string>
+    <string name="share_role_owner">Proprietario</string>
+    <string name="share_role_editor">Editor</string>
+    <string name="share_role_viewer">Visualizzatore</string>
+    <string name="share_task_chooser_title">Condividi attività</string>
+    <string name="share_due_label">Scadenza: %1$s</string>
+    <string name="share_priority_label">Priorità: %1$s</string>
+    <plurals name="share_task_count">
+        <item quantity="one">%d attività</item>
+        <item quantity="other">%d attività</item>
+    </plurals>
     <string name="todos_save_list_settings">Salva impostazioni elenco</string>
     <string name="todos_delete_list_title">Eliminare l\'elenco?</string>
     <string name="todos_delete_list_message">Questa azione eliminerà questo elenco, ogni attività al suo interno e la cronologia completata di tali attività.</string>
