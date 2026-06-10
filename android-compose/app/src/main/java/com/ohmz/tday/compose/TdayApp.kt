@@ -1356,7 +1356,7 @@ private fun TodosRoute(
         onDeleteList = { targetListId ->
             viewModel.deleteList(
                 listId = targetListId,
-                onOptimisticDelete = onListDeleted,
+                onDeleted = onListDeleted,
             )
         },
         onOpenFloaterList = onOpenFloaterList,
