@@ -1042,6 +1042,7 @@ private fun CalendarWeekCard(
                             isEnabled && !calendarTaskAlreadyDueOnDate(todo, day)
                         }
                         CalendarWeekDayCell(
+                            pageStart = displayWeekStart,
                             date = day,
                             taskCount = taskCount,
                             isSelected = isSelected,
@@ -1066,6 +1067,7 @@ private fun CalendarWeekCard(
 
 @Composable
 private fun CalendarWeekDayCell(
+    pageStart: LocalDate,
     date: LocalDate,
     taskCount: Int,
     isSelected: Boolean,
@@ -1119,7 +1121,9 @@ private fun CalendarWeekDayCell(
                 resolveTodo = resolveTodo,
             )
             .calendarInAppDateDropTarget(
-                targetId = "week-$date",
+                // Scope the ID to the pager page: pre-composed adjacent pages must not
+                // overwrite the visible page's bounds for the same date.
+                targetId = "week-$pageStart-$date",
                 date = date,
                 enabled = isEnabled && draggedTodo != null,
                 dropTargets = dropTargets,
@@ -1876,6 +1880,7 @@ private fun CalendarMonthCard(
                                     isEnabled && !calendarTaskAlreadyDueOnDate(todo, cell.date)
                                 }
                                 CalendarDayCell(
+                                    pageMonth = displayMonth,
                                     cell = cell,
                                     taskCount = taskCount,
                                     isSelected = cell.date == selectedDate,
@@ -1952,6 +1957,7 @@ private fun MiniCalendarNavButton(
 
 @Composable
 private fun CalendarDayCell(
+    pageMonth: YearMonth,
     cell: CalendarDayCellModel,
     taskCount: Int,
     isSelected: Boolean,
@@ -2029,7 +2035,9 @@ private fun CalendarDayCell(
                 resolveTodo = resolveTodo,
             )
             .calendarInAppDateDropTarget(
-                targetId = "month-${cell.date}",
+                // Scope the ID to the pager page: leading/trailing dates also appear on the
+                // pre-composed adjacent page, which must not overwrite this page's bounds.
+                targetId = "month-$pageMonth-${cell.date}",
                 date = cell.date,
                 enabled = isEnabled && draggedTodo != null,
                 dropTargets = dropTargets,
