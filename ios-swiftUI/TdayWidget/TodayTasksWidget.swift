@@ -15,6 +15,22 @@ private struct TodayTaskSnapshot: Codable, Identifiable {
     let title: String
     let dueEpochMs: Int64
     let priority: String
+    // Optional so snapshots persisted before this field existed still decode (as nil).
+    let description: String?
+
+    init(
+        id: String,
+        title: String,
+        dueEpochMs: Int64,
+        priority: String,
+        description: String? = nil
+    ) {
+        self.id = id
+        self.title = title
+        self.dueEpochMs = dueEpochMs
+        self.priority = priority
+        self.description = description
+    }
 }
 
 private enum TodayTasksSnapshotStatus: String, Codable {
@@ -173,7 +189,8 @@ private struct TodayTasksWidgetView: View {
                     id: $0.id,
                     title: $0.title,
                     priority: $0.priority,
-                    dueEpochMs: $0.dueEpochMs
+                    dueEpochMs: $0.dueEpochMs,
+                    description: $0.description
                 )
             },
             date: entry.date,
@@ -187,6 +204,14 @@ private struct WidgetTaskRowModel: Identifiable {
     let title: String
     let priority: String
     let dueEpochMs: Int64?
+    let description: String?
+
+    var note: String? {
+        guard let trimmed = description?.trimmingCharacters(in: .whitespacesAndNewlines), !trimmed.isEmpty else {
+            return nil
+        }
+        return trimmed
+    }
 }
 
 private enum TaskWidgetStatus: Equatable {
@@ -496,10 +521,18 @@ private struct TdayTasksWidgetContent: View {
     private func taskRow(_ row: WidgetTaskRowModel) -> some View {
         HStack(spacing: 7) {
             priorityDot(row.priority, size: 7)
-            Text(row.title)
-                .font(.system(size: metrics.rowFontSize, weight: .bold, design: .rounded))
-                .lineLimit(1)
-                .minimumScaleFactor(0.85)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(row.title)
+                    .font(.system(size: metrics.rowFontSize, weight: .bold, design: .rounded))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
+                if let note = row.note {
+                    Text(note)
+                        .font(.system(size: metrics.rowFontSize - 2, weight: .semibold, design: .rounded))
+                        .foregroundStyle(secondaryTextColor)
+                        .lineLimit(2)
+                }
+            }
             Spacer(minLength: 4)
             if mode.showsDueTime, family != .systemSmall, let dueEpochMs = row.dueEpochMs {
                 dueTimeChip(Self.dueTimeText(from: dueEpochMs))
@@ -507,7 +540,7 @@ private struct TdayTasksWidgetContent: View {
         }
         .foregroundStyle(.primary)
         .padding(.horizontal, 2)
-        .frame(height: metrics.rowHeight)
+        .frame(minHeight: metrics.rowHeight, alignment: .leading)
         .accessibilityLabel(accessibilityLabel(for: row))
     }
 
@@ -782,7 +815,8 @@ private struct FloaterTasksWidgetView: View {
                     id: $0.id,
                     title: $0.title,
                     priority: $0.priority,
-                    dueEpochMs: nil
+                    dueEpochMs: nil,
+                    description: nil
                 )
             },
             date: entry.date,

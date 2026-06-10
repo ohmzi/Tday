@@ -2827,6 +2827,12 @@ private struct CalendarPendingTaskRow: View {
                             .font(.tdayRounded(size: TodoTimelineMetrics.minimalRowSubtitleSize, weight: .semibold))
                             .foregroundStyle(colors.onSurfaceVariant.opacity(0.8))
                     }
+
+                    if let description = todo.description?.trimmingCharacters(in: .whitespacesAndNewlines), !description.isEmpty {
+                        Text(description)
+                            .font(.tdayRounded(size: 12, weight: .semibold))
+                            .foregroundStyle(colors.onSurfaceVariant)
+                    }
                 }
 
                 Spacer(minLength: 0)
