@@ -5,7 +5,7 @@ import ManageMembersSheet from "@/features/list/component/ManageMembersSheet";
 import NativePageTitle from "@/components/app/NativePageTitle";
 import ScreenWatermark from "@/components/app/ScreenWatermark";
 import MobileSearchHeader from "@/components/ui/MobileSearchHeader";
-import ShareListButton from "@/components/ui/ShareListButton";
+import { useShareListAsText } from "@/hooks/use-share-list";
 import { Button } from "@/components/ui/button";
 import { getListIcon } from "@/lib/listIcons";
 import { listColorAccentColors, nativeScreenAccentColors } from "@/components/app/nativeScreenTheme";
@@ -43,6 +43,7 @@ export default function FloaterListContainer({ id }: { id: string }) {
   const isViewer = myRole === "VIEWER";
   const sharedByLabel =
     listMeta && "ownerUsername" in listMeta ? listMeta.ownerUsername : null;
+  const shareListAsText = useShareListAsText({ listName, todos: floaterListTodos });
 
   const filteredFloaters = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -87,35 +88,28 @@ export default function FloaterListContainer({ id }: { id: string }) {
           ) : null}
         </div>
         {editableList ? (
-          <div className="flex shrink-0 items-center gap-2">
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="mt-4 h-12 w-12 shrink-0 rounded-full border border-white/70 bg-card/90 text-foreground shadow-[0_12px_28px_-22px_hsl(var(--shadow)/0.55)] hover:bg-card dark:border-white/10"
-              onClick={() => setMembersOpen(true)}
-              aria-label={appDict("members")}
-            >
-              <Users className="h-5 w-5" />
-            </Button>
-            <ShareListButton
-              listName={listName}
-              todos={floaterListTodos}
-              className="mt-4 h-12 w-12 shrink-0 rounded-full border border-white/70 bg-card/90 text-foreground shadow-[0_12px_28px_-22px_hsl(var(--shadow)/0.55)] hover:bg-card dark:border-white/10"
-            />
+          // One entry point per role: owners get the edit sheet (which hosts
+          // the Sharing section); members go straight to the members sheet.
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="mt-4 h-12 w-12 shrink-0 rounded-full border border-white/70 bg-card/90 text-foreground shadow-[0_12px_28px_-22px_hsl(var(--shadow)/0.55)] hover:bg-card dark:border-white/10"
+            onClick={() =>
+              myRole === "OWNER" ? setEditListOpen(true) : setMembersOpen(true)
+            }
+            aria-label={
+              myRole === "OWNER"
+                ? `${appDict("editFloaterList")} ${listName}`
+                : appDict("members")
+            }
+          >
             {myRole === "OWNER" ? (
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="mt-4 h-12 w-12 shrink-0 rounded-full border border-white/70 bg-card/90 text-foreground shadow-[0_12px_28px_-22px_hsl(var(--shadow)/0.55)] hover:bg-card dark:border-white/10"
-                onClick={() => setEditListOpen(true)}
-                aria-label={`${appDict("editFloaterList")} ${listName}`}
-              >
-                <Pencil className="h-5 w-5" />
-              </Button>
-            ) : null}
-          </div>
+              <Pencil className="h-5 w-5" />
+            ) : (
+              <Users className="h-5 w-5" />
+            )}
+          </Button>
         ) : null}
       </div>
 
@@ -174,6 +168,8 @@ export default function FloaterListContainer({ id }: { id: string }) {
         open={editListOpen}
         onOpenChange={setEditListOpen}
         list={editableList}
+        onManageMembers={() => setMembersOpen(true)}
+        onShareList={() => void shareListAsText()}
       />
       <ManageMembersSheet
         open={membersOpen}
@@ -182,6 +178,7 @@ export default function FloaterListContainer({ id }: { id: string }) {
         listType="floaterList"
         listName={listName}
         myRole={myRole}
+        onShareExternal={() => void shareListAsText()}
       />
     </div>
   );

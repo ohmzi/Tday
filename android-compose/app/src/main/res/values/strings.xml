@@ -308,6 +308,8 @@
     <string name="summary_source_local">Local model</string>
     <string name="todos_list_settings">List settings</string>
     <string name="share_list_action">Share list</string>
+    <string name="share_section_title">Sharing</string>
+    <string name="action_share">Share</string>
     <string name="members_title">Members</string>
     <string name="members_add_section">Add member</string>
     <string name="members_add_action">Add</string>

@@ -329,6 +329,8 @@
     "searchTasks": "Rechercher des tâches",
     "taskCount": "{{count}} tâches",
     "shareList": "Partager la liste",
+    "sharing": "Partage",
+    "share": "Partager",
     "shareListCopied": "Liste copiée dans le presse-papiers",
     "shareDueLabel": "Échéance : {{date}}",
     "shareTaskCount_one": "{{count}} tâche",

@@ -329,6 +329,8 @@
     "searchTasks": "Pesquisar tarefas",
     "taskCount": "{{count}} tarefas",
     "shareList": "Compartilhar lista",
+    "sharing": "Compartilhamento",
+    "share": "Compartilhar",
     "shareListCopied": "Lista copiada para a área de transferência",
     "shareDueLabel": "Vencimento: {{date}}",
     "shareTaskCount_one": "{{count}} tarefa",
