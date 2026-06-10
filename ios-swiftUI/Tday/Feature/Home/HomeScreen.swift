@@ -798,6 +798,12 @@ private struct HomeTodayTaskRow: View {
                         .font(.tdayRounded(size: 13, weight: .semibold))
                         .foregroundStyle(subtitleColor)
                 }
+
+                if let description = todo.description?.trimmingCharacters(in: .whitespacesAndNewlines), !description.isEmpty {
+                    Text(description)
+                        .font(.tdayRounded(size: 12, weight: .semibold))
+                        .foregroundStyle(colors.onSurfaceVariant)
+                }
             }
 
             Spacer(minLength: 0)

@@ -45,6 +45,22 @@ struct TodayTasksWidgetTaskSnapshot: Codable, Equatable, Identifiable {
     let title: String
     let dueEpochMs: Int64
     let priority: String
+    // Optional so previously persisted snapshots without this field still decode (as nil).
+    let description: String?
+
+    init(
+        id: String,
+        title: String,
+        dueEpochMs: Int64,
+        priority: String,
+        description: String? = nil
+    ) {
+        self.id = id
+        self.title = title
+        self.dueEpochMs = dueEpochMs
+        self.priority = priority
+        self.description = description
+    }
 }
 
 enum TodayTasksWidgetSnapshotStatus: String, Codable, Equatable {
@@ -108,7 +124,8 @@ enum TodayTasksWidgetSnapshotStore {
                     id: $0.id,
                     title: $0.title,
                     dueEpochMs: $0.dueEpochMs ?? dayStartEpochMs,
-                    priority: $0.priority
+                    priority: $0.priority,
+                    description: $0.description
                 )
             }
         )

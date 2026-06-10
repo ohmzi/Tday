@@ -1924,7 +1924,6 @@ struct TodoListScreen: View {
                 Text(description)
                     .font(.tdayRounded(size: 12, weight: .semibold))
                     .foregroundStyle(colors.onSurfaceVariant)
-                    .lineLimit(2)
             }
         }
         .opacity(isFading ? 0 : 1)
@@ -2024,6 +2023,12 @@ struct TodoListScreen: View {
                         Text(subtitleText)
                             .font(.tdayRounded(size: TodoTimelineMetrics.minimalRowSubtitleSize, weight: .semibold))
                             .foregroundStyle(subtitleColor)
+                    }
+
+                    if let description = todo.description?.trimmingCharacters(in: .whitespacesAndNewlines), !description.isEmpty {
+                        Text(description)
+                            .font(.tdayRounded(size: 12, weight: .semibold))
+                            .foregroundStyle(colors.onSurfaceVariant)
                     }
                 }
 
