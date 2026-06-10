@@ -29,6 +29,7 @@ final class AppContainer {
     let realtimeClient: RealtimeClient
     let reminderScheduler: TaskReminderScheduler
     let snackbarManager: SnackbarManager
+    let undoableDeleteScheduler: UndoableDeleteScheduler
     let bootstrapSession: BootstrapSessionUseCase
     let createTodo: CreateTodoUseCase
     let completeTodo: CompleteTodoUseCase
@@ -86,6 +87,7 @@ final class AppContainer {
         realtimeClient = RealtimeClient(configuration: networkConfiguration)
         reminderScheduler = TaskReminderScheduler(reminderPreferenceStore: reminderPreferenceStore)
         snackbarManager = SnackbarManager()
+        undoableDeleteScheduler = UndoableDeleteScheduler(snackbarManager: snackbarManager)
         bootstrapSession = BootstrapSessionUseCase(authRepository: authRepository, syncManager: syncManager)
         createTodo = CreateTodoUseCase(todoRepository: todoRepository)
         completeTodo = CompleteTodoUseCase(todoRepository: todoRepository)

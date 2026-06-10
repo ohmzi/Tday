@@ -13,6 +13,20 @@ struct TodoListCacheSnapshot {
     let aiSummaryEnabled: Bool
 }
 
+/// Snapshot of everything `stageDeleteTodo(_:)` pruned from the local cache,
+/// so `undoStagedTodo(_:)` can restore the exact pre-delete state.
+struct StagedTodoDeletion {
+    let todos: [CachedTodoRecord]
+    let pendingMutations: [PendingMutationRecord]
+}
+
+/// Snapshot of everything `stageDeleteFloater(_:)` pruned from the local
+/// cache, so `undoStagedFloater(_:)` can restore the exact pre-delete state.
+struct StagedFloaterDeletion {
+    let floaters: [CachedFloaterRecord]
+    let pendingMutations: [PendingMutationRecord]
+}
+
 @MainActor
 final class TodoRepository {
     private let api: TdayAPIService
@@ -469,6 +483,48 @@ final class TodoRepository {
         }
     }
 
+    /// First half of a delayed-commit delete: prunes the todo (and its pending
+    /// create/update mutations) from the local cache without queueing the
+    /// server delete. Commit later by calling `deleteTodo(_:)` — its prune
+    /// half re-runs as a no-op — or restore with `undoStagedTodo(_:)`.
+    func stageDeleteTodo(_ todo: TodoItem) -> StagedTodoDeletion {
+        var removedTodos: [CachedTodoRecord] = []
+        var removedMutations: [PendingMutationRecord] = []
+        cacheManager.updateOfflineState { state in
+            var nextState = state
+            removedTodos = state.todos.filter {
+                $0.canonicalId == todo.canonicalId && $0.instanceDateEpochMs == todo.instanceDateEpochMilliseconds
+            }
+            removedMutations = state.pendingMutations.filter {
+                $0.targetId == todo.canonicalId && ($0.kind == .createTodo || $0.kind == .updateTodo)
+            }
+            nextState.todos.removeAll { $0.canonicalId == todo.canonicalId && $0.instanceDateEpochMs == todo.instanceDateEpochMilliseconds }
+            nextState.pendingMutations.removeAll { $0.targetId == todo.canonicalId && ($0.kind == .createTodo || $0.kind == .updateTodo) }
+            return nextState
+        }
+        return StagedTodoDeletion(todos: removedTodos, pendingMutations: removedMutations)
+    }
+
+    /// Restores the local state captured by `stageDeleteTodo(_:)`. Idempotent:
+    /// records that already exist again (e.g. re-added by a sync pull during
+    /// the undo window) are left untouched.
+    func undoStagedTodo(_ staged: StagedTodoDeletion) {
+        cacheManager.updateOfflineState { state in
+            var nextState = state
+            for record in staged.todos where !nextState.todos.contains(where: {
+                $0.canonicalId == record.canonicalId && $0.instanceDateEpochMs == record.instanceDateEpochMs
+            }) {
+                nextState.todos.append(record)
+            }
+            for mutation in staged.pendingMutations where !nextState.pendingMutations.contains(where: {
+                $0.mutationId == mutation.mutationId
+            }) {
+                nextState.pendingMutations.append(mutation)
+            }
+            return nextState
+        }
+    }
+
     func deleteTodo(_ todo: TodoItem) async throws {
         let now = Date().epochMilliseconds
         _ = try await cacheManager.updateOfflineState { state in
@@ -505,6 +561,46 @@ final class TodoRepository {
         let result = await syncManager.syncCachedData(force: true, replayPendingMutations: true)
         if case let .failure(error) = result, isLikelyUnrecoverableMutationError(error) {
             throw error
+        }
+    }
+
+    /// First half of a delayed-commit delete: prunes the floater (and its
+    /// pending create/update mutations) from the local cache without queueing
+    /// the server delete. Commit later by calling `deleteFloater(_:)` — its
+    /// prune half re-runs as a no-op — or restore with `undoStagedFloater(_:)`.
+    func stageDeleteFloater(_ floater: TodoItem) -> StagedFloaterDeletion {
+        var removedFloaters: [CachedFloaterRecord] = []
+        var removedMutations: [PendingMutationRecord] = []
+        cacheManager.updateOfflineState { state in
+            var nextState = state
+            removedFloaters = state.floaters.filter { $0.canonicalId == floater.canonicalId }
+            removedMutations = state.pendingMutations.filter {
+                $0.targetId == floater.canonicalId && ($0.kind == .createFloater || $0.kind == .updateFloater)
+            }
+            nextState.floaters.removeAll { $0.canonicalId == floater.canonicalId }
+            nextState.pendingMutations.removeAll { $0.targetId == floater.canonicalId && ($0.kind == .createFloater || $0.kind == .updateFloater) }
+            return nextState
+        }
+        return StagedFloaterDeletion(floaters: removedFloaters, pendingMutations: removedMutations)
+    }
+
+    /// Restores the local state captured by `stageDeleteFloater(_:)`.
+    /// Idempotent: records that already exist again (e.g. re-added by a sync
+    /// pull during the undo window) are left untouched.
+    func undoStagedFloater(_ staged: StagedFloaterDeletion) {
+        cacheManager.updateOfflineState { state in
+            var nextState = state
+            for record in staged.floaters where !nextState.floaters.contains(where: {
+                $0.canonicalId == record.canonicalId
+            }) {
+                nextState.floaters.append(record)
+            }
+            for mutation in staged.pendingMutations where !nextState.pendingMutations.contains(where: {
+                $0.mutationId == mutation.mutationId
+            }) {
+                nextState.pendingMutations.append(mutation)
+            }
+            return nextState
         }
     }
 

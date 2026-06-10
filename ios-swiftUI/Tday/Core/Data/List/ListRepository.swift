@@ -1,5 +1,16 @@
 import Foundation
 
+/// Snapshot of everything `stageDeleteList(listId:)` pruned from the local
+/// cache — the list, its tasks, completed history for those tasks, and any
+/// pending mutations — so `undoStagedList(_:)` can restore the exact
+/// pre-delete state.
+struct StagedListDeletion {
+    let lists: [CachedListRecord]
+    let todos: [CachedTodoRecord]
+    let completedItems: [CachedCompletedRecord]
+    let pendingMutations: [PendingMutationRecord]
+}
+
 @MainActor
 final class ListRepository {
     private let api: TdayAPIService
@@ -203,6 +214,71 @@ final class ListRepository {
         let result = await syncManager.syncCachedData(force: true, replayPendingMutations: true)
         if case let .failure(error) = result, isLikelyUnrecoverableMutationError(error) {
             throw error
+        }
+    }
+
+    /// First half of a delayed-commit delete: prunes the list, its tasks,
+    /// their completed history, and related pending mutations from the local
+    /// cache without queueing the server delete. Commit later by calling
+    /// `deleteList(listId:onOptimisticDelete:)` — its prune half re-runs as a
+    /// no-op — or restore with `undoStagedList(_:)`.
+    func stageDeleteList(listId: String) -> StagedListDeletion {
+        let normalizedListID = listId.trimmingCharacters(in: .whitespacesAndNewlines)
+        var staged = StagedListDeletion(lists: [], todos: [], completedItems: [], pendingMutations: [])
+        guard !normalizedListID.isEmpty else {
+            return staged
+        }
+
+        cacheManager.updateOfflineState { state in
+            var nextState = state
+            let deletedTodoIDs = Set(state.todos.filter { $0.listId == normalizedListID }.map(\.canonicalId))
+            let isRemovedCompleted: (CachedCompletedRecord) -> Bool = { completed in
+                completed.listId == normalizedListID ||
+                    completed.originalTodoId.map { deletedTodoIDs.contains($0) } == true
+            }
+            let isRemovedMutation: (PendingMutationRecord) -> Bool = { mutation in
+                mutation.targetId == normalizedListID ||
+                    mutation.listId == normalizedListID ||
+                    mutation.targetId.map { deletedTodoIDs.contains($0) } == true
+            }
+            staged = StagedListDeletion(
+                lists: state.lists.filter { $0.id == normalizedListID },
+                todos: state.todos.filter { $0.listId == normalizedListID },
+                completedItems: state.completedItems.filter(isRemovedCompleted),
+                pendingMutations: state.pendingMutations.filter(isRemovedMutation)
+            )
+            nextState.lists.removeAll { $0.id == normalizedListID }
+            nextState.todos.removeAll { $0.listId == normalizedListID }
+            nextState.completedItems.removeAll(where: isRemovedCompleted)
+            nextState.pendingMutations.removeAll(where: isRemovedMutation)
+            return nextState
+        }
+        return staged
+    }
+
+    /// Restores the local state captured by `stageDeleteList(listId:)`.
+    /// Idempotent: records that already exist again (e.g. re-added by a sync
+    /// pull during the undo window) are left untouched.
+    func undoStagedList(_ staged: StagedListDeletion) {
+        cacheManager.updateOfflineState { state in
+            var nextState = state
+            for list in staged.lists where !nextState.lists.contains(where: { $0.id == list.id }) {
+                nextState.lists.append(list)
+            }
+            for todo in staged.todos where !nextState.todos.contains(where: {
+                $0.canonicalId == todo.canonicalId && $0.instanceDateEpochMs == todo.instanceDateEpochMs
+            }) {
+                nextState.todos.append(todo)
+            }
+            for completed in staged.completedItems where !nextState.completedItems.contains(where: { $0.id == completed.id }) {
+                nextState.completedItems.append(completed)
+            }
+            for mutation in staged.pendingMutations where !nextState.pendingMutations.contains(where: {
+                $0.mutationId == mutation.mutationId
+            }) {
+                nextState.pendingMutations.append(mutation)
+            }
+            return nextState
         }
     }
 
