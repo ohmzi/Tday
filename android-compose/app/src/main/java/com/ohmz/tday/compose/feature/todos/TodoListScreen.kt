@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -3852,7 +3853,8 @@ private fun SwipeTaskRow(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(SWIPE_ROW_HEIGHT),
+                    .heightIn(min = SWIPE_ROW_HEIGHT)
+                    .height(IntrinsicSize.Min),
             ) {
                 Row(
                     modifier = Modifier
@@ -4078,6 +4080,13 @@ private fun SwipeTaskRow(
                                         style = MaterialTheme.typography.bodySmall,
                                     )
                                 }
+                                todo.description?.takeIf { it.isNotBlank() }?.let { note ->
+                                    Text(
+                                        text = note,
+                                        color = colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                                        style = MaterialTheme.typography.bodySmall,
+                                    )
+                                }
                             }
                         }
                         if (showListIndicator || showPriorityIcon) {
@@ -4178,6 +4187,13 @@ private fun TodayTodoRow(
                             style = MaterialTheme.typography.bodySmall,
                         )
                     }
+                    todo.description?.takeIf { it.isNotBlank() }?.let { note ->
+                        Text(
+                            text = note,
+                            color = colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
                 }
             }
 
@@ -4242,6 +4258,13 @@ private fun TodoRow(
                     due?.let { text ->
                         Text(
                             text = text,
+                            color = colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                    todo.description?.takeIf { it.isNotBlank() }?.let { note ->
+                        Text(
+                            text = note,
                             color = colorScheme.onSurfaceVariant,
                             style = MaterialTheme.typography.bodySmall,
                         )
