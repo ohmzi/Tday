@@ -329,6 +329,8 @@
     "searchTasks": "タスクを検索",
     "taskCount": "{{count}} 件のタスク",
     "shareList": "リストを共有",
+    "sharing": "共有",
+    "share": "共有",
     "shareListCopied": "リストをクリップボードにコピーしました",
     "shareDueLabel": "期限: {{date}}",
     "shareTaskCount_one": "{{count}}件のタスク",

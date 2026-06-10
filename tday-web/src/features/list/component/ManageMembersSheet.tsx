@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Crown, UserPlus, X } from "lucide-react";
+import { Crown, Share2, UserPlus, X } from "lucide-react";
 import AppBottomSheet from "@/components/ui/AppBottomSheet";
 import { Input } from "@/components/ui/input";
 import { SheetCard, SheetSectionTitle } from "@/components/ui/sheet-chrome";
@@ -24,6 +24,9 @@ type ManageMembersSheetProps = {
   listType: ShareListKind;
   listName: string;
   myRole: ShareRoleType;
+  // Non-owners reach the external text share from here (owners have it in the
+  // edit sheet's Sharing section).
+  onShareExternal?: () => void;
 };
 
 const MEMBER_ROLES: ShareRoleType[] = ["EDITOR", "VIEWER"];
@@ -40,6 +43,7 @@ export default function ManageMembersSheet({
   listType,
   listName,
   myRole,
+  onShareExternal,
 }: ManageMembersSheetProps) {
   const { t: appDict } = useTranslation("app");
   const isOwner = myRole === "OWNER";
@@ -257,13 +261,28 @@ export default function ManageMembersSheet({
             </div>
           </div>
         ) : (
-          <button
-            type="button"
-            onClick={() => setConfirmingLeave(true)}
-            className="flex w-full items-center justify-center gap-2 rounded-2xl border border-destructive/30 bg-destructive/5 px-5 py-2.5 text-sm font-black text-destructive transition-colors hover:bg-destructive/10 active:scale-[0.99]"
-          >
-            {appDict("leaveList")}
-          </button>
+          <>
+            {onShareExternal ? (
+              <button
+                type="button"
+                onClick={() => {
+                  onOpenChange(false);
+                  onShareExternal();
+                }}
+                className="flex w-full items-center justify-center gap-2 rounded-2xl border border-border/70 bg-muted/60 px-5 py-2.5 text-sm font-black text-foreground transition-colors hover:bg-muted active:scale-[0.99]"
+              >
+                <Share2 className="h-4 w-4 stroke-[2.4]" />
+                {appDict("share")}
+              </button>
+            ) : null}
+            <button
+              type="button"
+              onClick={() => setConfirmingLeave(true)}
+              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-destructive/30 bg-destructive/5 px-5 py-2.5 text-sm font-black text-destructive transition-colors hover:bg-destructive/10 active:scale-[0.99]"
+            >
+              {appDict("leaveList")}
+            </button>
+          </>
         )}
       </div>
     </AppBottomSheet>

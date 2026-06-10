@@ -20,7 +20,7 @@ import NativeAppBrandButton from "@/components/app/NativeAppBrandButton";
 import ListDot from "@/components/ListDot";
 import ListFormSheet from "@/components/Sidebar/List/ListFormSheet";
 import ManageMembersSheet from "@/features/list/component/ManageMembersSheet";
-import ShareListButton from "@/components/ui/ShareListButton";
+import { useShareListAsText } from "@/hooks/use-share-list";
 import { Button } from "@/components/ui/button";
 import { useLocale } from "@/lib/navigation";
 import { useUserTimezone } from "@/features/user/query/get-timezone";
@@ -79,6 +79,7 @@ const ListContainer = ({ id }: { id: string }) => {
     const myRole = listMetaData[id]?.myRole ?? "OWNER";
     const isViewer = myRole === "VIEWER";
     const sharedByLabel = listMetaData[id]?.ownerUsername;
+    const shareListAsText = useShareListAsText({ listName, todos: listTodos });
 
     return (
         <TodoMutationProvider
@@ -112,35 +113,27 @@ const ListContainer = ({ id }: { id: string }) => {
                         ) : null}
                     </div>
                     {editableList ? (
-                        <div className="flex shrink-0 items-center gap-2">
-                            <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                className="mt-4 h-14 w-14 shrink-0 rounded-full border border-white/70 bg-card/90 text-foreground shadow-[0_12px_28px_-22px_hsl(var(--shadow)/0.55)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-card dark:border-white/10"
-                                onClick={() => setMembersOpen(true)}
-                                aria-label={appDict("members")}
-                            >
-                                <Users className="h-5 w-5" />
-                            </Button>
-                            <ShareListButton
-                                listName={listName}
-                                todos={listTodos}
-                                className="mt-4 h-14 w-14 shrink-0 rounded-full border border-white/70 bg-card/90 text-foreground shadow-[0_12px_28px_-22px_hsl(var(--shadow)/0.55)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-card dark:border-white/10"
-                            />
+                        // One entry point per role: owners get the edit sheet
+                        // (which hosts the Sharing section); members go straight
+                        // to the members sheet.
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="mt-4 h-14 w-14 shrink-0 rounded-full border border-white/70 bg-card/90 text-foreground shadow-[0_12px_28px_-22px_hsl(var(--shadow)/0.55)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-card dark:border-white/10"
+                            onClick={() =>
+                                myRole === "OWNER" ? setEditListOpen(true) : setMembersOpen(true)
+                            }
+                            aria-label={
+                                myRole === "OWNER" ? `Edit ${listName || "list"}` : appDict("members")
+                            }
+                        >
                             {myRole === "OWNER" ? (
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="icon"
-                                    className="mt-4 h-14 w-14 shrink-0 rounded-full border border-white/70 bg-card/90 text-foreground shadow-[0_12px_28px_-22px_hsl(var(--shadow)/0.55)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-card dark:border-white/10"
-                                    onClick={() => setEditListOpen(true)}
-                                    aria-label={`Edit ${listName || "list"}`}
-                                >
-                                    <Pencil className="h-5 w-5" />
-                                </Button>
-                            ) : null}
-                        </div>
+                                <Pencil className="h-5 w-5" />
+                            ) : (
+                                <Users className="h-5 w-5" />
+                            )}
+                        </Button>
                     ) : null}
                 </div>
 
@@ -197,6 +190,8 @@ const ListContainer = ({ id }: { id: string }) => {
                 open={editListOpen}
                 onOpenChange={setEditListOpen}
                 list={editableList}
+                onManageMembers={() => setMembersOpen(true)}
+                onShareList={() => void shareListAsText()}
             />
             <ManageMembersSheet
                 open={membersOpen}
@@ -205,6 +200,7 @@ const ListContainer = ({ id }: { id: string }) => {
                 listType="list"
                 listName={listName}
                 myRole={myRole}
+                onShareExternal={() => void shareListAsText()}
             />
         </TodoMutationProvider>
     );
