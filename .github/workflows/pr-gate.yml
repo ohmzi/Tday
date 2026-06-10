@@ -16,6 +16,30 @@ jobs:
           fi
           echo "Source branch is develop — allowed."
 
+  hook-check:
+    runs-on: macos-latest
+    needs: check-source-branch
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Install git hooks
+        run: bash scripts/install-hooks.sh
+
+      - name: Verify commit-msg hook strips AI trailers on macOS
+        run: |
+          printf '%s\n' \
+            'fix(test): sample commit' \
+            '' \
+            'Co-Authored-By: Claude <noreply@anthropic.com>' \
+            'Made-with: Cursor' > "$RUNNER_TEMP/msg.txt"
+          bash scripts/commit-msg "$RUNNER_TEMP/msg.txt"
+          if grep -iE '^(made-with|generated-by|written-by):|^co-authored-by:.*(cursor|codex|copilot|chatgpt|claude|openai|anthropic)' "$RUNNER_TEMP/msg.txt"; then
+            echo "::error::commit-msg hook failed to strip AI trailers on macOS."
+            exit 1
+          fi
+          echo "commit-msg hook stripped AI trailers correctly."
+
   lint-and-test:
     runs-on: ubuntu-latest
     needs: check-source-branch
