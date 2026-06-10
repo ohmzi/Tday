@@ -309,6 +309,7 @@
 
     <!-- Error handling / retry / offline -->
     <string name="action_retry">Erneut versuchen</string>
+    <string name="action_undo">Rückgängig</string>
     <string name="offline_banner_title">Du bist offline</string>
     <string name="offline_banner">Zwischengespeicherte Aufgaben sind verfügbar. Änderungen werden synchronisiert, sobald die Verbindung wiederhergestellt ist.</string>
     <string name="offline_banner_pending_one">1 Änderung wartet auf Synchronisierung</string>
@@ -454,6 +455,7 @@
     <string name="release_no_apk">Diesem Release ist keine APK beigefügt.</string>
     <string name="release_launch_update_toast">Update %1$s ist verfügbar.</string>
     <string name="task_deleted_toast">Aufgabe gelöscht</string>
+    <string name="list_deleted_toast">Liste gelöscht</string>
     <string name="release_view_on_github">Auf GitHub ansehen</string>
 
     <!-- Language picker -->

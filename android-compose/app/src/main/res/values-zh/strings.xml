@@ -309,6 +309,7 @@
 
     <!-- Error handling / retry / offline -->
     <string name="action_retry">重试</string>
+    <string name="action_undo">撤销</string>
     <string name="offline_banner_title">你已离线</string>
     <string name="offline_banner">缓存的任务仍可使用。恢复连接后更改将自动同步。</string>
     <string name="offline_banner_pending_one">1 项更改等待同步</string>
@@ -454,6 +455,7 @@
     <string name="release_no_apk">此版本未附带 APK。</string>
     <string name="release_launch_update_toast">更新 %1$s 已可用。</string>
     <string name="task_deleted_toast">任务已删除</string>
+    <string name="list_deleted_toast">列表已删除</string>
     <string name="release_view_on_github">在 GitHub 上查看</string>
 
     <!-- Language picker -->

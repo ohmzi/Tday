@@ -309,6 +309,7 @@
 
     <!-- Error handling / retry / offline -->
     <string name="action_retry">Tentar novamente</string>
+    <string name="action_undo">Desfazer</string>
     <string name="offline_banner_title">Você está offline</string>
     <string name="offline_banner">As tarefas em cache estão disponíveis. As alterações serão sincronizadas quando a conexão voltar.</string>
     <string name="offline_banner_pending_one">1 alteração aguardando sincronização</string>
@@ -454,6 +455,7 @@
     <string name="release_no_apk">Nenhum APK anexado a esta versão.</string>
     <string name="release_launch_update_toast">A atualização %1$s está disponível.</string>
     <string name="task_deleted_toast">Tarefa excluída</string>
+    <string name="list_deleted_toast">Lista excluída</string>
     <string name="release_view_on_github">Ver no GitHub</string>
 
     <!-- Language picker -->

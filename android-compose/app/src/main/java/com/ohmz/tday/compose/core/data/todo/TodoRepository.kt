@@ -719,6 +719,127 @@ class TodoRepository @Inject constructor(
         }
     }
 
+    /**
+     * Stage step of the delayed-commit delete flow: prunes the task from the local
+     * cache exactly like the prune-half of [deleteTodo], but records nothing for
+     * the server (no DELETE pending mutation), so nothing can sync out during the
+     * undo window. The removed records are captured so [undoStagedTodoDeletion]
+     * can restore them exactly; the commit step is the existing [deleteTodo],
+     * whose prune-half re-runs as a no-op on the already-pruned state.
+     */
+    suspend fun stageDeleteTodo(todo: TodoItem): StagedTodoDeletion {
+        val canonicalId = todo.canonicalId
+        val instanceDateEpochMs = todo.instanceDateEpochMillis
+        val isRecurringInstanceDelete = todo.isRecurring && instanceDateEpochMs != null
+        val isLocalOnly = canonicalId.startsWith(LOCAL_TODO_PREFIX)
+
+        var staged = StagedTodoDeletion()
+        cacheManager.updateOfflineState { state ->
+            fun matchesTodo(record: CachedTodoRecord): Boolean {
+                if (record.canonicalId != canonicalId) return false
+                return !isRecurringInstanceDelete || record.instanceDateEpochMs == instanceDateEpochMs
+            }
+
+            fun matchesCompleted(record: com.ohmz.tday.compose.core.data.CachedCompletedRecord): Boolean {
+                if (record.originalTodoId != canonicalId) return false
+                return !isRecurringInstanceDelete || record.instanceDateEpochMs == instanceDateEpochMs
+            }
+
+            // Mirrors the mutation pruning of [OfflineSyncState.withDeletedTodoCached]
+            // minus enqueueing the DELETE record (that happens at commit time).
+            fun matchesMutation(mutation: PendingMutationRecord): Boolean {
+                return if (isLocalOnly) {
+                    !isRecurringInstanceDelete && mutation.targetId == canonicalId
+                } else {
+                    mutation.kind == MutationKind.DELETE_TODO &&
+                        mutation.targetId == canonicalId &&
+                        mutation.instanceDateEpochMs == instanceDateEpochMs
+                }
+            }
+
+            staged = StagedTodoDeletion(
+                removedTodos = state.todos.filter(::matchesTodo),
+                removedCompletedItems = state.completedItems.filter(::matchesCompleted),
+                removedPendingMutations = state.pendingMutations.filter(::matchesMutation),
+            )
+            state.copy(
+                todos = state.todos.filterNot(::matchesTodo),
+                completedItems = state.completedItems.filterNot(::matchesCompleted),
+                pendingMutations = state.pendingMutations.filterNot(::matchesMutation),
+            )
+        }
+        refreshTodayWidgetNow()
+        return staged
+    }
+
+    /** Undo step: re-inserts the records captured by [stageDeleteTodo]. Idempotent. */
+    suspend fun undoStagedTodoDeletion(staged: StagedTodoDeletion) {
+        cacheManager.updateOfflineState { state ->
+            val todoIds = state.todos.map { it.id }.toSet()
+            val completedIds = state.completedItems.map { it.id }.toSet()
+            val mutationIds = state.pendingMutations.map { it.mutationId }.toSet()
+            state.copy(
+                todos = state.todos +
+                    staged.removedTodos.filterNot { it.id in todoIds },
+                completedItems = state.completedItems +
+                    staged.removedCompletedItems.filterNot { it.id in completedIds },
+                pendingMutations = state.pendingMutations +
+                    staged.removedPendingMutations.filterNot { it.mutationId in mutationIds },
+            )
+        }
+        refreshTodayWidgetNow()
+    }
+
+    /** Stage step of the delayed-commit floater delete; see [stageDeleteTodo]. */
+    suspend fun stageDeleteFloater(floater: TodoItem): StagedFloaterDeletion {
+        val canonicalId = floater.canonicalId
+        val isLocalOnly = canonicalId.startsWith(LOCAL_FLOATER_PREFIX)
+
+        var staged = StagedFloaterDeletion()
+        cacheManager.updateOfflineState { state ->
+            fun matchesMutation(mutation: PendingMutationRecord): Boolean {
+                return if (isLocalOnly) {
+                    mutation.targetId == canonicalId
+                } else {
+                    mutation.kind == MutationKind.DELETE_FLOATER && mutation.targetId == canonicalId
+                }
+            }
+
+            staged = StagedFloaterDeletion(
+                removedFloaters = state.floaters.filter { it.canonicalId == canonicalId },
+                removedCompletedFloaters = state.completedFloaters
+                    .filter { it.originalFloaterId == canonicalId },
+                removedPendingMutations = state.pendingMutations.filter(::matchesMutation),
+            )
+            state.copy(
+                floaters = state.floaters.filterNot { it.canonicalId == canonicalId },
+                completedFloaters = state.completedFloaters
+                    .filterNot { it.originalFloaterId == canonicalId },
+                pendingMutations = state.pendingMutations.filterNot(::matchesMutation),
+            )
+        }
+        refreshFloaterWidgetNow()
+        return staged
+    }
+
+    /** Undo step: re-inserts the records captured by [stageDeleteFloater]. Idempotent. */
+    suspend fun undoStagedFloaterDeletion(staged: StagedFloaterDeletion) {
+        cacheManager.updateOfflineState { state ->
+            val floaterIds = state.floaters.map { it.id }.toSet()
+            val completedIds = state.completedFloaters.map { it.id }.toSet()
+            val mutationIds = state.pendingMutations.map { it.mutationId }.toSet()
+            state.copy(
+                floaters = state.floaters +
+                    staged.removedFloaters.filterNot { it.id in floaterIds },
+                completedFloaters = state.completedFloaters +
+                    staged.removedCompletedFloaters.filterNot { it.id in completedIds },
+                pendingMutations = state.pendingMutations +
+                    staged.removedPendingMutations.filterNot { it.mutationId in mutationIds },
+            )
+        }
+        refreshFloaterWidgetNow()
+    }
+
     suspend fun deleteTodo(todo: TodoItem) {
         val timestampMs = System.currentTimeMillis()
         val canonicalId = todo.canonicalId
@@ -1245,6 +1366,24 @@ class TodoRepository @Inject constructor(
         const val LOG_TAG = "TodoRepository"
     }
 }
+
+/**
+ * Local cache records removed by [TodoRepository.stageDeleteTodo], retained so an
+ * Undo within the delete-toast window can restore the exact pre-delete state.
+ * Nothing here has been sent to the server.
+ */
+data class StagedTodoDeletion(
+    val removedTodos: List<CachedTodoRecord> = emptyList(),
+    val removedCompletedItems: List<com.ohmz.tday.compose.core.data.CachedCompletedRecord> = emptyList(),
+    val removedPendingMutations: List<PendingMutationRecord> = emptyList(),
+)
+
+/** Floater counterpart of [StagedTodoDeletion]; see [TodoRepository.stageDeleteFloater]. */
+data class StagedFloaterDeletion(
+    val removedFloaters: List<CachedFloaterRecord> = emptyList(),
+    val removedCompletedFloaters: List<com.ohmz.tday.compose.core.data.CachedCompletedFloaterRecord> = emptyList(),
+    val removedPendingMutations: List<PendingMutationRecord> = emptyList(),
+)
 
 internal fun OfflineSyncState.withDeletedTodoCached(
     canonicalId: String,
