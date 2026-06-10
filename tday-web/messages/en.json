@@ -329,6 +329,8 @@
     "searchTasks": "Search tasks",
     "taskCount": "{{count}} tasks",
     "shareList": "Share list",
+    "sharing": "Sharing",
+    "share": "Share",
     "shareListCopied": "List copied to clipboard",
     "shareDueLabel": "Due: {{date}}",
     "shareTaskCount_one": "{{count}} task",

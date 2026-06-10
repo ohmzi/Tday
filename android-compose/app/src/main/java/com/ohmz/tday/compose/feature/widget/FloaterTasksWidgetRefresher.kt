@@ -33,6 +33,9 @@ class FloaterTasksWidgetRefresher @Inject constructor(
         requestSystemRefresh()
     }
 
+    // Glance exposes no public per-id update path; AppWidgetId is the
+    // documented interop for refreshing specific widget instances.
+    @android.annotation.SuppressLint("RestrictedApi")
     private suspend fun updateWidgetInstances() {
         withContext(Dispatchers.Default) {
             val widget = FloaterTasksWidget()

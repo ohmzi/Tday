@@ -559,28 +559,25 @@ fun TodoListScreen(
             null
         },
         if (isListDetailScreen && selectedList != null) {
-            TodoTopBarAction(
-                icon = ImageVector.vectorResource(R.drawable.ic_lucide_users_round),
-                contentDescription = stringResource(R.string.members_title),
-                onClick = { showMembersSheet = true },
-            )
-        } else {
-            null
-        },
-        if (isListDetailScreen && selectedList != null && selectedList.isOwner) {
+            // One entry point per role: owners get list settings (which hosts
+            // the Sharing section); members go straight to the members sheet.
             TodoTopBarAction(
                 icon = ImageVector.vectorResource(R.drawable.ic_lucide_ellipsis),
                 contentDescription = stringResource(R.string.action_more_options),
                 onClick = {
-                    listSettingsTargetId = selectedList.id
-                    listSettingsName = selectedList.name
-                    listSettingsColor = normalizeTdayListColorKey(selectedList.color)
-                    listSettingsIconKey = selectedList.iconKey
-                        ?.takeIf { isTdayListIconKeySupported(it) }
-                        ?: TDAY_DEFAULT_LIST_ICON_KEY
-                    listSettingsColorTouched = false
-                    listSettingsIconTouched = false
-                    showListSettingsSheet = true
+                    if (!selectedList.isOwner) {
+                        showMembersSheet = true
+                    } else {
+                        listSettingsTargetId = selectedList.id
+                        listSettingsName = selectedList.name
+                        listSettingsColor = normalizeTdayListColorKey(selectedList.color)
+                        listSettingsIconKey = selectedList.iconKey
+                            ?.takeIf { isTdayListIconKeySupported(it) }
+                            ?: TDAY_DEFAULT_LIST_ICON_KEY
+                        listSettingsColorTouched = false
+                        listSettingsIconTouched = false
+                        showListSettingsSheet = true
+                    }
                 },
             )
         } else {
@@ -1471,6 +1468,11 @@ fun TodoListScreen(
                 selectedList?.let { list ->
                     shareList(context, list.name, uiState.items)
                 }
+            },
+            onMembers = {
+                showListSettingsSheet = false
+                listSettingsTargetId = null
+                showMembersSheet = true
             },
             onDismiss = {
                 showListSettingsSheet = false
@@ -2412,6 +2414,7 @@ private fun ListSettingsBottomSheet(
     onListIconChange: (String) -> Unit,
     showDelete: Boolean = true,
     onShare: (() -> Unit)? = null,
+    onMembers: (() -> Unit)? = null,
     onDismiss: () -> Unit,
     onSave: () -> Unit,
     onDelete: () -> Unit,
@@ -2649,10 +2652,30 @@ private fun ListSettingsBottomSheet(
                     }
                 }
 
-                Spacer(Modifier.height(2.dp))
-                if (onShare != null) {
-                    ListSettingsShareButton(onClick = onShare)
+                if (onShare != null || onMembers != null) {
+                    TdaySheetSectionTitle(
+                        text = stringResource(R.string.share_section_title),
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        if (onMembers != null) {
+                            ListSettingsActionTile(
+                                icon = ImageVector.vectorResource(R.drawable.ic_lucide_users_round),
+                                label = stringResource(R.string.members_title),
+                                onClick = onMembers,
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
+                        if (onShare != null) {
+                            ListSettingsActionTile(
+                                icon = ImageVector.vectorResource(R.drawable.ic_lucide_share_2),
+                                label = stringResource(R.string.action_share),
+                                onClick = onShare,
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
+                    }
                 }
+                Spacer(Modifier.height(2.dp))
                 if (showDelete) {
                     ListSettingsDeleteButton(onClick = onDelete)
                 }
@@ -2661,9 +2684,16 @@ private fun ListSettingsBottomSheet(
     }
 }
 
+/**
+ * Half-width tile used by the Sharing section of the list settings sheet —
+ * "Members" (collaboration) and "Share" (external share sheet) side by side.
+ */
 @Composable
-private fun ListSettingsShareButton(
+private fun ListSettingsActionTile(
+    icon: ImageVector,
+    label: String,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val view = LocalView.current
     val colorScheme = MaterialTheme.colorScheme
@@ -2671,12 +2701,11 @@ private fun ListSettingsShareButton(
     val pressed by interactionSource.collectIsPressedAsState()
     val scale by animateFloatAsState(
         targetValue = if (pressed) 0.97f else 1f,
-        label = "listSettingsShareButtonScale",
+        label = "listSettingsActionTileScale",
     )
 
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
+        modifier = modifier
             .graphicsLayer {
                 scaleX = scale
                 scaleY = scale
@@ -2696,20 +2725,21 @@ private fun ListSettingsShareButton(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 14.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                .padding(horizontal = 14.dp, vertical = 14.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
-                imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_share_2),
+                imageVector = icon,
                 contentDescription = null,
                 tint = colorScheme.onSurface,
             )
             Text(
-                text = stringResource(R.string.share_list_action),
+                text = label,
                 style = MaterialTheme.typography.titleMedium,
                 color = colorScheme.onSurface,
                 fontWeight = FontWeight.ExtraBold,
+                maxLines = 1,
             )
         }
     }
