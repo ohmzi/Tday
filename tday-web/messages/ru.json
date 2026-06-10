@@ -322,6 +322,7 @@
     "undo": "Отменить",
     "taskDeleted": "Задача удалена",
     "listDeleted": "Список удален",
+    "listsDeleted": "Удалено списков: {{count}}",
     "done": "Готово",
     "previous": "Назад",
     "next": "Далее",

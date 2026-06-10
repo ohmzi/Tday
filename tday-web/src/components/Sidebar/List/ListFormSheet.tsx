@@ -10,7 +10,6 @@ import {
   SheetSectionTitle,
 } from "@/components/ui/sheet-chrome";
 import { api } from "@/lib/api-client";
-import { usePathname, useRouter } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
 import { hapticTick, hapticConfirm } from "@/lib/haptics";
 import { listColorMap } from "@/lib/listColorMap";
@@ -21,9 +20,9 @@ import {
   normalizeListIconKey,
 } from "@/lib/listIcons";
 import { useToast } from "@/hooks/use-toast";
-import { useUndoableDelete } from "@/hooks/use-undoable-delete";
+import { useUndoableListDelete } from "@/hooks/use-undoable-list-delete";
 import { useCreateList } from "@/components/Sidebar/List/query/create-list";
-import type { ListColor, ListItemMetaMapType, ListItemMetaType } from "@/types";
+import type { ListColor, ListItemMetaType } from "@/types";
 
 type EditableList = {
   id: string;
@@ -64,14 +63,6 @@ async function patchList({
   });
 }
 
-async function deleteList(id: string) {
-  await api.DELETE({
-    url: "/api/list",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ id, ids: [id] }),
-  });
-}
-
 export default function ListFormSheet({
   open,
   onOpenChange,
@@ -84,9 +75,7 @@ export default function ListFormSheet({
   const { t: appDict } = useTranslation("app");
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const showUndoableDelete = useUndoableDelete();
-  const router = useRouter();
-  const pathname = usePathname();
+  const stageListDelete = useUndoableListDelete();
   const { createMutateAsync, createLoading } = useCreateList();
   const isEditing = Boolean(list?.id);
   const [name, setName] = useState(initialName);
@@ -138,44 +127,11 @@ export default function ListFormSheet({
     },
   });
 
-  // Commit half of the delayed-commit delete: fires the real DELETE once the
-  // undo toast has closed without undo. Runs from a toast callback, possibly
-  // after this sheet unmounted, so it only touches the queryClient and the
-  // imperative toast (both safe after unmount).
-  const commitDeleteList = async (id: string) => {
-    try {
-      await deleteList(id);
-    } catch (mutationError) {
-      const message =
-        mutationError instanceof Error ? mutationError.message : "Failed to delete list";
-      toast({ description: message, variant: "destructive" });
-    } finally {
-      // Success: refresh caches around the cascade (list + its tasks).
-      // Failure: the same refetch restores the staged pruning.
-      await invalidateListQueries();
-    }
-  };
-
-  // Stage: prune the list from the sidebar cache, close the sheet and leave
-  // the deleted list's page immediately — but DON'T send the DELETE yet; the
-  // undo toast decides whether the request ever fires.
+  // Close the sheet and stage the delayed-commit delete (cache prune + undo
+  // toast); the real DELETE only fires if the toast closes without undo.
   const handleDeleteList = (id: string) => {
-    void queryClient.cancelQueries({ queryKey: ["listMetaData"] });
-    queryClient.setQueryData<ListItemMetaMapType>(["listMetaData"], (old = {}) => {
-      const next = { ...old };
-      delete next[id];
-      return next;
-    });
     onOpenChange(false);
-    if (pathname.includes(`/app/list/${id}`)) {
-      router.push("/app/tday");
-    }
-    showUndoableDelete({
-      message: appDict("listDeleted"),
-      commit: () => void commitDeleteList(id),
-      // The server still has the list — a refetch restores the pruned cache.
-      undo: () => void invalidateListQueries(),
-    });
+    stageListDelete([id]);
   };
 
   const saving = createLoading || updateListMutation.isPending;

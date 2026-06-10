@@ -322,6 +322,7 @@
     "undo": "Annuler",
     "taskDeleted": "Tâche supprimée",
     "listDeleted": "Liste supprimée",
+    "listsDeleted": "{{count}} listes supprimées",
     "done": "Terminé",
     "previous": "Précédent",
     "next": "Suivant",

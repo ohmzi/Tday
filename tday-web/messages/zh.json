@@ -322,6 +322,7 @@
     "undo": "撤销",
     "taskDeleted": "任务已删除",
     "listDeleted": "列表已删除",
+    "listsDeleted": "已删除 {{count}} 个列表",
     "done": "完成",
     "previous": "上一个",
     "next": "下一个",
