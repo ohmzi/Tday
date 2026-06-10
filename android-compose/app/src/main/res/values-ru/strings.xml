@@ -309,6 +309,7 @@
 
     <!-- Error handling / retry / offline -->
     <string name="action_retry">Повторить</string>
+    <string name="action_undo">Отменить</string>
     <string name="offline_banner_title">Вы офлайн</string>
     <string name="offline_banner">Доступны кэшированные задачи. Изменения синхронизируются при восстановлении связи.</string>
     <string name="offline_banner_pending_one">1 изменение ожидает синхронизации</string>
@@ -454,6 +455,7 @@
     <string name="release_no_apk">К этому релизу не прикреплён APK.</string>
     <string name="release_launch_update_toast">Доступно обновление %1$s.</string>
     <string name="task_deleted_toast">Задача удалена</string>
+    <string name="list_deleted_toast">Список удалён</string>
     <string name="release_view_on_github">Посмотреть на GitHub</string>
 
     <!-- Language picker -->

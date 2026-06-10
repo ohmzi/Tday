@@ -1,7 +1,9 @@
 package com.ohmz.tday.compose.core.data.list
 
 import android.util.Log
+import com.ohmz.tday.compose.core.data.CachedCompletedFloaterRecord
 import com.ohmz.tday.compose.core.data.CachedFloaterListRecord
+import com.ohmz.tday.compose.core.data.CachedFloaterRecord
 import com.ohmz.tday.compose.core.data.MutationKind
 import com.ohmz.tday.compose.core.data.OfflineSyncState
 import com.ohmz.tday.compose.core.data.PendingMutationRecord
@@ -238,6 +240,71 @@ class FloaterListRepository @Inject constructor(
         }
     }
 
+    /**
+     * Stage step of the delayed-commit floater-list delete: prunes the list, its
+     * floaters and its completed floaters from the local cache exactly like the
+     * prune-half of [deleteList], but records nothing for the server (no
+     * DELETE_FLOATER_LIST pending mutation), so nothing can sync out during the
+     * undo window. The removed records are captured so [undoStagedListDeletion]
+     * can restore them exactly; the commit step is the existing [deleteList],
+     * whose prune-half re-runs as a no-op on the already-pruned state.
+     */
+    suspend fun stageDeleteList(listId: String): StagedFloaterListDeletion {
+        val normalizedListId = listId.trim()
+        if (normalizedListId.isBlank()) return StagedFloaterListDeletion()
+
+        var staged = StagedFloaterListDeletion()
+        cacheManager.updateOfflineState { state ->
+            val deletedFloaterIds = state.floaters
+                .filter { it.listId == normalizedListId }
+                .map { it.canonicalId }
+                .toSet()
+
+            fun matchesMutation(mutation: PendingMutationRecord): Boolean =
+                mutation.targetId == normalizedListId ||
+                    mutation.listId == normalizedListId ||
+                    deletedFloaterIds.contains(mutation.targetId)
+
+            fun matchesCompleted(completed: CachedCompletedFloaterRecord): Boolean =
+                completed.listId == normalizedListId ||
+                    completed.originalFloaterId?.let(deletedFloaterIds::contains) == true
+
+            staged = StagedFloaterListDeletion(
+                removedFloaterLists = state.floaterLists.filter { it.id == normalizedListId },
+                removedFloaters = state.floaters.filter { it.listId == normalizedListId },
+                removedCompletedFloaters = state.completedFloaters.filter(::matchesCompleted),
+                removedPendingMutations = state.pendingMutations.filter(::matchesMutation),
+            )
+            state.copy(
+                floaterLists = state.floaterLists.filterNot { it.id == normalizedListId },
+                floaters = state.floaters.filterNot { it.listId == normalizedListId },
+                completedFloaters = state.completedFloaters.filterNot(::matchesCompleted),
+                pendingMutations = state.pendingMutations.filterNot(::matchesMutation),
+            )
+        }
+        return staged
+    }
+
+    /** Undo step: re-inserts the records captured by [stageDeleteList]. Idempotent. */
+    suspend fun undoStagedListDeletion(staged: StagedFloaterListDeletion) {
+        cacheManager.updateOfflineState { state ->
+            val listIds = state.floaterLists.map { it.id }.toSet()
+            val floaterIds = state.floaters.map { it.id }.toSet()
+            val completedIds = state.completedFloaters.map { it.id }.toSet()
+            val mutationIds = state.pendingMutations.map { it.mutationId }.toSet()
+            state.copy(
+                floaterLists = state.floaterLists +
+                    staged.removedFloaterLists.filterNot { it.id in listIds },
+                floaters = state.floaters +
+                    staged.removedFloaters.filterNot { it.id in floaterIds },
+                completedFloaters = state.completedFloaters +
+                    staged.removedCompletedFloaters.filterNot { it.id in completedIds },
+                pendingMutations = state.pendingMutations +
+                    staged.removedPendingMutations.filterNot { it.mutationId in mutationIds },
+            )
+        }
+    }
+
     suspend fun deleteList(
         listId: String,
         onOptimisticDelete: () -> Unit = {},
@@ -352,3 +419,16 @@ class FloaterListRepository @Inject constructor(
         const val LOG_TAG = "FloaterListRepository"
     }
 }
+
+/**
+ * Local cache records removed by [FloaterListRepository.stageDeleteList], retained
+ * so an Undo within the delete-toast window can restore the exact pre-delete state
+ * (the list plus its cascaded floaters/completed floaters). Nothing here has been
+ * sent to the server.
+ */
+data class StagedFloaterListDeletion(
+    val removedFloaterLists: List<CachedFloaterListRecord> = emptyList(),
+    val removedFloaters: List<CachedFloaterRecord> = emptyList(),
+    val removedCompletedFloaters: List<CachedCompletedFloaterRecord> = emptyList(),
+    val removedPendingMutations: List<PendingMutationRecord> = emptyList(),
+)

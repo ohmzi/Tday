@@ -165,8 +165,6 @@ fun TdayApp(
     val updateToastMessage = releaseUiState.latestRelease?.tagName?.let { versionLabel ->
         stringResource(R.string.release_launch_update_toast, versionLabel)
     }
-    val taskDeletedToastMessage = stringResource(R.string.task_deleted_toast)
-    val listDeletedToastMessage = stringResource(R.string.list_deleted_toast)
     val passwordChangedToastMessage = stringResource(R.string.password_changed_toast)
     val profileNameUpdatedToastMessage = stringResource(R.string.profile_name_updated_toast)
     val securityQuestionsUpdatedToastMessage =
@@ -232,14 +230,6 @@ fun TdayApp(
     )
     OnAppForegroundResume {
         appViewModel.reconnectAfterForeground()
-    }
-
-    fun showTaskDeletedToast() {
-        appViewModel.snackbarManager.showSuccess(taskDeletedToastMessage)
-    }
-
-    fun showListDeletedToast() {
-        appViewModel.snackbarManager.showSuccess(listDeletedToastMessage)
     }
 
     fun handleRootFeedTabSelection(tab: RootFeedTab) {
@@ -506,7 +496,6 @@ fun TdayApp(
                                             TodosRoute(
                                                 mode = TodoListMode.FLOATER,
                                                 onBack = { rootFeedTab = RootFeedTab.HOME },
-                                                onTaskDeleted = ::showTaskDeletedToast,
                                                 pullRefreshEnabled = !appUiState.isLocalMode,
                                                 summaryAvailable = !appUiState.isLocalMode,
                                                 onOpenFloaterList = { id, name ->
@@ -741,7 +730,6 @@ fun TdayApp(
                     TodosRoute(
                         mode = TodoListMode.TODAY,
                         onBack = { navController.popBackStack() },
-                        onTaskDeleted = ::showTaskDeletedToast,
                         pullRefreshEnabled = !appUiState.isLocalMode,
                         summaryAvailable = !appUiState.isLocalMode,
                     )
@@ -790,7 +778,6 @@ fun TdayApp(
                         TodosRoute(
                             mode = TodoListMode.TODAY,
                             onBack = finishCreateTodayFlow,
-                            onTaskDeleted = ::showTaskDeletedToast,
                             openCreateTaskOnStart = true,
                             onCreateTaskFlowFinished = finishCreateTodayFlow,
                             pullRefreshEnabled = !appUiState.isLocalMode,
@@ -806,7 +793,6 @@ fun TdayApp(
                     TodosRoute(
                         mode = TodoListMode.OVERDUE,
                         onBack = { navController.popBackStack() },
-                        onTaskDeleted = ::showTaskDeletedToast,
                         pullRefreshEnabled = !appUiState.isLocalMode,
                         summaryAvailable = !appUiState.isLocalMode,
                     )
@@ -819,7 +805,6 @@ fun TdayApp(
                     TodosRoute(
                         mode = TodoListMode.SCHEDULED,
                         onBack = { navController.popBackStack() },
-                        onTaskDeleted = ::showTaskDeletedToast,
                         pullRefreshEnabled = !appUiState.isLocalMode,
                         summaryAvailable = !appUiState.isLocalMode,
                     )
@@ -851,7 +836,6 @@ fun TdayApp(
                         mode = TodoListMode.ALL,
                         highlightTodoId = highlightTodoId,
                         onBack = { navController.popBackStack() },
-                        onTaskDeleted = ::showTaskDeletedToast,
                         pullRefreshEnabled = !appUiState.isLocalMode,
                         summaryAvailable = !appUiState.isLocalMode,
                     )
@@ -864,7 +848,6 @@ fun TdayApp(
                     TodosRoute(
                         mode = TodoListMode.PRIORITY,
                         onBack = { navController.popBackStack() },
-                        onTaskDeleted = ::showTaskDeletedToast,
                         pullRefreshEnabled = !appUiState.isLocalMode,
                         summaryAvailable = !appUiState.isLocalMode,
                     )
@@ -887,7 +870,6 @@ fun TdayApp(
                         listId = listId,
                         listName = listName,
                         onBack = { navController.popBackStack() },
-                        onTaskDeleted = ::showTaskDeletedToast,
                         pullRefreshEnabled = !appUiState.isLocalMode,
                         summaryAvailable = !appUiState.isLocalMode,
                         onListDeleted = {
@@ -895,7 +877,6 @@ fun TdayApp(
                                 popUpTo(AppRoute.Home.route) { inclusive = false }
                                 launchSingleTop = true
                             }
-                            showListDeletedToast()
                         },
                     )
                 }
@@ -917,7 +898,6 @@ fun TdayApp(
                         listId = listId,
                         listName = listName,
                         onBack = { navController.popBackStack() },
-                        onTaskDeleted = ::showTaskDeletedToast,
                         pullRefreshEnabled = !appUiState.isLocalMode,
                         summaryAvailable = !appUiState.isLocalMode,
                         onListDeleted = {
@@ -926,7 +906,6 @@ fun TdayApp(
                                 popUpTo(AppRoute.Home.route) { inclusive = false }
                                 launchSingleTop = true
                             }
-                            showListDeletedToast()
                         },
                     )
                 }
@@ -943,11 +922,7 @@ fun TdayApp(
                         onBack = { navController.popBackStack() },
                         onRefresh = viewModel::refresh,
                         onUncomplete = viewModel::uncomplete,
-                        onDelete = { item ->
-                            viewModel.delete(item) {
-                                showTaskDeletedToast()
-                            }
-                        },
+                        onDelete = viewModel::delete,
                         onUpdateTask = viewModel::update,
                     )
                 }
@@ -968,11 +943,7 @@ fun TdayApp(
                         onCompleteTask = viewModel::complete,
                         onUpdateTask = viewModel::updateTask,
                         onMoveTask = viewModel::moveTask,
-                        onDelete = { todo ->
-                            viewModel.delete(todo) {
-                                showTaskDeletedToast()
-                            }
-                        },
+                        onDelete = viewModel::delete,
                     )
                 }
 
@@ -1293,7 +1264,6 @@ private fun HandleLaunchUpdateToast(
 private fun TodosRoute(
     mode: TodoListMode,
     onBack: () -> Unit,
-    onTaskDeleted: () -> Unit,
     onListDeleted: () -> Unit = {},
     onOpenFloaterList: (String, String) -> Unit = { _, _ -> },
     onOpenSettings: () -> Unit = {},
@@ -1340,11 +1310,7 @@ private fun TodosRoute(
         onMoveTask = viewModel::moveTask,
         onMoveTaskToTimeOfDay = viewModel::moveTaskToTimeOfDay,
         onComplete = viewModel::toggleComplete,
-        onDelete = { todo ->
-            viewModel.delete(todo) {
-                onTaskDeleted()
-            }
-        },
+        onDelete = viewModel::delete,
         onUpdateListSettings = { targetListId, name, color, iconKey ->
             viewModel.updateListSettings(
                 listId = targetListId,

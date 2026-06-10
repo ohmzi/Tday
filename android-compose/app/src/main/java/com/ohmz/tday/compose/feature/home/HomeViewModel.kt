@@ -8,6 +8,7 @@ import com.ohmz.tday.compose.core.data.cache.OfflineCacheManager
 import com.ohmz.tday.compose.core.data.list.ListRepository
 import com.ohmz.tday.compose.core.data.settings.SettingsRepository
 import com.ohmz.tday.compose.core.data.sync.SyncManager
+import com.ohmz.tday.compose.core.data.todo.StagedTodoDeletion
 import com.ohmz.tday.compose.core.data.todo.TodoRepository
 import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.DashboardSummary
@@ -18,6 +19,7 @@ import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
 import com.ohmz.tday.compose.core.model.capitalizeFirstListLetter
 import com.ohmz.tday.compose.core.notification.TaskReminderScheduler
 import com.ohmz.tday.compose.core.ui.SnackbarManager
+import com.ohmz.tday.compose.core.ui.UndoableDeleteCoordinator
 import com.ohmz.tday.compose.core.ui.userFacingMessage
 import com.ohmz.tday.compose.ui.priority.canonicalPriorityValue
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -70,6 +72,7 @@ class HomeViewModel @Inject constructor(
     private val cacheManager: OfflineCacheManager,
     private val reminderScheduler: TaskReminderScheduler,
     private val snackbarManager: SnackbarManager,
+    private val undoableDeleteCoordinator: UndoableDeleteCoordinator,
     @ApplicationContext private val appContext: Context,
 ) : ViewModel() {
     private var activeLoadingRefreshes = 0
@@ -395,7 +398,7 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    fun delete(todo: TodoItem, onDeleted: (() -> Unit)? = null) {
+    fun delete(todo: TodoItem) {
         val previousState = _uiState.value
         _uiState.update { current ->
             current.copy(
@@ -405,10 +408,13 @@ class HomeViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
+            // Delayed-commit delete: stage now (local-only removal), show the
+            // undoable toast, and let the coordinator run the real delete after
+            // the toast window — or restore the staged state on Undo.
             runCatching {
-                todoRepository.deleteTodo(todo)
-            }.onSuccess {
-                onDeleted?.invoke()
+                todoRepository.stageDeleteTodo(todo)
+            }.onSuccess { staged ->
+                showUndoableTaskDelete(todo, staged)
                 rescheduleReminders()
                 refreshAfterMutation()
             }.onFailure { error ->
@@ -461,8 +467,13 @@ class HomeViewModel @Inject constructor(
             current.copy(todayTodos = current.todayTodos.filterNot { it.id == todo.id })
         }
         viewModelScope.launch {
-            runCatching { todoRepository.deleteTodo(todo) }
-                .onSuccess { refreshInternal(forceSync = false, showLoading = false) }
+            // Delayed-commit delete; also gives HomeScreen deletes the same
+            // "Task deleted" toast as every other surface.
+            runCatching { todoRepository.stageDeleteTodo(todo) }
+                .onSuccess { staged ->
+                    showUndoableTaskDelete(todo, staged)
+                    refreshInternal(forceSync = false, showLoading = false)
+                }
                 .onFailure { error ->
                     _uiState.update {
                         it.copy(
@@ -475,6 +486,19 @@ class HomeViewModel @Inject constructor(
                     refreshFromCache()
                 }
         }
+    }
+
+    private fun showUndoableTaskDelete(todo: TodoItem, staged: StagedTodoDeletion) {
+        undoableDeleteCoordinator.showUndoableDelete(
+            message = appContext.getString(R.string.task_deleted_toast),
+            onCommit = { todoRepository.deleteTodo(todo) },
+            onUndo = {
+                todoRepository.undoStagedTodoDeletion(staged)
+                // Runs on the coordinator scope: this ViewModel may be gone by
+                // the time Undo restores a reminder-bearing task.
+                runCatching { reminderScheduler.rescheduleAll() }
+            },
+        )
     }
 
     val lists: List<ListSummary>

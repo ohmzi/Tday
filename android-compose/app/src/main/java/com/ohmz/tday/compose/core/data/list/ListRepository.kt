@@ -1,7 +1,9 @@
 package com.ohmz.tday.compose.core.data.list
 
 import android.util.Log
+import com.ohmz.tday.compose.core.data.CachedCompletedRecord
 import com.ohmz.tday.compose.core.data.CachedListRecord
+import com.ohmz.tday.compose.core.data.CachedTodoRecord
 import com.ohmz.tday.compose.core.data.MutationKind
 import com.ohmz.tday.compose.core.data.OfflineSyncState
 import com.ohmz.tday.compose.core.data.PendingMutationRecord
@@ -251,6 +253,71 @@ class ListRepository @Inject constructor(
         }
     }
 
+    /**
+     * Stage step of the delayed-commit list delete: prunes the list, its tasks and
+     * its completed items from the local cache exactly like the prune-half of
+     * [deleteList], but records nothing for the server (no DELETE_LIST pending
+     * mutation), so nothing can sync out during the undo window. The removed
+     * records are captured so [undoStagedListDeletion] can restore them exactly;
+     * the commit step is the existing [deleteList], whose prune-half re-runs as a
+     * no-op on the already-pruned state.
+     */
+    suspend fun stageDeleteList(listId: String): StagedListDeletion {
+        val normalizedListId = listId.trim()
+        if (normalizedListId.isBlank()) return StagedListDeletion()
+
+        var staged = StagedListDeletion()
+        cacheManager.updateOfflineState { state ->
+            val deletedTodoIds = state.todos
+                .filter { it.listId == normalizedListId }
+                .map { it.canonicalId }
+                .toSet()
+
+            fun matchesMutation(mutation: PendingMutationRecord): Boolean =
+                mutation.targetId == normalizedListId ||
+                    mutation.listId == normalizedListId ||
+                    deletedTodoIds.contains(mutation.targetId)
+
+            fun matchesCompleted(completed: CachedCompletedRecord): Boolean =
+                completed.listId == normalizedListId ||
+                    completed.originalTodoId?.let(deletedTodoIds::contains) == true
+
+            staged = StagedListDeletion(
+                removedLists = state.lists.filter { it.id == normalizedListId },
+                removedTodos = state.todos.filter { it.listId == normalizedListId },
+                removedCompletedItems = state.completedItems.filter(::matchesCompleted),
+                removedPendingMutations = state.pendingMutations.filter(::matchesMutation),
+            )
+            state.copy(
+                lists = state.lists.filterNot { it.id == normalizedListId },
+                todos = state.todos.filterNot { it.listId == normalizedListId },
+                completedItems = state.completedItems.filterNot(::matchesCompleted),
+                pendingMutations = state.pendingMutations.filterNot(::matchesMutation),
+            )
+        }
+        return staged
+    }
+
+    /** Undo step: re-inserts the records captured by [stageDeleteList]. Idempotent. */
+    suspend fun undoStagedListDeletion(staged: StagedListDeletion) {
+        cacheManager.updateOfflineState { state ->
+            val listIds = state.lists.map { it.id }.toSet()
+            val todoIds = state.todos.map { it.id }.toSet()
+            val completedIds = state.completedItems.map { it.id }.toSet()
+            val mutationIds = state.pendingMutations.map { it.mutationId }.toSet()
+            state.copy(
+                lists = state.lists +
+                    staged.removedLists.filterNot { it.id in listIds },
+                todos = state.todos +
+                    staged.removedTodos.filterNot { it.id in todoIds },
+                completedItems = state.completedItems +
+                    staged.removedCompletedItems.filterNot { it.id in completedIds },
+                pendingMutations = state.pendingMutations +
+                    staged.removedPendingMutations.filterNot { it.mutationId in mutationIds },
+            )
+        }
+    }
+
     suspend fun deleteList(
         listId: String,
         onOptimisticDelete: () -> Unit = {},
@@ -372,3 +439,16 @@ class ListRepository @Inject constructor(
         const val LOG_TAG = "ListRepository"
     }
 }
+
+/**
+ * Local cache records removed by [ListRepository.stageDeleteList], retained so an
+ * Undo within the delete-toast window can restore the exact pre-delete state
+ * (the list plus its cascaded tasks/completed items). Nothing here has been sent
+ * to the server.
+ */
+data class StagedListDeletion(
+    val removedLists: List<CachedListRecord> = emptyList(),
+    val removedTodos: List<CachedTodoRecord> = emptyList(),
+    val removedCompletedItems: List<CachedCompletedRecord> = emptyList(),
+    val removedPendingMutations: List<PendingMutationRecord> = emptyList(),
+)

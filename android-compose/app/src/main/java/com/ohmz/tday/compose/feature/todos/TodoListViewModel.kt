@@ -24,6 +24,7 @@ import com.ohmz.tday.compose.core.model.repositoryTargetForReschedule
 import com.ohmz.tday.compose.core.notification.TaskReminderScheduler
 import com.ohmz.tday.compose.core.observability.TdayTelemetry
 import com.ohmz.tday.compose.core.ui.SnackbarManager
+import com.ohmz.tday.compose.core.ui.UndoableDeleteCoordinator
 import com.ohmz.tday.compose.core.ui.userFacingMessage
 import com.ohmz.tday.compose.ui.priority.canonicalPriorityValue
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -73,6 +74,7 @@ class TodoListViewModel @Inject constructor(
     private val cacheManager: OfflineCacheManager,
     private val reminderScheduler: TaskReminderScheduler,
     private val snackbarManager: SnackbarManager,
+    private val undoableDeleteCoordinator: UndoableDeleteCoordinator,
     @ApplicationContext private val appContext: Context,
 ) : ViewModel() {
 
@@ -530,7 +532,7 @@ class TodoListViewModel @Inject constructor(
         }
     }
 
-    fun delete(todo: TodoItem, onDeleted: (() -> Unit)? = null) {
+    fun delete(todo: TodoItem) {
         val previousItems = _uiState.value.items
         val mode = _uiState.value.mode
         val listId = _uiState.value.listId
@@ -545,14 +547,31 @@ class TodoListViewModel @Inject constructor(
             )
         }
         viewModelScope.launch {
+            // Delayed-commit delete: stage now (local-only removal), show the
+            // undoable toast, and let the coordinator run the real delete after
+            // the toast window — or restore the staged state on Undo.
             runCatching {
                 if (mode == TodoListMode.FLOATER) {
-                    todoRepository.deleteFloater(todo)
+                    val staged = todoRepository.stageDeleteFloater(todo)
+                    undoableDeleteCoordinator.showUndoableDelete(
+                        message = appContext.getString(R.string.task_deleted_toast),
+                        onCommit = { todoRepository.deleteFloater(todo) },
+                        onUndo = { todoRepository.undoStagedFloaterDeletion(staged) },
+                    )
                 } else {
-                    todoRepository.deleteTodo(todo)
+                    val staged = todoRepository.stageDeleteTodo(todo)
+                    undoableDeleteCoordinator.showUndoableDelete(
+                        message = appContext.getString(R.string.task_deleted_toast),
+                        onCommit = { todoRepository.deleteTodo(todo) },
+                        onUndo = {
+                            todoRepository.undoStagedTodoDeletion(staged)
+                            // Runs on the coordinator scope: this ViewModel may be
+                            // gone by the time Undo restores a reminder-bearing task.
+                            runCatching { reminderScheduler.rescheduleAll() }
+                        },
+                    )
                 }
             }.onSuccess {
-                onDeleted?.invoke()
                 if (mode != TodoListMode.FLOATER) rescheduleReminders()
                 runCatching {
                     val todos = todoRepository.fetchTodosCached(mode = mode, listId = listId)
@@ -719,33 +738,67 @@ class TodoListViewModel @Inject constructor(
         )
 
         viewModelScope.launch {
+            // Delayed-commit delete: stage now (local-only removal of the list and
+            // its tasks), show the undoable toast, and let the coordinator run the
+            // real delete after the toast window — or restore the staged state on
+            // Undo. Undo still works after onDeleted() navigates away because the
+            // coordinator outlives this ViewModel.
             runCatching {
-                val optimisticDelete = {
-                    _uiState.update { current ->
-                        current.copy(
-                            lists = current.lists.filterNot { it.id == resolvedListId },
-                            items = current.items.filterNot { it.listId == resolvedListId },
-                            errorMessage = null,
-                        )
-                    }
-                }
-
                 if (currentState.mode == TodoListMode.FLOATER) {
-                    floaterListRepository.deleteList(
-                        listId = resolvedListId,
-                        onOptimisticDelete = optimisticDelete,
+                    val staged = floaterListRepository.stageDeleteList(resolvedListId)
+                    undoableDeleteCoordinator.showUndoableDelete(
+                        message = appContext.getString(R.string.list_deleted_toast),
+                        onCommit = {
+                            // Unlike task deletes, the list commit can throw on a
+                            // hard server rejection; surface it as an error toast
+                            // (the next sync pull restores the list).
+                            runCatching {
+                                floaterListRepository.deleteList(resolvedListId)
+                            }.onFailure { error ->
+                                snackbarManager.showError(
+                                    error.userFacingMessage(
+                                        appContext,
+                                        R.string.error_delete_list_failed,
+                                    ),
+                                )
+                            }
+                        },
+                        onUndo = { floaterListRepository.undoStagedListDeletion(staged) },
                     )
                 } else {
-                    listRepository.deleteList(
-                        listId = resolvedListId,
-                        onOptimisticDelete = optimisticDelete,
+                    val staged = listRepository.stageDeleteList(resolvedListId)
+                    undoableDeleteCoordinator.showUndoableDelete(
+                        message = appContext.getString(R.string.list_deleted_toast),
+                        onCommit = {
+                            runCatching {
+                                listRepository.deleteList(resolvedListId)
+                            }.onFailure { error ->
+                                snackbarManager.showError(
+                                    error.userFacingMessage(
+                                        appContext,
+                                        R.string.error_delete_list_failed,
+                                    ),
+                                )
+                            }
+                        },
+                        onUndo = {
+                            listRepository.undoStagedListDeletion(staged)
+                            runCatching { reminderScheduler.rescheduleAll() }
+                        },
+                    )
+                }
+                _uiState.update { current ->
+                    current.copy(
+                        lists = current.lists.filterNot { it.id == resolvedListId },
+                        items = current.items.filterNot { it.listId == resolvedListId },
+                        errorMessage = null,
                     )
                 }
             }.onSuccess {
-                // Navigate only after the delete flow completes, exactly once.
-                // Invoking this from inside the repository's mid-operation
-                // optimistic callback could drop the navigation or navigate
-                // away from a delete that then fails hard.
+                // Navigate exactly once, as soon as staging succeeds: the visible
+                // delete already happened locally, the commit runs later from the
+                // coordinator, and Undo restores the list even though the user has
+                // navigated away. On a staging failure the user stays on-screen.
                 onDeleted()
                 if (currentState.mode != TodoListMode.FLOATER) rescheduleReminders()
             }.onFailure { error ->
