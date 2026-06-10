@@ -2111,7 +2111,9 @@ private fun TodayTopBar(
                     isBackButton = true,
                 )
                 if (actions.isNotEmpty()) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(0.dp)) {
+                    // Same gap as the web list header's action cluster (gap-2
+                    // between the circular buttons).
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         actions.forEach { action ->
                             TodayHeaderButton(
                                 onClick = action.onClick,
