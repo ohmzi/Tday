@@ -29,11 +29,33 @@ private struct CalendarDateDropTargetFrame: Equatable {
     let frame: CGRect
 }
 
-private struct CalendarDateDropTargetFramePreferenceKey: PreferenceKey {
-    static var defaultValue: [String: CalendarDateDropTargetFrame] = [:]
+/// Collects day-cell frames for in-app drag resolution.
+///
+/// The day cells live inside `CalendarPagingScrollView`'s `UIHostingController` pages, so
+/// SwiftUI preference values set there never reach the screen's own hierarchy. Cells report
+/// their window-space frames into this shared registry instead, keyed by pager page identity
+/// plus day so that pre-mounted off-screen pages can never overwrite the visible page's
+/// frames for the same date.
+@MainActor
+private final class CalendarDropTargetRegistry {
+    private var targetsByKey: [String: CalendarDateDropTargetFrame] = [:]
 
-    static func reduce(value: inout [String: CalendarDateDropTargetFrame], nextValue: () -> [String: CalendarDateDropTargetFrame]) {
-        value.merge(nextValue(), uniquingKeysWith: { _, newValue in newValue })
+    nonisolated init() {}
+
+    var targets: [CalendarDateDropTargetFrame] {
+        Array(targetsByKey.values)
+    }
+
+    func register(_ target: CalendarDateDropTargetFrame, forKey key: String) {
+        targetsByKey[key] = target
+    }
+
+    func unregister(forKey key: String) {
+        targetsByKey[key] = nil
+    }
+
+    func removeAll() {
+        targetsByKey.removeAll()
     }
 }
 
@@ -171,7 +193,7 @@ struct CalendarScreen: View {
     @State private var draggedTodo: TodoItem?
     @State private var inAppDrag: CalendarInAppDrag?
     @State private var activeDropDate: Date?
-    @State private var dateDropTargetFrames: [String: CalendarDateDropTargetFrame] = [:]
+    @State private var dropTargetRegistry = CalendarDropTargetRegistry()
     @State private var pendingRescheduleDrop: CalendarTaskRescheduleDrop?
     @State private var openSwipeTaskID: String?
 
@@ -290,9 +312,6 @@ struct CalendarScreen: View {
         .background(colors.background)
         .tdayPullToRefresh(isRefreshing: viewModel.isLoading, isEnabled: pullRefreshEnabled) {
             await viewModel.refresh()
-        }
-        .onPreferenceChange(CalendarDateDropTargetFramePreferenceKey.self) { frames in
-            dateDropTargetFrames = frames
         }
         .overlay {
             EmptyTaskWatermark(
@@ -600,7 +619,8 @@ struct CalendarScreen: View {
                 onSelectDate: { selectDate($0) },
                 onDropDateChange: { activeDropDate = $0 },
                 onMoveTaskToDate: { todo, date in requestReschedule(todo, to: date) },
-                resolveTodo: resolveTodoForDrop
+                resolveTodo: resolveTodoForDrop,
+                dropTargetRegistry: dropTargetRegistry
             )
         case .week:
             CalendarWeekCard(
@@ -618,7 +638,8 @@ struct CalendarScreen: View {
                 onSelectDate: { selectDate($0) },
                 onDropDateChange: { activeDropDate = $0 },
                 onMoveTaskToDate: { todo, date in requestReschedule(todo, to: date) },
-                resolveTodo: resolveTodoForDrop
+                resolveTodo: resolveTodoForDrop,
+                dropTargetRegistry: dropTargetRegistry
             )
         case .day:
             CalendarDayCard(
@@ -709,6 +730,7 @@ struct CalendarScreen: View {
 
     private func beginInAppDrag(_ todo: TodoItem, at location: CGPoint) {
         openSwipeTaskID = nil
+        dropTargetRegistry.removeAll()
         if draggedTodo?.id != todo.id {
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
         }
@@ -729,6 +751,7 @@ struct CalendarScreen: View {
             calendarTaskAlreadyDueOnDate(todo, date) ? nil : date
         }
         let targetDate = location.flatMap { dropDate(at: $0, for: todo) } ?? fallbackDate
+        dropTargetRegistry.removeAll()
         activeDropDate = nil
         draggedTodo = nil
         inAppDrag = nil
@@ -740,6 +763,7 @@ struct CalendarScreen: View {
     }
 
     private func cancelInAppDrag() {
+        dropTargetRegistry.removeAll()
         activeDropDate = nil
         draggedTodo = nil
         inAppDrag = nil
@@ -747,7 +771,7 @@ struct CalendarScreen: View {
     }
 
     private func dropDate(at location: CGPoint, for todo: TodoItem?) -> Date? {
-        dateDropTargetFrames.values
+        dropTargetRegistry.targets
             .filter { $0.frame.contains(location) }
             .filter { target in
                 guard let todo else { return true }
@@ -811,6 +835,7 @@ private struct CalendarMonthGrid: View {
     let onDropDateChange: (Date?) -> Void
     let onMoveTaskToDate: (TodoItem, Date) -> Void
     let resolveTodo: (String) -> TodoItem?
+    let dropTargetRegistry: CalendarDropTargetRegistry
 
     @Environment(\.tdayColors) private var colors
     @State private var pageSelection = calendarNativePagerCenterIndex
@@ -905,7 +930,10 @@ private struct CalendarMonthGrid: View {
     }
 
     private func monthGrid(for displayMonth: Date) -> some View {
-        LazyVGrid(columns: columns, spacing: CalendarMonthGridMetrics.spacing) {
+        // Scope drop-target keys to the pager page: leading/trailing dates also appear on the
+        // pre-mounted adjacent page, which must not overwrite this page's frames.
+        let pageKey = "month-\(calendarMonthStart(for: displayMonth).timeIntervalSince1970)"
+        return LazyVGrid(columns: columns, spacing: CalendarMonthGridMetrics.spacing) {
             ForEach(Self.makeDays(for: displayMonth)) { day in
                 let dayTasks = tasksByDay[Calendar.current.startOfDay(for: day.date)].orEmpty
                 let dropEligibleDraggedTodo = draggedTodo.flatMap { todo in
@@ -924,7 +952,9 @@ private struct CalendarMonthGrid: View {
                     onSelectDate: onSelectDate,
                     onDropDateChange: onDropDateChange,
                     onMoveTaskToDate: onMoveTaskToDate,
-                    resolveTodo: resolveTodo
+                    resolveTodo: resolveTodo,
+                    dropTargetRegistry: dropTargetRegistry,
+                    dropTargetPageKey: pageKey
                 )
             }
         }
@@ -1056,6 +1086,7 @@ private struct CalendarWeekCard: View {
     let onDropDateChange: (Date?) -> Void
     let onMoveTaskToDate: (TodoItem, Date) -> Void
     let resolveTodo: (String) -> TodoItem?
+    let dropTargetRegistry: CalendarDropTargetRegistry
 
     @Environment(\.tdayColors) private var colors
     @State private var pageSelection = calendarNativePagerCenterIndex
@@ -1126,6 +1157,9 @@ private struct CalendarWeekCard: View {
     private func weekDaysRow(for displaySelectedDate: Date) -> some View {
         let weekStart = calendarStartOfWeek(for: displaySelectedDate)
         let weekDays = (0..<7).compactMap { Calendar.current.date(byAdding: .day, value: $0, to: weekStart) }
+        // Scope drop-target keys to the pager page so pre-mounted adjacent pages can never
+        // overwrite the visible page's frames.
+        let pageKey = "week-\(weekStart.timeIntervalSince1970)"
 
         return HStack(spacing: 6) {
             ForEach(weekDays, id: \.self) { date in
@@ -1148,7 +1182,9 @@ private struct CalendarWeekCard: View {
                     onSelect: { onSelectDate(date) },
                     onDropDateChange: onDropDateChange,
                     onMoveTaskToDate: onMoveTaskToDate,
-                    resolveTodo: resolveTodo
+                    resolveTodo: resolveTodo,
+                    dropTargetRegistry: dropTargetRegistry,
+                    dropTargetPageKey: pageKey
                 )
             }
         }
@@ -1257,6 +1293,8 @@ private struct CalendarWeekDayCell: View {
     let onDropDateChange: (Date?) -> Void
     let onMoveTaskToDate: (TodoItem, Date) -> Void
     let resolveTodo: (String) -> TodoItem?
+    let dropTargetRegistry: CalendarDropTargetRegistry
+    let dropTargetPageKey: String
 
     @Environment(\.tdayColors) private var colors
 
@@ -1298,7 +1336,12 @@ private struct CalendarWeekDayCell: View {
             onMove: onMoveTaskToDate,
             onDateChange: onDropDateChange
         )
-        .calendarInAppDateDropTargetFrame(date: date, enabled: isEnabled && draggedTodo != nil)
+        .calendarInAppDateDropTargetFrame(
+            registry: dropTargetRegistry,
+            pageKey: dropTargetPageKey,
+            date: date,
+            enabled: isEnabled && draggedTodo != nil
+        )
         .opacity(isEnabled ? 1 : 0.48)
     }
 
@@ -1452,6 +1495,8 @@ private struct CalendarDateDropDelegate: DropDelegate {
 }
 
 private struct CalendarInAppDateDropTargetFrameModifier: ViewModifier {
+    let registry: CalendarDropTargetRegistry
+    let pageKey: String
     let date: Date
     let enabled: Bool
 
@@ -1459,25 +1504,113 @@ private struct CalendarInAppDateDropTargetFrameModifier: ViewModifier {
     func body(content: Content) -> some View {
         content.background {
             if enabled {
-                GeometryReader { proxy in
-                    Color.clear.preference(
-                        key: CalendarDateDropTargetFramePreferenceKey.self,
-                        value: [
-                            String(Calendar.current.startOfDay(for: date).timeIntervalSince1970): CalendarDateDropTargetFrame(
-                                date: Calendar.current.startOfDay(for: date),
-                                frame: proxy.frame(in: .global)
-                            )
-                        ]
-                    )
-                }
+                let day = Calendar.current.startOfDay(for: date)
+                CalendarDropTargetFrameReporter(
+                    registry: registry,
+                    registryKey: "\(pageKey)-\(day.timeIntervalSince1970)",
+                    date: day
+                )
+                .allowsHitTesting(false)
             }
         }
     }
 }
 
+private struct CalendarDropTargetFrameReporter: UIViewRepresentable {
+    let registry: CalendarDropTargetRegistry
+    let registryKey: String
+    let date: Date
+
+    func makeUIView(context: Context) -> CalendarDropTargetFrameReportingView {
+        CalendarDropTargetFrameReportingView()
+    }
+
+    func updateUIView(_ uiView: CalendarDropTargetFrameReportingView, context: Context) {
+        uiView.configure(registry: registry, key: registryKey, date: date)
+    }
+
+    static func dismantleUIView(_ uiView: CalendarDropTargetFrameReportingView, coordinator: ()) {
+        uiView.unregister()
+    }
+}
+
+private final class CalendarDropTargetFrameReportingView: UIView {
+    private weak var registry: CalendarDropTargetRegistry?
+    private var registryKey: String?
+    private var date: Date?
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        backgroundColor = .clear
+        isUserInteractionEnabled = false
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    func configure(registry: CalendarDropTargetRegistry, key: String, date: Date) {
+        if registryKey != key {
+            unregister()
+        }
+        self.registry = registry
+        registryKey = key
+        self.date = date
+        reportFrameIfPossible()
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        reportFrameIfPossible()
+    }
+
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+        if window == nil {
+            unregister()
+        } else {
+            reportFrameIfPossible()
+        }
+    }
+
+    func unregister() {
+        guard let registryKey else { return }
+        registry?.unregister(forKey: registryKey)
+    }
+
+    private func reportFrameIfPossible() {
+        guard window != nil,
+              bounds.width > 0,
+              bounds.height > 0,
+              let registry,
+              let registryKey,
+              let date else {
+            return
+        }
+        // Window coordinates: the same space the in-app drag recognizer reports locations in.
+        registry.register(
+            CalendarDateDropTargetFrame(date: date, frame: convert(bounds, to: nil)),
+            forKey: registryKey
+        )
+    }
+}
+
 private extension View {
-    func calendarInAppDateDropTargetFrame(date: Date, enabled: Bool) -> some View {
-        modifier(CalendarInAppDateDropTargetFrameModifier(date: date, enabled: enabled))
+    func calendarInAppDateDropTargetFrame(
+        registry: CalendarDropTargetRegistry,
+        pageKey: String,
+        date: Date,
+        enabled: Bool
+    ) -> some View {
+        modifier(
+            CalendarInAppDateDropTargetFrameModifier(
+                registry: registry,
+                pageKey: pageKey,
+                date: date,
+                enabled: enabled
+            )
+        )
     }
 
     func calendarTaskDropTarget(
@@ -1769,6 +1902,8 @@ private struct CalendarMonthDayCell: View {
     let onDropDateChange: (Date?) -> Void
     let onMoveTaskToDate: (TodoItem, Date) -> Void
     let resolveTodo: (String) -> TodoItem?
+    let dropTargetRegistry: CalendarDropTargetRegistry
+    let dropTargetPageKey: String
 
     @Environment(\.tdayColors) private var colors
 
@@ -1829,7 +1964,12 @@ private struct CalendarMonthDayCell: View {
             onMove: onMoveTaskToDate,
             onDateChange: onDropDateChange
         )
-        .calendarInAppDateDropTargetFrame(date: day.date, enabled: isEnabled && draggedTodo != nil)
+        .calendarInAppDateDropTargetFrame(
+            registry: dropTargetRegistry,
+            pageKey: dropTargetPageKey,
+            date: day.date,
+            enabled: isEnabled && draggedTodo != nil
+        )
         .opacity(day.isCurrentMonth ? 1 : 0.45)
     }
 
