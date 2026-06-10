@@ -849,7 +849,12 @@ struct TodoListScreen: View {
                     onDelete: {
                         showingDeleteListConfirmation = false
                         Task {
-                            await viewModel.deleteList(onOptimisticDelete: onListDeleted)
+                            // Navigate from the screen after the delete completes,
+                            // so navigation is not dropped while the confirmation
+                            // overlay is still animating its dismissal.
+                            if await viewModel.deleteList() {
+                                onListDeleted()
+                            }
                         }
                     }
                 )

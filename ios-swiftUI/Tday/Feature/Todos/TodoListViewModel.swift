@@ -262,15 +262,18 @@ final class TodoListViewModel {
         }
     }
 
-    func deleteList(onOptimisticDelete: @escaping () -> Void) async {
-        guard let listId else { return }
+    /// Deletes the current list and returns `true` on success so the screen can
+    /// drive navigation deterministically after the await completes, instead of
+    /// from the repository's mid-await optimistic-delete callback (which raced
+    /// with the delete-confirmation overlay dismissal and dropped navigation).
+    func deleteList() async -> Bool {
+        guard let listId else { return false }
         TdayTelemetry.addBreadcrumb("list.delete", data: listTelemetryData(color: nil, iconKey: nil))
         do {
             let optimisticDelete = {
                 self.lists.removeAll { $0.id == listId }
                 self.items.removeAll { $0.listId == listId }
                 self.errorMessage = nil
-                onOptimisticDelete()
             }
             if mode == .floater {
                 try await container.floaterListRepository.deleteList(
@@ -284,12 +287,14 @@ final class TodoListViewModel {
                 )
             }
             container.snackbarManager.show(L("List deleted"), kind: .success)
+            return true
         } catch {
             container.snackbarManager.show(
                 userFacingMessage(for: error, fallback: "Could not delete list."),
                 kind: .error
             )
             hydrateFromCache()
+            return false
         }
     }
 
