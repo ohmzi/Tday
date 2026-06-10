@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Trash2 } from "lucide-react";
+import { Share2, Trash2, Users } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import AppBottomSheet from "@/components/ui/AppBottomSheet";
 import { Button } from "@/components/ui/button";
@@ -41,6 +41,9 @@ type FloaterListFormSheetProps = {
   initialColor?: ListColor;
   initialIconKey?: string;
   onSaved?: (list?: FloaterListItemMetaType) => void;
+  // Sharing section (edit mode only): manage members + share externally.
+  onManageMembers?: () => void;
+  onShareList?: () => void;
 };
 
 function normalizeListName(value: string) {
@@ -81,6 +84,8 @@ export default function FloaterListFormSheet({
   initialColor = "TEAL",
   initialIconKey = DEFAULT_LIST_ICON_KEY,
   onSaved,
+  onManageMembers,
+  onShareList,
 }: FloaterListFormSheetProps) {
   const { t: appDict } = useTranslation("app");
   const queryClient = useQueryClient();
@@ -314,6 +319,42 @@ export default function FloaterListFormSheet({
 
         {error ? (
           <p className="px-1 text-sm font-extrabold text-destructive">{error}</p>
+        ) : null}
+
+        {isEditing && list && (onManageMembers || onShareList) ? (
+          <>
+            <SheetSectionTitle>{appDict("sharing")}</SheetSectionTitle>
+            <div className="grid grid-cols-2 gap-2.5">
+              {onManageMembers ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    hapticTick();
+                    onOpenChange(false);
+                    onManageMembers();
+                  }}
+                  className="flex items-center justify-center gap-2 rounded-2xl border border-border/70 bg-muted/60 px-4 py-2.5 text-sm font-black text-foreground transition-colors hover:bg-muted active:scale-[0.99]"
+                >
+                  <Users className="h-4 w-4 stroke-[2.4]" />
+                  {appDict("members")}
+                </button>
+              ) : null}
+              {onShareList ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    hapticTick();
+                    onOpenChange(false);
+                    onShareList();
+                  }}
+                  className="flex items-center justify-center gap-2 rounded-2xl border border-border/70 bg-muted/60 px-4 py-2.5 text-sm font-black text-foreground transition-colors hover:bg-muted active:scale-[0.99]"
+                >
+                  <Share2 className="h-4 w-4 stroke-[2.4]" />
+                  {appDict("share")}
+                </button>
+              ) : null}
+            </div>
+          </>
         ) : null}
 
         {isEditing && list ? (

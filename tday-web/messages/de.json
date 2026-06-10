@@ -329,6 +329,8 @@
     "searchTasks": "Aufgaben suchen",
     "taskCount": "{{count}} Aufgaben",
     "shareList": "Liste teilen",
+    "sharing": "Teilen",
+    "share": "Teilen",
     "shareListCopied": "Liste in die Zwischenablage kopiert",
     "shareDueLabel": "Fällig: {{date}}",
     "shareTaskCount_one": "{{count}} Aufgabe",
