@@ -13,19 +13,14 @@ import com.ohmz.tday.compose.core.data.cache.LOCAL_LIST_PREFIX
 import com.ohmz.tday.compose.core.data.cache.LOCAL_TODO_PREFIX
 import com.ohmz.tday.compose.core.data.cache.OfflineCacheManager
 import com.ohmz.tday.compose.core.data.cache.floaterFromCache
-import com.ohmz.tday.compose.core.data.cache.floaterToCache
 import com.ohmz.tday.compose.core.data.cache.listFromCache
-import com.ohmz.tday.compose.core.data.cache.mapFloaterDto
-import com.ohmz.tday.compose.core.data.cache.mapTodoDto
 import com.ohmz.tday.compose.core.data.cache.orderListsLikeWeb
 import com.ohmz.tday.compose.core.data.cache.todoFromCache
 import com.ohmz.tday.compose.core.data.isLikelyUnrecoverableMutationError
 import com.ohmz.tday.compose.core.data.requireApiBody
 import com.ohmz.tday.compose.core.data.settings.SettingsRepository
 import com.ohmz.tday.compose.core.data.sync.SyncManager
-import com.ohmz.tday.compose.core.model.CreateFloaterRequest
 import com.ohmz.tday.compose.core.model.CreateTaskPayload
-import com.ohmz.tday.compose.core.model.CreateTodoRequest
 import com.ohmz.tday.compose.core.model.DashboardSummary
 import com.ohmz.tday.compose.core.model.DeleteFloaterRequest
 import com.ohmz.tday.compose.core.model.DeleteTodoRequest
@@ -171,55 +166,12 @@ class TodoRepository @Inject constructor(
 
         if (syncManager.isLocalMode()) return
 
-        if (!normalizedListId.isNullOrBlank() && normalizedListId.startsWith(
-                LOCAL_FLOATER_LIST_PREFIX
-            )
-        ) {
-            syncManager.syncCachedData(force = true, replayPendingMutations = true)
-            return
-        }
-
-        runCatching {
-            requireApiBody(
-                api.createTodo(
-                    CreateTodoRequest(
-                        title = trimmedTitle,
-                        description = normalizedDescription,
-                        priority = normalizedPriority,
-                        due = normalizedDue.toString(),
-                        rrule = normalizedRrule,
-                        listID = normalizedListId,
-                    ),
-                ),
-                "Could not create task",
-            ).todo
-        }.onSuccess { createdDto ->
-            if (createdDto == null) return@onSuccess
-            val createdTodo = mapTodoDto(createdDto)
-            cacheManager.updateOfflineState { state ->
-                val remapped = replaceLocalTodoId(
-                    state = state,
-                    localTodoId = localTodoId,
-                    serverTodoId = createdTodo.canonicalId,
-                )
-                remapped.copy(
-                    todos = remapped.todos.map {
-                        if (it.canonicalId == createdTodo.canonicalId) {
-                            com.ohmz.tday.compose.core.data.cache.todoToCache(createdTodo)
-                        } else {
-                            it
-                        }
-                    },
-                    pendingMutations = remapped.pendingMutations.filterNot { it.mutationId == mutationId },
-                )
-            }
-        }.onFailure {
-            // Creates are intentionally never dropped (isLikelyUnrecoverableMutationError
-            // treats CREATE_TODO as recoverable), so the pending mutation is retained for
-            // background-sync replay. Log it so a permanently-rejected create is at least
-            // diagnosable instead of failing completely silently.
-            Log.w(LOG_TAG, "createTodo deferred reason=${it.javaClass.simpleName}")
-        }
+        // Route the create through the single, sync-lock-protected replay path that updates and
+        // local-list creates already use. A direct api.createTodo here, on top of the replayable
+        // CREATE_TODO pending mutation, was a second server-write path: a concurrent
+        // replayPendingMutations sync could re-issue the create before the direct call removed
+        // the mutation, producing a duplicate todo that then synced to every device.
+        syncManager.syncCachedData(force = true, replayPendingMutations = true)
     }
 
     suspend fun createFloater(payload: CreateTaskPayload) {
@@ -263,51 +215,11 @@ class TodoRepository @Inject constructor(
 
         if (syncManager.isLocalMode()) return
 
-        if (!normalizedListId.isNullOrBlank() && normalizedListId.startsWith(
-                LOCAL_FLOATER_LIST_PREFIX
-            )
-        ) {
-            syncManager.syncCachedData(force = true, replayPendingMutations = true)
-            return
-        }
-
-        runCatching {
-            requireApiBody(
-                api.createFloater(
-                    CreateFloaterRequest(
-                        title = trimmedTitle,
-                        description = normalizedDescription,
-                        priority = normalizedPriority,
-                        listID = normalizedListId,
-                    ),
-                ),
-                "Could not create floater",
-            ).floater
-        }.onSuccess { createdDto ->
-            if (createdDto == null) return@onSuccess
-            val createdFloater = mapFloaterDto(createdDto)
-            cacheManager.updateOfflineState { state ->
-                val remapped = replaceLocalFloaterId(
-                    state = state,
-                    localFloaterId = localFloaterId,
-                    serverFloaterId = createdFloater.canonicalId,
-                )
-                remapped.copy(
-                    floaters = remapped.floaters.map {
-                        if (it.canonicalId == createdFloater.canonicalId) {
-                            floaterToCache(createdFloater)
-                        } else {
-                            it
-                        }
-                    },
-                    pendingMutations = remapped.pendingMutations.filterNot { it.mutationId == mutationId },
-                )
-            }
-        }.onFailure {
-            // See createTodo: creates are retained for background-sync replay; log so a
-            // permanently-rejected create is diagnosable rather than silently retried.
-            Log.w(LOG_TAG, "createFloater deferred reason=${it.javaClass.simpleName}")
-        }
+        // See createTodo: route through the single, sync-lock-protected replay path instead of
+        // also firing a direct api.createFloater. The redundant direct call raced the replayable
+        // CREATE_FLOATER pending mutation and produced duplicate floaters that synced to every
+        // device.
+        syncManager.syncCachedData(force = true, replayPendingMutations = true)
     }
 
     suspend fun updateTodo(todo: TodoItem, payload: CreateTaskPayload) {
@@ -1308,58 +1220,6 @@ class TodoRepository @Inject constructor(
             .minusNanos(1)
             .toInstant()
             .toEpochMilli()
-    }
-
-    private fun replaceLocalTodoId(
-        state: OfflineSyncState,
-        localTodoId: String,
-        serverTodoId: String,
-    ): OfflineSyncState {
-        return state.copy(
-            todos = state.todos.map {
-                if (it.canonicalId == localTodoId) {
-                    it.copy(
-                        id = if (it.id == localTodoId) serverTodoId else it.id,
-                        canonicalId = serverTodoId,
-                    )
-                } else {
-                    it
-                }
-            },
-            pendingMutations = state.pendingMutations.map {
-                if (it.targetId == localTodoId) {
-                    it.copy(targetId = serverTodoId)
-                } else {
-                    it
-                }
-            },
-        )
-    }
-
-    private fun replaceLocalFloaterId(
-        state: OfflineSyncState,
-        localFloaterId: String,
-        serverFloaterId: String,
-    ): OfflineSyncState {
-        return state.copy(
-            floaters = state.floaters.map {
-                if (it.canonicalId == localFloaterId) {
-                    it.copy(
-                        id = if (it.id == localFloaterId) serverFloaterId else it.id,
-                        canonicalId = serverFloaterId,
-                    )
-                } else {
-                    it
-                }
-            },
-            pendingMutations = state.pendingMutations.map {
-                if (it.targetId == localFloaterId) {
-                    it.copy(targetId = serverFloaterId)
-                } else {
-                    it
-                }
-            },
-        )
     }
 
     private companion object {
