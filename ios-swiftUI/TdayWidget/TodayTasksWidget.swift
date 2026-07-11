@@ -547,8 +547,13 @@ private struct TdayTasksWidgetContent: View {
     }
 
     private func taskRow(_ row: WidgetTaskRowModel) -> some View {
-        HStack(spacing: 7) {
+        HStack(alignment: .firstTextBaseline, spacing: 7) {
             priorityDot(row.priority, size: 7)
+                // Pin the dot to the first line (near its vertical centre) instead
+                // of centring it across a wrapped two-line title.
+                .alignmentGuide(.firstTextBaseline) { dimension in
+                    dimension[VerticalAlignment.center] + 3
+                }
             VStack(alignment: .leading, spacing: 1) {
                 Text(row.title)
                     .font(.system(size: metrics.rowFontSize, weight: .bold, design: .rounded))

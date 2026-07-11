@@ -466,11 +466,15 @@ private fun TaskWidgetRow(
             modifier = GlanceModifier
                 .fillMaxWidth()
                 .padding(vertical = 3.dp),
-            verticalAlignment = Alignment.CenterVertically,
+            // Top-align so the dot/time sit on the first line of a wrapped
+            // two-line title rather than centring across both lines.
+            verticalAlignment = Alignment.Top,
         ) {
             PriorityDot(
                 priority = row.priority,
                 size = 7.dp,
+                // Nudge the dot down to the vertical centre of the first line.
+                modifier = GlanceModifier.padding(top = 4.dp),
             )
             Spacer(modifier = GlanceModifier.width(7.dp))
             WidgetText(
@@ -503,9 +507,10 @@ private fun TaskWidgetRow(
 @Composable
 private fun TimeChip(text: String) {
     WidgetText(
+        // Sit on the first line (top-aligned row) rather than a fixed-height box
+        // that would centre the time across a two-line title.
         modifier = GlanceModifier
-            .height(22.dp)
-            .padding(start = 7.dp, end = 7.dp),
+            .padding(start = 7.dp, end = 7.dp, top = 1.dp),
         text = text,
         color = TaskWidgetTextColor.SECONDARY,
         fontSize = 11.sp,
@@ -518,11 +523,12 @@ private fun TimeChip(text: String) {
 private fun PriorityDot(
     priority: String,
     size: Dp,
+    modifier: GlanceModifier = GlanceModifier,
 ) {
     Image(
         provider = ImageProvider(taskWidgetPriorityDotResource(priority)),
         contentDescription = null,
-        modifier = GlanceModifier.size(size),
+        modifier = modifier.size(size),
     )
 }
 
