@@ -137,44 +137,15 @@ final class TodoRepository {
             return
         }
 
-        if normalizedListID?.hasPrefix(LOCAL_FLOATER_LIST_PREFIX) == true {
-            _ = await syncManager.syncCachedData(force: true, replayPendingMutations: true)
-            return
-        }
-
-        do {
-            let response = try await api.createTodo(
-                payload: CreateTodoRequest(
-                    title: normalizedTitle,
-                    description: normalizedDescription,
-                    priority: normalizedPriorityValue,
-                    due: normalizedDue.ISO8601Format(),
-                    rrule: payload.rrule,
-                    listID: normalizedListID
-                )
-            )
-            guard let createdDTO = response.todo else {
-                return
-            }
-            let createdTodo = mapTodoDTO(createdDTO)
-            _ = try await cacheManager.updateOfflineState { state in
-                var nextState = self.replaceLocalTodoID(
-                    state,
-                    localTodoID: localTodoID,
-                    serverTodoID: createdTodo.canonicalId
-                )
-                let createdRecord = todoToCache(createdTodo)
-                nextState.todos = nextState.todos.map { todo in
-                    guard todo.canonicalId == createdTodo.canonicalId else {
-                        return todo
-                    }
-                    return createdRecord
-                }
-                nextState.pendingMutations.removeAll { $0.mutationId == mutationID }
-                return nextState
-            }
-        } catch {
-            // Keep the pending CREATE_TODO mutation so background sync can retry it.
+        // Route the create through the single, sync-lock-protected replay path that updates and
+        // local-list creates already use. Previously this also fired a direct `api.createTodo`
+        // here while leaving a replayable CREATE_TODO pending mutation behind — two independent
+        // server-write paths for one action. Any concurrent `replayPendingMutations` sync (e.g.
+        // the realtime echo of this very create) could replay the mutation before the direct
+        // call removed it, creating a second server-side todo that then synced to every device.
+        let result = await syncManager.syncCachedData(force: true, replayPendingMutations: true)
+        if case let .failure(error) = result, isLikelyUnrecoverableMutationError(error) {
+            throw error
         }
     }
 
@@ -232,42 +203,13 @@ final class TodoRepository {
             return
         }
 
-        if normalizedListID?.hasPrefix(LOCAL_LIST_PREFIX) == true {
-            _ = await syncManager.syncCachedData(force: true, replayPendingMutations: true)
-            return
-        }
-
-        do {
-            let response = try await api.createFloater(
-                payload: CreateFloaterRequest(
-                    title: normalizedTitle,
-                    description: normalizedDescription,
-                    priority: normalizedPriorityValue,
-                    listID: normalizedListID
-                )
-            )
-            guard let createdDTO = response.floater else {
-                return
-            }
-            let createdFloater = mapFloaterDTO(createdDTO)
-            _ = try await cacheManager.updateOfflineState { state in
-                var nextState = self.replaceLocalFloaterID(
-                    state,
-                    localFloaterID: localFloaterID,
-                    serverFloaterID: createdFloater.canonicalId
-                )
-                let createdRecord = floaterToCache(createdFloater)
-                nextState.floaters = nextState.floaters.map { floater in
-                    guard floater.canonicalId == createdFloater.canonicalId else {
-                        return floater
-                    }
-                    return createdRecord
-                }
-                nextState.pendingMutations.removeAll { $0.mutationId == mutationID }
-                return nextState
-            }
-        } catch {
-            // Keep the pending CREATE_FLOATER mutation so background sync can retry it.
+        // See createTodo: route through the single, sync-lock-protected replay path instead of
+        // also firing a direct `api.createFloater`. The redundant direct call raced the
+        // replayable CREATE_FLOATER pending mutation and produced duplicate floaters that synced
+        // to every device.
+        let result = await syncManager.syncCachedData(force: true, replayPendingMutations: true)
+        if case let .failure(error) = result, isLikelyUnrecoverableMutationError(error) {
+            throw error
         }
     }
 
@@ -872,140 +814,6 @@ final class TodoRepository {
         if case let .failure(error) = result, isLikelyUnrecoverableMutationError(error) {
             throw error
         }
-    }
-
-    private func replaceLocalTodoID(_ state: OfflineSyncState, localTodoID: String, serverTodoID: String) -> OfflineSyncState {
-        OfflineSyncState(
-            lastSuccessfulSyncEpochMs: state.lastSuccessfulSyncEpochMs,
-            lastSyncAttemptEpochMs: state.lastSyncAttemptEpochMs,
-            todos: state.todos.map { todo in
-                guard todo.canonicalId == localTodoID || todo.id == localTodoID else {
-                    return todo
-                }
-                return CachedTodoRecord(
-                    id: todo.instanceDateEpochMs == nil ? serverTodoID : todo.id,
-                    canonicalId: serverTodoID,
-                    title: todo.title,
-                    description: todo.description,
-                    priority: todo.priority,
-                    dueEpochMs: todo.dueEpochMs,
-                    rrule: todo.rrule,
-                    instanceDateEpochMs: todo.instanceDateEpochMs,
-                    pinned: todo.pinned,
-                    completed: todo.completed,
-                    listId: todo.listId,
-                    updatedAtEpochMs: todo.updatedAtEpochMs
-                )
-            },
-            floaters: state.floaters,
-            completedItems: state.completedItems.map { item in
-                guard item.originalTodoId == localTodoID else {
-                    return item
-                }
-                return CachedCompletedRecord(
-                    id: item.id,
-                    originalTodoId: serverTodoID,
-                    title: item.title,
-                    description: item.description,
-                    priority: item.priority,
-                    dueEpochMs: item.dueEpochMs,
-                    completedAtEpochMs: item.completedAtEpochMs,
-                    rrule: item.rrule,
-                    instanceDateEpochMs: item.instanceDateEpochMs,
-                    listId: item.listId,
-                    listName: item.listName,
-                    listColor: item.listColor
-                )
-            },
-            completedFloaters: state.completedFloaters,
-            lists: state.lists,
-            floaterLists: state.floaterLists,
-            pendingMutations: state.pendingMutations.map { mutation in
-                PendingMutationRecord(
-                    mutationId: mutation.mutationId,
-                    kind: mutation.kind,
-                    targetId: mutation.targetId == localTodoID ? serverTodoID : mutation.targetId,
-                    timestampEpochMs: mutation.timestampEpochMs,
-                    title: mutation.title,
-                    description: mutation.description,
-                    priority: mutation.priority,
-                    dueEpochMs: mutation.dueEpochMs,
-                    rrule: mutation.rrule,
-                    listId: mutation.listId,
-                    pinned: mutation.pinned,
-                    completed: mutation.completed,
-                    instanceDateEpochMs: mutation.instanceDateEpochMs,
-                    name: mutation.name,
-                    color: mutation.color,
-                    iconKey: mutation.iconKey
-                )
-            },
-            aiSummaryEnabled: state.aiSummaryEnabled
-        )
-    }
-
-    private func replaceLocalFloaterID(_ state: OfflineSyncState, localFloaterID: String, serverFloaterID: String) -> OfflineSyncState {
-        OfflineSyncState(
-            lastSuccessfulSyncEpochMs: state.lastSuccessfulSyncEpochMs,
-            lastSyncAttemptEpochMs: state.lastSyncAttemptEpochMs,
-            todos: state.todos,
-            floaters: state.floaters.map { floater in
-                guard floater.canonicalId == localFloaterID || floater.id == localFloaterID else {
-                    return floater
-                }
-                return CachedFloaterRecord(
-                    id: serverFloaterID,
-                    canonicalId: serverFloaterID,
-                    title: floater.title,
-                    description: floater.description,
-                    priority: floater.priority,
-                    pinned: floater.pinned,
-                    completed: floater.completed,
-                    listId: floater.listId,
-                    updatedAtEpochMs: floater.updatedAtEpochMs
-                )
-            },
-            completedItems: state.completedItems,
-            completedFloaters: state.completedFloaters.map { item in
-                guard item.originalFloaterId == localFloaterID else {
-                    return item
-                }
-                return CachedCompletedFloaterRecord(
-                    id: item.id,
-                    originalFloaterId: serverFloaterID,
-                    title: item.title,
-                    description: item.description,
-                    priority: item.priority,
-                    completedAtEpochMs: item.completedAtEpochMs,
-                    listId: item.listId,
-                    listName: item.listName,
-                    listColor: item.listColor
-                )
-            },
-            lists: state.lists,
-            floaterLists: state.floaterLists,
-            pendingMutations: state.pendingMutations.map { mutation in
-                PendingMutationRecord(
-                    mutationId: mutation.mutationId,
-                    kind: mutation.kind,
-                    targetId: mutation.targetId == localFloaterID ? serverFloaterID : mutation.targetId,
-                    timestampEpochMs: mutation.timestampEpochMs,
-                    title: mutation.title,
-                    description: mutation.description,
-                    priority: mutation.priority,
-                    dueEpochMs: mutation.dueEpochMs,
-                    rrule: mutation.rrule,
-                    listId: mutation.listId,
-                    pinned: mutation.pinned,
-                    completed: mutation.completed,
-                    instanceDateEpochMs: mutation.instanceDateEpochMs,
-                    name: mutation.name,
-                    color: mutation.color,
-                    iconKey: mutation.iconKey
-                )
-            },
-            aiSummaryEnabled: state.aiSummaryEnabled
-        )
     }
 
     private func buildDashboardSummary(from state: OfflineSyncState) -> DashboardSummary {
