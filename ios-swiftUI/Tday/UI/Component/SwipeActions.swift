@@ -227,6 +227,8 @@ private struct HorizontalSwipePanObserver: UIViewRepresentable {
         }
 
         deinit {
+            // Re-enable scrolling in case the row is torn down mid-swipe.
+            observedScrollView?.isScrollEnabled = true
             observedScrollView?.removeGestureRecognizer(panRecognizer)
         }
 
@@ -271,13 +273,22 @@ private struct HorizontalSwipePanObserver: UIViewRepresentable {
         }
 
         @objc private func handlePan(_ recognizer: UIPanGestureRecognizer) {
-            guard enabled, let scrollView = observedScrollView else {
+            guard let scrollView = observedScrollView else {
+                return
+            }
+            guard enabled else {
+                // Swiping was disabled mid-gesture — never leave the list locked.
+                scrollView.isScrollEnabled = true
                 return
             }
 
             switch recognizer.state {
             case .began:
                 dragStartOffsetX = offsetX.wrappedValue
+                // Freeze vertical scrolling for the duration of the horizontal reveal. The pan
+                // recognizer lives on the scroll view and recognizes simultaneously, so without
+                // this the drag's small vertical component keeps nudging the list and it stutters.
+                scrollView.isScrollEnabled = false
                 if dragStartOffsetX != 0 {
                     openRowID.wrappedValue = rowID
                 }
@@ -294,6 +305,7 @@ private struct HorizontalSwipePanObserver: UIViewRepresentable {
                     }
                 }
             case .ended, .cancelled, .failed:
+                scrollView.isScrollEnabled = true
                 let velocityX = recognizer.velocity(in: scrollView).x
                 let shouldOpen = offsetX.wrappedValue < -(revealWidth * 0.32) ||
                     velocityX < openVelocityThreshold
