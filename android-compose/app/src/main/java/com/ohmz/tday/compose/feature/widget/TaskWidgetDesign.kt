@@ -331,14 +331,15 @@ private fun WidgetText(
     textAlign: TextAlign = TextAlign.Start,
     maxLines: Int = 1,
     fillBounds: Boolean = false,
+    fillWidth: Boolean = false,
 ) {
     require(fontSize.isSp) { "Widget font sizes must be expressed in sp." }
 
     val context = LocalContext.current
-    val layoutId = if (fillBounds) {
-        R.layout.widget_nunito_text_fill
-    } else {
-        R.layout.widget_nunito_text_wrap
+    val layoutId = when {
+        fillWidth -> R.layout.widget_nunito_text_fill_width
+        fillBounds -> R.layout.widget_nunito_text_fill
+        else -> R.layout.widget_nunito_text_wrap
     }
     val remoteViews = RemoteViews(context.packageName, layoutId).apply {
         setTextViewText(R.id.widget_nunito_text, text)
@@ -464,7 +465,7 @@ private fun TaskWidgetRow(
         Row(
             modifier = GlanceModifier
                 .fillMaxWidth()
-                .height(metrics.rowHeight),
+                .padding(vertical = 3.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             PriorityDot(
@@ -477,8 +478,8 @@ private fun TaskWidgetRow(
                 text = row.title,
                 color = TaskWidgetTextColor.PRIMARY,
                 fontSize = metrics.rowFontSize,
-                maxLines = 1,
-                fillBounds = true,
+                maxLines = 2,
+                fillWidth = true,
             )
             if (taskWidgetShowsTrailingText(layout) && row.trailingText != null) {
                 Spacer(modifier = GlanceModifier.width(6.dp))
