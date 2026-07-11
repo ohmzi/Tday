@@ -31,6 +31,7 @@ struct RootFeedDock: View {
 
     private let tabs: [RootFeedTab] = [.home, .floater]
     @Environment(\.tdayColors) private var colors
+    @State private var expandedByTap = false
 
     init(
         activeTab: RootFeedTab,
@@ -48,31 +49,51 @@ struct RootFeedDock: View {
         tabs.firstIndex(of: activeTab) ?? 0
     }
 
+    // The dock expands when the feed is at the top, or when the user taps the collapsed pill.
+    // Tap-to-expand keeps Home/Floater immediately pressable instead of relying on a
+    // scroll-to-top to bring the dock back, which left it stuck as an icon if the feed didn't
+    // scroll far enough. Mirrors the Android dock's `expandedByTap`.
+    private var isExpanded: Bool {
+        !collapsed || expandedByTap
+    }
+
     var body: some View {
         ZStack {
-            if collapsed {
-                collapsedButton
+            if isExpanded {
+                expandedControl
                     .transition(
                         .scale(scale: 0.82, anchor: .leading)
                         .combined(with: .opacity)
                     )
             } else {
-                expandedControl
+                collapsedButton
                     .transition(
                         .scale(scale: 0.82, anchor: .leading)
                         .combined(with: .opacity)
                     )
             }
         }
-        .animation(.spring(response: 0.34, dampingFraction: 0.82), value: collapsed)
+        .animation(.spring(response: 0.34, dampingFraction: 0.82), value: isExpanded)
+        .onChange(of: collapsed) { _, isCollapsed in
+            // Scrolling back to the top expands the dock on its own, so drop the tap override.
+            if !isCollapsed {
+                expandedByTap = false
+            }
+        }
+        .task(id: expandedByTap) {
+            // Auto-collapse a tap-expanded dock if no tab is chosen, matching the Android timeout.
+            guard expandedByTap else { return }
+            try? await Task.sleep(nanoseconds: 2_400_000_000)
+            guard !Task.isCancelled else { return }
+            expandedByTap = false
+        }
     }
 
-    // Icon-only pill shown when scrolled down.
-    // Tapping calls onSelect(activeTab), which triggers scroll-to-top in the parent,
-    // naturally returning scroll offset to 0 and expanding the dock back.
+    // Icon-only pill shown when scrolled down. Tapping expands the dock in place so the
+    // Home/Floater control becomes immediately pressable.
     private var collapsedButton: some View {
         Button {
-            onSelect(activeTab)
+            expandedByTap = true
         } label: {
             Group {
                 if activeTab == .home {
