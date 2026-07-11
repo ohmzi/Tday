@@ -10,9 +10,13 @@ export const nativeAppScrollClassName = cn(
 
 export const nativeAppContentClassName = "mx-auto w-full max-w-6xl";
 
+// Marks the active screen's scroll container so the root dock can scroll it to
+// the top when the already-selected tab is tapped again.
+export const nativeAppScrollAttribute = "data-native-scroll";
+
 export function NativeAppPageLayout({ children }: { children: ReactNode }) {
   return (
-    <div className={nativeAppScrollClassName}>
+    <div className={nativeAppScrollClassName} {...{ [nativeAppScrollAttribute]: "" }}>
       <div className={nativeAppContentClassName}>{children}</div>
     </div>
   );

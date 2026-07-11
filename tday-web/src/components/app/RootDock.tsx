@@ -6,6 +6,7 @@ import { useRef, useEffect, useState, useCallback } from "react";
 import {
   nativeAppContentClassName,
   nativeAppHorizontalPaddingClassName,
+  nativeAppScrollAttribute,
 } from "@/components/app/nativeAppLayout";
 import { nativeScreenAccentColors } from "@/components/app/nativeScreenTheme";
 import { cn } from "@/lib/utils";
@@ -29,6 +30,12 @@ const dockTabs: Array<{
   },
   { id: "more", labelKey: "more", icon: MoreHorizontal },
 ];
+
+// Scrolls the currently-visible screen's scroll container back to the top.
+function scrollActiveScreenToTop() {
+  const container = document.querySelector<HTMLElement>(`[${nativeAppScrollAttribute}]`);
+  container?.scrollTo({ top: 0, behavior: "smooth" });
+}
 
 function activeDockTab(pathname: string): DockTab {
   if (pathname.includes("/app/floater")) {
@@ -135,6 +142,12 @@ export default function RootDock({
                     hapticTick();
                     if (isMore) {
                       onOpenMore();
+                      return;
+                    }
+                    // Re-tapping the tab of the screen you're already on scrolls
+                    // that screen back to the top instead of a no-op navigation.
+                    if (selected) {
+                      scrollActiveScreenToTop();
                       return;
                     }
                     router.push(tab.path!);
