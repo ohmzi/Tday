@@ -552,8 +552,7 @@ private struct TdayTasksWidgetContent: View {
             VStack(alignment: .leading, spacing: 1) {
                 Text(row.title)
                     .font(.system(size: metrics.rowFontSize, weight: .bold, design: .rounded))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.85)
+                    .lineLimit(2)
                 if metrics.showsNotes, let note = row.note {
                     Text(note)
                         .font(.system(size: metrics.rowFontSize - 2, weight: .semibold, design: .rounded))
