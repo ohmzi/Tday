@@ -465,6 +465,35 @@
       "searchBody": "un toque mueve una tarea a mas tarde hoy, esta noche, manana o la proxima semana. cuando una tarea debe moverse, pero no mucho, evita el selector de fecha: la accion aplazar ofrece mas tarde hoy (+3 horas), esta noche (19:00), manana por la manana (09:00) y la proxima semana (lunes 09:00) con un solo toque. es el mismo cambio que haria la hoja de edicion, solo que mas rapido. las tareas recurrentes se aplazan por ocurrencia desde la hoja de edicion, asi que el menu de un toque no se interpone."
     },
     {
+      "id": "day-done",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "check-check",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.3.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Día completado",
+      "summary": "Termina todo lo de hoy y la pantalla Hoy lo celebra en silencio.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Cuando todas las tareas programadas para hoy están completadas — no simplemente ausentes — la pantalla Hoy cambia su mensaje de \"Sin tareas\" por un estado sereno de día completado: una doble marca suave, las palabras \"Todo listo por hoy\" y la fecha. Sin rachas ni puntuaciones; solo la pequeña recompensa de un día realmente terminado."
+          ]
+        }
+      ],
+      "searchTitle": "dia completado",
+      "searchKeywords": "dia completado, todo listo, terminado, todo completado, hoy vacio",
+      "searchBody": "termina todo lo de hoy y la pantalla hoy lo celebra en silencio. cuando todas las tareas programadas para hoy estan completadas — no simplemente ausentes — la pantalla hoy cambia su mensaje de \"sin tareas\" por un estado sereno de dia completado: una doble marca suave, las palabras \"todo listo por hoy\" y la fecha. sin rachas ni puntuaciones; solo la pequena recompensa de un dia realmente terminado."
+    },
+    {
       "id": "floater-lists",
       "section": "ORGANIZING",
       "sectionOrder": 3,

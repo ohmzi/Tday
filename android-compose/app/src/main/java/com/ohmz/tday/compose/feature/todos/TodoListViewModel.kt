@@ -46,6 +46,9 @@ data class TodoListUiState(
     val hasHydratedSnapshot: Boolean = false,
     val lists: List<ListSummary> = emptyList(),
     val items: List<TodoItem> = emptyList(),
+    // Feeds the Day Done state: completed-today count from the local cache,
+    // bumped optimistically on complete so the payoff shows immediately.
+    val completedTodayCount: Int = 0,
     val errorMessage: String? = null,
     val aiSummaryEnabled: Boolean = true,
     val aiSummaryConfigured: Boolean = false,
@@ -241,6 +244,13 @@ class TodoListViewModel @Inject constructor(
         )
     }
 
+    private fun completedTodayCountFor(mode: TodoListMode): Int =
+        if (mode == TodoListMode.TODAY) {
+            runCatching { todoRepository.completedTodayCount() }.getOrDefault(0)
+        } else {
+            0
+        }
+
     private fun hydrateFromCache(mode: TodoListMode, listId: String?) {
         runCatching {
             val todos = todoRepository.fetchTodosSnapshot(mode = mode, listId = listId)
@@ -254,6 +264,7 @@ class TodoListViewModel @Inject constructor(
                     hasHydratedSnapshot = true,
                     lists = if (current.lists == snapshot.lists) current.lists else snapshot.lists,
                     items = if (current.items == snapshot.todos) current.items else snapshot.todos,
+                    completedTodayCount = completedTodayCountFor(mode),
                     aiSummaryEnabled = snapshot.aiSummaryEnabled,
                     aiSummaryConfigured = snapshot.aiSummaryConfigured,
                     errorMessage = null,
@@ -300,6 +311,7 @@ class TodoListViewModel @Inject constructor(
                         isLoading = false,
                         lists = if (current.lists == lists) current.lists else lists,
                         items = if (current.items == todos) current.items else todos,
+                            completedTodayCount = completedTodayCountFor(mode),
                         errorMessage = null,
                     )
                 }
@@ -357,6 +369,7 @@ class TodoListViewModel @Inject constructor(
                         current.copy(
                             lists = if (current.lists == lists) current.lists else lists,
                             items = if (current.items == todos) current.items else todos,
+                            completedTodayCount = completedTodayCountFor(mode),
                             errorMessage = null,
                         )
                     }
@@ -447,6 +460,7 @@ class TodoListViewModel @Inject constructor(
                         current.copy(
                             lists = if (current.lists == lists) current.lists else lists,
                             items = if (current.items == todos) current.items else todos,
+                            completedTodayCount = completedTodayCountFor(mode),
                             errorMessage = null,
                         )
                     }
@@ -522,6 +536,7 @@ class TodoListViewModel @Inject constructor(
                         current.copy(
                             lists = if (current.lists == lists) current.lists else lists,
                             items = if (current.items == todos) current.items else todos,
+                            completedTodayCount = completedTodayCountFor(mode),
                             errorMessage = null,
                         )
                     }
@@ -544,6 +559,13 @@ class TodoListViewModel @Inject constructor(
         _uiState.update { current ->
             current.copy(
                 items = current.items.filterNot { it.id == todo.id },
+                // Optimistic Day Done: count the completion immediately so the
+                // payoff state can appear as the last row leaves the screen.
+                completedTodayCount = if (mode == TodoListMode.TODAY) {
+                    current.completedTodayCount + 1
+                } else {
+                    current.completedTodayCount
+                },
                 errorMessage = null,
             )
         }
@@ -616,6 +638,7 @@ class TodoListViewModel @Inject constructor(
                         current.copy(
                             lists = if (current.lists == lists) current.lists else lists,
                             items = if (current.items == todos) current.items else todos,
+                            completedTodayCount = completedTodayCountFor(mode),
                             errorMessage = null,
                         )
                     }

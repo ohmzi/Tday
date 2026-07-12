@@ -1058,9 +1058,19 @@ struct TodoListScreen: View {
                             )
                         )
                         if viewModel.items.isEmpty, !viewModel.isLoading, !isRootFloaterScreen {
-                            EmptyTaskBackgroundMessage(
-                                message: emptyTimelineMessage(for: viewModel.mode)
-                            )
+                            // Day Done: "finished everything" earns its own calm
+                            // state instead of the generic no-tasks watermark.
+                            if viewModel.mode == .today, viewModel.completedTodayCount > 0 {
+                                DayDoneBackgroundMessage(
+                                    message: L("All done for today"),
+                                    dateText: context.date.formatted(.dateTime.weekday(.wide).day().month(.wide))
+                                )
+                                .onAppear { HapticManager.taskCompleted() }
+                            } else {
+                                EmptyTaskBackgroundMessage(
+                                    message: emptyTimelineMessage(for: viewModel.mode)
+                                )
+                            }
                         }
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)

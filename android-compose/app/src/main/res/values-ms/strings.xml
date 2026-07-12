@@ -231,6 +231,7 @@
     <string name="todos_title_floater">Apungan</string>
     <string name="todos_title_list">Senarai</string>
     <string name="todos_empty_today">Tiada tugasan untuk hari ini</string>
+    <string name="todos_all_done_today">Semua selesai untuk hari ini</string>
     <string name="todos_empty_overdue">Tiada tugasan tertunggak</string>
     <string name="todos_empty_priority">Tiada tugasan keutamaan</string>
     <string name="todos_empty_scheduled">Tiada tugasan dijadualkan</string>

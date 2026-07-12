@@ -138,6 +138,7 @@ import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
 import com.ohmz.tday.compose.core.model.capitalizeFirstListLetter
 import com.ohmz.tday.compose.core.model.supportsTaskReschedule
 import com.ohmz.tday.compose.core.model.timelineRescheduleTargetDate
+import com.ohmz.tday.compose.core.ui.DayDoneBackgroundMessage
 import com.ohmz.tday.compose.core.ui.EmptyTaskBackgroundMessage
 import com.ohmz.tday.compose.core.ui.EmptyTaskWatermark
 import com.ohmz.tday.compose.core.ui.TaskSwipeActionButton
@@ -1262,9 +1263,27 @@ fun TodoListScreen(
             // Root floater shows its empty message inline (in the list, above
             // the list names) so the overlay version would double up.
             if (uiState.items.isEmpty() && !uiState.isLoading && !suppressInitialTodayTimeline && !isRootFloaterScreen) {
-                EmptyTaskBackgroundMessage(
-                    message = emptyStateMessageForMode(uiState.mode),
-                )
+                // Day Done: "finished everything" earns its own calm state
+                // instead of the generic no-tasks watermark message.
+                val isDayDone = uiState.mode == TodoListMode.TODAY && uiState.completedTodayCount > 0
+                if (isDayDone) {
+                    LaunchedEffect(Unit) {
+                        ViewCompat.performHapticFeedback(
+                            view,
+                            HapticFeedbackConstantsCompat.CONFIRM,
+                        )
+                    }
+                    DayDoneBackgroundMessage(
+                        message = stringResource(R.string.todos_all_done_today),
+                        dateText = LocalDate.now().format(
+                            DateTimeFormatter.ofPattern("EEEE d MMMM", Locale.getDefault()),
+                        ),
+                    )
+                } else {
+                    EmptyTaskBackgroundMessage(
+                        message = emptyStateMessageForMode(uiState.mode),
+                    )
+                }
             }
 
             if (showRootFeedDock && rootFeedTab != null && onRootFeedTabSelected != null) {

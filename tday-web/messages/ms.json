@@ -356,7 +356,8 @@
     "quickDeferLaterToday": "Kemudian hari ini",
     "quickDeferTonight": "Malam ini",
     "quickDeferTomorrow": "Esok pagi",
-    "quickDeferNextWeek": "Minggu depan"
+    "quickDeferNextWeek": "Minggu depan",
+    "allDoneToday": "Semua selesai untuk hari ini"
   },
   "today": {
     "saveInstance": "Simpan kejadian",
@@ -748,6 +749,12 @@
         "keywords": "tangguh, tunda, kemudian, malam ini, esok, minggu depan, jadual semula",
         "body": "Apabila tugasan perlu dialihkan tetapi tidak jauh, langkau pemilih tarikh: tindakan Tangguh menawarkan Kemudian hari ini (+3 jam), Malam ini (19:00), Esok pagi (09:00) dan Minggu depan (Isnin 09:00) dengan satu ketikan. Ia perubahan yang sama seperti helaian edit — cuma lebih pantas.",
         "tip": "Tugasan berulang ditangguh mengikut kejadian melalui helaian edit, jadi menu satu ketikan tidak mengganggunya."
+      },
+      "day-done": {
+        "title": "Hari selesai",
+        "summary": "Selesaikan semua untuk hari ini dan skrin Hari Ini meraikannya secara senyap.",
+        "keywords": "hari selesai, semua siap, selesai, semua lengkap, hari ini kosong",
+        "body": "Apabila setiap tugasan yang dijadualkan untuk hari ini selesai — bukan sekadar tiada — skrin Hari Ini menukar mesej \"Tiada tugasan\" kepada keadaan tenang hari selesai: tanda semak berganda yang lembut, perkataan \"Semua selesai untuk hari ini\" dan tarikh. Tiada rentetan, tiada mata; hanya ganjaran kecil untuk hari yang benar-benar selesai."
       },
       "floater-lists": {
         "title": "Senarai Floater",

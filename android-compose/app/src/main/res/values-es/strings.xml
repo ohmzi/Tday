@@ -231,6 +231,7 @@
     <string name="todos_title_floater">Flotante</string>
     <string name="todos_title_list">Lista</string>
     <string name="todos_empty_today">No hay tareas para hoy</string>
+    <string name="todos_all_done_today">Todo listo por hoy</string>
     <string name="todos_empty_overdue">No hay tareas vencidas</string>
     <string name="todos_empty_priority">No hay tareas prioritarias</string>
     <string name="todos_empty_scheduled">No hay tareas programadas</string>

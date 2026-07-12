@@ -356,7 +356,8 @@
     "quickDeferLaterToday": "Plus tard aujourd'hui",
     "quickDeferTonight": "Ce soir",
     "quickDeferTomorrow": "Demain matin",
-    "quickDeferNextWeek": "La semaine prochaine"
+    "quickDeferNextWeek": "La semaine prochaine",
+    "allDoneToday": "Tout est fait pour aujourd'hui"
   },
   "today": {
     "saveInstance": "Enregistrer l'instance",
@@ -748,6 +749,12 @@
         "keywords": "reporter, repousser, plus tard, ce soir, demain, semaine prochaine, replanifier",
         "body": "Quand une tâche doit bouger, mais pas loin, évitez le sélecteur de date : l'action Reporter propose Plus tard aujourd'hui (+3 heures), Ce soir (19 h), Demain matin (9 h) et La semaine prochaine (lundi 9 h) en un geste. C'est le même changement que la feuille d'édition — en plus rapide.",
         "tip": "Les tâches récurrentes se reportent par occurrence depuis la feuille d'édition, le menu express ne s'en mêle donc pas."
+      },
+      "day-done": {
+        "title": "Journée bouclée",
+        "summary": "Terminez tout pour aujourd'hui et l'écran Aujourd'hui célèbre discrètement.",
+        "keywords": "journée terminée, tout est fait, fini, tout accompli, aujourd'hui vide",
+        "body": "Quand chaque tâche prévue aujourd'hui est terminée — et pas simplement absente — l'écran Aujourd'hui remplace son message « Aucune tâche » par un état apaisé : une double coche douce, les mots « Tout est fait pour aujourd'hui » et la date. Pas de séries, pas de scores ; juste la petite récompense d'une journée vraiment achevée."
       },
       "floater-lists": {
         "title": "Listes de Floaters",

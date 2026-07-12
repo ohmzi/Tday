@@ -23,6 +23,7 @@
       "create-task",
       "promote-and-float",
       "quick-defer",
+      "day-done",
       "scheduled-lists"
     ],
     "reminder": [

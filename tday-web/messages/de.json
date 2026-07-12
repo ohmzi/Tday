@@ -356,7 +356,8 @@
     "quickDeferLaterToday": "Später heute",
     "quickDeferTonight": "Heute Abend",
     "quickDeferTomorrow": "Morgen früh",
-    "quickDeferNextWeek": "Nächste Woche"
+    "quickDeferNextWeek": "Nächste Woche",
+    "allDoneToday": "Alles erledigt für heute"
   },
   "today": {
     "saveInstance": "Instanz speichern",
@@ -748,6 +749,12 @@
         "keywords": "verschieben, aufschieben, später, heute abend, morgen, nächste woche, umplanen",
         "body": "Wenn eine Aufgabe wandern muss, aber nicht weit, spare dir den Datumswähler: Die Verschieben-Aktion bietet Später heute (+3 Stunden), Heute Abend (19:00), Morgen früh (09:00) und Nächste Woche (Montag 09:00) mit einem Tipp. Es ist dieselbe Änderung wie im Bearbeiten-Blatt – nur schneller.",
         "tip": "Wiederholende Aufgaben verschiebst du pro Termin über das Bearbeiten-Blatt; das Ein-Tipp-Menü bleibt ihnen fern."
+      },
+      "day-done": {
+        "title": "Tag geschafft",
+        "summary": "Erledige alles für heute und der Heute-Bildschirm feiert leise mit.",
+        "keywords": "tag geschafft, alles erledigt, fertig, alles abgeschlossen, heute leer",
+        "body": "Wenn jede für heute geplante Aufgabe erledigt ist — und nicht bloß fehlt — tauscht der Heute-Bildschirm seine „Keine Aufgaben“-Meldung gegen einen ruhigen Geschafft-Zustand: ein sanftes Doppelhäkchen, die Worte „Alles erledigt für heute“ und das Datum. Keine Serien, keine Punkte; nur die kleine Belohnung eines wirklich beendeten Tages."
       },
       "floater-lists": {
         "title": "Floater-Listen",

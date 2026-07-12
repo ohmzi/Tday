@@ -231,6 +231,7 @@
     <string name="todos_title_floater">Avulsas</string>
     <string name="todos_title_list">Lista</string>
     <string name="todos_empty_today">Nenhuma tarefa para hoje</string>
+    <string name="todos_all_done_today">Tudo feito por hoje</string>
     <string name="todos_empty_overdue">Nenhuma tarefa atrasada</string>
     <string name="todos_empty_priority">Nenhuma tarefa prioritária</string>
     <string name="todos_empty_scheduled">Nenhuma tarefa agendada</string>

@@ -231,6 +231,7 @@
     <string name="todos_title_floater">Без срока</string>
     <string name="todos_title_list">Список</string>
     <string name="todos_empty_today">Нет задач на сегодня</string>
+    <string name="todos_all_done_today">На сегодня всё сделано</string>
     <string name="todos_empty_overdue">Нет просроченных задач</string>
     <string name="todos_empty_priority">Нет приоритетных задач</string>
     <string name="todos_empty_scheduled">Нет запланированных задач</string>
