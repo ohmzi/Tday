@@ -1,0 +1,827 @@
+{
+  "currentVersion": "0.2.0",
+  "ui": {
+    "title": "How-To & Tips",
+    "subtitle": "Everything T'Day can do — the obvious and the hidden.",
+    "searchPlaceholder": "Search features…",
+    "searchAria": "Search the guide",
+    "whatsNew": "What's new",
+    "tryIt": "Try it",
+    "clearSearch": "Clear",
+    "noResults": "No matches. Try another word.",
+    "results": "{{count}} results",
+    "badges.hiddenGem": "Hidden gem",
+    "badges.proTip": "Pro tip",
+    "badges.new": "New",
+    "badges.server": "Server mode",
+    "sections.gettingStarted": "Getting started",
+    "sections.captureAndDates": "Capture & dates",
+    "sections.gestures": "Gestures",
+    "sections.organizing": "Organizing",
+    "sections.recurrenceAndReminders": "Recurrence & reminders",
+    "sections.widgetsAndSurfaces": "Widgets & surfaces",
+    "sections.modesAndSync": "Modes & sync",
+    "sections.integrations": "Integrations",
+    "sections.keyboardShortcuts": "Keyboard shortcuts"
+  },
+  "sections": [
+    {
+      "id": "GETTING_STARTED",
+      "title": "Getting started",
+      "order": 0
+    },
+    {
+      "id": "CAPTURE_AND_DATES",
+      "title": "Capture & dates",
+      "order": 1
+    },
+    {
+      "id": "GESTURES",
+      "title": "Gestures",
+      "order": 2
+    },
+    {
+      "id": "ORGANIZING",
+      "title": "Organizing",
+      "order": 3
+    },
+    {
+      "id": "RECURRENCE_AND_REMINDERS",
+      "title": "Recurrence & reminders",
+      "order": 4
+    },
+    {
+      "id": "WIDGETS_AND_SURFACES",
+      "title": "Widgets & surfaces",
+      "order": 5
+    },
+    {
+      "id": "MODES_AND_SYNC",
+      "title": "Modes & sync",
+      "order": 6
+    },
+    {
+      "id": "INTEGRATIONS",
+      "title": "Integrations",
+      "order": 7
+    },
+    {
+      "id": "KEYBOARD_SHORTCUTS",
+      "title": "Keyboard shortcuts",
+      "order": 8
+    }
+  ],
+  "topics": [
+    {
+      "id": "root-feeds",
+      "section": "GETTING_STARTED",
+      "sectionOrder": 0,
+      "icon": "layout-dashboard",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Home and Anytime",
+      "summary": "Two calm home feeds you switch between from the dock.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "T'Day has two sibling feeds. Home holds your scheduled tasks for today and beyond. Anytime holds Floaters — tasks with no date. Switch between them from the dock at the bottom, and create a task from either one."
+          ]
+        }
+      ],
+      "searchTitle": "home and anytime",
+      "searchKeywords": "home, anytime, feed, dock, root, navigate, tabs",
+      "searchBody": "two calm home feeds you switch between from the dock. t'day has two sibling feeds. home holds your scheduled tasks for today and beyond. anytime holds floaters — tasks with no date. switch between them from the dock at the bottom, and create a task from either one."
+    },
+    {
+      "id": "create-task",
+      "section": "GETTING_STARTED",
+      "sectionOrder": 0,
+      "icon": "plus",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Create a task",
+      "summary": "Add a scheduled task or a dateless Floater in a couple of taps.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Tap the create button to add a task. Give it a title and, if it has a date, a due time. Leave the date off and it becomes a Floater in your Anytime feed instead."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Start typing a date right in the title — T'Day reads it for you. See “Type the date”."
+          ]
+        }
+      ],
+      "searchTitle": "create a task",
+      "searchKeywords": "create, add, new, task, plus, fab, compose",
+      "searchBody": "add a scheduled task or a dateless floater in a couple of taps. tap the create button to add a task. give it a title and, if it has a date, a due time. leave the date off and it becomes a floater in your anytime feed instead. start typing a date right in the title — t'day reads it for you. see “type the date”."
+    },
+    {
+      "id": "nlp-date-syntax",
+      "section": "CAPTURE_AND_DATES",
+      "sectionOrder": 1,
+      "icon": "wand-sparkles",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [
+        "nlp-title-input"
+      ],
+      "title": "Type the date",
+      "summary": "Write the date into the title and T'Day schedules it for you.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "You don't need to open a date picker. Type a date phrase straight into the task title and T'Day parses it on-device — no account or network needed — highlighting the part it understood and scheduling the task."
+          ]
+        },
+        {
+          "type": "EXAMPLE",
+          "texts": [
+            "dentist tuesday 3pm"
+          ]
+        }
+      ],
+      "searchTitle": "type the date",
+      "searchKeywords": "natural language, date, tomorrow, next week, parse, quick, smart, nlp, on device",
+      "searchBody": "write the date into the title and t'day schedules it for you. you don't need to open a date picker. type a date phrase straight into the task title and t'day parses it on-device — no account or network needed — highlighting the part it understood and scheduling the task. dentist tuesday 3pm"
+    },
+    {
+      "id": "calendar-views",
+      "section": "CAPTURE_AND_DATES",
+      "sectionOrder": 1,
+      "icon": "calendar",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": {
+        "web": "calendar",
+        "android": "calendar",
+        "ios": "calendar"
+      },
+      "helpAnchors": [],
+      "title": "Calendar views",
+      "summary": "See your scheduled tasks by month, week, or day.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Open the calendar to see scheduled tasks laid out by month, week, or day. Swipe or use the chevrons to move between periods; the top-right button jumps you back to today without changing the view."
+          ]
+        }
+      ],
+      "searchTitle": "calendar views",
+      "searchKeywords": "calendar, month, week, day, agenda, view, dates",
+      "searchBody": "see your scheduled tasks by month, week, or day. open the calendar to see scheduled tasks laid out by month, week, or day. swipe or use the chevrons to move between periods; the top-right button jumps you back to today without changing the view."
+    },
+    {
+      "id": "priorities",
+      "section": "CAPTURE_AND_DATES",
+      "sectionOrder": 1,
+      "icon": "flag",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Priorities",
+      "summary": "Flag what matters with Low, Medium, or High.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Give a task a priority to mark how much it matters. Priority shows as a small accent dot on the task and helps sort what deserves attention first."
+          ]
+        }
+      ],
+      "searchTitle": "priorities",
+      "searchKeywords": "priority, high, medium, low, important, urgent, flag",
+      "searchBody": "flag what matters with low, medium, or high. give a task a priority to mark how much it matters. priority shows as a small accent dot on the task and helps sort what deserves attention first."
+    },
+    {
+      "id": "pin-task",
+      "section": "CAPTURE_AND_DATES",
+      "sectionOrder": 1,
+      "icon": "pin",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "PRO_TIP",
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Pin a task",
+      "summary": "Keep an important task at the top of its list.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Pin a task to hold it at the top of its feed, above the normal order. Unpin it to let it fall back into place."
+          ]
+        }
+      ],
+      "searchTitle": "pin a task",
+      "searchKeywords": "pin, pinned, stick, top, important, keep",
+      "searchBody": "keep an important task at the top of its list. pin a task to hold it at the top of its feed, above the normal order. unpin it to let it fall back into place."
+    },
+    {
+      "id": "swipe-actions",
+      "section": "GESTURES",
+      "sectionOrder": 2,
+      "icon": "pointer",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": {
+        "web": null,
+        "android": "todos/today",
+        "ios": "today"
+      },
+      "helpAnchors": [],
+      "title": "Swipe actions",
+      "summary": "Swipe a task row for quick actions without opening it.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Swipe a task row to reveal quick actions — complete it, or remove it — without opening the task at all."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "A completed task shows an undo toast for a few seconds, so a mis-swipe is never final."
+          ]
+        }
+      ],
+      "searchTitle": "swipe actions",
+      "searchKeywords": "swipe, gesture, slide, complete, delete, quick, row",
+      "searchBody": "swipe a task row for quick actions without opening it. swipe a task row to reveal quick actions — complete it, or remove it — without opening the task at all. a completed task shows an undo toast for a few seconds, so a mis-swipe is never final."
+    },
+    {
+      "id": "long-press-actions",
+      "section": "GESTURES",
+      "sectionOrder": 2,
+      "icon": "hand",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Long-press a task",
+      "summary": "Press and hold for more options and to start reordering.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Press and hold a task to open its options, or to pick it up and drag it to a new position in the list."
+          ]
+        }
+      ],
+      "searchTitle": "long-press a task",
+      "searchKeywords": "long press, hold, context menu, options, reorder, drag",
+      "searchBody": "press and hold for more options and to start reordering. press and hold a task to open its options, or to pick it up and drag it to a new position in the list."
+    },
+    {
+      "id": "drag-reorder",
+      "section": "GESTURES",
+      "sectionOrder": 2,
+      "icon": "grip-vertical",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "PRO_TIP",
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Reorder by dragging",
+      "summary": "Drag tasks into the order you want.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Your lists keep the order you give them. Drag a task up or down to arrange your day the way you think about it."
+          ]
+        }
+      ],
+      "searchTitle": "reorder by dragging",
+      "searchKeywords": "drag, reorder, move, sort, order, arrange",
+      "searchBody": "drag tasks into the order you want. your lists keep the order you give them. drag a task up or down to arrange your day the way you think about it."
+    },
+    {
+      "id": "floaters-vs-todos",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "waves",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Floaters vs scheduled tasks",
+      "summary": "Dateless tasks live in Anytime; dated tasks live in Home.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "A scheduled task has a due date and shows up in Home and the calendar. A Floater has no date — it waits quietly in your Anytime feed until you're ready. Use Floaters for “someday” work that shouldn't clutter today."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Floaters never appear on the calendar — that space is only for dated work."
+          ]
+        }
+      ],
+      "searchTitle": "floaters vs scheduled tasks",
+      "searchKeywords": "floater, anytime, unscheduled, dateless, todo, scheduled, difference",
+      "searchBody": "dateless tasks live in anytime; dated tasks live in home. a scheduled task has a due date and shows up in home and the calendar. a floater has no date — it waits quietly in your anytime feed until you're ready. use floaters for “someday” work that shouldn't clutter today. floaters never appear on the calendar — that space is only for dated work."
+    },
+    {
+      "id": "floater-lists",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "list",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Floater lists",
+      "summary": "Group your Anytime tasks into their own lists.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Organize Floaters into separate lists — groceries, packing, ideas — each with its own name and color, and its own completed history."
+          ]
+        }
+      ],
+      "searchTitle": "floater lists",
+      "searchKeywords": "floater list, anytime, group, list, category, groceries, packing",
+      "searchBody": "group your anytime tasks into their own lists. organize floaters into separate lists — groceries, packing, ideas — each with its own name and color, and its own completed history."
+    },
+    {
+      "id": "scheduled-lists",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "list-todo",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Lists for scheduled tasks",
+      "summary": "Sort dated tasks into named, colored lists.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Give scheduled tasks a list so related work stays together. Lists carry a name and color and can be filtered."
+          ]
+        }
+      ],
+      "searchTitle": "lists for scheduled tasks",
+      "searchKeywords": "list, project, group, color, scheduled, category",
+      "searchBody": "sort dated tasks into named, colored lists. give scheduled tasks a list so related work stays together. lists carry a name and color and can be filtered."
+    },
+    {
+      "id": "completed-history",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "check-check",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Completed history",
+      "summary": "Everything you finished, kept for you to look back on.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Finished tasks aren't discarded — they move to your completed history, grouped by day, so you can see what you actually got done."
+          ]
+        }
+      ],
+      "searchTitle": "completed history",
+      "searchKeywords": "completed, done, history, finished, archive, past",
+      "searchBody": "everything you finished, kept for you to look back on. finished tasks aren't discarded — they move to your completed history, grouped by day, so you can see what you actually got done."
+    },
+    {
+      "id": "overdue-view",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "alarm-clock",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": {
+        "web": "overdue",
+        "android": "todos/overdue",
+        "ios": "overdueTodos"
+      },
+      "helpAnchors": [],
+      "title": "Overdue",
+      "summary": "A dedicated place for tasks whose time has passed.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Tasks whose due time has passed collect in the Overdue view so nothing slips silently. Reschedule them when you're ready."
+          ]
+        }
+      ],
+      "searchTitle": "overdue",
+      "searchKeywords": "overdue, late, past due, missed, carried over, backlog",
+      "searchBody": "a dedicated place for tasks whose time has passed. tasks whose due time has passed collect in the overdue view so nothing slips silently. reschedule them when you're ready."
+    },
+    {
+      "id": "search-tasks",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "search",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Search your tasks",
+      "summary": "Find any task by title, note, or list name.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Use the search field to filter your tasks instantly by title, description, or list name — no need to scroll."
+          ]
+        }
+      ],
+      "searchTitle": "search your tasks",
+      "searchKeywords": "search, find, filter, lookup, query",
+      "searchBody": "find any task by title, note, or list name. use the search field to filter your tasks instantly by title, description, or list name — no need to scroll."
+    },
+    {
+      "id": "recurrence-presets",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "repeat",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [
+        "recurrence-picker"
+      ],
+      "title": "Repeating tasks",
+      "summary": "Make a task repeat daily, weekly, and more.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Set a task to repeat and it comes back on its own schedule. Pick from the presets — every day, weekday, week, or month — and completing one occurrence leaves the rest of the series intact."
+          ]
+        },
+        {
+          "type": "EXAMPLE",
+          "texts": [
+            "Water the plants · every week"
+          ]
+        }
+      ],
+      "searchTitle": "repeating tasks",
+      "searchKeywords": "repeat, recurring, recurrence, every day, weekly, monthly, rrule, schedule",
+      "searchBody": "make a task repeat daily, weekly, and more. set a task to repeat and it comes back on its own schedule. pick from the presets — every day, weekday, week, or month — and completing one occurrence leaves the rest of the series intact. water the plants · every week"
+    },
+    {
+      "id": "reminders",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "bell",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Reminders",
+      "summary": "Get a notification before a task is due.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Add a reminder to a scheduled task and your device notifies you at the right time. Reminders are scheduled on your device, so they work even in Local Mode."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Reminder lead-time options vary slightly by task — pick the one that gives you enough warning."
+          ]
+        }
+      ],
+      "searchTitle": "reminders",
+      "searchKeywords": "reminder, notification, alert, alarm, notify, before",
+      "searchBody": "get a notification before a task is due. add a reminder to a scheduled task and your device notifies you at the right time. reminders are scheduled on your device, so they work even in local mode. reminder lead-time options vary slightly by task — pick the one that gives you enough warning."
+    },
+    {
+      "id": "home-widget",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "layout-grid",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Home-screen widget",
+      "summary": "See today's tasks without opening the app.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Add the T'Day widget to your home screen to glance at today's tasks. Tapping the widget opens the app at the right place."
+          ]
+        }
+      ],
+      "searchTitle": "home-screen widget",
+      "searchKeywords": "widget, home screen, glance, today, lock screen",
+      "searchBody": "see today's tasks without opening the app. add the t'day widget to your home screen to glance at today's tasks. tapping the widget opens the app at the right place."
+    },
+    {
+      "id": "widget-quick-add",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "square-plus",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "PRO_TIP",
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Quick-add from the widget",
+      "summary": "Start a new task straight from the widget.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "The widget has a create button, so you can capture a task from your home screen without first opening the app — and it works in Local Mode too."
+          ]
+        }
+      ],
+      "searchTitle": "quick-add from the widget",
+      "searchKeywords": "widget, quick add, create, shortcut, home screen",
+      "searchBody": "start a new task straight from the widget. the widget has a create button, so you can capture a task from your home screen without first opening the app — and it works in local mode too."
+    },
+    {
+      "id": "carplay",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "car",
+      "platforms": [
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "T'Day on CarPlay",
+      "summary": "Glance at and capture tasks safely while you drive.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "On CarPlay, T'Day shows a focused, glanceable list built for the car, so you can check what's next or add a task by voice without reaching for your phone."
+          ]
+        }
+      ],
+      "searchTitle": "t'day on carplay",
+      "searchKeywords": "carplay, car, driving, voice, apple, hands free",
+      "searchBody": "glance at and capture tasks safely while you drive. on carplay, t'day shows a focused, glanceable list built for the car, so you can check what's next or add a task by voice without reaching for your phone."
+    },
+    {
+      "id": "local-mode",
+      "section": "MODES_AND_SYNC",
+      "sectionOrder": 6,
+      "icon": "wifi-off",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Local Mode",
+      "summary": "Use T'Day fully offline, with no server or account.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Local Mode keeps everything on your device — no login, no server, no upload. It's a first-class way to use T'Day privately, and your local data is never sent anywhere on its own."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Server-only features are shown here with a “Server mode” badge so you know what changes if you sign in."
+          ]
+        }
+      ],
+      "searchTitle": "local mode",
+      "searchKeywords": "local mode, offline, private, no account, no server, on device",
+      "searchBody": "use t'day fully offline, with no server or account. local mode keeps everything on your device — no login, no server, no upload. it's a first-class way to use t'day privately, and your local data is never sent anywhere on its own. server-only features are shown here with a “server mode” badge so you know what changes if you sign in."
+    },
+    {
+      "id": "server-mode",
+      "section": "MODES_AND_SYNC",
+      "sectionOrder": 6,
+      "icon": "cloud",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Server Mode",
+      "summary": "Sync across devices through your own private server.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Sign in to your self-hosted server to sync tasks across devices in real time. Writes happen instantly on your device and replay to the server, so the app stays fast even on a shaky connection."
+          ]
+        }
+      ],
+      "searchTitle": "server mode",
+      "searchKeywords": "server mode, sync, self hosted, account, login, devices, realtime",
+      "searchBody": "sync across devices through your own private server. sign in to your self-hosted server to sync tasks across devices in real time. writes happen instantly on your device and replay to the server, so the app stays fast even on a shaky connection."
+    },
+    {
+      "id": "offline-sync",
+      "section": "MODES_AND_SYNC",
+      "sectionOrder": 6,
+      "icon": "refresh-cw",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Offline sync",
+      "summary": "Keep working offline; changes replay when you reconnect.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "In Server Mode your changes are saved locally first and queued when you're offline. As soon as you reconnect, T'Day replays them to the server in order."
+          ]
+        }
+      ],
+      "searchTitle": "offline sync",
+      "searchKeywords": "offline, sync, pending, queue, replay, connection, conflict",
+      "searchBody": "keep working offline; changes replay when you reconnect. in server mode your changes are saved locally first and queued when you're offline. as soon as you reconnect, t'day replays them to the server in order."
+    },
+    {
+      "id": "ai-summary",
+      "section": "INTEGRATIONS",
+      "sectionOrder": 7,
+      "icon": "sparkles",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": true,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Task summaries",
+      "summary": "A short, calm read on your day — with optional local AI.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "T'Day can summarize your day in a sentence or two. With a local Ollama model it reads naturally; without one it falls back to a warm, deterministic recap — either way nothing leaves your server."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "The summary never depends on a cloud AI service — it's local or nothing."
+          ]
+        }
+      ],
+      "searchTitle": "task summaries",
+      "searchKeywords": "summary, ai, ollama, overview, digest, local, private",
+      "searchBody": "a short, calm read on your day — with optional local ai. t'day can summarize your day in a sentence or two. with a local ollama model it reads naturally; without one it falls back to a warm, deterministic recap — either way nothing leaves your server. the summary never depends on a cloud ai service — it's local or nothing."
+    }
+  ]
+}

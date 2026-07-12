@@ -79,3 +79,9 @@ jobs:
 
       - name: Run backend tests
         run: ./gradlew :tday-backend:test --no-daemon
+
+      - name: Run shared module tests
+        run: ./gradlew :shared:jvmTest --no-daemon
+
+      - name: Verify guide content is not stale
+        run: ./gradlew :shared:verifyGuideContent --no-daemon
