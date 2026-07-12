@@ -42,7 +42,22 @@ export function useTodoActionToast() {
     [openScheduledDate, showUndoableDelete, t],
   );
 
+  // Same delayed-commit shape as delete: completing a task stages the change
+  // (cache pruning only) and this toast's Undo decides whether the real
+  // /complete request ever fires.
+  const showTodoCompletedToast = useCallback(
+    ({ commit, undo }: UndoableDeleteHandlers) => {
+      showUndoableDelete({
+        message: t("taskCompleted"),
+        commit,
+        undo,
+      });
+    },
+    [showUndoableDelete, t],
+  );
+
   return {
     showTodoDeletedToast,
+    showTodoCompletedToast,
   };
 }

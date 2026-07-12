@@ -321,6 +321,7 @@
     "deleteList": "Удалить список",
     "undo": "Отменить",
     "taskDeleted": "Задача удалена",
+    "taskCompleted": "Задача выполнена",
     "listDeleted": "Список удален",
     "listsDeleted": "Удалено списков: {{count}}",
     "done": "Готово",

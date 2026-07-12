@@ -3,11 +3,17 @@ import { api } from "@/lib/api-client";
 import { useToast } from "@/hooks/use-toast";
 import { canonicalTodoId } from "@/lib/todo/todo-id";
 import { TodoItemType } from "@/types";
+import { useTodoActionToast } from "@/hooks/use-todo-action-toast";
+
+// Delayed-commit complete (see complete-todo.ts): stage the removal of this
+// recurring instance from the calendar cache, show an undoable toast, and only
+// PATCH /complete once the toast closes without undo.
 export const useCompleteCalendarTodoInstance = () => {
   const { toast } = useToast();
+  const { showTodoCompletedToast } = useTodoActionToast();
   const queryClient = useQueryClient();
 
-  const { mutate, isPending } = useMutation({
+  const { mutate: commitComplete, isPending } = useMutation({
     mutationFn: async ({ todoItem }: { todoItem: TodoItemType }) => {
       const todoId = canonicalTodoId(todoItem.id);
       await api.PATCH({
@@ -19,46 +25,35 @@ export const useCompleteCalendarTodoInstance = () => {
         }),
       });
     },
-
-    onMutate: async ({ todoItem }: { todoItem: TodoItemType }) => {
-      await queryClient.cancelQueries({ queryKey: ["calendarTodo"] });
-      const instanceDateMs = todoItem.instanceDate?.getTime();
-
-      const oldTodos = queryClient.getQueryData<TodoItemType[]>([
-        "calendarTodo",
-      ]);
-
-      if (instanceDateMs != null) {
-        queryClient.setQueriesData<TodoItemType[]>(
-          {
-            queryKey: ["calendarTodo"],
-          },
-          (old) =>
-            old?.filter(
-              (todo) =>
-                todo.instanceDate?.getTime() !== instanceDateMs,
-            ),
-        );
-      }
-
-      return { oldTodos };
-    },
-
-    onError: (error, _vars, context) => {
+    onError: (error) => {
       toast({ description: error.message, variant: "destructive" });
-      queryClient.setQueryData(["calendarTodo"], context?.oldTodos);
     },
-
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["calendarTodo"] });
-      queryClient.invalidateQueries({
-        queryKey: ["todo"],
-      });
-      queryClient.invalidateQueries({
-        queryKey: ["completedTodo"],
-      });
+      queryClient.invalidateQueries({ queryKey: ["todo"] });
+      queryClient.invalidateQueries({ queryKey: ["completedTodo"] });
     },
   });
 
-  return { mutateComplete: mutate, isPending };
+  const mutateComplete = ({ todoItem }: { todoItem: TodoItemType }) => {
+    const instanceDateMs = todoItem.instanceDate?.getTime();
+    void queryClient.cancelQueries({ queryKey: ["calendarTodo"] });
+    if (instanceDateMs != null) {
+      queryClient.setQueriesData<TodoItemType[]>(
+        { queryKey: ["calendarTodo"] },
+        (old) =>
+          old?.filter((todo) => todo.instanceDate?.getTime() !== instanceDateMs),
+      );
+    }
+
+    showTodoCompletedToast({
+      commit: () => commitComplete({ todoItem }),
+      undo: () => {
+        // The server still has the instance (incomplete) — a refetch restores it.
+        void queryClient.invalidateQueries({ queryKey: ["calendarTodo"] });
+      },
+    });
+  };
+
+  return { mutateComplete, isPending };
 };

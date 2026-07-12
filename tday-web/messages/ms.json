@@ -321,6 +321,7 @@
     "deleteList": "Padam senarai",
     "undo": "Buat asal",
     "taskDeleted": "Tugas dipadamkan",
+    "taskCompleted": "Tugas selesai",
     "listDeleted": "Senarai dipadamkan",
     "listsDeleted": "{{count}} senarai dipadamkan",
     "done": "Selesai",
