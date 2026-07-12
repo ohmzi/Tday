@@ -195,29 +195,18 @@ struct TodoTimelineTaskTitle: View {
     let titleColor: Color
     let strikeColor: Color
     var font: Font = .tdayRounded(size: TodoTimelineMetrics.minimalRowTitleSize, weight: .bold)
-    var lineLimit: Int = 2
-
-    private var strikeProgress: CGFloat {
-        isCompleted ? 1 : 0
-    }
+    // nil = no line limit; in-app screens show the full title across as many lines
+    // as it needs.
+    var lineLimit: Int? = nil
 
     var body: some View {
         Text(text)
             .font(font)
             .foregroundStyle(titleColor)
+            // Real per-line strikethrough so every line of a wrapped title is crossed
+            // out, instead of a single rule drawn across the middle of the block.
+            .strikethrough(isCompleted, color: strikeColor)
             .lineLimit(lineLimit)
-            .overlay {
-                GeometryReader { proxy in
-                    Rectangle()
-                        .fill(strikeColor)
-                        .frame(width: proxy.size.width * strikeProgress, height: 1.4)
-                        .position(
-                            x: (proxy.size.width * strikeProgress) / 2,
-                            y: proxy.size.height * 0.55
-                        )
-                }
-                .allowsHitTesting(false)
-            }
             .animation(.easeInOut(duration: 0.32), value: isCompleted)
     }
 }
@@ -2061,7 +2050,7 @@ struct TodoListScreen: View {
         let showStrikethrough = completionPhase == .struck || completionPhase == .fading || todo.completed
 
         return VStack(spacing: 0) {
-            HStack(alignment: .center, spacing: 12) {
+            HStack(alignment: .firstTextBaseline, spacing: 12) {
                 Button {
                     completeTodoWithoutReflow(todo)
                 } label: {
@@ -2077,6 +2066,10 @@ struct TodoListScreen: View {
                         normalShadowOpacity: 0
                     )
                 )
+                // Keep the toggle on the first line of a multi-line title.
+                .alignmentGuide(.firstTextBaseline) { dimension in
+                    dimension[VerticalAlignment.center] + 5
+                }
 
                 VStack(alignment: .leading, spacing: 4) {
                     TodoTimelineTaskTitle(
@@ -2114,6 +2107,10 @@ struct TodoListScreen: View {
                         }
                     }
                     .padding(.trailing, TodoTimelineMetrics.minimalRowTrailingIndicatorPadding)
+                    // Keep the trailing indicators on the first line too.
+                    .alignmentGuide(.firstTextBaseline) { dimension in
+                        dimension[VerticalAlignment.center] + 5
+                    }
                 }
             }
             .padding(.vertical, TodoTimelineMetrics.minimalRowVerticalPadding)
