@@ -153,6 +153,8 @@ struct AppRootView: View {
                             SettingsScreen(viewModel: appViewModel)
                         case .latestRelease:
                             LatestReleaseScreen(viewModel: appViewModel)
+                        case let .helpGuide(topic):
+                            HelpGuideScreen(viewModel: appViewModel, initialTopic: topic)
                         case .forgotPassword:
                             ForgotPasswordView(
                                 authViewModel: authViewModel,

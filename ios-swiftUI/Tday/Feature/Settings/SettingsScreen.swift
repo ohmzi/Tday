@@ -155,6 +155,16 @@ struct SettingsScreen: View {
                             .foregroundStyle(colors.secondary)
                     }
 
+                    SettingsDivider()
+
+                    SettingsListRow(
+                        title: L("How-To & Tips"),
+                        value: nil,
+                        action: {
+                            viewModel.navigationPath.append(.helpGuide(topic: nil))
+                        }
+                    )
+
                     if !viewModel.isLocalMode, let backendVersion = viewModel.backendVersion {
                         SettingsServerVersionRow(
                             backendVersion: backendVersion,
