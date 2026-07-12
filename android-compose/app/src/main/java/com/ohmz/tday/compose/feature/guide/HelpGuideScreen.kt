@@ -433,19 +433,38 @@ private fun BodyBlock(type: GuideBlockType, texts: List<String>) {
     }
 }
 
-// Per-topic Lucide icons where a drawable exists; a neutral book for the rest.
-// Adding the ~19 missing ic_lucide_* vectors (per docs/ICONS.md) is a follow-up.
+// Per-topic Lucide drawable. Every catalog glyph has an ic_lucide_* vector
+// (guarded by the guide-icons coverage test); book is a defensive fallback.
 @DrawableRes
 private fun guideIconRes(name: String): Int = when (name) {
-    "plus" -> R.drawable.ic_lucide_plus
+    "alarm-clock" -> R.drawable.ic_lucide_alarm_clock
+    "bell" -> R.drawable.ic_lucide_bell
+    "bell-ring" -> R.drawable.ic_lucide_bell_ring
     "calendar" -> R.drawable.ic_lucide_calendar
-    "flag" -> R.drawable.ic_lucide_flag
-    "pin" -> R.drawable.ic_lucide_pin
-    "list" -> R.drawable.ic_lucide_list
-    "search" -> R.drawable.ic_lucide_search
-    "repeat" -> R.drawable.ic_lucide_repeat
-    "car", "car-front" -> R.drawable.ic_lucide_car
+    "car" -> R.drawable.ic_lucide_car
+    "car-front" -> R.drawable.ic_lucide_car_front
+    "check-check" -> R.drawable.ic_lucide_check_check
+    "cloud" -> R.drawable.ic_lucide_cloud
     "download" -> R.drawable.ic_lucide_download
+    "flag" -> R.drawable.ic_lucide_flag
+    "grip-vertical" -> R.drawable.ic_lucide_grip_vertical
+    "hand" -> R.drawable.ic_lucide_hand
+    "key-round" -> R.drawable.ic_lucide_key_round
+    "keyboard" -> R.drawable.ic_lucide_keyboard
+    "layout-dashboard" -> R.drawable.ic_lucide_layout_dashboard
+    "layout-grid" -> R.drawable.ic_lucide_layout_grid
+    "list" -> R.drawable.ic_lucide_list
+    "list-todo" -> R.drawable.ic_lucide_list_todo
+    "pin" -> R.drawable.ic_lucide_pin
+    "plus" -> R.drawable.ic_lucide_plus
+    "pointer" -> R.drawable.ic_lucide_pointer
+    "refresh-cw" -> R.drawable.ic_lucide_refresh_cw
+    "repeat" -> R.drawable.ic_lucide_repeat
+    "search" -> R.drawable.ic_lucide_search
     "sparkles" -> R.drawable.ic_lucide_sparkles
+    "square-plus" -> R.drawable.ic_lucide_square_plus
+    "wand-sparkles" -> R.drawable.ic_lucide_wand_sparkles
+    "waves" -> R.drawable.ic_lucide_waves
+    "wifi-off" -> R.drawable.ic_lucide_wifi_off
     else -> R.drawable.ic_lucide_book
 }
