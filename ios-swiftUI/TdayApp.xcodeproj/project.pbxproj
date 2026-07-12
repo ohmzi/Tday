@@ -109,6 +109,21 @@
 		EF64B4D7E0FB06A86DA86E0C /* TaskFloatingActionButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DE4A047CF237AD9F605D02E /* TaskFloatingActionButton.swift */; };
 		F5D16EE508D6244152B8E4B2 /* ServerURLState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D24DBD8CA3EE648D4560B880 /* ServerURLState.swift */; };
 		FCDE195DEB990E58558699B1 /* ErrorRetryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE3D896A638869384B4CF1EF /* ErrorRetryView.swift */; };
+		CAFE0D1E0000000000000011 /* GuideContentStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAFE0D1E0000000000000001 /* GuideContentStore.swift */; };
+		CAFE0D1E0000000000000012 /* GuideSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAFE0D1E0000000000000002 /* GuideSearch.swift */; };
+		CAFE0D1E0000000000000013 /* GuideModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAFE0D1E0000000000000003 /* GuideModels.swift */; };
+		CAFE0D1E0000000000000014 /* HelpGuideScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAFE0D1E0000000000000004 /* HelpGuideScreen.swift */; };
+		CAFE0D1E0000000000000015 /* GuideContentContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAFE0D1E0000000000000005 /* GuideContentContractTests.swift */; };
+		CAFE0D1E0000000000000031 /* guide.de.json in Resources */ = {isa = PBXBuildFile; fileRef = CAFE0D1E0000000000000041 /* guide.de.json */; };
+		CAFE0D1E0000000000000032 /* guide.en.json in Resources */ = {isa = PBXBuildFile; fileRef = CAFE0D1E0000000000000042 /* guide.en.json */; };
+		CAFE0D1E0000000000000033 /* guide.es.json in Resources */ = {isa = PBXBuildFile; fileRef = CAFE0D1E0000000000000043 /* guide.es.json */; };
+		CAFE0D1E0000000000000034 /* guide.fr.json in Resources */ = {isa = PBXBuildFile; fileRef = CAFE0D1E0000000000000044 /* guide.fr.json */; };
+		CAFE0D1E0000000000000035 /* guide.it.json in Resources */ = {isa = PBXBuildFile; fileRef = CAFE0D1E0000000000000045 /* guide.it.json */; };
+		CAFE0D1E0000000000000036 /* guide.ja.json in Resources */ = {isa = PBXBuildFile; fileRef = CAFE0D1E0000000000000046 /* guide.ja.json */; };
+		CAFE0D1E0000000000000037 /* guide.ms.json in Resources */ = {isa = PBXBuildFile; fileRef = CAFE0D1E0000000000000047 /* guide.ms.json */; };
+		CAFE0D1E0000000000000038 /* guide.pt.json in Resources */ = {isa = PBXBuildFile; fileRef = CAFE0D1E0000000000000048 /* guide.pt.json */; };
+		CAFE0D1E0000000000000039 /* guide.ru.json in Resources */ = {isa = PBXBuildFile; fileRef = CAFE0D1E0000000000000049 /* guide.ru.json */; };
+		CAFE0D1E000000000000003A /* guide.zh.json in Resources */ = {isa = PBXBuildFile; fileRef = CAFE0D1E000000000000004A /* guide.zh.json */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -249,6 +264,21 @@
 		E867FA22FEB66EDCE837CF6D /* SecureStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureStore.swift; sourceTree = "<group>"; };
 		FC47AEF5EB0B44524D8C20B1 /* SettingsScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsScreen.swift; sourceTree = "<group>"; };
 		FC92D6152EADEDF915AE116B /* TodayTasksWidgetSnapshotStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayTasksWidgetSnapshotStoreTests.swift; sourceTree = "<group>"; };
+		CAFE0D1E0000000000000001 /* GuideContentStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuideContentStore.swift; sourceTree = "<group>"; };
+		CAFE0D1E0000000000000002 /* GuideSearch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuideSearch.swift; sourceTree = "<group>"; };
+		CAFE0D1E0000000000000003 /* GuideModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuideModels.swift; sourceTree = "<group>"; };
+		CAFE0D1E0000000000000004 /* HelpGuideScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelpGuideScreen.swift; sourceTree = "<group>"; };
+		CAFE0D1E0000000000000005 /* GuideContentContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuideContentContractTests.swift; sourceTree = "<group>"; };
+		CAFE0D1E0000000000000041 /* guide.de.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = guide.de.json; sourceTree = "<group>"; };
+		CAFE0D1E0000000000000042 /* guide.en.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = guide.en.json; sourceTree = "<group>"; };
+		CAFE0D1E0000000000000043 /* guide.es.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = guide.es.json; sourceTree = "<group>"; };
+		CAFE0D1E0000000000000044 /* guide.fr.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = guide.fr.json; sourceTree = "<group>"; };
+		CAFE0D1E0000000000000045 /* guide.it.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = guide.it.json; sourceTree = "<group>"; };
+		CAFE0D1E0000000000000046 /* guide.ja.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = guide.ja.json; sourceTree = "<group>"; };
+		CAFE0D1E0000000000000047 /* guide.ms.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = guide.ms.json; sourceTree = "<group>"; };
+		CAFE0D1E0000000000000048 /* guide.pt.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = guide.pt.json; sourceTree = "<group>"; };
+		CAFE0D1E0000000000000049 /* guide.ru.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = guide.ru.json; sourceTree = "<group>"; };
+		CAFE0D1E000000000000004A /* guide.zh.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = guide.zh.json; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -285,6 +315,7 @@
 			children = (
 				9F8E7D6C5B4A00000000F105 /* Localizable.xcstrings */,
 				2D679EC9EE22239446D1DE67 /* Fonts */,
+				CAFE0D1E0000000000000023 /* Guide */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -307,6 +338,7 @@
 				B10000000000000000000005 /* CarTaskModelsTests.swift */,
 				4A7B9C0D1E2F3456789ABC02 /* CompletedSyncMergeTests.swift */,
 				4D2A9B7E2CE3424C9D111002 /* ConnectivityClassificationTests.swift */,
+				CAFE0D1E0000000000000005 /* GuideContentContractTests.swift */,
 				4F52544D434C49454E543032 /* RealtimeClientTests.swift */,
 				D206496BC88FF6272CFC286C /* ServerURLPersistenceTests.swift */,
 				19F61DADBD9B8EFC300698C4 /* SystemCredentialLoginTests.swift */,
@@ -401,6 +433,7 @@
 				867DC72A3F5B3C04E5C36879 /* Calendar */,
 				B10000000000000000000010 /* CarPlay */,
 				FE3DA39BEFDCE31E8159D522 /* Completed */,
+				CAFE0D1E0000000000000022 /* Guide */,
 				7BA4A69F753AF1C268BCD197 /* Home */,
 				DA05A67258F74BF398DCADA3 /* Onboarding */,
 				9F18066D3B63DF80ECB870BB /* Settings */,
@@ -515,6 +548,7 @@
 			children = (
 				6049166B683EE082F8C551DD /* ApiModels.swift */,
 				8A6D006E491513605369E7D5 /* DomainModels.swift */,
+				CAFE0D1E0000000000000003 /* GuideModels.swift */,
 				AB49A43AFEE66EEDB3315F86 /* OfflineSyncModels.swift */,
 				593DCCDF3ADC95BE1CDC78FC /* StringHelpers.swift */,
 				CE3297DCE3ECD21F5B0A4635 /* VersionCompatibility.swift */,
@@ -546,6 +580,7 @@
 				9B7A416E298DA7E2D5DAD2FC /* Cache */,
 				A4AB62DB656606572D396BB2 /* Completed */,
 				CD839531581A4EFC90B74EE5 /* Database */,
+				CAFE0D1E0000000000000021 /* Guide */,
 				05ADD4FAA554BDBEA68C7904 /* List */,
 				EFBAA9912D7DFA7C8B8C2BD0 /* Server */,
 				CBFE1162EFBEBE3E95E1E0BE /* Settings */,
@@ -702,6 +737,40 @@
 			path = Completed;
 			sourceTree = "<group>";
 		};
+		CAFE0D1E0000000000000021 /* Guide */ = {
+			isa = PBXGroup;
+			children = (
+				CAFE0D1E0000000000000001 /* GuideContentStore.swift */,
+				CAFE0D1E0000000000000002 /* GuideSearch.swift */,
+			);
+			path = Guide;
+			sourceTree = "<group>";
+		};
+		CAFE0D1E0000000000000022 /* Guide */ = {
+			isa = PBXGroup;
+			children = (
+				CAFE0D1E0000000000000004 /* HelpGuideScreen.swift */,
+			);
+			path = Guide;
+			sourceTree = "<group>";
+		};
+		CAFE0D1E0000000000000023 /* Guide */ = {
+			isa = PBXGroup;
+			children = (
+				CAFE0D1E0000000000000041 /* guide.de.json */,
+				CAFE0D1E0000000000000042 /* guide.en.json */,
+				CAFE0D1E0000000000000043 /* guide.es.json */,
+				CAFE0D1E0000000000000044 /* guide.fr.json */,
+				CAFE0D1E0000000000000045 /* guide.it.json */,
+				CAFE0D1E0000000000000046 /* guide.ja.json */,
+				CAFE0D1E0000000000000047 /* guide.ms.json */,
+				CAFE0D1E0000000000000048 /* guide.pt.json */,
+				CAFE0D1E0000000000000049 /* guide.ru.json */,
+				CAFE0D1E000000000000004A /* guide.zh.json */,
+			);
+			path = Guide;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -806,6 +875,16 @@
 				85B5397D25D2A1436CF34394 /* LaunchScreen.storyboard in Resources */,
 				C4E342DFC88BD5C188893628 /* Nunito-OFL.txt in Resources */,
 				384B88FF643D87A6157C76C2 /* Nunito.ttf in Resources */,
+				CAFE0D1E0000000000000031 /* guide.de.json in Resources */,
+				CAFE0D1E0000000000000032 /* guide.en.json in Resources */,
+				CAFE0D1E0000000000000033 /* guide.es.json in Resources */,
+				CAFE0D1E0000000000000034 /* guide.fr.json in Resources */,
+				CAFE0D1E0000000000000035 /* guide.it.json in Resources */,
+				CAFE0D1E0000000000000036 /* guide.ja.json in Resources */,
+				CAFE0D1E0000000000000037 /* guide.ms.json in Resources */,
+				CAFE0D1E0000000000000038 /* guide.pt.json in Resources */,
+				CAFE0D1E0000000000000039 /* guide.ru.json in Resources */,
+				CAFE0D1E000000000000003A /* guide.zh.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -821,6 +900,7 @@
 				B10000000000000000000025 /* CarTaskModelsTests.swift in Sources */,
 				4A7B9C0D1E2F3456789ABC01 /* CompletedSyncMergeTests.swift in Sources */,
 				4D2A9B7E2CE3424C9D111001 /* ConnectivityClassificationTests.swift in Sources */,
+				CAFE0D1E0000000000000015 /* GuideContentContractTests.swift in Sources */,
 				4F52544D434C49454E543031 /* RealtimeClientTests.swift in Sources */,
 				03A0CCC6A8AAE2DB065E6DE6 /* ServerURLPersistenceTests.swift in Sources */,
 				C8B96DDF0DC7AD0B8DD54E4F /* SystemCredentialLoginTests.swift in Sources */,
@@ -845,6 +925,10 @@
 				07D1F4A0C9434C54853E9D29 /* AppDataMode.swift in Sources */,
 				5B82443B89507719EDD7215C /* AppContainer.swift in Sources */,
 				A316B4B3BB1AEA5FDF9998DF /* AppRootView.swift in Sources */,
+				CAFE0D1E0000000000000011 /* GuideContentStore.swift in Sources */,
+				CAFE0D1E0000000000000012 /* GuideSearch.swift in Sources */,
+				CAFE0D1E0000000000000013 /* GuideModels.swift in Sources */,
+				CAFE0D1E0000000000000014 /* HelpGuideScreen.swift in Sources */,
 				D1EC81F59DDFE7F8A10D1D30 /* AppRoute.swift in Sources */,
 				17A2E96F8BEA64247551A742 /* AppViewModel.swift in Sources */,
 				A7319C922AE54DC944A9ECC5 /* AuthRepository.swift in Sources */,
