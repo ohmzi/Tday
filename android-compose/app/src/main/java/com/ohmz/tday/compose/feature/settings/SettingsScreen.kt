@@ -116,6 +116,7 @@ fun SettingsScreen(
     onBack: () -> Unit,
     onLogout: () -> Unit,
     onOpenLatestRelease: () -> Unit,
+    onOpenHelpGuide: () -> Unit,
     onUpdateName: suspend (String) -> ProfileEditResult,
     onChangePassword: suspend (String, String) -> ProfileEditResult,
     onForgotPassword: () -> Unit,
@@ -233,6 +234,14 @@ fun SettingsScreen(
                         fontWeight = FontWeight.ExtraBold,
                     )
                 }
+
+                SettingsDivider()
+
+                SettingsListRow(
+                    title = stringResource(R.string.settings_help_guide),
+                    value = null,
+                    onClick = onOpenHelpGuide,
+                )
                 if (!isLocalMode && backendVersion != null) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
