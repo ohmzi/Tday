@@ -24,6 +24,7 @@
     <string name="quick_defer_tonight">今晚</string>
     <string name="quick_defer_tomorrow">明天早上</string>
     <string name="quick_defer_next_week">下周</string>
+    <string name="reminder_action_snooze_hour">暂停1小时</string>
     <string name="task_promote_failed">无法安排任务</string>
     <string name="task_float_failed">无法放漂任务</string>
     <string name="action_complete">完成</string>

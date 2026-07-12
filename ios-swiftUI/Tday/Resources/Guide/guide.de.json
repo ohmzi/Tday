@@ -685,6 +685,40 @@
       "searchBody": "erhalte eine benachrichtigung, bevor eine aufgabe fallig ist. fuge einer geplanten aufgabe eine erinnerung hinzu, und dein gerat benachrichtigt dich zur richtigen zeit. erinnerungen werden auf deinem gerat geplant, sodass sie auch im lokalen modus funktionieren. die optionen fur die vorlaufzeit einer erinnerung variieren je nach aufgabe leicht — wahle die, die dir genug vorwarnung gibt."
     },
     {
+      "id": "reminder-snooze",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "bell",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.3.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Erinnerung später wiederholen",
+      "summary": "Erinnerungs-Benachrichtigungen bieten „1 Std. später“ und „Heute Abend“.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Kommt eine Erinnerung ungelegen, musst du die App nicht öffnen: „1 Std. später“ stellt dieselbe Erinnerung eine Stunde später erneut zu, „Heute Abend“ verschiebt die Aufgabe selbst auf 19:00 heute. Heute Abend gilt für einmalige Aufgaben — wiederkehrende Termine planst du in der App um, damit die Serie intakt bleibt."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Später wiederholen verzögert nur die Benachrichtigung; die Aufgabe behält ihre ursprüngliche Zeit, bis du sie verschiebst."
+          ]
+        }
+      ],
+      "searchTitle": "erinnerung spater wiederholen",
+      "searchKeywords": "spater erinnern, erinnerung, benachrichtigung, snooze, heute abend, verschieben",
+      "searchBody": "erinnerungs-benachrichtigungen bieten „1 std. spater“ und „heute abend“. kommt eine erinnerung ungelegen, musst du die app nicht offnen: „1 std. spater“ stellt dieselbe erinnerung eine stunde spater erneut zu, „heute abend“ verschiebt die aufgabe selbst auf 19:00 heute. heute abend gilt fur einmalige aufgaben — wiederkehrende termine planst du in der app um, damit die serie intakt bleibt. spater wiederholen verzogert nur die benachrichtigung; die aufgabe behalt ihre ursprungliche zeit, bis du sie verschiebst."
+    },
+    {
       "id": "home-widget",
       "section": "WIDGETS_AND_SURFACES",
       "sectionOrder": 5,

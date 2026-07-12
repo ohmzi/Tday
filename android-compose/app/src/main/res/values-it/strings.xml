@@ -24,6 +24,7 @@
     <string name="quick_defer_tonight">Stasera</string>
     <string name="quick_defer_tomorrow">Domani mattina</string>
     <string name="quick_defer_next_week">La prossima settimana</string>
+    <string name="reminder_action_snooze_hour">Posticipa 1 h</string>
     <string name="task_promote_failed">Impossibile pianificare l\'attività</string>
     <string name="task_float_failed">Impossibile far fluttuare l\'attività</string>
     <string name="action_complete">Completa</string>

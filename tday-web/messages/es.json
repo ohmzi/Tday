@@ -793,6 +793,13 @@
         "body": "Añade un recordatorio a una tarea programada y tu dispositivo te avisará en el momento justo. Los recordatorios se programan en tu dispositivo, así que funcionan incluso en Modo local.",
         "tip": "Las opciones de antelación del recordatorio varían un poco según la tarea: elige la que te dé suficiente margen."
       },
+      "reminder-snooze": {
+        "title": "Posponer un recordatorio",
+        "summary": "Las notificaciones de recordatorio incluyen las acciones Posponer 1 h y Esta noche.",
+        "keywords": "posponer, recordatorio, notificación, más tarde, esta noche, aplazar alerta",
+        "body": "Cuando un recordatorio llega en mal momento, no hace falta abrir la app: Posponer 1 h vuelve a entregar el mismo recordatorio una hora después, y Esta noche mueve la tarea a las 19:00 de hoy. Esta noche funciona con tareas puntuales; las repeticiones se reprograman desde la app para mantener la serie intacta.",
+        "tip": "Posponer solo retrasa la notificación; la tarea conserva su hora original hasta que la muevas."
+      },
       "push-notifications": {
         "title": "Recordatorios web (push)",
         "summary": "Deja que la app web te avise cuando venza una tarea, aunque esté cerrada.",

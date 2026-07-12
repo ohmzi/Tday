@@ -685,6 +685,40 @@
       "searchBody": "在任务到期前收到通知。 给已安排的任务添加提醒，你的设备会在恰当的时间通知你。提醒在你的设备上安排，所以即便在本地模式下也能用。 提醒的提前时间选项会因任务而略有不同——挑一个能给你足够预留时间的。"
     },
     {
+      "id": "reminder-snooze",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "bell",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.3.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "暂停提醒",
+      "summary": "提醒通知带有“暂停1小时”和“今晚”操作。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "提醒来得不巧时，无需打开应用：“暂停1小时”会在一小时后重新送达同一条提醒，“今晚”则把任务本身移到今天 19:00。“今晚”适用于一次性任务——重复任务请在应用内改期，以保持系列完整。"
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "暂停只是推迟通知；在你移动任务之前，它仍保留原定时间。"
+          ]
+        }
+      ],
+      "searchTitle": "暂停提醒",
+      "searchKeywords": "暂停, 提醒, 通知, 稍后, 今晚, 推迟提醒",
+      "searchBody": "提醒通知带有“暂停1小时”和“今晚”操作。 提醒来得不巧时，无需打开应用：“暂停1小时”会在一小时后重新送达同一条提醒，“今晚”则把任务本身移到今天 19:00。“今晚”适用于一次性任务——重复任务请在应用内改期，以保持系列完整。 暂停只是推迟通知；在你移动任务之前，它仍保留原定时间。"
+    },
+    {
       "id": "home-widget",
       "section": "WIDGETS_AND_SURFACES",
       "sectionOrder": 5,

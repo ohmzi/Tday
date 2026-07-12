@@ -685,6 +685,40 @@
       "searchBody": "ricevi una notifica prima della scadenza di un'attivita. aggiungi un promemoria a un'attivita pianificata e il tuo dispositivo ti avvisa al momento giusto. i promemoria sono pianificati sul tuo dispositivo, quindi funzionano anche in modalita locale. le opzioni di anticipo del promemoria variano leggermente in base all'attivita — scegli quella che ti da abbastanza preavviso."
     },
     {
+      "id": "reminder-snooze",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "bell",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.3.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Posticipare un promemoria",
+      "summary": "Le notifiche dei promemoria offrono Posticipa 1 h e Stasera.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Quando un promemoria arriva nel momento sbagliato, non serve aprire l'app: Posticipa 1 h riconsegna lo stesso promemoria un'ora dopo, e Stasera sposta l'attività alle 19:00 di oggi. Stasera vale per le attività singole — le occorrenze ricorrenti si ripianificano dall'app per mantenere intatta la serie."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Posticipare ritarda solo la notifica; l'attività mantiene la sua ora originale finché non la sposti."
+          ]
+        }
+      ],
+      "searchTitle": "posticipare un promemoria",
+      "searchKeywords": "posticipare, promemoria, notifica, piu tardi, stasera, rinviare avviso",
+      "searchBody": "le notifiche dei promemoria offrono posticipa 1 h e stasera. quando un promemoria arriva nel momento sbagliato, non serve aprire l'app: posticipa 1 h riconsegna lo stesso promemoria un'ora dopo, e stasera sposta l'attivita alle 19:00 di oggi. stasera vale per le attivita singole — le occorrenze ricorrenti si ripianificano dall'app per mantenere intatta la serie. posticipare ritarda solo la notifica; l'attivita mantiene la sua ora originale finche non la sposti."
+    },
+    {
       "id": "home-widget",
       "section": "WIDGETS_AND_SURFACES",
       "sectionOrder": 5,

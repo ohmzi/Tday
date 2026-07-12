@@ -2,6 +2,10 @@ import Foundation
 import UserNotifications
 
 final class TaskReminderScheduler {
+    static let reminderCategoryID = "TASK_REMINDER"
+    static let snoozeHourActionID = "TDAY_SNOOZE_1H"
+    static let tonightActionID = "TDAY_MOVE_TONIGHT"
+
     private let reminderPreferenceStore: ReminderPreferenceStore
 
     init(reminderPreferenceStore: ReminderPreferenceStore) {
@@ -13,6 +17,49 @@ final class TaskReminderScheduler {
             return
         }
         _ = try? await notificationCenter.requestAuthorization(options: [.alert, .sound, .badge])
+        registerReminderCategory()
+    }
+
+    /// Snooze / Tonight actions shown on every task-reminder notification.
+    private func registerReminderCategory() {
+        guard let notificationCenter else {
+            return
+        }
+        let snooze = UNNotificationAction(
+            identifier: Self.snoozeHourActionID,
+            title: L("Snooze 1h")
+        )
+        let tonight = UNNotificationAction(
+            identifier: Self.tonightActionID,
+            title: L("Tonight")
+        )
+        let category = UNNotificationCategory(
+            identifier: Self.reminderCategoryID,
+            actions: [snooze, tonight],
+            intentIdentifiers: []
+        )
+        notificationCenter.setNotificationCategories([category])
+    }
+
+    /// Re-presents a delivered reminder after [interval]. Clears the
+    /// notified marker first — without that the next reschedule pass would
+    /// silently suppress the task's reminders.
+    func snooze(taskID: String, content: UNNotificationContent, interval: TimeInterval) async {
+        guard let notificationCenter else {
+            return
+        }
+        reminderPreferenceStore.clearNotified(taskID: taskID)
+        guard let snoozedContent = content.mutableCopy() as? UNMutableNotificationContent else {
+            return
+        }
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: interval, repeats: false)
+        let request = UNNotificationRequest(
+            identifier: "tday.todo.\(taskID).snoozed",
+            content: snoozedContent,
+            trigger: trigger
+        )
+        try? await notificationCenter.add(request)
+        TdayTelemetry.addBreadcrumb("reminder.snooze", data: ["intervalSeconds": Int(interval)])
     }
 
     func reschedule(tasks: [TodoItem], defaultReminder: ReminderOption) async {
@@ -43,7 +90,11 @@ final class TaskReminderScheduler {
             content.title = task.title
             content.body = task.description ?? "Due soon"
             content.sound = .default
-            content.userInfo = ["deepLink": Self.deepLinkURLString(for: task.id)]
+            content.categoryIdentifier = Self.reminderCategoryID
+            content.userInfo = [
+                "deepLink": Self.deepLinkURLString(for: task.id),
+                "taskId": task.id,
+            ]
 
             let components = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: triggerDate)
             let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)

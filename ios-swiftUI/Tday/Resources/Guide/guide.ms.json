@@ -685,6 +685,40 @@
       "searchBody": "dapatkan pemberitahuan sebelum tugasan tamat tempoh. tambah peringatan pada tugasan berjadual dan peranti anda memberitahu anda pada masa yang tepat. peringatan dijadualkan pada peranti anda, jadi ia berfungsi walaupun dalam mod tempatan. pilihan tempoh awal peringatan berbeza sedikit mengikut tugasan — pilih yang memberi anda amaran yang cukup awal."
     },
     {
+      "id": "reminder-snooze",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "bell",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.3.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Tunda peringatan",
+      "summary": "Pemberitahuan peringatan ada tindakan Tunda 1 jam dan Malam ini.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Apabila peringatan muncul pada masa yang tidak sesuai, tidak perlu buka aplikasi: Tunda 1 jam menghantar semula peringatan yang sama sejam kemudian, dan Malam ini memindahkan tugasan itu ke 19:00 hari ini. Malam ini untuk tugasan sekali sahaja — kejadian berulang dijadualkan semula dalam aplikasi supaya sirinya kekal."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Menunda hanya melewatkan pemberitahuan; tugasan mengekalkan masa asalnya sehingga anda memindahkannya."
+          ]
+        }
+      ],
+      "searchTitle": "tunda peringatan",
+      "searchKeywords": "tunda, peringatan, pemberitahuan, kemudian, malam ini, snooze",
+      "searchBody": "pemberitahuan peringatan ada tindakan tunda 1 jam dan malam ini. apabila peringatan muncul pada masa yang tidak sesuai, tidak perlu buka aplikasi: tunda 1 jam menghantar semula peringatan yang sama sejam kemudian, dan malam ini memindahkan tugasan itu ke 19:00 hari ini. malam ini untuk tugasan sekali sahaja — kejadian berulang dijadualkan semula dalam aplikasi supaya sirinya kekal. menunda hanya melewatkan pemberitahuan; tugasan mengekalkan masa asalnya sehingga anda memindahkannya."
+    },
+    {
       "id": "home-widget",
       "section": "WIDGETS_AND_SURFACES",
       "sectionOrder": 5,

@@ -24,6 +24,7 @@
     <string name="quick_defer_tonight">Hoje à noite</string>
     <string name="quick_defer_tomorrow">Amanhã de manhã</string>
     <string name="quick_defer_next_week">Na próxima semana</string>
+    <string name="reminder_action_snooze_hour">Adiar 1 h</string>
     <string name="task_promote_failed">Não foi possível agendar a tarefa</string>
     <string name="task_float_failed">Não foi possível deixar a tarefa flutuar</string>
     <string name="action_complete">Concluir</string>

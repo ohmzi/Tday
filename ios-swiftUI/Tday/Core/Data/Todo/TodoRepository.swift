@@ -334,6 +334,35 @@ final class TodoRepository {
         }
     }
 
+    /// Notification "Tonight" action: move a task to today 19:00 local by id.
+    /// Recurring tasks are skipped — their occurrences reschedule via the
+    /// app's per-instance flow, not from a notification button.
+    func moveTodoTonight(taskID: String) async throws {
+        let state = try await cacheManager.loadOfflineState()
+        guard let record = state.todos.first(where: {
+            ($0.canonicalId == taskID || $0.id == taskID) && $0.instanceDateEpochMs == nil
+        }), record.rrule == nil else {
+            return
+        }
+        let startOfDay = Calendar.current.startOfDay(for: Date())
+        let tonight = Calendar.current.date(bySettingHour: 19, minute: 0, second: 0, of: startOfDay) ?? Date()
+        let todo = TodoItem(
+            id: record.id,
+            canonicalId: record.canonicalId,
+            title: record.title,
+            description: record.description,
+            priority: record.priority,
+            due: record.dueEpochMs.map { Date(epochMilliseconds: $0) },
+            rrule: record.rrule,
+            instanceDate: nil,
+            pinned: record.pinned,
+            completed: record.completed,
+            listId: record.listId,
+            updatedAt: nil
+        )
+        try await moveTodo(todo, due: tonight)
+    }
+
     func moveTodo(_ todo: TodoItem, due: Date) async throws {
         let now = Date().epochMilliseconds
         let dueEpochMs = due.epochMilliseconds
