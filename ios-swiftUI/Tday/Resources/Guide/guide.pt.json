@@ -465,6 +465,35 @@
       "searchBody": "um toque move uma tarefa para mais tarde hoje, hoje a noite, amanha ou a proxima semana. quando uma tarefa precisa se mover, mas nao para longe, pule o seletor de data: a acao adiar oferece mais tarde hoje (+3 horas), hoje a noite (19:00), amanha de manha (09:00) e na proxima semana (segunda 09:00) com um toque. e a mesma mudanca que a folha de edicao faria — so que mais rapida. tarefas recorrentes sao adiadas por ocorrencia na folha de edicao, entao o menu de um toque nao atrapalha."
     },
     {
+      "id": "day-done",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "check-check",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.3.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Dia concluído",
+      "summary": "Termine tudo de hoje e a tela Hoje celebra em silêncio.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Quando todas as tarefas agendadas para hoje estão concluídas — e não apenas ausentes — a tela Hoje troca a mensagem \"Sem tarefas\" por um estado tranquilo: um duplo check suave, as palavras \"Tudo feito por hoje\" e a data. Sem sequências, sem pontuações; apenas a pequena recompensa de um dia realmente terminado."
+          ]
+        }
+      ],
+      "searchTitle": "dia concluido",
+      "searchKeywords": "dia concluido, tudo feito, terminado, tudo completado, hoje vazio",
+      "searchBody": "termine tudo de hoje e a tela hoje celebra em silencio. quando todas as tarefas agendadas para hoje estao concluidas — e nao apenas ausentes — a tela hoje troca a mensagem \"sem tarefas\" por um estado tranquilo: um duplo check suave, as palavras \"tudo feito por hoje\" e a data. sem sequencias, sem pontuacoes; apenas a pequena recompensa de um dia realmente terminado."
+    },
+    {
       "id": "floater-lists",
       "section": "ORGANIZING",
       "sectionOrder": 3,

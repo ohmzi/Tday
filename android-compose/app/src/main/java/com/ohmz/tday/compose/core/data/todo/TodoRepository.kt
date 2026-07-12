@@ -117,6 +117,17 @@ class TodoRepository @Inject constructor(
         )
     }
 
+    /** Completed-today count from the local cache, for the Day Done state. */
+    fun completedTodayCount(): Int {
+        val zone = zoneId
+        val today = java.time.LocalDate.now(zone)
+        return cacheManager.loadOfflineStateBlocking().completedItems.count { record ->
+            java.time.Instant.ofEpochMilli(record.completedAtEpochMs)
+                .atZone(zone)
+                .toLocalDate() == today
+        }
+    }
+
     suspend fun createTodo(payload: CreateTaskPayload) {
         val trimmedTitle = payload.title.trim()
         if (trimmedTitle.isBlank()) return

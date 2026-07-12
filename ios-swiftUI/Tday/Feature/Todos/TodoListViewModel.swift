@@ -13,6 +13,9 @@ final class TodoListViewModel {
     var listId: String?
     var lists: [ListSummary] = []
     var items: [TodoItem] = []
+    // Feeds the Day Done state: completed-today count from the local cache,
+    // bumped optimistically on complete so the payoff shows immediately.
+    var completedTodayCount = 0
     var errorMessage: String?
     var aiSummaryEnabled = true
     var summaryText: String?
@@ -242,6 +245,9 @@ final class TodoListViewModel {
         let container = container
         let isFloater = mode == .floater
         items.removeAll { $0.id == todo.id }
+        if !isFloater {
+            completedTodayCount += 1
+        }
         container.undoableDeleteScheduler.schedule(
             message: L("Task completed"),
             restore: { [weak self] in
@@ -422,6 +428,9 @@ final class TodoListViewModel {
         items = snapshot.items
         aiSummaryEnabled = snapshot.aiSummaryEnabled
         errorMessage = nil
+        if mode == .today {
+            completedTodayCount = container.todoRepository.completedTodayCount()
+        }
     }
 
     private func shouldUseRecentSuccessfulSync(_ state: OfflineSyncState) -> Bool {

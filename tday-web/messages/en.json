@@ -356,7 +356,8 @@
     "quickDeferLaterToday": "Later today",
     "quickDeferTonight": "Tonight",
     "quickDeferTomorrow": "Tomorrow morning",
-    "quickDeferNextWeek": "Next week"
+    "quickDeferNextWeek": "Next week",
+    "allDoneToday": "All done for today"
   },
   "today": {
     "saveInstance": "Save instance",
@@ -748,6 +749,12 @@
         "keywords": "defer, postpone, snooze task, later, tonight, tomorrow, next week, reschedule",
         "body": "When a task needs to move but not far, skip the date picker: the Defer action offers Later today (+3 hours), Tonight (19:00), Tomorrow morning (09:00) and Next week (Monday 09:00) as one-tap choices. It's the same change the edit sheet would make — just faster.",
         "tip": "Recurring tasks defer per-occurrence from the edit sheet, so the one-tap menu stays out of their way."
+      },
+      "day-done": {
+        "title": "Day Done",
+        "summary": "Finish everything for today and the Today screen quietly celebrates.",
+        "keywords": "day done, all done, finished, completed everything, empty today, celebration",
+        "body": "When every task scheduled for today is completed — not merely absent — the Today screen swaps its \"No tasks\" message for a calm Day Done state: a soft double-check, the words \"All done for today\" and the date. No streaks, no scores; just the small payoff of an actually finished day."
       },
       "floater-lists": {
         "title": "Floater lists",

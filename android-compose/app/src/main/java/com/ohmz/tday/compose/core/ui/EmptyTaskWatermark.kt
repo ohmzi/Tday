@@ -3,7 +3,10 @@ package com.ohmz.tday.compose.core.ui
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -87,6 +90,53 @@ fun EmptyTaskWatermark(
                     rotationZ = -7f
                 },
         )
+    }
+}
+
+/**
+ * The Day Done state: shown instead of "No tasks for today" when everything
+ * scheduled for today has actually been completed — a quiet payoff, not a
+ * generic empty screen.
+ */
+@Composable
+fun DayDoneBackgroundMessage(
+    message: String,
+    dateText: String,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier
+                .offset(x = 24.dp)
+                .padding(horizontal = 24.dp),
+        ) {
+            Icon(
+                imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_check_check),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.66f),
+                modifier = Modifier.size(44.dp),
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+            Text(
+                text = message,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.66f),
+                style = MaterialTheme.typography.displaySmall,
+                fontWeight = FontWeight.ExtraBold,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = dateText,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.ExtraBold,
+                textAlign = TextAlign.Center,
+            )
+        }
     }
 }
 

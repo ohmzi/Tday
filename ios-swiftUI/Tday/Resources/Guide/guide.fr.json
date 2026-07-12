@@ -465,6 +465,35 @@
       "searchBody": "un geste deplace une tache a plus tard aujourd'hui, ce soir, demain ou la semaine prochaine. quand une tache doit bouger, mais pas loin, evitez le selecteur de date : l'action reporter propose plus tard aujourd'hui (+3 heures), ce soir (19 h), demain matin (9 h) et la semaine prochaine (lundi 9 h) en un geste. c'est le meme changement que la feuille d'edition — en plus rapide. les taches recurrentes se reportent par occurrence depuis la feuille d'edition, le menu express ne s'en mele donc pas."
     },
     {
+      "id": "day-done",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "check-check",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.3.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Journée bouclée",
+      "summary": "Terminez tout pour aujourd'hui et l'écran Aujourd'hui célèbre discrètement.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Quand chaque tâche prévue aujourd'hui est terminée — et pas simplement absente — l'écran Aujourd'hui remplace son message « Aucune tâche » par un état apaisé : une double coche douce, les mots « Tout est fait pour aujourd'hui » et la date. Pas de séries, pas de scores ; juste la petite récompense d'une journée vraiment achevée."
+          ]
+        }
+      ],
+      "searchTitle": "journee bouclee",
+      "searchKeywords": "journee terminee, tout est fait, fini, tout accompli, aujourd'hui vide",
+      "searchBody": "terminez tout pour aujourd'hui et l'ecran aujourd'hui celebre discretement. quand chaque tache prevue aujourd'hui est terminee — et pas simplement absente — l'ecran aujourd'hui remplace son message « aucune tache » par un etat apaise : une double coche douce, les mots « tout est fait pour aujourd'hui » et la date. pas de series, pas de scores ; juste la petite recompense d'une journee vraiment achevee."
+    },
+    {
       "id": "floater-lists",
       "section": "ORGANIZING",
       "sectionOrder": 3,

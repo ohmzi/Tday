@@ -346,6 +346,32 @@
       "sinceVersion": "0.3.0"
     },
     {
+      "id": "day-done",
+      "section": "ORGANIZING",
+      "icon": "check-check",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "titleKey": "guide.topics.day-done.title",
+      "summaryKey": "guide.topics.day-done.summary",
+      "keywordsKey": "guide.topics.day-done.keywords",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "keys": [
+            "guide.topics.day-done.body"
+          ]
+        }
+      ],
+      "badge": "HIDDEN_GEM",
+      "deepLink": null,
+      "helpAnchors": [],
+      "serverOnly": false,
+      "sinceVersion": "0.3.0"
+    },
+    {
       "id": "floater-lists",
       "section": "ORGANIZING",
       "icon": "list",

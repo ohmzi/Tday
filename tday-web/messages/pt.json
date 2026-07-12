@@ -356,7 +356,8 @@
     "quickDeferLaterToday": "Mais tarde hoje",
     "quickDeferTonight": "Hoje à noite",
     "quickDeferTomorrow": "Amanhã de manhã",
-    "quickDeferNextWeek": "Na próxima semana"
+    "quickDeferNextWeek": "Na próxima semana",
+    "allDoneToday": "Tudo feito por hoje"
   },
   "today": {
     "saveInstance": "Guardar instância",
@@ -748,6 +749,12 @@
         "keywords": "adiar, postergar, mais tarde, hoje à noite, amanhã, próxima semana, reagendar",
         "body": "Quando uma tarefa precisa se mover, mas não para longe, pule o seletor de data: a ação Adiar oferece Mais tarde hoje (+3 horas), Hoje à noite (19:00), Amanhã de manhã (09:00) e Na próxima semana (segunda 09:00) com um toque. É a mesma mudança que a folha de edição faria — só que mais rápida.",
         "tip": "Tarefas recorrentes são adiadas por ocorrência na folha de edição, então o menu de um toque não atrapalha."
+      },
+      "day-done": {
+        "title": "Dia concluído",
+        "summary": "Termine tudo de hoje e a tela Hoje celebra em silêncio.",
+        "keywords": "dia concluído, tudo feito, terminado, tudo completado, hoje vazio",
+        "body": "Quando todas as tarefas agendadas para hoje estão concluídas — e não apenas ausentes — a tela Hoje troca a mensagem \"Sem tarefas\" por um estado tranquilo: um duplo check suave, as palavras \"Tudo feito por hoje\" e a data. Sem sequências, sem pontuações; apenas a pequena recompensa de um dia realmente terminado."
       },
       "floater-lists": {
         "title": "Listas de Flutuantes",

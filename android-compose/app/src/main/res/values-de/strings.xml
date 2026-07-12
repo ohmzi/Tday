@@ -231,6 +231,7 @@
     <string name="todos_title_floater">Floater</string>
     <string name="todos_title_list">Liste</string>
     <string name="todos_empty_today">Keine Aufgaben für heute</string>
+    <string name="todos_all_done_today">Alles erledigt für heute</string>
     <string name="todos_empty_overdue">Keine überfälligen Aufgaben</string>
     <string name="todos_empty_priority">Keine Prioritätsaufgaben</string>
     <string name="todos_empty_scheduled">Keine geplanten Aufgaben</string>

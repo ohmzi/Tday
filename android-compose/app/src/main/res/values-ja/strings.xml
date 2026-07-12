@@ -231,6 +231,7 @@
     <string name="todos_title_floater">フローター</string>
     <string name="todos_title_list">リスト</string>
     <string name="todos_empty_today">今日のタスクはありません</string>
+    <string name="todos_all_done_today">今日のタスクはすべて完了</string>
     <string name="todos_empty_overdue">期限超過のタスクはありません</string>
     <string name="todos_empty_priority">優先タスクはありません</string>
     <string name="todos_empty_scheduled">予定されたタスクはありません</string>

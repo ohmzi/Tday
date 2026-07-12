@@ -356,7 +356,8 @@
     "quickDeferLaterToday": "Más tarde hoy",
     "quickDeferTonight": "Esta noche",
     "quickDeferTomorrow": "Mañana por la mañana",
-    "quickDeferNextWeek": "La próxima semana"
+    "quickDeferNextWeek": "La próxima semana",
+    "allDoneToday": "Todo listo por hoy"
   },
   "today": {
     "saveInstance": "Guardar instancia",
@@ -748,6 +749,12 @@
         "keywords": "aplazar, posponer, más tarde, esta noche, mañana, próxima semana, reprogramar",
         "body": "Cuando una tarea debe moverse, pero no mucho, evita el selector de fecha: la acción Aplazar ofrece Más tarde hoy (+3 horas), Esta noche (19:00), Mañana por la mañana (09:00) y La próxima semana (lunes 09:00) con un solo toque. Es el mismo cambio que haría la hoja de edición, solo que más rápido.",
         "tip": "Las tareas recurrentes se aplazan por ocurrencia desde la hoja de edición, así que el menú de un toque no se interpone."
+      },
+      "day-done": {
+        "title": "Día completado",
+        "summary": "Termina todo lo de hoy y la pantalla Hoy lo celebra en silencio.",
+        "keywords": "día completado, todo listo, terminado, todo completado, hoy vacío",
+        "body": "Cuando todas las tareas programadas para hoy están completadas — no simplemente ausentes — la pantalla Hoy cambia su mensaje de \"Sin tareas\" por un estado sereno de día completado: una doble marca suave, las palabras \"Todo listo por hoy\" y la fecha. Sin rachas ni puntuaciones; solo la pequeña recompensa de un día realmente terminado."
       },
       "floater-lists": {
         "title": "Listas de Flotantes",

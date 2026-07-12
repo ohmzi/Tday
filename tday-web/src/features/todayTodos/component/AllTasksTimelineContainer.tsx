@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { CalendarClock, Clock3, Flag, Layers, Search, Sun, X } from "lucide-react";
+import { CalendarClock, CheckCheck, Clock3, Flag, Layers, Search, Sun, X } from "lucide-react";
+import { isSameDay } from "date-fns";
+import { useCompletedTodo } from "@/features/completed/query/get-completedTodo";
 import NativePageTitle from "@/components/app/NativePageTitle";
 import ScreenWatermark from "@/components/app/ScreenWatermark";
 import { timelineScopeAccentColors } from "@/components/app/nativeScreenTheme";
@@ -418,6 +420,14 @@ const AllTasksTimelineContainer = ({
   // Every scope shows the same native-style centered empty message when there
   // are no tasks (Today also keeps its Morning/Afternoon/Tonight headers above).
   const showEmpty = !todoLoading && !isSearching && !hasScopedTasks;
+  const { completedTodos } = useCompletedTodo();
+  const completedTodayCount = useMemo(
+    () =>
+      completedTodos.filter((todo) => isSameDay(todo.completedAt, new Date()))
+        .length,
+    [completedTodos],
+  );
+  const isDayDone = scope === "today" && showEmpty && completedTodayCount > 0;
 
   useEffect(() => {
     setVisibleCount(PAGE_SIZE);
@@ -638,12 +648,33 @@ const AllTasksTimelineContainer = ({
         )}
 
         {/* Native-style centered empty message — for Today it sits below the
-            Morning/Afternoon/Tonight headers; for other scopes it's the only body. */}
+            Morning/Afternoon/Tonight headers; for other scopes it's the only body.
+            Day Done: "finished everything" earns a calm payoff state instead of
+            the generic no-tasks message. */}
         {showEmpty && (
           <div className="flex min-h-[42vh] flex-col items-center justify-center text-center">
-            <p className="text-2xl font-black text-muted-foreground/70">
-              {emptyStateMessage}
-            </p>
+            {isDayDone ? (
+              <>
+                <CheckCheck
+                  className="mb-3 h-10 w-10 text-muted-foreground/70"
+                  aria-hidden="true"
+                />
+                <p className="text-2xl font-black text-muted-foreground/70">
+                  {appDict("allDoneToday")}
+                </p>
+                <p className="mt-1 text-sm font-bold text-muted-foreground/50">
+                  {new Intl.DateTimeFormat(locale, {
+                    weekday: "long",
+                    day: "numeric",
+                    month: "long",
+                  }).format(new Date())}
+                </p>
+              </>
+            ) : (
+              <p className="text-2xl font-black text-muted-foreground/70">
+                {emptyStateMessage}
+              </p>
+            )}
           </div>
         )}
 

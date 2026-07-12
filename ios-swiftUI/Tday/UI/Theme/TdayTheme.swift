@@ -369,6 +369,41 @@ struct EmptyTaskBackgroundMessage: View {
     }
 }
 
+/// The Day Done state: shown instead of "No tasks for today" when everything
+/// scheduled for today has actually been completed — a quiet payoff, not a
+/// generic empty screen.
+struct DayDoneBackgroundMessage: View {
+    let message: String
+    let dateText: String
+
+    @Environment(\.tdayColors) private var colors
+
+    var body: some View {
+        VStack(spacing: 10) {
+            Image("LucideCheckCheck")
+                .renderingMode(.template)
+                .resizable()
+                .scaledToFit()
+                .frame(width: 44, height: 44)
+                .foregroundStyle(colors.onSurfaceVariant.opacity(0.66))
+            Text(message)
+                .font(.tdayRounded(size: 28, weight: .bold))
+                .foregroundStyle(colors.onSurfaceVariant.opacity(0.66))
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+                .minimumScaleFactor(0.82)
+            Text(dateText)
+                .font(.tdayRounded(size: 15, weight: .heavy))
+                .foregroundStyle(colors.onSurfaceVariant.opacity(0.5))
+        }
+        .padding(.horizontal, 32)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+        .offset(x: 24)
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+}
+
 struct TdayCardModifier: ViewModifier {
     @Environment(\.tdayColors) private var colors
 

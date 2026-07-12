@@ -334,6 +334,14 @@ final class TodoRepository {
         }
     }
 
+    /// Completed-today count from the local cache, for the Day Done state.
+    func completedTodayCount() -> Int {
+        let calendar = Calendar.current
+        return cacheManager.loadOfflineState().completedItems.filter { record in
+            calendar.isDateInToday(Date(epochMilliseconds: record.completedAtEpochMs))
+        }.count
+    }
+
     /// Notification "Tonight" action: move a task to today 19:00 local by id.
     /// Recurring tasks are skipped — their occurrences reschedule via the
     /// app's per-instance flow, not from a notification button.
