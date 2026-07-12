@@ -537,6 +537,7 @@
     <string name="release_no_apk">No APK attached to this release.</string>
     <string name="release_launch_update_toast">Update %1$s is available.</string>
     <string name="task_deleted_toast">Task deleted</string>
+    <string name="task_completed_toast">Task completed</string>
     <string name="list_deleted_toast">List deleted</string>
     <string name="password_changed_toast">Password changed successfully</string>
     <string name="profile_name_updated_toast">Name updated successfully</string>

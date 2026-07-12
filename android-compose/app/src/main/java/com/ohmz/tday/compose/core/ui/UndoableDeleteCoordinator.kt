@@ -41,12 +41,32 @@ class UndoableDeleteCoordinator @Inject constructor(
 ) {
     private val scope = MainScope()
 
+    /** Delayed-commit delete (see class doc). */
     fun showUndoableDelete(
         message: String,
         onCommit: suspend () -> Unit,
         onUndo: suspend () -> Unit,
+    ) = showUndoable("delete", message, onCommit, onUndo)
+
+    /**
+     * Delayed-commit *complete*, same mechanism as delete: the caller stages the
+     * completion (local/optimistic UI removal only — the task stays incomplete on
+     * disk), then [onCommit] runs the real complete after the window unless the
+     * user taps Undo, in which case [onUndo] restores the staged-away row.
+     */
+    fun showUndoableComplete(
+        message: String,
+        onCommit: suspend () -> Unit,
+        onUndo: suspend () -> Unit,
+    ) = showUndoable("complete", message, onCommit, onUndo)
+
+    private fun showUndoable(
+        opName: String,
+        message: String,
+        onCommit: suspend () -> Unit,
+        onUndo: suspend () -> Unit,
     ) {
-        // Exactly one of commit/undo may claim the deletion. The toast
+        // Exactly one of commit/undo may claim the action. The toast
         // auto-dismisses before the commit delay elapses, so in practice a tap
         // on Undo always wins; the flag guards the races regardless.
         val resolved = AtomicBoolean(false)
@@ -56,7 +76,7 @@ class UndoableDeleteCoordinator @Inject constructor(
             // Once the commit starts it must not be torn mid-flight.
             withContext(NonCancellable) {
                 runCatching { onCommit() }.onFailure {
-                    Log.w(LOG_TAG, "delete commit failed reason=${it.javaClass.simpleName}")
+                    Log.w(LOG_TAG, "$opName commit failed reason=${it.javaClass.simpleName}")
                 }
             }
         }
@@ -72,7 +92,7 @@ class UndoableDeleteCoordinator @Inject constructor(
                             runCatching { onUndo() }.onFailure {
                                 Log.w(
                                     LOG_TAG,
-                                    "delete undo failed reason=${it.javaClass.simpleName}",
+                                    "$opName undo failed reason=${it.javaClass.simpleName}",
                                 )
                             }
                         }
