@@ -140,6 +140,8 @@ The in-app How-To guide (Settings → "How-To & Tips") is content-driven from th
 
 - Any PR that ships user-visible behavior must add its `GuideTopic` to `GuideCatalog.kt` (with `sinceVersion` = the release it ships in, to feed "What's New"), add `guide.topics.<id>.*` strings to **every** `tday-web/messages/<locale>.json`, then run `./gradlew :shared:exportGuideContent` and commit the regenerated artifacts.
 - Direction of truth: structure flows Kotlin→web/iOS; strings flow web→Kotlin/iOS. `./gradlew :shared:verifyGuideContent` is the CI drift gate — if it fails, regenerate and commit.
+- A topic's `deepLink` routes must be whitelisted in `shared/guide-content/routes.json` (the exporter fails otherwise). A new deep link means adding its web/android/ios route strings there in the same PR — that whitelist is the only CI gate against mobile route rot.
+- The exporter also regenerates `SummaryStringBundlesGenerated.kt` from the web `summary` namespace; a new summary-engine phrase means adding the key to every locale file and to `SUMMARY_VALUE_KEYS` in `GuideContentExporter.kt`.
 - Topic icons must be real Lucide glyphs present on every platform (web `lucide-react`, Android `ic_lucide_<glyph>.xml`, iOS `Lucide<Glyph>.imageset`); the `guide-icons` coverage test enforces this. Add missing assets per `docs/ICONS.md`.
 - The i18n parity guardrail blocks partial translations, so a new topic needs all locales up front (machine-translate, then refine).
 

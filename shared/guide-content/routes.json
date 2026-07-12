@@ -1,0 +1,17 @@
+{
+  "web": [
+    "calendar",
+    "overdue",
+    "settings"
+  ],
+  "android": [
+    "calendar",
+    "todos/today",
+    "todos/overdue"
+  ],
+  "ios": [
+    "calendar",
+    "today",
+    "overdueTodos"
+  ]
+}

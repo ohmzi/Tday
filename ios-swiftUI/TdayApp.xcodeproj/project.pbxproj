@@ -124,6 +124,7 @@
 		CAFE0D1E0000000000000038 /* guide.pt.json in Resources */ = {isa = PBXBuildFile; fileRef = CAFE0D1E0000000000000048 /* guide.pt.json */; };
 		CAFE0D1E0000000000000039 /* guide.ru.json in Resources */ = {isa = PBXBuildFile; fileRef = CAFE0D1E0000000000000049 /* guide.ru.json */; };
 		CAFE0D1E000000000000003A /* guide.zh.json in Resources */ = {isa = PBXBuildFile; fileRef = CAFE0D1E000000000000004A /* guide.zh.json */; };
+		CAFE0D1E0000000000000051 /* guide-search-vectors.json in Resources */ = {isa = PBXBuildFile; fileRef = CAFE0D1E0000000000000052 /* guide-search-vectors.json */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -279,6 +280,7 @@
 		CAFE0D1E0000000000000048 /* guide.pt.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = guide.pt.json; sourceTree = "<group>"; };
 		CAFE0D1E0000000000000049 /* guide.ru.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = guide.ru.json; sourceTree = "<group>"; };
 		CAFE0D1E000000000000004A /* guide.zh.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = guide.zh.json; sourceTree = "<group>"; };
+		CAFE0D1E0000000000000052 /* guide-search-vectors.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "guide-search-vectors.json"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -757,6 +759,7 @@
 		CAFE0D1E0000000000000023 /* Guide */ = {
 			isa = PBXGroup;
 			children = (
+				CAFE0D1E0000000000000052 /* guide-search-vectors.json */,
 				CAFE0D1E0000000000000041 /* guide.de.json */,
 				CAFE0D1E0000000000000042 /* guide.en.json */,
 				CAFE0D1E0000000000000043 /* guide.es.json */,
@@ -885,6 +888,7 @@
 				CAFE0D1E0000000000000038 /* guide.pt.json in Resources */,
 				CAFE0D1E0000000000000039 /* guide.ru.json in Resources */,
 				CAFE0D1E000000000000003A /* guide.zh.json in Resources */,
+				CAFE0D1E0000000000000051 /* guide-search-vectors.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1093,7 +1097,7 @@
 				CODE_SIGN_ENTITLEMENTS = Tday/Tday.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 7;
 				DEVELOPMENT_TEAM = JUFACN2FS3;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Tday/Info.plist;
@@ -1103,7 +1107,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.2.0;
+				MARKETING_VERSION = 0.2.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.ohmz.tday.ios;
 				PRODUCT_NAME = Tday;
 				SDKROOT = iphoneos;
@@ -1123,7 +1127,7 @@
 				CODE_SIGN_ENTITLEMENTS = Tday/Tday.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 7;
 				DEVELOPMENT_TEAM = JUFACN2FS3;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Tday/Info.plist;
@@ -1133,7 +1137,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.2.0;
+				MARKETING_VERSION = 0.2.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.ohmz.tday.ios;
 				PRODUCT_NAME = Tday;
 				SDKROOT = iphoneos;
@@ -1153,7 +1157,7 @@
 				CODE_SIGN_ENTITLEMENTS = TdayWidget/TdayWidget.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 7;
 				DEVELOPMENT_TEAM = JUFACN2FS3;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TdayWidget/Info.plist;
@@ -1163,7 +1167,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 0.2.0;
+				MARKETING_VERSION = 0.2.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.ohmz.tday.ios.TodayTasksWidget;
 				PRODUCT_NAME = TdayWidget;
 				SDKROOT = iphoneos;
@@ -1182,7 +1186,7 @@
 				CODE_SIGN_ENTITLEMENTS = TdayWidget/TdayWidget.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 7;
 				DEVELOPMENT_TEAM = JUFACN2FS3;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TdayWidget/Info.plist;
@@ -1192,7 +1196,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 0.2.0;
+				MARKETING_VERSION = 0.2.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.ohmz.tday.ios.TodayTasksWidget;
 				PRODUCT_NAME = TdayWidget;
 				SDKROOT = iphoneos;
