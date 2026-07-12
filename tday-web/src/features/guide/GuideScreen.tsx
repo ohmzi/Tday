@@ -9,6 +9,8 @@ import {
   GUIDE_SECTIONS,
   GUIDE_TOPICS,
   type GuideTopicDef,
+  markGuideSeen,
+  readLastSeenGuideVersion,
   topicsInSection,
   whatsNewTopics,
 } from "./guideContent";
@@ -28,6 +30,14 @@ export default function GuideScreen() {
   const [query, setQuery] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(focusTopicId ?? null);
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  // NEW badges show until the guide has been opened in this release: read the
+  // persisted last-seen version once, then mark the running release as seen.
+  const [lastSeenVersion] = useState(readLastSeenGuideVersion);
+  const showNewBadges = lastSeenVersion !== GUIDE_CURRENT_VERSION;
+  useEffect(() => {
+    markGuideSeen();
+  }, []);
 
   // Build search docs exactly as the exporter does, so ranking matches the
   // shared Kotlin engine (verified by tests/unit/guide-search.test.ts).
@@ -61,6 +71,7 @@ export default function GuideScreen() {
     <TopicCard
       key={topic.id}
       topic={topic}
+      showNew={showNewBadges && isNew(topic)}
       expanded={expandedId === topic.id}
       onToggle={() => setExpandedId((cur) => (cur === topic.id ? null : topic.id))}
       onTryIt={(seg) => navigate(`/${locale}/app/${seg}`)}
@@ -162,18 +173,22 @@ function SectionHeading({ children, icon }: { children: React.ReactNode; icon?: 
 
 function TopicCard({
   topic,
+  showNew,
   expanded,
   onToggle,
   onTryIt,
   registerRef,
 }: {
   topic: GuideTopicDef;
+  showNew: boolean;
   expanded: boolean;
   onToggle: () => void;
   onTryIt: (segment: string) => void;
   registerRef: (el: HTMLDivElement | null) => void;
 }) {
   const { t } = useTranslation();
+  // Web is server-mode-only (no Local Mode concept), so serverOnly topics never
+  // hide their Try-it button here; Android/iOS gate theirs behind !isLocalMode.
   const tryItSegment = topic.deepLink?.web ?? null;
 
   return (
@@ -193,7 +208,7 @@ function TopicCard({
         <span className="min-w-0 flex-1">
           <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <span className="font-semibold text-card-foreground">{t(topic.titleKey)}</span>
-            <TopicBadges topic={topic} />
+            <TopicBadges topic={topic} showNew={showNew} />
           </span>
           <span className="mt-0.5 block truncate text-[13px] text-card-foreground-muted">
             {t(topic.summaryKey)}
@@ -231,10 +246,10 @@ function TopicCard({
   );
 }
 
-function TopicBadges({ topic }: { topic: GuideTopicDef }) {
+function TopicBadges({ topic, showNew }: { topic: GuideTopicDef; showNew: boolean }) {
   const { t } = useTranslation();
   const badges: Array<{ key: string; label: string; tone: string }> = [];
-  if (isNew(topic))
+  if (showNew)
     badges.push({ key: "new", label: t("guide.badges.new"), tone: "bg-accent/15 text-accent" });
   if (topic.badge === "HIDDEN_GEM")
     badges.push({

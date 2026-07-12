@@ -92,6 +92,7 @@ import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
+import com.ohmz.tday.compose.feature.guide.GuideHelpLink
 import com.ohmz.tday.compose.ui.priority.PRIORITY_IMPORTANT_VALUE
 import com.ohmz.tday.compose.ui.priority.PRIORITY_NORMAL_VALUE
 import com.ohmz.tday.compose.ui.priority.PRIORITY_URGENT_VALUE
@@ -101,6 +102,7 @@ import com.ohmz.tday.compose.ui.theme.TdayTaskCompleteAccent
 import com.ohmz.tday.compose.ui.theme.tdayListAccentColorOrNull
 import com.ohmz.tday.compose.ui.theme.tdayListIconForKey
 import com.ohmz.tday.compose.ui.theme.tdayPriorityColor
+import com.ohmz.tday.shared.guide.GuideTopicIds
 import kotlinx.coroutines.delay
 import java.time.Instant
 import java.time.LocalDate
@@ -622,6 +624,9 @@ fun CreateTaskBottomSheet(
                                             onOptionSelected = { option ->
                                                 selectedRepeat = option.name
                                             },
+                                            titleTrailing = {
+                                                GuideHelpLink(GuideTopicIds.RECURRENCE_PRESETS)
+                                            },
                                         )
                                     }
                                 }
@@ -687,14 +692,21 @@ private fun TaskTextCard(
     onKeyboardDone: () -> Unit,
 ) {
     GroupCard {
-        TaskField(
-            value = title,
-            placeholder = stringResource(R.string.create_task_title_placeholder),
-            onValueChange = onTitleChange,
-            onKeyboardDone = onKeyboardDone,
-            highlightText = titleHighlight,
-            highlightStart = titleHighlightStart,
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            TaskField(
+                value = title,
+                placeholder = stringResource(R.string.create_task_title_placeholder),
+                onValueChange = onTitleChange,
+                onKeyboardDone = onKeyboardDone,
+                highlightText = titleHighlight,
+                highlightStart = titleHighlightStart,
+                modifier = Modifier.weight(1f),
+            )
+            GuideHelpLink(
+                GuideTopicIds.NLP_DATE_SYNTAX,
+                modifier = Modifier.padding(end = 10.dp),
+            )
+        }
         RowDivider()
         TaskField(
             value = notes,
@@ -713,6 +725,7 @@ private fun TaskField(
     onKeyboardDone: () -> Unit,
     highlightText: String? = null,
     highlightStart: Int = -1,
+    modifier: Modifier = Modifier,
 ) {
     val colorScheme = MaterialTheme.colorScheme
 
@@ -768,7 +781,7 @@ private fun TaskField(
             color = colorScheme.onSurface,
             fontWeight = FontWeight.ExtraBold,
         ),
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 18.dp, vertical = 16.dp),
         decorationBox = { innerTextField ->
@@ -966,6 +979,7 @@ private fun SheetRow(
     value: String,
     onClick: () -> Unit,
     valueLeading: (@Composable () -> Unit)? = null,
+    titleTrailing: (@Composable () -> Unit)? = null,
 ) {
     val view = LocalView.current
     val colorScheme = MaterialTheme.colorScheme
@@ -988,13 +1002,21 @@ private fun SheetRow(
         )
         Spacer(modifier = Modifier.size(14.dp))
 
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleMedium,
-            color = colorScheme.onSurface,
-            fontWeight = FontWeight.ExtraBold,
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.weight(1f),
-        )
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                color = colorScheme.onSurface,
+                fontWeight = FontWeight.ExtraBold,
+            )
+            if (titleTrailing != null) {
+                Spacer(modifier = Modifier.width(2.dp))
+                titleTrailing()
+            }
+        }
 
         Row(
             horizontalArrangement = Arrangement.End,
@@ -1038,6 +1060,7 @@ private fun <T> SheetDropdownRow(
     isSelected: (T) -> Boolean,
     onOptionSelected: (T) -> Unit,
     valueLeading: (@Composable () -> Unit)? = null,
+    titleTrailing: (@Composable () -> Unit)? = null,
 ) {
     var selectorOpen by remember { mutableStateOf(false) }
 
@@ -1048,6 +1071,7 @@ private fun <T> SheetDropdownRow(
             value = value,
             onClick = { selectorOpen = true },
             valueLeading = valueLeading,
+            titleTrailing = titleTrailing,
         )
 
         if (selectorOpen) {

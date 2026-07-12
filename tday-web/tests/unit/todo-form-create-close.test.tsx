@@ -10,6 +10,9 @@ vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string) => key,
   }),
+  // TodoForm now renders GuideHelpLink, whose Link (@/lib/navigation) pulls in
+  // src/i18n.ts — the mock must cover the module's full surface.
+  initReactI18next: { type: "3rdParty", init: () => {} },
 }));
 
 vi.mock("@/providers/TodoFormProvider", () => ({

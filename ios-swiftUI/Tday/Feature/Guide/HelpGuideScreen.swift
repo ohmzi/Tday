@@ -14,6 +14,9 @@ struct HelpGuideScreen: View {
     @State private var query = ""
     @State private var expandedId: String?
     @State private var loaded = false
+    // NEW badges show until the guide has been opened in this release; the
+    // last-seen version persists in UserDefaults (GuideStore).
+    @State private var showNewBadges = false
 
     private var trimmed: String { query.trimmingCharacters(in: .whitespaces) }
 
@@ -57,6 +60,10 @@ struct HelpGuideScreen: View {
             artifact = GuideContentStore.load()
             expandedId = initialTopic
             loaded = true
+
+            let store = GuideStore()
+            showNewBadges = store.lastSeenGuideVersion() != artifact.currentVersion
+            store.setLastSeenGuideVersion(artifact.currentVersion)
         }
     }
 
@@ -226,7 +233,9 @@ struct HelpGuideScreen: View {
 
     @ViewBuilder
     private func badges(_ topic: GuideTopicDTO) -> some View {
-        if topic.sinceVersion == artifact.currentVersion { pill(artifact.ui["badges.new"] ?? "New") }
+        if showNewBadges, topic.sinceVersion == artifact.currentVersion {
+            pill(artifact.ui["badges.new"] ?? "New")
+        }
         if topic.badge == "HIDDEN_GEM" { pill(artifact.ui["badges.hiddenGem"] ?? "Hidden gem") }
         if topic.badge == "PRO_TIP" { pill(artifact.ui["badges.proTip"] ?? "Pro tip") }
         if topic.serverOnly { pill(artifact.ui["badges.server"] ?? "Server mode") }

@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/sheet-chrome/CenteredSelectorOverlay";
 import ListDot from "@/components/ListDot";
 import FloaterListDot from "@/features/floaterList/component/FloaterListDot";
+import { GuideHelpLink } from "@/features/guide/GuideHelpLink";
 import NLPTitleInput from "./NLPTitleInput";
 import TaskSelectorOverlays, { type TaskSelector } from "./TodoFormSelectors";
 import { priorityLabelKey, repeatLabelKey } from "./labels";
@@ -121,15 +122,16 @@ const TodoForm = ({
     <div className="flex flex-col gap-3 pb-2">
       {/* Title + Notes */}
       <SheetCard>
-        <div className="px-[18px] pb-2 pt-3">
+        <div className="flex items-start gap-2 px-[18px] pb-2 pt-3">
           <NLPTitleInput
-            className="text-lg font-black"
+            className="min-w-0 flex-1 text-lg font-black"
             title={title}
             setTitle={setTitle}
             titleRef={titleRef}
             setDateRange={setDateRange}
             onSubmit={() => handleForm()}
           />
+          <GuideHelpLink topic="nlp-date-syntax" className="mt-0.5" />
         </div>
         <SheetDivider />
         <input

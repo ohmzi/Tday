@@ -113,6 +113,8 @@
 		CAFE0D1E0000000000000012 /* GuideSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAFE0D1E0000000000000002 /* GuideSearch.swift */; };
 		CAFE0D1E0000000000000013 /* GuideModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAFE0D1E0000000000000003 /* GuideModels.swift */; };
 		CAFE0D1E0000000000000014 /* HelpGuideScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAFE0D1E0000000000000004 /* HelpGuideScreen.swift */; };
+		CAFE0D1E0000000000000053 /* GuideHelpLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAFE0D1E0000000000000054 /* GuideHelpLink.swift */; };
+		CAFE0D1E0000000000000055 /* GuideStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAFE0D1E0000000000000056 /* GuideStore.swift */; };
 		CAFE0D1E0000000000000015 /* GuideContentContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAFE0D1E0000000000000005 /* GuideContentContractTests.swift */; };
 		CAFE0D1E0000000000000031 /* guide.de.json in Resources */ = {isa = PBXBuildFile; fileRef = CAFE0D1E0000000000000041 /* guide.de.json */; };
 		CAFE0D1E0000000000000032 /* guide.en.json in Resources */ = {isa = PBXBuildFile; fileRef = CAFE0D1E0000000000000042 /* guide.en.json */; };
@@ -269,6 +271,8 @@
 		CAFE0D1E0000000000000002 /* GuideSearch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuideSearch.swift; sourceTree = "<group>"; };
 		CAFE0D1E0000000000000003 /* GuideModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuideModels.swift; sourceTree = "<group>"; };
 		CAFE0D1E0000000000000004 /* HelpGuideScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelpGuideScreen.swift; sourceTree = "<group>"; };
+		CAFE0D1E0000000000000054 /* GuideHelpLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuideHelpLink.swift; sourceTree = "<group>"; };
+		CAFE0D1E0000000000000056 /* GuideStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuideStore.swift; sourceTree = "<group>"; };
 		CAFE0D1E0000000000000005 /* GuideContentContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuideContentContractTests.swift; sourceTree = "<group>"; };
 		CAFE0D1E0000000000000041 /* guide.de.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = guide.de.json; sourceTree = "<group>"; };
 		CAFE0D1E0000000000000042 /* guide.en.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = guide.en.json; sourceTree = "<group>"; };
@@ -744,6 +748,7 @@
 			children = (
 				CAFE0D1E0000000000000001 /* GuideContentStore.swift */,
 				CAFE0D1E0000000000000002 /* GuideSearch.swift */,
+				CAFE0D1E0000000000000056 /* GuideStore.swift */,
 			);
 			path = Guide;
 			sourceTree = "<group>";
@@ -751,6 +756,7 @@
 		CAFE0D1E0000000000000022 /* Guide */ = {
 			isa = PBXGroup;
 			children = (
+				CAFE0D1E0000000000000054 /* GuideHelpLink.swift */,
 				CAFE0D1E0000000000000004 /* HelpGuideScreen.swift */,
 			);
 			path = Guide;
@@ -933,6 +939,8 @@
 				CAFE0D1E0000000000000012 /* GuideSearch.swift in Sources */,
 				CAFE0D1E0000000000000013 /* GuideModels.swift in Sources */,
 				CAFE0D1E0000000000000014 /* HelpGuideScreen.swift in Sources */,
+				CAFE0D1E0000000000000053 /* GuideHelpLink.swift in Sources */,
+				CAFE0D1E0000000000000055 /* GuideStore.swift in Sources */,
 				D1EC81F59DDFE7F8A10D1D30 /* AppRoute.swift in Sources */,
 				17A2E96F8BEA64247551A742 /* AppViewModel.swift in Sources */,
 				A7319C922AE54DC944A9ECC5 /* AuthRepository.swift in Sources */,
