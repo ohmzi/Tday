@@ -351,7 +351,12 @@
     "noUsersFound": "Nenhum usuário encontrado",
     "tasksDueOn": "Tarefas para {{date}}",
     "noTasksDueThisDay": "Nenhuma tarefa para este dia",
-    "selectAnotherDate": "Selecione outra data no calendário."
+    "selectAnotherDate": "Selecione outra data no calendário.",
+    "quickDefer": "Adiar",
+    "quickDeferLaterToday": "Mais tarde hoje",
+    "quickDeferTonight": "Hoje à noite",
+    "quickDeferTomorrow": "Amanhã de manhã",
+    "quickDeferNextWeek": "Na próxima semana"
   },
   "today": {
     "saveInstance": "Guardar instância",
@@ -736,6 +741,13 @@
         "keywords": "promover, agendar flutuante, rebaixar, deixar flutuar, converter, a qualquer momento, mover, atrasada",
         "body": "Quando um flutuante estiver pronto para virar trabalho de verdade, use a ação Agendar: escolha um horário e ele passa para o Início como tarefa com data. O caminho inverso também funciona — uma tarefa atrasada que você vive adiando pode flutuar em silêncio: rebaixe-a e ela volta para Qualquer momento sem data, mantendo título, notas e prioridade.",
         "tip": "Tarefas recorrentes não podem flutuar — encerre a série primeiro se quiser deixá-la sem data."
+      },
+      "quick-defer": {
+        "title": "Adiamento rápido",
+        "summary": "Um toque move uma tarefa para mais tarde hoje, hoje à noite, amanhã ou a próxima semana.",
+        "keywords": "adiar, postergar, mais tarde, hoje à noite, amanhã, próxima semana, reagendar",
+        "body": "Quando uma tarefa precisa se mover, mas não para longe, pule o seletor de data: a ação Adiar oferece Mais tarde hoje (+3 horas), Hoje à noite (19:00), Amanhã de manhã (09:00) e Na próxima semana (segunda 09:00) com um toque. É a mesma mudança que a folha de edição faria — só que mais rápida.",
+        "tip": "Tarefas recorrentes são adiadas por ocorrência na folha de edição, então o menu de um toque não atrapalha."
       },
       "floater-lists": {
         "title": "Listas de Flutuantes",

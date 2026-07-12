@@ -18,6 +18,12 @@
     <string name="action_schedule_task">Pianifica attività</string>
     <string name="action_float">Fluttua</string>
     <string name="action_float_task">Lascia fluttuare</string>
+    <string name="action_defer">Rimanda</string>
+    <string name="action_defer_task">Rimanda attività</string>
+    <string name="quick_defer_later_today">Più tardi oggi</string>
+    <string name="quick_defer_tonight">Stasera</string>
+    <string name="quick_defer_tomorrow">Domani mattina</string>
+    <string name="quick_defer_next_week">La prossima settimana</string>
     <string name="task_promote_failed">Impossibile pianificare l\'attività</string>
     <string name="task_float_failed">Impossibile far fluttuare l\'attività</string>
     <string name="action_complete">Completa</string>

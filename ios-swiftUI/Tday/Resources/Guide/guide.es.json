@@ -430,6 +430,41 @@
       "searchBody": "programa un flotante como tarea real, o deja flotar una tarea estancada. cuando un flotante este listo para convertirse en trabajo real, usa su accion programar: elige una hora y pasara a inicio como tarea con fecha. tambien funciona al reves: una tarea atrasada que sigues posponiendo puede flotar tranquilamente; degradala y volvera a cualquier momento sin fecha, conservando su titulo, notas y prioridad. las tareas recurrentes no pueden flotar: termina primero la serie si quieres que quede sin fecha."
     },
     {
+      "id": "quick-defer",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "alarm-clock",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.3.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Aplazamiento rápido",
+      "summary": "Un toque mueve una tarea a más tarde hoy, esta noche, mañana o la próxima semana.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Cuando una tarea debe moverse, pero no mucho, evita el selector de fecha: la acción Aplazar ofrece Más tarde hoy (+3 horas), Esta noche (19:00), Mañana por la mañana (09:00) y La próxima semana (lunes 09:00) con un solo toque. Es el mismo cambio que haría la hoja de edición, solo que más rápido."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Las tareas recurrentes se aplazan por ocurrencia desde la hoja de edición, así que el menú de un toque no se interpone."
+          ]
+        }
+      ],
+      "searchTitle": "aplazamiento rapido",
+      "searchKeywords": "aplazar, posponer, mas tarde, esta noche, manana, proxima semana, reprogramar",
+      "searchBody": "un toque mueve una tarea a mas tarde hoy, esta noche, manana o la proxima semana. cuando una tarea debe moverse, pero no mucho, evita el selector de fecha: la accion aplazar ofrece mas tarde hoy (+3 horas), esta noche (19:00), manana por la manana (09:00) y la proxima semana (lunes 09:00) con un solo toque. es el mismo cambio que haria la hoja de edicion, solo que mas rapido. las tareas recurrentes se aplazan por ocurrencia desde la hoja de edicion, asi que el menu de un toque no se interpone."
+    },
+    {
       "id": "floater-lists",
       "section": "ORGANIZING",
       "sectionOrder": 3,

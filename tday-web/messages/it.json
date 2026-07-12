@@ -351,7 +351,12 @@
     "noUsersFound": "Nessun utente trovato",
     "tasksDueOn": "Attività in scadenza il {{date}}",
     "noTasksDueThisDay": "Nessuna attività in scadenza in questo giorno",
-    "selectAnotherDate": "Seleziona un'altra data nel calendario."
+    "selectAnotherDate": "Seleziona un'altra data nel calendario.",
+    "quickDefer": "Rimanda",
+    "quickDeferLaterToday": "Più tardi oggi",
+    "quickDeferTonight": "Stasera",
+    "quickDeferTomorrow": "Domani mattina",
+    "quickDeferNextWeek": "La prossima settimana"
   },
   "today": {
     "saveInstance": "Salva istanza",
@@ -736,6 +741,13 @@
         "keywords": "promuovere, pianificare fluttuante, retrocedere, lascia fluttuare, convertire, in qualsiasi momento, spostare, in ritardo",
         "body": "Quando un fluttuante è pronto a diventare lavoro vero, usa la sua azione Pianifica: scegli un orario e passerà in Home come attività con data. Vale anche il contrario: un'attività in ritardo che continui a rimandare può fluttuare in silenzio; retrocedila e tornerà in Qualsiasi momento senza data, conservando titolo, note e priorità.",
         "tip": "Le attività ricorrenti non possono fluttuare: termina prima la serie se la vuoi senza data."
+      },
+      "quick-defer": {
+        "title": "Rinvio rapido",
+        "summary": "Un tocco sposta un'attività a più tardi oggi, stasera, domani o alla prossima settimana.",
+        "keywords": "rimandare, posticipare, più tardi, stasera, domani, prossima settimana, ripianificare",
+        "body": "Quando un'attività deve spostarsi, ma non lontano, salta il selettore di data: l'azione Rimanda offre Più tardi oggi (+3 ore), Stasera (19:00), Domani mattina (09:00) e La prossima settimana (lunedì 09:00) con un solo tocco. È la stessa modifica della scheda di modifica — solo più veloce.",
+        "tip": "Le attività ricorrenti si rimandano per occorrenza dalla scheda di modifica, così il menu rapido non si mette in mezzo."
       },
       "floater-lists": {
         "title": "Elenchi di Floater",

@@ -18,6 +18,12 @@
     <string name="action_schedule_task">安排任务</string>
     <string name="action_float">放漂</string>
     <string name="action_float_task">放漂任务</string>
+    <string name="action_defer">推迟</string>
+    <string name="action_defer_task">推迟任务</string>
+    <string name="quick_defer_later_today">今天晚些时候</string>
+    <string name="quick_defer_tonight">今晚</string>
+    <string name="quick_defer_tomorrow">明天早上</string>
+    <string name="quick_defer_next_week">下周</string>
     <string name="task_promote_failed">无法安排任务</string>
     <string name="task_float_failed">无法放漂任务</string>
     <string name="action_complete">完成</string>

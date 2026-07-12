@@ -150,6 +150,7 @@ import com.ohmz.tday.compose.ui.component.RootFeedDock
 import com.ohmz.tday.compose.ui.component.RootFeedTab
 import com.ohmz.tday.compose.ui.component.TdayModalBottomSheet
 import com.ohmz.tday.compose.ui.component.TdayPullToRefreshBox
+import com.ohmz.tday.compose.ui.component.TdayCenteredSelectorDialog
 import com.ohmz.tday.compose.ui.component.TdaySheetCard
 import com.ohmz.tday.compose.ui.component.TdaySheetDefaults
 import com.ohmz.tday.compose.ui.component.TdaySheetHeader
@@ -234,6 +235,7 @@ fun TodoListScreen(
     onDelete: (todo: TodoItem) -> Unit,
     onPromoteFloater: (todo: TodoItem, dueEpochMs: Long) -> Unit = { _, _ -> },
     onDemoteTodo: (todo: TodoItem) -> Unit = {},
+    onDeferTask: (todo: TodoItem, dueEpochMs: Long) -> Unit = { _, _ -> },
     onUpdateListSettings: (listId: String, name: String, color: String?, iconKey: String?) -> Unit,
     onDeleteList: (listId: String) -> Unit,
     onOpenFloaterList: (listId: String, listName: String) -> Unit = { _, _ -> },
@@ -449,6 +451,7 @@ fun TodoListScreen(
     var quickAddDueEpochMs by rememberSaveable { mutableStateOf<Long?>(null) }
     var editTargetTodoId by rememberSaveable { mutableStateOf<String?>(null) }
     var promoteTargetTodoId by rememberSaveable { mutableStateOf<String?>(null) }
+    var deferTargetTodoId by rememberSaveable { mutableStateOf<String?>(null) }
     var activeDropSectionKey by remember(uiState.mode) { mutableStateOf<String?>(null) }
     var activeTimelineDrag by remember(uiState.mode) { mutableStateOf<TimelineInAppDrag?>(null) }
     var timelineDragContainerOrigin by remember(uiState.mode) { mutableStateOf(Offset.Zero) }
@@ -1112,6 +1115,7 @@ fun TodoListScreen(
                                             } else {
                                                 null
                                             },
+                                            onDefer = { deferTargetTodoId = todo.id },
                                             draggedTodo = sectionDraggedTodo,
                                             openSwipeTaskId = openSwipeTaskId,
                                             onOpenSwipeTaskIdChange = { openSwipeTaskId = it },
@@ -1455,6 +1459,27 @@ fun TodoListScreen(
                     .toInstant()
                     .toEpochMilli()
                 onPromoteFloater(floater, dueEpochMs)
+            },
+        )
+    }
+
+    // Quick Defer: one tap moves the task to a locally computed instant.
+    val deferTargetTodo = remember(deferTargetTodoId, uiState.items) {
+        deferTargetTodoId?.let { targetId -> uiState.items.firstOrNull { it.id == targetId } }
+    }
+    deferTargetTodo?.let { todo ->
+        val deferOptions = remember(deferTargetTodoId) { quickDeferOptions() }
+        val deferContext = LocalContext.current
+        TdayCenteredSelectorDialog(
+            title = stringResource(R.string.action_defer),
+            options = deferOptions,
+            optionLabel = { option -> deferContext.getString(option.choice.labelRes) },
+            optionSwatchColor = { TdaySwipeScheduleBackground },
+            isSelected = { false },
+            onDismiss = { deferTargetTodoId = null },
+            onOptionSelected = { option ->
+                deferTargetTodoId = null
+                onDeferTask(todo, option.dueEpochMs)
             },
         )
     }
@@ -3080,6 +3105,7 @@ private fun TimelineTaskRow(
     onInfo: () -> Unit,
     onPromote: (() -> Unit)? = null,
     onDemote: (() -> Unit)? = null,
+    onDefer: (() -> Unit)? = null,
     draggedTodo: TodoItem? = null,
     openSwipeTaskId: String?,
     onOpenSwipeTaskIdChange: (String?) -> Unit,
@@ -3133,6 +3159,7 @@ private fun TimelineTaskRow(
                 onInfo = onInfo,
                 onPromote = onPromote,
                 onDemote = onDemote,
+                onDefer = onDefer,
                 showDuePrefix = true,
                 showDueDateInSubtitle = showEarlierDateTimeSubtitle,
                 showDateDivider = showDateDivider,
@@ -3837,6 +3864,7 @@ private fun TodayTaskSwipeRow(
     onInfo: () -> Unit,
     onPromote: (() -> Unit)? = null,
     onDemote: (() -> Unit)? = null,
+    onDefer: (() -> Unit)? = null,
     showDuePrefix: Boolean,
     showDueDateInSubtitle: Boolean = false,
     showDateDivider: Boolean,
@@ -3856,6 +3884,7 @@ private fun TodayTaskSwipeRow(
         onInfo = onInfo,
         onPromote = onPromote,
         onDemote = onDemote,
+        onDefer = onDefer,
         keepCompletedInline = false,
         mode = mode,
         lists = lists,
@@ -3887,6 +3916,7 @@ private fun SwipeTaskRow(
     keepCompletedInline: Boolean,
     onPromote: (() -> Unit)? = null,
     onDemote: (() -> Unit)? = null,
+    onDefer: (() -> Unit)? = null,
     mode: TodoListMode = TodoListMode.ALL,
     lists: List<ListSummary> = emptyList(),
     flashHighlight: Boolean = false,
@@ -3910,12 +3940,21 @@ private fun SwipeTaskRow(
     val view = LocalView.current
     val coroutineScope = rememberCoroutineScope()
     // Floater rows reveal a third "Schedule" action, overdue rows a "Float"
-    // action (never for recurring todos — their series can't float).
+    // action, dated rows a "Defer" action (never for recurring todos — their
+    // series can't float, and occurrences defer via the edit sheet instead).
     val promoteAction = onPromote.takeIf { mode == TodoListMode.FLOATER }
     val demoteAction = onDemote.takeIf {
         mode == TodoListMode.OVERDUE && todo.rrule.isNullOrBlank()
     }
-    val hasExtraSwipeAction = promoteAction != null || demoteAction != null
+    val deferAction = onDefer.takeIf {
+        todo.rrule.isNullOrBlank() && mode in setOf(
+            TodoListMode.TODAY,
+            TodoListMode.SCHEDULED,
+            TodoListMode.PRIORITY,
+            TodoListMode.LIST,
+        )
+    }
+    val hasExtraSwipeAction = promoteAction != null || demoteAction != null || deferAction != null
     val swipeRevealState = rememberTaskSwipeRevealState(
         todo.id,
         revealWidth = if (hasExtraSwipeAction) 256.dp else 176.dp,
@@ -4100,6 +4139,25 @@ private fun SwipeTaskRow(
                                 )
                                 closeSwipeSlot()
                                 demoteAction()
+                            },
+                        )
+                    }
+                    if (deferAction != null) {
+                        TaskSwipeActionButton(
+                            icon = R.drawable.ic_lucide_alarm_clock,
+                            contentDescription = stringResource(R.string.action_defer_task),
+                            label = stringResource(R.string.action_defer),
+                            tint = Color.White,
+                            background = TdaySwipeScheduleBackground,
+                            revealProgress = actionRevealProgress,
+                            revealDelay = 0.74f,
+                            onClick = {
+                                ViewCompat.performHapticFeedback(
+                                    view,
+                                    HapticFeedbackConstantsCompat.CLOCK_TICK,
+                                )
+                                closeSwipeSlot()
+                                deferAction()
                             },
                         )
                     }

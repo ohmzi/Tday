@@ -87,6 +87,7 @@
 		B34A31B1812FC676A3AC1871 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = DCE08ADACC8F11CE2113C13B /* Assets.xcassets */; };
 		B4995200636F408E4296FF0D /* ApiModelContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 629820F1BA29236313992076 /* ApiModelContractTests.swift */; };
 		B5D28682AD0623E39CCD4F8E /* CompleteTodoUseCase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70F09E74879D0AAABCF70E20 /* CompleteTodoUseCase.swift */; };
+		CAFE0D1E0000000000000057 /* QuickDefer.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAFE0D1E0000000000000058 /* QuickDefer.swift */; };
 		B648A67EAD215BE5B74F7460 /* ApiModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6049166B683EE082F8C551DD /* ApiModels.swift */; };
 		BA2D51423497337836ADD5E9 /* TdayTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39ADD9E07BF8B32C3FC7B170 /* TdayTheme.swift */; };
 		C013C84CCBF84A849CE93963 /* NetworkConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91CFC3C0B9ADD376389DF63C /* NetworkConfiguration.swift */; };
@@ -206,6 +207,7 @@
 		6D0FD6CA5EE999F99D54CF94 /* SyncAndRefreshUseCase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncAndRefreshUseCase.swift; sourceTree = "<group>"; };
 		70A4E591B572A2A9980EC6B7 /* TdayApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdayApp.swift; sourceTree = "<group>"; };
 		70F09E74879D0AAABCF70E20 /* CompleteTodoUseCase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompleteTodoUseCase.swift; sourceTree = "<group>"; };
+		CAFE0D1E0000000000000058 /* QuickDefer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickDefer.swift; sourceTree = "<group>"; };
 		718528F64C339E527223D93F /* CreateTodoUseCase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateTodoUseCase.swift; sourceTree = "<group>"; };
 		7699A4200FA2F2970A1838D6 /* CompletedViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompletedViewModel.swift; sourceTree = "<group>"; };
 		78690CB92403D76DCA200972 /* TdayAPIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdayAPIService.swift; sourceTree = "<group>"; };
@@ -481,6 +483,7 @@
 			children = (
 				2E70F2999E1965A77EB21FF8 /* BootstrapSessionUseCase.swift */,
 				70F09E74879D0AAABCF70E20 /* CompleteTodoUseCase.swift */,
+				CAFE0D1E0000000000000058 /* QuickDefer.swift */,
 				718528F64C339E527223D93F /* CreateTodoUseCase.swift */,
 				6D0FD6CA5EE999F99D54CF94 /* SyncAndRefreshUseCase.swift */,
 			);
@@ -955,6 +958,7 @@
 				B10000000000000000000021 /* CarTaskModels.swift in Sources */,
 				9146B23E1A1F6A3A71DE7A5B /* Colors.swift in Sources */,
 				B5D28682AD0623E39CCD4F8E /* CompleteTodoUseCase.swift in Sources */,
+				CAFE0D1E0000000000000057 /* QuickDefer.swift in Sources */,
 				271C111B35309CA229AC1400 /* CompletedRepository.swift in Sources */,
 				558091FE1A8E358F473DE029 /* CompletedScreen.swift in Sources */,
 				CFD25493E8027AACCC39FE21 /* CompletedViewModel.swift in Sources */,

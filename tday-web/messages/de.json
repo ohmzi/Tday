@@ -351,7 +351,12 @@
     "noUsersFound": "Keine Benutzer gefunden",
     "tasksDueOn": "Fällige Aufgaben am {{date}}",
     "noTasksDueThisDay": "Keine Aufgaben an diesem Tag fällig",
-    "selectAnotherDate": "Wählen Sie ein anderes Datum im Kalender."
+    "selectAnotherDate": "Wählen Sie ein anderes Datum im Kalender.",
+    "quickDefer": "Verschieben",
+    "quickDeferLaterToday": "Später heute",
+    "quickDeferTonight": "Heute Abend",
+    "quickDeferTomorrow": "Morgen früh",
+    "quickDeferNextWeek": "Nächste Woche"
   },
   "today": {
     "saveInstance": "Instanz speichern",
@@ -736,6 +741,13 @@
         "keywords": "hochstufen, floater planen, herabstufen, treiben lassen, umwandeln, jederzeit, verschieben, überfällig",
         "body": "Wenn ein Floater zu echter Arbeit werden soll, nutze seine Planen-Aktion: Wähle eine Zeit, und er wandert als terminierte Aufgabe nach Start. Auch andersherum: Eine überfällige Aufgabe, die du immer wieder verschiebst, kann leise treiben – stufe sie herab und sie kehrt ohne Datum zu Jederzeit zurück, mit Titel, Notizen und Priorität.",
         "tip": "Wiederholende Aufgaben können nicht treiben – beende zuerst die Serie, wenn sie datumslos sein soll."
+      },
+      "quick-defer": {
+        "title": "Schnell verschieben",
+        "summary": "Ein Tipp verschiebt eine Aufgabe auf später heute, heute Abend, morgen oder nächste Woche.",
+        "keywords": "verschieben, aufschieben, später, heute abend, morgen, nächste woche, umplanen",
+        "body": "Wenn eine Aufgabe wandern muss, aber nicht weit, spare dir den Datumswähler: Die Verschieben-Aktion bietet Später heute (+3 Stunden), Heute Abend (19:00), Morgen früh (09:00) und Nächste Woche (Montag 09:00) mit einem Tipp. Es ist dieselbe Änderung wie im Bearbeiten-Blatt – nur schneller.",
+        "tip": "Wiederholende Aufgaben verschiebst du pro Termin über das Bearbeiten-Blatt; das Ein-Tipp-Menü bleibt ihnen fern."
       },
       "floater-lists": {
         "title": "Floater-Listen",

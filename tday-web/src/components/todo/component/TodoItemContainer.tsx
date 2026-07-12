@@ -17,6 +17,7 @@ import { getTodoFocusElementId } from "@/lib/todoToastNavigation";
 import TaskFormSheet from "@/components/todo/component/TodoForm/TaskFormSheet";
 import { FloatTaskButton, TaskActionButtons } from "@/components/ui/TaskActionButtons";
 import { useDemoteTodo } from "@/features/todayTodos/query/demote-todo";
+import { DeferTodoMenu } from "@/components/todo/component/DeferTodoMenu";
 
 
 type TodoItemContainerProps = {
@@ -352,6 +353,9 @@ export const TodoItemCard = ({
               )}
             >
               <div className="flex items-center gap-1">
+                {/* Quick Defer: recurring todos defer per-occurrence via the
+                    edit flow instead, so the one-tap menu hides for them. */}
+                {!rrule && !completed && <DeferTodoMenu todo={todoItem} />}
                 {/* "Let it float" only makes sense on carried-over tasks, and
                     the backend rejects recurring ones (their series would be
                     silently destroyed). */}

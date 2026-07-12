@@ -17,6 +17,7 @@
       "root-feeds",
       "create-task",
       "promote-and-float",
+      "quick-defer",
       "scheduled-lists"
     ],
     "reminder": [

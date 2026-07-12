@@ -430,6 +430,41 @@
       "searchBody": "schedule a floater into a real task, or let a stale task float. when a floater is ready to become real work, use its schedule action: pick a time and it moves into home as a dated task. the other direction works too — an overdue task you keep postponing can quietly float: demote it and it returns to anytime with no date, keeping its title, notes and priority. recurring tasks can't float — end the series first if you want it dateless."
     },
     {
+      "id": "quick-defer",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "alarm-clock",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.3.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Quick Defer",
+      "summary": "One tap moves a task to later today, tonight, tomorrow or next week.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "When a task needs to move but not far, skip the date picker: the Defer action offers Later today (+3 hours), Tonight (19:00), Tomorrow morning (09:00) and Next week (Monday 09:00) as one-tap choices. It's the same change the edit sheet would make — just faster."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Recurring tasks defer per-occurrence from the edit sheet, so the one-tap menu stays out of their way."
+          ]
+        }
+      ],
+      "searchTitle": "quick defer",
+      "searchKeywords": "defer, postpone, snooze task, later, tonight, tomorrow, next week, reschedule",
+      "searchBody": "one tap moves a task to later today, tonight, tomorrow or next week. when a task needs to move but not far, skip the date picker: the defer action offers later today (+3 hours), tonight (19:00), tomorrow morning (09:00) and next week (monday 09:00) as one-tap choices. it's the same change the edit sheet would make — just faster. recurring tasks defer per-occurrence from the edit sheet, so the one-tap menu stays out of their way."
+    },
+    {
       "id": "floater-lists",
       "section": "ORGANIZING",
       "sectionOrder": 3,

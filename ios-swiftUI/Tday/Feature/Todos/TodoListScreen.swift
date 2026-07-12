@@ -586,6 +586,7 @@ struct TodoListScreen: View {
     @State private var editingTodo: TodoItem?
     @State private var promotingFloater: TodoItem?
     @State private var promoteDue = Date()
+    @State private var deferringTodo: TodoItem?
     @State private var showingSummary = false
     @State private var showingListSettings = false
     @State private var showingMembers = false
@@ -959,6 +960,24 @@ struct TodoListScreen: View {
         .sheet(item: $promotingFloater) { floater in
             promoteFloaterSheetContent(for: floater)
         }
+        // Quick Defer: one tap moves the task to a locally computed instant.
+        .confirmationDialog(
+            L("Defer"),
+            isPresented: Binding(
+                get: { deferringTodo != nil },
+                set: { if !$0 { deferringTodo = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            if let todo = deferringTodo {
+                ForEach(Array(quickDeferOptions().enumerated()), id: \.offset) { entry in
+                    Button(entry.element.choice.label) {
+                        deferringTodo = nil
+                        Task { await viewModel.deferTask(todo, due: entry.element.due) }
+                    }
+                }
+            }
+        }
         .sheet(isPresented: $showingSummary) {
             summarySheetContent
         }
@@ -1229,7 +1248,7 @@ struct TodoListScreen: View {
 
     /// The mode-specific third swipe action: floaters get "Schedule" (promote
     /// into a dated task), overdue non-recurring todos get "Float" (demote to
-    /// Anytime). Other modes keep the plain Edit/Delete pair.
+    /// Anytime), other dated non-recurring rows get "Defer" (Quick Defer).
     private func promoteOrFloatSwipeAction(for todo: TodoItem) -> TodoSwipeExtraAction? {
         switch viewModel.mode {
         case .floater:
@@ -1248,6 +1267,16 @@ struct TodoListScreen: View {
                 tint: TaskSwipeActionTint.float
             ) {
                 Task { await viewModel.demoteTodo(todo) }
+            }
+        case .today, .scheduled, .priority, .list:
+            // Recurring todos defer per-occurrence via the edit sheet instead.
+            guard !todo.isRecurring else { return nil }
+            return TodoSwipeExtraAction(
+                title: L("Defer"),
+                assetName: "LucideAlarmClock",
+                tint: TaskSwipeActionTint.schedule
+            ) {
+                deferringTodo = todo
             }
         default:
             return nil
