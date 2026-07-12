@@ -29,7 +29,7 @@ import java.time.ZoneOffset
 interface PushNotificationService {
     suspend fun subscribe(userId: String, endpoint: String, p256dh: String, auth: String): Either<AppError, Unit>
     suspend fun unsubscribe(userId: String, endpoint: String): Either<AppError, Unit>
-    suspend fun sendToUser(userId: String, title: String, body: String, url: String? = null): Either<AppError, Unit>
+    suspend fun sendToUser(userId: String, title: String, body: String, url: String? = null, todoId: String? = null): Either<AppError, Unit>
     fun isConfigured(): Boolean
     fun getVapidPublicKey(): String?
 }
@@ -89,7 +89,7 @@ class PushNotificationServiceImpl(private val config: AppConfig) : PushNotificat
         return Unit.right()
     }
 
-    override suspend fun sendToUser(userId: String, title: String, body: String, url: String?): Either<AppError, Unit> {
+    override suspend fun sendToUser(userId: String, title: String, body: String, url: String?, todoId: String?): Either<AppError, Unit> {
         val svc = pushService ?: return AppError.BadRequest("Push notifications not configured").left()
 
         val subscriptions = newSuspendedTransaction(Dispatchers.IO) {
@@ -110,6 +110,7 @@ class PushNotificationServiceImpl(private val config: AppConfig) : PushNotificat
             put("title", title)
             put("body", body)
             if (url != null) put("url", url)
+            if (todoId != null) put("todoId", todoId)
         }.toString()
 
         val staleIds = mutableListOf<String>()
