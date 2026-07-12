@@ -465,6 +465,35 @@
       "searchBody": "ein tipp verschiebt eine aufgabe auf spater heute, heute abend, morgen oder nachste woche. wenn eine aufgabe wandern muss, aber nicht weit, spare dir den datumswahler: die verschieben-aktion bietet spater heute (+3 stunden), heute abend (19:00), morgen fruh (09:00) und nachste woche (montag 09:00) mit einem tipp. es ist dieselbe anderung wie im bearbeiten-blatt – nur schneller. wiederholende aufgaben verschiebst du pro termin uber das bearbeiten-blatt; das ein-tipp-menu bleibt ihnen fern."
     },
     {
+      "id": "day-done",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "check-check",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.3.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Tag geschafft",
+      "summary": "Erledige alles für heute und der Heute-Bildschirm feiert leise mit.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Wenn jede für heute geplante Aufgabe erledigt ist — und nicht bloß fehlt — tauscht der Heute-Bildschirm seine „Keine Aufgaben“-Meldung gegen einen ruhigen Geschafft-Zustand: ein sanftes Doppelhäkchen, die Worte „Alles erledigt für heute“ und das Datum. Keine Serien, keine Punkte; nur die kleine Belohnung eines wirklich beendeten Tages."
+          ]
+        }
+      ],
+      "searchTitle": "tag geschafft",
+      "searchKeywords": "tag geschafft, alles erledigt, fertig, alles abgeschlossen, heute leer",
+      "searchBody": "erledige alles fur heute und der heute-bildschirm feiert leise mit. wenn jede fur heute geplante aufgabe erledigt ist — und nicht blos fehlt — tauscht der heute-bildschirm seine „keine aufgaben“-meldung gegen einen ruhigen geschafft-zustand: ein sanftes doppelhakchen, die worte „alles erledigt fur heute“ und das datum. keine serien, keine punkte; nur die kleine belohnung eines wirklich beendeten tages."
+    },
+    {
       "id": "floater-lists",
       "section": "ORGANIZING",
       "sectionOrder": 3,

@@ -465,6 +465,35 @@
       "searchBody": "one tap moves a task to later today, tonight, tomorrow or next week. when a task needs to move but not far, skip the date picker: the defer action offers later today (+3 hours), tonight (19:00), tomorrow morning (09:00) and next week (monday 09:00) as one-tap choices. it's the same change the edit sheet would make — just faster. recurring tasks defer per-occurrence from the edit sheet, so the one-tap menu stays out of their way."
     },
     {
+      "id": "day-done",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "check-check",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.3.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Day Done",
+      "summary": "Finish everything for today and the Today screen quietly celebrates.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "When every task scheduled for today is completed — not merely absent — the Today screen swaps its \"No tasks\" message for a calm Day Done state: a soft double-check, the words \"All done for today\" and the date. No streaks, no scores; just the small payoff of an actually finished day."
+          ]
+        }
+      ],
+      "searchTitle": "day done",
+      "searchKeywords": "day done, all done, finished, completed everything, empty today, celebration",
+      "searchBody": "finish everything for today and the today screen quietly celebrates. when every task scheduled for today is completed — not merely absent — the today screen swaps its \"no tasks\" message for a calm day done state: a soft double-check, the words \"all done for today\" and the date. no streaks, no scores; just the small payoff of an actually finished day."
+    },
+    {
       "id": "floater-lists",
       "section": "ORGANIZING",
       "sectionOrder": 3,

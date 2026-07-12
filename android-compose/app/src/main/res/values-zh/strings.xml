@@ -231,6 +231,7 @@
     <string name="todos_title_floater">浮动任务</string>
     <string name="todos_title_list">列表</string>
     <string name="todos_empty_today">今天没有任务</string>
+    <string name="todos_all_done_today">今天的任务全部完成</string>
     <string name="todos_empty_overdue">没有逾期任务</string>
     <string name="todos_empty_priority">没有优先任务</string>
     <string name="todos_empty_scheduled">没有已安排的任务</string>

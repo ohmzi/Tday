@@ -356,7 +356,8 @@
     "quickDeferLaterToday": "Più tardi oggi",
     "quickDeferTonight": "Stasera",
     "quickDeferTomorrow": "Domani mattina",
-    "quickDeferNextWeek": "La prossima settimana"
+    "quickDeferNextWeek": "La prossima settimana",
+    "allDoneToday": "Tutto fatto per oggi"
   },
   "today": {
     "saveInstance": "Salva istanza",
@@ -748,6 +749,12 @@
         "keywords": "rimandare, posticipare, più tardi, stasera, domani, prossima settimana, ripianificare",
         "body": "Quando un'attività deve spostarsi, ma non lontano, salta il selettore di data: l'azione Rimanda offre Più tardi oggi (+3 ore), Stasera (19:00), Domani mattina (09:00) e La prossima settimana (lunedì 09:00) con un solo tocco. È la stessa modifica della scheda di modifica — solo più veloce.",
         "tip": "Le attività ricorrenti si rimandano per occorrenza dalla scheda di modifica, così il menu rapido non si mette in mezzo."
+      },
+      "day-done": {
+        "title": "Giornata conclusa",
+        "summary": "Completa tutto per oggi e la schermata Oggi festeggia in silenzio.",
+        "keywords": "giornata conclusa, tutto fatto, finito, tutto completato, oggi vuoto",
+        "body": "Quando ogni attività prevista per oggi è completata — e non semplicemente assente — la schermata Oggi sostituisce il messaggio \"Nessuna attività\" con uno stato sereno: una doppia spunta delicata, le parole \"Tutto fatto per oggi\" e la data. Niente serie, niente punteggi; solo la piccola ricompensa di una giornata davvero finita."
       },
       "floater-lists": {
         "title": "Elenchi di Floater",

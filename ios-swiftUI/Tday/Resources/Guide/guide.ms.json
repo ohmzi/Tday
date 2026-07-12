@@ -465,6 +465,35 @@
       "searchBody": "satu ketikan memindahkan tugasan ke kemudian hari ini, malam ini, esok atau minggu depan. apabila tugasan perlu dialihkan tetapi tidak jauh, langkau pemilih tarikh: tindakan tangguh menawarkan kemudian hari ini (+3 jam), malam ini (19:00), esok pagi (09:00) dan minggu depan (isnin 09:00) dengan satu ketikan. ia perubahan yang sama seperti helaian edit — cuma lebih pantas. tugasan berulang ditangguh mengikut kejadian melalui helaian edit, jadi menu satu ketikan tidak mengganggunya."
     },
     {
+      "id": "day-done",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "check-check",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.3.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Hari selesai",
+      "summary": "Selesaikan semua untuk hari ini dan skrin Hari Ini meraikannya secara senyap.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Apabila setiap tugasan yang dijadualkan untuk hari ini selesai — bukan sekadar tiada — skrin Hari Ini menukar mesej \"Tiada tugasan\" kepada keadaan tenang hari selesai: tanda semak berganda yang lembut, perkataan \"Semua selesai untuk hari ini\" dan tarikh. Tiada rentetan, tiada mata; hanya ganjaran kecil untuk hari yang benar-benar selesai."
+          ]
+        }
+      ],
+      "searchTitle": "hari selesai",
+      "searchKeywords": "hari selesai, semua siap, selesai, semua lengkap, hari ini kosong",
+      "searchBody": "selesaikan semua untuk hari ini dan skrin hari ini meraikannya secara senyap. apabila setiap tugasan yang dijadualkan untuk hari ini selesai — bukan sekadar tiada — skrin hari ini menukar mesej \"tiada tugasan\" kepada keadaan tenang hari selesai: tanda semak berganda yang lembut, perkataan \"semua selesai untuk hari ini\" dan tarikh. tiada rentetan, tiada mata; hanya ganjaran kecil untuk hari yang benar-benar selesai."
+    },
+    {
       "id": "floater-lists",
       "section": "ORGANIZING",
       "sectionOrder": 3,

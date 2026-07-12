@@ -465,6 +465,35 @@
       "searchBody": "un tocco sposta un'attivita a piu tardi oggi, stasera, domani o alla prossima settimana. quando un'attivita deve spostarsi, ma non lontano, salta il selettore di data: l'azione rimanda offre piu tardi oggi (+3 ore), stasera (19:00), domani mattina (09:00) e la prossima settimana (lunedi 09:00) con un solo tocco. e la stessa modifica della scheda di modifica — solo piu veloce. le attivita ricorrenti si rimandano per occorrenza dalla scheda di modifica, cosi il menu rapido non si mette in mezzo."
     },
     {
+      "id": "day-done",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "check-check",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.3.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Giornata conclusa",
+      "summary": "Completa tutto per oggi e la schermata Oggi festeggia in silenzio.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Quando ogni attività prevista per oggi è completata — e non semplicemente assente — la schermata Oggi sostituisce il messaggio \"Nessuna attività\" con uno stato sereno: una doppia spunta delicata, le parole \"Tutto fatto per oggi\" e la data. Niente serie, niente punteggi; solo la piccola ricompensa di una giornata davvero finita."
+          ]
+        }
+      ],
+      "searchTitle": "giornata conclusa",
+      "searchKeywords": "giornata conclusa, tutto fatto, finito, tutto completato, oggi vuoto",
+      "searchBody": "completa tutto per oggi e la schermata oggi festeggia in silenzio. quando ogni attivita prevista per oggi e completata — e non semplicemente assente — la schermata oggi sostituisce il messaggio \"nessuna attivita\" con uno stato sereno: una doppia spunta delicata, le parole \"tutto fatto per oggi\" e la data. niente serie, niente punteggi; solo la piccola ricompensa di una giornata davvero finita."
+    },
+    {
       "id": "floater-lists",
       "section": "ORGANIZING",
       "sectionOrder": 3,

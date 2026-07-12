@@ -85,6 +85,11 @@ object GuideCatalog {
             body = listOf(para(GuideTopicIds.QUICK_DEFER), tip(GuideTopicIds.QUICK_DEFER)),
         ),
         topic(
+            GuideTopicIds.DAY_DONE, GuideSectionId.ORGANIZING, "check-check",
+            setOf(WEB, ANDROID, IOS), badge = GuideBadge.HIDDEN_GEM, sinceVersion = "0.3.0",
+            body = listOf(para(GuideTopicIds.DAY_DONE)),
+        ),
+        topic(
             GuideTopicIds.FLOATER_LISTS, GuideSectionId.ORGANIZING, "list",
             setOf(WEB, ANDROID, IOS), body = listOf(para(GuideTopicIds.FLOATER_LISTS)),
         ),

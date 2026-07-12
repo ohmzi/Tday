@@ -231,6 +231,7 @@
     <string name="todos_title_floater">Senza data</string>
     <string name="todos_title_list">Elenco</string>
     <string name="todos_empty_today">Nessuna attività per oggi</string>
+    <string name="todos_all_done_today">Tutto fatto per oggi</string>
     <string name="todos_empty_overdue">Nessuna attività in ritardo</string>
     <string name="todos_empty_priority">Nessuna attività prioritaria</string>
     <string name="todos_empty_scheduled">Nessuna attività programmata</string>
