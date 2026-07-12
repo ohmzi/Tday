@@ -597,7 +597,9 @@ private struct TdayTasksWidgetContent: View {
 
     private func priorityDot(_ priority: String, size: CGFloat) -> some View {
         Circle()
-            .fill(widgetPriorityColor(priority))
+            // Floater tasks have no priority, so the dot matches the widget's
+            // green accent (same as the add button) instead of a priority colour.
+            .fill(mode == .floater ? accentColor : widgetPriorityColor(priority))
             .frame(width: size, height: size)
     }
 
