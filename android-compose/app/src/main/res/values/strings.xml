@@ -19,6 +19,12 @@
     <string name="action_schedule_task">Schedule task</string>
     <string name="action_float">Float</string>
     <string name="action_float_task">Let it float</string>
+    <string name="action_defer">Defer</string>
+    <string name="action_defer_task">Defer task</string>
+    <string name="quick_defer_later_today">Later today</string>
+    <string name="quick_defer_tonight">Tonight</string>
+    <string name="quick_defer_tomorrow">Tomorrow morning</string>
+    <string name="quick_defer_next_week">Next week</string>
     <string name="task_promote_failed">Could not schedule task</string>
     <string name="task_float_failed">Could not float task</string>
     <string name="action_complete">Complete</string>

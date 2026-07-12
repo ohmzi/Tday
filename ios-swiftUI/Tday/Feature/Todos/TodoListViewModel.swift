@@ -191,6 +191,20 @@ final class TodoListViewModel {
         }
     }
 
+    /// Quick Defer: one tap moves the task to a locally computed instant.
+    func deferTask(_ todo: TodoItem, due: Date) async {
+        TdayTelemetry.addBreadcrumb("task.defer", data: taskTelemetryData(mode: mode))
+        do {
+            try await container.todoRepository.moveTodo(todo, due: due)
+            hydrateFromCache()
+        } catch {
+            container.snackbarManager.show(
+                userFacingMessage(for: error, fallback: "Could not update task."),
+                kind: .error
+            )
+        }
+    }
+
     /// Schedules a floater into a real Todo at the picked due instant.
     func promoteFloater(_ floater: TodoItem, due: Date) async {
         TdayTelemetry.addBreadcrumb("task.promote", data: taskTelemetryData(mode: mode))

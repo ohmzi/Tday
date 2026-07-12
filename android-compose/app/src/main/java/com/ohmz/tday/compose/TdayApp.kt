@@ -1351,6 +1351,7 @@ private fun TodosRoute(
         onDelete = viewModel::delete,
         onPromoteFloater = viewModel::promoteFloater,
         onDemoteTodo = viewModel::demoteTodo,
+        onDeferTask = viewModel::deferTask,
         onUpdateListSettings = { targetListId, name, color, iconKey ->
             viewModel.updateListSettings(
                 listId = targetListId,

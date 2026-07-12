@@ -430,6 +430,41 @@
       "searchBody": "pianifica un fluttuante come attivita reale, o lascia fluttuare un'attivita ferma. quando un fluttuante e pronto a diventare lavoro vero, usa la sua azione pianifica: scegli un orario e passera in home come attivita con data. vale anche il contrario: un'attivita in ritardo che continui a rimandare puo fluttuare in silenzio; retrocedila e tornera in qualsiasi momento senza data, conservando titolo, note e priorita. le attivita ricorrenti non possono fluttuare: termina prima la serie se la vuoi senza data."
     },
     {
+      "id": "quick-defer",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "alarm-clock",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.3.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Rinvio rapido",
+      "summary": "Un tocco sposta un'attività a più tardi oggi, stasera, domani o alla prossima settimana.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Quando un'attività deve spostarsi, ma non lontano, salta il selettore di data: l'azione Rimanda offre Più tardi oggi (+3 ore), Stasera (19:00), Domani mattina (09:00) e La prossima settimana (lunedì 09:00) con un solo tocco. È la stessa modifica della scheda di modifica — solo più veloce."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Le attività ricorrenti si rimandano per occorrenza dalla scheda di modifica, così il menu rapido non si mette in mezzo."
+          ]
+        }
+      ],
+      "searchTitle": "rinvio rapido",
+      "searchKeywords": "rimandare, posticipare, piu tardi, stasera, domani, prossima settimana, ripianificare",
+      "searchBody": "un tocco sposta un'attivita a piu tardi oggi, stasera, domani o alla prossima settimana. quando un'attivita deve spostarsi, ma non lontano, salta il selettore di data: l'azione rimanda offre piu tardi oggi (+3 ore), stasera (19:00), domani mattina (09:00) e la prossima settimana (lunedi 09:00) con un solo tocco. e la stessa modifica della scheda di modifica — solo piu veloce. le attivita ricorrenti si rimandano per occorrenza dalla scheda di modifica, cosi il menu rapido non si mette in mezzo."
+    },
+    {
       "id": "floater-lists",
       "section": "ORGANIZING",
       "sectionOrder": 3,

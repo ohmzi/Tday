@@ -351,7 +351,12 @@
     "noUsersFound": "Tiada pengguna ditemui",
     "tasksDueOn": "Tugasan tamat tempoh {{date}}",
     "noTasksDueThisDay": "Tiada tugasan tamat tempoh pada hari ini",
-    "selectAnotherDate": "Pilih tarikh lain pada kalendar."
+    "selectAnotherDate": "Pilih tarikh lain pada kalendar.",
+    "quickDefer": "Tangguh",
+    "quickDeferLaterToday": "Kemudian hari ini",
+    "quickDeferTonight": "Malam ini",
+    "quickDeferTomorrow": "Esok pagi",
+    "quickDeferNextWeek": "Minggu depan"
   },
   "today": {
     "saveInstance": "Simpan kejadian",
@@ -736,6 +741,13 @@
         "keywords": "naik taraf, jadualkan terapung, turun taraf, biar terapung, tukar, bila-bila masa, alih, tertunggak",
         "body": "Apabila tugasan terapung sedia menjadi kerja sebenar, gunakan tindakan Jadualkan: pilih masa dan ia berpindah ke Laman Utama sebagai tugasan bertarikh. Arah sebaliknya juga boleh — tugasan tertunggak yang asyik ditangguhkan boleh terapung secara senyap: turunkan tarafnya dan ia kembali ke Bila-bila masa tanpa tarikh, dengan tajuk, nota dan keutamaan dikekalkan.",
         "tip": "Tugasan berulang tidak boleh terapung — tamatkan siri itu dahulu jika mahu ia tanpa tarikh."
+      },
+      "quick-defer": {
+        "title": "Tangguh pantas",
+        "summary": "Satu ketikan memindahkan tugasan ke kemudian hari ini, malam ini, esok atau minggu depan.",
+        "keywords": "tangguh, tunda, kemudian, malam ini, esok, minggu depan, jadual semula",
+        "body": "Apabila tugasan perlu dialihkan tetapi tidak jauh, langkau pemilih tarikh: tindakan Tangguh menawarkan Kemudian hari ini (+3 jam), Malam ini (19:00), Esok pagi (09:00) dan Minggu depan (Isnin 09:00) dengan satu ketikan. Ia perubahan yang sama seperti helaian edit — cuma lebih pantas.",
+        "tip": "Tugasan berulang ditangguh mengikut kejadian melalui helaian edit, jadi menu satu ketikan tidak mengganggunya."
       },
       "floater-lists": {
         "title": "Senarai Floater",

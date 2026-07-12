@@ -430,6 +430,41 @@
       "searchBody": "plane einen floater als echte aufgabe ein – oder lass eine liegengebliebene aufgabe treiben. wenn ein floater zu echter arbeit werden soll, nutze seine planen-aktion: wahle eine zeit, und er wandert als terminierte aufgabe nach start. auch andersherum: eine uberfallige aufgabe, die du immer wieder verschiebst, kann leise treiben – stufe sie herab und sie kehrt ohne datum zu jederzeit zuruck, mit titel, notizen und prioritat. wiederholende aufgaben konnen nicht treiben – beende zuerst die serie, wenn sie datumslos sein soll."
     },
     {
+      "id": "quick-defer",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "alarm-clock",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.3.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Schnell verschieben",
+      "summary": "Ein Tipp verschiebt eine Aufgabe auf später heute, heute Abend, morgen oder nächste Woche.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Wenn eine Aufgabe wandern muss, aber nicht weit, spare dir den Datumswähler: Die Verschieben-Aktion bietet Später heute (+3 Stunden), Heute Abend (19:00), Morgen früh (09:00) und Nächste Woche (Montag 09:00) mit einem Tipp. Es ist dieselbe Änderung wie im Bearbeiten-Blatt – nur schneller."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Wiederholende Aufgaben verschiebst du pro Termin über das Bearbeiten-Blatt; das Ein-Tipp-Menü bleibt ihnen fern."
+          ]
+        }
+      ],
+      "searchTitle": "schnell verschieben",
+      "searchKeywords": "verschieben, aufschieben, spater, heute abend, morgen, nachste woche, umplanen",
+      "searchBody": "ein tipp verschiebt eine aufgabe auf spater heute, heute abend, morgen oder nachste woche. wenn eine aufgabe wandern muss, aber nicht weit, spare dir den datumswahler: die verschieben-aktion bietet spater heute (+3 stunden), heute abend (19:00), morgen fruh (09:00) und nachste woche (montag 09:00) mit einem tipp. es ist dieselbe anderung wie im bearbeiten-blatt – nur schneller. wiederholende aufgaben verschiebst du pro termin uber das bearbeiten-blatt; das ein-tipp-menu bleibt ihnen fern."
+    },
+    {
       "id": "floater-lists",
       "section": "ORGANIZING",
       "sectionOrder": 3,
