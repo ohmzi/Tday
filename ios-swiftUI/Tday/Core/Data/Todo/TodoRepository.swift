@@ -715,6 +715,110 @@ final class TodoRepository {
         }
     }
 
+    /// Schedules a floater into a real Todo. Optimistically moves the row
+    /// between the cached silos; the replay case remaps the interim
+    /// `local-todo-` id (carried in the mutation's spare `name` field) to the
+    /// server id, exactly like CREATE_TODO reconciliation.
+    func promoteFloater(_ floater: TodoItem, due: Date, rrule: String?) async throws {
+        let now = Date().epochMilliseconds
+        let mutationID = UUID().uuidString
+        let localTodoID = LOCAL_TODO_PREFIX + UUID().uuidString.lowercased()
+        _ = try await cacheManager.updateOfflineState { state in
+            var nextState = state
+            nextState.floaters = state.floaters.filter { $0.canonicalId != floater.canonicalId }
+            nextState.todos.append(
+                CachedTodoRecord(
+                    id: localTodoID,
+                    canonicalId: localTodoID,
+                    title: floater.title,
+                    description: floater.description,
+                    priority: floater.priority,
+                    dueEpochMs: due.epochMilliseconds,
+                    rrule: rrule,
+                    instanceDateEpochMs: nil,
+                    pinned: floater.pinned,
+                    completed: false,
+                    // Floater lists and todo lists are separate types; membership stays behind.
+                    listId: nil,
+                    updatedAtEpochMs: now
+                )
+            )
+            nextState.pendingMutations.append(
+                PendingMutationRecord(
+                    mutationId: mutationID,
+                    kind: .promoteFloater,
+                    targetId: floater.canonicalId,
+                    timestampEpochMs: now,
+                    title: nil, description: nil, priority: nil,
+                    dueEpochMs: due.epochMilliseconds,
+                    rrule: rrule,
+                    listId: nil, pinned: nil, completed: nil,
+                    instanceDateEpochMs: nil,
+                    name: localTodoID,
+                    color: nil, iconKey: nil
+                )
+            )
+            return nextState
+        }
+        if syncManager.isLocalMode {
+            return
+        }
+        let result = await syncManager.syncCachedData(force: true, replayPendingMutations: true)
+        if case let .failure(error) = result, isLikelyUnrecoverableMutationError(error) {
+            throw error
+        }
+    }
+
+    /// "Let it float": demotes a todo into an Anytime floater. Recurring todos
+    /// are rejected server-side (their series would be silently destroyed), so
+    /// callers hide the action for them; this guards anyway.
+    func demoteTodo(_ todo: TodoItem) async throws {
+        guard !todo.isRecurring else { return }
+        let now = Date().epochMilliseconds
+        let mutationID = UUID().uuidString
+        let localFloaterID = LOCAL_FLOATER_PREFIX + UUID().uuidString.lowercased()
+        _ = try await cacheManager.updateOfflineState { state in
+            var nextState = state
+            nextState.todos = state.todos.filter { $0.canonicalId != todo.canonicalId }
+            nextState.floaters.append(
+                CachedFloaterRecord(
+                    id: localFloaterID,
+                    canonicalId: localFloaterID,
+                    title: todo.title,
+                    description: todo.description,
+                    priority: todo.priority,
+                    pinned: todo.pinned,
+                    completed: false,
+                    // Todo lists and floater lists are separate types; membership stays behind.
+                    listId: nil,
+                    updatedAtEpochMs: now
+                )
+            )
+            nextState.pendingMutations.append(
+                PendingMutationRecord(
+                    mutationId: mutationID,
+                    kind: .demoteTodo,
+                    targetId: todo.canonicalId,
+                    timestampEpochMs: now,
+                    title: nil, description: nil, priority: nil,
+                    dueEpochMs: nil, rrule: nil,
+                    listId: nil, pinned: nil, completed: nil,
+                    instanceDateEpochMs: nil,
+                    name: localFloaterID,
+                    color: nil, iconKey: nil
+                )
+            )
+            return nextState
+        }
+        if syncManager.isLocalMode {
+            return
+        }
+        let result = await syncManager.syncCachedData(force: true, replayPendingMutations: true)
+        if case let .failure(error) = result, isLikelyUnrecoverableMutationError(error) {
+            throw error
+        }
+    }
+
     func setPinned(_ todo: TodoItem, pinned: Bool) async throws {
         try await updateSimpleTodoMutation(todo, kind: .setPinned, pinned: pinned, priority: nil)
     }

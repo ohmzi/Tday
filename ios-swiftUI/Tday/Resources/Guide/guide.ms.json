@@ -395,6 +395,41 @@
       "searchBody": "tugasan tanpa tarikh tinggal di bila-bila; tugasan bertarikh tinggal di utama. tugasan berjadual mempunyai tarikh tamat tempoh dan muncul di utama serta kalendar. floater tiada tarikh — ia menunggu dengan tenang dalam suapan bila-bila anda sehingga anda bersedia. guna floater untuk kerja “suatu hari nanti” yang tidak sepatutnya menyesakkan hari ini. floater tidak pernah muncul pada kalendar — ruang itu hanya untuk kerja bertarikh."
     },
     {
+      "id": "promote-and-float",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "refresh-cw",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.3.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Naik taraf & biar terapung",
+      "summary": "Jadualkan tugasan terapung sebagai tugasan sebenar, atau biarkan tugasan tersekat terapung.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Apabila tugasan terapung sedia menjadi kerja sebenar, gunakan tindakan Jadualkan: pilih masa dan ia berpindah ke Laman Utama sebagai tugasan bertarikh. Arah sebaliknya juga boleh — tugasan tertunggak yang asyik ditangguhkan boleh terapung secara senyap: turunkan tarafnya dan ia kembali ke Bila-bila masa tanpa tarikh, dengan tajuk, nota dan keutamaan dikekalkan."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Tugasan berulang tidak boleh terapung — tamatkan siri itu dahulu jika mahu ia tanpa tarikh."
+          ]
+        }
+      ],
+      "searchTitle": "naik taraf & biar terapung",
+      "searchKeywords": "naik taraf, jadualkan terapung, turun taraf, biar terapung, tukar, bila-bila masa, alih, tertunggak",
+      "searchBody": "jadualkan tugasan terapung sebagai tugasan sebenar, atau biarkan tugasan tersekat terapung. apabila tugasan terapung sedia menjadi kerja sebenar, gunakan tindakan jadualkan: pilih masa dan ia berpindah ke laman utama sebagai tugasan bertarikh. arah sebaliknya juga boleh — tugasan tertunggak yang asyik ditangguhkan boleh terapung secara senyap: turunkan tarafnya dan ia kembali ke bila-bila masa tanpa tarikh, dengan tajuk, nota dan keutamaan dikekalkan. tugasan berulang tidak boleh terapung — tamatkan siri itu dahulu jika mahu ia tanpa tarikh."
+    },
+    {
       "id": "floater-lists",
       "section": "ORGANIZING",
       "sectionOrder": 3,

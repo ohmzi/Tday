@@ -730,6 +730,13 @@
         "body": "Une tâche planifiée a une date d'échéance et apparaît dans Accueil et le calendrier. Un Floater n'a pas de date — il attend tranquillement dans votre fil À tout moment jusqu'à ce que vous soyez prêt. Utilisez les Floaters pour le travail « un jour » qui ne devrait pas encombrer aujourd'hui.",
         "tip": "Les Floaters n'apparaissent jamais sur le calendrier — cet espace est réservé au travail daté."
       },
+      "promote-and-float": {
+        "title": "Promouvoir et laisser flotter",
+        "summary": "Planifiez un flottant en vraie tâche, ou laissez flotter une tâche en retard.",
+        "keywords": "promouvoir, planifier flottant, rétrograder, laisser flotter, convertir, à tout moment, déplacer, en retard",
+        "body": "Quand un flottant est prêt à devenir du vrai travail, utilisez son action Planifier : choisissez une heure et il rejoint l'Accueil comme tâche datée. L'inverse fonctionne aussi — une tâche en retard que vous repoussez sans cesse peut flotter discrètement : rétrogradez-la et elle revient dans À tout moment sans date, en gardant titre, notes et priorité.",
+        "tip": "Les tâches récurrentes ne peuvent pas flotter — terminez d'abord la série si vous la voulez sans date."
+      },
       "floater-lists": {
         "title": "Listes de Floaters",
         "summary": "Regroupez vos tâches À tout moment dans leurs propres listes.",

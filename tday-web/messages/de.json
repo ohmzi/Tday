@@ -730,6 +730,13 @@
         "body": "Eine geplante Aufgabe hat ein Fälligkeitsdatum und erscheint in Home und im Kalender. Ein Floater hat kein Datum — er wartet still in deinem Jederzeit-Feed, bis du bereit bist. Nutze Floater für „irgendwann“-Vorhaben, die den heutigen Tag nicht überladen sollen.",
         "tip": "Floater erscheinen nie im Kalender — dieser Platz ist nur für datierte Vorhaben."
       },
+      "promote-and-float": {
+        "title": "Hochstufen & treiben lassen",
+        "summary": "Plane einen Floater als echte Aufgabe ein – oder lass eine liegengebliebene Aufgabe treiben.",
+        "keywords": "hochstufen, floater planen, herabstufen, treiben lassen, umwandeln, jederzeit, verschieben, überfällig",
+        "body": "Wenn ein Floater zu echter Arbeit werden soll, nutze seine Planen-Aktion: Wähle eine Zeit, und er wandert als terminierte Aufgabe nach Start. Auch andersherum: Eine überfällige Aufgabe, die du immer wieder verschiebst, kann leise treiben – stufe sie herab und sie kehrt ohne Datum zu Jederzeit zurück, mit Titel, Notizen und Priorität.",
+        "tip": "Wiederholende Aufgaben können nicht treiben – beende zuerst die Serie, wenn sie datumslos sein soll."
+      },
       "floater-lists": {
         "title": "Floater-Listen",
         "summary": "Gruppiere deine Jederzeit-Aufgaben in eigene Listen.",

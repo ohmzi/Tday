@@ -93,6 +93,39 @@ class OfflineSyncStateSerializationTest {
     }
 
     @Test
+    fun `promote and demote mutations round-trip with their payload fields`() {
+        val state = OfflineSyncState(
+            pendingMutations = listOf(
+                PendingMutationRecord(
+                    mutationId = "m-promote",
+                    kind = MutationKind.PROMOTE_FLOATER,
+                    targetId = "floater-1",
+                    timestampEpochMs = 1700000000000L,
+                    dueEpochMs = 1700003600000L,
+                    rrule = "RRULE:FREQ=WEEKLY;INTERVAL=1",
+                    // Carries the optimistic local todo id for replay remapping.
+                    name = "local-todo-abc",
+                ),
+                PendingMutationRecord(
+                    mutationId = "m-demote",
+                    kind = MutationKind.DEMOTE_TODO,
+                    targetId = "todo-1",
+                    timestampEpochMs = 1700000001000L,
+                    name = "local-floater-def",
+                ),
+            ),
+        )
+
+        val encoded = json.encodeToString(OfflineSyncState.serializer(), state)
+        val decoded = json.decodeFromString(OfflineSyncState.serializer(), encoded)
+
+        assertEquals(state, decoded)
+        assertEquals(MutationKind.PROMOTE_FLOATER, decoded.pendingMutations[0].kind)
+        assertEquals("local-todo-abc", decoded.pendingMutations[0].name)
+        assertEquals(MutationKind.DEMOTE_TODO, decoded.pendingMutations[1].kind)
+    }
+
+    @Test
     fun `default field values are preserved when absent from JSON`() {
         val minimalJson = """{"lastSuccessfulSyncEpochMs":0}"""
         val decoded = json.decodeFromString(OfflineSyncState.serializer(), minimalJson)

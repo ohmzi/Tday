@@ -1116,7 +1116,7 @@ private fun repeatPresetFromRrule(rrule: String?): RepeatPreset {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ThemedDatePickerDialog(
+internal fun ThemedDatePickerDialog(
     initialEpochMs: Long,
     onDismiss: () -> Unit,
     onConfirm: (Long) -> Unit,

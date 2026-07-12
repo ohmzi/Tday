@@ -14,6 +14,12 @@
     <string name="action_delete_task">Excluir tarefa</string>
     <string name="action_delete_list">Excluir lista</string>
     <string name="action_delete">Excluir</string>
+    <string name="action_schedule">Agendar</string>
+    <string name="action_schedule_task">Agendar tarefa</string>
+    <string name="action_float">Flutuar</string>
+    <string name="action_float_task">Deixar flutuar</string>
+    <string name="task_promote_failed">Não foi possível agendar a tarefa</string>
+    <string name="task_float_failed">Não foi possível deixar a tarefa flutuar</string>
     <string name="action_complete">Concluir</string>
     <string name="action_more">Mais</string>
     <string name="action_more_options">Mais opções</string>

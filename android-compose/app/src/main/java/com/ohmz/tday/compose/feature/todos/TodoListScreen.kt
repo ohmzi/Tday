@@ -154,6 +154,7 @@ import com.ohmz.tday.compose.ui.component.TdaySheetCard
 import com.ohmz.tday.compose.ui.component.TdaySheetDefaults
 import com.ohmz.tday.compose.ui.component.TdaySheetHeader
 import com.ohmz.tday.compose.ui.component.TdaySheetSectionTitle
+import com.ohmz.tday.compose.ui.component.ThemedDatePickerDialog
 import com.ohmz.tday.compose.ui.priority.isImportantPriority
 import com.ohmz.tday.compose.ui.priority.isUrgentPriority
 import com.ohmz.tday.compose.ui.priority.priorityDisplayLabelRes
@@ -165,6 +166,8 @@ import com.ohmz.tday.compose.ui.theme.TdayListColorOptions
 import com.ohmz.tday.compose.ui.theme.TdayListIconOptions
 import com.ohmz.tday.compose.ui.theme.TdaySwipeDeleteBackground
 import com.ohmz.tday.compose.ui.theme.TdaySwipeEditBackground
+import com.ohmz.tday.compose.ui.theme.TdaySwipeFloatBackground
+import com.ohmz.tday.compose.ui.theme.TdaySwipeScheduleBackground
 import com.ohmz.tday.compose.ui.theme.TdayTaskCompleteAccent
 import com.ohmz.tday.compose.ui.theme.TdayTitleIconDayAccent
 import com.ohmz.tday.compose.ui.theme.TdayTitleIconNightAccent
@@ -185,6 +188,7 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.YearMonth
 import java.time.ZoneId
+import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
@@ -228,6 +232,8 @@ fun TodoListScreen(
     onMoveTaskToTimeOfDay: (todo: TodoItem, hour: Int, scope: TaskRescheduleScope) -> Unit,
     onComplete: (todo: TodoItem) -> Unit,
     onDelete: (todo: TodoItem) -> Unit,
+    onPromoteFloater: (todo: TodoItem, dueEpochMs: Long) -> Unit = { _, _ -> },
+    onDemoteTodo: (todo: TodoItem) -> Unit = {},
     onUpdateListSettings: (listId: String, name: String, color: String?, iconKey: String?) -> Unit,
     onDeleteList: (listId: String) -> Unit,
     onOpenFloaterList: (listId: String, listName: String) -> Unit = { _, _ -> },
@@ -442,6 +448,7 @@ fun TodoListScreen(
     var flashTodoId by remember(uiState.mode) { mutableStateOf<String?>(null) }
     var quickAddDueEpochMs by rememberSaveable { mutableStateOf<Long?>(null) }
     var editTargetTodoId by rememberSaveable { mutableStateOf<String?>(null) }
+    var promoteTargetTodoId by rememberSaveable { mutableStateOf<String?>(null) }
     var activeDropSectionKey by remember(uiState.mode) { mutableStateOf<String?>(null) }
     var activeTimelineDrag by remember(uiState.mode) { mutableStateOf<TimelineInAppDrag?>(null) }
     var timelineDragContainerOrigin by remember(uiState.mode) { mutableStateOf(Offset.Zero) }
@@ -1095,6 +1102,16 @@ fun TodoListScreen(
                                             onInfo = {
                                                 editTargetTodoId = todo.id
                                             },
+                                            onPromote = if (uiState.mode == TodoListMode.FLOATER) {
+                                                { promoteTargetTodoId = todo.id }
+                                            } else {
+                                                null
+                                            },
+                                            onDemote = if (uiState.mode == TodoListMode.OVERDUE) {
+                                                { onDemoteTodo(todo) }
+                                            } else {
+                                                null
+                                            },
                                             draggedTodo = sectionDraggedTodo,
                                             openSwipeTaskId = openSwipeTaskId,
                                             onOpenSwipeTaskIdChange = { openSwipeTaskId = it },
@@ -1413,6 +1430,31 @@ fun TodoListScreen(
             onUpdateTask = { target, payload ->
                 onUpdateTask(target, payload)
                 editTargetTodoId = null
+            },
+        )
+    }
+
+    // "Schedule" a floater: pick a day, promote it as a real todo at 09:00
+    // local that day (a sane default; the time is one edit away afterwards).
+    val promoteTargetTodo = remember(promoteTargetTodoId, uiState.items) {
+        promoteTargetTodoId?.let { targetId -> uiState.items.firstOrNull { it.id == targetId } }
+    }
+    promoteTargetTodo?.let { floater ->
+        ThemedDatePickerDialog(
+            initialEpochMs = System.currentTimeMillis(),
+            onDismiss = { promoteTargetTodoId = null },
+            onConfirm = { pickedDayUtcMidnightMs ->
+                promoteTargetTodoId = null
+                // The picker returns UTC-midnight of the picked calendar day.
+                val pickedDay = Instant.ofEpochMilli(pickedDayUtcMidnightMs)
+                    .atZone(ZoneOffset.UTC)
+                    .toLocalDate()
+                val dueEpochMs = pickedDay
+                    .atTime(9, 0)
+                    .atZone(ZoneId.systemDefault())
+                    .toInstant()
+                    .toEpochMilli()
+                onPromoteFloater(floater, dueEpochMs)
             },
         )
     }
@@ -3036,6 +3078,8 @@ private fun TimelineTaskRow(
     onComplete: () -> Unit,
     onDelete: () -> Unit,
     onInfo: () -> Unit,
+    onPromote: (() -> Unit)? = null,
+    onDemote: (() -> Unit)? = null,
     draggedTodo: TodoItem? = null,
     openSwipeTaskId: String?,
     onOpenSwipeTaskIdChange: (String?) -> Unit,
@@ -3087,6 +3131,8 @@ private fun TimelineTaskRow(
                 onComplete = onComplete,
                 onDelete = onDelete,
                 onInfo = onInfo,
+                onPromote = onPromote,
+                onDemote = onDemote,
                 showDuePrefix = true,
                 showDueDateInSubtitle = showEarlierDateTimeSubtitle,
                 showDateDivider = showDateDivider,
@@ -3789,6 +3835,8 @@ private fun TodayTaskSwipeRow(
     onComplete: () -> Unit,
     onDelete: () -> Unit,
     onInfo: () -> Unit,
+    onPromote: (() -> Unit)? = null,
+    onDemote: (() -> Unit)? = null,
     showDuePrefix: Boolean,
     showDueDateInSubtitle: Boolean = false,
     showDateDivider: Boolean,
@@ -3806,6 +3854,8 @@ private fun TodayTaskSwipeRow(
         onComplete = onComplete,
         onDelete = onDelete,
         onInfo = onInfo,
+        onPromote = onPromote,
+        onDemote = onDemote,
         keepCompletedInline = false,
         mode = mode,
         lists = lists,
@@ -3835,6 +3885,8 @@ private fun SwipeTaskRow(
     onDelete: () -> Unit,
     onInfo: () -> Unit,
     keepCompletedInline: Boolean,
+    onPromote: (() -> Unit)? = null,
+    onDemote: (() -> Unit)? = null,
     mode: TodoListMode = TodoListMode.ALL,
     lists: List<ListSummary> = emptyList(),
     flashHighlight: Boolean = false,
@@ -3857,7 +3909,17 @@ private fun SwipeTaskRow(
     val colorScheme = MaterialTheme.colorScheme
     val view = LocalView.current
     val coroutineScope = rememberCoroutineScope()
-    val swipeRevealState = rememberTaskSwipeRevealState(todo.id)
+    // Floater rows reveal a third "Schedule" action, overdue rows a "Float"
+    // action (never for recurring todos — their series can't float).
+    val promoteAction = onPromote.takeIf { mode == TodoListMode.FLOATER }
+    val demoteAction = onDemote.takeIf {
+        mode == TodoListMode.OVERDUE && todo.rrule.isNullOrBlank()
+    }
+    val hasExtraSwipeAction = promoteAction != null || demoteAction != null
+    val swipeRevealState = rememberTaskSwipeRevealState(
+        todo.id,
+        revealWidth = if (hasExtraSwipeAction) 256.dp else 176.dp,
+    )
     var localChecked by remember(todo.id) { mutableStateOf(false) }
     var localStruck by remember(todo.id) { mutableStateOf(false) }
     var pendingCompletion by remember(todo.id) { mutableStateOf(false) }
@@ -4003,6 +4065,44 @@ private fun SwipeTaskRow(
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
+                    if (promoteAction != null) {
+                        TaskSwipeActionButton(
+                            icon = R.drawable.ic_lucide_calendar_clock,
+                            contentDescription = stringResource(R.string.action_schedule_task),
+                            label = stringResource(R.string.action_schedule),
+                            tint = Color.White,
+                            background = TdaySwipeScheduleBackground,
+                            revealProgress = actionRevealProgress,
+                            revealDelay = 0.74f,
+                            onClick = {
+                                ViewCompat.performHapticFeedback(
+                                    view,
+                                    HapticFeedbackConstantsCompat.CLOCK_TICK,
+                                )
+                                closeSwipeSlot()
+                                promoteAction()
+                            },
+                        )
+                    }
+                    if (demoteAction != null) {
+                        TaskSwipeActionButton(
+                            icon = R.drawable.ic_lucide_waves,
+                            contentDescription = stringResource(R.string.action_float_task),
+                            label = stringResource(R.string.action_float),
+                            tint = Color.White,
+                            background = TdaySwipeFloatBackground,
+                            revealProgress = actionRevealProgress,
+                            revealDelay = 0.74f,
+                            onClick = {
+                                ViewCompat.performHapticFeedback(
+                                    view,
+                                    HapticFeedbackConstantsCompat.CLOCK_TICK,
+                                )
+                                closeSwipeSlot()
+                                demoteAction()
+                            },
+                        )
+                    }
                     TaskSwipeActionButton(
                         icon = R.drawable.ic_lucide_square_pen,
                         contentDescription = stringResource(R.string.action_edit_task),

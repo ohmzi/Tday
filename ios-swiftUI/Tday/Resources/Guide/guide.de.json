@@ -395,6 +395,41 @@
       "searchBody": "aufgaben ohne datum leben in jederzeit; aufgaben mit datum in home. eine geplante aufgabe hat ein falligkeitsdatum und erscheint in home und im kalender. ein floater hat kein datum — er wartet still in deinem jederzeit-feed, bis du bereit bist. nutze floater fur „irgendwann“-vorhaben, die den heutigen tag nicht uberladen sollen. floater erscheinen nie im kalender — dieser platz ist nur fur datierte vorhaben."
     },
     {
+      "id": "promote-and-float",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "refresh-cw",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.3.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Hochstufen & treiben lassen",
+      "summary": "Plane einen Floater als echte Aufgabe ein – oder lass eine liegengebliebene Aufgabe treiben.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Wenn ein Floater zu echter Arbeit werden soll, nutze seine Planen-Aktion: Wähle eine Zeit, und er wandert als terminierte Aufgabe nach Start. Auch andersherum: Eine überfällige Aufgabe, die du immer wieder verschiebst, kann leise treiben – stufe sie herab und sie kehrt ohne Datum zu Jederzeit zurück, mit Titel, Notizen und Priorität."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Wiederholende Aufgaben können nicht treiben – beende zuerst die Serie, wenn sie datumslos sein soll."
+          ]
+        }
+      ],
+      "searchTitle": "hochstufen & treiben lassen",
+      "searchKeywords": "hochstufen, floater planen, herabstufen, treiben lassen, umwandeln, jederzeit, verschieben, uberfallig",
+      "searchBody": "plane einen floater als echte aufgabe ein – oder lass eine liegengebliebene aufgabe treiben. wenn ein floater zu echter arbeit werden soll, nutze seine planen-aktion: wahle eine zeit, und er wandert als terminierte aufgabe nach start. auch andersherum: eine uberfallige aufgabe, die du immer wieder verschiebst, kann leise treiben – stufe sie herab und sie kehrt ohne datum zu jederzeit zuruck, mit titel, notizen und prioritat. wiederholende aufgaben konnen nicht treiben – beende zuerst die serie, wenn sie datumslos sein soll."
+    },
+    {
       "id": "floater-lists",
       "section": "ORGANIZING",
       "sectionOrder": 3,

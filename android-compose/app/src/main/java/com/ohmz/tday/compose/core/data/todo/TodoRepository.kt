@@ -997,6 +997,97 @@ class TodoRepository @Inject constructor(
         }
     }
 
+    /**
+     * Schedules a floater into a real Todo. Optimistically moves the row
+     * between the cached silos; the replay case remaps the interim
+     * `local-todo-` id (carried in the mutation's spare `name` field) to the
+     * server id — CREATE_TODO-style reconciliation.
+     */
+    suspend fun promoteFloater(floater: TodoItem, dueEpochMs: Long, rrule: String? = null) {
+        val timestampMs = System.currentTimeMillis()
+        val mutationId = UUID.randomUUID().toString()
+        val localTodoId = "$LOCAL_TODO_PREFIX${UUID.randomUUID()}"
+        cacheManager.updateOfflineState { state ->
+            val promoted = CachedTodoRecord(
+                id = localTodoId,
+                canonicalId = localTodoId,
+                title = floater.title,
+                description = floater.description,
+                priority = floater.priority,
+                dueEpochMs = dueEpochMs,
+                rrule = rrule,
+                instanceDateEpochMs = null,
+                pinned = floater.pinned,
+                completed = false,
+                // Floater lists and todo lists are separate types; membership stays behind.
+                listId = null,
+                updatedAtEpochMs = timestampMs,
+            )
+            state.copy(
+                floaters = state.floaters.filterNot { it.canonicalId == floater.canonicalId },
+                todos = state.todos + promoted,
+                pendingMutations = state.pendingMutations + PendingMutationRecord(
+                    mutationId = mutationId,
+                    kind = MutationKind.PROMOTE_FLOATER,
+                    targetId = floater.canonicalId,
+                    timestampEpochMs = timestampMs,
+                    dueEpochMs = dueEpochMs,
+                    rrule = rrule,
+                    name = localTodoId,
+                ),
+            )
+        }
+        refreshFloaterWidgetNow()
+        refreshTodayWidgetNow()
+
+        if (syncManager.isLocalMode()) return
+
+        syncManager.syncCachedData(force = true, replayPendingMutations = true)
+    }
+
+    /**
+     * "Let it float": demotes a todo into an Anytime floater. Recurring todos
+     * are rejected server-side (their series would be silently destroyed), so
+     * callers hide the action for them; this guards anyway.
+     */
+    suspend fun demoteTodo(todo: TodoItem) {
+        if (!todo.rrule.isNullOrBlank()) return
+        val timestampMs = System.currentTimeMillis()
+        val mutationId = UUID.randomUUID().toString()
+        val localFloaterId = "$LOCAL_FLOATER_PREFIX${UUID.randomUUID()}"
+        cacheManager.updateOfflineState { state ->
+            val demoted = CachedFloaterRecord(
+                id = localFloaterId,
+                canonicalId = localFloaterId,
+                title = todo.title,
+                description = todo.description,
+                priority = todo.priority,
+                pinned = todo.pinned,
+                completed = false,
+                // Todo lists and floater lists are separate types; membership stays behind.
+                listId = null,
+                updatedAtEpochMs = timestampMs,
+            )
+            state.copy(
+                todos = state.todos.filterNot { it.canonicalId == todo.canonicalId },
+                floaters = state.floaters + demoted,
+                pendingMutations = state.pendingMutations + PendingMutationRecord(
+                    mutationId = mutationId,
+                    kind = MutationKind.DEMOTE_TODO,
+                    targetId = todo.canonicalId,
+                    timestampEpochMs = timestampMs,
+                    name = localFloaterId,
+                ),
+            )
+        }
+        refreshTodayWidgetNow()
+        refreshFloaterWidgetNow()
+
+        if (syncManager.isLocalMode()) return
+
+        syncManager.syncCachedData(force = true, replayPendingMutations = true)
+    }
+
     suspend fun summarizeTodos(
         mode: TodoListMode,
         listId: String? = null,

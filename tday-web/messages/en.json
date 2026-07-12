@@ -730,6 +730,13 @@
         "body": "A scheduled task has a due date and shows up in Home and the calendar. A Floater has no date — it waits quietly in your Anytime feed until you're ready. Use Floaters for “someday” work that shouldn't clutter today.",
         "tip": "Floaters never appear on the calendar — that space is only for dated work."
       },
+      "promote-and-float": {
+        "title": "Promote & float",
+        "summary": "Schedule a floater into a real task, or let a stale task float.",
+        "keywords": "promote, schedule floater, demote, let it float, convert, anytime, move, overdue",
+        "body": "When a floater is ready to become real work, use its Schedule action: pick a time and it moves into Home as a dated task. The other direction works too — an overdue task you keep postponing can quietly float: demote it and it returns to Anytime with no date, keeping its title, notes and priority.",
+        "tip": "Recurring tasks can't float — end the series first if you want it dateless."
+      },
       "floater-lists": {
         "title": "Floater lists",
         "summary": "Group your Anytime tasks into their own lists.",

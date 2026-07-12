@@ -14,6 +14,12 @@
     <string name="action_delete_task">Padam tugasan</string>
     <string name="action_delete_list">Padam senarai</string>
     <string name="action_delete">Padam</string>
+    <string name="action_schedule">Jadualkan</string>
+    <string name="action_schedule_task">Jadualkan tugasan</string>
+    <string name="action_float">Terapung</string>
+    <string name="action_float_task">Biar terapung</string>
+    <string name="task_promote_failed">Tidak dapat menjadualkan tugasan</string>
+    <string name="task_float_failed">Tidak dapat mengapungkan tugasan</string>
     <string name="action_complete">Selesai</string>
     <string name="action_more">Lagi</string>
     <string name="action_more_options">Lagi pilihan</string>

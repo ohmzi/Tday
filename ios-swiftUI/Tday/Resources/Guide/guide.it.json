@@ -395,6 +395,41 @@
       "searchBody": "le attivita senza data vivono in in qualsiasi momento; quelle con data in home. un'attivita pianificata ha una data di scadenza e appare in home e nel calendario. un floater non ha data — attende in silenzio nel tuo feed in qualsiasi momento finche non sei pronto. usa i floater per il lavoro “un giorno” che non deve ingombrare l'oggi. i floater non appaiono mai nel calendario — quello spazio e riservato al lavoro con data."
     },
     {
+      "id": "promote-and-float",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "refresh-cw",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.3.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Promuovi e lascia fluttuare",
+      "summary": "Pianifica un fluttuante come attività reale, o lascia fluttuare un'attività ferma.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Quando un fluttuante è pronto a diventare lavoro vero, usa la sua azione Pianifica: scegli un orario e passerà in Home come attività con data. Vale anche il contrario: un'attività in ritardo che continui a rimandare può fluttuare in silenzio; retrocedila e tornerà in Qualsiasi momento senza data, conservando titolo, note e priorità."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Le attività ricorrenti non possono fluttuare: termina prima la serie se la vuoi senza data."
+          ]
+        }
+      ],
+      "searchTitle": "promuovi e lascia fluttuare",
+      "searchKeywords": "promuovere, pianificare fluttuante, retrocedere, lascia fluttuare, convertire, in qualsiasi momento, spostare, in ritardo",
+      "searchBody": "pianifica un fluttuante come attivita reale, o lascia fluttuare un'attivita ferma. quando un fluttuante e pronto a diventare lavoro vero, usa la sua azione pianifica: scegli un orario e passera in home come attivita con data. vale anche il contrario: un'attivita in ritardo che continui a rimandare puo fluttuare in silenzio; retrocedila e tornera in qualsiasi momento senza data, conservando titolo, note e priorita. le attivita ricorrenti non possono fluttuare: termina prima la serie se la vuoi senza data."
+    },
+    {
       "id": "floater-lists",
       "section": "ORGANIZING",
       "sectionOrder": 3,

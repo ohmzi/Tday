@@ -27,6 +27,8 @@ val TdayTitleIconNightAccent = Color(0xFFA8B8E8)
 val TdayTaskCompleteAccent = Color(0xFF6FBF86)
 val TdaySwipeEditBackground = Color(0xFF4C7DDE)
 val TdaySwipeDeleteBackground = Color(0xFFFF453A)
+val TdaySwipeScheduleBackground = Color(0xFF339988)
+val TdaySwipeFloatBackground = Color(0xFF7A9C6C)
 val TdayStatusSuccess = Color(0xFF4CAF50)
 
 val TdayListColorOptions = listOf(

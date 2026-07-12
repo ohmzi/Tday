@@ -14,6 +14,12 @@
     <string name="action_delete_task">Supprimer la tâche</string>
     <string name="action_delete_list">Supprimer la liste</string>
     <string name="action_delete">Supprimer</string>
+    <string name="action_schedule">Planifier</string>
+    <string name="action_schedule_task">Planifier la tâche</string>
+    <string name="action_float">Flotter</string>
+    <string name="action_float_task">Laisser flotter</string>
+    <string name="task_promote_failed">Impossible de planifier la tâche</string>
+    <string name="task_float_failed">Impossible de laisser flotter la tâche</string>
     <string name="action_complete">Terminer</string>
     <string name="action_more">Plus</string>
     <string name="action_more_options">Plus d\'options</string>

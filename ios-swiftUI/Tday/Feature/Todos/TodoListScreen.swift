@@ -584,6 +584,8 @@ struct TodoListScreen: View {
     @State private var showingCreateTask = false
     @State private var showingCreateList = false
     @State private var editingTodo: TodoItem?
+    @State private var promotingFloater: TodoItem?
+    @State private var promoteDue = Date()
     @State private var showingSummary = false
     @State private var showingListSettings = false
     @State private var showingMembers = false
@@ -954,6 +956,9 @@ struct TodoListScreen: View {
         .createTaskSheet(item: $editingTodo) { todo in
             editTaskSheetContent(for: todo)
         }
+        .sheet(item: $promotingFloater) { floater in
+            promoteFloaterSheetContent(for: floater)
+        }
         .sheet(isPresented: $showingSummary) {
             summarySheetContent
         }
@@ -1220,6 +1225,73 @@ struct TodoListScreen: View {
                 await viewModel.updateTask(todo, payload: payload)
             }
         )
+    }
+
+    /// The mode-specific third swipe action: floaters get "Schedule" (promote
+    /// into a dated task), overdue non-recurring todos get "Float" (demote to
+    /// Anytime). Other modes keep the plain Edit/Delete pair.
+    private func promoteOrFloatSwipeAction(for todo: TodoItem) -> TodoSwipeExtraAction? {
+        switch viewModel.mode {
+        case .floater:
+            return TodoSwipeExtraAction(
+                title: L("Schedule"),
+                assetName: "LucideCalendarClock",
+                tint: TaskSwipeActionTint.schedule
+            ) {
+                promoteDue = defaultPromoteDue()
+                promotingFloater = todo
+            }
+        case .overdue where !todo.isRecurring:
+            return TodoSwipeExtraAction(
+                title: L("Float"),
+                assetName: "LucideWaves",
+                tint: TaskSwipeActionTint.float
+            ) {
+                Task { await viewModel.demoteTodo(todo) }
+            }
+        default:
+            return nil
+        }
+    }
+
+    /// Tomorrow 09:00 — a sane starting point for scheduling a floater.
+    private func defaultPromoteDue() -> Date {
+        let calendar = Calendar.current
+        let tomorrow = calendar.date(byAdding: .day, value: 1, to: Date()) ?? Date()
+        return calendar.date(bySettingHour: 9, minute: 0, second: 0, of: tomorrow) ?? tomorrow
+    }
+
+    private func promoteFloaterSheetContent(for floater: TodoItem) -> some View {
+        VStack(spacing: 0) {
+            TdaySheetHeader(
+                title: L("Schedule"),
+                closeAccessibilityLabel: L("Close"),
+                onClose: { promotingFloater = nil }
+            )
+
+            DatePicker(
+                "",
+                selection: $promoteDue,
+                displayedComponents: [.date, .hourAndMinute]
+            )
+            .datePickerStyle(.graphical)
+            .padding(.horizontal, 18)
+
+            Button {
+                let due = promoteDue
+                promotingFloater = nil
+                Task { await viewModel.promoteFloater(floater, due: due) }
+            } label: {
+                Text(L("Schedule"))
+                    .font(.tdayRounded(size: 17, weight: .heavy))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+            }
+            .buttonStyle(.borderedProminent)
+            .padding(.horizontal, 18)
+            .padding(.bottom, 18)
+        }
+        .presentationDetents([.medium, .large])
     }
 
     private var summarySheetContent: some View {
@@ -1992,6 +2064,7 @@ struct TodoListScreen: View {
             rowID: todo.id,
             openRowID: $openSwipeTaskID,
             enabled: !isCompleting && !isViewerList,
+            extraAction: promoteOrFloatSwipeAction(for: todo),
             onEdit: {
                 editingTodo = todo
             },
@@ -2127,6 +2200,7 @@ struct TodoListScreen: View {
             rowID: todo.id,
             openRowID: $openSwipeTaskID,
             enabled: !isCompleting && !isViewerList,
+            extraAction: promoteOrFloatSwipeAction(for: todo),
             onEdit: {
                 editingTodo = todo
             },

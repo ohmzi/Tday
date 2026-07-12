@@ -44,6 +44,7 @@ import com.ohmz.tday.compose.core.model.DeleteTodoRequest
 import com.ohmz.tday.compose.core.model.FloaterCompleteRequest
 import com.ohmz.tday.compose.core.model.FloaterUncompleteRequest
 import com.ohmz.tday.compose.core.model.ListSummary
+import com.ohmz.tday.compose.core.model.PromoteFloaterRequest
 import com.ohmz.tday.compose.core.model.TodoCompleteRequest
 import com.ohmz.tday.compose.core.model.TodoInstanceUpdateRequest
 import com.ohmz.tday.compose.core.model.TodoItem
@@ -763,6 +764,54 @@ class SyncManager @Inject constructor(
                         )
                         true
                     }
+
+                    MutationKind.PROMOTE_FLOATER -> {
+                        // A floater that never reached the server has nothing to
+                        // promote yet; its CREATE_FLOATER replays first and
+                        // resolvedTargetId remaps us to the server id.
+                        val targetId = resolvedTargetId ?: return@runCatching false
+                        if (targetId.startsWith(LOCAL_FLOATER_PREFIX)) return@runCatching false
+                        val due = mutation.dueEpochMs ?: return@runCatching true
+                        val promoted = requireApiBody(
+                            api.promoteFloater(
+                                targetId,
+                                PromoteFloaterRequest(
+                                    due = Instant.ofEpochMilli(due).toString(),
+                                    rrule = mutation.rrule,
+                                ),
+                            ),
+                            "Could not schedule floater",
+                        ).todo
+                        // Remap the optimistic local todo (minted at enqueue time,
+                        // carried in `name`) to the server row — CREATE_TODO-style.
+                        val localTodoId = mutation.name
+                        if (promoted != null && localTodoId != null &&
+                            localTodoId.startsWith(LOCAL_TODO_PREFIX)
+                        ) {
+                            val promotedTodo = mapTodoDto(promoted)
+                            resolvedTodoIds[localTodoId] = promotedTodo.canonicalId
+                            state = replaceLocalTodoId(state, localTodoId, promotedTodo.canonicalId)
+                        }
+                        true
+                    }
+
+                    MutationKind.DEMOTE_TODO -> {
+                        val targetId = resolvedTargetId ?: return@runCatching false
+                        if (targetId.startsWith(LOCAL_TODO_PREFIX)) return@runCatching false
+                        val demoted = requireApiBody(
+                            api.demoteTodo(targetId),
+                            "Could not float task",
+                        ).floater
+                        val localFloaterId = mutation.name
+                        if (demoted != null && localFloaterId != null &&
+                            localFloaterId.startsWith(LOCAL_FLOATER_PREFIX)
+                        ) {
+                            val demotedFloater = mapFloaterDto(demoted)
+                            resolvedTodoIds[localFloaterId] = demotedFloater.canonicalId
+                            state = replaceLocalFloaterId(state, localFloaterId, demotedFloater.canonicalId)
+                        }
+                        true
+                    }
                 }
             }.getOrElse { error ->
                 if (isLikelyConnectivityIssue(error)) {
@@ -1387,7 +1436,10 @@ class SyncManager @Inject constructor(
             this == MutationKind.SET_PRIORITY ||
             this == MutationKind.COMPLETE_TODO ||
             this == MutationKind.COMPLETE_TODO_INSTANCE ||
-            this == MutationKind.UNCOMPLETE_TODO
+            this == MutationKind.UNCOMPLETE_TODO ||
+            // Consumes a todo (its optimistic floater is local-prefixed and
+            // therefore already merge-protected).
+            this == MutationKind.DEMOTE_TODO
     }
 
     private fun MutationKind.affectsFloater(): Boolean {
@@ -1395,7 +1447,10 @@ class SyncManager @Inject constructor(
                 this == MutationKind.UPDATE_FLOATER ||
                 this == MutationKind.DELETE_FLOATER ||
                 this == MutationKind.COMPLETE_FLOATER ||
-                this == MutationKind.UNCOMPLETE_FLOATER
+                this == MutationKind.UNCOMPLETE_FLOATER ||
+                // Consumes a floater (its optimistic todo is local-prefixed and
+                // therefore already merge-protected).
+                this == MutationKind.PROMOTE_FLOATER
     }
 
     private fun replaceLocalListId(

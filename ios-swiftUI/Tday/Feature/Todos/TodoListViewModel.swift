@@ -191,6 +191,34 @@ final class TodoListViewModel {
         }
     }
 
+    /// Schedules a floater into a real Todo at the picked due instant.
+    func promoteFloater(_ floater: TodoItem, due: Date) async {
+        TdayTelemetry.addBreadcrumb("task.promote", data: taskTelemetryData(mode: mode))
+        do {
+            try await container.todoRepository.promoteFloater(floater, due: due, rrule: nil)
+            hydrateFromCache()
+        } catch {
+            container.snackbarManager.show(
+                userFacingMessage(for: error, fallback: "Could not schedule task."),
+                kind: .error
+            )
+        }
+    }
+
+    /// "Let it float": demotes an overdue todo into an Anytime floater.
+    func demoteTodo(_ todo: TodoItem) async {
+        TdayTelemetry.addBreadcrumb("task.demote", data: taskTelemetryData(mode: mode))
+        do {
+            try await container.todoRepository.demoteTodo(todo)
+            hydrateFromCache()
+        } catch {
+            container.snackbarManager.show(
+                userFacingMessage(for: error, fallback: "Could not float task."),
+                kind: .error
+            )
+        }
+    }
+
     /// Delayed-commit complete: the row is hidden immediately (in-memory only,
     /// the cache is untouched), an undoable toast is shown, and the real
     /// completion only commits once the undo window expires. Tapping Undo cancels

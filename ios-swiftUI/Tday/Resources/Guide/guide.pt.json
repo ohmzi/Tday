@@ -395,6 +395,41 @@
       "searchBody": "as tarefas sem data ficam em qualquer altura; as tarefas com data ficam em inicio. uma tarefa agendada tem data de conclusao e aparece no inicio e no calendario. um flutuante nao tem data — espera calmamente no seu feed qualquer altura ate estar pronto. use os flutuantes para trabalho de “um dia destes” que nao deve atravancar o hoje. os flutuantes nunca aparecem no calendario — esse espaco e apenas para trabalho com data."
     },
     {
+      "id": "promote-and-float",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "refresh-cw",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.3.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Promover e deixar flutuar",
+      "summary": "Agende um flutuante como tarefa real, ou deixe flutuar uma tarefa parada.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Quando um flutuante estiver pronto para virar trabalho de verdade, use a ação Agendar: escolha um horário e ele passa para o Início como tarefa com data. O caminho inverso também funciona — uma tarefa atrasada que você vive adiando pode flutuar em silêncio: rebaixe-a e ela volta para Qualquer momento sem data, mantendo título, notas e prioridade."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Tarefas recorrentes não podem flutuar — encerre a série primeiro se quiser deixá-la sem data."
+          ]
+        }
+      ],
+      "searchTitle": "promover e deixar flutuar",
+      "searchKeywords": "promover, agendar flutuante, rebaixar, deixar flutuar, converter, a qualquer momento, mover, atrasada",
+      "searchBody": "agende um flutuante como tarefa real, ou deixe flutuar uma tarefa parada. quando um flutuante estiver pronto para virar trabalho de verdade, use a acao agendar: escolha um horario e ele passa para o inicio como tarefa com data. o caminho inverso tambem funciona — uma tarefa atrasada que voce vive adiando pode flutuar em silencio: rebaixe-a e ela volta para qualquer momento sem data, mantendo titulo, notas e prioridade. tarefas recorrentes nao podem flutuar — encerre a serie primeiro se quiser deixa-la sem data."
+    },
+    {
       "id": "floater-lists",
       "section": "ORGANIZING",
       "sectionOrder": 3,

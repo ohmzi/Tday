@@ -14,6 +14,12 @@
     <string name="action_delete_task">タスクを削除</string>
     <string name="action_delete_list">リストを削除</string>
     <string name="action_delete">削除</string>
+    <string name="action_schedule">予定する</string>
+    <string name="action_schedule_task">タスクを予定する</string>
+    <string name="action_float">フロート</string>
+    <string name="action_float_task">フロートさせる</string>
+    <string name="task_promote_failed">タスクを予定できませんでした</string>
+    <string name="task_float_failed">タスクをフロートできませんでした</string>
     <string name="action_complete">完了</string>
     <string name="action_more">もっと見る</string>
     <string name="action_more_options">その他のオプション</string>
