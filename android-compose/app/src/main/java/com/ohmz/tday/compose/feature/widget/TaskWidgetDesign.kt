@@ -67,6 +67,9 @@ internal data class TaskWidgetVisuals(
     val addIcon: Int,
     val emptyWatermark: Int,
     val setupWatermark: Int,
+    // When set, every task row uses this dot instead of a priority-coloured one
+    // (floater tasks have no priority, so they use the widget's green accent).
+    val priorityDotOverride: Int? = null,
 )
 
 internal data class TaskWidgetRow(
@@ -153,6 +156,7 @@ internal fun TaskWidgetContent(
                     rows = rows,
                     layout = layout,
                     metrics = metrics,
+                    visuals = visuals,
                     openAction = openAction,
                     modifier = GlanceModifier
                         .fillMaxWidth()
@@ -429,6 +433,7 @@ private fun TaskWidgetList(
     rows: List<TaskWidgetRow>,
     layout: TaskWidgetLayout,
     metrics: TaskWidgetMetrics,
+    visuals: TaskWidgetVisuals,
     openAction: Action,
     modifier: GlanceModifier = GlanceModifier,
 ) {
@@ -438,6 +443,7 @@ private fun TaskWidgetList(
                 row = row,
                 layout = layout,
                 metrics = metrics,
+                visuals = visuals,
                 openAction = openAction,
             )
             if (index < rows.lastIndex) {
@@ -452,6 +458,7 @@ private fun TaskWidgetRow(
     row: TaskWidgetRow,
     layout: TaskWidgetLayout,
     metrics: TaskWidgetMetrics,
+    visuals: TaskWidgetVisuals,
     openAction: Action,
 ) {
     val description = row.description?.takeIf { it.isNotBlank() }
@@ -473,6 +480,7 @@ private fun TaskWidgetRow(
             PriorityDot(
                 priority = row.priority,
                 size = 7.dp,
+                dotResourceOverride = visuals.priorityDotOverride,
                 // Nudge the dot down to the vertical centre of the first line.
                 modifier = GlanceModifier.padding(top = 4.dp),
             )
@@ -524,9 +532,10 @@ private fun PriorityDot(
     priority: String,
     size: Dp,
     modifier: GlanceModifier = GlanceModifier,
+    dotResourceOverride: Int? = null,
 ) {
     Image(
-        provider = ImageProvider(taskWidgetPriorityDotResource(priority)),
+        provider = ImageProvider(dotResourceOverride ?: taskWidgetPriorityDotResource(priority)),
         contentDescription = null,
         modifier = modifier.size(size),
     )
