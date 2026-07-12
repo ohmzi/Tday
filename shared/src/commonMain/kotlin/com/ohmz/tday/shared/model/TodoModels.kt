@@ -99,6 +99,17 @@ data class DeleteTodoRequest(
     val id: String,
 )
 
+/**
+ * Response of `POST /api/todo/{id}/demote` — lets a stale todo float: the todo
+ * row is consumed and an Anytime floater takes its place. Recurring todos are
+ * rejected (their series would be silently destroyed).
+ */
+@Serializable
+data class DemoteTodoResponse(
+    val message: String? = null,
+    val floater: FloaterDto? = null,
+)
+
 @Serializable
 data class TodoCompleteRequest(
     val id: String,

@@ -5,12 +5,14 @@ import arrow.core.left
 import arrow.core.right
 import com.ohmz.tday.db.enums.Priority
 import com.ohmz.tday.db.tables.CompletedTodos
+import com.ohmz.tday.db.tables.Floaters
 import com.ohmz.tday.db.tables.Lists
 import com.ohmz.tday.db.tables.TodoInstances
 import com.ohmz.tday.db.tables.Todos
 import com.ohmz.tday.db.util.CuidGenerator
 import com.ohmz.tday.domain.AppError
 import com.ohmz.tday.domain.DomainEvent
+import com.ohmz.tday.models.response.FloaterResponse
 import com.ohmz.tday.models.response.TodoResponse
 import com.ohmz.tday.security.FieldEncryption
 import org.jetbrains.exposed.sql.*
@@ -40,6 +42,7 @@ interface TodoService {
     suspend fun getOverdue(userId: String, timeZone: String): Either<AppError, List<TodoResponse>>
     suspend fun patchInstance(userId: String, todoId: String, instanceDate: LocalDateTime, fields: Map<String, Any?>): Either<AppError, Unit>
     suspend fun deleteInstance(userId: String, todoId: String, instanceDate: LocalDateTime): Either<AppError, Unit>
+    suspend fun demoteToFloater(userId: String, todoId: String): Either<AppError, FloaterResponse>
 }
 
 class TodoServiceImpl(
@@ -169,6 +172,64 @@ class TodoServiceImpl(
         cache.invalidateTodoCaches(userId)
         publisher.publishToCollaborators(userId, DomainEvent.TodoChanged())
         return count.right()
+    }
+
+    override suspend fun demoteToFloater(userId: String, todoId: String): Either<AppError, FloaterResponse> {
+        val newFloaterId = CuidGenerator.newCuid()
+        val now = LocalDateTime.now(ZoneOffset.UTC)
+        // Owner-only: demoting moves the row out of any shared list (see
+        // FloaterService.promoteToTodo for the symmetric rationale).
+        val result: Either<AppError, ResultRow> = newSuspendedTransaction(Dispatchers.IO) {
+            val todo = Todos.selectAll().where {
+                (Todos.id eq todoId) and (Todos.userID eq userId)
+            }.firstOrNull() ?: return@newSuspendedTransaction Either.Left(AppError.NotFound("todo not found"))
+
+            if (todo[Todos.rrule] != null) {
+                // Floaters carry no recurrence; silently destroying a series is
+                // worse than asking the user to end it first.
+                return@newSuspendedTransaction Either.Left(
+                    AppError.BadRequest("recurring tasks cannot be demoted to floaters", "id"),
+                )
+            }
+
+            Floaters.insert {
+                it[Floaters.id] = newFloaterId
+                it[Floaters.title] = todo[Todos.title]
+                // Ciphertext copies straight across — both tables encrypt "description".
+                it[Floaters.description] = todo[Todos.description]
+                it[Floaters.priority] = todo[Todos.priority]
+                it[Floaters.pinned] = todo[Todos.pinned]
+                // Todo lists and floater lists are separate types; membership stays behind.
+                it[Floaters.listID] = null
+                it[Floaters.userID] = userId
+                it[Floaters.createdAt] = todo[Todos.createdAt]
+                it[Floaters.updatedAt] = now
+            }
+            Todos.deleteWhere { (Todos.id eq todoId) and (Todos.userID eq userId) }
+            Either.Right(todo)
+        }
+        val demoted = when (result) {
+            is Either.Left -> return result
+            is Either.Right -> result.value
+        }
+
+        cache.invalidateTodoCaches(userId)
+        cache.invalidateFloaterCaches(userId)
+        publisher.publishToCollaborators(userId, DomainEvent.TodoChanged())
+        publisher.publishToCollaborators(userId, DomainEvent.FloaterChanged())
+        return FloaterResponse(
+            id = newFloaterId,
+            title = demoted[Todos.title],
+            description = fieldEncryption.decryptIfEncrypted(demoted[Todos.description]),
+            pinned = demoted[Todos.pinned],
+            priority = demoted[Todos.priority].name,
+            completed = false,
+            order = 0,
+            listID = null,
+            userID = userId,
+            createdAt = demoted[Todos.createdAt].toString(),
+            updatedAt = now.toString(),
+        ).right()
     }
 
     override suspend fun completeTodo(userId: String, todoId: String, instanceDate: LocalDateTime?): Either<AppError, Unit> {

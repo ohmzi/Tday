@@ -20,6 +20,7 @@ import io.ktor.server.request.*
 import io.ktor.server.routing.*
 import com.ohmz.tday.di.inject
 import com.ohmz.tday.shared.model.CreateTodoResponse
+import com.ohmz.tday.shared.model.DemoteTodoResponse
 import com.ohmz.tday.shared.model.Priority
 import com.ohmz.tday.shared.model.TodoSummaryResponse
 import com.ohmz.tday.shared.summary.SummaryEngine
@@ -53,7 +54,26 @@ fun Route.todoRoutes() {
         todoDeleteRoute(todoService)
         todoCompleteRoutes(todoService)
         todoInstanceRoutes(todoService)
+        todoDemoteRoute(todoService)
         todoUtilityRoutes(todoService, floaterService, todoNlpService, todoSummaryService)
+    }
+}
+
+/** Lets a stale todo float: the todo row is consumed and a floater takes its place. */
+private fun Route.todoDemoteRoute(todoService: TodoService) {
+    route("/{id}/demote") {
+        post {
+            call.withAuth { user ->
+                either {
+                    val todoId = call.parameters["id"]?.trim().orEmpty()
+                    if (todoId.isBlank()) {
+                        raise(AppError.BadRequest("todo id is required"))
+                    }
+                    val floater = todoService.demoteToFloater(user.id, todoId).bind()
+                    DemoteTodoResponse(message = "todo demoted", floater = floater)
+                }
+            }
+        }
     }
 }
 

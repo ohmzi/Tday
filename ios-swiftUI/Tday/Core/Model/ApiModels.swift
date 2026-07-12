@@ -261,6 +261,25 @@ struct CreateFloaterResponse: Codable {
     let floater: FloaterDTO?
 }
 
+/// Body of `POST /api/floater/{id}/promote` — schedules a floater into a real
+/// Todo (the floater row is consumed). Mirrors the shared PromoteFloaterRequest.
+struct PromoteFloaterRequest: Codable {
+    let due: String
+    let rrule: String?
+}
+
+struct PromoteFloaterResponse: Codable {
+    let message: String?
+    let todo: TodoDTO?
+}
+
+/// Response of `POST /api/todo/{id}/demote` — the todo row is consumed and an
+/// Anytime floater takes its place. Mirrors the shared DemoteTodoResponse.
+struct DemoteTodoResponse: Codable {
+    let message: String?
+    let floater: FloaterDTO?
+}
+
 struct UpdateFloaterRequest: Codable {
     let id: String
     let title: String?

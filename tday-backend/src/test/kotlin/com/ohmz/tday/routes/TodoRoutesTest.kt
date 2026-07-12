@@ -203,6 +203,25 @@ class TodoRoutesTest {
     }
 
     @Test
+    fun `demote todo returns the created floater`() = testApplication {
+        val todoService = RecordingTodoService()
+
+        application {
+            configureTodoRoutesTestApp(todoService)
+        }
+
+        val response = client.post("/api/todo/todo_42/demote")
+
+        assertEquals(HttpStatusCode.OK, response.status)
+        assertEquals("todo_42", todoService.lastDemoteId)
+        val payload = json.parseToJsonElement(response.bodyAsText()).jsonObject
+        assertEquals(
+            "floater_demoted",
+            payload.getValue("floater").jsonObject.getValue("id").jsonPrimitive.content,
+        )
+    }
+
+    @Test
     fun `patch todo rejects due clear when dateChanged true and due is missing`() = testApplication {
         val todoService = RecordingTodoService()
 
@@ -455,6 +474,7 @@ class TodoRoutesTest {
     ) : TodoService {
         var lastCreateDue: LocalDateTime? = null
         var lastUpdateFields: Map<String, Any?>? = null
+        var lastDemoteId: String? = null
 
         override suspend fun create(
             userId: String,
@@ -528,6 +548,11 @@ class TodoRoutesTest {
             todoId: String,
             instanceDate: LocalDateTime,
         ) = Unit.right()
+
+        override suspend fun demoteToFloater(userId: String, todoId: String): Either<com.ohmz.tday.domain.AppError, FloaterResponse> {
+            lastDemoteId = todoId
+            return makeFloater(id = "floater_demoted", title = "Let it float").right()
+        }
     }
 
     private class RecordingFloaterService(
@@ -554,6 +579,13 @@ class TodoRoutesTest {
         override suspend fun prioritize(userId: String, floaterId: String, priority: String) = Unit.right()
 
         override suspend fun reorder(userId: String, floaterId: String, newOrder: Int) = Unit.right()
+
+        override suspend fun promoteToTodo(
+            userId: String,
+            floaterId: String,
+            due: LocalDateTime,
+            rrule: String?,
+        ) = makeTodo(id = "todo_promoted", due = due.toString()).right()
     }
 
     private class FakeTodoNlpService : TodoNlpService {

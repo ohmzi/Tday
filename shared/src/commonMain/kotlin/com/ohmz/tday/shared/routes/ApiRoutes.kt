@@ -24,6 +24,8 @@ object ApiRoutes {
         const val Overdue = "$Base/overdue"
         const val Nlp = "$Base/nlp"
         const val Summary = "$Base/summary"
+
+        fun demote(todoId: String) = "$Base/$todoId/demote"
     }
 
     object List {
@@ -39,6 +41,8 @@ object ApiRoutes {
         const val Uncomplete = "$Base/uncomplete"
         const val Prioritize = "$Base/prioritize"
         const val Reorder = "$Base/reorder"
+
+        fun promote(floaterId: String) = "$Base/$floaterId/promote"
     }
 
     object FloaterList {
