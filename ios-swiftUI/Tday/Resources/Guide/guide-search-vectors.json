@@ -1,0 +1,56 @@
+{
+  "vectors": {
+    "repeat": [
+      "recurrence-presets"
+    ],
+    "swipe": [
+      "swipe-actions",
+      "calendar-views"
+    ],
+    "widget": [
+      "home-widget",
+      "widget-quick-add"
+    ],
+    "offline": [
+      "offline-sync",
+      "local-mode"
+    ],
+    "date": [
+      "nlp-date-syntax",
+      "floaters-vs-todos",
+      "calendar-views",
+      "root-feeds",
+      "create-task",
+      "scheduled-lists"
+    ],
+    "reminder": [
+      "reminders"
+    ],
+    "api key": [],
+    "floater": [
+      "floaters-vs-todos",
+      "floater-lists",
+      "root-feeds",
+      "create-task"
+    ],
+    "car": [
+      "carplay",
+      "overdue-view",
+      "scheduled-lists",
+      "completed-history"
+    ],
+    "search": [
+      "search-tasks"
+    ],
+    "priority": [
+      "priorities"
+    ],
+    "pin": [
+      "pin-task",
+      "create-task",
+      "home-widget"
+    ],
+    "keyboard": [],
+    "push": []
+  }
+}
