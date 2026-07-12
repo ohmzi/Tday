@@ -219,6 +219,7 @@ function Collapse({ open, children }: { open: boolean; children: ReactNode }) {
 export default function SettingsPage() {
   const { t: sidebarDict, i18n } = useTranslation("sidebar");
   const { t } = useTranslation("settings");
+  const { t: guideDict } = useTranslation("guide");
   const { user, refreshSession, logout } = useAuth();
   const { preferences, updatePreferences } = useUserPreferences();
   const { toast } = useToast();
@@ -1122,6 +1123,19 @@ export default function SettingsPage() {
           </div>
         )}
 
+        <CardDivider />
+
+        {/* How-To & feature guide — a searchable index of everything T'Day can do,
+            reachable by everyone (works offline / in every mode). */}
+        <Link
+          href="/guide"
+          className="flex w-full items-center gap-3 py-1.5 text-left transition active:opacity-60"
+        >
+          <span className="min-w-0 flex-1 truncate text-[1.05rem] font-black text-foreground">
+            {guideDict("title")}
+          </span>
+          <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" />
+        </Link>
         <CardDivider />
 
         {/* Admin entry point — only for admins. Opens the same admin screen as the
