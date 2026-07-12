@@ -10,7 +10,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-REMOTE_HOST="${REMOTE_HOST:-ohmz@192.168.1.106}"
+REMOTE_HOST="${REMOTE_HOST:-ohmz@192.168.40.69}"
 REMOTE_DIR="${REMOTE_DIR:-/home/ohmz/StudioProjects/Tday}"
 
 # Password can come from --password <pw>, -p <pw>, or the SSH_PASSWORD env var.
