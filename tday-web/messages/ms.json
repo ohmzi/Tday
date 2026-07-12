@@ -793,6 +793,13 @@
         "body": "Tambah peringatan pada tugasan berjadual dan peranti anda memberitahu anda pada masa yang tepat. Peringatan dijadualkan pada peranti anda, jadi ia berfungsi walaupun dalam Mod Tempatan.",
         "tip": "Pilihan tempoh awal peringatan berbeza sedikit mengikut tugasan — pilih yang memberi anda amaran yang cukup awal."
       },
+      "reminder-snooze": {
+        "title": "Tunda peringatan",
+        "summary": "Pemberitahuan peringatan ada tindakan Tunda 1 jam dan Malam ini.",
+        "keywords": "tunda, peringatan, pemberitahuan, kemudian, malam ini, snooze",
+        "body": "Apabila peringatan muncul pada masa yang tidak sesuai, tidak perlu buka aplikasi: Tunda 1 jam menghantar semula peringatan yang sama sejam kemudian, dan Malam ini memindahkan tugasan itu ke 19:00 hari ini. Malam ini untuk tugasan sekali sahaja — kejadian berulang dijadualkan semula dalam aplikasi supaya sirinya kekal.",
+        "tip": "Menunda hanya melewatkan pemberitahuan; tugasan mengekalkan masa asalnya sehingga anda memindahkannya."
+      },
       "push-notifications": {
         "title": "Peringatan web (push)",
         "summary": "Biarkan aplikasi web memberitahu anda apabila tugasan tamat tempoh, walaupun ia ditutup.",

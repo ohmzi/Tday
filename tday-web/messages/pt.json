@@ -793,6 +793,13 @@
         "body": "Adicione um lembrete a uma tarefa agendada e o seu dispositivo notifica-o à hora certa. Os lembretes são agendados no seu dispositivo, por isso funcionam mesmo em Modo local.",
         "tip": "As opções de antecedência do lembrete variam ligeiramente por tarefa — escolha a que lhe dá aviso suficiente."
       },
+      "reminder-snooze": {
+        "title": "Adiar um lembrete",
+        "summary": "As notificações de lembrete trazem as ações Adiar 1 h e Hoje à noite.",
+        "keywords": "adiar, lembrete, notificação, mais tarde, hoje à noite, soneca",
+        "body": "Quando um lembrete chega em má hora, não é preciso abrir o app: Adiar 1 h entrega o mesmo lembrete uma hora depois, e Hoje à noite move a tarefa para as 19:00 de hoje. Hoje à noite funciona para tarefas avulsas — ocorrências recorrentes são reagendadas no app para manter a série intacta.",
+        "tip": "Adiar só atrasa a notificação; a tarefa mantém o horário original até você movê-la."
+      },
       "push-notifications": {
         "title": "Lembretes na web (push)",
         "summary": "Deixe a aplicação web notificá-lo quando uma tarefa vence, mesmo com ela fechada.",

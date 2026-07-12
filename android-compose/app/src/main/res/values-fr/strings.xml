@@ -24,6 +24,7 @@
     <string name="quick_defer_tonight">Ce soir</string>
     <string name="quick_defer_tomorrow">Demain matin</string>
     <string name="quick_defer_next_week">La semaine prochaine</string>
+    <string name="reminder_action_snooze_hour">Reporter d\'1 h</string>
     <string name="task_promote_failed">Impossible de planifier la tâche</string>
     <string name="task_float_failed">Impossible de laisser flotter la tâche</string>
     <string name="action_complete">Terminer</string>

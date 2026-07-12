@@ -24,6 +24,7 @@
     <string name="quick_defer_tonight">今夜</string>
     <string name="quick_defer_tomorrow">明日の朝</string>
     <string name="quick_defer_next_week">来週</string>
+    <string name="reminder_action_snooze_hour">1時間後に再通知</string>
     <string name="task_promote_failed">タスクを予定できませんでした</string>
     <string name="task_float_failed">タスクをフロートできませんでした</string>
     <string name="action_complete">完了</string>

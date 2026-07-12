@@ -793,6 +793,13 @@
         "body": "Ajoutez un rappel à une tâche planifiée et votre appareil vous prévient au bon moment. Les rappels sont programmés sur votre appareil, ils fonctionnent donc même en Mode local.",
         "tip": "Les options de délai de rappel varient légèrement selon la tâche — choisissez celle qui vous laisse assez de préavis."
       },
+      "reminder-snooze": {
+        "title": "Reporter un rappel",
+        "summary": "Les notifications de rappel proposent Reporter d'1 h et Ce soir.",
+        "keywords": "reporter, rappel, notification, plus tard, ce soir, différer alerte",
+        "body": "Quand un rappel tombe au mauvais moment, inutile d'ouvrir l'app : Reporter d'1 h redélivre le même rappel une heure plus tard, et Ce soir déplace la tâche à 19 h aujourd'hui. Ce soir fonctionne pour les tâches ponctuelles — les occurrences récurrentes se replanifient depuis l'app pour préserver la série.",
+        "tip": "Reporter ne retarde que la notification ; la tâche garde son échéance d'origine tant que vous ne la déplacez pas."
+      },
       "push-notifications": {
         "title": "Rappels web (push)",
         "summary": "Laissez l'application web vous prévenir à l'échéance d'une tâche, même fermée.",

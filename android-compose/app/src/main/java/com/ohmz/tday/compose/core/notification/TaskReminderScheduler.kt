@@ -59,6 +59,47 @@ class TaskReminderScheduler @Inject constructor(
         Log.d(LOG_TAG, "Cancelled all task reminders")
     }
 
+    /**
+     * Re-arms a delivered reminder [delayMillis] from now (notification
+     * snooze). Clears the notified marker first — the re-fire goes through
+     * the same dedup as the original alarm. The alarm uses a salted request
+     * code and stays out of the tracked set so a rescheduleAll pass can
+     * neither cancel nor clobber it.
+     */
+    fun snooze(
+        taskId: String,
+        title: String?,
+        dueMillis: Long,
+        priority: String?,
+        instanceDateMillis: Long,
+        delayMillis: Long,
+    ) {
+        val alarmKey = alarmKeyFor(taskId, instanceDateMillis)
+        preferenceStore.clearNotified(alarmKey)
+
+        val intent = Intent(context, TaskReminderReceiver::class.java).apply {
+            putExtra(TaskReminderReceiver.EXTRA_TASK_ID, taskId)
+            putExtra(TaskReminderReceiver.EXTRA_TASK_TITLE, title)
+            putExtra(TaskReminderReceiver.EXTRA_TASK_DUE_MILLIS, dueMillis)
+            putExtra(TaskReminderReceiver.EXTRA_TASK_PRIORITY, priority)
+            putExtra(TaskReminderReceiver.EXTRA_INSTANCE_DATE_MILLIS, instanceDateMillis)
+        }
+        val pendingIntent = PendingIntent.getBroadcast(
+            context,
+            alarmKey.hashCode() xor SNOOZE_REQUEST_SALT,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+
+        val triggerAtMillis = System.currentTimeMillis() + delayMillis
+        if (canScheduleExactAlarms()) {
+            alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
+        } else {
+            alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
+        }
+        TdayTelemetry.addBreadcrumb("reminder.snooze", data = mapOf("delayMillis" to delayMillis))
+    }
+
     private fun cancelAllInternal() {
         val previousCodes = preferenceStore.getScheduledRequestCodes()
         for (code in previousCodes) {
@@ -127,6 +168,7 @@ class TaskReminderScheduler @Inject constructor(
 
     companion object {
         private const val LOG_TAG = "TaskReminderScheduler"
+        private const val SNOOZE_REQUEST_SALT = 0x534E5A31 // "SNZ1"
 
         fun requestCodeFor(task: TodoItem): Int {
             val instanceHash = task.instanceDate?.toEpochMilli()?.hashCode() ?: 0

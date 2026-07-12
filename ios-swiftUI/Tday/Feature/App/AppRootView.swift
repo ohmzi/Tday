@@ -246,6 +246,9 @@ struct AppRootView: View {
         .onChange(of: notificationDeepLinkRouter.pendingURL) { _, _ in
             routePendingNotificationDeepLink()
         }
+        .onChange(of: notificationDeepLinkRouter.pendingReminderAction) { _, _ in
+            handlePendingReminderAction()
+        }
         .onChange(of: appViewModel.hasCompletedInitialBootstrap) { _, _ in
             presentPendingRootCreateTaskIfReady()
         }
@@ -566,6 +569,20 @@ struct AppRootView: View {
         }
         handleDeepLink(url)
         notificationDeepLinkRouter.clearPendingURL()
+    }
+
+    /// Reminder-notification actions that need the data layer ("Tonight").
+    private func handlePendingReminderAction() {
+        guard let action = notificationDeepLinkRouter.pendingReminderAction else {
+            return
+        }
+        notificationDeepLinkRouter.clearPendingReminderAction()
+        switch action {
+        case let .moveTonight(taskID):
+            Task {
+                try? await container.todoRepository.moveTodoTonight(taskID: taskID)
+            }
+        }
     }
 }
 

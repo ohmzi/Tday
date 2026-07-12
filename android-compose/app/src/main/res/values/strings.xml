@@ -25,6 +25,7 @@
     <string name="quick_defer_tonight">Tonight</string>
     <string name="quick_defer_tomorrow">Tomorrow morning</string>
     <string name="quick_defer_next_week">Next week</string>
+    <string name="reminder_action_snooze_hour">Snooze 1h</string>
     <string name="task_promote_failed">Could not schedule task</string>
     <string name="task_float_failed">Could not float task</string>
     <string name="action_complete">Complete</string>

@@ -25,6 +25,7 @@ object GuideTopicIds {
     const val OVERDUE_VIEW = "overdue-view"
     const val SEARCH_TASKS = "search-tasks"
     const val RECURRENCE_PRESETS = "recurrence-presets"
+    const val REMINDER_SNOOZE = "reminder-snooze"
     const val REMINDERS = "reminders"
     const val PUSH_NOTIFICATIONS = "push-notifications"
     const val HOME_WIDGET = "home-widget"

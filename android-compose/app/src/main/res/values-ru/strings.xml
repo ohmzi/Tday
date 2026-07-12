@@ -24,6 +24,7 @@
     <string name="quick_defer_tonight">Сегодня вечером</string>
     <string name="quick_defer_tomorrow">Завтра утром</string>
     <string name="quick_defer_next_week">На следующей неделе</string>
+    <string name="reminder_action_snooze_hour">Отложить на 1 ч</string>
     <string name="task_promote_failed">Не удалось запланировать задачу</string>
     <string name="task_float_failed">Не удалось отпустить задачу</string>
     <string name="action_complete">Завершить</string>
