@@ -373,28 +373,15 @@ class HomeViewModel @Inject constructor(
     }
 
     fun toggleComplete(todo: TodoItem) {
-        val previousState = _uiState.value
+        val previousSearchable = _uiState.value.searchableTodos
         _uiState.update { current ->
             current.copy(
                 searchableTodos = current.searchableTodos.filterNot { it.id == todo.id },
                 errorMessage = null,
             )
         }
-
-        viewModelScope.launch {
-            runCatching {
-                todoRepository.completeTodo(todo)
-            }.onSuccess {
-                rescheduleReminders()
-                refreshAfterMutation()
-            }.onFailure { error ->
-                _uiState.value = previousState.copy(
-                    errorMessage = mutationFailureMessage(
-                        error,
-                        R.string.error_complete_task_failed
-                    ),
-                )
-            }
+        showUndoableTaskComplete(todo) {
+            _uiState.update { it.copy(searchableTodos = previousSearchable, errorMessage = null) }
         }
     }
 
@@ -442,24 +429,28 @@ class HomeViewModel @Inject constructor(
     }
 
     fun completeTodo(todo: TodoItem) {
+        val previousToday = _uiState.value.todayTodos
         _uiState.update { current ->
             current.copy(todayTodos = current.todayTodos.filterNot { it.id == todo.id })
         }
-        viewModelScope.launch {
-            runCatching { todoRepository.completeTodo(todo) }
-                .onSuccess { refreshInternal(forceSync = false, showLoading = false) }
-                .onFailure { error ->
-                    _uiState.update {
-                        it.copy(
-                            errorMessage = mutationFailureMessage(
-                                error,
-                                R.string.error_complete_task_failed
-                            )
-                        )
-                    }
-                    refreshFromCache()
-                }
+        showUndoableTaskComplete(todo) {
+            _uiState.update { it.copy(todayTodos = previousToday) }
         }
+    }
+
+    // Delayed-commit complete: stage the UI removal (done by the caller), show an
+    // undoable toast, and run the real complete after the window unless Undo
+    // restores the row. Mirrors [showUndoableTaskDelete].
+    private fun showUndoableTaskComplete(todo: TodoItem, onUndo: () -> Unit) {
+        undoableDeleteCoordinator.showUndoableComplete(
+            message = appContext.getString(R.string.task_completed_toast),
+            onCommit = {
+                todoRepository.completeTodo(todo)
+                // Runs on the coordinator scope: this ViewModel may be gone.
+                runCatching { reminderScheduler.rescheduleAll() }
+            },
+            onUndo = { onUndo() },
+        )
     }
 
     fun deleteTodo(todo: TodoItem) {
