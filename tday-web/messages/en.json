@@ -321,6 +321,7 @@
     "deleteList": "Delete list",
     "undo": "Undo",
     "taskDeleted": "Task deleted",
+    "taskCompleted": "Task completed",
     "listDeleted": "List deleted",
     "listsDeleted": "{{count}} lists deleted",
     "done": "Done",

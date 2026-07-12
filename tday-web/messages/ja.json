@@ -321,6 +321,7 @@
     "deleteList": "リストを削除",
     "undo": "元に戻す",
     "taskDeleted": "タスクを削除しました",
+    "taskCompleted": "タスクを完了しました",
     "listDeleted": "リストを削除しました",
     "listsDeleted": "{{count}} 件のリストを削除しました",
     "done": "完了",

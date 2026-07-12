@@ -321,6 +321,7 @@
     "deleteList": "Elimina elenco",
     "undo": "Annulla",
     "taskDeleted": "Attività eliminata",
+    "taskCompleted": "Attività completata",
     "listDeleted": "Elenco eliminato",
     "listsDeleted": "{{count}} elenchi eliminati",
     "done": "Fatto",
