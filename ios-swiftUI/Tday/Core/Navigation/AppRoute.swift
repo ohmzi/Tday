@@ -16,6 +16,7 @@ enum AppRoute: Hashable {
     case calendar
     case settings
     case latestRelease
+    case helpGuide(topic: String?)
     case forgotPassword
 
     var deepLinkPath: String {
@@ -53,6 +54,11 @@ enum AppRoute: Hashable {
             return "settings"
         case .latestRelease:
             return "latest-release"
+        case let .helpGuide(topic):
+            if let topic, !topic.isEmpty {
+                return "help-guide?topic=\(topic)"
+            }
+            return "help-guide"
         case .forgotPassword:
             return "forgot-password"
         }
@@ -82,6 +88,12 @@ enum AppRoute: Hashable {
             return .settings
         case "latest-release":
             return .latestRelease
+        case "help-guide":
+            let topic = URLComponents(url: url, resolvingAgainstBaseURL: false)?
+                .queryItems?
+                .first(where: { $0.name == "topic" })?
+                .value
+            return .helpGuide(topic: topic)
         case "forgot-password":
             return .forgotPassword
         case "todos":
