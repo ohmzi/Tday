@@ -498,9 +498,10 @@ class TodoListViewModel @Inject constructor(
 
     fun toggleComplete(todo: TodoItem) {
         val previousItems = _uiState.value.items
+        val mode = _uiState.value.mode
         TdayTelemetry.addBreadcrumb(
             "task.complete",
-            data = taskTelemetryData(mode = _uiState.value.mode),
+            data = taskTelemetryData(mode = mode),
         )
         _uiState.update { current ->
             current.copy(
@@ -508,28 +509,23 @@ class TodoListViewModel @Inject constructor(
                 errorMessage = null,
             )
         }
-        viewModelScope.launch {
-            runCatching {
-                if (_uiState.value.mode == TodoListMode.FLOATER) {
+        // Delayed-commit complete: stage the UI removal now, show the undoable
+        // toast, and let the coordinator run the real complete after the toast
+        // window — or restore the row on Undo (nothing was committed yet).
+        undoableDeleteCoordinator.showUndoableComplete(
+            message = appContext.getString(R.string.task_completed_toast),
+            onCommit = {
+                if (mode == TodoListMode.FLOATER) {
                     todoRepository.completeFloater(todo)
                 } else {
                     todoRepository.completeTodo(todo)
+                    runCatching { reminderScheduler.rescheduleAll() }
                 }
-            }.onSuccess {
-                if (_uiState.value.mode != TodoListMode.FLOATER) rescheduleReminders()
-                refreshInternal(forceSync = false, showLoading = false)
-            }.onFailure { error ->
-                _uiState.update {
-                    it.copy(
-                        items = previousItems,
-                        errorMessage = mutationFailureMessage(
-                            error,
-                            R.string.error_complete_task_failed
-                        ),
-                    )
-                }
-            }
-        }
+            },
+            onUndo = {
+                _uiState.update { it.copy(items = previousItems, errorMessage = null) }
+            },
+        )
     }
 
     fun delete(todo: TodoItem) {

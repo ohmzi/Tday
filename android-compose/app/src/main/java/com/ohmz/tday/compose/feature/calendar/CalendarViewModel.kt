@@ -232,24 +232,19 @@ class CalendarViewModel @Inject constructor(
                 errorMessage = null,
             )
         }
-        viewModelScope.launch {
-            runCatching {
+        // Delayed-commit complete: stage the UI removal now, show the undoable
+        // toast, and run the real complete after the toast window — or restore
+        // the row on Undo (nothing was committed yet).
+        undoableDeleteCoordinator.showUndoableComplete(
+            message = appContext.getString(R.string.task_completed_toast),
+            onCommit = {
                 todoRepository.completeTodo(todo)
-            }.onSuccess {
-                rescheduleReminders()
-                loadInternal(forceSync = false, showLoading = false)
-            }.onFailure { error ->
-                _uiState.update { current ->
-                    current.copy(
-                        items = previousItems,
-                        errorMessage = mutationFailureMessage(
-                            error,
-                            R.string.error_complete_task_failed
-                        ),
-                    )
-                }
-            }
-        }
+                runCatching { reminderScheduler.rescheduleAll() }
+            },
+            onUndo = {
+                _uiState.update { it.copy(items = previousItems, errorMessage = null) }
+            },
+        )
     }
 
     fun uncomplete(item: CompletedItem) {
