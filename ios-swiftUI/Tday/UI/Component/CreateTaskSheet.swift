@@ -271,6 +271,9 @@ struct CreateTaskSheet: View {
                         title: "Repeat",
                         value: selectedRepeatLabel,
                         isEnabled: scheduleEnabled,
+                        titleTrailing: AnyView(
+                            GuideHelpLink(topicId: GuideTopicId.recurrencePresets)
+                        ),
                         onTap: {
                             guard scheduleEnabled else { return }
                             activeSelector = .recurrence
@@ -533,14 +536,19 @@ private struct CreateTaskSheetTextCard: View {
 
     var body: some View {
         TdaySheetCard {
-            CreateTaskSheetTextField(
-                placeholder: L("Title"),
-                text: $title,
-                lineLimit: 1 ... 1,
-                field: .title,
-                focusedInputField: focusedInputField,
-                highlightText: titleHighlight
-            )
+            HStack(spacing: 0) {
+                CreateTaskSheetTextField(
+                    placeholder: L("Title"),
+                    text: $title,
+                    lineLimit: 1 ... 1,
+                    field: .title,
+                    focusedInputField: focusedInputField,
+                    highlightText: titleHighlight
+                )
+
+                GuideHelpLink(topicId: GuideTopicId.nlpDateSyntax)
+                    .padding(.trailing, 10)
+            }
 
             TdaySheetDivider()
 
@@ -848,6 +856,9 @@ private struct CreateTaskSheetSelectorTriggerRow: View {
     let value: String
     var isEnabled = true
     var valueLeading: AnyView? = nil
+    /// Rendered right after the title (e.g. a contextual GuideHelpLink, which
+    /// stays independently tappable because it uses a tap gesture).
+    var titleTrailing: AnyView? = nil
     let onTap: () -> Void
 
     @Environment(\.tdayColors) private var colors
@@ -862,9 +873,15 @@ private struct CreateTaskSheetSelectorTriggerRow: View {
                     .frame(width: 22, height: 22)
                     .foregroundStyle(colors.onSurfaceVariant.opacity(isEnabled ? 1 : 0.42))
 
-                Text(L(title))
-                    .font(.tdayRounded(size: 18, weight: .heavy))
-                    .foregroundStyle(colors.onSurface.opacity(isEnabled ? 1 : 0.5))
+                HStack(spacing: 2) {
+                    Text(L(title))
+                        .font(.tdayRounded(size: 18, weight: .heavy))
+                        .foregroundStyle(colors.onSurface.opacity(isEnabled ? 1 : 0.5))
+
+                    if let titleTrailing {
+                        titleTrailing
+                    }
+                }
 
                 Spacer(minLength: 8)
 

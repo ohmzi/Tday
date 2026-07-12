@@ -14,6 +14,7 @@ import clsx from "clsx";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "react-i18next";
 import CustomRepeatMenuContainer from "./CustomRepeat/CustomRepeatContainer";
+import { GuideHelpLink } from "@/features/guide/GuideHelpLink";
 
 const RepeatDropdownMenu = ({ }) => {
   const { t: appDict } = useTranslation("app");
@@ -143,6 +144,10 @@ const RepeatDropdownMenu = ({ }) => {
             </DropdownMenuItem>
           </>
         )}
+        <DropdownMenuSeparator className="my-3" />
+        <DropdownMenuItem asChild className="flex justify-center">
+          <GuideHelpLink topic="recurrence-presets" withLabel className="rounded-md" />
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
