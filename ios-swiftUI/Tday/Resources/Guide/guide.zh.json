@@ -1,73 +1,73 @@
 {
   "currentVersion": "0.2.0",
   "ui": {
-    "title": "How-To & Tips",
-    "subtitle": "Everything T'Day can do — the obvious and the hidden.",
-    "searchPlaceholder": "Search features…",
-    "searchAria": "Search the guide",
-    "whatsNew": "What's new",
-    "tryIt": "Try it",
-    "clearSearch": "Clear",
-    "noResults": "No matches. Try another word.",
-    "results": "{{count}} results",
-    "badges.hiddenGem": "Hidden gem",
-    "badges.proTip": "Pro tip",
-    "badges.new": "New",
-    "badges.server": "Server mode",
-    "sections.gettingStarted": "Getting started",
-    "sections.captureAndDates": "Capture & dates",
-    "sections.gestures": "Gestures",
-    "sections.organizing": "Organizing",
-    "sections.recurrenceAndReminders": "Recurrence & reminders",
-    "sections.widgetsAndSurfaces": "Widgets & surfaces",
-    "sections.modesAndSync": "Modes & sync",
-    "sections.integrations": "Integrations",
-    "sections.keyboardShortcuts": "Keyboard shortcuts"
+    "title": "使用方法与技巧",
+    "subtitle": "T'Day 能做的一切——显而易见的，和隐藏起来的。",
+    "searchPlaceholder": "搜索功能…",
+    "searchAria": "搜索指南",
+    "whatsNew": "新功能",
+    "tryIt": "试一试",
+    "clearSearch": "清除",
+    "noResults": "没有匹配项。换个词试试。",
+    "results": "{{count}} 条结果",
+    "badges.hiddenGem": "隐藏惊喜",
+    "badges.proTip": "高手技巧",
+    "badges.new": "新增",
+    "badges.server": "服务器模式",
+    "sections.gettingStarted": "快速上手",
+    "sections.captureAndDates": "记录与日期",
+    "sections.gestures": "手势",
+    "sections.organizing": "整理",
+    "sections.recurrenceAndReminders": "重复与提醒",
+    "sections.widgetsAndSurfaces": "小组件与展示界面",
+    "sections.modesAndSync": "模式与同步",
+    "sections.integrations": "集成",
+    "sections.keyboardShortcuts": "键盘快捷键"
   },
   "sections": [
     {
       "id": "GETTING_STARTED",
-      "title": "Getting started",
+      "title": "快速上手",
       "order": 0
     },
     {
       "id": "CAPTURE_AND_DATES",
-      "title": "Capture & dates",
+      "title": "记录与日期",
       "order": 1
     },
     {
       "id": "GESTURES",
-      "title": "Gestures",
+      "title": "手势",
       "order": 2
     },
     {
       "id": "ORGANIZING",
-      "title": "Organizing",
+      "title": "整理",
       "order": 3
     },
     {
       "id": "RECURRENCE_AND_REMINDERS",
-      "title": "Recurrence & reminders",
+      "title": "重复与提醒",
       "order": 4
     },
     {
       "id": "WIDGETS_AND_SURFACES",
-      "title": "Widgets & surfaces",
+      "title": "小组件与展示界面",
       "order": 5
     },
     {
       "id": "MODES_AND_SYNC",
-      "title": "Modes & sync",
+      "title": "模式与同步",
       "order": 6
     },
     {
       "id": "INTEGRATIONS",
-      "title": "Integrations",
+      "title": "集成",
       "order": 7
     },
     {
       "id": "KEYBOARD_SHORTCUTS",
-      "title": "Keyboard shortcuts",
+      "title": "键盘快捷键",
       "order": 8
     }
   ],
@@ -87,19 +87,19 @@
       "sinceVersion": null,
       "deepLink": null,
       "helpAnchors": [],
-      "title": "Home and Anytime",
-      "summary": "Two calm home feeds you switch between from the dock.",
+      "title": "主页与随时",
+      "summary": "两个宁静的主页信息流，可从底栏切换。",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "T'Day has two sibling feeds. Home holds your scheduled tasks for today and beyond. Anytime holds Floaters — tasks with no date. Switch between them from the dock at the bottom, and create a task from either one."
+            "T'Day 有两个并列的信息流。主页存放你今天及以后的已安排任务。随时存放浮动任务——没有日期的任务。从底部的底栏在两者之间切换，也可以从任意一个创建任务。"
           ]
         }
       ],
-      "searchTitle": "home and anytime",
-      "searchKeywords": "home, anytime, feed, dock, root, navigate, tabs",
-      "searchBody": "two calm home feeds you switch between from the dock. t'day has two sibling feeds. home holds your scheduled tasks for today and beyond. anytime holds floaters — tasks with no date. switch between them from the dock at the bottom, and create a task from either one."
+      "searchTitle": "主页与随时",
+      "searchKeywords": "主页, 随时, 信息流, 底栏, 根, 导航, 标签页, home, anytime, feed, tabs",
+      "searchBody": "两个宁静的主页信息流，可从底栏切换。 t'day 有两个并列的信息流。主页存放你今天及以后的已安排任务。随时存放浮动任务——没有日期的任务。从底部的底栏在两者之间切换，也可以从任意一个创建任务。"
     },
     {
       "id": "create-task",
@@ -116,25 +116,25 @@
       "sinceVersion": null,
       "deepLink": null,
       "helpAnchors": [],
-      "title": "Create a task",
-      "summary": "Add a scheduled task or a dateless Floater in a couple of taps.",
+      "title": "创建任务",
+      "summary": "几下点按即可添加一个已安排的任务或一个无日期的浮动任务。",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Tap the create button to add a task. Give it a title and, if it has a date, a due time. Leave the date off and it becomes a Floater in your Anytime feed instead."
+            "点按创建按钮来添加任务。给它一个标题，如果有日期，再加上截止时间。不填日期，它就会变成随时信息流里的一个浮动任务。"
           ]
         },
         {
           "type": "TIP",
           "texts": [
-            "Start typing a date right in the title — T'Day reads it for you. See “Type the date”."
+            "直接在标题里输入日期——T'Day 会替你识别。参见“输入日期”。"
           ]
         }
       ],
-      "searchTitle": "create a task",
-      "searchKeywords": "create, add, new, task, plus, fab, compose",
-      "searchBody": "add a scheduled task or a dateless floater in a couple of taps. tap the create button to add a task. give it a title and, if it has a date, a due time. leave the date off and it becomes a floater in your anytime feed instead. start typing a date right in the title — t'day reads it for you. see “type the date”."
+      "searchTitle": "创建任务",
+      "searchKeywords": "创建, 添加, 新建, 任务, 加号, 悬浮按钮, 撰写, create, add, new, task",
+      "searchBody": "几下点按即可添加一个已安排的任务或一个无日期的浮动任务。 点按创建按钮来添加任务。给它一个标题，如果有日期，再加上截止时间。不填日期，它就会变成随时信息流里的一个浮动任务。 直接在标题里输入日期——t'day 会替你识别。参见“输入日期”。"
     },
     {
       "id": "nlp-date-syntax",
@@ -153,25 +153,25 @@
       "helpAnchors": [
         "nlp-title-input"
       ],
-      "title": "Type the date",
-      "summary": "Write the date into the title and T'Day schedules it for you.",
+      "title": "输入日期",
+      "summary": "把日期写进标题，T'Day 就会替你安排好时间。",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "You don't need to open a date picker. Type a date phrase straight into the task title and T'Day parses it on-device — no account or network needed — highlighting the part it understood and scheduling the task."
+            "你不需要打开日期选择器。直接在任务标题里输入一段日期短语，T'Day 会在设备本地完成解析——无需账户或网络——高亮它理解的部分并安排好任务。"
           ]
         },
         {
           "type": "EXAMPLE",
           "texts": [
-            "dentist tuesday 3pm"
+            "看牙医 周二 下午3点"
           ]
         }
       ],
-      "searchTitle": "type the date",
-      "searchKeywords": "natural language, date, tomorrow, next week, parse, quick, smart, nlp, on device",
-      "searchBody": "write the date into the title and t'day schedules it for you. you don't need to open a date picker. type a date phrase straight into the task title and t'day parses it on-device — no account or network needed — highlighting the part it understood and scheduling the task. dentist tuesday 3pm"
+      "searchTitle": "输入日期",
+      "searchKeywords": "自然语言, 日期, 明天, 下周, 解析, 快捷, 智能, 本地识别, natural language, tomorrow, nlp",
+      "searchBody": "把日期写进标题，t'day 就会替你安排好时间。 你不需要打开日期选择器。直接在任务标题里输入一段日期短语，t'day 会在设备本地完成解析——无需账户或网络——高亮它理解的部分并安排好任务。 看牙医 周二 下午3点"
     },
     {
       "id": "calendar-views",
@@ -192,19 +192,19 @@
         "ios": "calendar"
       },
       "helpAnchors": [],
-      "title": "Calendar views",
-      "summary": "See your scheduled tasks by month, week, or day.",
+      "title": "日历视图",
+      "summary": "按月、周或日查看你已安排的任务。",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Open the calendar to see scheduled tasks laid out by month, week, or day. Swipe or use the chevrons to move between periods; the top-right button jumps you back to today without changing the view."
+            "打开日历，按月、周或日查看已安排的任务。滑动或使用箭头在不同时间段之间切换；右上角的按钮能让你回到今天而不改变视图。"
           ]
         }
       ],
-      "searchTitle": "calendar views",
-      "searchKeywords": "calendar, month, week, day, agenda, view, dates",
-      "searchBody": "see your scheduled tasks by month, week, or day. open the calendar to see scheduled tasks laid out by month, week, or day. swipe or use the chevrons to move between periods; the top-right button jumps you back to today without changing the view."
+      "searchTitle": "日历视图",
+      "searchKeywords": "日历, 月, 周, 日, 日程, 视图, 日期, calendar, month, week, day, agenda",
+      "searchBody": "按月、周或日查看你已安排的任务。 打开日历，按月、周或日查看已安排的任务。滑动或使用箭头在不同时间段之间切换；右上角的按钮能让你回到今天而不改变视图。"
     },
     {
       "id": "priorities",
@@ -221,19 +221,19 @@
       "sinceVersion": null,
       "deepLink": null,
       "helpAnchors": [],
-      "title": "Priorities",
-      "summary": "Flag what matters with Low, Medium, or High.",
+      "title": "优先级",
+      "summary": "用低、中、高标记重要程度。",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Give a task a priority to mark how much it matters. Priority shows as a small accent dot on the task and helps sort what deserves attention first."
+            "给任务设置优先级，标明它有多重要。优先级会在任务上显示为一个小小的强调色圆点，帮你排出哪些事最值得先关注。"
           ]
         }
       ],
-      "searchTitle": "priorities",
-      "searchKeywords": "priority, high, medium, low, important, urgent, flag",
-      "searchBody": "flag what matters with low, medium, or high. give a task a priority to mark how much it matters. priority shows as a small accent dot on the task and helps sort what deserves attention first."
+      "searchTitle": "优先级",
+      "searchKeywords": "优先级, 高, 中, 低, 重要, 紧急, 标记, priority, high, medium, low",
+      "searchBody": "用低、中、高标记重要程度。 给任务设置优先级，标明它有多重要。优先级会在任务上显示为一个小小的强调色圆点，帮你排出哪些事最值得先关注。"
     },
     {
       "id": "pin-task",
@@ -250,19 +250,19 @@
       "sinceVersion": null,
       "deepLink": null,
       "helpAnchors": [],
-      "title": "Pin a task",
-      "summary": "Keep an important task at the top of its list.",
+      "title": "置顶任务",
+      "summary": "让重要任务始终留在列表顶部。",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Pin a task to hold it at the top of its feed, above the normal order. Unpin it to let it fall back into place."
+            "置顶一个任务，让它固定在信息流顶部，位于常规顺序之上。取消置顶后，它会回到原来的位置。"
           ]
         }
       ],
-      "searchTitle": "pin a task",
-      "searchKeywords": "pin, pinned, stick, top, important, keep",
-      "searchBody": "keep an important task at the top of its list. pin a task to hold it at the top of its feed, above the normal order. unpin it to let it fall back into place."
+      "searchTitle": "置顶任务",
+      "searchKeywords": "置顶, 已置顶, 固定, 顶部, 重要, 保留, pin, top",
+      "searchBody": "让重要任务始终留在列表顶部。 置顶一个任务，让它固定在信息流顶部，位于常规顺序之上。取消置顶后，它会回到原来的位置。"
     },
     {
       "id": "swipe-actions",
@@ -282,25 +282,25 @@
         "ios": "today"
       },
       "helpAnchors": [],
-      "title": "Swipe actions",
-      "summary": "Swipe a task row for quick actions without opening it.",
+      "title": "滑动操作",
+      "summary": "在任务行上滑动，无需打开即可快速操作。",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Swipe a task row to reveal quick actions — complete it, or remove it — without opening the task at all."
+            "在任务行上滑动即可显示快捷操作——完成它，或移除它——完全不用打开任务。"
           ]
         },
         {
           "type": "TIP",
           "texts": [
-            "A completed task shows an undo toast for a few seconds, so a mis-swipe is never final."
+            "已完成的任务会显示几秒钟的撤销提示，所以误滑绝不会成为定局。"
           ]
         }
       ],
-      "searchTitle": "swipe actions",
-      "searchKeywords": "swipe, gesture, slide, complete, delete, quick, row",
-      "searchBody": "swipe a task row for quick actions without opening it. swipe a task row to reveal quick actions — complete it, or remove it — without opening the task at all. a completed task shows an undo toast for a few seconds, so a mis-swipe is never final."
+      "searchTitle": "滑动操作",
+      "searchKeywords": "滑动, 手势, 滑, 完成, 删除, 快捷, 行, swipe, gesture, complete, delete",
+      "searchBody": "在任务行上滑动，无需打开即可快速操作。 在任务行上滑动即可显示快捷操作——完成它，或移除它——完全不用打开任务。 已完成的任务会显示几秒钟的撤销提示，所以误滑绝不会成为定局。"
     },
     {
       "id": "long-press-actions",
@@ -316,19 +316,19 @@
       "sinceVersion": null,
       "deepLink": null,
       "helpAnchors": [],
-      "title": "Long-press a task",
-      "summary": "Press and hold for more options and to start reordering.",
+      "title": "长按任务",
+      "summary": "按住不放以查看更多选项并开始重新排序。",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Press and hold a task to open its options, or to pick it up and drag it to a new position in the list."
+            "按住一个任务不放，打开它的选项，或者把它拿起来拖到列表中的新位置。"
           ]
         }
       ],
-      "searchTitle": "long-press a task",
-      "searchKeywords": "long press, hold, context menu, options, reorder, drag",
-      "searchBody": "press and hold for more options and to start reordering. press and hold a task to open its options, or to pick it up and drag it to a new position in the list."
+      "searchTitle": "长按任务",
+      "searchKeywords": "长按, 按住, 快捷菜单, 选项, 重新排序, 拖动, long press, hold, reorder, drag",
+      "searchBody": "按住不放以查看更多选项并开始重新排序。 按住一个任务不放，打开它的选项，或者把它拿起来拖到列表中的新位置。"
     },
     {
       "id": "drag-reorder",
@@ -345,19 +345,19 @@
       "sinceVersion": null,
       "deepLink": null,
       "helpAnchors": [],
-      "title": "Reorder by dragging",
-      "summary": "Drag tasks into the order you want.",
+      "title": "拖动重新排序",
+      "summary": "把任务拖成你想要的顺序。",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Your lists keep the order you give them. Drag a task up or down to arrange your day the way you think about it."
+            "你的列表会保持你设定的顺序。上下拖动任务，按照你思考的方式来安排你的一天。"
           ]
         }
       ],
-      "searchTitle": "reorder by dragging",
-      "searchKeywords": "drag, reorder, move, sort, order, arrange",
-      "searchBody": "drag tasks into the order you want. your lists keep the order you give them. drag a task up or down to arrange your day the way you think about it."
+      "searchTitle": "拖动重新排序",
+      "searchKeywords": "拖动, 重新排序, 移动, 排序, 顺序, 排列, drag, reorder, sort",
+      "searchBody": "把任务拖成你想要的顺序。 你的列表会保持你设定的顺序。上下拖动任务，按照你思考的方式来安排你的一天。"
     },
     {
       "id": "floaters-vs-todos",
@@ -374,25 +374,25 @@
       "sinceVersion": null,
       "deepLink": null,
       "helpAnchors": [],
-      "title": "Floaters vs scheduled tasks",
-      "summary": "Dateless tasks live in Anytime; dated tasks live in Home.",
+      "title": "浮动任务与已安排任务",
+      "summary": "无日期任务住在随时里；有日期任务住在主页里。",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "A scheduled task has a due date and shows up in Home and the calendar. A Floater has no date — it waits quietly in your Anytime feed until you're ready. Use Floaters for “someday” work that shouldn't clutter today."
+            "已安排的任务有截止日期，会出现在主页和日历里。浮动任务没有日期——它安静地在你的随时信息流里等待，直到你准备好。用浮动任务来放那些“将来某天”要做、又不该扰乱今天的事。"
           ]
         },
         {
           "type": "TIP",
           "texts": [
-            "Floaters never appear on the calendar — that space is only for dated work."
+            "浮动任务从不出现在日历上——那片空间只留给有日期的事。"
           ]
         }
       ],
-      "searchTitle": "floaters vs scheduled tasks",
-      "searchKeywords": "floater, anytime, unscheduled, dateless, todo, scheduled, difference",
-      "searchBody": "dateless tasks live in anytime; dated tasks live in home. a scheduled task has a due date and shows up in home and the calendar. a floater has no date — it waits quietly in your anytime feed until you're ready. use floaters for “someday” work that shouldn't clutter today. floaters never appear on the calendar — that space is only for dated work."
+      "searchTitle": "浮动任务与已安排任务",
+      "searchKeywords": "浮动任务, 随时, 未安排, 无日期, 待办, 已安排, 区别, floater, anytime, todo",
+      "searchBody": "无日期任务住在随时里；有日期任务住在主页里。 已安排的任务有截止日期，会出现在主页和日历里。浮动任务没有日期——它安静地在你的随时信息流里等待，直到你准备好。用浮动任务来放那些“将来某天”要做、又不该扰乱今天的事。 浮动任务从不出现在日历上——那片空间只留给有日期的事。"
     },
     {
       "id": "floater-lists",
@@ -409,19 +409,19 @@
       "sinceVersion": null,
       "deepLink": null,
       "helpAnchors": [],
-      "title": "Floater lists",
-      "summary": "Group your Anytime tasks into their own lists.",
+      "title": "浮动任务列表",
+      "summary": "把你的随时任务归入各自的列表。",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Organize Floaters into separate lists — groceries, packing, ideas — each with its own name and color, and its own completed history."
+            "把浮动任务整理进不同的列表——采购、打包、点子——每个都有自己的名称、颜色和各自的完成记录。"
           ]
         }
       ],
-      "searchTitle": "floater lists",
-      "searchKeywords": "floater list, anytime, group, list, category, groceries, packing",
-      "searchBody": "group your anytime tasks into their own lists. organize floaters into separate lists — groceries, packing, ideas — each with its own name and color, and its own completed history."
+      "searchTitle": "浮动任务列表",
+      "searchKeywords": "浮动任务列表, 随时, 分组, 列表, 分类, 购物, 打包, floater list, group, category",
+      "searchBody": "把你的随时任务归入各自的列表。 把浮动任务整理进不同的列表——采购、打包、点子——每个都有自己的名称、颜色和各自的完成记录。"
     },
     {
       "id": "scheduled-lists",
@@ -438,19 +438,19 @@
       "sinceVersion": null,
       "deepLink": null,
       "helpAnchors": [],
-      "title": "Lists for scheduled tasks",
-      "summary": "Sort dated tasks into named, colored lists.",
+      "title": "已安排任务的列表",
+      "summary": "把有日期的任务归入命名的、带颜色的列表。",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Give scheduled tasks a list so related work stays together. Lists carry a name and color and can be filtered."
+            "给已安排的任务分配一个列表，让相关的事聚在一起。列表带有名称和颜色，还可以按其筛选。"
           ]
         }
       ],
-      "searchTitle": "lists for scheduled tasks",
-      "searchKeywords": "list, project, group, color, scheduled, category",
-      "searchBody": "sort dated tasks into named, colored lists. give scheduled tasks a list so related work stays together. lists carry a name and color and can be filtered."
+      "searchTitle": "已安排任务的列表",
+      "searchKeywords": "列表, 项目, 分组, 颜色, 已安排, 分类, list, project, group, color",
+      "searchBody": "把有日期的任务归入命名的、带颜色的列表。 给已安排的任务分配一个列表，让相关的事聚在一起。列表带有名称和颜色，还可以按其筛选。"
     },
     {
       "id": "completed-history",
@@ -467,19 +467,19 @@
       "sinceVersion": null,
       "deepLink": null,
       "helpAnchors": [],
-      "title": "Completed history",
-      "summary": "Everything you finished, kept for you to look back on.",
+      "title": "完成记录",
+      "summary": "你完成的一切，都替你留存下来供回顾。",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Finished tasks aren't discarded — they move to your completed history, grouped by day, so you can see what you actually got done."
+            "完成的任务不会被丢弃——它们会转入你的完成记录，按天分组，让你看到自己实际做成了哪些事。"
           ]
         }
       ],
-      "searchTitle": "completed history",
-      "searchKeywords": "completed, done, history, finished, archive, past",
-      "searchBody": "everything you finished, kept for you to look back on. finished tasks aren't discarded — they move to your completed history, grouped by day, so you can see what you actually got done."
+      "searchTitle": "完成记录",
+      "searchKeywords": "已完成, 完成, 历史, 完成记录, 归档, 过往, completed, done, history, archive",
+      "searchBody": "你完成的一切，都替你留存下来供回顾。 完成的任务不会被丢弃——它们会转入你的完成记录，按天分组，让你看到自己实际做成了哪些事。"
     },
     {
       "id": "overdue-view",
@@ -500,19 +500,19 @@
         "ios": "overdueTodos"
       },
       "helpAnchors": [],
-      "title": "Overdue",
-      "summary": "A dedicated place for tasks whose time has passed.",
+      "title": "逾期",
+      "summary": "一个专门存放已过时限任务的地方。",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Tasks whose due time has passed collect in the Overdue view so nothing slips silently. Reschedule them when you're ready."
+            "截止时间已过的任务会汇集到逾期视图里，这样什么都不会悄悄溜走。等你准备好，再给它们重新安排时间。"
           ]
         }
       ],
-      "searchTitle": "overdue",
-      "searchKeywords": "overdue, late, past due, missed, carried over, backlog",
-      "searchBody": "a dedicated place for tasks whose time has passed. tasks whose due time has passed collect in the overdue view so nothing slips silently. reschedule them when you're ready."
+      "searchTitle": "逾期",
+      "searchKeywords": "逾期, 迟到, 过期, 错过, 顺延, 积压, overdue, late, past due, backlog",
+      "searchBody": "一个专门存放已过时限任务的地方。 截止时间已过的任务会汇集到逾期视图里，这样什么都不会悄悄溜走。等你准备好，再给它们重新安排时间。"
     },
     {
       "id": "search-tasks",
@@ -529,19 +529,19 @@
       "sinceVersion": null,
       "deepLink": null,
       "helpAnchors": [],
-      "title": "Search your tasks",
-      "summary": "Find any task by title, note, or list name.",
+      "title": "搜索你的任务",
+      "summary": "按标题、备注或列表名称找到任何任务。",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Use the search field to filter your tasks instantly by title, description, or list name — no need to scroll."
+            "使用搜索栏，按标题、描述或列表名称即时筛选你的任务——无需滚动查找。"
           ]
         }
       ],
-      "searchTitle": "search your tasks",
-      "searchKeywords": "search, find, filter, lookup, query",
-      "searchBody": "find any task by title, note, or list name. use the search field to filter your tasks instantly by title, description, or list name — no need to scroll."
+      "searchTitle": "搜索你的任务",
+      "searchKeywords": "搜索, 查找, 筛选, 检索, 查询, search, find, filter, query",
+      "searchBody": "按标题、备注或列表名称找到任何任务。 使用搜索栏，按标题、描述或列表名称即时筛选你的任务——无需滚动查找。"
     },
     {
       "id": "recurrence-presets",
@@ -560,25 +560,25 @@
       "helpAnchors": [
         "recurrence-picker"
       ],
-      "title": "Repeating tasks",
-      "summary": "Make a task repeat daily, weekly, and more.",
+      "title": "重复任务",
+      "summary": "让任务每天、每周或按更多规律重复。",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Set a task to repeat and it comes back on its own schedule. Pick from the presets — every day, weekday, week, or month — and completing one occurrence leaves the rest of the series intact."
+            "把任务设为重复，它就会按自己的节奏回来。从预设中挑选——每天、工作日、每周或每月——完成其中一次，系列里的其余次数依旧保留。"
           ]
         },
         {
           "type": "EXAMPLE",
           "texts": [
-            "Water the plants · every week"
+            "给植物浇水 · 每周"
           ]
         }
       ],
-      "searchTitle": "repeating tasks",
-      "searchKeywords": "repeat, recurring, recurrence, every day, weekly, monthly, rrule, schedule",
-      "searchBody": "make a task repeat daily, weekly, and more. set a task to repeat and it comes back on its own schedule. pick from the presets — every day, weekday, week, or month — and completing one occurrence leaves the rest of the series intact. water the plants · every week"
+      "searchTitle": "重复任务",
+      "searchKeywords": "重复, 循环, 周期, 每天, 每周, 每月, 安排, repeat, recurring, weekly, rrule",
+      "searchBody": "让任务每天、每周或按更多规律重复。 把任务设为重复，它就会按自己的节奏回来。从预设中挑选——每天、工作日、每周或每月——完成其中一次，系列里的其余次数依旧保留。 给植物浇水 · 每周"
     },
     {
       "id": "reminders",
@@ -594,25 +594,25 @@
       "sinceVersion": null,
       "deepLink": null,
       "helpAnchors": [],
-      "title": "Reminders",
-      "summary": "Get a notification before a task is due.",
+      "title": "提醒",
+      "summary": "在任务到期前收到通知。",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Add a reminder to a scheduled task and your device notifies you at the right time. Reminders are scheduled on your device, so they work even in Local Mode."
+            "给已安排的任务添加提醒，你的设备会在恰当的时间通知你。提醒在你的设备上安排，所以即便在本地模式下也能用。"
           ]
         },
         {
           "type": "TIP",
           "texts": [
-            "Reminder lead-time options vary slightly by task — pick the one that gives you enough warning."
+            "提醒的提前时间选项会因任务而略有不同——挑一个能给你足够预留时间的。"
           ]
         }
       ],
-      "searchTitle": "reminders",
-      "searchKeywords": "reminder, notification, alert, alarm, notify, before",
-      "searchBody": "get a notification before a task is due. add a reminder to a scheduled task and your device notifies you at the right time. reminders are scheduled on your device, so they work even in local mode. reminder lead-time options vary slightly by task — pick the one that gives you enough warning."
+      "searchTitle": "提醒",
+      "searchKeywords": "提醒, 通知, 提示, 闹钟, 通知我, 提前, reminder, notification, alert",
+      "searchBody": "在任务到期前收到通知。 给已安排的任务添加提醒，你的设备会在恰当的时间通知你。提醒在你的设备上安排，所以即便在本地模式下也能用。 提醒的提前时间选项会因任务而略有不同——挑一个能给你足够预留时间的。"
     },
     {
       "id": "home-widget",
@@ -628,19 +628,19 @@
       "sinceVersion": null,
       "deepLink": null,
       "helpAnchors": [],
-      "title": "Home-screen widget",
-      "summary": "See today's tasks without opening the app.",
+      "title": "主屏幕小组件",
+      "summary": "不打开应用也能看到今天的任务。",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Add the T'Day widget to your home screen to glance at today's tasks. Tapping the widget opens the app at the right place."
+            "把 T'Day 小组件添加到主屏幕，随手一瞥就能看到今天的任务。点按小组件会把应用打开到相应的位置。"
           ]
         }
       ],
-      "searchTitle": "home-screen widget",
-      "searchKeywords": "widget, home screen, glance, today, lock screen",
-      "searchBody": "see today's tasks without opening the app. add the t'day widget to your home screen to glance at today's tasks. tapping the widget opens the app at the right place."
+      "searchTitle": "主屏幕小组件",
+      "searchKeywords": "小组件, 主屏幕, 一瞥, 今天, 锁屏, widget, home screen, today, lock screen",
+      "searchBody": "不打开应用也能看到今天的任务。 把 t'day 小组件添加到主屏幕，随手一瞥就能看到今天的任务。点按小组件会把应用打开到相应的位置。"
     },
     {
       "id": "widget-quick-add",
@@ -656,19 +656,19 @@
       "sinceVersion": null,
       "deepLink": null,
       "helpAnchors": [],
-      "title": "Quick-add from the widget",
-      "summary": "Start a new task straight from the widget.",
+      "title": "从小组件快速添加",
+      "summary": "直接从小组件开始一个新任务。",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "The widget has a create button, so you can capture a task from your home screen without first opening the app — and it works in Local Mode too."
+            "小组件上有一个创建按钮，所以你可以直接从主屏幕记录任务，无需先打开应用——而且在本地模式下也能用。"
           ]
         }
       ],
-      "searchTitle": "quick-add from the widget",
-      "searchKeywords": "widget, quick add, create, shortcut, home screen",
-      "searchBody": "start a new task straight from the widget. the widget has a create button, so you can capture a task from your home screen without first opening the app — and it works in local mode too."
+      "searchTitle": "从小组件快速添加",
+      "searchKeywords": "小组件, 快速添加, 创建, 快捷方式, 主屏幕, widget, quick add, create, shortcut",
+      "searchBody": "直接从小组件开始一个新任务。 小组件上有一个创建按钮，所以你可以直接从主屏幕记录任务，无需先打开应用——而且在本地模式下也能用。"
     },
     {
       "id": "carplay",
@@ -683,19 +683,19 @@
       "sinceVersion": null,
       "deepLink": null,
       "helpAnchors": [],
-      "title": "T'Day on CarPlay",
-      "summary": "Glance at and capture tasks safely while you drive.",
+      "title": "CarPlay 上的 T'Day",
+      "summary": "开车时安全地一瞥并记录任务。",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "On CarPlay, T'Day shows a focused, glanceable list built for the car, so you can check what's next or add a task by voice without reaching for your phone."
+            "在 CarPlay 上，T'Day 会显示一个专为车内设计、一瞥即知的精简列表，让你无需伸手去拿手机，就能看看接下来要做什么，或用语音添加任务。"
           ]
         }
       ],
-      "searchTitle": "t'day on carplay",
-      "searchKeywords": "carplay, car, driving, voice, apple, hands free",
-      "searchBody": "glance at and capture tasks safely while you drive. on carplay, t'day shows a focused, glanceable list built for the car, so you can check what's next or add a task by voice without reaching for your phone."
+      "searchTitle": "carplay 上的 t'day",
+      "searchKeywords": "carplay, 车, 开车, 语音, 苹果, 免提, car, driving, voice, hands free",
+      "searchBody": "开车时安全地一瞥并记录任务。 在 carplay 上，t'day 会显示一个专为车内设计、一瞥即知的精简列表，让你无需伸手去拿手机，就能看看接下来要做什么，或用语音添加任务。"
     },
     {
       "id": "local-mode",
@@ -711,25 +711,25 @@
       "sinceVersion": null,
       "deepLink": null,
       "helpAnchors": [],
-      "title": "Local Mode",
-      "summary": "Use T'Day fully offline, with no server or account.",
+      "title": "本地模式",
+      "summary": "完全离线使用 T'Day，无需服务器或账户。",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Local Mode keeps everything on your device — no login, no server, no upload. It's a first-class way to use T'Day privately, and your local data is never sent anywhere on its own."
+            "本地模式把一切都留在你的设备上——不登录、不用服务器、不上传。这是私密使用 T'Day 的一流方式，你的本地数据绝不会自行被发送到任何地方。"
           ]
         },
         {
           "type": "TIP",
           "texts": [
-            "Server-only features are shown here with a “Server mode” badge so you know what changes if you sign in."
+            "仅限服务器的功能在这里会标注“服务器模式”徽标，让你知道登录后会有哪些变化。"
           ]
         }
       ],
-      "searchTitle": "local mode",
-      "searchKeywords": "local mode, offline, private, no account, no server, on device",
-      "searchBody": "use t'day fully offline, with no server or account. local mode keeps everything on your device — no login, no server, no upload. it's a first-class way to use t'day privately, and your local data is never sent anywhere on its own. server-only features are shown here with a “server mode” badge so you know what changes if you sign in."
+      "searchTitle": "本地模式",
+      "searchKeywords": "本地模式, 离线, 私密, 无账户, 无服务器, 设备本地, local mode, offline, private",
+      "searchBody": "完全离线使用 t'day，无需服务器或账户。 本地模式把一切都留在你的设备上——不登录、不用服务器、不上传。这是私密使用 t'day 的一流方式，你的本地数据绝不会自行被发送到任何地方。 仅限服务器的功能在这里会标注“服务器模式”徽标，让你知道登录后会有哪些变化。"
     },
     {
       "id": "server-mode",
@@ -746,19 +746,19 @@
       "sinceVersion": null,
       "deepLink": null,
       "helpAnchors": [],
-      "title": "Server Mode",
-      "summary": "Sync across devices through your own private server.",
+      "title": "服务器模式",
+      "summary": "通过你自己的私有服务器在多台设备间同步。",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Sign in to your self-hosted server to sync tasks across devices in real time. Writes happen instantly on your device and replay to the server, so the app stays fast even on a shaky connection."
+            "登录你自托管的服务器，即可在多台设备间实时同步任务。写入会立即在你的设备上生效，再回放到服务器，所以即使网络不稳，应用依然流畅。"
           ]
         }
       ],
-      "searchTitle": "server mode",
-      "searchKeywords": "server mode, sync, self hosted, account, login, devices, realtime",
-      "searchBody": "sync across devices through your own private server. sign in to your self-hosted server to sync tasks across devices in real time. writes happen instantly on your device and replay to the server, so the app stays fast even on a shaky connection."
+      "searchTitle": "服务器模式",
+      "searchKeywords": "服务器模式, 同步, 自托管, 账户, 登录, 设备, 实时, server mode, sync, self hosted",
+      "searchBody": "通过你自己的私有服务器在多台设备间同步。 登录你自托管的服务器，即可在多台设备间实时同步任务。写入会立即在你的设备上生效，再回放到服务器，所以即使网络不稳，应用依然流畅。"
     },
     {
       "id": "offline-sync",
@@ -774,19 +774,19 @@
       "sinceVersion": null,
       "deepLink": null,
       "helpAnchors": [],
-      "title": "Offline sync",
-      "summary": "Keep working offline; changes replay when you reconnect.",
+      "title": "离线同步",
+      "summary": "离线也能继续工作；重新联网后改动会回放。",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "In Server Mode your changes are saved locally first and queued when you're offline. As soon as you reconnect, T'Day replays them to the server in order."
+            "在服务器模式下，你的改动会先保存在本地，离线时进入队列。一旦重新联网，T'Day 就会按顺序把它们回放到服务器。"
           ]
         }
       ],
-      "searchTitle": "offline sync",
-      "searchKeywords": "offline, sync, pending, queue, replay, connection, conflict",
-      "searchBody": "keep working offline; changes replay when you reconnect. in server mode your changes are saved locally first and queued when you're offline. as soon as you reconnect, t'day replays them to the server in order."
+      "searchTitle": "离线同步",
+      "searchKeywords": "离线, 同步, 待处理, 队列, 回放, 连接, 冲突, offline, sync, queue, replay",
+      "searchBody": "离线也能继续工作；重新联网后改动会回放。 在服务器模式下，你的改动会先保存在本地，离线时进入队列。一旦重新联网，t'day 就会按顺序把它们回放到服务器。"
     },
     {
       "id": "ai-summary",
@@ -803,25 +803,25 @@
       "sinceVersion": null,
       "deepLink": null,
       "helpAnchors": [],
-      "title": "Task summaries",
-      "summary": "A short, calm read on your day — with optional local AI.",
+      "title": "任务摘要",
+      "summary": "对你一天的简短、宁静的概览——可选配本地 AI。",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "T'Day can summarize your day in a sentence or two. With a local Ollama model it reads naturally; without one it falls back to a warm, deterministic recap — either way nothing leaves your server."
+            "T'Day 可以用一两句话概括你的一天。配上本地的 Ollama 模型，读起来自然流畅；没有它，则会退回到一段温暖、确定的回顾——无论哪种方式，都不会有任何东西离开你的服务器。"
           ]
         },
         {
           "type": "TIP",
           "texts": [
-            "The summary never depends on a cloud AI service — it's local or nothing."
+            "摘要从不依赖云端 AI 服务——要么本地生成，要么就没有。"
           ]
         }
       ],
-      "searchTitle": "task summaries",
-      "searchKeywords": "summary, ai, ollama, overview, digest, local, private",
-      "searchBody": "a short, calm read on your day — with optional local ai. t'day can summarize your day in a sentence or two. with a local ollama model it reads naturally; without one it falls back to a warm, deterministic recap — either way nothing leaves your server. the summary never depends on a cloud ai service — it's local or nothing."
+      "searchTitle": "任务摘要",
+      "searchKeywords": "摘要, ai, ollama, 概览, 摘要, 本地, 私密, summary, overview, digest, local",
+      "searchBody": "对你一天的简短、宁静的概览——可选配本地 ai。 t'day 可以用一两句话概括你的一天。配上本地的 ollama 模型，读起来自然流畅；没有它，则会退回到一段温暖、确定的回顾——无论哪种方式，都不会有任何东西离开你的服务器。 摘要从不依赖云端 ai 服务——要么本地生成，要么就没有。"
     }
   ]
 }
