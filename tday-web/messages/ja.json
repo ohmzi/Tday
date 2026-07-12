@@ -622,217 +622,217 @@
     "sourceLocal": "Local model"
   },
   "guide": {
-    "title": "How-To & Tips",
-    "subtitle": "Everything T'Day can do — the obvious and the hidden.",
-    "searchPlaceholder": "Search features…",
-    "searchAria": "Search the guide",
-    "whatsNew": "What's new",
-    "tryIt": "Try it",
-    "clearSearch": "Clear",
-    "noResults": "No matches. Try another word.",
-    "results": "{{count}} results",
+    "title": "使い方とヒント",
+    "subtitle": "T'Day でできることのすべて — 目に見える機能も、隠れた機能も。",
+    "searchPlaceholder": "機能を検索…",
+    "searchAria": "ガイドを検索",
+    "whatsNew": "新着情報",
+    "tryIt": "試してみる",
+    "clearSearch": "クリア",
+    "noResults": "一致する項目がありません。別の言葉でお試しください。",
+    "results": "{{count}} 件の結果",
     "badges": {
-      "hiddenGem": "Hidden gem",
-      "proTip": "Pro tip",
-      "new": "New",
-      "server": "Server mode"
+      "hiddenGem": "隠れた便利機能",
+      "proTip": "プロのヒント",
+      "new": "新機能",
+      "server": "サーバーモード"
     },
     "sections": {
-      "gettingStarted": "Getting started",
-      "captureAndDates": "Capture & dates",
-      "gestures": "Gestures",
-      "organizing": "Organizing",
-      "recurrenceAndReminders": "Recurrence & reminders",
-      "widgetsAndSurfaces": "Widgets & surfaces",
-      "modesAndSync": "Modes & sync",
-      "integrations": "Integrations",
-      "keyboardShortcuts": "Keyboard shortcuts"
+      "gettingStarted": "はじめに",
+      "captureAndDates": "入力と日付",
+      "gestures": "ジェスチャー",
+      "organizing": "整理する",
+      "recurrenceAndReminders": "繰り返しとリマインダー",
+      "widgetsAndSurfaces": "ウィジェットと表示先",
+      "modesAndSync": "モードと同期",
+      "integrations": "連携",
+      "keyboardShortcuts": "キーボードショートカット"
     },
     "topics": {
       "root-feeds": {
-        "title": "Home and Anytime",
-        "summary": "Two calm home feeds you switch between from the dock.",
-        "keywords": "home, anytime, feed, dock, root, navigate, tabs",
-        "body": "T'Day has two sibling feeds. Home holds your scheduled tasks for today and beyond. Anytime holds Floaters — tasks with no date. Switch between them from the dock at the bottom, and create a task from either one."
+        "title": "ホームとエニタイム",
+        "summary": "ドックから切り替えられる、2つの静かなホームフィード。",
+        "keywords": "ホーム, エニタイム, フィード, ドック, ルート, 移動, タブ, home, anytime, feed",
+        "body": "T'Day には対になった2つのフィードがあります。ホームには今日以降の予定付きタスクが並びます。エニタイムにはフローター（日付のないタスク）が並びます。下部のドックから2つを切り替え、どちらからでもタスクを作成できます。"
       },
       "create-task": {
-        "title": "Create a task",
-        "summary": "Add a scheduled task or a dateless Floater in a couple of taps.",
-        "keywords": "create, add, new, task, plus, fab, compose",
-        "body": "Tap the create button to add a task. Give it a title and, if it has a date, a due time. Leave the date off and it becomes a Floater in your Anytime feed instead.",
-        "tip": "Start typing a date right in the title — T'Day reads it for you. See “Type the date”."
+        "title": "タスクを作成する",
+        "summary": "予定付きタスクも日付なしのフローターも、数タップで追加。",
+        "keywords": "作成, 追加, 新規, タスク, プラス, 作成ボタン, 入力, create, add, new",
+        "body": "作成ボタンをタップしてタスクを追加します。タイトルを付け、日付があれば締め切り時刻も設定します。日付を入れなければ、エニタイムフィードのフローターになります。",
+        "tip": "タイトルにそのまま日付を入力し始めてください — T'Day が読み取ってくれます。「日付を入力する」を参照。"
       },
       "nlp-date-syntax": {
-        "title": "Type the date",
-        "summary": "Write the date into the title and T'Day schedules it for you.",
-        "keywords": "natural language, date, tomorrow, next week, parse, quick, smart, nlp, on device",
-        "body": "You don't need to open a date picker. Type a date phrase straight into the task title and T'Day parses it on-device — no account or network needed — highlighting the part it understood and scheduling the task.",
-        "example": "dentist tuesday 3pm"
+        "title": "日付を入力する",
+        "summary": "タイトルに日付を書くだけで、T'Day が予定を設定します。",
+        "keywords": "自然言語, 日付, 明日, 来週, 解析, クイック, スマート, オンデバイス, natural language, nlp, tomorrow",
+        "body": "日付ピッカーを開く必要はありません。タスクのタイトルに日付を表す言葉を直接入力すると、T'Day が端末上で解析し — アカウントもネットワークも不要 — 認識した部分をハイライトして、タスクの予定を設定します。",
+        "example": "歯医者 火曜 午後3時"
       },
       "calendar-views": {
-        "title": "Calendar views",
-        "summary": "See your scheduled tasks by month, week, or day.",
-        "keywords": "calendar, month, week, day, agenda, view, dates",
-        "body": "Open the calendar to see scheduled tasks laid out by month, week, or day. Swipe or use the chevrons to move between periods; the top-right button jumps you back to today without changing the view."
+        "title": "カレンダー表示",
+        "summary": "予定付きタスクを月・週・日で確認。",
+        "keywords": "カレンダー, 月, 週, 日, アジェンダ, 表示, 日付, calendar, month, week, day",
+        "body": "カレンダーを開くと、予定付きタスクが月・週・日ごとに並びます。スワイプするか山型ボタンで期間を移動できます。右上のボタンを押すと、表示を変えずに今日へ戻れます。"
       },
       "priorities": {
-        "title": "Priorities",
-        "summary": "Flag what matters with Low, Medium, or High.",
-        "keywords": "priority, high, medium, low, important, urgent, flag",
-        "body": "Give a task a priority to mark how much it matters. Priority shows as a small accent dot on the task and helps sort what deserves attention first."
+        "title": "優先度",
+        "summary": "低・中・高で、大切なものに印を付ける。",
+        "keywords": "優先度, 高, 中, 低, 重要, 緊急, フラグ, priority, high, medium, low",
+        "body": "タスクに優先度を付けて、どれくらい重要かを示します。優先度はタスク上に小さなアクセントカラーのドットで表示され、最初に注意を向けるべきものを並べ替えるのに役立ちます。"
       },
       "pin-task": {
-        "title": "Pin a task",
-        "summary": "Keep an important task at the top of its list.",
-        "keywords": "pin, pinned, stick, top, important, keep",
-        "body": "Pin a task to hold it at the top of its feed, above the normal order. Unpin it to let it fall back into place."
+        "title": "タスクをピン留めする",
+        "summary": "大切なタスクをリストの一番上に固定。",
+        "keywords": "ピン, ピン留め, 固定, 一番上, 重要, キープ, pin, pinned, top",
+        "body": "タスクをピン留めすると、通常の並び順より上、フィードの一番上に固定できます。ピンを外すと元の位置に戻ります。"
       },
       "swipe-actions": {
-        "title": "Swipe actions",
-        "summary": "Swipe a task row for quick actions without opening it.",
-        "keywords": "swipe, gesture, slide, complete, delete, quick, row",
-        "body": "Swipe a task row to reveal quick actions — complete it, or remove it — without opening the task at all.",
-        "tip": "A completed task shows an undo toast for a few seconds, so a mis-swipe is never final."
+        "title": "スワイプ操作",
+        "summary": "タスクの行をスワイプすれば、開かずにすばやく操作。",
+        "keywords": "スワイプ, ジェスチャー, スライド, 完了, 削除, クイック, 行, swipe, gesture, complete",
+        "body": "タスクの行をスワイプすると、タスクを開かずにすばやく操作できます — 完了にしたり、削除したり。",
+        "tip": "完了したタスクは数秒間「元に戻す」トーストを表示するので、誤ってスワイプしても取り返しがつかなくなることはありません。"
       },
       "long-press-actions": {
-        "title": "Long-press a task",
-        "summary": "Press and hold for more options and to start reordering.",
-        "keywords": "long press, hold, context menu, options, reorder, drag",
-        "body": "Press and hold a task to open its options, or to pick it up and drag it to a new position in the list."
+        "title": "タスクを長押しする",
+        "summary": "長押しでその他のオプションを開き、並べ替えを開始。",
+        "keywords": "長押し, ホールド, コンテキストメニュー, オプション, 並べ替え, ドラッグ, long press, hold, reorder",
+        "body": "タスクを長押しすると、そのオプションを開いたり、つまんでリスト内の新しい位置へドラッグしたりできます。"
       },
       "drag-reorder": {
-        "title": "Reorder by dragging",
-        "summary": "Drag tasks into the order you want.",
-        "keywords": "drag, reorder, move, sort, order, arrange",
-        "body": "Your lists keep the order you give them. Drag a task up or down to arrange your day the way you think about it."
+        "title": "ドラッグで並べ替える",
+        "summary": "タスクを好きな順番にドラッグ。",
+        "keywords": "ドラッグ, 並べ替え, 移動, ソート, 順番, 整理, drag, reorder, sort",
+        "body": "リストは自分で決めた順番を保ちます。タスクを上下にドラッグして、自分の考え方に合わせて一日を組み立てましょう。"
       },
       "floaters-vs-todos": {
-        "title": "Floaters vs scheduled tasks",
-        "summary": "Dateless tasks live in Anytime; dated tasks live in Home.",
-        "keywords": "floater, anytime, unscheduled, dateless, todo, scheduled, difference",
-        "body": "A scheduled task has a due date and shows up in Home and the calendar. A Floater has no date — it waits quietly in your Anytime feed until you're ready. Use Floaters for “someday” work that shouldn't clutter today.",
-        "tip": "Floaters never appear on the calendar — that space is only for dated work."
+        "title": "フローターと予定付きタスク",
+        "summary": "日付なしのタスクはエニタイムに、日付ありのタスクはホームに。",
+        "keywords": "フローター, エニタイム, 未予定, 日付なし, ToDo, 予定付き, 違い, floater, anytime, scheduled",
+        "body": "予定付きタスクには締め切り日があり、ホームとカレンダーに表示されます。フローターには日付がなく — 準備ができるまでエニタイムフィードで静かに待ちます。今日を散らかしたくない「いつか」やることには、フローターを使いましょう。",
+        "tip": "フローターはカレンダーには一切表示されません — その場所は日付のある予定だけのものです。"
       },
       "floater-lists": {
-        "title": "Floater lists",
-        "summary": "Group your Anytime tasks into their own lists.",
-        "keywords": "floater list, anytime, group, list, category, groceries, packing",
-        "body": "Organize Floaters into separate lists — groceries, packing, ideas — each with its own name and color, and its own completed history."
+        "title": "フローターのリスト",
+        "summary": "エニタイムのタスクを専用のリストにまとめる。",
+        "keywords": "フローターリスト, エニタイム, グループ, リスト, カテゴリ, 買い物, 荷造り, floater list, group",
+        "body": "フローターを別々のリスト — 買い物、荷造り、アイデアなど — に整理できます。それぞれに独自の名前と色、そして独自の完了履歴があります。"
       },
       "scheduled-lists": {
-        "title": "Lists for scheduled tasks",
-        "summary": "Sort dated tasks into named, colored lists.",
-        "keywords": "list, project, group, color, scheduled, category",
-        "body": "Give scheduled tasks a list so related work stays together. Lists carry a name and color and can be filtered."
+        "title": "予定付きタスクのリスト",
+        "summary": "日付ありのタスクを名前と色付きのリストに分類。",
+        "keywords": "リスト, プロジェクト, グループ, 色, 予定付き, カテゴリ, list, project, color",
+        "body": "予定付きタスクにリストを割り当てて、関連する作業をまとめておけます。リストには名前と色があり、絞り込みもできます。"
       },
       "completed-history": {
-        "title": "Completed history",
-        "summary": "Everything you finished, kept for you to look back on.",
-        "keywords": "completed, done, history, finished, archive, past",
-        "body": "Finished tasks aren't discarded — they move to your completed history, grouped by day, so you can see what you actually got done."
+        "title": "完了履歴",
+        "summary": "終えたことすべてを、後から振り返れるように保存。",
+        "keywords": "完了, 済み, 履歴, 終了, アーカイブ, 過去, completed, done, history",
+        "body": "終えたタスクは捨てられません — 日付ごとにまとめられた完了履歴に移り、実際に何をやり遂げたかを見返せます。"
       },
       "overdue-view": {
-        "title": "Overdue",
-        "summary": "A dedicated place for tasks whose time has passed.",
-        "keywords": "overdue, late, past due, missed, carried over, backlog",
-        "body": "Tasks whose due time has passed collect in the Overdue view so nothing slips silently. Reschedule them when you're ready."
+        "title": "期限切れ",
+        "summary": "時間が過ぎたタスクのための専用の場所。",
+        "keywords": "期限切れ, 遅れ, 期限超過, 見逃し, 繰り越し, 未処理, overdue, late, past due",
+        "body": "締め切り時刻が過ぎたタスクは期限切れビューに集まり、何も静かに抜け落ちることがありません。準備ができたら予定を組み直しましょう。"
       },
       "search-tasks": {
-        "title": "Search your tasks",
-        "summary": "Find any task by title, note, or list name.",
-        "keywords": "search, find, filter, lookup, query",
-        "body": "Use the search field to filter your tasks instantly by title, description, or list name — no need to scroll."
+        "title": "タスクを検索する",
+        "summary": "タイトル・メモ・リスト名からどんなタスクも見つける。",
+        "keywords": "検索, 見つける, 絞り込み, ルックアップ, クエリ, search, find, filter",
+        "body": "検索欄を使えば、タイトル・説明・リスト名でタスクをすぐに絞り込めます — スクロールする必要はありません。"
       },
       "recurrence-presets": {
-        "title": "Repeating tasks",
-        "summary": "Make a task repeat daily, weekly, and more.",
-        "keywords": "repeat, recurring, recurrence, every day, weekly, monthly, rrule, schedule",
-        "body": "Set a task to repeat and it comes back on its own schedule. Pick from the presets — every day, weekday, week, or month — and completing one occurrence leaves the rest of the series intact.",
-        "example": "Water the plants · every week"
+        "title": "繰り返しタスク",
+        "summary": "タスクを毎日・毎週などで繰り返す。",
+        "keywords": "繰り返し, 定期, リピート, 毎日, 毎週, 毎月, スケジュール, repeat, recurring, weekly, rrule",
+        "body": "タスクを繰り返しに設定すると、決めたスケジュールで自動的に戻ってきます。プリセット — 毎日、平日、毎週、毎月 — から選べて、1回分を完了しても残りのシリーズはそのまま残ります。",
+        "example": "植物に水やり · 毎週"
       },
       "reminders": {
-        "title": "Reminders",
-        "summary": "Get a notification before a task is due.",
-        "keywords": "reminder, notification, alert, alarm, notify, before",
-        "body": "Add a reminder to a scheduled task and your device notifies you at the right time. Reminders are scheduled on your device, so they work even in Local Mode.",
-        "tip": "Reminder lead-time options vary slightly by task — pick the one that gives you enough warning."
+        "title": "リマインダー",
+        "summary": "タスクの締め切り前に通知を受け取る。",
+        "keywords": "リマインダー, 通知, アラート, アラーム, 知らせる, 事前, reminder, notification, alert",
+        "body": "予定付きタスクにリマインダーを追加すると、適切なタイミングで端末が通知します。リマインダーは端末上で設定されるため、ローカルモードでも動作します。",
+        "tip": "リマインダーの事前通知のタイミングはタスクによって少し異なります — 十分に余裕を持てるものを選びましょう。"
       },
       "push-notifications": {
-        "title": "Web reminders (push)",
-        "summary": "Let the web app notify you when a task is due, even when it's closed.",
-        "keywords": "push, notification, web, browser, reminder, vapid, subscribe, due",
-        "body": "In the web app you can turn on push notifications from Settings. Your self-hosted server then sends a reminder when a task's due time arrives — so the web app can reach you even when the tab is closed. You can complete the task straight from the notification."
+        "title": "Web のリマインダー（プッシュ）",
+        "summary": "Web アプリを閉じていても、タスクの締め切りを通知。",
+        "keywords": "プッシュ, 通知, ウェブ, ブラウザ, リマインダー, 購読, 締め切り, push, web, vapid",
+        "body": "Web アプリでは設定からプッシュ通知をオンにできます。すると、タスクの締め切り時刻が来たときに自作のセルフホストサーバーがリマインダーを送信します — タブを閉じていても Web アプリがあなたに届きます。通知から直接タスクを完了することもできます。"
       },
       "home-widget": {
-        "title": "Home-screen widget",
-        "summary": "See today's tasks without opening the app.",
-        "keywords": "widget, home screen, glance, today, lock screen",
-        "body": "Add the T'Day widget to your home screen to glance at today's tasks. Tapping the widget opens the app at the right place."
+        "title": "ホーム画面ウィジェット",
+        "summary": "アプリを開かずに今日のタスクを確認。",
+        "keywords": "ウィジェット, ホーム画面, ひと目, 今日, ロック画面, widget, home screen, today",
+        "body": "T'Day ウィジェットをホーム画面に追加すれば、今日のタスクをひと目で確認できます。ウィジェットをタップすると、アプリが適切な場所で開きます。"
       },
       "widget-quick-add": {
-        "title": "Quick-add from the widget",
-        "summary": "Start a new task straight from the widget.",
-        "keywords": "widget, quick add, create, shortcut, home screen",
-        "body": "The widget has a create button, so you can capture a task from your home screen without first opening the app — and it works in Local Mode too."
+        "title": "ウィジェットからクイック追加",
+        "summary": "ウィジェットから直接、新しいタスクを開始。",
+        "keywords": "ウィジェット, クイック追加, 作成, ショートカット, ホーム画面, widget, quick add, shortcut",
+        "body": "ウィジェットには作成ボタンがあり、まずアプリを開かなくてもホーム画面からタスクを入力できます — ローカルモードでも動作します。"
       },
       "carplay": {
-        "title": "T'Day on CarPlay",
-        "summary": "Glance at and capture tasks safely while you drive.",
-        "keywords": "carplay, car, driving, voice, apple, hands free",
-        "body": "On CarPlay, T'Day shows a focused, glanceable list built for the car, so you can check what's next or add a task by voice without reaching for your phone."
+        "title": "CarPlay 上の T'Day",
+        "summary": "運転中も安全にタスクを確認・入力。",
+        "keywords": "carplay, 車, 運転, 音声, apple, ハンズフリー, car, driving, voice",
+        "body": "CarPlay では、T'Day は車向けに作られた見やすく絞り込んだリストを表示します。スマホに手を伸ばさずに、次にやることを確認したり、音声でタスクを追加したりできます。"
       },
       "android-car": {
-        "title": "T'Day car screen",
-        "summary": "A simplified in-app screen made for the car.",
-        "keywords": "car, driving, android, voice, hands free, screen",
-        "body": "T'Day includes a simplified car screen with large targets and voice capture, so you can add a task with minimal fuss while you're on the move."
+        "title": "T'Day のカー画面",
+        "summary": "車のために作られた、シンプルなアプリ内画面。",
+        "keywords": "車, 運転, android, 音声, ハンズフリー, 画面, car, driving, voice",
+        "body": "T'Day には、大きなタップ領域と音声入力を備えたシンプルなカー画面があります。移動中でも最小限の手間でタスクを追加できます。"
       },
       "local-mode": {
-        "title": "Local Mode",
-        "summary": "Use T'Day fully offline, with no server or account.",
-        "keywords": "local mode, offline, private, no account, no server, on device",
-        "body": "Local Mode keeps everything on your device — no login, no server, no upload. It's a first-class way to use T'Day privately, and your local data is never sent anywhere on its own.",
-        "tip": "Server-only features are shown here with a “Server mode” badge so you know what changes if you sign in."
+        "title": "ローカルモード",
+        "summary": "サーバーもアカウントも不要で、T'Day を完全オフラインで使う。",
+        "keywords": "ローカルモード, オフライン, プライベート, アカウント不要, サーバー不要, オンデバイス, local mode, offline, private",
+        "body": "ローカルモードはすべてを端末内に保ちます — ログインなし、サーバーなし、アップロードなし。T'Day をプライベートに使うための本格的な方法で、ローカルのデータが勝手にどこかへ送信されることは決してありません。",
+        "tip": "サーバー限定の機能にはここで「サーバーモード」バッジを付けているので、サインインすると何が変わるかがわかります。"
       },
       "server-mode": {
-        "title": "Server Mode",
-        "summary": "Sync across devices through your own private server.",
-        "keywords": "server mode, sync, self hosted, account, login, devices, realtime",
-        "body": "Sign in to your self-hosted server to sync tasks across devices in real time. Writes happen instantly on your device and replay to the server, so the app stays fast even on a shaky connection."
+        "title": "サーバーモード",
+        "summary": "自分専用のプライベートサーバーを通じて、複数の端末間で同期。",
+        "keywords": "サーバーモード, 同期, セルフホスト, アカウント, ログイン, 端末, リアルタイム, server mode, sync, self hosted",
+        "body": "自作のセルフホストサーバーにサインインすると、複数の端末間でタスクをリアルタイムに同期できます。書き込みは端末上で即座に反映され、サーバーへ再送されるため、接続が不安定でもアプリは軽快なままです。"
       },
       "offline-sync": {
-        "title": "Offline sync",
-        "summary": "Keep working offline; changes replay when you reconnect.",
-        "keywords": "offline, sync, pending, queue, replay, connection, conflict",
-        "body": "In Server Mode your changes are saved locally first and queued when you're offline. As soon as you reconnect, T'Day replays them to the server in order."
+        "title": "オフライン同期",
+        "summary": "オフラインでも作業を続け、再接続時に変更を再送。",
+        "keywords": "オフライン, 同期, 保留中, キュー, 再送, 接続, 競合, offline, sync, queue",
+        "body": "サーバーモードでは、変更はまずローカルに保存され、オフラインのときはキューに入ります。再接続するとすぐに、T'Day が順番どおりにサーバーへ再送します。"
       },
       "in-app-update": {
-        "title": "In-app updates",
-        "summary": "Install the latest T'Day build from inside the app.",
-        "keywords": "update, upgrade, version, install, apk, latest release",
-        "body": "When a new build is available, T'Day can download and install it for you from the Latest Release screen, so you stay current without hunting for a file."
+        "title": "アプリ内アップデート",
+        "summary": "最新の T'Day ビルドをアプリ内からインストール。",
+        "keywords": "アップデート, 更新, バージョン, インストール, apk, 最新リリース, update, upgrade, version",
+        "body": "新しいビルドが利用できるようになると、T'Day は最新リリース画面からそれをダウンロードしてインストールできます。ファイルを探し回らなくても、常に最新の状態を保てます。"
       },
       "api-key-homarr": {
-        "title": "API key & Homarr",
-        "summary": "Show your tasks on a dashboard with a personal API key.",
-        "keywords": "api key, homarr, dashboard, integration, token, widget, homelab",
-        "body": "Generate a personal API key in Settings to surface your tasks in a dashboard like Homarr. The key is tied to your account, so keep it private.",
-        "step0": "Open Settings and find the API key card.",
-        "step1": "Generate a key and copy it — it's shown once.",
-        "step2": "Paste it into your dashboard's T'Day widget."
+        "title": "API キーと Homarr",
+        "summary": "個人用の API キーで、タスクをダッシュボードに表示。",
+        "keywords": "api キー, homarr, ダッシュボード, 連携, トークン, ウィジェット, ホームラボ, api key, integration, homelab",
+        "body": "設定で個人用の API キーを生成すると、Homarr のようなダッシュボードにタスクを表示できます。キーはあなたのアカウントに紐づいているので、他人に見せないでください。",
+        "step0": "設定を開き、API キーのカードを見つけます。",
+        "step1": "キーを生成してコピーします — 表示されるのは一度きりです。",
+        "step2": "ダッシュボードの T'Day ウィジェットに貼り付けます。"
       },
       "ai-summary": {
-        "title": "Task summaries",
-        "summary": "A short, calm read on your day — with optional local AI.",
-        "keywords": "summary, ai, ollama, overview, digest, local, private",
-        "body": "T'Day can summarize your day in a sentence or two. With a local Ollama model it reads naturally; without one it falls back to a warm, deterministic recap — either way nothing leaves your server.",
-        "tip": "The summary never depends on a cloud AI service — it's local or nothing."
+        "title": "タスクの要約",
+        "summary": "一日を短く静かに読み解く — 任意でローカル AI も。",
+        "keywords": "要約, ai, ollama, 概要, ダイジェスト, ローカル, プライベート, summary, overview, local",
+        "body": "T'Day は一日を1〜2文で要約できます。ローカルの Ollama モデルがあれば自然な文章になり、なくても温かみのある決まった形の振り返りに切り替わります — どちらの場合も、何もサーバーの外には出ません。",
+        "tip": "要約がクラウド AI サービスに頼ることは決してありません — ローカルで行うか、何も行わないかのどちらかです。"
       },
       "keyboard-submit": {
-        "title": "Submit with the keyboard",
-        "summary": "Save a task without reaching for the mouse.",
-        "keywords": "keyboard, shortcut, submit, enter, save, hotkey",
-        "body": "In the web app you can submit the task form straight from the keyboard, so quick capture never breaks your flow.",
+        "title": "キーボードで送信する",
+        "summary": "マウスに手を伸ばさずにタスクを保存。",
+        "keywords": "キーボード, ショートカット, 送信, エンター, 保存, ホットキー, keyboard, shortcut, submit",
+        "body": "Web アプリでは、タスクフォームをキーボードから直接送信できるので、すばやい入力が流れを妨げることはありません。",
         "kbd": "Ctrl / ⌘ + Enter"
       }
     }

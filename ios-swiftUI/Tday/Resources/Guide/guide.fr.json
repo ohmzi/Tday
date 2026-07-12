@@ -1,73 +1,73 @@
 {
   "currentVersion": "0.2.0",
   "ui": {
-    "title": "How-To & Tips",
-    "subtitle": "Everything T'Day can do — the obvious and the hidden.",
-    "searchPlaceholder": "Search features…",
-    "searchAria": "Search the guide",
-    "whatsNew": "What's new",
-    "tryIt": "Try it",
-    "clearSearch": "Clear",
-    "noResults": "No matches. Try another word.",
-    "results": "{{count}} results",
-    "badges.hiddenGem": "Hidden gem",
-    "badges.proTip": "Pro tip",
-    "badges.new": "New",
-    "badges.server": "Server mode",
-    "sections.gettingStarted": "Getting started",
-    "sections.captureAndDates": "Capture & dates",
-    "sections.gestures": "Gestures",
-    "sections.organizing": "Organizing",
-    "sections.recurrenceAndReminders": "Recurrence & reminders",
-    "sections.widgetsAndSurfaces": "Widgets & surfaces",
-    "sections.modesAndSync": "Modes & sync",
-    "sections.integrations": "Integrations",
-    "sections.keyboardShortcuts": "Keyboard shortcuts"
+    "title": "Guide & astuces",
+    "subtitle": "Tout ce que T'Day sait faire — l'évident et le caché.",
+    "searchPlaceholder": "Rechercher des fonctionnalités…",
+    "searchAria": "Rechercher dans le guide",
+    "whatsNew": "Nouveautés",
+    "tryIt": "Essayer",
+    "clearSearch": "Effacer",
+    "noResults": "Aucun résultat. Essayez un autre mot.",
+    "results": "{{count}} résultats",
+    "badges.hiddenGem": "Pépite cachée",
+    "badges.proTip": "Astuce de pro",
+    "badges.new": "Nouveau",
+    "badges.server": "Mode serveur",
+    "sections.gettingStarted": "Premiers pas",
+    "sections.captureAndDates": "Saisie et dates",
+    "sections.gestures": "Gestes",
+    "sections.organizing": "Organisation",
+    "sections.recurrenceAndReminders": "Récurrence et rappels",
+    "sections.widgetsAndSurfaces": "Widgets et surfaces",
+    "sections.modesAndSync": "Modes et synchronisation",
+    "sections.integrations": "Intégrations",
+    "sections.keyboardShortcuts": "Raccourcis clavier"
   },
   "sections": [
     {
       "id": "GETTING_STARTED",
-      "title": "Getting started",
+      "title": "Premiers pas",
       "order": 0
     },
     {
       "id": "CAPTURE_AND_DATES",
-      "title": "Capture & dates",
+      "title": "Saisie et dates",
       "order": 1
     },
     {
       "id": "GESTURES",
-      "title": "Gestures",
+      "title": "Gestes",
       "order": 2
     },
     {
       "id": "ORGANIZING",
-      "title": "Organizing",
+      "title": "Organisation",
       "order": 3
     },
     {
       "id": "RECURRENCE_AND_REMINDERS",
-      "title": "Recurrence & reminders",
+      "title": "Récurrence et rappels",
       "order": 4
     },
     {
       "id": "WIDGETS_AND_SURFACES",
-      "title": "Widgets & surfaces",
+      "title": "Widgets et surfaces",
       "order": 5
     },
     {
       "id": "MODES_AND_SYNC",
-      "title": "Modes & sync",
+      "title": "Modes et synchronisation",
       "order": 6
     },
     {
       "id": "INTEGRATIONS",
-      "title": "Integrations",
+      "title": "Intégrations",
       "order": 7
     },
     {
       "id": "KEYBOARD_SHORTCUTS",
-      "title": "Keyboard shortcuts",
+      "title": "Raccourcis clavier",
       "order": 8
     }
   ],
@@ -87,19 +87,19 @@
       "sinceVersion": null,
       "deepLink": null,
       "helpAnchors": [],
-      "title": "Home and Anytime",
-      "summary": "Two calm home feeds you switch between from the dock.",
+      "title": "Accueil et À tout moment",
+      "summary": "Deux fils d'accueil paisibles entre lesquels vous basculez depuis le dock.",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "T'Day has two sibling feeds. Home holds your scheduled tasks for today and beyond. Anytime holds Floaters — tasks with no date. Switch between them from the dock at the bottom, and create a task from either one."
+            "T'Day propose deux fils jumeaux. Accueil réunit vos tâches planifiées pour aujourd'hui et au-delà. À tout moment réunit les Floaters — les tâches sans date. Basculez de l'un à l'autre depuis le dock en bas, et créez une tâche depuis n'importe lequel."
           ]
         }
       ],
-      "searchTitle": "home and anytime",
-      "searchKeywords": "home, anytime, feed, dock, root, navigate, tabs",
-      "searchBody": "two calm home feeds you switch between from the dock. t'day has two sibling feeds. home holds your scheduled tasks for today and beyond. anytime holds floaters — tasks with no date. switch between them from the dock at the bottom, and create a task from either one."
+      "searchTitle": "accueil et a tout moment",
+      "searchKeywords": "accueil, a tout moment, fil, dock, racine, naviguer, onglets",
+      "searchBody": "deux fils d'accueil paisibles entre lesquels vous basculez depuis le dock. t'day propose deux fils jumeaux. accueil reunit vos taches planifiees pour aujourd'hui et au-dela. a tout moment reunit les floaters — les taches sans date. basculez de l'un a l'autre depuis le dock en bas, et creez une tache depuis n'importe lequel."
     },
     {
       "id": "create-task",
@@ -116,25 +116,25 @@
       "sinceVersion": null,
       "deepLink": null,
       "helpAnchors": [],
-      "title": "Create a task",
-      "summary": "Add a scheduled task or a dateless Floater in a couple of taps.",
+      "title": "Créer une tâche",
+      "summary": "Ajoutez une tâche planifiée ou un Floater sans date en quelques touches.",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Tap the create button to add a task. Give it a title and, if it has a date, a due time. Leave the date off and it becomes a Floater in your Anytime feed instead."
+            "Touchez le bouton de création pour ajouter une tâche. Donnez-lui un titre et, si elle a une date, une heure d'échéance. Laissez la date de côté et elle devient un Floater dans votre fil À tout moment."
           ]
         },
         {
           "type": "TIP",
           "texts": [
-            "Start typing a date right in the title — T'Day reads it for you. See “Type the date”."
+            "Commencez à saisir une date directement dans le titre — T'Day la lit pour vous. Voir « Saisir la date »."
           ]
         }
       ],
-      "searchTitle": "create a task",
-      "searchKeywords": "create, add, new, task, plus, fab, compose",
-      "searchBody": "add a scheduled task or a dateless floater in a couple of taps. tap the create button to add a task. give it a title and, if it has a date, a due time. leave the date off and it becomes a floater in your anytime feed instead. start typing a date right in the title — t'day reads it for you. see “type the date”."
+      "searchTitle": "creer une tache",
+      "searchKeywords": "creer, ajouter, nouvelle, tache, plus, fab, composer",
+      "searchBody": "ajoutez une tache planifiee ou un floater sans date en quelques touches. touchez le bouton de creation pour ajouter une tache. donnez-lui un titre et, si elle a une date, une heure d'echeance. laissez la date de cote et elle devient un floater dans votre fil a tout moment. commencez a saisir une date directement dans le titre — t'day la lit pour vous. voir « saisir la date »."
     },
     {
       "id": "nlp-date-syntax",
@@ -153,25 +153,25 @@
       "helpAnchors": [
         "nlp-title-input"
       ],
-      "title": "Type the date",
-      "summary": "Write the date into the title and T'Day schedules it for you.",
+      "title": "Saisir la date",
+      "summary": "Écrivez la date dans le titre et T'Day la planifie pour vous.",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "You don't need to open a date picker. Type a date phrase straight into the task title and T'Day parses it on-device — no account or network needed — highlighting the part it understood and scheduling the task."
+            "Pas besoin d'ouvrir un sélecteur de date. Saisissez une expression de date directement dans le titre de la tâche et T'Day l'analyse sur l'appareil — sans compte ni réseau — en surlignant la partie qu'il a comprise et en planifiant la tâche."
           ]
         },
         {
           "type": "EXAMPLE",
           "texts": [
-            "dentist tuesday 3pm"
+            "dentiste mardi 15h"
           ]
         }
       ],
-      "searchTitle": "type the date",
-      "searchKeywords": "natural language, date, tomorrow, next week, parse, quick, smart, nlp, on device",
-      "searchBody": "write the date into the title and t'day schedules it for you. you don't need to open a date picker. type a date phrase straight into the task title and t'day parses it on-device — no account or network needed — highlighting the part it understood and scheduling the task. dentist tuesday 3pm"
+      "searchTitle": "saisir la date",
+      "searchKeywords": "langage naturel, date, demain, semaine prochaine, analyser, rapide, intelligent, nlp, sur l'appareil",
+      "searchBody": "ecrivez la date dans le titre et t'day la planifie pour vous. pas besoin d'ouvrir un selecteur de date. saisissez une expression de date directement dans le titre de la tache et t'day l'analyse sur l'appareil — sans compte ni reseau — en surlignant la partie qu'il a comprise et en planifiant la tache. dentiste mardi 15h"
     },
     {
       "id": "calendar-views",
@@ -192,19 +192,19 @@
         "ios": "calendar"
       },
       "helpAnchors": [],
-      "title": "Calendar views",
-      "summary": "See your scheduled tasks by month, week, or day.",
+      "title": "Vues du calendrier",
+      "summary": "Consultez vos tâches planifiées par mois, semaine ou jour.",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Open the calendar to see scheduled tasks laid out by month, week, or day. Swipe or use the chevrons to move between periods; the top-right button jumps you back to today without changing the view."
+            "Ouvrez le calendrier pour voir vos tâches planifiées disposées par mois, semaine ou jour. Balayez ou utilisez les chevrons pour passer d'une période à l'autre ; le bouton en haut à droite vous ramène à aujourd'hui sans changer de vue."
           ]
         }
       ],
-      "searchTitle": "calendar views",
-      "searchKeywords": "calendar, month, week, day, agenda, view, dates",
-      "searchBody": "see your scheduled tasks by month, week, or day. open the calendar to see scheduled tasks laid out by month, week, or day. swipe or use the chevrons to move between periods; the top-right button jumps you back to today without changing the view."
+      "searchTitle": "vues du calendrier",
+      "searchKeywords": "calendrier, mois, semaine, jour, agenda, vue, dates",
+      "searchBody": "consultez vos taches planifiees par mois, semaine ou jour. ouvrez le calendrier pour voir vos taches planifiees disposees par mois, semaine ou jour. balayez ou utilisez les chevrons pour passer d'une periode a l'autre ; le bouton en haut a droite vous ramene a aujourd'hui sans changer de vue."
     },
     {
       "id": "priorities",
@@ -221,19 +221,19 @@
       "sinceVersion": null,
       "deepLink": null,
       "helpAnchors": [],
-      "title": "Priorities",
-      "summary": "Flag what matters with Low, Medium, or High.",
+      "title": "Priorités",
+      "summary": "Signalez ce qui compte avec Basse, Moyenne ou Haute.",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Give a task a priority to mark how much it matters. Priority shows as a small accent dot on the task and helps sort what deserves attention first."
+            "Attribuez une priorité à une tâche pour indiquer son importance. La priorité apparaît sous la forme d'un petit point de couleur sur la tâche et aide à trier ce qui mérite l'attention en premier."
           ]
         }
       ],
-      "searchTitle": "priorities",
-      "searchKeywords": "priority, high, medium, low, important, urgent, flag",
-      "searchBody": "flag what matters with low, medium, or high. give a task a priority to mark how much it matters. priority shows as a small accent dot on the task and helps sort what deserves attention first."
+      "searchTitle": "priorites",
+      "searchKeywords": "priorite, haute, moyenne, basse, important, urgent, signaler",
+      "searchBody": "signalez ce qui compte avec basse, moyenne ou haute. attribuez une priorite a une tache pour indiquer son importance. la priorite apparait sous la forme d'un petit point de couleur sur la tache et aide a trier ce qui merite l'attention en premier."
     },
     {
       "id": "pin-task",
@@ -250,19 +250,19 @@
       "sinceVersion": null,
       "deepLink": null,
       "helpAnchors": [],
-      "title": "Pin a task",
-      "summary": "Keep an important task at the top of its list.",
+      "title": "Épingler une tâche",
+      "summary": "Gardez une tâche importante en haut de sa liste.",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Pin a task to hold it at the top of its feed, above the normal order. Unpin it to let it fall back into place."
+            "Épinglez une tâche pour la maintenir en haut de son fil, au-dessus de l'ordre habituel. Désépinglez-la pour la laisser reprendre sa place."
           ]
         }
       ],
-      "searchTitle": "pin a task",
-      "searchKeywords": "pin, pinned, stick, top, important, keep",
-      "searchBody": "keep an important task at the top of its list. pin a task to hold it at the top of its feed, above the normal order. unpin it to let it fall back into place."
+      "searchTitle": "epingler une tache",
+      "searchKeywords": "epingler, epingle, fixer, haut, important, garder",
+      "searchBody": "gardez une tache importante en haut de sa liste. epinglez une tache pour la maintenir en haut de son fil, au-dessus de l'ordre habituel. desepinglez-la pour la laisser reprendre sa place."
     },
     {
       "id": "swipe-actions",
@@ -282,25 +282,25 @@
         "ios": "today"
       },
       "helpAnchors": [],
-      "title": "Swipe actions",
-      "summary": "Swipe a task row for quick actions without opening it.",
+      "title": "Actions par balayage",
+      "summary": "Balayez une ligne de tâche pour des actions rapides sans l'ouvrir.",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Swipe a task row to reveal quick actions — complete it, or remove it — without opening the task at all."
+            "Balayez une ligne de tâche pour révéler des actions rapides — la terminer ou la supprimer — sans ouvrir la tâche du tout."
           ]
         },
         {
           "type": "TIP",
           "texts": [
-            "A completed task shows an undo toast for a few seconds, so a mis-swipe is never final."
+            "Une tâche terminée affiche un toast d'annulation pendant quelques secondes, pour qu'un balayage malencontreux ne soit jamais définitif."
           ]
         }
       ],
-      "searchTitle": "swipe actions",
-      "searchKeywords": "swipe, gesture, slide, complete, delete, quick, row",
-      "searchBody": "swipe a task row for quick actions without opening it. swipe a task row to reveal quick actions — complete it, or remove it — without opening the task at all. a completed task shows an undo toast for a few seconds, so a mis-swipe is never final."
+      "searchTitle": "actions par balayage",
+      "searchKeywords": "balayer, geste, glisser, terminer, supprimer, rapide, ligne",
+      "searchBody": "balayez une ligne de tache pour des actions rapides sans l'ouvrir. balayez une ligne de tache pour reveler des actions rapides — la terminer ou la supprimer — sans ouvrir la tache du tout. une tache terminee affiche un toast d'annulation pendant quelques secondes, pour qu'un balayage malencontreux ne soit jamais definitif."
     },
     {
       "id": "long-press-actions",
@@ -316,19 +316,19 @@
       "sinceVersion": null,
       "deepLink": null,
       "helpAnchors": [],
-      "title": "Long-press a task",
-      "summary": "Press and hold for more options and to start reordering.",
+      "title": "Appui long sur une tâche",
+      "summary": "Appuyez longuement pour plus d'options et pour commencer à réorganiser.",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Press and hold a task to open its options, or to pick it up and drag it to a new position in the list."
+            "Appuyez longuement sur une tâche pour ouvrir ses options, ou pour l'attraper et la faire glisser à une nouvelle position dans la liste."
           ]
         }
       ],
-      "searchTitle": "long-press a task",
-      "searchKeywords": "long press, hold, context menu, options, reorder, drag",
-      "searchBody": "press and hold for more options and to start reordering. press and hold a task to open its options, or to pick it up and drag it to a new position in the list."
+      "searchTitle": "appui long sur une tache",
+      "searchKeywords": "appui long, maintenir, menu contextuel, options, reorganiser, glisser",
+      "searchBody": "appuyez longuement pour plus d'options et pour commencer a reorganiser. appuyez longuement sur une tache pour ouvrir ses options, ou pour l'attraper et la faire glisser a une nouvelle position dans la liste."
     },
     {
       "id": "drag-reorder",
@@ -345,19 +345,19 @@
       "sinceVersion": null,
       "deepLink": null,
       "helpAnchors": [],
-      "title": "Reorder by dragging",
-      "summary": "Drag tasks into the order you want.",
+      "title": "Réorganiser par glissement",
+      "summary": "Faites glisser les tâches dans l'ordre que vous voulez.",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Your lists keep the order you give them. Drag a task up or down to arrange your day the way you think about it."
+            "Vos listes conservent l'ordre que vous leur donnez. Faites glisser une tâche vers le haut ou le bas pour organiser votre journée comme vous la concevez."
           ]
         }
       ],
-      "searchTitle": "reorder by dragging",
-      "searchKeywords": "drag, reorder, move, sort, order, arrange",
-      "searchBody": "drag tasks into the order you want. your lists keep the order you give them. drag a task up or down to arrange your day the way you think about it."
+      "searchTitle": "reorganiser par glissement",
+      "searchKeywords": "glisser, reorganiser, deplacer, trier, ordre, arranger",
+      "searchBody": "faites glisser les taches dans l'ordre que vous voulez. vos listes conservent l'ordre que vous leur donnez. faites glisser une tache vers le haut ou le bas pour organiser votre journee comme vous la concevez."
     },
     {
       "id": "floaters-vs-todos",
@@ -374,25 +374,25 @@
       "sinceVersion": null,
       "deepLink": null,
       "helpAnchors": [],
-      "title": "Floaters vs scheduled tasks",
-      "summary": "Dateless tasks live in Anytime; dated tasks live in Home.",
+      "title": "Floaters et tâches planifiées",
+      "summary": "Les tâches sans date vivent dans À tout moment ; les tâches datées dans Accueil.",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "A scheduled task has a due date and shows up in Home and the calendar. A Floater has no date — it waits quietly in your Anytime feed until you're ready. Use Floaters for “someday” work that shouldn't clutter today."
+            "Une tâche planifiée a une date d'échéance et apparaît dans Accueil et le calendrier. Un Floater n'a pas de date — il attend tranquillement dans votre fil À tout moment jusqu'à ce que vous soyez prêt. Utilisez les Floaters pour le travail « un jour » qui ne devrait pas encombrer aujourd'hui."
           ]
         },
         {
           "type": "TIP",
           "texts": [
-            "Floaters never appear on the calendar — that space is only for dated work."
+            "Les Floaters n'apparaissent jamais sur le calendrier — cet espace est réservé au travail daté."
           ]
         }
       ],
-      "searchTitle": "floaters vs scheduled tasks",
-      "searchKeywords": "floater, anytime, unscheduled, dateless, todo, scheduled, difference",
-      "searchBody": "dateless tasks live in anytime; dated tasks live in home. a scheduled task has a due date and shows up in home and the calendar. a floater has no date — it waits quietly in your anytime feed until you're ready. use floaters for “someday” work that shouldn't clutter today. floaters never appear on the calendar — that space is only for dated work."
+      "searchTitle": "floaters et taches planifiees",
+      "searchKeywords": "floater, a tout moment, non planifie, sans date, tache, planifie, difference",
+      "searchBody": "les taches sans date vivent dans a tout moment ; les taches datees dans accueil. une tache planifiee a une date d'echeance et apparait dans accueil et le calendrier. un floater n'a pas de date — il attend tranquillement dans votre fil a tout moment jusqu'a ce que vous soyez pret. utilisez les floaters pour le travail « un jour » qui ne devrait pas encombrer aujourd'hui. les floaters n'apparaissent jamais sur le calendrier — cet espace est reserve au travail date."
     },
     {
       "id": "floater-lists",
@@ -409,19 +409,19 @@
       "sinceVersion": null,
       "deepLink": null,
       "helpAnchors": [],
-      "title": "Floater lists",
-      "summary": "Group your Anytime tasks into their own lists.",
+      "title": "Listes de Floaters",
+      "summary": "Regroupez vos tâches À tout moment dans leurs propres listes.",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Organize Floaters into separate lists — groceries, packing, ideas — each with its own name and color, and its own completed history."
+            "Organisez les Floaters en listes distinctes — courses, bagages, idées — chacune avec son propre nom, sa couleur et son propre historique de tâches terminées."
           ]
         }
       ],
-      "searchTitle": "floater lists",
-      "searchKeywords": "floater list, anytime, group, list, category, groceries, packing",
-      "searchBody": "group your anytime tasks into their own lists. organize floaters into separate lists — groceries, packing, ideas — each with its own name and color, and its own completed history."
+      "searchTitle": "listes de floaters",
+      "searchKeywords": "liste de floaters, a tout moment, regrouper, liste, categorie, courses, bagages",
+      "searchBody": "regroupez vos taches a tout moment dans leurs propres listes. organisez les floaters en listes distinctes — courses, bagages, idees — chacune avec son propre nom, sa couleur et son propre historique de taches terminees."
     },
     {
       "id": "scheduled-lists",
@@ -438,19 +438,19 @@
       "sinceVersion": null,
       "deepLink": null,
       "helpAnchors": [],
-      "title": "Lists for scheduled tasks",
-      "summary": "Sort dated tasks into named, colored lists.",
+      "title": "Listes pour les tâches planifiées",
+      "summary": "Classez les tâches datées dans des listes nommées et colorées.",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Give scheduled tasks a list so related work stays together. Lists carry a name and color and can be filtered."
+            "Attribuez une liste aux tâches planifiées pour que le travail connexe reste ensemble. Les listes portent un nom et une couleur et peuvent être filtrées."
           ]
         }
       ],
-      "searchTitle": "lists for scheduled tasks",
-      "searchKeywords": "list, project, group, color, scheduled, category",
-      "searchBody": "sort dated tasks into named, colored lists. give scheduled tasks a list so related work stays together. lists carry a name and color and can be filtered."
+      "searchTitle": "listes pour les taches planifiees",
+      "searchKeywords": "liste, projet, regrouper, couleur, planifie, categorie",
+      "searchBody": "classez les taches datees dans des listes nommees et colorees. attribuez une liste aux taches planifiees pour que le travail connexe reste ensemble. les listes portent un nom et une couleur et peuvent etre filtrees."
     },
     {
       "id": "completed-history",
@@ -467,19 +467,19 @@
       "sinceVersion": null,
       "deepLink": null,
       "helpAnchors": [],
-      "title": "Completed history",
-      "summary": "Everything you finished, kept for you to look back on.",
+      "title": "Historique des tâches terminées",
+      "summary": "Tout ce que vous avez achevé, conservé pour un regard en arrière.",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Finished tasks aren't discarded — they move to your completed history, grouped by day, so you can see what you actually got done."
+            "Les tâches achevées ne sont pas jetées — elles rejoignent votre historique des tâches terminées, groupées par jour, pour que vous voyiez ce que vous avez vraiment accompli."
           ]
         }
       ],
-      "searchTitle": "completed history",
-      "searchKeywords": "completed, done, history, finished, archive, past",
-      "searchBody": "everything you finished, kept for you to look back on. finished tasks aren't discarded — they move to your completed history, grouped by day, so you can see what you actually got done."
+      "searchTitle": "historique des taches terminees",
+      "searchKeywords": "termine, fait, historique, acheve, archive, passe",
+      "searchBody": "tout ce que vous avez acheve, conserve pour un regard en arriere. les taches achevees ne sont pas jetees — elles rejoignent votre historique des taches terminees, groupees par jour, pour que vous voyiez ce que vous avez vraiment accompli."
     },
     {
       "id": "overdue-view",
@@ -500,19 +500,19 @@
         "ios": "overdueTodos"
       },
       "helpAnchors": [],
-      "title": "Overdue",
-      "summary": "A dedicated place for tasks whose time has passed.",
+      "title": "En retard",
+      "summary": "Un espace dédié aux tâches dont l'heure est passée.",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Tasks whose due time has passed collect in the Overdue view so nothing slips silently. Reschedule them when you're ready."
+            "Les tâches dont l'heure d'échéance est passée se rassemblent dans la vue En retard pour que rien ne file en silence. Reprogrammez-les quand vous êtes prêt."
           ]
         }
       ],
-      "searchTitle": "overdue",
-      "searchKeywords": "overdue, late, past due, missed, carried over, backlog",
-      "searchBody": "a dedicated place for tasks whose time has passed. tasks whose due time has passed collect in the overdue view so nothing slips silently. reschedule them when you're ready."
+      "searchTitle": "en retard",
+      "searchKeywords": "en retard, tardif, echeance passee, manque, reporte, arriere",
+      "searchBody": "un espace dedie aux taches dont l'heure est passee. les taches dont l'heure d'echeance est passee se rassemblent dans la vue en retard pour que rien ne file en silence. reprogrammez-les quand vous etes pret."
     },
     {
       "id": "search-tasks",
@@ -529,19 +529,19 @@
       "sinceVersion": null,
       "deepLink": null,
       "helpAnchors": [],
-      "title": "Search your tasks",
-      "summary": "Find any task by title, note, or list name.",
+      "title": "Rechercher vos tâches",
+      "summary": "Trouvez n'importe quelle tâche par titre, note ou nom de liste.",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Use the search field to filter your tasks instantly by title, description, or list name — no need to scroll."
+            "Utilisez le champ de recherche pour filtrer vos tâches instantanément par titre, description ou nom de liste — sans avoir à faire défiler."
           ]
         }
       ],
-      "searchTitle": "search your tasks",
-      "searchKeywords": "search, find, filter, lookup, query",
-      "searchBody": "find any task by title, note, or list name. use the search field to filter your tasks instantly by title, description, or list name — no need to scroll."
+      "searchTitle": "rechercher vos taches",
+      "searchKeywords": "rechercher, trouver, filtrer, recherche, requete",
+      "searchBody": "trouvez n'importe quelle tache par titre, note ou nom de liste. utilisez le champ de recherche pour filtrer vos taches instantanement par titre, description ou nom de liste — sans avoir a faire defiler."
     },
     {
       "id": "recurrence-presets",
@@ -560,25 +560,25 @@
       "helpAnchors": [
         "recurrence-picker"
       ],
-      "title": "Repeating tasks",
-      "summary": "Make a task repeat daily, weekly, and more.",
+      "title": "Tâches répétées",
+      "summary": "Faites répéter une tâche chaque jour, chaque semaine, et plus encore.",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Set a task to repeat and it comes back on its own schedule. Pick from the presets — every day, weekday, week, or month — and completing one occurrence leaves the rest of the series intact."
+            "Réglez une tâche pour qu'elle se répète et elle revient d'elle-même à son rythme. Choisissez parmi les préréglages — chaque jour, jour ouvré, semaine ou mois — et terminer une occurrence laisse le reste de la série intact."
           ]
         },
         {
           "type": "EXAMPLE",
           "texts": [
-            "Water the plants · every week"
+            "Arroser les plantes · chaque semaine"
           ]
         }
       ],
-      "searchTitle": "repeating tasks",
-      "searchKeywords": "repeat, recurring, recurrence, every day, weekly, monthly, rrule, schedule",
-      "searchBody": "make a task repeat daily, weekly, and more. set a task to repeat and it comes back on its own schedule. pick from the presets — every day, weekday, week, or month — and completing one occurrence leaves the rest of the series intact. water the plants · every week"
+      "searchTitle": "taches repetees",
+      "searchKeywords": "repeter, recurrent, recurrence, chaque jour, hebdomadaire, mensuel, rrule, planifier",
+      "searchBody": "faites repeter une tache chaque jour, chaque semaine, et plus encore. reglez une tache pour qu'elle se repete et elle revient d'elle-meme a son rythme. choisissez parmi les prereglages — chaque jour, jour ouvre, semaine ou mois — et terminer une occurrence laisse le reste de la serie intact. arroser les plantes · chaque semaine"
     },
     {
       "id": "reminders",
@@ -594,25 +594,25 @@
       "sinceVersion": null,
       "deepLink": null,
       "helpAnchors": [],
-      "title": "Reminders",
-      "summary": "Get a notification before a task is due.",
+      "title": "Rappels",
+      "summary": "Recevez une notification avant l'échéance d'une tâche.",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Add a reminder to a scheduled task and your device notifies you at the right time. Reminders are scheduled on your device, so they work even in Local Mode."
+            "Ajoutez un rappel à une tâche planifiée et votre appareil vous prévient au bon moment. Les rappels sont programmés sur votre appareil, ils fonctionnent donc même en Mode local."
           ]
         },
         {
           "type": "TIP",
           "texts": [
-            "Reminder lead-time options vary slightly by task — pick the one that gives you enough warning."
+            "Les options de délai de rappel varient légèrement selon la tâche — choisissez celle qui vous laisse assez de préavis."
           ]
         }
       ],
-      "searchTitle": "reminders",
-      "searchKeywords": "reminder, notification, alert, alarm, notify, before",
-      "searchBody": "get a notification before a task is due. add a reminder to a scheduled task and your device notifies you at the right time. reminders are scheduled on your device, so they work even in local mode. reminder lead-time options vary slightly by task — pick the one that gives you enough warning."
+      "searchTitle": "rappels",
+      "searchKeywords": "rappel, notification, alerte, alarme, prevenir, avant",
+      "searchBody": "recevez une notification avant l'echeance d'une tache. ajoutez un rappel a une tache planifiee et votre appareil vous previent au bon moment. les rappels sont programmes sur votre appareil, ils fonctionnent donc meme en mode local. les options de delai de rappel varient legerement selon la tache — choisissez celle qui vous laisse assez de preavis."
     },
     {
       "id": "home-widget",
@@ -628,19 +628,19 @@
       "sinceVersion": null,
       "deepLink": null,
       "helpAnchors": [],
-      "title": "Home-screen widget",
-      "summary": "See today's tasks without opening the app.",
+      "title": "Widget d'écran d'accueil",
+      "summary": "Consultez les tâches du jour sans ouvrir l'application.",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Add the T'Day widget to your home screen to glance at today's tasks. Tapping the widget opens the app at the right place."
+            "Ajoutez le widget T'Day à votre écran d'accueil pour jeter un œil aux tâches du jour. Toucher le widget ouvre l'application au bon endroit."
           ]
         }
       ],
-      "searchTitle": "home-screen widget",
-      "searchKeywords": "widget, home screen, glance, today, lock screen",
-      "searchBody": "see today's tasks without opening the app. add the t'day widget to your home screen to glance at today's tasks. tapping the widget opens the app at the right place."
+      "searchTitle": "widget d'ecran d'accueil",
+      "searchKeywords": "widget, ecran d'accueil, coup d'œil, aujourd'hui, ecran verrouille",
+      "searchBody": "consultez les taches du jour sans ouvrir l'application. ajoutez le widget t'day a votre ecran d'accueil pour jeter un œil aux taches du jour. toucher le widget ouvre l'application au bon endroit."
     },
     {
       "id": "widget-quick-add",
@@ -656,19 +656,19 @@
       "sinceVersion": null,
       "deepLink": null,
       "helpAnchors": [],
-      "title": "Quick-add from the widget",
-      "summary": "Start a new task straight from the widget.",
+      "title": "Ajout rapide depuis le widget",
+      "summary": "Démarrez une nouvelle tâche directement depuis le widget.",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "The widget has a create button, so you can capture a task from your home screen without first opening the app — and it works in Local Mode too."
+            "Le widget dispose d'un bouton de création, vous pouvez donc saisir une tâche depuis votre écran d'accueil sans ouvrir d'abord l'application — et cela fonctionne aussi en Mode local."
           ]
         }
       ],
-      "searchTitle": "quick-add from the widget",
-      "searchKeywords": "widget, quick add, create, shortcut, home screen",
-      "searchBody": "start a new task straight from the widget. the widget has a create button, so you can capture a task from your home screen without first opening the app — and it works in local mode too."
+      "searchTitle": "ajout rapide depuis le widget",
+      "searchKeywords": "widget, ajout rapide, creer, raccourci, ecran d'accueil",
+      "searchBody": "demarrez une nouvelle tache directement depuis le widget. le widget dispose d'un bouton de creation, vous pouvez donc saisir une tache depuis votre ecran d'accueil sans ouvrir d'abord l'application — et cela fonctionne aussi en mode local."
     },
     {
       "id": "carplay",
@@ -683,19 +683,19 @@
       "sinceVersion": null,
       "deepLink": null,
       "helpAnchors": [],
-      "title": "T'Day on CarPlay",
-      "summary": "Glance at and capture tasks safely while you drive.",
+      "title": "T'Day sur CarPlay",
+      "summary": "Consultez et saisissez vos tâches en toute sécurité au volant.",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "On CarPlay, T'Day shows a focused, glanceable list built for the car, so you can check what's next or add a task by voice without reaching for your phone."
+            "Sur CarPlay, T'Day affiche une liste épurée et lisible d'un coup d'œil, conçue pour la voiture, pour que vous puissiez voir ce qui suit ou ajouter une tâche à la voix sans toucher votre téléphone."
           ]
         }
       ],
-      "searchTitle": "t'day on carplay",
-      "searchKeywords": "carplay, car, driving, voice, apple, hands free",
-      "searchBody": "glance at and capture tasks safely while you drive. on carplay, t'day shows a focused, glanceable list built for the car, so you can check what's next or add a task by voice without reaching for your phone."
+      "searchTitle": "t'day sur carplay",
+      "searchKeywords": "carplay, voiture, conduite, voix, apple, mains libres",
+      "searchBody": "consultez et saisissez vos taches en toute securite au volant. sur carplay, t'day affiche une liste epuree et lisible d'un coup d'œil, concue pour la voiture, pour que vous puissiez voir ce qui suit ou ajouter une tache a la voix sans toucher votre telephone."
     },
     {
       "id": "local-mode",
@@ -711,25 +711,25 @@
       "sinceVersion": null,
       "deepLink": null,
       "helpAnchors": [],
-      "title": "Local Mode",
-      "summary": "Use T'Day fully offline, with no server or account.",
+      "title": "Mode local",
+      "summary": "Utilisez T'Day entièrement hors ligne, sans serveur ni compte.",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Local Mode keeps everything on your device — no login, no server, no upload. It's a first-class way to use T'Day privately, and your local data is never sent anywhere on its own."
+            "Le Mode local garde tout sur votre appareil — pas de connexion, pas de serveur, pas d'envoi. C'est une façon à part entière d'utiliser T'Day en toute confidentialité, et vos données locales ne sont jamais envoyées où que ce soit d'elles-mêmes."
           ]
         },
         {
           "type": "TIP",
           "texts": [
-            "Server-only features are shown here with a “Server mode” badge so you know what changes if you sign in."
+            "Les fonctionnalités réservées au serveur sont signalées ici par un badge « Mode serveur » pour que vous sachiez ce qui change si vous vous connectez."
           ]
         }
       ],
-      "searchTitle": "local mode",
-      "searchKeywords": "local mode, offline, private, no account, no server, on device",
-      "searchBody": "use t'day fully offline, with no server or account. local mode keeps everything on your device — no login, no server, no upload. it's a first-class way to use t'day privately, and your local data is never sent anywhere on its own. server-only features are shown here with a “server mode” badge so you know what changes if you sign in."
+      "searchTitle": "mode local",
+      "searchKeywords": "mode local, hors ligne, prive, sans compte, sans serveur, sur l'appareil",
+      "searchBody": "utilisez t'day entierement hors ligne, sans serveur ni compte. le mode local garde tout sur votre appareil — pas de connexion, pas de serveur, pas d'envoi. c'est une facon a part entiere d'utiliser t'day en toute confidentialite, et vos donnees locales ne sont jamais envoyees ou que ce soit d'elles-memes. les fonctionnalites reservees au serveur sont signalees ici par un badge « mode serveur » pour que vous sachiez ce qui change si vous vous connectez."
     },
     {
       "id": "server-mode",
@@ -746,19 +746,19 @@
       "sinceVersion": null,
       "deepLink": null,
       "helpAnchors": [],
-      "title": "Server Mode",
-      "summary": "Sync across devices through your own private server.",
+      "title": "Mode serveur",
+      "summary": "Synchronisez entre appareils via votre propre serveur privé.",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Sign in to your self-hosted server to sync tasks across devices in real time. Writes happen instantly on your device and replay to the server, so the app stays fast even on a shaky connection."
+            "Connectez-vous à votre serveur auto-hébergé pour synchroniser vos tâches entre appareils en temps réel. Les écritures ont lieu instantanément sur votre appareil puis sont rejouées sur le serveur, ainsi l'application reste rapide même sur une connexion instable."
           ]
         }
       ],
-      "searchTitle": "server mode",
-      "searchKeywords": "server mode, sync, self hosted, account, login, devices, realtime",
-      "searchBody": "sync across devices through your own private server. sign in to your self-hosted server to sync tasks across devices in real time. writes happen instantly on your device and replay to the server, so the app stays fast even on a shaky connection."
+      "searchTitle": "mode serveur",
+      "searchKeywords": "mode serveur, synchronisation, auto-heberge, compte, connexion, appareils, temps reel",
+      "searchBody": "synchronisez entre appareils via votre propre serveur prive. connectez-vous a votre serveur auto-heberge pour synchroniser vos taches entre appareils en temps reel. les ecritures ont lieu instantanement sur votre appareil puis sont rejouees sur le serveur, ainsi l'application reste rapide meme sur une connexion instable."
     },
     {
       "id": "offline-sync",
@@ -774,19 +774,19 @@
       "sinceVersion": null,
       "deepLink": null,
       "helpAnchors": [],
-      "title": "Offline sync",
-      "summary": "Keep working offline; changes replay when you reconnect.",
+      "title": "Synchronisation hors ligne",
+      "summary": "Continuez hors ligne ; les changements se rejouent à la reconnexion.",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "In Server Mode your changes are saved locally first and queued when you're offline. As soon as you reconnect, T'Day replays them to the server in order."
+            "En Mode serveur, vos changements sont d'abord enregistrés localement et mis en file quand vous êtes hors ligne. Dès la reconnexion, T'Day les rejoue sur le serveur dans l'ordre."
           ]
         }
       ],
-      "searchTitle": "offline sync",
-      "searchKeywords": "offline, sync, pending, queue, replay, connection, conflict",
-      "searchBody": "keep working offline; changes replay when you reconnect. in server mode your changes are saved locally first and queued when you're offline. as soon as you reconnect, t'day replays them to the server in order."
+      "searchTitle": "synchronisation hors ligne",
+      "searchKeywords": "hors ligne, synchronisation, en attente, file, rejouer, connexion, conflit",
+      "searchBody": "continuez hors ligne ; les changements se rejouent a la reconnexion. en mode serveur, vos changements sont d'abord enregistres localement et mis en file quand vous etes hors ligne. des la reconnexion, t'day les rejoue sur le serveur dans l'ordre."
     },
     {
       "id": "ai-summary",
@@ -803,25 +803,25 @@
       "sinceVersion": null,
       "deepLink": null,
       "helpAnchors": [],
-      "title": "Task summaries",
-      "summary": "A short, calm read on your day — with optional local AI.",
+      "title": "Résumés de tâches",
+      "summary": "Un aperçu bref et paisible de votre journée — avec une IA locale en option.",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "T'Day can summarize your day in a sentence or two. With a local Ollama model it reads naturally; without one it falls back to a warm, deterministic recap — either way nothing leaves your server."
+            "T'Day peut résumer votre journée en une phrase ou deux. Avec un modèle Ollama local, la lecture est naturelle ; sans lui, il se rabat sur un récapitulatif chaleureux et déterministe — dans les deux cas rien ne quitte votre serveur."
           ]
         },
         {
           "type": "TIP",
           "texts": [
-            "The summary never depends on a cloud AI service — it's local or nothing."
+            "Le résumé ne dépend jamais d'un service d'IA dans le cloud — c'est local ou rien."
           ]
         }
       ],
-      "searchTitle": "task summaries",
-      "searchKeywords": "summary, ai, ollama, overview, digest, local, private",
-      "searchBody": "a short, calm read on your day — with optional local ai. t'day can summarize your day in a sentence or two. with a local ollama model it reads naturally; without one it falls back to a warm, deterministic recap — either way nothing leaves your server. the summary never depends on a cloud ai service — it's local or nothing."
+      "searchTitle": "resumes de taches",
+      "searchKeywords": "resume, ia, ollama, apercu, synthese, local, prive",
+      "searchBody": "un apercu bref et paisible de votre journee — avec une ia locale en option. t'day peut resumer votre journee en une phrase ou deux. avec un modele ollama local, la lecture est naturelle ; sans lui, il se rabat sur un recapitulatif chaleureux et deterministe — dans les deux cas rien ne quitte votre serveur. le resume ne depend jamais d'un service d'ia dans le cloud — c'est local ou rien."
     }
   ]
 }
