@@ -11,7 +11,7 @@ type DateRange = {
   start: Date;
   end: Date;
 };
-//react-big-calendar's date range is either an array of start dates or a single DateRange object
+// A calendar date range is either an array of start dates or a single DateRange object.
 type CalendarDateRange = DateRange | Date[];
 
 /**
