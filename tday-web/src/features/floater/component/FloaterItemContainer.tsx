@@ -10,6 +10,7 @@ import { getPriorityFlag } from "@/lib/priority";
 import { useFloaterListMetaData } from "@/features/floaterList/query/get-floater-list-meta";
 import { useCompleteFloater } from "@/features/floater/query/complete-floater";
 import { useDeleteFloater } from "@/features/floater/query/delete-floater";
+import { PromoteFloaterMenu } from "@/features/floater/component/PromoteFloaterMenu";
 import type { FloaterItemType } from "@/types";
 import FloaterFormSheet from "./FloaterFormSheet";
 import { hapticButtonTap } from "@/lib/haptics";
@@ -294,12 +295,15 @@ export default function FloaterItemContainer({
                   showHandle ? "sm:opacity-100" : "sm:pointer-events-none sm:opacity-0",
                 )}
               >
-                <TaskActionButtons
-                  onEdit={() => { hapticButtonTap(); setDisplayForm(true); }}
-                  onDelete={() => { hapticButtonTap(); deleteMutateFn(floater); }}
-                  editLabel="Edit floater"
-                  deleteLabel="Delete floater"
-                />
+                <div className="flex items-center gap-1">
+                  <PromoteFloaterMenu floater={floater} />
+                  <TaskActionButtons
+                    onEdit={() => { hapticButtonTap(); setDisplayForm(true); }}
+                    onDelete={() => { hapticButtonTap(); deleteMutateFn(floater); }}
+                    editLabel="Edit floater"
+                    deleteLabel="Delete floater"
+                  />
+                </div>
               </div>
             )}
           </div>

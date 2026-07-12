@@ -17,6 +17,7 @@ object GuideTopicIds {
     const val LONG_PRESS_ACTIONS = "long-press-actions"
     const val DRAG_REORDER = "drag-reorder"
     const val FLOATERS_VS_TODOS = "floaters-vs-todos"
+    const val PROMOTE_AND_FLOAT = "promote-and-float"
     const val FLOATER_LISTS = "floater-lists"
     const val SCHEDULED_LISTS = "scheduled-lists"
     const val COMPLETED_HISTORY = "completed-history"

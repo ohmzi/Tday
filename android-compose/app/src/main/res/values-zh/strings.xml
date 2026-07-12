@@ -14,6 +14,12 @@
     <string name="action_delete_task">删除任务</string>
     <string name="action_delete_list">删除列表</string>
     <string name="action_delete">删除</string>
+    <string name="action_schedule">安排</string>
+    <string name="action_schedule_task">安排任务</string>
+    <string name="action_float">放漂</string>
+    <string name="action_float_task">放漂任务</string>
+    <string name="task_promote_failed">无法安排任务</string>
+    <string name="task_float_failed">无法放漂任务</string>
     <string name="action_complete">完成</string>
     <string name="action_more">更多</string>
     <string name="action_more_options">更多选项</string>

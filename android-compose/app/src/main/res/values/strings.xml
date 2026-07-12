@@ -15,6 +15,12 @@
     <string name="action_delete_task">Delete task</string>
     <string name="action_delete_list">Delete list</string>
     <string name="action_delete">Delete</string>
+    <string name="action_schedule">Schedule</string>
+    <string name="action_schedule_task">Schedule task</string>
+    <string name="action_float">Float</string>
+    <string name="action_float_task">Let it float</string>
+    <string name="task_promote_failed">Could not schedule task</string>
+    <string name="task_float_failed">Could not float task</string>
     <string name="action_complete">Complete</string>
     <string name="action_more">More</string>
     <string name="action_more_options">More options</string>

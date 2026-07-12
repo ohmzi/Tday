@@ -272,6 +272,8 @@ enum MutationKind: String, Codable, CaseIterable {
     case uncompleteTodo = "UNCOMPLETE_TODO"
     case completeFloater = "COMPLETE_FLOATER"
     case uncompleteFloater = "UNCOMPLETE_FLOATER"
+    case promoteFloater = "PROMOTE_FLOATER"
+    case demoteTodo = "DEMOTE_TODO"
 }
 
 struct PendingMutationRecord: Identifiable, Equatable, Codable {

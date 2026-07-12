@@ -870,6 +870,39 @@ final class SyncManager {
         case .uncompleteFloater:
             guard let targetID else { return }
             _ = try await api.uncompleteFloaterByBody(payload: FloaterUncompleteRequest(id: targetID))
+
+        case .promoteFloater:
+            guard let targetID else { return }
+            // A floater that never reached the server has nothing to promote yet;
+            // its CREATE_FLOATER replays first and resolveTargetID remaps us.
+            if targetID.hasPrefix(LOCAL_FLOATER_PREFIX) { return }
+            guard let dueEpochMs = mutation.dueEpochMs else { return }
+            let response = try await api.promoteFloater(
+                id: targetID,
+                payload: PromoteFloaterRequest(
+                    due: Date(epochMilliseconds: dueEpochMs).ISO8601Format(),
+                    rrule: mutation.rrule
+                )
+            )
+            // Remap the optimistic local todo (minted at enqueue time, carried
+            // in `name`) to the server row — CREATE_TODO-style reconciliation.
+            if let promotedTodo = response.todo,
+               let localTodoID = mutation.name,
+               localTodoID.hasPrefix(LOCAL_TODO_PREFIX) {
+                resolvedTodoIDs[localTodoID] = promotedTodo.id
+                state = replaceLocalTodoID(state, localTodoID: localTodoID, serverTodoID: promotedTodo.id)
+            }
+
+        case .demoteTodo:
+            guard let targetID else { return }
+            if targetID.hasPrefix(LOCAL_TODO_PREFIX) { return }
+            let response = try await api.demoteTodo(id: targetID)
+            if let demotedFloater = response.floater,
+               let localFloaterID = mutation.name,
+               localFloaterID.hasPrefix(LOCAL_FLOATER_PREFIX) {
+                resolvedFloaterIDs[localFloaterID] = demotedFloater.id
+                state = replaceLocalFloaterID(state, localFloaterID: localFloaterID, serverFloaterID: demotedFloater.id)
+            }
         }
     }
 
@@ -1219,7 +1252,10 @@ private extension MutationKind {
              .setPriority,
              .completeTodo,
              .completeTodoInstance,
-             .uncompleteTodo:
+             .uncompleteTodo,
+             // Consumes a todo (its optimistic floater is local-prefixed and
+             // therefore already merge-protected).
+             .demoteTodo:
             return true
         case .createList,
              .updateList,
@@ -1231,7 +1267,8 @@ private extension MutationKind {
              .updateFloater,
              .deleteFloater,
              .completeFloater,
-             .uncompleteFloater:
+             .uncompleteFloater,
+             .promoteFloater:
             return false
         }
     }
@@ -1242,7 +1279,10 @@ private extension MutationKind {
              .updateFloater,
              .deleteFloater,
              .completeFloater,
-             .uncompleteFloater:
+             .uncompleteFloater,
+             // Consumes a floater (its optimistic todo is local-prefixed and
+             // therefore already merge-protected).
+             .promoteFloater:
             return true
         case .createList,
              .updateList,
@@ -1257,7 +1297,8 @@ private extension MutationKind {
              .setPriority,
              .completeTodo,
              .completeTodoInstance,
-             .uncompleteTodo:
+             .uncompleteTodo,
+             .demoteTodo:
             return false
         }
     }

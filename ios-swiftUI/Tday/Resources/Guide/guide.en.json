@@ -395,6 +395,41 @@
       "searchBody": "dateless tasks live in anytime; dated tasks live in home. a scheduled task has a due date and shows up in home and the calendar. a floater has no date — it waits quietly in your anytime feed until you're ready. use floaters for “someday” work that shouldn't clutter today. floaters never appear on the calendar — that space is only for dated work."
     },
     {
+      "id": "promote-and-float",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "refresh-cw",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.3.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Promote & float",
+      "summary": "Schedule a floater into a real task, or let a stale task float.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "When a floater is ready to become real work, use its Schedule action: pick a time and it moves into Home as a dated task. The other direction works too — an overdue task you keep postponing can quietly float: demote it and it returns to Anytime with no date, keeping its title, notes and priority."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Recurring tasks can't float — end the series first if you want it dateless."
+          ]
+        }
+      ],
+      "searchTitle": "promote & float",
+      "searchKeywords": "promote, schedule floater, demote, let it float, convert, anytime, move, overdue",
+      "searchBody": "schedule a floater into a real task, or let a stale task float. when a floater is ready to become real work, use its schedule action: pick a time and it moves into home as a dated task. the other direction works too — an overdue task you keep postponing can quietly float: demote it and it returns to anytime with no date, keeping its title, notes and priority. recurring tasks can't float — end the series first if you want it dateless."
+    },
+    {
       "id": "floater-lists",
       "section": "ORGANIZING",
       "sectionOrder": 3,

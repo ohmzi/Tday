@@ -75,6 +75,11 @@ object GuideCatalog {
             body = listOf(para(GuideTopicIds.FLOATERS_VS_TODOS), tip(GuideTopicIds.FLOATERS_VS_TODOS)),
         ),
         topic(
+            GuideTopicIds.PROMOTE_AND_FLOAT, GuideSectionId.ORGANIZING, "refresh-cw",
+            setOf(WEB, ANDROID, IOS), sinceVersion = "0.3.0",
+            body = listOf(para(GuideTopicIds.PROMOTE_AND_FLOAT), tip(GuideTopicIds.PROMOTE_AND_FLOAT)),
+        ),
+        topic(
             GuideTopicIds.FLOATER_LISTS, GuideSectionId.ORGANIZING, "list",
             setOf(WEB, ANDROID, IOS), body = listOf(para(GuideTopicIds.FLOATER_LISTS)),
         ),

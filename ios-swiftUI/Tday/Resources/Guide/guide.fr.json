@@ -395,6 +395,41 @@
       "searchBody": "les taches sans date vivent dans a tout moment ; les taches datees dans accueil. une tache planifiee a une date d'echeance et apparait dans accueil et le calendrier. un floater n'a pas de date — il attend tranquillement dans votre fil a tout moment jusqu'a ce que vous soyez pret. utilisez les floaters pour le travail « un jour » qui ne devrait pas encombrer aujourd'hui. les floaters n'apparaissent jamais sur le calendrier — cet espace est reserve au travail date."
     },
     {
+      "id": "promote-and-float",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "refresh-cw",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.3.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Promouvoir et laisser flotter",
+      "summary": "Planifiez un flottant en vraie tâche, ou laissez flotter une tâche en retard.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Quand un flottant est prêt à devenir du vrai travail, utilisez son action Planifier : choisissez une heure et il rejoint l'Accueil comme tâche datée. L'inverse fonctionne aussi — une tâche en retard que vous repoussez sans cesse peut flotter discrètement : rétrogradez-la et elle revient dans À tout moment sans date, en gardant titre, notes et priorité."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Les tâches récurrentes ne peuvent pas flotter — terminez d'abord la série si vous la voulez sans date."
+          ]
+        }
+      ],
+      "searchTitle": "promouvoir et laisser flotter",
+      "searchKeywords": "promouvoir, planifier flottant, retrograder, laisser flotter, convertir, a tout moment, deplacer, en retard",
+      "searchBody": "planifiez un flottant en vraie tache, ou laissez flotter une tache en retard. quand un flottant est pret a devenir du vrai travail, utilisez son action planifier : choisissez une heure et il rejoint l'accueil comme tache datee. l'inverse fonctionne aussi — une tache en retard que vous repoussez sans cesse peut flotter discretement : retrogradez-la et elle revient dans a tout moment sans date, en gardant titre, notes et priorite. les taches recurrentes ne peuvent pas flotter — terminez d'abord la serie si vous la voulez sans date."
+    },
+    {
       "id": "floater-lists",
       "section": "ORGANIZING",
       "sectionOrder": 3,

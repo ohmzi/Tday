@@ -199,6 +199,38 @@ class TodoListViewModel @Inject constructor(
         refreshInternal(forceSync = true, showLoading = true)
     }
 
+    /** Schedules a floater into a real Todo at the picked due instant. */
+    fun promoteFloater(todo: TodoItem, dueEpochMs: Long) {
+        val mode = _uiState.value.mode
+        val listId = _uiState.value.listId
+        TdayTelemetry.addBreadcrumb("task.promote", data = taskTelemetryData(mode = mode))
+        viewModelScope.launch {
+            runCatching { todoRepository.promoteFloater(todo, dueEpochMs) }
+                .onFailure {
+                    _uiState.update { current ->
+                        current.copy(errorMessage = appContext.getString(R.string.task_promote_failed))
+                    }
+                }
+            hydrateFromCache(mode, listId)
+        }
+    }
+
+    /** "Let it float": demotes an overdue todo into an Anytime floater. */
+    fun demoteTodo(todo: TodoItem) {
+        val mode = _uiState.value.mode
+        val listId = _uiState.value.listId
+        TdayTelemetry.addBreadcrumb("task.demote", data = taskTelemetryData(mode = mode))
+        viewModelScope.launch {
+            runCatching { todoRepository.demoteTodo(todo) }
+                .onFailure {
+                    _uiState.update { current ->
+                        current.copy(errorMessage = appContext.getString(R.string.task_float_failed))
+                    }
+                }
+            hydrateFromCache(mode, listId)
+        }
+    }
+
     suspend fun parseTaskTitleNlp(
         text: String,
         referenceDueEpochMs: Long,

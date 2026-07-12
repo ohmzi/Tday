@@ -311,6 +311,16 @@ final class TdayAPIService {
         try await request(path: "/api/floater/complete", method: "PATCH", body: payload, responseType: MessageResponse.self)
     }
 
+    /// Schedules a floater into a real Todo (the floater row is consumed).
+    func promoteFloater(id: String, payload: PromoteFloaterRequest) async throws -> PromoteFloaterResponse {
+        try await request(path: "/api/floater/\(id)/promote", method: "POST", body: payload, responseType: PromoteFloaterResponse.self)
+    }
+
+    /// Lets a stale todo float: consumes the todo, creating an Anytime floater.
+    func demoteTodo(id: String) async throws -> DemoteTodoResponse {
+        try await request(path: "/api/todo/\(id)/demote", method: "POST", responseType: DemoteTodoResponse.self)
+    }
+
     func uncompleteFloaterByBody(payload: FloaterUncompleteRequest) async throws -> MessageResponse {
         try await request(path: "/api/floater/uncomplete", method: "PATCH", body: payload, responseType: MessageResponse.self)
     }

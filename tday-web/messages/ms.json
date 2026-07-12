@@ -730,6 +730,13 @@
         "body": "Tugasan berjadual mempunyai tarikh tamat tempoh dan muncul di Utama serta kalendar. Floater tiada tarikh — ia menunggu dengan tenang dalam suapan Bila-bila anda sehingga anda bersedia. Guna Floater untuk kerja “suatu hari nanti” yang tidak sepatutnya menyesakkan hari ini.",
         "tip": "Floater tidak pernah muncul pada kalendar — ruang itu hanya untuk kerja bertarikh."
       },
+      "promote-and-float": {
+        "title": "Naik taraf & biar terapung",
+        "summary": "Jadualkan tugasan terapung sebagai tugasan sebenar, atau biarkan tugasan tersekat terapung.",
+        "keywords": "naik taraf, jadualkan terapung, turun taraf, biar terapung, tukar, bila-bila masa, alih, tertunggak",
+        "body": "Apabila tugasan terapung sedia menjadi kerja sebenar, gunakan tindakan Jadualkan: pilih masa dan ia berpindah ke Laman Utama sebagai tugasan bertarikh. Arah sebaliknya juga boleh — tugasan tertunggak yang asyik ditangguhkan boleh terapung secara senyap: turunkan tarafnya dan ia kembali ke Bila-bila masa tanpa tarikh, dengan tajuk, nota dan keutamaan dikekalkan.",
+        "tip": "Tugasan berulang tidak boleh terapung — tamatkan siri itu dahulu jika mahu ia tanpa tarikh."
+      },
       "floater-lists": {
         "title": "Senarai Floater",
         "summary": "Kumpulkan tugasan Bila-bila anda ke dalam senarai tersendiri.",

@@ -14,6 +14,12 @@
     <string name="action_delete_task">Удалить задачу</string>
     <string name="action_delete_list">Удалить список</string>
     <string name="action_delete">Удалить</string>
+    <string name="action_schedule">Запланировать</string>
+    <string name="action_schedule_task">Запланировать задачу</string>
+    <string name="action_float">Отпустить</string>
+    <string name="action_float_task">Отпустить плавать</string>
+    <string name="task_promote_failed">Не удалось запланировать задачу</string>
+    <string name="task_float_failed">Не удалось отпустить задачу</string>
     <string name="action_complete">Завершить</string>
     <string name="action_more">Ещё</string>
     <string name="action_more_options">Дополнительно</string>

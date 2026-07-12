@@ -730,6 +730,13 @@
         "body": "Un'attività pianificata ha una data di scadenza e appare in Home e nel calendario. Un Floater non ha data — attende in silenzio nel tuo feed In qualsiasi momento finché non sei pronto. Usa i Floater per il lavoro “un giorno” che non deve ingombrare l'oggi.",
         "tip": "I Floater non appaiono mai nel calendario — quello spazio è riservato al lavoro con data."
       },
+      "promote-and-float": {
+        "title": "Promuovi e lascia fluttuare",
+        "summary": "Pianifica un fluttuante come attività reale, o lascia fluttuare un'attività ferma.",
+        "keywords": "promuovere, pianificare fluttuante, retrocedere, lascia fluttuare, convertire, in qualsiasi momento, spostare, in ritardo",
+        "body": "Quando un fluttuante è pronto a diventare lavoro vero, usa la sua azione Pianifica: scegli un orario e passerà in Home come attività con data. Vale anche il contrario: un'attività in ritardo che continui a rimandare può fluttuare in silenzio; retrocedila e tornerà in Qualsiasi momento senza data, conservando titolo, note e priorità.",
+        "tip": "Le attività ricorrenti non possono fluttuare: termina prima la serie se la vuoi senza data."
+      },
       "floater-lists": {
         "title": "Elenchi di Floater",
         "summary": "Raggruppa le tue attività In qualsiasi momento in elenchi propri.",

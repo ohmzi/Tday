@@ -395,6 +395,41 @@
       "searchBody": "las tareas sin fecha viven en en cualquier momento; las que tienen fecha, en inicio. una tarea programada tiene fecha de vencimiento y aparece en inicio y en el calendario. un flotante no tiene fecha: espera con calma en tu vista en cualquier momento hasta que estes listo. usa los flotantes para lo de «algun dia» que no deberia llenar el hoy. los flotantes nunca aparecen en el calendario: ese espacio es solo para lo que tiene fecha."
     },
     {
+      "id": "promote-and-float",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "refresh-cw",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.3.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Promover y flotar",
+      "summary": "Programa un flotante como tarea real, o deja flotar una tarea estancada.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Cuando un flotante esté listo para convertirse en trabajo real, usa su acción Programar: elige una hora y pasará a Inicio como tarea con fecha. También funciona al revés: una tarea atrasada que sigues posponiendo puede flotar tranquilamente; degrádala y volverá a Cualquier momento sin fecha, conservando su título, notas y prioridad."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Las tareas recurrentes no pueden flotar: termina primero la serie si quieres que quede sin fecha."
+          ]
+        }
+      ],
+      "searchTitle": "promover y flotar",
+      "searchKeywords": "promover, programar flotante, degradar, dejar flotar, convertir, en cualquier momento, mover, atrasada",
+      "searchBody": "programa un flotante como tarea real, o deja flotar una tarea estancada. cuando un flotante este listo para convertirse en trabajo real, usa su accion programar: elige una hora y pasara a inicio como tarea con fecha. tambien funciona al reves: una tarea atrasada que sigues posponiendo puede flotar tranquilamente; degradala y volvera a cualquier momento sin fecha, conservando su titulo, notas y prioridad. las tareas recurrentes no pueden flotar: termina primero la serie si quieres que quede sin fecha."
+    },
+    {
       "id": "floater-lists",
       "section": "ORGANIZING",
       "sectionOrder": 3,

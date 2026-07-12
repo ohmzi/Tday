@@ -1349,6 +1349,8 @@ private fun TodosRoute(
         onMoveTaskToTimeOfDay = viewModel::moveTaskToTimeOfDay,
         onComplete = viewModel::toggleComplete,
         onDelete = viewModel::delete,
+        onPromoteFloater = viewModel::promoteFloater,
+        onDemoteTodo = viewModel::demoteTodo,
         onUpdateListSettings = { targetListId, name, color, iconKey ->
             viewModel.updateListSettings(
                 listId = targetListId,
