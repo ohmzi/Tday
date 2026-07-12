@@ -283,21 +283,13 @@ struct HelpGuideScreen: View {
         viewModel.navigationPath.append(route)
     }
 
-    // Per-topic Lucide asset where it exists; a neutral book for the rest.
-    // Adding the ~19 missing Lucide imagesets (per docs/ICONS.md) is a follow-up.
+    // Lucide asset-catalog name for a kebab glyph (e.g. "wand-sparkles" ->
+    // "LucideWandSparkles"). Every catalog glyph has an imageset, guarded by the
+    // guide-icons coverage test.
     private static func iconAsset(_ name: String) -> String {
-        switch name {
-        case "plus": return "LucidePlus"
-        case "calendar": return "LucideCalendar"
-        case "flag": return "LucideFlag"
-        case "pin": return "LucidePin"
-        case "list": return "LucideList"
-        case "search": return "LucideSearch"
-        case "repeat": return "LucideRepeat"
-        case "car", "car-front": return "LucideCar"
-        case "download": return "LucideDownload"
-        case "sparkles": return "LucideSparkles"
-        default: return "LucideBook"
-        }
+        let pascal = name.split(separator: "-").map { word in
+            String(word.prefix(1)).uppercased() + String(word.dropFirst())
+        }.joined()
+        return "Lucide" + pascal
     }
 }
