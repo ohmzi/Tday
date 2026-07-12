@@ -88,6 +88,7 @@ fun Application.module(config: AppConfig = AppConfig.load()) {
     configureRateLimiting()
     configureRouting()
     warmUpSummaryModel()
+    startReminderPushScheduler()
     logger.info("Tday backend started successfully")
 }
 
@@ -96,6 +97,14 @@ private fun Application.warmUpSummaryModel() {
     launch {
         runCatching { todoSummaryService.warmUp() }
             .onFailure { logger.warn("Summary model warm-up skipped: ${it.message}") }
+    }
+}
+
+private fun Application.startReminderPushScheduler() {
+    val scheduler by inject<com.ohmz.tday.services.ReminderPushScheduler>()
+    launch {
+        runCatching { scheduler.run() }
+            .onFailure { logger.warn("Reminder push scheduler stopped: ${it.message}") }
     }
 }
 

@@ -46,6 +46,7 @@ import com.ohmz.tday.services.PushNotificationService
 import com.ohmz.tday.services.PushNotificationServiceImpl
 import com.ohmz.tday.services.RealtimeService
 import com.ohmz.tday.services.RealtimeServiceImpl
+import com.ohmz.tday.services.ReminderPushScheduler
 import com.ohmz.tday.services.SecurityQuestionService
 import com.ohmz.tday.services.SecurityQuestionServiceImpl
 import com.ohmz.tday.services.TodoNlpService
@@ -97,5 +98,6 @@ val serviceModule = module {
     single<RealtimeService> { RealtimeServiceImpl() }
     single<AdminService> { AdminServiceImpl(get(), get()) }
     single<PushNotificationService> { PushNotificationServiceImpl(get()) }
+    single { ReminderPushScheduler(get()) }
     single<UserApiKeyService> { UserApiKeyServiceImpl(get()) }
 }

@@ -94,6 +94,7 @@ interface PushPayload {
   url?: string;
   icon?: string;
   badgeCount?: number;
+  todoId?: string;
 }
 
 self.addEventListener("push", (event) => {
@@ -111,7 +112,7 @@ self.addEventListener("push", (event) => {
     body: payload.body ?? "",
     icon: "/icon-192.png",
     badge: "/icon-192.png",
-    data: { url: payload.url ?? "/" },
+    data: { url: payload.url ?? "/", todoId: payload.todoId },
     actions: [
       { action: "complete", title: "Complete" },
       { action: "snooze", title: "Snooze 1h" },
@@ -134,30 +135,55 @@ self.addEventListener("push", (event) => {
   event.waitUntil(Promise.all(tasks));
 });
 
+function focusOrOpenApp(url: string): Promise<unknown> {
+  return self.clients
+    .matchAll({ type: "window", includeUncontrolled: true })
+    .then((clientList) => {
+      for (const client of clientList) {
+        if (new URL(client.url).pathname === url && "focus" in client) {
+          return client.focus();
+        }
+      }
+      return self.clients.openWindow(url);
+    });
+}
+
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
 
   const action = event.action;
-  const data = event.notification.data as { url?: string } | undefined;
-  let url = data?.url ?? "/";
+  const data = event.notification.data as
+    | { url?: string; todoId?: string }
+    | undefined;
+  const baseUrl = data?.url ?? "/";
+  const todoId = data?.todoId;
 
-  // Handle notification actions
+  // "Complete" now finishes the task in place via the same endpoint the app
+  // uses (PATCH /api/todo/complete) instead of merely opening the task. The
+  // session cookie rides along with credentials: "include". If the request
+  // fails (offline, expired session), fall back to opening the app so the user
+  // can still act on it.
+  if (action === "complete" && todoId) {
+    event.waitUntil(
+      fetch("/api/todo/complete", {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: todoId }),
+      })
+        .then((res) => {
+          if (!res.ok) throw new Error(`complete failed: ${res.status}`);
+        })
+        .catch(() => focusOrOpenApp(baseUrl)),
+    );
+    return;
+  }
+
+  let url = baseUrl;
   if (action === "snooze") {
-    // Snooze — the client can handle this via a special query param
+    // Snooze — the client handles this via a special query param on open.
     url = `${url}${url.includes("?") ? "&" : "?"}snooze=1h`;
   }
-  // "complete" action and default click both navigate to the task
 
-  event.waitUntil(
-    self.clients
-      .matchAll({ type: "window", includeUncontrolled: true })
-      .then((clientList) => {
-        for (const client of clientList) {
-          if (new URL(client.url).pathname === url && "focus" in client) {
-            return client.focus();
-          }
-        }
-        return self.clients.openWindow(url);
-      }),
-  );
+  event.waitUntil(focusOrOpenApp(url));
 });
