@@ -59,6 +59,30 @@ final class GuideContentContractTests: XCTestCase {
         XCTAssertEqual(GuideSearch.normalize("  Café   Répéter "), "cafe repeter")
     }
 
+    /// Replays the exporter-generated query→ranked-ids vectors against the REAL
+    /// bundled artifact, so the Swift search port cannot drift from the shared
+    /// Kotlin engine (same guard as the web vitest fixture replay).
+    func testSearchRankingMatchesSharedFixtureVectors() throws {
+        let artifact = GuideContentStore.load(locale: "en")
+        XCTAssertFalse(artifact.topics.isEmpty, "bundled guide.en.json must load and contain topics")
+
+        struct SearchFixtures: Decodable { let vectors: [String: [String]] }
+        let url = try XCTUnwrap(
+            Bundle.main.url(forResource: "guide-search-vectors", withExtension: "json"),
+            "guide-search-vectors.json must be bundled (see :shared:exportGuideContent)"
+        )
+        let fixtures = try JSONDecoder().decode(SearchFixtures.self, from: Data(contentsOf: url))
+        XCTAssertFalse(fixtures.vectors.isEmpty)
+
+        for (query, expected) in fixtures.vectors {
+            XCTAssertEqual(
+                GuideSearch.rank(query, artifact.topics),
+                expected,
+                "search ranking parity broke for query \"\(query)\""
+            )
+        }
+    }
+
     func testSearchRankMatchesByKeywordAndHonoursTokenAnd() {
         let topics = [
             makeTopic(id: "recurrence", title: "Repeating tasks", keywords: "repeat, recurring, every", body: "presets"),

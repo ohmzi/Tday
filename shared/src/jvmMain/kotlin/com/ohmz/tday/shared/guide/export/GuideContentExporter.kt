@@ -10,6 +10,7 @@ import com.ohmz.tday.shared.guide.GuideTopic
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
@@ -40,7 +41,10 @@ object GuideContentExporter {
     private const val WEB_FIXTURES = "tday-web/tests/fixtures/guide-search-vectors.json"
     private const val ICONS_MANIFEST = "tday-web/tests/fixtures/guide-icons.json"
     private const val ANDROID_STRINGS = "shared/src/commonMain/kotlin/com/ohmz/tday/shared/guide/GuideStringsGenerated.kt"
+    private const val SUMMARY_STRINGS = "shared/src/commonMain/kotlin/com/ohmz/tday/shared/summary/SummaryStringBundlesGenerated.kt"
+    private const val ROUTES_WHITELIST = "shared/guide-content/routes.json"
     private const val IOS_DIR = "ios-swiftUI/Tday/Resources/Guide"
+    private const val IOS_VECTORS = "$IOS_DIR/guide-search-vectors.json"
 
     @OptIn(ExperimentalSerializationApi::class)
     private val json = Json { prettyPrint = true; prettyPrintIndent = "  "; encodeDefaults = true }
@@ -57,12 +61,15 @@ object GuideContentExporter {
         val en = strings.getValue("en")
 
         validateCatalog(en)
+        validateDeepLinks(rootDir)
 
         val outputs = LinkedHashMap<String, String>()
         outputs[WEB_ARTIFACT] = buildWebArtifact(version)
-        outputs[WEB_FIXTURES] = buildSearchFixtures(en)
+        outputs[WEB_FIXTURES] = buildSearchFixtures(en, GuidePlatform.WEB)
+        outputs[IOS_VECTORS] = buildSearchFixtures(en, GuidePlatform.IOS)
         outputs[ICONS_MANIFEST] = buildIconsManifest()
         outputs[ANDROID_STRINGS] = buildAndroidStrings(strings)
+        outputs[SUMMARY_STRINGS] = buildSummaryBundles(rootDir)
         for (locale in LOCALES) {
             outputs["$IOS_DIR/guide.$locale.json"] = buildIosArtifact(version, resolver(strings, locale))
         }
@@ -105,6 +112,33 @@ object GuideContentExporter {
         }
     }
 
+    /**
+     * Deep links are raw route strings (commonMain cannot see platform navigation
+     * types), so this committed whitelist is the only gate that fires in CI for
+     * mobile route rot. A new deep link means adding its route to
+     * `shared/guide-content/routes.json` in the same PR.
+     */
+    private fun validateDeepLinks(rootDir: File) {
+        val root = Json.parseToJsonElement(File(rootDir, ROUTES_WHITELIST).readText()).jsonObject
+        val whitelists = GuidePlatform.entries.associateWith { platform ->
+            val key = platform.name.lowercase()
+            (root[key] as? JsonArray ?: error("$ROUTES_WHITELIST is missing the '$key' array"))
+                .map { (it as JsonPrimitive).content }
+                .toSet()
+        }
+        val bad = GuideCatalog.topics.flatMap { topic ->
+            val link = topic.deepLink ?: return@flatMap emptyList<String>()
+            GuidePlatform.entries.mapNotNull { platform ->
+                val route = link.forPlatform(platform) ?: return@mapNotNull null
+                if (route in whitelists.getValue(platform)) null
+                else "${topic.id}: ${platform.name.lowercase()} route \"$route\" is not whitelisted in $ROUTES_WHITELIST"
+            }
+        }
+        require(bad.isEmpty()) {
+            "guide deep links failed route-whitelist validation:\n" + bad.joinToString("\n")
+        }
+    }
+
     private fun resolver(strings: Map<String, Map<String, String>>, locale: String): (String) -> String {
         val loc = strings.getValue(locale)
         val en = strings.getValue("en")
@@ -129,8 +163,12 @@ object GuideContentExporter {
         return icons.joinToString(separator = ",\n", prefix = "[\n", postfix = "\n]\n") { "  \"$it\"" }
     }
 
-    private fun buildSearchFixtures(en: Map<String, String>): String {
-        val docs = GuideCatalog.topicsFor(GuidePlatform.WEB).map { docFor(it, resolverFrom(en)) }
+    /**
+     * Query→ranked-ids vectors for [platform]'s topic set, replayed by that
+     * platform's port (vitest for web, XCTest for iOS) to guard ranking parity.
+     */
+    private fun buildSearchFixtures(en: Map<String, String>, platform: GuidePlatform): String {
+        val docs = GuideCatalog.topicsFor(platform).map { docFor(it, resolverFrom(en)) }
         val vectors = SEARCH_QUERIES.associateWith { GuideSearch.rank(it, docs) }
         return json.encodeToString(SearchFixtures.serializer(), SearchFixtures(vectors)) + "\n"
     }
@@ -162,6 +200,70 @@ object GuideContentExporter {
         sb.appendLine("        return stringsByLocale[lang]?.get(key)")
         sb.appendLine("            ?: stringsByLocale.getValue(\"en\")[key]")
         sb.appendLine("            ?: key")
+        sb.appendLine("    }")
+        sb.appendLine("}")
+        return sb.toString()
+    }
+
+    // ── Summary engine strings (generated Kotlin bundles for all locales) ─
+    /**
+     * The phrase keys the deterministic [com.ohmz.tday.shared.summary.SummaryEngine]
+     * consumes. Their source of truth is the web `summary` namespace; a key used by
+     * the engine must be listed here AND exist in every locale file.
+     */
+    private val SUMMARY_VALUE_KEYS = listOf(
+        "and", "clearForNow", "dateMonthDay", "dateMonthDayYear", "dayGroupedPast",
+        "dayGroupedPresent", "dueAnytime", "dueOnDate", "dueOnDateWindow", "dueTodayWindow",
+        "dueTomorrowWindow", "dueTonight", "dueYesterdayWindow", "nextUp", "night",
+        "overdueCatchUp", "qualifierAll", "qualifierBoth", "startWith", "targetOnDate",
+        "targetToday", "targetTomorrow", "targetYesterday", "taskPhrasePast", "taskPhrasePresent",
+        "thenSeparator", "untitledTask", "windowAfternoon", "windowMorning", "windowNight",
+        "window_afternoon", "window_morning",
+    )
+
+    private fun readSummaryBundle(rootDir: File, locale: String): Pair<Map<String, String>, List<String>> {
+        val root = Json.parseToJsonElement(File(rootDir, "tday-web/messages/$locale.json").readText()).jsonObject
+        val summary = root["summary"]?.jsonObject ?: error("locale $locale is missing the 'summary' namespace")
+        val values = SUMMARY_VALUE_KEYS.associateWith { key ->
+            (summary[key] as? JsonPrimitive)?.content ?: error("locale $locale is missing summary.$key")
+        }
+        val months = (summary["monthsShort"] as? JsonArray ?: error("locale $locale is missing summary.monthsShort"))
+            .map { (it as JsonPrimitive).content }
+        require(months.size == 12) { "locale $locale summary.monthsShort must have exactly 12 entries" }
+        return values to months
+    }
+
+    private fun buildSummaryBundles(rootDir: File): String {
+        val sb = StringBuilder()
+        sb.appendLine("package com.ohmz.tday.shared.summary")
+        sb.appendLine()
+        sb.appendLine("// GENERATED by :shared:exportGuideContent — do not edit by hand.")
+        sb.appendLine("// Source of truth: tday-web/messages/<locale>.json (the i18next `summary` namespace).")
+        sb.appendLine("// Regenerate with: ./gradlew :shared:exportGuideContent")
+        sb.appendLine()
+        sb.appendLine("internal object SummaryStringBundles {")
+        for (locale in LOCALES) {
+            val (values, months) = readSummaryBundle(rootDir, locale)
+            sb.appendLine("    val $locale = SummaryStrings(")
+            sb.appendLine("        values = mapOf(")
+            for ((key, value) in values) {
+                sb.appendLine("            ${kquote(key)} to ${kquote(value)},")
+            }
+            sb.appendLine("        ),")
+            sb.appendLine("        monthsShort = listOf(${months.joinToString(", ") { kquote(it) }}),")
+            sb.appendLine("    )")
+        }
+        sb.appendLine()
+        sb.appendLine("    private val byLang: Map<String, SummaryStrings> = mapOf(")
+        for (locale in LOCALES) {
+            sb.appendLine("        \"$locale\" to $locale,")
+        }
+        sb.appendLine("    )")
+        sb.appendLine()
+        sb.appendLine("    fun forLocale(locale: String?): SummaryStrings {")
+        sb.appendLine("        if (locale.isNullOrBlank()) return en")
+        sb.appendLine("        val lang = locale.substringBefore('-').substringBefore('_').lowercase()")
+        sb.appendLine("        return byLang[lang] ?: en")
         sb.appendLine("    }")
         sb.appendLine("}")
         return sb.toString()

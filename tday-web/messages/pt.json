@@ -619,7 +619,24 @@
     "loading": "Generating summary…",
     "error": "Couldn't generate a summary. Please try again.",
     "sourceServer": "Server model",
-    "sourceLocal": "Local model"
+    "sourceLocal": "Local model",
+    "dateMonthDay": "{{day}} {{month}}",
+    "dateMonthDayYear": "{{day}} {{month}} {{year}}",
+    "dueAnytime": "a qualquer momento",
+    "monthsShort": [
+      "jan",
+      "fev",
+      "mar",
+      "abr",
+      "mai",
+      "jun",
+      "jul",
+      "ago",
+      "set",
+      "out",
+      "nov",
+      "dez"
+    ]
   },
   "guide": {
     "title": "Como fazer e dicas",

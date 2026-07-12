@@ -619,7 +619,24 @@
     "loading": "Generating summary…",
     "error": "Couldn't generate a summary. Please try again.",
     "sourceServer": "Server model",
-    "sourceLocal": "Local model"
+    "sourceLocal": "Local model",
+    "dateMonthDay": "{{month}}{{day}}日",
+    "dateMonthDayYear": "{{year}}年{{month}}{{day}}日",
+    "dueAnytime": "随时",
+    "monthsShort": [
+      "1月",
+      "2月",
+      "3月",
+      "4月",
+      "5月",
+      "6月",
+      "7月",
+      "8月",
+      "9月",
+      "10月",
+      "11月",
+      "12月"
+    ]
   },
   "guide": {
     "title": "使用方法与技巧",
