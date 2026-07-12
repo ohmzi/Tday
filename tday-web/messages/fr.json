@@ -321,6 +321,7 @@
     "deleteList": "Supprimer la liste",
     "undo": "Annuler",
     "taskDeleted": "Tâche supprimée",
+    "taskCompleted": "Tâche terminée",
     "listDeleted": "Liste supprimée",
     "listsDeleted": "{{count}} listes supprimées",
     "done": "Terminé",

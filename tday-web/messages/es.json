@@ -321,6 +321,7 @@
     "deleteList": "Eliminar lista",
     "undo": "Deshacer",
     "taskDeleted": "Tarea eliminada",
+    "taskCompleted": "Tarea completada",
     "listDeleted": "Lista eliminada",
     "listsDeleted": "{{count}} listas eliminadas",
     "done": "Listo",

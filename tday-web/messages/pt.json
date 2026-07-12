@@ -321,6 +321,7 @@
     "deleteList": "Excluir lista",
     "undo": "Desfazer",
     "taskDeleted": "Tarefa excluída",
+    "taskCompleted": "Tarefa concluída",
     "listDeleted": "Lista excluída",
     "listsDeleted": "{{count}} listas excluídas",
     "done": "Concluído",

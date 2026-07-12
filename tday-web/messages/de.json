@@ -321,6 +321,7 @@
     "deleteList": "Liste löschen",
     "undo": "Rückgängig",
     "taskDeleted": "Aufgabe gelöscht",
+    "taskCompleted": "Aufgabe erledigt",
     "listDeleted": "Liste gelöscht",
     "listsDeleted": "{{count}} Listen gelöscht",
     "done": "Fertig",
