@@ -91,86 +91,7 @@ struct AppRootView: View {
                     .navigationBarBackButtonHidden(true)
                     .toolbar(.hidden, for: .navigationBar)
                     .navigationDestination(for: AppRoute.self) { route in
-                        switch route {
-                        case .home:
-                            HomeScreen(
-                                container: container,
-                                onRootFeedTabSelected: handleRootFeedTabSelection,
-                                summaryAvailable: !appViewModel.isLocalMode && !appViewModel.isOffline
-                            ) { nextRoute in
-                                handleRoute(nextRoute)
-                            }
-                        case .todayTodos:
-                            TodoListScreen(container: container, mode: .today, listId: nil, listName: nil, highlightedTodoId: nil, summaryAvailable: !appViewModel.isLocalMode && !appViewModel.isOffline)
-                        case .createTodayTodo:
-                            EmptyView()
-                        case .createFloaterTodo:
-                            EmptyView()
-                        case .overdueTodos:
-                            TodoListScreen(container: container, mode: .overdue, listId: nil, listName: nil, highlightedTodoId: nil, summaryAvailable: !appViewModel.isLocalMode && !appViewModel.isOffline)
-                        case .scheduledTodos:
-                            TodoListScreen(container: container, mode: .scheduled, listId: nil, listName: nil, highlightedTodoId: nil, summaryAvailable: !appViewModel.isLocalMode && !appViewModel.isOffline)
-                        case let .allTodos(highlightTodoId):
-                            TodoListScreen(container: container, mode: .all, listId: nil, listName: nil, highlightedTodoId: highlightTodoId, summaryAvailable: !appViewModel.isLocalMode && !appViewModel.isOffline)
-                        case .priorityTodos:
-                            TodoListScreen(container: container, mode: .priority, listId: nil, listName: nil, highlightedTodoId: nil, summaryAvailable: !appViewModel.isLocalMode && !appViewModel.isOffline)
-                        case .floaterTodos:
-                            Color.clear
-                                .navigationBarBackButtonHidden(true)
-                                .toolbar(.hidden, for: .navigationBar)
-                                .onAppear {
-                                    selectRootFeedTab(.floater)
-                                }
-                        case let .floaterListTodos(listId, listName):
-                            TodoListScreen(
-                                container: container,
-                                mode: .floater,
-                                listId: listId,
-                                listName: listName,
-                                highlightedTodoId: nil,
-                                summaryAvailable: !appViewModel.isLocalMode && !appViewModel.isOffline,
-                                onListDeleted: {
-                                    handleRoute(.floaterTodos)
-                                }
-                            )
-                        case let .listTodos(listId, listName):
-                            TodoListScreen(
-                                container: container,
-                                mode: .list,
-                                listId: listId,
-                                listName: listName,
-                                highlightedTodoId: nil,
-                                summaryAvailable: !appViewModel.isLocalMode && !appViewModel.isOffline,
-                                onListDeleted: {
-                                    appViewModel.navigate(to: .home)
-                                }
-                            )
-                        case .completed:
-                            CompletedScreen(container: container)
-                        case .calendar:
-                            CalendarScreen(container: container)
-                        case .settings:
-                            SettingsScreen(viewModel: appViewModel)
-                        case .latestRelease:
-                            LatestReleaseScreen(viewModel: appViewModel)
-                        case let .helpGuide(topic):
-                            HelpGuideScreen(viewModel: appViewModel, initialTopic: topic)
-                        case .forgotPassword:
-                            ForgotPasswordView(
-                                authViewModel: authViewModel,
-                                initialUsername: authViewModel.savedUsername,
-                                onDismiss: {
-                                    appViewModel.goBack()
-                                },
-                                onResetComplete: { _ in
-                                    appViewModel.goBack()
-                                    container.snackbarManager.show(
-                                        L("Password reset. Sign in with your new password."),
-                                        kind: .success
-                                    )
-                                }
-                            )
-                        }
+                        destinationView(for: route)
                     }
                     .onChange(of: appViewModel.navigationPath) { _, path in
                         normalizeRootNavigationPath(path)
@@ -343,6 +264,94 @@ struct AppRootView: View {
             @unknown default:
                 break
             }
+        }
+    }
+
+    // Kept out of `body`: as part of the ~300-line body expression this switch
+    // pushes the type-checker over its time limit ("unable to type-check this
+    // expression in reasonable time"); as a standalone function each case is
+    // checked independently.
+    @ViewBuilder
+    private func destinationView(for route: AppRoute) -> some View {
+        switch route {
+        case .home:
+            HomeScreen(
+                container: container,
+                onRootFeedTabSelected: handleRootFeedTabSelection,
+                summaryAvailable: !appViewModel.isLocalMode && !appViewModel.isOffline
+            ) { nextRoute in
+                handleRoute(nextRoute)
+            }
+        case .todayTodos:
+            TodoListScreen(container: container, mode: .today, listId: nil, listName: nil, highlightedTodoId: nil, summaryAvailable: !appViewModel.isLocalMode && !appViewModel.isOffline)
+        case .createTodayTodo:
+            EmptyView()
+        case .createFloaterTodo:
+            EmptyView()
+        case .overdueTodos:
+            TodoListScreen(container: container, mode: .overdue, listId: nil, listName: nil, highlightedTodoId: nil, summaryAvailable: !appViewModel.isLocalMode && !appViewModel.isOffline)
+        case .scheduledTodos:
+            TodoListScreen(container: container, mode: .scheduled, listId: nil, listName: nil, highlightedTodoId: nil, summaryAvailable: !appViewModel.isLocalMode && !appViewModel.isOffline)
+        case let .allTodos(highlightTodoId):
+            TodoListScreen(container: container, mode: .all, listId: nil, listName: nil, highlightedTodoId: highlightTodoId, summaryAvailable: !appViewModel.isLocalMode && !appViewModel.isOffline)
+        case .priorityTodos:
+            TodoListScreen(container: container, mode: .priority, listId: nil, listName: nil, highlightedTodoId: nil, summaryAvailable: !appViewModel.isLocalMode && !appViewModel.isOffline)
+        case .floaterTodos:
+            Color.clear
+                .navigationBarBackButtonHidden(true)
+                .toolbar(.hidden, for: .navigationBar)
+                .onAppear {
+                    selectRootFeedTab(.floater)
+                }
+        case let .floaterListTodos(listId, listName):
+            TodoListScreen(
+                container: container,
+                mode: .floater,
+                listId: listId,
+                listName: listName,
+                highlightedTodoId: nil,
+                summaryAvailable: !appViewModel.isLocalMode && !appViewModel.isOffline,
+                onListDeleted: {
+                    handleRoute(.floaterTodos)
+                }
+            )
+        case let .listTodos(listId, listName):
+            TodoListScreen(
+                container: container,
+                mode: .list,
+                listId: listId,
+                listName: listName,
+                highlightedTodoId: nil,
+                summaryAvailable: !appViewModel.isLocalMode && !appViewModel.isOffline,
+                onListDeleted: {
+                    appViewModel.navigate(to: .home)
+                }
+            )
+        case .completed:
+            CompletedScreen(container: container)
+        case .calendar:
+            CalendarScreen(container: container)
+        case .settings:
+            SettingsScreen(viewModel: appViewModel)
+        case .latestRelease:
+            LatestReleaseScreen(viewModel: appViewModel)
+        case let .helpGuide(topic):
+            HelpGuideScreen(viewModel: appViewModel, initialTopic: topic)
+        case .forgotPassword:
+            ForgotPasswordView(
+                authViewModel: authViewModel,
+                initialUsername: authViewModel.savedUsername,
+                onDismiss: {
+                    appViewModel.goBack()
+                },
+                onResetComplete: { _ in
+                    appViewModel.goBack()
+                    container.snackbarManager.show(
+                        L("Password reset. Sign in with your new password."),
+                        kind: .success
+                    )
+                }
+            )
         }
     }
 
