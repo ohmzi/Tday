@@ -269,7 +269,7 @@ export const TodoItemCard = ({
             <GripVertical className="h-4 w-4" />
           </div>
 
-      <div className="flex min-w-0 items-center gap-3">
+      <div className="flex min-w-0 items-start gap-3">
         <div className="shrink-0">
           <TodoCheckbox
             icon={Check}

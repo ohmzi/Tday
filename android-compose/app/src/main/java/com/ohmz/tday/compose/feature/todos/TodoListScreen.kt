@@ -3862,7 +3862,6 @@ private fun SwipeTaskRow(
     var localStruck by remember(todo.id) { mutableStateOf(false) }
     var pendingCompletion by remember(todo.id) { mutableStateOf(false) }
     var completionFading by remember(todo.id) { mutableStateOf(false) }
-    var titleLayoutResult by remember(todo.id) { mutableStateOf<TextLayoutResult?>(null) }
     var rowOriginInRoot by remember(todo.id) { mutableStateOf(Offset.Zero) }
     var dragPointerPosition by remember(todo.id) { mutableStateOf<Offset?>(null) }
     val latestOpenSwipeTaskId = rememberUpdatedState(openSwipeTaskId)
@@ -3901,11 +3900,6 @@ private fun SwipeTaskRow(
             easing = FastOutSlowInEasing
         ),
         label = "swipeTaskCompletionOffsetY",
-    )
-    val titleStrikeProgress by animateFloatAsState(
-        targetValue = if (visuallyStruck) 1f else 0f,
-        animationSpec = tween(durationMillis = 320, easing = FastOutSlowInEasing),
-        label = "swipeTaskTitleStrikeProgress",
     )
     val isOverdue = !todo.completed && todo.due?.isBefore(Instant.now()) == true
     val dueBodyText = todo.due?.let {
@@ -4154,7 +4148,9 @@ private fun SwipeTaskRow(
                                 .clip(RoundedCornerShape(18.dp))
                                 .background(foregroundColor, RoundedCornerShape(18.dp))
                                 .background(contentGlowBrush, RoundedCornerShape(18.dp)),
-                            verticalAlignment = Alignment.CenterVertically,
+                            // Top-align so the toggle sits on the first line of a
+                            // multi-line title rather than centring across all lines.
+                            verticalAlignment = Alignment.Top,
                         ) {
                             CircularCheckToggleIcon(
                                 imageVector = if (!visuallyChecked) {
@@ -4193,29 +4189,14 @@ private fun SwipeTaskRow(
                             )
 
                             Column(
+                                // top pad centres the first title line against the
+                                // (taller) toggle so the toggle lands on line one.
                                 modifier = Modifier
-                                    .padding(start = 10.dp, end = 8.dp)
+                                    .padding(start = 10.dp, top = 12.dp, end = 8.dp)
                                     .weight(1f),
                             ) {
                                 Text(
                                     text = todo.title,
-                                    modifier = Modifier.drawWithContent {
-                                        drawContent()
-                                        if (titleStrikeProgress > 0f) {
-                                            val lineEnd = (
-                                                    titleLayoutResult
-                                                        ?.takeIf { it.lineCount > 0 }
-                                                        ?.getLineRight(0) ?: size.width
-                                                    ).coerceIn(0f, size.width)
-                                            val lineY = size.height * 0.56f
-                                            drawLine(
-                                                color = colorScheme.onSurface.copy(alpha = 0.65f),
-                                                start = Offset(0f, lineY),
-                                                end = Offset(lineEnd * titleStrikeProgress, lineY),
-                                                strokeWidth = TdayDimens.BorderWidthThick.toPx(),
-                                            )
-                                        }
-                                    },
                                     color = if (visuallyStruck) {
                                         colorScheme.onSurface.copy(alpha = 0.78f)
                                     } else {
@@ -4223,9 +4204,15 @@ private fun SwipeTaskRow(
                                     },
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.ExtraBold,
-                                    textDecoration = TextDecoration.None,
-                                    maxLines = 2,
-                                    onTextLayout = { titleLayoutResult = it },
+                                    // Real per-line strikethrough crosses out every line of a
+                                    // wrapped title instead of one rule down the middle.
+                                    textDecoration = if (visuallyStruck) {
+                                        TextDecoration.LineThrough
+                                    } else {
+                                        TextDecoration.None
+                                    },
+                                    // No line cap in-app: show the whole title.
+                                    maxLines = Int.MAX_VALUE,
                                 )
                                 if (showDueText && dueSubtitleText != null) {
                                     Text(
