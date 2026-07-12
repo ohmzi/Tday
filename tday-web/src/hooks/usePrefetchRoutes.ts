@@ -37,6 +37,9 @@ export function usePrefetchRoutes() {
         } else if (pathname.includes("/app/floater")) {
           import("@/pages/TodayPage");
           import("@/pages/TodayTasksPage");
+        } else if (pathname.includes("/app/settings")) {
+          // Warm the guide chunk so tapping "How-To & Tips" feels instant.
+          import("@/pages/HelpGuidePage");
         }
       },
       { timeout: 2000 },
