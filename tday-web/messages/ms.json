@@ -622,217 +622,217 @@
     "sourceLocal": "Local model"
   },
   "guide": {
-    "title": "How-To & Tips",
-    "subtitle": "Everything T'Day can do — the obvious and the hidden.",
-    "searchPlaceholder": "Search features…",
-    "searchAria": "Search the guide",
-    "whatsNew": "What's new",
-    "tryIt": "Try it",
-    "clearSearch": "Clear",
-    "noResults": "No matches. Try another word.",
-    "results": "{{count}} results",
+    "title": "Panduan & Petua",
+    "subtitle": "Segala yang T'Day mampu lakukan — yang jelas dan yang tersembunyi.",
+    "searchPlaceholder": "Cari ciri…",
+    "searchAria": "Cari dalam panduan",
+    "whatsNew": "Apa yang baharu",
+    "tryIt": "Cuba",
+    "clearSearch": "Kosongkan",
+    "noResults": "Tiada padanan. Cuba perkataan lain.",
+    "results": "{{count}} hasil",
     "badges": {
-      "hiddenGem": "Hidden gem",
-      "proTip": "Pro tip",
-      "new": "New",
-      "server": "Server mode"
+      "hiddenGem": "Permata tersembunyi",
+      "proTip": "Petua pro",
+      "new": "Baharu",
+      "server": "Mod pelayan"
     },
     "sections": {
-      "gettingStarted": "Getting started",
-      "captureAndDates": "Capture & dates",
-      "gestures": "Gestures",
-      "organizing": "Organizing",
-      "recurrenceAndReminders": "Recurrence & reminders",
-      "widgetsAndSurfaces": "Widgets & surfaces",
-      "modesAndSync": "Modes & sync",
-      "integrations": "Integrations",
-      "keyboardShortcuts": "Keyboard shortcuts"
+      "gettingStarted": "Bermula",
+      "captureAndDates": "Catat & tarikh",
+      "gestures": "Gerak isyarat",
+      "organizing": "Menyusun",
+      "recurrenceAndReminders": "Ulangan & peringatan",
+      "widgetsAndSurfaces": "Widget & paparan",
+      "modesAndSync": "Mod & penyegerakan",
+      "integrations": "Integrasi",
+      "keyboardShortcuts": "Pintasan papan kekunci"
     },
     "topics": {
       "root-feeds": {
-        "title": "Home and Anytime",
-        "summary": "Two calm home feeds you switch between from the dock.",
-        "keywords": "home, anytime, feed, dock, root, navigate, tabs",
-        "body": "T'Day has two sibling feeds. Home holds your scheduled tasks for today and beyond. Anytime holds Floaters — tasks with no date. Switch between them from the dock at the bottom, and create a task from either one."
+        "title": "Utama dan Bila-bila",
+        "summary": "Dua suapan utama yang tenang, boleh ditukar dari dok.",
+        "keywords": "utama, bila-bila, suapan, dok, akar, navigasi, tab",
+        "body": "T'Day mempunyai dua suapan seiring. Utama menyimpan tugasan berjadual anda untuk hari ini dan seterusnya. Bila-bila menyimpan Floater — tugasan tanpa tarikh. Tukar antara keduanya dari dok di bahagian bawah, dan cipta tugasan dari mana-mana satu."
       },
       "create-task": {
-        "title": "Create a task",
-        "summary": "Add a scheduled task or a dateless Floater in a couple of taps.",
-        "keywords": "create, add, new, task, plus, fab, compose",
-        "body": "Tap the create button to add a task. Give it a title and, if it has a date, a due time. Leave the date off and it becomes a Floater in your Anytime feed instead.",
-        "tip": "Start typing a date right in the title — T'Day reads it for you. See “Type the date”."
+        "title": "Cipta tugasan",
+        "summary": "Tambah tugasan berjadual atau Floater tanpa tarikh dengan beberapa ketikan.",
+        "keywords": "cipta, tambah, baharu, tugasan, tambah, fab, karang",
+        "body": "Ketik butang cipta untuk menambah tugasan. Beri tajuk dan, jika ia bertarikh, masa tamat tempoh. Biarkan tarikh kosong dan ia menjadi Floater dalam suapan Bila-bila anda.",
+        "tip": "Mula taip tarikh terus dalam tajuk — T'Day membacanya untuk anda. Lihat “Taip tarikh”."
       },
       "nlp-date-syntax": {
-        "title": "Type the date",
-        "summary": "Write the date into the title and T'Day schedules it for you.",
-        "keywords": "natural language, date, tomorrow, next week, parse, quick, smart, nlp, on device",
-        "body": "You don't need to open a date picker. Type a date phrase straight into the task title and T'Day parses it on-device — no account or network needed — highlighting the part it understood and scheduling the task.",
-        "example": "dentist tuesday 3pm"
+        "title": "Taip tarikh",
+        "summary": "Tulis tarikh dalam tajuk dan T'Day menjadualkannya untuk anda.",
+        "keywords": "bahasa semula jadi, tarikh, esok, minggu depan, hurai, pantas, pintar, nlp, pada peranti",
+        "body": "Anda tidak perlu membuka pemilih tarikh. Taip frasa tarikh terus dalam tajuk tugasan dan T'Day menghuraikannya pada peranti — tanpa akaun atau rangkaian — menyerlahkan bahagian yang difahaminya dan menjadualkan tugasan itu.",
+        "example": "doktor gigi selasa 3 petang"
       },
       "calendar-views": {
-        "title": "Calendar views",
-        "summary": "See your scheduled tasks by month, week, or day.",
-        "keywords": "calendar, month, week, day, agenda, view, dates",
-        "body": "Open the calendar to see scheduled tasks laid out by month, week, or day. Swipe or use the chevrons to move between periods; the top-right button jumps you back to today without changing the view."
+        "title": "Paparan kalendar",
+        "summary": "Lihat tugasan berjadual anda mengikut bulan, minggu, atau hari.",
+        "keywords": "kalendar, bulan, minggu, hari, agenda, paparan, tarikh",
+        "body": "Buka kalendar untuk melihat tugasan berjadual disusun mengikut bulan, minggu, atau hari. Leret atau guna anak panah untuk beralih antara tempoh; butang di kanan atas membawa anda kembali ke hari ini tanpa menukar paparan."
       },
       "priorities": {
-        "title": "Priorities",
-        "summary": "Flag what matters with Low, Medium, or High.",
-        "keywords": "priority, high, medium, low, important, urgent, flag",
-        "body": "Give a task a priority to mark how much it matters. Priority shows as a small accent dot on the task and helps sort what deserves attention first."
+        "title": "Keutamaan",
+        "summary": "Tandakan yang penting dengan Rendah, Sederhana, atau Tinggi.",
+        "keywords": "keutamaan, tinggi, sederhana, rendah, penting, mustahak, tanda",
+        "body": "Beri tugasan satu keutamaan untuk menanda betapa pentingnya ia. Keutamaan dipaparkan sebagai titik aksen kecil pada tugasan dan membantu menyusun perkara yang patut diberi perhatian dahulu."
       },
       "pin-task": {
-        "title": "Pin a task",
-        "summary": "Keep an important task at the top of its list.",
-        "keywords": "pin, pinned, stick, top, important, keep",
-        "body": "Pin a task to hold it at the top of its feed, above the normal order. Unpin it to let it fall back into place."
+        "title": "Semat tugasan",
+        "summary": "Kekalkan tugasan penting di bahagian atas senarainya.",
+        "keywords": "semat, disemat, lekat, atas, penting, kekal",
+        "body": "Semat tugasan untuk menahannya di bahagian atas suapannya, di atas susunan biasa. Nyahsemat untuk membiarkannya kembali ke tempatnya."
       },
       "swipe-actions": {
-        "title": "Swipe actions",
-        "summary": "Swipe a task row for quick actions without opening it.",
-        "keywords": "swipe, gesture, slide, complete, delete, quick, row",
-        "body": "Swipe a task row to reveal quick actions — complete it, or remove it — without opening the task at all.",
-        "tip": "A completed task shows an undo toast for a few seconds, so a mis-swipe is never final."
+        "title": "Tindakan leret",
+        "summary": "Leret baris tugasan untuk tindakan pantas tanpa membukanya.",
+        "keywords": "leret, gerak isyarat, sapu, selesai, padam, pantas, baris",
+        "body": "Leret baris tugasan untuk mendedahkan tindakan pantas — selesaikannya, atau buang — tanpa membuka tugasan langsung.",
+        "tip": "Tugasan yang selesai memaparkan toast buat asal selama beberapa saat, jadi leret tersilap tidak pernah muktamad."
       },
       "long-press-actions": {
-        "title": "Long-press a task",
-        "summary": "Press and hold for more options and to start reordering.",
-        "keywords": "long press, hold, context menu, options, reorder, drag",
-        "body": "Press and hold a task to open its options, or to pick it up and drag it to a new position in the list."
+        "title": "Tekan lama tugasan",
+        "summary": "Tekan dan tahan untuk lebih banyak pilihan dan untuk mula menyusun semula.",
+        "keywords": "tekan lama, tahan, menu konteks, pilihan, susun semula, seret",
+        "body": "Tekan dan tahan tugasan untuk membuka pilihannya, atau untuk mengangkatnya dan menyeretnya ke kedudukan baharu dalam senarai."
       },
       "drag-reorder": {
-        "title": "Reorder by dragging",
-        "summary": "Drag tasks into the order you want.",
-        "keywords": "drag, reorder, move, sort, order, arrange",
-        "body": "Your lists keep the order you give them. Drag a task up or down to arrange your day the way you think about it."
+        "title": "Susun semula dengan menyeret",
+        "summary": "Seret tugasan ke susunan yang anda mahu.",
+        "keywords": "seret, susun semula, alih, isih, susunan, atur",
+        "body": "Senarai anda mengekalkan susunan yang anda berikan. Seret tugasan ke atas atau ke bawah untuk mengatur hari anda mengikut cara anda memikirkannya."
       },
       "floaters-vs-todos": {
-        "title": "Floaters vs scheduled tasks",
-        "summary": "Dateless tasks live in Anytime; dated tasks live in Home.",
-        "keywords": "floater, anytime, unscheduled, dateless, todo, scheduled, difference",
-        "body": "A scheduled task has a due date and shows up in Home and the calendar. A Floater has no date — it waits quietly in your Anytime feed until you're ready. Use Floaters for “someday” work that shouldn't clutter today.",
-        "tip": "Floaters never appear on the calendar — that space is only for dated work."
+        "title": "Floater vs tugasan berjadual",
+        "summary": "Tugasan tanpa tarikh tinggal di Bila-bila; tugasan bertarikh tinggal di Utama.",
+        "keywords": "floater, bila-bila, tak berjadual, tanpa tarikh, tugasan, berjadual, perbezaan",
+        "body": "Tugasan berjadual mempunyai tarikh tamat tempoh dan muncul di Utama serta kalendar. Floater tiada tarikh — ia menunggu dengan tenang dalam suapan Bila-bila anda sehingga anda bersedia. Guna Floater untuk kerja “suatu hari nanti” yang tidak sepatutnya menyesakkan hari ini.",
+        "tip": "Floater tidak pernah muncul pada kalendar — ruang itu hanya untuk kerja bertarikh."
       },
       "floater-lists": {
-        "title": "Floater lists",
-        "summary": "Group your Anytime tasks into their own lists.",
-        "keywords": "floater list, anytime, group, list, category, groceries, packing",
-        "body": "Organize Floaters into separate lists — groceries, packing, ideas — each with its own name and color, and its own completed history."
+        "title": "Senarai Floater",
+        "summary": "Kumpulkan tugasan Bila-bila anda ke dalam senarai tersendiri.",
+        "keywords": "senarai floater, bila-bila, kumpul, senarai, kategori, barang runcit, mengemas",
+        "body": "Susun Floater ke dalam senarai berasingan — barang runcit, mengemas beg, idea — setiap satu dengan nama dan warna tersendiri, serta sejarah selesai tersendiri."
       },
       "scheduled-lists": {
-        "title": "Lists for scheduled tasks",
-        "summary": "Sort dated tasks into named, colored lists.",
-        "keywords": "list, project, group, color, scheduled, category",
-        "body": "Give scheduled tasks a list so related work stays together. Lists carry a name and color and can be filtered."
+        "title": "Senarai untuk tugasan berjadual",
+        "summary": "Isih tugasan bertarikh ke dalam senarai bernama dan berwarna.",
+        "keywords": "senarai, projek, kumpul, warna, berjadual, kategori",
+        "body": "Beri tugasan berjadual satu senarai supaya kerja berkaitan kekal bersama. Senarai membawa nama dan warna serta boleh ditapis."
       },
       "completed-history": {
-        "title": "Completed history",
-        "summary": "Everything you finished, kept for you to look back on.",
-        "keywords": "completed, done, history, finished, archive, past",
-        "body": "Finished tasks aren't discarded — they move to your completed history, grouped by day, so you can see what you actually got done."
+        "title": "Sejarah selesai",
+        "summary": "Segala yang anda siapkan, disimpan untuk anda imbas kembali.",
+        "keywords": "selesai, siap, sejarah, tamat, arkib, lepas",
+        "body": "Tugasan yang siap tidak dibuang — ia berpindah ke sejarah selesai anda, dikumpulkan mengikut hari, supaya anda dapat melihat apa yang benar-benar anda siapkan."
       },
       "overdue-view": {
-        "title": "Overdue",
-        "summary": "A dedicated place for tasks whose time has passed.",
-        "keywords": "overdue, late, past due, missed, carried over, backlog",
-        "body": "Tasks whose due time has passed collect in the Overdue view so nothing slips silently. Reschedule them when you're ready."
+        "title": "Tertunggak",
+        "summary": "Tempat khusus untuk tugasan yang masanya telah berlalu.",
+        "keywords": "tertunggak, lewat, lepas tempoh, terlepas, dibawa ke hadapan, tunggakan",
+        "body": "Tugasan yang masa tamat tempohnya telah berlalu terkumpul dalam paparan Tertunggak supaya tiada yang terlepas secara senyap. Jadualkan semula bila anda bersedia."
       },
       "search-tasks": {
-        "title": "Search your tasks",
-        "summary": "Find any task by title, note, or list name.",
-        "keywords": "search, find, filter, lookup, query",
-        "body": "Use the search field to filter your tasks instantly by title, description, or list name — no need to scroll."
+        "title": "Cari tugasan anda",
+        "summary": "Cari sebarang tugasan mengikut tajuk, nota, atau nama senarai.",
+        "keywords": "cari, jumpa, tapis, semak, pertanyaan",
+        "body": "Guna medan carian untuk menapis tugasan anda serta-merta mengikut tajuk, huraian, atau nama senarai — tanpa perlu menatal."
       },
       "recurrence-presets": {
-        "title": "Repeating tasks",
-        "summary": "Make a task repeat daily, weekly, and more.",
-        "keywords": "repeat, recurring, recurrence, every day, weekly, monthly, rrule, schedule",
-        "body": "Set a task to repeat and it comes back on its own schedule. Pick from the presets — every day, weekday, week, or month — and completing one occurrence leaves the rest of the series intact.",
-        "example": "Water the plants · every week"
+        "title": "Tugasan berulang",
+        "summary": "Jadikan tugasan berulang setiap hari, mingguan, dan banyak lagi.",
+        "keywords": "ulang, berulang, ulangan, setiap hari, mingguan, bulanan, rrule, jadual",
+        "body": "Tetapkan tugasan untuk berulang dan ia kembali mengikut jadualnya sendiri. Pilih daripada praset — setiap hari, hari bekerja, minggu, atau bulan — dan menyelesaikan satu kejadian membiarkan selebihnya siri itu utuh.",
+        "example": "Siram pokok · setiap minggu"
       },
       "reminders": {
-        "title": "Reminders",
-        "summary": "Get a notification before a task is due.",
-        "keywords": "reminder, notification, alert, alarm, notify, before",
-        "body": "Add a reminder to a scheduled task and your device notifies you at the right time. Reminders are scheduled on your device, so they work even in Local Mode.",
-        "tip": "Reminder lead-time options vary slightly by task — pick the one that gives you enough warning."
+        "title": "Peringatan",
+        "summary": "Dapatkan pemberitahuan sebelum tugasan tamat tempoh.",
+        "keywords": "peringatan, pemberitahuan, amaran, penggera, maklum, sebelum",
+        "body": "Tambah peringatan pada tugasan berjadual dan peranti anda memberitahu anda pada masa yang tepat. Peringatan dijadualkan pada peranti anda, jadi ia berfungsi walaupun dalam Mod Tempatan.",
+        "tip": "Pilihan tempoh awal peringatan berbeza sedikit mengikut tugasan — pilih yang memberi anda amaran yang cukup awal."
       },
       "push-notifications": {
-        "title": "Web reminders (push)",
-        "summary": "Let the web app notify you when a task is due, even when it's closed.",
-        "keywords": "push, notification, web, browser, reminder, vapid, subscribe, due",
-        "body": "In the web app you can turn on push notifications from Settings. Your self-hosted server then sends a reminder when a task's due time arrives — so the web app can reach you even when the tab is closed. You can complete the task straight from the notification."
+        "title": "Peringatan web (push)",
+        "summary": "Biarkan aplikasi web memberitahu anda apabila tugasan tamat tempoh, walaupun ia ditutup.",
+        "keywords": "push, pemberitahuan, web, pelayar, peringatan, vapid, langgan, tamat tempoh",
+        "body": "Dalam aplikasi web anda boleh menghidupkan pemberitahuan push dari Tetapan. Pelayan hos sendiri anda kemudian menghantar peringatan apabila masa tamat tempoh tugasan tiba — supaya aplikasi web boleh menghubungi anda walaupun tab ditutup. Anda boleh menyelesaikan tugasan terus dari pemberitahuan itu."
       },
       "home-widget": {
-        "title": "Home-screen widget",
-        "summary": "See today's tasks without opening the app.",
-        "keywords": "widget, home screen, glance, today, lock screen",
-        "body": "Add the T'Day widget to your home screen to glance at today's tasks. Tapping the widget opens the app at the right place."
+        "title": "Widget skrin utama",
+        "summary": "Lihat tugasan hari ini tanpa membuka aplikasi.",
+        "keywords": "widget, skrin utama, imbas, hari ini, skrin kunci",
+        "body": "Tambah widget T'Day ke skrin utama anda untuk mengimbas tugasan hari ini. Mengetik widget membuka aplikasi di tempat yang betul."
       },
       "widget-quick-add": {
-        "title": "Quick-add from the widget",
-        "summary": "Start a new task straight from the widget.",
-        "keywords": "widget, quick add, create, shortcut, home screen",
-        "body": "The widget has a create button, so you can capture a task from your home screen without first opening the app — and it works in Local Mode too."
+        "title": "Tambah pantas dari widget",
+        "summary": "Mula tugasan baharu terus dari widget.",
+        "keywords": "widget, tambah pantas, cipta, pintasan, skrin utama",
+        "body": "Widget mempunyai butang cipta, jadi anda boleh mencatat tugasan dari skrin utama tanpa perlu membuka aplikasi dahulu — dan ia berfungsi dalam Mod Tempatan juga."
       },
       "carplay": {
-        "title": "T'Day on CarPlay",
-        "summary": "Glance at and capture tasks safely while you drive.",
-        "keywords": "carplay, car, driving, voice, apple, hands free",
-        "body": "On CarPlay, T'Day shows a focused, glanceable list built for the car, so you can check what's next or add a task by voice without reaching for your phone."
+        "title": "T'Day pada CarPlay",
+        "summary": "Imbas dan catat tugasan dengan selamat semasa anda memandu.",
+        "keywords": "carplay, kereta, memandu, suara, apple, bebas tangan",
+        "body": "Pada CarPlay, T'Day memaparkan senarai yang fokus dan mudah diimbas, dibina untuk kereta, supaya anda boleh menyemak apa yang seterusnya atau menambah tugasan melalui suara tanpa perlu mencapai telefon anda."
       },
       "android-car": {
-        "title": "T'Day car screen",
-        "summary": "A simplified in-app screen made for the car.",
-        "keywords": "car, driving, android, voice, hands free, screen",
-        "body": "T'Day includes a simplified car screen with large targets and voice capture, so you can add a task with minimal fuss while you're on the move."
+        "title": "Skrin kereta T'Day",
+        "summary": "Skrin dalam aplikasi yang dipermudah, dibuat untuk kereta.",
+        "keywords": "kereta, memandu, android, suara, bebas tangan, skrin",
+        "body": "T'Day menyertakan skrin kereta yang dipermudah dengan sasaran besar dan catatan suara, supaya anda boleh menambah tugasan dengan gangguan minimum semasa dalam perjalanan."
       },
       "local-mode": {
-        "title": "Local Mode",
-        "summary": "Use T'Day fully offline, with no server or account.",
-        "keywords": "local mode, offline, private, no account, no server, on device",
-        "body": "Local Mode keeps everything on your device — no login, no server, no upload. It's a first-class way to use T'Day privately, and your local data is never sent anywhere on its own.",
-        "tip": "Server-only features are shown here with a “Server mode” badge so you know what changes if you sign in."
+        "title": "Mod Tempatan",
+        "summary": "Guna T'Day sepenuhnya luar talian, tanpa pelayan atau akaun.",
+        "keywords": "mod tempatan, luar talian, peribadi, tanpa akaun, tanpa pelayan, pada peranti",
+        "body": "Mod Tempatan menyimpan segalanya pada peranti anda — tiada log masuk, tiada pelayan, tiada muat naik. Ia cara utama untuk menggunakan T'Day secara peribadi, dan data tempatan anda tidak pernah dihantar ke mana-mana dengan sendirinya.",
+        "tip": "Ciri khusus pelayan dipaparkan di sini dengan lencana “Mod pelayan” supaya anda tahu apa yang berubah jika anda log masuk."
       },
       "server-mode": {
-        "title": "Server Mode",
-        "summary": "Sync across devices through your own private server.",
-        "keywords": "server mode, sync, self hosted, account, login, devices, realtime",
-        "body": "Sign in to your self-hosted server to sync tasks across devices in real time. Writes happen instantly on your device and replay to the server, so the app stays fast even on a shaky connection."
+        "title": "Mod Pelayan",
+        "summary": "Segerakkan merentas peranti melalui pelayan peribadi anda sendiri.",
+        "keywords": "mod pelayan, segerak, hos sendiri, akaun, log masuk, peranti, masa nyata",
+        "body": "Log masuk ke pelayan hos sendiri anda untuk menyegerakkan tugasan merentas peranti dalam masa nyata. Tulisan berlaku serta-merta pada peranti anda dan dimainkan semula ke pelayan, jadi aplikasi kekal pantas walaupun pada sambungan yang tidak stabil."
       },
       "offline-sync": {
-        "title": "Offline sync",
-        "summary": "Keep working offline; changes replay when you reconnect.",
-        "keywords": "offline, sync, pending, queue, replay, connection, conflict",
-        "body": "In Server Mode your changes are saved locally first and queued when you're offline. As soon as you reconnect, T'Day replays them to the server in order."
+        "title": "Penyegerakan luar talian",
+        "summary": "Terus bekerja luar talian; perubahan dimainkan semula apabila anda bersambung semula.",
+        "keywords": "luar talian, segerak, tertunggak, baris gilir, main semula, sambungan, konflik",
+        "body": "Dalam Mod Pelayan perubahan anda disimpan secara tempatan dahulu dan dibariskan apabila anda luar talian. Sebaik sahaja anda bersambung semula, T'Day memainkannya semula ke pelayan mengikut urutan."
       },
       "in-app-update": {
-        "title": "In-app updates",
-        "summary": "Install the latest T'Day build from inside the app.",
-        "keywords": "update, upgrade, version, install, apk, latest release",
-        "body": "When a new build is available, T'Day can download and install it for you from the Latest Release screen, so you stay current without hunting for a file."
+        "title": "Kemas kini dalam aplikasi",
+        "summary": "Pasang binaan T'Day terkini dari dalam aplikasi.",
+        "keywords": "kemas kini, naik taraf, versi, pasang, apk, keluaran terkini",
+        "body": "Apabila binaan baharu tersedia, T'Day boleh memuat turun dan memasangnya untuk anda dari skrin Keluaran Terkini, supaya anda kekal terkini tanpa perlu memburu fail."
       },
       "api-key-homarr": {
-        "title": "API key & Homarr",
-        "summary": "Show your tasks on a dashboard with a personal API key.",
-        "keywords": "api key, homarr, dashboard, integration, token, widget, homelab",
-        "body": "Generate a personal API key in Settings to surface your tasks in a dashboard like Homarr. The key is tied to your account, so keep it private.",
-        "step0": "Open Settings and find the API key card.",
-        "step1": "Generate a key and copy it — it's shown once.",
-        "step2": "Paste it into your dashboard's T'Day widget."
+        "title": "Kunci API & Homarr",
+        "summary": "Paparkan tugasan anda pada papan pemuka dengan kunci API peribadi.",
+        "keywords": "kunci api, homarr, papan pemuka, integrasi, token, widget, homelab",
+        "body": "Jana kunci API peribadi dalam Tetapan untuk menampilkan tugasan anda pada papan pemuka seperti Homarr. Kunci itu terikat pada akaun anda, jadi rahsiakannya.",
+        "step0": "Buka Tetapan dan cari kad kunci API.",
+        "step1": "Jana kunci dan salinnya — ia dipaparkan sekali sahaja.",
+        "step2": "Tampalkannya ke dalam widget T'Day pada papan pemuka anda."
       },
       "ai-summary": {
-        "title": "Task summaries",
-        "summary": "A short, calm read on your day — with optional local AI.",
-        "keywords": "summary, ai, ollama, overview, digest, local, private",
-        "body": "T'Day can summarize your day in a sentence or two. With a local Ollama model it reads naturally; without one it falls back to a warm, deterministic recap — either way nothing leaves your server.",
-        "tip": "The summary never depends on a cloud AI service — it's local or nothing."
+        "title": "Ringkasan tugasan",
+        "summary": "Bacaan ringkas dan tenang tentang hari anda — dengan AI tempatan pilihan.",
+        "keywords": "ringkasan, ai, ollama, gambaran, ringkas, tempatan, peribadi",
+        "body": "T'Day boleh meringkaskan hari anda dalam satu atau dua ayat. Dengan model Ollama tempatan ia berbunyi semula jadi; tanpanya ia beralih kepada ringkasan hangat yang boleh diramal — apa pun, tiada yang meninggalkan pelayan anda.",
+        "tip": "Ringkasan tidak pernah bergantung pada perkhidmatan AI awan — ia tempatan atau tiada langsung."
       },
       "keyboard-submit": {
-        "title": "Submit with the keyboard",
-        "summary": "Save a task without reaching for the mouse.",
-        "keywords": "keyboard, shortcut, submit, enter, save, hotkey",
-        "body": "In the web app you can submit the task form straight from the keyboard, so quick capture never breaks your flow.",
+        "title": "Hantar dengan papan kekunci",
+        "summary": "Simpan tugasan tanpa perlu mencapai tetikus.",
+        "keywords": "papan kekunci, pintasan, hantar, enter, simpan, kekunci pantas",
+        "body": "Dalam aplikasi web anda boleh menghantar borang tugasan terus dari papan kekunci, jadi catatan pantas tidak pernah mengganggu aliran anda.",
         "kbd": "Ctrl / ⌘ + Enter"
       }
     }

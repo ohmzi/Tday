@@ -1,73 +1,73 @@
 {
   "currentVersion": "0.2.0",
   "ui": {
-    "title": "How-To & Tips",
-    "subtitle": "Everything T'Day can do — the obvious and the hidden.",
-    "searchPlaceholder": "Search features…",
-    "searchAria": "Search the guide",
-    "whatsNew": "What's new",
-    "tryIt": "Try it",
-    "clearSearch": "Clear",
-    "noResults": "No matches. Try another word.",
-    "results": "{{count}} results",
-    "badges.hiddenGem": "Hidden gem",
-    "badges.proTip": "Pro tip",
-    "badges.new": "New",
-    "badges.server": "Server mode",
-    "sections.gettingStarted": "Getting started",
-    "sections.captureAndDates": "Capture & dates",
-    "sections.gestures": "Gestures",
-    "sections.organizing": "Organizing",
-    "sections.recurrenceAndReminders": "Recurrence & reminders",
-    "sections.widgetsAndSurfaces": "Widgets & surfaces",
-    "sections.modesAndSync": "Modes & sync",
-    "sections.integrations": "Integrations",
-    "sections.keyboardShortcuts": "Keyboard shortcuts"
+    "title": "Инструкции и советы",
+    "subtitle": "Всё, что умеет T'Day, — очевидное и скрытое.",
+    "searchPlaceholder": "Поиск по функциям…",
+    "searchAria": "Поиск по руководству",
+    "whatsNew": "Что нового",
+    "tryIt": "Попробовать",
+    "clearSearch": "Очистить",
+    "noResults": "Ничего не найдено. Попробуйте другое слово.",
+    "results": "Результатов: {{count}}",
+    "badges.hiddenGem": "Скрытая находка",
+    "badges.proTip": "Совет профи",
+    "badges.new": "Новое",
+    "badges.server": "Серверный режим",
+    "sections.gettingStarted": "Первые шаги",
+    "sections.captureAndDates": "Запись и даты",
+    "sections.gestures": "Жесты",
+    "sections.organizing": "Организация",
+    "sections.recurrenceAndReminders": "Повторы и напоминания",
+    "sections.widgetsAndSurfaces": "Виджеты и экраны",
+    "sections.modesAndSync": "Режимы и синхронизация",
+    "sections.integrations": "Интеграции",
+    "sections.keyboardShortcuts": "Горячие клавиши"
   },
   "sections": [
     {
       "id": "GETTING_STARTED",
-      "title": "Getting started",
+      "title": "Первые шаги",
       "order": 0
     },
     {
       "id": "CAPTURE_AND_DATES",
-      "title": "Capture & dates",
+      "title": "Запись и даты",
       "order": 1
     },
     {
       "id": "GESTURES",
-      "title": "Gestures",
+      "title": "Жесты",
       "order": 2
     },
     {
       "id": "ORGANIZING",
-      "title": "Organizing",
+      "title": "Организация",
       "order": 3
     },
     {
       "id": "RECURRENCE_AND_REMINDERS",
-      "title": "Recurrence & reminders",
+      "title": "Повторы и напоминания",
       "order": 4
     },
     {
       "id": "WIDGETS_AND_SURFACES",
-      "title": "Widgets & surfaces",
+      "title": "Виджеты и экраны",
       "order": 5
     },
     {
       "id": "MODES_AND_SYNC",
-      "title": "Modes & sync",
+      "title": "Режимы и синхронизация",
       "order": 6
     },
     {
       "id": "INTEGRATIONS",
-      "title": "Integrations",
+      "title": "Интеграции",
       "order": 7
     },
     {
       "id": "KEYBOARD_SHORTCUTS",
-      "title": "Keyboard shortcuts",
+      "title": "Горячие клавиши",
       "order": 8
     }
   ],
@@ -87,19 +87,19 @@
       "sinceVersion": null,
       "deepLink": null,
       "helpAnchors": [],
-      "title": "Home and Anytime",
-      "summary": "Two calm home feeds you switch between from the dock.",
+      "title": "Главная и «В любое время»",
+      "summary": "Две спокойные ленты, между которыми вы переключаетесь на панели.",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "T'Day has two sibling feeds. Home holds your scheduled tasks for today and beyond. Anytime holds Floaters — tasks with no date. Switch between them from the dock at the bottom, and create a task from either one."
+            "В T'Day есть две родственные ленты. «Главная» хранит запланированные задачи на сегодня и далее. «В любое время» хранит плавающие задачи — те, у которых нет даты. Переключайтесь между ними с помощью панели внизу и создавайте задачу из любой из них."
           ]
         }
       ],
-      "searchTitle": "home and anytime",
-      "searchKeywords": "home, anytime, feed, dock, root, navigate, tabs",
-      "searchBody": "two calm home feeds you switch between from the dock. t'day has two sibling feeds. home holds your scheduled tasks for today and beyond. anytime holds floaters — tasks with no date. switch between them from the dock at the bottom, and create a task from either one."
+      "searchTitle": "главная и «в любое время»",
+      "searchKeywords": "главная, в любое время, лента, панель, док, корень, навигация, вкладки",
+      "searchBody": "две спокойные ленты, между которыми вы переключаетесь на панели. в t'day есть две родственные ленты. «главная» хранит запланированные задачи на сегодня и далее. «в любое время» хранит плавающие задачи — те, у которых нет даты. переключайтесь между ними с помощью панели внизу и создавайте задачу из любой из них."
     },
     {
       "id": "create-task",
@@ -116,25 +116,25 @@
       "sinceVersion": null,
       "deepLink": null,
       "helpAnchors": [],
-      "title": "Create a task",
-      "summary": "Add a scheduled task or a dateless Floater in a couple of taps.",
+      "title": "Создать задачу",
+      "summary": "Добавьте запланированную задачу или плавающую без даты в пару касаний.",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Tap the create button to add a task. Give it a title and, if it has a date, a due time. Leave the date off and it becomes a Floater in your Anytime feed instead."
+            "Нажмите кнопку создания, чтобы добавить задачу. Дайте ей название и, если у неё есть дата, время выполнения. Оставьте дату пустой — и задача станет плавающей в ленте «В любое время»."
           ]
         },
         {
           "type": "TIP",
           "texts": [
-            "Start typing a date right in the title — T'Day reads it for you. See “Type the date”."
+            "Начните вводить дату прямо в названии — T'Day прочитает её за вас. См. «Введите дату»."
           ]
         }
       ],
-      "searchTitle": "create a task",
-      "searchKeywords": "create, add, new, task, plus, fab, compose",
-      "searchBody": "add a scheduled task or a dateless floater in a couple of taps. tap the create button to add a task. give it a title and, if it has a date, a due time. leave the date off and it becomes a floater in your anytime feed instead. start typing a date right in the title — t'day reads it for you. see “type the date”."
+      "searchTitle": "создать задачу",
+      "searchKeywords": "создать, добавить, новая, задача, плюс, кнопка, ввести",
+      "searchBody": "добавьте запланированную задачу или плавающую без даты в пару касаний. нажмите кнопку создания, чтобы добавить задачу. дайте ей название и, если у неё есть дата, время выполнения. оставьте дату пустой — и задача станет плавающей в ленте «в любое время». начните вводить дату прямо в названии — t'day прочитает её за вас. см. «введите дату»."
     },
     {
       "id": "nlp-date-syntax",
@@ -153,25 +153,25 @@
       "helpAnchors": [
         "nlp-title-input"
       ],
-      "title": "Type the date",
-      "summary": "Write the date into the title and T'Day schedules it for you.",
+      "title": "Введите дату",
+      "summary": "Впишите дату в название, и T'Day запланирует задачу за вас.",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "You don't need to open a date picker. Type a date phrase straight into the task title and T'Day parses it on-device — no account or network needed — highlighting the part it understood and scheduling the task."
+            "Не нужно открывать выбор даты. Впишите фразу с датой прямо в название задачи, и T'Day распознает её прямо на устройстве — без аккаунта и без сети — подсветит понятую часть и запланирует задачу."
           ]
         },
         {
           "type": "EXAMPLE",
           "texts": [
-            "dentist tuesday 3pm"
+            "стоматолог вторник 15:00"
           ]
         }
       ],
-      "searchTitle": "type the date",
-      "searchKeywords": "natural language, date, tomorrow, next week, parse, quick, smart, nlp, on device",
-      "searchBody": "write the date into the title and t'day schedules it for you. you don't need to open a date picker. type a date phrase straight into the task title and t'day parses it on-device — no account or network needed — highlighting the part it understood and scheduling the task. dentist tuesday 3pm"
+      "searchTitle": "введите дату",
+      "searchKeywords": "естественный язык, дата, завтра, на следующей неделе, разбор, быстро, умный, распознавание, на устройстве",
+      "searchBody": "впишите дату в название, и t'day запланирует задачу за вас. не нужно открывать выбор даты. впишите фразу с датой прямо в название задачи, и t'day распознает её прямо на устройстве — без аккаунта и без сети — подсветит понятую часть и запланирует задачу. стоматолог вторник 15:00"
     },
     {
       "id": "calendar-views",
@@ -192,19 +192,19 @@
         "ios": "calendar"
       },
       "helpAnchors": [],
-      "title": "Calendar views",
-      "summary": "See your scheduled tasks by month, week, or day.",
+      "title": "Виды календаря",
+      "summary": "Смотрите запланированные задачи по месяцам, неделям или дням.",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Open the calendar to see scheduled tasks laid out by month, week, or day. Swipe or use the chevrons to move between periods; the top-right button jumps you back to today without changing the view."
+            "Откройте календарь, чтобы увидеть запланированные задачи по месяцам, неделям или дням. Листайте свайпом или используйте стрелки для перехода между периодами; кнопка справа вверху возвращает к сегодняшнему дню, не меняя вида."
           ]
         }
       ],
-      "searchTitle": "calendar views",
-      "searchKeywords": "calendar, month, week, day, agenda, view, dates",
-      "searchBody": "see your scheduled tasks by month, week, or day. open the calendar to see scheduled tasks laid out by month, week, or day. swipe or use the chevrons to move between periods; the top-right button jumps you back to today without changing the view."
+      "searchTitle": "виды календаря",
+      "searchKeywords": "календарь, месяц, неделя, день, расписание, вид, даты",
+      "searchBody": "смотрите запланированные задачи по месяцам, неделям или дням. откройте календарь, чтобы увидеть запланированные задачи по месяцам, неделям или дням. листайте свайпом или используйте стрелки для перехода между периодами; кнопка справа вверху возвращает к сегодняшнему дню, не меняя вида."
     },
     {
       "id": "priorities",
@@ -221,19 +221,19 @@
       "sinceVersion": null,
       "deepLink": null,
       "helpAnchors": [],
-      "title": "Priorities",
-      "summary": "Flag what matters with Low, Medium, or High.",
+      "title": "Приоритеты",
+      "summary": "Отметьте важное уровнем «Низкий», «Средний» или «Высокий».",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Give a task a priority to mark how much it matters. Priority shows as a small accent dot on the task and helps sort what deserves attention first."
+            "Задайте задаче приоритет, чтобы обозначить её важность. Приоритет отображается небольшой цветной точкой на задаче и помогает понять, что заслуживает внимания в первую очередь."
           ]
         }
       ],
-      "searchTitle": "priorities",
-      "searchKeywords": "priority, high, medium, low, important, urgent, flag",
-      "searchBody": "flag what matters with low, medium, or high. give a task a priority to mark how much it matters. priority shows as a small accent dot on the task and helps sort what deserves attention first."
+      "searchTitle": "приоритеты",
+      "searchKeywords": "приоритет, высокий, средний, низкий, важно, срочно, отметка",
+      "searchBody": "отметьте важное уровнем «низкий», «средний» или «высокий». задайте задаче приоритет, чтобы обозначить её важность. приоритет отображается небольшой цветной точкой на задаче и помогает понять, что заслуживает внимания в первую очередь."
     },
     {
       "id": "pin-task",
@@ -250,19 +250,19 @@
       "sinceVersion": null,
       "deepLink": null,
       "helpAnchors": [],
-      "title": "Pin a task",
-      "summary": "Keep an important task at the top of its list.",
+      "title": "Закрепить задачу",
+      "summary": "Держите важную задачу вверху её списка.",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Pin a task to hold it at the top of its feed, above the normal order. Unpin it to let it fall back into place."
+            "Закрепите задачу, чтобы удержать её вверху ленты, над обычным порядком. Открепите — и она вернётся на своё место."
           ]
         }
       ],
-      "searchTitle": "pin a task",
-      "searchKeywords": "pin, pinned, stick, top, important, keep",
-      "searchBody": "keep an important task at the top of its list. pin a task to hold it at the top of its feed, above the normal order. unpin it to let it fall back into place."
+      "searchTitle": "закрепить задачу",
+      "searchKeywords": "закрепить, закреплённая, наверху, верх, важно, оставить",
+      "searchBody": "держите важную задачу вверху её списка. закрепите задачу, чтобы удержать её вверху ленты, над обычным порядком. открепите — и она вернётся на своё место."
     },
     {
       "id": "swipe-actions",
@@ -282,25 +282,25 @@
         "ios": "today"
       },
       "helpAnchors": [],
-      "title": "Swipe actions",
-      "summary": "Swipe a task row for quick actions without opening it.",
+      "title": "Действия свайпом",
+      "summary": "Проведите по строке задачи для быстрых действий без её открытия.",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Swipe a task row to reveal quick actions — complete it, or remove it — without opening the task at all."
+            "Проведите по строке задачи, чтобы открыть быстрые действия — завершить или удалить её — вообще не открывая задачу."
           ]
         },
         {
           "type": "TIP",
           "texts": [
-            "A completed task shows an undo toast for a few seconds, so a mis-swipe is never final."
+            "Завершённая задача несколько секунд показывает всплывающее сообщение с отменой, так что случайный свайп никогда не окончателен."
           ]
         }
       ],
-      "searchTitle": "swipe actions",
-      "searchKeywords": "swipe, gesture, slide, complete, delete, quick, row",
-      "searchBody": "swipe a task row for quick actions without opening it. swipe a task row to reveal quick actions — complete it, or remove it — without opening the task at all. a completed task shows an undo toast for a few seconds, so a mis-swipe is never final."
+      "searchTitle": "действия свайпом",
+      "searchKeywords": "свайп, жест, провести, завершить, удалить, быстро, строка",
+      "searchBody": "проведите по строке задачи для быстрых действий без её открытия. проведите по строке задачи, чтобы открыть быстрые действия — завершить или удалить её — вообще не открывая задачу. завершённая задача несколько секунд показывает всплывающее сообщение с отменой, так что случайный свайп никогда не окончателен."
     },
     {
       "id": "long-press-actions",
@@ -316,19 +316,19 @@
       "sinceVersion": null,
       "deepLink": null,
       "helpAnchors": [],
-      "title": "Long-press a task",
-      "summary": "Press and hold for more options and to start reordering.",
+      "title": "Долгое нажатие на задачу",
+      "summary": "Нажмите и удерживайте для дополнительных опций и начала перестановки.",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Press and hold a task to open its options, or to pick it up and drag it to a new position in the list."
+            "Нажмите и удерживайте задачу, чтобы открыть её опции или подхватить её и перетащить на новое место в списке."
           ]
         }
       ],
-      "searchTitle": "long-press a task",
-      "searchKeywords": "long press, hold, context menu, options, reorder, drag",
-      "searchBody": "press and hold for more options and to start reordering. press and hold a task to open its options, or to pick it up and drag it to a new position in the list."
+      "searchTitle": "долгое нажатие на задачу",
+      "searchKeywords": "долгое нажатие, удержание, контекстное меню, опции, перестановка, перетаскивание",
+      "searchBody": "нажмите и удерживайте для дополнительных опций и начала перестановки. нажмите и удерживайте задачу, чтобы открыть её опции или подхватить её и перетащить на новое место в списке."
     },
     {
       "id": "drag-reorder",
@@ -345,19 +345,19 @@
       "sinceVersion": null,
       "deepLink": null,
       "helpAnchors": [],
-      "title": "Reorder by dragging",
-      "summary": "Drag tasks into the order you want.",
+      "title": "Перестановка перетаскиванием",
+      "summary": "Перетаскивайте задачи в нужном вам порядке.",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Your lists keep the order you give them. Drag a task up or down to arrange your day the way you think about it."
+            "Ваши списки сохраняют заданный вами порядок. Перетащите задачу вверх или вниз, чтобы выстроить день так, как вы о нём думаете."
           ]
         }
       ],
-      "searchTitle": "reorder by dragging",
-      "searchKeywords": "drag, reorder, move, sort, order, arrange",
-      "searchBody": "drag tasks into the order you want. your lists keep the order you give them. drag a task up or down to arrange your day the way you think about it."
+      "searchTitle": "перестановка перетаскиванием",
+      "searchKeywords": "перетащить, перестановка, переместить, сортировка, порядок, упорядочить",
+      "searchBody": "перетаскивайте задачи в нужном вам порядке. ваши списки сохраняют заданный вами порядок. перетащите задачу вверх или вниз, чтобы выстроить день так, как вы о нём думаете."
     },
     {
       "id": "floaters-vs-todos",
@@ -374,25 +374,25 @@
       "sinceVersion": null,
       "deepLink": null,
       "helpAnchors": [],
-      "title": "Floaters vs scheduled tasks",
-      "summary": "Dateless tasks live in Anytime; dated tasks live in Home.",
+      "title": "Плавающие и запланированные задачи",
+      "summary": "Задачи без даты живут в «В любое время»; задачи с датой — в «Главной».",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "A scheduled task has a due date and shows up in Home and the calendar. A Floater has no date — it waits quietly in your Anytime feed until you're ready. Use Floaters for “someday” work that shouldn't clutter today."
+            "У запланированной задачи есть дата выполнения, и она появляется в «Главной» и в календаре. У плавающей задачи даты нет — она спокойно ждёт в ленте «В любое время», пока вы не будете готовы. Используйте плавающие задачи для дел «когда-нибудь», которые не должны загромождать сегодняшний день."
           ]
         },
         {
           "type": "TIP",
           "texts": [
-            "Floaters never appear on the calendar — that space is only for dated work."
+            "Плавающие задачи никогда не появляются в календаре — это место только для дел с датой."
           ]
         }
       ],
-      "searchTitle": "floaters vs scheduled tasks",
-      "searchKeywords": "floater, anytime, unscheduled, dateless, todo, scheduled, difference",
-      "searchBody": "dateless tasks live in anytime; dated tasks live in home. a scheduled task has a due date and shows up in home and the calendar. a floater has no date — it waits quietly in your anytime feed until you're ready. use floaters for “someday” work that shouldn't clutter today. floaters never appear on the calendar — that space is only for dated work."
+      "searchTitle": "плавающие и запланированные задачи",
+      "searchKeywords": "плавающая, в любое время, без расписания, без даты, дело, запланированная, разница",
+      "searchBody": "задачи без даты живут в «в любое время»; задачи с датой — в «главной». у запланированной задачи есть дата выполнения, и она появляется в «главной» и в календаре. у плавающей задачи даты нет — она спокойно ждёт в ленте «в любое время», пока вы не будете готовы. используйте плавающие задачи для дел «когда-нибудь», которые не должны загромождать сегодняшний день. плавающие задачи никогда не появляются в календаре — это место только для дел с датой."
     },
     {
       "id": "floater-lists",
@@ -409,19 +409,19 @@
       "sinceVersion": null,
       "deepLink": null,
       "helpAnchors": [],
-      "title": "Floater lists",
-      "summary": "Group your Anytime tasks into their own lists.",
+      "title": "Списки плавающих задач",
+      "summary": "Группируйте задачи «В любое время» в отдельные списки.",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Organize Floaters into separate lists — groceries, packing, ideas — each with its own name and color, and its own completed history."
+            "Организуйте плавающие задачи в отдельные списки — покупки, сборы в дорогу, идеи — у каждого своё название и цвет, а также своя история завершённых."
           ]
         }
       ],
-      "searchTitle": "floater lists",
-      "searchKeywords": "floater list, anytime, group, list, category, groceries, packing",
-      "searchBody": "group your anytime tasks into their own lists. organize floaters into separate lists — groceries, packing, ideas — each with its own name and color, and its own completed history."
+      "searchTitle": "списки плавающих задач",
+      "searchKeywords": "список плавающих, в любое время, группа, список, категория, покупки, сборы",
+      "searchBody": "группируйте задачи «в любое время» в отдельные списки. организуйте плавающие задачи в отдельные списки — покупки, сборы в дорогу, идеи — у каждого своё название и цвет, а также своя история завершённых."
     },
     {
       "id": "scheduled-lists",
@@ -438,19 +438,19 @@
       "sinceVersion": null,
       "deepLink": null,
       "helpAnchors": [],
-      "title": "Lists for scheduled tasks",
-      "summary": "Sort dated tasks into named, colored lists.",
+      "title": "Списки для запланированных задач",
+      "summary": "Сортируйте задачи с датой по именованным цветным спискам.",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Give scheduled tasks a list so related work stays together. Lists carry a name and color and can be filtered."
+            "Присвойте запланированным задачам список, чтобы связанные дела держались вместе. Списки имеют название и цвет, и по ним можно фильтровать."
           ]
         }
       ],
-      "searchTitle": "lists for scheduled tasks",
-      "searchKeywords": "list, project, group, color, scheduled, category",
-      "searchBody": "sort dated tasks into named, colored lists. give scheduled tasks a list so related work stays together. lists carry a name and color and can be filtered."
+      "searchTitle": "списки для запланированных задач",
+      "searchKeywords": "список, проект, группа, цвет, запланированные, категория",
+      "searchBody": "сортируйте задачи с датой по именованным цветным спискам. присвойте запланированным задачам список, чтобы связанные дела держались вместе. списки имеют название и цвет, и по ним можно фильтровать."
     },
     {
       "id": "completed-history",
@@ -467,19 +467,19 @@
       "sinceVersion": null,
       "deepLink": null,
       "helpAnchors": [],
-      "title": "Completed history",
-      "summary": "Everything you finished, kept for you to look back on.",
+      "title": "История завершённых",
+      "summary": "Всё, что вы закончили, сохранено, чтобы вы могли оглянуться назад.",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Finished tasks aren't discarded — they move to your completed history, grouped by day, so you can see what you actually got done."
+            "Законченные задачи не выбрасываются — они переходят в историю завершённых, сгруппированные по дням, чтобы вы видели, что действительно сделали."
           ]
         }
       ],
-      "searchTitle": "completed history",
-      "searchKeywords": "completed, done, history, finished, archive, past",
-      "searchBody": "everything you finished, kept for you to look back on. finished tasks aren't discarded — they move to your completed history, grouped by day, so you can see what you actually got done."
+      "searchTitle": "история завершённых",
+      "searchKeywords": "завершённые, готово, история, законченные, архив, прошлое",
+      "searchBody": "всё, что вы закончили, сохранено, чтобы вы могли оглянуться назад. законченные задачи не выбрасываются — они переходят в историю завершённых, сгруппированные по дням, чтобы вы видели, что действительно сделали."
     },
     {
       "id": "overdue-view",
@@ -500,19 +500,19 @@
         "ios": "overdueTodos"
       },
       "helpAnchors": [],
-      "title": "Overdue",
-      "summary": "A dedicated place for tasks whose time has passed.",
+      "title": "Просроченные",
+      "summary": "Отдельное место для задач, чьё время уже прошло.",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Tasks whose due time has passed collect in the Overdue view so nothing slips silently. Reschedule them when you're ready."
+            "Задачи, чьё время выполнения прошло, собираются в разделе «Просроченные», чтобы ничего не ускользнуло незаметно. Перенесите их, когда будете готовы."
           ]
         }
       ],
-      "searchTitle": "overdue",
-      "searchKeywords": "overdue, late, past due, missed, carried over, backlog",
-      "searchBody": "a dedicated place for tasks whose time has passed. tasks whose due time has passed collect in the overdue view so nothing slips silently. reschedule them when you're ready."
+      "searchTitle": "просроченные",
+      "searchKeywords": "просроченные, опоздание, истёкший срок, пропущенные, перенесённые, задолженность",
+      "searchBody": "отдельное место для задач, чьё время уже прошло. задачи, чьё время выполнения прошло, собираются в разделе «просроченные», чтобы ничего не ускользнуло незаметно. перенесите их, когда будете готовы."
     },
     {
       "id": "search-tasks",
@@ -529,19 +529,19 @@
       "sinceVersion": null,
       "deepLink": null,
       "helpAnchors": [],
-      "title": "Search your tasks",
-      "summary": "Find any task by title, note, or list name.",
+      "title": "Поиск по задачам",
+      "summary": "Найдите любую задачу по названию, заметке или имени списка.",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Use the search field to filter your tasks instantly by title, description, or list name — no need to scroll."
+            "Используйте поле поиска, чтобы мгновенно отфильтровать задачи по названию, описанию или имени списка — без прокрутки."
           ]
         }
       ],
-      "searchTitle": "search your tasks",
-      "searchKeywords": "search, find, filter, lookup, query",
-      "searchBody": "find any task by title, note, or list name. use the search field to filter your tasks instantly by title, description, or list name — no need to scroll."
+      "searchTitle": "поиск по задачам",
+      "searchKeywords": "поиск, найти, фильтр, запрос, искать",
+      "searchBody": "найдите любую задачу по названию, заметке или имени списка. используйте поле поиска, чтобы мгновенно отфильтровать задачи по названию, описанию или имени списка — без прокрутки."
     },
     {
       "id": "recurrence-presets",
@@ -560,25 +560,25 @@
       "helpAnchors": [
         "recurrence-picker"
       ],
-      "title": "Repeating tasks",
-      "summary": "Make a task repeat daily, weekly, and more.",
+      "title": "Повторяющиеся задачи",
+      "summary": "Сделайте так, чтобы задача повторялась ежедневно, еженедельно и не только.",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Set a task to repeat and it comes back on its own schedule. Pick from the presets — every day, weekday, week, or month — and completing one occurrence leaves the rest of the series intact."
+            "Настройте повтор задачи, и она будет возвращаться по своему расписанию. Выбирайте из заготовок — каждый день, по будням, каждую неделю или месяц — и завершение одного повтора не затрагивает остальную серию."
           ]
         },
         {
           "type": "EXAMPLE",
           "texts": [
-            "Water the plants · every week"
+            "Полить цветы · каждую неделю"
           ]
         }
       ],
-      "searchTitle": "repeating tasks",
-      "searchKeywords": "repeat, recurring, recurrence, every day, weekly, monthly, rrule, schedule",
-      "searchBody": "make a task repeat daily, weekly, and more. set a task to repeat and it comes back on its own schedule. pick from the presets — every day, weekday, week, or month — and completing one occurrence leaves the rest of the series intact. water the plants · every week"
+      "searchTitle": "повторяющиеся задачи",
+      "searchKeywords": "повтор, повторяющаяся, повторение, каждый день, еженедельно, ежемесячно, rrule, расписание",
+      "searchBody": "сделайте так, чтобы задача повторялась ежедневно, еженедельно и не только. настройте повтор задачи, и она будет возвращаться по своему расписанию. выбирайте из заготовок — каждый день, по будням, каждую неделю или месяц — и завершение одного повтора не затрагивает остальную серию. полить цветы · каждую неделю"
     },
     {
       "id": "reminders",
@@ -594,25 +594,25 @@
       "sinceVersion": null,
       "deepLink": null,
       "helpAnchors": [],
-      "title": "Reminders",
-      "summary": "Get a notification before a task is due.",
+      "title": "Напоминания",
+      "summary": "Получайте уведомление до срока выполнения задачи.",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Add a reminder to a scheduled task and your device notifies you at the right time. Reminders are scheduled on your device, so they work even in Local Mode."
+            "Добавьте напоминание к запланированной задаче, и устройство уведомит вас в нужное время. Напоминания планируются на вашем устройстве, поэтому работают даже в локальном режиме."
           ]
         },
         {
           "type": "TIP",
           "texts": [
-            "Reminder lead-time options vary slightly by task — pick the one that gives you enough warning."
+            "Варианты времени напоминания немного различаются в зависимости от задачи — выберите тот, что даёт вам достаточно времени."
           ]
         }
       ],
-      "searchTitle": "reminders",
-      "searchKeywords": "reminder, notification, alert, alarm, notify, before",
-      "searchBody": "get a notification before a task is due. add a reminder to a scheduled task and your device notifies you at the right time. reminders are scheduled on your device, so they work even in local mode. reminder lead-time options vary slightly by task — pick the one that gives you enough warning."
+      "searchTitle": "напоминания",
+      "searchKeywords": "напоминание, уведомление, оповещение, будильник, известить, заранее",
+      "searchBody": "получайте уведомление до срока выполнения задачи. добавьте напоминание к запланированной задаче, и устройство уведомит вас в нужное время. напоминания планируются на вашем устройстве, поэтому работают даже в локальном режиме. варианты времени напоминания немного различаются в зависимости от задачи — выберите тот, что даёт вам достаточно времени."
     },
     {
       "id": "home-widget",
@@ -628,19 +628,19 @@
       "sinceVersion": null,
       "deepLink": null,
       "helpAnchors": [],
-      "title": "Home-screen widget",
-      "summary": "See today's tasks without opening the app.",
+      "title": "Виджет на главном экране",
+      "summary": "Смотрите сегодняшние задачи, не открывая приложение.",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Add the T'Day widget to your home screen to glance at today's tasks. Tapping the widget opens the app at the right place."
+            "Добавьте виджет T'Day на главный экран, чтобы взглянуть на сегодняшние задачи. Нажатие на виджет открывает приложение в нужном месте."
           ]
         }
       ],
-      "searchTitle": "home-screen widget",
-      "searchKeywords": "widget, home screen, glance, today, lock screen",
-      "searchBody": "see today's tasks without opening the app. add the t'day widget to your home screen to glance at today's tasks. tapping the widget opens the app at the right place."
+      "searchTitle": "виджет на главном экране",
+      "searchKeywords": "виджет, главный экран, взгляд, сегодня, экран блокировки",
+      "searchBody": "смотрите сегодняшние задачи, не открывая приложение. добавьте виджет t'day на главный экран, чтобы взглянуть на сегодняшние задачи. нажатие на виджет открывает приложение в нужном месте."
     },
     {
       "id": "widget-quick-add",
@@ -656,19 +656,19 @@
       "sinceVersion": null,
       "deepLink": null,
       "helpAnchors": [],
-      "title": "Quick-add from the widget",
-      "summary": "Start a new task straight from the widget.",
+      "title": "Быстрое добавление из виджета",
+      "summary": "Начните новую задачу прямо из виджета.",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "The widget has a create button, so you can capture a task from your home screen without first opening the app — and it works in Local Mode too."
+            "В виджете есть кнопка создания, так что вы можете записать задачу с главного экрана, не открывая сначала приложение, — и это работает даже в локальном режиме."
           ]
         }
       ],
-      "searchTitle": "quick-add from the widget",
-      "searchKeywords": "widget, quick add, create, shortcut, home screen",
-      "searchBody": "start a new task straight from the widget. the widget has a create button, so you can capture a task from your home screen without first opening the app — and it works in local mode too."
+      "searchTitle": "быстрое добавление из виджета",
+      "searchKeywords": "виджет, быстрое добавление, создать, ярлык, главный экран",
+      "searchBody": "начните новую задачу прямо из виджета. в виджете есть кнопка создания, так что вы можете записать задачу с главного экрана, не открывая сначала приложение, — и это работает даже в локальном режиме."
     },
     {
       "id": "carplay",
@@ -683,19 +683,19 @@
       "sinceVersion": null,
       "deepLink": null,
       "helpAnchors": [],
-      "title": "T'Day on CarPlay",
-      "summary": "Glance at and capture tasks safely while you drive.",
+      "title": "T'Day в CarPlay",
+      "summary": "Смотрите и записывайте задачи безопасно за рулём.",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "On CarPlay, T'Day shows a focused, glanceable list built for the car, so you can check what's next or add a task by voice without reaching for your phone."
+            "В CarPlay T'Day показывает лаконичный, легко читаемый список, созданный для автомобиля, так что вы можете проверить, что дальше, или добавить задачу голосом, не отвлекаясь на телефон."
           ]
         }
       ],
-      "searchTitle": "t'day on carplay",
-      "searchKeywords": "carplay, car, driving, voice, apple, hands free",
-      "searchBody": "glance at and capture tasks safely while you drive. on carplay, t'day shows a focused, glanceable list built for the car, so you can check what's next or add a task by voice without reaching for your phone."
+      "searchTitle": "t'day в carplay",
+      "searchKeywords": "carplay, машина, вождение, голос, apple, без рук",
+      "searchBody": "смотрите и записывайте задачи безопасно за рулём. в carplay t'day показывает лаконичный, легко читаемый список, созданный для автомобиля, так что вы можете проверить, что дальше, или добавить задачу голосом, не отвлекаясь на телефон."
     },
     {
       "id": "local-mode",
@@ -711,25 +711,25 @@
       "sinceVersion": null,
       "deepLink": null,
       "helpAnchors": [],
-      "title": "Local Mode",
-      "summary": "Use T'Day fully offline, with no server or account.",
+      "title": "Локальный режим",
+      "summary": "Пользуйтесь T'Day полностью офлайн, без сервера и аккаунта.",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Local Mode keeps everything on your device — no login, no server, no upload. It's a first-class way to use T'Day privately, and your local data is never sent anywhere on its own."
+            "Локальный режим держит всё на вашем устройстве — без входа, без сервера, без выгрузки. Это полноценный способ пользоваться T'Day приватно, и ваши локальные данные никогда никуда не отправляются сами по себе."
           ]
         },
         {
           "type": "TIP",
           "texts": [
-            "Server-only features are shown here with a “Server mode” badge so you know what changes if you sign in."
+            "Функции только для сервера отмечены здесь значком «Серверный режим», чтобы вы знали, что изменится при входе."
           ]
         }
       ],
-      "searchTitle": "local mode",
-      "searchKeywords": "local mode, offline, private, no account, no server, on device",
-      "searchBody": "use t'day fully offline, with no server or account. local mode keeps everything on your device — no login, no server, no upload. it's a first-class way to use t'day privately, and your local data is never sent anywhere on its own. server-only features are shown here with a “server mode” badge so you know what changes if you sign in."
+      "searchTitle": "локальный режим",
+      "searchKeywords": "локальный режим, офлайн, приватно, без аккаунта, без сервера, на устройстве",
+      "searchBody": "пользуйтесь t'day полностью офлайн, без сервера и аккаунта. локальный режим держит всё на вашем устройстве — без входа, без сервера, без выгрузки. это полноценный способ пользоваться t'day приватно, и ваши локальные данные никогда никуда не отправляются сами по себе. функции только для сервера отмечены здесь значком «серверный режим», чтобы вы знали, что изменится при входе."
     },
     {
       "id": "server-mode",
@@ -746,19 +746,19 @@
       "sinceVersion": null,
       "deepLink": null,
       "helpAnchors": [],
-      "title": "Server Mode",
-      "summary": "Sync across devices through your own private server.",
+      "title": "Серверный режим",
+      "summary": "Синхронизируйте устройства через свой собственный приватный сервер.",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Sign in to your self-hosted server to sync tasks across devices in real time. Writes happen instantly on your device and replay to the server, so the app stays fast even on a shaky connection."
+            "Войдите на свой собственный сервер, чтобы синхронизировать задачи между устройствами в реальном времени. Изменения происходят на устройстве мгновенно и передаются на сервер, поэтому приложение остаётся быстрым даже при нестабильном соединении."
           ]
         }
       ],
-      "searchTitle": "server mode",
-      "searchKeywords": "server mode, sync, self hosted, account, login, devices, realtime",
-      "searchBody": "sync across devices through your own private server. sign in to your self-hosted server to sync tasks across devices in real time. writes happen instantly on your device and replay to the server, so the app stays fast even on a shaky connection."
+      "searchTitle": "серверный режим",
+      "searchKeywords": "серверный режим, синхронизация, свой сервер, аккаунт, вход, устройства, в реальном времени",
+      "searchBody": "синхронизируйте устройства через свой собственный приватный сервер. войдите на свой собственный сервер, чтобы синхронизировать задачи между устройствами в реальном времени. изменения происходят на устройстве мгновенно и передаются на сервер, поэтому приложение остаётся быстрым даже при нестабильном соединении."
     },
     {
       "id": "offline-sync",
@@ -774,19 +774,19 @@
       "sinceVersion": null,
       "deepLink": null,
       "helpAnchors": [],
-      "title": "Offline sync",
-      "summary": "Keep working offline; changes replay when you reconnect.",
+      "title": "Офлайн-синхронизация",
+      "summary": "Продолжайте работать офлайн; изменения передадутся при переподключении.",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "In Server Mode your changes are saved locally first and queued when you're offline. As soon as you reconnect, T'Day replays them to the server in order."
+            "В серверном режиме изменения сначала сохраняются локально и ставятся в очередь, когда вы офлайн. Как только вы снова подключитесь, T'Day передаст их на сервер по порядку."
           ]
         }
       ],
-      "searchTitle": "offline sync",
-      "searchKeywords": "offline, sync, pending, queue, replay, connection, conflict",
-      "searchBody": "keep working offline; changes replay when you reconnect. in server mode your changes are saved locally first and queued when you're offline. as soon as you reconnect, t'day replays them to the server in order."
+      "searchTitle": "офлайн-синхронизация",
+      "searchKeywords": "офлайн, синхронизация, ожидающие, очередь, передача, соединение, конфликт",
+      "searchBody": "продолжайте работать офлайн; изменения передадутся при переподключении. в серверном режиме изменения сначала сохраняются локально и ставятся в очередь, когда вы офлайн. как только вы снова подключитесь, t'day передаст их на сервер по порядку."
     },
     {
       "id": "ai-summary",
@@ -803,25 +803,25 @@
       "sinceVersion": null,
       "deepLink": null,
       "helpAnchors": [],
-      "title": "Task summaries",
-      "summary": "A short, calm read on your day — with optional local AI.",
+      "title": "Сводки по задачам",
+      "summary": "Короткий, спокойный обзор вашего дня — с опциональным локальным ИИ.",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "T'Day can summarize your day in a sentence or two. With a local Ollama model it reads naturally; without one it falls back to a warm, deterministic recap — either way nothing leaves your server."
+            "T'Day может подытожить ваш день в одном-двух предложениях. С локальной моделью Ollama текст звучит естественно; без неё используется тёплый предсказуемый пересказ — в любом случае ничего не покидает ваш сервер."
           ]
         },
         {
           "type": "TIP",
           "texts": [
-            "The summary never depends on a cloud AI service — it's local or nothing."
+            "Сводка никогда не зависит от облачного ИИ-сервиса — она либо локальная, либо никакая."
           ]
         }
       ],
-      "searchTitle": "task summaries",
-      "searchKeywords": "summary, ai, ollama, overview, digest, local, private",
-      "searchBody": "a short, calm read on your day — with optional local ai. t'day can summarize your day in a sentence or two. with a local ollama model it reads naturally; without one it falls back to a warm, deterministic recap — either way nothing leaves your server. the summary never depends on a cloud ai service — it's local or nothing."
+      "searchTitle": "сводки по задачам",
+      "searchKeywords": "сводка, ии, ollama, обзор, дайджест, локально, приватно",
+      "searchBody": "короткий, спокойный обзор вашего дня — с опциональным локальным ии. t'day может подытожить ваш день в одном-двух предложениях. с локальной моделью ollama текст звучит естественно; без неё используется тёплый предсказуемый пересказ — в любом случае ничего не покидает ваш сервер. сводка никогда не зависит от облачного ии-сервиса — она либо локальная, либо никакая."
     }
   ]
 }
