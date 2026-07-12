@@ -91,6 +91,7 @@ import com.ohmz.tday.compose.feature.home.HomeScreen
 import com.ohmz.tday.compose.feature.home.HomeUiState
 import com.ohmz.tday.compose.feature.home.HomeViewModel
 import com.ohmz.tday.compose.feature.onboarding.OnboardingWizardOverlay
+import com.ohmz.tday.compose.feature.guide.HelpGuideScreen
 import com.ohmz.tday.compose.feature.release.LatestReleaseScreen
 import com.ohmz.tday.compose.feature.release.LatestReleaseUiState
 import com.ohmz.tday.compose.feature.release.LatestReleaseViewModel
@@ -1012,6 +1013,7 @@ fun TdayApp(
                         onBack = { navController.popBackStack() },
                         onLogout = { appViewModel.logout() },
                         onOpenLatestRelease = { navController.navigate(AppRoute.LatestRelease.route) },
+                        onOpenHelpGuide = { navController.navigate(AppRoute.HelpGuide.create()) },
                         onUpdateName = { newName ->
                             appViewModel.updateDisplayName(newName).also { result ->
                                 if (result is ProfileEditResult.Success) {
@@ -1063,6 +1065,30 @@ fun TdayApp(
                         uiState = releaseUiState,
                         onBack = { navController.popBackStack() },
                         onRetry = releaseViewModel::load,
+                    )
+                }
+
+                composable(
+                    route = AppRoute.HelpGuide.route,
+                    arguments = listOf(
+                        navArgument("topic") {
+                            type = NavType.StringType
+                            nullable = true
+                            defaultValue = null
+                        },
+                    ),
+                    enterTransition = { settingsEnterTransition() },
+                    exitTransition = { settingsExitTransition() },
+                    popEnterTransition = { settingsEnterTransition() },
+                    popExitTransition = { settingsExitTransition() },
+                ) { backStackEntry ->
+                    HelpGuideScreen(
+                        isLocalMode = appUiState.isLocalMode,
+                        onBack = { navController.popBackStack() },
+                        onOpenDeepLink = { route ->
+                            navController.navigate(route) { launchSingleTop = true }
+                        },
+                        initialTopic = backStackEntry.arguments?.getString("topic"),
                     )
                 }
             }
