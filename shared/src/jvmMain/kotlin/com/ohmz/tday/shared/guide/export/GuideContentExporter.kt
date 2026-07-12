@@ -38,6 +38,7 @@ object GuideContentExporter {
     val LOCALES = listOf("en", "es", "fr", "de", "it", "pt", "ru", "zh", "ja", "ms")
     private const val WEB_ARTIFACT = "tday-web/src/generated/guide-structure.json"
     private const val WEB_FIXTURES = "tday-web/tests/fixtures/guide-search-vectors.json"
+    private const val ICONS_MANIFEST = "tday-web/tests/fixtures/guide-icons.json"
     private const val ANDROID_STRINGS = "shared/src/commonMain/kotlin/com/ohmz/tday/shared/guide/GuideStringsGenerated.kt"
     private const val IOS_DIR = "ios-swiftUI/Tday/Resources/Guide"
 
@@ -60,6 +61,7 @@ object GuideContentExporter {
         val outputs = LinkedHashMap<String, String>()
         outputs[WEB_ARTIFACT] = buildWebArtifact(version)
         outputs[WEB_FIXTURES] = buildSearchFixtures(en)
+        outputs[ICONS_MANIFEST] = buildIconsManifest()
         outputs[ANDROID_STRINGS] = buildAndroidStrings(strings)
         for (locale in LOCALES) {
             outputs["$IOS_DIR/guide.$locale.json"] = buildIosArtifact(version, resolver(strings, locale))
@@ -119,6 +121,12 @@ object GuideContentExporter {
             topics = topics,
         )
         return json.encodeToString(WebArtifact.serializer(), artifact) + "\n"
+    }
+
+    /** Every distinct Lucide glyph the catalog references, for the icon-coverage guardrail. */
+    private fun buildIconsManifest(): String {
+        val icons = GuideCatalog.topics.map { it.icon }.distinct().sorted()
+        return icons.joinToString(separator = ",\n", prefix = "[\n", postfix = "\n]\n") { "  \"$it\"" }
     }
 
     private fun buildSearchFixtures(en: Map<String, String>): String {
