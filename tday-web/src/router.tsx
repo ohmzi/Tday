@@ -14,6 +14,7 @@ const PrivacyPage = lazy(() => import("@/pages/PrivacyPage"));
 const TermsPage = lazy(() => import("@/pages/TermsPage"));
 const BlogsPage = lazy(() => import("@/pages/BlogsPage"));
 const BlogArticlePage = lazy(() => import("@/pages/BlogArticlePage"));
+const HelpGuidePage = lazy(() => import("@/pages/HelpGuidePage"));
 const NotFoundPage = lazy(() => import("@/pages/NotFoundPage"));
 const AppLayout = lazy(() => import("@/pages/AppLayout"));
 const GeneralLayout = lazy(() => import("@/pages/GeneralLayout"));
@@ -73,6 +74,8 @@ export const router = sentryCreateBrowserRouter([
       },
       { path: "privacy", element: <PrivacyPage /> },
       { path: "terms", element: <TermsPage /> },
+      { path: "guide", element: <HelpGuidePage /> },
+      { path: "guide/:topicId", element: <HelpGuidePage /> },
       { path: "blogs", element: <BlogsPage /> },
       { path: "blogs/page/:slug", element: <BlogArticlePage /> },
       {
