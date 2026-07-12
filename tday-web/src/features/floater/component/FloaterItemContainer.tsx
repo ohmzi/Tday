@@ -227,7 +227,7 @@ export default function FloaterItemContainer({
             <GripVertical className="h-4 w-4" />
           </div>
 
-          <div className="flex min-w-0 items-center gap-3">
+          <div className="flex min-w-0 items-start gap-3">
             <div className="shrink-0">
               <TodoCheckbox
                 icon={Check}
@@ -238,9 +238,8 @@ export default function FloaterItemContainer({
               />
             </div>
 
-            {/* Floaters have no due time, so the title is vertically centered on
-                the check circle (intentionally offset from the home/scheduled row,
-                which has a "Due …" line beneath the title). */}
+            {/* Check circle sits on the first line of the title so it stays put
+                no matter how many lines the title wraps to. */}
             <div className="min-w-0">
               <p
                 className={clsx(
