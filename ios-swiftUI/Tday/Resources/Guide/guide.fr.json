@@ -685,6 +685,40 @@
       "searchBody": "recevez une notification avant l'echeance d'une tache. ajoutez un rappel a une tache planifiee et votre appareil vous previent au bon moment. les rappels sont programmes sur votre appareil, ils fonctionnent donc meme en mode local. les options de delai de rappel varient legerement selon la tache — choisissez celle qui vous laisse assez de preavis."
     },
     {
+      "id": "reminder-snooze",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "bell",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.3.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Reporter un rappel",
+      "summary": "Les notifications de rappel proposent Reporter d'1 h et Ce soir.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Quand un rappel tombe au mauvais moment, inutile d'ouvrir l'app : Reporter d'1 h redélivre le même rappel une heure plus tard, et Ce soir déplace la tâche à 19 h aujourd'hui. Ce soir fonctionne pour les tâches ponctuelles — les occurrences récurrentes se replanifient depuis l'app pour préserver la série."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Reporter ne retarde que la notification ; la tâche garde son échéance d'origine tant que vous ne la déplacez pas."
+          ]
+        }
+      ],
+      "searchTitle": "reporter un rappel",
+      "searchKeywords": "reporter, rappel, notification, plus tard, ce soir, differer alerte",
+      "searchBody": "les notifications de rappel proposent reporter d'1 h et ce soir. quand un rappel tombe au mauvais moment, inutile d'ouvrir l'app : reporter d'1 h redelivre le meme rappel une heure plus tard, et ce soir deplace la tache a 19 h aujourd'hui. ce soir fonctionne pour les taches ponctuelles — les occurrences recurrentes se replanifient depuis l'app pour preserver la serie. reporter ne retarde que la notification ; la tache garde son echeance d'origine tant que vous ne la deplacez pas."
+    },
+    {
       "id": "home-widget",
       "section": "WIDGETS_AND_SURFACES",
       "sectionOrder": 5,

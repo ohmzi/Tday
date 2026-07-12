@@ -46,7 +46,7 @@ class TaskReminderReceiver : BroadcastReceiver() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
-        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+        val builder = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(title)
             .setContentText(body)
@@ -54,7 +54,23 @@ class TaskReminderReceiver : BroadcastReceiver() {
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
-            .build()
+
+        // Snooze re-arms the same alarm; Tonight moves the due to 19:00 (only
+        // for non-recurring tasks — instances reschedule from the app).
+        builder.addAction(
+            0,
+            context.getString(R.string.reminder_action_snooze_hour),
+            snoozeActionIntent(context, intent, SnoozeActionReceiver.ACTION_SNOOZE_HOUR, taskId, 1),
+        )
+        if (instanceDateMillis <= 0) {
+            builder.addAction(
+                0,
+                context.getString(R.string.quick_defer_tonight),
+                snoozeActionIntent(context, intent, SnoozeActionReceiver.ACTION_MOVE_TONIGHT, taskId, 2),
+            )
+        }
+
+        val notification = builder.build()
 
         val notificationManager =
             context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -98,6 +114,26 @@ class TaskReminderReceiver : BroadcastReceiver() {
                 context.getString(resId, days)
             }
         }
+    }
+
+    /** A broadcast to [SnoozeActionReceiver] carrying this reminder's extras. */
+    private fun snoozeActionIntent(
+        context: Context,
+        source: Intent,
+        action: String,
+        taskId: String,
+        requestSalt: Int,
+    ): PendingIntent {
+        val actionIntent = Intent(context, SnoozeActionReceiver::class.java).apply {
+            this.action = action
+            source.extras?.let(::putExtras)
+        }
+        return PendingIntent.getBroadcast(
+            context,
+            taskId.hashCode() * 31 + requestSalt,
+            actionIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
     }
 
     private fun mapPriority(priority: String): Int = when (priority.lowercase()) {

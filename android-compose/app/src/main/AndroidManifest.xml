@@ -77,6 +77,10 @@
             android:exported="false" />
 
         <receiver
+            android:name=".core.notification.SnoozeActionReceiver"
+            android:exported="false" />
+
+        <receiver
             android:name=".feature.widget.TodayTasksWidgetSmallReceiver"
             android:exported="true"
             android:label="@string/widget_today_tasks_title_small">

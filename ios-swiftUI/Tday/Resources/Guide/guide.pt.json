@@ -685,6 +685,40 @@
       "searchBody": "receba uma notificacao antes de uma tarefa vencer. adicione um lembrete a uma tarefa agendada e o seu dispositivo notifica-o a hora certa. os lembretes sao agendados no seu dispositivo, por isso funcionam mesmo em modo local. as opcoes de antecedencia do lembrete variam ligeiramente por tarefa — escolha a que lhe da aviso suficiente."
     },
     {
+      "id": "reminder-snooze",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "bell",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.3.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Adiar um lembrete",
+      "summary": "As notificações de lembrete trazem as ações Adiar 1 h e Hoje à noite.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Quando um lembrete chega em má hora, não é preciso abrir o app: Adiar 1 h entrega o mesmo lembrete uma hora depois, e Hoje à noite move a tarefa para as 19:00 de hoje. Hoje à noite funciona para tarefas avulsas — ocorrências recorrentes são reagendadas no app para manter a série intacta."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Adiar só atrasa a notificação; a tarefa mantém o horário original até você movê-la."
+          ]
+        }
+      ],
+      "searchTitle": "adiar um lembrete",
+      "searchKeywords": "adiar, lembrete, notificacao, mais tarde, hoje a noite, soneca",
+      "searchBody": "as notificacoes de lembrete trazem as acoes adiar 1 h e hoje a noite. quando um lembrete chega em ma hora, nao e preciso abrir o app: adiar 1 h entrega o mesmo lembrete uma hora depois, e hoje a noite move a tarefa para as 19:00 de hoje. hoje a noite funciona para tarefas avulsas — ocorrencias recorrentes sao reagendadas no app para manter a serie intacta. adiar so atrasa a notificacao; a tarefa mantem o horario original ate voce move-la."
+    },
+    {
       "id": "home-widget",
       "section": "WIDGETS_AND_SURFACES",
       "sectionOrder": 5,

@@ -31,6 +31,18 @@ class ReminderPreferenceStore @Inject constructor(
         prefs.edit().putStringSet(KEY_NOTIFIED_SET, current).apply()
     }
 
+    /**
+     * Forget that [alarmKey] was notified. Snooze depends on this: the re-fired
+     * alarm goes through the same [wasNotified] dedup, so without clearing it
+     * the snoozed reminder would be silently suppressed.
+     */
+    fun clearNotified(alarmKey: String) {
+        val current = prefs.getStringSet(KEY_NOTIFIED_SET, emptySet()).orEmpty().toMutableSet()
+        if (current.remove(alarmKey)) {
+            prefs.edit().putStringSet(KEY_NOTIFIED_SET, current).apply()
+        }
+    }
+
     fun clearNotifiedSet() {
         prefs.edit().remove(KEY_NOTIFIED_SET).apply()
     }

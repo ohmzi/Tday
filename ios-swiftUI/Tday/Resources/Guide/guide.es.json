@@ -685,6 +685,40 @@
       "searchBody": "recibe una notificacion antes de que venza una tarea. anade un recordatorio a una tarea programada y tu dispositivo te avisara en el momento justo. los recordatorios se programan en tu dispositivo, asi que funcionan incluso en modo local. las opciones de antelacion del recordatorio varian un poco segun la tarea: elige la que te de suficiente margen."
     },
     {
+      "id": "reminder-snooze",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "bell",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.3.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Posponer un recordatorio",
+      "summary": "Las notificaciones de recordatorio incluyen las acciones Posponer 1 h y Esta noche.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Cuando un recordatorio llega en mal momento, no hace falta abrir la app: Posponer 1 h vuelve a entregar el mismo recordatorio una hora después, y Esta noche mueve la tarea a las 19:00 de hoy. Esta noche funciona con tareas puntuales; las repeticiones se reprograman desde la app para mantener la serie intacta."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Posponer solo retrasa la notificación; la tarea conserva su hora original hasta que la muevas."
+          ]
+        }
+      ],
+      "searchTitle": "posponer un recordatorio",
+      "searchKeywords": "posponer, recordatorio, notificacion, mas tarde, esta noche, aplazar alerta",
+      "searchBody": "las notificaciones de recordatorio incluyen las acciones posponer 1 h y esta noche. cuando un recordatorio llega en mal momento, no hace falta abrir la app: posponer 1 h vuelve a entregar el mismo recordatorio una hora despues, y esta noche mueve la tarea a las 19:00 de hoy. esta noche funciona con tareas puntuales; las repeticiones se reprograman desde la app para mantener la serie intacta. posponer solo retrasa la notificacion; la tarea conserva su hora original hasta que la muevas."
+    },
+    {
       "id": "home-widget",
       "section": "WIDGETS_AND_SURFACES",
       "sectionOrder": 5,

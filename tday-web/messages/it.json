@@ -793,6 +793,13 @@
         "body": "Aggiungi un promemoria a un'attività pianificata e il tuo dispositivo ti avvisa al momento giusto. I promemoria sono pianificati sul tuo dispositivo, quindi funzionano anche in Modalità locale.",
         "tip": "Le opzioni di anticipo del promemoria variano leggermente in base all'attività — scegli quella che ti dà abbastanza preavviso."
       },
+      "reminder-snooze": {
+        "title": "Posticipare un promemoria",
+        "summary": "Le notifiche dei promemoria offrono Posticipa 1 h e Stasera.",
+        "keywords": "posticipare, promemoria, notifica, più tardi, stasera, rinviare avviso",
+        "body": "Quando un promemoria arriva nel momento sbagliato, non serve aprire l'app: Posticipa 1 h riconsegna lo stesso promemoria un'ora dopo, e Stasera sposta l'attività alle 19:00 di oggi. Stasera vale per le attività singole — le occorrenze ricorrenti si ripianificano dall'app per mantenere intatta la serie.",
+        "tip": "Posticipare ritarda solo la notifica; l'attività mantiene la sua ora originale finché non la sposti."
+      },
       "push-notifications": {
         "title": "Promemoria web (push)",
         "summary": "Lascia che l'app web ti avvisi alla scadenza di un'attività, anche quando è chiusa.",

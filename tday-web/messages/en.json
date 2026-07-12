@@ -793,6 +793,13 @@
         "body": "Add a reminder to a scheduled task and your device notifies you at the right time. Reminders are scheduled on your device, so they work even in Local Mode.",
         "tip": "Reminder lead-time options vary slightly by task — pick the one that gives you enough warning."
       },
+      "reminder-snooze": {
+        "title": "Snooze a reminder",
+        "summary": "Reminder notifications carry Snooze 1h and Tonight actions.",
+        "keywords": "snooze, reminder, notification, later, tonight, postpone alert",
+        "body": "When a reminder fires at a bad moment, you don't have to open the app: Snooze 1h re-delivers the same reminder an hour later, and Tonight moves the task itself to 19:00 today. Tonight works for one-off tasks — recurring occurrences reschedule from the app so their series stays intact.",
+        "tip": "Snoozing only delays the notification; the task keeps its original due time until you move it."
+      },
       "push-notifications": {
         "title": "Web reminders (push)",
         "summary": "Let the web app notify you when a task is due, even when it's closed.",

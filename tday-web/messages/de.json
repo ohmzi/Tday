@@ -793,6 +793,13 @@
         "body": "Füge einer geplanten Aufgabe eine Erinnerung hinzu, und dein Gerät benachrichtigt dich zur richtigen Zeit. Erinnerungen werden auf deinem Gerät geplant, sodass sie auch im lokalen Modus funktionieren.",
         "tip": "Die Optionen für die Vorlaufzeit einer Erinnerung variieren je nach Aufgabe leicht — wähle die, die dir genug Vorwarnung gibt."
       },
+      "reminder-snooze": {
+        "title": "Erinnerung später wiederholen",
+        "summary": "Erinnerungs-Benachrichtigungen bieten „1 Std. später“ und „Heute Abend“.",
+        "keywords": "später erinnern, erinnerung, benachrichtigung, snooze, heute abend, verschieben",
+        "body": "Kommt eine Erinnerung ungelegen, musst du die App nicht öffnen: „1 Std. später“ stellt dieselbe Erinnerung eine Stunde später erneut zu, „Heute Abend“ verschiebt die Aufgabe selbst auf 19:00 heute. Heute Abend gilt für einmalige Aufgaben — wiederkehrende Termine planst du in der App um, damit die Serie intakt bleibt.",
+        "tip": "Später wiederholen verzögert nur die Benachrichtigung; die Aufgabe behält ihre ursprüngliche Zeit, bis du sie verschiebst."
+      },
       "push-notifications": {
         "title": "Web-Erinnerungen (Push)",
         "summary": "Lass die Web-App dich benachrichtigen, wenn eine Aufgabe fällig ist, selbst wenn sie geschlossen ist.",
