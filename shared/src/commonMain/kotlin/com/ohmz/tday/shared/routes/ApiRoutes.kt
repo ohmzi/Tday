@@ -76,7 +76,6 @@ object ApiRoutes {
     }
 
     object Admin {
-        const val Settings = "$ApiPrefix/admin/settings"
         const val Users = "$ApiPrefix/admin/users"
     }
 
