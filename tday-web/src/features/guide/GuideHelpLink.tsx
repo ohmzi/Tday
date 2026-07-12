@@ -10,9 +10,12 @@ import { cn } from "@/lib/utils";
 export function GuideHelpLink({
   topic,
   className,
+  withLabel,
 }: {
   topic: string;
   className?: string;
+  /** Also render the guide title next to the icon (for menu rows). */
+  withLabel?: boolean;
 }) {
   const { t } = useTranslation("guide");
   return (
@@ -21,11 +24,12 @@ export function GuideHelpLink({
       aria-label={t("title")}
       title={t("title")}
       className={cn(
-        "inline-flex shrink-0 items-center justify-center rounded-full p-1 text-muted-foreground transition-colors hover:text-foreground",
+        "inline-flex shrink-0 items-center justify-center gap-1.5 rounded-full p-1 text-muted-foreground transition-colors hover:text-foreground",
         className,
       )}
     >
       <CircleHelp className="h-[18px] w-[18px]" aria-hidden="true" />
+      {withLabel && <span className="text-sm">{t("title")}</span>}
     </Link>
   );
 }

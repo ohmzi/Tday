@@ -218,6 +218,11 @@ struct AppRootView: View {
             }
         }
         .tdayAppTheme(themeMode: appViewModel.themeMode)
+        // One provider for every contextual "?" help link (GuideHelpLink):
+        // pushes the guide onto the main navigation stack, pre-scrolled.
+        .environment(\.openGuideTopic, { topicId in
+            appViewModel.navigationPath.append(.helpGuide(topic: topicId))
+        })
         // In-app language override: changing the locale (and reading the
         // generation token) re-resolves every Text against the selected
         // language bundle instantly, no restart.

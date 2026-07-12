@@ -62,3 +62,23 @@ export function topicsInSection(sectionId: string): GuideTopicDef[] {
 export function whatsNewTopics(): GuideTopicDef[] {
   return GUIDE_TOPICS.filter((t) => t.sinceVersion === GUIDE_CURRENT_VERSION);
 }
+
+const LAST_SEEN_GUIDE_VERSION_KEY = "tday.lastSeenGuideVersion";
+
+/** The release the user last opened the guide in; null before the first visit. */
+export function readLastSeenGuideVersion(): string | null {
+  try {
+    return window.localStorage.getItem(LAST_SEEN_GUIDE_VERSION_KEY);
+  } catch {
+    return null;
+  }
+}
+
+/** Mark the running release as seen; NEW badges clear from the next visit on. */
+export function markGuideSeen(): void {
+  try {
+    window.localStorage.setItem(LAST_SEEN_GUIDE_VERSION_KEY, GUIDE_CURRENT_VERSION);
+  } catch {
+    // Storage unavailable (e.g. private mode) — badges simply persist.
+  }
+}

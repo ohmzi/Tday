@@ -29,6 +29,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -39,6 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
@@ -48,6 +50,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ohmz.tday.compose.BuildConfig
 import com.ohmz.tday.compose.R
+import com.ohmz.tday.compose.core.data.GuidePreferenceStore
 import com.ohmz.tday.shared.guide.GuideBadge
 import com.ohmz.tday.shared.guide.GuideBlockType
 import com.ohmz.tday.shared.guide.GuideCatalog
@@ -95,6 +98,13 @@ fun HelpGuideScreen(
         if (trimmed.isEmpty()) emptyList() else GuideSearch.rank(query, docs)
     }
     val whatsNew = remember { topics.filter { it.sinceVersion == BuildConfig.VERSION_NAME } }
+
+    // NEW badges show until the guide has been opened in this release: read the
+    // persisted last-seen version once, then mark the running release as seen.
+    val context = LocalContext.current
+    val guidePrefs = remember { GuidePreferenceStore(context) }
+    val showNewBadges = remember { guidePrefs.lastSeenGuideVersion() != BuildConfig.VERSION_NAME }
+    LaunchedEffect(Unit) { guidePrefs.setLastSeenGuideVersion(BuildConfig.VERSION_NAME) }
 
     Scaffold(containerColor = colorScheme.background) { padding ->
         Column(
@@ -195,7 +205,7 @@ fun HelpGuideScreen(
                 } else {
                     rankedIds.forEach { id ->
                         byId[id]?.let { topic ->
-                            TopicCard(topic, expandedId == id, ::res, isLocalMode, onOpenDeepLink) {
+                            TopicCard(topic, expandedId == id, ::res, isLocalMode, showNewBadges, onOpenDeepLink) {
                                 expandedId = if (expandedId == id) null else id
                             }
                             Spacer(Modifier.height(10.dp))
@@ -206,7 +216,7 @@ fun HelpGuideScreen(
                 if (whatsNew.isNotEmpty()) {
                     SectionLabel(res("guide.whatsNew"))
                     whatsNew.forEach { topic ->
-                        TopicCard(topic, expandedId == topic.id, ::res, isLocalMode, onOpenDeepLink) {
+                        TopicCard(topic, expandedId == topic.id, ::res, isLocalMode, showNewBadges, onOpenDeepLink) {
                             expandedId = if (expandedId == topic.id) null else topic.id
                         }
                         Spacer(Modifier.height(10.dp))
@@ -218,7 +228,7 @@ fun HelpGuideScreen(
                     if (sectionTopics.isNotEmpty()) {
                         SectionLabel(res(section.titleKey))
                         sectionTopics.forEach { topic ->
-                            TopicCard(topic, expandedId == topic.id, ::res, isLocalMode, onOpenDeepLink) {
+                            TopicCard(topic, expandedId == topic.id, ::res, isLocalMode, showNewBadges, onOpenDeepLink) {
                                 expandedId = if (expandedId == topic.id) null else topic.id
                             }
                             Spacer(Modifier.height(10.dp))
@@ -248,6 +258,7 @@ private fun TopicCard(
     expanded: Boolean,
     res: (String) -> String,
     isLocalMode: Boolean,
+    showNewBadge: Boolean,
     onOpenDeepLink: (String) -> Unit,
     onToggle: () -> Unit,
 ) {
@@ -289,7 +300,7 @@ private fun TopicCard(
                             fontWeight = FontWeight.Bold,
                             color = colorScheme.onSurface,
                         )
-                        Badges(topic, res)
+                        Badges(topic, res, showNewBadge)
                     }
                     Text(
                         text = res(topic.summaryKey),
@@ -348,8 +359,8 @@ private fun TopicCard(
 }
 
 @Composable
-private fun Badges(topic: GuideTopic, res: (String) -> String) {
-    val isNew = topic.sinceVersion == BuildConfig.VERSION_NAME
+private fun Badges(topic: GuideTopic, res: (String) -> String, showNewBadge: Boolean) {
+    val isNew = showNewBadge && topic.sinceVersion == BuildConfig.VERSION_NAME
     if (isNew) Pill(res("guide.badges.new"))
     when (topic.badge) {
         GuideBadge.HIDDEN_GEM -> Pill(res("guide.badges.hiddenGem"))
