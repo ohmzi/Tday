@@ -430,6 +430,41 @@
       "searchBody": "agende um flutuante como tarefa real, ou deixe flutuar uma tarefa parada. quando um flutuante estiver pronto para virar trabalho de verdade, use a acao agendar: escolha um horario e ele passa para o inicio como tarefa com data. o caminho inverso tambem funciona — uma tarefa atrasada que voce vive adiando pode flutuar em silencio: rebaixe-a e ela volta para qualquer momento sem data, mantendo titulo, notas e prioridade. tarefas recorrentes nao podem flutuar — encerre a serie primeiro se quiser deixa-la sem data."
     },
     {
+      "id": "quick-defer",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "alarm-clock",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.3.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Adiamento rápido",
+      "summary": "Um toque move uma tarefa para mais tarde hoje, hoje à noite, amanhã ou a próxima semana.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Quando uma tarefa precisa se mover, mas não para longe, pule o seletor de data: a ação Adiar oferece Mais tarde hoje (+3 horas), Hoje à noite (19:00), Amanhã de manhã (09:00) e Na próxima semana (segunda 09:00) com um toque. É a mesma mudança que a folha de edição faria — só que mais rápida."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Tarefas recorrentes são adiadas por ocorrência na folha de edição, então o menu de um toque não atrapalha."
+          ]
+        }
+      ],
+      "searchTitle": "adiamento rapido",
+      "searchKeywords": "adiar, postergar, mais tarde, hoje a noite, amanha, proxima semana, reagendar",
+      "searchBody": "um toque move uma tarefa para mais tarde hoje, hoje a noite, amanha ou a proxima semana. quando uma tarefa precisa se mover, mas nao para longe, pule o seletor de data: a acao adiar oferece mais tarde hoje (+3 horas), hoje a noite (19:00), amanha de manha (09:00) e na proxima semana (segunda 09:00) com um toque. e a mesma mudanca que a folha de edicao faria — so que mais rapida. tarefas recorrentes sao adiadas por ocorrencia na folha de edicao, entao o menu de um toque nao atrapalha."
+    },
+    {
       "id": "floater-lists",
       "section": "ORGANIZING",
       "sectionOrder": 3,

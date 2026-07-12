@@ -18,6 +18,12 @@
     <string name="action_schedule_task">Aufgabe planen</string>
     <string name="action_float">Treiben</string>
     <string name="action_float_task">Treiben lassen</string>
+    <string name="action_defer">Verschieben</string>
+    <string name="action_defer_task">Aufgabe verschieben</string>
+    <string name="quick_defer_later_today">Später heute</string>
+    <string name="quick_defer_tonight">Heute Abend</string>
+    <string name="quick_defer_tomorrow">Morgen früh</string>
+    <string name="quick_defer_next_week">Nächste Woche</string>
     <string name="task_promote_failed">Aufgabe konnte nicht geplant werden</string>
     <string name="task_float_failed">Aufgabe konnte nicht treiben</string>
     <string name="action_complete">Abschließen</string>

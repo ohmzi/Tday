@@ -430,6 +430,41 @@
       "searchBody": "planifiez un flottant en vraie tache, ou laissez flotter une tache en retard. quand un flottant est pret a devenir du vrai travail, utilisez son action planifier : choisissez une heure et il rejoint l'accueil comme tache datee. l'inverse fonctionne aussi — une tache en retard que vous repoussez sans cesse peut flotter discretement : retrogradez-la et elle revient dans a tout moment sans date, en gardant titre, notes et priorite. les taches recurrentes ne peuvent pas flotter — terminez d'abord la serie si vous la voulez sans date."
     },
     {
+      "id": "quick-defer",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "alarm-clock",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.3.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Report rapide",
+      "summary": "Un geste déplace une tâche à plus tard aujourd'hui, ce soir, demain ou la semaine prochaine.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Quand une tâche doit bouger, mais pas loin, évitez le sélecteur de date : l'action Reporter propose Plus tard aujourd'hui (+3 heures), Ce soir (19 h), Demain matin (9 h) et La semaine prochaine (lundi 9 h) en un geste. C'est le même changement que la feuille d'édition — en plus rapide."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Les tâches récurrentes se reportent par occurrence depuis la feuille d'édition, le menu express ne s'en mêle donc pas."
+          ]
+        }
+      ],
+      "searchTitle": "report rapide",
+      "searchKeywords": "reporter, repousser, plus tard, ce soir, demain, semaine prochaine, replanifier",
+      "searchBody": "un geste deplace une tache a plus tard aujourd'hui, ce soir, demain ou la semaine prochaine. quand une tache doit bouger, mais pas loin, evitez le selecteur de date : l'action reporter propose plus tard aujourd'hui (+3 heures), ce soir (19 h), demain matin (9 h) et la semaine prochaine (lundi 9 h) en un geste. c'est le meme changement que la feuille d'edition — en plus rapide. les taches recurrentes se reportent par occurrence depuis la feuille d'edition, le menu express ne s'en mele donc pas."
+    },
+    {
       "id": "floater-lists",
       "section": "ORGANIZING",
       "sectionOrder": 3,

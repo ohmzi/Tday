@@ -401,6 +401,12 @@ class TodoListViewModel @Inject constructor(
         applyMovedDue(todo, movedDue, scope)
     }
 
+    /** Quick Defer: one tap moves the task to a locally computed instant. */
+    fun deferTask(todo: TodoItem, dueEpochMs: Long) {
+        // Hidden for recurring todos in the UI; SERIES scope is a plain update.
+        applyMovedDue(todo, java.time.Instant.ofEpochMilli(dueEpochMs), TaskRescheduleScope.SERIES)
+    }
+
     private fun applyMovedDue(
         todo: TodoItem,
         movedDue: java.time.Instant,

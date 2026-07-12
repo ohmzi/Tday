@@ -351,7 +351,12 @@
     "noUsersFound": "No se encontraron usuarios",
     "tasksDueOn": "Tareas para el {{date}}",
     "noTasksDueThisDay": "No hay tareas para este día",
-    "selectAnotherDate": "Selecciona otra fecha en el calendario."
+    "selectAnotherDate": "Selecciona otra fecha en el calendario.",
+    "quickDefer": "Aplazar",
+    "quickDeferLaterToday": "Más tarde hoy",
+    "quickDeferTonight": "Esta noche",
+    "quickDeferTomorrow": "Mañana por la mañana",
+    "quickDeferNextWeek": "La próxima semana"
   },
   "today": {
     "saveInstance": "Guardar instancia",
@@ -736,6 +741,13 @@
         "keywords": "promover, programar flotante, degradar, dejar flotar, convertir, en cualquier momento, mover, atrasada",
         "body": "Cuando un flotante esté listo para convertirse en trabajo real, usa su acción Programar: elige una hora y pasará a Inicio como tarea con fecha. También funciona al revés: una tarea atrasada que sigues posponiendo puede flotar tranquilamente; degrádala y volverá a Cualquier momento sin fecha, conservando su título, notas y prioridad.",
         "tip": "Las tareas recurrentes no pueden flotar: termina primero la serie si quieres que quede sin fecha."
+      },
+      "quick-defer": {
+        "title": "Aplazamiento rápido",
+        "summary": "Un toque mueve una tarea a más tarde hoy, esta noche, mañana o la próxima semana.",
+        "keywords": "aplazar, posponer, más tarde, esta noche, mañana, próxima semana, reprogramar",
+        "body": "Cuando una tarea debe moverse, pero no mucho, evita el selector de fecha: la acción Aplazar ofrece Más tarde hoy (+3 horas), Esta noche (19:00), Mañana por la mañana (09:00) y La próxima semana (lunes 09:00) con un solo toque. Es el mismo cambio que haría la hoja de edición, solo que más rápido.",
+        "tip": "Las tareas recurrentes se aplazan por ocurrencia desde la hoja de edición, así que el menú de un toque no se interpone."
       },
       "floater-lists": {
         "title": "Listas de Flotantes",

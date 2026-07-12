@@ -351,7 +351,12 @@
     "noUsersFound": "No users found",
     "tasksDueOn": "Tasks due {{date}}",
     "noTasksDueThisDay": "No tasks due this day",
-    "selectAnotherDate": "Select another date on the calendar."
+    "selectAnotherDate": "Select another date on the calendar.",
+    "quickDefer": "Defer",
+    "quickDeferLaterToday": "Later today",
+    "quickDeferTonight": "Tonight",
+    "quickDeferTomorrow": "Tomorrow morning",
+    "quickDeferNextWeek": "Next week"
   },
   "today": {
     "saveInstance": "Save instance",
@@ -736,6 +741,13 @@
         "keywords": "promote, schedule floater, demote, let it float, convert, anytime, move, overdue",
         "body": "When a floater is ready to become real work, use its Schedule action: pick a time and it moves into Home as a dated task. The other direction works too — an overdue task you keep postponing can quietly float: demote it and it returns to Anytime with no date, keeping its title, notes and priority.",
         "tip": "Recurring tasks can't float — end the series first if you want it dateless."
+      },
+      "quick-defer": {
+        "title": "Quick Defer",
+        "summary": "One tap moves a task to later today, tonight, tomorrow or next week.",
+        "keywords": "defer, postpone, snooze task, later, tonight, tomorrow, next week, reschedule",
+        "body": "When a task needs to move but not far, skip the date picker: the Defer action offers Later today (+3 hours), Tonight (19:00), Tomorrow morning (09:00) and Next week (Monday 09:00) as one-tap choices. It's the same change the edit sheet would make — just faster.",
+        "tip": "Recurring tasks defer per-occurrence from the edit sheet, so the one-tap menu stays out of their way."
       },
       "floater-lists": {
         "title": "Floater lists",

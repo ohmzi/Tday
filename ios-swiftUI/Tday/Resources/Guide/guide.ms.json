@@ -430,6 +430,41 @@
       "searchBody": "jadualkan tugasan terapung sebagai tugasan sebenar, atau biarkan tugasan tersekat terapung. apabila tugasan terapung sedia menjadi kerja sebenar, gunakan tindakan jadualkan: pilih masa dan ia berpindah ke laman utama sebagai tugasan bertarikh. arah sebaliknya juga boleh — tugasan tertunggak yang asyik ditangguhkan boleh terapung secara senyap: turunkan tarafnya dan ia kembali ke bila-bila masa tanpa tarikh, dengan tajuk, nota dan keutamaan dikekalkan. tugasan berulang tidak boleh terapung — tamatkan siri itu dahulu jika mahu ia tanpa tarikh."
     },
     {
+      "id": "quick-defer",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "alarm-clock",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.3.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Tangguh pantas",
+      "summary": "Satu ketikan memindahkan tugasan ke kemudian hari ini, malam ini, esok atau minggu depan.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Apabila tugasan perlu dialihkan tetapi tidak jauh, langkau pemilih tarikh: tindakan Tangguh menawarkan Kemudian hari ini (+3 jam), Malam ini (19:00), Esok pagi (09:00) dan Minggu depan (Isnin 09:00) dengan satu ketikan. Ia perubahan yang sama seperti helaian edit — cuma lebih pantas."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Tugasan berulang ditangguh mengikut kejadian melalui helaian edit, jadi menu satu ketikan tidak mengganggunya."
+          ]
+        }
+      ],
+      "searchTitle": "tangguh pantas",
+      "searchKeywords": "tangguh, tunda, kemudian, malam ini, esok, minggu depan, jadual semula",
+      "searchBody": "satu ketikan memindahkan tugasan ke kemudian hari ini, malam ini, esok atau minggu depan. apabila tugasan perlu dialihkan tetapi tidak jauh, langkau pemilih tarikh: tindakan tangguh menawarkan kemudian hari ini (+3 jam), malam ini (19:00), esok pagi (09:00) dan minggu depan (isnin 09:00) dengan satu ketikan. ia perubahan yang sama seperti helaian edit — cuma lebih pantas. tugasan berulang ditangguh mengikut kejadian melalui helaian edit, jadi menu satu ketikan tidak mengganggunya."
+    },
+    {
       "id": "floater-lists",
       "section": "ORGANIZING",
       "sectionOrder": 3,

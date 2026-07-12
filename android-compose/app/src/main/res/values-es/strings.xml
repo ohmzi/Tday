@@ -18,6 +18,12 @@
     <string name="action_schedule_task">Programar tarea</string>
     <string name="action_float">Flotar</string>
     <string name="action_float_task">Dejar flotar</string>
+    <string name="action_defer">Aplazar</string>
+    <string name="action_defer_task">Aplazar tarea</string>
+    <string name="quick_defer_later_today">Más tarde hoy</string>
+    <string name="quick_defer_tonight">Esta noche</string>
+    <string name="quick_defer_tomorrow">Mañana por la mañana</string>
+    <string name="quick_defer_next_week">La próxima semana</string>
     <string name="task_promote_failed">No se pudo programar la tarea</string>
     <string name="task_float_failed">No se pudo dejar flotar la tarea</string>
     <string name="action_complete">Completar</string>

@@ -18,6 +18,12 @@
     <string name="action_schedule_task">Запланировать задачу</string>
     <string name="action_float">Отпустить</string>
     <string name="action_float_task">Отпустить плавать</string>
+    <string name="action_defer">Отложить</string>
+    <string name="action_defer_task">Отложить задачу</string>
+    <string name="quick_defer_later_today">Позже сегодня</string>
+    <string name="quick_defer_tonight">Сегодня вечером</string>
+    <string name="quick_defer_tomorrow">Завтра утром</string>
+    <string name="quick_defer_next_week">На следующей неделе</string>
     <string name="task_promote_failed">Не удалось запланировать задачу</string>
     <string name="task_float_failed">Не удалось отпустить задачу</string>
     <string name="action_complete">Завершить</string>

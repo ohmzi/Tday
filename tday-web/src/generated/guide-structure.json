@@ -314,6 +314,38 @@
       "sinceVersion": "0.3.0"
     },
     {
+      "id": "quick-defer",
+      "section": "ORGANIZING",
+      "icon": "alarm-clock",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "titleKey": "guide.topics.quick-defer.title",
+      "summaryKey": "guide.topics.quick-defer.summary",
+      "keywordsKey": "guide.topics.quick-defer.keywords",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "keys": [
+            "guide.topics.quick-defer.body"
+          ]
+        },
+        {
+          "type": "TIP",
+          "keys": [
+            "guide.topics.quick-defer.tip"
+          ]
+        }
+      ],
+      "badge": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "serverOnly": false,
+      "sinceVersion": "0.3.0"
+    },
+    {
       "id": "floater-lists",
       "section": "ORGANIZING",
       "icon": "list",

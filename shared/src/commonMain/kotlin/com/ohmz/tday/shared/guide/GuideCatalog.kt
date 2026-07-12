@@ -80,6 +80,11 @@ object GuideCatalog {
             body = listOf(para(GuideTopicIds.PROMOTE_AND_FLOAT), tip(GuideTopicIds.PROMOTE_AND_FLOAT)),
         ),
         topic(
+            GuideTopicIds.QUICK_DEFER, GuideSectionId.ORGANIZING, "alarm-clock",
+            setOf(WEB, ANDROID, IOS), sinceVersion = "0.3.0",
+            body = listOf(para(GuideTopicIds.QUICK_DEFER), tip(GuideTopicIds.QUICK_DEFER)),
+        ),
+        topic(
             GuideTopicIds.FLOATER_LISTS, GuideSectionId.ORGANIZING, "list",
             setOf(WEB, ANDROID, IOS), body = listOf(para(GuideTopicIds.FLOATER_LISTS)),
         ),

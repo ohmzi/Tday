@@ -18,6 +18,12 @@
     <string name="action_schedule_task">Agendar tarefa</string>
     <string name="action_float">Flutuar</string>
     <string name="action_float_task">Deixar flutuar</string>
+    <string name="action_defer">Adiar</string>
+    <string name="action_defer_task">Adiar tarefa</string>
+    <string name="quick_defer_later_today">Mais tarde hoje</string>
+    <string name="quick_defer_tonight">Hoje à noite</string>
+    <string name="quick_defer_tomorrow">Amanhã de manhã</string>
+    <string name="quick_defer_next_week">Na próxima semana</string>
     <string name="task_promote_failed">Não foi possível agendar a tarefa</string>
     <string name="task_float_failed">Não foi possível deixar a tarefa flutuar</string>
     <string name="action_complete">Concluir</string>

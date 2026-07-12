@@ -351,7 +351,12 @@
     "noUsersFound": "Aucun utilisateur trouvé",
     "tasksDueOn": "Tâches dues le {{date}}",
     "noTasksDueThisDay": "Aucune tâche due ce jour",
-    "selectAnotherDate": "Sélectionnez une autre date dans le calendrier."
+    "selectAnotherDate": "Sélectionnez une autre date dans le calendrier.",
+    "quickDefer": "Reporter",
+    "quickDeferLaterToday": "Plus tard aujourd'hui",
+    "quickDeferTonight": "Ce soir",
+    "quickDeferTomorrow": "Demain matin",
+    "quickDeferNextWeek": "La semaine prochaine"
   },
   "today": {
     "saveInstance": "Enregistrer l'instance",
@@ -736,6 +741,13 @@
         "keywords": "promouvoir, planifier flottant, rétrograder, laisser flotter, convertir, à tout moment, déplacer, en retard",
         "body": "Quand un flottant est prêt à devenir du vrai travail, utilisez son action Planifier : choisissez une heure et il rejoint l'Accueil comme tâche datée. L'inverse fonctionne aussi — une tâche en retard que vous repoussez sans cesse peut flotter discrètement : rétrogradez-la et elle revient dans À tout moment sans date, en gardant titre, notes et priorité.",
         "tip": "Les tâches récurrentes ne peuvent pas flotter — terminez d'abord la série si vous la voulez sans date."
+      },
+      "quick-defer": {
+        "title": "Report rapide",
+        "summary": "Un geste déplace une tâche à plus tard aujourd'hui, ce soir, demain ou la semaine prochaine.",
+        "keywords": "reporter, repousser, plus tard, ce soir, demain, semaine prochaine, replanifier",
+        "body": "Quand une tâche doit bouger, mais pas loin, évitez le sélecteur de date : l'action Reporter propose Plus tard aujourd'hui (+3 heures), Ce soir (19 h), Demain matin (9 h) et La semaine prochaine (lundi 9 h) en un geste. C'est le même changement que la feuille d'édition — en plus rapide.",
+        "tip": "Les tâches récurrentes se reportent par occurrence depuis la feuille d'édition, le menu express ne s'en mêle donc pas."
       },
       "floater-lists": {
         "title": "Listes de Floaters",
