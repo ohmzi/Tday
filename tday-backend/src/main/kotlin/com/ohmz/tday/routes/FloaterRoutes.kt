@@ -12,6 +12,8 @@ import com.ohmz.tday.models.request.*
 import com.ohmz.tday.models.response.CreateFloaterResponse
 import com.ohmz.tday.services.FloaterService
 import com.ohmz.tday.shared.model.Priority
+import com.ohmz.tday.shared.model.PromoteFloaterRequest
+import com.ohmz.tday.shared.model.PromoteFloaterResponse
 import io.ktor.server.request.receive
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.delete
@@ -115,6 +117,29 @@ fun Route.floaterRoutes() {
                     val body = call.receive<FloaterReorderRequest>()
                     floaterService.reorder(user.id, body.id, body.order)
                         .map { mapOf("message" to "order updated") }
+                }
+            }
+        }
+
+        // Schedules a floater into a real Todo (the floater row is consumed).
+        route("/{id}/promote") {
+            post {
+                call.withAuth { user ->
+                    either {
+                        val floaterId = call.parameters["id"]?.trim().orEmpty()
+                        if (floaterId.isBlank()) {
+                            raise(AppError.BadRequest("floater id is required"))
+                        }
+                        val body = call.receive<PromoteFloaterRequest>()
+                        if (body.due.isBlank()) {
+                            raise(AppError.BadRequest("due is required"))
+                        }
+                        val due = parseTodoDateTime(body.due)
+                            ?: raise(AppError.BadRequest("due must be a valid ISO-8601 datetime"))
+                        val rrule = body.rrule?.takeIf { it.isNotBlank() }
+                        val todo = floaterService.promoteToTodo(user.id, floaterId, due, rrule).bind()
+                        PromoteFloaterResponse(message = "floater promoted", todo = todo)
+                    }
                 }
             }
         }

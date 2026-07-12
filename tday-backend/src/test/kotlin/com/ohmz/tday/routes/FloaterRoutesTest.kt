@@ -8,6 +8,8 @@ import com.ohmz.tday.plugins.configureSerialization
 import com.ohmz.tday.security.JwtUserClaims
 import com.ohmz.tday.services.FloaterService
 import com.ohmz.tday.shared.model.FloaterDto
+import com.ohmz.tday.shared.model.TodoDto
+import java.time.LocalDateTime
 import io.ktor.client.request.delete
 import io.ktor.client.request.get
 import io.ktor.client.request.patch
@@ -150,6 +152,53 @@ class FloaterRoutesTest {
     }
 
     @Test
+    fun `promote floater parses due and returns the created todo`() = testApplication {
+        val floaterService = RecordingFloaterService()
+
+        application {
+            configureFloaterRoutesTestApp(floaterService)
+        }
+
+        val response = client.post("/api/floater/floater_9/promote") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """
+                    {
+                      "due": "2026-07-01T09:00:00Z",
+                      "rrule": "RRULE:FREQ=WEEKLY;INTERVAL=1"
+                    }
+                """.trimIndent(),
+            )
+        }
+
+        assertEquals(HttpStatusCode.OK, response.status)
+        assertEquals("floater_9", floaterService.lastPromote?.floaterId)
+        assertEquals("RRULE:FREQ=WEEKLY;INTERVAL=1", floaterService.lastPromote?.rrule)
+        val payload = json.parseToJsonElement(response.bodyAsText()).jsonObject
+        assertEquals(
+            "todo_promoted",
+            payload.getValue("todo").jsonObject.getValue("id").jsonPrimitive.content,
+        )
+    }
+
+    @Test
+    fun `promote floater rejects an invalid due`() = testApplication {
+        val floaterService = RecordingFloaterService()
+
+        application {
+            configureFloaterRoutesTestApp(floaterService)
+        }
+
+        val response = client.post("/api/floater/floater_9/promote") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"due":"not-a-date"}""")
+        }
+
+        assertEquals(HttpStatusCode.BadRequest, response.status)
+        assertNull(floaterService.lastPromote)
+    }
+
+    @Test
     fun `delete floater validates id`() = testApplication {
         val floaterService = RecordingFloaterService()
 
@@ -206,6 +255,12 @@ class FloaterRoutesTest {
         val listID: String?,
     )
 
+    private data class PromoteCall(
+        val floaterId: String,
+        val due: LocalDateTime,
+        val rrule: String?,
+    )
+
     private class RecordingFloaterService(
         val rows: MutableList<FloaterDto> = mutableListOf(),
     ) : FloaterService {
@@ -213,6 +268,7 @@ class FloaterRoutesTest {
         var lastUpdateId: String? = null
         var lastUpdateFields: Map<String, Any?>? = null
         var lastDeleteId: String? = null
+        var lastPromote: PromoteCall? = null
         val events = mutableListOf<String>()
 
         override suspend fun create(
@@ -263,5 +319,20 @@ class FloaterRoutesTest {
 
         override suspend fun reorder(userId: String, floaterId: String, newOrder: Int): Either<AppError, Unit> =
             Unit.right()
+
+        override suspend fun promoteToTodo(
+            userId: String,
+            floaterId: String,
+            due: LocalDateTime,
+            rrule: String?,
+        ): Either<AppError, TodoDto> {
+            lastPromote = PromoteCall(floaterId, due, rrule)
+            return TodoDto(
+                id = "todo_promoted",
+                title = "Paint shelf",
+                due = due.toString(),
+                rrule = rrule,
+            ).right()
+        }
     }
 }

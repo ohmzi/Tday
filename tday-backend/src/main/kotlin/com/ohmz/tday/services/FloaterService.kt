@@ -6,10 +6,12 @@ import com.ohmz.tday.db.enums.Priority
 import com.ohmz.tday.db.tables.CompletedFloaters
 import com.ohmz.tday.db.tables.FloaterLists
 import com.ohmz.tday.db.tables.Floaters
+import com.ohmz.tday.db.tables.Todos
 import com.ohmz.tday.db.util.CuidGenerator
 import com.ohmz.tday.domain.AppError
 import com.ohmz.tday.domain.DomainEvent
 import com.ohmz.tday.models.response.FloaterResponse
+import com.ohmz.tday.models.response.TodoResponse
 import com.ohmz.tday.security.FieldEncryption
 import kotlinx.coroutines.Dispatchers
 import org.jetbrains.exposed.sql.Op
@@ -38,6 +40,7 @@ interface FloaterService {
     suspend fun uncompleteFloater(userId: String, floaterId: String): Either<AppError, Unit>
     suspend fun prioritize(userId: String, floaterId: String, priority: String): Either<AppError, Unit>
     suspend fun reorder(userId: String, floaterId: String, newOrder: Int): Either<AppError, Unit>
+    suspend fun promoteToTodo(userId: String, floaterId: String, due: LocalDateTime, rrule: String?): Either<AppError, TodoResponse>
 }
 
 class FloaterServiceImpl(
@@ -226,6 +229,66 @@ class FloaterServiceImpl(
         cache.invalidateFloaterCaches(userId)
         publisher.publishToCollaborators(userId, DomainEvent.FloaterChanged())
         return Unit.right()
+    }
+
+    override suspend fun promoteToTodo(
+        userId: String,
+        floaterId: String,
+        due: LocalDateTime,
+        rrule: String?,
+    ): Either<AppError, TodoResponse> {
+        val newTodoId = CuidGenerator.newCuid()
+        val now = LocalDateTime.now(ZoneOffset.UTC)
+        // Owner-only: promoting moves the row out of any shared floater list, so
+        // an editor collaborator must not be able to pull it into their timeline.
+        val promoted = newSuspendedTransaction(Dispatchers.IO) {
+            val floater = Floaters.selectAll().where {
+                (Floaters.id eq floaterId) and (Floaters.userID eq userId)
+            }.firstOrNull() ?: return@newSuspendedTransaction null
+
+            Todos.insert {
+                it[Todos.id] = newTodoId
+                it[Todos.title] = floater[Floaters.title]
+                // Ciphertext copies straight across — both tables encrypt "description".
+                it[Todos.description] = floater[Floaters.description]
+                it[Todos.priority] = floater[Floaters.priority]
+                it[Todos.pinned] = floater[Floaters.pinned]
+                it[Todos.due] = due
+                it[Todos.rrule] = rrule
+                // Floater lists and todo lists are separate types; membership stays behind.
+                it[Todos.listID] = null
+                it[Todos.userID] = userId
+                it[Todos.createdAt] = floater[Floaters.createdAt]
+                it[Todos.updatedAt] = now
+                it[Todos.exdates] = emptyList()
+            }
+            CompletedFloaters.deleteWhere {
+                (CompletedFloaters.userID eq userId) and (CompletedFloaters.originalFloaterID eq floaterId)
+            }
+            Floaters.deleteWhere { (Floaters.id eq floaterId) and (Floaters.userID eq userId) }
+            floater
+        } ?: return Either.Left(AppError.NotFound("floater not found"))
+
+        cache.invalidateFloaterCaches(userId)
+        cache.invalidateTodoCaches(userId)
+        publisher.publishToCollaborators(userId, DomainEvent.FloaterChanged())
+        publisher.publishToCollaborators(userId, DomainEvent.TodoChanged())
+        return TodoResponse(
+            id = newTodoId,
+            title = promoted[Floaters.title],
+            description = fieldEncryption.decryptIfEncrypted(promoted[Floaters.description]),
+            pinned = promoted[Floaters.pinned],
+            priority = promoted[Floaters.priority].name,
+            due = due.toString(),
+            rrule = rrule,
+            timeZone = "UTC",
+            completed = false,
+            order = 0,
+            listID = null,
+            userID = userId,
+            createdAt = promoted[Floaters.createdAt].toString(),
+            updatedAt = now.toString(),
+        ).right()
     }
 
     private fun ResultRow.toFloaterResponse(): FloaterResponse = FloaterResponse(

@@ -30,6 +30,23 @@ data class CreateFloaterRequest(
     val listID: String? = null,
 )
 
+/**
+ * Body of `POST /api/floater/{id}/promote` — schedules a floater into a real
+ * Todo (the floater row is consumed). List membership does not carry across:
+ * floater lists and todo lists are separate types.
+ */
+@Serializable
+data class PromoteFloaterRequest(
+    val due: String,
+    val rrule: String? = null,
+)
+
+@Serializable
+data class PromoteFloaterResponse(
+    val message: String? = null,
+    val todo: TodoDto? = null,
+)
+
 @Serializable
 data class CreateFloaterResponse(
     val message: String? = null,

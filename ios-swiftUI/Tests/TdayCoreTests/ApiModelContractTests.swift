@@ -30,6 +30,67 @@ final class ApiModelContractTests: XCTestCase {
         XCTAssertEqual(dto.userID, "user-1")
     }
 
+    func testPromoteFloaterContractRoundTrips() throws {
+        let request = PromoteFloaterRequest(due: "2026-07-01T09:00:00Z", rrule: nil)
+        let encoded = try JSONEncoder().encode(request)
+        let object = try XCTUnwrap(
+            try JSONSerialization.jsonObject(with: encoded) as? [String: Any]
+        )
+        XCTAssertEqual(object["due"] as? String, "2026-07-01T09:00:00Z")
+
+        let responseJson = """
+        {
+          "message": "floater promoted",
+          "todo": {
+            "id": "todo-9",
+            "title": "Paint shelf",
+            "description": null,
+            "pinned": true,
+            "priority": "Medium",
+            "due": "2026-07-01T09:00:00",
+            "rrule": "RRULE:FREQ=WEEKLY;INTERVAL=1",
+            "timeZone": "UTC",
+            "instanceDate": null,
+            "completed": false,
+            "order": 0,
+            "listID": null,
+            "userID": "user-1",
+            "updatedAt": "2026-06-30T10:00:00",
+            "createdAt": "2026-06-01T10:00:00"
+          }
+        }
+        """.data(using: .utf8)!
+        let response = try JSONDecoder().decode(PromoteFloaterResponse.self, from: responseJson)
+        XCTAssertEqual(response.todo?.id, "todo-9")
+        XCTAssertEqual(response.todo?.rrule, "RRULE:FREQ=WEEKLY;INTERVAL=1")
+    }
+
+    func testDemoteTodoResponseAcceptsSharedContractShape() throws {
+        let json = """
+        {
+          "message": "todo demoted",
+          "floater": {
+            "id": "floater-7",
+            "title": "Fix the bike",
+            "description": null,
+            "pinned": false,
+            "priority": "Low",
+            "completed": false,
+            "order": 0,
+            "listID": null,
+            "userID": "user-1",
+            "updatedAt": "2026-06-30T10:00:00",
+            "createdAt": "2026-06-01T10:00:00"
+          }
+        }
+        """.data(using: .utf8)!
+
+        let response = try JSONDecoder().decode(DemoteTodoResponse.self, from: json)
+
+        XCTAssertEqual(response.floater?.id, "floater-7")
+        XCTAssertNil(response.floater?.listID)
+    }
+
     func testSummaryResponseAcceptsFallbackOnlyContract() throws {
         let json = """
         {
