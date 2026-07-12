@@ -134,6 +134,15 @@ T'Day is Sentry-first and privacy-first. New UI, API, sync, auth, reminder, widg
 - Local Mode diagnostics may describe the operation, but must not upload local-only content or imply server sync.
 - Update `docs/TELEMETRY.md`, guardrail tests, and platform docs when collected fields, SDK config, helper behavior, or privacy boundaries change.
 
+## Feature Guide
+
+The in-app How-To guide (Settings → "How-To & Tips") is content-driven from the shared `GuideCatalog` (`shared/src/commonMain/kotlin/com/ohmz/tday/shared/guide/`). It works fully offline and in Local Mode because content is compiled/bundled into every client.
+
+- Any PR that ships user-visible behavior must add its `GuideTopic` to `GuideCatalog.kt` (with `sinceVersion` = the release it ships in, to feed "What's New"), add `guide.topics.<id>.*` strings to **every** `tday-web/messages/<locale>.json`, then run `./gradlew :shared:exportGuideContent` and commit the regenerated artifacts.
+- Direction of truth: structure flows Kotlin→web/iOS; strings flow web→Kotlin/iOS. `./gradlew :shared:verifyGuideContent` is the CI drift gate — if it fails, regenerate and commit.
+- Topic icons must be real Lucide glyphs present on every platform (web `lucide-react`, Android `ic_lucide_<glyph>.xml`, iOS `Lucide<Glyph>.imageset`); the `guide-icons` coverage test enforces this. Add missing assets per `docs/ICONS.md`.
+- The i18n parity guardrail blocks partial translations, so a new topic needs all locales up front (machine-translate, then refine).
+
 ## Architecture Expectations
 
 Across the repo, keep changes shaped around readable boundaries: a file or type should have a clear reason to exist, dependencies should flow from UI to state to services/repositories to storage/network, and helpers should start local before being promoted to shared.
