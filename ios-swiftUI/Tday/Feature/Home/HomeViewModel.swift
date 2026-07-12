@@ -132,18 +132,28 @@ final class HomeViewModel {
         }
     }
 
+    /// Delayed-commit complete (see TodoListViewModel.complete): hide the row
+    /// now, show an undoable toast, and only commit the real completion once the
+    /// undo window expires. Undo re-reads the untouched cache to restore it.
     func complete(_ todo: TodoItem) async {
+        let container = container
         todayTodos.removeAll { $0.id == todo.id }
-        do {
-            try await container.completeTodo(todo)
-            refreshFromCache()
-        } catch {
-            container.snackbarManager.show(
-                userFacingMessage(for: error, fallback: "Could not complete task."),
-                kind: .error
-            )
-            refreshFromCache()
-        }
+        searchableTodos.removeAll { $0.id == todo.id }
+        container.undoableDeleteScheduler.schedule(
+            message: L("Task completed"),
+            restore: { [weak self] in self?.refreshFromCache() },
+            commit: { [weak self] in
+                do {
+                    try await container.completeTodo(todo)
+                } catch {
+                    container.snackbarManager.show(
+                        userFacingMessage(for: error, fallback: "Could not complete task."),
+                        kind: .error
+                    )
+                }
+                self?.refreshFromCache()
+            }
+        )
     }
 
     /// Delayed-commit delete: the task is staged out of the local cache
