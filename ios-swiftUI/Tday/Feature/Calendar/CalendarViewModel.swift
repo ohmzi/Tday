@@ -50,14 +50,25 @@ final class CalendarViewModel {
         }
     }
 
+    /// Delayed-commit complete (see TodoListViewModel.complete): hide the row
+    /// now, show an undoable toast, and only commit the real completion once the
+    /// undo window expires. Undo re-reads the untouched cache to restore it.
     func complete(_ todo: TodoItem) async {
         TdayTelemetry.addBreadcrumb("calendar.task.complete", data: calendarTelemetryData())
-        do {
-            try await container.completeTodo(todo)
-            hydrateFromCache()
-        } catch {
-            container.snackbarManager.show(userFacingMessage(for: error, fallback: "Could not complete task."), kind: .error)
-        }
+        let container = container
+        items.removeAll { $0.id == todo.id }
+        container.undoableDeleteScheduler.schedule(
+            message: L("Task completed"),
+            restore: { [weak self] in self?.hydrateFromCache() },
+            commit: { [weak self] in
+                do {
+                    try await container.completeTodo(todo)
+                } catch {
+                    container.snackbarManager.show(userFacingMessage(for: error, fallback: "Could not complete task."), kind: .error)
+                }
+                self?.hydrateFromCache()
+            }
+        )
     }
 
     func uncomplete(_ item: CompletedItem) async {
