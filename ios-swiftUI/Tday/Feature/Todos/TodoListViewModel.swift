@@ -191,21 +191,37 @@ final class TodoListViewModel {
         }
     }
 
+    /// Delayed-commit complete: the row is hidden immediately (in-memory only,
+    /// the cache is untouched), an undoable toast is shown, and the real
+    /// completion only commits once the undo window expires. Tapping Undo cancels
+    /// the pending commit and re-reads the cache to restore the row.
     func complete(_ todo: TodoItem) async {
         TdayTelemetry.addBreadcrumb("task.complete", data: taskTelemetryData(mode: mode))
-        do {
-            if mode == .floater {
-                try await container.todoRepository.completeFloater(todo)
-            } else {
-                try await container.completeTodo(todo)
+        let container = container
+        let isFloater = mode == .floater
+        items.removeAll { $0.id == todo.id }
+        container.undoableDeleteScheduler.schedule(
+            message: L("Task completed"),
+            restore: { [weak self] in
+                // The cache was never changed, so re-reading it restores the row.
+                self?.hydrateFromCache()
+            },
+            commit: { [weak self] in
+                do {
+                    if isFloater {
+                        try await container.todoRepository.completeFloater(todo)
+                    } else {
+                        try await container.completeTodo(todo)
+                    }
+                } catch {
+                    container.snackbarManager.show(
+                        userFacingMessage(for: error, fallback: "Could not complete task."),
+                        kind: .error
+                    )
+                }
+                self?.hydrateFromCache()
             }
-            hydrateFromCache()
-        } catch {
-            container.snackbarManager.show(
-                userFacingMessage(for: error, fallback: "Could not complete task."),
-                kind: .error
-            )
-        }
+        )
     }
 
     /// Delayed-commit delete: the task is staged out of the local cache
