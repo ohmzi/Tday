@@ -327,6 +327,11 @@ class RateLimitingTest {
             instanceDate: LocalDateTime,
         ): Either<AppError, Unit> = Unit.right()
 
+        override suspend fun demoteToFloater(
+            userId: String,
+            todoId: String,
+        ): Either<AppError, FloaterResponse> = unsupported()
+
         private fun <T> unsupported(): Either<AppError, T> =
             Either.Left(AppError.Internal("unsupported in rate limit test"))
     }
@@ -371,6 +376,13 @@ class RateLimitingTest {
         override suspend fun prioritize(userId: String, floaterId: String, priority: String): Either<AppError, Unit> = Unit.right()
 
         override suspend fun reorder(userId: String, floaterId: String, newOrder: Int): Either<AppError, Unit> = Unit.right()
+
+        override suspend fun promoteToTodo(
+            userId: String,
+            floaterId: String,
+            due: LocalDateTime,
+            rrule: String?,
+        ): Either<AppError, TodoResponse> = unsupported()
 
         private fun <T> unsupported(): Either<AppError, T> =
             Either.Left(AppError.Internal("unsupported in rate limit test"))
