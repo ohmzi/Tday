@@ -39,6 +39,7 @@ import { api } from "@/lib/api-client";
 import { getErrorMessage } from "@/lib/error-message";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { Link, usePathname } from "@/lib/navigation";
+import { GuideHelpLink } from "@/features/guide/GuideHelpLink";
 import { LANGUAGE_STORAGE_KEY, resolveInitialLocale } from "@/i18n";
 import {
   fetchAllSecurityQuestions,
@@ -75,16 +76,21 @@ const LANGUAGE_OPTIONS = [
 function SettingsSection({
   title,
   description,
+  titleAction,
   children,
 }: {
   title: string;
   description?: ReactNode;
+  titleAction?: ReactNode;
   children: ReactNode;
 }) {
   return (
     <SheetCard className="space-y-4 p-[18px]">
       <div className="space-y-1">
-        <h2 className="text-[1.4rem] font-black leading-tight text-foreground">{title}</h2>
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-[1.4rem] font-black leading-tight text-foreground">{title}</h2>
+          {titleAction}
+        </div>
         {description ? (
           <p className="text-sm font-extrabold text-muted-foreground">{description}</p>
         ) : null}
@@ -96,10 +102,21 @@ function SettingsSection({
 
 /** Sub-section heading used inside a combined card (e.g. Appearance + Language
  * grouped together) — matches the SettingsSection header styling. */
-function SectionHeading({ title, description }: { title: string; description?: ReactNode }) {
+function SectionHeading({
+  title,
+  description,
+  titleAction,
+}: {
+  title: string;
+  description?: ReactNode;
+  titleAction?: ReactNode;
+}) {
   return (
     <div className="space-y-1">
-      <h2 className="text-[1.4rem] font-black leading-tight text-foreground">{title}</h2>
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="text-[1.4rem] font-black leading-tight text-foreground">{title}</h2>
+        {titleAction}
+      </div>
       {description ? (
         <p className="text-sm font-extrabold text-muted-foreground">{description}</p>
       ) : null}
@@ -1036,7 +1053,10 @@ export default function SettingsPage() {
         {push.isSupported && (
           <>
             <CardDivider />
-            <SectionHeading title={t("notifications.title")} />
+            <SectionHeading
+              title={t("notifications.title")}
+              titleAction={<GuideHelpLink topic="push-notifications" />}
+            />
             <div className="flex items-center justify-between gap-4">
               <div className="min-w-0">
                 <p className="text-[1.05rem] font-black text-foreground">{t("notifications.push")}</p>
@@ -1061,7 +1081,10 @@ export default function SettingsPage() {
         )}
       </SheetCard>
 
-      <SettingsSection title={t("dashboard.title")}>
+      <SettingsSection
+        title={t("dashboard.title")}
+        titleAction={<GuideHelpLink topic="api-key-homarr" />}
+      >
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0 text-sm">
             <p className="font-black text-foreground">
