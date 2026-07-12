@@ -14,6 +14,12 @@
     <string name="action_delete_task">Aufgabe löschen</string>
     <string name="action_delete_list">Liste löschen</string>
     <string name="action_delete">Löschen</string>
+    <string name="action_schedule">Planen</string>
+    <string name="action_schedule_task">Aufgabe planen</string>
+    <string name="action_float">Treiben</string>
+    <string name="action_float_task">Treiben lassen</string>
+    <string name="task_promote_failed">Aufgabe konnte nicht geplant werden</string>
+    <string name="task_float_failed">Aufgabe konnte nicht treiben</string>
     <string name="action_complete">Abschließen</string>
     <string name="action_more">Mehr</string>
     <string name="action_more_options">Weitere Optionen</string>

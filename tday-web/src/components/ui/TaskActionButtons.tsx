@@ -1,6 +1,6 @@
 import React from "react";
 import clsx from "clsx";
-import { SquarePen, Trash } from "lucide-react";
+import { Leaf, SquarePen, Trash } from "lucide-react";
 
 /**
  * Canonical edit / delete action buttons used across the web app (Today,
@@ -66,6 +66,27 @@ export function DeleteTaskButton({ onActivate, label, className }: ActionButtonP
       )}
     >
       <Trash className="h-4 w-4" strokeWidth={1.8} />
+    </button>
+  );
+}
+
+/** "Let it float": demote a stale todo into an Anytime floater. */
+export function FloatTaskButton({ onActivate, label, className }: ActionButtonProps) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title={label}
+      onPointerDown={suppressDragActivation}
+      onMouseDown={suppressDragActivation}
+      onTouchStart={suppressDragActivation}
+      onClick={(event) => {
+        event.stopPropagation();
+        onActivate();
+      }}
+      className={clsx(BASE_BUTTON_CLASS, "hover:bg-muted hover:text-foreground", className)}
+    >
+      <Leaf className="h-4 w-4" strokeWidth={1.8} />
     </button>
   );
 }

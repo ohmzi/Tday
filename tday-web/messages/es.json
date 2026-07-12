@@ -730,6 +730,13 @@
         "body": "Una tarea programada tiene fecha de vencimiento y aparece en Inicio y en el calendario. Un Flotante no tiene fecha: espera con calma en tu vista En cualquier momento hasta que estés listo. Usa los Flotantes para lo de «algún día» que no debería llenar el hoy.",
         "tip": "Los Flotantes nunca aparecen en el calendario: ese espacio es solo para lo que tiene fecha."
       },
+      "promote-and-float": {
+        "title": "Promover y flotar",
+        "summary": "Programa un flotante como tarea real, o deja flotar una tarea estancada.",
+        "keywords": "promover, programar flotante, degradar, dejar flotar, convertir, en cualquier momento, mover, atrasada",
+        "body": "Cuando un flotante esté listo para convertirse en trabajo real, usa su acción Programar: elige una hora y pasará a Inicio como tarea con fecha. También funciona al revés: una tarea atrasada que sigues posponiendo puede flotar tranquilamente; degrádala y volverá a Cualquier momento sin fecha, conservando su título, notas y prioridad.",
+        "tip": "Las tareas recurrentes no pueden flotar: termina primero la serie si quieres que quede sin fecha."
+      },
       "floater-lists": {
         "title": "Listas de Flotantes",
         "summary": "Agrupa tus tareas de En cualquier momento en sus propias listas.",

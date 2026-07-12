@@ -16,6 +16,7 @@
       "calendar-views",
       "root-feeds",
       "create-task",
+      "promote-and-float",
       "scheduled-lists"
     ],
     "reminder": [
@@ -27,6 +28,7 @@
     "floater": [
       "floaters-vs-todos",
       "floater-lists",
+      "promote-and-float",
       "root-feeds",
       "create-task"
     ],
@@ -40,11 +42,13 @@
       "search-tasks"
     ],
     "priority": [
-      "priorities"
+      "priorities",
+      "promote-and-float"
     ],
     "pin": [
       "pin-task",
-      "create-task"
+      "create-task",
+      "promote-and-float"
     ],
     "keyboard": [
       "keyboard-submit"

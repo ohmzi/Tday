@@ -14,6 +14,12 @@
     <string name="action_delete_task">Elimina attività</string>
     <string name="action_delete_list">Elimina elenco</string>
     <string name="action_delete">Elimina</string>
+    <string name="action_schedule">Pianifica</string>
+    <string name="action_schedule_task">Pianifica attività</string>
+    <string name="action_float">Fluttua</string>
+    <string name="action_float_task">Lascia fluttuare</string>
+    <string name="task_promote_failed">Impossibile pianificare l\'attività</string>
+    <string name="task_float_failed">Impossibile far fluttuare l\'attività</string>
     <string name="action_complete">Completa</string>
     <string name="action_more">Altro</string>
     <string name="action_more_options">Altre opzioni</string>

@@ -14,6 +14,12 @@
     <string name="action_delete_task">Eliminar tarea</string>
     <string name="action_delete_list">Eliminar lista</string>
     <string name="action_delete">Eliminar</string>
+    <string name="action_schedule">Programar</string>
+    <string name="action_schedule_task">Programar tarea</string>
+    <string name="action_float">Flotar</string>
+    <string name="action_float_task">Dejar flotar</string>
+    <string name="task_promote_failed">No se pudo programar la tarea</string>
+    <string name="task_float_failed">No se pudo dejar flotar la tarea</string>
     <string name="action_complete">Completar</string>
     <string name="action_more">Más</string>
     <string name="action_more_options">Más opciones</string>

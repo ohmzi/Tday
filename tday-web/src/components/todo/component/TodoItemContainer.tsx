@@ -15,7 +15,8 @@ import { getPriorityFlag } from "@/lib/priority";
 import { useUserTimezone } from "@/features/user/query/get-timezone";
 import { getTodoFocusElementId } from "@/lib/todoToastNavigation";
 import TaskFormSheet from "@/components/todo/component/TodoForm/TaskFormSheet";
-import { TaskActionButtons } from "@/components/ui/TaskActionButtons";
+import { FloatTaskButton, TaskActionButtons } from "@/components/ui/TaskActionButtons";
+import { useDemoteTodo } from "@/features/todayTodos/query/demote-todo";
 
 
 type TodoItemContainerProps = {
@@ -48,6 +49,7 @@ export const TodoItemCard = ({
   const { useCompleteTodo, useDeleteTodo, readOnly = false } = useTodoMutation();
   const { completeMutateFn } = useCompleteTodo();
   const { deleteMutateFn } = useDeleteTodo();
+  const { demoteMutateFn } = useDemoteTodo();
   const locale = useLocale();
   const userTimeZone = useUserTimezone();
   const [itemElement, setItemElement] = useState<HTMLDivElement | null>(null);
@@ -349,12 +351,23 @@ export const TodoItemCard = ({
                 showHandle ? "sm:opacity-100" : "sm:pointer-events-none sm:opacity-0",
               )}
             >
-              <TaskActionButtons
-                onEdit={() => setDisplayForm(true)}
-                onDelete={() => deleteMutateFn(todoItem)}
-                editLabel="Edit task"
-                deleteLabel="Delete task"
-              />
+              <div className="flex items-center gap-1">
+                {/* "Let it float" only makes sense on carried-over tasks, and
+                    the backend rejects recurring ones (their series would be
+                    silently destroyed). */}
+                {isOverdue && !rrule && (
+                  <FloatTaskButton
+                    onActivate={() => demoteMutateFn(todoItem)}
+                    label="Let it float"
+                  />
+                )}
+                <TaskActionButtons
+                  onEdit={() => setDisplayForm(true)}
+                  onDelete={() => deleteMutateFn(todoItem)}
+                  editLabel="Edit task"
+                  deleteLabel="Delete task"
+                />
+              </div>
             </div>
           )}
         </div>

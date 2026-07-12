@@ -282,6 +282,38 @@
       "sinceVersion": null
     },
     {
+      "id": "promote-and-float",
+      "section": "ORGANIZING",
+      "icon": "refresh-cw",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "titleKey": "guide.topics.promote-and-float.title",
+      "summaryKey": "guide.topics.promote-and-float.summary",
+      "keywordsKey": "guide.topics.promote-and-float.keywords",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "keys": [
+            "guide.topics.promote-and-float.body"
+          ]
+        },
+        {
+          "type": "TIP",
+          "keys": [
+            "guide.topics.promote-and-float.tip"
+          ]
+        }
+      ],
+      "badge": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "serverOnly": false,
+      "sinceVersion": "0.3.0"
+    },
+    {
       "id": "floater-lists",
       "section": "ORGANIZING",
       "icon": "list",

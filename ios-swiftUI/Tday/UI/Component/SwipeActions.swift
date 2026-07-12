@@ -3,6 +3,18 @@ import SwiftUI
 enum TaskSwipeActionTint {
     static let edit = Color(.sRGB, red: 76.0 / 255.0, green: 125.0 / 255.0, blue: 222.0 / 255.0, opacity: 1)
     static let delete = Color(.sRGB, red: 255.0 / 255.0, green: 69.0 / 255.0, blue: 58.0 / 255.0, opacity: 1)
+    static let schedule = Color(.sRGB, red: 51.0 / 255.0, green: 153.0 / 255.0, blue: 136.0 / 255.0, opacity: 1)
+    static let float = Color(.sRGB, red: 122.0 / 255.0, green: 156.0 / 255.0, blue: 108.0 / 255.0, opacity: 1)
+}
+
+/// An optional mode-specific action revealed before Edit/Delete in the
+/// trailing swipe row (e.g. "Schedule" on floaters, "Float" on overdue).
+struct TodoSwipeExtraAction {
+    let title: String
+    /// Asset-catalog name of the lucide template glyph (shared with web/Android).
+    let assetName: String
+    let tint: Color
+    let action: () -> Void
 }
 
 struct TodoRowAction {
@@ -34,6 +46,7 @@ extension View {
         rowID: String,
         openRowID: Binding<String?>,
         enabled: Bool = true,
+        extraAction: TodoSwipeExtraAction? = nil,
         onEdit: @escaping () -> Void,
         onDelete: @escaping () -> Void
     ) -> some View {
@@ -42,6 +55,7 @@ extension View {
                 rowID: rowID,
                 openRowID: openRowID,
                 enabled: enabled,
+                extraAction: extraAction,
                 onEdit: onEdit,
                 onDelete: onDelete
             )
@@ -53,13 +67,14 @@ private struct TodoTrailingSwipeActionsModifier: ViewModifier {
     let rowID: String
     @Binding var openRowID: String?
     let enabled: Bool
+    let extraAction: TodoSwipeExtraAction?
     let onEdit: () -> Void
     let onDelete: () -> Void
 
     @State private var offsetX: CGFloat = 0
     @State private var isHinting = false
 
-    private let revealWidth: CGFloat = 152
+    private var revealWidth: CGFloat { extraAction == nil ? 152 : 228 }
     private let openVelocityThreshold: CGFloat = -180
 
     private var revealProgress: CGFloat {
@@ -103,6 +118,20 @@ private struct TodoTrailingSwipeActionsModifier: ViewModifier {
 
             HStack(spacing: 16) {
                 Spacer()
+                if let extraAction {
+                    TodoSwipePillActionButton(
+                        title: extraAction.title,
+                        assetName: extraAction.assetName,
+                        tint: extraAction.tint,
+                        revealProgress: revealProgress,
+                        revealDelay: 0.74
+                    ) {
+                        HapticManager.buttonTap()
+                        closeActions()
+                        extraAction.action()
+                    }
+                }
+
                 TodoSwipePillActionButton(
                     title: "Edit",
                     assetName: "ActionEdit",

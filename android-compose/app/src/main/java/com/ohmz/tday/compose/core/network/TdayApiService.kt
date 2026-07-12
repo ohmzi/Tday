@@ -25,6 +25,7 @@ import com.ohmz.tday.compose.core.model.DeleteFloaterRequest
 import com.ohmz.tday.compose.core.model.DeleteListRequest
 import com.ohmz.tday.compose.core.model.DeleteListResponse
 import com.ohmz.tday.compose.core.model.DeleteTodoRequest
+import com.ohmz.tday.compose.core.model.DemoteTodoResponse
 import com.ohmz.tday.compose.core.model.FloaterCompleteRequest
 import com.ohmz.tday.compose.core.model.FloaterListDetailResponse
 import com.ohmz.tday.compose.core.model.FloaterListsResponse
@@ -39,6 +40,8 @@ import com.ohmz.tday.compose.core.model.MessageResponse
 import com.ohmz.tday.compose.core.model.MobileProbeResponse
 import com.ohmz.tday.compose.core.model.PreferencesDto
 import com.ohmz.tday.compose.core.model.PreferencesResponse
+import com.ohmz.tday.compose.core.model.PromoteFloaterRequest
+import com.ohmz.tday.compose.core.model.PromoteFloaterResponse
 import com.ohmz.tday.compose.core.model.RegisterRequest
 import com.ohmz.tday.compose.core.model.RegisterResponse
 import com.ohmz.tday.compose.core.model.RemoveMemberRequest
@@ -194,6 +197,19 @@ interface TdayApiService {
     suspend fun completeFloaterByBody(
         @Body payload: FloaterCompleteRequest,
     ): Response<MessageResponse>
+
+    /** Schedules a floater into a real Todo (the floater row is consumed). */
+    @POST("/api/floater/{id}/promote")
+    suspend fun promoteFloater(
+        @Path("id") floaterId: String,
+        @Body payload: PromoteFloaterRequest,
+    ): Response<PromoteFloaterResponse>
+
+    /** Lets a stale todo float: consumes the todo, creating an Anytime floater. */
+    @POST("/api/todo/{id}/demote")
+    suspend fun demoteTodo(
+        @Path("id") todoId: String,
+    ): Response<DemoteTodoResponse>
 
     @PATCH("/api/floater/uncomplete")
     suspend fun uncompleteFloaterByBody(
