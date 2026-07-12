@@ -620,5 +620,221 @@
     "error": "Couldn't generate a summary. Please try again.",
     "sourceServer": "Server model",
     "sourceLocal": "Local model"
+  },
+  "guide": {
+    "title": "How-To & Tips",
+    "subtitle": "Everything T'Day can do — the obvious and the hidden.",
+    "searchPlaceholder": "Search features…",
+    "searchAria": "Search the guide",
+    "whatsNew": "What's new",
+    "tryIt": "Try it",
+    "clearSearch": "Clear",
+    "noResults": "No matches. Try another word.",
+    "results": "{{count}} results",
+    "badges": {
+      "hiddenGem": "Hidden gem",
+      "proTip": "Pro tip",
+      "new": "New",
+      "server": "Server mode"
+    },
+    "sections": {
+      "gettingStarted": "Getting started",
+      "captureAndDates": "Capture & dates",
+      "gestures": "Gestures",
+      "organizing": "Organizing",
+      "recurrenceAndReminders": "Recurrence & reminders",
+      "widgetsAndSurfaces": "Widgets & surfaces",
+      "modesAndSync": "Modes & sync",
+      "integrations": "Integrations",
+      "keyboardShortcuts": "Keyboard shortcuts"
+    },
+    "topics": {
+      "root-feeds": {
+        "title": "Home and Anytime",
+        "summary": "Two calm home feeds you switch between from the dock.",
+        "keywords": "home, anytime, feed, dock, root, navigate, tabs",
+        "body": "T'Day has two sibling feeds. Home holds your scheduled tasks for today and beyond. Anytime holds Floaters — tasks with no date. Switch between them from the dock at the bottom, and create a task from either one."
+      },
+      "create-task": {
+        "title": "Create a task",
+        "summary": "Add a scheduled task or a dateless Floater in a couple of taps.",
+        "keywords": "create, add, new, task, plus, fab, compose",
+        "body": "Tap the create button to add a task. Give it a title and, if it has a date, a due time. Leave the date off and it becomes a Floater in your Anytime feed instead.",
+        "tip": "Start typing a date right in the title — T'Day reads it for you. See “Type the date”."
+      },
+      "nlp-date-syntax": {
+        "title": "Type the date",
+        "summary": "Write the date into the title and T'Day schedules it for you.",
+        "keywords": "natural language, date, tomorrow, next week, parse, quick, smart, nlp, on device",
+        "body": "You don't need to open a date picker. Type a date phrase straight into the task title and T'Day parses it on-device — no account or network needed — highlighting the part it understood and scheduling the task.",
+        "example": "dentist tuesday 3pm"
+      },
+      "calendar-views": {
+        "title": "Calendar views",
+        "summary": "See your scheduled tasks by month, week, or day.",
+        "keywords": "calendar, month, week, day, agenda, view, dates",
+        "body": "Open the calendar to see scheduled tasks laid out by month, week, or day. Swipe or use the chevrons to move between periods; the top-right button jumps you back to today without changing the view."
+      },
+      "priorities": {
+        "title": "Priorities",
+        "summary": "Flag what matters with Low, Medium, or High.",
+        "keywords": "priority, high, medium, low, important, urgent, flag",
+        "body": "Give a task a priority to mark how much it matters. Priority shows as a small accent dot on the task and helps sort what deserves attention first."
+      },
+      "pin-task": {
+        "title": "Pin a task",
+        "summary": "Keep an important task at the top of its list.",
+        "keywords": "pin, pinned, stick, top, important, keep",
+        "body": "Pin a task to hold it at the top of its feed, above the normal order. Unpin it to let it fall back into place."
+      },
+      "swipe-actions": {
+        "title": "Swipe actions",
+        "summary": "Swipe a task row for quick actions without opening it.",
+        "keywords": "swipe, gesture, slide, complete, delete, quick, row",
+        "body": "Swipe a task row to reveal quick actions — complete it, or remove it — without opening the task at all.",
+        "tip": "A completed task shows an undo toast for a few seconds, so a mis-swipe is never final."
+      },
+      "long-press-actions": {
+        "title": "Long-press a task",
+        "summary": "Press and hold for more options and to start reordering.",
+        "keywords": "long press, hold, context menu, options, reorder, drag",
+        "body": "Press and hold a task to open its options, or to pick it up and drag it to a new position in the list."
+      },
+      "drag-reorder": {
+        "title": "Reorder by dragging",
+        "summary": "Drag tasks into the order you want.",
+        "keywords": "drag, reorder, move, sort, order, arrange",
+        "body": "Your lists keep the order you give them. Drag a task up or down to arrange your day the way you think about it."
+      },
+      "floaters-vs-todos": {
+        "title": "Floaters vs scheduled tasks",
+        "summary": "Dateless tasks live in Anytime; dated tasks live in Home.",
+        "keywords": "floater, anytime, unscheduled, dateless, todo, scheduled, difference",
+        "body": "A scheduled task has a due date and shows up in Home and the calendar. A Floater has no date — it waits quietly in your Anytime feed until you're ready. Use Floaters for “someday” work that shouldn't clutter today.",
+        "tip": "Floaters never appear on the calendar — that space is only for dated work."
+      },
+      "floater-lists": {
+        "title": "Floater lists",
+        "summary": "Group your Anytime tasks into their own lists.",
+        "keywords": "floater list, anytime, group, list, category, groceries, packing",
+        "body": "Organize Floaters into separate lists — groceries, packing, ideas — each with its own name and color, and its own completed history."
+      },
+      "scheduled-lists": {
+        "title": "Lists for scheduled tasks",
+        "summary": "Sort dated tasks into named, colored lists.",
+        "keywords": "list, project, group, color, scheduled, category",
+        "body": "Give scheduled tasks a list so related work stays together. Lists carry a name and color and can be filtered."
+      },
+      "completed-history": {
+        "title": "Completed history",
+        "summary": "Everything you finished, kept for you to look back on.",
+        "keywords": "completed, done, history, finished, archive, past",
+        "body": "Finished tasks aren't discarded — they move to your completed history, grouped by day, so you can see what you actually got done."
+      },
+      "overdue-view": {
+        "title": "Overdue",
+        "summary": "A dedicated place for tasks whose time has passed.",
+        "keywords": "overdue, late, past due, missed, carried over, backlog",
+        "body": "Tasks whose due time has passed collect in the Overdue view so nothing slips silently. Reschedule them when you're ready."
+      },
+      "search-tasks": {
+        "title": "Search your tasks",
+        "summary": "Find any task by title, note, or list name.",
+        "keywords": "search, find, filter, lookup, query",
+        "body": "Use the search field to filter your tasks instantly by title, description, or list name — no need to scroll."
+      },
+      "recurrence-presets": {
+        "title": "Repeating tasks",
+        "summary": "Make a task repeat daily, weekly, and more.",
+        "keywords": "repeat, recurring, recurrence, every day, weekly, monthly, rrule, schedule",
+        "body": "Set a task to repeat and it comes back on its own schedule. Pick from the presets — every day, weekday, week, or month — and completing one occurrence leaves the rest of the series intact.",
+        "example": "Water the plants · every week"
+      },
+      "reminders": {
+        "title": "Reminders",
+        "summary": "Get a notification before a task is due.",
+        "keywords": "reminder, notification, alert, alarm, notify, before",
+        "body": "Add a reminder to a scheduled task and your device notifies you at the right time. Reminders are scheduled on your device, so they work even in Local Mode.",
+        "tip": "Reminder lead-time options vary slightly by task — pick the one that gives you enough warning."
+      },
+      "push-notifications": {
+        "title": "Web reminders (push)",
+        "summary": "Let the web app notify you when a task is due, even when it's closed.",
+        "keywords": "push, notification, web, browser, reminder, vapid, subscribe, due",
+        "body": "In the web app you can turn on push notifications from Settings. Your self-hosted server then sends a reminder when a task's due time arrives — so the web app can reach you even when the tab is closed. You can complete the task straight from the notification."
+      },
+      "home-widget": {
+        "title": "Home-screen widget",
+        "summary": "See today's tasks without opening the app.",
+        "keywords": "widget, home screen, glance, today, lock screen",
+        "body": "Add the T'Day widget to your home screen to glance at today's tasks. Tapping the widget opens the app at the right place."
+      },
+      "widget-quick-add": {
+        "title": "Quick-add from the widget",
+        "summary": "Start a new task straight from the widget.",
+        "keywords": "widget, quick add, create, shortcut, home screen",
+        "body": "The widget has a create button, so you can capture a task from your home screen without first opening the app — and it works in Local Mode too."
+      },
+      "carplay": {
+        "title": "T'Day on CarPlay",
+        "summary": "Glance at and capture tasks safely while you drive.",
+        "keywords": "carplay, car, driving, voice, apple, hands free",
+        "body": "On CarPlay, T'Day shows a focused, glanceable list built for the car, so you can check what's next or add a task by voice without reaching for your phone."
+      },
+      "android-car": {
+        "title": "T'Day car screen",
+        "summary": "A simplified in-app screen made for the car.",
+        "keywords": "car, driving, android, voice, hands free, screen",
+        "body": "T'Day includes a simplified car screen with large targets and voice capture, so you can add a task with minimal fuss while you're on the move."
+      },
+      "local-mode": {
+        "title": "Local Mode",
+        "summary": "Use T'Day fully offline, with no server or account.",
+        "keywords": "local mode, offline, private, no account, no server, on device",
+        "body": "Local Mode keeps everything on your device — no login, no server, no upload. It's a first-class way to use T'Day privately, and your local data is never sent anywhere on its own.",
+        "tip": "Server-only features are shown here with a “Server mode” badge so you know what changes if you sign in."
+      },
+      "server-mode": {
+        "title": "Server Mode",
+        "summary": "Sync across devices through your own private server.",
+        "keywords": "server mode, sync, self hosted, account, login, devices, realtime",
+        "body": "Sign in to your self-hosted server to sync tasks across devices in real time. Writes happen instantly on your device and replay to the server, so the app stays fast even on a shaky connection."
+      },
+      "offline-sync": {
+        "title": "Offline sync",
+        "summary": "Keep working offline; changes replay when you reconnect.",
+        "keywords": "offline, sync, pending, queue, replay, connection, conflict",
+        "body": "In Server Mode your changes are saved locally first and queued when you're offline. As soon as you reconnect, T'Day replays them to the server in order."
+      },
+      "in-app-update": {
+        "title": "In-app updates",
+        "summary": "Install the latest T'Day build from inside the app.",
+        "keywords": "update, upgrade, version, install, apk, latest release",
+        "body": "When a new build is available, T'Day can download and install it for you from the Latest Release screen, so you stay current without hunting for a file."
+      },
+      "api-key-homarr": {
+        "title": "API key & Homarr",
+        "summary": "Show your tasks on a dashboard with a personal API key.",
+        "keywords": "api key, homarr, dashboard, integration, token, widget, homelab",
+        "body": "Generate a personal API key in Settings to surface your tasks in a dashboard like Homarr. The key is tied to your account, so keep it private.",
+        "step0": "Open Settings and find the API key card.",
+        "step1": "Generate a key and copy it — it's shown once.",
+        "step2": "Paste it into your dashboard's T'Day widget."
+      },
+      "ai-summary": {
+        "title": "Task summaries",
+        "summary": "A short, calm read on your day — with optional local AI.",
+        "keywords": "summary, ai, ollama, overview, digest, local, private",
+        "body": "T'Day can summarize your day in a sentence or two. With a local Ollama model it reads naturally; without one it falls back to a warm, deterministic recap — either way nothing leaves your server.",
+        "tip": "The summary never depends on a cloud AI service — it's local or nothing."
+      },
+      "keyboard-submit": {
+        "title": "Submit with the keyboard",
+        "summary": "Save a task without reaching for the mouse.",
+        "keywords": "keyboard, shortcut, submit, enter, save, hotkey",
+        "body": "In the web app you can submit the task form straight from the keyboard, so quick capture never breaks your flow.",
+        "kbd": "Ctrl / ⌘ + Enter"
+      }
+    }
   }
 }
