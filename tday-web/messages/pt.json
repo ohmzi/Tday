@@ -825,6 +825,13 @@
         "body": "Quando um lembrete chega em má hora, não é preciso abrir o app: Adiar 1 h entrega o mesmo lembrete uma hora depois, e Hoje à noite move a tarefa para as 19:00 de hoje. Hoje à noite funciona para tarefas avulsas — ocorrências recorrentes são reagendadas no app para manter a série intacta.",
         "tip": "Adiar só atrasa a notificação; a tarefa mantém o horário original até você movê-la."
       },
+      "day-ahead": {
+        "title": "Resumo do dia",
+        "summary": "Uma notificação matinal discreta com os números de hoje.",
+        "keywords": "resumo, dia pela frente, manhã, notificação diária, visão geral",
+        "body": "Ative nos Ajustes e escolha um horário: toda manhã uma notificação mostra como está o dia — \"4 tarefas hoje, 2 acumuladas\" — e abre o Hoje, ou vai direto para a Varredura matinal quando há tarefas acumuladas. Totalmente no dispositivo: nada sai do seu telefone.",
+        "tip": "O resumo fica em silêncio nos dias sem tarefas — sem notícias, boas notícias."
+      },
       "push-notifications": {
         "title": "Lembretes na web (push)",
         "summary": "Deixe a aplicação web notificá-lo quando uma tarefa vence, mesmo com ela fechada.",

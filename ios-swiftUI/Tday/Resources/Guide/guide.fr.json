@@ -787,6 +787,40 @@
       "searchBody": "les notifications de rappel proposent reporter d'1 h et ce soir. quand un rappel tombe au mauvais moment, inutile d'ouvrir l'app : reporter d'1 h redelivre le meme rappel une heure plus tard, et ce soir deplace la tache a 19 h aujourd'hui. ce soir fonctionne pour les taches ponctuelles — les occurrences recurrentes se replanifient depuis l'app pour preserver la serie. reporter ne retarde que la notification ; la tache garde son echeance d'origine tant que vous ne la deplacez pas."
     },
     {
+      "id": "day-ahead",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "bell-ring",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.3.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Aperçu de la journée",
+      "summary": "Une notification matinale discrète avec les chiffres du jour.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Activez-le dans Réglages et choisissez une heure : chaque matin, une notification vous dit à quoi ressemble la journée — « 4 tâches aujourd'hui, 2 reportées » — et ouvre Aujourd'hui, ou saute directement au Balayage du matin si des tâches sont reportées. Entièrement sur l'appareil : rien ne quitte votre téléphone."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "L'aperçu reste silencieux les jours sans tâches — pas de nouvelles, bonnes nouvelles."
+          ]
+        }
+      ],
+      "searchTitle": "apercu de la journee",
+      "searchKeywords": "apercu, journee a venir, matin, notification quotidienne, vue d'ensemble",
+      "searchBody": "une notification matinale discrete avec les chiffres du jour. activez-le dans reglages et choisissez une heure : chaque matin, une notification vous dit a quoi ressemble la journee — « 4 taches aujourd'hui, 2 reportees » — et ouvre aujourd'hui, ou saute directement au balayage du matin si des taches sont reportees. entierement sur l'appareil : rien ne quitte votre telephone. l'apercu reste silencieux les jours sans taches — pas de nouvelles, bonnes nouvelles."
+    },
+    {
       "id": "home-widget",
       "section": "WIDGETS_AND_SURFACES",
       "sectionOrder": 5,

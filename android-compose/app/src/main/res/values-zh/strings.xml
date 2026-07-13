@@ -35,6 +35,14 @@
     <string name="sweep_skip">跳过</string>
     <string name="sweep_all_to_today">全部移到今天</string>
     <string name="sweep_swept_toast">已清理 %1$d 项任务</string>
+    <string name="day_ahead_setting">今日摘要</string>
+    <string name="day_ahead_off">关闭</string>
+    <string name="day_ahead_h7">7:00</string>
+    <string name="day_ahead_h8">8:00</string>
+    <string name="day_ahead_h9">9:00</string>
+    <string name="day_ahead_title">你的一天</string>
+    <string name="day_ahead_text">今天有 %1$d 项任务</string>
+    <string name="day_ahead_text_with_overdue">今天有 %1$d 项任务，%2$d 项积压</string>
     <string name="task_promote_failed">无法安排任务</string>
     <string name="task_float_failed">无法放漂任务</string>
     <string name="action_complete">完成</string>

@@ -36,6 +36,14 @@
     <string name="sweep_skip">Skip</string>
     <string name="sweep_all_to_today">Sweep all to today</string>
     <string name="sweep_swept_toast">Swept %1$d tasks</string>
+    <string name="day_ahead_setting">Day Ahead digest</string>
+    <string name="day_ahead_off">Off</string>
+    <string name="day_ahead_h7">7:00</string>
+    <string name="day_ahead_h8">8:00</string>
+    <string name="day_ahead_h9">9:00</string>
+    <string name="day_ahead_title">Your day ahead</string>
+    <string name="day_ahead_text">%1$d tasks today</string>
+    <string name="day_ahead_text_with_overdue">%1$d tasks today, %2$d carried over</string>
     <string name="task_promote_failed">Could not schedule task</string>
     <string name="task_float_failed">Could not float task</string>
     <string name="action_complete">Complete</string>

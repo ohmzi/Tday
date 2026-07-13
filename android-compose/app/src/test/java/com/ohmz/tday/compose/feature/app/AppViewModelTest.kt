@@ -19,6 +19,8 @@ import com.ohmz.tday.compose.core.model.SessionUser
 import com.ohmz.tday.compose.core.network.ConnectivityObserver
 import com.ohmz.tday.compose.core.network.RealtimeClient
 import com.ohmz.tday.compose.core.network.RealtimeEvent
+import com.ohmz.tday.compose.core.notification.DayAheadOption
+import com.ohmz.tday.compose.core.notification.DayAheadPreferenceStore
 import com.ohmz.tday.compose.core.notification.ReminderOption
 import com.ohmz.tday.compose.core.notification.ReminderPreferenceStore
 import com.ohmz.tday.compose.core.notification.TaskReminderScheduler
@@ -57,6 +59,7 @@ class AppViewModelTest {
     private val themePreferenceStore = mockk<ThemePreferenceStore>()
     private val reminderScheduler = mockk<TaskReminderScheduler>()
     private val reminderPreferenceStore = mockk<ReminderPreferenceStore>()
+    private val dayAheadPreferenceStore = mockk<DayAheadPreferenceStore>()
     private val realtimeClient = mockk<RealtimeClient>()
     private val connectivityObserver = mockk<ConnectivityObserver>()
     private val appVersionManager = mockk<AppVersionManager>()
@@ -83,6 +86,7 @@ class AppViewModelTest {
         every { appContext.getString(any()) } answers { "res-${firstArg<Int>()}" }
         every { themePreferenceStore.getThemeMode() } returns AppThemeMode.SYSTEM
         every { reminderPreferenceStore.getDefaultReminder() } returns ReminderOption.DEFAULT
+        every { dayAheadPreferenceStore.getOption() } returns DayAheadOption.OFF
         every { appVersionManager.state } returns versionState
         coEvery { appVersionManager.refreshServerCompatibility() } returns Unit
         every { serverConfigRepository.getAppDataMode() } returns AppDataMode.SERVER
@@ -368,6 +372,7 @@ class AppViewModelTest {
             themePreferenceStore = themePreferenceStore,
             reminderScheduler = reminderScheduler,
             reminderPreferenceStore = reminderPreferenceStore,
+            dayAheadPreferenceStore = dayAheadPreferenceStore,
             snackbarManager = snackbarManager,
             realtimeClient = realtimeClient,
             connectivityObserver = connectivityObserver,

@@ -35,6 +35,14 @@
     <string name="sweep_skip">Passer</string>
     <string name="sweep_all_to_today">Tout balayer vers aujourd\'hui</string>
     <string name="sweep_swept_toast">%1$d tâches balayées</string>
+    <string name="day_ahead_setting">Aperçu de la journée</string>
+    <string name="day_ahead_off">Désactivé</string>
+    <string name="day_ahead_h7">7:00</string>
+    <string name="day_ahead_h8">8:00</string>
+    <string name="day_ahead_h9">9:00</string>
+    <string name="day_ahead_title">Votre journée à venir</string>
+    <string name="day_ahead_text">%1$d tâches aujourd\'hui</string>
+    <string name="day_ahead_text_with_overdue">%1$d tâches aujourd\'hui, %2$d reportées</string>
     <string name="task_promote_failed">Impossible de planifier la tâche</string>
     <string name="task_float_failed">Impossible de laisser flotter la tâche</string>
     <string name="action_complete">Terminer</string>

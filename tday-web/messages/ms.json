@@ -825,6 +825,13 @@
         "body": "Apabila peringatan muncul pada masa yang tidak sesuai, tidak perlu buka aplikasi: Tunda 1 jam menghantar semula peringatan yang sama sejam kemudian, dan Malam ini memindahkan tugasan itu ke 19:00 hari ini. Malam ini untuk tugasan sekali sahaja — kejadian berulang dijadualkan semula dalam aplikasi supaya sirinya kekal.",
         "tip": "Menunda hanya melewatkan pemberitahuan; tugasan mengekalkan masa asalnya sehingga anda memindahkannya."
       },
+      "day-ahead": {
+        "title": "Ringkasan hari",
+        "summary": "Satu pemberitahuan pagi yang senyap dengan kiraan hari ini.",
+        "keywords": "ringkasan, hari anda, pagi, pemberitahuan harian, gambaran",
+        "body": "Aktifkan dalam Tetapan dan pilih waktu: setiap pagi satu pemberitahuan memberitahu keadaan hari itu — \"4 tugasan hari ini, 2 terbawa\" — dan membuka Hari Ini, atau terus ke Sapuan pagi apabila ada yang terbawa. Sepenuhnya pada peranti: tiada apa yang meninggalkan telefon anda.",
+        "tip": "Ringkasan senyap pada hari tanpa tugasan — tiada berita ialah berita baik."
+      },
       "push-notifications": {
         "title": "Peringatan web (push)",
         "summary": "Biarkan aplikasi web memberitahu anda apabila tugasan tamat tempoh, walaupun ia ditutup.",

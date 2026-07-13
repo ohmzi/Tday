@@ -35,6 +35,14 @@
     <string name="sweep_skip">スキップ</string>
     <string name="sweep_all_to_today">すべて今日へ</string>
     <string name="sweep_swept_toast">%1$d件のタスクを整理しました</string>
+    <string name="day_ahead_setting">今日のダイジェスト</string>
+    <string name="day_ahead_off">オフ</string>
+    <string name="day_ahead_h7">7:00</string>
+    <string name="day_ahead_h8">8:00</string>
+    <string name="day_ahead_h9">9:00</string>
+    <string name="day_ahead_title">今日の予定</string>
+    <string name="day_ahead_text">今日のタスクは%1$d件</string>
+    <string name="day_ahead_text_with_overdue">今日のタスクは%1$d件、持ち越し%2$d件</string>
     <string name="task_promote_failed">タスクを予定できませんでした</string>
     <string name="task_float_failed">タスクをフロートできませんでした</string>
     <string name="action_complete">完了</string>

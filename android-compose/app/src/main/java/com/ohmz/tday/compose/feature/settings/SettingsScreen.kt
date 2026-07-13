@@ -80,6 +80,7 @@ import com.ohmz.tday.compose.core.model.SecurityAnswerInput
 import com.ohmz.tday.compose.core.model.SecurityQuestion
 import com.ohmz.tday.compose.core.model.SecurityQuestionStatusResponse
 import com.ohmz.tday.compose.core.model.SessionUser
+import com.ohmz.tday.compose.core.notification.DayAheadOption
 import com.ohmz.tday.compose.core.notification.ReminderOption
 import com.ohmz.tday.compose.core.ui.rememberScrollCollapsingTitleScrollBehavior
 import com.ohmz.tday.compose.feature.app.MobileSyncStatus
@@ -90,6 +91,7 @@ import com.ohmz.tday.compose.ui.component.TdaySegmentedSlider
 import com.ohmz.tday.compose.ui.theme.AppThemeMode
 import com.ohmz.tday.compose.ui.theme.TdayDimens
 import com.ohmz.tday.compose.ui.theme.TdayStatusSuccess
+import com.ohmz.tday.compose.ui.theme.TdayTitleIconDayAccent
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate
@@ -111,6 +113,8 @@ fun SettingsScreen(
     versionCheckResult: VersionCheckResult? = null,
     onThemeModeSelected: (AppThemeMode) -> Unit,
     onReminderSelected: (ReminderOption) -> Unit,
+    selectedDayAhead: DayAheadOption = DayAheadOption.OFF,
+    onDayAheadSelected: (DayAheadOption) -> Unit = {},
     onSyncNow: () -> Unit,
     onToggleAiSummary: (Boolean) -> Unit,
     onBack: () -> Unit,
@@ -174,6 +178,11 @@ fun SettingsScreen(
                 ReminderSelector(
                     selectedReminder = selectedReminder,
                     onReminderSelected = onReminderSelected,
+                )
+                SettingsDivider()
+                DayAheadSelector(
+                    selectedDayAhead = selectedDayAhead,
+                    onDayAheadSelected = onDayAheadSelected,
                 )
                 SettingsDivider()
                 SettingsSectionTitle(title = stringResource(R.string.settings_language))
@@ -1363,6 +1372,75 @@ private fun ReminderSelector(
     }
 }
 
+@Composable
+private fun DayAheadSelector(
+    selectedDayAhead: DayAheadOption,
+    onDayAheadSelected: (DayAheadOption) -> Unit,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    val view = LocalView.current
+    val context = LocalContext.current
+    var expanded by remember { mutableStateOf(false) }
+
+    Box {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .clickable {
+                    ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+                    expanded = true
+                }
+                .padding(vertical = 2.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = stringResource(R.string.day_ahead_setting),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.ExtraBold,
+                color = colorScheme.onSurface,
+            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                Text(
+                    text = stringResource(selectedDayAhead.labelRes),
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = colorScheme.secondary,
+                )
+                Icon(
+                    imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_chevron_right),
+                    contentDescription = null,
+                    tint = colorScheme.onSurface.copy(alpha = 0.42f),
+                    modifier = Modifier.size(18.dp),
+                )
+            }
+        }
+
+        if (expanded) {
+            TdayCenteredSelectorDialog(
+                title = stringResource(R.string.day_ahead_setting),
+                options = DayAheadOption.entries,
+                optionLabel = { option -> context.getString(option.labelRes) },
+                optionSwatchColor = { option -> dayAheadSwatchColor(option) },
+                isSelected = { option -> option == selectedDayAhead },
+                onDismiss = { expanded = false },
+                onOptionSelected = { option ->
+                    ViewCompat.performHapticFeedback(
+                        view,
+                        HapticFeedbackConstantsCompat.CLOCK_TICK,
+                    )
+                    onDayAheadSelected(option)
+                    expanded = false
+                },
+            )
+        }
+    }
+}
+
 /** Supported in-app languages (endonyms). `tag == null` = follow the device. */
 private enum class AppLanguage(val tag: String?, val endonym: String) {
     SYSTEM(null, ""),
@@ -1451,6 +1529,10 @@ private fun LanguageSelector() {
             )
         }
     }
+}
+
+private fun dayAheadSwatchColor(option: DayAheadOption): Color {
+    return if (option == DayAheadOption.OFF) Color(0xFFB7BCC8) else TdayTitleIconDayAccent
 }
 
 private fun reminderSwatchColor(option: ReminderOption): Color {

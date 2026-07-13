@@ -35,6 +35,14 @@
     <string name="sweep_skip">Pular</string>
     <string name="sweep_all_to_today">Varrer tudo para hoje</string>
     <string name="sweep_swept_toast">%1$d tarefas varridas</string>
+    <string name="day_ahead_setting">Resumo do dia</string>
+    <string name="day_ahead_off">Desativado</string>
+    <string name="day_ahead_h7">7:00</string>
+    <string name="day_ahead_h8">8:00</string>
+    <string name="day_ahead_h9">9:00</string>
+    <string name="day_ahead_title">Seu dia pela frente</string>
+    <string name="day_ahead_text">%1$d tarefas hoje</string>
+    <string name="day_ahead_text_with_overdue">%1$d tarefas hoje, %2$d acumuladas</string>
     <string name="task_promote_failed">Não foi possível agendar a tarefa</string>
     <string name="task_float_failed">Não foi possível deixar a tarefa flutuar</string>
     <string name="action_complete">Concluir</string>
