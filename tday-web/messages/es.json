@@ -825,6 +825,13 @@
         "body": "Cuando un recordatorio llega en mal momento, no hace falta abrir la app: Posponer 1 h vuelve a entregar el mismo recordatorio una hora después, y Esta noche mueve la tarea a las 19:00 de hoy. Esta noche funciona con tareas puntuales; las repeticiones se reprograman desde la app para mantener la serie intacta.",
         "tip": "Posponer solo retrasa la notificación; la tarea conserva su hora original hasta que la muevas."
       },
+      "day-ahead": {
+        "title": "Resumen del día",
+        "summary": "Una tranquila notificación matutina con los números de hoy.",
+        "keywords": "resumen, día por delante, mañana, notificación diaria, vista general",
+        "body": "Actívalo en Ajustes y elige una hora: cada mañana una notificación te dice cómo pinta el día — «4 tareas hoy, 2 arrastradas» — y abre Hoy, o salta directo al Barrido matutino cuando hay tareas arrastradas. Totalmente en el dispositivo: nada sale de tu teléfono.",
+        "tip": "El resumen guarda silencio los días sin tareas: sin noticias, buenas noticias."
+      },
       "push-notifications": {
         "title": "Recordatorios web (push)",
         "summary": "Deja que la app web te avise cuando venza una tarea, aunque esté cerrada.",

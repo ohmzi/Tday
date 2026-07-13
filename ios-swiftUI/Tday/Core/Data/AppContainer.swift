@@ -29,6 +29,8 @@ final class AppContainer {
     let settingsRepository: SettingsRepository
     let realtimeClient: RealtimeClient
     let reminderScheduler: TaskReminderScheduler
+    let dayAheadStore: DayAheadStore
+    let dayAheadScheduler: DayAheadScheduler
     let snackbarManager: SnackbarManager
     let undoableDeleteScheduler: UndoableDeleteScheduler
     let bootstrapSession: BootstrapSessionUseCase
@@ -88,6 +90,8 @@ final class AppContainer {
         settingsRepository = SettingsRepository(api: apiService, cacheManager: cacheManager, secureStore: secureStore)
         realtimeClient = RealtimeClient(configuration: networkConfiguration)
         reminderScheduler = TaskReminderScheduler(reminderPreferenceStore: reminderPreferenceStore)
+        dayAheadStore = DayAheadStore()
+        dayAheadScheduler = DayAheadScheduler(store: dayAheadStore)
         snackbarManager = SnackbarManager()
         undoableDeleteScheduler = UndoableDeleteScheduler(snackbarManager: snackbarManager)
         bootstrapSession = BootstrapSessionUseCase(authRepository: authRepository, syncManager: syncManager)

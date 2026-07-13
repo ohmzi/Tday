@@ -787,6 +787,40 @@
       "searchBody": "pemberitahuan peringatan ada tindakan tunda 1 jam dan malam ini. apabila peringatan muncul pada masa yang tidak sesuai, tidak perlu buka aplikasi: tunda 1 jam menghantar semula peringatan yang sama sejam kemudian, dan malam ini memindahkan tugasan itu ke 19:00 hari ini. malam ini untuk tugasan sekali sahaja — kejadian berulang dijadualkan semula dalam aplikasi supaya sirinya kekal. menunda hanya melewatkan pemberitahuan; tugasan mengekalkan masa asalnya sehingga anda memindahkannya."
     },
     {
+      "id": "day-ahead",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "bell-ring",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.3.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Ringkasan hari",
+      "summary": "Satu pemberitahuan pagi yang senyap dengan kiraan hari ini.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Aktifkan dalam Tetapan dan pilih waktu: setiap pagi satu pemberitahuan memberitahu keadaan hari itu — \"4 tugasan hari ini, 2 terbawa\" — dan membuka Hari Ini, atau terus ke Sapuan pagi apabila ada yang terbawa. Sepenuhnya pada peranti: tiada apa yang meninggalkan telefon anda."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Ringkasan senyap pada hari tanpa tugasan — tiada berita ialah berita baik."
+          ]
+        }
+      ],
+      "searchTitle": "ringkasan hari",
+      "searchKeywords": "ringkasan, hari anda, pagi, pemberitahuan harian, gambaran",
+      "searchBody": "satu pemberitahuan pagi yang senyap dengan kiraan hari ini. aktifkan dalam tetapan dan pilih waktu: setiap pagi satu pemberitahuan memberitahu keadaan hari itu — \"4 tugasan hari ini, 2 terbawa\" — dan membuka hari ini, atau terus ke sapuan pagi apabila ada yang terbawa. sepenuhnya pada peranti: tiada apa yang meninggalkan telefon anda. ringkasan senyap pada hari tanpa tugasan — tiada berita ialah berita baik."
+    },
+    {
       "id": "home-widget",
       "section": "WIDGETS_AND_SURFACES",
       "sectionOrder": 5,

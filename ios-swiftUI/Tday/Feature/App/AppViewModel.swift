@@ -64,6 +64,7 @@ final class AppViewModel {
     var aiSummaryEnabled = true
     var isAiSummarySaving = false
     var selectedReminder: ReminderOption
+    var dayAheadOption: DayAheadOption
     var isOffline = false
     var pendingMutationCount = 0
     var lastSuccessfulSyncEpochMs: Int64 = 0
@@ -126,6 +127,7 @@ final class AppViewModel {
         themeMode = container.themeStore.load()
         appLanguage = container.languageStore.load()
         selectedReminder = container.reminderPreferenceStore.getDefaultReminder()
+        dayAheadOption = container.dayAheadStore.getOption()
         observeCacheChanges()
         observeOfflineSyncFailures()
         observeOfflineSyncSuccesses()
@@ -545,6 +547,12 @@ final class AppViewModel {
         // nil = follow system (clears the bundle override).
         LanguageBundle.setLanguage(value == LanguageStore.systemValue ? nil : value)
         localizationGeneration += 1
+    }
+
+    func setDayAhead(_ option: DayAheadOption) {
+        dayAheadOption = option
+        container.dayAheadStore.setOption(option)
+        Task { await rescheduleReminders() }
     }
 
     func setDefaultReminder(_ option: ReminderOption) {
@@ -970,6 +978,7 @@ final class AppViewModel {
     private func rescheduleReminders() async {
         let tasks = container.todoRepository.fetchTodosSnapshot(mode: .all)
         await container.reminderScheduler.reschedule(tasks: tasks, defaultReminder: selectedReminder)
+        await container.dayAheadScheduler.reschedule(tasks: tasks)
     }
 
     func refreshVersionInfo() async {

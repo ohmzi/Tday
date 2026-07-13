@@ -825,6 +825,13 @@
         "body": "Quando un promemoria arriva nel momento sbagliato, non serve aprire l'app: Posticipa 1 h riconsegna lo stesso promemoria un'ora dopo, e Stasera sposta l'attività alle 19:00 di oggi. Stasera vale per le attività singole — le occorrenze ricorrenti si ripianificano dall'app per mantenere intatta la serie.",
         "tip": "Posticipare ritarda solo la notifica; l'attività mantiene la sua ora originale finché non la sposti."
       },
+      "day-ahead": {
+        "title": "Anteprima della giornata",
+        "summary": "Una discreta notifica mattutina con i numeri di oggi.",
+        "keywords": "anteprima, giornata, mattina, notifica giornaliera, panoramica",
+        "body": "Attivala nelle Impostazioni e scegli un'ora: ogni mattina una notifica ti dice come si presenta la giornata — «4 attività oggi, 2 arretrate» — e apre Oggi, o salta dritto al Riordino mattutino quando c'è qualcosa di arretrato. Tutto sul dispositivo: nulla lascia il tuo telefono.",
+        "tip": "Nei giorni senza attività l'anteprima resta in silenzio — nessuna notizia, buona notizia."
+      },
       "push-notifications": {
         "title": "Promemoria web (push)",
         "summary": "Lascia che l'app web ti avvisi alla scadenza di un'attività, anche quando è chiusa.",

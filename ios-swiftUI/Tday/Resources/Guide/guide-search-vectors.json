@@ -46,7 +46,8 @@
       "overdue-view",
       "scheduled-lists",
       "completed-history",
-      "reminder-snooze"
+      "reminder-snooze",
+      "day-ahead"
     ],
     "search": [
       "search-tasks"

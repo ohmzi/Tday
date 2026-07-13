@@ -787,6 +787,40 @@
       "searchBody": "las notificaciones de recordatorio incluyen las acciones posponer 1 h y esta noche. cuando un recordatorio llega en mal momento, no hace falta abrir la app: posponer 1 h vuelve a entregar el mismo recordatorio una hora despues, y esta noche mueve la tarea a las 19:00 de hoy. esta noche funciona con tareas puntuales; las repeticiones se reprograman desde la app para mantener la serie intacta. posponer solo retrasa la notificacion; la tarea conserva su hora original hasta que la muevas."
     },
     {
+      "id": "day-ahead",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "bell-ring",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.3.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Resumen del día",
+      "summary": "Una tranquila notificación matutina con los números de hoy.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Actívalo en Ajustes y elige una hora: cada mañana una notificación te dice cómo pinta el día — «4 tareas hoy, 2 arrastradas» — y abre Hoy, o salta directo al Barrido matutino cuando hay tareas arrastradas. Totalmente en el dispositivo: nada sale de tu teléfono."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "El resumen guarda silencio los días sin tareas: sin noticias, buenas noticias."
+          ]
+        }
+      ],
+      "searchTitle": "resumen del dia",
+      "searchKeywords": "resumen, dia por delante, manana, notificacion diaria, vista general",
+      "searchBody": "una tranquila notificacion matutina con los numeros de hoy. activalo en ajustes y elige una hora: cada manana una notificacion te dice como pinta el dia — «4 tareas hoy, 2 arrastradas» — y abre hoy, o salta directo al barrido matutino cuando hay tareas arrastradas. totalmente en el dispositivo: nada sale de tu telefono. el resumen guarda silencio los dias sin tareas: sin noticias, buenas noticias."
+    },
+    {
       "id": "home-widget",
       "section": "WIDGETS_AND_SURFACES",
       "sectionOrder": 5,

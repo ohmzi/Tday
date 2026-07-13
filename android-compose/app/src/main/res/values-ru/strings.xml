@@ -35,6 +35,14 @@
     <string name="sweep_skip">Пропустить</string>
     <string name="sweep_all_to_today">Всё на сегодня</string>
     <string name="sweep_swept_toast">Перенесено задач: %1$d</string>
+    <string name="day_ahead_setting">Дайджест дня</string>
+    <string name="day_ahead_off">Выключено</string>
+    <string name="day_ahead_h7">7:00</string>
+    <string name="day_ahead_h8">8:00</string>
+    <string name="day_ahead_h9">9:00</string>
+    <string name="day_ahead_title">Ваш день впереди</string>
+    <string name="day_ahead_text">Задач на сегодня: %1$d</string>
+    <string name="day_ahead_text_with_overdue">Задач на сегодня: %1$d, накопилось: %2$d</string>
     <string name="task_promote_failed">Не удалось запланировать задачу</string>
     <string name="task_float_failed">Не удалось отпустить задачу</string>
     <string name="action_complete">Завершить</string>

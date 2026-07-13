@@ -136,6 +136,11 @@ object GuideCatalog {
             body = listOf(para(GuideTopicIds.REMINDER_SNOOZE), tip(GuideTopicIds.REMINDER_SNOOZE)),
         ),
         topic(
+            GuideTopicIds.DAY_AHEAD, GuideSectionId.RECURRENCE_AND_REMINDERS, "bell-ring",
+            setOf(ANDROID, IOS), sinceVersion = "0.3.0",
+            body = listOf(para(GuideTopicIds.DAY_AHEAD), tip(GuideTopicIds.DAY_AHEAD)),
+        ),
+        topic(
             GuideTopicIds.PUSH_NOTIFICATIONS, GuideSectionId.RECURRENCE_AND_REMINDERS, "bell-ring",
             setOf(WEB), serverOnly = true, sinceVersion = "0.3.0",
             body = listOf(para(GuideTopicIds.PUSH_NOTIFICATIONS)),

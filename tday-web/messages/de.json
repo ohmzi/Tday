@@ -825,6 +825,13 @@
         "body": "Kommt eine Erinnerung ungelegen, musst du die App nicht öffnen: „1 Std. später“ stellt dieselbe Erinnerung eine Stunde später erneut zu, „Heute Abend“ verschiebt die Aufgabe selbst auf 19:00 heute. Heute Abend gilt für einmalige Aufgaben — wiederkehrende Termine planst du in der App um, damit die Serie intakt bleibt.",
         "tip": "Später wiederholen verzögert nur die Benachrichtigung; die Aufgabe behält ihre ursprüngliche Zeit, bis du sie verschiebst."
       },
+      "day-ahead": {
+        "title": "Tagesüberblick",
+        "summary": "Eine leise Morgenbenachrichtigung mit den Zahlen des Tages.",
+        "keywords": "tagesüberblick, digest, morgens, tägliche benachrichtigung, überblick",
+        "body": "In den Einstellungen aktivieren und eine Uhrzeit wählen: Jeden Morgen sagt dir eine Benachrichtigung, wie der Tag aussieht — „4 Aufgaben heute, 2 liegengeblieben“ — und öffnet Heute, oder springt direkt ins morgendliche Aufräumen, wenn etwas liegengeblieben ist. Vollständig auf dem Gerät: Nichts verlässt dein Telefon.",
+        "tip": "An aufgabenfreien Tagen bleibt der Überblick stumm — keine Nachrichten sind gute Nachrichten."
+      },
       "push-notifications": {
         "title": "Web-Erinnerungen (Push)",
         "summary": "Lass die Web-App dich benachrichtigen, wenn eine Aufgabe fällig ist, selbst wenn sie geschlossen ist.",

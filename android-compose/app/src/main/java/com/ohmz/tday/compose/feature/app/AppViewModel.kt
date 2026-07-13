@@ -26,6 +26,9 @@ import com.ohmz.tday.compose.core.model.SessionUser
 import com.ohmz.tday.compose.core.network.ConnectivityObserver
 import com.ohmz.tday.compose.core.network.RealtimeClient
 import com.ohmz.tday.compose.core.network.RealtimeEvent
+import com.ohmz.tday.compose.core.notification.DayAheadOption
+import com.ohmz.tday.compose.core.notification.DayAheadPreferenceStore
+import com.ohmz.tday.compose.core.notification.DayAheadScheduling
 import com.ohmz.tday.compose.core.notification.ReminderOption
 import com.ohmz.tday.compose.core.notification.ReminderPreferenceStore
 import com.ohmz.tday.compose.core.notification.TaskReminderScheduler
@@ -74,6 +77,7 @@ data class AppUiState(
     val isManualSyncing: Boolean = false,
     val aiSummaryEnabled: Boolean = true,
     val selectedReminder: ReminderOption = ReminderOption.DEFAULT,
+    val selectedDayAhead: DayAheadOption = DayAheadOption.OFF,
     val isOffline: Boolean = false,
     val pendingMutationCount: Int = 0,
     val lastSuccessfulSyncEpochMs: Long = 0L,
@@ -154,6 +158,7 @@ class AppViewModel @Inject constructor(
     private val themePreferenceStore: ThemePreferenceStore,
     private val reminderScheduler: TaskReminderScheduler,
     private val reminderPreferenceStore: ReminderPreferenceStore,
+    private val dayAheadPreferenceStore: DayAheadPreferenceStore,
     val snackbarManager: SnackbarManager,
     private val realtimeClient: RealtimeClient,
     private val connectivityObserver: ConnectivityObserver,
@@ -179,6 +184,7 @@ class AppViewModel @Inject constructor(
             it.copy(
                 themeMode = themePreferenceStore.getThemeMode(),
                 selectedReminder = reminderPreferenceStore.getDefaultReminder(),
+                selectedDayAhead = dayAheadPreferenceStore.getOption(),
             )
         }
         viewModelScope.launch {
@@ -884,6 +890,12 @@ class AppViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.Default) {
             runCatching { reminderScheduler.rescheduleAll() }
         }
+    }
+
+    fun setDayAhead(option: DayAheadOption) {
+        dayAheadPreferenceStore.setOption(option)
+        _uiState.update { it.copy(selectedDayAhead = option) }
+        DayAheadScheduling.scheduleNext(appContext, option)
     }
 
     fun rescheduleReminders() {

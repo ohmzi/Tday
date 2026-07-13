@@ -787,6 +787,40 @@
       "searchBody": "reminder notifications carry snooze 1h and tonight actions. when a reminder fires at a bad moment, you don't have to open the app: snooze 1h re-delivers the same reminder an hour later, and tonight moves the task itself to 19:00 today. tonight works for one-off tasks — recurring occurrences reschedule from the app so their series stays intact. snoozing only delays the notification; the task keeps its original due time until you move it."
     },
     {
+      "id": "day-ahead",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "bell-ring",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.3.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Day Ahead digest",
+      "summary": "One quiet morning notification with today's counts.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Opt in from Settings and pick an hour: each morning one notification tells you how the day looks — \"4 tasks today, 2 carried over\" — and opens Today, or jumps straight into Morning Sweep when something is carried over. Fully on-device: nothing leaves your phone."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "The digest stays silent on task-free days — no news is good news."
+          ]
+        }
+      ],
+      "searchTitle": "day ahead digest",
+      "searchKeywords": "day ahead, digest, morning summary, daily notification, overview",
+      "searchBody": "one quiet morning notification with today's counts. opt in from settings and pick an hour: each morning one notification tells you how the day looks — \"4 tasks today, 2 carried over\" — and opens today, or jumps straight into morning sweep when something is carried over. fully on-device: nothing leaves your phone. the digest stays silent on task-free days — no news is good news."
+    },
+    {
       "id": "home-widget",
       "section": "WIDGETS_AND_SURFACES",
       "sectionOrder": 5,
