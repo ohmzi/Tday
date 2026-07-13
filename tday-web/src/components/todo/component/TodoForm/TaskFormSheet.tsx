@@ -20,7 +20,7 @@ type TaskFormSheetProps = {
   open: boolean;
   onOpenChange: Dispatch<SetStateAction<boolean>>;
   todo?: TodoItemType;
-  overrideFields?: { listID?: string };
+  overrideFields?: { listID?: string; title?: string };
   editInstanceOnly?: boolean;
   setEditInstanceOnly?: Dispatch<SetStateAction<boolean>>;
   persistent?: boolean;
