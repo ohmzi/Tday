@@ -614,6 +614,45 @@
       "searchBody": "um espaco dedicado as tarefas cujo prazo ja passou. as tarefas cuja hora de conclusao ja passou juntam-se na vista em atraso para que nada escape em silencio. reagende-as quando estiver pronto."
     },
     {
+      "id": "morning-sweep",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "hand",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.3.0",
+      "deepLink": {
+        "web": "overdue",
+        "android": "morning-sweep",
+        "ios": "morning-sweep"
+      },
+      "helpAnchors": [],
+      "title": "Varredura matinal",
+      "summary": "Faça a triagem das tarefas acumuladas um cartão de cada vez.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Ficar para trás deixa de doer: o botão Varrer na tela de Atrasadas percorre suas tarefas acumuladas um cartão de cada vez — Hoje, Amanhã, Escolher uma data, Tornar flutuante ou Deixar ir. Com pressa? Varrer tudo para hoje move tudo de uma vez, com um único desfazer."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Tarefas recorrentes ficam fora da varredura; suas ocorrências são reagendadas pela folha de edição para manter a série intacta."
+          ]
+        }
+      ],
+      "searchTitle": "varredura matinal",
+      "searchKeywords": "varredura, atrasadas, triagem, acumuladas, colocar em dia, pendencias, manha",
+      "searchBody": "faca a triagem das tarefas acumuladas um cartao de cada vez. ficar para tras deixa de doer: o botao varrer na tela de atrasadas percorre suas tarefas acumuladas um cartao de cada vez — hoje, amanha, escolher uma data, tornar flutuante ou deixar ir. com pressa? varrer tudo para hoje move tudo de uma vez, com um unico desfazer. tarefas recorrentes ficam fora da varredura; suas ocorrencias sao reagendadas pela folha de edicao para manter a serie intacta."
+    },
+    {
       "id": "search-tasks",
       "section": "ORGANIZING",
       "sectionOrder": 3,

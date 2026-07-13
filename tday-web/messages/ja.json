@@ -357,7 +357,18 @@
     "quickDeferTonight": "今夜",
     "quickDeferTomorrow": "明日の朝",
     "quickDeferNextWeek": "来週",
-    "allDoneToday": "今日のタスクはすべて完了"
+    "allDoneToday": "今日のタスクはすべて完了",
+    "sweep": "スイープ",
+    "sweepTitle": "朝のスイープ",
+    "sweepToday": "今日",
+    "sweepTomorrow": "明日",
+    "sweepPickDate": "日付を選ぶ",
+    "sweepFloat": "フローターにする",
+    "sweepLetGo": "手放す",
+    "sweepSkip": "スキップ",
+    "sweepAllToToday": "すべて今日へ",
+    "sweptToast": "{{count}}件のタスクを整理しました",
+    "sweepDone": "すべて片付きました"
   },
   "today": {
     "saveInstance": "インスタンスを保存",
@@ -779,6 +790,13 @@
         "summary": "時間が過ぎたタスクのための専用の場所。",
         "keywords": "期限切れ, 遅れ, 期限超過, 見逃し, 繰り越し, 未処理, overdue, late, past due",
         "body": "締め切り時刻が過ぎたタスクは期限切れビューに集まり、何も静かに抜け落ちることがありません。準備ができたら予定を組み直しましょう。"
+      },
+      "morning-sweep": {
+        "title": "朝のスイープ",
+        "summary": "持ち越したタスクをカード1枚ずつ整理します。",
+        "keywords": "スイープ, 期限切れ, 整理, 持ち越し, 挽回, 溜まったタスク, 朝",
+        "body": "遅れがつらくなくなります。期限切れ画面の「スイープ」ボタンは、持ち越したタスクをカード1枚ずつ確認していきます。今日・明日・日付を選ぶ・フローターにする・手放す、から選ぶだけ。急いでいるなら「すべて今日へ」で一括移動でき、取り消しも1回で済みます。",
+        "tip": "繰り返しタスクはスイープの対象外です。シリーズを保つため、編集シートから回ごとに予定を変更してください。"
       },
       "search-tasks": {
         "title": "タスクを検索する",

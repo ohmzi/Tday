@@ -24,6 +24,7 @@ object GuideTopicIds {
     const val SCHEDULED_LISTS = "scheduled-lists"
     const val COMPLETED_HISTORY = "completed-history"
     const val OVERDUE_VIEW = "overdue-view"
+    const val MORNING_SWEEP = "morning-sweep"
     const val SEARCH_TASKS = "search-tasks"
     const val RECURRENCE_PRESETS = "recurrence-presets"
     const val REMINDER_SNOOZE = "reminder-snooze"

@@ -480,6 +480,42 @@
       "sinceVersion": null
     },
     {
+      "id": "morning-sweep",
+      "section": "ORGANIZING",
+      "icon": "hand",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "titleKey": "guide.topics.morning-sweep.title",
+      "summaryKey": "guide.topics.morning-sweep.summary",
+      "keywordsKey": "guide.topics.morning-sweep.keywords",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "keys": [
+            "guide.topics.morning-sweep.body"
+          ]
+        },
+        {
+          "type": "TIP",
+          "keys": [
+            "guide.topics.morning-sweep.tip"
+          ]
+        }
+      ],
+      "badge": null,
+      "deepLink": {
+        "web": "overdue",
+        "android": "morning-sweep",
+        "ios": "morning-sweep"
+      },
+      "helpAnchors": [],
+      "serverOnly": false,
+      "sinceVersion": "0.3.0"
+    },
+    {
       "id": "search-tasks",
       "section": "ORGANIZING",
       "icon": "search",

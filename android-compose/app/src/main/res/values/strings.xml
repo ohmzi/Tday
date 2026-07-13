@@ -26,6 +26,16 @@
     <string name="quick_defer_tomorrow">Tomorrow morning</string>
     <string name="quick_defer_next_week">Next week</string>
     <string name="reminder_action_snooze_hour">Snooze 1h</string>
+    <string name="sweep_title">Morning Sweep</string>
+    <string name="sweep_done">All caught up</string>
+    <string name="sweep_today">Today</string>
+    <string name="sweep_tomorrow">Tomorrow</string>
+    <string name="sweep_pick_date">Pick a date</string>
+    <string name="sweep_float">Make it a floater</string>
+    <string name="sweep_let_go">Let it go</string>
+    <string name="sweep_skip">Skip</string>
+    <string name="sweep_all_to_today">Sweep all to today</string>
+    <string name="sweep_swept_toast">Swept %1$d tasks</string>
     <string name="task_promote_failed">Could not schedule task</string>
     <string name="task_float_failed">Could not float task</string>
     <string name="action_complete">Complete</string>

@@ -1082,6 +1082,19 @@ struct TodoListScreen: View {
     @ToolbarContentBuilder
     private var navigationToolbarContent: some ToolbarContent {
         if !usesHeroTimelineMode {
+            // Morning Sweep: guided triage entry, only where there is something
+            // to triage (recurring occurrences reschedule via the edit flow).
+            if viewModel.mode == .overdue,
+               viewModel.items.contains(where: { !$0.isRecurring && $0.instanceDate == nil }) {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        NotificationDeepLinkRouter.shared.route(URL(string: "tday://morning-sweep")!)
+                    } label: {
+                        Image(systemName: "sunrise")
+                    }
+                    .accessibilityLabel(Text(L("Sweep")))
+                }
+            }
             if canSummarizeCurrentMode {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button(action: presentSummary) {

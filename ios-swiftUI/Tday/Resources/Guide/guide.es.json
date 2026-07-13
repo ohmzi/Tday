@@ -614,6 +614,45 @@
       "searchBody": "un lugar dedicado a las tareas cuyo momento ya paso. las tareas cuya hora de vencimiento ya paso se reunen en la vista vencidas para que nada se escape en silencio. reprogramalas cuando estes listo."
     },
     {
+      "id": "morning-sweep",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "hand",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.3.0",
+      "deepLink": {
+        "web": "overdue",
+        "android": "morning-sweep",
+        "ios": "morning-sweep"
+      },
+      "helpAnchors": [],
+      "title": "Barrido matutino",
+      "summary": "Prioriza las tareas arrastradas una tarjeta a la vez.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Ir atrasado deja de doler: el botón Barrer en la pantalla de Atrasadas recorre tus tareas arrastradas una tarjeta a la vez — Hoy, Mañana, Elegir una fecha, Convertir en flotante o Dejarla ir. ¿Con prisa? Barrer todo a hoy lo mueve todo de una vez, con un solo deshacer."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Las tareas recurrentes quedan fuera del barrido; sus repeticiones se reprograman desde la hoja de edición para mantener la serie intacta."
+          ]
+        }
+      ],
+      "searchTitle": "barrido matutino",
+      "searchKeywords": "barrido, atrasadas, priorizar, arrastradas, ponerse al dia, pendientes, manana",
+      "searchBody": "prioriza las tareas arrastradas una tarjeta a la vez. ir atrasado deja de doler: el boton barrer en la pantalla de atrasadas recorre tus tareas arrastradas una tarjeta a la vez — hoy, manana, elegir una fecha, convertir en flotante o dejarla ir. ¿con prisa? barrer todo a hoy lo mueve todo de una vez, con un solo deshacer. las tareas recurrentes quedan fuera del barrido; sus repeticiones se reprograman desde la hoja de edicion para mantener la serie intacta."
+    },
+    {
       "id": "search-tasks",
       "section": "ORGANIZING",
       "sectionOrder": 3,

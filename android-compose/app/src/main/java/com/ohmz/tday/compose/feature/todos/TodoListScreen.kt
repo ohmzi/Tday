@@ -237,6 +237,7 @@ fun TodoListScreen(
     onPromoteFloater: (todo: TodoItem, dueEpochMs: Long) -> Unit = { _, _ -> },
     onDemoteTodo: (todo: TodoItem) -> Unit = {},
     onDeferTask: (todo: TodoItem, dueEpochMs: Long) -> Unit = { _, _ -> },
+    onOpenMorningSweep: () -> Unit = {},
     onUpdateListSettings: (listId: String, name: String, color: String?, iconKey: String?) -> Unit,
     onDeleteList: (listId: String) -> Unit,
     onOpenFloaterList: (listId: String, listName: String) -> Unit = { _, _ -> },
@@ -559,7 +560,20 @@ fun TodoListScreen(
                 // Hidden on the root floater screen; kept on the per-mode screens
                 // (today/all/scheduled/etc.) and list detail.
                 !isRootFloaterScreen
+    // Morning Sweep: guided triage entry, only where there is something to
+    // triage (recurring occurrences reschedule via the edit flow instead).
+    val hasSweepableTasks = uiState.mode == TodoListMode.OVERDUE &&
+        uiState.items.any { it.rrule.isNullOrBlank() && it.instanceDate == null }
     val topBarActions = listOfNotNull(
+        if (hasSweepableTasks) {
+            TodoTopBarAction(
+                icon = ImageVector.vectorResource(R.drawable.ic_lucide_sun),
+                contentDescription = stringResource(R.string.sweep_title),
+                onClick = onOpenMorningSweep,
+            )
+        } else {
+            null
+        },
         if (canSummarizeCurrentMode) {
             TodoTopBarAction(
                 icon = ImageVector.vectorResource(R.drawable.ic_lucide_sparkles),

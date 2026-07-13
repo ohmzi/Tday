@@ -114,6 +114,7 @@
 		CAFE0D1E0000000000000012 /* GuideSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAFE0D1E0000000000000002 /* GuideSearch.swift */; };
 		CAFE0D1E0000000000000013 /* GuideModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAFE0D1E0000000000000003 /* GuideModels.swift */; };
 		CAFE0D1E0000000000000014 /* HelpGuideScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAFE0D1E0000000000000004 /* HelpGuideScreen.swift */; };
+		CAFE0D1E0000000000000059 /* MorningSweepScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAFE0D1E000000000000005A /* MorningSweepScreen.swift */; };
 		CAFE0D1E0000000000000053 /* GuideHelpLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAFE0D1E0000000000000054 /* GuideHelpLink.swift */; };
 		CAFE0D1E0000000000000055 /* GuideStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAFE0D1E0000000000000056 /* GuideStore.swift */; };
 		CAFE0D1E0000000000000015 /* GuideContentContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAFE0D1E0000000000000005 /* GuideContentContractTests.swift */; };
@@ -273,6 +274,7 @@
 		CAFE0D1E0000000000000002 /* GuideSearch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuideSearch.swift; sourceTree = "<group>"; };
 		CAFE0D1E0000000000000003 /* GuideModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuideModels.swift; sourceTree = "<group>"; };
 		CAFE0D1E0000000000000004 /* HelpGuideScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelpGuideScreen.swift; sourceTree = "<group>"; };
+		CAFE0D1E000000000000005A /* MorningSweepScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MorningSweepScreen.swift; sourceTree = "<group>"; };
 		CAFE0D1E0000000000000054 /* GuideHelpLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuideHelpLink.swift; sourceTree = "<group>"; };
 		CAFE0D1E0000000000000056 /* GuideStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuideStore.swift; sourceTree = "<group>"; };
 		CAFE0D1E0000000000000005 /* GuideContentContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuideContentContractTests.swift; sourceTree = "<group>"; };
@@ -442,6 +444,7 @@
 				B10000000000000000000010 /* CarPlay */,
 				FE3DA39BEFDCE31E8159D522 /* Completed */,
 				CAFE0D1E0000000000000022 /* Guide */,
+				CAFE0D1E000000000000005B /* Sweep */,
 				7BA4A69F753AF1C268BCD197 /* Home */,
 				DA05A67258F74BF398DCADA3 /* Onboarding */,
 				9F18066D3B63DF80ECB870BB /* Settings */,
@@ -765,6 +768,14 @@
 			path = Guide;
 			sourceTree = "<group>";
 		};
+		CAFE0D1E000000000000005B /* Sweep */ = {
+			isa = PBXGroup;
+			children = (
+				CAFE0D1E000000000000005A /* MorningSweepScreen.swift */,
+			);
+			path = Sweep;
+			sourceTree = "<group>";
+		};
 		CAFE0D1E0000000000000023 /* Guide */ = {
 			isa = PBXGroup;
 			children = (
@@ -942,6 +953,7 @@
 				CAFE0D1E0000000000000012 /* GuideSearch.swift in Sources */,
 				CAFE0D1E0000000000000013 /* GuideModels.swift in Sources */,
 				CAFE0D1E0000000000000014 /* HelpGuideScreen.swift in Sources */,
+				CAFE0D1E0000000000000059 /* MorningSweepScreen.swift in Sources */,
 				CAFE0D1E0000000000000053 /* GuideHelpLink.swift in Sources */,
 				CAFE0D1E0000000000000055 /* GuideStore.swift in Sources */,
 				D1EC81F59DDFE7F8A10D1D30 /* AppRoute.swift in Sources */,

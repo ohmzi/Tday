@@ -614,6 +614,45 @@
       "searchBody": "a dedicated place for tasks whose time has passed. tasks whose due time has passed collect in the overdue view so nothing slips silently. reschedule them when you're ready."
     },
     {
+      "id": "morning-sweep",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "hand",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.3.0",
+      "deepLink": {
+        "web": "overdue",
+        "android": "morning-sweep",
+        "ios": "morning-sweep"
+      },
+      "helpAnchors": [],
+      "title": "Morning Sweep",
+      "summary": "Triage carried-over tasks one card at a time.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Getting behind stops hurting: the Sweep button on the Overdue screen walks your carried-over tasks one card at a time — Today, Tomorrow, Pick a date, Make it a floater, or Let it go. In a hurry? Sweep all to today moves everything at once, with a single undo."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Recurring tasks stay out of the sweep; their occurrences reschedule from the edit sheet so the series stays intact."
+          ]
+        }
+      ],
+      "searchTitle": "morning sweep",
+      "searchKeywords": "sweep, overdue, triage, carried over, catch up, backlog, morning",
+      "searchBody": "triage carried-over tasks one card at a time. getting behind stops hurting: the sweep button on the overdue screen walks your carried-over tasks one card at a time — today, tomorrow, pick a date, make it a floater, or let it go. in a hurry? sweep all to today moves everything at once, with a single undo. recurring tasks stay out of the sweep; their occurrences reschedule from the edit sheet so the series stays intact."
+    },
+    {
       "id": "search-tasks",
       "section": "ORGANIZING",
       "sectionOrder": 3,

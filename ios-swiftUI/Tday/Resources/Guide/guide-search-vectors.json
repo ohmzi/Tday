@@ -24,7 +24,8 @@
       "promote-and-float",
       "quick-defer",
       "day-done",
-      "scheduled-lists"
+      "scheduled-lists",
+      "morning-sweep"
     ],
     "reminder": [
       "reminders",
@@ -36,10 +37,12 @@
       "floater-lists",
       "promote-and-float",
       "root-feeds",
-      "create-task"
+      "create-task",
+      "morning-sweep"
     ],
     "car": [
       "carplay",
+      "morning-sweep",
       "overdue-view",
       "scheduled-lists",
       "completed-history",

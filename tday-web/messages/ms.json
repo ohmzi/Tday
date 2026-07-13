@@ -357,7 +357,18 @@
     "quickDeferTonight": "Malam ini",
     "quickDeferTomorrow": "Esok pagi",
     "quickDeferNextWeek": "Minggu depan",
-    "allDoneToday": "Semua selesai untuk hari ini"
+    "allDoneToday": "Semua selesai untuk hari ini",
+    "sweep": "Sapu",
+    "sweepTitle": "Sapuan pagi",
+    "sweepToday": "Hari ini",
+    "sweepTomorrow": "Esok",
+    "sweepPickDate": "Pilih tarikh",
+    "sweepFloat": "Jadikan terapung",
+    "sweepLetGo": "Lepaskan",
+    "sweepSkip": "Langkau",
+    "sweepAllToToday": "Sapu semua ke hari ini",
+    "sweptToast": "{{count}} tugasan disapu",
+    "sweepDone": "Semua terkini"
   },
   "today": {
     "saveInstance": "Simpan kejadian",
@@ -779,6 +790,13 @@
         "summary": "Tempat khusus untuk tugasan yang masanya telah berlalu.",
         "keywords": "tertunggak, lewat, lepas tempoh, terlepas, dibawa ke hadapan, tunggakan",
         "body": "Tugasan yang masa tamat tempohnya telah berlalu terkumpul dalam paparan Tertunggak supaya tiada yang terlepas secara senyap. Jadualkan semula bila anda bersedia."
+      },
+      "morning-sweep": {
+        "title": "Sapuan pagi",
+        "summary": "Uruskan tugasan tertunggak satu kad pada satu masa.",
+        "keywords": "sapuan, tertunggak, triaj, terbawa, kejar semula, tunggakan, pagi",
+        "body": "Ketinggalan tidak lagi menyakitkan: butang Sapu pada skrin Tertunggak membawa anda melalui tugasan terbawa satu kad pada satu masa — Hari ini, Esok, Pilih tarikh, Jadikan terapung atau Lepaskan. Tergesa-gesa? Sapu semua ke hari ini memindahkan semuanya sekali gus, dengan satu buat asal.",
+        "tip": "Tugasan berulang tidak termasuk dalam sapuan; kejadiannya dijadualkan semula melalui helaian edit supaya sirinya kekal."
       },
       "search-tasks": {
         "title": "Cari tugasan anda",
