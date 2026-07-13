@@ -78,6 +78,8 @@ internal data class TaskWidgetRow(
     val priority: String,
     val trailingText: String? = null,
     val description: String? = null,
+    /** Tapping the leading dot completes the task inline (widgets v2). */
+    val completeAction: Action? = null,
 )
 
 private enum class TaskWidgetTextColor(@ColorRes val resourceId: Int) {
@@ -477,14 +479,34 @@ private fun TaskWidgetRow(
             // two-line title rather than centring across both lines.
             verticalAlignment = Alignment.Top,
         ) {
-            PriorityDot(
-                priority = row.priority,
-                size = 7.dp,
-                dotResourceOverride = visuals.priorityDotOverride,
-                // Nudge the dot down to the vertical centre of the first line.
-                modifier = GlanceModifier.padding(top = 4.dp),
-            )
-            Spacer(modifier = GlanceModifier.width(7.dp))
+            // Widgets v2: the leading dot doubles as an inline complete target.
+            // The clickable box pads well past the 7dp dot so the tap target
+            // stays usable at home-screen sizes without moving the layout.
+            if (row.completeAction != null) {
+                Box(
+                    modifier = GlanceModifier
+                        .clickable(row.completeAction)
+                        .padding(top = 1.dp, bottom = 3.dp, end = 3.dp),
+                ) {
+                    PriorityDot(
+                        priority = row.priority,
+                        size = 7.dp,
+                        dotResourceOverride = visuals.priorityDotOverride,
+                        // Nudge the dot down to the vertical centre of the first line.
+                        modifier = GlanceModifier.padding(top = 3.dp),
+                    )
+                }
+                Spacer(modifier = GlanceModifier.width(4.dp))
+            } else {
+                PriorityDot(
+                    priority = row.priority,
+                    size = 7.dp,
+                    dotResourceOverride = visuals.priorityDotOverride,
+                    // Nudge the dot down to the vertical centre of the first line.
+                    modifier = GlanceModifier.padding(top = 4.dp),
+                )
+                Spacer(modifier = GlanceModifier.width(7.dp))
+            }
             WidgetText(
                 modifier = GlanceModifier.defaultWeight(),
                 text = row.title,

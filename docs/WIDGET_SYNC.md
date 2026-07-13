@@ -75,6 +75,20 @@ TdayWidget/
 
 ### iOS
 
+## Inline completion (widgets v2, Android)
+
+Tapping a task's leading dot in the Today/Floater widgets completes it inline:
+
+1. The row's dot carries `actionRunCallback<CompleteTodayTaskAction|CompleteFloaterTaskAction>`
+   with the cached record id (`feature/widget/CompleteTaskAction.kt`).
+2. The callback resolves `WidgetCompleteTaskSubmitter` via `WidgetEntryPoint`,
+   looks the record up in the offline cache, and calls the same
+   `TodoRepository.completeTodo/completeFloater` the in-app checkbox uses —
+   optimistic cache write, queued COMPLETE_* mutation, sync in Server Mode.
+3. The repository's own widget refresh pushes the new state, so the row
+   disappears immediately. Mis-taps are reversed from the app's Completed
+   screen (no transient in-widget undo yet).
+
 - [ ] **Enable App Groups** on both the main app target and the TdayWidget extension
   (same identifier, e.g. `group.com.ohmz.tday`)
 - [ ] Set `kTdayAppGroupID` in `WidgetReloadHelper.swift` to your actual group ID
