@@ -66,6 +66,7 @@ class FloaterTasksWidget : GlanceAppWidget() {
                             title = task.title,
                             priority = task.priority,
                             description = task.description,
+                            completeAction = completeFloaterTaskAction(task.id),
                         )
                     },
                     visuals = FloaterWidgetVisuals,
