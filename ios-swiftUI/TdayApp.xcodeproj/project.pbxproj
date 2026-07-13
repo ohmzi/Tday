@@ -36,6 +36,7 @@
 		2E1D50F9EEE6B8D7D9B14AEA /* TodoListScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62AD2C2DD2233FCBB4611E95 /* TodoListScreen.swift */; };
 		A1C0FFEE000000000000B001 /* ListShareText.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE000000000000F001 /* ListShareText.swift */; };
 		3172D88F15D3395465E578E3 /* TaskReminderScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D7ACBCBA57903A93BEC3BFA /* TaskReminderScheduler.swift */; };
+		CAFE0D1E000000000000005C /* DayAhead.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAFE0D1E000000000000005D /* DayAhead.swift */; };
 		384B88FF643D87A6157C76C2 /* Nunito.ttf in Resources */ = {isa = PBXBuildFile; fileRef = D9D2A99D6C098B63352D4FB8 /* Nunito.ttf */; };
 		3E0BE8F327DB1A2EE5B101C4 /* ReminderPreferenceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3407352DB3FED037D2A26BF /* ReminderPreferenceStore.swift */; };
 		434143484D41505045525300 /* CacheMappersDateParsingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 434143484D41505045525301 /* CacheMappersDateParsingTests.swift */; };
@@ -195,6 +196,7 @@
 		53EFEAE1EE18AB86477A56BC /* CalendarViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarViewModel.swift; sourceTree = "<group>"; };
 		593DCCDF3ADC95BE1CDC78FC /* StringHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StringHelpers.swift; sourceTree = "<group>"; };
 		5D7ACBCBA57903A93BEC3BFA /* TaskReminderScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskReminderScheduler.swift; sourceTree = "<group>"; };
+		CAFE0D1E000000000000005D /* DayAhead.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayAhead.swift; sourceTree = "<group>"; };
 		B10000000000000000000001 /* CarTaskModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarTaskModels.swift; sourceTree = "<group>"; };
 		B10000000000000000000002 /* CarPlayCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarPlayCoordinator.swift; sourceTree = "<group>"; };
 		B10000000000000000000003 /* CarPlaySceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarPlaySceneDelegate.swift; sourceTree = "<group>"; };
@@ -500,6 +502,7 @@
 				2FBC41C56EEEFC8869E762B3 /* ReminderOption.swift */,
 				C3407352DB3FED037D2A26BF /* ReminderPreferenceStore.swift */,
 				5D7ACBCBA57903A93BEC3BFA /* TaskReminderScheduler.swift */,
+				CAFE0D1E000000000000005D /* DayAhead.swift */,
 			);
 			path = Notification;
 			sourceTree = "<group>";
@@ -1020,6 +1023,7 @@
 				5D93F6903E05BD9902C43A51 /* SystemCredentialService.swift in Sources */,
 				EF64B4D7E0FB06A86DA86E0C /* TaskFloatingActionButton.swift in Sources */,
 				3172D88F15D3395465E578E3 /* TaskReminderScheduler.swift in Sources */,
+				CAFE0D1E000000000000005C /* DayAhead.swift in Sources */,
 				2D4CE01CFE08086ACC160F8B /* TdayAPIService.swift in Sources */,
 				861A548A6A3DDE0A78D35D83 /* TdayApp.swift in Sources */,
 				BA2D51423497337836ADD5E9 /* TdayTheme.swift in Sources */,

@@ -5,6 +5,8 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
+import com.ohmz.tday.compose.core.notification.DayAheadPreferenceStore
+import com.ohmz.tday.compose.core.notification.DayAheadScheduling
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
@@ -27,6 +29,7 @@ import javax.inject.Inject
 class TdayApplication : Application(), Configuration.Provider {
 
     @Inject lateinit var workerFactory: HiltWorkerFactory
+    @Inject lateinit var dayAheadPreferenceStore: DayAheadPreferenceStore
     private val deferredStartupRan = AtomicBoolean(false)
 
     override val workManagerConfiguration: Configuration
@@ -37,6 +40,8 @@ class TdayApplication : Application(), Configuration.Provider {
     override fun onCreate() {
         super.onCreate()
         TodayTasksWidgetPreviewPublisher.publish(this)
+        // Re-arm the Day Ahead digest across process restarts (no-op when off).
+        DayAheadScheduling.scheduleNext(this, dayAheadPreferenceStore.getOption())
     }
 
     fun runDeferredStartup() {

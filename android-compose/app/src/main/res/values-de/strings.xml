@@ -35,6 +35,14 @@
     <string name="sweep_skip">Überspringen</string>
     <string name="sweep_all_to_today">Alles auf heute schieben</string>
     <string name="sweep_swept_toast">%1$d Aufgaben verschoben</string>
+    <string name="day_ahead_setting">Tagesüberblick</string>
+    <string name="day_ahead_off">Aus</string>
+    <string name="day_ahead_h7">7:00</string>
+    <string name="day_ahead_h8">8:00</string>
+    <string name="day_ahead_h9">9:00</string>
+    <string name="day_ahead_title">Dein Tag</string>
+    <string name="day_ahead_text">%1$d Aufgaben heute</string>
+    <string name="day_ahead_text_with_overdue">%1$d Aufgaben heute, %2$d liegengeblieben</string>
     <string name="task_promote_failed">Aufgabe konnte nicht geplant werden</string>
     <string name="task_float_failed">Aufgabe konnte nicht treiben</string>
     <string name="action_complete">Abschließen</string>

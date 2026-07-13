@@ -17,6 +17,7 @@ struct SettingsScreen: View {
     @Environment(\.tdayColors) private var colors
     @State private var settingsScrollOffset: CGFloat = 0
     @State private var showingReminderSelector = false
+    @State private var showingDayAheadSelector = false
     @State private var showingLanguageSelector = false
     @State private var profileEditor: ProfileEditorExpansion = .none
 
@@ -58,6 +59,18 @@ struct SettingsScreen: View {
                     onSelect: viewModel.setDefaultReminder,
                     onDismiss: {
                         showingReminderSelector = false
+                    }
+                )
+                .transition(.opacity.combined(with: .scale(scale: 0.97)))
+            }
+        }
+        .overlay {
+            if showingDayAheadSelector {
+                SettingsDayAheadSelectorOverlay(
+                    selected: viewModel.dayAheadOption,
+                    onSelect: viewModel.setDayAhead,
+                    onDismiss: {
+                        showingDayAheadSelector = false
                     }
                 )
                 .transition(.opacity.combined(with: .scale(scale: 0.97)))
@@ -108,6 +121,13 @@ struct SettingsScreen: View {
                         selectedReminder: viewModel.selectedReminder,
                         onOpen: {
                             showingReminderSelector = true
+                        }
+                    )
+                    SettingsDivider()
+                    SettingsDayAheadSelector(
+                        selected: viewModel.dayAheadOption,
+                        onOpen: {
+                            showingDayAheadSelector = true
                         }
                     )
                     SettingsDivider()
@@ -1149,6 +1169,59 @@ private struct SettingsReminderSelectorOverlay: View {
             return Color(red: 0.61, green: 0.54, blue: 0.82)
         case .twoDays:
             return Color(red: 0.78, green: 0.48, blue: 0.58)
+        }
+    }
+}
+
+private struct SettingsDayAheadSelector: View {
+    let selected: DayAheadOption
+    let onOpen: () -> Void
+
+    @Environment(\.tdayColors) private var colors
+
+    var body: some View {
+        Button(action: onOpen) {
+            SettingsRowLabel(
+                title: "Day Ahead digest",
+                value: selected.label,
+                valueColor: colors.secondary,
+                showChevron: true
+            )
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+private struct SettingsDayAheadSelectorOverlay: View {
+    let selected: DayAheadOption
+    let onSelect: (DayAheadOption) -> Void
+    let onDismiss: () -> Void
+
+    @Environment(\.tdayColors) private var colors
+
+    var body: some View {
+        ZStack {
+            colors.bottomSheetScrim
+                .ignoresSafeArea()
+                .onTapGesture(perform: onDismiss)
+
+            TdayCenteredSelectorCard(title: L("Day Ahead digest")) {
+                ForEach(Array(DayAheadOption.allCases.enumerated()), id: \.element.id) { index, option in
+                    if index > 0 {
+                        TdaySheetDivider(horizontalPadding: 20, opacity: 0.16)
+                    }
+
+                    TdayCenteredSelectorRow(
+                        title: option.label,
+                        swatchColor: option == .off ? colors.onSurfaceVariant.opacity(0.4) : colors.secondary,
+                        selected: option == selected
+                    ) {
+                        onSelect(option)
+                        onDismiss()
+                    }
+                }
+            }
+            .padding(.horizontal, 54)
         }
     }
 }

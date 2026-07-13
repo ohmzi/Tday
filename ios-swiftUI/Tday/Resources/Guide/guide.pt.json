@@ -787,6 +787,40 @@
       "searchBody": "as notificacoes de lembrete trazem as acoes adiar 1 h e hoje a noite. quando um lembrete chega em ma hora, nao e preciso abrir o app: adiar 1 h entrega o mesmo lembrete uma hora depois, e hoje a noite move a tarefa para as 19:00 de hoje. hoje a noite funciona para tarefas avulsas — ocorrencias recorrentes sao reagendadas no app para manter a serie intacta. adiar so atrasa a notificacao; a tarefa mantem o horario original ate voce move-la."
     },
     {
+      "id": "day-ahead",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "bell-ring",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.3.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Resumo do dia",
+      "summary": "Uma notificação matinal discreta com os números de hoje.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Ative nos Ajustes e escolha um horário: toda manhã uma notificação mostra como está o dia — \"4 tarefas hoje, 2 acumuladas\" — e abre o Hoje, ou vai direto para a Varredura matinal quando há tarefas acumuladas. Totalmente no dispositivo: nada sai do seu telefone."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "O resumo fica em silêncio nos dias sem tarefas — sem notícias, boas notícias."
+          ]
+        }
+      ],
+      "searchTitle": "resumo do dia",
+      "searchKeywords": "resumo, dia pela frente, manha, notificacao diaria, visao geral",
+      "searchBody": "uma notificacao matinal discreta com os numeros de hoje. ative nos ajustes e escolha um horario: toda manha uma notificacao mostra como esta o dia — \"4 tarefas hoje, 2 acumuladas\" — e abre o hoje, ou vai direto para a varredura matinal quando ha tarefas acumuladas. totalmente no dispositivo: nada sai do seu telefone. o resumo fica em silencio nos dias sem tarefas — sem noticias, boas noticias."
+    },
+    {
       "id": "home-widget",
       "section": "WIDGETS_AND_SURFACES",
       "sectionOrder": 5,

@@ -1025,6 +1025,8 @@ fun TdayApp(
                             versionCheckResult = appUiState.versionCheckResult,
                             onThemeModeSelected = appViewModel::setThemeMode,
                             onReminderSelected = appViewModel::setDefaultReminder,
+                        selectedDayAhead = appUiState.selectedDayAhead,
+                        onDayAheadSelected = appViewModel::setDayAhead,
                             onSyncNow = appViewModel::syncNow,
                             onToggleAiSummary = appViewModel::setAiSummaryEnabled,
                             onBack = { navController.popBackStack() },
@@ -1087,6 +1089,7 @@ fun TdayApp(
 
                     composable(
                         route = AppRoute.MorningSweep.route,
+                        deepLinks = listOf(navDeepLink { uriPattern = "tday://morning-sweep" }),
                         enterTransition = { settingsEnterTransition() },
                         exitTransition = { settingsExitTransition() },
                         popEnterTransition = { settingsEnterTransition() },

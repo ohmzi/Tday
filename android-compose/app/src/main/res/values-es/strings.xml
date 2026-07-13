@@ -35,6 +35,14 @@
     <string name="sweep_skip">Omitir</string>
     <string name="sweep_all_to_today">Barrer todo a hoy</string>
     <string name="sweep_swept_toast">%1$d tareas barridas</string>
+    <string name="day_ahead_setting">Resumen del día</string>
+    <string name="day_ahead_off">Desactivado</string>
+    <string name="day_ahead_h7">7:00</string>
+    <string name="day_ahead_h8">8:00</string>
+    <string name="day_ahead_h9">9:00</string>
+    <string name="day_ahead_title">Tu día por delante</string>
+    <string name="day_ahead_text">%1$d tareas hoy</string>
+    <string name="day_ahead_text_with_overdue">%1$d tareas hoy, %2$d arrastradas</string>
     <string name="task_promote_failed">No se pudo programar la tarea</string>
     <string name="task_float_failed">No se pudo dejar flotar la tarea</string>
     <string name="action_complete">Completar</string>
