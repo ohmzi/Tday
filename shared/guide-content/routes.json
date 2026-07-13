@@ -7,11 +7,13 @@
   "android": [
     "calendar",
     "todos/today",
-    "todos/overdue"
+    "todos/overdue",
+    "morning-sweep"
   ],
   "ios": [
     "calendar",
     "today",
-    "overdueTodos"
+    "overdueTodos",
+    "morning-sweep"
   ]
 }

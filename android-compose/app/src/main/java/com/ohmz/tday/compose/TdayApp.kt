@@ -98,6 +98,7 @@ import com.ohmz.tday.compose.feature.release.LatestReleaseScreen
 import com.ohmz.tday.compose.feature.release.LatestReleaseUiState
 import com.ohmz.tday.compose.feature.release.LatestReleaseViewModel
 import com.ohmz.tday.compose.feature.settings.SettingsScreen
+import com.ohmz.tday.compose.feature.sweep.MorningSweepScreen
 import com.ohmz.tday.compose.feature.todos.TodoListScreen
 import com.ohmz.tday.compose.feature.todos.TodoListViewModel
 import com.ohmz.tday.compose.ui.component.RootCreateTaskButton
@@ -805,6 +806,11 @@ fun TdayApp(
                         TodosRoute(
                             mode = TodoListMode.OVERDUE,
                             onBack = { navController.popBackStack() },
+                            onOpenMorningSweep = {
+                                navController.navigate(AppRoute.MorningSweep.route) {
+                                    launchSingleTop = true
+                                }
+                            },
                             pullRefreshEnabled = !appUiState.isLocalMode,
                             summaryAvailable = !appUiState.isLocalMode,
                         )
@@ -1080,6 +1086,18 @@ fun TdayApp(
                     }
 
                     composable(
+                        route = AppRoute.MorningSweep.route,
+                        enterTransition = { settingsEnterTransition() },
+                        exitTransition = { settingsExitTransition() },
+                        popEnterTransition = { settingsEnterTransition() },
+                        popExitTransition = { settingsExitTransition() },
+                    ) {
+                        MorningSweepScreen(
+                            onBack = { navController.popBackStack() },
+                        )
+                    }
+
+                    composable(
                         route = AppRoute.HelpGuide.route,
                         arguments = listOf(
                             navArgument("topic") {
@@ -1305,6 +1323,7 @@ private fun TodosRoute(
     onListDeleted: () -> Unit = {},
     onOpenFloaterList: (String, String) -> Unit = { _, _ -> },
     onOpenSettings: () -> Unit = {},
+    onOpenMorningSweep: () -> Unit = {},
     highlightTodoId: String? = null,
     listId: String? = null,
     listName: String? = null,
@@ -1352,6 +1371,7 @@ private fun TodosRoute(
         onPromoteFloater = viewModel::promoteFloater,
         onDemoteTodo = viewModel::demoteTodo,
         onDeferTask = viewModel::deferTask,
+        onOpenMorningSweep = onOpenMorningSweep,
         onUpdateListSettings = { targetListId, name, color, iconKey ->
             viewModel.updateListSettings(
                 listId = targetListId,

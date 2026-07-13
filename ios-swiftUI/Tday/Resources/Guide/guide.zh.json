@@ -614,6 +614,45 @@
       "searchBody": "一个专门存放已过时限任务的地方。 截止时间已过的任务会汇集到逾期视图里，这样什么都不会悄悄溜走。等你准备好，再给它们重新安排时间。"
     },
     {
+      "id": "morning-sweep",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "hand",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.3.0",
+      "deepLink": {
+        "web": "overdue",
+        "android": "morning-sweep",
+        "ios": "morning-sweep"
+      },
+      "helpAnchors": [],
+      "title": "晨间清理",
+      "summary": "逐张卡片处理积压的任务。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "落后不再让人焦虑：逾期页面上的“清理”按钮会带你逐张卡片处理积压任务——今天、明天、选择日期、变为漂浮任务或放手。赶时间？“全部移到今天”一次移动所有任务，只需一次撤销。"
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "重复任务不参与清理；它们的单次安排请在编辑表单中改期，以保持系列完整。"
+          ]
+        }
+      ],
+      "searchTitle": "晨间清理",
+      "searchKeywords": "清理, 逾期, 分流, 积压, 赶上进度, 待办堆积, 早晨",
+      "searchBody": "逐张卡片处理积压的任务。 落后不再让人焦虑：逾期页面上的“清理”按钮会带你逐张卡片处理积压任务——今天、明天、选择日期、变为漂浮任务或放手。赶时间？“全部移到今天”一次移动所有任务，只需一次撤销。 重复任务不参与清理；它们的单次安排请在编辑表单中改期，以保持系列完整。"
+    },
+    {
       "id": "search-tasks",
       "section": "ORGANIZING",
       "sectionOrder": 3,

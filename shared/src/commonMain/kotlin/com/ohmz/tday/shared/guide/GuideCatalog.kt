@@ -107,6 +107,12 @@ object GuideCatalog {
             deepLink = GuideDeepLink(web = "overdue", android = "todos/overdue", ios = "overdueTodos"),
         ),
         topic(
+            GuideTopicIds.MORNING_SWEEP, GuideSectionId.ORGANIZING, "hand",
+            setOf(WEB, ANDROID, IOS), sinceVersion = "0.3.0",
+            body = listOf(para(GuideTopicIds.MORNING_SWEEP), tip(GuideTopicIds.MORNING_SWEEP)),
+            deepLink = GuideDeepLink(web = "overdue", android = "morning-sweep", ios = "morning-sweep"),
+        ),
+        topic(
             GuideTopicIds.SEARCH_TASKS, GuideSectionId.ORGANIZING, "search",
             setOf(WEB, ANDROID, IOS), badge = GuideBadge.HIDDEN_GEM,
             body = listOf(para(GuideTopicIds.SEARCH_TASKS)),

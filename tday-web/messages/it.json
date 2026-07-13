@@ -357,7 +357,18 @@
     "quickDeferTonight": "Stasera",
     "quickDeferTomorrow": "Domani mattina",
     "quickDeferNextWeek": "La prossima settimana",
-    "allDoneToday": "Tutto fatto per oggi"
+    "allDoneToday": "Tutto fatto per oggi",
+    "sweep": "Riordina",
+    "sweepTitle": "Riordino mattutino",
+    "sweepToday": "Oggi",
+    "sweepTomorrow": "Domani",
+    "sweepPickDate": "Scegli una data",
+    "sweepFloat": "Rendi fluttuante",
+    "sweepLetGo": "Lascia andare",
+    "sweepSkip": "Salta",
+    "sweepAllToToday": "Sposta tutto a oggi",
+    "sweptToast": "{{count}} attività spostate",
+    "sweepDone": "Tutto in pari"
   },
   "today": {
     "saveInstance": "Salva istanza",
@@ -779,6 +790,13 @@
         "summary": "Uno spazio dedicato alle attività il cui momento è passato.",
         "keywords": "in ritardo, scaduto, scadenza passata, mancato, riportato, arretrato",
         "body": "Le attività la cui scadenza è passata si raccolgono nella vista In ritardo così nulla scivola via in silenzio. Riprogrammale quando sei pronto."
+      },
+      "morning-sweep": {
+        "title": "Riordino mattutino",
+        "summary": "Smista le attività arretrate una scheda alla volta.",
+        "keywords": "riordino, in ritardo, smistare, arretrate, recuperare, arretrato, mattina",
+        "body": "Essere indietro smette di pesare: il pulsante Riordina nella schermata In ritardo scorre le attività arretrate una scheda alla volta — Oggi, Domani, Scegli una data, Rendi fluttuante o Lascia andare. Di fretta? Sposta tutto a oggi muove tutto in una volta, con un solo annulla.",
+        "tip": "Le attività ricorrenti restano fuori dal riordino; le loro occorrenze si ripianificano dalla scheda di modifica così la serie resta intatta."
       },
       "search-tasks": {
         "title": "Cerca le tue attività",

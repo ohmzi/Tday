@@ -25,6 +25,16 @@
     <string name="quick_defer_tomorrow">明日の朝</string>
     <string name="quick_defer_next_week">来週</string>
     <string name="reminder_action_snooze_hour">1時間後に再通知</string>
+    <string name="sweep_title">朝のスイープ</string>
+    <string name="sweep_done">すべて片付きました</string>
+    <string name="sweep_today">今日</string>
+    <string name="sweep_tomorrow">明日</string>
+    <string name="sweep_pick_date">日付を選ぶ</string>
+    <string name="sweep_float">フローターにする</string>
+    <string name="sweep_let_go">手放す</string>
+    <string name="sweep_skip">スキップ</string>
+    <string name="sweep_all_to_today">すべて今日へ</string>
+    <string name="sweep_swept_toast">%1$d件のタスクを整理しました</string>
     <string name="task_promote_failed">タスクを予定できませんでした</string>
     <string name="task_float_failed">タスクをフロートできませんでした</string>
     <string name="action_complete">完了</string>

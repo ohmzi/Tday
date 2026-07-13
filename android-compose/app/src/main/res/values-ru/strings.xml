@@ -25,6 +25,16 @@
     <string name="quick_defer_tomorrow">Завтра утром</string>
     <string name="quick_defer_next_week">На следующей неделе</string>
     <string name="reminder_action_snooze_hour">Отложить на 1 ч</string>
+    <string name="sweep_title">Утренний разбор</string>
+    <string name="sweep_done">Всё разобрано</string>
+    <string name="sweep_today">Сегодня</string>
+    <string name="sweep_tomorrow">Завтра</string>
+    <string name="sweep_pick_date">Выбрать дату</string>
+    <string name="sweep_float">Сделать плавающей</string>
+    <string name="sweep_let_go">Отпустить её</string>
+    <string name="sweep_skip">Пропустить</string>
+    <string name="sweep_all_to_today">Всё на сегодня</string>
+    <string name="sweep_swept_toast">Перенесено задач: %1$d</string>
     <string name="task_promote_failed">Не удалось запланировать задачу</string>
     <string name="task_float_failed">Не удалось отпустить задачу</string>
     <string name="action_complete">Завершить</string>
