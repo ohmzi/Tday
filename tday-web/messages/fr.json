@@ -357,7 +357,18 @@
     "quickDeferTonight": "Ce soir",
     "quickDeferTomorrow": "Demain matin",
     "quickDeferNextWeek": "La semaine prochaine",
-    "allDoneToday": "Tout est fait pour aujourd'hui"
+    "allDoneToday": "Tout est fait pour aujourd'hui",
+    "sweep": "Balayer",
+    "sweepTitle": "Balayage du matin",
+    "sweepToday": "Aujourd'hui",
+    "sweepTomorrow": "Demain",
+    "sweepPickDate": "Choisir une date",
+    "sweepFloat": "En faire un flottant",
+    "sweepLetGo": "Laisser partir",
+    "sweepSkip": "Passer",
+    "sweepAllToToday": "Tout balayer vers aujourd'hui",
+    "sweptToast": "{{count}} tâches balayées",
+    "sweepDone": "Tout est à jour"
   },
   "today": {
     "saveInstance": "Enregistrer l'instance",
@@ -779,6 +790,13 @@
         "summary": "Un espace dédié aux tâches dont l'heure est passée.",
         "keywords": "en retard, tardif, échéance passée, manqué, reporté, arriéré",
         "body": "Les tâches dont l'heure d'échéance est passée se rassemblent dans la vue En retard pour que rien ne file en silence. Reprogrammez-les quand vous êtes prêt."
+      },
+      "morning-sweep": {
+        "title": "Balayage du matin",
+        "summary": "Triez les tâches en retard une carte à la fois.",
+        "keywords": "balayage, en retard, trier, reportées, rattraper, arriéré, matin",
+        "body": "Être en retard ne fait plus mal : le bouton Balayer de l'écran En retard passe vos tâches reportées une carte à la fois — Aujourd'hui, Demain, Choisir une date, En faire un flottant ou Laisser partir. Pressé ? Tout balayer vers aujourd'hui déplace tout d'un coup, avec une seule annulation.",
+        "tip": "Les tâches récurrentes restent hors du balayage ; leurs occurrences se replanifient depuis la feuille d'édition pour préserver la série."
       },
       "search-tasks": {
         "title": "Rechercher vos tâches",

@@ -39,6 +39,7 @@ sealed class AppRoute(val route: String) {
     data object Car : AppRoute("car")
     data object Settings : AppRoute("settings")
     data object LatestRelease : AppRoute("latest-release")
+    data object MorningSweep : AppRoute("morning-sweep")
     data object HelpGuide : AppRoute("help-guide?topic={topic}") {
         fun create(topic: String? = null): String {
             return if (topic.isNullOrBlank()) "help-guide" else "help-guide?topic=${Uri.encode(topic)}"

@@ -25,6 +25,16 @@
     <string name="quick_defer_tomorrow">Morgen früh</string>
     <string name="quick_defer_next_week">Nächste Woche</string>
     <string name="reminder_action_snooze_hour">1 Std. später</string>
+    <string name="sweep_title">Morgendliches Aufräumen</string>
+    <string name="sweep_done">Alles aufgeholt</string>
+    <string name="sweep_today">Heute</string>
+    <string name="sweep_tomorrow">Morgen</string>
+    <string name="sweep_pick_date">Datum wählen</string>
+    <string name="sweep_float">Zum Floater machen</string>
+    <string name="sweep_let_go">Loslassen</string>
+    <string name="sweep_skip">Überspringen</string>
+    <string name="sweep_all_to_today">Alles auf heute schieben</string>
+    <string name="sweep_swept_toast">%1$d Aufgaben verschoben</string>
     <string name="task_promote_failed">Aufgabe konnte nicht geplant werden</string>
     <string name="task_float_failed">Aufgabe konnte nicht treiben</string>
     <string name="action_complete">Abschließen</string>

@@ -357,7 +357,18 @@
     "quickDeferTonight": "Esta noche",
     "quickDeferTomorrow": "Mañana por la mañana",
     "quickDeferNextWeek": "La próxima semana",
-    "allDoneToday": "Todo listo por hoy"
+    "allDoneToday": "Todo listo por hoy",
+    "sweep": "Barrer",
+    "sweepTitle": "Barrido matutino",
+    "sweepToday": "Hoy",
+    "sweepTomorrow": "Mañana",
+    "sweepPickDate": "Elegir una fecha",
+    "sweepFloat": "Convertir en flotante",
+    "sweepLetGo": "Dejarla ir",
+    "sweepSkip": "Omitir",
+    "sweepAllToToday": "Barrer todo a hoy",
+    "sweptToast": "{{count}} tareas barridas",
+    "sweepDone": "Todo al día"
   },
   "today": {
     "saveInstance": "Guardar instancia",
@@ -779,6 +790,13 @@
         "summary": "Un lugar dedicado a las tareas cuyo momento ya pasó.",
         "keywords": "vencidas, atrasadas, retrasadas, sin hacer, arrastradas, pendientes",
         "body": "Las tareas cuya hora de vencimiento ya pasó se reúnen en la vista Vencidas para que nada se escape en silencio. Reprográmalas cuando estés listo."
+      },
+      "morning-sweep": {
+        "title": "Barrido matutino",
+        "summary": "Prioriza las tareas arrastradas una tarjeta a la vez.",
+        "keywords": "barrido, atrasadas, priorizar, arrastradas, ponerse al día, pendientes, mañana",
+        "body": "Ir atrasado deja de doler: el botón Barrer en la pantalla de Atrasadas recorre tus tareas arrastradas una tarjeta a la vez — Hoy, Mañana, Elegir una fecha, Convertir en flotante o Dejarla ir. ¿Con prisa? Barrer todo a hoy lo mueve todo de una vez, con un solo deshacer.",
+        "tip": "Las tareas recurrentes quedan fuera del barrido; sus repeticiones se reprograman desde la hoja de edición para mantener la serie intacta."
       },
       "search-tasks": {
         "title": "Busca tus tareas",

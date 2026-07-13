@@ -357,7 +357,18 @@
     "quickDeferTonight": "Heute Abend",
     "quickDeferTomorrow": "Morgen früh",
     "quickDeferNextWeek": "Nächste Woche",
-    "allDoneToday": "Alles erledigt für heute"
+    "allDoneToday": "Alles erledigt für heute",
+    "sweep": "Aufräumen",
+    "sweepTitle": "Morgendliches Aufräumen",
+    "sweepToday": "Heute",
+    "sweepTomorrow": "Morgen",
+    "sweepPickDate": "Datum wählen",
+    "sweepFloat": "Zum Floater machen",
+    "sweepLetGo": "Loslassen",
+    "sweepSkip": "Überspringen",
+    "sweepAllToToday": "Alles auf heute schieben",
+    "sweptToast": "{{count}} Aufgaben verschoben",
+    "sweepDone": "Alles aufgeholt"
   },
   "today": {
     "saveInstance": "Instanz speichern",
@@ -779,6 +790,13 @@
         "summary": "Ein eigener Ort für Aufgaben, deren Zeit verstrichen ist.",
         "keywords": "überfällig, verspätet, fällig, verpasst, übertragen, rückstand",
         "body": "Aufgaben, deren Fälligkeitszeit verstrichen ist, sammeln sich in der Ansicht Überfällig, damit nichts stillschweigend durchrutscht. Plane sie neu ein, wenn du bereit bist."
+      },
+      "morning-sweep": {
+        "title": "Morgendliches Aufräumen",
+        "summary": "Sortiere liegengebliebene Aufgaben Karte für Karte.",
+        "keywords": "aufräumen, überfällig, sortieren, liegengeblieben, aufholen, rückstand, morgen",
+        "body": "Rückstand tut nicht mehr weh: Der Aufräumen-Knopf auf dem Überfällig-Bildschirm geht deine liegengebliebenen Aufgaben Karte für Karte durch — Heute, Morgen, Datum wählen, Zum Floater machen oder Loslassen. In Eile? „Alles auf heute schieben“ verschiebt alles auf einmal, mit einem einzigen Rückgängig.",
+        "tip": "Wiederholende Aufgaben bleiben außen vor; ihre Termine planst du im Bearbeiten-Blatt um, damit die Serie intakt bleibt."
       },
       "search-tasks": {
         "title": "Aufgaben durchsuchen",

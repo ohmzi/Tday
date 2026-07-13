@@ -25,6 +25,16 @@
     <string name="quick_defer_tomorrow">Demain matin</string>
     <string name="quick_defer_next_week">La semaine prochaine</string>
     <string name="reminder_action_snooze_hour">Reporter d\'1 h</string>
+    <string name="sweep_title">Balayage du matin</string>
+    <string name="sweep_done">Tout est à jour</string>
+    <string name="sweep_today">Aujourd\'hui</string>
+    <string name="sweep_tomorrow">Demain</string>
+    <string name="sweep_pick_date">Choisir une date</string>
+    <string name="sweep_float">En faire un flottant</string>
+    <string name="sweep_let_go">Laisser partir</string>
+    <string name="sweep_skip">Passer</string>
+    <string name="sweep_all_to_today">Tout balayer vers aujourd\'hui</string>
+    <string name="sweep_swept_toast">%1$d tâches balayées</string>
     <string name="task_promote_failed">Impossible de planifier la tâche</string>
     <string name="task_float_failed">Impossible de laisser flotter la tâche</string>
     <string name="action_complete">Terminer</string>

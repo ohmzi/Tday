@@ -357,7 +357,18 @@
     "quickDeferTonight": "Hoje à noite",
     "quickDeferTomorrow": "Amanhã de manhã",
     "quickDeferNextWeek": "Na próxima semana",
-    "allDoneToday": "Tudo feito por hoje"
+    "allDoneToday": "Tudo feito por hoje",
+    "sweep": "Varrer",
+    "sweepTitle": "Varredura matinal",
+    "sweepToday": "Hoje",
+    "sweepTomorrow": "Amanhã",
+    "sweepPickDate": "Escolher uma data",
+    "sweepFloat": "Tornar flutuante",
+    "sweepLetGo": "Deixar ir",
+    "sweepSkip": "Pular",
+    "sweepAllToToday": "Varrer tudo para hoje",
+    "sweptToast": "{{count}} tarefas varridas",
+    "sweepDone": "Tudo em dia"
   },
   "today": {
     "saveInstance": "Guardar instância",
@@ -779,6 +790,13 @@
         "summary": "Um espaço dedicado às tarefas cujo prazo já passou.",
         "keywords": "em atraso, atrasada, prazo passado, falhada, transitada, acumuladas",
         "body": "As tarefas cuja hora de conclusão já passou juntam-se na vista Em atraso para que nada escape em silêncio. Reagende-as quando estiver pronto."
+      },
+      "morning-sweep": {
+        "title": "Varredura matinal",
+        "summary": "Faça a triagem das tarefas acumuladas um cartão de cada vez.",
+        "keywords": "varredura, atrasadas, triagem, acumuladas, colocar em dia, pendências, manhã",
+        "body": "Ficar para trás deixa de doer: o botão Varrer na tela de Atrasadas percorre suas tarefas acumuladas um cartão de cada vez — Hoje, Amanhã, Escolher uma data, Tornar flutuante ou Deixar ir. Com pressa? Varrer tudo para hoje move tudo de uma vez, com um único desfazer.",
+        "tip": "Tarefas recorrentes ficam fora da varredura; suas ocorrências são reagendadas pela folha de edição para manter a série intacta."
       },
       "search-tasks": {
         "title": "Pesquisar as suas tarefas",

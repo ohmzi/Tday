@@ -357,7 +357,18 @@
     "quickDeferTonight": "Tonight",
     "quickDeferTomorrow": "Tomorrow morning",
     "quickDeferNextWeek": "Next week",
-    "allDoneToday": "All done for today"
+    "allDoneToday": "All done for today",
+    "sweep": "Sweep",
+    "sweepTitle": "Morning Sweep",
+    "sweepToday": "Today",
+    "sweepTomorrow": "Tomorrow",
+    "sweepPickDate": "Pick a date",
+    "sweepFloat": "Make it a floater",
+    "sweepLetGo": "Let it go",
+    "sweepSkip": "Skip",
+    "sweepAllToToday": "Sweep all to today",
+    "sweptToast": "Swept {{count}} tasks",
+    "sweepDone": "All caught up"
   },
   "today": {
     "saveInstance": "Save instance",
@@ -779,6 +790,13 @@
         "summary": "A dedicated place for tasks whose time has passed.",
         "keywords": "overdue, late, past due, missed, carried over, backlog",
         "body": "Tasks whose due time has passed collect in the Overdue view so nothing slips silently. Reschedule them when you're ready."
+      },
+      "morning-sweep": {
+        "title": "Morning Sweep",
+        "summary": "Triage carried-over tasks one card at a time.",
+        "keywords": "sweep, overdue, triage, carried over, catch up, backlog, morning",
+        "body": "Getting behind stops hurting: the Sweep button on the Overdue screen walks your carried-over tasks one card at a time — Today, Tomorrow, Pick a date, Make it a floater, or Let it go. In a hurry? Sweep all to today moves everything at once, with a single undo.",
+        "tip": "Recurring tasks stay out of the sweep; their occurrences reschedule from the edit sheet so the series stays intact."
       },
       "search-tasks": {
         "title": "Search your tasks",

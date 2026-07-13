@@ -345,6 +345,8 @@ struct AppRootView: View {
             LatestReleaseScreen(viewModel: appViewModel)
         case let .helpGuide(topic):
             HelpGuideScreen(viewModel: appViewModel, initialTopic: topic)
+        case .morningSweep:
+            MorningSweepScreen(viewModel: appViewModel)
         case .forgotPassword:
             ForgotPasswordView(
                 authViewModel: authViewModel,

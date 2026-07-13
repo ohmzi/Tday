@@ -614,6 +614,45 @@
       "searchBody": "uno spazio dedicato alle attivita il cui momento e passato. le attivita la cui scadenza e passata si raccolgono nella vista in ritardo cosi nulla scivola via in silenzio. riprogrammale quando sei pronto."
     },
     {
+      "id": "morning-sweep",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "hand",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.3.0",
+      "deepLink": {
+        "web": "overdue",
+        "android": "morning-sweep",
+        "ios": "morning-sweep"
+      },
+      "helpAnchors": [],
+      "title": "Riordino mattutino",
+      "summary": "Smista le attività arretrate una scheda alla volta.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Essere indietro smette di pesare: il pulsante Riordina nella schermata In ritardo scorre le attività arretrate una scheda alla volta — Oggi, Domani, Scegli una data, Rendi fluttuante o Lascia andare. Di fretta? Sposta tutto a oggi muove tutto in una volta, con un solo annulla."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Le attività ricorrenti restano fuori dal riordino; le loro occorrenze si ripianificano dalla scheda di modifica così la serie resta intatta."
+          ]
+        }
+      ],
+      "searchTitle": "riordino mattutino",
+      "searchKeywords": "riordino, in ritardo, smistare, arretrate, recuperare, arretrato, mattina",
+      "searchBody": "smista le attivita arretrate una scheda alla volta. essere indietro smette di pesare: il pulsante riordina nella schermata in ritardo scorre le attivita arretrate una scheda alla volta — oggi, domani, scegli una data, rendi fluttuante o lascia andare. di fretta? sposta tutto a oggi muove tutto in una volta, con un solo annulla. le attivita ricorrenti restano fuori dal riordino; le loro occorrenze si ripianificano dalla scheda di modifica cosi la serie resta intatta."
+    },
+    {
       "id": "search-tasks",
       "section": "ORGANIZING",
       "sectionOrder": 3,

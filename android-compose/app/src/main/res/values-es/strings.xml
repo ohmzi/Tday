@@ -25,6 +25,16 @@
     <string name="quick_defer_tomorrow">Mañana por la mañana</string>
     <string name="quick_defer_next_week">La próxima semana</string>
     <string name="reminder_action_snooze_hour">Posponer 1 h</string>
+    <string name="sweep_title">Barrido matutino</string>
+    <string name="sweep_done">Todo al día</string>
+    <string name="sweep_today">Hoy</string>
+    <string name="sweep_tomorrow">Mañana</string>
+    <string name="sweep_pick_date">Elegir una fecha</string>
+    <string name="sweep_float">Convertir en flotante</string>
+    <string name="sweep_let_go">Dejarla ir</string>
+    <string name="sweep_skip">Omitir</string>
+    <string name="sweep_all_to_today">Barrer todo a hoy</string>
+    <string name="sweep_swept_toast">%1$d tareas barridas</string>
     <string name="task_promote_failed">No se pudo programar la tarea</string>
     <string name="task_float_failed">No se pudo dejar flotar la tarea</string>
     <string name="action_complete">Completar</string>
