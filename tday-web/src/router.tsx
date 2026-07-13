@@ -1,6 +1,7 @@
 import { createBrowserRouter, Navigate, Outlet } from "react-router-dom";
 import * as Sentry from "@sentry/react";
 import { resolveInitialLocale } from "@/i18n";
+import ShareTargetRedirectPage from "@/pages/ShareTargetRedirectPage";
 import ProtectedRoute from "@/pages/ProtectedRoute";
 import { lazy, Suspense } from "react";
 import RouteErrorPage from "@/pages/RouteErrorPage";
@@ -56,6 +57,12 @@ export const router = sentryCreateBrowserRouter([
   {
     path: "/",
     element: <Navigate to={`/${resolveInitialLocale()}`} replace />,
+    errorElement: <RouteErrorPage />,
+  },
+  {
+    // PWA share_target entry (manifest.webmanifest): bounce into the app.
+    path: "/share",
+    element: <ShareTargetRedirectPage />,
     errorElement: <RouteErrorPage />,
   },
   {

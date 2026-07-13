@@ -42,7 +42,7 @@ interface TodoFormContextType {
 // Props for the provider
 interface TodoFormProviderProps {
   todoItem?: TodoItemType;
-  overrideFields?: { listID?: string };
+  overrideFields?: { listID?: string; title?: string };
   children: React.ReactNode;
 }
 
@@ -51,7 +51,8 @@ const TodoFormContext = createContext<TodoFormContextType | undefined>(
 );
 
 const TodoFormProvider = ({ children, todoItem, overrideFields }: TodoFormProviderProps) => {
-  const [title, setTitle] = useState<string>(todoItem?.title || "");
+  // Share-target prefill: shared text arrives as an override title.
+  const [title, setTitle] = useState<string>(overrideFields?.title ?? todoItem?.title ?? "");
   const [desc, setDesc] = useState<string>(todoItem?.description || "");
   const [listID, setListID] = useState<string | null>(
     overrideFields?.listID ??
