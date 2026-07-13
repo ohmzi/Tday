@@ -15,7 +15,7 @@ import { useReorderTodo } from "@/features/todayTodos/query/reorder-todo";
 import { useEditTodo } from "@/features/todayTodos/query/update-todo";
 import { useEditTodoInstance } from "@/features/todayTodos/query/update-todo-instance";
 
-type CreateTaskOverrides = { listID?: string };
+type CreateTaskOverrides = { listID?: string; title?: string };
 
 type CreateTaskContextValue = {
   openCreateTask: (overrideFields?: CreateTaskOverrides) => void;

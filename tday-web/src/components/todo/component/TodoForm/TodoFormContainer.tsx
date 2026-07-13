@@ -8,7 +8,7 @@ interface TodoFormContainerProps {
   displayForm: boolean;
   setDisplayForm: React.Dispatch<React.SetStateAction<boolean>>;
   todo?: TodoItemType;
-  overrideFields?: { listID?: string };
+  overrideFields?: { listID?: string; title?: string };
   persistent?: boolean;
   registerSubmit?: (submit: () => void) => void;
   onCanSubmitChange?: (canSubmit: boolean) => void;
