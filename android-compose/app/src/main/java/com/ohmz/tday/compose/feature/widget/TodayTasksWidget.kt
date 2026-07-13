@@ -79,6 +79,7 @@ class TodayTasksWidget : GlanceAppWidget() {
                             priority = task.priority,
                             trailingText = task.dueEpochMs?.let(::dueTimeText),
                             description = task.description,
+                            completeAction = completeTodayTaskAction(task.id),
                         )
                     },
                     visuals = visuals,
