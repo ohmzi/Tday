@@ -565,7 +565,14 @@
       "generating": "Generazione...",
       "revokeKey": "Revoca chiave",
       "generateKey": "Genera chiave",
-      "copyNow": "Copia ora la tua chiave API — non verrà più mostrata."
+      "copyNow": "Copia ora la tua chiave API — non verrà più mostrata.",
+      "labelPlaceholder": "Nome della chiave (facoltativo)",
+      "scopeRead": "Sola lettura",
+      "scopeFull": "Accesso completo",
+      "scopeReadHint": "Può leggere le tue attività ma non modificarle: sicura per le dashboard.",
+      "scopeFullHint": "Può leggere e modificare il tuo account. Usala solo con app affidabili.",
+      "unnamedKey": "Chiave senza nome",
+      "expired": "Scaduta"
     },
     "toast": {
       "apiKeyGenerated": "Chiave API generata. Copiala ora — non verrà più mostrata.",
@@ -949,9 +956,9 @@
         "title": "Chiave API e Homarr",
         "summary": "Mostra le tue attività su una dashboard con una chiave API personale.",
         "keywords": "chiave api, homarr, dashboard, integrazione, token, widget, homelab",
-        "body": "Genera una chiave API personale nelle Impostazioni per mostrare le tue attività in una dashboard come Homarr. La chiave è legata al tuo account, quindi tienila privata.",
+        "body": "Genera una chiave API personale nelle Impostazioni per mostrare le tue attività in una dashboard come Homarr. Scegli una chiave di sola lettura per le dashboard così non potrà mai modificare i tuoi dati, dai un nome per distinguere le chiavi e tienila privata. Puoi avere più chiavi e revocarne una alla volta.",
         "step0": "Apri le Impostazioni e trova la scheda della chiave API.",
-        "step1": "Genera una chiave e copiala — viene mostrata una sola volta.",
+        "step1": "Scegli l'ambito di sola lettura per le dashboard, genera la chiave e copiala: viene mostrata una sola volta.",
         "step2": "Incollala nel widget T'Day della tua dashboard."
       },
       "ai-summary": {

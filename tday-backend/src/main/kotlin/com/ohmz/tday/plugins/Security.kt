@@ -12,8 +12,10 @@ import com.ohmz.tday.security.isSessionPastAbsoluteLifetime
 import com.ohmz.tday.security.issueSessionCookie
 import com.ohmz.tday.security.sessionCookieNames
 import com.ohmz.tday.security.shouldRenewSession
+import com.ohmz.tday.services.ApiKeyScope
 import com.ohmz.tday.services.UserApiKeyService
 import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.invoke
 import io.ktor.server.application.Application
@@ -24,6 +26,7 @@ import io.ktor.server.application.install
 import io.ktor.server.auth.Authentication
 import io.ktor.server.auth.UserIdPrincipal
 import io.ktor.server.auth.bearer
+import io.ktor.server.request.httpMethod
 import io.ktor.server.request.path
 import io.ktor.server.response.respond
 import io.ktor.util.AttributeKey
@@ -40,7 +43,15 @@ private const val API_KEY_PREFIX = "tday_"
 
 val AuthUserKey = AttributeKey<JwtUserClaims>("AuthUser")
 
+/** Present only when the request authenticated via an API key; carries that key's scope. */
+val ApiKeyScopeKey = AttributeKey<ApiKeyScope>("ApiKeyScope")
+
 fun ApplicationCall.authUser(): JwtUserClaims? = attributes.getOrNull(AuthUserKey)
+
+fun ApplicationCall.apiKeyScope(): ApiKeyScope? = attributes.getOrNull(ApiKeyScopeKey)
+
+private fun isSafeMethod(method: HttpMethod): Boolean =
+    method == HttpMethod.Get || method == HttpMethod.Head || method == HttpMethod.Options
 
 fun ApplicationCall.requireUser(): JwtUserClaims =
     authUser() ?: throw IllegalStateException("Authentication required")
@@ -73,14 +84,29 @@ fun Application.configureSecurity() {
         if (token != null && token.startsWith(API_KEY_PREFIX)) {
             // Per-user API key (e.g. dashboard widgets). Resolves to the owning user and
             // populates the same auth principal the session path uses, then skips renewal.
-            val apiKeyUserId = userApiKeyService.resolveUserId(token)
-            if (apiKeyUserId != null) {
-                val user = loadCachedAuthUser(authUserCache, apiKeyUserId)
+            val resolved = userApiKeyService.resolveKey(token)
+            if (resolved != null) {
+                // READ-scoped keys may only issue safe requests. A mutating method is
+                // rejected before any handler runs, regardless of route.
+                if (resolved.scope == ApiKeyScope.READ && !isSafeMethod(call.request.httpMethod)) {
+                    call.respond(
+                        HttpStatusCode.Forbidden,
+                        buildJsonObject {
+                            put("code", JsonPrimitive(HttpStatusCode.Forbidden.value))
+                            put("message", JsonPrimitive("This API key is read-only"))
+                            put("reason", JsonPrimitive("api_key_read_only"))
+                        },
+                    )
+                    finish()
+                    return@intercept
+                }
+                val user = loadCachedAuthUser(authUserCache, resolved.userId)
                 if (user != null) {
+                    call.attributes.put(ApiKeyScopeKey, resolved.scope)
                     call.attributes.put(
                         AuthUserKey,
                         JwtUserClaims(
-                            id = apiKeyUserId,
+                            id = resolved.userId,
                             role = user.role,
                             approvalStatus = user.approvalStatus,
                             tokenVersion = user.tokenVersion,

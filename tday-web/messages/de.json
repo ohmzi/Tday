@@ -565,7 +565,14 @@
       "generating": "Generieren...",
       "revokeKey": "Schlüssel widerrufen",
       "generateKey": "Schlüssel generieren",
-      "copyNow": "Kopieren Sie Ihren API-Schlüssel jetzt — er wird nicht erneut angezeigt."
+      "copyNow": "Kopieren Sie Ihren API-Schlüssel jetzt — er wird nicht erneut angezeigt.",
+      "labelPlaceholder": "Schlüsselname (optional)",
+      "scopeRead": "Nur Lesen",
+      "scopeFull": "Vollzugriff",
+      "scopeReadHint": "Kann deine Aufgaben lesen, aber nicht ändern – sicher für Dashboards.",
+      "scopeFullHint": "Kann dein Konto lesen und ändern. Nur bei vertrauenswürdigen Apps verwenden.",
+      "unnamedKey": "Unbenannter Schlüssel",
+      "expired": "Abgelaufen"
     },
     "toast": {
       "apiKeyGenerated": "API-Schlüssel generiert. Kopieren Sie ihn jetzt — er wird nicht erneut angezeigt.",
@@ -949,9 +956,9 @@
         "title": "API-Schlüssel & Homarr",
         "summary": "Zeig deine Aufgaben mit einem persönlichen API-Schlüssel auf einem Dashboard.",
         "keywords": "api-schlüssel, homarr, dashboard, integration, token, widget, homelab",
-        "body": "Erstelle in den Einstellungen einen persönlichen API-Schlüssel, um deine Aufgaben in einem Dashboard wie Homarr anzuzeigen. Der Schlüssel ist mit deinem Konto verknüpft, halte ihn also privat.",
+        "body": "Erstelle in den Einstellungen einen persönlichen API-Schlüssel, um deine Aufgaben in einem Dashboard wie Homarr anzuzeigen. Wähle für Dashboards einen Nur-Lese-Schlüssel, damit er deine Daten nie ändern kann, gib ihm einen Namen zur Unterscheidung und halte ihn privat. Du kannst mehrere Schlüssel anlegen und jeden einzeln widerrufen.",
         "step0": "Öffne die Einstellungen und finde die API-Schlüssel-Karte.",
-        "step1": "Erstelle einen Schlüssel und kopiere ihn — er wird nur einmal angezeigt.",
+        "step1": "Wähle für Dashboards den Nur-Lese-Bereich, erstelle den Schlüssel und kopiere ihn – er wird nur einmal angezeigt.",
         "step2": "Füge ihn in das T'Day-Widget deines Dashboards ein."
       },
       "ai-summary": {

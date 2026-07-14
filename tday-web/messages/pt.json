@@ -565,7 +565,14 @@
       "generating": "Gerando...",
       "revokeKey": "Revogar chave",
       "generateKey": "Gerar chave",
-      "copyNow": "Copie sua chave de API agora — ela não será mostrada novamente."
+      "copyNow": "Copie sua chave de API agora — ela não será mostrada novamente.",
+      "labelPlaceholder": "Nome da chave (opcional)",
+      "scopeRead": "Somente leitura",
+      "scopeFull": "Acesso total",
+      "scopeReadHint": "Pode ler suas tarefas, mas não alterá-las — seguro para painéis.",
+      "scopeFullHint": "Pode ler e alterar sua conta. Use apenas em apps confiáveis.",
+      "unnamedKey": "Chave sem nome",
+      "expired": "Expirada"
     },
     "toast": {
       "apiKeyGenerated": "Chave de API gerada. Copie-a agora — não será mostrada novamente.",
@@ -949,9 +956,9 @@
         "title": "Chave de API e Homarr",
         "summary": "Mostre as suas tarefas num painel com uma chave de API pessoal.",
         "keywords": "chave de api, homarr, painel, integração, token, widget, homelab",
-        "body": "Gere uma chave de API pessoal nas Definições para mostrar as suas tarefas num painel como o Homarr. A chave está associada à sua conta, por isso mantenha-a privada.",
+        "body": "Gere uma chave de API pessoal nas Configurações para mostrar suas tarefas em um painel como o Homarr. Escolha uma chave somente leitura para painéis, assim ela nunca poderá alterar seus dados; dê um nome para diferenciar as chaves e mantenha-a privada. Você pode ter várias chaves e revogar cada uma separadamente.",
         "step0": "Abra as Definições e encontre o cartão da chave de API.",
-        "step1": "Gere uma chave e copie-a — é mostrada apenas uma vez.",
+        "step1": "Escolha o escopo somente leitura para painéis, gere a chave e copie-a — ela é exibida apenas uma vez.",
         "step2": "Cole-a no widget do T'Day do seu painel."
       },
       "ai-summary": {
