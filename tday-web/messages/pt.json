@@ -857,6 +857,13 @@
         "body": "Os widgets de Hoje e Flutuantes agora respondem ao toque: toque no anel no início de qualquer linha para concluir essa tarefa sem abrir a aplicação. A linha desaparece de imediato e a conclusão sincroniza como qualquer outra — os toques feitos offline ficam em fila e aplicam-se assim que voltar a estar online.",
         "tip": "Tocou sem querer? Abra o histórico de concluídas na aplicação e restaure a tarefa a partir daí."
       },
+      "share-into-tday": {
+        "title": "Partilhar para o T'Day",
+        "summary": "Envie texto de qualquer aplicação diretamente para uma nova tarefa.",
+        "keywords": "partilhar, folha de partilha, enviar para, capturar, importar, de outra aplicação",
+        "body": "Encontrou algo noutra aplicação? Abra a folha de partilha do sistema e escolha o T'Day. O texto partilhado entra num formulário de nova tarefa — ao partilhar uma página, o título torna-se o nome da tarefa e a ligação fica nas notas. No Android e na aplicação web o formulário abre no momento; no iOS a captura é guardada de imediato e o formulário pré-preenchido aparece na próxima vez que abrir a aplicação.",
+        "tip": "Partilhe um texto com uma data lá dentro e o analisador define o prazo por si."
+      },
       "carplay": {
         "title": "O T'Day no CarPlay",
         "summary": "Veja e registe tarefas em segurança enquanto conduz.",

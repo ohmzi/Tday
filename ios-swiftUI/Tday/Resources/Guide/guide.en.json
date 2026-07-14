@@ -911,6 +911,41 @@
       "searchBody": "check off tasks right on the home-screen widget. the today and floater widgets take taps now: hit the ring at the start of any row to complete that task without opening the app. the row disappears immediately and the completion syncs like any other — taps made offline queue up and apply once you're back. mis-tapped? open the completed history in the app and restore the task from there."
     },
     {
+      "id": "share-into-tday",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "share-2",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.4.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Share into T'Day",
+      "summary": "Send text from any app straight into a new task.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Found something in another app? Open the system share sheet and pick T'Day. Shared text lands in a new-task form — a shared page keeps its title as the task name with the link tucked into notes. On Android and the web app the form opens on the spot; on iOS the capture is saved instantly and the prefilled form greets you next time you open the app."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Share text that contains a date phrase and the parser sets the due date for you."
+          ]
+        }
+      ],
+      "searchTitle": "share into t'day",
+      "searchKeywords": "share, share sheet, send to, capture, import, from another app",
+      "searchBody": "send text from any app straight into a new task. found something in another app? open the system share sheet and pick t'day. shared text lands in a new-task form — a shared page keeps its title as the task name with the link tucked into notes. on android and the web app the form opens on the spot; on ios the capture is saved instantly and the prefilled form greets you next time you open the app. share text that contains a date phrase and the parser sets the due date for you."
+    },
+    {
       "id": "carplay",
       "section": "WIDGETS_AND_SURFACES",
       "sectionOrder": 5,

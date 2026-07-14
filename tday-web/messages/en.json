@@ -857,6 +857,13 @@
         "body": "The Today and Floater widgets take taps now: hit the ring at the start of any row to complete that task without opening the app. The row disappears immediately and the completion syncs like any other — taps made offline queue up and apply once you're back.",
         "tip": "Mis-tapped? Open the Completed history in the app and restore the task from there."
       },
+      "share-into-tday": {
+        "title": "Share into T'Day",
+        "summary": "Send text from any app straight into a new task.",
+        "keywords": "share, share sheet, send to, capture, import, from another app",
+        "body": "Found something in another app? Open the system share sheet and pick T'Day. Shared text lands in a new-task form — a shared page keeps its title as the task name with the link tucked into notes. On Android and the web app the form opens on the spot; on iOS the capture is saved instantly and the prefilled form greets you next time you open the app.",
+        "tip": "Share text that contains a date phrase and the parser sets the due date for you."
+      },
       "carplay": {
         "title": "T'Day on CarPlay",
         "summary": "Glance at and capture tasks safely while you drive.",

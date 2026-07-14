@@ -12,6 +12,8 @@ struct AppRootView: View {
     @State private var rootFeedTab: RootFeedTab = .home
     @State private var rootCreateTaskRequestID = 0
     @State private var pendingRootCreateTask: PendingRootCreateTask?
+    // Prefill from a share-extension capture, applied to the next create sheet.
+    @State private var rootCreateTaskPrefill: CreateTaskPayload?
     @State private var rootHomeScrollToTopRequestID = 0
     @State private var rootFloaterScrollToTopRequestID = 0
     @State private var rootDockCollapsed = false
@@ -46,6 +48,8 @@ struct AppRootView: View {
                                     onRootFeedTabSelected: handleRootFeedTabSelection,
                                     showsRootControls: false,
                                     createTaskRequestID: rootCreateTaskRequestID,
+                                    createTaskPrefill: rootCreateTaskPrefill,
+                                    onCreateTaskSheetClosed: { rootCreateTaskPrefill = nil },
                                     scrollToTopRequestID: rootHomeScrollToTopRequestID,
                                     onRootDockCollapsedChange: { rootDockCollapsed = $0 },
                                     onRootControlsVisibleChange: { rootControlsVisible = $0 },
@@ -238,6 +242,7 @@ struct AppRootView: View {
                 await appViewModel.bootstrap()
             }
             routePendingNotificationDeepLink()
+            drainPendingShareIfReady()
             presentPendingRootCreateTaskIfReady()
         }
         .onOpenURL { url in
@@ -250,6 +255,7 @@ struct AppRootView: View {
             handlePendingReminderAction()
         }
         .onChange(of: appViewModel.hasCompletedInitialBootstrap) { _, _ in
+            drainPendingShareIfReady()
             presentPendingRootCreateTaskIfReady()
             // Cold launch: apply completions tapped on widgets while the app
             // was dead (scenePhase is already .active here, so the .onChange
@@ -259,6 +265,7 @@ struct AppRootView: View {
             }
         }
         .onChange(of: appViewModel.isWorkspaceAvailable) { _, _ in
+            drainPendingShareIfReady()
             presentPendingRootCreateTaskIfReady()
         }
         .onChange(of: scenePhase) { _, phase in
@@ -267,6 +274,7 @@ struct AppRootView: View {
                 Task {
                     await container.todoRepository.drainWidgetCompletions()
                 }
+                drainPendingShareIfReady()
                 guard hasLeftActiveScene else {
                     presentPendingRootCreateTaskIfReady()
                     return
@@ -416,6 +424,34 @@ struct AppRootView: View {
         selectRootFeedTab(tab)
         pendingRootCreateTask = PendingRootCreateTask(tab: tab)
         presentPendingRootCreateTaskIfReady()
+    }
+
+    /// Turns the oldest share-extension capture into a prefilled create sheet
+    /// on the Home tab. One per activation; the queue holds the rest. Skips
+    /// while another create request is mid-flight so the prefill can't attach
+    /// to a sheet the user asked for manually.
+    private func drainPendingShareIfReady() {
+        guard
+            scenePhase == .active,
+            appViewModel.hasCompletedInitialBootstrap,
+            appViewModel.isWorkspaceAvailable,
+            pendingRootCreateTask == nil,
+            rootCreateTaskPrefill == nil,
+            let share = PendingShareStore.drainNext()
+        else {
+            return
+        }
+        rootCreateTaskPrefill = CreateTaskPayload(
+            title: share.title,
+            description: share.notes,
+            priority: TaskPriorityDisplay.normalValue,
+            // Same default the blank sheet uses; the NLP parse can move it if
+            // the shared text carries a date phrase.
+            due: Date().addingTimeInterval(60 * 60),
+            rrule: nil,
+            listId: nil
+        )
+        requestRootCreateTask(on: .home)
     }
 
     private func presentPendingRootCreateTaskIfReady() {

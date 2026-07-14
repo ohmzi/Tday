@@ -911,6 +911,41 @@
       "searchBody": "在主屏幕小组件上直接勾掉任务。 今日任务和浮动任务的小组件现在支持点按：点一下任意一行开头的圆环，无需打开应用即可完成该任务。这一行会立即消失，完成操作也会照常同步——离线时的点按会先排队，联网后自动补上。 点错了？在应用里打开完成记录，从那里恢复任务即可。"
     },
     {
+      "id": "share-into-tday",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "share-2",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.4.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "分享到 T'Day",
+      "summary": "把任意应用里的文字直接变成一条新任务。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "在别的应用里看到想记下的内容？打开系统分享面板选择 T'Day，分享的文字就会进入新任务表单——分享网页时，标题会成为任务名，链接则收进备注。在 Android 和网页版中表单会立即打开；在 iOS 上分享会即时保存，下次打开应用时会看到已填好的表单。"
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "分享带有日期的文字，解析器会自动帮你设置截止时间。"
+          ]
+        }
+      ],
+      "searchTitle": "分享到 t'day",
+      "searchKeywords": "分享, 分享面板, 发送到, 捕获, 导入, 来自其他应用",
+      "searchBody": "把任意应用里的文字直接变成一条新任务。 在别的应用里看到想记下的内容？打开系统分享面板选择 t'day，分享的文字就会进入新任务表单——分享网页时，标题会成为任务名，链接则收进备注。在 android 和网页版中表单会立即打开；在 ios 上分享会即时保存，下次打开应用时会看到已填好的表单。 分享带有日期的文字，解析器会自动帮你设置截止时间。"
+    },
+    {
       "id": "carplay",
       "section": "WIDGETS_AND_SURFACES",
       "sectionOrder": 5,
