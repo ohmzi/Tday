@@ -624,4 +624,9 @@
     <string name="settings_data_confirm_body">This adds %1$d items to your account. Nothing you already have is changed or removed.</string>
     <string name="settings_data_confirm_import">Import</string>
     <string name="settings_data_confirm_cancel">Cancel</string>
+    <string name="settings_unifiedpush_title">UnifiedPush</string>
+    <string name="settings_unifiedpush_subtitle">Receive server pushes via your own distributor</string>
+    <string name="settings_unifiedpush_enabled">On</string>
+    <string name="settings_unifiedpush_disabled">Off</string>
+    <string name="settings_unifiedpush_none">No UnifiedPush distributor found. Install one (e.g. ntfy) and try again.</string>
 </resources>

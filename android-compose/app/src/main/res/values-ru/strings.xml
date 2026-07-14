@@ -621,4 +621,9 @@
     <string name="settings_data_confirm_body">Будет добавлено элементов: %1$d. Ничего из имеющегося не изменится и не удалится.</string>
     <string name="settings_data_confirm_import">Импорт</string>
     <string name="settings_data_confirm_cancel">Отмена</string>
+    <string name="settings_unifiedpush_title">UnifiedPush</string>
+    <string name="settings_unifiedpush_subtitle">Получайте пуши сервера через свой дистрибьютор</string>
+    <string name="settings_unifiedpush_enabled">Вкл</string>
+    <string name="settings_unifiedpush_disabled">Выкл</string>
+    <string name="settings_unifiedpush_none">Дистрибьютор UnifiedPush не найден. Установите его (например, ntfy) и повторите.</string>
 </resources>

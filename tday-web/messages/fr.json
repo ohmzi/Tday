@@ -1038,6 +1038,15 @@
         "step0": "Dans les Réglages, colle l'URL de ton endpoint et choisis les événements.",
         "step1": "Ajoute le webhook et copie son secret de signature — affiché une seule fois.",
         "step2": "Vérifie le HMAC X-Tday-Signature sur chaque requête avant d'agir."
+      },
+      "unifiedpush": {
+        "title": "UnifiedPush (Android)",
+        "summary": "Push serveur sans Google, via ton propre distributeur.",
+        "keywords": "unifiedpush, ntfy, push, notifications, auto-hébergé, distributeur, fcm",
+        "body": "En Mode Serveur, T'Day peut envoyer les notifications du serveur via UnifiedPush au lieu du FCM de Google — tes données restent sur ton serveur et ton distributeur. Installe une app distributeur (comme ntfy), puis active UnifiedPush dans les Réglages. Les rappels locaux fonctionnent toujours.",
+        "step0": "Installe un distributeur UnifiedPush comme ntfy depuis ton magasin d'apps.",
+        "step1": "Dans Réglages → Rappels, active UnifiedPush et choisis le distributeur.",
+        "step2": "Ton serveur envoie les changements à cet endpoint ; désactive quand tu veux."
       }
     }
   },

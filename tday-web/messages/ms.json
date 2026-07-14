@@ -1038,6 +1038,15 @@
         "step0": "Dalam Tetapan, tampal URL endpoint anda dan pilih peristiwa yang diterima.",
         "step1": "Tambah webhook dan salin rahsia tandatangannya — dipaparkan sekali.",
         "step2": "Sahkan HMAC X-Tday-Signature pada setiap permintaan sebelum bertindak."
+      },
+      "unifiedpush": {
+        "title": "UnifiedPush (Android)",
+        "summary": "Tolakan pelayan tanpa Google, melalui pengedar anda.",
+        "keywords": "unifiedpush, ntfy, tolak, pemberitahuan, hos sendiri, pengedar, fcm",
+        "body": "Dalam Mod Pelayan, T'Day boleh menghantar pemberitahuan pelayan melalui UnifiedPush dan bukan FCM Google — data anda kekal pada pelayan dan pengedar anda sendiri. Pasang apl pengedar (seperti ntfy), kemudian hidupkan UnifiedPush dalam Tetapan. Peringatan tempatan tetap berfungsi.",
+        "step0": "Pasang pengedar UnifiedPush seperti ntfy dari gedung apl anda.",
+        "step1": "Dalam Tetapan → Peringatan, hidupkan UnifiedPush dan pilih pengedar.",
+        "step2": "Pelayan anda kini menolak perubahan ke endpoint itu; matikan bila-bila masa."
       }
     }
   },

@@ -619,4 +619,9 @@
     <string name="settings_data_confirm_body">Questo aggiunge %1$d elementi al tuo account. Nulla di ciò che hai già viene cambiato o rimosso.</string>
     <string name="settings_data_confirm_import">Importa</string>
     <string name="settings_data_confirm_cancel">Annulla</string>
+    <string name="settings_unifiedpush_title">UnifiedPush</string>
+    <string name="settings_unifiedpush_subtitle">Ricevi le notifiche del server tramite il tuo distributore</string>
+    <string name="settings_unifiedpush_enabled">Attivo</string>
+    <string name="settings_unifiedpush_disabled">Disattivato</string>
+    <string name="settings_unifiedpush_none">Nessun distributore UnifiedPush trovato. Installane uno (es. ntfy) e riprova.</string>
 </resources>

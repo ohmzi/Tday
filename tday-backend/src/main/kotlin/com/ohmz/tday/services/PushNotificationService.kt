@@ -7,6 +7,12 @@ import com.ohmz.tday.config.AppConfig
 import com.ohmz.tday.db.tables.PushSubscriptions
 import com.ohmz.tday.db.util.CuidGenerator
 import com.ohmz.tday.domain.AppError
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.cio.CIO
+import io.ktor.client.request.post
+import io.ktor.client.request.setBody
+import io.ktor.http.ContentType
+import io.ktor.http.contentType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.buildJsonObject
@@ -26,8 +32,18 @@ import java.security.Security
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 
+/** Push delivery transports. */
+const val TRANSPORT_WEBPUSH = "webpush"
+const val TRANSPORT_UNIFIEDPUSH = "unifiedpush"
+
 interface PushNotificationService {
-    suspend fun subscribe(userId: String, endpoint: String, p256dh: String, auth: String): Either<AppError, Unit>
+    suspend fun subscribe(
+        userId: String,
+        endpoint: String,
+        p256dh: String,
+        auth: String,
+        transport: String = TRANSPORT_WEBPUSH,
+    ): Either<AppError, Unit>
     suspend fun unsubscribe(userId: String, endpoint: String): Either<AppError, Unit>
     suspend fun sendToUser(userId: String, title: String, body: String, url: String? = null, todoId: String? = null): Either<AppError, Unit>
     fun isConfigured(): Boolean
@@ -36,6 +52,10 @@ interface PushNotificationService {
 
 class PushNotificationServiceImpl(private val config: AppConfig) : PushNotificationService {
     private val logger = LoggerFactory.getLogger(PushNotificationServiceImpl::class.java)
+
+    // Used only for UnifiedPush (plain POST to the distributor endpoint); Web Push has
+    // its own blocking Apache client inside the webpush library.
+    private val httpClient = HttpClient(CIO) { engine { requestTimeout = UNIFIEDPUSH_TIMEOUT_MS } }
 
     private val pushService: PushService? by lazy {
         val publicKey = config.vapidPublicKey
@@ -57,11 +77,26 @@ class PushNotificationServiceImpl(private val config: AppConfig) : PushNotificat
 
     override fun isConfigured(): Boolean = !config.vapidPublicKey.isNullOrBlank() && !config.vapidPrivateKey.isNullOrBlank()
 
+    private companion object {
+        const val UNIFIEDPUSH_TIMEOUT_MS = 10_000L
+    }
+
     override fun getVapidPublicKey(): String? = config.vapidPublicKey
 
-    override suspend fun subscribe(userId: String, endpoint: String, p256dh: String, auth: String): Either<AppError, Unit> {
-        if (endpoint.isBlank() || p256dh.isBlank() || auth.isBlank()) {
-            return AppError.BadRequest("endpoint, p256dh and auth are required").left()
+    override suspend fun subscribe(
+        userId: String,
+        endpoint: String,
+        p256dh: String,
+        auth: String,
+        transport: String,
+    ): Either<AppError, Unit> {
+        val normalizedTransport = if (transport == TRANSPORT_UNIFIEDPUSH) TRANSPORT_UNIFIEDPUSH else TRANSPORT_WEBPUSH
+        if (endpoint.isBlank()) {
+            return AppError.BadRequest("endpoint is required").left()
+        }
+        // Web Push needs the encryption keys; UnifiedPush is endpoint-only.
+        if (normalizedTransport == TRANSPORT_WEBPUSH && (p256dh.isBlank() || auth.isBlank())) {
+            return AppError.BadRequest("p256dh and auth are required for web push").left()
         }
         newSuspendedTransaction(Dispatchers.IO) {
             // Upsert: delete existing for same user+endpoint, then insert
@@ -74,6 +109,7 @@ class PushNotificationServiceImpl(private val config: AppConfig) : PushNotificat
                 it[PushSubscriptions.endpoint] = endpoint
                 it[PushSubscriptions.p256dh] = p256dh
                 it[PushSubscriptions.auth] = auth
+                it[PushSubscriptions.transport] = normalizedTransport
                 it[PushSubscriptions.createdAt] = LocalDateTime.now(ZoneOffset.UTC)
             }
         }
@@ -90,16 +126,16 @@ class PushNotificationServiceImpl(private val config: AppConfig) : PushNotificat
     }
 
     override suspend fun sendToUser(userId: String, title: String, body: String, url: String?, todoId: String?): Either<AppError, Unit> {
-        val svc = pushService ?: return AppError.BadRequest("Push notifications not configured").left()
-
         val subscriptions = newSuspendedTransaction(Dispatchers.IO) {
             PushSubscriptions.selectAll()
                 .where { PushSubscriptions.userID eq userId }
                 .map { row ->
-                    Triple(
-                        row[PushSubscriptions.id],
-                        row[PushSubscriptions.endpoint],
-                        Subscription.Keys(row[PushSubscriptions.p256dh], row[PushSubscriptions.auth]),
+                    PushTarget(
+                        id = row[PushSubscriptions.id],
+                        endpoint = row[PushSubscriptions.endpoint],
+                        p256dh = row[PushSubscriptions.p256dh],
+                        auth = row[PushSubscriptions.auth],
+                        transport = row[PushSubscriptions.transport],
                     )
                 }
         }
@@ -113,24 +149,34 @@ class PushNotificationServiceImpl(private val config: AppConfig) : PushNotificat
             if (todoId != null) put("todoId", todoId)
         }.toString()
 
+        val svc = pushService
         val staleIds = mutableListOf<String>()
 
-        // svc.send() is a synchronous, blocking Apache HttpClient call; running the
-        // loop on the request coroutine would tie up a dispatcher/event-loop thread
-        // per slow endpoint. Push it onto the IO dispatcher.
+        // Network sends are blocking/suspending; keep them off the request coroutine.
         withContext(Dispatchers.IO) {
-            for ((subId, endpoint, keys) in subscriptions) {
+            for (target in subscriptions) {
                 try {
-                    val sub = Subscription(endpoint, keys)
-                    val notification = Notification(sub, payload)
-                    val response = svc.send(notification)
-                    val statusCode = response.statusLine.statusCode
+                    val statusCode = if (target.transport == TRANSPORT_UNIFIEDPUSH) {
+                        // UnifiedPush: plain POST of the payload to the distributor endpoint.
+                        httpClient.post(target.endpoint) {
+                            contentType(ContentType.Application.Json)
+                            setBody(payload)
+                        }.status.value
+                    } else {
+                        // Web Push: VAPID-signed, encrypted. Requires configured keys.
+                        if (svc == null) {
+                            logger.debug("Skipping web-push send — VAPID not configured")
+                            continue
+                        }
+                        val sub = Subscription(target.endpoint, Subscription.Keys(target.p256dh, target.auth))
+                        svc.send(Notification(sub, payload)).statusLine.statusCode
+                    }
                     if (statusCode in listOf(404, 410)) {
-                        staleIds.add(subId)
-                        logger.debug("Push endpoint gone ({}), marking stale: {}", statusCode, endpoint.take(60))
+                        staleIds.add(target.id)
+                        logger.debug("Push endpoint gone ({}), marking stale: {}", statusCode, target.endpoint.take(60))
                     }
                 } catch (e: Exception) {
-                    logger.warn("Failed to send push to {}: {}", endpoint.take(60), e.message)
+                    logger.warn("Failed to send push to {}: {}", target.endpoint.take(60), e.message)
                 }
             }
         }
@@ -145,4 +191,12 @@ class PushNotificationServiceImpl(private val config: AppConfig) : PushNotificat
 
         return Unit.right()
     }
+
+    private data class PushTarget(
+        val id: String,
+        val endpoint: String,
+        val p256dh: String,
+        val auth: String,
+        val transport: String,
+    )
 }
