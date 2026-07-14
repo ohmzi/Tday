@@ -31,6 +31,9 @@ fun Application.configureRouting() {
 
         appleAppSiteAssociationRoutes(config)
 
+        // Public iCalendar feed — token-in-path, no session/API-key auth.
+        calendarFeedRoutes()
+
         route("/api") {
             todoRoutes()
             floaterRoutes()

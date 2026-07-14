@@ -220,6 +220,13 @@ object GuideCatalog {
             helpAnchors = listOf("settings-api-key"),
         ),
         topic(
+            GuideTopicIds.CALENDAR_FEED, GuideSectionId.INTEGRATIONS, "calendar",
+            setOf(WEB), serverOnly = true, sinceVersion = "0.5.0",
+            body = listOf(para(GuideTopicIds.CALENDAR_FEED), steps(GuideTopicIds.CALENDAR_FEED, 3)),
+            deepLink = GuideDeepLink(web = "settings"),
+            helpAnchors = listOf("settings-calendar-feed"),
+        ),
+        topic(
             GuideTopicIds.AI_SUMMARY, GuideSectionId.INTEGRATIONS, "sparkles",
             setOf(WEB, ANDROID, IOS), serverOnly = true,
             body = listOf(para(GuideTopicIds.AI_SUMMARY), tip(GuideTopicIds.AI_SUMMARY)),

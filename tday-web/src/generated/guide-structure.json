@@ -730,6 +730,44 @@
       "sinceVersion": null
     },
     {
+      "id": "calendar-feed",
+      "section": "INTEGRATIONS",
+      "icon": "calendar",
+      "platforms": [
+        "WEB"
+      ],
+      "titleKey": "guide.topics.calendar-feed.title",
+      "summaryKey": "guide.topics.calendar-feed.summary",
+      "keywordsKey": "guide.topics.calendar-feed.keywords",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "keys": [
+            "guide.topics.calendar-feed.body"
+          ]
+        },
+        {
+          "type": "STEPS",
+          "keys": [
+            "guide.topics.calendar-feed.step0",
+            "guide.topics.calendar-feed.step1",
+            "guide.topics.calendar-feed.step2"
+          ]
+        }
+      ],
+      "badge": null,
+      "deepLink": {
+        "web": "settings",
+        "android": null,
+        "ios": null
+      },
+      "helpAnchors": [
+        "settings-calendar-feed"
+      ],
+      "serverOnly": true,
+      "sinceVersion": "0.5.0"
+    },
+    {
       "id": "ai-summary",
       "section": "INTEGRATIONS",
       "icon": "sparkles",

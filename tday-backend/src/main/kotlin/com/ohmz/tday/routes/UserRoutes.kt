@@ -18,6 +18,7 @@ import com.ohmz.tday.security.SecurityQuestions
 import com.ohmz.tday.security.SessionControl
 import com.ohmz.tday.security.issueSessionCookie
 import com.ohmz.tday.services.ApiKeyScope
+import com.ohmz.tday.services.CalendarFeedService
 import com.ohmz.tday.services.CreateApiKeyResponse
 import com.ohmz.tday.services.ListShareService
 import com.ohmz.tday.services.SecurityQuestionService
@@ -40,6 +41,7 @@ fun Route.userRoutes() {
     val sessionControl by inject<SessionControl>()
     val userService by inject<UserService>()
     val userApiKeyService by inject<UserApiKeyService>()
+    val calendarFeedService by inject<CalendarFeedService>()
     val securityQuestionService by inject<SecurityQuestionService>()
     val listShareService by inject<ListShareService>()
 
@@ -181,6 +183,32 @@ fun Route.userRoutes() {
                         userApiKeyService.revokeKey(user.id, keyId)
                             .map { mapOf("message" to "api key revoked") }
                     }
+                }
+            }
+        }
+
+        route("/calendar-feed") {
+            // Whether the user has an active feed token (secret never returned).
+            get {
+                call.withAuth { user ->
+                    calendarFeedService.status(user.id)
+                        .map { mapOf("status" to it) }
+                }
+            }
+
+            // Generate (or rotate) the feed token. The plaintext token is returned once;
+            // the client builds the subscribe URL as `<origin>/calendar/<token>.ics`.
+            post {
+                call.withAuth { user ->
+                    calendarFeedService.generate(user.id)
+                        .map { mapOf("message" to "calendar feed created", "feed" to it) }
+                }
+            }
+
+            delete {
+                call.withAuth { user ->
+                    calendarFeedService.revoke(user.id)
+                        .map { mapOf("message" to "calendar feed revoked") }
                 }
             }
         }

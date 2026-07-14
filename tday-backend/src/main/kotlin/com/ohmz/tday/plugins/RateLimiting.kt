@@ -52,7 +52,7 @@ private fun resolvePolicies(
         )
     }
 
-    if (path == "/health" || path == "/api/mobile/probe") {
+    if (path == "/health" || path == "/api/mobile/probe" || path.startsWith("/calendar/")) {
         add(
             RequestRateLimitPolicy(
                 name = "infra",

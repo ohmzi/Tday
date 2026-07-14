@@ -593,7 +593,13 @@
       "passwordChangeFailed": "Failed to change password",
       "securityQuestionsUpdated": "Security questions updated",
       "securityQuestionsUpdateFailed": "Could not update security questions",
-      "securityQuestionsLoadFailed": "Could not load security questions"
+      "securityQuestionsLoadFailed": "Could not load security questions",
+      "calendarFeedGenerated": "Calendar feed created. Copy the URL now.",
+      "calendarFeedGenerateFailed": "Failed to create calendar feed",
+      "calendarFeedRevoked": "Calendar feed revoked",
+      "calendarFeedRevokeFailed": "Failed to revoke calendar feed",
+      "calendarFeedCopied": "Calendar URL copied to clipboard",
+      "calendarFeedCopyFailed": "Failed to copy calendar URL"
     },
     "signOut": "Sign out",
     "aiSummary": {
@@ -630,6 +636,17 @@
       "confirmRemapped": "{{count}} items with clashing IDs will be added as fresh copies.",
       "confirmCancel": "Cancel",
       "confirmImport": "Import"
+    },
+    "calendarFeed": {
+      "title": "Calendar feed",
+      "blurb": "A private, read-only .ics link for Apple/Google Calendar.",
+      "active": "Feed active",
+      "inactive": "No calendar feed",
+      "generate": "Generate feed URL",
+      "revoke": "Revoke feed",
+      "generating": "Generating...",
+      "revoking": "Revoking...",
+      "copyUrl": "Copy this calendar URL now — treat it like a password."
     }
   },
   "summary": {
@@ -984,6 +1001,15 @@
         "kbd": "N",
         "kbd2": "Ctrl / ⌘ + K",
         "kbd3": "?"
+      },
+      "calendar-feed": {
+        "title": "Calendar feed",
+        "summary": "Subscribe to your dated tasks from any calendar app.",
+        "keywords": "calendar, ics, subscribe, feed, apple calendar, google calendar, ical, webcal",
+        "body": "Publish a read-only calendar feed so your dated tasks show up in Apple Calendar, Google Calendar, or any app that reads an .ics URL. The link holds a private token — anyone with it can see your tasks, so keep it to yourself and revoke it if it leaks.",
+        "step0": "In Settings, open the Calendar feed card and generate a feed URL.",
+        "step1": "Copy the URL — it's shown once; regenerate if you lose it.",
+        "step2": "Add it as a subscription calendar in your calendar app."
       }
     }
   },

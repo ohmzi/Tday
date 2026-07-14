@@ -593,7 +593,13 @@
       "passwordChangeFailed": "パスワードの変更に失敗しました",
       "securityQuestionsUpdated": "Security questions updated",
       "securityQuestionsUpdateFailed": "Could not update security questions",
-      "securityQuestionsLoadFailed": "Could not load security questions"
+      "securityQuestionsLoadFailed": "Could not load security questions",
+      "calendarFeedGenerated": "カレンダー配信を作成しました。URL をコピーしてください。",
+      "calendarFeedGenerateFailed": "カレンダー配信の作成に失敗しました",
+      "calendarFeedRevoked": "カレンダー配信を取り消しました",
+      "calendarFeedRevokeFailed": "カレンダー配信の取り消しに失敗しました",
+      "calendarFeedCopied": "カレンダー URL をコピーしました",
+      "calendarFeedCopyFailed": "カレンダー URL のコピーに失敗しました"
     },
     "signOut": "ログアウト",
     "aiSummary": {
@@ -630,6 +636,17 @@
       "confirmRemapped": "ID が重複する {{count}} 件は新しいコピーとして追加されます。",
       "confirmCancel": "キャンセル",
       "confirmImport": "インポート"
+    },
+    "calendarFeed": {
+      "title": "カレンダー配信",
+      "blurb": "Apple/Google カレンダー用の非公開・読み取り専用 .ics リンク。",
+      "active": "配信有効",
+      "inactive": "カレンダー配信なし",
+      "generate": "配信 URL を生成",
+      "revoke": "配信を取り消す",
+      "generating": "生成中...",
+      "revoking": "取り消し中...",
+      "copyUrl": "このカレンダー URL を今すぐコピー。パスワードのように扱ってください。"
     }
   },
   "summary": {
@@ -984,6 +1001,15 @@
         "kbd": "N",
         "kbd2": "Ctrl / ⌘ + K",
         "kbd3": "?"
+      },
+      "calendar-feed": {
+        "title": "カレンダー配信",
+        "summary": "日付付きタスクを任意のカレンダーアプリで購読します。",
+        "keywords": "カレンダー, ics, 購読, フィード, apple calendar, google calendar, ical, webcal",
+        "body": "読み取り専用のカレンダー配信を公開すると、日付付きタスクが Apple カレンダー、Google カレンダー、または .ics の URL を読めるアプリに表示されます。リンクには非公開トークンが含まれ、持っている人は誰でもタスクを見られるため、他人に渡さず、漏れたら取り消してください。",
+        "step0": "設定で「カレンダー配信」カードを開き、URL を生成します。",
+        "step1": "URL をコピーします。表示は一度だけで、失くしたら再生成します。",
+        "step2": "カレンダーアプリに購読カレンダーとして追加します。"
       }
     }
   },

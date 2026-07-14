@@ -64,6 +64,30 @@ curl -H "Authorization: Bearer tday_<keyId>_<secret>" https://tday.example.com/a
 # 401 → key missing, invalid, disabled, or revoked
 ```
 
+## Calendar feed (read-only ICS)
+
+For calendar apps that only understand a subscription URL (Apple Calendar, Google Calendar), T'Day
+publishes a **read-only iCalendar feed** at a token-in-path URL that needs no `Authorization` header:
+
+```
+GET /calendar/<token>.ics   →  text/calendar (VCALENDAR of your dated todos)
+```
+
+- The feed is **its own credential**, separate from API keys — revoking the feed never touches a key,
+  and vice versa. Only a SHA-256 hash of the token is stored; the URL is shown **once** at creation.
+- Each dated todo becomes a `VEVENT` with a point-in-time `DTSTART;TZID=…` (durations were dropped in
+  V5, so there is no `DTEND`), plus `RRULE`/`EXDATE` for recurrences and a `RECURRENCE-ID` event for
+  any moved/renamed single occurrence. Undated floaters are not included.
+- Anyone with the URL can read your tasks, so treat it like a password and revoke it if it leaks.
+
+Management endpoints (require a **session cookie**):
+
+| Method   | Path                      | Body / Returns                                                                 |
+|----------|---------------------------|--------------------------------------------------------------------------------|
+| `GET`    | `/api/user/calendar-feed` | `{ status: { enabled, tokenPreview?, createdAt? } }`                            |
+| `POST`   | `/api/user/calendar-feed` | `{ message, feed: { token, tokenPreview, createdAt } }` — build `<origin>/calendar/<token>.ics`, shown once |
+| `DELETE` | `/api/user/calendar-feed` | `{ message }` (revokes the feed)                                               |
+
 ## Working with tasks
 
 The endpoints below are the ones a task integration needs (this is exactly the surface the Homarr
