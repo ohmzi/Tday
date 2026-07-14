@@ -20,6 +20,7 @@ import com.ohmz.tday.security.issueSessionCookie
 import com.ohmz.tday.services.ApiKeyScope
 import com.ohmz.tday.services.CalendarFeedService
 import com.ohmz.tday.services.CreateApiKeyResponse
+import com.ohmz.tday.services.CreateCalendarFeedResponse
 import com.ohmz.tday.services.ListShareService
 import com.ohmz.tday.services.SecurityQuestionService
 import com.ohmz.tday.services.UserApiKeyService
@@ -201,7 +202,7 @@ fun Route.userRoutes() {
             post {
                 call.withAuth { user ->
                     calendarFeedService.generate(user.id)
-                        .map { mapOf("message" to "calendar feed created", "feed" to it) }
+                        .map { CreateCalendarFeedResponse(message = "calendar feed created", feed = it) }
                 }
             }
 

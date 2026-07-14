@@ -41,6 +41,12 @@ data class CalendarFeedStatus(
     val createdAt: String? = null,
 )
 
+@Serializable
+data class CreateCalendarFeedResponse(
+    val message: String,
+    val feed: CalendarFeedToken,
+)
+
 interface CalendarFeedService {
     /** Generates a fresh feed token, rotating any previous one. Returns the plaintext once. */
     suspend fun generate(userId: String): Either<AppError, CalendarFeedToken>
