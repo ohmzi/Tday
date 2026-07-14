@@ -719,6 +719,41 @@
       "searchBody": "jadikan tugasan berulang setiap hari, mingguan, dan banyak lagi. tetapkan tugasan untuk berulang dan ia kembali mengikut jadualnya sendiri. pilih daripada praset — setiap hari, hari bekerja, minggu, atau bulan — dan menyelesaikan satu kejadian membiarkan selebihnya siri itu utuh. siram pokok · setiap minggu"
     },
     {
+      "id": "repeat-suggestions",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "repeat",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.6.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Cadangan ulangan",
+      "summary": "T'Day mengesan tugasan yang anda selesaikan berirama dan menawarkan ulangan.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Apabila anda terus menyelesaikan tugasan yang sama secara berirama — menyiram pokok setiap minggu, membayar sewa setiap bulan — T'Day perasan dan menawarkan cip satu ketuk untuk mengulanginya. Ia hanya membaca sejarah selesai pada peranti; tiada apa yang keluar dari peranti."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Tak berminat? Ketik ✕ dan tajuk itu tidak akan bertanya lagi."
+          ]
+        }
+      ],
+      "searchTitle": "cadangan ulangan",
+      "searchKeywords": "ulang, cadangan, berulang, irama, tabiat, corak, automatik",
+      "searchBody": "t'day mengesan tugasan yang anda selesaikan berirama dan menawarkan ulangan. apabila anda terus menyelesaikan tugasan yang sama secara berirama — menyiram pokok setiap minggu, membayar sewa setiap bulan — t'day perasan dan menawarkan cip satu ketuk untuk mengulanginya. ia hanya membaca sejarah selesai pada peranti; tiada apa yang keluar dari peranti. tak berminat? ketik ✕ dan tajuk itu tidak akan bertanya lagi."
+    },
+    {
       "id": "reminders",
       "section": "RECURRENCE_AND_REMINDERS",
       "sectionOrder": 4,

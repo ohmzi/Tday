@@ -26,6 +26,7 @@ struct CreateTaskSheet: View {
     let defaultScheduled: Bool
     let showScheduleControls: Bool
     let onParseTaskTitleNlp: ((String, Int64) async -> TodoTitleNlpResponse?)?
+    let onSuggestRepeat: ((String) async -> String?)?
     let onDismiss: () -> Void
     let onSubmit: (CreateTaskPayload) async -> Void
 
@@ -41,6 +42,9 @@ struct CreateTaskSheet: View {
     @State private var repeatRule: String?
     @State private var isSubmitting = false
     @State private var parserTask: Task<Void, Never>?
+    @State private var suggestionTask: Task<Void, Never>?
+    // A preset RRULE suggested from the completed-history cadence ("Make this repeat?").
+    @State private var suggestedRepeatRrule: String?
     // The detected date phrase (e.g. "July 29 at 8pm"). Stays visible & highlighted
     // in the title field as you type; stripped from the saved title on submit.
     @State private var nlpMatchedText: String?
@@ -104,6 +108,7 @@ struct CreateTaskSheet: View {
         defaultScheduled: Bool = true,
         showScheduleControls: Bool = true,
         onParseTaskTitleNlp: ((String, Int64) async -> TodoTitleNlpResponse?)?,
+        onSuggestRepeat: ((String) async -> String?)? = nil,
         onDismiss: @escaping () -> Void,
         onSubmit: @escaping (CreateTaskPayload) async -> Void
     ) {
@@ -114,6 +119,7 @@ struct CreateTaskSheet: View {
         self.defaultScheduled = defaultScheduled
         self.showScheduleControls = showScheduleControls
         self.onParseTaskTitleNlp = onParseTaskTitleNlp
+        self.onSuggestRepeat = onSuggestRepeat
         self.onDismiss = onDismiss
         self.onSubmit = onSubmit
     }
@@ -180,6 +186,7 @@ struct CreateTaskSheet: View {
         }
         .onChange(of: title) { _, _ in
             scheduleNlpParse()
+            scheduleRepeatSuggestion()
         }
         .onChange(of: activeSelector) { _, selector in
             if selector != nil {
@@ -204,6 +211,10 @@ struct CreateTaskSheet: View {
                 titleHighlight: nlpMatchedText,
                 focusedInputField: $focusedInputField
             )
+
+            if let rrule = suggestedRepeatRrule {
+                repeatSuggestionChip(rrule: rrule)
+            }
 
             if showScheduleControls {
                 TdaySheetSectionTitle(text: "Schedule")
@@ -357,6 +368,85 @@ struct CreateTaskSheet: View {
                     priority = TaskPriorityDisplay.canonicalValue(parsedPriority)
                 }
             }
+        }
+    }
+
+    /// Debounced "Make this repeat?" lookup over the completed-history cadence.
+    private func scheduleRepeatSuggestion() {
+        guard let onSuggestRepeat else {
+            suggestedRepeatRrule = nil
+            return
+        }
+        suggestionTask?.cancel()
+        let source = title
+        if source.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || repeatRule != nil {
+            suggestedRepeatRrule = nil
+            return
+        }
+        suggestionTask = Task {
+            try? await Task.sleep(for: .milliseconds(400))
+            guard !Task.isCancelled else { return }
+            let rrule = await onSuggestRepeat(source)
+            await MainActor.run {
+                if let rrule, repeatRule == nil,
+                   !isRepeatSuggestionDismissed(RepeatSuggestionEngine.normalize(source)) {
+                    suggestedRepeatRrule = rrule
+                } else {
+                    suggestedRepeatRrule = nil
+                }
+            }
+        }
+    }
+
+    private func isRepeatSuggestionDismissed(_ normalized: String) -> Bool {
+        guard !normalized.isEmpty else { return false }
+        let stored = UserDefaults.standard.stringArray(forKey: Self.dismissedKey) ?? []
+        return stored.contains(normalized)
+    }
+
+    private func dismissRepeatSuggestion(_ normalized: String) {
+        guard !normalized.isEmpty else { return }
+        var stored = UserDefaults.standard.stringArray(forKey: Self.dismissedKey) ?? []
+        stored.removeAll { $0 == normalized }
+        stored.append(normalized)
+        UserDefaults.standard.set(Array(stored.suffix(200)), forKey: Self.dismissedKey)
+    }
+
+    private static let dismissedKey = "repeatSuggestionDismissed"
+
+    @ViewBuilder
+    private func repeatSuggestionChip(rrule: String) -> some View {
+        let cadence = repeatOptions.first { $0.value == rrule }?.label ?? L("Weekly")
+        HStack(spacing: 8) {
+            Button {
+                repeatRule = rrule
+                scheduleEnabled = true
+                userTurnedScheduleOff = false
+                suggestedRepeatRrule = nil
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "repeat")
+                    Text(String(format: L("Repeat %@?"), cadence))
+                }
+                .font(.subheadline.weight(.heavy))
+                .foregroundStyle(colors.secondary)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(colors.secondary.opacity(0.15), in: Capsule())
+            }
+            .buttonStyle(.plain)
+
+            Button {
+                dismissRepeatSuggestion(RepeatSuggestionEngine.normalize(title))
+                suggestedRepeatRrule = nil
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(.secondary)
+                    .padding(6)
+            }
+            .buttonStyle(.plain)
+            Spacer(minLength: 0)
         }
     }
 

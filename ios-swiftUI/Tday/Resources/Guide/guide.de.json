@@ -719,6 +719,41 @@
       "searchBody": "lass eine aufgabe taglich, wochentlich und mehr wiederkehren. stell eine aufgabe auf wiederholung, und sie kommt nach ihrem eigenen zeitplan zuruck. wahle aus den vorlagen — jeden tag, wochentag, jede woche oder jeden monat —, und das abschliesen eines termins lasst den rest der serie unberuhrt. pflanzen giesen · jede woche"
     },
     {
+      "id": "repeat-suggestions",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "repeat",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.6.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Wiederholungs-Vorschläge",
+      "summary": "T'Day erkennt Aufgaben mit Rhythmus und bietet an, sie zu wiederholen.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Wenn du dieselbe Aufgabe in gleichmäßigem Rhythmus erledigst – Pflanzen jede Woche gießen, Miete monatlich zahlen – bemerkt T'Day das und bietet einen Ein-Tipp-Chip zum Wiederholen an. Es liest nur deinen lokalen Erledigt-Verlauf; nichts verlässt das Gerät."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Kein Interesse? Tippe auf das ✕ und dieser Titel fragt nicht wieder."
+          ]
+        }
+      ],
+      "searchTitle": "wiederholungs-vorschlage",
+      "searchKeywords": "wiederholen, vorschlag, wiederkehrend, rhythmus, gewohnheit, muster, automatisch",
+      "searchBody": "t'day erkennt aufgaben mit rhythmus und bietet an, sie zu wiederholen. wenn du dieselbe aufgabe in gleichmasigem rhythmus erledigst – pflanzen jede woche giesen, miete monatlich zahlen – bemerkt t'day das und bietet einen ein-tipp-chip zum wiederholen an. es liest nur deinen lokalen erledigt-verlauf; nichts verlasst das gerat. kein interesse? tippe auf das ✕ und dieser titel fragt nicht wieder."
+    },
+    {
       "id": "reminders",
       "section": "RECURRENCE_AND_REMINDERS",
       "sectionOrder": 4,

@@ -381,6 +381,14 @@
       "editAsInstance": "Edit as instance",
       "delete": "Delete",
       "Move to": "Move to..."
+    },
+    "repeatSuggestion": {
+      "prompt": "Repeat {{cadence}}?",
+      "dismiss": "Dismiss",
+      "everyDay": "daily",
+      "everyWeek": "weekly",
+      "everyMonth": "monthly",
+      "everyYear": "yearly"
     }
   },
   "sidebar": {
@@ -1047,6 +1055,13 @@
         "step0": "Install a UnifiedPush distributor such as ntfy from your app store.",
         "step1": "In Settings → Reminders, turn on UnifiedPush and pick the distributor.",
         "step2": "Your server now pushes changes to that endpoint; turn it off anytime."
+      },
+      "repeat-suggestions": {
+        "title": "Repeat suggestions",
+        "summary": "T'Day spots tasks you finish on a rhythm and offers to repeat them.",
+        "keywords": "repeat, suggestion, recurring, cadence, habit, pattern, smart, automatic",
+        "body": "When you keep completing the same task on a steady rhythm — watering plants every week, paying rent monthly — T'Day notices and offers a one-tap chip to make it repeat. It reads only your on-device completed history; nothing leaves your device.",
+        "tip": "Not interested? Tap the ✕ and that title won't ask again."
       }
     }
   },

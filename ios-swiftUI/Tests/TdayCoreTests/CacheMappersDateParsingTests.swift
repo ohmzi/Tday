@@ -106,3 +106,47 @@ final class RecurrencePriorityGrammarTests: XCTestCase {
         XCTAssertNil(result.priority)
     }
 }
+
+final class RepeatSuggestionEngineTests: XCTestCase {
+    private let day: Int64 = 86_400_000
+    private let base: Int64 = 1_700_000_000_000
+
+    private func completion(_ title: String, _ days: Int64) -> RepeatSuggestionEngine.Completion {
+        RepeatSuggestionEngine.Completion(title: title, completedAtEpochMs: base + days * day)
+    }
+
+    func testSuggestsWeeklyForSteadyCadence() {
+        let completions = [0, 7, 14, 21].map { completion("water plants", Int64($0)) }
+        XCTAssertEqual(
+            RepeatSuggestionEngine.suggest(currentTitle: "water plants", completions: completions),
+            "RRULE:FREQ=WEEKLY;INTERVAL=1"
+        )
+    }
+
+    func testRequiresThreeCompletions() {
+        let completions = [0, 7].map { completion("water plants", Int64($0)) }
+        XCTAssertNil(RepeatSuggestionEngine.suggest(currentTitle: "water plants", completions: completions))
+    }
+
+    func testIgnoresIrregularCadence() {
+        let completions = [0, 3, 20, 21].map { completion("random chore", Int64($0)) }
+        XCTAssertNil(RepeatSuggestionEngine.suggest(currentTitle: "random chore", completions: completions))
+    }
+
+    func testMatchesCaseAndPhraseInsensitively() {
+        let completions = [
+            completion("Water Plants", 0),
+            completion("water plants", 7),
+            completion("water plants !", 14),
+        ]
+        XCTAssertEqual(
+            RepeatSuggestionEngine.suggest(currentTitle: "water plants every week", completions: completions),
+            "RRULE:FREQ=WEEKLY;INTERVAL=1"
+        )
+    }
+
+    func testIgnoresUnrelatedTitles() {
+        let completions = [completion("water plants", 0), completion("water plants", 7), completion("something else", 100)]
+        XCTAssertNil(RepeatSuggestionEngine.suggest(currentTitle: "water plants", completions: completions))
+    }
+}

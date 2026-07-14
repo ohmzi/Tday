@@ -719,6 +719,41 @@
       "searchBody": "make a task repeat daily, weekly, and more. set a task to repeat and it comes back on its own schedule. pick from the presets — every day, weekday, week, or month — and completing one occurrence leaves the rest of the series intact. water the plants · every week"
     },
     {
+      "id": "repeat-suggestions",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "repeat",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.6.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Repeat suggestions",
+      "summary": "T'Day spots tasks you finish on a rhythm and offers to repeat them.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "When you keep completing the same task on a steady rhythm — watering plants every week, paying rent monthly — T'Day notices and offers a one-tap chip to make it repeat. It reads only your on-device completed history; nothing leaves your device."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Not interested? Tap the ✕ and that title won't ask again."
+          ]
+        }
+      ],
+      "searchTitle": "repeat suggestions",
+      "searchKeywords": "repeat, suggestion, recurring, cadence, habit, pattern, smart, automatic",
+      "searchBody": "t'day spots tasks you finish on a rhythm and offers to repeat them. when you keep completing the same task on a steady rhythm — watering plants every week, paying rent monthly — t'day notices and offers a one-tap chip to make it repeat. it reads only your on-device completed history; nothing leaves your device. not interested? tap the ✕ and that title won't ask again."
+    },
+    {
       "id": "reminders",
       "section": "RECURRENCE_AND_REMINDERS",
       "sectionOrder": 4,

@@ -186,6 +186,7 @@ fun HomeScreen(
     onOpenList: (listId: String, listName: String) -> Unit,
     onCreateTask: (payload: CreateTaskPayload) -> Unit,
     onParseTaskTitleNlp: suspend (title: String, referenceDueEpochMs: Long) -> TodoTitleNlpResponse?,
+    onSuggestRepeat: (suspend (title: String) -> String?)? = null,
     onCreateList: (name: String, color: String?, iconKey: String?) -> Unit,
     onCompleteTask: (todo: TodoItem) -> Unit,
     onDeleteTask: (todo: TodoItem) -> Unit,
@@ -720,6 +721,7 @@ fun HomeScreen(
             lists = uiState.summary.lists,
             defaultListId = null,
             onParseTaskTitleNlp = onParseTaskTitleNlp,
+            onSuggestRepeat = onSuggestRepeat,
             onDismiss = { showCreateTask = false },
             onCreateTask = { payload ->
                 onCreateTask(payload)
