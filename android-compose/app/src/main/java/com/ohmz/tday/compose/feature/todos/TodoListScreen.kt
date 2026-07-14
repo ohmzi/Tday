@@ -81,7 +81,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
@@ -112,7 +111,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
@@ -288,6 +286,10 @@ fun TodoListScreen(
         isTodayDaytime = isTodayDaytime,
     )
     val emptyWatermarkDrawable = emptyStateDrawableForMode(uiState.mode)
+    // The floater leaf watermark is mirrored so it points the same way as the iOS "leaf" symbol
+    // and the Tday widgets.
+    val flipWatermark =
+        uiState.mode == TodoListMode.FLOATER && selectedList?.iconKey.isNullOrBlank()
     val showSectionedTimeline =
         uiState.mode == TodoListMode.TODAY || uiState.mode == TodoListMode.OVERDUE || uiState.mode == TodoListMode.SCHEDULED || uiState.mode == TodoListMode.ALL || uiState.mode == TodoListMode.PRIORITY || uiState.mode == TodoListMode.FLOATER || uiState.mode == TodoListMode.LIST
     val suppressInitialTodayTimeline =
@@ -1231,11 +1233,13 @@ fun TodoListScreen(
                 EmptyTaskWatermark(
                     iconRes = emptyWatermarkDrawable,
                     accentColor = titleColor,
+                    flipHorizontal = flipWatermark,
                 )
             } else {
                 EmptyTaskWatermark(
                     imageVector = emptyWatermarkIcon,
                     accentColor = titleColor,
+                    flipHorizontal = flipWatermark,
                 )
             }
             // Root floater shows its empty message inline (in the list, above

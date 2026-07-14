@@ -1,4 +1,6 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?><!-- Floater widget watermark: the shared lucide leaf (same glyph as the floater screen), mirrored
+     horizontally so it points the same way as the iOS "leaf" symbol, tinted with the floater
+     accent at 10%. scaleX=-1 flips; rotation -7 matches the other widget watermarks. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="180dp"
     android:height="180dp"
@@ -7,10 +9,21 @@
     <group
         android:pivotX="12"
         android:pivotY="12"
-        android:rotation="-7">
+        android:rotation="-7"
+        android:scaleX="-1">
         <path
-            android:fillAlpha="0.10"
-            android:fillColor="@color/tday_widget_floater_accent"
-            android:pathData="M20,2H4C2.9,2 2,2.9 2,4V7.01C2,7.73 2.38,8.36 2.96,8.7L4,9.3V20C4,21.1 4.9,22 6,22H18C19.1,22 20,21.1 20,20V9.3L21.04,8.7C21.62,8.36 22,7.73 22,7.01V4C22,2.9 21.1,2 20,2ZM4,4H20V7H4V4ZM18,20H6V9H18V20ZM9,12H15V14H9V12Z" />
+            android:pathData="M11,20A7,7 0 0 1 9.8,6.1C15.5,5 17,4.48 19,2c1,2 2,4.18 2,8 0,5.5 -4.78,10 -10,10Z"
+            android:strokeWidth="2"
+            android:strokeAlpha="0.10"
+            android:strokeColor="@color/tday_widget_floater_accent"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round" />
+        <path
+            android:pathData="M2,21c0,-3 1.85,-5.36 5.08,-6C9.5,14.52 12,13 13,12"
+            android:strokeWidth="2"
+            android:strokeAlpha="0.10"
+            android:strokeColor="@color/tday_widget_floater_accent"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round" />
     </group>
 </vector>
