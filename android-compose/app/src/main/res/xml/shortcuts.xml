@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Static launcher shortcuts (long-press the app icon). Labels reuse core UI
+     strings so all 10 locales are covered; intents ride the existing tday://
+     deep links through the exported MainActivity. -->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="new-task"
+        android:enabled="true"
+        android:icon="@drawable/ic_lucide_square_plus"
+        android:shortcutShortLabel="@string/create_task_title_new">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="tday://todos/create?target=today"
+            android:targetPackage="com.ohmz.tday.compose"
+            android:targetClass="com.ohmz.tday.compose.MainActivity" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="today"
+        android:enabled="true"
+        android:icon="@drawable/ic_lucide_calendar"
+        android:shortcutShortLabel="@string/todos_title_today">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="tday://todos/today"
+            android:targetPackage="com.ohmz.tday.compose"
+            android:targetClass="com.ohmz.tday.compose.MainActivity" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="floater"
+        android:enabled="true"
+        android:icon="@drawable/ic_lucide_waves"
+        android:shortcutShortLabel="@string/todos_title_floater">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="tday://floater"
+            android:targetPackage="com.ohmz.tday.compose"
+            android:targetClass="com.ohmz.tday.compose.MainActivity" />
+    </shortcut>
+</shortcuts>

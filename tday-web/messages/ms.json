@@ -864,6 +864,13 @@
         "body": "Terjumpa sesuatu dalam aplikasi lain? Buka helaian kongsi sistem dan pilih T'Day. Teks yang dikongsi masuk ke borang tugasan baharu — halaman yang dikongsi mengekalkan tajuknya sebagai nama tugasan dengan pautan disimpan dalam nota. Pada Android dan aplikasi web, borang terbuka serta-merta; pada iOS, tangkapan disimpan serta-merta dan borang praisi menyambut anda pada kali seterusnya anda membuka aplikasi.",
         "tip": "Kongsi teks yang mengandungi frasa tarikh dan penghurai akan menetapkan tarikh akhir untuk anda."
       },
+      "android-shortcuts": {
+        "title": "Jubin tetapan pantas & pintasan",
+        "summary": "Tambah tugasan dari tetapan pantas atau tekan lama ikon aplikasi.",
+        "keywords": "tetapan pantas, jubin, pintasan, tekan lama, ikon aplikasi, tambah pantas",
+        "body": "Dua lorong pantas di Android. Tambah jubin T'Day ke tetapan pantas (edit grid jubin dan seret masuk) — satu ketikan membuka borang tugasan baharu dari mana-mana sahaja, walaupun di atas aplikasi lain. Menekan lama ikon aplikasi turut menawarkan pintasan: Tugasan baharu, Hari ini dan Floater terus membawa anda ke tempat yang dituju.",
+        "tip": "Pintasan boleh diseret keluar sebagai ikon tersendiri di skrin utama — butang khas tugasan baharu satu ketikan."
+      },
       "carplay": {
         "title": "T'Day pada CarPlay",
         "summary": "Imbas dan catat tugasan dengan selamat semasa anda memandu.",

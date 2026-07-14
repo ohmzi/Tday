@@ -864,6 +864,13 @@
         "body": "Etwas in einer anderen App gefunden? Öffne das System-Teilen-Menü und wähle T'Day. Der geteilte Text landet in einem Neue-Aufgabe-Formular — bei einer geteilten Seite wird ihr Titel zum Aufgabennamen und der Link wandert in die Notizen. Auf Android und im Web öffnet sich das Formular sofort; auf iOS wird die Aufnahme sofort gespeichert und das vorausgefüllte Formular erscheint beim nächsten Öffnen der App.",
         "tip": "Teile Text mit einer Datumsangabe — der Parser setzt das Fälligkeitsdatum für dich."
       },
+      "android-shortcuts": {
+        "title": "Schnelleinstellungen-Kachel & Verknüpfungen",
+        "summary": "Lege Aufgaben aus den Schnelleinstellungen oder per langem Druck aufs App-Symbol an.",
+        "keywords": "schnelleinstellungen, kachel, verknüpfung, langes drücken, app-symbol, schnell hinzufügen",
+        "body": "Zwei Abkürzungen auf Android. Füge die T'Day-Kachel den Schnelleinstellungen hinzu (Kachelraster bearbeiten und hineinziehen) — ein Tipp öffnet das Neue-Aufgabe-Formular von überall, sogar über einer anderen App. Ein langer Druck aufs App-Symbol bietet außerdem Verknüpfungen: Neue Aufgabe, Heute und Floater springen direkt ans Ziel.",
+        "tip": "Verknüpfungen lassen sich als eigene Symbole auf den Startbildschirm ziehen — ein eigener Ein-Tipp-Knopf für neue Aufgaben."
+      },
       "carplay": {
         "title": "T'Day auf CarPlay",
         "summary": "Aufgaben sicher im Blick behalten und erfassen, während du fährst.",

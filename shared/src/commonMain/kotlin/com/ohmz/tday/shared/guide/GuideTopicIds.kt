@@ -35,6 +35,7 @@ object GuideTopicIds {
     const val WIDGET_QUICK_ADD = "widget-quick-add"
     const val INTERACTIVE_WIDGETS = "interactive-widgets"
     const val SHARE_INTO_TDAY = "share-into-tday"
+    const val ANDROID_SHORTCUTS = "android-shortcuts"
     const val CARPLAY = "carplay"
     const val ANDROID_CAR = "android-car"
     const val LOCAL_MODE = "local-mode"

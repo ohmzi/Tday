@@ -864,6 +864,13 @@
         "body": "Encontrou algo noutra aplicação? Abra a folha de partilha do sistema e escolha o T'Day. O texto partilhado entra num formulário de nova tarefa — ao partilhar uma página, o título torna-se o nome da tarefa e a ligação fica nas notas. No Android e na aplicação web o formulário abre no momento; no iOS a captura é guardada de imediato e o formulário pré-preenchido aparece na próxima vez que abrir a aplicação.",
         "tip": "Partilhe um texto com uma data lá dentro e o analisador define o prazo por si."
       },
+      "android-shortcuts": {
+        "title": "Mosaico de definições rápidas e atalhos",
+        "summary": "Adicione tarefas a partir das definições rápidas ou do toque longo no ícone da aplicação.",
+        "keywords": "definições rápidas, mosaico, atalho, toque longo, ícone da aplicação, adição rápida",
+        "body": "Duas vias rápidas no Android. Adicione o mosaico do T'Day às definições rápidas (edite a grelha e arraste-o) — um toque abre o formulário de nova tarefa a partir de qualquer lugar, mesmo por cima de outra aplicação. O toque longo no ícone da aplicação também oferece atalhos: Nova tarefa, Hoje e Flutuantes levam-no diretamente ao destino.",
+        "tip": "Os atalhos podem ser arrastados para o ecrã principal como ícones independentes — um botão dedicado de nova tarefa num só toque."
+      },
       "carplay": {
         "title": "O T'Day no CarPlay",
         "summary": "Veja e registe tarefas em segurança enquanto conduz.",
