@@ -31,6 +31,8 @@ import com.ohmz.tday.services.CompletedFloaterService
 import com.ohmz.tday.services.CompletedFloaterServiceImpl
 import com.ohmz.tday.services.CompletedTodoService
 import com.ohmz.tday.services.CompletedTodoServiceImpl
+import com.ohmz.tday.services.ExportService
+import com.ohmz.tday.services.ExportServiceImpl
 import com.ohmz.tday.services.FloaterListService
 import com.ohmz.tday.services.FloaterListServiceImpl
 import com.ohmz.tday.services.FloaterService
@@ -92,6 +94,7 @@ val serviceModule = module {
     single<SecurityQuestionService> { SecurityQuestionServiceImpl(get(), get(), get(), get()) }
     single<CompletedTodoService> { CompletedTodoServiceImpl(get(), get()) }
     single<CompletedFloaterService> { CompletedFloaterServiceImpl(get(), get()) }
+    single<ExportService> { ExportServiceImpl(get(), get(), get()) }
     single<PreferencesService> { PreferencesServiceImpl() }
     single<TodoSummaryService> { TodoSummaryServiceImpl(get()) }
     single<TodoNlpService> { TodoNlpServiceImpl() }
