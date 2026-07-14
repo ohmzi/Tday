@@ -395,6 +395,41 @@
       "searchBody": "无日期任务住在随时里；有日期任务住在主页里。 已安排的任务有截止日期，会出现在主页和日历里。浮动任务没有日期——它安静地在你的随时信息流里等待，直到你准备好。用浮动任务来放那些“将来某天”要做、又不该扰乱今天的事。 浮动任务从不出现在日历上——那片空间只留给有日期的事。"
     },
     {
+      "id": "resting-floaters",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "waves",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.6.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "休眠浮动任务",
+      "summary": "长期未动的 Anytime 任务会淡出并休眠，让列表保持平静。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "一个月未触碰的 Anytime 任务会轻轻淡出，三个月后会聚到底部平静的“休眠”分组。任何任务都不会被删除——它们只是不再争夺注意力，直到你再回来。"
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "这只是显示提示；轻点即可唤醒浮动任务。"
+          ]
+        }
+      ],
+      "searchTitle": "休眠浮动任务",
+      "searchKeywords": "休眠, 浮动, anytime, 淡出, 变暗, 老化, 闲置, 旧, 平静",
+      "searchBody": "长期未动的 anytime 任务会淡出并休眠，让列表保持平静。 一个月未触碰的 anytime 任务会轻轻淡出，三个月后会聚到底部平静的“休眠”分组。任何任务都不会被删除——它们只是不再争夺注意力，直到你再回来。 这只是显示提示；轻点即可唤醒浮动任务。"
+    },
+    {
       "id": "promote-and-float",
       "section": "ORGANIZING",
       "sectionOrder": 3,

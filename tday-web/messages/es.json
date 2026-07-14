@@ -678,6 +678,10 @@
       "disabled": "Desactivado",
       "delete": "Eliminar webhook",
       "none": "Aún no hay webhooks"
+    },
+    "restingFloaters": {
+      "title": "Flotantes en reposo",
+      "toggle": "Atenuar tareas de Anytime sin tocar"
     }
   },
   "summary": {
@@ -1093,6 +1097,13 @@
         "keywords": "silencio, horas, no molestar, noche, dormir, recordatorios, horario",
         "body": "Define una franja —por ejemplo de 22:00 a 07:00— y cualquier recordatorio que sonaría dentro se retiene hasta que termina. Es solo en el dispositivo; los recordatorios locales esperan a la mañana.",
         "tip": "La franja puede cruzar la medianoche (22:00 → 07:00); el cálculo lo resuelve."
+      },
+      "resting-floaters": {
+        "title": "Flotantes en reposo",
+        "summary": "Las tareas de Anytime sin tocar se atenúan y reposan para mantener la calma.",
+        "keywords": "reposo, flotante, anytime, atenuar, envejecer, inactivo, viejo, calma",
+        "body": "Las tareas de Anytime que no tocas en un mes se atenúan suavemente, y tras tres meses se agrupan en un tranquilo grupo \"En reposo\" al final. Nada se borra: solo dejan de reclamar atención hasta que vuelvas.",
+        "tip": "Es solo una señal visual; un toque despierta un flotante al instante."
       }
     }
   },

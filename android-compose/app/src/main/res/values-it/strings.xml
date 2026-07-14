@@ -629,4 +629,5 @@
     <string name="settings_quiet_hours">Ore di silenzio</string>
     <string name="settings_quiet_hours_start">Inizio</string>
     <string name="settings_quiet_hours_end">Fine</string>
+    <string name="settings_resting_floaters">Sbiadisci i floater a riposo</string>
 </resources>

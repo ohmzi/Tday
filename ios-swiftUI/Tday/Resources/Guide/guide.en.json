@@ -395,6 +395,41 @@
       "searchBody": "dateless tasks live in anytime; dated tasks live in home. a scheduled task has a due date and shows up in home and the calendar. a floater has no date — it waits quietly in your anytime feed until you're ready. use floaters for “someday” work that shouldn't clutter today. floaters never appear on the calendar — that space is only for dated work."
     },
     {
+      "id": "resting-floaters",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "waves",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.6.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Resting floaters",
+      "summary": "Untouched Anytime tasks quietly fade and rest, so your list stays calm.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Anytime tasks you haven't touched in a month gently fade, and after three months they gather into a calm \"Resting\" group at the bottom. Nothing is deleted — they just stop demanding attention until you come back to them."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "It's a display cue only; a tap wakes a floater right back up."
+          ]
+        }
+      ],
+      "searchTitle": "resting floaters",
+      "searchKeywords": "resting, floater, anytime, fade, dim, aging, dormant, old, quiet",
+      "searchBody": "untouched anytime tasks quietly fade and rest, so your list stays calm. anytime tasks you haven't touched in a month gently fade, and after three months they gather into a calm \"resting\" group at the bottom. nothing is deleted — they just stop demanding attention until you come back to them. it's a display cue only; a tap wakes a floater right back up."
+    },
+    {
       "id": "promote-and-float",
       "section": "ORGANIZING",
       "sectionOrder": 3,

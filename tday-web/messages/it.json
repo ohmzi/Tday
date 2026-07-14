@@ -678,6 +678,10 @@
       "disabled": "Disattivato",
       "delete": "Elimina webhook",
       "none": "Ancora nessun webhook"
+    },
+    "restingFloaters": {
+      "title": "Floater a riposo",
+      "toggle": "Sbiadisci le attività Anytime intatte"
     }
   },
   "summary": {
@@ -1093,6 +1097,13 @@
         "keywords": "silenzio, ore, non disturbare, notte, sonno, promemoria, orario",
         "body": "Imposta una fascia — ad es. 22:00–07:00 — e ogni promemoria che suonerebbe dentro viene trattenuto fino alla fine. Solo sul dispositivo; i promemoria locali aspettano il mattino.",
         "tip": "La fascia può superare la mezzanotte (22:00 → 07:00); il calcolo lo gestisce."
+      },
+      "resting-floaters": {
+        "title": "Floater a riposo",
+        "summary": "Le attività Anytime intatte sbiadiscono e riposano, così la lista resta calma.",
+        "keywords": "riposo, floater, anytime, sbiadire, invecchiare, inattivo, vecchio, calma",
+        "body": "Le attività Anytime che non tocchi da un mese sbiadiscono dolcemente e dopo tre mesi si raccolgono in un tranquillo gruppo \"A riposo\" in fondo. Nulla viene eliminato: smettono solo di chiedere attenzione.",
+        "tip": "È solo un segnale visivo; un tocco risveglia subito un floater."
       }
     }
   },

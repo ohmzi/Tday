@@ -629,4 +629,5 @@
     <string name="settings_quiet_hours">Horas de silêncio</string>
     <string name="settings_quiet_hours_start">Início</string>
     <string name="settings_quiet_hours_end">Fim</string>
+    <string name="settings_resting_floaters">Desbotar flutuantes em repouso</string>
 </resources>

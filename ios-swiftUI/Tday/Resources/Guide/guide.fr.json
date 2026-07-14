@@ -395,6 +395,41 @@
       "searchBody": "les taches sans date vivent dans a tout moment ; les taches datees dans accueil. une tache planifiee a une date d'echeance et apparait dans accueil et le calendrier. un floater n'a pas de date — il attend tranquillement dans votre fil a tout moment jusqu'a ce que vous soyez pret. utilisez les floaters pour le travail « un jour » qui ne devrait pas encombrer aujourd'hui. les floaters n'apparaissent jamais sur le calendrier — cet espace est reserve au travail date."
     },
     {
+      "id": "resting-floaters",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "waves",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.6.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Flottants au repos",
+      "summary": "Les tâches Anytime intactes s'estompent et se reposent pour garder le calme.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Les tâches Anytime que tu n'as pas touchées depuis un mois s'estompent doucement, et après trois mois elles se regroupent dans un calme groupe « Au repos » en bas. Rien n'est supprimé : elles cessent juste de réclamer l'attention."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "C'est un simple indice visuel ; un toucher réveille un flottant."
+          ]
+        }
+      ],
+      "searchTitle": "flottants au repos",
+      "searchKeywords": "repos, flottant, anytime, estomper, vieillir, dormant, vieux, calme",
+      "searchBody": "les taches anytime intactes s'estompent et se reposent pour garder le calme. les taches anytime que tu n'as pas touchees depuis un mois s'estompent doucement, et apres trois mois elles se regroupent dans un calme groupe « au repos » en bas. rien n'est supprime : elles cessent juste de reclamer l'attention. c'est un simple indice visuel ; un toucher reveille un flottant."
+    },
+    {
       "id": "promote-and-float",
       "section": "ORGANIZING",
       "sectionOrder": 3,

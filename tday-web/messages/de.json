@@ -678,6 +678,10 @@
       "disabled": "Deaktiviert",
       "delete": "Webhook löschen",
       "none": "Noch keine Webhooks"
+    },
+    "restingFloaters": {
+      "title": "Ruhende Floater",
+      "toggle": "Unberührte Anytime-Aufgaben ausblenden"
     }
   },
   "summary": {
@@ -1093,6 +1097,13 @@
         "keywords": "ruhe, zeiten, nicht stören, nacht, schlaf, erinnerungen, zeitplan",
         "body": "Lege ein Fenster fest – etwa 22:00 bis 07:00 – und jede Erinnerung, die darin ausgelöst würde, wird bis zum Ende gehalten. Nur auf dem Gerät; lokale Erinnerungen warten bis zum Morgen.",
         "tip": "Das Fenster darf Mitternacht überschreiten (22:00 → 07:00); die Berechnung passt."
+      },
+      "resting-floaters": {
+        "title": "Ruhende Floater",
+        "summary": "Unberührte Anytime-Aufgaben verblassen und ruhen, damit die Liste ruhig bleibt.",
+        "keywords": "ruhen, floater, anytime, verblassen, altern, inaktiv, alt, ruhe",
+        "body": "Anytime-Aufgaben, die du einen Monat nicht angefasst hast, verblassen sanft, und nach drei Monaten sammeln sie sich in einer ruhigen Gruppe „Ruhend“ unten. Nichts wird gelöscht – sie fordern nur keine Aufmerksamkeit mehr.",
+        "tip": "Nur ein Anzeigehinweis; ein Tippen weckt einen Floater sofort."
       }
     }
   },

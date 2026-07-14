@@ -395,6 +395,41 @@
       "searchBody": "tugasan tanpa tarikh tinggal di bila-bila; tugasan bertarikh tinggal di utama. tugasan berjadual mempunyai tarikh tamat tempoh dan muncul di utama serta kalendar. floater tiada tarikh — ia menunggu dengan tenang dalam suapan bila-bila anda sehingga anda bersedia. guna floater untuk kerja “suatu hari nanti” yang tidak sepatutnya menyesakkan hari ini. floater tidak pernah muncul pada kalendar — ruang itu hanya untuk kerja bertarikh."
     },
     {
+      "id": "resting-floaters",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "waves",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.6.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Floater berehat",
+      "summary": "Tugasan Anytime yang tidak disentuh pudar dan berehat, memastikan senarai tenang.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Tugasan Anytime yang tidak anda sentuh selama sebulan akan pudar perlahan, dan selepas tiga bulan ia berkumpul dalam kumpulan tenang \"Berehat\" di bawah. Tiada yang dipadam — ia cuma berhenti menuntut perhatian sehingga anda kembali."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Ia hanya isyarat paparan; satu ketik menghidupkan semula floater."
+          ]
+        }
+      ],
+      "searchTitle": "floater berehat",
+      "searchKeywords": "rehat, floater, anytime, pudar, malap, penuaan, tidak aktif, lama, tenang",
+      "searchBody": "tugasan anytime yang tidak disentuh pudar dan berehat, memastikan senarai tenang. tugasan anytime yang tidak anda sentuh selama sebulan akan pudar perlahan, dan selepas tiga bulan ia berkumpul dalam kumpulan tenang \"berehat\" di bawah. tiada yang dipadam — ia cuma berhenti menuntut perhatian sehingga anda kembali. ia hanya isyarat paparan; satu ketik menghidupkan semula floater."
+    },
+    {
       "id": "promote-and-float",
       "section": "ORGANIZING",
       "sectionOrder": 3,
