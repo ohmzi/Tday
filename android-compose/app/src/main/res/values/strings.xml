@@ -629,4 +629,6 @@
     <string name="settings_unifiedpush_enabled">On</string>
     <string name="settings_unifiedpush_disabled">Off</string>
     <string name="settings_unifiedpush_none">No UnifiedPush distributor found. Install one (e.g. ntfy) and try again.</string>
+    <string name="create_task_repeat_suggestion">Repeat %1$s?</string>
+    <string name="create_task_repeat_suggestion_dismiss">Dismiss</string>
 </resources>

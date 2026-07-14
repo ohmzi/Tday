@@ -381,6 +381,14 @@
       "editAsInstance": "Editar como instância",
       "delete": "Eliminar",
       "Move to": "Mover para..."
+    },
+    "repeatSuggestion": {
+      "prompt": "Repetir {{cadence}}?",
+      "dismiss": "Dispensar",
+      "everyDay": "diariamente",
+      "everyWeek": "semanalmente",
+      "everyMonth": "mensalmente",
+      "everyYear": "anualmente"
     }
   },
   "sidebar": {
@@ -1047,6 +1055,13 @@
         "step0": "Instale um distribuidor UnifiedPush como o ntfy na sua loja de apps.",
         "step1": "Em Configurações → Lembretes, ative o UnifiedPush e escolha o distribuidor.",
         "step2": "Seu servidor passa a enviar mudanças a esse endpoint; desative quando quiser."
+      },
+      "repeat-suggestions": {
+        "title": "Sugestões de repetição",
+        "summary": "O T'Day nota tarefas concluídas num ritmo e sugere repeti-las.",
+        "keywords": "repetir, sugestão, recorrente, ritmo, hábito, padrão, automático",
+        "body": "Quando você conclui a mesma tarefa num ritmo constante — regar as plantas toda semana, pagar o aluguel todo mês — o T'Day percebe e oferece um chip de um toque para repeti-la. Ele lê apenas seu histórico concluído no dispositivo; nada sai dele.",
+        "tip": "Não tem interesse? Toque no ✕ e esse título não perguntará de novo."
       }
     }
   },

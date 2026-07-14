@@ -142,6 +142,67 @@ function sanitizeTimezoneOffset(rawOffset?: number | null): number | undefined {
   return rounded;
 }
 
+export type RepeatCompletion = { title: string; completedAtEpochMs: number };
+
+const SUGGEST_TARGETS: ReadonlyArray<{ days: number; rrule: string; tol: number }> = [
+  { days: 1, rrule: "RRULE:FREQ=DAILY;INTERVAL=1", tol: 0.5 },
+  { days: 7, rrule: "RRULE:FREQ=WEEKLY;INTERVAL=1", tol: 2 },
+  { days: 30, rrule: "RRULE:FREQ=MONTHLY;INTERVAL=1", tol: 7 },
+  { days: 365, rrule: "RRULE:FREQ=YEARLY;INTERVAL=1", tol: 45 },
+];
+const SUGGEST_MIN_COMPLETIONS = 3;
+const MS_PER_DAY = 86_400_000;
+
+/** Lowercased, whitespace-collapsed, recurrence/priority-stripped title — matches the
+ * shared Kotlin RepeatSuggestionEngine.normalize so cross-platform behaviour agrees. */
+export function normalizeForSuggestion(title: string): string {
+  return parseRecurrencePriority(title)
+    .cleanTitle.toLowerCase()
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
+function medianOf(values: number[]): number {
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 1 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+}
+
+/**
+ * "Make this repeat?" — mirrors the shared Kotlin RepeatSuggestionEngine. Returns a
+ * preset RRULE to suggest for `currentTitle` when past completions of the same title
+ * show a steady cadence, else null.
+ */
+export function suggestRepeat(
+  currentTitle: string,
+  completions: RepeatCompletion[],
+): string | null {
+  const norm = normalizeForSuggestion(currentTitle);
+  if (!norm) return null;
+
+  const times = completions
+    .filter((c) => normalizeForSuggestion(c.title) === norm)
+    .map((c) => c.completedAtEpochMs)
+    .sort((a, b) => a - b);
+  if (times.length < SUGGEST_MIN_COMPLETIONS) return null;
+
+  const intervals: number[] = [];
+  for (let i = 1; i < times.length; i++) {
+    const days = (times[i] - times[i - 1]) / MS_PER_DAY;
+    if (days > 0.25) intervals.push(days);
+  }
+  if (intervals.length < SUGGEST_MIN_COMPLETIONS - 1) return null;
+
+  const median = medianOf(intervals);
+  const target = SUGGEST_TARGETS.find((t) => Math.abs(median - t.days) <= t.tol);
+  if (!target) return null;
+
+  const consistent = intervals.filter((d) => Math.abs(d - median) <= target.tol).length;
+  if (consistent < intervals.length - Math.floor(intervals.length / 3)) return null;
+
+  return target.rrule;
+}
+
 export function parseTodoTitle(input: ParseTodoTitleInput): ParseTodoTitleOutput {
   const rawText = typeof input.text === "string" ? input.text : "";
   const trimmedText = rawText.trim();

@@ -719,6 +719,41 @@
       "searchBody": "让任务每天、每周或按更多规律重复。 把任务设为重复，它就会按自己的节奏回来。从预设中挑选——每天、工作日、每周或每月——完成其中一次，系列里的其余次数依旧保留。 给植物浇水 · 每周"
     },
     {
+      "id": "repeat-suggestions",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "repeat",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.6.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "重复建议",
+      "summary": "T'Day 发现你按节奏完成的任务，并建议将其设为重复。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "当你以稳定节奏反复完成同一任务——每周浇花、每月付房租——T'Day 会注意到，并提供一键芯片将其设为重复。它只读取设备上的已完成历史，任何数据都不会离开设备。"
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "不需要？点 ✕，该标题不再询问。"
+          ]
+        }
+      ],
+      "searchTitle": "重复建议",
+      "searchKeywords": "重复, 建议, 循环, 节奏, 习惯, 模式, 智能, 自动",
+      "searchBody": "t'day 发现你按节奏完成的任务，并建议将其设为重复。 当你以稳定节奏反复完成同一任务——每周浇花、每月付房租——t'day 会注意到，并提供一键芯片将其设为重复。它只读取设备上的已完成历史，任何数据都不会离开设备。 不需要？点 ✕，该标题不再询问。"
+    },
+    {
       "id": "reminders",
       "section": "RECURRENCE_AND_REMINDERS",
       "sectionOrder": 4,

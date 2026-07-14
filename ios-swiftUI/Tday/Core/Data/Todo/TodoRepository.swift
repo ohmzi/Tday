@@ -1267,3 +1267,68 @@ enum RecurrencePriorityGrammar {
         return "Medium"
     }
 }
+
+/// "Make this repeat?" engine — the Swift twin of the shared Kotlin
+/// RepeatSuggestionEngine. Given completed history + the title being created, returns a
+/// preset RRULE when the same task shows a steady cadence, else nil.
+enum RepeatSuggestionEngine {
+    struct Completion {
+        let title: String
+        let completedAtEpochMs: Int64
+    }
+
+    private struct Target {
+        let days: Double
+        let rrule: String
+        let tolerance: Double
+    }
+
+    private static let targets = [
+        Target(days: 1, rrule: "RRULE:FREQ=DAILY;INTERVAL=1", tolerance: 0.5),
+        Target(days: 7, rrule: "RRULE:FREQ=WEEKLY;INTERVAL=1", tolerance: 2),
+        Target(days: 30, rrule: "RRULE:FREQ=MONTHLY;INTERVAL=1", tolerance: 7),
+        Target(days: 365, rrule: "RRULE:FREQ=YEARLY;INTERVAL=1", tolerance: 45),
+    ]
+
+    static let minCompletions = 3
+    private static let msPerDay = 86_400_000.0
+
+    static func normalize(_ title: String) -> String {
+        RecurrencePriorityGrammar.parse(title).cleanTitle
+            .lowercased()
+            .replacingOccurrences(of: "\\s{2,}", with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    static func suggest(currentTitle: String, completions: [Completion]) -> String? {
+        let norm = normalize(currentTitle)
+        if norm.isEmpty { return nil }
+
+        let times = completions
+            .filter { normalize($0.title) == norm }
+            .map { $0.completedAtEpochMs }
+            .sorted()
+        if times.count < minCompletions { return nil }
+
+        var intervals: [Double] = []
+        for index in 1..<times.count {
+            let days = Double(times[index] - times[index - 1]) / msPerDay
+            if days > 0.25 { intervals.append(days) }
+        }
+        if intervals.count < minCompletions - 1 { return nil }
+
+        let median = medianOf(intervals)
+        guard let target = targets.first(where: { abs(median - $0.days) <= $0.tolerance }) else { return nil }
+
+        let consistent = intervals.filter { abs($0 - median) <= target.tolerance }.count
+        if consistent < intervals.count - intervals.count / 3 { return nil }
+
+        return target.rrule
+    }
+
+    private static func medianOf(_ values: [Double]) -> Double {
+        let sorted = values.sorted()
+        let mid = sorted.count / 2
+        return sorted.count % 2 == 1 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2
+    }
+}

@@ -623,4 +623,6 @@
     <string name="settings_unifiedpush_enabled">オン</string>
     <string name="settings_unifiedpush_disabled">オフ</string>
     <string name="settings_unifiedpush_none">UnifiedPush ディストリビューターが見つかりません。インストール（例: ntfy）して再試行してください。</string>
+    <string name="create_task_repeat_suggestion">%1$sで繰り返す？</string>
+    <string name="create_task_repeat_suggestion_dismiss">閉じる</string>
 </resources>

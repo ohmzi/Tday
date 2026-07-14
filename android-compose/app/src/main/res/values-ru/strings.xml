@@ -626,4 +626,6 @@
     <string name="settings_unifiedpush_enabled">Вкл</string>
     <string name="settings_unifiedpush_disabled">Выкл</string>
     <string name="settings_unifiedpush_none">Дистрибьютор UnifiedPush не найден. Установите его (например, ntfy) и повторите.</string>
+    <string name="create_task_repeat_suggestion">Повторять %1$s?</string>
+    <string name="create_task_repeat_suggestion_dismiss">Скрыть</string>
 </resources>

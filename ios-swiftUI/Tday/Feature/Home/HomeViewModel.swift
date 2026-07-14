@@ -200,6 +200,20 @@ final class HomeViewModel {
         await container.todoRepository.parseTodoTitleNlp(text: text, referenceDueEpochMs: referenceDueEpochMs)
     }
 
+    /// "Make this repeat?" — a preset RRULE when the completed history shows a steady
+    /// cadence for `title`, else nil. Feeds the create-sheet suggestion chip.
+    func suggestRepeatRrule(title: String) async -> String? {
+        let completions = container.completedRepository.fetchCompletedItemsSnapshot()
+            .compactMap { item -> RepeatSuggestionEngine.Completion? in
+                guard let completedAt = item.completedAt else { return nil }
+                return RepeatSuggestionEngine.Completion(
+                    title: item.title,
+                    completedAtEpochMs: Int64(completedAt.timeIntervalSince1970 * 1000)
+                )
+            }
+        return RepeatSuggestionEngine.suggest(currentTitle: title, completions: completions)
+    }
+
     private func observeCacheChanges() {
         observationTask = Task {
             for await _ in NotificationCenter.default.notifications(named: .offlineCacheDidChange) {

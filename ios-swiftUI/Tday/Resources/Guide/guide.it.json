@@ -719,6 +719,41 @@
       "searchBody": "fai ripetere un'attivita ogni giorno, ogni settimana e altro. imposta un'attivita perche si ripeta e tornera secondo la sua pianificazione. scegli tra i preset — ogni giorno, giorno feriale, settimana o mese — e completare un'occorrenza lascia intatto il resto della serie. annaffiare le piante · ogni settimana"
     },
     {
+      "id": "repeat-suggestions",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "repeat",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.6.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Suggerimenti di ripetizione",
+      "summary": "T'Day individua attività finite con un ritmo e propone di ripeterle.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Quando completi la stessa attività con un ritmo costante — annaffiare le piante ogni settimana, pagare l'affitto ogni mese — T'Day lo nota e propone un chip con un tocco per ripeterla. Legge solo la cronologia completata sul dispositivo; nulla lo lascia."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Non ti interessa? Tocca la ✕ e quel titolo non chiederà più."
+          ]
+        }
+      ],
+      "searchTitle": "suggerimenti di ripetizione",
+      "searchKeywords": "ripeti, suggerimento, ricorrente, ritmo, abitudine, schema, automatico",
+      "searchBody": "t'day individua attivita finite con un ritmo e propone di ripeterle. quando completi la stessa attivita con un ritmo costante — annaffiare le piante ogni settimana, pagare l'affitto ogni mese — t'day lo nota e propone un chip con un tocco per ripeterla. legge solo la cronologia completata sul dispositivo; nulla lo lascia. non ti interessa? tocca la ✕ e quel titolo non chiedera piu."
+    },
+    {
       "id": "reminders",
       "section": "RECURRENCE_AND_REMINDERS",
       "sectionOrder": 4,

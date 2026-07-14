@@ -66,6 +66,7 @@ private data class HomeSnapshot(
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val todoRepository: TodoRepository,
+    private val completedRepository: com.ohmz.tday.compose.core.data.completed.CompletedRepository,
     private val listRepository: ListRepository,
     private val settingsRepository: SettingsRepository,
     private val syncManager: SyncManager,
@@ -426,6 +427,17 @@ class HomeViewModel @Inject constructor(
             text = text,
             referenceDueEpochMs = referenceDueEpochMs,
         )
+    }
+
+    /** "Make this repeat?" — a preset RRULE when the completed history shows a steady
+     * cadence for [title], else null. Feeds the create-sheet suggestion chip. */
+    suspend fun suggestRepeatRrule(title: String): String? {
+        val completions = completedRepository.fetchCompletedItems().mapNotNull { item ->
+            item.completedAt?.let {
+                com.ohmz.tday.shared.nlp.RepeatSuggestionEngine.Completion(item.title, it.toEpochMilli())
+            }
+        }
+        return com.ohmz.tday.shared.nlp.RepeatSuggestionEngine.suggest(title, completions)
     }
 
     fun completeTodo(todo: TodoItem) {
