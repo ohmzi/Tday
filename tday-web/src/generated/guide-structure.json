@@ -282,6 +282,38 @@
       "sinceVersion": null
     },
     {
+      "id": "resting-floaters",
+      "section": "ORGANIZING",
+      "icon": "waves",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "titleKey": "guide.topics.resting-floaters.title",
+      "summaryKey": "guide.topics.resting-floaters.summary",
+      "keywordsKey": "guide.topics.resting-floaters.keywords",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "keys": [
+            "guide.topics.resting-floaters.body"
+          ]
+        },
+        {
+          "type": "TIP",
+          "keys": [
+            "guide.topics.resting-floaters.tip"
+          ]
+        }
+      ],
+      "badge": "HIDDEN_GEM",
+      "deepLink": null,
+      "helpAnchors": [],
+      "serverOnly": false,
+      "sinceVersion": "0.6.0"
+    },
+    {
       "id": "promote-and-float",
       "section": "ORGANIZING",
       "icon": "refresh-cw",

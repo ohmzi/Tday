@@ -628,4 +628,5 @@
     <string name="settings_quiet_hours">サイレント時間</string>
     <string name="settings_quiet_hours_start">開始</string>
     <string name="settings_quiet_hours_end">終了</string>
+    <string name="settings_resting_floaters">休眠フローターを薄く</string>
 </resources>

@@ -154,6 +154,12 @@ struct SettingsScreen: View {
 
             settingsListRow {
                 SettingsSectionCard {
+                    SettingsRestingFloatersSection()
+                }
+            }
+
+            settingsListRow {
+                SettingsSectionCard {
                     SettingsWorkspaceContent(
                         syncStatus: viewModel.syncStatus,
                         onSyncNow: {
@@ -289,6 +295,29 @@ private struct SettingsProfileCard: View {
                 .font(.tdayRounded(size: 13, weight: .bold))
                 .foregroundStyle(colors.onSurface.opacity(0.58))
         }
+    }
+}
+
+// MARK: - Resting floaters
+
+/// Toggle for the "resting floaters" display cue (dim untouched Anytime tasks).
+private struct SettingsRestingFloatersSection: View {
+    @Environment(\.tdayColors) private var colors
+    private let store = RestingFloatersStore()
+    @State private var enabled: Bool
+
+    init() {
+        _enabled = State(initialValue: RestingFloatersStore().isEnabled)
+    }
+
+    var body: some View {
+        Toggle(isOn: $enabled) {
+            Text(L("Resting floaters"))
+                .font(.body.weight(.heavy))
+                .foregroundStyle(colors.onSurface)
+        }
+        .tint(colors.secondary)
+        .onChange(of: enabled) { _, value in store.isEnabled = value }
     }
 }
 

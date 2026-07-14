@@ -41,6 +41,10 @@ import NativeAppBrandButton from "@/components/app/NativeAppBrandButton";
 import { api } from "@/lib/api-client";
 import { getErrorMessage } from "@/lib/error-message";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
+import {
+  isRestingFloatersEnabled,
+  setRestingFloatersEnabled,
+} from "@/lib/floaterResting";
 import { Link, usePathname } from "@/lib/navigation";
 import { GuideHelpLink } from "@/features/guide/GuideHelpLink";
 import { LANGUAGE_STORAGE_KEY, resolveInitialLocale } from "@/i18n";
@@ -357,6 +361,9 @@ export default function SettingsPage() {
   const sqConfigured = sqStatus != null && !sqStatus.requireSecurityQuestions;
 
   const push = usePushNotifications();
+  const [restingFloatersOn, setRestingFloatersOn] = useState(() =>
+    isRestingFloatersEnabled(),
+  );
 
   const [apiKeys, setApiKeys] = useState<ApiKeyInfo[] | null>(null);
   const [generatedApiKey, setGeneratedApiKey] = useState<string | null>(null);
@@ -1269,6 +1276,28 @@ export default function SettingsPage() {
                 aiSummaryEnabled: !(preferences?.aiSummaryEnabled !== false),
               })
             }
+          />
+        </div>
+
+        <CardDivider />
+        <SectionHeading
+          title={t("restingFloaters.title")}
+          titleAction={<GuideHelpLink topic="resting-floaters" />}
+        />
+        <div className="flex items-center justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-[1.05rem] font-black text-foreground">
+              {t("restingFloaters.toggle")}
+            </p>
+          </div>
+          <SettingsSwitch
+            checked={restingFloatersOn}
+            ariaLabel={t("restingFloaters.toggle")}
+            onClick={() => {
+              const next = !restingFloatersOn;
+              setRestingFloatersEnabled(next);
+              setRestingFloatersOn(next);
+            }}
           />
         </div>
 

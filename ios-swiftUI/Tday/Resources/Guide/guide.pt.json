@@ -395,6 +395,41 @@
       "searchBody": "as tarefas sem data ficam em qualquer altura; as tarefas com data ficam em inicio. uma tarefa agendada tem data de conclusao e aparece no inicio e no calendario. um flutuante nao tem data — espera calmamente no seu feed qualquer altura ate estar pronto. use os flutuantes para trabalho de “um dia destes” que nao deve atravancar o hoje. os flutuantes nunca aparecem no calendario — esse espaco e apenas para trabalho com data."
     },
     {
+      "id": "resting-floaters",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "waves",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.6.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Flutuantes em repouso",
+      "summary": "Tarefas Anytime intocadas desaparecem e descansam, mantendo a lista calma.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Tarefas Anytime que você não toca há um mês desbotam suavemente e, após três meses, se juntam num calmo grupo \"Em repouso\" no fim. Nada é apagado: elas só deixam de pedir atenção."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "É apenas uma dica visual; um toque acorda um flutuante na hora."
+          ]
+        }
+      ],
+      "searchTitle": "flutuantes em repouso",
+      "searchKeywords": "repouso, flutuante, anytime, desbotar, envelhecer, inativo, antigo, calma",
+      "searchBody": "tarefas anytime intocadas desaparecem e descansam, mantendo a lista calma. tarefas anytime que voce nao toca ha um mes desbotam suavemente e, apos tres meses, se juntam num calmo grupo \"em repouso\" no fim. nada e apagado: elas so deixam de pedir atencao. e apenas uma dica visual; um toque acorda um flutuante na hora."
+    },
+    {
       "id": "promote-and-float",
       "section": "ORGANIZING",
       "sectionOrder": 3,

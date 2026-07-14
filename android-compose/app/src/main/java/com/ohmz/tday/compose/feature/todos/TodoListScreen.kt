@@ -102,7 +102,11 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalContext
+import com.ohmz.tday.compose.core.data.RestingFloatersPreferenceStore
+import com.ohmz.tday.shared.floater.FloaterResting
+import com.ohmz.tday.shared.floater.FloaterRestingTier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -261,6 +265,7 @@ fun TodoListScreen(
     val colorScheme = MaterialTheme.colorScheme
     val view = LocalView.current
     val context = LocalContext.current
+    val restingFloatersEnabled = remember { RestingFloatersPreferenceStore(context).isEnabled() }
     val zoneId = remember { ZoneId.systemDefault() }
     val selectedList = uiState.lists.firstOrNull { it.id == uiState.listId }
     val selectedListColorKey = selectedList?.color
@@ -1096,6 +1101,7 @@ fun TodoListScreen(
                                         }
                                         TimelineTaskRow(
                                             modifier = rowModifier
+                                                .alpha(restingAlphaFor(uiState.mode, todo, restingFloatersEnabled))
                                                 .timelineInAppDropTarget(
                                                     targetId = "row-${section.key}-${todo.id}",
                                                     section = section,
@@ -4691,3 +4697,17 @@ private fun modeAccentColor(
 }
 
 private const val FLOATER_LIST_CONTAINER_COLOR_WEIGHT = 0.66f
+
+/** Dim factor for a "resting" floater row: 1f = normal, lower = faded/dormant. */
+private fun restingAlphaFor(
+    mode: TodoListMode,
+    todo: TodoItem,
+    enabled: Boolean,
+): Float {
+    if (!enabled || mode != TodoListMode.FLOATER || todo.completed) return 1f
+    return when (FloaterResting.tierFor(todo.updatedAt?.toEpochMilli(), System.currentTimeMillis())) {
+        FloaterRestingTier.RESTING -> 0.45f
+        FloaterRestingTier.FADING -> 0.6f
+        else -> 1f
+    }
+}

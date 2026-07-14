@@ -75,6 +75,11 @@ object GuideCatalog {
             body = listOf(para(GuideTopicIds.FLOATERS_VS_TODOS), tip(GuideTopicIds.FLOATERS_VS_TODOS)),
         ),
         topic(
+            GuideTopicIds.RESTING_FLOATERS, GuideSectionId.ORGANIZING, "waves",
+            setOf(WEB, ANDROID, IOS), badge = GuideBadge.HIDDEN_GEM, sinceVersion = "0.6.0",
+            body = listOf(para(GuideTopicIds.RESTING_FLOATERS), tip(GuideTopicIds.RESTING_FLOATERS)),
+        ),
+        topic(
             GuideTopicIds.PROMOTE_AND_FLOAT, GuideSectionId.ORGANIZING, "refresh-cw",
             setOf(WEB, ANDROID, IOS), sinceVersion = "0.3.0",
             body = listOf(para(GuideTopicIds.PROMOTE_AND_FLOAT), tip(GuideTopicIds.PROMOTE_AND_FLOAT)),

@@ -227,6 +227,8 @@ fun SettingsScreen(
                         ),
                     )
                 }
+                SettingsDivider()
+                RestingFloatersRow()
             }
 
             SettingsSectionCard {
@@ -1319,6 +1321,39 @@ private fun ThemeModeSelector(
  * "Hold reminders between HH:MM and HH:MM" — entirely local. The receiver re-arms any
  * reminder that would fire in the window for the window end.
  */
+/** Toggle for the "resting floaters" display cue (dim untouched Anytime tasks). */
+@Composable
+private fun RestingFloatersRow() {
+    val colorScheme = MaterialTheme.colorScheme
+    val context = LocalContext.current
+    val store = remember { com.ohmz.tday.compose.core.data.RestingFloatersPreferenceStore(context.applicationContext) }
+    var enabled by remember { mutableStateOf(store.isEnabled()) }
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = stringResource(R.string.settings_resting_floaters),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.ExtraBold,
+            color = colorScheme.onSurface,
+        )
+        Switch(
+            checked = enabled,
+            onCheckedChange = {
+                enabled = it
+                store.setEnabled(it)
+            },
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = Color.White,
+                checkedTrackColor = colorScheme.secondary,
+                checkedBorderColor = Color.Transparent,
+            ),
+        )
+    }
+}
+
 @Composable
 private fun QuietHoursRow() {
     val colorScheme = MaterialTheme.colorScheme

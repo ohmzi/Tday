@@ -462,3 +462,30 @@ extension Date {
         self = Date(timeIntervalSince1970: TimeInterval(epochMilliseconds) / 1_000)
     }
 }
+
+// MARK: - Resting floaters (client-only aging)
+
+/// On/off toggle for the "resting floaters" display cue (dim Anytime tasks untouched
+/// for 30d+). Default on. UserDefaults-backed, mirroring ThemeStore's style.
+struct RestingFloatersStore {
+    private let defaults = UserDefaults.standard
+    private static let key = "floater.resting.enabled"
+
+    var isEnabled: Bool {
+        get { defaults.object(forKey: Self.key) as? Bool ?? true }
+        nonmutating set { defaults.set(newValue, forKey: Self.key) }
+    }
+}
+
+enum FloaterRestingTier {
+    case active, fading, resting
+}
+
+/// Swift twin of the shared Kotlin FloaterResting.tierFor. updatedAt is READ-ONLY input.
+func floaterRestingTier(updatedAt: Date?, now: Date) -> FloaterRestingTier {
+    guard let updatedAt, updatedAt.timeIntervalSince1970 > 0 else { return .active }
+    let ageDays = now.timeIntervalSince(updatedAt) / 86_400
+    if ageDays >= 90 { return .resting }
+    if ageDays >= 30 { return .fading }
+    return .active
+}

@@ -2159,6 +2159,18 @@ struct TodoListScreen: View {
             )
     }
 
+    /// Dim factor for a "resting" floater row: 1 = normal, lower = faded/dormant.
+    private func restingRowOpacity(for todo: TodoItem) -> Double {
+        guard viewModel.mode == .floater, !todo.completed, RestingFloatersStore().isEnabled else {
+            return 1
+        }
+        switch floaterRestingTier(updatedAt: todo.updatedAt, now: Date()) {
+        case .resting: return 0.45
+        case .fading: return 0.6
+        case .active: return 1
+        }
+    }
+
     private func minimalTimelineRow(_ todo: TodoItem, in section: TodoTimelineSection, flashHighlight: Bool = false) -> some View {
         let listMeta = todo.listId.flatMap { listId in
             viewModel.lists.first(where: { $0.id == listId })
@@ -2241,7 +2253,7 @@ struct TodoListScreen: View {
             .padding(.vertical, TodoTimelineMetrics.minimalRowVerticalPadding)
             .contentShape(Rectangle())
         }
-        .opacity(isFading ? 0 : (draggedTodo?.id == todo.id ? 0.7 : 1))
+        .opacity((isFading ? 0 : (draggedTodo?.id == todo.id ? 0.7 : 1)) * restingRowOpacity(for: todo))
         .scaleEffect(isFading ? 0.985 : 1, anchor: .center)
         .offset(y: isFading ? -10 : 0)
         .animation(.easeInOut(duration: 0.26), value: isFading)

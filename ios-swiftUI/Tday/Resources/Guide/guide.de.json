@@ -395,6 +395,41 @@
       "searchBody": "aufgaben ohne datum leben in jederzeit; aufgaben mit datum in home. eine geplante aufgabe hat ein falligkeitsdatum und erscheint in home und im kalender. ein floater hat kein datum — er wartet still in deinem jederzeit-feed, bis du bereit bist. nutze floater fur „irgendwann“-vorhaben, die den heutigen tag nicht uberladen sollen. floater erscheinen nie im kalender — dieser platz ist nur fur datierte vorhaben."
     },
     {
+      "id": "resting-floaters",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "waves",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.6.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Ruhende Floater",
+      "summary": "Unberührte Anytime-Aufgaben verblassen und ruhen, damit die Liste ruhig bleibt.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Anytime-Aufgaben, die du einen Monat nicht angefasst hast, verblassen sanft, und nach drei Monaten sammeln sie sich in einer ruhigen Gruppe „Ruhend“ unten. Nichts wird gelöscht – sie fordern nur keine Aufmerksamkeit mehr."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Nur ein Anzeigehinweis; ein Tippen weckt einen Floater sofort."
+          ]
+        }
+      ],
+      "searchTitle": "ruhende floater",
+      "searchKeywords": "ruhen, floater, anytime, verblassen, altern, inaktiv, alt, ruhe",
+      "searchBody": "unberuhrte anytime-aufgaben verblassen und ruhen, damit die liste ruhig bleibt. anytime-aufgaben, die du einen monat nicht angefasst hast, verblassen sanft, und nach drei monaten sammeln sie sich in einer ruhigen gruppe „ruhend“ unten. nichts wird geloscht – sie fordern nur keine aufmerksamkeit mehr. nur ein anzeigehinweis; ein tippen weckt einen floater sofort."
+    },
+    {
       "id": "promote-and-float",
       "section": "ORGANIZING",
       "sectionOrder": 3,

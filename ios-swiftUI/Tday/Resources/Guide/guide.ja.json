@@ -395,6 +395,41 @@
       "searchBody": "日付なしのタスクはエニタイムに、日付ありのタスクはホームに。 予定付きタスクには締め切り日があり、ホームとカレンダーに表示されます。フローターには日付がなく — 準備ができるまでエニタイムフィードで静かに待ちます。今日を散らかしたくない「いつか」やることには、フローターを使いましょう。 フローターはカレンダーには一切表示されません — その場所は日付のある予定だけのものです。"
     },
     {
+      "id": "resting-floaters",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "waves",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.6.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "休眠フローター",
+      "summary": "手つかずの Anytime タスクは静かに薄れて休み、リストを穏やかに保ちます。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "1か月触れていない Anytime タスクはそっと薄くなり、3か月後には下部の穏やかな「休眠」グループにまとまります。削除はされません。あなたが戻るまで注目を求めなくなるだけです。"
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "表示上の合図だけです。タップすればすぐに呼び戻せます。"
+          ]
+        }
+      ],
+      "searchTitle": "休眠フローター",
+      "searchKeywords": "休眠, フローター, anytime, フェード, 薄く, 経年, 休止, 古い, 静か",
+      "searchBody": "手つかずの anytime タスクは静かに薄れて休み、リストを穏やかに保ちます。 1か月触れていない anytime タスクはそっと薄くなり、3か月後には下部の穏やかな「休眠」グループにまとまります。削除はされません。あなたが戻るまで注目を求めなくなるだけです。 表示上の合図だけです。タップすればすぐに呼び戻せます。"
+    },
+    {
       "id": "promote-and-float",
       "section": "ORGANIZING",
       "sectionOrder": 3,

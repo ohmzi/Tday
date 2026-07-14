@@ -395,6 +395,41 @@
       "searchBody": "las tareas sin fecha viven en en cualquier momento; las que tienen fecha, en inicio. una tarea programada tiene fecha de vencimiento y aparece en inicio y en el calendario. un flotante no tiene fecha: espera con calma en tu vista en cualquier momento hasta que estes listo. usa los flotantes para lo de «algun dia» que no deberia llenar el hoy. los flotantes nunca aparecen en el calendario: ese espacio es solo para lo que tiene fecha."
     },
     {
+      "id": "resting-floaters",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "waves",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.6.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Flotantes en reposo",
+      "summary": "Las tareas de Anytime sin tocar se atenúan y reposan para mantener la calma.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Las tareas de Anytime que no tocas en un mes se atenúan suavemente, y tras tres meses se agrupan en un tranquilo grupo \"En reposo\" al final. Nada se borra: solo dejan de reclamar atención hasta que vuelvas."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Es solo una señal visual; un toque despierta un flotante al instante."
+          ]
+        }
+      ],
+      "searchTitle": "flotantes en reposo",
+      "searchKeywords": "reposo, flotante, anytime, atenuar, envejecer, inactivo, viejo, calma",
+      "searchBody": "las tareas de anytime sin tocar se atenuan y reposan para mantener la calma. las tareas de anytime que no tocas en un mes se atenuan suavemente, y tras tres meses se agrupan en un tranquilo grupo \"en reposo\" al final. nada se borra: solo dejan de reclamar atencion hasta que vuelvas. es solo una senal visual; un toque despierta un flotante al instante."
+    },
+    {
       "id": "promote-and-float",
       "section": "ORGANIZING",
       "sectionOrder": 3,

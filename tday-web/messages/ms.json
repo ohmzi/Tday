@@ -678,6 +678,10 @@
       "disabled": "Dilumpuhkan",
       "delete": "Padam webhook",
       "none": "Belum ada webhook"
+    },
+    "restingFloaters": {
+      "title": "Floater berehat",
+      "toggle": "Pudarkan tugasan Anytime yang tidak disentuh"
     }
   },
   "summary": {
@@ -1093,6 +1097,13 @@
         "keywords": "senyap, waktu, jangan ganggu, malam, tidur, peringatan, jadual",
         "body": "Tetapkan tetingkap — contohnya 22:00 hingga 07:00 — dan mana-mana peringatan yang akan berbunyi di dalamnya ditahan sehingga tamat. Pada peranti sahaja; peringatan tempatan menunggu pagi.",
         "tip": "Tetingkap boleh melepasi tengah malam (22:00 → 07:00); pengiraan menanganinya."
+      },
+      "resting-floaters": {
+        "title": "Floater berehat",
+        "summary": "Tugasan Anytime yang tidak disentuh pudar dan berehat, memastikan senarai tenang.",
+        "keywords": "rehat, floater, anytime, pudar, malap, penuaan, tidak aktif, lama, tenang",
+        "body": "Tugasan Anytime yang tidak anda sentuh selama sebulan akan pudar perlahan, dan selepas tiga bulan ia berkumpul dalam kumpulan tenang \"Berehat\" di bawah. Tiada yang dipadam — ia cuma berhenti menuntut perhatian sehingga anda kembali.",
+        "tip": "Ia hanya isyarat paparan; satu ketik menghidupkan semula floater."
       }
     }
   },
