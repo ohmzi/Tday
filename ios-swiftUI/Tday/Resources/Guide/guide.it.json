@@ -1,5 +1,5 @@
 {
-  "currentVersion": "0.5.0",
+  "currentVersion": "0.6.0",
   "ui": {
     "title": "Guida e consigli",
     "subtitle": "Tutto ciò che T'Day può fare — le funzioni evidenti e quelle nascoste.",
@@ -159,19 +159,19 @@
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Non serve aprire un selettore di date. Digita una frase con la data direttamente nel titolo dell'attività e T'Day la interpreta sul dispositivo — senza account né connessione — evidenziando la parte che ha compreso e pianificando l'attività."
+            "Niente selettori. Scrivi una data (\"domani 15\"), una ripetizione (\"every day\", \"weekly\", \"every weekday\") o una priorità (\"!\", \"!!\" o \"high\"/\"low\" finale) direttamente nel titolo. T'Day la analizza sul dispositivo — senza account né rete —, evidenzia la data compresa e compila orario, ricorrenza e priorità."
           ]
         },
         {
           "type": "EXAMPLE",
           "texts": [
-            "dentista martedì alle 15"
+            "dentista martedì 15 every weekday !!"
           ]
         }
       ],
       "searchTitle": "digita la data",
       "searchKeywords": "linguaggio naturale, data, domani, prossima settimana, analizza, veloce, intelligente, nlp, sul dispositivo",
-      "searchBody": "scrivi la data nel titolo e t'day la pianifica per te. non serve aprire un selettore di date. digita una frase con la data direttamente nel titolo dell'attivita e t'day la interpreta sul dispositivo — senza account ne connessione — evidenziando la parte che ha compreso e pianificando l'attivita. dentista martedi alle 15"
+      "searchBody": "scrivi la data nel titolo e t'day la pianifica per te. niente selettori. scrivi una data (\"domani 15\"), una ripetizione (\"every day\", \"weekly\", \"every weekday\") o una priorita (\"!\", \"!!\" o \"high\"/\"low\" finale) direttamente nel titolo. t'day la analizza sul dispositivo — senza account ne rete —, evidenzia la data compresa e compila orario, ricorrenza e priorita. dentista martedi 15 every weekday !!"
     },
     {
       "id": "calendar-views",

@@ -2,6 +2,7 @@ package com.ohmz.tday.compose.core.data.todo
 
 import com.joestelmach.natty.Parser
 import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
+import com.ohmz.tday.shared.nlp.RecurrencePriorityGrammar
 import java.util.Date
 import java.util.TimeZone
 
@@ -24,12 +25,22 @@ object OnDeviceTitleNlpParser {
 
         val parser = Parser(TimeZone.getDefault())
         val groups = runCatching { parser.parse(text, Date(referenceEpochMs)) }.getOrNull()
-            ?: return null
-        if (groups.isEmpty()) return null
+        val group = groups?.firstOrNull()
+        val dates = group?.dates
 
-        val group = groups[0]
-        val dates = group.dates
-        if (dates.isNullOrEmpty()) return null
+        // No date phrase: still capture recurrence/priority so "gym every day !" works.
+        if (group == null || dates.isNullOrEmpty()) {
+            val grammar = RecurrencePriorityGrammar.parse(trimmed)
+            if (grammar.rrule == null && grammar.priority == null) return null
+            return TodoTitleNlpResponse(
+                cleanTitle = grammar.cleanTitle,
+                matchedText = null,
+                matchStart = 0,
+                dueEpochMs = null,
+                rrule = grammar.rrule,
+                priority = grammar.priority,
+            )
+        }
 
         val matchedText = group.text ?: ""
         // Use the time the user named: the start for a single time, the end only
@@ -54,23 +65,31 @@ object OnDeviceTitleNlpParser {
         }
 
         if (matchStart < 0) {
+            val grammar = RecurrencePriorityGrammar.parse(trimmed)
             return TodoTitleNlpResponse(
-                cleanTitle = trimmed,
+                cleanTitle = grammar.cleanTitle,
                 matchedText = null,
                 matchStart = 0,
                 dueEpochMs = dueDate.time,
+                rrule = grammar.rrule,
+                priority = grammar.priority,
             )
         }
 
         val before = text.substring(0, matchStart)
         val after = text.substring((matchStart + matchedText.length).coerceAtMost(text.length))
-        val cleanTitle = "$before$after".replace(Regex("\\s{2,}"), " ").trim()
+        val dateStripped = "$before$after".replace(Regex("\\s{2,}"), " ").trim()
+        // Recurrence/priority are stripped from the date-cleaned title; the highlight
+        // span (matchStart/matchedText) still points at the date phrase in the raw text.
+        val grammar = RecurrencePriorityGrammar.parse(dateStripped)
 
         return TodoTitleNlpResponse(
-            cleanTitle = cleanTitle,
+            cleanTitle = grammar.cleanTitle,
             matchedText = matchedText.ifEmpty { null },
             matchStart = matchStart,
             dueEpochMs = dueDate.time,
+            rrule = grammar.rrule,
+            priority = grammar.priority,
         )
     }
 }

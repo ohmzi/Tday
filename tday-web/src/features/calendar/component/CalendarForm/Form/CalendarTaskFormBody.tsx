@@ -78,6 +78,8 @@ export default function CalendarTaskFormBody({
             setTitle={setTitle}
             titleRef={titleRef}
             setDateRange={setDateRange}
+            setPriority={setPriority}
+            setRruleOptions={setRruleOptions}
           />
         </div>
         <SheetDivider />

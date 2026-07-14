@@ -58,3 +58,51 @@ final class CacheMappersDateParsingTests: XCTestCase {
         XCTAssertNil(timelineRescheduleTargetDate(sectionId: "month-24316", today: today, calendar: calendar))
     }
 }
+
+final class RecurrencePriorityGrammarTests: XCTestCase {
+    func testCapturesTheFiveRecurrencePresets() {
+        XCTAssertEqual(RecurrencePriorityGrammar.parse("water plants every day").rrule, "RRULE:FREQ=DAILY;INTERVAL=1")
+        XCTAssertEqual(RecurrencePriorityGrammar.parse("standup weekly").rrule, "RRULE:FREQ=WEEKLY;INTERVAL=1")
+        XCTAssertEqual(
+            RecurrencePriorityGrammar.parse("gym every weekday").rrule,
+            "RRULE:FREQ=WEEKLY;INTERVAL=1;BYDAY=MO,TU,WE,TH,FR"
+        )
+        XCTAssertEqual(RecurrencePriorityGrammar.parse("rent monthly").rrule, "RRULE:FREQ=MONTHLY;INTERVAL=1")
+        XCTAssertEqual(RecurrencePriorityGrammar.parse("taxes annually").rrule, "RRULE:FREQ=YEARLY;INTERVAL=1")
+    }
+
+    func testWeekdayWinsOverWeekSubstring() {
+        XCTAssertEqual(
+            RecurrencePriorityGrammar.parse("report weekdays").rrule,
+            "RRULE:FREQ=WEEKLY;INTERVAL=1;BYDAY=MO,TU,WE,TH,FR"
+        )
+    }
+
+    func testCapturesPriority() {
+        let bang = RecurrencePriorityGrammar.parse("call mom !!")
+        XCTAssertEqual(bang.priority, "High")
+        XCTAssertEqual(bang.cleanTitle, "call mom")
+        XCTAssertEqual(RecurrencePriorityGrammar.parse("email boss !").priority, "Medium")
+        XCTAssertEqual(RecurrencePriorityGrammar.parse("fix bug high priority").priority, "High")
+        XCTAssertEqual(RecurrencePriorityGrammar.parse("buy milk low").priority, "Low")
+    }
+
+    func testIgnoresNonTrailingBareWords() {
+        XCTAssertNil(RecurrencePriorityGrammar.parse("buy low-fat milk").priority)
+        XCTAssertNil(RecurrencePriorityGrammar.parse("review highlights").priority)
+    }
+
+    func testCapturesRecurrenceAndPriorityTogether() {
+        let result = RecurrencePriorityGrammar.parse("gym every day !!")
+        XCTAssertEqual(result.rrule, "RRULE:FREQ=DAILY;INTERVAL=1")
+        XCTAssertEqual(result.priority, "High")
+        XCTAssertEqual(result.cleanTitle, "gym")
+    }
+
+    func testLeavesPlainTitlesUntouched() {
+        let result = RecurrencePriorityGrammar.parse("buy groceries")
+        XCTAssertEqual(result.cleanTitle, "buy groceries")
+        XCTAssertNil(result.rrule)
+        XCTAssertNil(result.priority)
+    }
+}

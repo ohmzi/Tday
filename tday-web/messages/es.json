@@ -766,8 +766,8 @@
         "title": "Escribe la fecha",
         "summary": "Escribe la fecha en el título y T'Day la programa por ti.",
         "keywords": "lenguaje natural, fecha, mañana, próxima semana, interpretar, rápido, inteligente, nlp, en el dispositivo",
-        "body": "No necesitas abrir un selector de fechas. Escribe una expresión de fecha directamente en el título de la tarea y T'Day la interpreta en el dispositivo (sin cuenta ni conexión), resaltando la parte que entendió y programando la tarea.",
-        "example": "dentista martes 15h"
+        "body": "No necesitas selectores. Escribe una fecha (\"mañana 15h\"), una repetición (\"every day\", \"weekly\", \"every weekday\") o una prioridad (\"!\", \"!!\" o \"high\"/\"low\" al final) directamente en el título. T'Day lo analiza en el dispositivo —sin cuenta ni red—, resalta la fecha que entendió y rellena el horario, la repetición y la prioridad.",
+        "example": "dentista martes 15h every weekday !!"
       },
       "calendar-views": {
         "title": "Vistas de calendario",
