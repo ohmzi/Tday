@@ -1038,6 +1038,15 @@
         "step0": "在设置中粘贴端点 URL 并选择要接收的事件。",
         "step1": "添加 webhook 并复制其签名密钥——只显示一次。",
         "step2": "在处理每个请求前验证 X-Tday-Signature 的 HMAC。"
+      },
+      "unifiedpush": {
+        "title": "UnifiedPush（Android）",
+        "summary": "无需 Google，通过你自己的分发器接收服务器推送。",
+        "keywords": "unifiedpush, ntfy, 推送, 通知, 自托管, 分发器, fcm",
+        "body": "在服务器模式下，T'Day 可通过 UnifiedPush 而非 Google 的 FCM 发送服务器通知——数据留在你自己的服务器和分发器上。安装一个分发器应用（如 ntfy），然后在设置中开启 UnifiedPush。本地提醒不受影响，照常工作。",
+        "step0": "从应用商店安装 UnifiedPush 分发器，例如 ntfy。",
+        "step1": "在设置 → 提醒中开启 UnifiedPush 并选择分发器。",
+        "step2": "服务器随后会将变更推送到该端点；可随时关闭。"
       }
     }
   },

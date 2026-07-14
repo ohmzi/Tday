@@ -1,14 +1,17 @@
-package com.ohmz.tday.models.request
+package com.ohmz.tday.compose.core.model
 
 import kotlinx.serialization.Serializable
 
+/**
+ * Registers a push endpoint with the backend. For UnifiedPush the encryption keys are
+ * omitted (the server POSTs plaintext to the distributor endpoint).
+ */
 @Serializable
 data class PushSubscribeRequest(
     val endpoint: String,
-    // Web Push carries encryption keys; UnifiedPush omits them (endpoint-only).
+    val transport: String = "unifiedpush",
     val p256dh: String = "",
     val auth: String = "",
-    val transport: String = "webpush",
 )
 
 @Serializable

@@ -1038,6 +1038,15 @@
         "step0": "Nas Configurações, cole a URL do endpoint e escolha os eventos.",
         "step1": "Adicione o webhook e copie o segredo de assinatura — exibido uma vez.",
         "step2": "Verifique o HMAC X-Tday-Signature em cada requisição antes de agir."
+      },
+      "unifiedpush": {
+        "title": "UnifiedPush (Android)",
+        "summary": "Push do servidor sem Google, pelo seu distribuidor.",
+        "keywords": "unifiedpush, ntfy, push, notificações, auto-hospedado, distribuidor, fcm",
+        "body": "No Modo Servidor, o T'Day pode entregar notificações do servidor via UnifiedPush em vez do FCM do Google — mantendo seus dados no seu servidor e no seu distribuidor. Instale um app distribuidor (como o ntfy) e ative o UnifiedPush nas Configurações. Os lembretes locais continuam funcionando.",
+        "step0": "Instale um distribuidor UnifiedPush como o ntfy na sua loja de apps.",
+        "step1": "Em Configurações → Lembretes, ative o UnifiedPush e escolha o distribuidor.",
+        "step2": "Seu servidor passa a enviar mudanças a esse endpoint; desative quando quiser."
       }
     }
   },

@@ -619,4 +619,9 @@
     <string name="settings_data_confirm_body">Esto añade %1$d elementos a tu cuenta. Nada de lo que ya tienes se cambia ni se elimina.</string>
     <string name="settings_data_confirm_import">Importar</string>
     <string name="settings_data_confirm_cancel">Cancelar</string>
+    <string name="settings_unifiedpush_title">UnifiedPush</string>
+    <string name="settings_unifiedpush_subtitle">Recibe notificaciones del servidor con tu propio distribuidor</string>
+    <string name="settings_unifiedpush_enabled">Activado</string>
+    <string name="settings_unifiedpush_disabled">Desactivado</string>
+    <string name="settings_unifiedpush_none">No se encontró ningún distribuidor UnifiedPush. Instala uno (p. ej. ntfy) e inténtalo de nuevo.</string>
 </resources>
