@@ -91,12 +91,16 @@ class WidgetCreateTaskActivity : AppCompatActivity() {
     }
 }
 
+// Internal so ShareReceiverActivity presents the exact same frameless create
+// sheet (theme, workspace guard, submit path) the widgets use.
 @Composable
-private fun WidgetCreateTaskSurface(
+internal fun WidgetCreateTaskSurface(
     createTarget: WidgetCreateTarget,
     widgetCreateTaskSubmitter: WidgetCreateTaskSubmitter,
     onExit: () -> Unit,
     onOpenMainApp: () -> Unit,
+    initialTitle: String? = null,
+    initialNotes: String? = null,
 ) {
     val appViewModel: AppViewModel = hiltViewModel()
     val appUiState by appViewModel.uiState.collectAsStateWithLifecycle()
@@ -129,6 +133,8 @@ private fun WidgetCreateTaskSurface(
                 lists = todoUiState.lists,
                 defaultScheduled = createTarget.showScheduleControls,
                 showScheduleControls = createTarget.showScheduleControls,
+                initialTitle = initialTitle,
+                initialNotes = initialNotes,
                 presentImmediately = true,
                 onParseTaskTitleNlp = if (createTarget.showScheduleControls) {
                     todoViewModel::parseTaskTitleNlp
@@ -162,7 +168,7 @@ private fun WidgetCreateTaskSurface(
     }
 }
 
-private enum class WidgetCreateTarget(
+internal enum class WidgetCreateTarget(
     val mode: TodoListMode,
     val showScheduleControls: Boolean,
 ) {
