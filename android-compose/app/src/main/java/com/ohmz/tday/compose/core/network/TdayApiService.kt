@@ -37,6 +37,8 @@ import com.ohmz.tday.compose.core.model.ListDetailResponse
 import com.ohmz.tday.compose.core.model.ListMembersResponse
 import com.ohmz.tday.compose.core.model.ListsResponse
 import com.ohmz.tday.compose.core.model.MessageResponse
+import com.ohmz.tday.compose.core.model.PushSubscribeRequest
+import com.ohmz.tday.compose.core.model.PushUnsubscribeRequest
 import com.ohmz.tday.compose.core.model.MobileProbeResponse
 import com.ohmz.tday.compose.core.model.PreferencesDto
 import com.ohmz.tday.compose.core.model.PreferencesResponse
@@ -440,4 +442,14 @@ interface TdayApiService {
     suspend fun syncTimezone(
         @Header("X-User-Timezone") timezone: String,
     ): Response<JsonObject>
+
+    @POST("/api/notifications/subscribe")
+    suspend fun subscribePush(
+        @Body payload: PushSubscribeRequest,
+    ): Response<MessageResponse>
+
+    @HTTP(method = "DELETE", path = "/api/notifications/unsubscribe", hasBody = true)
+    suspend fun unsubscribePush(
+        @Body payload: PushUnsubscribeRequest,
+    ): Response<MessageResponse>
 }

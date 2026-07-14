@@ -1,5 +1,6 @@
 package com.ohmz.tday.compose.feature.settings
 
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateDpAsState
@@ -75,6 +76,7 @@ import androidx.core.view.HapticFeedbackConstantsCompat
 import androidx.core.view.ViewCompat
 import com.ohmz.tday.compose.BuildConfig
 import com.ohmz.tday.compose.R
+import org.unifiedpush.android.connector.UnifiedPush
 import com.ohmz.tday.compose.core.data.server.VersionCheckResult
 import com.ohmz.tday.compose.core.model.SecurityAnswerInput
 import com.ohmz.tday.compose.core.model.SecurityQuestion
@@ -185,6 +187,11 @@ fun SettingsScreen(
                     selectedDayAhead = selectedDayAhead,
                     onDayAheadSelected = onDayAheadSelected,
                 )
+                // Server pushes via UnifiedPush are only meaningful in Server Mode.
+                if (!isLocalMode) {
+                    SettingsDivider()
+                    UnifiedPushRow()
+                }
                 SettingsDivider()
                 SettingsSectionTitle(title = stringResource(R.string.settings_language))
                 LanguageSelector()
@@ -1304,6 +1311,68 @@ private fun ThemeModeSelector(
         onOptionSelected = onThemeModeSelected,
         label = { mode -> context.getString(mode.labelRes) },
     )
+}
+
+/**
+ * Server Mode only: enable/disable UnifiedPush so a self-hoster's distributor (e.g.
+ * ntfy) delivers server pushes. Registration completes asynchronously — the endpoint
+ * is sent to the backend by [com.ohmz.tday.compose.core.push.UnifiedPushReceiver].
+ */
+@Composable
+private fun UnifiedPushRow() {
+    val colorScheme = MaterialTheme.colorScheme
+    val context = LocalContext.current
+    var registered by remember { mutableStateOf(UnifiedPush.getAckDistributor(context) != null) }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .clickable {
+                if (registered) {
+                    UnifiedPush.unregisterApp(context)
+                    registered = false
+                } else {
+                    val distributors = UnifiedPush.getDistributors(context)
+                    if (distributors.isEmpty()) {
+                        Toast.makeText(
+                            context,
+                            context.getString(R.string.settings_unifiedpush_none),
+                            Toast.LENGTH_LONG,
+                        ).show()
+                    } else {
+                        UnifiedPush.registerAppWithDialog(context)
+                        registered = true
+                    }
+                }
+            }
+            .padding(vertical = 2.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = stringResource(R.string.settings_unifiedpush_title),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.ExtraBold,
+                color = colorScheme.onSurface,
+            )
+            Text(
+                text = stringResource(R.string.settings_unifiedpush_subtitle),
+                style = MaterialTheme.typography.labelSmall,
+                color = colorScheme.onSurfaceVariant,
+            )
+        }
+        Text(
+            text = stringResource(
+                if (registered) R.string.settings_unifiedpush_enabled
+                else R.string.settings_unifiedpush_disabled,
+            ),
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.ExtraBold,
+            color = colorScheme.secondary,
+        )
+    }
 }
 
 @Composable

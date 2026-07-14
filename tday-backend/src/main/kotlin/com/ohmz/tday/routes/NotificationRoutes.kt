@@ -28,7 +28,7 @@ fun Route.notificationRoutes() {
         post("/subscribe") {
             call.withAuth { user ->
                 val body = call.receive<PushSubscribeRequest>()
-                pushService.subscribe(user.id, body.endpoint, body.p256dh, body.auth)
+                pushService.subscribe(user.id, body.endpoint, body.p256dh, body.auth, body.transport)
                     .map { mapOf("message" to "subscribed") }
             }
         }

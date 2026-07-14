@@ -618,4 +618,9 @@
     <string name="settings_data_confirm_body">アカウントに %1$d 件を追加します。既存のデータは変更も削除もされません。</string>
     <string name="settings_data_confirm_import">インポート</string>
     <string name="settings_data_confirm_cancel">キャンセル</string>
+    <string name="settings_unifiedpush_title">UnifiedPush</string>
+    <string name="settings_unifiedpush_subtitle">自分のディストリビューター経由でサーバープッシュを受信</string>
+    <string name="settings_unifiedpush_enabled">オン</string>
+    <string name="settings_unifiedpush_disabled">オフ</string>
+    <string name="settings_unifiedpush_none">UnifiedPush ディストリビューターが見つかりません。インストール（例: ntfy）して再試行してください。</string>
 </resources>

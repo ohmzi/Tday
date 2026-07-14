@@ -9,6 +9,9 @@ object PushSubscriptions : Table("push_subscriptions") {
     val endpoint = text("endpoint")
     val p256dh = text("p256dh")
     val auth = varchar("auth", 64)
+    // "webpush" (VAPID/encrypted, browsers + iOS) or "unifiedpush" (plain POST to the
+    // distributor endpoint, Android self-hosters). Defaults to webpush via V18.
+    val transport = varchar("transport", 20).default("webpush")
     val createdAt = datetime("createdAt")
 
     override val primaryKey = PrimaryKey(id)

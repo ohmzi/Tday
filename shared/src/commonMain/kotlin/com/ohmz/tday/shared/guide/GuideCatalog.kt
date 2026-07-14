@@ -146,6 +146,12 @@ object GuideCatalog {
             body = listOf(para(GuideTopicIds.PUSH_NOTIFICATIONS)),
             helpAnchors = listOf("settings-notifications"),
         ),
+        topic(
+            GuideTopicIds.UNIFIEDPUSH, GuideSectionId.RECURRENCE_AND_REMINDERS, "bell-ring",
+            setOf(ANDROID), serverOnly = true, sinceVersion = "0.5.0",
+            body = listOf(para(GuideTopicIds.UNIFIEDPUSH), steps(GuideTopicIds.UNIFIEDPUSH, 3)),
+            helpAnchors = listOf("settings-notifications"),
+        ),
 
         // ── Widgets & surfaces ───────────────────────────────────────────
         topic(
