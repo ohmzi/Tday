@@ -822,6 +822,42 @@
       "searchBody": "提醒通知带有“暂停1小时”和“今晚”操作。 提醒来得不巧时，无需打开应用：“暂停1小时”会在一小时后重新送达同一条提醒，“今晚”则把任务本身移到今天 19:00。“今晚”适用于一次性任务——重复任务请在应用内改期，以保持系列完整。 暂停只是推迟通知；在你移动任务之前，它仍保留原定时间。"
     },
     {
+      "id": "quiet-hours",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "bell",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.6.0",
+      "deepLink": null,
+      "helpAnchors": [
+        "settings-notifications"
+      ],
+      "title": "免打扰时段",
+      "summary": "夜间暂缓提醒，睡觉时不会有任何响动。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "设置一个时段——例如 22:00 到 07:00——凡是会在其中触发的提醒都会保留到时段结束。仅在设备本地生效；本地提醒会等到早晨。"
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "时段可跨越午夜（22:00 → 07:00），计算会自动处理。"
+          ]
+        }
+      ],
+      "searchTitle": "免打扰时段",
+      "searchKeywords": "免打扰, 时段, 勿扰, 夜间, 睡眠, 提醒, 计划",
+      "searchBody": "夜间暂缓提醒，睡觉时不会有任何响动。 设置一个时段——例如 22:00 到 07:00——凡是会在其中触发的提醒都会保留到时段结束。仅在设备本地生效；本地提醒会等到早晨。 时段可跨越午夜（22:00 → 07:00），计算会自动处理。"
+    },
+    {
       "id": "day-ahead",
       "section": "RECURRENCE_AND_REMINDERS",
       "sectionOrder": 4,

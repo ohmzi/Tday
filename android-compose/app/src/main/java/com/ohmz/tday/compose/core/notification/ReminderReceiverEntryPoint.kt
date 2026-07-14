@@ -9,6 +9,7 @@ import dagger.hilt.components.SingletonComponent
 @InstallIn(SingletonComponent::class)
 interface ReminderReceiverEntryPoint {
     fun reminderPreferenceStore(): ReminderPreferenceStore
+    fun quietHoursPreferenceStore(): QuietHoursPreferenceStore
     fun taskReminderScheduler(): TaskReminderScheduler
     fun todoRepository(): TodoRepository
 }

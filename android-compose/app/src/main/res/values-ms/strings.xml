@@ -625,4 +625,7 @@
     <string name="settings_unifiedpush_none">Tiada pengedar UnifiedPush ditemui. Pasang satu (cth. ntfy) dan cuba lagi.</string>
     <string name="create_task_repeat_suggestion">Ulang %1$s?</string>
     <string name="create_task_repeat_suggestion_dismiss">Tolak</string>
+    <string name="settings_quiet_hours">Waktu senyap</string>
+    <string name="settings_quiet_hours_start">Mula</string>
+    <string name="settings_quiet_hours_end">Tamat</string>
 </resources>

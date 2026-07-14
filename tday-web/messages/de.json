@@ -1086,6 +1086,13 @@
         "keywords": "woche, rückblick, zusammenfassung, sonntag, erledigt, retrospektive",
         "body": "Sonntags zeigt T'Day einen kurzen Rückblick in deinem Heute-Feed: wie viele Aufgaben du diese Woche erledigt hast, dein aktivster Tag und die älteste endlich erledigte Aufgabe. Er stammt aus deinem Erledigt-Verlauf.",
         "tip": "Keine Lust? Schließe ihn – bis nächste Woche bleibt er weg."
+      },
+      "quiet-hours": {
+        "title": "Ruhezeiten",
+        "summary": "Halte Erinnerungen nachts zurück, damit nichts im Schlaf summt.",
+        "keywords": "ruhe, zeiten, nicht stören, nacht, schlaf, erinnerungen, zeitplan",
+        "body": "Lege ein Fenster fest – etwa 22:00 bis 07:00 – und jede Erinnerung, die darin ausgelöst würde, wird bis zum Ende gehalten. Nur auf dem Gerät; lokale Erinnerungen warten bis zum Morgen.",
+        "tip": "Das Fenster darf Mitternacht überschreiten (22:00 → 07:00); die Berechnung passt."
       }
     }
   },

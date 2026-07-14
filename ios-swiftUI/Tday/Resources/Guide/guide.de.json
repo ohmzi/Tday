@@ -822,6 +822,42 @@
       "searchBody": "erinnerungs-benachrichtigungen bieten „1 std. spater“ und „heute abend“. kommt eine erinnerung ungelegen, musst du die app nicht offnen: „1 std. spater“ stellt dieselbe erinnerung eine stunde spater erneut zu, „heute abend“ verschiebt die aufgabe selbst auf 19:00 heute. heute abend gilt fur einmalige aufgaben — wiederkehrende termine planst du in der app um, damit die serie intakt bleibt. spater wiederholen verzogert nur die benachrichtigung; die aufgabe behalt ihre ursprungliche zeit, bis du sie verschiebst."
     },
     {
+      "id": "quiet-hours",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "bell",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.6.0",
+      "deepLink": null,
+      "helpAnchors": [
+        "settings-notifications"
+      ],
+      "title": "Ruhezeiten",
+      "summary": "Halte Erinnerungen nachts zurück, damit nichts im Schlaf summt.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Lege ein Fenster fest – etwa 22:00 bis 07:00 – und jede Erinnerung, die darin ausgelöst würde, wird bis zum Ende gehalten. Nur auf dem Gerät; lokale Erinnerungen warten bis zum Morgen."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Das Fenster darf Mitternacht überschreiten (22:00 → 07:00); die Berechnung passt."
+          ]
+        }
+      ],
+      "searchTitle": "ruhezeiten",
+      "searchKeywords": "ruhe, zeiten, nicht storen, nacht, schlaf, erinnerungen, zeitplan",
+      "searchBody": "halte erinnerungen nachts zuruck, damit nichts im schlaf summt. lege ein fenster fest – etwa 22:00 bis 07:00 – und jede erinnerung, die darin ausgelost wurde, wird bis zum ende gehalten. nur auf dem gerat; lokale erinnerungen warten bis zum morgen. das fenster darf mitternacht uberschreiten (22:00 → 07:00); die berechnung passt."
+    },
+    {
       "id": "day-ahead",
       "section": "RECURRENCE_AND_REMINDERS",
       "sectionOrder": 4,

@@ -34,7 +34,8 @@
     ],
     "reminder": [
       "reminders",
-      "reminder-snooze"
+      "reminder-snooze",
+      "quiet-hours"
     ],
     "api key": [],
     "floater": [

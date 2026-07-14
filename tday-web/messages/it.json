@@ -1086,6 +1086,13 @@
         "keywords": "settimana, riepilogo, resoconto, domenica, completato, retrospettiva",
         "body": "La domenica, T'Day mostra un breve resoconto nel feed Oggi: quante attività hai completato questa settimana, il giorno più intenso e la più vecchia finalmente finita. Nasce dalla cronologia completata.",
         "tip": "Non è il momento? Chiudilo e resta via fino alla prossima settimana."
+      },
+      "quiet-hours": {
+        "title": "Ore di silenzio",
+        "summary": "Trattieni i promemoria di notte così nulla suona mentre dormi.",
+        "keywords": "silenzio, ore, non disturbare, notte, sonno, promemoria, orario",
+        "body": "Imposta una fascia — ad es. 22:00–07:00 — e ogni promemoria che suonerebbe dentro viene trattenuto fino alla fine. Solo sul dispositivo; i promemoria locali aspettano il mattino.",
+        "tip": "La fascia può superare la mezzanotte (22:00 → 07:00); il calcolo lo gestisce."
       }
     }
   },

@@ -822,6 +822,42 @@
       "searchBody": "reminder notifications carry snooze 1h and tonight actions. when a reminder fires at a bad moment, you don't have to open the app: snooze 1h re-delivers the same reminder an hour later, and tonight moves the task itself to 19:00 today. tonight works for one-off tasks — recurring occurrences reschedule from the app so their series stays intact. snoozing only delays the notification; the task keeps its original due time until you move it."
     },
     {
+      "id": "quiet-hours",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "bell",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.6.0",
+      "deepLink": null,
+      "helpAnchors": [
+        "settings-notifications"
+      ],
+      "title": "Quiet hours",
+      "summary": "Hold reminders overnight so nothing buzzes while you sleep.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Set a window — say 22:00 to 07:00 — and any reminder that would fire inside it is held until the window ends. It's on-device only; local reminders just wait for morning."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "The window can cross midnight (22:00 → 07:00); the math handles it."
+          ]
+        }
+      ],
+      "searchTitle": "quiet hours",
+      "searchKeywords": "quiet, hours, do not disturb, night, sleep, reminders, silence, schedule",
+      "searchBody": "hold reminders overnight so nothing buzzes while you sleep. set a window — say 22:00 to 07:00 — and any reminder that would fire inside it is held until the window ends. it's on-device only; local reminders just wait for morning. the window can cross midnight (22:00 → 07:00); the math handles it."
+    },
+    {
       "id": "day-ahead",
       "section": "RECURRENCE_AND_REMINDERS",
       "sectionOrder": 4,
