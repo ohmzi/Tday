@@ -143,6 +143,8 @@ fun CreateTaskBottomSheet(
     defaultScheduled: Boolean = true,
     showScheduleControls: Boolean = true,
     initialDueEpochMs: Long? = null,
+    initialTitle: String? = null,
+    initialNotes: String? = null,
     presentImmediately: Boolean = false,
     onParseTaskTitleNlp: (suspend (
         title: String,
@@ -174,7 +176,7 @@ fun CreateTaskBottomSheet(
 
     val isEditMode = editingTask != null
     var title by rememberSaveable(editingTask?.id) {
-        mutableStateOf(editingTask?.title.orEmpty())
+        mutableStateOf(editingTask?.title ?: initialTitle.orEmpty())
     }
     // The natural-language date phrase detected in the title (e.g. "July 29 at
     // 8pm"). Kept visible & highlighted in the field as you type, and stripped
@@ -189,7 +191,7 @@ fun CreateTaskBottomSheet(
         mutableStateOf(-1)
     }
     var notes by rememberSaveable(editingTask?.id) {
-        mutableStateOf(editingTask?.description.orEmpty())
+        mutableStateOf(editingTask?.description ?: initialNotes.orEmpty())
     }
     var selectedPriority by rememberSaveable(editingTask?.id, defaultPriority) {
         mutableStateOf(
