@@ -719,6 +719,41 @@
       "searchBody": "faca uma tarefa repetir-se diariamente, semanalmente e mais. defina uma tarefa para se repetir e ela volta na sua propria cadencia. escolha entre as predefinicoes — todos os dias, dias uteis, semana ou mes — e concluir uma ocorrencia deixa o resto da serie intacto. regar as plantas · todas as semanas"
     },
     {
+      "id": "repeat-suggestions",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "repeat",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.6.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Sugestões de repetição",
+      "summary": "O T'Day nota tarefas concluídas num ritmo e sugere repeti-las.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Quando você conclui a mesma tarefa num ritmo constante — regar as plantas toda semana, pagar o aluguel todo mês — o T'Day percebe e oferece um chip de um toque para repeti-la. Ele lê apenas seu histórico concluído no dispositivo; nada sai dele."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Não tem interesse? Toque no ✕ e esse título não perguntará de novo."
+          ]
+        }
+      ],
+      "searchTitle": "sugestoes de repeticao",
+      "searchKeywords": "repetir, sugestao, recorrente, ritmo, habito, padrao, automatico",
+      "searchBody": "o t'day nota tarefas concluidas num ritmo e sugere repeti-las. quando voce conclui a mesma tarefa num ritmo constante — regar as plantas toda semana, pagar o aluguel todo mes — o t'day percebe e oferece um chip de um toque para repeti-la. ele le apenas seu historico concluido no dispositivo; nada sai dele. nao tem interesse? toque no ✕ e esse titulo nao perguntara de novo."
+    },
+    {
       "id": "reminders",
       "section": "RECURRENCE_AND_REMINDERS",
       "sectionOrder": 4,

@@ -624,4 +624,6 @@
     <string name="settings_unifiedpush_enabled">Ativado</string>
     <string name="settings_unifiedpush_disabled">Desativado</string>
     <string name="settings_unifiedpush_none">Nenhum distribuidor UnifiedPush encontrado. Instale um (ex. ntfy) e tente novamente.</string>
+    <string name="create_task_repeat_suggestion">Repetir %1$s?</string>
+    <string name="create_task_repeat_suggestion_dismiss">Dispensar</string>
 </resources>

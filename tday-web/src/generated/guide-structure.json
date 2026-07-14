@@ -576,6 +576,38 @@
       "sinceVersion": null
     },
     {
+      "id": "repeat-suggestions",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "icon": "repeat",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "titleKey": "guide.topics.repeat-suggestions.title",
+      "summaryKey": "guide.topics.repeat-suggestions.summary",
+      "keywordsKey": "guide.topics.repeat-suggestions.keywords",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "keys": [
+            "guide.topics.repeat-suggestions.body"
+          ]
+        },
+        {
+          "type": "TIP",
+          "keys": [
+            "guide.topics.repeat-suggestions.tip"
+          ]
+        }
+      ],
+      "badge": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "serverOnly": false,
+      "sinceVersion": "0.6.0"
+    },
+    {
       "id": "push-notifications",
       "section": "RECURRENCE_AND_REMINDERS",
       "icon": "bell-ring",

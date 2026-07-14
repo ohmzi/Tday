@@ -381,6 +381,14 @@
       "editAsInstance": "Als Instanz bearbeiten",
       "delete": "Löschen",
       "Move to": "Verschieben nach..."
+    },
+    "repeatSuggestion": {
+      "prompt": "{{cadence}} wiederholen?",
+      "dismiss": "Verwerfen",
+      "everyDay": "täglich",
+      "everyWeek": "wöchentlich",
+      "everyMonth": "monatlich",
+      "everyYear": "jährlich"
     }
   },
   "sidebar": {
@@ -1047,6 +1055,13 @@
         "step0": "Installiere einen UnifiedPush-Distributor wie ntfy aus deinem App-Store.",
         "step1": "Aktiviere in Einstellungen → Erinnerungen UnifiedPush und wähle den Distributor.",
         "step2": "Dein Server pusht nun Änderungen an diesen Endpunkt; jederzeit abschaltbar."
+      },
+      "repeat-suggestions": {
+        "title": "Wiederholungs-Vorschläge",
+        "summary": "T'Day erkennt Aufgaben mit Rhythmus und bietet an, sie zu wiederholen.",
+        "keywords": "wiederholen, vorschlag, wiederkehrend, rhythmus, gewohnheit, muster, automatisch",
+        "body": "Wenn du dieselbe Aufgabe in gleichmäßigem Rhythmus erledigst – Pflanzen jede Woche gießen, Miete monatlich zahlen – bemerkt T'Day das und bietet einen Ein-Tipp-Chip zum Wiederholen an. Es liest nur deinen lokalen Erledigt-Verlauf; nichts verlässt das Gerät.",
+        "tip": "Kein Interesse? Tippe auf das ✕ und dieser Titel fragt nicht wieder."
       }
     }
   },

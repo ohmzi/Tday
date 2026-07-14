@@ -466,6 +466,7 @@ fun TdayApp(
                                                         homeViewModel.createTask(payload)
                                                     },
                                                     onParseTaskTitleNlp = homeViewModel::parseTaskTitleNlp,
+                                                    onSuggestRepeat = homeViewModel::suggestRepeatRrule,
                                                     onCreateList = { name, color, iconKey ->
                                                         homeViewModel.createList(
                                                             name = name,

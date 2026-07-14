@@ -29,6 +29,7 @@ import ListDot from "@/components/ListDot";
 import FloaterListDot from "@/features/floaterList/component/FloaterListDot";
 import { GuideHelpLink } from "@/features/guide/GuideHelpLink";
 import NLPTitleInput from "./NLPTitleInput";
+import RepeatSuggestionChip from "./RepeatSuggestionChip";
 import TaskSelectorOverlays, { type TaskSelector } from "./TodoFormSelectors";
 import { priorityLabelKey, repeatLabelKey } from "./labels";
 import { getPriorityFlag } from "@/lib/priority";
@@ -144,6 +145,12 @@ const TodoForm = ({
           className="w-full bg-transparent px-[18px] py-3 text-base font-bold text-foreground placeholder:font-bold placeholder:text-muted-foreground/60 focus:outline-hidden"
         />
       </SheetCard>
+
+      <RepeatSuggestionChip
+        title={title}
+        rruleOptions={rruleOptions}
+        setRruleOptions={setRruleOptions}
+      />
 
       {/* Schedule toggle (create only) — off turns the task into a floater. */}
       {!isEditing && (

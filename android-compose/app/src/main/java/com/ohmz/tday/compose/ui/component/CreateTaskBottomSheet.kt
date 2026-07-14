@@ -68,6 +68,7 @@ import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -102,8 +103,10 @@ import com.ohmz.tday.compose.ui.theme.TdayTaskCompleteAccent
 import com.ohmz.tday.compose.ui.theme.tdayListAccentColorOrNull
 import com.ohmz.tday.compose.ui.theme.tdayListIconForKey
 import com.ohmz.tday.compose.ui.theme.tdayPriorityColor
+import com.ohmz.tday.compose.core.data.RepeatSuggestionDismissalStore
 import com.ohmz.tday.shared.guide.GuideTopicIds
 import com.ohmz.tday.shared.nlp.RecurrencePriorityGrammar
+import com.ohmz.tday.shared.nlp.RepeatSuggestionEngine
 import kotlinx.coroutines.delay
 import java.time.Instant
 import java.time.LocalDate
@@ -151,6 +154,7 @@ fun CreateTaskBottomSheet(
         title: String,
         referenceDueEpochMs: Long,
     ) -> TodoTitleNlpResponse?)? = null,
+    onSuggestRepeat: (suspend (title: String) -> String?)? = null,
     onDismiss: () -> Unit,
     onCreateTask: (CreateTaskPayload) -> Unit,
     onUpdateTask: ((todo: TodoItem, payload: CreateTaskPayload) -> Unit)? = null,
@@ -264,6 +268,25 @@ fun CreateTaskBottomSheet(
             }
         }
         parseResult.priority?.let { selectedPriority = canonicalPriorityValue(it) }
+    }
+
+    // "Make this repeat?" suggestion from the completed-history cadence.
+    val repeatSuggestionContext = LocalContext.current
+    val repeatDismissalStore = remember { RepeatSuggestionDismissalStore(repeatSuggestionContext) }
+    var suggestedRepeatRrule by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(title, onSuggestRepeat, selectedRepeat) {
+        val lookup = onSuggestRepeat
+        if (lookup == null || editingTask != null || title.isBlank() ||
+            selectedRepeat != RepeatPreset.NONE.name
+        ) {
+            suggestedRepeatRrule = null
+            return@LaunchedEffect
+        }
+        delay(400)
+        val rrule = runCatching { lookup(title) }.getOrNull()
+        suggestedRepeatRrule = rrule?.takeUnless {
+            repeatDismissalStore.isDismissed(RepeatSuggestionEngine.normalize(title))
+        }
     }
     var dueDatePickerOpen by rememberSaveable { mutableStateOf(false) }
     var dueTimePickerOpen by rememberSaveable { mutableStateOf(false) }
@@ -537,6 +560,23 @@ fun CreateTaskBottomSheet(
                                     onNotesChange = { notes = it },
                                     onKeyboardDone = dismissKeyboard,
                                 )
+
+                                suggestedRepeatRrule?.let { rrule ->
+                                    RepeatSuggestionChip(
+                                        rrule = rrule,
+                                        onAccept = {
+                                            if (showScheduleControls) scheduleEnabled = true
+                                            selectedRepeat = repeatPresetFromRrule(rrule).name
+                                            suggestedRepeatRrule = null
+                                        },
+                                        onDismiss = {
+                                            repeatDismissalStore.markDismissed(
+                                                RepeatSuggestionEngine.normalize(title),
+                                            )
+                                            suggestedRepeatRrule = null
+                                        },
+                                    )
+                                }
 
                                 if (showScheduleControls) {
                                     SectionHeading(stringResource(R.string.create_task_section_schedule))
@@ -1131,6 +1171,59 @@ private fun repeatSwatchColor(preset: RepeatPreset): Color {
 private fun repeatPresetFromRrule(rrule: String?): RepeatPreset {
     if (rrule.isNullOrBlank()) return RepeatPreset.NONE
     return RepeatPreset.entries.firstOrNull { it.rrule == rrule } ?: RepeatPreset.NONE
+}
+
+/** "Make this repeat?" pill — accept sets the recurrence, ✕ dismisses it (persisted). */
+@Composable
+private fun RepeatSuggestionChip(
+    rrule: String,
+    onAccept: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    val cadence = stringResource(repeatPresetFromRrule(rrule).labelRes)
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Row(
+            modifier = Modifier
+                .weight(1f, fill = false)
+                .clip(RoundedCornerShape(999.dp))
+                .background(colorScheme.secondary.copy(alpha = 0.15f))
+                .clickable(onClick = onAccept)
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_repeat),
+                contentDescription = null,
+                tint = colorScheme.secondary,
+                modifier = Modifier.size(16.dp),
+            )
+            Text(
+                text = stringResource(R.string.create_task_repeat_suggestion, cadence),
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.ExtraBold,
+                color = colorScheme.secondary,
+            )
+        }
+        Box(
+            modifier = Modifier
+                .clip(RoundedCornerShape(999.dp))
+                .clickable(onClick = onDismiss)
+                .padding(6.dp),
+        ) {
+            Icon(
+                imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_x),
+                contentDescription = stringResource(R.string.create_task_repeat_suggestion_dismiss),
+                tint = colorScheme.onSurface.copy(alpha = 0.5f),
+                modifier = Modifier.size(16.dp),
+            )
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

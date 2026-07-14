@@ -381,6 +381,14 @@
       "editAsInstance": "编辑此实例",
       "delete": "删除",
       "Move to": "移动到..."
+    },
+    "repeatSuggestion": {
+      "prompt": "每{{cadence}}重复？",
+      "dismiss": "忽略",
+      "everyDay": "天",
+      "everyWeek": "周",
+      "everyMonth": "月",
+      "everyYear": "年"
     }
   },
   "sidebar": {
@@ -1047,6 +1055,13 @@
         "step0": "从应用商店安装 UnifiedPush 分发器，例如 ntfy。",
         "step1": "在设置 → 提醒中开启 UnifiedPush 并选择分发器。",
         "step2": "服务器随后会将变更推送到该端点；可随时关闭。"
+      },
+      "repeat-suggestions": {
+        "title": "重复建议",
+        "summary": "T'Day 发现你按节奏完成的任务，并建议将其设为重复。",
+        "keywords": "重复, 建议, 循环, 节奏, 习惯, 模式, 智能, 自动",
+        "body": "当你以稳定节奏反复完成同一任务——每周浇花、每月付房租——T'Day 会注意到，并提供一键芯片将其设为重复。它只读取设备上的已完成历史，任何数据都不会离开设备。",
+        "tip": "不需要？点 ✕，该标题不再询问。"
       }
     }
   },

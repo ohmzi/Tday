@@ -381,6 +381,14 @@
       "editAsInstance": "Edit sebagai kejadian",
       "delete": "Padam",
       "Move to": "Pindah ke..."
+    },
+    "repeatSuggestion": {
+      "prompt": "Ulang {{cadence}}?",
+      "dismiss": "Tolak",
+      "everyDay": "setiap hari",
+      "everyWeek": "setiap minggu",
+      "everyMonth": "setiap bulan",
+      "everyYear": "setiap tahun"
     }
   },
   "sidebar": {
@@ -1047,6 +1055,13 @@
         "step0": "Pasang pengedar UnifiedPush seperti ntfy dari gedung apl anda.",
         "step1": "Dalam Tetapan → Peringatan, hidupkan UnifiedPush dan pilih pengedar.",
         "step2": "Pelayan anda kini menolak perubahan ke endpoint itu; matikan bila-bila masa."
+      },
+      "repeat-suggestions": {
+        "title": "Cadangan ulangan",
+        "summary": "T'Day mengesan tugasan yang anda selesaikan berirama dan menawarkan ulangan.",
+        "keywords": "ulang, cadangan, berulang, irama, tabiat, corak, automatik",
+        "body": "Apabila anda terus menyelesaikan tugasan yang sama secara berirama — menyiram pokok setiap minggu, membayar sewa setiap bulan — T'Day perasan dan menawarkan cip satu ketuk untuk mengulanginya. Ia hanya membaca sejarah selesai pada peranti; tiada apa yang keluar dari peranti.",
+        "tip": "Tak berminat? Ketik ✕ dan tajuk itu tidak akan bertanya lagi."
       }
     }
   },

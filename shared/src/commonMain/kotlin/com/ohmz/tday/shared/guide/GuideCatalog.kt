@@ -126,6 +126,11 @@ object GuideCatalog {
             helpAnchors = listOf("recurrence-picker"),
         ),
         topic(
+            GuideTopicIds.REPEAT_SUGGESTIONS, GuideSectionId.RECURRENCE_AND_REMINDERS, "repeat",
+            setOf(WEB, ANDROID, IOS), sinceVersion = "0.6.0",
+            body = listOf(para(GuideTopicIds.REPEAT_SUGGESTIONS), tip(GuideTopicIds.REPEAT_SUGGESTIONS)),
+        ),
+        topic(
             GuideTopicIds.REMINDERS, GuideSectionId.RECURRENCE_AND_REMINDERS, "bell",
             setOf(ANDROID, IOS),
             body = listOf(para(GuideTopicIds.REMINDERS), tip(GuideTopicIds.REMINDERS)),

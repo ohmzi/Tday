@@ -2,6 +2,7 @@
   "vectors": {
     "repeat": [
       "recurrence-presets",
+      "repeat-suggestions",
       "nlp-date-syntax"
     ],
     "swipe": [

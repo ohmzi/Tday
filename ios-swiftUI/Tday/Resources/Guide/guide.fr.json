@@ -719,6 +719,41 @@
       "searchBody": "faites repeter une tache chaque jour, chaque semaine, et plus encore. reglez une tache pour qu'elle se repete et elle revient d'elle-meme a son rythme. choisissez parmi les prereglages — chaque jour, jour ouvre, semaine ou mois — et terminer une occurrence laisse le reste de la serie intact. arroser les plantes · chaque semaine"
     },
     {
+      "id": "repeat-suggestions",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "repeat",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.6.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Suggestions de répétition",
+      "summary": "T'Day repère les tâches finies à un rythme et propose de les répéter.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Quand tu finis la même tâche à un rythme régulier — arroser les plantes chaque semaine, payer le loyer chaque mois — T'Day le remarque et propose une puce à un toucher pour la répéter. Il ne lit que ton historique terminé sur l'appareil ; rien n'en sort."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Pas intéressé ? Touche la ✕ et ce titre ne redemandera plus."
+          ]
+        }
+      ],
+      "searchTitle": "suggestions de repetition",
+      "searchKeywords": "repeter, suggestion, recurrent, rythme, habitude, motif, automatique",
+      "searchBody": "t'day repere les taches finies a un rythme et propose de les repeter. quand tu finis la meme tache a un rythme regulier — arroser les plantes chaque semaine, payer le loyer chaque mois — t'day le remarque et propose une puce a un toucher pour la repeter. il ne lit que ton historique termine sur l'appareil ; rien n'en sort. pas interesse ? touche la ✕ et ce titre ne redemandera plus."
+    },
+    {
       "id": "reminders",
       "section": "RECURRENCE_AND_REMINDERS",
       "sectionOrder": 4,

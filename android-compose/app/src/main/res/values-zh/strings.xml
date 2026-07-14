@@ -623,4 +623,6 @@
     <string name="settings_unifiedpush_enabled">开</string>
     <string name="settings_unifiedpush_disabled">关</string>
     <string name="settings_unifiedpush_none">未找到 UnifiedPush 分发器。请安装一个（如 ntfy）后重试。</string>
+    <string name="create_task_repeat_suggestion">重复%1$s？</string>
+    <string name="create_task_repeat_suggestion_dismiss">忽略</string>
 </resources>

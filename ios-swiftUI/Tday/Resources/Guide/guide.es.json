@@ -719,6 +719,41 @@
       "searchBody": "haz que una tarea se repita a diario, cada semana y mas. configura una tarea para que se repita y volvera segun su propia programacion. elige entre los ajustes predefinidos —cada dia, entre semana, cada semana o cada mes— y completar una ocurrencia deja intacta el resto de la serie. regar las plantas · cada semana"
     },
     {
+      "id": "repeat-suggestions",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "repeat",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.6.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Sugerencias de repetición",
+      "summary": "T'Day detecta tareas que completas con un ritmo y ofrece repetirlas.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Cuando completas la misma tarea con un ritmo constante —regar las plantas cada semana, pagar el alquiler cada mes— T'Day lo detecta y ofrece un chip de un toque para repetirla. Solo lee tu historial completado en el dispositivo; nada sale de él."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "¿No te interesa? Toca la ✕ y ese título no volverá a preguntar."
+          ]
+        }
+      ],
+      "searchTitle": "sugerencias de repeticion",
+      "searchKeywords": "repetir, sugerencia, recurrente, ritmo, habito, patron, automatico",
+      "searchBody": "t'day detecta tareas que completas con un ritmo y ofrece repetirlas. cuando completas la misma tarea con un ritmo constante —regar las plantas cada semana, pagar el alquiler cada mes— t'day lo detecta y ofrece un chip de un toque para repetirla. solo lee tu historial completado en el dispositivo; nada sale de el. ¿no te interesa? toca la ✕ y ese titulo no volvera a preguntar."
+    },
+    {
       "id": "reminders",
       "section": "RECURRENCE_AND_REMINDERS",
       "sectionOrder": 4,

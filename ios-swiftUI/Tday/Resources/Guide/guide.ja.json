@@ -719,6 +719,41 @@
       "searchBody": "タスクを毎日・毎週などで繰り返す。 タスクを繰り返しに設定すると、決めたスケジュールで自動的に戻ってきます。プリセット — 毎日、平日、毎週、毎月 — から選べて、1回分を完了しても残りのシリーズはそのまま残ります。 植物に水やり · 毎週"
     },
     {
+      "id": "repeat-suggestions",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "repeat",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.6.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "繰り返しの提案",
+      "summary": "T'Day はリズムよく終える作業を見つけ、繰り返しを提案します。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "同じ作業を一定のリズムで終え続けると——毎週の水やり、毎月の家賃——T'Day がそれに気づき、ワンタップで繰り返しにするチップを表示します。読み取るのは端末内の完了履歴だけで、データは端末から出ません。"
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "不要ですか？ ✕ をタップすれば、そのタイトルは再び尋ねません。"
+          ]
+        }
+      ],
+      "searchTitle": "繰り返しの提案",
+      "searchKeywords": "繰り返し, 提案, 定期, リズム, 習慣, パターン, 自動",
+      "searchBody": "t'day はリズムよく終える作業を見つけ、繰り返しを提案します。 同じ作業を一定のリズムで終え続けると——毎週の水やり、毎月の家賃——t'day がそれに気づき、ワンタップで繰り返しにするチップを表示します。読み取るのは端末内の完了履歴だけで、データは端末から出ません。 不要ですか？ ✕ をタップすれば、そのタイトルは再び尋ねません。"
+    },
+    {
       "id": "reminders",
       "section": "RECURRENCE_AND_REMINDERS",
       "sectionOrder": 4,

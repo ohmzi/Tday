@@ -417,6 +417,9 @@ struct HomeScreen: View {
                 onParseTaskTitleNlp: { title, dueRef in
                     await viewModel.parseTaskTitleNlp(text: title, referenceDueEpochMs: dueRef)
                 },
+                onSuggestRepeat: { title in
+                    await viewModel.suggestRepeatRrule(title: title)
+                },
                 onDismiss: { showingCreateTask = false },
                 onSubmit: { payload in
                     await viewModel.createTask(payload)
