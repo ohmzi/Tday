@@ -15,6 +15,15 @@ data class ChangePasswordRequest(
 )
 
 @Serializable
+data class CreateApiKeyRequest(
+    val label: String? = null,
+    /** "READ" or "FULL"; defaults to FULL when absent or unrecognised. */
+    val scope: String? = null,
+    /** Optional lifetime in days; the key never expires when absent. */
+    val expiresInDays: Long? = null,
+)
+
+@Serializable
 data class PreferencesPatchRequest(
     val sortBy: String? = null,
     val groupBy: String? = null,

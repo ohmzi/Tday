@@ -565,7 +565,14 @@
       "generating": "正在生成...",
       "revokeKey": "撤销密钥",
       "generateKey": "生成密钥",
-      "copyNow": "立即复制您的 API 密钥——它不会再次显示。"
+      "copyNow": "立即复制您的 API 密钥——它不会再次显示。",
+      "labelPlaceholder": "密钥名称（可选）",
+      "scopeRead": "只读",
+      "scopeFull": "完全访问",
+      "scopeReadHint": "可读取但无法修改你的任务——适合仪表盘使用。",
+      "scopeFullHint": "可读取并修改你的账户。仅在信任的应用中使用。",
+      "unnamedKey": "未命名密钥",
+      "expired": "已过期"
     },
     "toast": {
       "apiKeyGenerated": "已生成 API 密钥。立即复制——它不会再次显示。",
@@ -949,9 +956,9 @@
         "title": "API 密钥与 Homarr",
         "summary": "用个人 API 密钥把你的任务显示在仪表盘上。",
         "keywords": "api密钥, homarr, 仪表盘, 集成, 令牌, 小组件, 家庭实验室, api key, dashboard, token",
-        "body": "在设置中生成一个个人 API 密钥，把你的任务展示到像 Homarr 这样的仪表盘上。该密钥与你的账户绑定，所以要妥善保管。",
+        "body": "在设置中生成个人 API 密钥，即可在 Homarr 等仪表盘上显示你的任务。为仪表盘选择只读密钥，使其永远无法修改你的数据；为密钥命名以便区分，并妥善保密。你可以创建多个密钥，并分别撤销其中任意一个。",
         "step0": "打开设置，找到 API 密钥卡片。",
-        "step1": "生成一个密钥并复制它——它只显示一次。",
+        "step1": "为仪表盘选择只读权限，生成密钥并复制——只会显示一次。",
         "step2": "把它粘贴到你仪表盘的 T'Day 小组件里。"
       },
       "ai-summary": {

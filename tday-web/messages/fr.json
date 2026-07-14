@@ -565,7 +565,14 @@
       "generating": "Génération...",
       "revokeKey": "Révoquer la clé",
       "generateKey": "Générer une clé",
-      "copyNow": "Copiez votre clé API maintenant — elle ne sera plus affichée."
+      "copyNow": "Copiez votre clé API maintenant — elle ne sera plus affichée.",
+      "labelPlaceholder": "Nom de la clé (facultatif)",
+      "scopeRead": "Lecture seule",
+      "scopeFull": "Accès complet",
+      "scopeReadHint": "Peut lire vos tâches mais pas les modifier — sûr pour les tableaux de bord.",
+      "scopeFullHint": "Peut lire et modifier votre compte. À utiliser uniquement en toute confiance.",
+      "unnamedKey": "Clé sans nom",
+      "expired": "Expirée"
     },
     "toast": {
       "apiKeyGenerated": "Clé API générée. Copiez-la maintenant — elle ne sera plus affichée.",
@@ -949,9 +956,9 @@
         "title": "Clé API et Homarr",
         "summary": "Affichez vos tâches sur un tableau de bord avec une clé API personnelle.",
         "keywords": "clé api, homarr, tableau de bord, intégration, jeton, widget, homelab",
-        "body": "Générez une clé API personnelle dans les Réglages pour faire apparaître vos tâches dans un tableau de bord comme Homarr. La clé est liée à votre compte, gardez-la donc privée.",
+        "body": "Génère une clé API personnelle dans les Réglages pour afficher tes tâches dans un tableau de bord comme Homarr. Choisis une clé en lecture seule pour les tableaux de bord afin qu'elle ne puisse jamais modifier tes données, donne-lui un nom pour distinguer les clés et garde-la privée. Tu peux avoir plusieurs clés et en révoquer une seule à la fois.",
         "step0": "Ouvrez les Réglages et trouvez la carte de clé API.",
-        "step1": "Générez une clé et copiez-la — elle n'est affichée qu'une fois.",
+        "step1": "Choisis la portée lecture seule pour les tableaux de bord, génère la clé et copie-la — elle n'apparaît qu'une fois.",
         "step2": "Collez-la dans le widget T'Day de votre tableau de bord."
       },
       "ai-summary": {
