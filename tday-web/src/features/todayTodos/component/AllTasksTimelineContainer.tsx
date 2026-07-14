@@ -8,6 +8,7 @@ import ScreenWatermark from "@/components/app/ScreenWatermark";
 import { timelineScopeAccentColors } from "@/components/app/nativeScreenTheme";
 import NativeAppBrandButton from "@/components/app/NativeAppBrandButton";
 import SummaryButton from "@/features/summary/SummaryButton";
+import WeekInReviewCard from "@/features/summary/WeekInReviewCard";
 import TodoListLoading from "@/components/todo/component/TodoListLoading";
 import TodoGroup from "@/components/todo/component/TodoGroup";
 import TimelineSections from "@/components/todo/dnd/TimelineSections";
@@ -526,6 +527,8 @@ const AllTasksTimelineContainer = ({
           accentColor={timelineScopeAccentColors[scope]}
           icon={ScopeIcon}
         />
+
+        {scope === "today" && <WeekInReviewCard />}
 
         {todoLoading && <TodoListLoading heading={pageHeading} />}
 

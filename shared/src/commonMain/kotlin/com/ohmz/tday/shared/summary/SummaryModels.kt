@@ -11,7 +11,8 @@ enum class SummaryScope(val responseMode: String, val usesFloaters: Boolean = fa
     ALL("all"),
     PRIORITY("priority"),
     LIST("list"),
-    FLOATER("floater", usesFloaters = true);
+    FLOATER("floater", usesFloaters = true),
+    WEEK("week");
 
     companion object {
         fun from(value: String?): SummaryScope? {
@@ -23,6 +24,7 @@ enum class SummaryScope(val responseMode: String, val usesFloaters: Boolean = fa
                 "priority" -> PRIORITY
                 "list" -> LIST
                 "floater", "anytime" -> FLOATER
+                "week" -> WEEK
                 else -> null
             }
         }
@@ -47,4 +49,6 @@ data class SummaryTaskInput(
     val listId: String? = null,
     val completed: Boolean = false,
     val kind: String = "task",
+    /** When the task was completed (UTC epoch millis), for the WEEK retrospective. */
+    val completedAtEpochMs: Long? = null,
 )

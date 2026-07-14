@@ -9,6 +9,7 @@ package com.ohmz.tday.shared.summary
 internal data class SummaryStrings(
     val values: Map<String, String>,
     val monthsShort: List<String>,
+    val weekdaysShort: List<String> = emptyList(),
 ) {
     fun t(key: String, params: Map<String, String> = emptyMap()): String {
         var out = values[key] ?: SummaryStringBundles.en.values[key] ?: key

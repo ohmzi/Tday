@@ -389,6 +389,10 @@
       "everyWeek": "setiap minggu",
       "everyMonth": "setiap bulan",
       "everyYear": "setiap tahun"
+    },
+    "weekInReview": {
+      "title": "Imbasan Minggu",
+      "dismiss": "Tolak"
     }
   },
   "sidebar": {
@@ -727,6 +731,19 @@
       "Okt",
       "Nov",
       "Dis"
+    ],
+    "weekNone": "Belum ada tugasan diselesaikan minggu ini.",
+    "weekCleared": "Anda selesaikan {{count}} tugasan minggu ini.",
+    "weekBusiest": "Hari paling sibuk ialah {{day}} ({{count}}).",
+    "weekOldest": "Paling lama akhirnya diselesaikan: {{title}}.",
+    "weekdaysShort": [
+      "Isn",
+      "Sel",
+      "Rab",
+      "Kha",
+      "Jum",
+      "Sab",
+      "Ahd"
     ]
   },
   "guide": {
@@ -1062,6 +1079,13 @@
         "keywords": "ulang, cadangan, berulang, irama, tabiat, corak, automatik",
         "body": "Apabila anda terus menyelesaikan tugasan yang sama secara berirama — menyiram pokok setiap minggu, membayar sewa setiap bulan — T'Day perasan dan menawarkan cip satu ketuk untuk mengulanginya. Ia hanya membaca sejarah selesai pada peranti; tiada apa yang keluar dari peranti.",
         "tip": "Tak berminat? Ketik ✕ dan tajuk itu tidak akan bertanya lagi."
+      },
+      "week-in-review": {
+        "title": "Imbasan Minggu",
+        "summary": "Imbasan Ahad yang tenang tentang apa yang anda selesaikan.",
+        "keywords": "minggu, imbasan, ringkasan, ahad, selesai, retrospektif",
+        "body": "Pada hari Ahad, T'Day memaparkan imbasan ringkas dalam suapan Hari Ini anda: berapa tugasan diselesaikan minggu ini, hari paling sibuk, dan tugasan paling lama yang akhirnya siap. Ia dibina daripada sejarah selesai anda.",
+        "tip": "Tak berkenan? Tolak dan ia hilang sehingga minggu depan."
       }
     }
   },

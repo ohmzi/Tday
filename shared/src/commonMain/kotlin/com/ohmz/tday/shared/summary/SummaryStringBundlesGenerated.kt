@@ -39,8 +39,13 @@ internal object SummaryStringBundles {
             "windowNight" to "at night",
             "window_afternoon" to "afternoon",
             "window_morning" to "morning",
+            "weekNone" to "No tasks cleared this week yet.",
+            "weekCleared" to "You cleared {{count}} tasks this week.",
+            "weekBusiest" to "Busiest day was {{day}} ({{count}}).",
+            "weekOldest" to "Oldest you finally cleared: {{title}}.",
         ),
         monthsShort = listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"),
+        weekdaysShort = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"),
     )
     val es = SummaryStrings(
         values = mapOf(
@@ -76,8 +81,13 @@ internal object SummaryStringBundles {
             "windowNight" to "por la noche",
             "window_afternoon" to "tarde",
             "window_morning" to "mañana",
+            "weekNone" to "Aún no has completado tareas esta semana.",
+            "weekCleared" to "Completaste {{count}} tareas esta semana.",
+            "weekBusiest" to "El día más activo fue {{day}} ({{count}}).",
+            "weekOldest" to "La más antigua que por fin completaste: {{title}}.",
         ),
         monthsShort = listOf("ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"),
+        weekdaysShort = listOf("lun", "mar", "mié", "jue", "vie", "sáb", "dom"),
     )
     val fr = SummaryStrings(
         values = mapOf(
@@ -113,8 +123,13 @@ internal object SummaryStringBundles {
             "windowNight" to "le soir",
             "window_afternoon" to "après-midi",
             "window_morning" to "matin",
+            "weekNone" to "Aucune tâche terminée cette semaine.",
+            "weekCleared" to "Tu as terminé {{count}} tâches cette semaine.",
+            "weekBusiest" to "Jour le plus chargé : {{day}} ({{count}}).",
+            "weekOldest" to "La plus ancienne enfin terminée : {{title}}.",
         ),
         monthsShort = listOf("janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."),
+        weekdaysShort = listOf("lun", "mar", "mer", "jeu", "ven", "sam", "dim"),
     )
     val de = SummaryStrings(
         values = mapOf(
@@ -150,8 +165,13 @@ internal object SummaryStringBundles {
             "windowNight" to "in der Nacht",
             "window_afternoon" to "Nachmittag",
             "window_morning" to "Morgen",
+            "weekNone" to "Diese Woche noch keine Aufgaben erledigt.",
+            "weekCleared" to "Du hast diese Woche {{count}} Aufgaben erledigt.",
+            "weekBusiest" to "Aktivster Tag war {{day}} ({{count}}).",
+            "weekOldest" to "Die älteste endlich erledigte: {{title}}.",
         ),
         monthsShort = listOf("Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"),
+        weekdaysShort = listOf("Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"),
     )
     val it = SummaryStrings(
         values = mapOf(
@@ -187,8 +207,13 @@ internal object SummaryStringBundles {
             "windowNight" to "di notte",
             "window_afternoon" to "pomeriggio",
             "window_morning" to "mattina",
+            "weekNone" to "Nessuna attività completata questa settimana.",
+            "weekCleared" to "Hai completato {{count}} attività questa settimana.",
+            "weekBusiest" to "Giorno più intenso: {{day}} ({{count}}).",
+            "weekOldest" to "La più vecchia finalmente completata: {{title}}.",
         ),
         monthsShort = listOf("gen", "feb", "mar", "apr", "mag", "giu", "lug", "ago", "set", "ott", "nov", "dic"),
+        weekdaysShort = listOf("lun", "mar", "mer", "gio", "ven", "sab", "dom"),
     )
     val pt = SummaryStrings(
         values = mapOf(
@@ -224,8 +249,13 @@ internal object SummaryStringBundles {
             "windowNight" to "à noite",
             "window_afternoon" to "tarde",
             "window_morning" to "manhã",
+            "weekNone" to "Nenhuma tarefa concluída esta semana ainda.",
+            "weekCleared" to "Você concluiu {{count}} tarefas esta semana.",
+            "weekBusiest" to "Dia mais movimentado: {{day}} ({{count}}).",
+            "weekOldest" to "A mais antiga que enfim concluiu: {{title}}.",
         ),
         monthsShort = listOf("jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"),
+        weekdaysShort = listOf("seg", "ter", "qua", "qui", "sex", "sáb", "dom"),
     )
     val ru = SummaryStrings(
         values = mapOf(
@@ -261,8 +291,13 @@ internal object SummaryStringBundles {
             "windowNight" to "ночью",
             "window_afternoon" to "день",
             "window_morning" to "утро",
+            "weekNone" to "На этой неделе пока нет выполненных задач.",
+            "weekCleared" to "На этой неделе вы выполнили {{count}} задач.",
+            "weekBusiest" to "Самый активный день — {{day}} ({{count}}).",
+            "weekOldest" to "Самая старая, наконец выполненная: {{title}}.",
         ),
         monthsShort = listOf("янв.", "февр.", "мар.", "апр.", "мая", "июн.", "июл.", "авг.", "сент.", "окт.", "нояб.", "дек."),
+        weekdaysShort = listOf("пн", "вт", "ср", "чт", "пт", "сб", "вс"),
     )
     val zh = SummaryStrings(
         values = mapOf(
@@ -298,8 +333,13 @@ internal object SummaryStringBundles {
             "windowNight" to "晚上",
             "window_afternoon" to "下午",
             "window_morning" to "上午",
+            "weekNone" to "本周还没有完成的任务。",
+            "weekCleared" to "本周你完成了 {{count}} 项任务。",
+            "weekBusiest" to "最忙的一天是{{day}}（{{count}}）。",
+            "weekOldest" to "终于完成的最久任务：{{title}}。",
         ),
         monthsShort = listOf("1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"),
+        weekdaysShort = listOf("周一", "周二", "周三", "周四", "周五", "周六", "周日"),
     )
     val ja = SummaryStrings(
         values = mapOf(
@@ -335,8 +375,13 @@ internal object SummaryStringBundles {
             "windowNight" to "夜に",
             "window_afternoon" to "午後",
             "window_morning" to "午前",
+            "weekNone" to "今週はまだ完了したタスクがありません。",
+            "weekCleared" to "今週は {{count}} 件のタスクを完了しました。",
+            "weekBusiest" to "最も忙しかった日は{{day}}（{{count}}）。",
+            "weekOldest" to "ようやく片付いた最古のタスク：{{title}}。",
         ),
         monthsShort = listOf("1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"),
+        weekdaysShort = listOf("月", "火", "水", "木", "金", "土", "日"),
     )
     val ms = SummaryStrings(
         values = mapOf(
@@ -372,8 +417,13 @@ internal object SummaryStringBundles {
             "windowNight" to "pada waktu malam",
             "window_afternoon" to "petang",
             "window_morning" to "pagi",
+            "weekNone" to "Belum ada tugasan diselesaikan minggu ini.",
+            "weekCleared" to "Anda selesaikan {{count}} tugasan minggu ini.",
+            "weekBusiest" to "Hari paling sibuk ialah {{day}} ({{count}}).",
+            "weekOldest" to "Paling lama akhirnya diselesaikan: {{title}}.",
         ),
         monthsShort = listOf("Jan", "Feb", "Mac", "Apr", "Mei", "Jun", "Jul", "Ogo", "Sep", "Okt", "Nov", "Dis"),
+        weekdaysShort = listOf("Isn", "Sel", "Rab", "Kha", "Jum", "Sab", "Ahd"),
     )
 
     private val byLang: Map<String, SummaryStrings> = mapOf(
