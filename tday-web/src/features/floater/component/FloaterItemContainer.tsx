@@ -7,6 +7,11 @@ import TodoCheckbox from "@/components/ui/TodoCheckbox";
 import { TaskActionButtons } from "@/components/ui/TaskActionButtons";
 import FloaterListDot from "@/features/floaterList/component/FloaterListDot";
 import { getPriorityFlag } from "@/lib/priority";
+import {
+  floaterRestingTier,
+  floaterUpdatedEpochMs,
+  isRestingFloatersEnabled,
+} from "@/lib/floaterResting";
 import { useFloaterListMetaData } from "@/features/floaterList/query/get-floater-list-meta";
 import { useCompleteFloater } from "@/features/floater/query/complete-floater";
 import { useDeleteFloater } from "@/features/floater/query/delete-floater";
@@ -37,6 +42,11 @@ export default function FloaterItemContainer({
   const { completeMutateFn } = useCompleteFloater();
   const { deleteMutateFn } = useDeleteFloater();
   const { title, description, completed, priority, listID } = floater;
+  // "Resting floaters": dim Anytime tasks left untouched for a month+ (read-only cue).
+  const resting =
+    !completed &&
+    isRestingFloatersEnabled() &&
+    floaterRestingTier(floaterUpdatedEpochMs(floater), Date.now()) !== "active";
   const priorityFlag = getPriorityFlag(priority);
   const [displayForm, setDisplayForm] = useState(false);
   const [showHandle, setShowHandle] = useState(false);
@@ -139,8 +149,9 @@ export default function FloaterItemContainer({
         {...attributes}
         {...listeners}
         className={clsx(
-          "group relative max-w-full overflow-hidden sm:overflow-visible",
+          "group relative max-w-full overflow-hidden transition-opacity sm:overflow-visible",
           isDragging && "opacity-70",
+          resting && "opacity-50 saturate-[0.65]",
         )}
       >
         <div

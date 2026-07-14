@@ -629,4 +629,5 @@
     <string name="settings_quiet_hours">Ruhezeiten</string>
     <string name="settings_quiet_hours_start">Beginn</string>
     <string name="settings_quiet_hours_end">Ende</string>
+    <string name="settings_resting_floaters">Ruhende Floater ausblenden</string>
 </resources>

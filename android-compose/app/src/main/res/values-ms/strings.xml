@@ -628,4 +628,5 @@
     <string name="settings_quiet_hours">Waktu senyap</string>
     <string name="settings_quiet_hours_start">Mula</string>
     <string name="settings_quiet_hours_end">Tamat</string>
+    <string name="settings_resting_floaters">Pudarkan floater berehat</string>
 </resources>

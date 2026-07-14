@@ -678,6 +678,10 @@
       "disabled": "Disabled",
       "delete": "Delete webhook",
       "none": "No webhooks yet"
+    },
+    "restingFloaters": {
+      "title": "Resting floaters",
+      "toggle": "Fade untouched Anytime tasks"
     }
   },
   "summary": {
@@ -1093,6 +1097,13 @@
         "keywords": "quiet, hours, do not disturb, night, sleep, reminders, silence, schedule",
         "body": "Set a window — say 22:00 to 07:00 — and any reminder that would fire inside it is held until the window ends. It's on-device only; local reminders just wait for morning.",
         "tip": "The window can cross midnight (22:00 → 07:00); the math handles it."
+      },
+      "resting-floaters": {
+        "title": "Resting floaters",
+        "summary": "Untouched Anytime tasks quietly fade and rest, so your list stays calm.",
+        "keywords": "resting, floater, anytime, fade, dim, aging, dormant, old, quiet",
+        "body": "Anytime tasks you haven't touched in a month gently fade, and after three months they gather into a calm \"Resting\" group at the bottom. Nothing is deleted — they just stop demanding attention until you come back to them.",
+        "tip": "It's a display cue only; a tap wakes a floater right back up."
       }
     }
   },

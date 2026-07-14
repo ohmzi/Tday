@@ -21,6 +21,7 @@ object GuideTopicIds {
     const val QUICK_DEFER = "quick-defer"
     const val DAY_DONE = "day-done"
     const val FLOATER_LISTS = "floater-lists"
+    const val RESTING_FLOATERS = "resting-floaters"
     const val SCHEDULED_LISTS = "scheduled-lists"
     const val COMPLETED_HISTORY = "completed-history"
     const val OVERDUE_VIEW = "overdue-view"

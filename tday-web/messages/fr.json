@@ -678,6 +678,10 @@
       "disabled": "Désactivé",
       "delete": "Supprimer le webhook",
       "none": "Aucun webhook pour l'instant"
+    },
+    "restingFloaters": {
+      "title": "Flottants au repos",
+      "toggle": "Estomper les tâches Anytime intactes"
     }
   },
   "summary": {
@@ -1093,6 +1097,13 @@
         "keywords": "silence, heures, ne pas déranger, nuit, sommeil, rappels, horaire",
         "body": "Définis une plage — par ex. 22:00 à 07:00 — et tout rappel qui sonnerait dedans est retenu jusqu'à la fin. Uniquement sur l'appareil ; les rappels locaux attendent le matin.",
         "tip": "La plage peut passer minuit (22:00 → 07:00) ; le calcul le gère."
+      },
+      "resting-floaters": {
+        "title": "Flottants au repos",
+        "summary": "Les tâches Anytime intactes s'estompent et se reposent pour garder le calme.",
+        "keywords": "repos, flottant, anytime, estomper, vieillir, dormant, vieux, calme",
+        "body": "Les tâches Anytime que tu n'as pas touchées depuis un mois s'estompent doucement, et après trois mois elles se regroupent dans un calme groupe « Au repos » en bas. Rien n'est supprimé : elles cessent juste de réclamer l'attention.",
+        "tip": "C'est un simple indice visuel ; un toucher réveille un flottant."
       }
     }
   },
