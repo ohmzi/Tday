@@ -57,6 +57,8 @@ import com.ohmz.tday.services.TodoService
 import com.ohmz.tday.services.TodoServiceImpl
 import com.ohmz.tday.services.TodoSummaryService
 import com.ohmz.tday.services.TodoSummaryServiceImpl
+import com.ohmz.tday.services.CalendarFeedService
+import com.ohmz.tday.services.CalendarFeedServiceImpl
 import com.ohmz.tday.services.UserApiKeyService
 import com.ohmz.tday.services.UserApiKeyServiceImpl
 import com.ohmz.tday.services.UserService
@@ -103,4 +105,5 @@ val serviceModule = module {
     single<PushNotificationService> { PushNotificationServiceImpl(get()) }
     single { ReminderPushScheduler(get()) }
     single<UserApiKeyService> { UserApiKeyServiceImpl(get()) }
+    single<CalendarFeedService> { CalendarFeedServiceImpl(get()) }
 }

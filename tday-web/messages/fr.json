@@ -593,7 +593,13 @@
       "passwordChangeFailed": "Échec du changement de mot de passe",
       "securityQuestionsUpdated": "Security questions updated",
       "securityQuestionsUpdateFailed": "Could not update security questions",
-      "securityQuestionsLoadFailed": "Could not load security questions"
+      "securityQuestionsLoadFailed": "Could not load security questions",
+      "calendarFeedGenerated": "Flux de calendrier créé. Copie l'URL maintenant.",
+      "calendarFeedGenerateFailed": "Échec de la création du flux de calendrier",
+      "calendarFeedRevoked": "Flux de calendrier révoqué",
+      "calendarFeedRevokeFailed": "Échec de la révocation du flux de calendrier",
+      "calendarFeedCopied": "URL de calendrier copiée",
+      "calendarFeedCopyFailed": "Échec de la copie de l'URL de calendrier"
     },
     "signOut": "Déconnexion",
     "aiSummary": {
@@ -630,6 +636,17 @@
       "confirmRemapped": "{{count}} éléments aux ID en conflit seront ajoutés comme nouvelles copies.",
       "confirmCancel": "Annuler",
       "confirmImport": "Importer"
+    },
+    "calendarFeed": {
+      "title": "Flux de calendrier",
+      "blurb": "Un lien .ics privé en lecture seule pour Apple/Google Calendar.",
+      "active": "Flux actif",
+      "inactive": "Aucun flux de calendrier",
+      "generate": "Générer l'URL du flux",
+      "revoke": "Révoquer le flux",
+      "generating": "Génération...",
+      "revoking": "Révocation...",
+      "copyUrl": "Copie cette URL de calendrier maintenant — traite-la comme un mot de passe."
     }
   },
   "summary": {
@@ -984,6 +1001,15 @@
         "kbd": "N",
         "kbd2": "Ctrl / ⌘ + K",
         "kbd3": "?"
+      },
+      "calendar-feed": {
+        "title": "Flux de calendrier",
+        "summary": "Abonne-toi à tes tâches datées depuis n'importe quelle app de calendrier.",
+        "keywords": "calendrier, ics, abonnement, flux, apple calendar, google calendar, ical, webcal",
+        "body": "Publie un flux de calendrier en lecture seule pour que tes tâches datées apparaissent dans Apple Calendar, Google Calendar ou toute app qui lit une URL .ics. Le lien contient un jeton privé — quiconque le possède voit tes tâches, alors garde-le pour toi et révoque-le en cas de fuite.",
+        "step0": "Dans les Réglages, ouvre la carte Flux de calendrier et génère une URL.",
+        "step1": "Copie l'URL — elle n'apparaît qu'une fois ; régénère-la si tu la perds.",
+        "step2": "Ajoute-la comme calendrier d'abonnement dans ton app de calendrier."
       }
     }
   },

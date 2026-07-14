@@ -593,7 +593,13 @@
       "passwordChangeFailed": "Impossibile cambiare la password",
       "securityQuestionsUpdated": "Security questions updated",
       "securityQuestionsUpdateFailed": "Could not update security questions",
-      "securityQuestionsLoadFailed": "Could not load security questions"
+      "securityQuestionsLoadFailed": "Could not load security questions",
+      "calendarFeedGenerated": "Feed calendario creato. Copia ora l'URL.",
+      "calendarFeedGenerateFailed": "Impossibile creare il feed calendario",
+      "calendarFeedRevoked": "Feed calendario revocato",
+      "calendarFeedRevokeFailed": "Impossibile revocare il feed calendario",
+      "calendarFeedCopied": "URL del calendario copiato",
+      "calendarFeedCopyFailed": "Impossibile copiare l'URL del calendario"
     },
     "signOut": "Esci",
     "aiSummary": {
@@ -630,6 +636,17 @@
       "confirmRemapped": "{{count}} elementi con ID in conflitto verranno aggiunti come nuove copie.",
       "confirmCancel": "Annulla",
       "confirmImport": "Importa"
+    },
+    "calendarFeed": {
+      "title": "Feed calendario",
+      "blurb": "Un link .ics privato di sola lettura per Apple/Google Calendar.",
+      "active": "Feed attivo",
+      "inactive": "Nessun feed calendario",
+      "generate": "Genera URL del feed",
+      "revoke": "Revoca feed",
+      "generating": "Generazione...",
+      "revoking": "Revoca...",
+      "copyUrl": "Copia ora questo URL del calendario: trattalo come una password."
     }
   },
   "summary": {
@@ -984,6 +1001,15 @@
         "kbd": "N",
         "kbd2": "Ctrl / ⌘ + K",
         "kbd3": "?"
+      },
+      "calendar-feed": {
+        "title": "Feed calendario",
+        "summary": "Iscriviti alle tue attività con data da qualsiasi app calendario.",
+        "keywords": "calendario, ics, iscrizione, feed, apple calendar, google calendar, ical, webcal",
+        "body": "Pubblica un feed calendario di sola lettura così le tue attività con data compaiono in Apple Calendar, Google Calendar o in qualsiasi app che legge un URL .ics. Il link contiene un token privato: chiunque lo possieda può vedere le tue attività, quindi tienilo per te e revocalo se trapela.",
+        "step0": "Nelle Impostazioni, apri la scheda Feed calendario e genera un URL.",
+        "step1": "Copia l'URL: viene mostrato una sola volta; rigeneralo se lo perdi.",
+        "step2": "Aggiungilo come calendario in abbonamento nella tua app calendario."
       }
     }
   },
