@@ -864,6 +864,13 @@
         "body": "¿Encontraste algo en otra app? Abre la hoja de compartir del sistema y elige T'Day. El texto compartido llega a un formulario de tarea nueva: al compartir una página, su título se convierte en el nombre de la tarea y el enlace queda en las notas. En Android y en la app web el formulario se abre al momento; en iOS la captura se guarda al instante y el formulario prellenado te recibe la próxima vez que abras la app.",
         "tip": "Comparte un texto con una fecha dentro y el analizador fijará el vencimiento por ti."
       },
+      "android-shortcuts": {
+        "title": "Mosaico de ajustes rápidos y atajos",
+        "summary": "Añade tareas desde los ajustes rápidos o manteniendo pulsado el icono de la app.",
+        "keywords": "ajustes rápidos, mosaico, atajo, pulsación larga, icono de la app, añadir rápido",
+        "body": "Dos vías rápidas en Android. Añade el mosaico de T'Day a los ajustes rápidos (edita la cuadrícula y arrástralo): un toque abre el formulario de tarea nueva desde cualquier lugar, incluso encima de otra app. Mantener pulsado el icono de la app también ofrece atajos: Tarea nueva, Hoy y Flotantes te llevan directo a donde ibas.",
+        "tip": "Los atajos se pueden arrastrar a la pantalla de inicio como iconos independientes: un botón dedicado de tarea nueva con un solo toque."
+      },
       "carplay": {
         "title": "T'Day en CarPlay",
         "summary": "Consulta y captura tareas de forma segura mientras conduces.",
