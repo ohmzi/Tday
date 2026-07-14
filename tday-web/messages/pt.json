@@ -607,6 +607,22 @@
       "errorDistinct": "Security questions must be different",
       "errorAnswersRequired": "Please answer all three questions",
       "errorPasswordRequired": "Enter your current password"
+    },
+    "data": {
+      "title": "Os seus dados",
+      "summary": "{{tasks}} tarefas · {{lists}} listas · {{completed}} concluídas, tudo neste servidor.",
+      "download": "Descarregar os meus dados",
+      "import": "Importar",
+      "exportDone": "O ficheiro dos seus dados foi descarregado.",
+      "exportFailed": "Não foi possível exportar os seus dados.",
+      "importInvalid": "Esse ficheiro não é uma exportação válida do T'Day.",
+      "importDone": "Importação concluída — {{count}} itens adicionados.",
+      "importFailed": "Não foi possível importar esse ficheiro.",
+      "confirmTitle": "Importar dados?",
+      "confirmBody": "Isto adiciona {{count}} itens à sua conta. Nada do que já tem é alterado ou removido.",
+      "confirmRemapped": "{{count}} itens com IDs em conflito serão adicionados como novas cópias.",
+      "confirmCancel": "Cancelar",
+      "confirmImport": "Importar"
     }
   },
   "summary": {
@@ -908,6 +924,20 @@
         "summary": "Continue a trabalhar offline; as alterações são reproduzidas ao reconectar.",
         "keywords": "offline, sincronização, pendente, fila, reproduzir, ligação, conflito",
         "body": "Em Modo servidor, as suas alterações são guardadas primeiro localmente e colocadas em fila quando está offline. Assim que reconectar, o T'Day reproduz-nas no servidor por ordem."
+      },
+      "export-your-data": {
+        "title": "Exporte os seus dados",
+        "summary": "Descarregue tudo num ficheiro portátil — e traga-o de volta quando quiser.",
+        "keywords": "exportar, importar, descarregar, cópia de segurança, os meus dados, portátil, restaurar, migrar",
+        "body": "Nas Definições pode descarregar toda a sua conta — tarefas, listas, histórico de concluídas e preferências — como um único ficheiro JSON. Importe-o para outro T'Day (um servidor ou um dispositivo em Modo local) e tudo entra como itens novos: a importação adiciona sempre e nunca substitui, por isso não perde nada do que já tem. Num servidor, as descrições são desencriptadas no ficheiro para que continue legível mesmo que mude para um servidor com outra chave.",
+        "tip": "O ficheiro é JSON simples e legível — guarde uma cópia como cópia de segurança pessoal."
+      },
+      "local-to-server-migration": {
+        "title": "Passar deste dispositivo para um servidor",
+        "summary": "Leve as tarefas do dispositivo consigo ao mudar para o Modo servidor.",
+        "keywords": "migração, local para servidor, mover dados, mudar de modo, carregar, iniciar sessão, transferir",
+        "body": "Começou no Modo local e depois configurou um servidor? Nada é carregado por conta própria. Para mover os seus dados: exporte-os primeiro nas Definições, inicie sessão no seu servidor e importe aí o ficheiro. Tarefas, listas e histórico transferem-se num passo deliberado — escolhe o momento, e os dados no dispositivo ficam intactos até lá.",
+        "tip": "Depois de importar, guarde o ficheiro exportado até confirmar que tudo chegou — assim também serve de cópia de segurança."
       },
       "in-app-update": {
         "title": "Atualizações na aplicação",

@@ -607,6 +607,22 @@
       "errorDistinct": "Security questions must be different",
       "errorAnswersRequired": "Please answer all three questions",
       "errorPasswordRequired": "Enter your current password"
+    },
+    "data": {
+      "title": "I tuoi dati",
+      "summary": "{{tasks}} attività · {{lists}} liste · {{completed}} completate, tutto su questo server.",
+      "download": "Scarica i miei dati",
+      "import": "Importa",
+      "exportDone": "Il file dei tuoi dati è stato scaricato.",
+      "exportFailed": "Impossibile esportare i tuoi dati.",
+      "importInvalid": "Quel file non è un export T'Day valido.",
+      "importDone": "Importazione completata — aggiunti {{count}} elementi.",
+      "importFailed": "Impossibile importare quel file.",
+      "confirmTitle": "Importare i dati?",
+      "confirmBody": "Questo aggiunge {{count}} elementi al tuo account. Nulla di ciò che hai già viene cambiato o rimosso.",
+      "confirmRemapped": "{{count}} elementi con ID in conflitto verranno aggiunti come nuove copie.",
+      "confirmCancel": "Annulla",
+      "confirmImport": "Importa"
     }
   },
   "summary": {
@@ -908,6 +924,20 @@
         "summary": "Continua a lavorare offline; le modifiche si ripropagano alla riconnessione.",
         "keywords": "offline, sincronizzazione, in sospeso, coda, ripropaga, connessione, conflitto",
         "body": "In Modalità server le tue modifiche vengono salvate prima in locale e messe in coda quando sei offline. Non appena ti riconnetti, T'Day le ripropaga al server in ordine."
+      },
+      "export-your-data": {
+        "title": "Esporta i tuoi dati",
+        "summary": "Scarica tutto in un unico file portabile — e riportalo quando vuoi.",
+        "keywords": "esportare, importare, scaricare, backup, i miei dati, portabile, ripristinare, migrare",
+        "body": "Dalle Impostazioni puoi scaricare l'intero account — attività, liste, cronologia completati e preferenze — come un unico file JSON. Importalo in un altro T'Day (un server o un dispositivo in Modalità locale) e tutto entra come nuovi elementi: l'importazione aggiunge sempre e non sovrascrive mai, quindi non perdi nulla di ciò che hai già. Su un server le descrizioni vengono decifrate nel file, così resta leggibile anche se passi a un server con una chiave diversa.",
+        "tip": "Il file è JSON semplice e leggibile — tienine una copia come backup personale."
+      },
+      "local-to-server-migration": {
+        "title": "Passa da questo dispositivo a un server",
+        "summary": "Porta con te le attività del dispositivo quando passi alla Modalità server.",
+        "keywords": "migrazione, locale a server, spostare dati, cambiare modalità, caricare, accedere, trasferire",
+        "body": "Hai iniziato in Modalità locale e poi hai configurato un server? Non viene mai caricato nulla da solo. Per spostare i tuoi dati: esportali prima dalle Impostazioni, accedi al tuo server e importa lì il file. Attività, liste e cronologia si spostano in un passaggio voluto — scegli tu il momento, e i dati sul dispositivo restano intatti fino ad allora.",
+        "tip": "Dopo l'importazione conserva il file esportato finché non confermi che è arrivato tutto — così fa anche da backup."
       },
       "in-app-update": {
         "title": "Aggiornamenti nell'app",

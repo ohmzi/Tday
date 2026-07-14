@@ -1064,6 +1064,75 @@
       "searchBody": "sigue trabajando sin conexion; los cambios se reenvian al reconectar. en modo servidor, tus cambios se guardan primero en local y se ponen en cola cuando estas sin conexion. en cuanto te reconectas, t'day los reenvia al servidor en orden."
     },
     {
+      "id": "export-your-data",
+      "section": "MODES_AND_SYNC",
+      "sectionOrder": 6,
+      "icon": "download",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.5.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Exporta tus datos",
+      "summary": "Descarga todo como un archivo portátil y recupéralo cuando quieras.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Desde Ajustes puedes descargar toda tu cuenta — tareas, listas, historial de completadas y preferencias — como un solo archivo JSON. Impórtalo en otro T'Day (un servidor o un dispositivo en Modo local) y todo entra como elementos nuevos: la importación siempre añade y nunca sobrescribe, así que no pierdes nada de lo que ya tienes. En un servidor, las descripciones se descifran en el archivo para que siga siendo legible aunque cambies a un servidor con otra clave."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "El archivo es JSON legible y sencillo — guarda una copia como respaldo personal."
+          ]
+        }
+      ],
+      "searchTitle": "exporta tus datos",
+      "searchKeywords": "exportar, importar, descargar, copia de seguridad, mis datos, portatil, restaurar, migrar",
+      "searchBody": "descarga todo como un archivo portatil y recuperalo cuando quieras. desde ajustes puedes descargar toda tu cuenta — tareas, listas, historial de completadas y preferencias — como un solo archivo json. importalo en otro t'day (un servidor o un dispositivo en modo local) y todo entra como elementos nuevos: la importacion siempre anade y nunca sobrescribe, asi que no pierdes nada de lo que ya tienes. en un servidor, las descripciones se descifran en el archivo para que siga siendo legible aunque cambies a un servidor con otra clave. el archivo es json legible y sencillo — guarda una copia como respaldo personal."
+    },
+    {
+      "id": "local-to-server-migration",
+      "section": "MODES_AND_SYNC",
+      "sectionOrder": 6,
+      "icon": "cloud",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.5.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Pasa de este dispositivo a un servidor",
+      "summary": "Lleva contigo tus tareas del dispositivo al cambiar al Modo servidor.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "¿Empezaste en Modo local y luego montaste un servidor? Nunca se sube nada por su cuenta. Para trasladar tus datos: expórtalos primero desde Ajustes, inicia sesión en tu servidor e importa allí el archivo. Tus tareas, listas e historial se trasladan en un paso deliberado — tú eliges el momento, y tus datos del dispositivo quedan intactos hasta entonces."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Tras importar, conserva el archivo exportado hasta confirmar que llegó todo — así también sirve de respaldo."
+          ]
+        }
+      ],
+      "searchTitle": "pasa de este dispositivo a un servidor",
+      "searchKeywords": "migracion, local a servidor, mover datos, cambiar de modo, subir, iniciar sesion, transferir",
+      "searchBody": "lleva contigo tus tareas del dispositivo al cambiar al modo servidor. ¿empezaste en modo local y luego montaste un servidor? nunca se sube nada por su cuenta. para trasladar tus datos: exportalos primero desde ajustes, inicia sesion en tu servidor e importa alli el archivo. tus tareas, listas e historial se trasladan en un paso deliberado — tu eliges el momento, y tus datos del dispositivo quedan intactos hasta entonces. tras importar, conserva el archivo exportado hasta confirmar que llego todo — asi tambien sirve de respaldo."
+    },
+    {
       "id": "ai-summary",
       "section": "INTEGRATIONS",
       "sectionOrder": 7,

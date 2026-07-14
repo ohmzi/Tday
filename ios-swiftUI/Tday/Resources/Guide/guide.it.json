@@ -1064,6 +1064,75 @@
       "searchBody": "continua a lavorare offline; le modifiche si ripropagano alla riconnessione. in modalita server le tue modifiche vengono salvate prima in locale e messe in coda quando sei offline. non appena ti riconnetti, t'day le ripropaga al server in ordine."
     },
     {
+      "id": "export-your-data",
+      "section": "MODES_AND_SYNC",
+      "sectionOrder": 6,
+      "icon": "download",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.5.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Esporta i tuoi dati",
+      "summary": "Scarica tutto in un unico file portabile — e riportalo quando vuoi.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Dalle Impostazioni puoi scaricare l'intero account — attività, liste, cronologia completati e preferenze — come un unico file JSON. Importalo in un altro T'Day (un server o un dispositivo in Modalità locale) e tutto entra come nuovi elementi: l'importazione aggiunge sempre e non sovrascrive mai, quindi non perdi nulla di ciò che hai già. Su un server le descrizioni vengono decifrate nel file, così resta leggibile anche se passi a un server con una chiave diversa."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Il file è JSON semplice e leggibile — tienine una copia come backup personale."
+          ]
+        }
+      ],
+      "searchTitle": "esporta i tuoi dati",
+      "searchKeywords": "esportare, importare, scaricare, backup, i miei dati, portabile, ripristinare, migrare",
+      "searchBody": "scarica tutto in un unico file portabile — e riportalo quando vuoi. dalle impostazioni puoi scaricare l'intero account — attivita, liste, cronologia completati e preferenze — come un unico file json. importalo in un altro t'day (un server o un dispositivo in modalita locale) e tutto entra come nuovi elementi: l'importazione aggiunge sempre e non sovrascrive mai, quindi non perdi nulla di cio che hai gia. su un server le descrizioni vengono decifrate nel file, cosi resta leggibile anche se passi a un server con una chiave diversa. il file e json semplice e leggibile — tienine una copia come backup personale."
+    },
+    {
+      "id": "local-to-server-migration",
+      "section": "MODES_AND_SYNC",
+      "sectionOrder": 6,
+      "icon": "cloud",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.5.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Passa da questo dispositivo a un server",
+      "summary": "Porta con te le attività del dispositivo quando passi alla Modalità server.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Hai iniziato in Modalità locale e poi hai configurato un server? Non viene mai caricato nulla da solo. Per spostare i tuoi dati: esportali prima dalle Impostazioni, accedi al tuo server e importa lì il file. Attività, liste e cronologia si spostano in un passaggio voluto — scegli tu il momento, e i dati sul dispositivo restano intatti fino ad allora."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Dopo l'importazione conserva il file esportato finché non confermi che è arrivato tutto — così fa anche da backup."
+          ]
+        }
+      ],
+      "searchTitle": "passa da questo dispositivo a un server",
+      "searchKeywords": "migrazione, locale a server, spostare dati, cambiare modalita, caricare, accedere, trasferire",
+      "searchBody": "porta con te le attivita del dispositivo quando passi alla modalita server. hai iniziato in modalita locale e poi hai configurato un server? non viene mai caricato nulla da solo. per spostare i tuoi dati: esportali prima dalle impostazioni, accedi al tuo server e importa li il file. attivita, liste e cronologia si spostano in un passaggio voluto — scegli tu il momento, e i dati sul dispositivo restano intatti fino ad allora. dopo l'importazione conserva il file esportato finche non confermi che e arrivato tutto — cosi fa anche da backup."
+    },
+    {
       "id": "ai-summary",
       "section": "INTEGRATIONS",
       "sectionOrder": 7,

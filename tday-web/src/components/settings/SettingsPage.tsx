@@ -33,6 +33,7 @@ import { useAuth } from "@/providers/AuthProvider";
 import { useUserPreferences } from "@/providers/UserPreferencesProvider";
 import { useToast } from "@/hooks/use-toast";
 import NativePageTitle from "@/components/app/NativePageTitle";
+import DataTransferCard from "./DataTransferCard";
 import { nativeScreenAccentColors } from "@/components/app/nativeScreenTheme";
 import NativeAppBrandButton from "@/components/app/NativeAppBrandButton";
 import { api } from "@/lib/api-client";
@@ -1080,6 +1081,8 @@ export default function SettingsPage() {
           </>
         )}
       </SheetCard>
+
+      <DataTransferCard />
 
       <SettingsSection
         title={t("dashboard.title")}

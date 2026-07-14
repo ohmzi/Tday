@@ -607,6 +607,22 @@
       "errorDistinct": "Security questions must be different",
       "errorAnswersRequired": "Please answer all three questions",
       "errorPasswordRequired": "Enter your current password"
+    },
+    "data": {
+      "title": "Vos données",
+      "summary": "{{tasks}} tâches · {{lists}} listes · {{completed}} terminées, le tout sur ce serveur.",
+      "download": "Télécharger mes données",
+      "import": "Importer",
+      "exportDone": "Votre fichier de données a été téléchargé.",
+      "exportFailed": "Impossible d'exporter vos données.",
+      "importInvalid": "Ce fichier n'est pas un export T'Day valide.",
+      "importDone": "Import terminé — {{count}} éléments ajoutés.",
+      "importFailed": "Impossible d'importer ce fichier.",
+      "confirmTitle": "Importer les données ?",
+      "confirmBody": "Cela ajoute {{count}} éléments à votre compte. Rien de ce que vous avez déjà n'est modifié ni supprimé.",
+      "confirmRemapped": "{{count}} éléments aux ID en conflit seront ajoutés comme nouvelles copies.",
+      "confirmCancel": "Annuler",
+      "confirmImport": "Importer"
     }
   },
   "summary": {
@@ -908,6 +924,20 @@
         "summary": "Continuez hors ligne ; les changements se rejouent à la reconnexion.",
         "keywords": "hors ligne, synchronisation, en attente, file, rejouer, connexion, conflit",
         "body": "En Mode serveur, vos changements sont d'abord enregistrés localement et mis en file quand vous êtes hors ligne. Dès la reconnexion, T'Day les rejoue sur le serveur dans l'ordre."
+      },
+      "export-your-data": {
+        "title": "Exportez vos données",
+        "summary": "Téléchargez tout dans un fichier portable — et récupérez-le quand vous voulez.",
+        "keywords": "exporter, importer, télécharger, sauvegarde, mes données, portable, restaurer, migrer",
+        "body": "Depuis les Réglages, vous pouvez télécharger tout votre compte — tâches, listes, historique des tâches terminées et préférences — dans un seul fichier JSON. Importez-le dans un autre T'Day (un serveur, ou un appareil en Mode local) et tout arrive sous forme de nouveaux éléments : l'import ajoute toujours et n'écrase jamais, donc rien de ce que vous avez déjà n'est perdu. Sur un serveur, les descriptions sont déchiffrées dans le fichier pour qu'il reste lisible même si vous passez à un serveur avec une autre clé.",
+        "tip": "Le fichier est du JSON simple et lisible — gardez-en une copie comme sauvegarde personnelle."
+      },
+      "local-to-server-migration": {
+        "title": "Passer de cet appareil à un serveur",
+        "summary": "Emportez vos tâches de l'appareil quand vous passez en Mode serveur.",
+        "keywords": "migration, local vers serveur, déplacer les données, changer de mode, envoyer, se connecter, transférer",
+        "body": "Vous avez commencé en Mode local puis installé un serveur ? Rien n'est jamais envoyé tout seul. Pour transférer vos données : exportez-les d'abord depuis les Réglages, connectez-vous à votre serveur, puis importez-y le fichier. Vos tâches, listes et historique migrent en une étape volontaire — vous choisissez le moment, et vos données locales restent intactes jusque-là.",
+        "tip": "Après l'import, gardez le fichier exporté jusqu'à confirmer que tout est bien arrivé — il fait alors aussi office de sauvegarde."
       },
       "in-app-update": {
         "title": "Mises à jour dans l'application",

@@ -1064,6 +1064,75 @@
       "searchBody": "arbeite offline weiter; anderungen werden bei erneuter verbindung ubertragen. im servermodus werden deine anderungen zuerst lokal gespeichert und in die warteschlange gestellt, wenn du offline bist. sobald du wieder verbunden bist, ubertragt t'day sie der reihe nach an den server."
     },
     {
+      "id": "export-your-data",
+      "section": "MODES_AND_SYNC",
+      "sectionOrder": 6,
+      "icon": "download",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.5.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Deine Daten exportieren",
+      "summary": "Lade alles als eine portable Datei herunter — und hol es jederzeit zurück.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "In den Einstellungen kannst du dein ganzes Konto — Aufgaben, Listen, abgeschlossene Historie und Einstellungen — als einzelne JSON-Datei herunterladen. Importiere sie in ein anderes T'Day (einen Server oder ein Gerät im lokalen Modus), und alles landet als neue Einträge: Der Import fügt immer hinzu und überschreibt nie, sodass nichts Vorhandenes verloren geht. Auf einem Server werden Beschreibungen in die Datei entschlüsselt, damit sie lesbar bleibt, selbst wenn du zu einem anders verschlüsselten Server wechselst."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Die Datei ist einfaches, lesbares JSON — bewahre eine Kopie als persönliches Backup auf."
+          ]
+        }
+      ],
+      "searchTitle": "deine daten exportieren",
+      "searchKeywords": "export, import, herunterladen, backup, meine daten, portabel, wiederherstellen, migrieren",
+      "searchBody": "lade alles als eine portable datei herunter — und hol es jederzeit zuruck. in den einstellungen kannst du dein ganzes konto — aufgaben, listen, abgeschlossene historie und einstellungen — als einzelne json-datei herunterladen. importiere sie in ein anderes t'day (einen server oder ein gerat im lokalen modus), und alles landet als neue eintrage: der import fugt immer hinzu und uberschreibt nie, sodass nichts vorhandenes verloren geht. auf einem server werden beschreibungen in die datei entschlusselt, damit sie lesbar bleibt, selbst wenn du zu einem anders verschlusselten server wechselst. die datei ist einfaches, lesbares json — bewahre eine kopie als personliches backup auf."
+    },
+    {
+      "id": "local-to-server-migration",
+      "section": "MODES_AND_SYNC",
+      "sectionOrder": 6,
+      "icon": "cloud",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.5.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Von diesem Gerät auf einen Server umziehen",
+      "summary": "Nimm deine Aufgaben vom Gerät mit, wenn du in den Server-Modus wechselst.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Im lokalen Modus gestartet und später einen Server eingerichtet? Es wird nie etwas von selbst hochgeladen. So ziehst du deine Daten um: Exportiere sie zuerst in den Einstellungen, melde dich an deinem Server an und importiere dort die Datei. Aufgaben, Listen und Historie ziehen in einem bewussten Schritt um — du wählst den Moment, und deine Gerätedaten bleiben bis dahin unberührt."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Behalte die exportierte Datei nach dem Import, bis du geprüft hast, dass alles angekommen ist — dann dient sie zugleich als Backup."
+          ]
+        }
+      ],
+      "searchTitle": "von diesem gerat auf einen server umziehen",
+      "searchKeywords": "migration, lokal zu server, daten umziehen, modus wechseln, hochladen, anmelden, ubertragen",
+      "searchBody": "nimm deine aufgaben vom gerat mit, wenn du in den server-modus wechselst. im lokalen modus gestartet und spater einen server eingerichtet? es wird nie etwas von selbst hochgeladen. so ziehst du deine daten um: exportiere sie zuerst in den einstellungen, melde dich an deinem server an und importiere dort die datei. aufgaben, listen und historie ziehen in einem bewussten schritt um — du wahlst den moment, und deine geratedaten bleiben bis dahin unberuhrt. behalte die exportierte datei nach dem import, bis du gepruft hast, dass alles angekommen ist — dann dient sie zugleich als backup."
+    },
+    {
       "id": "ai-summary",
       "section": "INTEGRATIONS",
       "sectionOrder": 7,

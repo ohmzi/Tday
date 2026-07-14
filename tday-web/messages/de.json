@@ -607,6 +607,22 @@
       "errorDistinct": "Security questions must be different",
       "errorAnswersRequired": "Please answer all three questions",
       "errorPasswordRequired": "Enter your current password"
+    },
+    "data": {
+      "title": "Deine Daten",
+      "summary": "{{tasks}} Aufgaben · {{lists}} Listen · {{completed}} abgeschlossen, alles auf diesem Server.",
+      "download": "Meine Daten herunterladen",
+      "import": "Importieren",
+      "exportDone": "Deine Datendatei wurde heruntergeladen.",
+      "exportFailed": "Deine Daten konnten nicht exportiert werden.",
+      "importInvalid": "Diese Datei ist kein gültiger T'Day-Export.",
+      "importDone": "Import abgeschlossen — {{count}} Einträge hinzugefügt.",
+      "importFailed": "Diese Datei konnte nicht importiert werden.",
+      "confirmTitle": "Daten importieren?",
+      "confirmBody": "Das fügt {{count}} Einträge zu deinem Konto hinzu. Vorhandenes wird nicht geändert oder entfernt.",
+      "confirmRemapped": "{{count}} Einträge mit kollidierenden IDs werden als neue Kopien hinzugefügt.",
+      "confirmCancel": "Abbrechen",
+      "confirmImport": "Importieren"
     }
   },
   "summary": {
@@ -908,6 +924,20 @@
         "summary": "Arbeite offline weiter; Änderungen werden bei erneuter Verbindung übertragen.",
         "keywords": "offline, sync, ausstehend, warteschlange, übertragen, verbindung, konflikt",
         "body": "Im Servermodus werden deine Änderungen zuerst lokal gespeichert und in die Warteschlange gestellt, wenn du offline bist. Sobald du wieder verbunden bist, überträgt T'Day sie der Reihe nach an den Server."
+      },
+      "export-your-data": {
+        "title": "Deine Daten exportieren",
+        "summary": "Lade alles als eine portable Datei herunter — und hol es jederzeit zurück.",
+        "keywords": "export, import, herunterladen, backup, meine daten, portabel, wiederherstellen, migrieren",
+        "body": "In den Einstellungen kannst du dein ganzes Konto — Aufgaben, Listen, abgeschlossene Historie und Einstellungen — als einzelne JSON-Datei herunterladen. Importiere sie in ein anderes T'Day (einen Server oder ein Gerät im lokalen Modus), und alles landet als neue Einträge: Der Import fügt immer hinzu und überschreibt nie, sodass nichts Vorhandenes verloren geht. Auf einem Server werden Beschreibungen in die Datei entschlüsselt, damit sie lesbar bleibt, selbst wenn du zu einem anders verschlüsselten Server wechselst.",
+        "tip": "Die Datei ist einfaches, lesbares JSON — bewahre eine Kopie als persönliches Backup auf."
+      },
+      "local-to-server-migration": {
+        "title": "Von diesem Gerät auf einen Server umziehen",
+        "summary": "Nimm deine Aufgaben vom Gerät mit, wenn du in den Server-Modus wechselst.",
+        "keywords": "migration, lokal zu server, daten umziehen, modus wechseln, hochladen, anmelden, übertragen",
+        "body": "Im lokalen Modus gestartet und später einen Server eingerichtet? Es wird nie etwas von selbst hochgeladen. So ziehst du deine Daten um: Exportiere sie zuerst in den Einstellungen, melde dich an deinem Server an und importiere dort die Datei. Aufgaben, Listen und Historie ziehen in einem bewussten Schritt um — du wählst den Moment, und deine Gerätedaten bleiben bis dahin unberührt.",
+        "tip": "Behalte die exportierte Datei nach dem Import, bis du geprüft hast, dass alles angekommen ist — dann dient sie zugleich als Backup."
       },
       "in-app-update": {
         "title": "In-App-Updates",
