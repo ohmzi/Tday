@@ -911,6 +911,41 @@
       "searchBody": "marca tareas directamente en el widget de la pantalla de inicio. los widgets de hoy y flotantes ahora responden al toque: pulsa el anillo al inicio de cualquier fila para completar esa tarea sin abrir la app. la fila desaparece al instante y el completado se sincroniza como cualquier otro; los toques hechos sin conexion se ponen en cola y se aplican cuando vuelves a estar en linea. ¿un toque accidental? abre el historial de completadas en la app y restaura la tarea desde alli."
     },
     {
+      "id": "share-into-tday",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "share-2",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.4.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Compartir a T'Day",
+      "summary": "Envía texto desde cualquier app directamente a una tarea nueva.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "¿Encontraste algo en otra app? Abre la hoja de compartir del sistema y elige T'Day. El texto compartido llega a un formulario de tarea nueva: al compartir una página, su título se convierte en el nombre de la tarea y el enlace queda en las notas. En Android y en la app web el formulario se abre al momento; en iOS la captura se guarda al instante y el formulario prellenado te recibe la próxima vez que abras la app."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Comparte un texto con una fecha dentro y el analizador fijará el vencimiento por ti."
+          ]
+        }
+      ],
+      "searchTitle": "compartir a t'day",
+      "searchKeywords": "compartir, hoja de compartir, enviar a, capturar, importar, desde otra app",
+      "searchBody": "envia texto desde cualquier app directamente a una tarea nueva. ¿encontraste algo en otra app? abre la hoja de compartir del sistema y elige t'day. el texto compartido llega a un formulario de tarea nueva: al compartir una pagina, su titulo se convierte en el nombre de la tarea y el enlace queda en las notas. en android y en la app web el formulario se abre al momento; en ios la captura se guarda al instante y el formulario prellenado te recibe la proxima vez que abras la app. comparte un texto con una fecha dentro y el analizador fijara el vencimiento por ti."
+    },
+    {
       "id": "carplay",
       "section": "WIDGETS_AND_SURFACES",
       "sectionOrder": 5,

@@ -857,6 +857,13 @@
         "body": "I widget Oggi e Floater ora rispondono al tocco: tocca l'anello all'inizio di una riga per completare quell'attività senza aprire l'app. La riga scompare subito e il completamento si sincronizza come qualsiasi altro — i tocchi fatti offline vengono messi in coda e applicati appena torni online.",
         "tip": "Tocco sbagliato? Apri la cronologia completati nell'app e ripristina l'attività da lì."
       },
+      "share-into-tday": {
+        "title": "Condividi su T'Day",
+        "summary": "Invia testo da qualsiasi app direttamente in una nuova attività.",
+        "keywords": "condividere, foglio di condivisione, invia a, catturare, importare, da un'altra app",
+        "body": "Hai trovato qualcosa in un'altra app? Apri il foglio di condivisione di sistema e scegli T'Day. Il testo condiviso arriva in un modulo di nuova attività — condividendo una pagina, il titolo diventa il nome dell'attività e il link finisce nelle note. Su Android e nell'app web il modulo si apre subito; su iOS la cattura viene salvata all'istante e il modulo precompilato ti accoglie alla prossima apertura dell'app.",
+        "tip": "Condividi un testo con una data all'interno: il parser imposta la scadenza per te."
+      },
       "carplay": {
         "title": "T'Day su CarPlay",
         "summary": "Consulta e cattura attività in sicurezza mentre guidi.",

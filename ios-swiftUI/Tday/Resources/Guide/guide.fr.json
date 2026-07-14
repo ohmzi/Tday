@@ -911,6 +911,41 @@
       "searchBody": "cochez vos taches directement sur le widget de l'ecran d'accueil. les widgets aujourd'hui et floaters reagissent desormais au toucher : touchez l'anneau au debut d'une ligne pour terminer la tache sans ouvrir l'application. la ligne disparait aussitot et la completion se synchronise comme n'importe quelle autre — les appuis effectues hors ligne sont mis en file et appliques des que la connexion revient. touche par erreur ? ouvrez l'historique des taches terminees dans l'application et restaurez la tache a partir de la."
     },
     {
+      "id": "share-into-tday",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "share-2",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.4.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Partager vers T'Day",
+      "summary": "Envoyez du texte depuis n'importe quelle app directement dans une nouvelle tâche.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Vous avez trouvé quelque chose dans une autre app ? Ouvrez la feuille de partage du système et choisissez T'Day. Le texte partagé arrive dans un formulaire de nouvelle tâche — pour une page partagée, son titre devient le nom de la tâche et le lien se range dans les notes. Sur Android et sur l'app web le formulaire s'ouvre aussitôt ; sur iOS la capture est enregistrée immédiatement et le formulaire prérempli vous attend à la prochaine ouverture de l'app."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Partagez un texte contenant une date : l'analyseur règle l'échéance pour vous."
+          ]
+        }
+      ],
+      "searchTitle": "partager vers t'day",
+      "searchKeywords": "partager, feuille de partage, envoyer vers, capturer, importer, depuis une autre app",
+      "searchBody": "envoyez du texte depuis n'importe quelle app directement dans une nouvelle tache. vous avez trouve quelque chose dans une autre app ? ouvrez la feuille de partage du systeme et choisissez t'day. le texte partage arrive dans un formulaire de nouvelle tache — pour une page partagee, son titre devient le nom de la tache et le lien se range dans les notes. sur android et sur l'app web le formulaire s'ouvre aussitot ; sur ios la capture est enregistree immediatement et le formulaire prerempli vous attend a la prochaine ouverture de l'app. partagez un texte contenant une date : l'analyseur regle l'echeance pour vous."
+    },
+    {
       "id": "carplay",
       "section": "WIDGETS_AND_SURFACES",
       "sectionOrder": 5,
