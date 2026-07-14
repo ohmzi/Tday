@@ -221,6 +221,19 @@ object GuideCatalog {
             setOf(WEB),
             body = listOf(para(GuideTopicIds.KEYBOARD_SUBMIT), kbd(GuideTopicIds.KEYBOARD_SUBMIT)),
         ),
+        topic(
+            GuideTopicIds.KEYBOARD_SHORTCUTS, GuideSectionId.KEYBOARD_SHORTCUTS, "keyboard",
+            setOf(WEB), sinceVersion = "0.4.0",
+            // Chords must stay in lockstep with useGlobalHotkeys and the "?"
+            // overlay in the web app.
+            body = listOf(
+                para(GuideTopicIds.KEYBOARD_SHORTCUTS),
+                kbd(GuideTopicIds.KEYBOARD_SHORTCUTS),
+                kbd(GuideTopicIds.KEYBOARD_SHORTCUTS, slot = 2),
+                kbd(GuideTopicIds.KEYBOARD_SHORTCUTS, slot = 3),
+                tip(GuideTopicIds.KEYBOARD_SHORTCUTS),
+            ),
+        ),
     )
 
     /** Fast id lookup. */
@@ -268,7 +281,10 @@ object GuideCatalog {
     private fun para(id: String) = GuideBlock(GuideBlockType.PARAGRAPH, listOf("guide.topics.$id.body"))
     private fun tip(id: String) = GuideBlock(GuideBlockType.TIP, listOf("guide.topics.$id.tip"))
     private fun example(id: String) = GuideBlock(GuideBlockType.EXAMPLE, listOf("guide.topics.$id.example"))
-    private fun kbd(id: String) = GuideBlock(GuideBlockType.KBD, listOf("guide.topics.$id.kbd"))
+    private fun kbd(id: String, slot: Int = 1) = GuideBlock(
+        GuideBlockType.KBD,
+        listOf(if (slot <= 1) "guide.topics.$id.kbd" else "guide.topics.$id.kbd$slot"),
+    )
     private fun steps(id: String, count: Int) =
         GuideBlock(GuideBlockType.STEPS, (0 until count).map { "guide.topics.$id.step$it" })
 }

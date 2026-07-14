@@ -434,7 +434,8 @@
       "submitAndOpen": "送信して別のフォームを開く",
       "openForm": "フォームを開く",
       "exitForm": "フォームを閉じる",
-      "editForm": "フォームを編集"
+      "editForm": "フォームを編集",
+      "submit": "フォームを送信"
     },
     "calendar": {
       "markComplete": "完了とする",
@@ -450,6 +451,12 @@
       "today": "今日",
       "calendar": "カレンダー",
       "completed": "完了済み"
+    },
+    "global": {
+      "title": "どこでも",
+      "newTask": "新規タスク",
+      "openPalette": "コマンドパレット",
+      "showShortcuts": "この一覧"
     }
   },
   "filterMenu": {
@@ -930,7 +937,26 @@
         "keywords": "キーボード, ショートカット, 送信, エンター, 保存, ホットキー, keyboard, shortcut, submit",
         "body": "Web アプリでは、タスクフォームをキーボードから直接送信できるので、すばやい入力が流れを妨げることはありません。",
         "kbd": "Ctrl / ⌘ + Enter"
+      },
+      "keyboard-shortcuts": {
+        "title": "キーボードショートカット",
+        "summary": "Web アプリをキーボードで操作：クイック追加、パレット、一覧。",
+        "keywords": "キーボード, ショートカット, ホットキー, コマンドパレット, cmd+k, クイック追加",
+        "body": "Web アプリには全体で使えるキーボードレイヤーがあります。どこでも N で新規タスク、Ctrl / ⌘ + K でコマンドパレット（入力するとビューやリストへ移動したり操作を実行できます）、? でショートカット一覧が開きます。フィールドに入力中はキーは無視されます。",
+        "tip": "パレット内では矢印キーで選択を移動し、Enter で実行します。",
+        "kbd": "N",
+        "kbd2": "Ctrl / ⌘ + K",
+        "kbd3": "?"
       }
     }
+  },
+  "palette": {
+    "title": "コマンドパレット",
+    "placeholder": "コマンドを入力または検索…",
+    "empty": "一致なし",
+    "actions": "操作",
+    "navigation": "移動",
+    "lists": "リスト",
+    "newTask": "新規タスク"
   }
 }
