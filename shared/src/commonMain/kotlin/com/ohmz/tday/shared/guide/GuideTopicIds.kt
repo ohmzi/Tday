@@ -30,6 +30,7 @@ object GuideTopicIds {
     const val REPEAT_SUGGESTIONS = "repeat-suggestions"
     const val WEEK_IN_REVIEW = "week-in-review"
     const val REMINDER_SNOOZE = "reminder-snooze"
+    const val QUIET_HOURS = "quiet-hours"
     const val DAY_AHEAD = "day-ahead"
     const val REMINDERS = "reminders"
     const val PUSH_NOTIFICATIONS = "push-notifications"

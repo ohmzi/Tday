@@ -29,6 +29,28 @@ class TaskReminderReceiver : BroadcastReceiver() {
 
         val alarmKey = TaskReminderScheduler.alarmKeyFor(taskId, instanceDateMillis)
         if (preferenceStore.wasNotified(alarmKey)) return
+
+        // Quiet hours: if we'd fire inside the held window, re-arm this reminder for the
+        // window end instead of notifying now. Clearing wasNotified isn't needed (we never
+        // marked it), but the re-armed alarm reaches this receiver again after the window.
+        val quietHours = entryPoint.quietHoursPreferenceStore()
+        if (quietHours.isEnabled()) {
+            val nowMinute = java.time.LocalTime.now().let { it.hour * 60 + it.minute }
+            val shiftMinutes = com.ohmz.tday.shared.notification.QuietHours.minutesUntilWindowEnd(
+                nowMinute, quietHours.getStartMinute(), quietHours.getEndMinute(),
+            )
+            if (shiftMinutes > 0) {
+                entryPoint.taskReminderScheduler().snooze(
+                    taskId = taskId,
+                    title = intent.getStringExtra(EXTRA_TASK_TITLE),
+                    dueMillis = dueMillis,
+                    priority = priority,
+                    instanceDateMillis = instanceDateMillis,
+                    delayMillis = shiftMinutes.toLong() * 60_000L,
+                )
+                return
+            }
+        }
         preferenceStore.markNotified(alarmKey)
 
         val body = formatDueBody(context, dueMillis)

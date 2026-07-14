@@ -625,4 +625,7 @@
     <string name="settings_unifiedpush_none">UnifiedPush ディストリビューターが見つかりません。インストール（例: ntfy）して再試行してください。</string>
     <string name="create_task_repeat_suggestion">%1$sで繰り返す？</string>
     <string name="create_task_repeat_suggestion_dismiss">閉じる</string>
+    <string name="settings_quiet_hours">サイレント時間</string>
+    <string name="settings_quiet_hours_start">開始</string>
+    <string name="settings_quiet_hours_end">終了</string>
 </resources>

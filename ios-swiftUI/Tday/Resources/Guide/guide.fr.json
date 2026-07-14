@@ -822,6 +822,42 @@
       "searchBody": "les notifications de rappel proposent reporter d'1 h et ce soir. quand un rappel tombe au mauvais moment, inutile d'ouvrir l'app : reporter d'1 h redelivre le meme rappel une heure plus tard, et ce soir deplace la tache a 19 h aujourd'hui. ce soir fonctionne pour les taches ponctuelles — les occurrences recurrentes se replanifient depuis l'app pour preserver la serie. reporter ne retarde que la notification ; la tache garde son echeance d'origine tant que vous ne la deplacez pas."
     },
     {
+      "id": "quiet-hours",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "bell",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.6.0",
+      "deepLink": null,
+      "helpAnchors": [
+        "settings-notifications"
+      ],
+      "title": "Heures silencieuses",
+      "summary": "Retiens les rappels la nuit pour que rien ne sonne pendant ton sommeil.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Définis une plage — par ex. 22:00 à 07:00 — et tout rappel qui sonnerait dedans est retenu jusqu'à la fin. Uniquement sur l'appareil ; les rappels locaux attendent le matin."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "La plage peut passer minuit (22:00 → 07:00) ; le calcul le gère."
+          ]
+        }
+      ],
+      "searchTitle": "heures silencieuses",
+      "searchKeywords": "silence, heures, ne pas deranger, nuit, sommeil, rappels, horaire",
+      "searchBody": "retiens les rappels la nuit pour que rien ne sonne pendant ton sommeil. definis une plage — par ex. 22:00 a 07:00 — et tout rappel qui sonnerait dedans est retenu jusqu'a la fin. uniquement sur l'appareil ; les rappels locaux attendent le matin. la plage peut passer minuit (22:00 → 07:00) ; le calcul le gere."
+    },
+    {
       "id": "day-ahead",
       "section": "RECURRENCE_AND_REMINDERS",
       "sectionOrder": 4,

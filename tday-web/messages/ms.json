@@ -1086,6 +1086,13 @@
         "keywords": "minggu, imbasan, ringkasan, ahad, selesai, retrospektif",
         "body": "Pada hari Ahad, T'Day memaparkan imbasan ringkas dalam suapan Hari Ini anda: berapa tugasan diselesaikan minggu ini, hari paling sibuk, dan tugasan paling lama yang akhirnya siap. Ia dibina daripada sejarah selesai anda.",
         "tip": "Tak berkenan? Tolak dan ia hilang sehingga minggu depan."
+      },
+      "quiet-hours": {
+        "title": "Waktu senyap",
+        "summary": "Tahan peringatan pada waktu malam supaya tiada bunyi semasa anda tidur.",
+        "keywords": "senyap, waktu, jangan ganggu, malam, tidur, peringatan, jadual",
+        "body": "Tetapkan tetingkap — contohnya 22:00 hingga 07:00 — dan mana-mana peringatan yang akan berbunyi di dalamnya ditahan sehingga tamat. Pada peranti sahaja; peringatan tempatan menunggu pagi.",
+        "tip": "Tetingkap boleh melepasi tengah malam (22:00 → 07:00); pengiraan menanganinya."
       }
     }
   },

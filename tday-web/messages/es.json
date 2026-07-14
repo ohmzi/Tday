@@ -1086,6 +1086,13 @@
         "keywords": "semana, resumen, repaso, domingo, completado, retrospectiva",
         "body": "Los domingos, T'Day muestra un breve repaso en tu lista de Hoy: cuántas tareas completaste esta semana, tu día más activo y la tarea más antigua que por fin terminaste. Se crea con tu historial completado.",
         "tip": "¿No es el momento? Descártalo y no volverá hasta la próxima semana."
+      },
+      "quiet-hours": {
+        "title": "Horas de silencio",
+        "summary": "Retén los recordatorios de noche para que nada suene mientras duermes.",
+        "keywords": "silencio, horas, no molestar, noche, dormir, recordatorios, horario",
+        "body": "Define una franja —por ejemplo de 22:00 a 07:00— y cualquier recordatorio que sonaría dentro se retiene hasta que termina. Es solo en el dispositivo; los recordatorios locales esperan a la mañana.",
+        "tip": "La franja puede cruzar la medianoche (22:00 → 07:00); el cálculo lo resuelve."
       }
     }
   },

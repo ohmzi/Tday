@@ -150,3 +150,20 @@ final class RepeatSuggestionEngineTests: XCTestCase {
         XCTAssertNil(RepeatSuggestionEngine.suggest(currentTitle: "water plants", completions: completions))
     }
 }
+
+final class QuietHoursMathTests: XCTestCase {
+    func testSameDayWindow() {
+        XCTAssertTrue(QuietHoursMath.contains(13 * 60 + 30, 13 * 60, 14 * 60))
+        XCTAssertFalse(QuietHoursMath.contains(14 * 60, 13 * 60, 14 * 60))
+    }
+
+    func testMidnightSpanning() {
+        XCTAssertTrue(QuietHoursMath.contains(2 * 60, 22 * 60, 7 * 60))
+        XCTAssertFalse(QuietHoursMath.contains(12 * 60, 22 * 60, 7 * 60))
+    }
+
+    func testShift() {
+        XCTAssertEqual(QuietHoursMath.minutesUntilWindowEnd(23 * 60, 22 * 60, 7 * 60), 8 * 60)
+        XCTAssertEqual(QuietHoursMath.minutesUntilWindowEnd(15 * 60, 13 * 60, 14 * 60), 0)
+    }
+}

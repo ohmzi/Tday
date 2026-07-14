@@ -131,6 +131,8 @@ struct SettingsScreen: View {
                         }
                     )
                     SettingsDivider()
+                    SettingsQuietHoursSection()
+                    SettingsDivider()
                     SettingsSectionTitle("Language")
                     SettingsLanguageSelector(
                         currentLanguage: viewModel.appLanguage,
@@ -287,6 +289,67 @@ private struct SettingsProfileCard: View {
                 .font(.tdayRounded(size: 13, weight: .bold))
                 .foregroundStyle(colors.onSurface.opacity(0.58))
         }
+    }
+}
+
+// MARK: - Quiet hours
+
+/// "Hold reminders between HH:MM and HH:MM" — entirely local; the scheduler shifts any
+/// reminder inside the window to the window end.
+private struct SettingsQuietHoursSection: View {
+    @Environment(\.tdayColors) private var colors
+    private let store = QuietHoursStore()
+    @State private var enabled: Bool
+    @State private var startTime: Date
+    @State private var endTime: Date
+
+    init() {
+        let store = QuietHoursStore()
+        _enabled = State(initialValue: store.isEnabled)
+        _startTime = State(initialValue: Self.date(fromMinute: store.startMinute))
+        _endTime = State(initialValue: Self.date(fromMinute: store.endMinute))
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Toggle(isOn: $enabled) {
+                Text(L("Quiet hours"))
+                    .font(.body.weight(.heavy))
+                    .foregroundStyle(colors.onSurface)
+            }
+            .tint(colors.secondary)
+            .onChange(of: enabled) { _, value in store.isEnabled = value }
+
+            if enabled {
+                HStack {
+                    Text(L("Start"))
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(colors.onSurfaceVariant)
+                    Spacer()
+                    DatePicker("", selection: $startTime, displayedComponents: .hourAndMinute)
+                        .labelsHidden()
+                        .onChange(of: startTime) { _, value in store.startMinute = Self.minute(from: value) }
+                }
+                HStack {
+                    Text(L("End"))
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(colors.onSurfaceVariant)
+                    Spacer()
+                    DatePicker("", selection: $endTime, displayedComponents: .hourAndMinute)
+                        .labelsHidden()
+                        .onChange(of: endTime) { _, value in store.endMinute = Self.minute(from: value) }
+                }
+            }
+        }
+    }
+
+    private static func date(fromMinute minute: Int) -> Date {
+        Calendar.current.date(bySettingHour: minute / 60, minute: minute % 60, second: 0, of: Date()) ?? Date()
+    }
+
+    private static func minute(from date: Date) -> Int {
+        let comps = Calendar.current.dateComponents([.hour, .minute], from: date)
+        return (comps.hour ?? 0) * 60 + (comps.minute ?? 0)
     }
 }
 

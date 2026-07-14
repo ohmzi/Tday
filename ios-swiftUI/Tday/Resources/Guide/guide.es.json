@@ -822,6 +822,42 @@
       "searchBody": "las notificaciones de recordatorio incluyen las acciones posponer 1 h y esta noche. cuando un recordatorio llega en mal momento, no hace falta abrir la app: posponer 1 h vuelve a entregar el mismo recordatorio una hora despues, y esta noche mueve la tarea a las 19:00 de hoy. esta noche funciona con tareas puntuales; las repeticiones se reprograman desde la app para mantener la serie intacta. posponer solo retrasa la notificacion; la tarea conserva su hora original hasta que la muevas."
     },
     {
+      "id": "quiet-hours",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "bell",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.6.0",
+      "deepLink": null,
+      "helpAnchors": [
+        "settings-notifications"
+      ],
+      "title": "Horas de silencio",
+      "summary": "Retén los recordatorios de noche para que nada suene mientras duermes.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Define una franja —por ejemplo de 22:00 a 07:00— y cualquier recordatorio que sonaría dentro se retiene hasta que termina. Es solo en el dispositivo; los recordatorios locales esperan a la mañana."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "La franja puede cruzar la medianoche (22:00 → 07:00); el cálculo lo resuelve."
+          ]
+        }
+      ],
+      "searchTitle": "horas de silencio",
+      "searchKeywords": "silencio, horas, no molestar, noche, dormir, recordatorios, horario",
+      "searchBody": "reten los recordatorios de noche para que nada suene mientras duermes. define una franja —por ejemplo de 22:00 a 07:00— y cualquier recordatorio que sonaria dentro se retiene hasta que termina. es solo en el dispositivo; los recordatorios locales esperan a la manana. la franja puede cruzar la medianoche (22:00 → 07:00); el calculo lo resuelve."
+    },
+    {
       "id": "day-ahead",
       "section": "RECURRENCE_AND_REMINDERS",
       "sectionOrder": 4,
