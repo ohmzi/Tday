@@ -850,6 +850,13 @@
         "keywords": "widget, ajout rapide, créer, raccourci, écran d'accueil",
         "body": "Le widget dispose d'un bouton de création, vous pouvez donc saisir une tâche depuis votre écran d'accueil sans ouvrir d'abord l'application — et cela fonctionne aussi en Mode local."
       },
+      "interactive-widgets": {
+        "title": "Terminer depuis le widget",
+        "summary": "Cochez vos tâches directement sur le widget de l'écran d'accueil.",
+        "keywords": "widget, terminer, cocher, écran d'accueil, interactif, toucher",
+        "body": "Les widgets Aujourd'hui et Floaters réagissent désormais au toucher : touchez l'anneau au début d'une ligne pour terminer la tâche sans ouvrir l'application. La ligne disparaît aussitôt et la complétion se synchronise comme n'importe quelle autre — les appuis effectués hors ligne sont mis en file et appliqués dès que la connexion revient.",
+        "tip": "Touché par erreur ? Ouvrez l'historique des tâches terminées dans l'application et restaurez la tâche à partir de là."
+      },
       "carplay": {
         "title": "T'Day sur CarPlay",
         "summary": "Consultez et saisissez vos tâches en toute sécurité au volant.",

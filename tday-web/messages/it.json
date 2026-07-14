@@ -850,6 +850,13 @@
         "keywords": "widget, aggiunta rapida, crea, scorciatoia, schermata home",
         "body": "Il widget ha un pulsante di creazione, così puoi catturare un'attività dalla schermata Home senza prima aprire l'app — e funziona anche in Modalità locale."
       },
+      "interactive-widgets": {
+        "title": "Completa dal widget",
+        "summary": "Spunta le attività direttamente dal widget nella schermata Home.",
+        "keywords": "widget, completare, spuntare, schermata home, interattivo, tocco",
+        "body": "I widget Oggi e Floater ora rispondono al tocco: tocca l'anello all'inizio di una riga per completare quell'attività senza aprire l'app. La riga scompare subito e il completamento si sincronizza come qualsiasi altro — i tocchi fatti offline vengono messi in coda e applicati appena torni online.",
+        "tip": "Tocco sbagliato? Apri la cronologia completati nell'app e ripristina l'attività da lì."
+      },
       "carplay": {
         "title": "T'Day su CarPlay",
         "summary": "Consulta e cattura attività in sicurezza mentre guidi.",

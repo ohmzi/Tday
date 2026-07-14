@@ -877,6 +877,40 @@
       "searchBody": "demarrez une nouvelle tache directement depuis le widget. le widget dispose d'un bouton de creation, vous pouvez donc saisir une tache depuis votre ecran d'accueil sans ouvrir d'abord l'application — et cela fonctionne aussi en mode local."
     },
     {
+      "id": "interactive-widgets",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "check-check",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.4.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Terminer depuis le widget",
+      "summary": "Cochez vos tâches directement sur le widget de l'écran d'accueil.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Les widgets Aujourd'hui et Floaters réagissent désormais au toucher : touchez l'anneau au début d'une ligne pour terminer la tâche sans ouvrir l'application. La ligne disparaît aussitôt et la complétion se synchronise comme n'importe quelle autre — les appuis effectués hors ligne sont mis en file et appliqués dès que la connexion revient."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Touché par erreur ? Ouvrez l'historique des tâches terminées dans l'application et restaurez la tâche à partir de là."
+          ]
+        }
+      ],
+      "searchTitle": "terminer depuis le widget",
+      "searchKeywords": "widget, terminer, cocher, ecran d'accueil, interactif, toucher",
+      "searchBody": "cochez vos taches directement sur le widget de l'ecran d'accueil. les widgets aujourd'hui et floaters reagissent desormais au toucher : touchez l'anneau au debut d'une ligne pour terminer la tache sans ouvrir l'application. la ligne disparait aussitot et la completion se synchronise comme n'importe quelle autre — les appuis effectues hors ligne sont mis en file et appliques des que la connexion revient. touche par erreur ? ouvrez l'historique des taches terminees dans l'application et restaurez la tache a partir de la."
+    },
+    {
       "id": "carplay",
       "section": "WIDGETS_AND_SURFACES",
       "sectionOrder": 5,

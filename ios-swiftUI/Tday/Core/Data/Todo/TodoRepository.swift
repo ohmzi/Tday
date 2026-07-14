@@ -752,6 +752,66 @@ final class TodoRepository {
         }
     }
 
+    /// Applies completions tapped on the home-screen widgets (widgets v2).
+    /// The widget process cannot reach the cache, so each check-ring tap only
+    /// queued a `{kind, id}` descriptor in the app group; here every
+    /// descriptor resolves to its cached record and rides the normal complete
+    /// path — optimistic cache write, queued mutation, sync in Server Mode,
+    /// widget snapshot refresh.
+    func drainWidgetCompletions() async {
+        let entries = WidgetPendingCompletionQueue.drain()
+        guard !entries.isEmpty else {
+            return
+        }
+        guard let state = try? await cacheManager.loadOfflineState() else {
+            return
+        }
+        for entry in entries {
+            switch entry.kind {
+            case WidgetPendingCompletionQueue.todoKind:
+                guard let record = state.todos.first(where: { $0.id == entry.id && !$0.completed }) else {
+                    continue
+                }
+                let todo = TodoItem(
+                    id: record.id,
+                    canonicalId: record.canonicalId,
+                    title: record.title,
+                    description: record.description,
+                    priority: record.priority,
+                    due: record.dueEpochMs.map { Date(epochMilliseconds: $0) },
+                    rrule: record.rrule,
+                    instanceDate: record.instanceDateEpochMs.map { Date(epochMilliseconds: $0) },
+                    pinned: record.pinned,
+                    completed: record.completed,
+                    listId: record.listId,
+                    updatedAt: nil
+                )
+                try? await completeTodo(todo)
+            case WidgetPendingCompletionQueue.floaterKind:
+                guard let record = state.floaters.first(where: { $0.id == entry.id && !$0.completed }) else {
+                    continue
+                }
+                let floater = TodoItem(
+                    id: record.id,
+                    canonicalId: record.canonicalId,
+                    title: record.title,
+                    description: record.description,
+                    priority: record.priority,
+                    due: nil,
+                    rrule: nil,
+                    instanceDate: nil,
+                    pinned: record.pinned,
+                    completed: record.completed,
+                    listId: record.listId,
+                    updatedAt: nil
+                )
+                try? await completeFloater(floater)
+            default:
+                continue
+            }
+        }
+    }
+
     /// Schedules a floater into a real Todo. Optimistically moves the row
     /// between the cached silos; the replay case remaps the interim
     /// `local-todo-` id (carried in the mutation's spare `name` field) to the

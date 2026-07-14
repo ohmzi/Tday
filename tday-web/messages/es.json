@@ -850,6 +850,13 @@
         "keywords": "widget, añadir rápido, crear, acceso directo, pantalla de inicio",
         "body": "El widget tiene un botón de crear, así que puedes capturar una tarea desde tu pantalla de inicio sin abrir antes la app, y también funciona en Modo local."
       },
+      "interactive-widgets": {
+        "title": "Completa desde el widget",
+        "summary": "Marca tareas directamente en el widget de la pantalla de inicio.",
+        "keywords": "widget, completar, marcar, pantalla de inicio, interactivo, tocar",
+        "body": "Los widgets de Hoy y Flotantes ahora responden al toque: pulsa el anillo al inicio de cualquier fila para completar esa tarea sin abrir la app. La fila desaparece al instante y el completado se sincroniza como cualquier otro; los toques hechos sin conexión se ponen en cola y se aplican cuando vuelves a estar en línea.",
+        "tip": "¿Un toque accidental? Abre el historial de completadas en la app y restaura la tarea desde allí."
+      },
       "carplay": {
         "title": "T'Day en CarPlay",
         "summary": "Consulta y captura tareas de forma segura mientras conduces.",
