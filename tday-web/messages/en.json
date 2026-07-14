@@ -434,7 +434,8 @@
       "submitAndOpen": "Submit form and open another",
       "openForm": "Open form",
       "exitForm": "Exit form",
-      "editForm": "Edit form"
+      "editForm": "Edit form",
+      "submit": "Submit form"
     },
     "calendar": {
       "markComplete": "Mark complete",
@@ -450,6 +451,12 @@
       "today": "Today",
       "calendar": "Calendar",
       "completed": "Completed"
+    },
+    "global": {
+      "title": "Anywhere",
+      "newTask": "New task",
+      "openPalette": "Command palette",
+      "showShortcuts": "This overview"
     }
   },
   "filterMenu": {
@@ -930,7 +937,26 @@
         "keywords": "keyboard, shortcut, submit, enter, save, hotkey",
         "body": "In the web app you can submit the task form straight from the keyboard, so quick capture never breaks your flow.",
         "kbd": "Ctrl / ⌘ + Enter"
+      },
+      "keyboard-shortcuts": {
+        "title": "Keyboard shortcuts",
+        "summary": "Drive the web app from the keyboard: quick add, palette, overview.",
+        "keywords": "keyboard, shortcut, hotkey, command palette, cmd+k, quick add",
+        "body": "The web app has a global keyboard layer. Press N anywhere to start a new task, Ctrl / ⌘ + K to open the command palette — type to jump to any view or list, or run an action — and ? to see the shortcut overview. Keys are ignored while you're typing in a field.",
+        "tip": "Inside the palette, the arrow keys move the selection and Enter runs it.",
+        "kbd": "N",
+        "kbd2": "Ctrl / ⌘ + K",
+        "kbd3": "?"
       }
     }
+  },
+  "palette": {
+    "title": "Command palette",
+    "placeholder": "Type a command or search…",
+    "empty": "Nothing matches",
+    "actions": "Actions",
+    "navigation": "Go to",
+    "lists": "Lists",
+    "newTask": "New task"
   }
 }

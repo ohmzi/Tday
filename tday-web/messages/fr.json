@@ -434,7 +434,8 @@
       "submitAndOpen": "Soumettre le formulaire et en ouvrir un autre",
       "openForm": "Ouvrir le formulaire",
       "exitForm": "Quitter le formulaire",
-      "editForm": "Modifier le formulaire"
+      "editForm": "Modifier le formulaire",
+      "submit": "Valider le formulaire"
     },
     "calendar": {
       "markComplete": "Marquer comme terminé",
@@ -450,6 +451,12 @@
       "today": "Aujourd'hui",
       "calendar": "Calendrier",
       "completed": "Terminé"
+    },
+    "global": {
+      "title": "Partout",
+      "newTask": "Nouvelle tâche",
+      "openPalette": "Palette de commandes",
+      "showShortcuts": "Cet aperçu"
     }
   },
   "filterMenu": {
@@ -930,7 +937,26 @@
         "keywords": "clavier, raccourci, valider, entrée, enregistrer, touche",
         "body": "Dans l'application web, vous pouvez valider le formulaire de tâche directement au clavier, pour que la saisie rapide ne casse jamais votre élan.",
         "kbd": "Ctrl / ⌘ + Entrée"
+      },
+      "keyboard-shortcuts": {
+        "title": "Raccourcis clavier",
+        "summary": "Pilotez l'app web au clavier : ajout rapide, palette, aperçu.",
+        "keywords": "clavier, raccourci, touche, palette de commandes, cmd+k, ajout rapide",
+        "body": "L'app web possède une couche clavier globale. Appuyez sur N n'importe où pour créer une tâche, Ctrl / ⌘ + K pour ouvrir la palette de commandes — tapez pour rejoindre une vue ou une liste, ou lancer une action — et ? pour afficher l'aperçu des raccourcis. Les touches sont ignorées pendant la saisie dans un champ.",
+        "tip": "Dans la palette, les flèches déplacent la sélection et Entrée l'exécute.",
+        "kbd": "N",
+        "kbd2": "Ctrl / ⌘ + K",
+        "kbd3": "?"
       }
     }
+  },
+  "palette": {
+    "title": "Palette de commandes",
+    "placeholder": "Saisissez une commande ou recherchez…",
+    "empty": "Aucun résultat",
+    "actions": "Actions",
+    "navigation": "Aller à",
+    "lists": "Listes",
+    "newTask": "Nouvelle tâche"
   }
 }

@@ -434,7 +434,8 @@
       "submitAndOpen": "Formular absenden und weiteres öffnen",
       "openForm": "Formular öffnen",
       "exitForm": "Formular schließen",
-      "editForm": "Formular bearbeiten"
+      "editForm": "Formular bearbeiten",
+      "submit": "Formular absenden"
     },
     "calendar": {
       "markComplete": "Marcar como completada",
@@ -450,6 +451,12 @@
       "today": "Heute",
       "calendar": "Kalender",
       "completed": "Abgeschlossen"
+    },
+    "global": {
+      "title": "Überall",
+      "newTask": "Neue Aufgabe",
+      "openPalette": "Befehlspalette",
+      "showShortcuts": "Diese Übersicht"
     }
   },
   "filterMenu": {
@@ -930,7 +937,26 @@
         "keywords": "tastatur, tastenkürzel, absenden, enter, speichern, hotkey",
         "body": "In der Web-App kannst du das Aufgabenformular direkt über die Tastatur absenden, sodass schnelles Erfassen deinen Fluss nie unterbricht.",
         "kbd": "Strg / ⌘ + Enter"
+      },
+      "keyboard-shortcuts": {
+        "title": "Tastaturkürzel",
+        "summary": "Steuere die Web-App per Tastatur: Schnelleingabe, Palette, Übersicht.",
+        "keywords": "tastatur, kürzel, hotkey, befehlspalette, cmd+k, schnell hinzufügen",
+        "body": "Die Web-App hat eine globale Tastatur-Ebene. Drücke überall N für eine neue Aufgabe, Ctrl / ⌘ + K für die Befehlspalette — tippe, um zu einer Ansicht oder Liste zu springen oder eine Aktion auszuführen — und ? für die Kürzel-Übersicht. Während du in einem Feld tippst, werden die Tasten ignoriert.",
+        "tip": "In der Palette bewegen die Pfeiltasten die Auswahl, Enter führt sie aus.",
+        "kbd": "N",
+        "kbd2": "Ctrl / ⌘ + K",
+        "kbd3": "?"
       }
     }
+  },
+  "palette": {
+    "title": "Befehlspalette",
+    "placeholder": "Befehl eingeben oder suchen…",
+    "empty": "Keine Treffer",
+    "actions": "Aktionen",
+    "navigation": "Gehe zu",
+    "lists": "Listen",
+    "newTask": "Neue Aufgabe"
   }
 }

@@ -45,4 +45,5 @@ object GuideTopicIds {
     const val API_KEY_HOMARR = "api-key-homarr"
     const val AI_SUMMARY = "ai-summary"
     const val KEYBOARD_SUBMIT = "keyboard-submit"
+    const val KEYBOARD_SHORTCUTS = "keyboard-shortcuts"
 }

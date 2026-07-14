@@ -758,6 +758,54 @@
       "helpAnchors": [],
       "serverOnly": false,
       "sinceVersion": null
+    },
+    {
+      "id": "keyboard-shortcuts",
+      "section": "KEYBOARD_SHORTCUTS",
+      "icon": "keyboard",
+      "platforms": [
+        "WEB"
+      ],
+      "titleKey": "guide.topics.keyboard-shortcuts.title",
+      "summaryKey": "guide.topics.keyboard-shortcuts.summary",
+      "keywordsKey": "guide.topics.keyboard-shortcuts.keywords",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "keys": [
+            "guide.topics.keyboard-shortcuts.body"
+          ]
+        },
+        {
+          "type": "KBD",
+          "keys": [
+            "guide.topics.keyboard-shortcuts.kbd"
+          ]
+        },
+        {
+          "type": "KBD",
+          "keys": [
+            "guide.topics.keyboard-shortcuts.kbd2"
+          ]
+        },
+        {
+          "type": "KBD",
+          "keys": [
+            "guide.topics.keyboard-shortcuts.kbd3"
+          ]
+        },
+        {
+          "type": "TIP",
+          "keys": [
+            "guide.topics.keyboard-shortcuts.tip"
+          ]
+        }
+      ],
+      "badge": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "serverOnly": false,
+      "sinceVersion": "0.4.0"
     }
   ]
 }
