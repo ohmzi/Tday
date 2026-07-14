@@ -609,4 +609,16 @@
     <string name="settings_account_security_questions_updated">Контрольные вопросы обновлены</string>
     <string name="summary_source_local">Локальная модель</string>
     <string name="summary_source_server">Серверная модель</string>
+    <string name="settings_data_title">Ваши данные</string>
+    <string name="settings_data_summary">%1$d задач · %2$d списков · %3$d завершено</string>
+    <string name="settings_data_download">Скачать мои данные</string>
+    <string name="settings_data_import">Импорт</string>
+    <string name="settings_data_import_local_hint">Войдите на сервер, чтобы импортировать файл.</string>
+    <string name="settings_data_export_done">Файл с вашими данными сохранён.</string>
+    <string name="settings_data_import_done">Импорт завершён — добавлено элементов: %1$d.</string>
+    <string name="settings_data_import_failed">Не удалось импортировать этот файл.</string>
+    <string name="settings_data_confirm_title">Импортировать данные?</string>
+    <string name="settings_data_confirm_body">Будет добавлено элементов: %1$d. Ничего из имеющегося не изменится и не удалится.</string>
+    <string name="settings_data_confirm_import">Импорт</string>
+    <string name="settings_data_confirm_cancel">Отмена</string>
 </resources>

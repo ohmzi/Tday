@@ -606,4 +606,16 @@
     <string name="settings_account_security_questions_updated">セキュリティの質問を更新しました</string>
     <string name="summary_source_local">ローカルモデル</string>
     <string name="summary_source_server">サーバーモデル</string>
+    <string name="settings_data_title">あなたのデータ</string>
+    <string name="settings_data_summary">タスク %1$d · リスト %2$d · 完了 %3$d</string>
+    <string name="settings_data_download">データをダウンロード</string>
+    <string name="settings_data_import">インポート</string>
+    <string name="settings_data_import_local_hint">ファイルをインポートするにはサーバーにサインインしてください。</string>
+    <string name="settings_data_export_done">データファイルを保存しました。</string>
+    <string name="settings_data_import_done">インポート完了 — %1$d 件を追加しました。</string>
+    <string name="settings_data_import_failed">このファイルをインポートできませんでした。</string>
+    <string name="settings_data_confirm_title">データをインポートしますか？</string>
+    <string name="settings_data_confirm_body">アカウントに %1$d 件を追加します。既存のデータは変更も削除もされません。</string>
+    <string name="settings_data_confirm_import">インポート</string>
+    <string name="settings_data_confirm_cancel">キャンセル</string>
 </resources>

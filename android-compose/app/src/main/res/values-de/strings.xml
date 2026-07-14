@@ -607,4 +607,16 @@
     <string name="settings_account_security_questions_updated">Sicherheitsfragen aktualisiert</string>
     <string name="summary_source_local">Lokales Modell</string>
     <string name="summary_source_server">Server-Modell</string>
+    <string name="settings_data_title">Deine Daten</string>
+    <string name="settings_data_summary">%1$d Aufgaben · %2$d Listen · %3$d abgeschlossen</string>
+    <string name="settings_data_download">Meine Daten herunterladen</string>
+    <string name="settings_data_import">Importieren</string>
+    <string name="settings_data_import_local_hint">Melde dich an einem Server an, um eine Datei zu importieren.</string>
+    <string name="settings_data_export_done">Deine Datendatei wurde gespeichert.</string>
+    <string name="settings_data_import_done">Import abgeschlossen — %1$d Einträge hinzugefügt.</string>
+    <string name="settings_data_import_failed">Diese Datei konnte nicht importiert werden.</string>
+    <string name="settings_data_confirm_title">Daten importieren?</string>
+    <string name="settings_data_confirm_body">Das fügt %1$d Einträge zu deinem Konto hinzu. Vorhandenes wird nicht geändert oder entfernt.</string>
+    <string name="settings_data_confirm_import">Importieren</string>
+    <string name="settings_data_confirm_cancel">Abbrechen</string>
 </resources>

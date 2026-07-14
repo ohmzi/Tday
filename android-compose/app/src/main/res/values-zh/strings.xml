@@ -606,4 +606,16 @@
     <string name="settings_account_security_questions_updated">安全问题已更新</string>
     <string name="summary_source_local">本地模型</string>
     <string name="summary_source_server">服务器模型</string>
+    <string name="settings_data_title">你的数据</string>
+    <string name="settings_data_summary">%1$d 个任务 · %2$d 个清单 · %3$d 个已完成</string>
+    <string name="settings_data_download">下载我的数据</string>
+    <string name="settings_data_import">导入</string>
+    <string name="settings_data_import_local_hint">登录服务器后才能导入文件。</string>
+    <string name="settings_data_export_done">已保存你的数据文件。</string>
+    <string name="settings_data_import_done">导入完成——已添加 %1$d 项。</string>
+    <string name="settings_data_import_failed">无法导入该文件。</string>
+    <string name="settings_data_confirm_title">导入数据？</string>
+    <string name="settings_data_confirm_body">这会向你的账户添加 %1$d 项。你已有的内容不会被更改或删除。</string>
+    <string name="settings_data_confirm_import">导入</string>
+    <string name="settings_data_confirm_cancel">取消</string>
 </resources>

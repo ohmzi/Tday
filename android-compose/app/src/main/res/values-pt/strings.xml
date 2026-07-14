@@ -607,4 +607,16 @@
     <string name="settings_account_security_questions_updated">Perguntas de segurança atualizadas</string>
     <string name="summary_source_local">Modelo local</string>
     <string name="summary_source_server">Modelo do servidor</string>
+    <string name="settings_data_title">Os seus dados</string>
+    <string name="settings_data_summary">%1$d tarefas · %2$d listas · %3$d concluídas</string>
+    <string name="settings_data_download">Descarregar os meus dados</string>
+    <string name="settings_data_import">Importar</string>
+    <string name="settings_data_import_local_hint">Inicie sessão num servidor para importar um ficheiro.</string>
+    <string name="settings_data_export_done">O ficheiro dos seus dados foi guardado.</string>
+    <string name="settings_data_import_done">Importação concluída — %1$d itens adicionados.</string>
+    <string name="settings_data_import_failed">Não foi possível importar esse ficheiro.</string>
+    <string name="settings_data_confirm_title">Importar dados?</string>
+    <string name="settings_data_confirm_body">Isto adiciona %1$d itens à sua conta. Nada do que já tem é alterado ou removido.</string>
+    <string name="settings_data_confirm_import">Importar</string>
+    <string name="settings_data_confirm_cancel">Cancelar</string>
 </resources>
