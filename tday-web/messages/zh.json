@@ -599,7 +599,13 @@
       "calendarFeedRevoked": "日历订阅已撤销",
       "calendarFeedRevokeFailed": "撤销日历订阅失败",
       "calendarFeedCopied": "日历链接已复制",
-      "calendarFeedCopyFailed": "复制日历链接失败"
+      "calendarFeedCopyFailed": "复制日历链接失败",
+      "webhookCreated": "已添加 webhook，请立即复制签名密钥。",
+      "webhookCreateFailed": "添加 webhook 失败",
+      "webhookDeleted": "已删除 webhook",
+      "webhookDeleteFailed": "删除 webhook 失败",
+      "webhookSecretCopied": "签名密钥已复制",
+      "webhookSecretCopyFailed": "复制签名密钥失败"
     },
     "signOut": "退出登录",
     "aiSummary": {
@@ -647,6 +653,19 @@
       "generating": "生成中...",
       "revoking": "撤销中...",
       "copyUrl": "立即复制此日历链接——请像密码一样妥善保管。"
+    },
+    "webhooks": {
+      "title": "Webhook",
+      "blurb": "数据变更时获得已签名的 HTTP 通知。",
+      "urlPlaceholder": "https://你的服务器/webhook",
+      "eventsLabel": "事件（不选=全部）",
+      "creating": "添加中...",
+      "add": "添加 webhook",
+      "secretCopyNow": "立即复制此签名密钥——不会再次显示。",
+      "allEvents": "所有事件",
+      "disabled": "已禁用",
+      "delete": "删除 webhook",
+      "none": "暂无 webhook"
     }
   },
   "summary": {
@@ -1010,6 +1029,15 @@
         "step0": "在设置中打开“日历订阅”卡片并生成链接。",
         "step1": "复制链接——只显示一次；丢失后可重新生成。",
         "step2": "在你的日历应用中将其添加为订阅日历。"
+      },
+      "webhooks": {
+        "title": "Webhook",
+        "summary": "任务变更时获得 HTTP 通知。",
+        "keywords": "webhook, http, 集成, hmac, 签名, 自动化, 通知, 回调",
+        "body": "注册一个 HTTP 端点，当你的任务、列表或浮动项变更时，T'Day 会 POST 一个小型的已签名“发生变更”通知——不包含任务内容，仅含事件类型和列表 id，便于你的自动化通过普通 API 重新获取。每个 webhook 都有自己的密钥，在 X-Tday-Signature 头中用 HMAC-SHA256 对主体签名；信任请求前请先验证。持续失败的 webhook 会被自动禁用。",
+        "step0": "在设置中粘贴端点 URL 并选择要接收的事件。",
+        "step1": "添加 webhook 并复制其签名密钥——只显示一次。",
+        "step2": "在处理每个请求前验证 X-Tday-Signature 的 HMAC。"
       }
     }
   },

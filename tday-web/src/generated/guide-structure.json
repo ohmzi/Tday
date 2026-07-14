@@ -768,6 +768,44 @@
       "sinceVersion": "0.5.0"
     },
     {
+      "id": "webhooks",
+      "section": "INTEGRATIONS",
+      "icon": "webhook",
+      "platforms": [
+        "WEB"
+      ],
+      "titleKey": "guide.topics.webhooks.title",
+      "summaryKey": "guide.topics.webhooks.summary",
+      "keywordsKey": "guide.topics.webhooks.keywords",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "keys": [
+            "guide.topics.webhooks.body"
+          ]
+        },
+        {
+          "type": "STEPS",
+          "keys": [
+            "guide.topics.webhooks.step0",
+            "guide.topics.webhooks.step1",
+            "guide.topics.webhooks.step2"
+          ]
+        }
+      ],
+      "badge": null,
+      "deepLink": {
+        "web": "settings",
+        "android": null,
+        "ios": null
+      },
+      "helpAnchors": [
+        "settings-webhooks"
+      ],
+      "serverOnly": true,
+      "sinceVersion": "0.5.0"
+    },
+    {
       "id": "ai-summary",
       "section": "INTEGRATIONS",
       "icon": "sparkles",

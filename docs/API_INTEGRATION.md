@@ -88,6 +88,35 @@ Management endpoints (require a **session cookie**):
 | `POST`   | `/api/user/calendar-feed` | `{ message, feed: { token, tokenPreview, createdAt } }` — build `<origin>/calendar/<token>.ics`, shown once |
 | `DELETE` | `/api/user/calendar-feed` | `{ message }` (revokes the feed)                                               |
 
+## Outbound webhooks
+
+Instead of polling, register an HTTP endpoint and T'Day will **push** a small signed ping whenever
+your data changes — the same coarse "something changed" signal the web/mobile apps receive over `/ws`.
+
+- **ID-only payload** — no task contents, just the event type, your user id, an optional list id, and
+  a timestamp. Your automation refetches through the normal API (which enforces access):
+
+  ```json
+  { "event": "todo.changed", "userId": "usr_…", "listId": null, "timestamp": "2026-07-14T09:00:00" }
+  ```
+
+- **Event types:** `todo.changed`, `floater.changed`, `list.changed`, `floaterList.changed`,
+  `list.members`, `completed.changed`. A subscription with no filter receives them all.
+- **Signature:** each request carries `X-Tday-Signature: sha256=<hex>`, the HMAC-SHA256 of the **raw
+  request body** under the subscription's secret (returned once at creation). Recompute and compare
+  before trusting a request.
+- **Delivery:** `POST` with a short timeout, retried a few times with exponential backoff. A
+  subscription that fails repeatedly (15 consecutive failures) is auto-disabled; outcomes are logged.
+
+Management endpoints (require a **session cookie**):
+
+| Method   | Path                  | Body / Returns                                                                 |
+|----------|-----------------------|--------------------------------------------------------------------------------|
+| `GET`    | `/api/webhook`        | `{ webhooks: [{ id, url, events, enabled, consecutiveFailures, lastStatus?, lastAttemptAt?, createdAt }] }` |
+| `GET`    | `/api/webhook/event-types` | `{ eventTypes: [...] }`                                                    |
+| `POST`   | `/api/webhook`        | Body `{ url, events?: [...] }` → `{ message, webhook: { id, url, events, secret, createdAt } }` — `secret` shown once |
+| `DELETE` | `/api/webhook/{id}`   | `{ message }` (`404` if the id is unknown)                                      |
+
 ## Working with tasks
 
 The endpoints below are the ones a task integration needs (this is exactly the surface the Homarr

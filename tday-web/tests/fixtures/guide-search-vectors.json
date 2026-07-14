@@ -36,7 +36,8 @@
       "promote-and-float",
       "root-feeds",
       "create-task",
-      "morning-sweep"
+      "morning-sweep",
+      "webhooks"
     ],
     "car": [
       "morning-sweep",
@@ -57,6 +58,7 @@
       "pin-task",
       "create-task",
       "promote-and-float",
+      "webhooks",
       "keyboard-shortcuts"
     ],
     "keyboard": [
