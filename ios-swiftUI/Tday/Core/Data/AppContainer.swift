@@ -27,6 +27,7 @@ final class AppContainer {
     let listShareRepository: ListShareRepository
     let completedRepository: CompletedRepository
     let settingsRepository: SettingsRepository
+    let dataExportRepository: DataExportRepository
     let realtimeClient: RealtimeClient
     let reminderScheduler: TaskReminderScheduler
     let dayAheadStore: DayAheadStore
@@ -88,6 +89,7 @@ final class AppContainer {
         listShareRepository = ListShareRepository(api: apiService)
         completedRepository = CompletedRepository(api: apiService, cacheManager: cacheManager, syncManager: syncManager)
         settingsRepository = SettingsRepository(api: apiService, cacheManager: cacheManager, secureStore: secureStore)
+        dataExportRepository = DataExportRepository(api: apiService, cacheManager: cacheManager, syncManager: syncManager, secureStore: secureStore)
         realtimeClient = RealtimeClient(configuration: networkConfiguration)
         reminderScheduler = TaskReminderScheduler(reminderPreferenceStore: reminderPreferenceStore)
         dayAheadStore = DayAheadStore()

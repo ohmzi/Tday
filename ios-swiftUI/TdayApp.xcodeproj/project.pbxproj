@@ -33,6 +33,7 @@
 		494E748270A233BECED5A359 /* TodayTasksWidgetSnapshotStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC92D6152EADEDF915AE116B /* TodayTasksWidgetSnapshotStoreTests.swift */; };
 		4A7B9C0D1E2F3456789ABC01 /* CompletedSyncMergeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A7B9C0D1E2F3456789ABC02 /* CompletedSyncMergeTests.swift */; };
 		4D2A9B7E2CE3424C9D111001 /* ConnectivityClassificationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D2A9B7E2CE3424C9D111002 /* ConnectivityClassificationTests.swift */; };
+		DA7A000000000000000000003 /* DataExportMapperTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA7A000000000000000000004 /* DataExportMapperTests.swift */; };
 		4E4F544946444545504C3031 /* NotificationDeepLinkRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E4F544946444545504C3032 /* NotificationDeepLinkRouter.swift */; };
 		4F52544D434C49454E543031 /* RealtimeClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F52544D434C49454E543032 /* RealtimeClientTests.swift */; };
 		51A46F8E627C26BF34E91F7B /* TodoListViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF0DB445B9FEE9B047FBB708 /* TodoListViewModel.swift */; };
@@ -88,6 +89,7 @@
 		B5C6D7E8F9A000000000B201 /* AppLocale.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5C6D7E8F9A000000000F201 /* AppLocale.swift */; };
 		B5D28682AD0623E39CCD4F8E /* CompleteTodoUseCase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70F09E74879D0AAABCF70E20 /* CompleteTodoUseCase.swift */; };
 		B648A67EAD215BE5B74F7460 /* ApiModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6049166B683EE082F8C551DD /* ApiModels.swift */; };
+		DA7A000000000000000000001 /* DataExport.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA7A000000000000000000002 /* DataExport.swift */; };
 		BA2D51423497337836ADD5E9 /* TdayTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39ADD9E07BF8B32C3FC7B170 /* TdayTheme.swift */; };
 		C013C84CCBF84A849CE93963 /* NetworkConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91CFC3C0B9ADD376389DF63C /* NetworkConfiguration.swift */; };
 		C0768A60B1B807FCA7A6D37F /* HomeScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9D2CB40ACEE85331512EEC2 /* HomeScreen.swift */; };
@@ -199,6 +201,7 @@
 		434143484D41505045525301 /* CacheMappersDateParsingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CacheMappersDateParsingTests.swift; sourceTree = "<group>"; };
 		4A7B9C0D1E2F3456789ABC02 /* CompletedSyncMergeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompletedSyncMergeTests.swift; sourceTree = "<group>"; };
 		4D2A9B7E2CE3424C9D111002 /* ConnectivityClassificationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectivityClassificationTests.swift; sourceTree = "<group>"; };
+		DA7A000000000000000000004 /* DataExportMapperTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataExportMapperTests.swift; sourceTree = "<group>"; };
 		4E4F544946444545504C3032 /* NotificationDeepLinkRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationDeepLinkRouter.swift; sourceTree = "<group>"; };
 		4F52544D434C49454E543032 /* RealtimeClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RealtimeClientTests.swift; sourceTree = "<group>"; };
 		53EFEAE1EE18AB86477A56BC /* CalendarViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarViewModel.swift; sourceTree = "<group>"; };
@@ -212,6 +215,7 @@
 		5D7ACBCBA57903A93BEC3BFA /* TaskReminderScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskReminderScheduler.swift; sourceTree = "<group>"; };
 		5E7E7A8C0B534B26A6E2F911 /* TelemetrySanitizerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TelemetrySanitizerTests.swift; sourceTree = "<group>"; };
 		6049166B683EE082F8C551DD /* ApiModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApiModels.swift; sourceTree = "<group>"; };
+		DA7A000000000000000000002 /* DataExport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataExport.swift; sourceTree = "<group>"; };
 		629820F1BA29236313992076 /* ApiModelContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApiModelContractTests.swift; sourceTree = "<group>"; };
 		62AD2C2DD2233FCBB4611E95 /* TodoListScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodoListScreen.swift; sourceTree = "<group>"; };
 		6CF6FD5D2845A10D7052467D /* AppContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppContainer.swift; sourceTree = "<group>"; };
@@ -375,6 +379,7 @@
 				B10000000000000000000005 /* CarTaskModelsTests.swift */,
 				4A7B9C0D1E2F3456789ABC02 /* CompletedSyncMergeTests.swift */,
 				4D2A9B7E2CE3424C9D111002 /* ConnectivityClassificationTests.swift */,
+				DA7A000000000000000000004 /* DataExportMapperTests.swift */,
 				CAFE0D1E0000000000000005 /* GuideContentContractTests.swift */,
 				4F52544D434C49454E543032 /* RealtimeClientTests.swift */,
 				5A4E00000000000000000034 /* PendingShareStoreTests.swift */,
@@ -587,6 +592,7 @@
 			isa = PBXGroup;
 			children = (
 				6049166B683EE082F8C551DD /* ApiModels.swift */,
+				DA7A000000000000000000002 /* DataExport.swift */,
 				8A6D006E491513605369E7D5 /* DomainModels.swift */,
 				CAFE0D1E0000000000000003 /* GuideModels.swift */,
 				AB49A43AFEE66EEDB3315F86 /* OfflineSyncModels.swift */,
@@ -1002,6 +1008,7 @@
 				B10000000000000000000025 /* CarTaskModelsTests.swift in Sources */,
 				4A7B9C0D1E2F3456789ABC01 /* CompletedSyncMergeTests.swift in Sources */,
 				4D2A9B7E2CE3424C9D111001 /* ConnectivityClassificationTests.swift in Sources */,
+				DA7A000000000000000000003 /* DataExportMapperTests.swift in Sources */,
 				CAFE0D1E0000000000000015 /* GuideContentContractTests.swift in Sources */,
 				4F52544D434C49454E543031 /* RealtimeClientTests.swift in Sources */,
 				5A4E00000000000000000035 /* PendingShareStoreTests.swift in Sources */,
@@ -1025,6 +1032,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				B648A67EAD215BE5B74F7460 /* ApiModels.swift in Sources */,
+				DA7A000000000000000000001 /* DataExport.swift in Sources */,
 				5A4E00000000000000000031 /* PendingShareStore.swift in Sources */,
 				07D1F4A0C9434C54853E9D29 /* AppDataMode.swift in Sources */,
 				5B82443B89507719EDD7215C /* AppContainer.swift in Sources */,

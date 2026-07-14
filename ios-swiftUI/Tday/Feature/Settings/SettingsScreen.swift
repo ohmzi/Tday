@@ -208,6 +208,10 @@ struct SettingsScreen: View {
                 }
             }
 
+            settingsListRow {
+                DataTransferCard(viewModel: viewModel)
+            }
+
             Color.clear
                 .frame(height: TodoTimelineMetrics.titleCollapseDistance + TodoTimelineMetrics.topBarRowHeight + 24)
                 .listRowInsets(EdgeInsets())
@@ -1901,4 +1905,152 @@ private enum ReleaseDateFormatters {
         formatter.formatOptions = [.withInternetDateTime]
         return formatter
     }()
+}
+
+/// "Your data" trust card: shows what lives in the account, exports it to a JSON
+/// file, and imports one back (Server Mode) after an additive-merge preview.
+private struct DataTransferCard: View {
+    let viewModel: AppViewModel
+
+    @State private var taskCount = 0
+    @State private var listCount = 0
+    @State private var completedCount = 0
+    @State private var busy = false
+    @State private var exportDocument: DataExportDocument?
+    @State private var showExporter = false
+    @State private var showImporter = false
+    @State private var pendingImportData: Data?
+    @State private var previewCount = 0
+    @State private var showConfirm = false
+
+    private var repository: DataExportRepository { viewModel.container.dataExportRepository }
+
+    var body: some View {
+        SettingsSectionCard {
+            HStack {
+                SettingsSectionTitle("Your data")
+                Spacer()
+                GuideHelpLink(topicId: "export-your-data")
+            }
+            Text("\(taskCount) tasks · \(listCount) lists · \(completedCount) completed")
+                .font(.tdayRounded(size: 13, weight: .semibold))
+                .foregroundStyle(.secondary)
+
+            SettingsListRow(title: "Download my data", value: nil, showChevron: false) {
+                startExport()
+            }
+
+            SettingsDivider()
+
+            if viewModel.isLocalMode {
+                Text("Sign in to a server to import a file.")
+                    .font(.tdayRounded(size: 12, weight: .semibold))
+                    .foregroundStyle(.secondary)
+            } else {
+                SettingsListRow(title: "Import", value: nil, showChevron: false) {
+                    if !busy { showImporter = true }
+                }
+            }
+        }
+        .task { loadCounts() }
+        .fileExporter(
+            isPresented: $showExporter,
+            document: exportDocument,
+            contentType: .json,
+            defaultFilename: exportFilename()
+        ) { result in
+            if case .failure(let error) = result {
+                notify(error.localizedDescription, kind: .error)
+            } else {
+                notify("Your data file was saved.", kind: .success)
+            }
+        }
+        .fileImporter(isPresented: $showImporter, allowedContentTypes: [.json]) { result in
+            handleImportPick(result)
+        }
+        .confirmationDialog("Import data?", isPresented: $showConfirm, titleVisibility: .visible) {
+            Button("Import \(previewCount) items") { confirmImport() }
+            Button("Cancel", role: .cancel) { clearPending() }
+        } message: {
+            Text("This adds \(previewCount) items to your account. Nothing you already have is changed or removed.")
+        }
+    }
+
+    private func loadCounts() {
+        let state = viewModel.container.cacheManager.loadOfflineState()
+        taskCount = state.todos.count + state.floaters.count
+        listCount = state.lists.count + state.floaterLists.count
+        completedCount = state.completedItems.count + state.completedFloaters.count
+    }
+
+    private func startExport() {
+        guard !busy else { return }
+        busy = true
+        Task {
+            do {
+                let data = try await repository.buildExportData()
+                exportDocument = DataExportDocument(data: data)
+                showExporter = true
+            } catch {
+                notify(error.localizedDescription, kind: .error)
+            }
+            busy = false
+        }
+    }
+
+    private func handleImportPick(_ result: Result<URL, Error>) {
+        guard case .success(let url) = result else {
+            if case .failure(let error) = result { notify(error.localizedDescription, kind: .error) }
+            return
+        }
+        guard url.startAccessingSecurityScopedResource(), let data = try? Data(contentsOf: url) else {
+            notify("Could not read that file.", kind: .error)
+            return
+        }
+        url.stopAccessingSecurityScopedResource()
+        pendingImportData = data
+        busy = true
+        Task {
+            do {
+                let response = try await repository.preview(fileData: data)
+                previewCount = response.imported.total
+                showConfirm = true
+            } catch {
+                notify("That file isn't a valid T'Day export.", kind: .error)
+                clearPending()
+            }
+            busy = false
+        }
+    }
+
+    private func confirmImport() {
+        guard let data = pendingImportData else { return }
+        busy = true
+        Task {
+            do {
+                let response = try await repository.commit(fileData: data)
+                notify("Import complete — added \(response.imported.total) items.", kind: .success)
+                loadCounts()
+            } catch {
+                notify("Could not import that file.", kind: .error)
+            }
+            clearPending()
+            busy = false
+        }
+    }
+
+    private func clearPending() {
+        pendingImportData = nil
+        previewCount = 0
+    }
+
+    private func exportFilename() -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        return "tday-export-\(formatter.string(from: Date())).json"
+    }
+
+    private func notify(_ message: String, kind: SnackbarKind) {
+        viewModel.container.snackbarManager.show(message, kind: kind)
+    }
 }
