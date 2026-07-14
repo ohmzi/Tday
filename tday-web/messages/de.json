@@ -857,6 +857,13 @@
         "body": "Die Today- und Floater-Widgets reagieren jetzt auf Tippen: Tippe auf den Ring am Anfang einer Zeile, um die Aufgabe abzuschließen, ohne die App zu öffnen. Die Zeile verschwindet sofort und der Abschluss synchronisiert wie jeder andere — offline getippte Häkchen warten in der Warteschlange und werden übernommen, sobald du wieder online bist.",
         "tip": "Vertippt? Öffne in der App die Abgeschlossene Historie und stelle die Aufgabe von dort wieder her."
       },
+      "share-into-tday": {
+        "title": "In T'Day teilen",
+        "summary": "Schicke Text aus jeder App direkt in eine neue Aufgabe.",
+        "keywords": "teilen, share sheet, senden an, erfassen, import, aus anderer app",
+        "body": "Etwas in einer anderen App gefunden? Öffne das System-Teilen-Menü und wähle T'Day. Der geteilte Text landet in einem Neue-Aufgabe-Formular — bei einer geteilten Seite wird ihr Titel zum Aufgabennamen und der Link wandert in die Notizen. Auf Android und im Web öffnet sich das Formular sofort; auf iOS wird die Aufnahme sofort gespeichert und das vorausgefüllte Formular erscheint beim nächsten Öffnen der App.",
+        "tip": "Teile Text mit einer Datumsangabe — der Parser setzt das Fälligkeitsdatum für dich."
+      },
       "carplay": {
         "title": "T'Day auf CarPlay",
         "summary": "Aufgaben sicher im Blick behalten und erfassen, während du fährst.",

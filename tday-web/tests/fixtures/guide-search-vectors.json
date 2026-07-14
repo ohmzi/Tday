@@ -20,7 +20,8 @@
       "quick-defer",
       "day-done",
       "scheduled-lists",
-      "morning-sweep"
+      "morning-sweep",
+      "share-into-tday"
     ],
     "reminder": [
       "push-notifications"

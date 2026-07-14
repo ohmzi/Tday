@@ -911,6 +911,41 @@
       "searchBody": "tanda tugasan terus pada widget skrin utama. widget today dan floater kini menerima ketikan: ketik gelang di awal mana-mana baris untuk menyelesaikan tugasan itu tanpa membuka aplikasi. baris itu hilang serta-merta dan penyelesaian disegerakkan seperti biasa — ketikan semasa luar talian menunggu dalam barisan dan digunakan sebaik sahaja anda kembali dalam talian. tersilap ketik? buka sejarah selesai dalam aplikasi dan pulihkan tugasan dari situ."
     },
     {
+      "id": "share-into-tday",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "share-2",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.4.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Kongsi ke T'Day",
+      "summary": "Hantar teks dari mana-mana aplikasi terus menjadi tugasan baharu.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Terjumpa sesuatu dalam aplikasi lain? Buka helaian kongsi sistem dan pilih T'Day. Teks yang dikongsi masuk ke borang tugasan baharu — halaman yang dikongsi mengekalkan tajuknya sebagai nama tugasan dengan pautan disimpan dalam nota. Pada Android dan aplikasi web, borang terbuka serta-merta; pada iOS, tangkapan disimpan serta-merta dan borang praisi menyambut anda pada kali seterusnya anda membuka aplikasi."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Kongsi teks yang mengandungi frasa tarikh dan penghurai akan menetapkan tarikh akhir untuk anda."
+          ]
+        }
+      ],
+      "searchTitle": "kongsi ke t'day",
+      "searchKeywords": "kongsi, helaian kongsi, hantar ke, tangkap, import, dari aplikasi lain",
+      "searchBody": "hantar teks dari mana-mana aplikasi terus menjadi tugasan baharu. terjumpa sesuatu dalam aplikasi lain? buka helaian kongsi sistem dan pilih t'day. teks yang dikongsi masuk ke borang tugasan baharu — halaman yang dikongsi mengekalkan tajuknya sebagai nama tugasan dengan pautan disimpan dalam nota. pada android dan aplikasi web, borang terbuka serta-merta; pada ios, tangkapan disimpan serta-merta dan borang praisi menyambut anda pada kali seterusnya anda membuka aplikasi. kongsi teks yang mengandungi frasa tarikh dan penghurai akan menetapkan tarikh akhir untuk anda."
+    },
+    {
       "id": "carplay",
       "section": "WIDGETS_AND_SURFACES",
       "sectionOrder": 5,

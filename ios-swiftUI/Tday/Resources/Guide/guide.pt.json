@@ -911,6 +911,41 @@
       "searchBody": "marque tarefas diretamente no widget do ecra principal. os widgets de hoje e flutuantes agora respondem ao toque: toque no anel no inicio de qualquer linha para concluir essa tarefa sem abrir a aplicacao. a linha desaparece de imediato e a conclusao sincroniza como qualquer outra — os toques feitos offline ficam em fila e aplicam-se assim que voltar a estar online. tocou sem querer? abra o historico de concluidas na aplicacao e restaure a tarefa a partir dai."
     },
     {
+      "id": "share-into-tday",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "share-2",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.4.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Partilhar para o T'Day",
+      "summary": "Envie texto de qualquer aplicação diretamente para uma nova tarefa.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Encontrou algo noutra aplicação? Abra a folha de partilha do sistema e escolha o T'Day. O texto partilhado entra num formulário de nova tarefa — ao partilhar uma página, o título torna-se o nome da tarefa e a ligação fica nas notas. No Android e na aplicação web o formulário abre no momento; no iOS a captura é guardada de imediato e o formulário pré-preenchido aparece na próxima vez que abrir a aplicação."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Partilhe um texto com uma data lá dentro e o analisador define o prazo por si."
+          ]
+        }
+      ],
+      "searchTitle": "partilhar para o t'day",
+      "searchKeywords": "partilhar, folha de partilha, enviar para, capturar, importar, de outra aplicacao",
+      "searchBody": "envie texto de qualquer aplicacao diretamente para uma nova tarefa. encontrou algo noutra aplicacao? abra a folha de partilha do sistema e escolha o t'day. o texto partilhado entra num formulario de nova tarefa — ao partilhar uma pagina, o titulo torna-se o nome da tarefa e a ligacao fica nas notas. no android e na aplicacao web o formulario abre no momento; no ios a captura e guardada de imediato e o formulario pre-preenchido aparece na proxima vez que abrir a aplicacao. partilhe um texto com uma data la dentro e o analisador define o prazo por si."
+    },
+    {
       "id": "carplay",
       "section": "WIDGETS_AND_SURFACES",
       "sectionOrder": 5,

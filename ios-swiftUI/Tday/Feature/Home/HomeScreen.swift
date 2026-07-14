@@ -69,6 +69,10 @@ struct HomeScreen: View {
     let onRootFeedTabSelected: (RootFeedTab) -> Void
     let showsRootControls: Bool
     let createTaskRequestID: Int
+    // Prefill for the next create sheet (shared-in text); cleared by the
+    // owner via onCreateTaskSheetClosed so later manual creates start blank.
+    let createTaskPrefill: CreateTaskPayload?
+    let onCreateTaskSheetClosed: () -> Void
     let scrollToTopRequestID: Int
     let onRootDockCollapsedChange: (Bool) -> Void
     let onRootControlsVisibleChange: (Bool) -> Void
@@ -98,6 +102,8 @@ struct HomeScreen: View {
         onRootFeedTabSelected: @escaping (RootFeedTab) -> Void = { _ in },
         showsRootControls: Bool = true,
         createTaskRequestID: Int = 0,
+        createTaskPrefill: CreateTaskPayload? = nil,
+        onCreateTaskSheetClosed: @escaping () -> Void = {},
         scrollToTopRequestID: Int = 0,
         onRootDockCollapsedChange: @escaping (Bool) -> Void = { _ in },
         onRootControlsVisibleChange: @escaping (Bool) -> Void = { _ in },
@@ -108,6 +114,8 @@ struct HomeScreen: View {
         self.onRootFeedTabSelected = onRootFeedTabSelected
         self.showsRootControls = showsRootControls
         self.createTaskRequestID = createTaskRequestID
+        self.createTaskPrefill = createTaskPrefill
+        self.onCreateTaskSheetClosed = onCreateTaskSheetClosed
         self.scrollToTopRequestID = scrollToTopRequestID
         self.onRootDockCollapsedChange = onRootDockCollapsedChange
         self.onRootControlsVisibleChange = onRootControlsVisibleChange
@@ -395,12 +403,17 @@ struct HomeScreen: View {
         .onDisappear {
             onRootControlsVisibleChange(true)
         }
+        .onChange(of: showingCreateTask) { _, showing in
+            if !showing {
+                onCreateTaskSheetClosed()
+            }
+        }
         .createTaskSheet(isPresented: $showingCreateTask) {
             CreateTaskSheet(
                 lists: viewModel.summary.lists,
                 titleText: L("New task"),
                 submitText: L("Create"),
-                initialPayload: nil,
+                initialPayload: createTaskPrefill,
                 onParseTaskTitleNlp: { title, dueRef in
                     await viewModel.parseTaskTitleNlp(text: title, referenceDueEpochMs: dueRef)
                 },

@@ -602,6 +602,38 @@
       "sinceVersion": "0.3.0"
     },
     {
+      "id": "share-into-tday",
+      "section": "WIDGETS_AND_SURFACES",
+      "icon": "share-2",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "titleKey": "guide.topics.share-into-tday.title",
+      "summaryKey": "guide.topics.share-into-tday.summary",
+      "keywordsKey": "guide.topics.share-into-tday.keywords",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "keys": [
+            "guide.topics.share-into-tday.body"
+          ]
+        },
+        {
+          "type": "TIP",
+          "keys": [
+            "guide.topics.share-into-tday.tip"
+          ]
+        }
+      ],
+      "badge": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "serverOnly": false,
+      "sinceVersion": "0.4.0"
+    },
+    {
       "id": "server-mode",
       "section": "MODES_AND_SYNC",
       "icon": "cloud",

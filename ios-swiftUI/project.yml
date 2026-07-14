@@ -23,6 +23,7 @@ targets:
       - package: sentry-cocoa
         product: Sentry-Dynamic
       - target: TdayWidget
+      - target: TdayShareExtension
     settings:
       base:
         PRODUCT_NAME: Tday
@@ -54,6 +55,28 @@ targets:
         DEVELOPMENT_TEAM: THT5Z8K3TF
         INFOPLIST_FILE: TdayWidget/Info.plist
         CODE_SIGN_ENTITLEMENTS: TdayWidget/TdayWidget.entitlements
+        GENERATE_INFOPLIST_FILE: NO
+        SWIFT_VERSION: 5.0
+        CURRENT_PROJECT_VERSION: 9
+        MARKETING_VERSION: 0.4.0
+        TARGETED_DEVICE_FAMILY: 1
+        SKIP_INSTALL: YES
+        APPLICATION_EXTENSION_API_ONLY: YES
+  TdayShareExtension:
+    type: app-extension
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: TdayShareExtension
+        excludes:
+          - Info.plist
+    settings:
+      base:
+        PRODUCT_NAME: TdayShareExtension
+        PRODUCT_BUNDLE_IDENTIFIER: com.ohmz.tday.ios.ShareExtension
+        DEVELOPMENT_TEAM: THT5Z8K3TF
+        INFOPLIST_FILE: TdayShareExtension/Info.plist
+        CODE_SIGN_ENTITLEMENTS: TdayShareExtension/TdayShareExtension.entitlements
         GENERATE_INFOPLIST_FILE: NO
         SWIFT_VERSION: 5.0
         CURRENT_PROJECT_VERSION: 9

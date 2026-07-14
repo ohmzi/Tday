@@ -11,6 +11,7 @@
 		01C535860D5694F91772B940 /* CookieStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D210E2E24F013C1E30BE80A /* CookieStore.swift */; };
 		02DCC3220DC138F342784CA4 /* SyncManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6D61A167DBA9FD21F8CC00A /* SyncManager.swift */; };
 		03A0CCC6A8AAE2DB065E6DE6 /* ServerURLPersistenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D206496BC88FF6272CFC286C /* ServerURLPersistenceTests.swift */; };
+		5A4E00000000000000000035 /* PendingShareStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A4E00000000000000000034 /* PendingShareStoreTests.swift */; };
 		041712E33446975E528F050E /* RealtimeClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CC7B17CE45842F8DF7D522B /* RealtimeClient.swift */; };
 		04EFD8B7BFDF9261BE3D88BE /* CacheMappers.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3CD3233C5F5D5FC1E058708 /* CacheMappers.swift */; };
 		0536D5C87C017F1DAC4F316C /* ThemeStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD41A49221B1A947AF8A94D0 /* ThemeStore.swift */; };
@@ -68,6 +69,9 @@
 		72304EA28CF49303A8CCB6B0 /* TodayTasksWidgetSnapshotStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC80072C8B232C0C09CE3139 /* TodayTasksWidgetSnapshotStore.swift */; };
 		D4A100000000000000000011 /* TdayWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = D4A100000000000000000010 /* TdayWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		D4A100000000000000000012 /* TodayTasksWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4A100000000000000000013 /* TodayTasksWidget.swift */; };
+		5A4E00000000000000000001 /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A4E00000000000000000002 /* ShareViewController.swift */; };
+		5A4E00000000000000000011 /* TdayShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 5A4E00000000000000000010 /* TdayShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		5A4E00000000000000000031 /* PendingShareStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A4E00000000000000000032 /* PendingShareStore.swift */; };
 		765ED719B3CCBB90176C55EB /* DomainModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A6D006E491513605369E7D5 /* DomainModels.swift */; };
 		846AE66C58EF435FB506E3E6 /* OnboardingWizardOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = D617DF23936179DDFF13A36D /* OnboardingWizardOverlay.swift */; };
 		84B6C4F440AD30E4EFA1FA3F /* ReminderOption.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FBC41C56EEEFC8869E762B3 /* ReminderOption.swift */; };
@@ -147,6 +151,13 @@
 			remoteGlobalIDString = D4A100000000000000000016;
 			remoteInfo = TdayWidget;
 		};
+		5A4E0000000000000000001E /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = DEBED54F5F85A969685E5452 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 5A4E00000000000000000016;
+			remoteInfo = TdayShareExtension;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -157,6 +168,7 @@
 			dstSubfolderSpec = 13;
 			files = (
 				D4A100000000000000000011 /* TdayWidget.appex in Embed Foundation Extensions */,
+				5A4E00000000000000000011 /* TdayShareExtension.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -255,12 +267,18 @@
 		A1C0FFEE000000000000F002 /* ListShareRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListShareRepository.swift; sourceTree = "<group>"; };
 		A1C0FFEE000000000000F003 /* ManageMembersSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManageMembersSheet.swift; sourceTree = "<group>"; };
 		D206496BC88FF6272CFC286C /* ServerURLPersistenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServerURLPersistenceTests.swift; sourceTree = "<group>"; };
+		5A4E00000000000000000034 /* PendingShareStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingShareStoreTests.swift; sourceTree = "<group>"; };
 		D24DBD8CA3EE648D4560B880 /* ServerURLState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServerURLState.swift; sourceTree = "<group>"; };
 		D26B48A87B57A0417CC3F578 /* TdayTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TdayTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		D4A100000000000000000010 /* TdayWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TdayWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		D4A100000000000000000013 /* TodayTasksWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayTasksWidget.swift; sourceTree = "<group>"; };
 		D4A100000000000000000014 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		D4A100000000000000000015 /* TdayWidget.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TdayWidget.entitlements; sourceTree = "<group>"; };
+		5A4E00000000000000000002 /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
+		5A4E00000000000000000010 /* TdayShareExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TdayShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		5A4E00000000000000000014 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		5A4E00000000000000000015 /* TdayShareExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TdayShareExtension.entitlements; sourceTree = "<group>"; };
+		5A4E00000000000000000032 /* PendingShareStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingShareStore.swift; sourceTree = "<group>"; };
 		D3CD3233C5F5D5FC1E058708 /* CacheMappers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CacheMappers.swift; sourceTree = "<group>"; };
 		D617DF23936179DDFF13A36D /* OnboardingWizardOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingWizardOverlay.swift; sourceTree = "<group>"; };
 		D6D61A167DBA9FD21F8CC00A /* SyncManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncManager.swift; sourceTree = "<group>"; };
@@ -303,6 +321,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		D4A100000000000000000018 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5A4E00000000000000000018 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -352,6 +377,7 @@
 				4D2A9B7E2CE3424C9D111002 /* ConnectivityClassificationTests.swift */,
 				CAFE0D1E0000000000000005 /* GuideContentContractTests.swift */,
 				4F52544D434C49454E543032 /* RealtimeClientTests.swift */,
+				5A4E00000000000000000034 /* PendingShareStoreTests.swift */,
 				D206496BC88FF6272CFC286C /* ServerURLPersistenceTests.swift */,
 				19F61DADBD9B8EFC300698C4 /* SystemCredentialLoginTests.swift */,
 				5E7E7A8C0B534B26A6E2F911 /* TelemetrySanitizerTests.swift */,
@@ -406,6 +432,7 @@
 				2A80E8562326D2BB4FF7E8C7 /* Tday.app */,
 				D26B48A87B57A0417CC3F578 /* TdayTests.xctest */,
 				D4A100000000000000000010 /* TdayWidget.appex */,
+				5A4E00000000000000000010 /* TdayShareExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -460,6 +487,7 @@
 			children = (
 				83705160F9DB3C02FBD56E41 /* Tday */,
 				D4A100000000000000000020 /* TdayWidget */,
+				5A4E00000000000000000020 /* TdayShareExtension */,
 				75319F4921808A73555E9EC0 /* Tests */,
 				3F0733C5DBF6EC9BC6DBCB4D /* Products */,
 			);
@@ -473,6 +501,24 @@
 				D4A100000000000000000015 /* TdayWidget.entitlements */,
 			);
 			path = TdayWidget;
+			sourceTree = "<group>";
+		};
+		5A4E00000000000000000020 /* TdayShareExtension */ = {
+			isa = PBXGroup;
+			children = (
+				5A4E00000000000000000002 /* ShareViewController.swift */,
+				5A4E00000000000000000014 /* Info.plist */,
+				5A4E00000000000000000015 /* TdayShareExtension.entitlements */,
+			);
+			path = TdayShareExtension;
+			sourceTree = "<group>";
+		};
+		5A4E00000000000000000033 /* Share */ = {
+			isa = PBXGroup;
+			children = (
+				5A4E00000000000000000032 /* PendingShareStore.swift */,
+			);
+			path = Share;
 			sourceTree = "<group>";
 		};
 		6DFF136486536F6077D88A7F /* Navigation */ = {
@@ -714,6 +760,7 @@
 				A3A6721B3AFD5E9252EF45BB /* Network */,
 				72FDFB18FAE7DA7B2B569510 /* Notification */,
 				4E5771B69142214019F82B21 /* Security */,
+				5A4E00000000000000000033 /* Share */,
 				DF657ECAF439ED3F03187CCE /* UI */,
 				5477B1D0058C97A680F19FA5 /* Widget */,
 			);
@@ -831,6 +878,7 @@
 			);
 			dependencies = (
 				D4A10000000000000000001D /* PBXTargetDependency */,
+				5A4E0000000000000000001D /* PBXTargetDependency */,
 			);
 			name = Tday;
 			packageProductDependencies = (
@@ -856,6 +904,24 @@
 			);
 			productName = TdayWidget;
 			productReference = D4A100000000000000000010 /* TdayWidget.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		5A4E00000000000000000016 /* TdayShareExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5A4E0000000000000000001B /* Build configuration list for PBXNativeTarget "TdayShareExtension" */;
+			buildPhases = (
+				5A4E00000000000000000017 /* Sources */,
+				5A4E00000000000000000018 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = TdayShareExtension;
+			packageProductDependencies = (
+			);
+			productName = TdayShareExtension;
+			productReference = 5A4E00000000000000000010 /* TdayShareExtension.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
@@ -886,6 +952,7 @@
 			targets = (
 				CEB0667A66D01D2A147D96AA /* Tday */,
 				D4A100000000000000000016 /* TdayWidget */,
+				5A4E00000000000000000016 /* TdayShareExtension */,
 				870B7E606F6196C1CA699A1F /* TdayTests */,
 			);
 		};
@@ -929,6 +996,7 @@
 				4D2A9B7E2CE3424C9D111001 /* ConnectivityClassificationTests.swift in Sources */,
 				CAFE0D1E0000000000000015 /* GuideContentContractTests.swift in Sources */,
 				4F52544D434C49454E543031 /* RealtimeClientTests.swift in Sources */,
+				5A4E00000000000000000035 /* PendingShareStoreTests.swift in Sources */,
 				03A0CCC6A8AAE2DB065E6DE6 /* ServerURLPersistenceTests.swift in Sources */,
 				C8B96DDF0DC7AD0B8DD54E4F /* SystemCredentialLoginTests.swift in Sources */,
 				5E7E7A8C0B534B26A6E2F910 /* TelemetrySanitizerTests.swift in Sources */,
@@ -944,11 +1012,20 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		5A4E00000000000000000017 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5A4E00000000000000000001 /* ShareViewController.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		EE513C8DAF31C33B310B4E38 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 				B648A67EAD215BE5B74F7460 /* ApiModels.swift in Sources */,
+				5A4E00000000000000000031 /* PendingShareStore.swift in Sources */,
 				07D1F4A0C9434C54853E9D29 /* AppDataMode.swift in Sources */,
 				5B82443B89507719EDD7215C /* AppContainer.swift in Sources */,
 				A316B4B3BB1AEA5FDF9998DF /* AppRootView.swift in Sources */,
@@ -1056,6 +1133,11 @@
 			isa = PBXTargetDependency;
 			target = D4A100000000000000000016 /* TdayWidget */;
 			targetProxy = D4A10000000000000000001E /* PBXContainerItemProxy */;
+		};
+		5A4E0000000000000000001D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 5A4E00000000000000000016 /* TdayShareExtension */;
+			targetProxy = 5A4E0000000000000000001E /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -1234,6 +1316,62 @@
 			};
 			name = Release;
 		};
+		5A4E00000000000000000019 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = TdayShareExtension/TdayShareExtension.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 9;
+				DEVELOPMENT_TEAM = JUFACN2FS3;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = TdayShareExtension/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 0.4.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ohmz.tday.ios.ShareExtension;
+				PRODUCT_NAME = TdayShareExtension;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		5A4E0000000000000000001A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = TdayShareExtension/TdayShareExtension.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 9;
+				DEVELOPMENT_TEAM = JUFACN2FS3;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = TdayShareExtension/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 0.4.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ohmz.tday.ios.ShareExtension;
+				PRODUCT_NAME = TdayShareExtension;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
 		B38EA14A0A17C1F777BD5D3E /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -1370,6 +1508,15 @@
 			buildConfigurations = (
 				D4A100000000000000000019 /* Debug */,
 				D4A10000000000000000001A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		5A4E0000000000000000001B /* Build configuration list for PBXNativeTarget "TdayShareExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5A4E00000000000000000019 /* Debug */,
+				5A4E0000000000000000001A /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;

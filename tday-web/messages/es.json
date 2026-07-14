@@ -857,6 +857,13 @@
         "body": "Los widgets de Hoy y Flotantes ahora responden al toque: pulsa el anillo al inicio de cualquier fila para completar esa tarea sin abrir la app. La fila desaparece al instante y el completado se sincroniza como cualquier otro; los toques hechos sin conexión se ponen en cola y se aplican cuando vuelves a estar en línea.",
         "tip": "¿Un toque accidental? Abre el historial de completadas en la app y restaura la tarea desde allí."
       },
+      "share-into-tday": {
+        "title": "Compartir a T'Day",
+        "summary": "Envía texto desde cualquier app directamente a una tarea nueva.",
+        "keywords": "compartir, hoja de compartir, enviar a, capturar, importar, desde otra app",
+        "body": "¿Encontraste algo en otra app? Abre la hoja de compartir del sistema y elige T'Day. El texto compartido llega a un formulario de tarea nueva: al compartir una página, su título se convierte en el nombre de la tarea y el enlace queda en las notas. En Android y en la app web el formulario se abre al momento; en iOS la captura se guarda al instante y el formulario prellenado te recibe la próxima vez que abras la app.",
+        "tip": "Comparte un texto con una fecha dentro y el analizador fijará el vencimiento por ti."
+      },
       "carplay": {
         "title": "T'Day en CarPlay",
         "summary": "Consulta y captura tareas de forma segura mientras conduces.",

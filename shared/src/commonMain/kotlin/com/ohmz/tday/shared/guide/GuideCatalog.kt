@@ -163,6 +163,11 @@ object GuideCatalog {
             body = listOf(para(GuideTopicIds.INTERACTIVE_WIDGETS), tip(GuideTopicIds.INTERACTIVE_WIDGETS)),
         ),
         topic(
+            GuideTopicIds.SHARE_INTO_TDAY, GuideSectionId.WIDGETS_AND_SURFACES, "share-2",
+            setOf(WEB, ANDROID, IOS), sinceVersion = "0.4.0",
+            body = listOf(para(GuideTopicIds.SHARE_INTO_TDAY), tip(GuideTopicIds.SHARE_INTO_TDAY)),
+        ),
+        topic(
             GuideTopicIds.CARPLAY, GuideSectionId.WIDGETS_AND_SURFACES, "car",
             setOf(IOS), badge = GuideBadge.HIDDEN_GEM,
             body = listOf(para(GuideTopicIds.CARPLAY)),

@@ -857,6 +857,13 @@
         "body": "Les widgets Aujourd'hui et Floaters réagissent désormais au toucher : touchez l'anneau au début d'une ligne pour terminer la tâche sans ouvrir l'application. La ligne disparaît aussitôt et la complétion se synchronise comme n'importe quelle autre — les appuis effectués hors ligne sont mis en file et appliqués dès que la connexion revient.",
         "tip": "Touché par erreur ? Ouvrez l'historique des tâches terminées dans l'application et restaurez la tâche à partir de là."
       },
+      "share-into-tday": {
+        "title": "Partager vers T'Day",
+        "summary": "Envoyez du texte depuis n'importe quelle app directement dans une nouvelle tâche.",
+        "keywords": "partager, feuille de partage, envoyer vers, capturer, importer, depuis une autre app",
+        "body": "Vous avez trouvé quelque chose dans une autre app ? Ouvrez la feuille de partage du système et choisissez T'Day. Le texte partagé arrive dans un formulaire de nouvelle tâche — pour une page partagée, son titre devient le nom de la tâche et le lien se range dans les notes. Sur Android et sur l'app web le formulaire s'ouvre aussitôt ; sur iOS la capture est enregistrée immédiatement et le formulaire prérempli vous attend à la prochaine ouverture de l'app.",
+        "tip": "Partagez un texte contenant une date : l'analyseur règle l'échéance pour vous."
+      },
       "carplay": {
         "title": "T'Day sur CarPlay",
         "summary": "Consultez et saisissez vos tâches en toute sécurité au volant.",
