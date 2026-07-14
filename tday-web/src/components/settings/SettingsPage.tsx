@@ -72,6 +72,20 @@ const LANGUAGE_OPTIONS = [
   { code: "ms", label: "Bahasa Melayu" },
 ] as const;
 
+type ApiKeyScope = "READ" | "FULL";
+
+/** Metadata for a personal API key, as returned by GET /api/user/api-key. */
+type ApiKeyInfo = {
+  id: string;
+  label?: string | null;
+  scope: string;
+  keyPreview: string;
+  createdAt?: string | null;
+  lastUsedAt?: string | null;
+  expiresAt?: string | null;
+  expired?: boolean;
+};
+
 /** Rounded grouped section card with a big ExtraBold title — mirrors the
  * native SettingsSectionCard / SettingsSectionTitle. */
 function SettingsSection({
@@ -319,14 +333,13 @@ export default function SettingsPage() {
 
   const push = usePushNotifications();
 
-  const [apiKeyStatus, setApiKeyStatus] = useState<{
-    enabled: boolean;
-    keyPreview?: string | null;
-    createdAt?: string | null;
-  } | null>(null);
+  const [apiKeys, setApiKeys] = useState<ApiKeyInfo[] | null>(null);
   const [generatedApiKey, setGeneratedApiKey] = useState<string | null>(null);
   const [apiKeyLoading, setApiKeyLoading] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
+  const [newKeyLabel, setNewKeyLabel] = useState("");
+  const [newKeyScope, setNewKeyScope] = useState<ApiKeyScope>("READ");
+  const [revokingKeyId, setRevokingKeyId] = useState<string | null>(null);
   const [signingOut, setSigningOut] = useState(false);
 
   useEffect(() => {
@@ -348,10 +361,10 @@ export default function SettingsPage() {
     api
       .GET({ url: "/api/user/api-key" })
       .then((res) => {
-        if (!cancelled) setApiKeyStatus(res?.status ?? { enabled: false });
+        if (!cancelled) setApiKeys(res?.keys ?? []);
       })
       .catch(() => {
-        if (!cancelled) setApiKeyStatus({ enabled: false });
+        if (!cancelled) setApiKeys([]);
       });
     return () => {
       cancelled = true;
@@ -364,16 +377,28 @@ export default function SettingsPage() {
       const res = await api.POST({
         url: "/api/user/api-key",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
+        body: JSON.stringify({
+          label: newKeyLabel.trim() || undefined,
+          scope: newKeyScope,
+        }),
       });
       const created = res?.apiKey;
       setGeneratedApiKey(created?.key ?? null);
       setShowApiKey(true);
-      setApiKeyStatus({
-        enabled: true,
-        keyPreview: created?.keyPreview ?? null,
-        createdAt: created?.createdAt ?? null,
-      });
+      setNewKeyLabel("");
+      if (created) {
+        setApiKeys((prev) => [
+          {
+            id: created.id,
+            label: created.label ?? null,
+            scope: created.scope,
+            keyPreview: created.keyPreview,
+            createdAt: created.createdAt ?? null,
+            expiresAt: created.expiresAt ?? null,
+          },
+          ...(prev ?? []),
+        ]);
+      }
       toast({ description: t("toast.apiKeyGenerated") });
     } catch (err) {
       toast({
@@ -385,17 +410,11 @@ export default function SettingsPage() {
     }
   };
 
-  const handleRevokeApiKey = async () => {
-    setApiKeyLoading(true);
+  const handleRevokeApiKey = async (id: string) => {
+    setRevokingKeyId(id);
     try {
-      await api.DELETE({
-        url: "/api/user/api-key",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
-      });
-      setApiKeyStatus({ enabled: false });
-      setGeneratedApiKey(null);
-      setShowApiKey(false);
+      await api.DELETE({ url: `/api/user/api-key/${id}` });
+      setApiKeys((prev) => (prev ?? []).filter((key) => key.id !== id));
       toast({ description: t("toast.apiKeyRevoked") });
     } catch (err) {
       toast({
@@ -403,7 +422,7 @@ export default function SettingsPage() {
         variant: "destructive",
       });
     } finally {
-      setApiKeyLoading(false);
+      setRevokingKeyId(null);
     }
   };
 
@@ -1088,35 +1107,50 @@ export default function SettingsPage() {
         title={t("dashboard.title")}
         titleAction={<GuideHelpLink topic="api-key-homarr" />}
       >
-        <div className="flex items-center justify-between gap-3">
-          <div className="min-w-0 text-sm">
-            <p className="font-black text-foreground">
-              {apiKeyStatus?.enabled ? t("dashboard.enabled") : t("dashboard.disabled")}
-            </p>
-            <p className="text-xs font-extrabold text-muted-foreground">
-              {apiKeyStatus?.enabled
-                ? apiKeyStatus.keyPreview
-                  ? t("dashboard.activeKeyEnding", { preview: apiKeyStatus.keyPreview })
-                  : t("dashboard.activeKeyExists")
-                : t("dashboard.noKey")}
-            </p>
+        {/* Create a new scoped key. Read-only keys can only fetch data (safe for
+            dashboards); full keys can modify the account. */}
+        <div className="space-y-3">
+          <Input
+            type="text"
+            value={newKeyLabel}
+            onChange={(event) => setNewKeyLabel(event.target.value)}
+            maxLength={60}
+            placeholder={t("dashboard.labelPlaceholder")}
+            className="h-11 rounded-2xl font-extrabold"
+          />
+          <div className="flex rounded-2xl bg-muted/60 p-1.5">
+            {(["READ", "FULL"] as ApiKeyScope[]).map((scope) => (
+              <button
+                key={scope}
+                type="button"
+                onClick={() => setNewKeyScope(scope)}
+                aria-pressed={newKeyScope === scope}
+                className={cn(
+                  "flex flex-1 items-center justify-center rounded-[13px] py-2 text-[0.9rem] font-black transition-colors",
+                  newKeyScope === scope
+                    ? "bg-card text-accent shadow-sm"
+                    : "text-muted-foreground",
+                )}
+              >
+                {scope === "READ" ? t("dashboard.scopeRead") : t("dashboard.scopeFull")}
+              </button>
+            ))}
           </div>
+          <p className="text-xs font-extrabold text-muted-foreground">
+            {newKeyScope === "READ"
+              ? t("dashboard.scopeReadHint")
+              : t("dashboard.scopeFullHint")}
+          </p>
           <Button
             type="button"
-            variant={apiKeyStatus?.enabled ? "destructive" : "default"}
-            disabled={apiKeyLoading || apiKeyStatus === null}
-            onClick={apiKeyStatus?.enabled ? handleRevokeApiKey : handleGenerateApiKey}
-            className="h-11 shrink-0 rounded-2xl font-black"
+            disabled={apiKeyLoading}
+            onClick={handleGenerateApiKey}
+            className="h-11 w-full rounded-2xl font-black"
           >
             {apiKeyLoading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                {apiKeyStatus?.enabled ? t("dashboard.revoking") : t("dashboard.generating")}
-              </>
-            ) : apiKeyStatus?.enabled ? (
-              <>
-                <Trash2 className="mr-2 h-4 w-4" />
-                {t("dashboard.revokeKey")}
+                {t("dashboard.generating")}
               </>
             ) : (
               <>
@@ -1147,6 +1181,51 @@ export default function SettingsPage() {
               </Button>
             </div>
           </div>
+        )}
+
+        {/* Existing keys — each revocable independently. */}
+        {apiKeys !== null && apiKeys.length > 0 && (
+          <div className="space-y-2">
+            {apiKeys.map((key) => (
+              <div
+                key={key.id}
+                className="flex items-center justify-between gap-3 rounded-2xl border border-border/60 bg-muted/30 p-3"
+              >
+                <div className="min-w-0 text-sm">
+                  <p className="truncate font-black text-foreground">
+                    {key.label?.trim() || t("dashboard.unnamedKey")}
+                  </p>
+                  <p className="text-xs font-extrabold text-muted-foreground">
+                    {t("dashboard.activeKeyEnding", { preview: key.keyPreview })}
+                    {" · "}
+                    {key.scope === "READ" ? t("dashboard.scopeRead") : t("dashboard.scopeFull")}
+                    {key.expired ? ` · ${t("dashboard.expired")}` : ""}
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="icon"
+                  disabled={revokingKeyId === key.id}
+                  onClick={() => handleRevokeApiKey(key.id)}
+                  aria-label={t("dashboard.revokeKey")}
+                  className="h-10 w-10 shrink-0 rounded-xl"
+                >
+                  {revokingKeyId === key.id ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {apiKeys !== null && apiKeys.length === 0 && (
+          <p className="text-xs font-extrabold text-muted-foreground">
+            {t("dashboard.noKey")}
+          </p>
         )}
 
         <CardDivider />

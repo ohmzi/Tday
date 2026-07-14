@@ -565,7 +565,14 @@
       "generating": "Menjana...",
       "revokeKey": "Batalkan kunci",
       "generateKey": "Jana kunci",
-      "copyNow": "Salin kunci API anda sekarang — ia tidak akan ditunjukkan lagi."
+      "copyNow": "Salin kunci API anda sekarang — ia tidak akan ditunjukkan lagi.",
+      "labelPlaceholder": "Nama kunci (pilihan)",
+      "scopeRead": "Baca sahaja",
+      "scopeFull": "Akses penuh",
+      "scopeReadHint": "Boleh baca tugasan anda tetapi tidak boleh ubah — selamat untuk papan pemuka.",
+      "scopeFullHint": "Boleh baca dan ubah akaun anda. Guna hanya pada apl yang dipercayai.",
+      "unnamedKey": "Kunci tanpa nama",
+      "expired": "Tamat tempoh"
     },
     "toast": {
       "apiKeyGenerated": "Kunci API dijana. Salin sekarang — ia tidak akan ditunjukkan lagi.",
@@ -949,9 +956,9 @@
         "title": "Kunci API & Homarr",
         "summary": "Paparkan tugasan anda pada papan pemuka dengan kunci API peribadi.",
         "keywords": "kunci api, homarr, papan pemuka, integrasi, token, widget, homelab",
-        "body": "Jana kunci API peribadi dalam Tetapan untuk menampilkan tugasan anda pada papan pemuka seperti Homarr. Kunci itu terikat pada akaun anda, jadi rahsiakannya.",
+        "body": "Jana kunci API peribadi dalam Tetapan untuk memaparkan tugasan anda pada papan pemuka seperti Homarr. Pilih kunci baca sahaja untuk papan pemuka supaya ia tidak boleh mengubah data anda, beri nama untuk membezakan kunci, dan simpan secara peribadi. Anda boleh mempunyai beberapa kunci dan membatalkan setiap satu secara berasingan.",
         "step0": "Buka Tetapan dan cari kad kunci API.",
-        "step1": "Jana kunci dan salinnya — ia dipaparkan sekali sahaja.",
+        "step1": "Pilih skop baca sahaja untuk papan pemuka, jana kunci dan salin — ia dipaparkan sekali sahaja.",
         "step2": "Tampalkannya ke dalam widget T'Day pada papan pemuka anda."
       },
       "ai-summary": {

@@ -565,7 +565,14 @@
       "generating": "Generando...",
       "revokeKey": "Revocar clave",
       "generateKey": "Generar clave",
-      "copyNow": "Copia tu clave de API ahora — no se volverá a mostrar."
+      "copyNow": "Copia tu clave de API ahora — no se volverá a mostrar.",
+      "labelPlaceholder": "Nombre de la clave (opcional)",
+      "scopeRead": "Solo lectura",
+      "scopeFull": "Acceso completo",
+      "scopeReadHint": "Puede leer tus tareas pero no modificarlas: seguro para paneles.",
+      "scopeFullHint": "Puede leer y modificar tu cuenta. Úsala solo en apps de confianza.",
+      "unnamedKey": "Clave sin nombre",
+      "expired": "Caducada"
     },
     "toast": {
       "apiKeyGenerated": "Clave de API generada. Cópiala ahora — no se volverá a mostrar.",
@@ -949,9 +956,9 @@
         "title": "Clave API y Homarr",
         "summary": "Muestra tus tareas en un panel con una clave API personal.",
         "keywords": "clave api, homarr, panel, dashboard, integración, token, widget, homelab",
-        "body": "Genera una clave API personal en Ajustes para mostrar tus tareas en un panel como Homarr. La clave está vinculada a tu cuenta, así que mantenla en privado.",
+        "body": "Genera una clave API personal en Ajustes para mostrar tus tareas en un panel como Homarr. Elige una clave de solo lectura para los paneles, así nunca podrá modificar tus datos; ponle un nombre para distinguir las claves y mantenla en privado. Puedes tener varias claves y revocar cada una por separado.",
         "step0": "Abre Ajustes y busca la tarjeta de la clave API.",
-        "step1": "Genera una clave y cópiala: se muestra una sola vez.",
+        "step1": "Elige el alcance de solo lectura para los paneles, genera la clave y cópiala: se muestra una sola vez.",
         "step2": "Pégala en el widget de T'Day de tu panel."
       },
       "ai-summary": {

@@ -7,6 +7,7 @@ import com.ohmz.tday.di.inject
 import com.ohmz.tday.domain.AppError
 import com.ohmz.tday.domain.withAuth
 import com.ohmz.tday.models.request.ChangePasswordRequest
+import com.ohmz.tday.models.request.CreateApiKeyRequest
 import com.ohmz.tday.models.request.SetSecurityQuestionsRequest
 import com.ohmz.tday.models.request.UserPatchKeyRequest
 import com.ohmz.tday.models.request.UserProfilePatchRequest
@@ -16,6 +17,7 @@ import com.ohmz.tday.security.JwtService
 import com.ohmz.tday.security.SecurityQuestions
 import com.ohmz.tday.security.SessionControl
 import com.ohmz.tday.security.issueSessionCookie
+import com.ohmz.tday.services.ApiKeyScope
 import com.ohmz.tday.services.CreateApiKeyResponse
 import com.ohmz.tday.services.ListShareService
 import com.ohmz.tday.services.SecurityQuestionService
@@ -146,24 +148,39 @@ fun Route.userRoutes() {
         }
 
         route("/api-key") {
+            // List every key the user owns (metadata only — secrets are never returned).
             get {
                 call.withAuth { user ->
-                    userApiKeyService.status(user.id)
-                        .map { mapOf("status" to it) }
+                    userApiKeyService.list(user.id)
+                        .map { mapOf("keys" to it) }
                 }
             }
 
+            // Create a new scoped key. Additive — existing keys are left intact.
             post {
                 call.withAuth { user ->
-                    userApiKeyService.generate(user.id)
-                        .map { CreateApiKeyResponse(message = "api key created", apiKey = it) }
+                    val body = runCatching { call.receive<CreateApiKeyRequest>() }
+                        .getOrDefault(CreateApiKeyRequest())
+                    val scope = ApiKeyScope.fromStorage(body.scope)
+                    userApiKeyService.generate(
+                        userId = user.id,
+                        label = body.label,
+                        scope = scope,
+                        expiresInDays = body.expiresInDays,
+                    ).map { CreateApiKeyResponse(message = "api key created", apiKey = it) }
                 }
             }
 
-            delete {
+            // Revoke a single key by id.
+            delete("/{id}") {
                 call.withAuth { user ->
-                    userApiKeyService.revoke(user.id)
-                        .map { mapOf("message" to "api key revoked") }
+                    val keyId = call.parameters["id"].orEmpty()
+                    if (keyId.isBlank()) {
+                        Either.Left(AppError.BadRequest("api key id is required"))
+                    } else {
+                        userApiKeyService.revokeKey(user.id, keyId)
+                            .map { mapOf("message" to "api key revoked") }
+                    }
                 }
             }
         }

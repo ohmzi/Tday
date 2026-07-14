@@ -565,7 +565,14 @@
       "generating": "Generating...",
       "revokeKey": "Revoke key",
       "generateKey": "Generate key",
-      "copyNow": "Copy your API key now — it won't be shown again."
+      "copyNow": "Copy your API key now — it won't be shown again.",
+      "labelPlaceholder": "Key name (optional)",
+      "scopeRead": "Read-only",
+      "scopeFull": "Full access",
+      "scopeReadHint": "Can read your tasks but not change them — safe for dashboards.",
+      "scopeFullHint": "Can read and modify your account. Only use where you trust the app.",
+      "unnamedKey": "Unnamed key",
+      "expired": "Expired"
     },
     "toast": {
       "apiKeyGenerated": "API key generated. Copy it now — it won't be shown again.",
@@ -949,9 +956,9 @@
         "title": "API key & Homarr",
         "summary": "Show your tasks on a dashboard with a personal API key.",
         "keywords": "api key, homarr, dashboard, integration, token, widget, homelab",
-        "body": "Generate a personal API key in Settings to surface your tasks in a dashboard like Homarr. The key is tied to your account, so keep it private.",
+        "body": "Generate a personal API key in Settings to surface your tasks in a dashboard like Homarr. Choose a read-only key for dashboards so it can never change your data, give it a name to tell keys apart, and keep it private. You can hold several keys and revoke any one on its own.",
         "step0": "Open Settings and find the API key card.",
-        "step1": "Generate a key and copy it — it's shown once.",
+        "step1": "Pick a read-only scope for dashboards, generate the key, and copy it — it's shown once.",
         "step2": "Paste it into your dashboard's T'Day widget."
       },
       "ai-summary": {
