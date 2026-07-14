@@ -41,6 +41,7 @@ fun Application.configureRouting() {
             preferencesRoutes()
             completedTodoRoutes()
             completedFloaterRoutes()
+            exportRoutes()
             timezoneRoutes()
             appSettingsRoutes()
             adminRoutes()

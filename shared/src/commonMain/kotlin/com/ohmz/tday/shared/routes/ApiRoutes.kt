@@ -64,6 +64,14 @@ object ApiRoutes {
         const val Base = "$ApiPrefix/preferences"
     }
 
+    object Export {
+        /** GET — the full portable bundle for the authenticated user. */
+        const val Base = "$ApiPrefix/export"
+
+        /** POST — restore/merge a bundle (supports dryRun preview). */
+        const val Import = "$ApiPrefix/import"
+    }
+
     object User {
         const val Base = "$ApiPrefix/user"
         const val Profile = "$Base/profile"
