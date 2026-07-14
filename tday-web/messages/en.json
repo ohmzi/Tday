@@ -599,7 +599,13 @@
       "calendarFeedRevoked": "Calendar feed revoked",
       "calendarFeedRevokeFailed": "Failed to revoke calendar feed",
       "calendarFeedCopied": "Calendar URL copied to clipboard",
-      "calendarFeedCopyFailed": "Failed to copy calendar URL"
+      "calendarFeedCopyFailed": "Failed to copy calendar URL",
+      "webhookCreated": "Webhook added. Copy the signing secret now.",
+      "webhookCreateFailed": "Failed to add webhook",
+      "webhookDeleted": "Webhook deleted",
+      "webhookDeleteFailed": "Failed to delete webhook",
+      "webhookSecretCopied": "Signing secret copied to clipboard",
+      "webhookSecretCopyFailed": "Failed to copy signing secret"
     },
     "signOut": "Sign out",
     "aiSummary": {
@@ -647,6 +653,19 @@
       "generating": "Generating...",
       "revoking": "Revoking...",
       "copyUrl": "Copy this calendar URL now — treat it like a password."
+    },
+    "webhooks": {
+      "title": "Webhooks",
+      "blurb": "Get a signed HTTP ping when your data changes.",
+      "urlPlaceholder": "https://your-server/webhook",
+      "eventsLabel": "Events (none selected = all)",
+      "creating": "Adding...",
+      "add": "Add webhook",
+      "secretCopyNow": "Copy this signing secret now — it won't be shown again.",
+      "allEvents": "All events",
+      "disabled": "Disabled",
+      "delete": "Delete webhook",
+      "none": "No webhooks yet"
     }
   },
   "summary": {
@@ -1010,6 +1029,15 @@
         "step0": "In Settings, open the Calendar feed card and generate a feed URL.",
         "step1": "Copy the URL — it's shown once; regenerate if you lose it.",
         "step2": "Add it as a subscription calendar in your calendar app."
+      },
+      "webhooks": {
+        "title": "Webhooks",
+        "summary": "Get an HTTP ping whenever your tasks change.",
+        "keywords": "webhook, http, integration, hmac, signature, automation, notify, callback",
+        "body": "Register an HTTP endpoint and T'Day POSTs a small signed “something changed” ping whenever your tasks, lists, or floaters change — no task contents, just the event type and list id, so your automation refetches through the normal API. Each webhook has its own secret that signs the body with HMAC-SHA256 in the X-Tday-Signature header; verify it before trusting a request. A webhook that keeps failing is disabled automatically.",
+        "step0": "In Settings, paste your endpoint URL and pick which events to receive.",
+        "step1": "Add the webhook and copy its signing secret — it's shown once.",
+        "step2": "Verify the X-Tday-Signature HMAC on each request before acting."
       }
     }
   },

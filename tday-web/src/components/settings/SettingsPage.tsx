@@ -18,6 +18,7 @@ import {
   Sun,
   Trash2,
   User,
+  Webhook,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useNavigate } from "react-router-dom";
@@ -74,6 +75,29 @@ const LANGUAGE_OPTIONS = [
 ] as const;
 
 type ApiKeyScope = "READ" | "FULL";
+
+/** Metadata for an outbound webhook subscription (GET /api/webhook). */
+type WebhookInfo = {
+  id: string;
+  url: string;
+  events: string[];
+  enabled: boolean;
+  consecutiveFailures: number;
+  lastStatus?: number | null;
+  lastAttemptAt?: string | null;
+  createdAt: string;
+};
+
+// The event types a webhook can filter on — mirrors WEBHOOK_EVENT_TYPES on the
+// backend. An empty selection means "all events".
+const WEBHOOK_EVENT_TYPES = [
+  "todo.changed",
+  "floater.changed",
+  "list.changed",
+  "floaterList.changed",
+  "list.members",
+  "completed.changed",
+] as const;
 
 /** Metadata for a personal API key, as returned by GET /api/user/api-key. */
 type ApiKeyInfo = {
@@ -349,6 +373,13 @@ export default function SettingsPage() {
   const [generatedFeedUrl, setGeneratedFeedUrl] = useState<string | null>(null);
   const [feedLoading, setFeedLoading] = useState(false);
   const [showFeedUrl, setShowFeedUrl] = useState(false);
+  const [webhooks, setWebhooks] = useState<WebhookInfo[] | null>(null);
+  const [newWebhookUrl, setNewWebhookUrl] = useState("");
+  const [newWebhookEvents, setNewWebhookEvents] = useState<string[]>([]);
+  const [webhookLoading, setWebhookLoading] = useState(false);
+  const [generatedWebhookSecret, setGeneratedWebhookSecret] = useState<string | null>(null);
+  const [showWebhookSecret, setShowWebhookSecret] = useState(false);
+  const [revokingWebhookId, setRevokingWebhookId] = useState<string | null>(null);
   const [signingOut, setSigningOut] = useState(false);
 
   useEffect(() => {
@@ -507,6 +538,93 @@ export default function SettingsPage() {
       toast({ description: t("toast.calendarFeedCopied") });
     } catch {
       toast({ description: t("toast.calendarFeedCopyFailed"), variant: "destructive" });
+    }
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .GET({ url: "/api/webhook" })
+      .then((res) => {
+        if (!cancelled) setWebhooks(res?.webhooks ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setWebhooks([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const toggleWebhookEvent = (event: string) => {
+    setNewWebhookEvents((prev) =>
+      prev.includes(event) ? prev.filter((e) => e !== event) : [...prev, event],
+    );
+  };
+
+  const handleCreateWebhook = async () => {
+    setWebhookLoading(true);
+    try {
+      const res = await api.POST({
+        url: "/api/webhook",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          url: newWebhookUrl.trim(),
+          events: newWebhookEvents,
+        }),
+      });
+      const created = res?.webhook;
+      setGeneratedWebhookSecret(created?.secret ?? null);
+      setShowWebhookSecret(true);
+      setNewWebhookUrl("");
+      setNewWebhookEvents([]);
+      if (created) {
+        setWebhooks((prev) => [
+          {
+            id: created.id,
+            url: created.url,
+            events: created.events ?? [],
+            enabled: true,
+            consecutiveFailures: 0,
+            createdAt: created.createdAt,
+          },
+          ...(prev ?? []),
+        ]);
+      }
+      toast({ description: t("toast.webhookCreated") });
+    } catch (err) {
+      toast({
+        description: getErrorMessage(err, t("toast.webhookCreateFailed")),
+        variant: "destructive",
+      });
+    } finally {
+      setWebhookLoading(false);
+    }
+  };
+
+  const handleDeleteWebhook = async (id: string) => {
+    setRevokingWebhookId(id);
+    try {
+      await api.DELETE({ url: `/api/webhook/${id}` });
+      setWebhooks((prev) => (prev ?? []).filter((w) => w.id !== id));
+      toast({ description: t("toast.webhookDeleted") });
+    } catch (err) {
+      toast({
+        description: getErrorMessage(err, t("toast.webhookDeleteFailed")),
+        variant: "destructive",
+      });
+    } finally {
+      setRevokingWebhookId(null);
+    }
+  };
+
+  const handleCopyWebhookSecret = async () => {
+    if (!generatedWebhookSecret) return;
+    try {
+      await navigator.clipboard.writeText(generatedWebhookSecret);
+      toast({ description: t("toast.webhookSecretCopied") });
+    } catch {
+      toast({ description: t("toast.webhookSecretCopyFailed"), variant: "destructive" });
     }
   };
 
@@ -1253,6 +1371,133 @@ export default function SettingsPage() {
               </Button>
             </div>
           </div>
+        )}
+      </SettingsSection>
+
+      <SettingsSection
+        title={t("webhooks.title")}
+        description={t("webhooks.blurb")}
+        titleAction={<GuideHelpLink topic="webhooks" />}
+      >
+        <div className="space-y-3">
+          <Input
+            type="url"
+            inputMode="url"
+            value={newWebhookUrl}
+            onChange={(event) => setNewWebhookUrl(event.target.value)}
+            placeholder={t("webhooks.urlPlaceholder")}
+            className="h-11 rounded-2xl font-mono text-xs"
+          />
+          <div className="space-y-1.5">
+            <p className="text-xs font-extrabold text-muted-foreground">
+              {t("webhooks.eventsLabel")}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {WEBHOOK_EVENT_TYPES.map((event) => {
+                const selected = newWebhookEvents.includes(event);
+                return (
+                  <button
+                    key={event}
+                    type="button"
+                    onClick={() => toggleWebhookEvent(event)}
+                    aria-pressed={selected}
+                    className={cn(
+                      "rounded-full px-3 py-1.5 text-xs font-black transition-colors",
+                      selected
+                        ? "bg-accent text-accent-foreground"
+                        : "bg-muted/60 text-muted-foreground",
+                    )}
+                  >
+                    {event}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <Button
+            type="button"
+            disabled={webhookLoading || newWebhookUrl.trim().length === 0}
+            onClick={handleCreateWebhook}
+            className="h-11 w-full rounded-2xl font-black"
+          >
+            {webhookLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                {t("webhooks.creating")}
+              </>
+            ) : (
+              <>
+                <Webhook className="mr-2 h-4 w-4" />
+                {t("webhooks.add")}
+              </>
+            )}
+          </Button>
+        </div>
+
+        {generatedWebhookSecret && (
+          <div className="space-y-2 rounded-2xl border border-border/60 bg-muted/40 p-3">
+            <p className="text-xs font-extrabold text-muted-foreground">
+              {t("webhooks.secretCopyNow")}
+            </p>
+            <div className="flex gap-2">
+              <Input
+                type={showWebhookSecret ? "text" : "password"}
+                value={generatedWebhookSecret}
+                readOnly
+                className="h-10 flex-1 rounded-xl bg-background/50 font-mono text-xs"
+              />
+              <Button type="button" variant="outline" size="icon" className="h-10 w-10 shrink-0 rounded-xl" onClick={() => setShowWebhookSecret(!showWebhookSecret)}>
+                {showWebhookSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </Button>
+              <Button type="button" variant="outline" size="icon" className="h-10 w-10 shrink-0 rounded-xl" onClick={handleCopyWebhookSecret}>
+                <Copy className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {webhooks !== null && webhooks.length > 0 && (
+          <div className="space-y-2">
+            {webhooks.map((webhook) => (
+              <div
+                key={webhook.id}
+                className="flex items-center justify-between gap-3 rounded-2xl border border-border/60 bg-muted/30 p-3"
+              >
+                <div className="min-w-0 text-sm">
+                  <p className="truncate font-mono text-xs font-black text-foreground">
+                    {webhook.url}
+                  </p>
+                  <p className="text-xs font-extrabold text-muted-foreground">
+                    {webhook.events.length > 0
+                      ? webhook.events.join(", ")
+                      : t("webhooks.allEvents")}
+                    {webhook.enabled ? "" : ` · ${t("webhooks.disabled")}`}
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="icon"
+                  disabled={revokingWebhookId === webhook.id}
+                  onClick={() => handleDeleteWebhook(webhook.id)}
+                  aria-label={t("webhooks.delete")}
+                  className="h-10 w-10 shrink-0 rounded-xl"
+                >
+                  {revokingWebhookId === webhook.id ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {webhooks !== null && webhooks.length === 0 && (
+          <p className="text-xs font-extrabold text-muted-foreground">
+            {t("webhooks.none")}
+          </p>
         )}
       </SettingsSection>
 

@@ -599,7 +599,13 @@
       "calendarFeedRevoked": "Flux de calendrier révoqué",
       "calendarFeedRevokeFailed": "Échec de la révocation du flux de calendrier",
       "calendarFeedCopied": "URL de calendrier copiée",
-      "calendarFeedCopyFailed": "Échec de la copie de l'URL de calendrier"
+      "calendarFeedCopyFailed": "Échec de la copie de l'URL de calendrier",
+      "webhookCreated": "Webhook ajouté. Copie le secret de signature maintenant.",
+      "webhookCreateFailed": "Échec de l'ajout du webhook",
+      "webhookDeleted": "Webhook supprimé",
+      "webhookDeleteFailed": "Échec de la suppression du webhook",
+      "webhookSecretCopied": "Secret de signature copié",
+      "webhookSecretCopyFailed": "Échec de la copie du secret de signature"
     },
     "signOut": "Déconnexion",
     "aiSummary": {
@@ -647,6 +653,19 @@
       "generating": "Génération...",
       "revoking": "Révocation...",
       "copyUrl": "Copie cette URL de calendrier maintenant — traite-la comme un mot de passe."
+    },
+    "webhooks": {
+      "title": "Webhooks",
+      "blurb": "Recevez un ping HTTP signé quand vos données changent.",
+      "urlPlaceholder": "https://votre-serveur/webhook",
+      "eventsLabel": "Événements (aucun = tous)",
+      "creating": "Ajout...",
+      "add": "Ajouter un webhook",
+      "secretCopyNow": "Copie ce secret de signature maintenant — il ne sera plus affiché.",
+      "allEvents": "Tous les événements",
+      "disabled": "Désactivé",
+      "delete": "Supprimer le webhook",
+      "none": "Aucun webhook pour l'instant"
     }
   },
   "summary": {
@@ -1010,6 +1029,15 @@
         "step0": "Dans les Réglages, ouvre la carte Flux de calendrier et génère une URL.",
         "step1": "Copie l'URL — elle n'apparaît qu'une fois ; régénère-la si tu la perds.",
         "step2": "Ajoute-la comme calendrier d'abonnement dans ton app de calendrier."
+      },
+      "webhooks": {
+        "title": "Webhooks",
+        "summary": "Recevez un ping HTTP quand vos tâches changent.",
+        "keywords": "webhook, http, intégration, hmac, signature, automatisation, notifier, callback",
+        "body": "Enregistre un endpoint HTTP et T'Day envoie en POST un petit ping signé « quelque chose a changé » dès que tes tâches, listes ou flottants changent — sans contenu, juste le type d'événement et l'id de liste, pour que ton automatisation recharge via l'API normale. Chaque webhook a son propre secret qui signe le corps en HMAC-SHA256 dans l'en-tête X-Tday-Signature ; vérifie-le avant de faire confiance à une requête. Un webhook qui échoue sans cesse est désactivé automatiquement.",
+        "step0": "Dans les Réglages, colle l'URL de ton endpoint et choisis les événements.",
+        "step1": "Ajoute le webhook et copie son secret de signature — affiché une seule fois.",
+        "step2": "Vérifie le HMAC X-Tday-Signature sur chaque requête avant d'agir."
       }
     }
   },

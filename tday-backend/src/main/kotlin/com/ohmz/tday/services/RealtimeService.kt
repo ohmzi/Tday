@@ -41,6 +41,7 @@ class RealtimePublisher(
     private val realtime: RealtimeService,
     private val shareService: ListShareService,
     private val cache: CacheService,
+    private val webhookDispatch: WebhookDispatchService,
 ) {
     suspend fun publishToCollaborators(actorId: String, event: DomainEvent) {
         val recipients = buildSet {
@@ -55,5 +56,8 @@ class RealtimePublisher(
             if (userId != actorId) cache.invalidateForUser(userId)
         }
         realtime.emitToUsers(recipients, event)
+        // Fan the same "something changed" signal out to any registered webhooks
+        // (fire-and-forget; never blocks the mutation response).
+        webhookDispatch.dispatch(recipients, event)
     }
 }

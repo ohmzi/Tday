@@ -3,16 +3,23 @@ package com.ohmz.tday.routes
 import arrow.core.Either
 import arrow.core.right
 import com.ohmz.tday.domain.AppError
+import com.ohmz.tday.plugins.AuthUserKey
 import com.ohmz.tday.plugins.configureSerialization
+import com.ohmz.tday.security.JwtUserClaims
 import com.ohmz.tday.services.CalendarFeedService
 import com.ohmz.tday.services.CalendarFeedStatus
 import com.ohmz.tday.services.CalendarFeedToken
 import io.ktor.client.request.get
+import io.ktor.client.request.post
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.*
+import io.ktor.server.routing.route
 import io.ktor.server.routing.routing
 import io.ktor.server.testing.testApplication
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import org.junit.jupiter.api.Test
 import org.koin.dsl.module
 import org.koin.ktor.plugin.Koin
@@ -45,6 +52,39 @@ class CalendarFeedRoutesTest {
         val response = client.get("/calendar/nope_bad.ics")
 
         assertEquals(HttpStatusCode.NotFound, response.status)
+    }
+
+    @Test
+    fun `management create returns the feed token once`() = testApplication {
+        val service = FakeCalendarFeedService()
+        application {
+            install(Koin) {
+                modules(module { single<CalendarFeedService> { service } })
+            }
+            configureSerialization()
+            intercept(ApplicationCallPipeline.Plugins) {
+                if (call.attributes.getOrNull(AuthUserKey) == null) {
+                    call.attributes.put(
+                        AuthUserKey,
+                        JwtUserClaims(
+                            id = "user_123",
+                            username = "testuser",
+                            role = "USER",
+                            approvalStatus = "APPROVED",
+                            timeZone = "UTC",
+                        ),
+                    )
+                }
+            }
+            routing { route("/api") { userRoutes() } }
+        }
+
+        val response = client.post("/api/user/calendar-feed")
+
+        assertEquals(HttpStatusCode.OK, response.status)
+        val token = Json.parseToJsonElement(response.bodyAsText())
+            .jsonObject["feed"]!!.jsonObject["token"]!!.jsonPrimitive.content
+        assertEquals("id_secret", token)
     }
 
     private fun Application.configureFeedApp(service: CalendarFeedService) {

@@ -599,7 +599,13 @@
       "calendarFeedRevoked": "Feed calendario revocato",
       "calendarFeedRevokeFailed": "Impossibile revocare il feed calendario",
       "calendarFeedCopied": "URL del calendario copiato",
-      "calendarFeedCopyFailed": "Impossibile copiare l'URL del calendario"
+      "calendarFeedCopyFailed": "Impossibile copiare l'URL del calendario",
+      "webhookCreated": "Webhook aggiunto. Copia ora il segreto di firma.",
+      "webhookCreateFailed": "Impossibile aggiungere il webhook",
+      "webhookDeleted": "Webhook eliminato",
+      "webhookDeleteFailed": "Impossibile eliminare il webhook",
+      "webhookSecretCopied": "Segreto di firma copiato",
+      "webhookSecretCopyFailed": "Impossibile copiare il segreto di firma"
     },
     "signOut": "Esci",
     "aiSummary": {
@@ -647,6 +653,19 @@
       "generating": "Generazione...",
       "revoking": "Revoca...",
       "copyUrl": "Copia ora questo URL del calendario: trattalo come una password."
+    },
+    "webhooks": {
+      "title": "Webhook",
+      "blurb": "Ricevi un ping HTTP firmato quando i dati cambiano.",
+      "urlPlaceholder": "https://il-tuo-server/webhook",
+      "eventsLabel": "Eventi (nessuno = tutti)",
+      "creating": "Aggiunta...",
+      "add": "Aggiungi webhook",
+      "secretCopyNow": "Copia ora questo segreto di firma: non verrà più mostrato.",
+      "allEvents": "Tutti gli eventi",
+      "disabled": "Disattivato",
+      "delete": "Elimina webhook",
+      "none": "Ancora nessun webhook"
     }
   },
   "summary": {
@@ -1010,6 +1029,15 @@
         "step0": "Nelle Impostazioni, apri la scheda Feed calendario e genera un URL.",
         "step1": "Copia l'URL: viene mostrato una sola volta; rigeneralo se lo perdi.",
         "step2": "Aggiungilo come calendario in abbonamento nella tua app calendario."
+      },
+      "webhooks": {
+        "title": "Webhook",
+        "summary": "Ricevi un ping HTTP quando cambiano le tue attività.",
+        "keywords": "webhook, http, integrazione, hmac, firma, automazione, notifica, callback",
+        "body": "Registra un endpoint HTTP e T'Day invia in POST un piccolo ping firmato “qualcosa è cambiato” quando cambiano attività, liste o floater — nessun contenuto, solo il tipo di evento e l'id della lista, così la tua automazione ricarica tramite l'API normale. Ogni webhook ha un proprio segreto che firma il corpo con HMAC-SHA256 nell'header X-Tday-Signature; verificalo prima di fidarti di una richiesta. Un webhook che continua a fallire viene disattivato automaticamente.",
+        "step0": "Nelle Impostazioni, incolla l'URL dell'endpoint e scegli gli eventi.",
+        "step1": "Aggiungi il webhook e copia il segreto di firma: mostrato una sola volta.",
+        "step2": "Verifica l'HMAC X-Tday-Signature a ogni richiesta prima di agire."
       }
     }
   },

@@ -599,7 +599,13 @@
       "calendarFeedRevoked": "カレンダー配信を取り消しました",
       "calendarFeedRevokeFailed": "カレンダー配信の取り消しに失敗しました",
       "calendarFeedCopied": "カレンダー URL をコピーしました",
-      "calendarFeedCopyFailed": "カレンダー URL のコピーに失敗しました"
+      "calendarFeedCopyFailed": "カレンダー URL のコピーに失敗しました",
+      "webhookCreated": "webhook を追加しました。署名シークレットをコピーしてください。",
+      "webhookCreateFailed": "webhook の追加に失敗しました",
+      "webhookDeleted": "webhook を削除しました",
+      "webhookDeleteFailed": "webhook の削除に失敗しました",
+      "webhookSecretCopied": "署名シークレットをコピーしました",
+      "webhookSecretCopyFailed": "署名シークレットのコピーに失敗しました"
     },
     "signOut": "ログアウト",
     "aiSummary": {
@@ -647,6 +653,19 @@
       "generating": "生成中...",
       "revoking": "取り消し中...",
       "copyUrl": "このカレンダー URL を今すぐコピー。パスワードのように扱ってください。"
+    },
+    "webhooks": {
+      "title": "Webhook",
+      "blurb": "データ変更時に署名付き HTTP 通知を受け取ります。",
+      "urlPlaceholder": "https://your-server/webhook",
+      "eventsLabel": "イベント（未選択=すべて）",
+      "creating": "追加中...",
+      "add": "webhook を追加",
+      "secretCopyNow": "この署名シークレットを今すぐコピー。二度と表示されません。",
+      "allEvents": "すべてのイベント",
+      "disabled": "無効",
+      "delete": "webhook を削除",
+      "none": "webhook はまだありません"
     }
   },
   "summary": {
@@ -1010,6 +1029,15 @@
         "step0": "設定で「カレンダー配信」カードを開き、URL を生成します。",
         "step1": "URL をコピーします。表示は一度だけで、失くしたら再生成します。",
         "step2": "カレンダーアプリに購読カレンダーとして追加します。"
+      },
+      "webhooks": {
+        "title": "Webhook",
+        "summary": "タスクが変わったときに HTTP 通知を受け取ります。",
+        "keywords": "webhook, http, 連携, hmac, 署名, 自動化, 通知, コールバック",
+        "body": "HTTP エンドポイントを登録すると、タスク・リスト・フローターが変わるたびに T'Day が署名付きの小さな「変更あり」通知を POST します。内容は含まず、イベント種別とリスト id だけなので、自動化は通常の API で再取得します。各 webhook には固有のシークレットがあり、X-Tday-Signature ヘッダーでボディを HMAC-SHA256 署名します。信頼する前に検証してください。失敗が続く webhook は自動的に無効になります。",
+        "step0": "設定でエンドポイント URL を貼り付け、受け取るイベントを選びます。",
+        "step1": "webhook を追加し、署名シークレットをコピーします。表示は一度だけです。",
+        "step2": "各リクエストで X-Tday-Signature の HMAC を検証してから処理します。"
       }
     }
   },

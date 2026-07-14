@@ -59,6 +59,10 @@ import com.ohmz.tday.services.TodoSummaryService
 import com.ohmz.tday.services.TodoSummaryServiceImpl
 import com.ohmz.tday.services.CalendarFeedService
 import com.ohmz.tday.services.CalendarFeedServiceImpl
+import com.ohmz.tday.services.WebhookDispatchService
+import com.ohmz.tday.services.WebhookDispatchServiceImpl
+import com.ohmz.tday.services.WebhookService
+import com.ohmz.tday.services.WebhookServiceImpl
 import com.ohmz.tday.services.UserApiKeyService
 import com.ohmz.tday.services.UserApiKeyServiceImpl
 import com.ohmz.tday.services.UserService
@@ -87,7 +91,9 @@ val securityModule = module {
 val serviceModule = module {
     single<CacheService> { CacheServiceImpl() }
     single<ListShareService> { ListShareServiceImpl(get(), get()) }
-    single { RealtimePublisher(get(), get(), get()) }
+    single<WebhookDispatchService> { WebhookDispatchServiceImpl(get()) }
+    single<WebhookService> { WebhookServiceImpl(get()) }
+    single { RealtimePublisher(get(), get(), get(), get()) }
     single<TodoService> { TodoServiceImpl(get(), get(), get(), get()) }
     single<FloaterService> { FloaterServiceImpl(get(), get(), get(), get()) }
     single<ListService> { ListServiceImpl(get(), get(), get()) }

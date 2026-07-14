@@ -599,7 +599,13 @@
       "calendarFeedRevoked": "Suapan kalendar dibatalkan",
       "calendarFeedRevokeFailed": "Gagal membatalkan suapan kalendar",
       "calendarFeedCopied": "URL kalendar disalin",
-      "calendarFeedCopyFailed": "Gagal menyalin URL kalendar"
+      "calendarFeedCopyFailed": "Gagal menyalin URL kalendar",
+      "webhookCreated": "Webhook ditambah. Salin rahsia tandatangan sekarang.",
+      "webhookCreateFailed": "Gagal menambah webhook",
+      "webhookDeleted": "Webhook dipadam",
+      "webhookDeleteFailed": "Gagal memadam webhook",
+      "webhookSecretCopied": "Rahsia tandatangan disalin",
+      "webhookSecretCopyFailed": "Gagal menyalin rahsia tandatangan"
     },
     "signOut": "Log keluar",
     "aiSummary": {
@@ -647,6 +653,19 @@
       "generating": "Menjana...",
       "revoking": "Membatalkan...",
       "copyUrl": "Salin URL kalendar ini sekarang — anggap ia seperti kata laluan."
+    },
+    "webhooks": {
+      "title": "Webhook",
+      "blurb": "Dapatkan ping HTTP bertandatangan apabila data berubah.",
+      "urlPlaceholder": "https://pelayan-anda/webhook",
+      "eventsLabel": "Peristiwa (tiada = semua)",
+      "creating": "Menambah...",
+      "add": "Tambah webhook",
+      "secretCopyNow": "Salin rahsia tandatangan ini sekarang — ia tidak dipaparkan lagi.",
+      "allEvents": "Semua peristiwa",
+      "disabled": "Dilumpuhkan",
+      "delete": "Padam webhook",
+      "none": "Belum ada webhook"
     }
   },
   "summary": {
@@ -1010,6 +1029,15 @@
         "step0": "Dalam Tetapan, buka kad Suapan kalendar dan jana URL.",
         "step1": "Salin URL — ia dipaparkan sekali; jana semula jika hilang.",
         "step2": "Tambah sebagai kalendar langganan dalam apl kalendar anda."
+      },
+      "webhooks": {
+        "title": "Webhook",
+        "summary": "Dapatkan ping HTTP apabila tugasan anda berubah.",
+        "keywords": "webhook, http, integrasi, hmac, tandatangan, automasi, maklum, callback",
+        "body": "Daftarkan endpoint HTTP dan T'Day akan POST satu ping kecil bertandatangan “sesuatu berubah” apabila tugasan, senarai atau floater anda berubah — tanpa kandungan tugasan, hanya jenis peristiwa dan id senarai, supaya automasi anda mengambil semula melalui API biasa. Setiap webhook mempunyai rahsianya sendiri yang menandatangani badan dengan HMAC-SHA256 dalam pengepala X-Tday-Signature; sahkannya sebelum mempercayai permintaan. Webhook yang terus gagal dilumpuhkan secara automatik.",
+        "step0": "Dalam Tetapan, tampal URL endpoint anda dan pilih peristiwa yang diterima.",
+        "step1": "Tambah webhook dan salin rahsia tandatangannya — dipaparkan sekali.",
+        "step2": "Sahkan HMAC X-Tday-Signature pada setiap permintaan sebelum bertindak."
       }
     }
   },
