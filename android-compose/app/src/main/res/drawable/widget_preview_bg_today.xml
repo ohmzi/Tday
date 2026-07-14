@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?><!-- Widget-picker preview background for the Today widgets: the surface plus the per-type
+     watermark baked in (bottom-right), so the picker differentiates widget types the way the
+     placed widget does. Mirrors the runtime watermark drawn by TaskWidgetDesign. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/tday_widget_surface" />
+            <corners android:radius="24dp" />
+        </shape>
+    </item>
+    <item
+        android:width="128dp"
+        android:height="128dp"
+        android:bottom="-12dp"
+        android:drawable="@drawable/widget_empty_watermark_today"
+        android:gravity="bottom|end"
+        android:right="-12dp" />
+</layer-list>
