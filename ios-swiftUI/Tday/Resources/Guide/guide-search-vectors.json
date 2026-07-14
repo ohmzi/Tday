@@ -9,11 +9,13 @@
     ],
     "widget": [
       "home-widget",
-      "widget-quick-add"
+      "widget-quick-add",
+      "interactive-widgets"
     ],
     "offline": [
       "offline-sync",
-      "local-mode"
+      "local-mode",
+      "interactive-widgets"
     ],
     "date": [
       "nlp-date-syntax",
@@ -38,7 +40,8 @@
       "promote-and-float",
       "root-feeds",
       "create-task",
-      "morning-sweep"
+      "morning-sweep",
+      "interactive-widgets"
     ],
     "car": [
       "carplay",

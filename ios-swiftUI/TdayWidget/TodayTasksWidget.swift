@@ -1,6 +1,83 @@
 #if canImport(WidgetKit) && canImport(SwiftUI)
+import AppIntents
 import SwiftUI
 import WidgetKit
+
+/// Inline widget completions (widgets v2). The widget process has no cache or
+/// SwiftData access, so a tapped check ring only queues a `{kind, id}`
+/// descriptor in the app group; the app drains the queue through the normal
+/// repository complete path on next activation. Until then both providers hide
+/// queued ids so the row disappears immediately.
+enum WidgetPendingCompletionStore {
+    static let queueKey = "tday.widget.pendingCompletions"
+    static let appGroupSuiteName = "group.com.ohmz.tday"
+    static let todoKind = "todo"
+    static let floaterKind = "floater"
+
+    struct Entry: Codable, Equatable {
+        let kind: String
+        let id: String
+    }
+
+    static func load() -> [Entry] {
+        guard let data = store().data(forKey: queueKey),
+              let entries = try? JSONDecoder().decode([Entry].self, from: data) else {
+            return []
+        }
+        return entries
+    }
+
+    static func append(kind: String, id: String) {
+        var entries = load()
+        guard !entries.contains(Entry(kind: kind, id: id)) else {
+            return
+        }
+        entries.append(Entry(kind: kind, id: id))
+        guard let data = try? JSONEncoder().encode(entries) else {
+            return
+        }
+        store().set(data, forKey: queueKey)
+    }
+
+    static func pendingIds(kind: String) -> Set<String> {
+        Set(load().filter { $0.kind == kind }.map(\.id))
+    }
+
+    private static func store() -> UserDefaults {
+        UserDefaults(suiteName: appGroupSuiteName) ?? .standard
+    }
+}
+
+/// Completes a task straight from a widget row without opening the app.
+/// Runs in the widget process, so it only records the tap and refreshes the
+/// timeline; the app performs the real completion when it next activates.
+struct CompleteWidgetTaskIntent: AppIntent {
+    static let title: LocalizedStringResource = "Complete Task"
+    // Widget-button plumbing only — never surfaced in Shortcuts or Spotlight.
+    static let isDiscoverable = false
+    static let openAppWhenRun = false
+
+    @Parameter(title: "Task Kind")
+    var kind: String
+
+    @Parameter(title: "Task ID")
+    var taskID: String
+
+    init() {}
+
+    init(kind: String, taskID: String) {
+        self.kind = kind
+        self.taskID = taskID
+    }
+
+    func perform() async throws -> some IntentResult {
+        WidgetPendingCompletionStore.append(kind: kind, id: taskID)
+        WidgetCenter.shared.reloadTimelines(
+            ofKind: kind == WidgetPendingCompletionStore.floaterKind ? "FloaterTasksWidget" : "TodayTasksWidget"
+        )
+        return .result()
+    }
+}
 
 private struct TodayTasksEntry: TimelineEntry {
     let date: Date
@@ -106,12 +183,16 @@ private struct TodayTasksProvider: TimelineProvider {
             )
         }
 
+        // Hide rows completed from the widget that the app has not drained yet.
+        let pending = WidgetPendingCompletionStore.pendingIds(kind: WidgetPendingCompletionStore.todoKind)
+        let tasks = snapshot.tasks.filter { !pending.contains($0.id) }
+        let taskCount = max(0, snapshot.taskCount - (snapshot.tasks.count - tasks.count))
         return TodayTasksEntry(
             date: date,
             title: snapshot.title,
-            status: snapshot.status,
-            taskCount: snapshot.taskCount,
-            tasks: snapshot.tasks
+            status: snapshot.status == .tasks && taskCount == 0 ? .empty : snapshot.status,
+            taskCount: taskCount,
+            tasks: tasks
         )
     }
 
@@ -312,6 +393,15 @@ private enum TaskWidgetMode {
 
     var showsDueTime: Bool {
         self == .today
+    }
+
+    var completionKind: String {
+        switch self {
+        case .today:
+            return WidgetPendingCompletionStore.todoKind
+        case .floater:
+            return WidgetPendingCompletionStore.floaterKind
+        }
     }
 
     func accentColor(renderingMode: WidgetRenderingMode) -> Color {
@@ -548,11 +638,11 @@ private struct TdayTasksWidgetContent: View {
 
     private func taskRow(_ row: WidgetTaskRowModel) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 7) {
-            priorityDot(row.priority, size: 7)
-                // Pin the dot to the first line (near its vertical centre) instead
+            completeButton(for: row)
+                // Pin the ring to the first line (near its vertical centre) instead
                 // of centring it across a wrapped two-line title.
                 .alignmentGuide(.firstTextBaseline) { dimension in
-                    dimension[VerticalAlignment.center] + 3
+                    dimension[VerticalAlignment.center] + 5
                 }
             VStack(alignment: .leading, spacing: 1) {
                 Text(row.title)
@@ -595,12 +685,20 @@ private struct TdayTasksWidgetContent: View {
             .frame(height: metrics.rowHeight, alignment: .leading)
     }
 
-    private func priorityDot(_ priority: String, size: CGFloat) -> some View {
-        Circle()
-            // Floater tasks have no priority, so the dot matches the widget's
-            // green accent (same as the add button) instead of a priority colour.
-            .fill(mode == .floater ? accentColor : widgetPriorityColor(priority))
-            .frame(width: size, height: size)
+    /// Tappable check ring (widgets v2): completes the task in place without
+    /// opening the app. Keeps the priority colour the old leading dot carried.
+    private func completeButton(for row: WidgetTaskRowModel) -> some View {
+        Button(intent: CompleteWidgetTaskIntent(kind: mode.completionKind, taskID: row.id)) {
+            Circle()
+                .strokeBorder(
+                    mode == .floater ? accentColor : widgetPriorityColor(row.priority),
+                    lineWidth: 1.6
+                )
+                .frame(width: 14, height: 14)
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Complete \(row.title)")
     }
 
     private func widgetPriorityColor(_ priority: String) -> Color {
@@ -773,12 +871,16 @@ private struct FloaterTasksProvider: TimelineProvider {
             )
         }
 
+        // Hide rows completed from the widget that the app has not drained yet.
+        let pending = WidgetPendingCompletionStore.pendingIds(kind: WidgetPendingCompletionStore.floaterKind)
+        let tasks = snapshot.tasks.filter { !pending.contains($0.id) }
+        let taskCount = max(0, snapshot.taskCount - (snapshot.tasks.count - tasks.count))
         return FloaterTasksEntry(
             date: Date(timeIntervalSince1970: TimeInterval(snapshot.generatedAtEpochMs) / 1_000),
             title: snapshot.title,
-            status: snapshot.status,
-            taskCount: snapshot.taskCount,
-            tasks: snapshot.tasks
+            status: snapshot.status == .tasks && taskCount == 0 ? .empty : snapshot.status,
+            taskCount: taskCount,
+            tasks: tasks
         )
     }
 

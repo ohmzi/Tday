@@ -877,6 +877,40 @@
       "searchBody": "start a new task straight from the widget. the widget has a create button, so you can capture a task from your home screen without first opening the app — and it works in local mode too."
     },
     {
+      "id": "interactive-widgets",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "check-check",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.4.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Complete from the widget",
+      "summary": "Check off tasks right on the home-screen widget.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "The Today and Floater widgets take taps now: hit the ring at the start of any row to complete that task without opening the app. The row disappears immediately and the completion syncs like any other — taps made offline queue up and apply once you're back."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Mis-tapped? Open the Completed history in the app and restore the task from there."
+          ]
+        }
+      ],
+      "searchTitle": "complete from the widget",
+      "searchKeywords": "widget, complete, check off, home screen, interactive, tap",
+      "searchBody": "check off tasks right on the home-screen widget. the today and floater widgets take taps now: hit the ring at the start of any row to complete that task without opening the app. the row disappears immediately and the completion syncs like any other — taps made offline queue up and apply once you're back. mis-tapped? open the completed history in the app and restore the task from there."
+    },
+    {
       "id": "carplay",
       "section": "WIDGETS_AND_SURFACES",
       "sectionOrder": 5,

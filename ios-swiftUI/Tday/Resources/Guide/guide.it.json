@@ -877,6 +877,40 @@
       "searchBody": "avvia una nuova attivita direttamente dal widget. il widget ha un pulsante di creazione, cosi puoi catturare un'attivita dalla schermata home senza prima aprire l'app — e funziona anche in modalita locale."
     },
     {
+      "id": "interactive-widgets",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "check-check",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.4.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Completa dal widget",
+      "summary": "Spunta le attività direttamente dal widget nella schermata Home.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "I widget Oggi e Floater ora rispondono al tocco: tocca l'anello all'inizio di una riga per completare quell'attività senza aprire l'app. La riga scompare subito e il completamento si sincronizza come qualsiasi altro — i tocchi fatti offline vengono messi in coda e applicati appena torni online."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Tocco sbagliato? Apri la cronologia completati nell'app e ripristina l'attività da lì."
+          ]
+        }
+      ],
+      "searchTitle": "completa dal widget",
+      "searchKeywords": "widget, completare, spuntare, schermata home, interattivo, tocco",
+      "searchBody": "spunta le attivita direttamente dal widget nella schermata home. i widget oggi e floater ora rispondono al tocco: tocca l'anello all'inizio di una riga per completare quell'attivita senza aprire l'app. la riga scompare subito e il completamento si sincronizza come qualsiasi altro — i tocchi fatti offline vengono messi in coda e applicati appena torni online. tocco sbagliato? apri la cronologia completati nell'app e ripristina l'attivita da li."
+    },
+    {
       "id": "carplay",
       "section": "WIDGETS_AND_SURFACES",
       "sectionOrder": 5,

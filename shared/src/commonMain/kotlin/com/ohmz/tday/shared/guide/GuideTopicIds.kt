@@ -33,6 +33,7 @@ object GuideTopicIds {
     const val PUSH_NOTIFICATIONS = "push-notifications"
     const val HOME_WIDGET = "home-widget"
     const val WIDGET_QUICK_ADD = "widget-quick-add"
+    const val INTERACTIVE_WIDGETS = "interactive-widgets"
     const val CARPLAY = "carplay"
     const val ANDROID_CAR = "android-car"
     const val LOCAL_MODE = "local-mode"
