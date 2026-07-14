@@ -864,6 +864,13 @@
         "body": "Hai trovato qualcosa in un'altra app? Apri il foglio di condivisione di sistema e scegli T'Day. Il testo condiviso arriva in un modulo di nuova attività — condividendo una pagina, il titolo diventa il nome dell'attività e il link finisce nelle note. Su Android e nell'app web il modulo si apre subito; su iOS la cattura viene salvata all'istante e il modulo precompilato ti accoglie alla prossima apertura dell'app.",
         "tip": "Condividi un testo con una data all'interno: il parser imposta la scadenza per te."
       },
+      "android-shortcuts": {
+        "title": "Riquadro impostazioni rapide e scorciatoie",
+        "summary": "Aggiungi attività dalle impostazioni rapide o tenendo premuta l'icona dell'app.",
+        "keywords": "impostazioni rapide, riquadro, scorciatoia, pressione prolungata, icona dell'app, aggiunta rapida",
+        "body": "Due corsie veloci su Android. Aggiungi il riquadro di T'Day alle impostazioni rapide (modifica la griglia e trascinalo dentro): un tocco apre il modulo di nuova attività da qualsiasi punto, anche sopra un'altra app. Tenendo premuta l'icona dell'app compaiono anche le scorciatoie: Nuova attività, Oggi e Floater portano dritti a destinazione.",
+        "tip": "Le scorciatoie si possono trascinare sulla schermata Home come icone autonome: un pulsante dedicato per creare un'attività con un tocco."
+      },
       "carplay": {
         "title": "T'Day su CarPlay",
         "summary": "Consulta e cattura attività in sicurezza mentre guidi.",

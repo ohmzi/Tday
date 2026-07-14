@@ -864,6 +864,13 @@
         "body": "Found something in another app? Open the system share sheet and pick T'Day. Shared text lands in a new-task form — a shared page keeps its title as the task name with the link tucked into notes. On Android and the web app the form opens on the spot; on iOS the capture is saved instantly and the prefilled form greets you next time you open the app.",
         "tip": "Share text that contains a date phrase and the parser sets the due date for you."
       },
+      "android-shortcuts": {
+        "title": "Quick Settings tile & shortcuts",
+        "summary": "Add tasks from Quick Settings or the app icon's long-press menu.",
+        "keywords": "quick settings, tile, shortcut, long press, app icon, quick add",
+        "body": "Two Android fast lanes. Add T'Day's tile to Quick Settings (edit the tile grid and drag it in) and one tap opens the new-task sheet from anywhere — even on top of another app. Long-pressing the app icon offers shortcuts too: New task, Today, and Floater each jump straight to where you were headed.",
+        "tip": "Launcher shortcuts can be dragged out as standalone home-screen icons — a dedicated one-tap New task button."
+      },
       "carplay": {
         "title": "T'Day on CarPlay",
         "summary": "Glance at and capture tasks safely while you drive.",

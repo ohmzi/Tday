@@ -864,6 +864,13 @@
         "body": "Vous avez trouvé quelque chose dans une autre app ? Ouvrez la feuille de partage du système et choisissez T'Day. Le texte partagé arrive dans un formulaire de nouvelle tâche — pour une page partagée, son titre devient le nom de la tâche et le lien se range dans les notes. Sur Android et sur l'app web le formulaire s'ouvre aussitôt ; sur iOS la capture est enregistrée immédiatement et le formulaire prérempli vous attend à la prochaine ouverture de l'app.",
         "tip": "Partagez un texte contenant une date : l'analyseur règle l'échéance pour vous."
       },
+      "android-shortcuts": {
+        "title": "Tuile de réglages rapides et raccourcis",
+        "summary": "Ajoutez des tâches depuis les réglages rapides ou l'appui long sur l'icône de l'app.",
+        "keywords": "réglages rapides, tuile, raccourci, appui long, icône de l'app, ajout rapide",
+        "body": "Deux voies rapides sur Android. Ajoutez la tuile T'Day aux réglages rapides (modifiez la grille de tuiles et glissez-la) : un appui ouvre le formulaire de nouvelle tâche depuis n'importe où, même par-dessus une autre app. Un appui long sur l'icône de l'app propose aussi des raccourcis : Nouvelle tâche, Aujourd'hui et Floaters mènent droit au but.",
+        "tip": "Les raccourcis se déposent sur l'écran d'accueil comme icônes autonomes — un bouton Nouvelle tâche en un appui."
+      },
       "carplay": {
         "title": "T'Day sur CarPlay",
         "summary": "Consultez et saisissez vos tâches en toute sécurité au volant.",
