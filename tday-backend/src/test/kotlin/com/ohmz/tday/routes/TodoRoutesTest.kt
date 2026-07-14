@@ -442,6 +442,7 @@ class TodoRoutesTest {
                     single<FloaterService> { floaterService }
                     single<TodoNlpService> { FakeTodoNlpService() }
                     single<TodoSummaryService> { summaryService }
+                    single<com.ohmz.tday.services.CompletedTodoService> { FakeCompletedTodoService() }
                 },
             )
         }
@@ -586,6 +587,13 @@ class TodoRoutesTest {
             due: LocalDateTime,
             rrule: String?,
         ) = makeTodo(id = "todo_promoted", due = due.toString()).right()
+    }
+
+    private class FakeCompletedTodoService : com.ohmz.tday.services.CompletedTodoService {
+        override suspend fun getAll(userId: String) = arrow.core.Either.Right(emptyList<com.ohmz.tday.models.response.CompletedTodoResponse>())
+        override suspend fun deleteAll(userId: String) = arrow.core.Either.Right(0)
+        override suspend fun deleteById(userId: String, id: String) = arrow.core.Either.Right(0)
+        override suspend fun update(userId: String, id: String, fields: Map<String, Any?>) = arrow.core.Either.Right(0)
     }
 
     private class FakeTodoNlpService : TodoNlpService {

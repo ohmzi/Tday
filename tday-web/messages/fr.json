@@ -389,6 +389,10 @@
       "everyWeek": "chaque semaine",
       "everyMonth": "chaque mois",
       "everyYear": "chaque année"
+    },
+    "weekInReview": {
+      "title": "Bilan de la semaine",
+      "dismiss": "Ignorer"
     }
   },
   "sidebar": {
@@ -727,6 +731,19 @@
       "oct.",
       "nov.",
       "déc."
+    ],
+    "weekNone": "Aucune tâche terminée cette semaine.",
+    "weekCleared": "Tu as terminé {{count}} tâches cette semaine.",
+    "weekBusiest": "Jour le plus chargé : {{day}} ({{count}}).",
+    "weekOldest": "La plus ancienne enfin terminée : {{title}}.",
+    "weekdaysShort": [
+      "lun",
+      "mar",
+      "mer",
+      "jeu",
+      "ven",
+      "sam",
+      "dim"
     ]
   },
   "guide": {
@@ -1062,6 +1079,13 @@
         "keywords": "répéter, suggestion, récurrent, rythme, habitude, motif, automatique",
         "body": "Quand tu finis la même tâche à un rythme régulier — arroser les plantes chaque semaine, payer le loyer chaque mois — T'Day le remarque et propose une puce à un toucher pour la répéter. Il ne lit que ton historique terminé sur l'appareil ; rien n'en sort.",
         "tip": "Pas intéressé ? Touche la ✕ et ce titre ne redemandera plus."
+      },
+      "week-in-review": {
+        "title": "Bilan de la semaine",
+        "summary": "Un récap tranquille du dimanche sur ce que tu as terminé cette semaine.",
+        "keywords": "semaine, bilan, récap, dimanche, terminé, rétrospective",
+        "body": "Le dimanche, T'Day affiche un court récap dans ton fil Aujourd'hui : combien de tâches tu as terminées cette semaine, ton jour le plus chargé et la plus ancienne enfin finie. Il se base sur ton historique terminé.",
+        "tip": "Pas envie ? Ferme-le, il revient la semaine prochaine."
       }
     }
   },

@@ -389,6 +389,10 @@
       "everyWeek": "weekly",
       "everyMonth": "monthly",
       "everyYear": "yearly"
+    },
+    "weekInReview": {
+      "title": "Week in Review",
+      "dismiss": "Dismiss"
     }
   },
   "sidebar": {
@@ -727,6 +731,19 @@
       "Oct",
       "Nov",
       "Dec"
+    ],
+    "weekNone": "No tasks cleared this week yet.",
+    "weekCleared": "You cleared {{count}} tasks this week.",
+    "weekBusiest": "Busiest day was {{day}} ({{count}}).",
+    "weekOldest": "Oldest you finally cleared: {{title}}.",
+    "weekdaysShort": [
+      "Mon",
+      "Tue",
+      "Wed",
+      "Thu",
+      "Fri",
+      "Sat",
+      "Sun"
     ]
   },
   "guide": {
@@ -1062,6 +1079,13 @@
         "keywords": "repeat, suggestion, recurring, cadence, habit, pattern, smart, automatic",
         "body": "When you keep completing the same task on a steady rhythm — watering plants every week, paying rent monthly — T'Day notices and offers a one-tap chip to make it repeat. It reads only your on-device completed history; nothing leaves your device.",
         "tip": "Not interested? Tap the ✕ and that title won't ask again."
+      },
+      "week-in-review": {
+        "title": "Week in Review",
+        "summary": "A calm Sunday recap of what you cleared this week.",
+        "keywords": "week, review, recap, summary, sunday, completed, retrospective",
+        "body": "On Sundays, T'Day shows a short recap on your Today feed: how many tasks you cleared this week, your busiest day, and the oldest task you finally finished. It's built from your completed history.",
+        "tip": "Not in the mood? Dismiss it and it stays gone until next week."
       }
     }
   },

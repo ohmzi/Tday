@@ -870,6 +870,36 @@
       "sinceVersion": null
     },
     {
+      "id": "week-in-review",
+      "section": "INTEGRATIONS",
+      "icon": "check-check",
+      "platforms": [
+        "WEB"
+      ],
+      "titleKey": "guide.topics.week-in-review.title",
+      "summaryKey": "guide.topics.week-in-review.summary",
+      "keywordsKey": "guide.topics.week-in-review.keywords",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "keys": [
+            "guide.topics.week-in-review.body"
+          ]
+        },
+        {
+          "type": "TIP",
+          "keys": [
+            "guide.topics.week-in-review.tip"
+          ]
+        }
+      ],
+      "badge": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "serverOnly": false,
+      "sinceVersion": "0.6.0"
+    },
+    {
       "id": "keyboard-submit",
       "section": "KEYBOARD_SHORTCUTS",
       "icon": "keyboard",

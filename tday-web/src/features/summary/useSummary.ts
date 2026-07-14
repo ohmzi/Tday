@@ -10,7 +10,8 @@ export type SummaryMode =
   | "priority"
   | "overdue"
   | "list"
-  | "floater";
+  | "floater"
+  | "week";
 
 export type SummarySource = "ai" | "logic";
 

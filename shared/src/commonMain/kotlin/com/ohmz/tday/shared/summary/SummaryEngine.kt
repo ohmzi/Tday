@@ -35,6 +35,12 @@ object SummaryEngine {
         val now = Instant.fromEpochMilliseconds(nowEpochMs).toLocalDateTime(zone)
         val normalizedListId = listId?.trim()?.takeIf { it.isNotEmpty() }
 
+        // The weekly retrospective is a different shape from the forward-looking summary:
+        // it reads the completed history rather than pending tasks.
+        if (scope == SummaryScope.WEEK) {
+            return buildWeekReview(tasks, nowEpochMs, now, zone, strings)
+        }
+
         val scoped = tasks
             .asSequence()
             .filterNot { it.completed }
@@ -48,6 +54,45 @@ object SummaryEngine {
         val then = candidates.drop(1)
         val overdueCount = scoped.count { it.dueEpochMs != null && it.dueEpochMs < nowEpochMs }
         return buildReadableTaskSummary(start, then, overdueCount, strings)
+    }
+
+    // ---- week in review (retrospective over the completed history) ----
+
+    private const val WEEK_WINDOW_MS = 7L * 24 * 60 * 60 * 1000
+
+    private fun buildWeekReview(
+        tasks: List<SummaryTaskInput>,
+        nowEpochMs: Long,
+        now: LocalDateTime,
+        zone: TimeZone,
+        s: SummaryStrings,
+    ): String {
+        val windowStart = nowEpochMs - WEEK_WINDOW_MS
+        val cleared = tasks.filter { task ->
+            val completedAt = task.completedAtEpochMs
+            task.completed && completedAt != null && completedAt in windowStart..nowEpochMs
+        }
+        if (cleared.isEmpty()) return s.t("weekNone")
+
+        // DayOfWeek.ordinal is 0=Monday … 6=Sunday, matching weekdaysShort order.
+        val byWeekday = cleared.groupBy {
+            Instant.fromEpochMilliseconds(it.completedAtEpochMs!!).toLocalDateTime(zone).dayOfWeek.ordinal
+        }
+        val busiest = byWeekday.entries.maxByOrNull { it.value.size }
+        // Oldest cleared: the one that was due earliest, else completed earliest.
+        val oldest = cleared.filter { it.dueEpochMs != null }.minByOrNull { it.dueEpochMs!! }
+            ?: cleared.minByOrNull { it.completedAtEpochMs!! }
+
+        val sentences = mutableListOf<String>()
+        sentences += s.t("weekCleared", mapOf("count" to cleared.size.toString()))
+        if (busiest != null && s.weekdaysShort.size == 7) {
+            val dayName = s.weekdaysShort[busiest.key]
+            sentences += s.t("weekBusiest", mapOf("day" to dayName, "count" to busiest.value.size.toString()))
+        }
+        if (oldest != null) {
+            sentences += s.t("weekOldest", mapOf("title" to compactTitle(oldest.title, s)))
+        }
+        return sentences.joinToString(" ")
     }
 
     // ---- scope filtering (mirrors backend buildSummaryTasks filter) ----
@@ -71,6 +116,8 @@ object SummaryEngine {
             SummaryScope.PRIORITY -> isPriorityTask(task.priority)
             SummaryScope.LIST -> normalizedListId != null && task.listId == normalizedListId
             SummaryScope.FLOATER -> true
+            // WEEK is handled by buildWeekReview before scope filtering runs.
+            SummaryScope.WEEK -> false
         }
     }
 

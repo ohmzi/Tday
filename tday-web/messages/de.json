@@ -389,6 +389,10 @@
       "everyWeek": "wöchentlich",
       "everyMonth": "monatlich",
       "everyYear": "jährlich"
+    },
+    "weekInReview": {
+      "title": "Wochenrückblick",
+      "dismiss": "Verwerfen"
     }
   },
   "sidebar": {
@@ -727,6 +731,19 @@
       "Okt",
       "Nov",
       "Dez"
+    ],
+    "weekNone": "Diese Woche noch keine Aufgaben erledigt.",
+    "weekCleared": "Du hast diese Woche {{count}} Aufgaben erledigt.",
+    "weekBusiest": "Aktivster Tag war {{day}} ({{count}}).",
+    "weekOldest": "Die älteste endlich erledigte: {{title}}.",
+    "weekdaysShort": [
+      "Mo",
+      "Di",
+      "Mi",
+      "Do",
+      "Fr",
+      "Sa",
+      "So"
     ]
   },
   "guide": {
@@ -1062,6 +1079,13 @@
         "keywords": "wiederholen, vorschlag, wiederkehrend, rhythmus, gewohnheit, muster, automatisch",
         "body": "Wenn du dieselbe Aufgabe in gleichmäßigem Rhythmus erledigst – Pflanzen jede Woche gießen, Miete monatlich zahlen – bemerkt T'Day das und bietet einen Ein-Tipp-Chip zum Wiederholen an. Es liest nur deinen lokalen Erledigt-Verlauf; nichts verlässt das Gerät.",
         "tip": "Kein Interesse? Tippe auf das ✕ und dieser Titel fragt nicht wieder."
+      },
+      "week-in-review": {
+        "title": "Wochenrückblick",
+        "summary": "Ein ruhiger Sonntags-Rückblick auf deine erledigten Aufgaben.",
+        "keywords": "woche, rückblick, zusammenfassung, sonntag, erledigt, retrospektive",
+        "body": "Sonntags zeigt T'Day einen kurzen Rückblick in deinem Heute-Feed: wie viele Aufgaben du diese Woche erledigt hast, dein aktivster Tag und die älteste endlich erledigte Aufgabe. Er stammt aus deinem Erledigt-Verlauf.",
+        "tip": "Keine Lust? Schließe ihn – bis nächste Woche bleibt er weg."
       }
     }
   },
