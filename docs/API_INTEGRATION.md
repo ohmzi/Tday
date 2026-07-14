@@ -86,6 +86,29 @@ curl -X POST https://tday.example.com/api/todo \
   -d '{ "title": "Submit report", "priority": "High", "due": "2030-07-29T20:00:00.000Z" }'
 ```
 
+## Export & import (portable backup)
+
+Two endpoints move a user's whole dataset as one versioned JSON bundle — the basis for
+"Download my data", server backups, and Local→Server migration.
+
+| Method | Path           | Purpose                                                             |
+|--------|----------------|--------------------------------------------------------------------|
+| `GET`  | `/api/export`  | The caller's full [`TdayExport`](../shared/src/commonMain/kotlin/com/ohmz/tday/shared/model/ExportModels.kt) bundle |
+| `POST` | `/api/import`  | Restore/merge a bundle: `{ export, dryRun?, includeCompleted?, includePreferences? }` |
+
+- The bundle carries lists, floater lists, todos (with their `exdates` and per-occurrence
+  instance overrides), floaters, completed history, and preferences. Descriptions are
+  **decrypted to plaintext** on export, so a bundle is portable across servers that use
+  different field-encryption keys — the importing server re-encrypts on its own boundary.
+- `schemaVersion` gates compatibility: import rejects a bundle newer than the server understands
+  and fills missing fields from defaults for older ones.
+- Import **never overwrites**. Any primary-key id that already exists for the user (or repeats
+  within the bundle) is minted fresh and all references rewritten, so a bundle always adds rows.
+  The whole import runs in one transaction — it fully applies or fully rolls back.
+- `dryRun: true` validates and returns the counts that *would* be written (`ImportCounts`,
+  including `remappedIds`) without touching the database — the preview a trust screen shows before
+  the user confirms.
+
 ## Security notes
 
 - An API key is a **full-account credential** — treat it like a password. Anyone holding it can

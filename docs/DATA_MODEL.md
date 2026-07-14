@@ -180,4 +180,5 @@ When changing data shape:
 - Update iOS SwiftData entities, mappers, cache records, and widget snapshot logic if affected.
 - Update REST docs in `docs/API_GUIDELINES.md`.
 - Update architecture and platform READMEs if the data flow changes.
+- Extend the portable export bundle (`shared/.../model/ExportModels.kt` + `ExportService`) and, if the wire shape gains a field older importers must not drop, bump `TdayExport.CURRENT_SCHEMA_VERSION`.
 - Add or update tests for recurrence, tenant isolation, sync replay, local mode, and destructive operations.
