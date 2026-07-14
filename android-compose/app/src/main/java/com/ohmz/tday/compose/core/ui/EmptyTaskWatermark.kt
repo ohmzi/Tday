@@ -30,6 +30,7 @@ fun EmptyTaskWatermark(
     imageVector: ImageVector = ImageVector.vectorResource(R.drawable.ic_lucide_inbox),
     accentColor: Color? = null,
     modifier: Modifier = Modifier,
+    flipHorizontal: Boolean = false,
 ) {
     val neutralTint = MaterialTheme.colorScheme.onSurfaceVariant
     val watermarkTint = accentColor
@@ -52,6 +53,7 @@ fun EmptyTaskWatermark(
                 .size(iconSize)
                 .graphicsLayer {
                     rotationZ = -7f
+                    scaleX = if (flipHorizontal) -1f else 1f
                 },
         )
     }
@@ -63,6 +65,7 @@ fun EmptyTaskWatermark(
     @DrawableRes iconRes: Int,
     accentColor: Color? = null,
     modifier: Modifier = Modifier,
+    flipHorizontal: Boolean = false,
 ) {
     val neutralTint = MaterialTheme.colorScheme.onSurfaceVariant
     val watermarkTint = accentColor
@@ -85,6 +88,7 @@ fun EmptyTaskWatermark(
                 .size(iconSize)
                 .graphicsLayer {
                     rotationZ = -7f
+                    scaleX = if (flipHorizontal) -1f else 1f
                 },
         )
     }
