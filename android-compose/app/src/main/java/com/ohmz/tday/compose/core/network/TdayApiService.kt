@@ -410,6 +410,14 @@ interface TdayApiService {
     @GET("/api/preferences")
     suspend fun getPreferences(): Response<PreferencesResponse>
 
+    @GET("/api/export")
+    suspend fun getExport(): Response<com.ohmz.tday.shared.model.TdayExport>
+
+    @POST("/api/import")
+    suspend fun postImport(
+        @Body payload: com.ohmz.tday.shared.model.ImportRequest,
+    ): Response<com.ohmz.tday.shared.model.ImportResponse>
+
     @PATCH("/api/preferences")
     suspend fun patchPreferences(
         @Body payload: PreferencesDto,

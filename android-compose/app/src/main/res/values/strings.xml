@@ -612,4 +612,16 @@
     <string name="reminder_due_in_days_one">Due in %1$d day</string>
     <string name="reminder_due_in_days_other">Due in %1$d days</string>
     <string name="settings_help_guide">How-To &amp; Tips</string>
+    <string name="settings_data_title">Your data</string>
+    <string name="settings_data_summary">%1$d tasks · %2$d lists · %3$d completed</string>
+    <string name="settings_data_download">Download my data</string>
+    <string name="settings_data_import">Import</string>
+    <string name="settings_data_import_local_hint">Sign in to a server to import a file.</string>
+    <string name="settings_data_export_done">Your data file was saved.</string>
+    <string name="settings_data_import_done">Import complete — added %1$d items.</string>
+    <string name="settings_data_import_failed">Could not import that file.</string>
+    <string name="settings_data_confirm_title">Import data?</string>
+    <string name="settings_data_confirm_body">This adds %1$d items to your account. Nothing you already have is changed or removed.</string>
+    <string name="settings_data_confirm_import">Import</string>
+    <string name="settings_data_confirm_cancel">Cancel</string>
 </resources>

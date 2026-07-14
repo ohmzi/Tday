@@ -85,6 +85,7 @@ import com.ohmz.tday.compose.core.notification.ReminderOption
 import com.ohmz.tday.compose.core.ui.rememberScrollCollapsingTitleScrollBehavior
 import com.ohmz.tday.compose.feature.app.MobileSyncStatus
 import com.ohmz.tday.compose.feature.app.ProfileEditResult
+import com.ohmz.tday.compose.feature.settings.data.DataTransferCard
 import com.ohmz.tday.compose.feature.auth.SecurityQuestionPicker
 import com.ohmz.tday.compose.ui.component.TdayCenteredSelectorDialog
 import com.ohmz.tday.compose.ui.component.TdaySegmentedSlider
@@ -303,6 +304,8 @@ fun SettingsScreen(
                     )
                 }
             }
+
+            DataTransferCard()
 
             Spacer(modifier = Modifier.height(24.dp))
         }

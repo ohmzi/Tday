@@ -606,4 +606,16 @@
     <string name="settings_account_security_questions_updated">Soalan keselamatan dikemas kini</string>
     <string name="summary_source_local">Model setempat</string>
     <string name="summary_source_server">Model pelayan</string>
+    <string name="settings_data_title">Data anda</string>
+    <string name="settings_data_summary">%1$d tugasan · %2$d senarai · %3$d selesai</string>
+    <string name="settings_data_download">Muat turun data saya</string>
+    <string name="settings_data_import">Import</string>
+    <string name="settings_data_import_local_hint">Log masuk ke pelayan untuk mengimport fail.</string>
+    <string name="settings_data_export_done">Fail data anda telah disimpan.</string>
+    <string name="settings_data_import_done">Import selesai — %1$d item ditambah.</string>
+    <string name="settings_data_import_failed">Tidak dapat mengimport fail itu.</string>
+    <string name="settings_data_confirm_title">Import data?</string>
+    <string name="settings_data_confirm_body">Ini menambah %1$d item ke akaun anda. Apa yang sedia ada tidak diubah atau dibuang.</string>
+    <string name="settings_data_confirm_import">Import</string>
+    <string name="settings_data_confirm_cancel">Batal</string>
 </resources>
