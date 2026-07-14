@@ -41,6 +41,8 @@ object GuideTopicIds {
     const val LOCAL_MODE = "local-mode"
     const val SERVER_MODE = "server-mode"
     const val OFFLINE_SYNC = "offline-sync"
+    const val EXPORT_YOUR_DATA = "export-your-data"
+    const val LOCAL_TO_SERVER_MIGRATION = "local-to-server-migration"
     const val IN_APP_UPDATE = "in-app-update"
     const val API_KEY_HOMARR = "api-key-homarr"
     const val AI_SUMMARY = "ai-summary"

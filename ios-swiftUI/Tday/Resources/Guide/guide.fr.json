@@ -1064,6 +1064,75 @@
       "searchBody": "continuez hors ligne ; les changements se rejouent a la reconnexion. en mode serveur, vos changements sont d'abord enregistres localement et mis en file quand vous etes hors ligne. des la reconnexion, t'day les rejoue sur le serveur dans l'ordre."
     },
     {
+      "id": "export-your-data",
+      "section": "MODES_AND_SYNC",
+      "sectionOrder": 6,
+      "icon": "download",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.5.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Exportez vos données",
+      "summary": "Téléchargez tout dans un fichier portable — et récupérez-le quand vous voulez.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Depuis les Réglages, vous pouvez télécharger tout votre compte — tâches, listes, historique des tâches terminées et préférences — dans un seul fichier JSON. Importez-le dans un autre T'Day (un serveur, ou un appareil en Mode local) et tout arrive sous forme de nouveaux éléments : l'import ajoute toujours et n'écrase jamais, donc rien de ce que vous avez déjà n'est perdu. Sur un serveur, les descriptions sont déchiffrées dans le fichier pour qu'il reste lisible même si vous passez à un serveur avec une autre clé."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Le fichier est du JSON simple et lisible — gardez-en une copie comme sauvegarde personnelle."
+          ]
+        }
+      ],
+      "searchTitle": "exportez vos donnees",
+      "searchKeywords": "exporter, importer, telecharger, sauvegarde, mes donnees, portable, restaurer, migrer",
+      "searchBody": "telechargez tout dans un fichier portable — et recuperez-le quand vous voulez. depuis les reglages, vous pouvez telecharger tout votre compte — taches, listes, historique des taches terminees et preferences — dans un seul fichier json. importez-le dans un autre t'day (un serveur, ou un appareil en mode local) et tout arrive sous forme de nouveaux elements : l'import ajoute toujours et n'ecrase jamais, donc rien de ce que vous avez deja n'est perdu. sur un serveur, les descriptions sont dechiffrees dans le fichier pour qu'il reste lisible meme si vous passez a un serveur avec une autre cle. le fichier est du json simple et lisible — gardez-en une copie comme sauvegarde personnelle."
+    },
+    {
+      "id": "local-to-server-migration",
+      "section": "MODES_AND_SYNC",
+      "sectionOrder": 6,
+      "icon": "cloud",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.5.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Passer de cet appareil à un serveur",
+      "summary": "Emportez vos tâches de l'appareil quand vous passez en Mode serveur.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Vous avez commencé en Mode local puis installé un serveur ? Rien n'est jamais envoyé tout seul. Pour transférer vos données : exportez-les d'abord depuis les Réglages, connectez-vous à votre serveur, puis importez-y le fichier. Vos tâches, listes et historique migrent en une étape volontaire — vous choisissez le moment, et vos données locales restent intactes jusque-là."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Après l'import, gardez le fichier exporté jusqu'à confirmer que tout est bien arrivé — il fait alors aussi office de sauvegarde."
+          ]
+        }
+      ],
+      "searchTitle": "passer de cet appareil a un serveur",
+      "searchKeywords": "migration, local vers serveur, deplacer les donnees, changer de mode, envoyer, se connecter, transferer",
+      "searchBody": "emportez vos taches de l'appareil quand vous passez en mode serveur. vous avez commence en mode local puis installe un serveur ? rien n'est jamais envoye tout seul. pour transferer vos donnees : exportez-les d'abord depuis les reglages, connectez-vous a votre serveur, puis importez-y le fichier. vos taches, listes et historique migrent en une etape volontaire — vous choisissez le moment, et vos donnees locales restent intactes jusque-la. apres l'import, gardez le fichier exporte jusqu'a confirmer que tout est bien arrive — il fait alors aussi office de sauvegarde."
+    },
+    {
       "id": "ai-summary",
       "section": "INTEGRATIONS",
       "sectionOrder": 7,

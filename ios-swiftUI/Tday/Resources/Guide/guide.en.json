@@ -1064,6 +1064,75 @@
       "searchBody": "keep working offline; changes replay when you reconnect. in server mode your changes are saved locally first and queued when you're offline. as soon as you reconnect, t'day replays them to the server in order."
     },
     {
+      "id": "export-your-data",
+      "section": "MODES_AND_SYNC",
+      "sectionOrder": 6,
+      "icon": "download",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.5.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Export your data",
+      "summary": "Download everything as one portable file — and bring it back anytime.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "From Settings you can download your whole account — tasks, lists, completed history, and preferences — as a single JSON file. Import it into another T'Day (a server, or a device in Local Mode) and it lands as new items: import always adds and never overwrites, so nothing you already have is lost. On a server, descriptions are decrypted into the file so it stays readable even if you move to a differently-keyed server."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "The file is plain, human-readable JSON — keep a copy as a personal backup."
+          ]
+        }
+      ],
+      "searchTitle": "export your data",
+      "searchKeywords": "export, import, download, backup, my data, portable, restore, migrate",
+      "searchBody": "download everything as one portable file — and bring it back anytime. from settings you can download your whole account — tasks, lists, completed history, and preferences — as a single json file. import it into another t'day (a server, or a device in local mode) and it lands as new items: import always adds and never overwrites, so nothing you already have is lost. on a server, descriptions are decrypted into the file so it stays readable even if you move to a differently-keyed server. the file is plain, human-readable json — keep a copy as a personal backup."
+    },
+    {
+      "id": "local-to-server-migration",
+      "section": "MODES_AND_SYNC",
+      "sectionOrder": 6,
+      "icon": "cloud",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.5.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Move from this device to a server",
+      "summary": "Bring your on-device tasks with you when you switch to Server Mode.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Started in Local Mode and later set up a server? Nothing ever uploads on its own. To move your data up: export it from Settings first, sign in to your server, then import the file there. Your tasks, lists, and history transfer in one deliberate step — you choose the moment, and your on-device data stays untouched until you do."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "After importing, keep the exported file until you've confirmed everything arrived — then it doubles as a backup."
+          ]
+        }
+      ],
+      "searchTitle": "move from this device to a server",
+      "searchKeywords": "migration, local to server, move data, switch mode, upload, sign in, transfer",
+      "searchBody": "bring your on-device tasks with you when you switch to server mode. started in local mode and later set up a server? nothing ever uploads on its own. to move your data up: export it from settings first, sign in to your server, then import the file there. your tasks, lists, and history transfer in one deliberate step — you choose the moment, and your on-device data stays untouched until you do. after importing, keep the exported file until you've confirmed everything arrived — then it doubles as a backup."
+    },
+    {
       "id": "ai-summary",
       "section": "INTEGRATIONS",
       "sectionOrder": 7,

@@ -1064,6 +1064,75 @@
       "searchBody": "terus bekerja luar talian; perubahan dimainkan semula apabila anda bersambung semula. dalam mod pelayan perubahan anda disimpan secara tempatan dahulu dan dibariskan apabila anda luar talian. sebaik sahaja anda bersambung semula, t'day memainkannya semula ke pelayan mengikut urutan."
     },
     {
+      "id": "export-your-data",
+      "section": "MODES_AND_SYNC",
+      "sectionOrder": 6,
+      "icon": "download",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.5.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Eksport data anda",
+      "summary": "Muat turun semuanya sebagai satu fail mudah alih — dan bawa balik bila-bila masa.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Daripada Tetapan anda boleh memuat turun keseluruhan akaun — tugasan, senarai, sejarah selesai dan keutamaan — sebagai satu fail JSON. Import ke T'Day lain (pelayan, atau peranti dalam Mod tempatan) dan semuanya masuk sebagai item baharu: import sentiasa menambah dan tidak pernah menimpa, jadi apa yang sedia ada tidak hilang. Pada pelayan, penerangan dinyahsulit ke dalam fail supaya kekal boleh dibaca walaupun anda berpindah ke pelayan dengan kunci berbeza."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Fail itu ialah JSON biasa yang boleh dibaca — simpan satu salinan sebagai sandaran peribadi."
+          ]
+        }
+      ],
+      "searchTitle": "eksport data anda",
+      "searchKeywords": "eksport, import, muat turun, sandaran, data saya, mudah alih, pulih, pindah",
+      "searchBody": "muat turun semuanya sebagai satu fail mudah alih — dan bawa balik bila-bila masa. daripada tetapan anda boleh memuat turun keseluruhan akaun — tugasan, senarai, sejarah selesai dan keutamaan — sebagai satu fail json. import ke t'day lain (pelayan, atau peranti dalam mod tempatan) dan semuanya masuk sebagai item baharu: import sentiasa menambah dan tidak pernah menimpa, jadi apa yang sedia ada tidak hilang. pada pelayan, penerangan dinyahsulit ke dalam fail supaya kekal boleh dibaca walaupun anda berpindah ke pelayan dengan kunci berbeza. fail itu ialah json biasa yang boleh dibaca — simpan satu salinan sebagai sandaran peribadi."
+    },
+    {
+      "id": "local-to-server-migration",
+      "section": "MODES_AND_SYNC",
+      "sectionOrder": 6,
+      "icon": "cloud",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.5.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Pindah dari peranti ini ke pelayan",
+      "summary": "Bawa tugasan dalam peranti anda apabila beralih ke Mod pelayan.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Bermula dalam Mod tempatan dan kemudian menyediakan pelayan? Tiada apa-apa dimuat naik dengan sendirinya. Untuk memindahkan data anda: eksport dahulu daripada Tetapan, log masuk ke pelayan anda, kemudian import fail itu di sana. Tugasan, senarai dan sejarah berpindah dalam satu langkah yang disengajakan — anda pilih masanya, dan data dalam peranti kekal tidak tersentuh sehingga itu."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Selepas import, simpan fail yang dieksport sehingga anda sahkan semuanya tiba — ia juga berfungsi sebagai sandaran."
+          ]
+        }
+      ],
+      "searchTitle": "pindah dari peranti ini ke pelayan",
+      "searchKeywords": "pindah, tempatan ke pelayan, alih data, tukar mod, muat naik, log masuk, pindahkan",
+      "searchBody": "bawa tugasan dalam peranti anda apabila beralih ke mod pelayan. bermula dalam mod tempatan dan kemudian menyediakan pelayan? tiada apa-apa dimuat naik dengan sendirinya. untuk memindahkan data anda: eksport dahulu daripada tetapan, log masuk ke pelayan anda, kemudian import fail itu di sana. tugasan, senarai dan sejarah berpindah dalam satu langkah yang disengajakan — anda pilih masanya, dan data dalam peranti kekal tidak tersentuh sehingga itu. selepas import, simpan fail yang dieksport sehingga anda sahkan semuanya tiba — ia juga berfungsi sebagai sandaran."
+    },
+    {
       "id": "ai-summary",
       "section": "INTEGRATIONS",
       "sectionOrder": 7,

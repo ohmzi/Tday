@@ -607,6 +607,22 @@
       "errorDistinct": "Security questions must be different",
       "errorAnswersRequired": "Please answer all three questions",
       "errorPasswordRequired": "Enter your current password"
+    },
+    "data": {
+      "title": "Data anda",
+      "summary": "{{tasks}} tugasan · {{lists}} senarai · {{completed}} selesai, semuanya pada pelayan ini.",
+      "download": "Muat turun data saya",
+      "import": "Import",
+      "exportDone": "Fail data anda telah dimuat turun.",
+      "exportFailed": "Tidak dapat mengeksport data anda.",
+      "importInvalid": "Fail itu bukan eksport T'Day yang sah.",
+      "importDone": "Import selesai — {{count}} item ditambah.",
+      "importFailed": "Tidak dapat mengimport fail itu.",
+      "confirmTitle": "Import data?",
+      "confirmBody": "Ini menambah {{count}} item ke akaun anda. Apa yang sedia ada tidak diubah atau dibuang.",
+      "confirmRemapped": "{{count}} item dengan ID bercanggah akan ditambah sebagai salinan baharu.",
+      "confirmCancel": "Batal",
+      "confirmImport": "Import"
     }
   },
   "summary": {
@@ -908,6 +924,20 @@
         "summary": "Terus bekerja luar talian; perubahan dimainkan semula apabila anda bersambung semula.",
         "keywords": "luar talian, segerak, tertunggak, baris gilir, main semula, sambungan, konflik",
         "body": "Dalam Mod Pelayan perubahan anda disimpan secara tempatan dahulu dan dibariskan apabila anda luar talian. Sebaik sahaja anda bersambung semula, T'Day memainkannya semula ke pelayan mengikut urutan."
+      },
+      "export-your-data": {
+        "title": "Eksport data anda",
+        "summary": "Muat turun semuanya sebagai satu fail mudah alih — dan bawa balik bila-bila masa.",
+        "keywords": "eksport, import, muat turun, sandaran, data saya, mudah alih, pulih, pindah",
+        "body": "Daripada Tetapan anda boleh memuat turun keseluruhan akaun — tugasan, senarai, sejarah selesai dan keutamaan — sebagai satu fail JSON. Import ke T'Day lain (pelayan, atau peranti dalam Mod tempatan) dan semuanya masuk sebagai item baharu: import sentiasa menambah dan tidak pernah menimpa, jadi apa yang sedia ada tidak hilang. Pada pelayan, penerangan dinyahsulit ke dalam fail supaya kekal boleh dibaca walaupun anda berpindah ke pelayan dengan kunci berbeza.",
+        "tip": "Fail itu ialah JSON biasa yang boleh dibaca — simpan satu salinan sebagai sandaran peribadi."
+      },
+      "local-to-server-migration": {
+        "title": "Pindah dari peranti ini ke pelayan",
+        "summary": "Bawa tugasan dalam peranti anda apabila beralih ke Mod pelayan.",
+        "keywords": "pindah, tempatan ke pelayan, alih data, tukar mod, muat naik, log masuk, pindahkan",
+        "body": "Bermula dalam Mod tempatan dan kemudian menyediakan pelayan? Tiada apa-apa dimuat naik dengan sendirinya. Untuk memindahkan data anda: eksport dahulu daripada Tetapan, log masuk ke pelayan anda, kemudian import fail itu di sana. Tugasan, senarai dan sejarah berpindah dalam satu langkah yang disengajakan — anda pilih masanya, dan data dalam peranti kekal tidak tersentuh sehingga itu.",
+        "tip": "Selepas import, simpan fail yang dieksport sehingga anda sahkan semuanya tiba — ia juga berfungsi sebagai sandaran."
       },
       "in-app-update": {
         "title": "Kemas kini dalam aplikasi",

@@ -607,6 +607,22 @@
       "errorDistinct": "Security questions must be different",
       "errorAnswersRequired": "Please answer all three questions",
       "errorPasswordRequired": "Enter your current password"
+    },
+    "data": {
+      "title": "你的数据",
+      "summary": "{{tasks}} 个任务 · {{lists}} 个清单 · {{completed}} 个已完成，全部在这台服务器上。",
+      "download": "下载我的数据",
+      "import": "导入",
+      "exportDone": "已下载你的数据文件。",
+      "exportFailed": "无法导出你的数据。",
+      "importInvalid": "该文件不是有效的 T'Day 导出文件。",
+      "importDone": "导入完成——已添加 {{count}} 项。",
+      "importFailed": "无法导入该文件。",
+      "confirmTitle": "导入数据？",
+      "confirmBody": "这会向你的账户添加 {{count}} 项。你已有的内容不会被更改或删除。",
+      "confirmRemapped": "{{count}} 项 ID 冲突的内容将作为新副本添加。",
+      "confirmCancel": "取消",
+      "confirmImport": "导入"
     }
   },
   "summary": {
@@ -908,6 +924,20 @@
         "summary": "离线也能继续工作；重新联网后改动会回放。",
         "keywords": "离线, 同步, 待处理, 队列, 回放, 连接, 冲突, offline, sync, queue, replay",
         "body": "在服务器模式下，你的改动会先保存在本地，离线时进入队列。一旦重新联网，T'Day 就会按顺序把它们回放到服务器。"
+      },
+      "export-your-data": {
+        "title": "导出你的数据",
+        "summary": "把所有内容下载为一个可携带的文件，随时都能带回来。",
+        "keywords": "导出, 导入, 下载, 备份, 我的数据, 可携带, 恢复, 迁移",
+        "body": "在设置里，你可以把整个账户——任务、清单、完成记录和偏好——下载为一个 JSON 文件。把它导入到另一个 T'Day（服务器，或本地模式下的设备），所有内容都会作为新条目进入：导入只会新增、绝不覆盖，所以已有的内容不会丢失。在服务器上，描述会被解密写入文件，即使你换到使用不同密钥的服务器也依然可读。",
+        "tip": "这个文件就是普通、可读的 JSON——留一份副本当作个人备份。"
+      },
+      "local-to-server-migration": {
+        "title": "从本设备迁移到服务器",
+        "summary": "切换到服务器模式时，把设备上的任务一起带走。",
+        "keywords": "迁移, 本地到服务器, 迁移数据, 切换模式, 上传, 登录, 转移",
+        "body": "先用本地模式，后来又搭了服务器？绝不会自动上传任何内容。迁移数据的方法：先在设置里导出，登录你的服务器，然后在那里导入文件。任务、清单和历史会在你主动的一步里迁移过去——时机由你决定，在此之前设备上的数据保持原样。",
+        "tip": "导入后，先留着导出的文件，等确认全部到齐再删——它同时也是一份备份。"
       },
       "in-app-update": {
         "title": "应用内更新",
