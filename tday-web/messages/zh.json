@@ -434,7 +434,8 @@
       "submitAndOpen": "提交并打开另一个",
       "openForm": "打开表单",
       "exitForm": "退出表单",
-      "editForm": "编辑表单"
+      "editForm": "编辑表单",
+      "submit": "提交表单"
     },
     "calendar": {
       "markComplete": "标记为完成",
@@ -450,6 +451,12 @@
       "today": "今天",
       "calendar": "日历",
       "completed": "已完成"
+    },
+    "global": {
+      "title": "任意位置",
+      "newTask": "新任务",
+      "openPalette": "命令面板",
+      "showShortcuts": "此总览"
     }
   },
   "filterMenu": {
@@ -930,7 +937,26 @@
         "keywords": "键盘, 快捷键, 提交, 回车, 保存, 热键, keyboard, shortcut, submit, enter",
         "body": "在网页应用里，你可以直接用键盘提交任务表单，让快速记录不打断你的节奏。",
         "kbd": "Ctrl / ⌘ + Enter"
+      },
+      "keyboard-shortcuts": {
+        "title": "键盘快捷键",
+        "summary": "用键盘操作网页版：快速添加、命令面板、快捷键总览。",
+        "keywords": "键盘, 快捷键, 热键, 命令面板, cmd+k, 快速添加",
+        "body": "网页版有一层全局键盘操作。在任何地方按 N 新建任务，按 Ctrl / ⌘ + K 打开命令面板——输入即可跳转到任意视图或清单，或执行操作——按 ? 查看快捷键总览。在输入框里打字时按键会被忽略。",
+        "tip": "在面板中，方向键移动选择，Enter 执行。",
+        "kbd": "N",
+        "kbd2": "Ctrl / ⌘ + K",
+        "kbd3": "?"
       }
     }
+  },
+  "palette": {
+    "title": "命令面板",
+    "placeholder": "输入命令或搜索…",
+    "empty": "没有匹配项",
+    "actions": "操作",
+    "navigation": "前往",
+    "lists": "清单",
+    "newTask": "新任务"
   }
 }

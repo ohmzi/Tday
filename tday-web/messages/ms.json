@@ -434,7 +434,8 @@
       "submitAndOpen": "Hantar borang dan buka yang lain",
       "openForm": "Buka borang",
       "exitForm": "Keluar borang",
-      "editForm": "Edit borang"
+      "editForm": "Edit borang",
+      "submit": "Hantar borang"
     },
     "calendar": {
       "markComplete": "Tanda selesai",
@@ -450,6 +451,12 @@
       "today": "Hari ini",
       "calendar": "Kalendar",
       "completed": "Selesai"
+    },
+    "global": {
+      "title": "Di mana-mana",
+      "newTask": "Tugasan baharu",
+      "openPalette": "Palet perintah",
+      "showShortcuts": "Ringkasan ini"
     }
   },
   "filterMenu": {
@@ -930,7 +937,26 @@
         "keywords": "papan kekunci, pintasan, hantar, enter, simpan, kekunci pantas",
         "body": "Dalam aplikasi web anda boleh menghantar borang tugasan terus dari papan kekunci, jadi catatan pantas tidak pernah mengganggu aliran anda.",
         "kbd": "Ctrl / ⌘ + Enter"
+      },
+      "keyboard-shortcuts": {
+        "title": "Pintasan papan kekunci",
+        "summary": "Kawal aplikasi web dari papan kekunci: tambah pantas, palet, ringkasan.",
+        "keywords": "papan kekunci, pintasan, kekunci pantas, palet perintah, cmd+k, tambah pantas",
+        "body": "Aplikasi web mempunyai lapisan papan kekunci global. Tekan N di mana-mana untuk tugasan baharu, Ctrl / ⌘ + K untuk membuka palet perintah — taip untuk melompat ke mana-mana paparan atau senarai, atau jalankan tindakan — dan ? untuk melihat ringkasan pintasan. Kekunci diabaikan semasa anda menaip dalam medan.",
+        "tip": "Dalam palet, kekunci anak panah menggerakkan pilihan dan Enter menjalankannya.",
+        "kbd": "N",
+        "kbd2": "Ctrl / ⌘ + K",
+        "kbd3": "?"
       }
     }
+  },
+  "palette": {
+    "title": "Palet perintah",
+    "placeholder": "Taip perintah atau cari…",
+    "empty": "Tiada padanan",
+    "actions": "Tindakan",
+    "navigation": "Pergi ke",
+    "lists": "Senarai",
+    "newTask": "Tugasan baharu"
   }
 }

@@ -434,7 +434,8 @@
       "submitAndOpen": "Enviar formulario y abrir otro",
       "openForm": "Abrir formulario",
       "exitForm": "Salir del formulario",
-      "editForm": "Editar formulario"
+      "editForm": "Editar formulario",
+      "submit": "Enviar formulario"
     },
     "calendar": {
       "markComplete": "Marcar como completada",
@@ -450,6 +451,12 @@
       "today": "Hoy",
       "calendar": "Calendario",
       "completed": "Completado"
+    },
+    "global": {
+      "title": "En cualquier lugar",
+      "newTask": "Tarea nueva",
+      "openPalette": "Paleta de comandos",
+      "showShortcuts": "Este resumen"
     }
   },
   "filterMenu": {
@@ -930,7 +937,26 @@
         "keywords": "teclado, atajo, guardar, enter, intro, tecla rápida",
         "body": "En la app web puedes enviar el formulario de tarea directamente desde el teclado, así la captura rápida nunca interrumpe tu ritmo.",
         "kbd": "Ctrl / ⌘ + Intro"
+      },
+      "keyboard-shortcuts": {
+        "title": "Atajos de teclado",
+        "summary": "Maneja la app web desde el teclado: añadir rápido, paleta, resumen.",
+        "keywords": "teclado, atajo, tecla rápida, paleta de comandos, cmd+k, añadir rápido",
+        "body": "La app web tiene una capa global de teclado. Pulsa N en cualquier lugar para crear una tarea, Ctrl / ⌘ + K para abrir la paleta de comandos — escribe para saltar a cualquier vista o lista, o ejecutar una acción — y ? para ver el resumen de atajos. Las teclas se ignoran mientras escribes en un campo.",
+        "tip": "Dentro de la paleta, las flechas mueven la selección y Enter la ejecuta.",
+        "kbd": "N",
+        "kbd2": "Ctrl / ⌘ + K",
+        "kbd3": "?"
       }
     }
+  },
+  "palette": {
+    "title": "Paleta de comandos",
+    "placeholder": "Escribe un comando o busca…",
+    "empty": "Sin coincidencias",
+    "actions": "Acciones",
+    "navigation": "Ir a",
+    "lists": "Listas",
+    "newTask": "Tarea nueva"
   }
 }

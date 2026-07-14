@@ -434,7 +434,8 @@
       "submitAndOpen": "Invia modulo e aprine un altro",
       "openForm": "Apri modulo",
       "exitForm": "Esci dal modulo",
-      "editForm": "Modifica modulo"
+      "editForm": "Modifica modulo",
+      "submit": "Invia il modulo"
     },
     "calendar": {
       "markComplete": "Segna come completato",
@@ -450,6 +451,12 @@
       "today": "Oggi",
       "calendar": "Calendario",
       "completed": "Completato"
+    },
+    "global": {
+      "title": "Ovunque",
+      "newTask": "Nuova attività",
+      "openPalette": "Palette comandi",
+      "showShortcuts": "Questa panoramica"
     }
   },
   "filterMenu": {
@@ -930,7 +937,26 @@
         "keywords": "tastiera, scorciatoia, invia, invio, salva, hotkey",
         "body": "Nell'app web puoi inviare il modulo dell'attività direttamente dalla tastiera, così la cattura rapida non interrompe mai il tuo flusso.",
         "kbd": "Ctrl / ⌘ + Invio"
+      },
+      "keyboard-shortcuts": {
+        "title": "Scorciatoie da tastiera",
+        "summary": "Guida l'app web dalla tastiera: aggiunta rapida, palette, panoramica.",
+        "keywords": "tastiera, scorciatoia, tasto rapido, palette comandi, cmd+k, aggiunta rapida",
+        "body": "L'app web ha un livello tastiera globale. Premi N ovunque per creare un'attività, Ctrl / ⌘ + K per aprire la palette dei comandi — digita per saltare a una vista o a una lista, o eseguire un'azione — e ? per la panoramica delle scorciatoie. I tasti vengono ignorati mentre scrivi in un campo.",
+        "tip": "Nella palette le frecce spostano la selezione e Invio la esegue.",
+        "kbd": "N",
+        "kbd2": "Ctrl / ⌘ + K",
+        "kbd3": "?"
       }
     }
+  },
+  "palette": {
+    "title": "Palette comandi",
+    "placeholder": "Digita un comando o cerca…",
+    "empty": "Nessuna corrispondenza",
+    "actions": "Azioni",
+    "navigation": "Vai a",
+    "lists": "Liste",
+    "newTask": "Nuova attività"
   }
 }
