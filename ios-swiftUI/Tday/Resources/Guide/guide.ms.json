@@ -822,6 +822,42 @@
       "searchBody": "pemberitahuan peringatan ada tindakan tunda 1 jam dan malam ini. apabila peringatan muncul pada masa yang tidak sesuai, tidak perlu buka aplikasi: tunda 1 jam menghantar semula peringatan yang sama sejam kemudian, dan malam ini memindahkan tugasan itu ke 19:00 hari ini. malam ini untuk tugasan sekali sahaja — kejadian berulang dijadualkan semula dalam aplikasi supaya sirinya kekal. menunda hanya melewatkan pemberitahuan; tugasan mengekalkan masa asalnya sehingga anda memindahkannya."
     },
     {
+      "id": "quiet-hours",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "bell",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.6.0",
+      "deepLink": null,
+      "helpAnchors": [
+        "settings-notifications"
+      ],
+      "title": "Waktu senyap",
+      "summary": "Tahan peringatan pada waktu malam supaya tiada bunyi semasa anda tidur.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Tetapkan tetingkap — contohnya 22:00 hingga 07:00 — dan mana-mana peringatan yang akan berbunyi di dalamnya ditahan sehingga tamat. Pada peranti sahaja; peringatan tempatan menunggu pagi."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Tetingkap boleh melepasi tengah malam (22:00 → 07:00); pengiraan menanganinya."
+          ]
+        }
+      ],
+      "searchTitle": "waktu senyap",
+      "searchKeywords": "senyap, waktu, jangan ganggu, malam, tidur, peringatan, jadual",
+      "searchBody": "tahan peringatan pada waktu malam supaya tiada bunyi semasa anda tidur. tetapkan tetingkap — contohnya 22:00 hingga 07:00 — dan mana-mana peringatan yang akan berbunyi di dalamnya ditahan sehingga tamat. pada peranti sahaja; peringatan tempatan menunggu pagi. tetingkap boleh melepasi tengah malam (22:00 → 07:00); pengiraan menanganinya."
+    },
+    {
       "id": "day-ahead",
       "section": "RECURRENCE_AND_REMINDERS",
       "sectionOrder": 4,

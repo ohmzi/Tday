@@ -187,6 +187,8 @@ fun SettingsScreen(
                     selectedDayAhead = selectedDayAhead,
                     onDayAheadSelected = onDayAheadSelected,
                 )
+                SettingsDivider()
+                QuietHoursRow()
                 // Server pushes via UnifiedPush are only meaningful in Server Mode.
                 if (!isLocalMode) {
                     SettingsDivider()
@@ -1311,6 +1313,97 @@ private fun ThemeModeSelector(
         onOptionSelected = onThemeModeSelected,
         label = { mode -> context.getString(mode.labelRes) },
     )
+}
+
+/**
+ * "Hold reminders between HH:MM and HH:MM" — entirely local. The receiver re-arms any
+ * reminder that would fire in the window for the window end.
+ */
+@Composable
+private fun QuietHoursRow() {
+    val colorScheme = MaterialTheme.colorScheme
+    val context = LocalContext.current
+    val store = remember { com.ohmz.tday.compose.core.notification.QuietHoursPreferenceStore(context.applicationContext) }
+    var enabled by remember { mutableStateOf(store.isEnabled()) }
+    var startMinute by remember { mutableStateOf(store.getStartMinute()) }
+    var endMinute by remember { mutableStateOf(store.getEndMinute()) }
+
+    fun fmt(minute: Int): String = "%02d:%02d".format(minute / 60, minute % 60)
+    fun pickTime(current: Int, onPicked: (Int) -> Unit) {
+        android.app.TimePickerDialog(
+            context,
+            { _, hour, min -> onPicked(hour * 60 + min) },
+            current / 60,
+            current % 60,
+            true,
+        ).show()
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = stringResource(R.string.settings_quiet_hours),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.ExtraBold,
+                color = colorScheme.onSurface,
+            )
+            Switch(
+                checked = enabled,
+                onCheckedChange = {
+                    enabled = it
+                    store.setEnabled(it)
+                },
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = Color.White,
+                    checkedTrackColor = colorScheme.secondary,
+                    checkedBorderColor = Color.Transparent,
+                ),
+            )
+        }
+        if (enabled) {
+            QuietHoursTimeRow(
+                label = stringResource(R.string.settings_quiet_hours_start),
+                value = fmt(startMinute),
+                onClick = { pickTime(startMinute) { startMinute = it; store.setWindow(startMinute, endMinute) } },
+            )
+            QuietHoursTimeRow(
+                label = stringResource(R.string.settings_quiet_hours_end),
+                value = fmt(endMinute),
+                onClick = { pickTime(endMinute) { endMinute = it; store.setWindow(startMinute, endMinute) } },
+            )
+        }
+    }
+}
+
+@Composable
+private fun QuietHoursTimeRow(label: String, value: String, onClick: () -> Unit) {
+    val colorScheme = MaterialTheme.colorScheme
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .clickable(onClick = onClick)
+            .padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.Bold,
+            color = colorScheme.onSurfaceVariant,
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.ExtraBold,
+            color = colorScheme.secondary,
+        )
+    }
 }
 
 /**

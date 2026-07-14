@@ -626,4 +626,7 @@
     <string name="settings_unifiedpush_none">No se encontró ningún distribuidor UnifiedPush. Instala uno (p. ej. ntfy) e inténtalo de nuevo.</string>
     <string name="create_task_repeat_suggestion">¿Repetir %1$s?</string>
     <string name="create_task_repeat_suggestion_dismiss">Descartar</string>
+    <string name="settings_quiet_hours">Horas de silencio</string>
+    <string name="settings_quiet_hours_start">Inicio</string>
+    <string name="settings_quiet_hours_end">Fin</string>
 </resources>

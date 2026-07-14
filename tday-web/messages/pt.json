@@ -1086,6 +1086,13 @@
         "keywords": "semana, resumo, recap, domingo, concluído, retrospectiva",
         "body": "Aos domingos, o T'Day mostra um breve resumo no seu feed Hoje: quantas tarefas você concluiu nesta semana, seu dia mais movimentado e a mais antiga que enfim terminou. Vem do seu histórico concluído.",
         "tip": "Sem clima? Dispense — ele só volta na próxima semana."
+      },
+      "quiet-hours": {
+        "title": "Horas de silêncio",
+        "summary": "Segure os lembretes à noite para nada tocar enquanto você dorme.",
+        "keywords": "silêncio, horas, não perturbe, noite, sono, lembretes, horário",
+        "body": "Defina uma janela — por exemplo 22:00 às 07:00 — e qualquer lembrete que tocaria dentro dela fica retido até o fim. Só no dispositivo; os lembretes locais esperam a manhã.",
+        "tip": "A janela pode cruzar a meia-noite (22:00 → 07:00); o cálculo cuida disso."
       }
     }
   },

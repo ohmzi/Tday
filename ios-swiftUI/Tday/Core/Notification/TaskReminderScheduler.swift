@@ -77,11 +77,24 @@ final class TaskReminderScheduler {
             return
         }
 
+        let quietHours = QuietHoursStore()
         for task in tasks where !task.completed {
             guard let due = task.due else {
                 continue
             }
-            let triggerDate = due.addingTimeInterval(-offsetSeconds)
+            var triggerDate = due.addingTimeInterval(-offsetSeconds)
+            // Quiet hours: shift a reminder that would fire inside the held window to the
+            // window end, so nothing buzzes overnight.
+            if quietHours.isEnabled {
+                let comps = Calendar.current.dateComponents([.hour, .minute], from: triggerDate)
+                let minuteOfDay = (comps.hour ?? 0) * 60 + (comps.minute ?? 0)
+                let shift = QuietHoursMath.minutesUntilWindowEnd(
+                    minuteOfDay, quietHours.startMinute, quietHours.endMinute
+                )
+                if shift > 0 {
+                    triggerDate = triggerDate.addingTimeInterval(Double(shift) * 60)
+                }
+            }
             guard triggerDate > Date(), !reminderPreferenceStore.hasNotified(taskID: task.id) else {
                 continue
             }
@@ -121,5 +134,50 @@ final class TaskReminderScheduler {
             return nil
         }
         return UNUserNotificationCenter.current()
+    }
+}
+
+/// Local "hold reminders between HH:MM and HH:MM" setting (UserDefaults). Times are
+/// minute-of-day (0..1439). Off by default.
+struct QuietHoursStore {
+    private let defaults = UserDefaults.standard
+    private static let enabledKey = "quietHours.enabled"
+    private static let startKey = "quietHours.startMinute"
+    private static let endKey = "quietHours.endMinute"
+
+    var isEnabled: Bool {
+        get { defaults.bool(forKey: Self.enabledKey) }
+        nonmutating set { defaults.set(newValue, forKey: Self.enabledKey) }
+    }
+
+    var startMinute: Int {
+        get { defaults.object(forKey: Self.startKey) as? Int ?? 22 * 60 }
+        nonmutating set { defaults.set(newValue, forKey: Self.startKey) }
+    }
+
+    var endMinute: Int {
+        get { defaults.object(forKey: Self.endKey) as? Int ?? 7 * 60 }
+        nonmutating set { defaults.set(newValue, forKey: Self.endKey) }
+    }
+}
+
+/// Swift twin of the shared Kotlin QuietHours math. Kept in sync by hand + tests.
+enum QuietHoursMath {
+    static let minutesPerDay = 24 * 60
+
+    static func contains(_ minuteOfDay: Int, _ startMinute: Int, _ endMinute: Int) -> Bool {
+        if startMinute == endMinute { return false }
+        let t = ((minuteOfDay % minutesPerDay) + minutesPerDay) % minutesPerDay
+        if startMinute < endMinute {
+            return t >= startMinute && t < endMinute
+        }
+        return t >= startMinute || t < endMinute
+    }
+
+    static func minutesUntilWindowEnd(_ minuteOfDay: Int, _ startMinute: Int, _ endMinute: Int) -> Int {
+        if !contains(minuteOfDay, startMinute, endMinute) { return 0 }
+        let t = ((minuteOfDay % minutesPerDay) + minutesPerDay) % minutesPerDay
+        let delta = (endMinute - t + minutesPerDay) % minutesPerDay
+        return delta == 0 ? minutesPerDay : delta
     }
 }

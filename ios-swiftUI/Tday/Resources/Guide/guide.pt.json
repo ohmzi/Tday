@@ -822,6 +822,42 @@
       "searchBody": "as notificacoes de lembrete trazem as acoes adiar 1 h e hoje a noite. quando um lembrete chega em ma hora, nao e preciso abrir o app: adiar 1 h entrega o mesmo lembrete uma hora depois, e hoje a noite move a tarefa para as 19:00 de hoje. hoje a noite funciona para tarefas avulsas — ocorrencias recorrentes sao reagendadas no app para manter a serie intacta. adiar so atrasa a notificacao; a tarefa mantem o horario original ate voce move-la."
     },
     {
+      "id": "quiet-hours",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "bell",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.6.0",
+      "deepLink": null,
+      "helpAnchors": [
+        "settings-notifications"
+      ],
+      "title": "Horas de silêncio",
+      "summary": "Segure os lembretes à noite para nada tocar enquanto você dorme.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Defina uma janela — por exemplo 22:00 às 07:00 — e qualquer lembrete que tocaria dentro dela fica retido até o fim. Só no dispositivo; os lembretes locais esperam a manhã."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "A janela pode cruzar a meia-noite (22:00 → 07:00); o cálculo cuida disso."
+          ]
+        }
+      ],
+      "searchTitle": "horas de silencio",
+      "searchKeywords": "silencio, horas, nao perturbe, noite, sono, lembretes, horario",
+      "searchBody": "segure os lembretes a noite para nada tocar enquanto voce dorme. defina uma janela — por exemplo 22:00 as 07:00 — e qualquer lembrete que tocaria dentro dela fica retido ate o fim. so no dispositivo; os lembretes locais esperam a manha. a janela pode cruzar a meia-noite (22:00 → 07:00); o calculo cuida disso."
+    },
+    {
       "id": "day-ahead",
       "section": "RECURRENCE_AND_REMINDERS",
       "sectionOrder": 4,

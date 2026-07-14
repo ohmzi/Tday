@@ -141,6 +141,12 @@ object GuideCatalog {
             body = listOf(para(GuideTopicIds.REMINDER_SNOOZE), tip(GuideTopicIds.REMINDER_SNOOZE)),
         ),
         topic(
+            GuideTopicIds.QUIET_HOURS, GuideSectionId.RECURRENCE_AND_REMINDERS, "bell",
+            setOf(ANDROID, IOS), sinceVersion = "0.6.0",
+            body = listOf(para(GuideTopicIds.QUIET_HOURS), tip(GuideTopicIds.QUIET_HOURS)),
+            helpAnchors = listOf("settings-notifications"),
+        ),
+        topic(
             GuideTopicIds.DAY_AHEAD, GuideSectionId.RECURRENCE_AND_REMINDERS, "bell-ring",
             setOf(ANDROID, IOS), sinceVersion = "0.3.0",
             body = listOf(para(GuideTopicIds.DAY_AHEAD), tip(GuideTopicIds.DAY_AHEAD)),

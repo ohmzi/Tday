@@ -1086,6 +1086,13 @@
         "keywords": "week, review, recap, summary, sunday, completed, retrospective",
         "body": "On Sundays, T'Day shows a short recap on your Today feed: how many tasks you cleared this week, your busiest day, and the oldest task you finally finished. It's built from your completed history.",
         "tip": "Not in the mood? Dismiss it and it stays gone until next week."
+      },
+      "quiet-hours": {
+        "title": "Quiet hours",
+        "summary": "Hold reminders overnight so nothing buzzes while you sleep.",
+        "keywords": "quiet, hours, do not disturb, night, sleep, reminders, silence, schedule",
+        "body": "Set a window — say 22:00 to 07:00 — and any reminder that would fire inside it is held until the window ends. It's on-device only; local reminders just wait for morning.",
+        "tip": "The window can cross midnight (22:00 → 07:00); the math handles it."
       }
     }
   },

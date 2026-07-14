@@ -1086,6 +1086,13 @@
         "keywords": "semaine, bilan, récap, dimanche, terminé, rétrospective",
         "body": "Le dimanche, T'Day affiche un court récap dans ton fil Aujourd'hui : combien de tâches tu as terminées cette semaine, ton jour le plus chargé et la plus ancienne enfin finie. Il se base sur ton historique terminé.",
         "tip": "Pas envie ? Ferme-le, il revient la semaine prochaine."
+      },
+      "quiet-hours": {
+        "title": "Heures silencieuses",
+        "summary": "Retiens les rappels la nuit pour que rien ne sonne pendant ton sommeil.",
+        "keywords": "silence, heures, ne pas déranger, nuit, sommeil, rappels, horaire",
+        "body": "Définis une plage — par ex. 22:00 à 07:00 — et tout rappel qui sonnerait dedans est retenu jusqu'à la fin. Uniquement sur l'appareil ; les rappels locaux attendent le matin.",
+        "tip": "La plage peut passer minuit (22:00 → 07:00) ; le calcul le gère."
       }
     }
   },
