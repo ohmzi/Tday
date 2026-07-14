@@ -877,6 +877,40 @@
       "searchBody": "comece uma nova tarefa diretamente a partir do widget. o widget tem um botao de criar, por isso pode registar uma tarefa a partir do ecra principal sem abrir primeiro a aplicacao — e funciona tambem em modo local."
     },
     {
+      "id": "interactive-widgets",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "check-check",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.4.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Concluir a partir do widget",
+      "summary": "Marque tarefas diretamente no widget do ecrã principal.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Os widgets de Hoje e Flutuantes agora respondem ao toque: toque no anel no início de qualquer linha para concluir essa tarefa sem abrir a aplicação. A linha desaparece de imediato e a conclusão sincroniza como qualquer outra — os toques feitos offline ficam em fila e aplicam-se assim que voltar a estar online."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Tocou sem querer? Abra o histórico de concluídas na aplicação e restaure a tarefa a partir daí."
+          ]
+        }
+      ],
+      "searchTitle": "concluir a partir do widget",
+      "searchKeywords": "widget, concluir, marcar, ecra principal, interativo, toque",
+      "searchBody": "marque tarefas diretamente no widget do ecra principal. os widgets de hoje e flutuantes agora respondem ao toque: toque no anel no inicio de qualquer linha para concluir essa tarefa sem abrir a aplicacao. a linha desaparece de imediato e a conclusao sincroniza como qualquer outra — os toques feitos offline ficam em fila e aplicam-se assim que voltar a estar online. tocou sem querer? abra o historico de concluidas na aplicacao e restaure a tarefa a partir dai."
+    },
+    {
       "id": "carplay",
       "section": "WIDGETS_AND_SURFACES",
       "sectionOrder": 5,

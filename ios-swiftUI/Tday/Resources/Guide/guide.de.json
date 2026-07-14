@@ -877,6 +877,40 @@
       "searchBody": "starte eine neue aufgabe direkt aus dem widget. das widget hat eine erstellen-schaltflache, sodass du eine aufgabe von deinem startbildschirm erfassen kannst, ohne zuerst die app zu offnen — und das funktioniert auch im lokalen modus."
     },
     {
+      "id": "interactive-widgets",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "check-check",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.4.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Direkt im Widget abhaken",
+      "summary": "Hake Aufgaben direkt im Widget auf dem Startbildschirm ab.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Die Today- und Floater-Widgets reagieren jetzt auf Tippen: Tippe auf den Ring am Anfang einer Zeile, um die Aufgabe abzuschließen, ohne die App zu öffnen. Die Zeile verschwindet sofort und der Abschluss synchronisiert wie jeder andere — offline getippte Häkchen warten in der Warteschlange und werden übernommen, sobald du wieder online bist."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Vertippt? Öffne in der App die Abgeschlossene Historie und stelle die Aufgabe von dort wieder her."
+          ]
+        }
+      ],
+      "searchTitle": "direkt im widget abhaken",
+      "searchKeywords": "widget, abhaken, erledigen, startbildschirm, interaktiv, tippen",
+      "searchBody": "hake aufgaben direkt im widget auf dem startbildschirm ab. die today- und floater-widgets reagieren jetzt auf tippen: tippe auf den ring am anfang einer zeile, um die aufgabe abzuschliesen, ohne die app zu offnen. die zeile verschwindet sofort und der abschluss synchronisiert wie jeder andere — offline getippte hakchen warten in der warteschlange und werden ubernommen, sobald du wieder online bist. vertippt? offne in der app die abgeschlossene historie und stelle die aufgabe von dort wieder her."
+    },
+    {
       "id": "carplay",
       "section": "WIDGETS_AND_SURFACES",
       "sectionOrder": 5,

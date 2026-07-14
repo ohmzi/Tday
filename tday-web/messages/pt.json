@@ -850,6 +850,13 @@
         "keywords": "widget, adição rápida, criar, atalho, ecrã principal",
         "body": "O widget tem um botão de criar, por isso pode registar uma tarefa a partir do ecrã principal sem abrir primeiro a aplicação — e funciona também em Modo local."
       },
+      "interactive-widgets": {
+        "title": "Concluir a partir do widget",
+        "summary": "Marque tarefas diretamente no widget do ecrã principal.",
+        "keywords": "widget, concluir, marcar, ecrã principal, interativo, toque",
+        "body": "Os widgets de Hoje e Flutuantes agora respondem ao toque: toque no anel no início de qualquer linha para concluir essa tarefa sem abrir a aplicação. A linha desaparece de imediato e a conclusão sincroniza como qualquer outra — os toques feitos offline ficam em fila e aplicam-se assim que voltar a estar online.",
+        "tip": "Tocou sem querer? Abra o histórico de concluídas na aplicação e restaure a tarefa a partir daí."
+      },
       "carplay": {
         "title": "O T'Day no CarPlay",
         "summary": "Veja e registe tarefas em segurança enquanto conduz.",

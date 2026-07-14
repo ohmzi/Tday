@@ -319,3 +319,35 @@ enum FloaterTasksWidgetSnapshotStore {
         return 2
     }
 }
+
+/// App-side twin of the widget's pending-completion queue (widgets v2). The
+/// widget's check ring runs in a process with no cache access, so a tap only
+/// records `{kind, id}` under this app-group key; the app drains the queue
+/// through TodoRepository's normal complete path when it activates. Key and
+/// entry shape must stay in lockstep with WidgetPendingCompletionStore in
+/// TdayWidget/TodayTasksWidget.swift.
+enum WidgetPendingCompletionQueue {
+    static let queueKey = "tday.widget.pendingCompletions"
+    static let appGroupSuiteName = "group.com.ohmz.tday"
+    static let todoKind = "todo"
+    static let floaterKind = "floater"
+
+    struct Entry: Codable, Equatable {
+        let kind: String
+        let id: String
+    }
+
+    /// Removes and returns the queued entries. The queue clears before the
+    /// repository applies them, so a widget tap landing mid-drain starts a
+    /// fresh queue for the next drain instead of being wiped unseen.
+    static func drain() -> [Entry] {
+        let store = UserDefaults(suiteName: appGroupSuiteName) ?? .standard
+        guard let data = store.data(forKey: queueKey),
+              let entries = try? JSONDecoder().decode([Entry].self, from: data),
+              !entries.isEmpty else {
+            return []
+        }
+        store.removeObject(forKey: queueKey)
+        return entries
+    }
+}

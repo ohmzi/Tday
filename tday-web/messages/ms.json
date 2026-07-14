@@ -850,6 +850,13 @@
         "keywords": "widget, tambah pantas, cipta, pintasan, skrin utama",
         "body": "Widget mempunyai butang cipta, jadi anda boleh mencatat tugasan dari skrin utama tanpa perlu membuka aplikasi dahulu — dan ia berfungsi dalam Mod Tempatan juga."
       },
+      "interactive-widgets": {
+        "title": "Selesaikan terus dari widget",
+        "summary": "Tanda tugasan terus pada widget skrin utama.",
+        "keywords": "widget, selesai, tanda, skrin utama, interaktif, ketik",
+        "body": "Widget Today dan Floater kini menerima ketikan: ketik gelang di awal mana-mana baris untuk menyelesaikan tugasan itu tanpa membuka aplikasi. Baris itu hilang serta-merta dan penyelesaian disegerakkan seperti biasa — ketikan semasa luar talian menunggu dalam barisan dan digunakan sebaik sahaja anda kembali dalam talian.",
+        "tip": "Tersilap ketik? Buka sejarah selesai dalam aplikasi dan pulihkan tugasan dari situ."
+      },
       "carplay": {
         "title": "T'Day pada CarPlay",
         "summary": "Imbas dan catat tugasan dengan selamat semasa anda memandu.",

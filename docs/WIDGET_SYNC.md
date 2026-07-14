@@ -75,20 +75,6 @@ TdayWidget/
 
 ### iOS
 
-## Inline completion (widgets v2, Android)
-
-Tapping a task's leading dot in the Today/Floater widgets completes it inline:
-
-1. The row's dot carries `actionRunCallback<CompleteTodayTaskAction|CompleteFloaterTaskAction>`
-   with the cached record id (`feature/widget/CompleteTaskAction.kt`).
-2. The callback resolves `WidgetCompleteTaskSubmitter` via `WidgetEntryPoint`,
-   looks the record up in the offline cache, and calls the same
-   `TodoRepository.completeTodo/completeFloater` the in-app checkbox uses —
-   optimistic cache write, queued COMPLETE_* mutation, sync in Server Mode.
-3. The repository's own widget refresh pushes the new state, so the row
-   disappears immediately. Mis-taps are reversed from the app's Completed
-   screen (no transient in-widget undo yet).
-
 - [ ] **Enable App Groups** on both the main app target and the TdayWidget extension
   (same identifier, e.g. `group.com.ohmz.tday`)
 - [ ] Set `kTdayAppGroupID` in `WidgetReloadHelper.swift` to your actual group ID
@@ -104,6 +90,44 @@ Tapping a task's leading dot in the Today/Floater widgets completes it inline:
   in your `Widget` struct declarations in the TdayWidget extension
 - [ ] For App Intents (interactive widget buttons), add
   `WidgetCenter.shared.reloadAllTimelines()` at the end of `perform()`
+
+## Inline completion (widgets v2)
+
+### Android
+
+Tapping a task's leading dot in the Today/Floater widgets completes it inline:
+
+1. The row's dot carries `actionRunCallback<CompleteTodayTaskAction|CompleteFloaterTaskAction>`
+   with the cached record id (`feature/widget/CompleteTaskAction.kt`).
+2. The callback resolves `WidgetCompleteTaskSubmitter` via `WidgetEntryPoint`,
+   looks the record up in the offline cache, and calls the same
+   `TodoRepository.completeTodo/completeFloater` the in-app checkbox uses —
+   optimistic cache write, queued COMPLETE_* mutation, sync in Server Mode.
+3. The repository's own widget refresh pushes the new state, so the row
+   disappears immediately. Mis-taps are reversed from the app's Completed
+   screen (no transient in-widget undo yet).
+
+### iOS
+
+The widget extension runs in its own process with no cache or SwiftData
+access, so completion is a two-phase handoff through the app group:
+
+1. Each row's leading ring is a `Button(intent: CompleteWidgetTaskIntent(...))`
+   (defined inside `TdayWidget/TodayTasksWidget.swift`, the only file the
+   widget target compiles). `perform()` appends a `{kind, id}` descriptor to
+   the `tday.widget.pendingCompletions` app-group key
+   (`WidgetPendingCompletionStore`) and reloads that widget's timeline.
+2. Both timeline providers filter out snapshot rows whose id is queued, so
+   the row disappears immediately even though nothing has really completed.
+3. When the app activates (cold launch via the bootstrap `onChange`, warm
+   foreground via the scenePhase `.active` block in `AppRootView`),
+   `TodoRepository.drainWidgetCompletions()` empties the queue
+   (`WidgetPendingCompletionQueue` — key and entry shape must stay in
+   lockstep with the widget-side store), resolves each id against the
+   offline cache, and rides the normal `completeTodo/completeFloater` path —
+   optimistic cache write, queued COMPLETE_* mutation, sync in Server Mode,
+   fresh widget snapshot. Mis-taps are reversed from the app's Completed
+   screen, same as Android.
 
 ## How the refresh cascade works (after pressing +)
 

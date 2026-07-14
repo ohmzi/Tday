@@ -251,6 +251,12 @@ struct AppRootView: View {
         }
         .onChange(of: appViewModel.hasCompletedInitialBootstrap) { _, _ in
             presentPendingRootCreateTaskIfReady()
+            // Cold launch: apply completions tapped on widgets while the app
+            // was dead (scenePhase is already .active here, so the .onChange
+            // drain below never fires for this activation).
+            Task {
+                await container.todoRepository.drainWidgetCompletions()
+            }
         }
         .onChange(of: appViewModel.isWorkspaceAvailable) { _, _ in
             presentPendingRootCreateTaskIfReady()
@@ -258,6 +264,9 @@ struct AppRootView: View {
         .onChange(of: scenePhase) { _, phase in
             switch phase {
             case .active:
+                Task {
+                    await container.todoRepository.drainWidgetCompletions()
+                }
                 guard hasLeftActiveScene else {
                     presentPendingRootCreateTaskIfReady()
                     return

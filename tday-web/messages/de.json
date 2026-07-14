@@ -850,6 +850,13 @@
         "keywords": "widget, schnell hinzufügen, erstellen, verknüpfung, startbildschirm",
         "body": "Das Widget hat eine Erstellen-Schaltfläche, sodass du eine Aufgabe von deinem Startbildschirm erfassen kannst, ohne zuerst die App zu öffnen — und das funktioniert auch im lokalen Modus."
       },
+      "interactive-widgets": {
+        "title": "Direkt im Widget abhaken",
+        "summary": "Hake Aufgaben direkt im Widget auf dem Startbildschirm ab.",
+        "keywords": "widget, abhaken, erledigen, startbildschirm, interaktiv, tippen",
+        "body": "Die Today- und Floater-Widgets reagieren jetzt auf Tippen: Tippe auf den Ring am Anfang einer Zeile, um die Aufgabe abzuschließen, ohne die App zu öffnen. Die Zeile verschwindet sofort und der Abschluss synchronisiert wie jeder andere — offline getippte Häkchen warten in der Warteschlange und werden übernommen, sobald du wieder online bist.",
+        "tip": "Vertippt? Öffne in der App die Abgeschlossene Historie und stelle die Aufgabe von dort wieder her."
+      },
       "carplay": {
         "title": "T'Day auf CarPlay",
         "summary": "Aufgaben sicher im Blick behalten und erfassen, während du fährst.",

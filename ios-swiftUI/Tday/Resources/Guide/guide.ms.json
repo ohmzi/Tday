@@ -877,6 +877,40 @@
       "searchBody": "mula tugasan baharu terus dari widget. widget mempunyai butang cipta, jadi anda boleh mencatat tugasan dari skrin utama tanpa perlu membuka aplikasi dahulu — dan ia berfungsi dalam mod tempatan juga."
     },
     {
+      "id": "interactive-widgets",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "check-check",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.4.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Selesaikan terus dari widget",
+      "summary": "Tanda tugasan terus pada widget skrin utama.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Widget Today dan Floater kini menerima ketikan: ketik gelang di awal mana-mana baris untuk menyelesaikan tugasan itu tanpa membuka aplikasi. Baris itu hilang serta-merta dan penyelesaian disegerakkan seperti biasa — ketikan semasa luar talian menunggu dalam barisan dan digunakan sebaik sahaja anda kembali dalam talian."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Tersilap ketik? Buka sejarah selesai dalam aplikasi dan pulihkan tugasan dari situ."
+          ]
+        }
+      ],
+      "searchTitle": "selesaikan terus dari widget",
+      "searchKeywords": "widget, selesai, tanda, skrin utama, interaktif, ketik",
+      "searchBody": "tanda tugasan terus pada widget skrin utama. widget today dan floater kini menerima ketikan: ketik gelang di awal mana-mana baris untuk menyelesaikan tugasan itu tanpa membuka aplikasi. baris itu hilang serta-merta dan penyelesaian disegerakkan seperti biasa — ketikan semasa luar talian menunggu dalam barisan dan digunakan sebaik sahaja anda kembali dalam talian. tersilap ketik? buka sejarah selesai dalam aplikasi dan pulihkan tugasan dari situ."
+    },
+    {
       "id": "carplay",
       "section": "WIDGETS_AND_SURFACES",
       "sectionOrder": 5,

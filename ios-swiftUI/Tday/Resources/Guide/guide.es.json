@@ -877,6 +877,40 @@
       "searchBody": "empieza una tarea nueva directamente desde el widget. el widget tiene un boton de crear, asi que puedes capturar una tarea desde tu pantalla de inicio sin abrir antes la app, y tambien funciona en modo local."
     },
     {
+      "id": "interactive-widgets",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "check-check",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.4.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Completa desde el widget",
+      "summary": "Marca tareas directamente en el widget de la pantalla de inicio.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Los widgets de Hoy y Flotantes ahora responden al toque: pulsa el anillo al inicio de cualquier fila para completar esa tarea sin abrir la app. La fila desaparece al instante y el completado se sincroniza como cualquier otro; los toques hechos sin conexión se ponen en cola y se aplican cuando vuelves a estar en línea."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "¿Un toque accidental? Abre el historial de completadas en la app y restaura la tarea desde allí."
+          ]
+        }
+      ],
+      "searchTitle": "completa desde el widget",
+      "searchKeywords": "widget, completar, marcar, pantalla de inicio, interactivo, tocar",
+      "searchBody": "marca tareas directamente en el widget de la pantalla de inicio. los widgets de hoy y flotantes ahora responden al toque: pulsa el anillo al inicio de cualquier fila para completar esa tarea sin abrir la app. la fila desaparece al instante y el completado se sincroniza como cualquier otro; los toques hechos sin conexion se ponen en cola y se aplican cuando vuelves a estar en linea. ¿un toque accidental? abre el historial de completadas en la app y restaura la tarea desde alli."
+    },
+    {
       "id": "carplay",
       "section": "WIDGETS_AND_SURFACES",
       "sectionOrder": 5,

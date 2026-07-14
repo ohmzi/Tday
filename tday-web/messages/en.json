@@ -850,6 +850,13 @@
         "keywords": "widget, quick add, create, shortcut, home screen",
         "body": "The widget has a create button, so you can capture a task from your home screen without first opening the app — and it works in Local Mode too."
       },
+      "interactive-widgets": {
+        "title": "Complete from the widget",
+        "summary": "Check off tasks right on the home-screen widget.",
+        "keywords": "widget, complete, check off, home screen, interactive, tap",
+        "body": "The Today and Floater widgets take taps now: hit the ring at the start of any row to complete that task without opening the app. The row disappears immediately and the completion syncs like any other — taps made offline queue up and apply once you're back.",
+        "tip": "Mis-tapped? Open the Completed history in the app and restore the task from there."
+      },
       "carplay": {
         "title": "T'Day on CarPlay",
         "summary": "Glance at and capture tasks safely while you drive.",

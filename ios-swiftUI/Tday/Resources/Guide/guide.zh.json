@@ -877,6 +877,40 @@
       "searchBody": "直接从小组件开始一个新任务。 小组件上有一个创建按钮，所以你可以直接从主屏幕记录任务，无需先打开应用——而且在本地模式下也能用。"
     },
     {
+      "id": "interactive-widgets",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "check-check",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.4.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "在小组件上直接完成",
+      "summary": "在主屏幕小组件上直接勾掉任务。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "今日任务和浮动任务的小组件现在支持点按：点一下任意一行开头的圆环，无需打开应用即可完成该任务。这一行会立即消失，完成操作也会照常同步——离线时的点按会先排队，联网后自动补上。"
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "点错了？在应用里打开完成记录，从那里恢复任务即可。"
+          ]
+        }
+      ],
+      "searchTitle": "在小组件上直接完成",
+      "searchKeywords": "小组件, 完成, 勾选, 主屏幕, 交互, 点按",
+      "searchBody": "在主屏幕小组件上直接勾掉任务。 今日任务和浮动任务的小组件现在支持点按：点一下任意一行开头的圆环，无需打开应用即可完成该任务。这一行会立即消失，完成操作也会照常同步——离线时的点按会先排队，联网后自动补上。 点错了？在应用里打开完成记录，从那里恢复任务即可。"
+    },
+    {
       "id": "carplay",
       "section": "WIDGETS_AND_SURFACES",
       "sectionOrder": 5,
