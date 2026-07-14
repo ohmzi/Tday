@@ -103,6 +103,7 @@ import com.ohmz.tday.compose.ui.theme.tdayListAccentColorOrNull
 import com.ohmz.tday.compose.ui.theme.tdayListIconForKey
 import com.ohmz.tday.compose.ui.theme.tdayPriorityColor
 import com.ohmz.tday.shared.guide.GuideTopicIds
+import com.ohmz.tday.shared.nlp.RecurrencePriorityGrammar
 import kotlinx.coroutines.delay
 import java.time.Instant
 import java.time.LocalDate
@@ -213,6 +214,14 @@ fun CreateTaskBottomSheet(
     var scheduleEnabled by rememberSaveable(editingTask?.id, defaultScheduled) {
         mutableStateOf(showScheduleControls && (editingTask?.due != null || (editingTask == null && defaultScheduled)))
     }
+    var selectedRepeat by rememberSaveable(editingTask?.id) {
+        mutableStateOf(repeatPresetFromRrule(editingTask?.rrule).name)
+    }
+    LaunchedEffect(scheduleEnabled) {
+        if (!scheduleEnabled) {
+            selectedRepeat = RepeatPreset.NONE.name
+        }
+    }
     LaunchedEffect(title, onParseTaskTitleNlp) {
         val nlpParser = onParseTaskTitleNlp ?: return@LaunchedEffect
         if (title.isBlank()) {
@@ -222,34 +231,39 @@ fun CreateTaskBottomSheet(
         }
 
         delay(260)
-        // Pass the raw title so the matched phrase aligns with what's shown in the
-        // field (used to highlight it). The phrase stays in the field; it's only
+        // Pass the raw title so the matched date phrase aligns with what's shown in the
+        // field (used to highlight it). Matched phrases stay in the field; they're only
         // removed from the saved title on submit.
         val parseResult = runCatching { nlpParser(title, dueEpochMs) }.getOrNull()
-        val parsedDueEpochMs = parseResult?.dueEpochMs
-        val matched = parseResult?.matchedText
-        if (parseResult == null || parsedDueEpochMs == null || matched.isNullOrEmpty()) {
+        if (parseResult == null) {
             nlpMatchedText = null
             nlpMatchStart = -1
             return@LaunchedEffect
         }
 
-        nlpMatchedText = matched
-        nlpMatchStart = parseResult.matchStart ?: -1
-        if (showScheduleControls && !scheduleEnabled) {
-            scheduleEnabled = true
+        // Date span highlight — only when a date phrase was actually matched.
+        val matched = parseResult.matchedText
+        if (matched.isNullOrEmpty()) {
+            nlpMatchedText = null
+            nlpMatchStart = -1
+        } else {
+            nlpMatchedText = matched
+            nlpMatchStart = parseResult.matchStart ?: -1
         }
-        if (parsedDueEpochMs != dueEpochMs) {
-            dueEpochMs = parsedDueEpochMs
+
+        val parsedDueEpochMs = parseResult.dueEpochMs
+        if (parsedDueEpochMs != null) {
+            if (showScheduleControls && !scheduleEnabled) scheduleEnabled = true
+            if (parsedDueEpochMs != dueEpochMs) dueEpochMs = parsedDueEpochMs
         }
-    }
-    var selectedRepeat by rememberSaveable(editingTask?.id) {
-        mutableStateOf(repeatPresetFromRrule(editingTask?.rrule).name)
-    }
-    LaunchedEffect(scheduleEnabled) {
-        if (!scheduleEnabled) {
-            selectedRepeat = RepeatPreset.NONE.name
+        // A captured recurrence needs a schedule to start from; enable it so the preset sticks.
+        parseResult.rrule?.let { rrule ->
+            if (showScheduleControls) {
+                if (!scheduleEnabled) scheduleEnabled = true
+                selectedRepeat = repeatPresetFromRrule(rrule).name
+            }
         }
+        parseResult.priority?.let { selectedPriority = canonicalPriorityValue(it) }
     }
     var dueDatePickerOpen by rememberSaveable { mutableStateOf(false) }
     var dueTimePickerOpen by rememberSaveable { mutableStateOf(false) }
@@ -345,9 +359,12 @@ fun CreateTaskBottomSheet(
         } else {
             title.trim()
         }
+        // Also strip any recurrence/priority phrase we captured into the fields.
+        val cleanedTitle = RecurrencePriorityGrammar.parse(effectiveTitle).cleanTitle
+            .ifBlank { effectiveTitle }
 
         val payload = CreateTaskPayload(
-            title = effectiveTitle,
+            title = cleanedTitle,
             description = notes.trim().ifBlank { null },
             priority = selectedPriority,
             due = due,

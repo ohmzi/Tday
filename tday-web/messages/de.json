@@ -766,8 +766,8 @@
         "title": "Das Datum eintippen",
         "summary": "Schreib das Datum in den Titel, und T'Day plant es für dich ein.",
         "keywords": "natürliche sprache, datum, morgen, nächste woche, erkennen, schnell, smart, nlp, auf dem gerät",
-        "body": "Du musst keine Datumsauswahl öffnen. Tippe eine Datumsangabe direkt in den Aufgabentitel, und T'Day erkennt sie auf dem Gerät — ganz ohne Konto oder Netzwerk —, hebt den verstandenen Teil hervor und plant die Aufgabe ein.",
-        "example": "zahnarzt dienstag 15 uhr"
+        "body": "Keine Auswahlfelder nötig. Tippe ein Datum (\"morgen 15 Uhr\"), eine Wiederholung (\"every day\", \"weekly\", \"every weekday\") oder eine Priorität (\"!\", \"!!\" oder \"high\"/\"low\" am Ende) direkt in den Titel. T'Day wertet das auf dem Gerät aus — ohne Konto oder Netz —, hebt das erkannte Datum hervor und füllt Termin, Wiederholung und Priorität aus.",
+        "example": "Zahnarzt Dienstag 15 Uhr every weekday !!"
       },
       "calendar-views": {
         "title": "Kalenderansichten",

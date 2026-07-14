@@ -13,7 +13,81 @@ export type ParseTodoTitleOutput = {
   matchedText: string | null;
   matchStart: number | null;
   dueEpochMs: number | null;
+  rrule: string | null;
+  priority: TodoPriority | null;
 };
+
+export type TodoPriority = "Low" | "Medium" | "High";
+
+export type RecurrencePriorityResult = {
+  cleanTitle: string;
+  rrule: string | null;
+  priority: TodoPriority | null;
+};
+
+// Canonical RRULE strings — byte-identical to the 5 recurrence presets the create
+// sheets offer (see TodoFormSelectors / CreateTaskBottomSheet / CreateTaskSheet).
+const RECURRENCE_RULES: ReadonlyArray<{ re: RegExp; rrule: string }> = [
+  // "weekday(s)" must be tried before "week", which it contains.
+  { re: /\b(?:every\s+weekday|weekdays?)\b/i, rrule: "RRULE:FREQ=WEEKLY;INTERVAL=1;BYDAY=MO,TU,WE,TH,FR" },
+  { re: /\b(?:every\s*day|everyday|daily)\b/i, rrule: "RRULE:FREQ=DAILY;INTERVAL=1" },
+  { re: /\b(?:every\s+week|weekly)\b/i, rrule: "RRULE:FREQ=WEEKLY;INTERVAL=1" },
+  { re: /\b(?:every\s+month|monthly)\b/i, rrule: "RRULE:FREQ=MONTHLY;INTERVAL=1" },
+  { re: /\b(?:every\s+year|yearly|annually)\b/i, rrule: "RRULE:FREQ=YEARLY;INTERVAL=1" },
+];
+
+function capitalizePriority(word: string): TodoPriority {
+  const lower = word.toLowerCase();
+  if (lower === "high") return "High";
+  if (lower === "low") return "Low";
+  return "Medium";
+}
+
+/**
+ * Deterministic, on-device recurrence + priority capture. Detects an English
+ * recurrence phrase ("every day", "weekly", …) → one of the 5 preset RRULEs, and a
+ * priority marker ("!" / "!!" / "high|low|medium priority" / a trailing high|low|
+ * medium) → the priority field. Matched phrases are stripped from the title. Bare
+ * priority words are only honoured when trailing or paired with "priority", to avoid
+ * false positives like "buy low-fat milk".
+ */
+export function parseRecurrencePriority(text: string): RecurrencePriorityResult {
+  let working = typeof text === "string" ? text : "";
+  let rrule: string | null = null;
+
+  for (const rule of RECURRENCE_RULES) {
+    const match = rule.re.exec(working);
+    if (match) {
+      rrule = rule.rrule;
+      working = working.slice(0, match.index) + working.slice(match.index + match[0].length);
+      break;
+    }
+  }
+
+  let priority: TodoPriority | null = null;
+  if (working.includes("!!")) {
+    priority = "High";
+    working = working.replace("!!", "");
+  } else if (working.includes("!")) {
+    priority = "Medium";
+    working = working.replace("!", "");
+  } else {
+    const phrase = /\b(high|medium|low)\s+priority\b/i.exec(working);
+    if (phrase) {
+      priority = capitalizePriority(phrase[1]);
+      working = working.slice(0, phrase.index) + working.slice(phrase.index + phrase[0].length);
+    } else {
+      const trailing = /\s+(high|medium|low)\s*$/i.exec(working);
+      if (trailing) {
+        priority = capitalizePriority(trailing[1]);
+        working = working.slice(0, trailing.index);
+      }
+    }
+  }
+
+  const cleanTitle = working.replace(/\s{2,}/g, " ").trim();
+  return { cleanTitle, rrule, priority };
+}
 
 type ChronoParser = {
   parse: (
@@ -77,6 +151,8 @@ export function parseTodoTitle(input: ParseTodoTitleInput): ParseTodoTitleOutput
       matchedText: null,
       matchStart: null,
       dueEpochMs: null,
+      rrule: null,
+      priority: null,
     };
   }
 
@@ -94,11 +170,14 @@ export function parseTodoTitle(input: ParseTodoTitleInput): ParseTodoTitleOutput
 
   const parsedResults = parse(rawText, reference);
   if (!parsedResults.length) {
+    const rp = parseRecurrencePriority(trimmedText);
     return {
-      cleanTitle: trimmedText,
+      cleanTitle: rp.cleanTitle,
       matchedText: null,
       matchStart: null,
       dueEpochMs: null,
+      rrule: rp.rrule,
+      priority: rp.priority,
     };
   }
 
@@ -113,12 +192,15 @@ export function parseTodoTitle(input: ParseTodoTitleInput): ParseTodoTitleOutput
 
   const before = rawText.slice(0, matchStart);
   const after = rawText.slice(matchStart + matchedText.length);
-  const cleanTitle = `${before}${after}`.replace(/\s{2,}/g, " ").trim();
+  const dateCleaned = `${before}${after}`;
+  const rp = parseRecurrencePriority(dateCleaned);
 
   return {
-    cleanTitle,
+    cleanTitle: rp.cleanTitle,
     matchedText: matchedText || null,
     matchStart,
     dueEpochMs: dueDate.getTime(),
+    rrule: rp.rrule,
+    priority: rp.priority,
   };
 }

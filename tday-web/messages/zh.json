@@ -766,8 +766,8 @@
         "title": "输入日期",
         "summary": "把日期写进标题，T'Day 就会替你安排好时间。",
         "keywords": "自然语言, 日期, 明天, 下周, 解析, 快捷, 智能, 本地识别, natural language, tomorrow, nlp",
-        "body": "你不需要打开日期选择器。直接在任务标题里输入一段日期短语，T'Day 会在设备本地完成解析——无需账户或网络——高亮它理解的部分并安排好任务。",
-        "example": "看牙医 周二 下午3点"
+        "body": "无需选择器。直接在标题里输入日期（\"tomorrow 3pm\"）、重复（\"every day\"、\"weekly\"、\"every weekday\"）或优先级（\"!\"、\"!!\"，或结尾的 \"high\"/\"low\"）。T'Day 在设备上解析——无需账户或网络——高亮它理解的日期，并自动填入日程、重复和优先级。",
+        "example": "牙医 tuesday 3pm every weekday !!"
       },
       "calendar-views": {
         "title": "日历视图",

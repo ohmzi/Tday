@@ -320,27 +320,41 @@ struct CreateTaskSheet: View {
             let parsed = await onParseTaskTitleNlp(source, dueDate.epochMilliseconds)
             await MainActor.run {
                 // Keep the full typed text in the field (the phrase stays visible &
-                // highlighted); only set the Due. The phrase is stripped from the
-                // saved title at submit. Clear the highlight when no date is found.
-                guard let parsed,
-                      let dueEpochMs = parsed.dueEpochMs,
-                      let matched = parsed.matchedText,
-                      !matched.isEmpty else {
+                // highlighted); captured phrases are stripped from the saved title at
+                // submit via nlpCleanTitle.
+                guard let parsed else {
                     nlpMatchedText = nil
                     nlpCleanTitle = nil
                     nlpSourceTitle = nil
                     return
                 }
-                nlpMatchedText = matched
+                // Date span highlight only when a date phrase actually matched.
+                if let matched = parsed.matchedText, !matched.isEmpty {
+                    nlpMatchedText = matched
+                } else {
+                    nlpMatchedText = nil
+                }
                 nlpCleanTitle = parsed.cleanTitle
                 nlpSourceTitle = source
                 // Respect explicit user choices: don't clobber a hand-picked date, and
                 // don't re-enable schedule the user just turned off.
-                if !userPickedDueDate {
-                    dueDate = Date(epochMilliseconds: dueEpochMs)
+                if let dueEpochMs = parsed.dueEpochMs {
+                    if !userPickedDueDate {
+                        dueDate = Date(epochMilliseconds: dueEpochMs)
+                    }
+                    if !userTurnedScheduleOff {
+                        scheduleEnabled = true
+                    }
                 }
-                if !userTurnedScheduleOff {
-                    scheduleEnabled = true
+                // A captured recurrence needs a schedule to start from.
+                if let parsedRrule = parsed.rrule {
+                    if !userTurnedScheduleOff {
+                        scheduleEnabled = true
+                    }
+                    repeatRule = parsedRrule
+                }
+                if let parsedPriority = parsed.priority {
+                    priority = TaskPriorityDisplay.canonicalValue(parsedPriority)
                 }
             }
         }

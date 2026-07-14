@@ -766,8 +766,8 @@
         "title": "Escrever a data",
         "summary": "Escreva a data no título e o T'Day agenda-a por si.",
         "keywords": "linguagem natural, data, amanhã, próxima semana, interpretar, rápido, inteligente, nlp, no dispositivo",
-        "body": "Não precisa de abrir um seletor de datas. Escreva uma expressão de data diretamente no título da tarefa e o T'Day interpreta-a no próprio dispositivo — sem conta nem rede — destacando a parte que compreendeu e agendando a tarefa.",
-        "example": "dentista terça-feira 15h"
+        "body": "Sem seletores. Digite uma data (\"amanhã 15h\"), uma repetição (\"every day\", \"weekly\", \"every weekday\") ou uma prioridade (\"!\", \"!!\" ou \"high\"/\"low\" no fim) direto no título. O T'Day analisa no dispositivo — sem conta nem rede —, destaca a data entendida e preenche horário, recorrência e prioridade.",
+        "example": "dentista terça 15h every weekday !!"
       },
       "calendar-views": {
         "title": "Vistas de calendário",

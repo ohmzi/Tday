@@ -766,8 +766,8 @@
         "title": "Type the date",
         "summary": "Write the date into the title and T'Day schedules it for you.",
         "keywords": "natural language, date, tomorrow, next week, parse, quick, smart, nlp, on device",
-        "body": "You don't need to open a date picker. Type a date phrase straight into the task title and T'Day parses it on-device — no account or network needed — highlighting the part it understood and scheduling the task.",
-        "example": "dentist tuesday 3pm"
+        "body": "You don't need pickers. Type a date phrase (\"tomorrow 3pm\"), a repeat (\"every day\", \"weekly\", \"every weekday\"), or a priority (\"!\", \"!!\", or a trailing \"high\"/\"low\") straight into the task title. T'Day parses it on-device — no account or network — highlights the date it understood, and fills in the schedule, recurrence, and priority.",
+        "example": "dentist tuesday 3pm every weekday !!"
       },
       "calendar-views": {
         "title": "Calendar views",

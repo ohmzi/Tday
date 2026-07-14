@@ -201,6 +201,10 @@ struct TodoTitleNlpResponse: Codable, Equatable {
     let matchedText: String?
     let matchStart: Int?
     let dueEpochMs: Int64?
+    /// A preset RRULE captured from a phrase like "every day" (nil when none).
+    var rrule: String? = nil
+    /// A priority captured from "!"/"!!"/"high|low|medium" (nil when none).
+    var priority: String? = nil
 }
 
 struct CreateTodoRequest: Codable {

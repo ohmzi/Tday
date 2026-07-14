@@ -766,8 +766,8 @@
         "title": "Saisir la date",
         "summary": "Écrivez la date dans le titre et T'Day la planifie pour vous.",
         "keywords": "langage naturel, date, demain, semaine prochaine, analyser, rapide, intelligent, nlp, sur l'appareil",
-        "body": "Pas besoin d'ouvrir un sélecteur de date. Saisissez une expression de date directement dans le titre de la tâche et T'Day l'analyse sur l'appareil — sans compte ni réseau — en surlignant la partie qu'il a comprise et en planifiant la tâche.",
-        "example": "dentiste mardi 15h"
+        "body": "Pas besoin de sélecteurs. Tape une date (\"demain 15h\"), une répétition (\"every day\", \"weekly\", \"every weekday\") ou une priorité (\"!\", \"!!\" ou \"high\"/\"low\" à la fin) directement dans le titre. T'Day l'analyse sur l'appareil — sans compte ni réseau —, surligne la date comprise et remplit l'horaire, la récurrence et la priorité.",
+        "example": "dentiste mardi 15h every weekday !!"
       },
       "calendar-views": {
         "title": "Vues du calendrier",

@@ -766,8 +766,8 @@
         "title": "Taip tarikh",
         "summary": "Tulis tarikh dalam tajuk dan T'Day menjadualkannya untuk anda.",
         "keywords": "bahasa semula jadi, tarikh, esok, minggu depan, hurai, pantas, pintar, nlp, pada peranti",
-        "body": "Anda tidak perlu membuka pemilih tarikh. Taip frasa tarikh terus dalam tajuk tugasan dan T'Day menghuraikannya pada peranti — tanpa akaun atau rangkaian — menyerlahkan bahagian yang difahaminya dan menjadualkan tugasan itu.",
-        "example": "doktor gigi selasa 3 petang"
+        "body": "Tanpa pemilih. Taip tarikh (\"tomorrow 3pm\"), ulangan (\"every day\", \"weekly\", \"every weekday\"), atau keutamaan (\"!\", \"!!\", atau \"high\"/\"low\" di hujung) terus dalam tajuk. T'Day menghuraikannya pada peranti — tanpa akaun atau rangkaian —, menyerlahkan tarikh yang difahami, dan mengisi jadual, ulangan dan keutamaan.",
+        "example": "doktor gigi tuesday 3pm every weekday !!"
       },
       "calendar-views": {
         "title": "Paparan kalendar",

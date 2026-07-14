@@ -1,5 +1,5 @@
 {
-  "currentVersion": "0.5.0",
+  "currentVersion": "0.6.0",
   "ui": {
     "title": "Panduan & Petua",
     "subtitle": "Segala yang T'Day mampu lakukan — yang jelas dan yang tersembunyi.",
@@ -159,19 +159,19 @@
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Anda tidak perlu membuka pemilih tarikh. Taip frasa tarikh terus dalam tajuk tugasan dan T'Day menghuraikannya pada peranti — tanpa akaun atau rangkaian — menyerlahkan bahagian yang difahaminya dan menjadualkan tugasan itu."
+            "Tanpa pemilih. Taip tarikh (\"tomorrow 3pm\"), ulangan (\"every day\", \"weekly\", \"every weekday\"), atau keutamaan (\"!\", \"!!\", atau \"high\"/\"low\" di hujung) terus dalam tajuk. T'Day menghuraikannya pada peranti — tanpa akaun atau rangkaian —, menyerlahkan tarikh yang difahami, dan mengisi jadual, ulangan dan keutamaan."
           ]
         },
         {
           "type": "EXAMPLE",
           "texts": [
-            "doktor gigi selasa 3 petang"
+            "doktor gigi tuesday 3pm every weekday !!"
           ]
         }
       ],
       "searchTitle": "taip tarikh",
       "searchKeywords": "bahasa semula jadi, tarikh, esok, minggu depan, hurai, pantas, pintar, nlp, pada peranti",
-      "searchBody": "tulis tarikh dalam tajuk dan t'day menjadualkannya untuk anda. anda tidak perlu membuka pemilih tarikh. taip frasa tarikh terus dalam tajuk tugasan dan t'day menghuraikannya pada peranti — tanpa akaun atau rangkaian — menyerlahkan bahagian yang difahaminya dan menjadualkan tugasan itu. doktor gigi selasa 3 petang"
+      "searchBody": "tulis tarikh dalam tajuk dan t'day menjadualkannya untuk anda. tanpa pemilih. taip tarikh (\"tomorrow 3pm\"), ulangan (\"every day\", \"weekly\", \"every weekday\"), atau keutamaan (\"!\", \"!!\", atau \"high\"/\"low\" di hujung) terus dalam tajuk. t'day menghuraikannya pada peranti — tanpa akaun atau rangkaian —, menyerlahkan tarikh yang difahami, dan mengisi jadual, ulangan dan keutamaan. doktor gigi tuesday 3pm every weekday !!"
     },
     {
       "id": "calendar-views",
