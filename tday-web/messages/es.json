@@ -389,6 +389,10 @@
       "everyWeek": "cada semana",
       "everyMonth": "cada mes",
       "everyYear": "cada año"
+    },
+    "weekInReview": {
+      "title": "Resumen de la semana",
+      "dismiss": "Descartar"
     }
   },
   "sidebar": {
@@ -727,6 +731,19 @@
       "oct",
       "nov",
       "dic"
+    ],
+    "weekNone": "Aún no has completado tareas esta semana.",
+    "weekCleared": "Completaste {{count}} tareas esta semana.",
+    "weekBusiest": "El día más activo fue {{day}} ({{count}}).",
+    "weekOldest": "La más antigua que por fin completaste: {{title}}.",
+    "weekdaysShort": [
+      "lun",
+      "mar",
+      "mié",
+      "jue",
+      "vie",
+      "sáb",
+      "dom"
     ]
   },
   "guide": {
@@ -1062,6 +1079,13 @@
         "keywords": "repetir, sugerencia, recurrente, ritmo, hábito, patrón, automático",
         "body": "Cuando completas la misma tarea con un ritmo constante —regar las plantas cada semana, pagar el alquiler cada mes— T'Day lo detecta y ofrece un chip de un toque para repetirla. Solo lee tu historial completado en el dispositivo; nada sale de él.",
         "tip": "¿No te interesa? Toca la ✕ y ese título no volverá a preguntar."
+      },
+      "week-in-review": {
+        "title": "Resumen de la semana",
+        "summary": "Un repaso tranquilo del domingo de lo que completaste esta semana.",
+        "keywords": "semana, resumen, repaso, domingo, completado, retrospectiva",
+        "body": "Los domingos, T'Day muestra un breve repaso en tu lista de Hoy: cuántas tareas completaste esta semana, tu día más activo y la tarea más antigua que por fin terminaste. Se crea con tu historial completado.",
+        "tip": "¿No es el momento? Descártalo y no volverá hasta la próxima semana."
       }
     }
   },

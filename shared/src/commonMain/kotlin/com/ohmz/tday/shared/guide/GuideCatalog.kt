@@ -249,6 +249,11 @@ object GuideCatalog {
             setOf(WEB, ANDROID, IOS), serverOnly = true,
             body = listOf(para(GuideTopicIds.AI_SUMMARY), tip(GuideTopicIds.AI_SUMMARY)),
         ),
+        topic(
+            GuideTopicIds.WEEK_IN_REVIEW, GuideSectionId.INTEGRATIONS, "check-check",
+            setOf(WEB), sinceVersion = "0.6.0",
+            body = listOf(para(GuideTopicIds.WEEK_IN_REVIEW), tip(GuideTopicIds.WEEK_IN_REVIEW)),
+        ),
 
         // ── Keyboard shortcuts ───────────────────────────────────────────
         topic(

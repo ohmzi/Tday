@@ -10,8 +10,10 @@ import com.ohmz.tday.domain.validatePatchTodo
 import com.ohmz.tday.domain.validateRequiredEnumValue
 import com.ohmz.tday.domain.withAuth
 import com.ohmz.tday.models.request.*
+import com.ohmz.tday.models.response.CompletedTodoResponse
 import com.ohmz.tday.models.response.FloaterResponse
 import com.ohmz.tday.models.response.TodoResponse
+import com.ohmz.tday.services.CompletedTodoService
 import com.ohmz.tday.services.FloaterService
 import com.ohmz.tday.services.TodoNlpService
 import com.ohmz.tday.services.TodoService
@@ -46,6 +48,7 @@ fun Route.todoRoutes() {
     val floaterService by inject<FloaterService>()
     val todoNlpService by inject<TodoNlpService>()
     val todoSummaryService by inject<TodoSummaryService>()
+    val completedTodoService by inject<CompletedTodoService>()
 
     route("/todo") {
         todoCreateRoute(todoService)
@@ -55,7 +58,7 @@ fun Route.todoRoutes() {
         todoCompleteRoutes(todoService)
         todoInstanceRoutes(todoService)
         todoDemoteRoute(todoService)
-        todoUtilityRoutes(todoService, floaterService, todoNlpService, todoSummaryService)
+        todoUtilityRoutes(todoService, floaterService, todoNlpService, todoSummaryService, completedTodoService)
     }
 }
 
@@ -263,6 +266,7 @@ private fun Route.todoUtilityRoutes(
     floaterService: FloaterService,
     todoNlpService: TodoNlpService,
     todoSummaryService: TodoSummaryService,
+    completedTodoService: CompletedTodoService,
 ) {
     route("/overdue") {
         get {
@@ -306,6 +310,22 @@ private fun Route.todoUtilityRoutes(
 
                 val locale = body.locale
                 val nowMs = Instant.now().toEpochMilli()
+
+                // Week in Review: a retrospective over the completed history, rendered by
+                // the same shared engine (deterministic — no AI path for the recap).
+                if (scope == SummaryScope.WEEK) {
+                    val cleared = completedTodoService.getAll(user.id).getOrNull().orEmpty()
+                        .mapNotNull { it.toWeekSummaryInput() }
+                    return@withAuth TodoSummaryResponse(
+                        summary = SummaryEngine.summarize(cleared, SharedSummaryScope.WEEK, nowMs, timeZone, locale),
+                        source = SOURCE_LOGIC,
+                        mode = scope.responseMode,
+                        taskCount = cleared.size,
+                        generatedAt = Instant.now().toString(),
+                        fallbackReason = null,
+                        reason = null,
+                    ).right()
+                }
 
                 val todos = todoService.getTimeline(user.id, timeZone, 365).getOrNull() ?: emptyList()
                 val floaters = if (scope.usesFloaters) {
@@ -371,7 +391,8 @@ private enum class SummaryScope(
     ALL("all"),
     PRIORITY("priority"),
     LIST("list"),
-    FLOATER("floater", usesFloaters = true);
+    FLOATER("floater", usesFloaters = true),
+    WEEK("week");
 
     companion object {
         fun from(value: String?): SummaryScope? {
@@ -383,6 +404,7 @@ private enum class SummaryScope(
                 "priority" -> PRIORITY
                 "list" -> LIST
                 "floater", "anytime" -> FLOATER
+                "week" -> WEEK
                 else -> null
             }
         }
@@ -456,6 +478,8 @@ private fun buildSummaryTasks(
                     SummaryScope.PRIORITY -> isPrioritySummaryTask(task.priority)
                     SummaryScope.LIST -> normalizedListId != null && task.listId == normalizedListId
                     SummaryScope.FLOATER -> false
+                    // WEEK is handled from the completed history before buildSummaryTasks runs.
+                    SummaryScope.WEEK -> false
                 }
             }
             .sortedWith(
@@ -536,6 +560,19 @@ private fun boundedSummaryTitle(title: String): String {
     } else {
         normalized.take(MAX_SUMMARY_TITLE_LENGTH - 3).trimEnd() + "..."
     }
+}
+
+/** Maps a completed todo into the shared engine's WEEK input (timestamps are UTC). */
+private fun CompletedTodoResponse.toWeekSummaryInput(): SummaryTaskInput? {
+    val completedMs = parseTodoDateTime(completedAt)
+        ?.toInstant(ZoneOffset.UTC)?.toEpochMilli() ?: return null
+    return SummaryTaskInput(
+        title = title,
+        priority = priority,
+        dueEpochMs = parseTodoDateTime(due)?.toInstant(ZoneOffset.UTC)?.toEpochMilli(),
+        completed = true,
+        completedAtEpochMs = completedMs,
+    )
 }
 
 internal fun parseTodoDateTime(value: String?): LocalDateTime? {

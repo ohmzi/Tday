@@ -389,6 +389,10 @@
       "everyWeek": "semanalmente",
       "everyMonth": "mensalmente",
       "everyYear": "anualmente"
+    },
+    "weekInReview": {
+      "title": "Resumo da semana",
+      "dismiss": "Dispensar"
     }
   },
   "sidebar": {
@@ -727,6 +731,19 @@
       "out",
       "nov",
       "dez"
+    ],
+    "weekNone": "Nenhuma tarefa concluída esta semana ainda.",
+    "weekCleared": "Você concluiu {{count}} tarefas esta semana.",
+    "weekBusiest": "Dia mais movimentado: {{day}} ({{count}}).",
+    "weekOldest": "A mais antiga que enfim concluiu: {{title}}.",
+    "weekdaysShort": [
+      "seg",
+      "ter",
+      "qua",
+      "qui",
+      "sex",
+      "sáb",
+      "dom"
     ]
   },
   "guide": {
@@ -1062,6 +1079,13 @@
         "keywords": "repetir, sugestão, recorrente, ritmo, hábito, padrão, automático",
         "body": "Quando você conclui a mesma tarefa num ritmo constante — regar as plantas toda semana, pagar o aluguel todo mês — o T'Day percebe e oferece um chip de um toque para repeti-la. Ele lê apenas seu histórico concluído no dispositivo; nada sai dele.",
         "tip": "Não tem interesse? Toque no ✕ e esse título não perguntará de novo."
+      },
+      "week-in-review": {
+        "title": "Resumo da semana",
+        "summary": "Um resumo tranquilo de domingo do que você concluiu.",
+        "keywords": "semana, resumo, recap, domingo, concluído, retrospectiva",
+        "body": "Aos domingos, o T'Day mostra um breve resumo no seu feed Hoje: quantas tarefas você concluiu nesta semana, seu dia mais movimentado e a mais antiga que enfim terminou. Vem do seu histórico concluído.",
+        "tip": "Sem clima? Dispense — ele só volta na próxima semana."
       }
     }
   },

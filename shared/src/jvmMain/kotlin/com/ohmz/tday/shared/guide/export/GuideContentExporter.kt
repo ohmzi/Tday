@@ -219,9 +219,16 @@ object GuideContentExporter {
         "targetToday", "targetTomorrow", "targetYesterday", "taskPhrasePast", "taskPhrasePresent",
         "thenSeparator", "untitledTask", "windowAfternoon", "windowMorning", "windowNight",
         "window_afternoon", "window_morning",
+        "weekNone", "weekCleared", "weekBusiest", "weekOldest",
     )
 
-    private fun readSummaryBundle(rootDir: File, locale: String): Pair<Map<String, String>, List<String>> {
+    private data class SummaryBundleData(
+        val values: Map<String, String>,
+        val months: List<String>,
+        val weekdays: List<String>,
+    )
+
+    private fun readSummaryBundle(rootDir: File, locale: String): SummaryBundleData {
         val root = Json.parseToJsonElement(File(rootDir, "tday-web/messages/$locale.json").readText()).jsonObject
         val summary = root["summary"]?.jsonObject ?: error("locale $locale is missing the 'summary' namespace")
         val values = SUMMARY_VALUE_KEYS.associateWith { key ->
@@ -230,7 +237,10 @@ object GuideContentExporter {
         val months = (summary["monthsShort"] as? JsonArray ?: error("locale $locale is missing summary.monthsShort"))
             .map { (it as JsonPrimitive).content }
         require(months.size == 12) { "locale $locale summary.monthsShort must have exactly 12 entries" }
-        return values to months
+        val weekdays = (summary["weekdaysShort"] as? JsonArray ?: error("locale $locale is missing summary.weekdaysShort"))
+            .map { (it as JsonPrimitive).content }
+        require(weekdays.size == 7) { "locale $locale summary.weekdaysShort must have exactly 7 entries (Mon..Sun)" }
+        return SummaryBundleData(values, months, weekdays)
     }
 
     private fun buildSummaryBundles(rootDir: File): String {
@@ -243,14 +253,15 @@ object GuideContentExporter {
         sb.appendLine()
         sb.appendLine("internal object SummaryStringBundles {")
         for (locale in LOCALES) {
-            val (values, months) = readSummaryBundle(rootDir, locale)
+            val bundle = readSummaryBundle(rootDir, locale)
             sb.appendLine("    val $locale = SummaryStrings(")
             sb.appendLine("        values = mapOf(")
-            for ((key, value) in values) {
+            for ((key, value) in bundle.values) {
                 sb.appendLine("            ${kquote(key)} to ${kquote(value)},")
             }
             sb.appendLine("        ),")
-            sb.appendLine("        monthsShort = listOf(${months.joinToString(", ") { kquote(it) }}),")
+            sb.appendLine("        monthsShort = listOf(${bundle.months.joinToString(", ") { kquote(it) }}),")
+            sb.appendLine("        weekdaysShort = listOf(${bundle.weekdays.joinToString(", ") { kquote(it) }}),")
             sb.appendLine("    )")
         }
         sb.appendLine()

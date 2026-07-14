@@ -389,6 +389,10 @@
       "everyWeek": "ogni settimana",
       "everyMonth": "ogni mese",
       "everyYear": "ogni anno"
+    },
+    "weekInReview": {
+      "title": "Riepilogo settimanale",
+      "dismiss": "Ignora"
     }
   },
   "sidebar": {
@@ -727,6 +731,19 @@
       "ott",
       "nov",
       "dic"
+    ],
+    "weekNone": "Nessuna attività completata questa settimana.",
+    "weekCleared": "Hai completato {{count}} attività questa settimana.",
+    "weekBusiest": "Giorno più intenso: {{day}} ({{count}}).",
+    "weekOldest": "La più vecchia finalmente completata: {{title}}.",
+    "weekdaysShort": [
+      "lun",
+      "mar",
+      "mer",
+      "gio",
+      "ven",
+      "sab",
+      "dom"
     ]
   },
   "guide": {
@@ -1062,6 +1079,13 @@
         "keywords": "ripeti, suggerimento, ricorrente, ritmo, abitudine, schema, automatico",
         "body": "Quando completi la stessa attività con un ritmo costante — annaffiare le piante ogni settimana, pagare l'affitto ogni mese — T'Day lo nota e propone un chip con un tocco per ripeterla. Legge solo la cronologia completata sul dispositivo; nulla lo lascia.",
         "tip": "Non ti interessa? Tocca la ✕ e quel titolo non chiederà più."
+      },
+      "week-in-review": {
+        "title": "Riepilogo settimanale",
+        "summary": "Un tranquillo resoconto domenicale di ciò che hai completato.",
+        "keywords": "settimana, riepilogo, resoconto, domenica, completato, retrospettiva",
+        "body": "La domenica, T'Day mostra un breve resoconto nel feed Oggi: quante attività hai completato questa settimana, il giorno più intenso e la più vecchia finalmente finita. Nasce dalla cronologia completata.",
+        "tip": "Non è il momento? Chiudilo e resta via fino alla prossima settimana."
       }
     }
   },
