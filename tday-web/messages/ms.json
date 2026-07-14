@@ -593,7 +593,13 @@
       "passwordChangeFailed": "Gagal menukar kata laluan",
       "securityQuestionsUpdated": "Security questions updated",
       "securityQuestionsUpdateFailed": "Could not update security questions",
-      "securityQuestionsLoadFailed": "Could not load security questions"
+      "securityQuestionsLoadFailed": "Could not load security questions",
+      "calendarFeedGenerated": "Suapan kalendar dicipta. Salin URL sekarang.",
+      "calendarFeedGenerateFailed": "Gagal mencipta suapan kalendar",
+      "calendarFeedRevoked": "Suapan kalendar dibatalkan",
+      "calendarFeedRevokeFailed": "Gagal membatalkan suapan kalendar",
+      "calendarFeedCopied": "URL kalendar disalin",
+      "calendarFeedCopyFailed": "Gagal menyalin URL kalendar"
     },
     "signOut": "Log keluar",
     "aiSummary": {
@@ -630,6 +636,17 @@
       "confirmRemapped": "{{count}} item dengan ID bercanggah akan ditambah sebagai salinan baharu.",
       "confirmCancel": "Batal",
       "confirmImport": "Import"
+    },
+    "calendarFeed": {
+      "title": "Suapan kalendar",
+      "blurb": "Pautan .ics peribadi baca sahaja untuk Apple/Google Calendar.",
+      "active": "Suapan aktif",
+      "inactive": "Tiada suapan kalendar",
+      "generate": "Jana URL suapan",
+      "revoke": "Batalkan suapan",
+      "generating": "Menjana...",
+      "revoking": "Membatalkan...",
+      "copyUrl": "Salin URL kalendar ini sekarang — anggap ia seperti kata laluan."
     }
   },
   "summary": {
@@ -984,6 +1001,15 @@
         "kbd": "N",
         "kbd2": "Ctrl / ⌘ + K",
         "kbd3": "?"
+      },
+      "calendar-feed": {
+        "title": "Suapan kalendar",
+        "summary": "Langgan tugasan bertarikh anda dari mana-mana apl kalendar.",
+        "keywords": "kalendar, ics, langgan, suapan, apple calendar, google calendar, ical, webcal",
+        "body": "Terbitkan suapan kalendar baca sahaja supaya tugasan bertarikh anda muncul dalam Apple Calendar, Google Calendar atau mana-mana apl yang membaca URL .ics. Pautan itu mengandungi token peribadi — sesiapa yang memilikinya boleh melihat tugasan anda, jadi simpan sendiri dan batalkan jika bocor.",
+        "step0": "Dalam Tetapan, buka kad Suapan kalendar dan jana URL.",
+        "step1": "Salin URL — ia dipaparkan sekali; jana semula jika hilang.",
+        "step2": "Tambah sebagai kalendar langganan dalam apl kalendar anda."
       }
     }
   },

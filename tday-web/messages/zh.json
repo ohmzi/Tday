@@ -593,7 +593,13 @@
       "passwordChangeFailed": "更改密码失败",
       "securityQuestionsUpdated": "Security questions updated",
       "securityQuestionsUpdateFailed": "Could not update security questions",
-      "securityQuestionsLoadFailed": "Could not load security questions"
+      "securityQuestionsLoadFailed": "Could not load security questions",
+      "calendarFeedGenerated": "日历订阅已创建，请立即复制链接。",
+      "calendarFeedGenerateFailed": "创建日历订阅失败",
+      "calendarFeedRevoked": "日历订阅已撤销",
+      "calendarFeedRevokeFailed": "撤销日历订阅失败",
+      "calendarFeedCopied": "日历链接已复制",
+      "calendarFeedCopyFailed": "复制日历链接失败"
     },
     "signOut": "退出登录",
     "aiSummary": {
@@ -630,6 +636,17 @@
       "confirmRemapped": "{{count}} 项 ID 冲突的内容将作为新副本添加。",
       "confirmCancel": "取消",
       "confirmImport": "导入"
+    },
+    "calendarFeed": {
+      "title": "日历订阅",
+      "blurb": "用于 Apple/Google 日历的私有只读 .ics 链接。",
+      "active": "订阅已启用",
+      "inactive": "暂无日历订阅",
+      "generate": "生成订阅链接",
+      "revoke": "撤销订阅",
+      "generating": "生成中...",
+      "revoking": "撤销中...",
+      "copyUrl": "立即复制此日历链接——请像密码一样妥善保管。"
     }
   },
   "summary": {
@@ -984,6 +1001,15 @@
         "kbd": "N",
         "kbd2": "Ctrl / ⌘ + K",
         "kbd3": "?"
+      },
+      "calendar-feed": {
+        "title": "日历订阅",
+        "summary": "在任意日历应用中订阅你带日期的任务。",
+        "keywords": "日历, ics, 订阅, 源, apple calendar, google calendar, ical, webcal",
+        "body": "发布只读日历订阅，让带日期的任务显示在 Apple 日历、Google 日历或任何可读取 .ics 链接的应用中。该链接包含私有令牌——任何持有者都能看到你的任务，请妥善保管，泄露后请撤销。",
+        "step0": "在设置中打开“日历订阅”卡片并生成链接。",
+        "step1": "复制链接——只显示一次；丢失后可重新生成。",
+        "step2": "在你的日历应用中将其添加为订阅日历。"
       }
     }
   },

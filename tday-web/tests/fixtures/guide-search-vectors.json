@@ -21,7 +21,8 @@
       "day-done",
       "scheduled-lists",
       "morning-sweep",
-      "share-into-tday"
+      "share-into-tday",
+      "calendar-feed"
     ],
     "reminder": [
       "push-notifications"
@@ -42,7 +43,8 @@
       "overdue-view",
       "scheduled-lists",
       "completed-history",
-      "api-key-homarr"
+      "api-key-homarr",
+      "calendar-feed"
     ],
     "search": [
       "search-tasks"

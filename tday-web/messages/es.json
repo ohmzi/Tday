@@ -593,7 +593,13 @@
       "passwordChangeFailed": "No se pudo cambiar la contraseña",
       "securityQuestionsUpdated": "Security questions updated",
       "securityQuestionsUpdateFailed": "Could not update security questions",
-      "securityQuestionsLoadFailed": "Could not load security questions"
+      "securityQuestionsLoadFailed": "Could not load security questions",
+      "calendarFeedGenerated": "Feed de calendario creado. Copia la URL ahora.",
+      "calendarFeedGenerateFailed": "No se pudo crear el feed de calendario",
+      "calendarFeedRevoked": "Feed de calendario revocado",
+      "calendarFeedRevokeFailed": "No se pudo revocar el feed de calendario",
+      "calendarFeedCopied": "URL de calendario copiada",
+      "calendarFeedCopyFailed": "No se pudo copiar la URL de calendario"
     },
     "signOut": "Cerrar sesión",
     "aiSummary": {
@@ -630,6 +636,17 @@
       "confirmRemapped": "{{count}} elementos con ID en conflicto se añadirán como copias nuevas.",
       "confirmCancel": "Cancelar",
       "confirmImport": "Importar"
+    },
+    "calendarFeed": {
+      "title": "Feed de calendario",
+      "blurb": "Un enlace .ics privado y de solo lectura para Apple/Google Calendar.",
+      "active": "Feed activo",
+      "inactive": "Sin feed de calendario",
+      "generate": "Generar URL del feed",
+      "revoke": "Revocar feed",
+      "generating": "Generando...",
+      "revoking": "Revocando...",
+      "copyUrl": "Copia esta URL de calendario ahora: trátala como una contraseña."
     }
   },
   "summary": {
@@ -984,6 +1001,15 @@
         "kbd": "N",
         "kbd2": "Ctrl / ⌘ + K",
         "kbd3": "?"
+      },
+      "calendar-feed": {
+        "title": "Feed de calendario",
+        "summary": "Suscríbete a tus tareas con fecha desde cualquier app de calendario.",
+        "keywords": "calendario, ics, suscribir, feed, apple calendar, google calendar, ical, webcal",
+        "body": "Publica un feed de calendario de solo lectura para que tus tareas con fecha aparezcan en Apple Calendar, Google Calendar o cualquier app que lea una URL .ics. El enlace contiene un token privado: cualquiera que lo tenga puede ver tus tareas, así que guárdalo y revócalo si se filtra.",
+        "step0": "En Ajustes, abre la tarjeta Feed de calendario y genera una URL.",
+        "step1": "Copia la URL: se muestra una sola vez; vuelve a generarla si la pierdes.",
+        "step2": "Añádela como calendario de suscripción en tu app de calendario."
       }
     }
   },

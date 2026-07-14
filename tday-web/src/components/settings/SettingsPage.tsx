@@ -1,6 +1,7 @@
 import React, { useState, useEffect, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import {
+  Calendar,
   Check,
   ChevronRight,
   Copy,
@@ -340,6 +341,14 @@ export default function SettingsPage() {
   const [newKeyLabel, setNewKeyLabel] = useState("");
   const [newKeyScope, setNewKeyScope] = useState<ApiKeyScope>("READ");
   const [revokingKeyId, setRevokingKeyId] = useState<string | null>(null);
+  const [calendarFeed, setCalendarFeed] = useState<{
+    enabled: boolean;
+    tokenPreview?: string | null;
+    createdAt?: string | null;
+  } | null>(null);
+  const [generatedFeedUrl, setGeneratedFeedUrl] = useState<string | null>(null);
+  const [feedLoading, setFeedLoading] = useState(false);
+  const [showFeedUrl, setShowFeedUrl] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
 
   useEffect(() => {
@@ -423,6 +432,81 @@ export default function SettingsPage() {
       });
     } finally {
       setRevokingKeyId(null);
+    }
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .GET({ url: "/api/user/calendar-feed" })
+      .then((res) => {
+        if (!cancelled) setCalendarFeed(res?.status ?? { enabled: false });
+      })
+      .catch(() => {
+        if (!cancelled) setCalendarFeed({ enabled: false });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const handleGenerateFeed = async () => {
+    setFeedLoading(true);
+    try {
+      const res = await api.POST({
+        url: "/api/user/calendar-feed",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const token = res?.feed?.token as string | undefined;
+      // The subscribe URL is built client-side so the server never needs to know
+      // its own public origin.
+      const url = token
+        ? `${window.location.origin}/calendar/${token}.ics`
+        : null;
+      setGeneratedFeedUrl(url);
+      setShowFeedUrl(true);
+      setCalendarFeed({
+        enabled: true,
+        tokenPreview: res?.feed?.tokenPreview ?? null,
+        createdAt: res?.feed?.createdAt ?? null,
+      });
+      toast({ description: t("toast.calendarFeedGenerated") });
+    } catch (err) {
+      toast({
+        description: getErrorMessage(err, t("toast.calendarFeedGenerateFailed")),
+        variant: "destructive",
+      });
+    } finally {
+      setFeedLoading(false);
+    }
+  };
+
+  const handleRevokeFeed = async () => {
+    setFeedLoading(true);
+    try {
+      await api.DELETE({ url: "/api/user/calendar-feed" });
+      setCalendarFeed({ enabled: false });
+      setGeneratedFeedUrl(null);
+      setShowFeedUrl(false);
+      toast({ description: t("toast.calendarFeedRevoked") });
+    } catch (err) {
+      toast({
+        description: getErrorMessage(err, t("toast.calendarFeedRevokeFailed")),
+        variant: "destructive",
+      });
+    } finally {
+      setFeedLoading(false);
+    }
+  };
+
+  const handleCopyFeedUrl = async () => {
+    if (!generatedFeedUrl) return;
+    try {
+      await navigator.clipboard.writeText(generatedFeedUrl);
+      toast({ description: t("toast.calendarFeedCopied") });
+    } catch {
+      toast({ description: t("toast.calendarFeedCopyFailed"), variant: "destructive" });
     }
   };
 
@@ -1102,6 +1186,75 @@ export default function SettingsPage() {
       </SheetCard>
 
       <DataTransferCard />
+
+      <SettingsSection
+        title={t("calendarFeed.title")}
+        description={t("calendarFeed.blurb")}
+        titleAction={<GuideHelpLink topic="calendar-feed" />}
+      >
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0 text-sm">
+            <p className="font-black text-foreground">
+              {calendarFeed?.enabled
+                ? t("calendarFeed.active")
+                : t("calendarFeed.inactive")}
+            </p>
+            {calendarFeed?.enabled && calendarFeed.tokenPreview ? (
+              <p className="text-xs font-extrabold text-muted-foreground">
+                {t("dashboard.activeKeyEnding", { preview: calendarFeed.tokenPreview })}
+              </p>
+            ) : null}
+          </div>
+          <Button
+            type="button"
+            variant={calendarFeed?.enabled ? "destructive" : "default"}
+            disabled={feedLoading || calendarFeed === null}
+            onClick={calendarFeed?.enabled ? handleRevokeFeed : handleGenerateFeed}
+            className="h-11 shrink-0 rounded-2xl font-black"
+          >
+            {feedLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                {calendarFeed?.enabled
+                  ? t("calendarFeed.revoking")
+                  : t("calendarFeed.generating")}
+              </>
+            ) : calendarFeed?.enabled ? (
+              <>
+                <Trash2 className="mr-2 h-4 w-4" />
+                {t("calendarFeed.revoke")}
+              </>
+            ) : (
+              <>
+                <Calendar className="mr-2 h-4 w-4" />
+                {t("calendarFeed.generate")}
+              </>
+            )}
+          </Button>
+        </div>
+
+        {generatedFeedUrl && (
+          <div className="space-y-2 rounded-2xl border border-border/60 bg-muted/40 p-3">
+            <p className="text-xs font-extrabold text-muted-foreground">
+              {t("calendarFeed.copyUrl")}
+            </p>
+            <div className="flex gap-2">
+              <Input
+                type={showFeedUrl ? "text" : "password"}
+                value={generatedFeedUrl}
+                readOnly
+                className="h-10 flex-1 rounded-xl bg-background/50 font-mono text-xs"
+              />
+              <Button type="button" variant="outline" size="icon" className="h-10 w-10 shrink-0 rounded-xl" onClick={() => setShowFeedUrl(!showFeedUrl)}>
+                {showFeedUrl ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </Button>
+              <Button type="button" variant="outline" size="icon" className="h-10 w-10 shrink-0 rounded-xl" onClick={handleCopyFeedUrl}>
+                <Copy className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
+      </SettingsSection>
 
       <SettingsSection
         title={t("dashboard.title")}
