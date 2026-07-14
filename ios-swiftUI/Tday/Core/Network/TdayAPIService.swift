@@ -496,6 +496,14 @@ final class TdayAPIService {
         try await request(path: "/api/preferences", method: "PATCH", body: payload, responseType: PreferencesResponse.self)
     }
 
+    func getExport() async throws -> TdayExport {
+        try await request(path: "/api/export", method: "GET", responseType: TdayExport.self)
+    }
+
+    func postImport(payload: ImportRequest) async throws -> ImportResponse {
+        try await request(path: "/api/import", method: "POST", body: payload, responseType: ImportResponse.self)
+    }
+
     func getUserDetails() async throws -> UserResponse {
         try await request(path: "/api/user", method: "GET", responseType: UserResponse.self)
     }
