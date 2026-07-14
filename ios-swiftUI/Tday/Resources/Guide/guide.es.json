@@ -1,5 +1,5 @@
 {
-  "currentVersion": "0.5.0",
+  "currentVersion": "0.6.0",
   "ui": {
     "title": "Cómo se usa y consejos",
     "subtitle": "Todo lo que T'Day puede hacer: lo evidente y lo oculto.",
@@ -159,19 +159,19 @@
         {
           "type": "PARAGRAPH",
           "texts": [
-            "No necesitas abrir un selector de fechas. Escribe una expresión de fecha directamente en el título de la tarea y T'Day la interpreta en el dispositivo (sin cuenta ni conexión), resaltando la parte que entendió y programando la tarea."
+            "No necesitas selectores. Escribe una fecha (\"mañana 15h\"), una repetición (\"every day\", \"weekly\", \"every weekday\") o una prioridad (\"!\", \"!!\" o \"high\"/\"low\" al final) directamente en el título. T'Day lo analiza en el dispositivo —sin cuenta ni red—, resalta la fecha que entendió y rellena el horario, la repetición y la prioridad."
           ]
         },
         {
           "type": "EXAMPLE",
           "texts": [
-            "dentista martes 15h"
+            "dentista martes 15h every weekday !!"
           ]
         }
       ],
       "searchTitle": "escribe la fecha",
       "searchKeywords": "lenguaje natural, fecha, manana, proxima semana, interpretar, rapido, inteligente, nlp, en el dispositivo",
-      "searchBody": "escribe la fecha en el titulo y t'day la programa por ti. no necesitas abrir un selector de fechas. escribe una expresion de fecha directamente en el titulo de la tarea y t'day la interpreta en el dispositivo (sin cuenta ni conexion), resaltando la parte que entendio y programando la tarea. dentista martes 15h"
+      "searchBody": "escribe la fecha en el titulo y t'day la programa por ti. no necesitas selectores. escribe una fecha (\"manana 15h\"), una repeticion (\"every day\", \"weekly\", \"every weekday\") o una prioridad (\"!\", \"!!\" o \"high\"/\"low\" al final) directamente en el titulo. t'day lo analiza en el dispositivo —sin cuenta ni red—, resalta la fecha que entendio y rellena el horario, la repeticion y la prioridad. dentista martes 15h every weekday !!"
     },
     {
       "id": "calendar-views",

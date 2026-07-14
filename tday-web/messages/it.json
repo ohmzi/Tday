@@ -766,8 +766,8 @@
         "title": "Digita la data",
         "summary": "Scrivi la data nel titolo e T'Day la pianifica per te.",
         "keywords": "linguaggio naturale, data, domani, prossima settimana, analizza, veloce, intelligente, nlp, sul dispositivo",
-        "body": "Non serve aprire un selettore di date. Digita una frase con la data direttamente nel titolo dell'attività e T'Day la interpreta sul dispositivo — senza account né connessione — evidenziando la parte che ha compreso e pianificando l'attività.",
-        "example": "dentista martedì alle 15"
+        "body": "Niente selettori. Scrivi una data (\"domani 15\"), una ripetizione (\"every day\", \"weekly\", \"every weekday\") o una priorità (\"!\", \"!!\" o \"high\"/\"low\" finale) direttamente nel titolo. T'Day la analizza sul dispositivo — senza account né rete —, evidenzia la data compresa e compila orario, ricorrenza e priorità.",
+        "example": "dentista martedì 15 every weekday !!"
       },
       "calendar-views": {
         "title": "Viste calendario",

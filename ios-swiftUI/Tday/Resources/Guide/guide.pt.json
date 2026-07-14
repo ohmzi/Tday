@@ -1,5 +1,5 @@
 {
-  "currentVersion": "0.5.0",
+  "currentVersion": "0.6.0",
   "ui": {
     "title": "Como fazer e dicas",
     "subtitle": "Tudo o que o T'Day sabe fazer — o óbvio e o escondido.",
@@ -159,19 +159,19 @@
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Não precisa de abrir um seletor de datas. Escreva uma expressão de data diretamente no título da tarefa e o T'Day interpreta-a no próprio dispositivo — sem conta nem rede — destacando a parte que compreendeu e agendando a tarefa."
+            "Sem seletores. Digite uma data (\"amanhã 15h\"), uma repetição (\"every day\", \"weekly\", \"every weekday\") ou uma prioridade (\"!\", \"!!\" ou \"high\"/\"low\" no fim) direto no título. O T'Day analisa no dispositivo — sem conta nem rede —, destaca a data entendida e preenche horário, recorrência e prioridade."
           ]
         },
         {
           "type": "EXAMPLE",
           "texts": [
-            "dentista terça-feira 15h"
+            "dentista terça 15h every weekday !!"
           ]
         }
       ],
       "searchTitle": "escrever a data",
       "searchKeywords": "linguagem natural, data, amanha, proxima semana, interpretar, rapido, inteligente, nlp, no dispositivo",
-      "searchBody": "escreva a data no titulo e o t'day agenda-a por si. nao precisa de abrir um seletor de datas. escreva uma expressao de data diretamente no titulo da tarefa e o t'day interpreta-a no proprio dispositivo — sem conta nem rede — destacando a parte que compreendeu e agendando a tarefa. dentista terca-feira 15h"
+      "searchBody": "escreva a data no titulo e o t'day agenda-a por si. sem seletores. digite uma data (\"amanha 15h\"), uma repeticao (\"every day\", \"weekly\", \"every weekday\") ou uma prioridade (\"!\", \"!!\" ou \"high\"/\"low\" no fim) direto no titulo. o t'day analisa no dispositivo — sem conta nem rede —, destaca a data entendida e preenche horario, recorrencia e prioridade. dentista terca 15h every weekday !!"
     },
     {
       "id": "calendar-views",

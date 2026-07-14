@@ -41,6 +41,10 @@ data class TodoTitleNlpResponse(
     val matchedText: String? = null,
     val matchStart: Int? = null,
     val dueEpochMs: Long? = null,
+    /** A preset RRULE captured from a phrase like "every day" (null when none). */
+    val rrule: String? = null,
+    /** A priority captured from "!"/"!!"/"high|low|medium" (null when none). */
+    val priority: String? = null,
 )
 
 @Serializable

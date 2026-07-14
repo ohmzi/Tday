@@ -1,8 +1,10 @@
 import { getCaretOffset } from "@/components/todo/lib/getCaretOffset";
 import { setCaretOffset } from "@/components/todo/lib/setCaretOffset";
+import { parseRecurrencePriority, type TodoPriority } from "@/lib/todoNlp";
 import { useLocale } from "@/lib/navigation";
 import { cn, isDesktopPointer } from "@/lib/utils";
 import * as chrono from "chrono-node";
+import { RRule, type Options } from "rrule";
 import React, { SetStateAction, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -14,6 +16,10 @@ type NLPTitleInputProps = {
   setTitle: React.Dispatch<SetStateAction<string>>;
   setDateRange: React.Dispatch<SetStateAction<FormDateRange>>;
   setListID?: React.Dispatch<SetStateAction<string | null>>;
+  // Optional: capture "every day"/"weekly" → recurrence and "!"/"high" → priority
+  // straight from the title. Omitted by surfaces that don't expose those fields.
+  setPriority?: (priority: TodoPriority) => void;
+  setRruleOptions?: (options: Partial<Options> | null) => void;
   className?: string;
   onSubmit?: () => void;
 };
@@ -23,6 +29,8 @@ export default function NLPTitleInput({
   title,
   setTitle,
   setDateRange,
+  setPriority,
+  setRruleOptions,
   className,
   onSubmit,
 }: NLPTitleInputProps) {
@@ -63,32 +71,42 @@ export default function NLPTitleInput({
 
   const applyNLPHighlighting = (text: string) => {
     const parsedResults = parseDate(text);
+    let html: string;
+    let dateCleaned: string;
+
     if (!parsedResults.length) {
-      return {
-        html: escapeHtml(text),
-        cleanTitle: text.trim(),
-      };
+      html = escapeHtml(text);
+      dateCleaned = text;
+    } else {
+      const parsed = parsedResults[0];
+      const idx = parsed.index as number;
+      const matched = parsed.text as string;
+
+      // Use the time the user actually named (parsed.start). Only fall back to an
+      // explicit end when the text gave a range ("8pm to 10pm"); a single time
+      // like "8pm" has no end and must NOT be shifted. This mirrors the backend
+      // NLP (Natty) used by iOS/Android: dueDate = dates.size > 1 ? dates[1] : start.
+      const from = parsed.start.date();
+      const due = parsed.end?.date() ?? from;
+      setDateRange({ from: due, to: due });
+
+      const before = text.slice(0, idx);
+      const after = text.slice(idx + matched.length);
+      html = `${escapeHtml(before)}<span class=\"bg-nlp inline rounded-[2px]\">${escapeHtml(matched)}</span>${escapeHtml(after)}`;
+      dateCleaned = `${before}${after}`;
     }
 
-    const parsed = parsedResults[0];
-    const idx = parsed.index as number;
-    const matched = parsed.text as string;
+    // Recurrence + priority capture. Only sets the fields when a phrase is present
+    // (so it never clobbers a hand-picked recurrence/priority on later keystrokes).
+    const rp = parseRecurrencePriority(dateCleaned);
+    if (rp.rrule && setRruleOptions) {
+      setRruleOptions(RRule.parseString(rp.rrule));
+    }
+    if (rp.priority && setPriority) {
+      setPriority(rp.priority);
+    }
 
-    // Use the time the user actually named (parsed.start). Only fall back to an
-    // explicit end when the text gave a range ("8pm to 10pm"); a single time
-    // like "8pm" has no end and must NOT be shifted. This mirrors the backend
-    // NLP (Natty) used by iOS/Android: dueDate = dates.size > 1 ? dates[1] : start.
-    const from = parsed.start.date();
-    const due = parsed.end?.date() ?? from;
-    setDateRange({ from: due, to: due });
-
-    const before = text.slice(0, idx);
-    const after = text.slice(idx + matched.length);
-
-    return {
-      html: `${escapeHtml(before)}<span class=\"bg-nlp inline rounded-[2px]\">${escapeHtml(matched)}</span>${escapeHtml(after)}`,
-      cleanTitle: `${before}${after}`.replace(/\s{2,}/g, " ").trim(),
-    };
+    return { html, cleanTitle: rp.cleanTitle };
   };
 
   const handleNLPInput = () => {

@@ -129,6 +129,8 @@ const TodoForm = ({
             setTitle={setTitle}
             titleRef={titleRef}
             setDateRange={setDateRange}
+            setPriority={setPriority}
+            setRruleOptions={setRruleOptions}
             onSubmit={() => handleForm()}
           />
           <GuideHelpLink topic="nlp-date-syntax" className="mt-0.5" />

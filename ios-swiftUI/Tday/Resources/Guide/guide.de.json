@@ -1,5 +1,5 @@
 {
-  "currentVersion": "0.5.0",
+  "currentVersion": "0.6.0",
   "ui": {
     "title": "Anleitung & Tipps",
     "subtitle": "Alles, was T'Day kann — das Offensichtliche und das Verborgene.",
@@ -159,19 +159,19 @@
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Du musst keine Datumsauswahl öffnen. Tippe eine Datumsangabe direkt in den Aufgabentitel, und T'Day erkennt sie auf dem Gerät — ganz ohne Konto oder Netzwerk —, hebt den verstandenen Teil hervor und plant die Aufgabe ein."
+            "Keine Auswahlfelder nötig. Tippe ein Datum (\"morgen 15 Uhr\"), eine Wiederholung (\"every day\", \"weekly\", \"every weekday\") oder eine Priorität (\"!\", \"!!\" oder \"high\"/\"low\" am Ende) direkt in den Titel. T'Day wertet das auf dem Gerät aus — ohne Konto oder Netz —, hebt das erkannte Datum hervor und füllt Termin, Wiederholung und Priorität aus."
           ]
         },
         {
           "type": "EXAMPLE",
           "texts": [
-            "zahnarzt dienstag 15 uhr"
+            "Zahnarzt Dienstag 15 Uhr every weekday !!"
           ]
         }
       ],
       "searchTitle": "das datum eintippen",
       "searchKeywords": "naturliche sprache, datum, morgen, nachste woche, erkennen, schnell, smart, nlp, auf dem gerat",
-      "searchBody": "schreib das datum in den titel, und t'day plant es fur dich ein. du musst keine datumsauswahl offnen. tippe eine datumsangabe direkt in den aufgabentitel, und t'day erkennt sie auf dem gerat — ganz ohne konto oder netzwerk —, hebt den verstandenen teil hervor und plant die aufgabe ein. zahnarzt dienstag 15 uhr"
+      "searchBody": "schreib das datum in den titel, und t'day plant es fur dich ein. keine auswahlfelder notig. tippe ein datum (\"morgen 15 uhr\"), eine wiederholung (\"every day\", \"weekly\", \"every weekday\") oder eine prioritat (\"!\", \"!!\" oder \"high\"/\"low\" am ende) direkt in den titel. t'day wertet das auf dem gerat aus — ohne konto oder netz —, hebt das erkannte datum hervor und fullt termin, wiederholung und prioritat aus. zahnarzt dienstag 15 uhr every weekday !!"
     },
     {
       "id": "calendar-views",

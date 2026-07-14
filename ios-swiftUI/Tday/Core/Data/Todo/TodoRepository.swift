@@ -1155,36 +1155,115 @@ enum OnDeviceTitleNlpParser {
     }()
 
     static func parse(text: String) -> TodoTitleNlpResponse? {
-        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-              let detector else {
-            return nil
-        }
-        let fullRange = NSRange(text.startIndex ..< text.endIndex, in: text)
-        guard let match = detector.firstMatch(in: text, options: [], range: fullRange),
-              match.resultType == .date,
-              let date = match.date,
-              let matchedRange = Range(match.range, in: text) else {
-            return nil
+        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
+
+        // Try a date phrase first (keeps the highlight span aligned with the raw field).
+        if let detector {
+            let fullRange = NSRange(text.startIndex ..< text.endIndex, in: text)
+            if let match = detector.firstMatch(in: text, options: [], range: fullRange),
+               match.resultType == .date,
+               let date = match.date,
+               let matchedRange = Range(match.range, in: text) {
+                // `match.date` already resolves wall-clock phrases ("8pm", "tomorrow") in
+                // the device's local zone, so `epochMilliseconds` is the correct UTC
+                // instant.
+                let matchedText = String(text[matchedRange])
+                var clean = text
+                clean.removeSubrange(matchedRange)
+                let dateStripped = clean
+                    .replacingOccurrences(of: "\\s{2,}", with: " ", options: .regularExpression)
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                // Recurrence/priority are stripped from the date-cleaned title; the
+                // highlight span still points at the date phrase in the raw text.
+                let grammar = RecurrencePriorityGrammar.parse(dateStripped)
+                return TodoTitleNlpResponse(
+                    cleanTitle: grammar.cleanTitle,
+                    matchedText: matchedText,
+                    matchStart: match.range.location,
+                    dueEpochMs: date.epochMilliseconds,
+                    rrule: grammar.rrule,
+                    priority: grammar.priority
+                )
+            }
         }
 
-        // `match.date` already resolves wall-clock phrases ("8pm", "tomorrow") in the
-        // device's local zone, so "3pm" maps to 3pm local and `epochMilliseconds`
-        // is the correct UTC instant. (An earlier version assumed NSDataDetector
-        // returned GMT and re-shifted by the UTC offset — that double-shifted the
-        // time, e.g. 3pm → 7pm in EDT.)
+        // No date phrase: still capture recurrence/priority so "gym every day !" works.
+        let grammar = RecurrencePriorityGrammar.parse(
+            text.trimmingCharacters(in: .whitespacesAndNewlines)
+        )
+        guard grammar.rrule != nil || grammar.priority != nil else { return nil }
+        return TodoTitleNlpResponse(
+            cleanTitle: grammar.cleanTitle,
+            matchedText: nil,
+            matchStart: 0,
+            dueEpochMs: nil,
+            rrule: grammar.rrule,
+            priority: grammar.priority
+        )
+    }
+}
 
-        let matchedText = String(text[matchedRange])
-        var clean = text
-        clean.removeSubrange(matchedRange)
-        let cleanTitle = clean
+/// Deterministic recurrence + priority capture — the Swift twin of the shared
+/// `RecurrencePriorityGrammar` (Kotlin) used on web/Android. Kept in sync by hand.
+enum RecurrencePriorityGrammar {
+    struct Result {
+        let cleanTitle: String
+        let rrule: String?
+        let priority: String?
+    }
+
+    private static let recurrenceRules: [(pattern: String, rrule: String)] = [
+        // "weekday(s)" is tried before "week", which it contains.
+        (#"\b(?:every\s+weekday|weekdays?)\b"#, "RRULE:FREQ=WEEKLY;INTERVAL=1;BYDAY=MO,TU,WE,TH,FR"),
+        (#"\b(?:every\s*day|everyday|daily)\b"#, "RRULE:FREQ=DAILY;INTERVAL=1"),
+        (#"\b(?:every\s+week|weekly)\b"#, "RRULE:FREQ=WEEKLY;INTERVAL=1"),
+        (#"\b(?:every\s+month|monthly)\b"#, "RRULE:FREQ=MONTHLY;INTERVAL=1"),
+        (#"\b(?:every\s+year|yearly|annually)\b"#, "RRULE:FREQ=YEARLY;INTERVAL=1"),
+    ]
+
+    static func parse(_ text: String) -> Result {
+        var working = text
+        var rrule: String?
+
+        for rule in recurrenceRules {
+            if let range = working.range(of: rule.pattern, options: [.regularExpression, .caseInsensitive]) {
+                rrule = rule.rrule
+                working.removeSubrange(range)
+                break
+            }
+        }
+
+        var priority: String?
+        if let range = working.range(of: "!!") {
+            priority = "High"
+            working.removeSubrange(range)
+        } else if let range = working.range(of: "!") {
+            priority = "Medium"
+            working.removeSubrange(range)
+        } else if let range = working.range(
+            of: #"\b(high|medium|low)\s+priority\b"#,
+            options: [.regularExpression, .caseInsensitive]
+        ) {
+            priority = capitalizePriority(String(working[range]))
+            working.removeSubrange(range)
+        } else if let range = working.range(
+            of: #"\s+(high|medium|low)\s*$"#,
+            options: [.regularExpression, .caseInsensitive]
+        ) {
+            priority = capitalizePriority(String(working[range]))
+            working.removeSubrange(range)
+        }
+
+        let cleanTitle = working
             .replacingOccurrences(of: "\\s{2,}", with: " ", options: .regularExpression)
             .trimmingCharacters(in: .whitespacesAndNewlines)
+        return Result(cleanTitle: cleanTitle, rrule: rrule, priority: priority)
+    }
 
-        return TodoTitleNlpResponse(
-            cleanTitle: cleanTitle,
-            matchedText: matchedText,
-            matchStart: match.range.location,
-            dueEpochMs: date.epochMilliseconds
-        )
+    private static func capitalizePriority(_ raw: String) -> String {
+        let lowered = raw.lowercased()
+        if lowered.contains("high") { return "High" }
+        if lowered.contains("low") { return "Low" }
+        return "Medium"
     }
 }

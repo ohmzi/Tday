@@ -1,5 +1,5 @@
 {
-  "currentVersion": "0.5.0",
+  "currentVersion": "0.6.0",
   "ui": {
     "title": "How-To & Tips",
     "subtitle": "Everything T'Day can do — the obvious and the hidden.",
@@ -159,19 +159,19 @@
         {
           "type": "PARAGRAPH",
           "texts": [
-            "You don't need to open a date picker. Type a date phrase straight into the task title and T'Day parses it on-device — no account or network needed — highlighting the part it understood and scheduling the task."
+            "You don't need pickers. Type a date phrase (\"tomorrow 3pm\"), a repeat (\"every day\", \"weekly\", \"every weekday\"), or a priority (\"!\", \"!!\", or a trailing \"high\"/\"low\") straight into the task title. T'Day parses it on-device — no account or network — highlights the date it understood, and fills in the schedule, recurrence, and priority."
           ]
         },
         {
           "type": "EXAMPLE",
           "texts": [
-            "dentist tuesday 3pm"
+            "dentist tuesday 3pm every weekday !!"
           ]
         }
       ],
       "searchTitle": "type the date",
       "searchKeywords": "natural language, date, tomorrow, next week, parse, quick, smart, nlp, on device",
-      "searchBody": "write the date into the title and t'day schedules it for you. you don't need to open a date picker. type a date phrase straight into the task title and t'day parses it on-device — no account or network needed — highlighting the part it understood and scheduling the task. dentist tuesday 3pm"
+      "searchBody": "write the date into the title and t'day schedules it for you. you don't need pickers. type a date phrase (\"tomorrow 3pm\"), a repeat (\"every day\", \"weekly\", \"every weekday\"), or a priority (\"!\", \"!!\", or a trailing \"high\"/\"low\") straight into the task title. t'day parses it on-device — no account or network — highlights the date it understood, and fills in the schedule, recurrence, and priority. dentist tuesday 3pm every weekday !!"
     },
     {
       "id": "calendar-views",
