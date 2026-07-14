@@ -607,6 +607,22 @@
       "errorDistinct": "Security questions must be different",
       "errorAnswersRequired": "Please answer all three questions",
       "errorPasswordRequired": "Enter your current password"
+    },
+    "data": {
+      "title": "Tus datos",
+      "summary": "{{tasks}} tareas · {{lists}} listas · {{completed}} completadas, todo en este servidor.",
+      "download": "Descargar mis datos",
+      "import": "Importar",
+      "exportDone": "Se descargó tu archivo de datos.",
+      "exportFailed": "No se pudieron exportar tus datos.",
+      "importInvalid": "Ese archivo no es una exportación válida de T'Day.",
+      "importDone": "Importación completa: se añadieron {{count}} elementos.",
+      "importFailed": "No se pudo importar ese archivo.",
+      "confirmTitle": "¿Importar datos?",
+      "confirmBody": "Esto añade {{count}} elementos a tu cuenta. Nada de lo que ya tienes se cambia ni se elimina.",
+      "confirmRemapped": "{{count}} elementos con ID en conflicto se añadirán como copias nuevas.",
+      "confirmCancel": "Cancelar",
+      "confirmImport": "Importar"
     }
   },
   "summary": {
@@ -908,6 +924,20 @@
         "summary": "Sigue trabajando sin conexión; los cambios se reenvían al reconectar.",
         "keywords": "sin conexión, sincronizar, pendientes, cola, reenviar, conexión, conflicto",
         "body": "En Modo servidor, tus cambios se guardan primero en local y se ponen en cola cuando estás sin conexión. En cuanto te reconectas, T'Day los reenvía al servidor en orden."
+      },
+      "export-your-data": {
+        "title": "Exporta tus datos",
+        "summary": "Descarga todo como un archivo portátil y recupéralo cuando quieras.",
+        "keywords": "exportar, importar, descargar, copia de seguridad, mis datos, portátil, restaurar, migrar",
+        "body": "Desde Ajustes puedes descargar toda tu cuenta — tareas, listas, historial de completadas y preferencias — como un solo archivo JSON. Impórtalo en otro T'Day (un servidor o un dispositivo en Modo local) y todo entra como elementos nuevos: la importación siempre añade y nunca sobrescribe, así que no pierdes nada de lo que ya tienes. En un servidor, las descripciones se descifran en el archivo para que siga siendo legible aunque cambies a un servidor con otra clave.",
+        "tip": "El archivo es JSON legible y sencillo — guarda una copia como respaldo personal."
+      },
+      "local-to-server-migration": {
+        "title": "Pasa de este dispositivo a un servidor",
+        "summary": "Lleva contigo tus tareas del dispositivo al cambiar al Modo servidor.",
+        "keywords": "migración, local a servidor, mover datos, cambiar de modo, subir, iniciar sesión, transferir",
+        "body": "¿Empezaste en Modo local y luego montaste un servidor? Nunca se sube nada por su cuenta. Para trasladar tus datos: expórtalos primero desde Ajustes, inicia sesión en tu servidor e importa allí el archivo. Tus tareas, listas e historial se trasladan en un paso deliberado — tú eliges el momento, y tus datos del dispositivo quedan intactos hasta entonces.",
+        "tip": "Tras importar, conserva el archivo exportado hasta confirmar que llegó todo — así también sirve de respaldo."
       },
       "in-app-update": {
         "title": "Actualizaciones dentro de la app",

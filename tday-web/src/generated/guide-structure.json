@@ -660,6 +660,38 @@
       "sinceVersion": null
     },
     {
+      "id": "export-your-data",
+      "section": "MODES_AND_SYNC",
+      "icon": "download",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "titleKey": "guide.topics.export-your-data.title",
+      "summaryKey": "guide.topics.export-your-data.summary",
+      "keywordsKey": "guide.topics.export-your-data.keywords",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "keys": [
+            "guide.topics.export-your-data.body"
+          ]
+        },
+        {
+          "type": "TIP",
+          "keys": [
+            "guide.topics.export-your-data.tip"
+          ]
+        }
+      ],
+      "badge": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "serverOnly": false,
+      "sinceVersion": "0.5.0"
+    },
+    {
       "id": "api-key-homarr",
       "section": "INTEGRATIONS",
       "icon": "key-round",

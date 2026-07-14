@@ -1064,6 +1064,75 @@
       "searchBody": "continue a trabalhar offline; as alteracoes sao reproduzidas ao reconectar. em modo servidor, as suas alteracoes sao guardadas primeiro localmente e colocadas em fila quando esta offline. assim que reconectar, o t'day reproduz-nas no servidor por ordem."
     },
     {
+      "id": "export-your-data",
+      "section": "MODES_AND_SYNC",
+      "sectionOrder": 6,
+      "icon": "download",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.5.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Exporte os seus dados",
+      "summary": "Descarregue tudo num ficheiro portátil — e traga-o de volta quando quiser.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Nas Definições pode descarregar toda a sua conta — tarefas, listas, histórico de concluídas e preferências — como um único ficheiro JSON. Importe-o para outro T'Day (um servidor ou um dispositivo em Modo local) e tudo entra como itens novos: a importação adiciona sempre e nunca substitui, por isso não perde nada do que já tem. Num servidor, as descrições são desencriptadas no ficheiro para que continue legível mesmo que mude para um servidor com outra chave."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "O ficheiro é JSON simples e legível — guarde uma cópia como cópia de segurança pessoal."
+          ]
+        }
+      ],
+      "searchTitle": "exporte os seus dados",
+      "searchKeywords": "exportar, importar, descarregar, copia de seguranca, os meus dados, portatil, restaurar, migrar",
+      "searchBody": "descarregue tudo num ficheiro portatil — e traga-o de volta quando quiser. nas definicoes pode descarregar toda a sua conta — tarefas, listas, historico de concluidas e preferencias — como um unico ficheiro json. importe-o para outro t'day (um servidor ou um dispositivo em modo local) e tudo entra como itens novos: a importacao adiciona sempre e nunca substitui, por isso nao perde nada do que ja tem. num servidor, as descricoes sao desencriptadas no ficheiro para que continue legivel mesmo que mude para um servidor com outra chave. o ficheiro e json simples e legivel — guarde uma copia como copia de seguranca pessoal."
+    },
+    {
+      "id": "local-to-server-migration",
+      "section": "MODES_AND_SYNC",
+      "sectionOrder": 6,
+      "icon": "cloud",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.5.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Passar deste dispositivo para um servidor",
+      "summary": "Leve as tarefas do dispositivo consigo ao mudar para o Modo servidor.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Começou no Modo local e depois configurou um servidor? Nada é carregado por conta própria. Para mover os seus dados: exporte-os primeiro nas Definições, inicie sessão no seu servidor e importe aí o ficheiro. Tarefas, listas e histórico transferem-se num passo deliberado — escolhe o momento, e os dados no dispositivo ficam intactos até lá."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Depois de importar, guarde o ficheiro exportado até confirmar que tudo chegou — assim também serve de cópia de segurança."
+          ]
+        }
+      ],
+      "searchTitle": "passar deste dispositivo para um servidor",
+      "searchKeywords": "migracao, local para servidor, mover dados, mudar de modo, carregar, iniciar sessao, transferir",
+      "searchBody": "leve as tarefas do dispositivo consigo ao mudar para o modo servidor. comecou no modo local e depois configurou um servidor? nada e carregado por conta propria. para mover os seus dados: exporte-os primeiro nas definicoes, inicie sessao no seu servidor e importe ai o ficheiro. tarefas, listas e historico transferem-se num passo deliberado — escolhe o momento, e os dados no dispositivo ficam intactos ate la. depois de importar, guarde o ficheiro exportado ate confirmar que tudo chegou — assim tambem serve de copia de seguranca."
+    },
+    {
       "id": "ai-summary",
       "section": "INTEGRATIONS",
       "sectionOrder": 7,

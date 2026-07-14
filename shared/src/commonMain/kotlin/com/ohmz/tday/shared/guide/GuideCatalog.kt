@@ -200,6 +200,16 @@ object GuideCatalog {
             GuideTopicIds.IN_APP_UPDATE, GuideSectionId.MODES_AND_SYNC, "download",
             setOf(ANDROID), body = listOf(para(GuideTopicIds.IN_APP_UPDATE)),
         ),
+        topic(
+            GuideTopicIds.EXPORT_YOUR_DATA, GuideSectionId.MODES_AND_SYNC, "download",
+            setOf(WEB, ANDROID, IOS), sinceVersion = "0.5.0",
+            body = listOf(para(GuideTopicIds.EXPORT_YOUR_DATA), tip(GuideTopicIds.EXPORT_YOUR_DATA)),
+        ),
+        topic(
+            GuideTopicIds.LOCAL_TO_SERVER_MIGRATION, GuideSectionId.MODES_AND_SYNC, "cloud",
+            setOf(ANDROID, IOS), sinceVersion = "0.5.0",
+            body = listOf(para(GuideTopicIds.LOCAL_TO_SERVER_MIGRATION), tip(GuideTopicIds.LOCAL_TO_SERVER_MIGRATION)),
+        ),
 
         // ── Integrations ─────────────────────────────────────────────────
         topic(

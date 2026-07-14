@@ -607,6 +607,22 @@
       "errorDistinct": "Security questions must be different",
       "errorAnswersRequired": "Please answer all three questions",
       "errorPasswordRequired": "Enter your current password"
+    },
+    "data": {
+      "title": "Your data",
+      "summary": "{{tasks}} tasks · {{lists}} lists · {{completed}} completed, all on this server.",
+      "download": "Download my data",
+      "import": "Import",
+      "exportDone": "Your data file was downloaded.",
+      "exportFailed": "Could not export your data.",
+      "importInvalid": "That file isn't a valid T'Day export.",
+      "importDone": "Import complete — added {{count}} items.",
+      "importFailed": "Could not import that file.",
+      "confirmTitle": "Import data?",
+      "confirmBody": "This adds {{count}} items to your account. Nothing you already have is changed or removed.",
+      "confirmRemapped": "{{count}} items with clashing IDs will be added as fresh copies.",
+      "confirmCancel": "Cancel",
+      "confirmImport": "Import"
     }
   },
   "summary": {
@@ -908,6 +924,20 @@
         "summary": "Keep working offline; changes replay when you reconnect.",
         "keywords": "offline, sync, pending, queue, replay, connection, conflict",
         "body": "In Server Mode your changes are saved locally first and queued when you're offline. As soon as you reconnect, T'Day replays them to the server in order."
+      },
+      "export-your-data": {
+        "title": "Export your data",
+        "summary": "Download everything as one portable file — and bring it back anytime.",
+        "keywords": "export, import, download, backup, my data, portable, restore, migrate",
+        "body": "From Settings you can download your whole account — tasks, lists, completed history, and preferences — as a single JSON file. Import it into another T'Day (a server, or a device in Local Mode) and it lands as new items: import always adds and never overwrites, so nothing you already have is lost. On a server, descriptions are decrypted into the file so it stays readable even if you move to a differently-keyed server.",
+        "tip": "The file is plain, human-readable JSON — keep a copy as a personal backup."
+      },
+      "local-to-server-migration": {
+        "title": "Move from this device to a server",
+        "summary": "Bring your on-device tasks with you when you switch to Server Mode.",
+        "keywords": "migration, local to server, move data, switch mode, upload, sign in, transfer",
+        "body": "Started in Local Mode and later set up a server? Nothing ever uploads on its own. To move your data up: export it from Settings first, sign in to your server, then import the file there. Your tasks, lists, and history transfer in one deliberate step — you choose the moment, and your on-device data stays untouched until you do.",
+        "tip": "After importing, keep the exported file until you've confirmed everything arrived — then it doubles as a backup."
       },
       "in-app-update": {
         "title": "In-app updates",
