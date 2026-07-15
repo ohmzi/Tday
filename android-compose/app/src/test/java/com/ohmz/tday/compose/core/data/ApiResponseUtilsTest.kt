@@ -12,7 +12,9 @@ class ApiResponseUtilsTest {
 
     @Test
     fun `server unavailable responses are treated as connectivity issues`() {
-        val unavailableStatuses = listOf(408, 502, 503, 504, 520, 521, 522, 523, 524)
+        // 500 = database down (backend up), 502/503/504 = backend container down behind a
+        // live proxy — all are "server can't sync right now", treated the same as offline.
+        val unavailableStatuses = listOf(408, 500, 501, 502, 503, 504, 520, 521, 522, 523, 524)
 
         unavailableStatuses.forEach { statusCode ->
             assertTrue(
@@ -28,12 +30,13 @@ class ApiResponseUtilsTest {
     }
 
     @Test
-    fun `generic server errors are not treated as connectivity issues`() {
+    fun `client validation errors are not treated as connectivity issues`() {
+        // 4xx is a real client-side problem (bad request / validation), not an outage.
         assertFalse(
             isLikelyConnectivityIssue(
                 ApiCallException(
-                    statusCode = 500,
-                    message = "Internal Server Error",
+                    statusCode = 422,
+                    message = "Unprocessable",
                 ),
             ),
         )
