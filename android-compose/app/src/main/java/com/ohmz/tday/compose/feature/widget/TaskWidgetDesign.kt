@@ -449,9 +449,30 @@ private fun TaskWidgetList(
                 openAction = openAction,
             )
             if (index < rows.lastIndex) {
-                Spacer(modifier = GlanceModifier.height(metrics.rowSpacing))
+                TaskWidgetRowDivider(gap = metrics.rowSpacing)
             }
         }
+    }
+}
+
+// ColorProvider(resourceId) is Glance's documented day/night color API; only lint-restricted.
+@android.annotation.SuppressLint("RestrictedApi")
+@Composable
+private fun TaskWidgetRowDivider(gap: Dp) {
+    // Native Notes-widget-style separator: a full-width hairline centred in the SAME
+    // inter-row gap that used to be an empty Spacer, so it adds no height and the visible
+    // row count is unchanged (still ~3 medium / ~9 large). Each row's own 3dp vertical
+    // padding gives the line its breathing room, so a tiny gap here is not cramped.
+    Box(
+        modifier = GlanceModifier.fillMaxWidth().height(gap),
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(
+            modifier = GlanceModifier
+                .fillMaxWidth()
+                .height(1.dp)
+                .background(ColorProvider(R.color.tday_widget_divider)),
+        ) {}
     }
 }
 
@@ -468,8 +489,7 @@ private fun TaskWidgetRow(
     Column(
         modifier = GlanceModifier
             .fillMaxWidth()
-            .clickable(openAction)
-            .padding(start = 2.dp, end = 2.dp),
+            .clickable(openAction),
     ) {
         Row(
             modifier = GlanceModifier
@@ -591,7 +611,7 @@ internal fun taskWidgetShowsTrailingText(layout: TaskWidgetLayout): Boolean {
 private fun taskWidgetMetrics(layout: TaskWidgetLayout): TaskWidgetMetrics {
     return when (layout) {
         TaskWidgetLayout.COMPACT -> TaskWidgetMetrics(
-            horizontalPadding = 13.dp,
+            horizontalPadding = 12.dp,
             topPadding = 5.dp,
             bottomPadding = 6.dp,
             headerHeight = 38.dp,
@@ -606,7 +626,7 @@ private fun taskWidgetMetrics(layout: TaskWidgetLayout): TaskWidgetMetrics {
         )
 
         TaskWidgetLayout.WIDE -> TaskWidgetMetrics(
-            horizontalPadding = 14.dp,
+            horizontalPadding = 12.dp,
             topPadding = 6.dp,
             bottomPadding = 7.dp,
             headerHeight = 42.dp,
@@ -621,7 +641,7 @@ private fun taskWidgetMetrics(layout: TaskWidgetLayout): TaskWidgetMetrics {
         )
 
         TaskWidgetLayout.MEDIUM -> TaskWidgetMetrics(
-            horizontalPadding = 14.dp,
+            horizontalPadding = 12.dp,
             topPadding = 6.dp,
             bottomPadding = 7.dp,
             headerHeight = 42.dp,
@@ -636,7 +656,7 @@ private fun taskWidgetMetrics(layout: TaskWidgetLayout): TaskWidgetMetrics {
         )
 
         TaskWidgetLayout.TALL -> TaskWidgetMetrics(
-            horizontalPadding = 14.dp,
+            horizontalPadding = 12.dp,
             topPadding = 8.dp,
             bottomPadding = 9.dp,
             headerHeight = 45.dp,

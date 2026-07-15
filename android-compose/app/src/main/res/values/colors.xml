@@ -25,6 +25,7 @@
     <color name="tday_widget_due_chip_background">#FFF1F4F9</color>
     <color name="tday_widget_on_surface">#FF1C2333</color>
     <color name="tday_widget_on_surface_variant">#FF5D677E</color>
+    <color name="tday_widget_divider">#1F1C2333</color>
     <color name="tday_widget_priority_high">#FFFF3B30</color>
     <color name="tday_widget_priority_medium">#FFFF9500</color>
     <color name="tday_widget_priority_low">#FF007AFF</color>
