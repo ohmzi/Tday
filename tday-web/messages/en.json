@@ -1160,6 +1160,15 @@
         "step0": "Open Settings ▸ Focus on iPhone and pick a Focus.",
         "step1": "Add a Focus Filter and choose T'Day, then pick your lists.",
         "step2": "Enable the Focus — Today and the widget now show only those lists."
+      },
+      "apple-watch": {
+        "title": "Apple Watch",
+        "summary": "Your Today tasks on the wrist, mirrored live from your iPhone.",
+        "keywords": "apple watch, watch, wrist, complication, watchos, today, glance, mirror",
+        "body": "Install T'Day on Apple Watch and today's tasks ride along on your wrist. The Watch mirrors the same Today list your iPhone builds — no separate login — and a complication on your watch face shows how many tasks are left so you can glance without opening the app. It updates whenever your iPhone syncs.",
+        "step0": "Open the Watch app on iPhone and install T'Day.",
+        "step1": "Add the T'Day complication to your watch face.",
+        "step2": "Glance at the count, or open the app for the full list."
       }
     }
   },

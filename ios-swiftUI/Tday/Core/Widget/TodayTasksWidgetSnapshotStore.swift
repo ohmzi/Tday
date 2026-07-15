@@ -151,6 +151,9 @@ enum TodayTasksWidgetSnapshotStore {
         #if canImport(WidgetKit)
         WidgetCenter.shared.reloadTimelines(ofKind: widgetKind)
         #endif
+
+        // Mirror the same Today snapshot to a paired Apple Watch (R6-4).
+        WatchSessionManager.shared.syncTodaySnapshot()
     }
 
     static func loadSnapshot() -> TodayTasksWidgetSnapshot? {

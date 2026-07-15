@@ -18,6 +18,7 @@ struct TdayApp: App {
         TdayFont.applyGlobalAppearances()
         SentryConfiguration.start()
         NotificationDeepLinkDelegate.shared.install()
+        WatchSessionManager.shared.activate()
     }
 
     var body: some Scene {

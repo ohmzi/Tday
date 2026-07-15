@@ -1151,6 +1151,41 @@
       "searchBody": "deja que un modo de concentracion de ios decida que listas se muestran en tu feed de hoy. t'day se integra con el modo de concentracion de ios. elige una concentracion como trabajo o personal, escoge que listas debe mostrar y, mientras esa concentracion este activa, tu feed de hoy y el widget de la pantalla de inicio ocultan discretamente todo lo demas. desactiva la concentracion y todas las tareas vuelven: no se elimina nada. abre ajustes ▸ concentracion en el iphone y elige una concentracion. anade un filtro de concentracion, elige t'day y luego selecciona tus listas. activa la concentracion: hoy y el widget ahora muestran solo esas listas."
     },
     {
+      "id": "apple-watch",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "alarm-clock",
+      "platforms": [
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.7.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Apple Watch",
+      "summary": "Tus tareas de Hoy en la muñeca, reflejadas en directo desde tu iPhone.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Instala T'Day en el Apple Watch y las tareas de hoy te acompañan en la muñeca. El Watch refleja la misma lista de Hoy que crea tu iPhone —sin inicio de sesión aparte— y una complicación en la esfera muestra cuántas tareas quedan para que le eches un vistazo sin abrir la app. Se actualiza cada vez que tu iPhone se sincroniza."
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "Abre la app Watch en el iPhone e instala T'Day.",
+            "Añade la complicación de T'Day a tu esfera.",
+            "Echa un vistazo al número o abre la app para ver la lista completa."
+          ]
+        }
+      ],
+      "searchTitle": "apple watch",
+      "searchKeywords": "apple watch, reloj, muneca, complicacion, watchos, hoy, vistazo, reflejar",
+      "searchBody": "tus tareas de hoy en la muneca, reflejadas en directo desde tu iphone. instala t'day en el apple watch y las tareas de hoy te acompanan en la muneca. el watch refleja la misma lista de hoy que crea tu iphone —sin inicio de sesion aparte— y una complicacion en la esfera muestra cuantas tareas quedan para que le eches un vistazo sin abrir la app. se actualiza cada vez que tu iphone se sincroniza. abre la app watch en el iphone e instala t'day. anade la complicacion de t'day a tu esfera. echa un vistazo al numero o abre la app para ver la lista completa."
+    },
+    {
       "id": "local-mode",
       "section": "MODES_AND_SYNC",
       "sectionOrder": 6,

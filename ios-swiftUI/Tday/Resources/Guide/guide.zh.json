@@ -1151,6 +1151,41 @@
       "searchBody": "让 ios 专注模式决定「今天」列表中显示哪些清单。 t'day 可接入 ios 专注模式。选择一个专注模式（如「工作」或「个人」），指定它应显示哪些清单；当该专注模式开启时，你的「今天」列表和主屏幕小组件会悄悄隐藏其余内容。关闭专注模式后，所有任务都会回来——不会删除任何内容。 在 iphone 上打开「设置」▸「专注模式」并选择一个专注模式。 添加一个专注过滤器并选择 t'day，然后挑选你的清单。 开启专注模式——「今天」和小组件现在只显示这些清单。"
     },
     {
+      "id": "apple-watch",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "alarm-clock",
+      "platforms": [
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.7.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Apple Watch",
+      "summary": "把「今天」的任务戴在手腕上，从 iPhone 实时镜像同步。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "在 Apple Watch 上安装 T'Day，今天的任务便随你戴在手腕上。手表会镜像 iPhone 生成的同一份「今天」列表——无需单独登录——表盘上的复杂功能会显示还剩多少任务，让你无需打开应用即可一瞥了然。每当 iPhone 同步时，它都会更新。"
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "在 iPhone 上打开 Watch 应用并安装 T'Day。",
+            "在表盘上添加 T'Day 复杂功能。",
+            "瞥一眼数量，或打开应用查看完整列表。"
+          ]
+        }
+      ],
+      "searchTitle": "apple watch",
+      "searchKeywords": "apple watch, 手表, 手腕, 复杂功能, watchos, 今天, 一瞥, 镜像",
+      "searchBody": "把「今天」的任务戴在手腕上，从 iphone 实时镜像同步。 在 apple watch 上安装 t'day，今天的任务便随你戴在手腕上。手表会镜像 iphone 生成的同一份「今天」列表——无需单独登录——表盘上的复杂功能会显示还剩多少任务，让你无需打开应用即可一瞥了然。每当 iphone 同步时，它都会更新。 在 iphone 上打开 watch 应用并安装 t'day。 在表盘上添加 t'day 复杂功能。 瞥一眼数量，或打开应用查看完整列表。"
+    },
+    {
       "id": "local-mode",
       "section": "MODES_AND_SYNC",
       "sectionOrder": 6,

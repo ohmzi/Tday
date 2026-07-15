@@ -1151,6 +1151,41 @@
       "searchBody": "ios の集中モードに、今日のフィードに表示するリストを決めてもらいましょう。 t'day は ios の集中モードと連携します。仕事やプライベートなどの集中モードを選び、表示するリストを指定すると、その集中モードがオンの間は今日のフィードとホーム画面ウィジェットがそれ以外を静かに隠します。集中モードをオフにすればすべてのタスクが戻ります——何も削除されません。 iphone で 設定 ▸ 集中モード を開き、集中モードを選びます。 集中モードフィルタを追加して t'day を選び、リストを指定します。 集中モードをオンにすると、今日とウィジェットにはそのリストだけが表示されます。"
     },
     {
+      "id": "apple-watch",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "alarm-clock",
+      "platforms": [
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.7.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Apple Watch",
+      "summary": "今日のタスクを手首に。iPhone からライブでミラーリングされます。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Apple Watch に T'Day をインストールすると、今日のタスクが手首でも確認できます。Watch は iPhone が作成する今日のリストをそのままミラーリングし（別途ログインは不要）、文字盤のコンプリケーションには残りのタスク数が表示されるので、アプリを開かなくてもひと目で確認できます。iPhone が同期するたびに更新されます。"
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "iPhone で Watch アプリを開き、T'Day をインストールします。",
+            "文字盤に T'Day のコンプリケーションを追加します。",
+            "件数をひと目で確認するか、アプリを開いて全リストを見ましょう。"
+          ]
+        }
+      ],
+      "searchTitle": "apple watch",
+      "searchKeywords": "apple watch, watch, 手首, コンプリケーション, watchos, 今日, ひと目, ミラーリング",
+      "searchBody": "今日のタスクを手首に。iphone からライブでミラーリングされます。 apple watch に t'day をインストールすると、今日のタスクが手首でも確認できます。watch は iphone が作成する今日のリストをそのままミラーリングし（別途ログインは不要）、文字盤のコンプリケーションには残りのタスク数が表示されるので、アプリを開かなくてもひと目で確認できます。iphone が同期するたびに更新されます。 iphone で watch アプリを開き、t'day をインストールします。 文字盤に t'day のコンプリケーションを追加します。 件数をひと目で確認するか、アプリを開いて全リストを見ましょう。"
+    },
+    {
       "id": "local-mode",
       "section": "MODES_AND_SYNC",
       "sectionOrder": 6,

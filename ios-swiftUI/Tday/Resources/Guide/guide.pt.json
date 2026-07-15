@@ -1151,6 +1151,41 @@
       "searchBody": "deixe um foco do ios decidir que listas aparecem no seu feed de hoje. o t'day integra-se com o foco do ios. escolha um foco como trabalho ou pessoal, selecione que listas ele deve mostrar e, enquanto esse foco estiver ativo, o seu feed de hoje e o widget do ecra principal ocultam discretamente tudo o resto. desative o foco e todas as tarefas voltam — nada e eliminado. abra definicoes ▸ foco no iphone e escolha um foco. adicione um filtro de foco e escolha o t'day, depois selecione as suas listas. ative o foco — hoje e o widget mostram agora apenas essas listas."
     },
     {
+      "id": "apple-watch",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "alarm-clock",
+      "platforms": [
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.7.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Apple Watch",
+      "summary": "As suas tarefas de Hoje no pulso, espelhadas em direto a partir do seu iPhone.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Instale o T'Day no Apple Watch e as tarefas de hoje seguem consigo no pulso. O Watch espelha a mesma lista de Hoje que o seu iPhone cria — sem início de sessão separado — e uma complicação no mostrador indica quantas tarefas faltam, para que dê uma vista de olhos sem abrir a app. Atualiza-se sempre que o seu iPhone sincroniza."
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "Abra a app Watch no iPhone e instale o T'Day.",
+            "Adicione a complicação do T'Day ao seu mostrador.",
+            "Dê uma vista de olhos ao número, ou abra a app para ver a lista completa."
+          ]
+        }
+      ],
+      "searchTitle": "apple watch",
+      "searchKeywords": "apple watch, relogio, pulso, complicacao, watchos, hoje, relance, espelhar",
+      "searchBody": "as suas tarefas de hoje no pulso, espelhadas em direto a partir do seu iphone. instale o t'day no apple watch e as tarefas de hoje seguem consigo no pulso. o watch espelha a mesma lista de hoje que o seu iphone cria — sem inicio de sessao separado — e uma complicacao no mostrador indica quantas tarefas faltam, para que de uma vista de olhos sem abrir a app. atualiza-se sempre que o seu iphone sincroniza. abra a app watch no iphone e instale o t'day. adicione a complicacao do t'day ao seu mostrador. de uma vista de olhos ao numero, ou abra a app para ver a lista completa."
+    },
+    {
       "id": "local-mode",
       "section": "MODES_AND_SYNC",
       "sectionOrder": 6,

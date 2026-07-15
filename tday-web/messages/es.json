@@ -1160,6 +1160,15 @@
         "step0": "Abre Ajustes ▸ Concentración en el iPhone y elige una Concentración.",
         "step1": "Añade un Filtro de Concentración, elige T'Day y luego selecciona tus listas.",
         "step2": "Activa la Concentración: Hoy y el widget ahora muestran solo esas listas."
+      },
+      "apple-watch": {
+        "title": "Apple Watch",
+        "summary": "Tus tareas de Hoy en la muñeca, reflejadas en directo desde tu iPhone.",
+        "keywords": "apple watch, reloj, muñeca, complicación, watchos, hoy, vistazo, reflejar",
+        "body": "Instala T'Day en el Apple Watch y las tareas de hoy te acompañan en la muñeca. El Watch refleja la misma lista de Hoy que crea tu iPhone —sin inicio de sesión aparte— y una complicación en la esfera muestra cuántas tareas quedan para que le eches un vistazo sin abrir la app. Se actualiza cada vez que tu iPhone se sincroniza.",
+        "step0": "Abre la app Watch en el iPhone e instala T'Day.",
+        "step1": "Añade la complicación de T'Day a tu esfera.",
+        "step2": "Echa un vistazo al número o abre la app para ver la lista completa."
       }
     }
   },

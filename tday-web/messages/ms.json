@@ -1160,6 +1160,15 @@
         "step0": "Buka Tetapan ▸ Fokus pada iPhone dan pilih satu Fokus.",
         "step1": "Tambah Penapis Fokus dan pilih T'Day, kemudian pilih senarai anda.",
         "step2": "Aktifkan Fokus — Hari Ini dan widget kini hanya menunjukkan senarai tersebut."
+      },
+      "apple-watch": {
+        "title": "Apple Watch",
+        "summary": "Tugasan Hari Ini anda di pergelangan tangan, dicerminkan secara langsung dari iPhone anda.",
+        "keywords": "apple watch, jam, pergelangan tangan, komplikasi, watchos, hari ini, pandang, cermin",
+        "body": "Pasang T'Day pada Apple Watch dan tugasan hari ini turut hadir di pergelangan tangan anda. Watch mencerminkan senarai Hari Ini yang sama seperti yang dibina iPhone anda — tanpa log masuk berasingan — dan komplikasi pada muka jam menunjukkan berapa banyak tugasan yang berbaki, jadi anda boleh memandangnya tanpa membuka apl. Ia dikemas kini setiap kali iPhone anda menyegerak.",
+        "step0": "Buka apl Watch pada iPhone dan pasang T'Day.",
+        "step1": "Tambah komplikasi T'Day pada muka jam anda.",
+        "step2": "Pandang jumlahnya, atau buka apl untuk senarai penuh."
       }
     }
   },
