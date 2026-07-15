@@ -397,6 +397,18 @@
     "weekInReview": {
       "title": "Week in Review",
       "dismiss": "Dismiss"
+    },
+    "brainDump": {
+      "title": "Brain dump",
+      "blurb": "Paste everything on your mind — T'Day splits it into tasks for you to review.",
+      "placeholder": "buy milk\ncall the dentist tomorrow 3pm\nwater plants every week",
+      "parse": "Split into tasks",
+      "parseFailed": "Couldn't parse that — try again",
+      "reviewHint": "Uncheck anything you don't want. Dated → scheduled, undated → Anytime.",
+      "empty": "Nothing to add.",
+      "back": "Back",
+      "add": "Add {{count}}",
+      "created": "Added {{count}} tasks"
     }
   },
   "sidebar": {
@@ -1117,6 +1129,15 @@
         "step0": "Open a floater list and turn on \"Reusable\" in its settings.",
         "step1": "Work through it, checking items off as usual.",
         "step2": "When you need it again, tap Reset to un-check everything."
+      },
+      "brain-dump": {
+        "title": "Brain dump",
+        "summary": "Empty your head into one box; T'Day sorts it into tasks.",
+        "keywords": "brain dump, capture, paste, split, tasks, review, gtd, offload",
+        "body": "When your head is full, open Brain dump (⌘K → Brain dump), paste everything — one thought per line, bullets, or \"and then\" — and T'Day splits it into candidate tasks. Dates you wrote become scheduled tasks; the rest become Anytime floaters. It parses on your own server; nothing is invented.",
+        "step0": "Open the command palette (⌘K) and pick Brain dump.",
+        "step1": "Paste your thoughts and tap Split into tasks.",
+        "step2": "Uncheck anything you don't want, then Add."
       }
     }
   },
@@ -1127,6 +1148,7 @@
     "actions": "Actions",
     "navigation": "Go to",
     "lists": "Lists",
-    "newTask": "New task"
+    "newTask": "New task",
+    "brainDump": "Brain dump"
   }
 }

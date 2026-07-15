@@ -36,6 +36,27 @@ data class TodoTitleNlpRequest(
 )
 
 @Serializable
+data class BrainDumpRequest(
+    val text: String,
+    val timeZone: String? = null,
+    val locale: String? = null,
+)
+
+/** One candidate task parsed from a brain-dump fragment. Dated → Todo, undated → Floater. */
+@Serializable
+data class BrainDumpCandidate(
+    val title: String,
+    val dueEpochMs: Long? = null,
+    val rrule: String? = null,
+    val priority: String? = null,
+)
+
+@Serializable
+data class BrainDumpResponse(
+    val candidates: List<BrainDumpCandidate>,
+)
+
+@Serializable
 data class TodoTitleNlpResponse(
     val cleanTitle: String,
     val matchedText: String? = null,

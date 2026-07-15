@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "currentVersion": "0.6.0",
+  "currentVersion": "0.7.0",
   "sections": [
     {
       "id": "GETTING_STARTED",
@@ -140,6 +140,38 @@
       ],
       "serverOnly": false,
       "sinceVersion": null
+    },
+    {
+      "id": "brain-dump",
+      "section": "CAPTURE_AND_DATES",
+      "icon": "wand-sparkles",
+      "platforms": [
+        "WEB"
+      ],
+      "titleKey": "guide.topics.brain-dump.title",
+      "summaryKey": "guide.topics.brain-dump.summary",
+      "keywordsKey": "guide.topics.brain-dump.keywords",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "keys": [
+            "guide.topics.brain-dump.body"
+          ]
+        },
+        {
+          "type": "STEPS",
+          "keys": [
+            "guide.topics.brain-dump.step0",
+            "guide.topics.brain-dump.step1",
+            "guide.topics.brain-dump.step2"
+          ]
+        }
+      ],
+      "badge": "PRO_TIP",
+      "deepLink": null,
+      "helpAnchors": [],
+      "serverOnly": false,
+      "sinceVersion": "0.7.0"
     },
     {
       "id": "calendar-views",

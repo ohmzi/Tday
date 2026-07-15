@@ -397,6 +397,18 @@
     "weekInReview": {
       "title": "Bilan de la semaine",
       "dismiss": "Ignorer"
+    },
+    "brainDump": {
+      "title": "Vide-cerveau",
+      "blurb": "Colle tout ce que tu as en tête — T'Day le découpe en tâches à vérifier.",
+      "placeholder": "acheter du lait\nappeler le dentiste demain 15h\narroser les plantes chaque semaine",
+      "parse": "Découper en tâches",
+      "parseFailed": "Analyse impossible — réessaie",
+      "reviewHint": "Décoche ce que tu ne veux pas. Daté → planifié, non daté → Anytime.",
+      "empty": "Rien à ajouter.",
+      "back": "Retour",
+      "add": "Ajouter {{count}}",
+      "created": "{{count}} tâches ajoutées"
     }
   },
   "sidebar": {
@@ -1117,6 +1129,15 @@
         "step0": "Ouvre une liste flottante et active « Réutilisable » dans ses réglages.",
         "step1": "Coche les éléments au fur et à mesure, comme d'habitude.",
         "step2": "Quand tu en as de nouveau besoin, touche Réinitialiser pour tout décocher."
+      },
+      "brain-dump": {
+        "title": "Vide-cerveau",
+        "summary": "Vide ta tête dans une zone ; T'Day la trie en tâches.",
+        "keywords": "vide-cerveau, capture, coller, découper, tâches, vérifier, gtd",
+        "body": "Quand ta tête est pleine, ouvre Vide-cerveau (⌘K → Vide-cerveau), colle tout — une idée par ligne, des puces ou « et ensuite » — et T'Day le découpe en tâches candidates. Les dates deviennent des tâches planifiées ; le reste, des flottants Anytime. L'analyse se fait sur ton serveur ; rien n'est inventé.",
+        "step0": "Ouvre la palette de commandes (⌘K) et choisis Vide-cerveau.",
+        "step1": "Colle tes idées et touche Découper en tâches.",
+        "step2": "Décoche ce que tu ne veux pas, puis Ajouter."
       }
     }
   },
@@ -1127,6 +1148,7 @@
     "actions": "Actions",
     "navigation": "Aller à",
     "lists": "Listes",
-    "newTask": "Nouvelle tâche"
+    "newTask": "Nouvelle tâche",
+    "brainDump": "Vide-cerveau"
   }
 }

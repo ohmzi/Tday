@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { List as ListIcon, Plus, Waves } from "lucide-react";
+import { Brain, List as ListIcon, Plus, Waves } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { nativeRoutes } from "@/components/app/nativeRouteConfig";
 import { useListMetaData } from "@/components/Sidebar/List/query/get-list-meta";
@@ -24,6 +24,7 @@ type PaletteEntry = {
 type CommandPaletteProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onOpenBrainDump?: () => void;
 };
 
 /**
@@ -31,7 +32,7 @@ type CommandPaletteProps = {
  * Entries reuse the nativeRoutes nav table (labels match the dock/nav sheet)
  * plus the cached list metadata, so it needs no extra fetches.
  */
-export default function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
+export default function CommandPalette({ open, onOpenChange, onOpenBrainDump }: CommandPaletteProps) {
   const { t } = useTranslation("palette");
   const router = useRouter();
   const { openCreateTask } = useCreateTask();
@@ -53,6 +54,17 @@ export default function CommandPalette({ open, onOpenChange }: CommandPalettePro
       run: () => {
         close();
         openCreateTask();
+      },
+    };
+    const brainDump: PaletteEntry = {
+      id: "action-brain-dump",
+      section: "actions",
+      label: t("brainDump"),
+      icon: Brain,
+      accentClass: "text-accent",
+      run: () => {
+        close();
+        onOpenBrainDump?.();
       },
     };
     const routes: PaletteEntry[] = nativeRoutes.map((route) => ({
@@ -90,8 +102,8 @@ export default function CommandPalette({ open, onOpenChange }: CommandPalettePro
         },
       }),
     );
-    return [newTask, ...routes, ...lists, ...floaterLists];
-  }, [t, onOpenChange, openCreateTask, router, listMetaData, floaterListMetaData]);
+    return [newTask, brainDump, ...routes, ...lists, ...floaterLists];
+  }, [t, onOpenChange, openCreateTask, onOpenBrainDump, router, listMetaData, floaterListMetaData]);
 
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();

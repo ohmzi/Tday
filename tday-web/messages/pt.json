@@ -397,6 +397,18 @@
     "weekInReview": {
       "title": "Resumo da semana",
       "dismiss": "Dispensar"
+    },
+    "brainDump": {
+      "title": "Despejo mental",
+      "blurb": "Cole tudo o que está na sua mente — o T'Day divide em tarefas para revisar.",
+      "placeholder": "comprar leite\nligar para o dentista amanhã 15h\nregar plantas toda semana",
+      "parse": "Dividir em tarefas",
+      "parseFailed": "Não foi possível analisar — tente de novo",
+      "reviewHint": "Desmarque o que não quiser. Com data → agendada, sem data → Anytime.",
+      "empty": "Nada a adicionar.",
+      "back": "Voltar",
+      "add": "Adicionar {{count}}",
+      "created": "{{count}} tarefas adicionadas"
     }
   },
   "sidebar": {
@@ -1117,6 +1129,15 @@
         "step0": "Abra uma lista flutuante e ative \"Reutilizável\" nas configurações.",
         "step1": "Vá marcando os itens como de costume.",
         "step2": "Quando precisar de novo, toque em Reiniciar para desmarcar tudo."
+      },
+      "brain-dump": {
+        "title": "Despejo mental",
+        "summary": "Esvazie a cabeça numa caixa; o T'Day organiza em tarefas.",
+        "keywords": "despejo mental, capturar, colar, dividir, tarefas, revisar, gtd",
+        "body": "Quando a cabeça está cheia, abra o Despejo mental (⌘K → Despejo mental), cole tudo — um pensamento por linha, marcadores ou \"e depois\" — e o T'Day divide em tarefas candidatas. As datas viram tarefas agendadas; o resto, flutuantes de Anytime. A análise ocorre no seu servidor; nada é inventado.",
+        "step0": "Abra a paleta de comandos (⌘K) e escolha Despejo mental.",
+        "step1": "Cole seus pensamentos e toque em Dividir em tarefas.",
+        "step2": "Desmarque o que não quiser e toque em Adicionar."
       }
     }
   },
@@ -1127,6 +1148,7 @@
     "actions": "Ações",
     "navigation": "Ir para",
     "lists": "Listas",
-    "newTask": "Nova tarefa"
+    "newTask": "Nova tarefa",
+    "brainDump": "Despejo mental"
   }
 }

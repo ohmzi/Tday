@@ -10,6 +10,7 @@ object GuideTopicIds {
     const val ROOT_FEEDS = "root-feeds"
     const val CREATE_TASK = "create-task"
     const val NLP_DATE_SYNTAX = "nlp-date-syntax"
+    const val BRAIN_DUMP = "brain-dump"
     const val CALENDAR_VIEWS = "calendar-views"
     const val PRIORITIES = "priorities"
     const val PIN_TASK = "pin-task"
