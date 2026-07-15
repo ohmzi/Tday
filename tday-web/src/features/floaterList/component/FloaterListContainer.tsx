@@ -1,5 +1,7 @@
 import { useMemo, useState } from "react";
-import { Pencil, Search, Users, X } from "lucide-react";
+import { Pencil, RotateCcw, Search, Users, X } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { useResetFloaterList } from "@/features/floaterList/query/reset-floater-list";
 import { useTranslation } from "react-i18next";
 import ManageMembersSheet from "@/features/list/component/ManageMembersSheet";
 import NativePageTitle from "@/components/app/NativePageTitle";
@@ -18,6 +20,8 @@ import FloaterListDot from "./FloaterListDot";
 
 export default function FloaterListContainer({ id }: { id: string }) {
   const { t: appDict } = useTranslation("app");
+  const { toast } = useToast();
+  const resetList = useResetFloaterList();
   const { floaterListMetaData } = useFloaterListMetaData();
   const { floaterList, floaterListTodos, floaterListLoading } = useFloaterList({ id });
   const [searchQuery, setSearchQuery] = useState("");
@@ -87,30 +91,50 @@ export default function FloaterListContainer({ id }: { id: string }) {
             </p>
           ) : null}
         </div>
-        {editableList ? (
-          // One entry point per role: owners get the edit sheet (which hosts
-          // the Sharing section); members go straight to the members sheet.
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="mt-4 h-12 w-12 shrink-0 rounded-full border border-white/70 bg-card/90 text-foreground shadow-[0_12px_28px_-22px_hsl(var(--shadow)/0.55)] hover:bg-card dark:border-white/10"
-            onClick={() =>
-              myRole === "OWNER" ? setEditListOpen(true) : setMembersOpen(true)
-            }
-            aria-label={
-              myRole === "OWNER"
-                ? `${appDict("editFloaterList")} ${listName}`
-                : appDict("members")
-            }
-          >
-            {myRole === "OWNER" ? (
-              <Pencil className="h-5 w-5" />
-            ) : (
-              <Users className="h-5 w-5" />
-            )}
-          </Button>
-        ) : null}
+        <div className="mt-4 flex shrink-0 items-center gap-2">
+          {listMeta?.reusable && !isViewer ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              disabled={resetList.isPending}
+              className="h-12 w-12 shrink-0 rounded-full border border-white/70 bg-card/90 text-foreground shadow-[0_12px_28px_-22px_hsl(var(--shadow)/0.55)] hover:bg-card dark:border-white/10"
+              onClick={() => {
+                resetList.mutate(
+                  { id },
+                  { onSuccess: () => toast({ description: appDict("floaterListReset") }) },
+                );
+              }}
+              aria-label={appDict("resetFloaterList")}
+            >
+              <RotateCcw className="h-5 w-5" />
+            </Button>
+          ) : null}
+          {editableList ? (
+            // One entry point per role: owners get the edit sheet (which hosts
+            // the Sharing section); members go straight to the members sheet.
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-12 w-12 shrink-0 rounded-full border border-white/70 bg-card/90 text-foreground shadow-[0_12px_28px_-22px_hsl(var(--shadow)/0.55)] hover:bg-card dark:border-white/10"
+              onClick={() =>
+                myRole === "OWNER" ? setEditListOpen(true) : setMembersOpen(true)
+              }
+              aria-label={
+                myRole === "OWNER"
+                  ? `${appDict("editFloaterList")} ${listName}`
+                  : appDict("members")
+              }
+            >
+              {myRole === "OWNER" ? (
+                <Pencil className="h-5 w-5" />
+              ) : (
+                <Users className="h-5 w-5" />
+              )}
+            </Button>
+          ) : null}
+        </div>
       </div>
 
       {floaterListLoading ? (

@@ -368,7 +368,11 @@
     "sweepSkip": "Passer",
     "sweepAllToToday": "Tout balayer vers aujourd'hui",
     "sweptToast": "{{count}} tâches balayées",
-    "sweepDone": "Tout est à jour"
+    "sweepDone": "Tout est à jour",
+    "reusableList": "Liste réutilisable",
+    "reusableListHint": "Affiche Réinitialiser pour tout décocher et refaire",
+    "resetFloaterList": "Réinitialiser la liste",
+    "floaterListReset": "Liste réinitialisée — tout décoché"
   },
   "today": {
     "saveInstance": "Enregistrer l'instance",
@@ -1104,6 +1108,15 @@
         "keywords": "repos, flottant, anytime, estomper, vieillir, dormant, vieux, calme",
         "body": "Les tâches Anytime que tu n'as pas touchées depuis un mois s'estompent doucement, et après trois mois elles se regroupent dans un calme groupe « Au repos » en bas. Rien n'est supprimé : elles cessent juste de réclamer l'attention.",
         "tip": "C'est un simple indice visuel ; un toucher réveille un flottant."
+      },
+      "reusable-lists": {
+        "title": "Listes réutilisables",
+        "summary": "Réinitialise une liste pour la refaire : bagages, corvées, courses.",
+        "keywords": "réutilisable, réinitialiser, liste, flottant, répéter, modèle",
+        "body": "Marque une liste Anytime comme réutilisable et un bouton Réinitialiser apparaît. Un toucher décoche tout pour refaire la même liste, sans la recréer.",
+        "step0": "Ouvre une liste flottante et active « Réutilisable » dans ses réglages.",
+        "step1": "Coche les éléments au fur et à mesure, comme d'habitude.",
+        "step2": "Quand tu en as de nouveau besoin, touche Réinitialiser pour tout décocher."
       }
     }
   },

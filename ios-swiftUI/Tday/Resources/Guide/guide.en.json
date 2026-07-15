@@ -558,6 +558,43 @@
       "searchBody": "group your anytime tasks into their own lists. organize floaters into separate lists — groceries, packing, ideas — each with its own name and color, and its own completed history."
     },
     {
+      "id": "reusable-lists",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "refresh-cw",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.6.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Reusable lists",
+      "summary": "Reset a checklist to run it again — packing, chores, groceries.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Mark an Anytime list as reusable and a Reset appears. One tap un-completes every item so you can run the same checklist again — no need to recreate it."
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "Open a floater list and turn on \"Reusable\" in its settings.",
+            "Work through it, checking items off as usual.",
+            "When you need it again, tap Reset to un-check everything."
+          ]
+        }
+      ],
+      "searchTitle": "reusable lists",
+      "searchKeywords": "reusable, reset, checklist, floater, list, repeat, template, run again",
+      "searchBody": "reset a checklist to run it again — packing, chores, groceries. mark an anytime list as reusable and a reset appears. one tap un-completes every item so you can run the same checklist again — no need to recreate it. open a floater list and turn on \"reusable\" in its settings. work through it, checking items off as usual. when you need it again, tap reset to un-check everything."
+    },
+    {
       "id": "scheduled-lists",
       "section": "ORGANIZING",
       "sectionOrder": 3,

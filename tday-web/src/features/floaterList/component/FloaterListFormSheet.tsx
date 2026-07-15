@@ -31,6 +31,7 @@ type EditableFloaterList = {
   name: string;
   color?: ListColor;
   iconKey?: string | null;
+  reusable?: boolean;
 };
 
 type FloaterListFormSheetProps = {
@@ -55,16 +56,18 @@ async function patchFloaterList({
   name,
   color,
   iconKey,
+  reusable,
 }: {
   id: string;
   name: string;
   color: ListColor;
   iconKey: string;
+  reusable: boolean;
 }) {
   await api.PATCH({
     url: "/api/floaterList",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ id, name, color, iconKey }),
+    body: JSON.stringify({ id, name, color, iconKey, reusable }),
   });
 }
 
@@ -100,6 +103,7 @@ export default function FloaterListFormSheet({
   const [iconKey, setIconKey] = useState(() =>
     normalizeListIconKey(list?.iconKey ?? initialIconKey),
   );
+  const [reusable, setReusable] = useState(list?.reusable ?? false);
   const [error, setError] = useState<string | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
@@ -108,6 +112,7 @@ export default function FloaterListFormSheet({
     setName(list?.name ?? initialName);
     setColor(list?.color ?? initialColor);
     setIconKey(normalizeListIconKey(list?.iconKey ?? initialIconKey));
+    setReusable(list?.reusable ?? false);
     setError(null);
     setConfirmingDelete(false);
   }, [initialColor, initialIconKey, initialName, list, open]);
@@ -205,17 +210,18 @@ export default function FloaterListFormSheet({
       if (
         normalizedName === normalizeListName(list.name) &&
         color === (list.color ?? "TEAL") &&
-        iconKey === currentIconKey
+        iconKey === currentIconKey &&
+        reusable === (list.reusable ?? false)
       ) {
         onOpenChange(false);
         return;
       }
-      updateListMutation.mutate({ id: list.id, name: normalizedName, color, iconKey });
+      updateListMutation.mutate({ id: list.id, name: normalizedName, color, iconKey, reusable });
       return;
     }
 
     try {
-      const created = await createMutateAsync({ name: normalizedName, color, iconKey });
+      const created = await createMutateAsync({ name: normalizedName, color, iconKey, reusable });
       onSaved?.(created);
       onOpenChange(false);
       setName("");
@@ -315,6 +321,38 @@ export default function FloaterListFormSheet({
               );
             })}
           </div>
+        </SheetCard>
+
+        <SheetCard className="p-[18px]">
+          <button
+            type="button"
+            role="switch"
+            aria-checked={reusable}
+            onClick={() => { hapticTick(); setReusable((v) => !v); }}
+            className="flex w-full items-center justify-between gap-3 text-left"
+          >
+            <span className="min-w-0">
+              <span className="block text-[1.05rem] font-black text-foreground">
+                {appDict("reusableList")}
+              </span>
+              <span className="mt-0.5 block text-xs font-extrabold text-muted-foreground">
+                {appDict("reusableListHint")}
+              </span>
+            </span>
+            <span
+              className={cn(
+                "relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors",
+                reusable ? "bg-accent" : "bg-muted-foreground/30",
+              )}
+            >
+              <span
+                className={cn(
+                  "inline-block h-5 w-5 rounded-full bg-white shadow transition-transform",
+                  reusable ? "translate-x-[22px]" : "translate-x-[2px]",
+                )}
+              />
+            </span>
+          </button>
         </SheetCard>
 
         {error ? (

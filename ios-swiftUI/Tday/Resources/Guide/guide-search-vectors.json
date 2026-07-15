@@ -3,6 +3,7 @@
     "repeat": [
       "recurrence-presets",
       "repeat-suggestions",
+      "reusable-lists",
       "nlp-date-syntax"
     ],
     "swipe": [
@@ -43,6 +44,7 @@
       "resting-floaters",
       "floater-lists",
       "promote-and-float",
+      "reusable-lists",
       "root-feeds",
       "create-task",
       "morning-sweep",

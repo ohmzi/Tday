@@ -423,6 +423,16 @@ class SyncManager @Inject constructor(
                         true
                     }
 
+                    MutationKind.RESET_FLOATER_LIST -> {
+                        val targetId = resolvedTargetId ?: return@runCatching false
+                        if (targetId.startsWith(LOCAL_FLOATER_LIST_PREFIX)) return@runCatching false
+                        requireApiBody(
+                            api.resetFloaterList(targetId),
+                            "Could not reset floater list",
+                        )
+                        true
+                    }
+
                     MutationKind.DELETE_FLOATER_LIST -> {
                         val targetId = resolvedTargetId ?: return@runCatching false
                         if (targetId.startsWith(LOCAL_FLOATER_LIST_PREFIX)) return@runCatching true

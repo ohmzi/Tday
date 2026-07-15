@@ -558,6 +558,43 @@
       "searchBody": "agrupa tus tareas de en cualquier momento en sus propias listas. organiza los flotantes en listas separadas —compra, equipaje, ideas—, cada una con su propio nombre y color, y su propio historial de completadas."
     },
     {
+      "id": "reusable-lists",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "refresh-cw",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.6.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Listas reutilizables",
+      "summary": "Reinicia una lista para volver a usarla: maletas, tareas, compras.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Marca una lista de Anytime como reutilizable y aparece Reiniciar. Un toque desmarca todos los elementos para volver a usar la misma lista, sin recrearla."
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "Abre una lista flotante y activa \"Reutilizable\" en sus ajustes.",
+            "Ve marcando los elementos como siempre.",
+            "Cuando la necesites otra vez, toca Reiniciar para desmarcar todo."
+          ]
+        }
+      ],
+      "searchTitle": "listas reutilizables",
+      "searchKeywords": "reutilizable, reiniciar, lista, flotante, repetir, plantilla",
+      "searchBody": "reinicia una lista para volver a usarla: maletas, tareas, compras. marca una lista de anytime como reutilizable y aparece reiniciar. un toque desmarca todos los elementos para volver a usar la misma lista, sin recrearla. abre una lista flotante y activa \"reutilizable\" en sus ajustes. ve marcando los elementos como siempre. cuando la necesites otra vez, toca reiniciar para desmarcar todo."
+    },
+    {
       "id": "scheduled-lists",
       "section": "ORGANIZING",
       "sectionOrder": 3,

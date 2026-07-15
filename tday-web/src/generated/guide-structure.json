@@ -430,6 +430,40 @@
       "sinceVersion": null
     },
     {
+      "id": "reusable-lists",
+      "section": "ORGANIZING",
+      "icon": "refresh-cw",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "titleKey": "guide.topics.reusable-lists.title",
+      "summaryKey": "guide.topics.reusable-lists.summary",
+      "keywordsKey": "guide.topics.reusable-lists.keywords",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "keys": [
+            "guide.topics.reusable-lists.body"
+          ]
+        },
+        {
+          "type": "STEPS",
+          "keys": [
+            "guide.topics.reusable-lists.step0",
+            "guide.topics.reusable-lists.step1",
+            "guide.topics.reusable-lists.step2"
+          ]
+        }
+      ],
+      "badge": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "serverOnly": false,
+      "sinceVersion": "0.6.0"
+    },
+    {
       "id": "scheduled-lists",
       "section": "ORGANIZING",
       "icon": "list-todo",

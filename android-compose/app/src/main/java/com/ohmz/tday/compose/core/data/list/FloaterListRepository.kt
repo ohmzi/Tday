@@ -240,6 +240,51 @@ class FloaterListRepository @Inject constructor(
         }
     }
 
+    /** Reset a reusable list: locally un-complete all its floaters, then queue the reset. */
+    suspend fun resetFloaterList(listId: String) {
+        if (listId.isBlank()) return
+        val timestampMs = System.currentTimeMillis()
+        val mutationId = UUID.randomUUID().toString()
+        val pendingMutation = PendingMutationRecord(
+            mutationId = mutationId,
+            kind = MutationKind.RESET_FLOATER_LIST,
+            targetId = listId,
+            timestampEpochMs = timestampMs,
+        )
+
+        cacheManager.updateOfflineState { state ->
+            val updatedFloaters = state.floaters.map {
+                if (it.listId == listId && it.completed) {
+                    it.copy(completed = false, updatedAtEpochMs = timestampMs)
+                } else {
+                    it
+                }
+            }
+            state.copy(
+                floaters = updatedFloaters,
+                completedFloaters = state.completedFloaters.filterNot { it.listId == listId },
+                pendingMutations = state.pendingMutations
+                    .filterNot { it.kind == MutationKind.RESET_FLOATER_LIST && it.targetId == listId } + pendingMutation,
+            )
+        }
+
+        if (syncManager.isLocalMode() || listId.startsWith(LOCAL_FLOATER_LIST_PREFIX)) return
+
+        val immediateError = runCatching {
+            requireApiBody(api.resetFloaterList(listId), "Could not reset floater list")
+        }.exceptionOrNull()
+
+        if (immediateError == null) {
+            cacheManager.updateOfflineState { state ->
+                state.copy(pendingMutations = state.pendingMutations.filterNot { it.mutationId == mutationId })
+            }
+        } else if (isLikelyUnrecoverableMutationError(immediateError, pendingMutation)) {
+            throw immediateError
+        } else {
+            Log.w(LOG_TAG, "resetFloaterList deferred reason=${immediateError.javaClass.simpleName}")
+        }
+    }
+
     /**
      * Stage step of the delayed-commit floater-list delete: prunes the list, its
      * floaters and its completed floaters from the local cache exactly like the

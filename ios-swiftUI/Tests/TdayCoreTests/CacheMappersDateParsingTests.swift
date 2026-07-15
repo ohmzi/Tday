@@ -167,3 +167,22 @@ final class QuietHoursMathTests: XCTestCase {
         XCTAssertEqual(QuietHoursMath.minutesUntilWindowEnd(15 * 60, 13 * 60, 14 * 60), 0)
     }
 }
+
+final class FloaterListReusableContractTests: XCTestCase {
+    func testDecodesReusableField() throws {
+        let json = """
+        {"id":"l1","name":"Packing","color":null,"todoCount":3,"iconKey":null,"userID":"u1","updatedAt":null,"createdAt":null,"reusable":true}
+        """.data(using: .utf8)!
+        let dto = try JSONDecoder().decode(FloaterListDTO.self, from: json)
+        XCTAssertEqual(dto.reusable, true)
+        XCTAssertEqual(dto.name, "Packing")
+    }
+
+    func testReusableDefaultsNilWhenAbsent() throws {
+        let json = """
+        {"id":"l2","name":"Old list","color":null,"todoCount":0,"iconKey":null,"userID":"u1","updatedAt":null,"createdAt":null}
+        """.data(using: .utf8)!
+        let dto = try JSONDecoder().decode(FloaterListDTO.self, from: json)
+        XCTAssertNil(dto.reusable)
+    }
+}

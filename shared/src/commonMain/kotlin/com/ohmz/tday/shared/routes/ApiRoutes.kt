@@ -50,6 +50,7 @@ object ApiRoutes {
 
         fun members(listId: String) = "$Base/$listId/members"
         fun leave(listId: String) = "$Base/$listId/leave"
+        fun reset(listId: String) = "$Base/$listId/reset"
     }
 
     object Completed {

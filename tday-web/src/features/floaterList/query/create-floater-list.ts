@@ -14,12 +14,14 @@ export const useCreateFloaterList = () => {
         name,
         color,
         iconKey,
+        reusable,
       }: {
         name: string;
         color?: ListColor;
         iconKey?: string;
+        reusable?: boolean;
       }): Promise<FloaterListItemMetaType> => {
-        const parsedObj = listCreateSchema.safeParse({ name, color, iconKey });
+        const parsedObj = listCreateSchema.safeParse({ name, color, iconKey, reusable });
         if (!parsedObj.success) {
           throw new Error(parsedObj.error.errors[0].message);
         }

@@ -368,7 +368,11 @@
     "sweepSkip": "Pular",
     "sweepAllToToday": "Varrer tudo para hoje",
     "sweptToast": "{{count}} tarefas varridas",
-    "sweepDone": "Tudo em dia"
+    "sweepDone": "Tudo em dia",
+    "reusableList": "Lista reutilizável",
+    "reusableListHint": "Mostra Reiniciar para desmarcar tudo e usar de novo",
+    "resetFloaterList": "Reiniciar lista",
+    "floaterListReset": "Lista reiniciada — tudo desmarcado"
   },
   "today": {
     "saveInstance": "Guardar instância",
@@ -1104,6 +1108,15 @@
         "keywords": "repouso, flutuante, anytime, desbotar, envelhecer, inativo, antigo, calma",
         "body": "Tarefas Anytime que você não toca há um mês desbotam suavemente e, após três meses, se juntam num calmo grupo \"Em repouso\" no fim. Nada é apagado: elas só deixam de pedir atenção.",
         "tip": "É apenas uma dica visual; um toque acorda um flutuante na hora."
+      },
+      "reusable-lists": {
+        "title": "Listas reutilizáveis",
+        "summary": "Reinicie uma lista para usá-la de novo: mala, tarefas, compras.",
+        "keywords": "reutilizável, reiniciar, lista, flutuante, repetir, modelo",
+        "body": "Marque uma lista Anytime como reutilizável e um Reiniciar aparece. Um toque desmarca todos os itens para refazer a mesma lista, sem recriá-la.",
+        "step0": "Abra uma lista flutuante e ative \"Reutilizável\" nas configurações.",
+        "step1": "Vá marcando os itens como de costume.",
+        "step2": "Quando precisar de novo, toque em Reiniciar para desmarcar tudo."
       }
     }
   },

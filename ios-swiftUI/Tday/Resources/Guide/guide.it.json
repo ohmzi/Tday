@@ -558,6 +558,43 @@
       "searchBody": "raggruppa le tue attivita in qualsiasi momento in elenchi propri. organizza i floater in elenchi separati — spesa, valigia, idee — ognuno con il proprio nome e colore, e la propria cronologia dei completamenti."
     },
     {
+      "id": "reusable-lists",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "refresh-cw",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.6.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Liste riutilizzabili",
+      "summary": "Reimposta una lista per rifarla: valigia, faccende, spesa.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Segna una lista Anytime come riutilizzabile e appare Reimposta. Un tocco deseleziona tutto per rifare la stessa lista, senza ricrearla."
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "Apri una lista floater e attiva \"Riutilizzabile\" nelle sue impostazioni.",
+            "Procedi spuntando gli elementi come al solito.",
+            "Quando ti serve di nuovo, tocca Reimposta per deselezionare tutto."
+          ]
+        }
+      ],
+      "searchTitle": "liste riutilizzabili",
+      "searchKeywords": "riutilizzabile, reimposta, lista, floater, ripeti, modello",
+      "searchBody": "reimposta una lista per rifarla: valigia, faccende, spesa. segna una lista anytime come riutilizzabile e appare reimposta. un tocco deseleziona tutto per rifare la stessa lista, senza ricrearla. apri una lista floater e attiva \"riutilizzabile\" nelle sue impostazioni. procedi spuntando gli elementi come al solito. quando ti serve di nuovo, tocca reimposta per deselezionare tutto."
+    },
+    {
       "id": "scheduled-lists",
       "section": "ORGANIZING",
       "sectionOrder": 3,

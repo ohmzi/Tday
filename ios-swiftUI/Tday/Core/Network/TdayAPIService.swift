@@ -453,6 +453,11 @@ final class TdayAPIService {
         try await request(path: "/api/floaterList", method: "DELETE", body: payload, responseType: DeleteFloaterListResponse.self)
     }
 
+    /// Reset a reusable floater list — un-completes all its floaters.
+    func resetFloaterList(id: String) async throws -> MessageResponse {
+        try await request(path: "/api/floaterList/\(id)/reset", method: "POST", responseType: MessageResponse.self)
+    }
+
     func deleteList(payload: DeleteListRequest) async throws -> DeleteListResponse {
         try await deleteListByBody(payload: payload)
     }

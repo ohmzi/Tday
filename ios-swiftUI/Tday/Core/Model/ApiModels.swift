@@ -409,6 +409,8 @@ struct FloaterListDTO: Codable, Equatable {
     let userID: String?
     let updatedAt: String?
     let createdAt: String?
+    /// A reusable list can be Reset (all floaters un-completed) to run again.
+    var reusable: Bool?
     // Sharing metadata; nil on responses from servers that predate sharing.
     var myRole: String?
     var isShared: Bool?

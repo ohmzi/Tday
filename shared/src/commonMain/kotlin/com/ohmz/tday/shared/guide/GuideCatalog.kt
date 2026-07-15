@@ -99,6 +99,11 @@ object GuideCatalog {
             setOf(WEB, ANDROID, IOS), body = listOf(para(GuideTopicIds.FLOATER_LISTS)),
         ),
         topic(
+            GuideTopicIds.REUSABLE_LISTS, GuideSectionId.ORGANIZING, "refresh-cw",
+            setOf(WEB, ANDROID, IOS), sinceVersion = "0.6.0",
+            body = listOf(para(GuideTopicIds.REUSABLE_LISTS), steps(GuideTopicIds.REUSABLE_LISTS, 3)),
+        ),
+        topic(
             GuideTopicIds.SCHEDULED_LISTS, GuideSectionId.ORGANIZING, "list-todo",
             setOf(WEB, ANDROID, IOS), body = listOf(para(GuideTopicIds.SCHEDULED_LISTS)),
         ),

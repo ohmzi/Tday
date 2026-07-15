@@ -368,7 +368,11 @@
     "sweepSkip": "Salta",
     "sweepAllToToday": "Sposta tutto a oggi",
     "sweptToast": "{{count}} attività spostate",
-    "sweepDone": "Tutto in pari"
+    "sweepDone": "Tutto in pari",
+    "reusableList": "Lista riutilizzabile",
+    "reusableListHint": "Mostra Reimposta per deselezionare tutto e rifarla",
+    "resetFloaterList": "Reimposta lista",
+    "floaterListReset": "Lista reimpostata: tutto deselezionato"
   },
   "today": {
     "saveInstance": "Salva istanza",
@@ -1104,6 +1108,15 @@
         "keywords": "riposo, floater, anytime, sbiadire, invecchiare, inattivo, vecchio, calma",
         "body": "Le attività Anytime che non tocchi da un mese sbiadiscono dolcemente e dopo tre mesi si raccolgono in un tranquillo gruppo \"A riposo\" in fondo. Nulla viene eliminato: smettono solo di chiedere attenzione.",
         "tip": "È solo un segnale visivo; un tocco risveglia subito un floater."
+      },
+      "reusable-lists": {
+        "title": "Liste riutilizzabili",
+        "summary": "Reimposta una lista per rifarla: valigia, faccende, spesa.",
+        "keywords": "riutilizzabile, reimposta, lista, floater, ripeti, modello",
+        "body": "Segna una lista Anytime come riutilizzabile e appare Reimposta. Un tocco deseleziona tutto per rifare la stessa lista, senza ricrearla.",
+        "step0": "Apri una lista floater e attiva \"Riutilizzabile\" nelle sue impostazioni.",
+        "step1": "Procedi spuntando gli elementi come al solito.",
+        "step2": "Quando ti serve di nuovo, tocca Reimposta per deselezionare tutto."
       }
     }
   },

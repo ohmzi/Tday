@@ -259,6 +259,7 @@ enum MutationKind: String, Codable, CaseIterable {
     case createFloaterList = "CREATE_FLOATER_LIST"
     case updateFloaterList = "UPDATE_FLOATER_LIST"
     case deleteFloaterList = "DELETE_FLOATER_LIST"
+    case resetFloaterList = "RESET_FLOATER_LIST"
     case createTodo = "CREATE_TODO"
     case updateTodo = "UPDATE_TODO"
     case deleteTodo = "DELETE_TODO"

@@ -558,6 +558,43 @@
       "searchBody": "kumpulkan tugasan bila-bila anda ke dalam senarai tersendiri. susun floater ke dalam senarai berasingan — barang runcit, mengemas beg, idea — setiap satu dengan nama dan warna tersendiri, serta sejarah selesai tersendiri."
     },
     {
+      "id": "reusable-lists",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "refresh-cw",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.6.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Senarai boleh guna semula",
+      "summary": "Set semula senarai untuk guna lagi — mengemas, kerja rumah, barangan.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Tandai senarai Anytime sebagai boleh guna semula dan butang Set Semula muncul. Satu ketik menyahtanda semua item supaya anda boleh guna senarai yang sama sekali lagi — tanpa mencipta semula."
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "Buka senarai floater dan hidupkan \"Boleh guna semula\" dalam tetapannya.",
+            "Teruskan menanda item seperti biasa.",
+            "Bila perlu lagi, ketik Set Semula untuk nyahtanda semua."
+          ]
+        }
+      ],
+      "searchTitle": "senarai boleh guna semula",
+      "searchKeywords": "boleh guna semula, set semula, senarai, floater, ulang, templat",
+      "searchBody": "set semula senarai untuk guna lagi — mengemas, kerja rumah, barangan. tandai senarai anytime sebagai boleh guna semula dan butang set semula muncul. satu ketik menyahtanda semua item supaya anda boleh guna senarai yang sama sekali lagi — tanpa mencipta semula. buka senarai floater dan hidupkan \"boleh guna semula\" dalam tetapannya. teruskan menanda item seperti biasa. bila perlu lagi, ketik set semula untuk nyahtanda semua."
+    },
+    {
       "id": "scheduled-lists",
       "section": "ORGANIZING",
       "sectionOrder": 3,
