@@ -38,9 +38,18 @@ struct BootstrapSessionUseCase {
         case .failure(let error):
             syncError = error
         }
-        return BootstrapSessionResult(
-            user: restored.user,
-            isOffline: syncError.map(isLikelyConnectivityIssue) == true
-        )
+        // Show the "can't reach server" notice whenever we're running degraded/offline.
+        // If we had to fall back to a cached session, the server already failed to hand us
+        // a fresh one this launch, so ANY subsequent sync failure means we're offline —
+        // including a 5xx or a reverse-proxy error/maintenance page that isn't a strict
+        // connectivity code. With a freshly fetched session, only a true connectivity error
+        // counts as offline (a healthy server that merely hit a transient sync error is not).
+        let isOffline: Bool
+        if let syncError {
+            isOffline = restored.usedCachedSession || isLikelyConnectivityIssue(syncError)
+        } else {
+            isOffline = false
+        }
+        return BootstrapSessionResult(user: restored.user, isOffline: isOffline)
     }
 }

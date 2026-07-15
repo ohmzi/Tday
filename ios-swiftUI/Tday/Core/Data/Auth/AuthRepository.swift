@@ -72,7 +72,14 @@ final class AuthRepository: AuthRepositoryServicing {
             cacheSessionUser(user)
             return RestoredSession(user: user, usedCachedSession: false)
         } catch {
-            guard isLikelyConnectivityIssue(error) else {
+            // The server didn't hand us a fresh session. Only a genuine 401 means the
+            // session was actually rejected — that's a real logout. ANY other failure
+            // (offline, timeout, 5xx, or a reverse-proxy error/maintenance page while the
+            // backend is down) means the server is unreachable or unhealthy, and we must
+            // NOT throw the user out: fall back to the last cached session and run offline.
+            // The online sync-recovery path (recoverSessionAndRetrySyncIfNeeded) re-validates
+            // and expires the session later if it's genuinely dead.
+            if isSessionAuthenticationIssue(error) {
                 return nil
             }
             if let cached = loadCachedSessionUser(), cached.id != nil {
