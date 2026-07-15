@@ -368,7 +368,11 @@
     "sweepSkip": "Überspringen",
     "sweepAllToToday": "Alles auf heute schieben",
     "sweptToast": "{{count}} Aufgaben verschoben",
-    "sweepDone": "Alles aufgeholt"
+    "sweepDone": "Alles aufgeholt",
+    "reusableList": "Wiederverwendbare Liste",
+    "reusableListHint": "Zeigt Zurücksetzen, um alles abzuwählen und erneut zu nutzen",
+    "resetFloaterList": "Liste zurücksetzen",
+    "floaterListReset": "Liste zurückgesetzt – alles abgewählt"
   },
   "today": {
     "saveInstance": "Instanz speichern",
@@ -1104,6 +1108,15 @@
         "keywords": "ruhen, floater, anytime, verblassen, altern, inaktiv, alt, ruhe",
         "body": "Anytime-Aufgaben, die du einen Monat nicht angefasst hast, verblassen sanft, und nach drei Monaten sammeln sie sich in einer ruhigen Gruppe „Ruhend“ unten. Nichts wird gelöscht – sie fordern nur keine Aufmerksamkeit mehr.",
         "tip": "Nur ein Anzeigehinweis; ein Tippen weckt einen Floater sofort."
+      },
+      "reusable-lists": {
+        "title": "Wiederverwendbare Listen",
+        "summary": "Setze eine Liste zurück, um sie erneut zu nutzen: Packen, Aufgaben, Einkauf.",
+        "keywords": "wiederverwendbar, zurücksetzen, liste, floater, wiederholen, vorlage",
+        "body": "Markiere eine Anytime-Liste als wiederverwendbar, und ein Zurücksetzen erscheint. Ein Tippen hebt alle Häkchen auf, sodass du dieselbe Liste erneut durchgehen kannst – ohne sie neu zu erstellen.",
+        "step0": "Öffne eine Floater-Liste und aktiviere „Wiederverwendbar“ in den Einstellungen.",
+        "step1": "Arbeite sie ab und hake Punkte wie gewohnt ab.",
+        "step2": "Wenn du sie wieder brauchst, tippe auf Zurücksetzen."
       }
     }
   },

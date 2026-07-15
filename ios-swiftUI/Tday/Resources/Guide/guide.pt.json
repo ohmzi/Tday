@@ -558,6 +558,43 @@
       "searchBody": "agrupe as suas tarefas de qualquer altura em listas proprias. organize os flutuantes em listas separadas — compras, mala, ideias — cada uma com o seu nome e cor, e o seu proprio historico de concluidas."
     },
     {
+      "id": "reusable-lists",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "refresh-cw",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.6.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Listas reutilizáveis",
+      "summary": "Reinicie uma lista para usá-la de novo: mala, tarefas, compras.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Marque uma lista Anytime como reutilizável e um Reiniciar aparece. Um toque desmarca todos os itens para refazer a mesma lista, sem recriá-la."
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "Abra uma lista flutuante e ative \"Reutilizável\" nas configurações.",
+            "Vá marcando os itens como de costume.",
+            "Quando precisar de novo, toque em Reiniciar para desmarcar tudo."
+          ]
+        }
+      ],
+      "searchTitle": "listas reutilizaveis",
+      "searchKeywords": "reutilizavel, reiniciar, lista, flutuante, repetir, modelo",
+      "searchBody": "reinicie uma lista para usa-la de novo: mala, tarefas, compras. marque uma lista anytime como reutilizavel e um reiniciar aparece. um toque desmarca todos os itens para refazer a mesma lista, sem recria-la. abra uma lista flutuante e ative \"reutilizavel\" nas configuracoes. va marcando os itens como de costume. quando precisar de novo, toque em reiniciar para desmarcar tudo."
+    },
+    {
       "id": "scheduled-lists",
       "section": "ORGANIZING",
       "sectionOrder": 3,

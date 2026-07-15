@@ -126,6 +126,27 @@ class OfflineSyncStateSerializationTest {
     }
 
     @Test
+    fun `reset floater list mutation round-trips`() {
+        val state = OfflineSyncState(
+            pendingMutations = listOf(
+                PendingMutationRecord(
+                    mutationId = "m-reset",
+                    kind = MutationKind.RESET_FLOATER_LIST,
+                    targetId = "floater-list-1",
+                    timestampEpochMs = 1700000002000L,
+                ),
+            ),
+        )
+
+        val encoded = json.encodeToString(OfflineSyncState.serializer(), state)
+        val decoded = json.decodeFromString(OfflineSyncState.serializer(), encoded)
+
+        assertEquals(state, decoded)
+        assertEquals(MutationKind.RESET_FLOATER_LIST, decoded.pendingMutations[0].kind)
+        assertEquals("floater-list-1", decoded.pendingMutations[0].targetId)
+    }
+
+    @Test
     fun `default field values are preserved when absent from JSON`() {
         val minimalJson = """{"lastSuccessfulSyncEpochMs":0}"""
         val decoded = json.decodeFromString(OfflineSyncState.serializer(), minimalJson)

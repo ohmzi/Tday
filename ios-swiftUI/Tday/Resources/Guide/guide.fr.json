@@ -558,6 +558,43 @@
       "searchBody": "regroupez vos taches a tout moment dans leurs propres listes. organisez les floaters en listes distinctes — courses, bagages, idees — chacune avec son propre nom, sa couleur et son propre historique de taches terminees."
     },
     {
+      "id": "reusable-lists",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "refresh-cw",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.6.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Listes réutilisables",
+      "summary": "Réinitialise une liste pour la refaire : bagages, corvées, courses.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Marque une liste Anytime comme réutilisable et un bouton Réinitialiser apparaît. Un toucher décoche tout pour refaire la même liste, sans la recréer."
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "Ouvre une liste flottante et active « Réutilisable » dans ses réglages.",
+            "Coche les éléments au fur et à mesure, comme d'habitude.",
+            "Quand tu en as de nouveau besoin, touche Réinitialiser pour tout décocher."
+          ]
+        }
+      ],
+      "searchTitle": "listes reutilisables",
+      "searchKeywords": "reutilisable, reinitialiser, liste, flottant, repeter, modele",
+      "searchBody": "reinitialise une liste pour la refaire : bagages, corvees, courses. marque une liste anytime comme reutilisable et un bouton reinitialiser apparait. un toucher decoche tout pour refaire la meme liste, sans la recreer. ouvre une liste flottante et active « reutilisable » dans ses reglages. coche les elements au fur et a mesure, comme d'habitude. quand tu en as de nouveau besoin, touche reinitialiser pour tout decocher."
+    },
+    {
       "id": "scheduled-lists",
       "section": "ORGANIZING",
       "sectionOrder": 3,

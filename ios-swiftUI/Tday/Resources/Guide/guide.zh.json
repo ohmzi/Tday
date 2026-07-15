@@ -558,6 +558,43 @@
       "searchBody": "把你的随时任务归入各自的列表。 把浮动任务整理进不同的列表——采购、打包、点子——每个都有自己的名称、颜色和各自的完成记录。"
     },
     {
+      "id": "reusable-lists",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "refresh-cw",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.6.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "可重用清单",
+      "summary": "重置清单以再次使用——收拾行李、家务、购物。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "将某个 Anytime 清单标记为可重用，就会出现“重置”。一键取消所有勾选，即可再次使用同一清单，无需重新创建。"
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "打开一个浮动清单，在其设置中开启“可重用”。",
+            "照常逐项勾选完成。",
+            "再次需要时，点“重置”即可取消全部勾选。"
+          ]
+        }
+      ],
+      "searchTitle": "可重用清单",
+      "searchKeywords": "可重用, 重置, 清单, 浮动, 重复, 模板, 再次",
+      "searchBody": "重置清单以再次使用——收拾行李、家务、购物。 将某个 anytime 清单标记为可重用，就会出现“重置”。一键取消所有勾选，即可再次使用同一清单，无需重新创建。 打开一个浮动清单，在其设置中开启“可重用”。 照常逐项勾选完成。 再次需要时，点“重置”即可取消全部勾选。"
+    },
+    {
       "id": "scheduled-lists",
       "section": "ORGANIZING",
       "sectionOrder": 3,

@@ -27,8 +27,9 @@ interface FloaterListService {
     suspend fun getAll(userId: String): Either<AppError, List<FloaterListResponse>>
     suspend fun getById(userId: String, listId: String): Either<AppError, FloaterListResponse>
     suspend fun getFloatersForList(userId: String, listId: String): Either<AppError, List<FloaterListTodoResponse>>
-    suspend fun create(userId: String, name: String, color: String?, iconKey: String?): Either<AppError, FloaterListResponse>
-    suspend fun update(userId: String, id: String, name: String?, color: String?, iconKey: String?): Either<AppError, Unit>
+    suspend fun create(userId: String, name: String, color: String?, iconKey: String?, reusable: Boolean = false): Either<AppError, FloaterListResponse>
+    suspend fun update(userId: String, id: String, name: String?, color: String?, iconKey: String?, reusable: Boolean? = null): Either<AppError, Unit>
+    suspend fun resetFloaters(userId: String, listId: String): Either<AppError, Int>
     suspend fun delete(userId: String, id: String): Either<AppError, Int>
     suspend fun deleteMany(userId: String, ids: List<String>): Either<AppError, List<String>> = either {
         ids.distinct().filter { it.isNotBlank() }.mapNotNull { id ->
@@ -149,7 +150,7 @@ class FloaterListServiceImpl(
         return floaters.right()
     }
 
-    override suspend fun create(userId: String, name: String, color: String?, iconKey: String?): Either<AppError, FloaterListResponse> {
+    override suspend fun create(userId: String, name: String, color: String?, iconKey: String?, reusable: Boolean): Either<AppError, FloaterListResponse> {
         val id = CuidGenerator.newCuid()
         val now = LocalDateTime.now(ZoneOffset.UTC)
         newSuspendedTransaction(Dispatchers.IO) {
@@ -159,6 +160,7 @@ class FloaterListServiceImpl(
                 it[FloaterLists.color] = color?.let { c -> ListColor.valueOf(c) }
                 it[FloaterLists.iconKey] = iconKey
                 it[FloaterLists.userID] = userId
+                it[FloaterLists.reusable] = reusable
                 it[FloaterLists.createdAt] = now
                 it[FloaterLists.updatedAt] = now
             }
@@ -171,13 +173,14 @@ class FloaterListServiceImpl(
             color = color,
             iconKey = iconKey,
             userID = userId,
+            reusable = reusable,
             createdAt = now.toString(),
             updatedAt = now.toString(),
             myRole = ShareRole.OWNER.name,
         ).right()
     }
 
-    override suspend fun update(userId: String, id: String, name: String?, color: String?, iconKey: String?): Either<AppError, Unit> {
+    override suspend fun update(userId: String, id: String, name: String?, color: String?, iconKey: String?, reusable: Boolean?): Either<AppError, Unit> {
         when (shareService.accessFor(userId, id, ListType.FLOATER)) {
             null -> return AppError.NotFound("floater list not found").left()
             ShareRole.OWNER -> Unit
@@ -188,12 +191,41 @@ class FloaterListServiceImpl(
                 name?.let { n -> it[FloaterLists.name] = n }
                 color?.let { c -> it[FloaterLists.color] = ListColor.valueOf(c) }
                 iconKey?.let { k -> it[FloaterLists.iconKey] = k }
+                reusable?.let { r -> it[FloaterLists.reusable] = r }
                 it[FloaterLists.updatedAt] = LocalDateTime.now(ZoneOffset.UTC)
             }
         }
         cache.invalidateFloaterListCaches(userId)
         publisher.publishToCollaborators(userId, DomainEvent.FloaterListChanged(id))
         return Unit.right()
+    }
+
+    /** Reset a reusable list: un-complete every floater in it, in one transaction. */
+    override suspend fun resetFloaters(userId: String, listId: String): Either<AppError, Int> {
+        when (shareService.accessFor(userId, listId, ListType.FLOATER)) {
+            null -> return AppError.NotFound("floater list not found").left()
+            ShareRole.VIEWER -> return AppError.Forbidden("viewers cannot reset a list").left()
+            else -> Unit
+        }
+        val count = newSuspendedTransaction(Dispatchers.IO) {
+            val floaterIds = Floaters.selectAll()
+                .where { (Floaters.listID eq listId) and (Floaters.completed eq true) }
+                .map { it[Floaters.id] }
+            if (floaterIds.isEmpty()) return@newSuspendedTransaction 0
+            Floaters.update({ Floaters.listID eq listId }) {
+                it[Floaters.completed] = false
+                it[Floaters.updatedAt] = LocalDateTime.now(ZoneOffset.UTC)
+            }
+            CompletedFloaters.deleteWhere {
+                (CompletedFloaters.userID eq userId) and (CompletedFloaters.listID eq listId)
+            }
+            floaterIds.size
+        }
+        cache.invalidateFloaterCaches(userId)
+        cache.invalidateFloaterListCaches(userId)
+        publisher.publishToCollaborators(userId, DomainEvent.FloaterChanged(listId))
+        publisher.publishToCollaborators(userId, DomainEvent.CompletedChanged())
+        return count.right()
     }
 
     override suspend fun delete(userId: String, id: String): Either<AppError, Int> =
@@ -275,6 +307,7 @@ class FloaterListServiceImpl(
         iconKey = this[FloaterLists.iconKey],
         userID = this[FloaterLists.userID],
         todoCount = todoCountOverride,
+        reusable = this[FloaterLists.reusable],
         createdAt = this[FloaterLists.createdAt].toString(),
         updatedAt = this[FloaterLists.updatedAt].toString(),
     )

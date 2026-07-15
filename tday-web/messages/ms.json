@@ -368,7 +368,11 @@
     "sweepSkip": "Langkau",
     "sweepAllToToday": "Sapu semua ke hari ini",
     "sweptToast": "{{count}} tugasan disapu",
-    "sweepDone": "Semua terkini"
+    "sweepDone": "Semua terkini",
+    "reusableList": "Senarai boleh guna semula",
+    "reusableListHint": "Tunjuk Set Semula untuk nyahtanda semua dan guna lagi",
+    "resetFloaterList": "Set semula senarai",
+    "floaterListReset": "Senarai diset semula — semua dinyahtanda"
   },
   "today": {
     "saveInstance": "Simpan kejadian",
@@ -1104,6 +1108,15 @@
         "keywords": "rehat, floater, anytime, pudar, malap, penuaan, tidak aktif, lama, tenang",
         "body": "Tugasan Anytime yang tidak anda sentuh selama sebulan akan pudar perlahan, dan selepas tiga bulan ia berkumpul dalam kumpulan tenang \"Berehat\" di bawah. Tiada yang dipadam — ia cuma berhenti menuntut perhatian sehingga anda kembali.",
         "tip": "Ia hanya isyarat paparan; satu ketik menghidupkan semula floater."
+      },
+      "reusable-lists": {
+        "title": "Senarai boleh guna semula",
+        "summary": "Set semula senarai untuk guna lagi — mengemas, kerja rumah, barangan.",
+        "keywords": "boleh guna semula, set semula, senarai, floater, ulang, templat",
+        "body": "Tandai senarai Anytime sebagai boleh guna semula dan butang Set Semula muncul. Satu ketik menyahtanda semua item supaya anda boleh guna senarai yang sama sekali lagi — tanpa mencipta semula.",
+        "step0": "Buka senarai floater dan hidupkan \"Boleh guna semula\" dalam tetapannya.",
+        "step1": "Teruskan menanda item seperti biasa.",
+        "step2": "Bila perlu lagi, ketik Set Semula untuk nyahtanda semua."
       }
     }
   },

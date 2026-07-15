@@ -558,6 +558,43 @@
       "searchBody": "gruppiere deine jederzeit-aufgaben in eigene listen. organisiere floater in getrennte listen — einkaufe, packliste, ideen — jede mit eigenem namen und eigener farbe und eigener abgeschlossener historie."
     },
     {
+      "id": "reusable-lists",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "refresh-cw",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.6.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Wiederverwendbare Listen",
+      "summary": "Setze eine Liste zurück, um sie erneut zu nutzen: Packen, Aufgaben, Einkauf.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Markiere eine Anytime-Liste als wiederverwendbar, und ein Zurücksetzen erscheint. Ein Tippen hebt alle Häkchen auf, sodass du dieselbe Liste erneut durchgehen kannst – ohne sie neu zu erstellen."
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "Öffne eine Floater-Liste und aktiviere „Wiederverwendbar“ in den Einstellungen.",
+            "Arbeite sie ab und hake Punkte wie gewohnt ab.",
+            "Wenn du sie wieder brauchst, tippe auf Zurücksetzen."
+          ]
+        }
+      ],
+      "searchTitle": "wiederverwendbare listen",
+      "searchKeywords": "wiederverwendbar, zurucksetzen, liste, floater, wiederholen, vorlage",
+      "searchBody": "setze eine liste zuruck, um sie erneut zu nutzen: packen, aufgaben, einkauf. markiere eine anytime-liste als wiederverwendbar, und ein zurucksetzen erscheint. ein tippen hebt alle hakchen auf, sodass du dieselbe liste erneut durchgehen kannst – ohne sie neu zu erstellen. offne eine floater-liste und aktiviere „wiederverwendbar“ in den einstellungen. arbeite sie ab und hake punkte wie gewohnt ab. wenn du sie wieder brauchst, tippe auf zurucksetzen."
+    },
+    {
       "id": "scheduled-lists",
       "section": "ORGANIZING",
       "sectionOrder": 3,

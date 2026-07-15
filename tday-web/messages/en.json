@@ -368,7 +368,11 @@
     "sweepSkip": "Skip",
     "sweepAllToToday": "Sweep all to today",
     "sweptToast": "Swept {{count}} tasks",
-    "sweepDone": "All caught up"
+    "sweepDone": "All caught up",
+    "reusableList": "Reusable list",
+    "reusableListHint": "Show a Reset to un-check everything and run it again",
+    "resetFloaterList": "Reset list",
+    "floaterListReset": "List reset — everything un-checked"
   },
   "today": {
     "saveInstance": "Save instance",
@@ -1104,6 +1108,15 @@
         "keywords": "resting, floater, anytime, fade, dim, aging, dormant, old, quiet",
         "body": "Anytime tasks you haven't touched in a month gently fade, and after three months they gather into a calm \"Resting\" group at the bottom. Nothing is deleted — they just stop demanding attention until you come back to them.",
         "tip": "It's a display cue only; a tap wakes a floater right back up."
+      },
+      "reusable-lists": {
+        "title": "Reusable lists",
+        "summary": "Reset a checklist to run it again — packing, chores, groceries.",
+        "keywords": "reusable, reset, checklist, floater, list, repeat, template, run again",
+        "body": "Mark an Anytime list as reusable and a Reset appears. One tap un-completes every item so you can run the same checklist again — no need to recreate it.",
+        "step0": "Open a floater list and turn on \"Reusable\" in its settings.",
+        "step1": "Work through it, checking items off as usual.",
+        "step2": "When you need it again, tap Reset to un-check everything."
       }
     }
   },

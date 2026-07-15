@@ -84,6 +84,7 @@ data class CreateFloaterListRequest(
     val name: String,
     val color: String? = null,
     val iconKey: String? = null,
+    val reusable: Boolean = false,
 )
 
 @Serializable
@@ -96,6 +97,8 @@ data class FloaterListDto(
     val userID: String? = null,
     val updatedAt: String? = null,
     val createdAt: String? = null,
+    /** A reusable list can be Reset (all its floaters un-completed) to run again. */
+    val reusable: Boolean = false,
     // Sharing metadata. myRole is null on responses from servers that predate
     // sharing; treat null as OWNER.
     val myRole: String? = null,
@@ -122,6 +125,7 @@ data class UpdateFloaterListRequest(
     val name: String? = null,
     val color: String? = null,
     val iconKey: String? = null,
+    val reusable: Boolean? = null,
 )
 
 @Serializable
