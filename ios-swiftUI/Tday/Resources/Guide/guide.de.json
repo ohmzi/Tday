@@ -1151,6 +1151,41 @@
       "searchBody": "lass einen ios-fokus entscheiden, welche listen in deinem heute-feed erscheinen. t'day nutzt den ios-fokus. wahle einen fokus wie arbeit oder privat, lege fest, welche deiner listen er anzeigen soll, und wahrend dieser fokus aktiv ist, blenden dein heute-feed und das home-bildschirm-widget alles andere still aus. schalte den fokus aus, und jede aufgabe kommt zuruck – nichts wird geloscht. offne einstellungen ▸ fokus auf dem iphone und wahle einen fokus. fuge einen fokusfilter hinzu, wahle t'day und dann deine listen. aktiviere den fokus – heute und das widget zeigen jetzt nur diese listen."
     },
     {
+      "id": "apple-watch",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "alarm-clock",
+      "platforms": [
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.7.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Apple Watch",
+      "summary": "Deine Heute-Aufgaben am Handgelenk, live von deinem iPhone gespiegelt.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Installiere T'Day auf der Apple Watch, und die heutigen Aufgaben wandern mit ans Handgelenk. Die Watch spiegelt genau die Heute-Liste, die dein iPhone erstellt – ohne separate Anmeldung – und eine Komplikation auf dem Zifferblatt zeigt, wie viele Aufgaben noch offen sind, sodass du sie mit einem Blick siehst, ohne die App zu öffnen. Sie aktualisiert sich, sobald dein iPhone synchronisiert."
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "Öffne die Watch-App auf dem iPhone und installiere T'Day.",
+            "Füge die T'Day-Komplikation zu deinem Zifferblatt hinzu.",
+            "Wirf einen Blick auf die Anzahl oder öffne die App für die vollständige Liste."
+          ]
+        }
+      ],
+      "searchTitle": "apple watch",
+      "searchKeywords": "apple watch, watch, uhr, handgelenk, komplikation, watchos, heute, blick, spiegeln",
+      "searchBody": "deine heute-aufgaben am handgelenk, live von deinem iphone gespiegelt. installiere t'day auf der apple watch, und die heutigen aufgaben wandern mit ans handgelenk. die watch spiegelt genau die heute-liste, die dein iphone erstellt – ohne separate anmeldung – und eine komplikation auf dem zifferblatt zeigt, wie viele aufgaben noch offen sind, sodass du sie mit einem blick siehst, ohne die app zu offnen. sie aktualisiert sich, sobald dein iphone synchronisiert. offne die watch-app auf dem iphone und installiere t'day. fuge die t'day-komplikation zu deinem zifferblatt hinzu. wirf einen blick auf die anzahl oder offne die app fur die vollstandige liste."
+    },
+    {
       "id": "local-mode",
       "section": "MODES_AND_SYNC",
       "sectionOrder": 6,

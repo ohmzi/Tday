@@ -1160,6 +1160,15 @@
         "step0": "Abra Definições ▸ Foco no iPhone e escolha um Foco.",
         "step1": "Adicione um Filtro de Foco e escolha o T'Day, depois selecione as suas listas.",
         "step2": "Ative o Foco — Hoje e o widget mostram agora apenas essas listas."
+      },
+      "apple-watch": {
+        "title": "Apple Watch",
+        "summary": "As suas tarefas de Hoje no pulso, espelhadas em direto a partir do seu iPhone.",
+        "keywords": "apple watch, relógio, pulso, complicação, watchos, hoje, relance, espelhar",
+        "body": "Instale o T'Day no Apple Watch e as tarefas de hoje seguem consigo no pulso. O Watch espelha a mesma lista de Hoje que o seu iPhone cria — sem início de sessão separado — e uma complicação no mostrador indica quantas tarefas faltam, para que dê uma vista de olhos sem abrir a app. Atualiza-se sempre que o seu iPhone sincroniza.",
+        "step0": "Abra a app Watch no iPhone e instale o T'Day.",
+        "step1": "Adicione a complicação do T'Day ao seu mostrador.",
+        "step2": "Dê uma vista de olhos ao número, ou abra a app para ver a lista completa."
       }
     }
   },

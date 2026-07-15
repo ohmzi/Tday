@@ -28,6 +28,10 @@ targets:
       # Groups capability registered — Xcode's automatic signing handles this
       # the first time you select the team under Signing & Capabilities.
       - target: TdayShareExtension
+      # Embedded watchOS companion (R6-4). Fed live from the phone over
+      # WatchConnectivity (see Tday/Core/Widget/WatchSessionManager.swift).
+      - target: TdayWatch
+        embed: true
     settings:
       base:
         PRODUCT_NAME: Tday
@@ -88,6 +92,57 @@ targets:
         TARGETED_DEVICE_FAMILY: 1
         SKIP_INSTALL: YES
         APPLICATION_EXTENSION_API_ONLY: YES
+  # watchOS companion app (R6-4). A single-target watchOS app (watchOS 10+),
+  # embedded in the iOS Tday app. It mirrors the phone's Today snapshot over
+  # WatchConnectivity — no separate login, no direct server calls.
+  TdayWatch:
+    type: application
+    platform: watchOS
+    deploymentTarget: "10.0"
+    sources:
+      - path: TdayWatch
+        excludes:
+          - Info.plist
+    dependencies:
+      - target: TdayWatchWidget
+        embed: true
+    settings:
+      base:
+        PRODUCT_NAME: Tday
+        PRODUCT_BUNDLE_IDENTIFIER: com.ohmz.tday.ios.watchkitapp
+        DEVELOPMENT_TEAM: THT5Z8K3TF
+        INFOPLIST_FILE: TdayWatch/Info.plist
+        CODE_SIGN_ENTITLEMENTS: TdayWatch/TdayWatch.entitlements
+        GENERATE_INFOPLIST_FILE: NO
+        SWIFT_VERSION: 5.0
+        CURRENT_PROJECT_VERSION: 12
+        MARKETING_VERSION: 0.7.0
+        TARGETED_DEVICE_FAMILY: 4
+        SKIP_INSTALL: YES
+  # watchOS complication showing the remaining-task count on the watch face.
+  # Reuses the same snapshot the phone widget uses (R6-4).
+  TdayWatchWidget:
+    type: app-extension
+    platform: watchOS
+    deploymentTarget: "10.0"
+    sources:
+      - path: TdayWatchWidget
+        excludes:
+          - Info.plist
+    settings:
+      base:
+        PRODUCT_NAME: TdayWatchWidget
+        PRODUCT_BUNDLE_IDENTIFIER: com.ohmz.tday.ios.watchkitapp.widget
+        DEVELOPMENT_TEAM: THT5Z8K3TF
+        INFOPLIST_FILE: TdayWatchWidget/Info.plist
+        CODE_SIGN_ENTITLEMENTS: TdayWatchWidget/TdayWatchWidget.entitlements
+        GENERATE_INFOPLIST_FILE: NO
+        SWIFT_VERSION: 5.0
+        CURRENT_PROJECT_VERSION: 12
+        MARKETING_VERSION: 0.7.0
+        TARGETED_DEVICE_FAMILY: 4
+        SKIP_INSTALL: YES
+        APPLICATION_EXTENSION_API_ONLY: YES
   TdayTests:
     type: bundle.unit-test
     platform: iOS
@@ -110,6 +165,14 @@ schemes:
     test:
       targets:
         - TdayTests
+    run:
+      config: Debug
+    archive:
+      config: Release
+  TdayWatch:
+    build:
+      targets:
+        TdayWatch: all
     run:
       config: Debug
     archive:

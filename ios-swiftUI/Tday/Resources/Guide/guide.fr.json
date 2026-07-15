@@ -1151,6 +1151,41 @@
       "searchBody": "laissez un mode de concentration ios decider quelles listes apparaissent dans votre flux aujourd'hui. t'day s'integre au mode concentration d'ios. choisissez une concentration comme travail ou personnel, indiquez quelles listes elle doit afficher et, tant que cette concentration est active, votre flux aujourd'hui et le widget de l'ecran d'accueil masquent discretement tout le reste. desactivez la concentration et toutes les taches reviennent — rien n'est supprime. ouvrez reglages ▸ concentration sur l'iphone et choisissez une concentration. ajoutez un filtre de concentration, choisissez t'day, puis selectionnez vos listes. activez la concentration — aujourd'hui et le widget n'affichent plus que ces listes."
     },
     {
+      "id": "apple-watch",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "alarm-clock",
+      "platforms": [
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.7.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Apple Watch",
+      "summary": "Vos tâches d'Aujourd'hui au poignet, reflétées en direct depuis votre iPhone.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Installez T'Day sur l'Apple Watch et les tâches du jour vous suivent au poignet. La Watch reflète la même liste Aujourd'hui que celle créée par votre iPhone — sans connexion séparée — et une complication sur le cadran indique combien de tâches restent, pour un coup d'œil sans ouvrir l'app. Elle se met à jour dès que votre iPhone se synchronise."
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "Ouvrez l'app Watch sur l'iPhone et installez T'Day.",
+            "Ajoutez la complication T'Day à votre cadran.",
+            "Jetez un coup d'œil au nombre, ou ouvrez l'app pour la liste complète."
+          ]
+        }
+      ],
+      "searchTitle": "apple watch",
+      "searchKeywords": "apple watch, montre, poignet, complication, watchos, aujourd'hui, coup d'œil, miroir",
+      "searchBody": "vos taches d'aujourd'hui au poignet, refletees en direct depuis votre iphone. installez t'day sur l'apple watch et les taches du jour vous suivent au poignet. la watch reflete la meme liste aujourd'hui que celle creee par votre iphone — sans connexion separee — et une complication sur le cadran indique combien de taches restent, pour un coup d'œil sans ouvrir l'app. elle se met a jour des que votre iphone se synchronise. ouvrez l'app watch sur l'iphone et installez t'day. ajoutez la complication t'day a votre cadran. jetez un coup d'œil au nombre, ou ouvrez l'app pour la liste complete."
+    },
+    {
       "id": "local-mode",
       "section": "MODES_AND_SYNC",
       "sectionOrder": 6,

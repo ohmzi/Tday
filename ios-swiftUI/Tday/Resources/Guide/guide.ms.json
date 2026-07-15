@@ -1151,6 +1151,41 @@
       "searchBody": "biar fokus ios menentukan senarai mana yang muncul dalam suapan hari ini anda. t'day disepadukan dengan fokus ios. pilih fokus seperti kerja atau peribadi, tentukan senarai mana yang patut ditunjukkan, dan semasa fokus itu aktif, suapan hari ini dan widget skrin utama anda menyembunyikan yang lain secara senyap. matikan fokus dan setiap tugasan kembali — tiada apa-apa yang dipadam. buka tetapan ▸ fokus pada iphone dan pilih satu fokus. tambah penapis fokus dan pilih t'day, kemudian pilih senarai anda. aktifkan fokus — hari ini dan widget kini hanya menunjukkan senarai tersebut."
     },
     {
+      "id": "apple-watch",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "alarm-clock",
+      "platforms": [
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.7.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Apple Watch",
+      "summary": "Tugasan Hari Ini anda di pergelangan tangan, dicerminkan secara langsung dari iPhone anda.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Pasang T'Day pada Apple Watch dan tugasan hari ini turut hadir di pergelangan tangan anda. Watch mencerminkan senarai Hari Ini yang sama seperti yang dibina iPhone anda — tanpa log masuk berasingan — dan komplikasi pada muka jam menunjukkan berapa banyak tugasan yang berbaki, jadi anda boleh memandangnya tanpa membuka apl. Ia dikemas kini setiap kali iPhone anda menyegerak."
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "Buka apl Watch pada iPhone dan pasang T'Day.",
+            "Tambah komplikasi T'Day pada muka jam anda.",
+            "Pandang jumlahnya, atau buka apl untuk senarai penuh."
+          ]
+        }
+      ],
+      "searchTitle": "apple watch",
+      "searchKeywords": "apple watch, jam, pergelangan tangan, komplikasi, watchos, hari ini, pandang, cermin",
+      "searchBody": "tugasan hari ini anda di pergelangan tangan, dicerminkan secara langsung dari iphone anda. pasang t'day pada apple watch dan tugasan hari ini turut hadir di pergelangan tangan anda. watch mencerminkan senarai hari ini yang sama seperti yang dibina iphone anda — tanpa log masuk berasingan — dan komplikasi pada muka jam menunjukkan berapa banyak tugasan yang berbaki, jadi anda boleh memandangnya tanpa membuka apl. ia dikemas kini setiap kali iphone anda menyegerak. buka apl watch pada iphone dan pasang t'day. tambah komplikasi t'day pada muka jam anda. pandang jumlahnya, atau buka apl untuk senarai penuh."
+    },
+    {
       "id": "local-mode",
       "section": "MODES_AND_SYNC",
       "sectionOrder": 6,
