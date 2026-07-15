@@ -3,6 +3,7 @@ import { useGlobalHotkeys } from "@/hooks/useGlobalHotkeys";
 import { useCreateTask } from "@/providers/CreateTaskProvider";
 import CommandPalette from "./CommandPalette";
 import ShortcutsOverlay from "./ShortcutsOverlay";
+import BrainDumpModal from "@/features/brainDump/BrainDumpModal";
 
 /**
  * Mounts the app-wide keyboard layer inside the authenticated shell:
@@ -13,6 +14,7 @@ import ShortcutsOverlay from "./ShortcutsOverlay";
 export default function KeyboardLayer() {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [brainDumpOpen, setBrainDumpOpen] = useState(false);
   const { openCreateTask } = useCreateTask();
 
   useGlobalHotkeys({
@@ -33,8 +35,16 @@ export default function KeyboardLayer() {
 
   return (
     <>
-      <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
+      <CommandPalette
+        open={paletteOpen}
+        onOpenChange={setPaletteOpen}
+        onOpenBrainDump={() => {
+          setPaletteOpen(false);
+          setBrainDumpOpen(true);
+        }}
+      />
       <ShortcutsOverlay open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
+      <BrainDumpModal open={brainDumpOpen} onOpenChange={setBrainDumpOpen} />
     </>
   );
 }

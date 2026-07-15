@@ -397,6 +397,18 @@
     "weekInReview": {
       "title": "Riepilogo settimanale",
       "dismiss": "Ignora"
+    },
+    "brainDump": {
+      "title": "Scarico mentale",
+      "blurb": "Incolla tutto ciò che hai in mente: T'Day lo divide in attività da rivedere.",
+      "placeholder": "comprare il latte\nchiamare il dentista domani 15\nannaffiare le piante ogni settimana",
+      "parse": "Dividi in attività",
+      "parseFailed": "Impossibile analizzare — riprova",
+      "reviewHint": "Deseleziona ciò che non vuoi. Con data → pianificata, senza → Anytime.",
+      "empty": "Niente da aggiungere.",
+      "back": "Indietro",
+      "add": "Aggiungi {{count}}",
+      "created": "Aggiunte {{count}} attività"
     }
   },
   "sidebar": {
@@ -1117,6 +1129,15 @@
         "step0": "Apri una lista floater e attiva \"Riutilizzabile\" nelle sue impostazioni.",
         "step1": "Procedi spuntando gli elementi come al solito.",
         "step2": "Quando ti serve di nuovo, tocca Reimposta per deselezionare tutto."
+      },
+      "brain-dump": {
+        "title": "Scarico mentale",
+        "summary": "Svuota la testa in un riquadro; T'Day lo ordina in attività.",
+        "keywords": "scarico mentale, cattura, incolla, dividi, attività, rivedi, gtd",
+        "body": "Quando hai la testa piena, apri Scarico mentale (⌘K → Scarico mentale), incolla tutto — un pensiero per riga, elenchi o \"e poi\" — e T'Day lo divide in attività candidate. Le date scritte diventano attività pianificate; il resto, floater di Anytime. L'analisi avviene sul tuo server; nulla è inventato.",
+        "step0": "Apri la palette dei comandi (⌘K) e scegli Scarico mentale.",
+        "step1": "Incolla i pensieri e tocca Dividi in attività.",
+        "step2": "Deseleziona ciò che non vuoi, poi Aggiungi."
       }
     }
   },
@@ -1127,6 +1148,7 @@
     "actions": "Azioni",
     "navigation": "Vai a",
     "lists": "Liste",
-    "newTask": "Nuova attività"
+    "newTask": "Nuova attività",
+    "brainDump": "Scarico mentale"
   }
 }
