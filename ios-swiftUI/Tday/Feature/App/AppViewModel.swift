@@ -770,12 +770,21 @@ final class AppViewModel {
                 Task { await self.recheckVersion() }
                 return
             }
+            let wasOffline = isOffline
             isOffline = isLikelyConnectivityIssue(error) ||
                 (suppressAuthenticationExpired && isSessionAuthenticationIssue(error))
-            if isOffline && showOfflineNotice {
-                presentOfflineNotice(for: error, forceShow: bypassCooldown)
-            }
-            if !isOffline {
+            if isOffline {
+                // Announce on a FRESH offline transition from ANY path — including the
+                // silent background sync loop — so a backend/DB outage (5xx while the
+                // network is fine) surfaces the toast without the user having to trigger a
+                // refresh. `showOfflineNotice` additionally re-announces while already
+                // offline (foreground reconnect / manual sync). Cooldown-gated unless a
+                // user-initiated sync forces it.
+                let transitionedToOffline = !wasOffline
+                if transitionedToOffline || showOfflineNotice {
+                    presentOfflineNotice(for: error, forceShow: bypassCooldown)
+                }
+            } else {
                 container.snackbarManager.show(message: userFacingMessage(for: error))
             }
             refreshSyncStatusFromCache()
