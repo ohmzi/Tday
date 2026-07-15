@@ -108,7 +108,7 @@ targets:
         embed: true
     settings:
       base:
-        PRODUCT_NAME: Tday
+        PRODUCT_NAME: TdayWatch
         PRODUCT_BUNDLE_IDENTIFIER: com.ohmz.tday.ios.watchkitapp
         DEVELOPMENT_TEAM: THT5Z8K3TF
         INFOPLIST_FILE: TdayWatch/Info.plist
