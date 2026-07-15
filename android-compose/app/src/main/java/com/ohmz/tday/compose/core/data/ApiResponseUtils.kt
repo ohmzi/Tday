@@ -73,7 +73,9 @@ internal object AuthErrorCode {
     const val SERVER_OUTDATED = "tday.err.server_outdated"
 }
 
-internal enum class ConnectionFailureKind { CANNOT_REACH, SERVER_UNAVAILABLE, NONE }
+// Public so it can surface in AppUiState (which drives the connectivity toast copy);
+// the classifier functions below stay internal.
+enum class ConnectionFailureKind { CANNOT_REACH, SERVER_UNAVAILABLE, NONE }
 
 /**
  * Distinguishes "couldn't reach the server at all" (transport: no network, DNS,

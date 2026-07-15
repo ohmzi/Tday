@@ -577,6 +577,7 @@
     <string name="offline_toast_pending_many">Anda di luar talian — %1$d perubahan menunggu penyegerakan.</string>
     <string name="offline_toast_pending_one">Anda di luar talian — 1 perubahan menunggu penyegerakan.</string>
     <string name="online_toast">Kembali dalam talian — menyegerakkan perubahan terkini anda…</string>
+    <string name="backend_down_toast">Ralat pelayan — bahagian belakang atau pangkalan data mungkin tidak tersedia. Cuba lagi sebentar lagi.</string>
     <string name="password_changed_toast">Kata laluan berjaya ditukar</string>
     <string name="pending_approval_check">Semak status kelulusan</string>
     <string name="pending_approval_message">Akaun anda (%1$s) sedang menunggu kelulusan pentadbir. Kami akan benarkan anda masuk sebaik sahaja diluluskan.</string>

@@ -311,7 +311,7 @@ struct CalendarScreen: View {
         .disableVerticalScrollBounce()
         .background(colors.background)
         .tdayPullToRefresh(isRefreshing: viewModel.isLoading, isEnabled: pullRefreshEnabled) {
-            await viewModel.refresh()
+            await viewModel.refresh(userInitiated: true)
         }
         .overlay {
             EmptyTaskWatermark(

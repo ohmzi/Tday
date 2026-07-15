@@ -3,6 +3,8 @@ import Foundation
 struct BootstrapSessionResult {
     let user: SessionUser
     let isOffline: Bool
+    /// The offline state is a backend 5xx (server/database down), not a no-network state.
+    let serverDown: Bool
 }
 
 struct BootstrapSessionUseCase {
@@ -50,6 +52,7 @@ struct BootstrapSessionUseCase {
         } else {
             isOffline = false
         }
-        return BootstrapSessionResult(user: restored.user, isOffline: isOffline)
+        let serverDown = syncError.map(isBackendUnavailableError) == true
+        return BootstrapSessionResult(user: restored.user, isOffline: isOffline, serverDown: serverDown)
     }
 }

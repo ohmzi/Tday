@@ -578,6 +578,7 @@
     <string name="offline_toast_pending_many">Estás sin conexión: %1$d cambios esperan sincronizarse.</string>
     <string name="offline_toast_pending_one">Estás sin conexión: 1 cambio espera sincronizarse.</string>
     <string name="online_toast">De nuevo en línea: sincronizando tus últimos cambios…</string>
+    <string name="backend_down_toast">Error del servidor: es posible que el backend o la base de datos no estén disponibles. Inténtalo de nuevo en breve.</string>
     <string name="password_changed_toast">Contraseña cambiada correctamente</string>
     <string name="pending_approval_check">Comprobar estado de aprobación</string>
     <string name="pending_approval_message">Tu cuenta (%1$s) está esperando a que un administrador la apruebe. Te dejaremos entrar en cuanto esté aprobada.</string>

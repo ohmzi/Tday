@@ -34,7 +34,7 @@ final class HomeViewModel {
         observationTask?.cancel()
     }
 
-    func refresh() async {
+    func refresh(userInitiated: Bool = false) async {
         activeLoadingRefreshes += 1
         isLoading = true
         defer {
@@ -54,6 +54,7 @@ final class HomeViewModel {
         let result = await container.syncAndRefresh(
             force: true,
             replayPendingMutations: true,
+            userInitiated: userInitiated,
             connectionProbeTimeoutSeconds: SyncAndRefreshUseCase.userRefreshConnectionTimeoutSeconds
         )
         if case let .failure(error) = result, !isLikelyConnectivityIssue(error) {
