@@ -11,6 +11,7 @@ import com.ohmz.tday.compose.core.data.extractApiErrorDetails
 import com.ohmz.tday.compose.core.data.extractApiErrorMessage
 import com.ohmz.tday.compose.core.data.isLikelyConnectivityIssue
 import com.ohmz.tday.compose.core.data.isLikelyServerUnavailableStatus
+import com.ohmz.tday.compose.core.data.isSessionAuthenticationIssue
 import com.ohmz.tday.compose.core.data.requireApiBody
 import com.ohmz.tday.compose.core.data.versionMismatchAuthCode
 import com.ohmz.tday.compose.core.model.AuthResult
@@ -77,7 +78,16 @@ class AuthRepository @Inject constructor(
                 RestoredSession(user = user, usedCachedSession = false)
             }
         }.getOrElse { error ->
-            if (!isLikelyConnectivityIssue(error)) return@getOrElse null
+            // Only a genuine 401 (server reachable, session rejected) is a real logout —
+            // drop the stale cache and route to login. ANY other failure (offline, timeout,
+            // 5xx, 429, 403/404, a reverse-proxy error/maintenance page, or a decode failure)
+            // means the server is unreachable/unhealthy, so keep the last cached session and
+            // run offline. The online recover path (recoverSessionAndRetrySyncIfNeeded)
+            // re-validates and expires the session later if it's genuinely dead.
+            if (isSessionAuthenticationIssue(error)) {
+                secureConfigStore.clearCachedSessionUser()
+                return@getOrElse null
+            }
             (loadCachedSessionUser() ?: loadLastKnownOfflineSessionUser())
                 ?.takeIf { it.id != null }
                 ?.let { user ->
@@ -89,27 +99,32 @@ class AuthRepository @Inject constructor(
     private suspend fun restoreSessionFromServer(): SessionUser? {
         val response = api.getSession()
         if (!response.isSuccessful) {
-            if (isLikelyServerUnavailableStatus(response.code())) {
-                throw ApiCallException(
-                    statusCode = response.code(),
-                    message = extractApiErrorMessage(response, SERVER_UNREACHABLE_MESSAGE),
-                )
-            }
+            // Surface the status code and let restoreSessionForBootstrap classify it: a
+            // genuine 401 is a real logout, every other status (429, 5xx, 403, 404, or a
+            // reverse-proxy error page) means the server is unhealthy and we keep the
+            // cached session. We deliberately do NOT clear the cached session here.
+            throw ApiCallException(
+                statusCode = response.code(),
+                message = extractApiErrorMessage(response, SERVER_UNREACHABLE_MESSAGE),
+            )
+        }
+
+        val payload = response.body()
+        if (payload == null || payload is JsonNull) {
+            // The server answered (2xx) with no session — a genuine logout.
             secureConfigStore.clearCachedSessionUser()
             return null
         }
 
-        val payload = response.body() ?: return null
-        if (payload is JsonNull) {
+        // A decode failure here (e.g. an HTML error page served with a 200) throws and is
+        // treated by the caller as a server-unhealthy error (keep the cached session), not
+        // a logout.
+        val user = json.decodeFromJsonElement<AuthSession>(payload).user
+        if (user?.id == null) {
             secureConfigStore.clearCachedSessionUser()
             return null
         }
-
-        return runCatching {
-            json.decodeFromJsonElement<AuthSession>(payload).user
-        }.getOrNull().also { user ->
-            if (user?.id == null) secureConfigStore.clearCachedSessionUser()
-        }
+        return user
     }
 
     private fun cacheSessionUser(user: SessionUser) {
