@@ -21,6 +21,11 @@ import com.ohmz.tday.services.TodoSummaryService
 import io.ktor.server.request.*
 import io.ktor.server.routing.*
 import com.ohmz.tday.di.inject
+import com.ohmz.tday.shared.model.BrainDumpCandidate
+import com.ohmz.tday.shared.model.BrainDumpRequest
+import com.ohmz.tday.shared.model.BrainDumpResponse
+import com.ohmz.tday.shared.nlp.BrainDumpSplitter
+import com.ohmz.tday.shared.nlp.RecurrencePriorityGrammar
 import com.ohmz.tday.shared.model.CreateTodoResponse
 import com.ohmz.tday.shared.model.DemoteTodoResponse
 import com.ohmz.tday.shared.model.Priority
@@ -376,6 +381,37 @@ private fun Route.todoUtilityRoutes(
                     fallbackReason = if (usedAi) null else REASON_AI_UNAVAILABLE,
                     reason = if (usedAi) null else REASON_AI_UNAVAILABLE,
                 ).right()
+            }
+        }
+    }
+
+    // Brain Dump: split a free-text blob into candidate tasks (dates via Natty, recurrence
+    // and priority via the shared grammar). The model never invents timestamps — the
+    // deterministic split + on-device grammar are the source of truth.
+    route("/brain-dump") {
+        post {
+            call.withAuth { user ->
+                val body = call.receive<BrainDumpRequest>()
+                val timeZone = body.timeZone ?: user.timeZone ?: "UTC"
+                val offsetMinutes = runCatching {
+                    ZoneId.of(timeZone).rules.getOffset(Instant.now()).totalSeconds / 60
+                }.getOrDefault(0)
+                val candidates = BrainDumpSplitter.split(body.text).map { fragment ->
+                    val dateParse = todoNlpService.parse(
+                        text = fragment,
+                        locale = body.locale,
+                        referenceEpochMs = Instant.now().toEpochMilli(),
+                        timezoneOffsetMinutes = offsetMinutes,
+                    )
+                    val grammar = RecurrencePriorityGrammar.parse(dateParse.cleanTitle)
+                    BrainDumpCandidate(
+                        title = grammar.cleanTitle.ifBlank { fragment },
+                        dueEpochMs = dateParse.dueEpochMs,
+                        rrule = grammar.rrule,
+                        priority = grammar.priority,
+                    )
+                }
+                BrainDumpResponse(candidates = candidates).right()
             }
         }
     }

@@ -19,6 +19,7 @@
       "calendar-views",
       "root-feeds",
       "create-task",
+      "brain-dump",
       "promote-and-float",
       "quick-defer",
       "day-done",
@@ -41,6 +42,7 @@
       "reusable-lists",
       "root-feeds",
       "create-task",
+      "brain-dump",
       "morning-sweep",
       "webhooks"
     ],

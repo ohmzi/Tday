@@ -397,6 +397,18 @@
     "weekInReview": {
       "title": "Wochenrückblick",
       "dismiss": "Verwerfen"
+    },
+    "brainDump": {
+      "title": "Gedanken-Dump",
+      "blurb": "Füge alles ein, was dir im Kopf ist — T'Day teilt es in Aufgaben zur Prüfung.",
+      "placeholder": "Milch kaufen\nZahnarzt morgen 15 Uhr anrufen\nPflanzen jede Woche gießen",
+      "parse": "In Aufgaben aufteilen",
+      "parseFailed": "Konnte nicht verarbeitet werden — versuch es erneut",
+      "reviewHint": "Hake ab, was du nicht willst. Mit Datum → geplant, ohne → Anytime.",
+      "empty": "Nichts hinzuzufügen.",
+      "back": "Zurück",
+      "add": "{{count}} hinzufügen",
+      "created": "{{count}} Aufgaben hinzugefügt"
     }
   },
   "sidebar": {
@@ -1117,6 +1129,15 @@
         "step0": "Öffne eine Floater-Liste und aktiviere „Wiederverwendbar“ in den Einstellungen.",
         "step1": "Arbeite sie ab und hake Punkte wie gewohnt ab.",
         "step2": "Wenn du sie wieder brauchst, tippe auf Zurücksetzen."
+      },
+      "brain-dump": {
+        "title": "Gedanken-Dump",
+        "summary": "Leere deinen Kopf in ein Feld; T'Day sortiert es in Aufgaben.",
+        "keywords": "gedanken-dump, erfassen, einfügen, aufteilen, aufgaben, prüfen, gtd",
+        "body": "Wenn dein Kopf voll ist, öffne Gedanken-Dump (⌘K → Gedanken-Dump), füge alles ein — ein Gedanke pro Zeile, Aufzählungen oder „und dann“ — und T'Day teilt es in Aufgaben-Kandidaten. Notierte Daten werden geplante Aufgaben; der Rest wird zu Anytime-Floatern. Die Analyse läuft auf deinem Server; nichts wird erfunden.",
+        "step0": "Öffne die Befehlspalette (⌘K) und wähle Gedanken-Dump.",
+        "step1": "Füge deine Gedanken ein und tippe In Aufgaben aufteilen.",
+        "step2": "Hake ab, was du nicht willst, dann Hinzufügen."
       }
     }
   },
@@ -1127,6 +1148,7 @@
     "actions": "Aktionen",
     "navigation": "Gehe zu",
     "lists": "Listen",
-    "newTask": "Neue Aufgabe"
+    "newTask": "Neue Aufgabe",
+    "brainDump": "Gedanken-Dump"
   }
 }

@@ -397,6 +397,18 @@
     "weekInReview": {
       "title": "Imbasan Minggu",
       "dismiss": "Tolak"
+    },
+    "brainDump": {
+      "title": "Curah minda",
+      "blurb": "Tampal semua yang ada dalam fikiran — T'Day pecahkan kepada tugasan untuk semakan.",
+      "placeholder": "beli susu\ntelefon doktor gigi esok 3ptg\nsiram pokok setiap minggu",
+      "parse": "Pecah kepada tugasan",
+      "parseFailed": "Tidak dapat dihurai — cuba lagi",
+      "reviewHint": "Nyahtanda yang tak dimahukan. Bertarikh → dijadualkan, tiada → Anytime.",
+      "empty": "Tiada apa untuk ditambah.",
+      "back": "Kembali",
+      "add": "Tambah {{count}}",
+      "created": "{{count}} tugasan ditambah"
     }
   },
   "sidebar": {
@@ -1117,6 +1129,15 @@
         "step0": "Buka senarai floater dan hidupkan \"Boleh guna semula\" dalam tetapannya.",
         "step1": "Teruskan menanda item seperti biasa.",
         "step2": "Bila perlu lagi, ketik Set Semula untuk nyahtanda semua."
+      },
+      "brain-dump": {
+        "title": "Curah minda",
+        "summary": "Kosongkan kepala ke satu kotak; T'Day susun jadi tugasan.",
+        "keywords": "curah minda, tangkap, tampal, pecah, tugasan, semak, gtd",
+        "body": "Bila kepala penuh, buka Curah minda (⌘K → Curah minda), tampal semua — satu fikiran satu baris, senarai berbulet, atau \"kemudian\" — dan T'Day pecahkan jadi tugasan calon. Tarikh yang ditulis jadi tugasan berjadual; selebihnya jadi floater Anytime. Ia dihurai pada pelayan anda sendiri; tiada yang direka.",
+        "step0": "Buka palet arahan (⌘K) dan pilih Curah minda.",
+        "step1": "Tampal fikiran anda dan ketik Pecah kepada tugasan.",
+        "step2": "Nyahtanda yang tak dimahukan, kemudian Tambah."
       }
     }
   },
@@ -1127,6 +1148,7 @@
     "actions": "Tindakan",
     "navigation": "Pergi ke",
     "lists": "Senarai",
-    "newTask": "Tugasan baharu"
+    "newTask": "Tugasan baharu",
+    "brainDump": "Curah minda"
   }
 }

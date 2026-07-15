@@ -397,6 +397,18 @@
     "weekInReview": {
       "title": "Resumen de la semana",
       "dismiss": "Descartar"
+    },
+    "brainDump": {
+      "title": "Volcado mental",
+      "blurb": "Pega todo lo que tengas en mente: T'Day lo divide en tareas para revisar.",
+      "placeholder": "comprar leche\nllamar al dentista mañana 15h\nregar plantas cada semana",
+      "parse": "Dividir en tareas",
+      "parseFailed": "No se pudo procesar, inténtalo de nuevo",
+      "reviewHint": "Desmarca lo que no quieras. Con fecha → programada, sin fecha → Anytime.",
+      "empty": "Nada que añadir.",
+      "back": "Atrás",
+      "add": "Añadir {{count}}",
+      "created": "Añadidas {{count}} tareas"
     }
   },
   "sidebar": {
@@ -1117,6 +1129,15 @@
         "step0": "Abre una lista flotante y activa \"Reutilizable\" en sus ajustes.",
         "step1": "Ve marcando los elementos como siempre.",
         "step2": "Cuando la necesites otra vez, toca Reiniciar para desmarcar todo."
+      },
+      "brain-dump": {
+        "title": "Volcado mental",
+        "summary": "Vacía tu cabeza en un cuadro; T'Day lo ordena en tareas.",
+        "keywords": "volcado mental, capturar, pegar, dividir, tareas, revisar, gtd",
+        "body": "Cuando tu cabeza está llena, abre Volcado mental (⌘K → Volcado mental), pega todo —una idea por línea, viñetas o \"y luego\"— y T'Day lo divide en tareas candidatas. Las fechas que escribas se vuelven tareas programadas; el resto, flotantes de Anytime. Se analiza en tu servidor; no se inventa nada.",
+        "step0": "Abre la paleta de comandos (⌘K) y elige Volcado mental.",
+        "step1": "Pega tus ideas y toca Dividir en tareas.",
+        "step2": "Desmarca lo que no quieras y pulsa Añadir."
       }
     }
   },
@@ -1127,6 +1148,7 @@
     "actions": "Acciones",
     "navigation": "Ir a",
     "lists": "Listas",
-    "newTask": "Tarea nueva"
+    "newTask": "Tarea nueva",
+    "brainDump": "Volcado mental"
   }
 }
