@@ -38,7 +38,9 @@ final class ConnectivityClassificationTests: XCTestCase {
     }
 
     func testServerUnavailableResponsesAreConnectivityIssues() {
-        let unavailableStatuses = [408, 502, 503, 504, 520, 521, 522, 523, 524]
+        // 500 = database down (backend up), 502/503/504 = backend container down behind a
+        // live proxy — all are "server can't sync right now", treated the same as offline.
+        let unavailableStatuses = [408, 500, 501, 502, 503, 504, 520, 521, 522, 523, 524]
 
         for statusCode in unavailableStatuses {
             XCTAssertTrue(
@@ -53,14 +55,25 @@ final class ConnectivityClassificationTests: XCTestCase {
     func testServerUnavailableResponsesUseConnectionMessage() {
         XCTAssertEqual(
             userFacingMessage(for: APIError(message: "Web server is down", statusCode: 521)),
-            "Connection error. Check your internet and try again."
+            "The server isn't responding right now — it may be down or restarting. If this keeps happening, contact your administrator."
         )
     }
 
-    func testGenericServerErrorsAreNotConnectivityIssues() {
-        XCTAssertFalse(
+    func testDatabaseOutageFivehundredIsAConnectivityIssue() {
+        // A 500 (e.g. the backend is up but the database is down) means sync can't happen,
+        // so it must read as offline — keep the session, defer sync, show the offline notice.
+        XCTAssertTrue(
             isLikelyConnectivityIssue(
                 APIError(message: "Internal Server Error", statusCode: 500)
+            )
+        )
+    }
+
+    func testClientValidationErrorsAreNotConnectivityIssues() {
+        // 4xx is a real client-side problem (bad request / validation), not an outage.
+        XCTAssertFalse(
+            isLikelyConnectivityIssue(
+                APIError(message: "Unprocessable", statusCode: 422)
             )
         )
     }
@@ -81,7 +94,7 @@ final class ConnectivityClassificationTests: XCTestCase {
     func testGenericServerErrorsUseServerMessage() {
         XCTAssertEqual(
             userFacingMessage(for: APIError(message: "Internal Server Error", statusCode: 500)),
-            "Server error. Please try again later."
+            "The server isn't responding right now — it may be down or restarting. If this keeps happening, contact your administrator."
         )
     }
 
@@ -94,7 +107,7 @@ final class ConnectivityClassificationTests: XCTestCase {
                     reason: "app_update_required"
                 )
             ),
-            "This version of the app is out of date. Please update to continue."
+            "Your app is out of date. Please update to the latest version to continue."
         )
         XCTAssertEqual(
             userFacingMessage(
@@ -104,7 +117,7 @@ final class ConnectivityClassificationTests: XCTestCase {
                     reason: "server_update_required"
                 )
             ),
-            "The server needs to be updated before this app can continue."
+            "This app is newer than the server. Ask your administrator to update the server."
         )
     }
 

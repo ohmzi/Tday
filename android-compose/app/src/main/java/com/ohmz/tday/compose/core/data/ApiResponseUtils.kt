@@ -155,11 +155,12 @@ internal fun isSessionAuthenticationIssue(error: Throwable): Boolean {
 }
 
 internal fun isLikelyServerUnavailableStatus(statusCode: Int): Boolean {
-    return statusCode == 408 ||
-            statusCode == 502 ||
-            statusCode == 503 ||
-            statusCode == 504 ||
-            statusCode in 520..524
+    // Any 5xx means the address is alive but the backend can't fulfill the request —
+    // the backend container is down/restarting (502/503/504), the database is down (500),
+    // etc. Sync genuinely can't happen, so treat it exactly like being offline (keep the
+    // session, defer sync, show the same "can't reach server" notice). 408 is a request
+    // timeout. 4xx stays a real client error, handled elsewhere.
+    return statusCode == 408 || statusCode in 500..599
 }
 
 internal fun isLikelyUnrecoverableMutationError(
