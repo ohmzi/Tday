@@ -372,7 +372,11 @@
     "reusableList": "Liste réutilisable",
     "reusableListHint": "Affiche Réinitialiser pour tout décocher et refaire",
     "resetFloaterList": "Réinitialiser la liste",
-    "floaterListReset": "Liste réinitialisée — tout décoché"
+    "floaterListReset": "Liste réinitialisée — tout décoché",
+    "steps": "Étapes",
+    "add": "Ajouter",
+    "addStep": "Ajouter une étape",
+    "stepsCreateHint": "Enregistre d'abord la tâche pour ajouter des étapes."
   },
   "today": {
     "saveInstance": "Enregistrer l'instance",
@@ -1138,6 +1142,15 @@
         "step0": "Ouvre la palette de commandes (⌘K) et choisis Vide-cerveau.",
         "step1": "Colle tes idées et touche Découper en tâches.",
         "step2": "Décoche ce que tu ne veux pas, puis Ajouter."
+      },
+      "task-steps": {
+        "title": "Étapes",
+        "summary": "Décomposez une tâche en une liste de contrôle à plat et regardez-la se remplir.",
+        "keywords": "étapes, liste, sous-tâches, décomposition, progression, case à cocher, sous-étapes",
+        "body": "Ouvrez une tâche et ajoutez des Étapes pour la décomposer en une liste de contrôle à plat — sans imbrication ni dates distinctes. Un petit compteur comme 2/5 indique votre progression, et toute la tâche reste sur une seule ligne dans votre journée. Cochez les étapes au fur et à mesure ; une fois la tâche terminée, ses étapes sont conservées dans son historique.",
+        "step0": "Ouvrez une tâche et ajoutez votre première étape sous Étapes.",
+        "step1": "Ajoutez-en autant que nécessaire, puis glissez pour réorganiser.",
+        "step2": "Cochez-les — le compteur 2/5 suit votre progression."
       }
     }
   },

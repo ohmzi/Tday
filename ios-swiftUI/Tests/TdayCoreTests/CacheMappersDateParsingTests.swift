@@ -186,3 +186,101 @@ final class FloaterListReusableContractTests: XCTestCase {
         XCTAssertNil(dto.reusable)
     }
 }
+
+final class TaskStepMutationSerializationTests: XCTestCase {
+    private func makeJSON() -> JSONEncoder {
+        JSONEncoder()
+    }
+
+    func testStepMutationsRoundTripWithPayloadFields() throws {
+        let state = OfflineSyncState(
+            pendingMutations: [
+                PendingMutationRecord(
+                    mutationId: "m-create-step",
+                    kind: .createStep,
+                    targetId: "todo-1",
+                    timestampEpochMs: 1_700_000_003_000,
+                    title: "Preheat oven",
+                    description: nil,
+                    priority: nil,
+                    dueEpochMs: nil,
+                    rrule: nil,
+                    listId: nil,
+                    pinned: nil,
+                    completed: nil,
+                    instanceDateEpochMs: nil,
+                    // Optimistic local step id for replay remapping.
+                    name: "local-step-xyz",
+                    color: nil,
+                    iconKey: nil
+                ),
+                PendingMutationRecord(
+                    mutationId: "m-toggle-step",
+                    kind: .toggleStep,
+                    targetId: "step-1",
+                    timestampEpochMs: 1_700_000_004_000,
+                    title: nil,
+                    description: nil,
+                    priority: nil,
+                    dueEpochMs: nil,
+                    rrule: nil,
+                    listId: nil,
+                    pinned: nil,
+                    completed: true,
+                    instanceDateEpochMs: nil,
+                    name: nil,
+                    color: nil,
+                    iconKey: nil
+                ),
+                PendingMutationRecord(
+                    mutationId: "m-reorder-steps",
+                    kind: .reorderSteps,
+                    targetId: "todo-1",
+                    timestampEpochMs: 1_700_000_006_000,
+                    title: nil,
+                    description: nil,
+                    priority: nil,
+                    dueEpochMs: nil,
+                    rrule: nil,
+                    listId: nil,
+                    pinned: nil,
+                    completed: nil,
+                    instanceDateEpochMs: nil,
+                    name: nil,
+                    color: nil,
+                    iconKey: nil,
+                    orderedIds: ["step-2", "step-1", "step-3"]
+                ),
+            ]
+        )
+
+        let encoded = try JSONEncoder().encode(state)
+        let decoded = try JSONDecoder().decode(OfflineSyncState.self, from: encoded)
+
+        XCTAssertEqual(decoded, state)
+        XCTAssertEqual(decoded.pendingMutations[0].kind, .createStep)
+        XCTAssertEqual(decoded.pendingMutations[0].title, "Preheat oven")
+        XCTAssertEqual(decoded.pendingMutations[0].name, "local-step-xyz")
+        XCTAssertEqual(decoded.pendingMutations[1].completed, true)
+        XCTAssertEqual(decoded.pendingMutations[2].orderedIds, ["step-2", "step-1", "step-3"])
+    }
+
+    func testMutationKindRawValuesMatchBackend() {
+        XCTAssertEqual(MutationKind.createStep.rawValue, "CREATE_STEP")
+        XCTAssertEqual(MutationKind.toggleStep.rawValue, "TOGGLE_STEP")
+        XCTAssertEqual(MutationKind.deleteStep.rawValue, "DELETE_STEP")
+        XCTAssertEqual(MutationKind.reorderSteps.rawValue, "REORDER_STEPS")
+    }
+
+    func testTaskStepDTODecodesFromBackendShape() throws {
+        let json = """
+        {"id":"s1","todoID":"t1","title":"Buy milk","completed":false,"position":0,"createdAt":"2026-07-15T10:00"}
+        """.data(using: .utf8)!
+        let dto = try JSONDecoder().decode(TaskStepDTO.self, from: json)
+        XCTAssertEqual(dto.id, "s1")
+        XCTAssertEqual(dto.todoID, "t1")
+        XCTAssertEqual(dto.title, "Buy milk")
+        XCTAssertEqual(dto.completed, false)
+        XCTAssertEqual(dto.position, 0)
+    }
+}

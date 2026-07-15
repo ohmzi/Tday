@@ -41,6 +41,11 @@ object GuideCatalog {
             body = listOf(para(GuideTopicIds.BRAIN_DUMP), steps(GuideTopicIds.BRAIN_DUMP, 3)),
         ),
         topic(
+            GuideTopicIds.TASK_STEPS, GuideSectionId.CAPTURE_AND_DATES, "list-todo",
+            setOf(WEB), badge = GuideBadge.PRO_TIP, sinceVersion = "0.7.0",
+            body = listOf(para(GuideTopicIds.TASK_STEPS), steps(GuideTopicIds.TASK_STEPS, 3)),
+        ),
+        topic(
             GuideTopicIds.CALENDAR_VIEWS, GuideSectionId.CAPTURE_AND_DATES, "calendar",
             setOf(WEB, ANDROID, IOS), body = listOf(para(GuideTopicIds.CALENDAR_VIEWS)),
             deepLink = GuideDeepLink(web = "calendar", android = "calendar", ios = "calendar"),

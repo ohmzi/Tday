@@ -372,7 +372,11 @@
     "reusableList": "Wiederverwendbare Liste",
     "reusableListHint": "Zeigt Zurücksetzen, um alles abzuwählen und erneut zu nutzen",
     "resetFloaterList": "Liste zurücksetzen",
-    "floaterListReset": "Liste zurückgesetzt – alles abgewählt"
+    "floaterListReset": "Liste zurückgesetzt – alles abgewählt",
+    "steps": "Schritte",
+    "add": "Hinzufügen",
+    "addStep": "Schritt hinzufügen",
+    "stepsCreateHint": "Speichere die Aufgabe zuerst, um Schritte hinzuzufügen."
   },
   "today": {
     "saveInstance": "Instanz speichern",
@@ -1138,6 +1142,15 @@
         "step0": "Öffne die Befehlspalette (⌘K) und wähle Gedanken-Dump.",
         "step1": "Füge deine Gedanken ein und tippe In Aufgaben aufteilen.",
         "step2": "Hake ab, was du nicht willst, dann Hinzufügen."
+      },
+      "task-steps": {
+        "title": "Schritte",
+        "summary": "Zerlege eine Aufgabe in eine flache Checkliste und sieh zu, wie sie sich füllt.",
+        "keywords": "schritte, checkliste, teilaufgaben, aufteilung, fortschritt, kontrollkästchen, teilschritte",
+        "body": "Öffne eine Aufgabe und füge Schritte hinzu, um sie in eine flache Checkliste zu zerlegen – keine Verschachtelung, keine separaten Termine. Ein kleiner Zähler wie 2/5 zeigt, wie weit du bist, und die gesamte Aufgabe bleibt eine einzige Zeile in deinem Tag. Hake Schritte ab, während du vorankommst; ist die Aufgabe erledigt, bleiben ihre Schritte in ihrem Verlauf erhalten.",
+        "step0": "Öffne eine Aufgabe und füge unter Schritte deinen ersten Schritt hinzu.",
+        "step1": "Füge so viele hinzu, wie du brauchst, und ziehe sie zum Umsortieren.",
+        "step2": "Hake sie ab – der 2/5-Zähler verfolgt deinen Fortschritt."
       }
     }
   },

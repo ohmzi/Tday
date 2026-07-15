@@ -147,6 +147,57 @@ class OfflineSyncStateSerializationTest {
     }
 
     @Test
+    fun `task-step mutations round-trip with their payload fields`() {
+        val state = OfflineSyncState(
+            pendingMutations = listOf(
+                PendingMutationRecord(
+                    mutationId = "m-create-step",
+                    kind = MutationKind.CREATE_STEP,
+                    targetId = "todo-1",
+                    timestampEpochMs = 1700000003000L,
+                    title = "Preheat oven",
+                    // Optimistic local step id for replay remapping.
+                    name = "local-step-xyz",
+                ),
+                PendingMutationRecord(
+                    mutationId = "m-toggle-step",
+                    kind = MutationKind.TOGGLE_STEP,
+                    targetId = "step-1",
+                    timestampEpochMs = 1700000004000L,
+                    completed = true,
+                ),
+                PendingMutationRecord(
+                    mutationId = "m-delete-step",
+                    kind = MutationKind.DELETE_STEP,
+                    targetId = "step-2",
+                    timestampEpochMs = 1700000005000L,
+                ),
+                PendingMutationRecord(
+                    mutationId = "m-reorder-steps",
+                    kind = MutationKind.REORDER_STEPS,
+                    targetId = "todo-1",
+                    timestampEpochMs = 1700000006000L,
+                    orderedIds = listOf("step-2", "step-1", "step-3"),
+                ),
+            ),
+        )
+
+        val encoded = json.encodeToString(OfflineSyncState.serializer(), state)
+        val decoded = json.decodeFromString(OfflineSyncState.serializer(), encoded)
+
+        assertEquals(state, decoded)
+        assertEquals(MutationKind.CREATE_STEP, decoded.pendingMutations[0].kind)
+        assertEquals("Preheat oven", decoded.pendingMutations[0].title)
+        assertEquals("local-step-xyz", decoded.pendingMutations[0].name)
+        assertEquals(true, decoded.pendingMutations[1].completed)
+        assertEquals(MutationKind.DELETE_STEP, decoded.pendingMutations[2].kind)
+        assertEquals(
+            listOf("step-2", "step-1", "step-3"),
+            decoded.pendingMutations[3].orderedIds,
+        )
+    }
+
+    @Test
     fun `default field values are preserved when absent from JSON`() {
         val minimalJson = """{"lastSuccessfulSyncEpochMs":0}"""
         val decoded = json.decodeFromString(OfflineSyncState.serializer(), minimalJson)

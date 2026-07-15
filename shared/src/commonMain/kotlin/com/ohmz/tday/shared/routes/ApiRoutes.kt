@@ -26,6 +26,16 @@ object ApiRoutes {
         const val Summary = "$Base/summary"
 
         fun demote(todoId: String) = "$Base/$todoId/demote"
+
+        /** Flat checklist steps inside a todo (R6-2). */
+        object Steps {
+            const val Base = "$ApiPrefix/todo/steps"
+            const val Toggle = "$Base/toggle"
+            const val Delete = "$Base/delete"
+            const val Reorder = "$Base/reorder"
+
+            fun forTodo(todoId: String) = "$ApiPrefix/todo/$todoId/steps"
+        }
     }
 
     object List {
