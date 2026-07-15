@@ -68,6 +68,13 @@ typealias UpdateMemberRoleRequest = com.ohmz.tday.shared.model.UpdateMemberRoleR
 typealias RemoveMemberRequest = com.ohmz.tday.shared.model.RemoveMemberRequest
 typealias UserSearchResponse = com.ohmz.tday.shared.model.UserSearchResponse
 typealias UserSearchResultDto = com.ohmz.tday.shared.model.UserSearchResultDto
+typealias TaskStepDto = com.ohmz.tday.shared.model.TaskStepDto
+typealias TaskStepsResponse = com.ohmz.tday.shared.model.TaskStepsResponse
+typealias CreateTaskStepRequest = com.ohmz.tday.shared.model.CreateTaskStepRequest
+typealias ToggleTaskStepRequest = com.ohmz.tday.shared.model.ToggleTaskStepRequest
+typealias DeleteTaskStepRequest = com.ohmz.tday.shared.model.DeleteTaskStepRequest
+typealias ReorderTaskStepsRequest = com.ohmz.tday.shared.model.ReorderTaskStepsRequest
+typealias TaskStepMutationResponse = com.ohmz.tday.shared.model.TaskStepMutationResponse
 
 @Serializable
 data class CsrfResponse(

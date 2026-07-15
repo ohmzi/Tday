@@ -122,6 +122,8 @@ data class PendingMutationRecord(
     val name: String? = null,
     val color: String? = null,
     val iconKey: String? = null,
+    // Task-step ordering (REORDER_STEPS): the full ordered list of step ids.
+    val orderedIds: List<String>? = null,
 )
 
 @Serializable
@@ -148,4 +150,8 @@ enum class MutationKind {
     UNCOMPLETE_FLOATER,
     PROMOTE_FLOATER,
     DEMOTE_TODO,
+    CREATE_STEP,
+    TOGGLE_STEP,
+    DELETE_STEP,
+    REORDER_STEPS,
 }

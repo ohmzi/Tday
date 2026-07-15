@@ -372,7 +372,11 @@
     "reusableList": "Lista riutilizzabile",
     "reusableListHint": "Mostra Reimposta per deselezionare tutto e rifarla",
     "resetFloaterList": "Reimposta lista",
-    "floaterListReset": "Lista reimpostata: tutto deselezionato"
+    "floaterListReset": "Lista reimpostata: tutto deselezionato",
+    "steps": "Passaggi",
+    "add": "Aggiungi",
+    "addStep": "Aggiungi un passaggio",
+    "stepsCreateHint": "Salva prima l'attività per aggiungere passaggi."
   },
   "today": {
     "saveInstance": "Salva istanza",
@@ -1138,6 +1142,15 @@
         "step0": "Apri la palette dei comandi (⌘K) e scegli Scarico mentale.",
         "step1": "Incolla i pensieri e tocca Dividi in attività.",
         "step2": "Deseleziona ciò che non vuoi, poi Aggiungi."
+      },
+      "task-steps": {
+        "title": "Passaggi",
+        "summary": "Suddividi un'attività in una lista di controllo piatta e guardala riempirsi.",
+        "keywords": "passaggi, lista, sottoattività, suddivisione, progresso, casella, sotto-passaggi",
+        "body": "Apri un'attività e aggiungi i Passaggi per suddividerla in una lista di controllo piatta — senza annidamenti né date separate. Un piccolo contatore come 2/5 mostra a che punto sei, e l'intera attività resta una singola riga nella tua giornata. Spunta i passaggi man mano che procedi; quando l'attività è completata, i suoi passaggi vengono conservati nella sua cronologia.",
+        "step0": "Apri un'attività e aggiungi il tuo primo passaggio in Passaggi.",
+        "step1": "Aggiungine quanti ne servono, poi trascina per riordinare.",
+        "step2": "Spuntali — il contatore 2/5 tiene traccia dei tuoi progressi."
       }
     }
   },

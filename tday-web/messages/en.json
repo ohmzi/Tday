@@ -372,7 +372,11 @@
     "reusableList": "Reusable list",
     "reusableListHint": "Show a Reset to un-check everything and run it again",
     "resetFloaterList": "Reset list",
-    "floaterListReset": "List reset — everything un-checked"
+    "floaterListReset": "List reset — everything un-checked",
+    "steps": "Steps",
+    "add": "Add",
+    "addStep": "Add a step",
+    "stepsCreateHint": "Save the task first to add steps."
   },
   "today": {
     "saveInstance": "Save instance",
@@ -1138,6 +1142,15 @@
         "step0": "Open the command palette (⌘K) and pick Brain dump.",
         "step1": "Paste your thoughts and tap Split into tasks.",
         "step2": "Uncheck anything you don't want, then Add."
+      },
+      "task-steps": {
+        "title": "Steps",
+        "summary": "Break a task into a flat checklist and watch it fill up.",
+        "keywords": "steps, checklist, subtasks, breakdown, progress, checkbox, sub-steps",
+        "body": "Open a task and add Steps to break it into a flat checklist — no nesting, no separate dates. A small counter like 2/5 shows how far along you are, and the whole task stays a single line in your day. Check steps off as you go; when the task is done its steps are kept with its history.",
+        "step0": "Open a task and add your first step under Steps.",
+        "step1": "Add as many as you need, then drag to reorder.",
+        "step2": "Check them off — the 2/5 counter tracks your progress."
       }
     }
   },

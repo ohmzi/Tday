@@ -372,7 +372,11 @@
     "reusableList": "Lista reutilizable",
     "reusableListHint": "Muestra Reiniciar para desmarcar todo y volver a usarla",
     "resetFloaterList": "Reiniciar lista",
-    "floaterListReset": "Lista reiniciada: todo desmarcado"
+    "floaterListReset": "Lista reiniciada: todo desmarcado",
+    "steps": "Pasos",
+    "add": "Añadir",
+    "addStep": "Añadir un paso",
+    "stepsCreateHint": "Guarda la tarea primero para añadir pasos."
   },
   "today": {
     "saveInstance": "Guardar instancia",
@@ -1138,6 +1142,15 @@
         "step0": "Abre la paleta de comandos (⌘K) y elige Volcado mental.",
         "step1": "Pega tus ideas y toca Dividir en tareas.",
         "step2": "Desmarca lo que no quieras y pulsa Añadir."
+      },
+      "task-steps": {
+        "title": "Pasos",
+        "summary": "Divide una tarea en una lista de verificación plana y mírala llenarse.",
+        "keywords": "pasos, lista, subtareas, desglose, progreso, casilla, subpasos",
+        "body": "Abre una tarea y añade Pasos para dividirla en una lista de verificación plana: sin anidamiento ni fechas separadas. Un pequeño contador como 2/5 muestra cuánto has avanzado, y toda la tarea sigue siendo una sola línea en tu día. Marca los pasos a medida que avanzas; cuando la tarea esté hecha, sus pasos se conservan en su historial.",
+        "step0": "Abre una tarea y añade tu primer paso en Pasos.",
+        "step1": "Añade tantos como necesites y arrastra para reordenar.",
+        "step2": "Márcalos: el contador 2/5 sigue tu progreso."
       }
     }
   },

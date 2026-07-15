@@ -175,3 +175,53 @@ data class TodoInstanceDeleteRequest(
     val todoId: String,
     val instanceDate: String,
 )
+
+/**
+ * A single flat checklist step inside a todo (R6-2). No nesting, no per-step
+ * dates — ordering is an integer [position]. Steps are owned by their todo and
+ * cascade-delete with it; completed todos keep a JSON snapshot instead.
+ */
+@Serializable
+data class TaskStepDto(
+    val id: String,
+    val todoID: String,
+    val title: String,
+    val completed: Boolean = false,
+    val position: Int = 0,
+    val createdAt: String? = null,
+)
+
+@Serializable
+data class TaskStepsResponse(
+    val steps: List<TaskStepDto> = emptyList(),
+)
+
+@Serializable
+data class CreateTaskStepRequest(
+    val todoId: String,
+    val title: String,
+)
+
+@Serializable
+data class ToggleTaskStepRequest(
+    val id: String,
+    val completed: Boolean,
+)
+
+@Serializable
+data class DeleteTaskStepRequest(
+    val id: String,
+)
+
+/** New order for a todo's steps, given as the full ordered list of step ids. */
+@Serializable
+data class ReorderTaskStepsRequest(
+    val todoId: String,
+    val orderedIds: List<String>,
+)
+
+@Serializable
+data class TaskStepMutationResponse(
+    val message: String? = null,
+    val step: TaskStepDto? = null,
+)

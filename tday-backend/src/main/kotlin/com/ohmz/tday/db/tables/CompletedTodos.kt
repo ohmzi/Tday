@@ -21,6 +21,8 @@ object CompletedTodos : Table("CompletedTodo") {
     val listID = varchar("projectID", 30).references(Lists.id).nullable().index()
     val listName = varchar("projectName", 255).nullable()
     val listColor = varchar("projectColor", 32).nullable()
+    // JSON snapshot of the todo's steps at completion time (R6-2); null when none.
+    val steps = text("steps").nullable()
 
     override val primaryKey = PrimaryKey(id)
 }

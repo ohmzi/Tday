@@ -30,6 +30,7 @@ import FloaterListDot from "@/features/floaterList/component/FloaterListDot";
 import { GuideHelpLink } from "@/features/guide/GuideHelpLink";
 import NLPTitleInput from "./NLPTitleInput";
 import RepeatSuggestionChip from "./RepeatSuggestionChip";
+import TaskStepsSection from "./TaskStepsSection";
 import TaskSelectorOverlays, { type TaskSelector } from "./TodoFormSelectors";
 import { priorityLabelKey, repeatLabelKey } from "./labels";
 import { getPriorityFlag } from "@/lib/priority";
@@ -275,6 +276,20 @@ const TodoForm = ({
           </>
         )}
       </SheetCard>
+
+      {/* Steps — a flat checklist, only for an already-saved task. */}
+      {isEditing && todo?.id ? (
+        <TaskStepsSection todoId={todo.id} />
+      ) : (
+        <>
+          <SheetSectionTitle>{appDict("steps")}</SheetSectionTitle>
+          <SheetCard>
+            <p className="px-[18px] py-3 text-sm font-bold text-muted-foreground">
+              {appDict("stepsCreateHint")}
+            </p>
+          </SheetCard>
+        </>
+      )}
 
       {/* Floater list picker (shown when schedule is off) */}
       <CenteredSelectorOverlay

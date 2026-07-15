@@ -246,6 +246,47 @@ struct CreateFloaterRequest: Codable {
     let listID: String?
 }
 
+// MARK: - Task steps (R6-2)
+
+/// A single flat checklist step inside a todo. Mirrors the shared TaskStepDto.
+struct TaskStepDTO: Codable, Equatable, Identifiable {
+    let id: String
+    let todoID: String
+    let title: String
+    let completed: Bool
+    let position: Int
+    let createdAt: String?
+}
+
+struct TaskStepsResponse: Codable {
+    let steps: [TaskStepDTO]
+}
+
+struct CreateTaskStepRequest: Codable {
+    let todoId: String
+    let title: String
+}
+
+struct ToggleTaskStepRequest: Codable {
+    let id: String
+    let completed: Bool
+}
+
+struct DeleteTaskStepRequest: Codable {
+    let id: String
+}
+
+/// Body of `POST /api/todo/steps/reorder` — the full ordered list of step ids.
+struct ReorderTaskStepsRequest: Codable {
+    let todoId: String
+    let orderedIds: [String]
+}
+
+struct TaskStepMutationResponse: Codable {
+    let message: String?
+    let step: TaskStepDTO?
+}
+
 struct FloaterDTO: Codable, Equatable {
     let id: String
     let title: String

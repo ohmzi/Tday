@@ -25,6 +25,7 @@ internal const val LOCAL_FLOATER_PREFIX = "local-floater-"
 internal const val LOCAL_LIST_PREFIX = "local-list-"
 internal const val LOCAL_FLOATER_LIST_PREFIX = "local-floater-list-"
 internal const val LOCAL_COMPLETED_PREFIX = "local-completed-"
+internal const val LOCAL_STEP_PREFIX = "local-step-"
 internal const val LOCAL_COMPLETED_FLOATER_PREFIX = "local-completed-floater-"
 
 internal fun todoToCache(todo: TodoItem): CachedTodoRecord {
