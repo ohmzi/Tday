@@ -1116,6 +1116,41 @@
       "searchBody": "aufgaben sicher im blick behalten und erfassen, wahrend du fahrst. auf carplay zeigt t'day eine fokussierte, uberschaubare liste, die fur das auto gemacht ist, sodass du prufen kannst, was als nachstes ansteht, oder per sprache eine aufgabe hinzufugst, ohne zum telefon zu greifen."
     },
     {
+      "id": "focus-filters",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "layout-grid",
+      "platforms": [
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.7.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Fokus-Filter",
+      "summary": "Lass einen iOS-Fokus entscheiden, welche Listen in deinem Heute-Feed erscheinen.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "T'Day nutzt den iOS-Fokus. Wähle einen Fokus wie Arbeit oder Privat, lege fest, welche deiner Listen er anzeigen soll, und während dieser Fokus aktiv ist, blenden dein Heute-Feed und das Home-Bildschirm-Widget alles andere still aus. Schalte den Fokus aus, und jede Aufgabe kommt zurück – nichts wird gelöscht."
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "Öffne Einstellungen ▸ Fokus auf dem iPhone und wähle einen Fokus.",
+            "Füge einen Fokusfilter hinzu, wähle T'Day und dann deine Listen.",
+            "Aktiviere den Fokus – Heute und das Widget zeigen jetzt nur diese Listen."
+          ]
+        }
+      ],
+      "searchTitle": "fokus-filter",
+      "searchKeywords": "fokus, filter, ios, arbeit, privat, nicht storen, listen, ausblenden, konzentrieren, focus",
+      "searchBody": "lass einen ios-fokus entscheiden, welche listen in deinem heute-feed erscheinen. t'day nutzt den ios-fokus. wahle einen fokus wie arbeit oder privat, lege fest, welche deiner listen er anzeigen soll, und wahrend dieser fokus aktiv ist, blenden dein heute-feed und das home-bildschirm-widget alles andere still aus. schalte den fokus aus, und jede aufgabe kommt zuruck – nichts wird geloscht. offne einstellungen ▸ fokus auf dem iphone und wahle einen fokus. fuge einen fokusfilter hinzu, wahle t'day und dann deine listen. aktiviere den fokus – heute und das widget zeigen jetzt nur diese listen."
+    },
+    {
       "id": "local-mode",
       "section": "MODES_AND_SYNC",
       "sectionOrder": 6,

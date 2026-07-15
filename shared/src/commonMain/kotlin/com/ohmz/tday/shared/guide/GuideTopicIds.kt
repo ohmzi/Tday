@@ -43,6 +43,7 @@ object GuideTopicIds {
     const val INTERACTIVE_WIDGETS = "interactive-widgets"
     const val SHARE_INTO_TDAY = "share-into-tday"
     const val ANDROID_SHORTCUTS = "android-shortcuts"
+    const val FOCUS_FILTERS = "focus-filters"
     const val CARPLAY = "carplay"
     const val ANDROID_CAR = "android-car"
     const val LOCAL_MODE = "local-mode"

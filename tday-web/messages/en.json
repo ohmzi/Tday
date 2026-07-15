@@ -1151,6 +1151,15 @@
         "step0": "Open a task and add your first step under Steps.",
         "step1": "Add as many as you need, then drag to reorder.",
         "step2": "Check them off — the 2/5 counter tracks your progress."
+      },
+      "focus-filters": {
+        "title": "Focus filters",
+        "summary": "Let an iOS Focus decide which lists show in your Today feed.",
+        "keywords": "focus, filter, ios, work, personal, do not disturb, lists, hide, concentrate",
+        "body": "T'Day plugs into iOS Focus. Pick a Focus like Work or Personal, choose which of your lists it should show, and while that Focus is on your Today feed and home-screen widget quietly hide everything else. Turn the Focus off and every task comes back — nothing is deleted.",
+        "step0": "Open Settings ▸ Focus on iPhone and pick a Focus.",
+        "step1": "Add a Focus Filter and choose T'Day, then pick your lists.",
+        "step2": "Enable the Focus — Today and the widget now show only those lists."
       }
     }
   },

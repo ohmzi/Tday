@@ -1089,7 +1089,8 @@ final class TodoRepository {
         let filtered: [TodoItem]
         switch mode {
         case .today:
-            filtered = items.filter { isTodayTodo($0, now: now) }
+            // An active iOS Focus filter (R6-3) narrows Today to its chosen lists.
+            filtered = items.filter { isTodayTodo($0, now: now) && TdayFocusFilterStore.allows(listId: $0.listId) }
         case .overdue:
             filtered = items.filter { isOverdueTodo($0, now: now) }
         case .scheduled:

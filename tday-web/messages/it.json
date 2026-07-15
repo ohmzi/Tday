@@ -1151,6 +1151,15 @@
         "step0": "Apri un'attività e aggiungi il tuo primo passaggio in Passaggi.",
         "step1": "Aggiungine quanti ne servono, poi trascina per riordinare.",
         "step2": "Spuntali — il contatore 2/5 tiene traccia dei tuoi progressi."
+      },
+      "focus-filters": {
+        "title": "Filtri Full Immersion",
+        "summary": "Lascia che una Full Immersion di iOS decida quali liste appaiono nel tuo feed Oggi.",
+        "keywords": "full immersion, filtro, ios, lavoro, personale, non disturbare, liste, nascondi, concentrazione, focus",
+        "body": "T'Day si integra con Full Immersion di iOS. Scegli una Full Immersion come Lavoro o Personale, indica quali liste deve mostrare e, mentre quella Full Immersion è attiva, il tuo feed Oggi e il widget della schermata Home nascondono discretamente tutto il resto. Disattiva la Full Immersion e ogni attività ritorna: non viene eliminato nulla.",
+        "step0": "Apri Impostazioni ▸ Full Immersion su iPhone e scegli una Full Immersion.",
+        "step1": "Aggiungi un filtro Full Immersion, scegli T'Day e poi seleziona le tue liste.",
+        "step2": "Attiva la Full Immersion — Oggi e il widget ora mostrano solo quelle liste."
       }
     }
   },

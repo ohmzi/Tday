@@ -13,7 +13,8 @@
     "widget": [
       "home-widget",
       "widget-quick-add",
-      "interactive-widgets"
+      "interactive-widgets",
+      "focus-filters"
     ],
     "offline": [
       "offline-sync",
