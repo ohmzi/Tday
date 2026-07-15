@@ -65,6 +65,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.navigation.navDeepLink
+import com.ohmz.tday.compose.core.data.ConnectionFailureKind
 import com.ohmz.tday.compose.core.model.DashboardSummary
 import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TodoListMode
@@ -230,7 +231,9 @@ fun TdayApp(
         isOffline = appUiState.isOffline &&
                 appUiState.authenticated &&
                 !appUiState.isLocalMode,
+        offlineReason = appUiState.offlineReason,
         pendingMutationCount = appUiState.pendingMutationCount,
+        manualNoticePulse = appUiState.manualNoticePulse,
     )
     OnAppForegroundResume {
         appViewModel.reconnectAfterForeground()
@@ -432,7 +435,7 @@ fun TdayApp(
                                                 }
                                                 HomeScreen(
                                                     uiState = homeUiState,
-                                                    onRefresh = homeViewModel::refresh,
+                                                    onRefresh = { homeViewModel.refresh(userInitiated = true) },
                                                     pullRefreshEnabled = !appUiState.isLocalMode,
                                                     onOpenToday = { navController.navigate(AppRoute.TodayTodos.route) },
                                                     onOpenOverdue = { navController.navigate(AppRoute.OverdueTodos.route) },
@@ -939,7 +942,7 @@ fun TdayApp(
                         CompletedScreen(
                             uiState = uiState,
                             onBack = { navController.popBackStack() },
-                            onRefresh = viewModel::refresh,
+                            onRefresh = { viewModel.refresh(userInitiated = true) },
                             onUncomplete = viewModel::uncomplete,
                             onDelete = viewModel::delete,
                             onUpdateTask = viewModel::update,
@@ -956,7 +959,7 @@ fun TdayApp(
                         CalendarScreen(
                             uiState = uiState,
                             onBack = { navController.popBackStack() },
-                            onRefresh = viewModel::refresh,
+                            onRefresh = { viewModel.refresh(userInitiated = true) },
                             onCreateTask = viewModel::createTask,
                             onParseTaskTitleNlp = viewModel::parseTaskTitleNlp,
                             onCompleteTask = viewModel::complete,
@@ -1170,31 +1173,58 @@ private fun CollectAppSnackbars(
 
 /**
  * Surfaces connectivity changes as transient toasts (replacing the persistent
- * offline banner): an INFO toast when the app drops offline and a "Back online"
+ * offline banner): an ERROR toast when the app drops offline and a "Back online"
  * toast when the same gated signal flips back. Drives off the same
  * `isOffline` condition the banner used so behaviour stays in sync.
+ *
+ * The offline toast fires on an `isOffline` transition OR when [manualNoticePulse]
+ * increments — a manual sync (Settings "Sync now" / pull-to-refresh) force-shows the
+ * toast every time it applies, even while already offline. The back-online toast fires
+ * only on a genuine offline→online transition, never on a pulse. The offline message
+ * branches on [offlineReason]: a backend/DB 5xx (SERVER_UNAVAILABLE) shows the distinct
+ * "server error" toast; anything else keeps the generic "you're offline" toast.
  */
 @Composable
 private fun CollectConnectivityToasts(
     appViewModel: AppViewModel,
     isOffline: Boolean,
+    offlineReason: ConnectionFailureKind,
     pendingMutationCount: Int,
+    manualNoticePulse: Int,
 ) {
     val context = LocalContext.current
-    // Tracks whether we have already announced the current offline state so we
-    // emit exactly one toast per transition (and skip the initial composition).
+    // Tracks the last announced offline state and pulse so we emit exactly one toast per
+    // transition or manual pulse (and skip the initial composition).
     var wasOffline by remember { mutableStateOf<Boolean?>(null) }
+    var lastPulse by remember { mutableStateOf(manualNoticePulse) }
 
-    LaunchedEffect(isOffline, pendingMutationCount) {
+    LaunchedEffect(isOffline, manualNoticePulse) {
         val previous = wasOffline
-        if (previous == isOffline) return@LaunchedEffect
+        val transitioned = previous != isOffline
+        val pulseIncremented = manualNoticePulse != lastPulse
         wasOffline = isOffline
+        lastPulse = manualNoticePulse
 
         // Skip the very first observation so a cold start that is already online
         // does not flash a spurious "Back online" toast.
         if (previous == null) return@LaunchedEffect
+        if (!transitioned && !pulseIncremented) return@LaunchedEffect
 
-        val message = if (isOffline) {
+        if (!isOffline) {
+            // Back-online only announces on a real offline→online flip, not a manual pulse.
+            if (!transitioned) return@LaunchedEffect
+            appViewModel.snackbarManager.show(
+                SnackbarEvent(
+                    message = context.getString(R.string.online_toast),
+                    kind = SnackbarKind.INFO,
+                ),
+            )
+            return@LaunchedEffect
+        }
+
+        val message = if (offlineReason == ConnectionFailureKind.SERVER_UNAVAILABLE) {
+            context.getString(R.string.backend_down_toast)
+        } else {
             when {
                 pendingMutationCount == 1 ->
                     context.getString(R.string.offline_toast_pending_one)
@@ -1204,14 +1234,12 @@ private fun CollectConnectivityToasts(
 
                 else -> context.getString(R.string.offline_toast)
             }
-        } else {
-            context.getString(R.string.online_toast)
         }
         appViewModel.snackbarManager.show(
             SnackbarEvent(
-                // Offline is an "issue" → red shade; back-online stays neutral.
+                // Offline / server-down is an "issue" → red shade.
                 message = message,
-                kind = if (isOffline) SnackbarKind.ERROR else SnackbarKind.INFO,
+                kind = SnackbarKind.ERROR,
             ),
         )
     }
@@ -1361,7 +1389,7 @@ private fun TodosRoute(
     TodoListScreen(
         uiState = uiState,
         onBack = onBack,
-        onRefresh = viewModel::refresh,
+        onRefresh = { viewModel.refresh(userInitiated = true) },
         highlightedTodoId = highlightTodoId,
         onSummarize = viewModel::summarizeCurrentMode,
         onDismissSummaryConnectivityError = viewModel::dismissSummaryConnectivityError,

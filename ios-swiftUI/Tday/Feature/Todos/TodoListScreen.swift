@@ -1027,7 +1027,7 @@ struct TodoListScreen: View {
                 isRefreshing: viewModel.isLoading,
                 isEnabled: pullRefreshEnabled,
                 action: {
-                    await viewModel.refresh()
+                    await viewModel.refresh(userInitiated: true)
                 }
             ) {
                 watermarkedModeContent
@@ -1035,7 +1035,7 @@ struct TodoListScreen: View {
         } else {
             watermarkedModeContent
                 .tdayPullToRefresh(isRefreshing: viewModel.isLoading, isEnabled: pullRefreshEnabled) {
-                    await viewModel.refresh()
+                    await viewModel.refresh(userInitiated: true)
                 }
         }
     }

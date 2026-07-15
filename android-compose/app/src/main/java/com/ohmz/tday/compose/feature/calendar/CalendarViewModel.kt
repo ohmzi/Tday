@@ -106,10 +106,10 @@ class CalendarViewModel @Inject constructor(
         hydrateFromCache()
     }
 
-    fun refresh() {
+    fun refresh(userInitiated: Boolean = false) {
         hasLoadedScreen = true
         TdayTelemetry.addBreadcrumb("calendar.refresh", data = calendarTelemetryData())
-        loadInternal(forceSync = true, showLoading = true)
+        loadInternal(forceSync = true, showLoading = true, userInitiated = userInitiated)
     }
 
     suspend fun parseTaskTitleNlp(
@@ -146,7 +146,7 @@ class CalendarViewModel @Inject constructor(
         }
     }
 
-    private fun loadInternal(forceSync: Boolean, showLoading: Boolean) {
+    private fun loadInternal(forceSync: Boolean, showLoading: Boolean, userInitiated: Boolean = false) {
         viewModelScope.launch {
             if (showLoading) {
                 _uiState.update { current ->
@@ -164,6 +164,7 @@ class CalendarViewModel @Inject constructor(
                     syncManager.syncCachedData(
                         force = true,
                         replayPendingMutations = false,
+                        userInitiated = userInitiated,
                         connectionProbeTimeoutMs = SyncManager.USER_REFRESH_CONNECTION_TIMEOUT_MS,
                     )
                         .onFailure { /* fall back to cache */ }

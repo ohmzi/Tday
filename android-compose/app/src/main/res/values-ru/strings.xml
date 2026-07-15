@@ -580,6 +580,7 @@
     <string name="offline_toast_pending_many">Вы офлайн — %1$d изменений ждут синхронизации.</string>
     <string name="offline_toast_pending_one">Вы офлайн — 1 изменение ждёт синхронизации.</string>
     <string name="online_toast">Снова в сети — синхронизируем последние изменения…</string>
+    <string name="backend_down_toast">Ошибка сервера — бэкенд или база данных могут быть недоступны. Повторите попытку через некоторое время.</string>
     <string name="password_changed_toast">Пароль успешно изменён</string>
     <string name="pending_approval_check">Проверить статус одобрения</string>
     <string name="pending_approval_message">Ваша учётная запись (%1$s) ожидает одобрения администратора. Мы впустим вас, как только её одобрят.</string>

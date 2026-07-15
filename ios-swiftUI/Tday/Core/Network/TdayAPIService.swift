@@ -89,12 +89,22 @@ func isSessionAuthenticationIssue(_ error: Error) -> Bool {
 }
 
 func isLikelyServerUnavailableStatusCode(_ statusCode: Int) -> Bool {
-    // Any 5xx means the address is alive but the backend can't fulfill the request —
-    // the backend container is down/restarting (502/503/504), the database is down
-    // (500), etc. Sync genuinely can't happen, so treat it exactly like being offline
-    // (keep the session, defer sync, show the same "can't reach server" notice). 408 is
-    // a request timeout. 4xx stays a real client error, handled elsewhere.
+    // "Can't sync right now, keep the session, retry later" — covers a request timeout
+    // (408) and any 5xx (backend container/database down). This drives the retry/keep-
+    // session behavior; the user-facing MESSAGE is chosen separately (see
+    // isBackendUnavailableError) so a 5xx reads as "server error", not "you're offline".
     statusCode == 408 || (500 ... 599).contains(statusCode)
+}
+
+/// True when the address is alive but the backend answered with a 5xx — the backend
+/// container is down/restarting (502/503/504) or the database is down (500). Distinct
+/// from a genuine no-network failure (transport error / no HTTP status), so we can show a
+/// "server error" message instead of "you're offline". 408 (timeout) reads as no-network.
+func isBackendUnavailableError(_ error: Error) -> Bool {
+    guard let apiError = error as? APIError, let statusCode = apiError.statusCode else {
+        return false
+    }
+    return (500 ... 599).contains(statusCode)
 }
 
 func isLikelyUnrecoverableMutationError(_ error: Error) -> Bool {

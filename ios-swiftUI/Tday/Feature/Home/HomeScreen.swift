@@ -188,7 +188,7 @@ struct HomeScreen: View {
                     isRefreshing: viewModel.isLoading,
                     isEnabled: pullRefreshEnabled,
                     action: {
-                        await viewModel.refresh()
+                        await viewModel.refresh(userInitiated: true)
                     }
                 ) {
                     ScrollViewReader { scrollProxy in
