@@ -451,6 +451,9 @@ private struct TdayTasksWidgetContent: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .padding(.horizontal, metrics.horizontalInset)
+            .padding(.top, metrics.topInset)
+            .padding(.bottom, metrics.bottomInset)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .widgetURL(mode.openURL)
@@ -575,15 +578,42 @@ private struct TdayTasksWidgetContent: View {
         let visibleRows = visibleTaskRows(totalCount: totalCount)
         let overflowCount = max(0, totalCount - visibleRows.count)
 
-        return VStack(alignment: .leading, spacing: metrics.rowSpacing) {
-            ForEach(visibleRows) { row in
+        let hasOverflow = overflowCount > 0
+
+        // spacing 0: the inter-row gap is recreated by rowDivider's own vertical padding,
+        // so the separator lives INSIDE the existing gap and adds no height — the row-fit
+        // count (3 medium / 9 large) stays exactly the same as without dividers.
+        return VStack(alignment: .leading, spacing: 0) {
+            ForEach(Array(visibleRows.enumerated()), id: \.element.id) { index, row in
                 taskRow(row)
+                if index < visibleRows.count - 1 || hasOverflow {
+                    rowDivider
+                }
             }
-            if overflowCount > 0 {
+            if hasOverflow {
                 overflowRow(count: overflowCount)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    /// Native Notes-widget-style separator between rows. It sits within the existing
+    /// inter-row gap (vertical padding = (rowSpacing − lineHeight) / 2 on each side), so
+    /// introducing it costs no extra height and never pushes a task out of the widget.
+    private var rowDivider: some View {
+        let lineHeight: CGFloat = 0.75
+        return Rectangle()
+            .fill(dividerColor)
+            .frame(maxWidth: .infinity)
+            .frame(height: lineHeight)
+            .padding(.vertical, max(0, (metrics.rowSpacing - lineHeight) / 2))
+    }
+
+    private var dividerColor: Color {
+        guard renderingMode == .fullColor else {
+            return Color.primary.opacity(0.12)
+        }
+        return Color.primary.opacity(colorScheme == .dark ? 0.17 : 0.12)
     }
 
     private func rowUnitCost(_ row: WidgetTaskRowModel) -> Int {
@@ -634,6 +664,7 @@ private struct TdayTasksWidgetContent: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
         .multilineTextAlignment(.center)
+        .padding(.horizontal, metrics.horizontalInset)
     }
 
     private func taskRow(_ row: WidgetTaskRowModel) -> some View {
@@ -661,7 +692,6 @@ private struct TdayTasksWidgetContent: View {
             }
         }
         .foregroundStyle(.primary)
-        .padding(.horizontal, 2)
         .frame(minHeight: metrics.rowHeight, alignment: .leading)
         .accessibilityLabel(accessibilityLabel(for: row))
     }
@@ -741,6 +771,11 @@ private struct WidgetLayoutMetrics {
     // visible note costs 2 units, and the "+X more" overflow row costs 1 unit.
     let rowUnitCapacity: Int
     let showsNotes: Bool
+    // Custom content insets (default WidgetKit content margins are disabled) so tasks run
+    // closer edge-to-edge and reclaim the horizontal space the bullet indent used to waste.
+    let horizontalInset: CGFloat
+    let topInset: CGFloat
+    let bottomInset: CGFloat
     let watermarkSize: CGFloat
     let watermarkTrailingOffset: CGFloat
     let watermarkVerticalFraction: CGFloat
@@ -757,6 +792,9 @@ private struct WidgetLayoutMetrics {
             rowFontSize = 12
             rowUnitCapacity = 2
             showsNotes = false
+            horizontalInset = 13
+            topInset = 11
+            bottomInset = 9
             watermarkSize = 116
             watermarkTrailingOffset = 18
             watermarkVerticalFraction = 0.70
@@ -771,6 +809,9 @@ private struct WidgetLayoutMetrics {
             // ~306pt usable - 45pt header - 8pt spacing ~= 253pt; 9 x 28pt units - 4 ~= 248pt.
             rowUnitCapacity = 9
             showsNotes = true
+            horizontalInset = 15
+            topInset = 14
+            bottomInset = 12
             watermarkSize = 224
             watermarkTrailingOffset = 28
             watermarkVerticalFraction = 0.68
@@ -784,6 +825,9 @@ private struct WidgetLayoutMetrics {
             rowFontSize = 12
             rowUnitCapacity = 3
             showsNotes = true
+            horizontalInset = 14
+            topInset = 13
+            bottomInset = 11
             watermarkSize = 164
             watermarkTrailingOffset = 22
             watermarkVerticalFraction = 0.68
@@ -802,6 +846,7 @@ struct TodayTasksWidget: Widget {
         .description("Shows today's T'Day tasks at a glance.")
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
         .containerBackgroundRemovable(true)
+        .contentMarginsDisabled()
     }
 }
 
@@ -979,6 +1024,7 @@ struct FloaterTasksWidget: Widget {
         .description("Shows floater T'Day tasks at a glance.")
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
         .containerBackgroundRemovable(true)
+        .contentMarginsDisabled()
     }
 }
 
