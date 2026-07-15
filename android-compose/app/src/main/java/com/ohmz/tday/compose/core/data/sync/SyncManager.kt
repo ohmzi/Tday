@@ -12,6 +12,7 @@ import com.ohmz.tday.compose.core.data.SecureConfigStore
 import com.ohmz.tday.compose.core.data.cache.LOCAL_FLOATER_LIST_PREFIX
 import com.ohmz.tday.compose.core.data.cache.LOCAL_FLOATER_PREFIX
 import com.ohmz.tday.compose.core.data.cache.LOCAL_LIST_PREFIX
+import com.ohmz.tday.compose.core.data.cache.LOCAL_STEP_PREFIX
 import com.ohmz.tday.compose.core.data.cache.LOCAL_TODO_PREFIX
 import com.ohmz.tday.compose.core.data.cache.OfflineCacheManager
 import com.ohmz.tday.compose.core.data.cache.completedFloaterToCache
@@ -36,11 +37,15 @@ import com.ohmz.tday.compose.core.model.CompletedItem
 import com.ohmz.tday.compose.core.model.CreateFloaterListRequest
 import com.ohmz.tday.compose.core.model.CreateFloaterRequest
 import com.ohmz.tday.compose.core.model.CreateListRequest
+import com.ohmz.tday.compose.core.model.CreateTaskStepRequest
 import com.ohmz.tday.compose.core.model.CreateTodoRequest
 import com.ohmz.tday.compose.core.model.DeleteFloaterListRequest
 import com.ohmz.tday.compose.core.model.DeleteFloaterRequest
 import com.ohmz.tday.compose.core.model.DeleteListRequest
+import com.ohmz.tday.compose.core.model.DeleteTaskStepRequest
 import com.ohmz.tday.compose.core.model.DeleteTodoRequest
+import com.ohmz.tday.compose.core.model.ReorderTaskStepsRequest
+import com.ohmz.tday.compose.core.model.ToggleTaskStepRequest
 import com.ohmz.tday.compose.core.model.FloaterCompleteRequest
 import com.ohmz.tday.compose.core.model.FloaterUncompleteRequest
 import com.ohmz.tday.compose.core.model.ListSummary
@@ -820,6 +825,67 @@ class SyncManager @Inject constructor(
                             resolvedTodoIds[localFloaterId] = demotedFloater.canonicalId
                             state = replaceLocalFloaterId(state, localFloaterId, demotedFloater.canonicalId)
                         }
+                        true
+                    }
+
+                    MutationKind.CREATE_STEP -> {
+                        val todoId = resolvedTargetId ?: return@runCatching false
+                        // The parent todo must exist server-side before a step attaches.
+                        if (todoId.startsWith(LOCAL_TODO_PREFIX)) return@runCatching false
+                        val created = requireApiBody(
+                            api.createTaskStep(
+                                CreateTaskStepRequest(
+                                    todoId = todoId,
+                                    title = mutation.title?.trim().orEmpty(),
+                                ),
+                            ),
+                            "Could not add step",
+                        ).step ?: return@runCatching false
+                        // Remap the optimistic local step id (carried in `name`) so a
+                        // later TOGGLE/DELETE in this same batch resolves correctly.
+                        val localStepId = mutation.name
+                        if (localStepId != null && localStepId.startsWith(LOCAL_STEP_PREFIX)) {
+                            resolvedTodoIds[localStepId] = created.id
+                        }
+                        true
+                    }
+
+                    MutationKind.TOGGLE_STEP -> {
+                        val stepId = resolvedTargetId ?: return@runCatching false
+                        if (stepId.startsWith(LOCAL_STEP_PREFIX)) return@runCatching false
+                        requireApiBody(
+                            api.toggleTaskStep(
+                                ToggleTaskStepRequest(id = stepId, completed = mutation.completed ?: false),
+                            ),
+                            "Could not update step",
+                        )
+                        true
+                    }
+
+                    MutationKind.DELETE_STEP -> {
+                        val stepId = resolvedTargetId ?: return@runCatching false
+                        // A step that never synced has nothing to delete server-side.
+                        if (stepId.startsWith(LOCAL_STEP_PREFIX)) return@runCatching true
+                        requireApiBody(
+                            api.deleteTaskStep(DeleteTaskStepRequest(id = stepId)),
+                            "Could not delete step",
+                        )
+                        true
+                    }
+
+                    MutationKind.REORDER_STEPS -> {
+                        val todoId = resolvedTargetId ?: return@runCatching false
+                        if (todoId.startsWith(LOCAL_TODO_PREFIX)) return@runCatching false
+                        val orderedIds = mutation.orderedIds.orEmpty()
+                            .map { resolvedTodoIds[it] ?: it }
+                            .filterNot { it.startsWith(LOCAL_STEP_PREFIX) }
+                        if (orderedIds.isEmpty()) return@runCatching true
+                        requireApiBody(
+                            api.reorderTaskSteps(
+                                ReorderTaskStepsRequest(todoId = todoId, orderedIds = orderedIds),
+                            ),
+                            "Could not reorder steps",
+                        )
                         true
                     }
                 }

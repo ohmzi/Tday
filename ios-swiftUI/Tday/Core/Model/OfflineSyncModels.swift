@@ -6,6 +6,7 @@ let LOCAL_TODO_PREFIX = "local-todo-"
 let LOCAL_FLOATER_PREFIX = "local-floater-"
 let LOCAL_COMPLETED_PREFIX = "local-completed-"
 let LOCAL_COMPLETED_FLOATER_PREFIX = "local-completed-floater-"
+let LOCAL_STEP_PREFIX = "local-step-"
 
 struct OfflineSyncState: Equatable, Codable {
     var lastSuccessfulSyncEpochMs: Int64 = 0
@@ -275,6 +276,10 @@ enum MutationKind: String, Codable, CaseIterable {
     case uncompleteFloater = "UNCOMPLETE_FLOATER"
     case promoteFloater = "PROMOTE_FLOATER"
     case demoteTodo = "DEMOTE_TODO"
+    case createStep = "CREATE_STEP"
+    case toggleStep = "TOGGLE_STEP"
+    case deleteStep = "DELETE_STEP"
+    case reorderSteps = "REORDER_STEPS"
 }
 
 struct PendingMutationRecord: Identifiable, Equatable, Codable {
@@ -294,6 +299,9 @@ struct PendingMutationRecord: Identifiable, Equatable, Codable {
     let name: String?
     let color: String?
     let iconKey: String?
+    // Task-step ordering (REORDER_STEPS): the full ordered list of step ids.
+    // Defaulted so the 30+ existing memberwise-init call sites keep compiling.
+    var orderedIds: [String]? = nil
 
     var id: String {
         mutationId

@@ -82,6 +82,14 @@ export interface TodoItemType {
   listID?: string | null;
 }
 
+export interface TaskStepType {
+  id: string;
+  todoID: string;
+  title: string;
+  completed: boolean;
+  position: number;
+}
+
 export interface overridingInstance {
   id: string;
   completedAt: Date | null;

@@ -7,6 +7,7 @@ import com.ohmz.tday.db.enums.Priority
 import com.ohmz.tday.db.tables.CompletedTodos
 import com.ohmz.tday.db.tables.Floaters
 import com.ohmz.tday.db.tables.Lists
+import com.ohmz.tday.db.tables.TaskSteps
 import com.ohmz.tday.db.tables.TodoInstances
 import com.ohmz.tday.db.tables.Todos
 import com.ohmz.tday.db.util.CuidGenerator
@@ -15,6 +16,9 @@ import com.ohmz.tday.domain.DomainEvent
 import com.ohmz.tday.models.response.FloaterResponse
 import com.ohmz.tday.models.response.TodoResponse
 import com.ohmz.tday.security.FieldEncryption
+import com.ohmz.tday.shared.model.TaskStepDto
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.greaterEq
@@ -261,6 +265,22 @@ class TodoServiceImpl(
             }.firstOrNull()
 
             if (existingCompleted == null) {
+                // Snapshot the todo's steps as JSON so history survives the parent's
+                // deletion (R6-2). Null when the todo has no steps.
+                val stepSnapshot = TaskSteps.selectAll()
+                    .where { TaskSteps.todoID eq todoId }
+                    .orderBy(TaskSteps.position to SortOrder.ASC, TaskSteps.createdAt to SortOrder.ASC)
+                    .map { row ->
+                        TaskStepDto(
+                            id = row[TaskSteps.id],
+                            todoID = todoId,
+                            title = row[TaskSteps.title],
+                            completed = row[TaskSteps.completed],
+                            position = row[TaskSteps.position],
+                            createdAt = row[TaskSteps.createdAt].toString(),
+                        )
+                    }
+                val stepsJson = if (stepSnapshot.isEmpty()) null else Json.encodeToString(stepSnapshot)
                 CompletedTodos.insert {
                     it[CompletedTodos.id] = CuidGenerator.newCuid()
                     it[CompletedTodos.originalTodoID] = todoId
@@ -277,6 +297,7 @@ class TodoServiceImpl(
                     it[CompletedTodos.listID] = todo[Todos.listID]
                     it[CompletedTodos.listName] = list?.get(Lists.name)
                     it[CompletedTodos.listColor] = list?.get(Lists.color)?.name
+                    it[CompletedTodos.steps] = stepsJson
                 }
             }
 

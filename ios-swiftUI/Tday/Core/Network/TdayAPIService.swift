@@ -333,6 +333,28 @@ final class TdayAPIService {
         try await request(path: "/api/todo/complete", method: "PATCH", body: payload, responseType: MessageResponse.self)
     }
 
+    // MARK: - Task steps (R6-2)
+
+    func getTaskSteps(todoId: String) async throws -> TaskStepsResponse {
+        try await request(path: "/api/todo/\(todoId)/steps", method: "GET", responseType: TaskStepsResponse.self)
+    }
+
+    func createTaskStep(payload: CreateTaskStepRequest) async throws -> TaskStepMutationResponse {
+        try await request(path: "/api/todo/steps", method: "POST", body: payload, responseType: TaskStepMutationResponse.self)
+    }
+
+    func toggleTaskStep(payload: ToggleTaskStepRequest) async throws -> TaskStepMutationResponse {
+        try await request(path: "/api/todo/steps/toggle", method: "POST", body: payload, responseType: TaskStepMutationResponse.self)
+    }
+
+    func deleteTaskStep(payload: DeleteTaskStepRequest) async throws -> MessageResponse {
+        try await request(path: "/api/todo/steps/delete", method: "POST", body: payload, responseType: MessageResponse.self)
+    }
+
+    func reorderTaskSteps(payload: ReorderTaskStepsRequest) async throws -> MessageResponse {
+        try await request(path: "/api/todo/steps/reorder", method: "POST", body: payload, responseType: MessageResponse.self)
+    }
+
     func uncompleteTodoByBody(payload: TodoUncompleteRequest) async throws -> MessageResponse {
         try await request(path: "/api/todo/uncomplete", method: "PATCH", body: payload, responseType: MessageResponse.self)
     }

@@ -372,7 +372,11 @@
     "reusableList": "Senarai boleh guna semula",
     "reusableListHint": "Tunjuk Set Semula untuk nyahtanda semua dan guna lagi",
     "resetFloaterList": "Set semula senarai",
-    "floaterListReset": "Senarai diset semula — semua dinyahtanda"
+    "floaterListReset": "Senarai diset semula — semua dinyahtanda",
+    "steps": "Langkah",
+    "add": "Tambah",
+    "addStep": "Tambah langkah",
+    "stepsCreateHint": "Simpan tugasan dahulu untuk menambah langkah."
   },
   "today": {
     "saveInstance": "Simpan kejadian",
@@ -1138,6 +1142,15 @@
         "step0": "Buka palet arahan (⌘K) dan pilih Curah minda.",
         "step1": "Tampal fikiran anda dan ketik Pecah kepada tugasan.",
         "step2": "Nyahtanda yang tak dimahukan, kemudian Tambah."
+      },
+      "task-steps": {
+        "title": "Langkah",
+        "summary": "Pecahkan tugasan kepada senarai semak rata dan lihat ia terisi.",
+        "keywords": "langkah, senarai semak, subtugas, pecahan, kemajuan, kotak semak, sub-langkah",
+        "body": "Buka tugasan dan tambah Langkah untuk memecahkannya kepada senarai semak rata — tiada sarang, tiada tarikh berasingan. Pembilang kecil seperti 2/5 menunjukkan sejauh mana kemajuan anda, dan keseluruhan tugasan kekal satu baris dalam hari anda. Tandakan langkah sambil anda meneruskan; apabila tugasan selesai, langkahnya disimpan bersama sejarahnya.",
+        "step0": "Buka tugasan dan tambah langkah pertama anda di bawah Langkah.",
+        "step1": "Tambah seberapa banyak yang diperlukan, kemudian seret untuk menyusun semula.",
+        "step2": "Tandakannya — pembilang 2/5 menjejaki kemajuan anda."
       }
     }
   },

@@ -910,6 +910,45 @@ final class SyncManager {
                 resolvedFloaterIDs[localFloaterID] = demotedFloater.id
                 state = replaceLocalFloaterID(state, localFloaterID: localFloaterID, serverFloaterID: demotedFloater.id)
             }
+
+        case .createStep:
+            guard let targetID else { return }
+            // The parent todo must exist server-side before a step attaches.
+            if targetID.hasPrefix(LOCAL_TODO_PREFIX) { return }
+            let response = try await api.createTaskStep(
+                payload: CreateTaskStepRequest(todoId: targetID, title: mutation.title ?? "")
+            )
+            // Remap the optimistic local step id (carried in `name`) so a later
+            // TOGGLE/DELETE in this same batch resolves correctly.
+            if let createdStep = response.step,
+               let localStepID = mutation.name,
+               localStepID.hasPrefix(LOCAL_STEP_PREFIX) {
+                resolvedTodoIDs[localStepID] = createdStep.id
+            }
+
+        case .toggleStep:
+            guard let targetID else { return }
+            if targetID.hasPrefix(LOCAL_STEP_PREFIX) { return }
+            _ = try await api.toggleTaskStep(
+                payload: ToggleTaskStepRequest(id: targetID, completed: mutation.completed ?? false)
+            )
+
+        case .deleteStep:
+            guard let targetID else { return }
+            // A step that never synced has nothing to delete server-side.
+            if targetID.hasPrefix(LOCAL_STEP_PREFIX) { return }
+            _ = try await api.deleteTaskStep(payload: DeleteTaskStepRequest(id: targetID))
+
+        case .reorderSteps:
+            guard let targetID else { return }
+            if targetID.hasPrefix(LOCAL_TODO_PREFIX) { return }
+            let orderedIDs = (mutation.orderedIds ?? [])
+                .map { resolvedTodoIDs[$0] ?? $0 }
+                .filter { !$0.hasPrefix(LOCAL_STEP_PREFIX) }
+            if orderedIDs.isEmpty { return }
+            _ = try await api.reorderTaskSteps(
+                payload: ReorderTaskStepsRequest(todoId: targetID, orderedIds: orderedIDs)
+            )
         }
     }
 
@@ -1276,7 +1315,12 @@ private extension MutationKind {
              .deleteFloater,
              .completeFloater,
              .uncompleteFloater,
-             .promoteFloater:
+             .promoteFloater,
+             // Steps live on their own table, not the todo row.
+             .createStep,
+             .toggleStep,
+             .deleteStep,
+             .reorderSteps:
             return false
         }
     }
@@ -1308,7 +1352,11 @@ private extension MutationKind {
              .completeTodo,
              .completeTodoInstance,
              .uncompleteTodo,
-             .demoteTodo:
+             .demoteTodo,
+             .createStep,
+             .toggleStep,
+             .deleteStep,
+             .reorderSteps:
             return false
         }
     }

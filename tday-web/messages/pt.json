@@ -372,7 +372,11 @@
     "reusableList": "Lista reutilizável",
     "reusableListHint": "Mostra Reiniciar para desmarcar tudo e usar de novo",
     "resetFloaterList": "Reiniciar lista",
-    "floaterListReset": "Lista reiniciada — tudo desmarcado"
+    "floaterListReset": "Lista reiniciada — tudo desmarcado",
+    "steps": "Etapas",
+    "add": "Adicionar",
+    "addStep": "Adicionar etapa",
+    "stepsCreateHint": "Salve a tarefa primeiro para adicionar etapas."
   },
   "today": {
     "saveInstance": "Guardar instância",
@@ -1138,6 +1142,15 @@
         "step0": "Abra a paleta de comandos (⌘K) e escolha Despejo mental.",
         "step1": "Cole seus pensamentos e toque em Dividir em tarefas.",
         "step2": "Desmarque o que não quiser e toque em Adicionar."
+      },
+      "task-steps": {
+        "title": "Etapas",
+        "summary": "Divida uma tarefa numa lista de verificação plana e veja-a a encher.",
+        "keywords": "etapas, lista, subtarefas, divisão, progresso, caixa de seleção, subetapas",
+        "body": "Abra uma tarefa e adicione Etapas para dividi-la numa lista de verificação plana — sem aninhamento nem datas separadas. Um pequeno contador como 2/5 mostra o quanto avançou, e a tarefa inteira continua a ser uma única linha no seu dia. Marque as etapas à medida que avança; quando a tarefa estiver concluída, as suas etapas são mantidas no seu histórico.",
+        "step0": "Abra uma tarefa e adicione a sua primeira etapa em Etapas.",
+        "step1": "Adicione quantas precisar e arraste para reordenar.",
+        "step2": "Marque-as — o contador 2/5 acompanha o seu progresso."
       }
     }
   },

@@ -12,8 +12,14 @@ import com.ohmz.tday.compose.core.model.CreateFloaterRequest
 import com.ohmz.tday.compose.core.model.CreateFloaterResponse
 import com.ohmz.tday.compose.core.model.CreateListRequest
 import com.ohmz.tday.compose.core.model.CreateListResponse
+import com.ohmz.tday.compose.core.model.CreateTaskStepRequest
 import com.ohmz.tday.compose.core.model.CreateTodoRequest
 import com.ohmz.tday.compose.core.model.CreateTodoResponse
+import com.ohmz.tday.compose.core.model.DeleteTaskStepRequest
+import com.ohmz.tday.compose.core.model.ReorderTaskStepsRequest
+import com.ohmz.tday.compose.core.model.TaskStepMutationResponse
+import com.ohmz.tday.compose.core.model.TaskStepsResponse
+import com.ohmz.tday.compose.core.model.ToggleTaskStepRequest
 import com.ohmz.tday.compose.core.model.CredentialKeyResponse
 import com.ohmz.tday.compose.core.model.CredentialsCallbackRequest
 import com.ohmz.tday.compose.core.model.CsrfResponse
@@ -236,6 +242,31 @@ interface TdayApiService {
     @HTTP(method = "DELETE", path = "/api/todo", hasBody = true)
     suspend fun deleteTodoByBody(
         @Body payload: DeleteTodoRequest,
+    ): Response<MessageResponse>
+
+    @GET("/api/todo/{todoId}/steps")
+    suspend fun getTaskSteps(
+        @Path("todoId") todoId: String,
+    ): Response<TaskStepsResponse>
+
+    @POST("/api/todo/steps")
+    suspend fun createTaskStep(
+        @Body payload: CreateTaskStepRequest,
+    ): Response<TaskStepMutationResponse>
+
+    @POST("/api/todo/steps/toggle")
+    suspend fun toggleTaskStep(
+        @Body payload: ToggleTaskStepRequest,
+    ): Response<TaskStepMutationResponse>
+
+    @POST("/api/todo/steps/delete")
+    suspend fun deleteTaskStep(
+        @Body payload: DeleteTaskStepRequest,
+    ): Response<MessageResponse>
+
+    @POST("/api/todo/steps/reorder")
+    suspend fun reorderTaskSteps(
+        @Body payload: ReorderTaskStepsRequest,
     ): Response<MessageResponse>
 
     @PATCH("/api/todo/complete")
