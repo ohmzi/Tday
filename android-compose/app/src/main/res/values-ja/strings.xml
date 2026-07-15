@@ -577,6 +577,7 @@
     <string name="offline_toast_pending_many">オフラインです。%1$d件の変更が同期待ちです。</string>
     <string name="offline_toast_pending_one">オフラインです。1件の変更が同期待ちです。</string>
     <string name="online_toast">オンラインに戻りました。最新の変更を同期しています…</string>
+    <string name="backend_down_toast">サーバーエラーです。バックエンドまたはデータベースが停止している可能性があります。しばらくしてからもう一度お試しください。</string>
     <string name="password_changed_toast">パスワードを変更しました</string>
     <string name="pending_approval_check">承認状況を確認</string>
     <string name="pending_approval_message">アカウント（%1$s）は管理者の承認待ちです。承認され次第ご利用いただけます。</string>

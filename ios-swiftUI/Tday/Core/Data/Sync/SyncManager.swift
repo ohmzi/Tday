@@ -3,6 +3,10 @@ import Foundation
 extension Notification.Name {
     static let offlineSyncAttemptFailed = Notification.Name("tday.offline-sync.attempt-failed")
     static let offlineSyncAttemptSucceeded = Notification.Name("tday.offline-sync.attempt-succeeded")
+    /// A USER-INITIATED refresh (pull-to-refresh) hit a connectivity/backend failure. Unlike
+    /// `offlineSyncAttemptFailed` (background/mutation-triggered, cooldown-gated), this always
+    /// surfaces a toast. userInfo["serverDown"] Bool distinguishes a 5xx from a no-network state.
+    static let userInitiatedSyncFailedOffline = Notification.Name("tday.user-sync.failed-offline")
 }
 
 private struct RemoteSnapshot {
@@ -120,6 +124,7 @@ final class SyncManager {
         force: Bool = false,
         replayPendingMutations: Bool = true,
         notifyOfflineFailure: Bool = true,
+        userInitiated: Bool = false,
         connectionProbeTimeoutSeconds: TimeInterval? = nil
     ) async -> Result<Void, Error> {
         if isLocalMode {
@@ -152,8 +157,18 @@ final class SyncManager {
             }
             return .success(())
         } catch {
-            if notifyOfflineFailure, isLikelyConnectivityIssue(error) {
-                NotificationCenter.default.post(name: .offlineSyncAttemptFailed, object: nil)
+            if isLikelyConnectivityIssue(error) {
+                if userInitiated {
+                    // Pull-to-refresh: always surface a toast (bypasses the cooldown),
+                    // carrying whether it's a backend 5xx vs a no-network state.
+                    NotificationCenter.default.post(
+                        name: .userInitiatedSyncFailedOffline,
+                        object: nil,
+                        userInfo: ["serverDown": isBackendUnavailableError(error)]
+                    )
+                } else if notifyOfflineFailure {
+                    NotificationCenter.default.post(name: .offlineSyncAttemptFailed, object: nil)
+                }
             }
             return .failure(error)
         }

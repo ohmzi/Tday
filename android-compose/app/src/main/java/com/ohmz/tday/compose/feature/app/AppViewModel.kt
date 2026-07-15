@@ -6,6 +6,8 @@ import androidx.lifecycle.viewModelScope
 import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.data.ApiCallException
 import com.ohmz.tday.compose.core.data.AppDataMode
+import com.ohmz.tday.compose.core.data.ConnectionFailureKind
+import com.ohmz.tday.compose.core.data.classifyConnectionFailure
 import com.ohmz.tday.compose.core.data.ServerProbeException
 import com.ohmz.tday.compose.core.data.ThemePreferenceStore
 import com.ohmz.tday.compose.core.data.auth.AuthRepository
@@ -79,10 +81,16 @@ data class AppUiState(
     val selectedReminder: ReminderOption = ReminderOption.DEFAULT,
     val selectedDayAhead: DayAheadOption = DayAheadOption.OFF,
     val isOffline: Boolean = false,
+    // Why the last sync counted as offline: SERVER_UNAVAILABLE (backend/DB 5xx) drives the
+    // distinct "server error" toast; anything else keeps the generic "you're offline" toast.
+    val offlineReason: ConnectionFailureKind = ConnectionFailureKind.NONE,
     val pendingMutationCount: Int = 0,
     val lastSuccessfulSyncEpochMs: Long = 0L,
     val lastSyncAttemptEpochMs: Long = 0L,
     val offlineNoticeId: Long = 0L,
+    // Bumped by manual syncs (Settings "Sync now" + pull-to-refresh) so the connectivity
+    // toast force-shows every time it applies, bypassing the offline-transition gate.
+    val manualNoticePulse: Int = 0,
     val versionCheckResult: VersionCheckResult? = null,
     val backendVersion: String? = null,
     val requiredUpdateRelease: GitHubRelease? = null,
@@ -200,6 +208,7 @@ class AppViewModel @Inject constructor(
             }
         }
         observeOfflineSyncFailures()
+        observeUserInitiatedSyncFailures()
         observeOfflineSyncSuccesses()
         observeSyncMetadataChanges()
         bootstrap()
@@ -276,6 +285,7 @@ class AppViewModel @Inject constructor(
                         isManualSyncing = false,
                         aiSummaryEnabled = settingsRepository.isAiSummaryEnabledSnapshot(),
                         isOffline = sessionResult.isOffline,
+                        offlineReason = sessionResult.offlineReason,
                         pendingMutationCount = syncMetadata.pendingMutationCount,
                         lastSuccessfulSyncEpochMs = syncMetadata.lastSuccessfulSyncEpochMs,
                         lastSyncAttemptEpochMs = syncMetadata.lastSyncAttemptEpochMs,
@@ -506,9 +516,11 @@ class AppViewModel @Inject constructor(
         }
 
         val syncError = syncResult.exceptionOrNull()
+        val isOffline = syncError != null && isLikelyConnectivityIssue(syncError)
         return SessionBootstrapResult(
             user = user,
-            isOffline = syncError != null && isLikelyConnectivityIssue(syncError),
+            isOffline = isOffline,
+            offlineReason = offlineReasonFor(isOffline, syncError),
         )
     }
 
@@ -824,12 +836,21 @@ class AppViewModel @Inject constructor(
                         error = syncError,
                         suppressAuthenticationExpired = true,
                     )
+            val offlineReason = offlineReasonFor(isOffline, syncError)
             val shouldShowOfflineNotice = isOffline && offlineNoticeCooldown.shouldShowNotice()
             val syncMetadata = syncMetadataSnapshot(AppDataMode.SERVER)
             _uiState.update {
                 it.copy(
                     isManualSyncing = false,
                     isOffline = isOffline,
+                    offlineReason = offlineReason,
+                    // Manual sync ("Sync now" / retry): force-show the toast every time it
+                    // applies by bumping the pulse, bypassing the offline-transition gate.
+                    manualNoticePulse = if (isOffline) {
+                        it.manualNoticePulse + 1
+                    } else {
+                        it.manualNoticePulse
+                    },
                     offlineNoticeId = if (shouldShowOfflineNotice) {
                         it.offlineNoticeId + 1L
                     } else {
@@ -972,6 +993,7 @@ class AppViewModel @Inject constructor(
                     error = syncError,
                     suppressAuthenticationExpired = suppressAuthenticationExpired,
                 )
+        val offlineReason = offlineReasonFor(isOffline, syncError)
         val shouldDeferOfflineState = syncError != null &&
                 isLikelyConnectivityIssue(syncError) &&
                 !markOfflineOnConnectivityFailure
@@ -987,6 +1009,14 @@ class AppViewModel @Inject constructor(
                     shouldDeferOfflineState -> it.isOffline
                     isOffline -> true
                     else -> false
+                },
+                // Keep the reason aligned with the effective offline flag above; a deferred
+                // state preserves whatever reason the prior offline transition recorded.
+                offlineReason = when {
+                    syncError == null -> ConnectionFailureKind.NONE
+                    shouldDeferOfflineState -> it.offlineReason
+                    isOffline -> offlineReason
+                    else -> ConnectionFailureKind.NONE
                 },
                 offlineNoticeId = if (shouldShowOfflineNotice) {
                     it.offlineNoticeId + 1L
@@ -1059,6 +1089,22 @@ class AppViewModel @Inject constructor(
     ): Boolean {
         return isLikelyConnectivityIssue(error) ||
                 (suppressAuthenticationExpired && isSessionAuthenticationIssue(error))
+    }
+
+    /**
+     * The reason to attach when we mark the app offline from a sync error. A 5xx/408
+     * (backend or database down) classifies as [ConnectionFailureKind.SERVER_UNAVAILABLE]
+     * and drives the distinct "server error" toast; a no-network failure classifies as
+     * [ConnectionFailureKind.CANNOT_REACH]. A 401 kept offline (suppressed auth-expiry) is
+     * not a connectivity failure, so it classifies as [ConnectionFailureKind.NONE] and keeps
+     * the generic offline toast rather than reading as backend-down.
+     */
+    private fun offlineReasonFor(isOffline: Boolean, error: Throwable?): ConnectionFailureKind {
+        return if (isOffline && error != null) {
+            classifyConnectionFailure(error)
+        } else {
+            ConnectionFailureKind.NONE
+        }
     }
 
     private fun classifyAndShowError(
@@ -1153,6 +1199,29 @@ class AppViewModel @Inject constructor(
                         connectionProbeTimeoutMs = SyncManager.USER_REFRESH_CONNECTION_TIMEOUT_MS,
                         suppressAuthenticationExpired = true,
                     )
+                }
+            }
+        }
+    }
+
+    /**
+     * User-initiated syncs (pull-to-refresh) report connectivity failures on a dedicated
+     * channel so we can force-show the connectivity toast every time — even when already
+     * offline — by bumping [AppUiState.manualNoticePulse], bypassing the transition gate.
+     */
+    private fun observeUserInitiatedSyncFailures() {
+        viewModelScope.launch {
+            syncManager.userInitiatedSyncFailures.collect { kind ->
+                val state = _uiState.value
+                if (state.authenticated && !state.isLocalMode) {
+                    _uiState.update {
+                        it.copy(
+                            isOffline = true,
+                            offlineReason = kind,
+                            manualNoticePulse = it.manualNoticePulse + 1,
+                        )
+                    }
+                    refreshSyncMetadataFromCache()
                 }
             }
         }
@@ -1288,6 +1357,7 @@ class AppViewModel @Inject constructor(
     private data class SessionBootstrapResult(
         val user: SessionUser,
         val isOffline: Boolean,
+        val offlineReason: ConnectionFailureKind,
     )
 
     private companion object {

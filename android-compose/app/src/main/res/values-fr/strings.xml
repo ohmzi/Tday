@@ -578,6 +578,7 @@
     <string name="offline_toast_pending_many">Vous êtes hors ligne — %1$d modifications en attente de synchronisation.</string>
     <string name="offline_toast_pending_one">Vous êtes hors ligne — 1 modification en attente de synchronisation.</string>
     <string name="online_toast">De retour en ligne — synchronisation de vos dernières modifications…</string>
+    <string name="backend_down_toast">Erreur du serveur — le backend ou la base de données est peut-être indisponible. Réessayez dans un instant.</string>
     <string name="password_changed_toast">Mot de passe modifié avec succès</string>
     <string name="pending_approval_check">Vérifier le statut d\'approbation</string>
     <string name="pending_approval_message">Votre compte (%1$s) attend l\'approbation d\'un administrateur. Vous pourrez vous connecter dès qu\'il sera approuvé.</string>

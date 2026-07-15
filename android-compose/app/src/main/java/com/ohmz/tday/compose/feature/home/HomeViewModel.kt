@@ -156,11 +156,15 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    fun refresh() {
-        refreshInternal(forceSync = true, showLoading = true)
+    fun refresh(userInitiated: Boolean = false) {
+        refreshInternal(forceSync = true, showLoading = true, userInitiated = userInitiated)
     }
 
-    private fun refreshInternal(forceSync: Boolean, showLoading: Boolean) {
+    private fun refreshInternal(
+        forceSync: Boolean,
+        showLoading: Boolean,
+        userInitiated: Boolean = false,
+    ) {
         viewModelScope.launch {
             if (showLoading) activeLoadingRefreshes += 1
             try {
@@ -179,6 +183,7 @@ class HomeViewModel @Inject constructor(
                         syncManager.syncCachedData(
                             force = true,
                             replayPendingMutations = true,
+                            userInitiated = userInitiated,
                             connectionProbeTimeoutMs = SyncManager.USER_REFRESH_CONNECTION_TIMEOUT_MS,
                         )
                             .onFailure { /* fall back to local cache */ }

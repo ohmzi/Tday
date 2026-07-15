@@ -593,6 +593,10 @@ struct AppRootView: View {
     }
 
     private var offlineToastMessage: String {
+        // A backend 5xx (server/database down) reads as a server error, not "you're offline".
+        if appViewModel.offlineNoticeKind == .serverDown {
+            return L("Server error — the backend or database may be down. Try again shortly.")
+        }
         let count = appViewModel.pendingMutationCount
         if count == 1 {
             return L("You're offline — 1 change waiting to sync.")

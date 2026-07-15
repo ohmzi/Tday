@@ -194,12 +194,12 @@ class TodoListViewModel @Inject constructor(
         _uiState.update { it.copy(summaryConnectivityError = false) }
     }
 
-    fun refresh() {
+    fun refresh(userInitiated: Boolean = false) {
         TdayTelemetry.addBreadcrumb(
             "todo_list.refresh",
             data = modeTelemetryData(),
         )
-        refreshInternal(forceSync = true, showLoading = true)
+        refreshInternal(forceSync = true, showLoading = true, userInitiated = userInitiated)
     }
 
     /** Schedules a floater into a real Todo at the picked due instant. */
@@ -277,7 +277,11 @@ class TodoListViewModel @Inject constructor(
         }
     }
 
-    private fun refreshInternal(forceSync: Boolean, showLoading: Boolean) {
+    private fun refreshInternal(
+        forceSync: Boolean,
+        showLoading: Boolean,
+        userInitiated: Boolean = false,
+    ) {
         val mode = _uiState.value.mode
         val listId = _uiState.value.listId
 
@@ -298,6 +302,7 @@ class TodoListViewModel @Inject constructor(
                     syncManager.syncCachedData(
                         force = true,
                         replayPendingMutations = true,
+                        userInitiated = userInitiated,
                         connectionProbeTimeoutMs = SyncManager.USER_REFRESH_CONNECTION_TIMEOUT_MS,
                     )
                         .onFailure { /* fall back to local cache */ }

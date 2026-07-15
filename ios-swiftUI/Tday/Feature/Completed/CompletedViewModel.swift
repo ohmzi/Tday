@@ -23,11 +23,12 @@ final class CompletedViewModel {
         observationTask?.cancel()
     }
 
-    func refresh() async {
+    func refresh(userInitiated: Bool = false) async {
         isLoading = true
         let result = await container.syncAndRefresh(
             force: true,
             replayPendingMutations: false,
+            userInitiated: userInitiated,
             connectionProbeTimeoutSeconds: SyncAndRefreshUseCase.userRefreshConnectionTimeoutSeconds
         )
         if case let .failure(error) = result, !isLikelyConnectivityIssue(error) {

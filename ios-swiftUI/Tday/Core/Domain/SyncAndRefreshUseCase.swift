@@ -17,12 +17,14 @@ struct SyncAndRefreshUseCase {
         force: Bool,
         replayPendingMutations: Bool,
         notifyOfflineFailure: Bool = true,
+        userInitiated: Bool = false,
         connectionProbeTimeoutSeconds: TimeInterval? = nil
     ) async -> Result<Void, Error> {
         await syncManager.syncCachedData(
             force: force,
             replayPendingMutations: replayPendingMutations,
             notifyOfflineFailure: notifyOfflineFailure,
+            userInitiated: userInitiated,
             connectionProbeTimeoutSeconds: connectionProbeTimeoutSeconds
         )
     }

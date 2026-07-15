@@ -48,7 +48,7 @@ struct CompletedScreen: View {
     var body: some View {
         completedTimelineContent
             .tdayPullToRefresh(isRefreshing: viewModel.isLoading, isEnabled: pullRefreshEnabled) {
-                await viewModel.refresh()
+                await viewModel.refresh(userInitiated: true)
             }
             .background(colors.background)
             .overlay {

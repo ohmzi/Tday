@@ -70,6 +70,9 @@ final class AppViewModel {
     var lastSuccessfulSyncEpochMs: Int64 = 0
     var lastSyncAttemptEpochMs: Int64 = 0
     var offlineNoticeID = 0
+    /// Which message the offline notice should render — a genuine no-network state vs the
+    /// backend answering with a 5xx (server/database down). Set alongside every notice bump.
+    var offlineNoticeKind: OfflineNoticeKind = .offline
     var navigationPath: [AppRoute] = []
     var latestVersionName: String?
     var latestRelease: GitHubRelease?
@@ -115,6 +118,7 @@ final class AppViewModel {
     @ObservationIgnored nonisolated(unsafe) private var syncLoopTask: Task<Void, Never>?
     @ObservationIgnored nonisolated(unsafe) private var offlineSyncFailureTask: Task<Void, Never>?
     @ObservationIgnored nonisolated(unsafe) private var offlineSyncSuccessTask: Task<Void, Never>?
+    @ObservationIgnored nonisolated(unsafe) private var userInitiatedSyncFailureTask: Task<Void, Never>?
     @ObservationIgnored nonisolated(unsafe) private var networkMonitor: NWPathMonitor?
     @ObservationIgnored private let networkMonitorQueue = DispatchQueue(label: "tday.network-monitor")
     @ObservationIgnored private var isForegroundReconnectInFlight = false
@@ -130,6 +134,7 @@ final class AppViewModel {
         dayAheadOption = container.dayAheadStore.getOption()
         observeCacheChanges()
         observeOfflineSyncFailures()
+        observeUserInitiatedSyncFailures()
         observeOfflineSyncSuccesses()
         startNetworkMonitor()
     }
@@ -138,6 +143,7 @@ final class AppViewModel {
         cacheObservationTask?.cancel()
         syncLoopTask?.cancel()
         offlineSyncFailureTask?.cancel()
+        userInitiatedSyncFailureTask?.cancel()
         offlineSyncSuccessTask?.cancel()
         networkMonitor?.cancel()
     }
@@ -203,8 +209,11 @@ final class AppViewModel {
             pendingApprovalMessage = nil
             canResetServerTrust = true
             isOffline = sessionResult.isOffline
-            if sessionResult.isOffline && shouldShowOfflineNotice() {
-                offlineNoticeID += 1
+            if sessionResult.isOffline {
+                offlineNoticeKind = sessionResult.serverDown ? .serverDown : .offline
+                if shouldShowOfflineNotice() {
+                    offlineNoticeID += 1
+                }
             }
             finishBootstrap()
             await refreshAiSummarySetting()
@@ -576,7 +585,8 @@ final class AppViewModel {
             connectionProbeTimeoutSeconds: SyncAndRefreshUseCase.userRefreshConnectionTimeoutSeconds
         )
         isManualSyncing = false
-        applySyncResult(result, showOfflineNotice: true)
+        // A user tapped "Sync now" — always surface the result, bypassing the anti-spam cooldown.
+        applySyncResult(result, showOfflineNotice: true, bypassCooldown: true)
         await rescheduleReminders()
     }
 
@@ -727,10 +737,27 @@ final class AppViewModel {
         }
     }
 
+    enum OfflineNoticeKind {
+        /// No network / can't reach the server at all (transport error, no HTTP status).
+        case offline
+        /// The backend answered with a 5xx — server container or database is down.
+        case serverDown
+    }
+
+    /// Bump the offline notice with the right message kind. `forceShow` bypasses the
+    /// anti-spam cooldown (used for user-initiated syncs); background paths pass false.
+    private func presentOfflineNotice(for error: Error, forceShow: Bool) {
+        offlineNoticeKind = isBackendUnavailableError(error) ? .serverDown : .offline
+        if forceShow || shouldShowOfflineNotice() {
+            offlineNoticeID += 1
+        }
+    }
+
     private func applySyncResult(
         _ result: Result<Void, Error>,
         showOfflineNotice: Bool = false,
-        suppressAuthenticationExpired: Bool = false
+        suppressAuthenticationExpired: Bool = false,
+        bypassCooldown: Bool = false
     ) {
         switch result {
         case .success:
@@ -745,8 +772,8 @@ final class AppViewModel {
             }
             isOffline = isLikelyConnectivityIssue(error) ||
                 (suppressAuthenticationExpired && isSessionAuthenticationIssue(error))
-            if isOffline && showOfflineNotice && shouldShowOfflineNotice() {
-                offlineNoticeID += 1
+            if isOffline && showOfflineNotice {
+                presentOfflineNotice(for: error, forceShow: bypassCooldown)
             }
             if !isOffline {
                 container.snackbarManager.show(message: userFacingMessage(for: error))
@@ -788,6 +815,24 @@ final class AppViewModel {
         }
 
         await reconnectWithServer(showOfflineNotice: true)
+    }
+
+    /// Pull-to-refresh hit a connectivity/backend failure — always surface the toast
+    /// (bypasses the cooldown), with the right message kind. No second sync: the user's
+    /// refresh already synced; we only need to report the outcome.
+    private func observeUserInitiatedSyncFailures() {
+        userInitiatedSyncFailureTask = Task {
+            for await notification in NotificationCenter.default.notifications(named: .userInitiatedSyncFailedOffline) {
+                let serverDown = (notification.userInfo?["serverDown"] as? Bool) ?? false
+                await MainActor.run {
+                    guard self.authenticated, !self.isLocalMode else { return }
+                    self.isOffline = true
+                    self.offlineNoticeKind = serverDown ? .serverDown : .offline
+                    self.offlineNoticeID += 1
+                    self.refreshSyncStatusFromCache()
+                }
+            }
+        }
     }
 
     private func observeOfflineSyncSuccesses() {
@@ -846,6 +891,8 @@ final class AppViewModel {
             return
         }
         isOffline = true
+        // OS-level link loss is always a genuine no-network state, never a backend 5xx.
+        offlineNoticeKind = .offline
         if shouldShowOfflineNotice() {
             offlineNoticeID += 1
         }

@@ -46,7 +46,7 @@ final class TodoListViewModel {
         observationTask?.cancel()
     }
 
-    func refresh() async {
+    func refresh(userInitiated: Bool = false) async {
         TdayTelemetry.addBreadcrumb("todo_list.refresh", data: modeTelemetryData())
         isLoading = true
         defer {
@@ -67,6 +67,7 @@ final class TodoListViewModel {
         let result = await container.syncAndRefresh(
             force: true,
             replayPendingMutations: true,
+            userInitiated: userInitiated,
             connectionProbeTimeoutSeconds: SyncAndRefreshUseCase.userRefreshConnectionTimeoutSeconds
         )
         if case let .failure(error) = result, !isLikelyConnectivityIssue(error) {

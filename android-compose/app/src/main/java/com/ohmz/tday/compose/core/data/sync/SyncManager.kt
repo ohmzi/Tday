@@ -30,6 +30,8 @@ import com.ohmz.tday.compose.core.data.cache.orderFloaterListsLikeWeb
 import com.ohmz.tday.compose.core.data.cache.orderListsLikeWeb
 import com.ohmz.tday.compose.core.data.cache.todoMergeKey
 import com.ohmz.tday.compose.core.data.cache.todoToCache
+import com.ohmz.tday.compose.core.data.ConnectionFailureKind
+import com.ohmz.tday.compose.core.data.classifyConnectionFailure
 import com.ohmz.tday.compose.core.data.isLikelyConnectivityIssue
 import com.ohmz.tday.compose.core.data.isLikelyUnrecoverableMutationError
 import com.ohmz.tday.compose.core.data.requireApiBody
@@ -84,6 +86,12 @@ class SyncManager @Inject constructor(
 ) {
     private val offlineSyncFailureMutable = MutableSharedFlow<Unit>(extraBufferCapacity = 8)
     val offlineSyncFailures: SharedFlow<Unit> = offlineSyncFailureMutable.asSharedFlow()
+    // Connectivity failures from user-initiated syncs (pull-to-refresh) carry the failure
+    // kind so the app can force-show the matching toast every time, even when already offline.
+    private val userInitiatedSyncFailureMutable =
+        MutableSharedFlow<ConnectionFailureKind>(extraBufferCapacity = 8)
+    val userInitiatedSyncFailures: SharedFlow<ConnectionFailureKind> =
+        userInitiatedSyncFailureMutable.asSharedFlow()
     private val offlineSyncSuccessMutable = MutableSharedFlow<Unit>(extraBufferCapacity = 8)
     val offlineSyncSuccesses: SharedFlow<Unit> = offlineSyncSuccessMutable.asSharedFlow()
 
@@ -96,6 +104,7 @@ class SyncManager @Inject constructor(
         force: Boolean = false,
         replayPendingMutations: Boolean = true,
         notifyOfflineFailure: Boolean = true,
+        userInitiated: Boolean = false,
         connectionProbeTimeoutMs: Long? = null,
     ): Result<Unit> {
         if (isLocalMode()) {
@@ -138,8 +147,13 @@ class SyncManager @Inject constructor(
             Unit
         }
         val error = result.exceptionOrNull()
-        if (notifyOfflineFailure && error != null && isLikelyConnectivityIssue(error)) {
-            offlineSyncFailureMutable.tryEmit(Unit)
+        if (error != null && isLikelyConnectivityIssue(error)) {
+            if (userInitiated) {
+                // Dedicated channel: force-shows the toast even when already offline.
+                userInitiatedSyncFailureMutable.tryEmit(classifyConnectionFailure(error))
+            } else if (notifyOfflineFailure) {
+                offlineSyncFailureMutable.tryEmit(Unit)
+            }
         }
         return result
     }

@@ -578,6 +578,7 @@
     <string name="offline_toast_pending_many">Você está offline — %1$d alterações aguardando sincronização.</string>
     <string name="offline_toast_pending_one">Você está offline — 1 alteração aguardando sincronização.</string>
     <string name="online_toast">De volta online — sincronizando suas últimas alterações…</string>
+    <string name="backend_down_toast">Erro no servidor — o backend ou o banco de dados pode estar indisponível. Tente novamente em instantes.</string>
     <string name="password_changed_toast">Senha alterada com sucesso</string>
     <string name="pending_approval_check">Verificar status de aprovação</string>
     <string name="pending_approval_message">Sua conta (%1$s) está aguardando a aprovação de um administrador. Liberaremos seu acesso assim que for aprovada.</string>

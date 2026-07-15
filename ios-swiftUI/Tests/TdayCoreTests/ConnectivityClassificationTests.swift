@@ -78,6 +78,21 @@ final class ConnectivityClassificationTests: XCTestCase {
         )
     }
 
+    func testBackendUnavailableSplitsFromNoNetwork() {
+        // A 5xx = the backend answered but is down → "server error" message, not "you're offline".
+        for code in [500, 502, 503, 504] {
+            XCTAssertTrue(
+                isBackendUnavailableError(APIError(message: "down", statusCode: code)),
+                "Expected HTTP \(code) to read as backend-down"
+            )
+        }
+        // No-network states (transport error / no HTTP status) and non-5xx are NOT backend-down.
+        XCTAssertFalse(isBackendUnavailableError(APIError(message: "no status", statusCode: nil)))
+        XCTAssertFalse(isBackendUnavailableError(URLError(.notConnectedToInternet)))
+        XCTAssertFalse(isBackendUnavailableError(APIError(message: "unauth", statusCode: 401)))
+        XCTAssertFalse(isBackendUnavailableError(APIError(message: "timeout", statusCode: 408)))
+    }
+
     func testUnauthorizedResponsesAreRecoverableSessionIssues() {
         XCTAssertTrue(
             isSessionAuthenticationIssue(
