@@ -1116,6 +1116,41 @@
       "searchBody": "consulta y captura tareas de forma segura mientras conduces. en carplay, t'day muestra una lista clara y facil de ojear, pensada para el coche, para que veas que sigue o anadas una tarea por voz sin alcanzar el telefono."
     },
     {
+      "id": "focus-filters",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "layout-grid",
+      "platforms": [
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.7.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Filtros de concentración",
+      "summary": "Deja que un modo de Concentración de iOS decida qué listas se muestran en tu feed de Hoy.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "T'Day se integra con el modo de Concentración de iOS. Elige una Concentración como Trabajo o Personal, escoge qué listas debe mostrar y, mientras esa Concentración esté activa, tu feed de Hoy y el widget de la pantalla de inicio ocultan discretamente todo lo demás. Desactiva la Concentración y todas las tareas vuelven: no se elimina nada."
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "Abre Ajustes ▸ Concentración en el iPhone y elige una Concentración.",
+            "Añade un Filtro de Concentración, elige T'Day y luego selecciona tus listas.",
+            "Activa la Concentración: Hoy y el widget ahora muestran solo esas listas."
+          ]
+        }
+      ],
+      "searchTitle": "filtros de concentracion",
+      "searchKeywords": "concentracion, filtro, ios, trabajo, personal, no molestar, listas, ocultar, enfoque, focus",
+      "searchBody": "deja que un modo de concentracion de ios decida que listas se muestran en tu feed de hoy. t'day se integra con el modo de concentracion de ios. elige una concentracion como trabajo o personal, escoge que listas debe mostrar y, mientras esa concentracion este activa, tu feed de hoy y el widget de la pantalla de inicio ocultan discretamente todo lo demas. desactiva la concentracion y todas las tareas vuelven: no se elimina nada. abre ajustes ▸ concentracion en el iphone y elige una concentracion. anade un filtro de concentracion, elige t'day y luego selecciona tus listas. activa la concentracion: hoy y el widget ahora muestran solo esas listas."
+    },
+    {
       "id": "local-mode",
       "section": "MODES_AND_SYNC",
       "sectionOrder": 6,

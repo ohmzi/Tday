@@ -1151,6 +1151,15 @@
         "step0": "Abra uma tarefa e adicione a sua primeira etapa em Etapas.",
         "step1": "Adicione quantas precisar e arraste para reordenar.",
         "step2": "Marque-as — o contador 2/5 acompanha o seu progresso."
+      },
+      "focus-filters": {
+        "title": "Filtros de foco",
+        "summary": "Deixe um Foco do iOS decidir que listas aparecem no seu feed de Hoje.",
+        "keywords": "foco, filtro, ios, trabalho, pessoal, não incomodar, listas, ocultar, concentrar",
+        "body": "O T'Day integra-se com o Foco do iOS. Escolha um Foco como Trabalho ou Pessoal, selecione que listas ele deve mostrar e, enquanto esse Foco estiver ativo, o seu feed de Hoje e o widget do ecrã principal ocultam discretamente tudo o resto. Desative o Foco e todas as tarefas voltam — nada é eliminado.",
+        "step0": "Abra Definições ▸ Foco no iPhone e escolha um Foco.",
+        "step1": "Adicione um Filtro de Foco e escolha o T'Day, depois selecione as suas listas.",
+        "step2": "Ative o Foco — Hoje e o widget mostram agora apenas essas listas."
       }
     }
   },

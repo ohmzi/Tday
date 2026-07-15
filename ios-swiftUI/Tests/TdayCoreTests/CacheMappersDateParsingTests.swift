@@ -284,3 +284,28 @@ final class TaskStepMutationSerializationTests: XCTestCase {
         XCTAssertEqual(dto.position, 0)
     }
 }
+
+/// Focus filter list gating (R6-3). Uses a real defaults store, so each case
+/// clears the filter afterwards to stay hermetic.
+final class FocusFilterStoreTests: XCTestCase {
+    override func tearDown() {
+        TdayFocusFilterStore.setActiveListIDs([])
+        super.tearDown()
+    }
+
+    func testNoFilterAllowsEverything() {
+        TdayFocusFilterStore.setActiveListIDs([])
+        XCTAssertNil(TdayFocusFilterStore.activeListIDs())
+        XCTAssertTrue(TdayFocusFilterStore.allows(listId: "list-1"))
+        XCTAssertTrue(TdayFocusFilterStore.allows(listId: nil))
+    }
+
+    func testActiveFilterGatesByList() {
+        TdayFocusFilterStore.setActiveListIDs(["list-1", "list-2"])
+        XCTAssertEqual(TdayFocusFilterStore.activeListIDs(), ["list-1", "list-2"])
+        XCTAssertTrue(TdayFocusFilterStore.allows(listId: "list-1"))
+        XCTAssertFalse(TdayFocusFilterStore.allows(listId: "list-9"))
+        // A todo with no list is hidden while an explicit filter is active.
+        XCTAssertFalse(TdayFocusFilterStore.allows(listId: nil))
+    }
+}

@@ -1116,6 +1116,41 @@
       "searchBody": "glance at and capture tasks safely while you drive. on carplay, t'day shows a focused, glanceable list built for the car, so you can check what's next or add a task by voice without reaching for your phone."
     },
     {
+      "id": "focus-filters",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "layout-grid",
+      "platforms": [
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.7.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Focus filters",
+      "summary": "Let an iOS Focus decide which lists show in your Today feed.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "T'Day plugs into iOS Focus. Pick a Focus like Work or Personal, choose which of your lists it should show, and while that Focus is on your Today feed and home-screen widget quietly hide everything else. Turn the Focus off and every task comes back — nothing is deleted."
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "Open Settings ▸ Focus on iPhone and pick a Focus.",
+            "Add a Focus Filter and choose T'Day, then pick your lists.",
+            "Enable the Focus — Today and the widget now show only those lists."
+          ]
+        }
+      ],
+      "searchTitle": "focus filters",
+      "searchKeywords": "focus, filter, ios, work, personal, do not disturb, lists, hide, concentrate",
+      "searchBody": "let an ios focus decide which lists show in your today feed. t'day plugs into ios focus. pick a focus like work or personal, choose which of your lists it should show, and while that focus is on your today feed and home-screen widget quietly hide everything else. turn the focus off and every task comes back — nothing is deleted. open settings ▸ focus on iphone and pick a focus. add a focus filter and choose t'day, then pick your lists. enable the focus — today and the widget now show only those lists."
+    },
+    {
       "id": "local-mode",
       "section": "MODES_AND_SYNC",
       "sectionOrder": 6,

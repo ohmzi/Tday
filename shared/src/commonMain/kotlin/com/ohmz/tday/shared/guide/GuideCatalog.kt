@@ -215,6 +215,11 @@ object GuideCatalog {
             body = listOf(para(GuideTopicIds.CARPLAY)),
         ),
         topic(
+            GuideTopicIds.FOCUS_FILTERS, GuideSectionId.WIDGETS_AND_SURFACES, "layout-grid",
+            setOf(IOS), badge = GuideBadge.HIDDEN_GEM, sinceVersion = "0.7.0",
+            body = listOf(para(GuideTopicIds.FOCUS_FILTERS), steps(GuideTopicIds.FOCUS_FILTERS, 3)),
+        ),
+        topic(
             GuideTopicIds.ANDROID_CAR, GuideSectionId.WIDGETS_AND_SURFACES, "car-front",
             setOf(ANDROID), body = listOf(para(GuideTopicIds.ANDROID_CAR)),
         ),

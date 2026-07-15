@@ -98,12 +98,18 @@ enum TodayTasksWidgetSnapshotStore {
         let dayStartEpochMs = Int64(dayStart.timeIntervalSince1970 * 1_000)
         let dayEndEpochMs = Int64(dayEnd.timeIntervalSince1970 * 1_000)
 
+        // An active iOS Focus filter (R6-3) narrows the widget to its chosen lists.
+        let focusListIDs = TdayFocusFilterStore.activeListIDs()
         let todayTasks = state.todos
             .filter {
                 guard let dueEpochMs = $0.dueEpochMs else {
                     return false
                 }
-                return !$0.completed && dueEpochMs >= dayStartEpochMs && dueEpochMs < dayEndEpochMs
+                guard !$0.completed && dueEpochMs >= dayStartEpochMs && dueEpochMs < dayEndEpochMs else {
+                    return false
+                }
+                guard let focusListIDs else { return true }
+                return $0.listId.map(focusListIDs.contains) ?? false
             }
             .sorted { left, right in
                 let leftDue = left.dueEpochMs ?? Int64.max
