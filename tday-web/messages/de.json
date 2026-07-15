@@ -1151,6 +1151,15 @@
         "step0": "Öffne eine Aufgabe und füge unter Schritte deinen ersten Schritt hinzu.",
         "step1": "Füge so viele hinzu, wie du brauchst, und ziehe sie zum Umsortieren.",
         "step2": "Hake sie ab – der 2/5-Zähler verfolgt deinen Fortschritt."
+      },
+      "focus-filters": {
+        "title": "Fokus-Filter",
+        "summary": "Lass einen iOS-Fokus entscheiden, welche Listen in deinem Heute-Feed erscheinen.",
+        "keywords": "fokus, filter, ios, arbeit, privat, nicht stören, listen, ausblenden, konzentrieren, focus",
+        "body": "T'Day nutzt den iOS-Fokus. Wähle einen Fokus wie Arbeit oder Privat, lege fest, welche deiner Listen er anzeigen soll, und während dieser Fokus aktiv ist, blenden dein Heute-Feed und das Home-Bildschirm-Widget alles andere still aus. Schalte den Fokus aus, und jede Aufgabe kommt zurück – nichts wird gelöscht.",
+        "step0": "Öffne Einstellungen ▸ Fokus auf dem iPhone und wähle einen Fokus.",
+        "step1": "Füge einen Fokusfilter hinzu, wähle T'Day und dann deine Listen.",
+        "step2": "Aktiviere den Fokus – Heute und das Widget zeigen jetzt nur diese Listen."
       }
     }
   },

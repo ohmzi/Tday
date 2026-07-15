@@ -1116,6 +1116,41 @@
       "searchBody": "consulta e cattura attivita in sicurezza mentre guidi. su carplay, t'day mostra un elenco essenziale e a colpo d'occhio pensato per l'auto, cosi puoi controllare cosa viene dopo o aggiungere un'attivita a voce senza afferrare il telefono."
     },
     {
+      "id": "focus-filters",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "layout-grid",
+      "platforms": [
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.7.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Filtri Full Immersion",
+      "summary": "Lascia che una Full Immersion di iOS decida quali liste appaiono nel tuo feed Oggi.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "T'Day si integra con Full Immersion di iOS. Scegli una Full Immersion come Lavoro o Personale, indica quali liste deve mostrare e, mentre quella Full Immersion è attiva, il tuo feed Oggi e il widget della schermata Home nascondono discretamente tutto il resto. Disattiva la Full Immersion e ogni attività ritorna: non viene eliminato nulla."
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "Apri Impostazioni ▸ Full Immersion su iPhone e scegli una Full Immersion.",
+            "Aggiungi un filtro Full Immersion, scegli T'Day e poi seleziona le tue liste.",
+            "Attiva la Full Immersion — Oggi e il widget ora mostrano solo quelle liste."
+          ]
+        }
+      ],
+      "searchTitle": "filtri full immersion",
+      "searchKeywords": "full immersion, filtro, ios, lavoro, personale, non disturbare, liste, nascondi, concentrazione, focus",
+      "searchBody": "lascia che una full immersion di ios decida quali liste appaiono nel tuo feed oggi. t'day si integra con full immersion di ios. scegli una full immersion come lavoro o personale, indica quali liste deve mostrare e, mentre quella full immersion e attiva, il tuo feed oggi e il widget della schermata home nascondono discretamente tutto il resto. disattiva la full immersion e ogni attivita ritorna: non viene eliminato nulla. apri impostazioni ▸ full immersion su iphone e scegli una full immersion. aggiungi un filtro full immersion, scegli t'day e poi seleziona le tue liste. attiva la full immersion — oggi e il widget ora mostrano solo quelle liste."
+    },
+    {
       "id": "local-mode",
       "section": "MODES_AND_SYNC",
       "sectionOrder": 6,

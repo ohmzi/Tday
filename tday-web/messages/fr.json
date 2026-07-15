@@ -1151,6 +1151,15 @@
         "step0": "Ouvrez une tâche et ajoutez votre première étape sous Étapes.",
         "step1": "Ajoutez-en autant que nécessaire, puis glissez pour réorganiser.",
         "step2": "Cochez-les — le compteur 2/5 suit votre progression."
+      },
+      "focus-filters": {
+        "title": "Filtres de concentration",
+        "summary": "Laissez un mode de Concentration iOS décider quelles listes apparaissent dans votre flux Aujourd'hui.",
+        "keywords": "concentration, filtre, ios, travail, personnel, ne pas déranger, listes, masquer, focus",
+        "body": "T'Day s'intègre au mode Concentration d'iOS. Choisissez une Concentration comme Travail ou Personnel, indiquez quelles listes elle doit afficher et, tant que cette Concentration est active, votre flux Aujourd'hui et le widget de l'écran d'accueil masquent discrètement tout le reste. Désactivez la Concentration et toutes les tâches reviennent — rien n'est supprimé.",
+        "step0": "Ouvrez Réglages ▸ Concentration sur l'iPhone et choisissez une Concentration.",
+        "step1": "Ajoutez un filtre de Concentration, choisissez T'Day, puis sélectionnez vos listes.",
+        "step2": "Activez la Concentration — Aujourd'hui et le widget n'affichent plus que ces listes."
       }
     }
   },

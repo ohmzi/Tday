@@ -1116,6 +1116,41 @@
       "searchBody": "veja e registe tarefas em seguranca enquanto conduz. no carplay, o t'day mostra uma lista focada e facil de ver, feita para o carro, para que possa ver o que vem a seguir ou adicionar uma tarefa por voz sem pegar no telemovel."
     },
     {
+      "id": "focus-filters",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "layout-grid",
+      "platforms": [
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.7.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Filtros de foco",
+      "summary": "Deixe um Foco do iOS decidir que listas aparecem no seu feed de Hoje.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "O T'Day integra-se com o Foco do iOS. Escolha um Foco como Trabalho ou Pessoal, selecione que listas ele deve mostrar e, enquanto esse Foco estiver ativo, o seu feed de Hoje e o widget do ecrã principal ocultam discretamente tudo o resto. Desative o Foco e todas as tarefas voltam — nada é eliminado."
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "Abra Definições ▸ Foco no iPhone e escolha um Foco.",
+            "Adicione um Filtro de Foco e escolha o T'Day, depois selecione as suas listas.",
+            "Ative o Foco — Hoje e o widget mostram agora apenas essas listas."
+          ]
+        }
+      ],
+      "searchTitle": "filtros de foco",
+      "searchKeywords": "foco, filtro, ios, trabalho, pessoal, nao incomodar, listas, ocultar, concentrar",
+      "searchBody": "deixe um foco do ios decidir que listas aparecem no seu feed de hoje. o t'day integra-se com o foco do ios. escolha um foco como trabalho ou pessoal, selecione que listas ele deve mostrar e, enquanto esse foco estiver ativo, o seu feed de hoje e o widget do ecra principal ocultam discretamente tudo o resto. desative o foco e todas as tarefas voltam — nada e eliminado. abra definicoes ▸ foco no iphone e escolha um foco. adicione um filtro de foco e escolha o t'day, depois selecione as suas listas. ative o foco — hoje e o widget mostram agora apenas essas listas."
+    },
+    {
       "id": "local-mode",
       "section": "MODES_AND_SYNC",
       "sectionOrder": 6,

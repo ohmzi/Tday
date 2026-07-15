@@ -1,5 +1,6 @@
 import AppIntents
 import Foundation
+import WidgetKit
 
 enum CarTaskIntentTarget: String, AppEnum {
     case today
@@ -71,6 +72,108 @@ struct CreateCarTaskIntent: AppIntent {
             )
             throw error
         }
+    }
+}
+
+// MARK: - Focus filters (R6-3, iOS-only)
+
+/// Shared store for the list-ID set an active iOS Focus limits Today to. Backed
+/// by the App Group so the widget snapshot builder sees the same value. `nil`
+/// (or an empty set) means "no Focus filter active" → show every list.
+enum TdayFocusFilterStore {
+    private static let suiteName = "group.com.ohmz.tday"
+    private static let activeListIDsKey = "tday.focus.activeListIDs"
+
+    private static var defaults: UserDefaults {
+        UserDefaults(suiteName: suiteName) ?? .standard
+    }
+
+    static func activeListIDs() -> Set<String>? {
+        guard let ids = defaults.array(forKey: activeListIDsKey) as? [String], !ids.isEmpty else {
+            return nil
+        }
+        return Set(ids)
+    }
+
+    static func setActiveListIDs(_ ids: [String]) {
+        if ids.isEmpty {
+            defaults.removeObject(forKey: activeListIDsKey)
+        } else {
+            defaults.set(ids, forKey: activeListIDsKey)
+        }
+    }
+
+    /// Whether a todo in `listId` is visible under the current Focus. A todo with
+    /// no list is hidden while a filter is active — the user picked explicit lists.
+    static func allows(listId: String?) -> Bool {
+        guard let active = activeListIDs() else { return true }
+        guard let listId else { return false }
+        return active.contains(listId)
+    }
+}
+
+/// A user list, exposed to the Focus Filter picker in Settings ▸ Focus.
+struct TdayListAppEntity: AppEntity, Identifiable {
+    let id: String
+    let name: String
+
+    static var typeDisplayRepresentation = TypeDisplayRepresentation(name: "List")
+    static var defaultQuery = TdayListEntityQuery()
+
+    var displayRepresentation: DisplayRepresentation {
+        DisplayRepresentation(title: "\(name)")
+    }
+}
+
+struct TdayListEntityQuery: EntityQuery {
+    @MainActor
+    func entities(for identifiers: [String]) async throws -> [TdayListAppEntity] {
+        let wanted = Set(identifiers)
+        return allLists().filter { wanted.contains($0.id) }
+    }
+
+    @MainActor
+    func suggestedEntities() async throws -> [TdayListAppEntity] {
+        allLists()
+    }
+
+    @MainActor
+    private func allLists() -> [TdayListAppEntity] {
+        AppContainer.shared.cacheManager.loadOfflineState().lists
+            .map { TdayListAppEntity(id: $0.id, name: $0.name) }
+    }
+}
+
+/// Lets an iOS Focus narrow the Today feed (and home-screen widget) to a chosen
+/// set of lists. The system runs `perform()` when the Focus turns on/off, so the
+/// stored set always reflects the active Focus; clearing it restores every list.
+struct TdayFocusFilterIntent: SetFocusFilterIntent {
+    static var title: LocalizedStringResource = "Filter T'Day lists"
+    static var description: IntentDescription? =
+        IntentDescription("Choose which lists appear in Today and the widget while a Focus is on.")
+
+    @Parameter(title: "Lists")
+    var lists: [TdayListAppEntity]?
+
+    var displayRepresentation: DisplayRepresentation {
+        let names = (lists ?? []).map(\.name)
+        let subtitle: String
+        switch names.count {
+        case 0: subtitle = "All lists"
+        case 1: subtitle = names[0]
+        default: subtitle = "\(names.count) lists"
+        }
+        return DisplayRepresentation(title: "T'Day", subtitle: "\(subtitle)")
+    }
+
+    @MainActor
+    func perform() async throws -> some IntentResult {
+        TdayFocusFilterStore.setActiveListIDs((lists ?? []).map(\.id))
+        // Rebuild the today snapshot so the widget reflects the new filter now,
+        // not on the next cache change. saveTodayTasks also reloads the timeline.
+        let state = try await AppContainer.shared.cacheManager.loadOfflineState()
+        TodayTasksWidgetSnapshotStore.saveTodayTasks(from: state)
+        return .result()
     }
 }
 

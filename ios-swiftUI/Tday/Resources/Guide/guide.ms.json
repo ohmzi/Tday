@@ -1116,6 +1116,41 @@
       "searchBody": "imbas dan catat tugasan dengan selamat semasa anda memandu. pada carplay, t'day memaparkan senarai yang fokus dan mudah diimbas, dibina untuk kereta, supaya anda boleh menyemak apa yang seterusnya atau menambah tugasan melalui suara tanpa perlu mencapai telefon anda."
     },
     {
+      "id": "focus-filters",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "layout-grid",
+      "platforms": [
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.7.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Penapis Fokus",
+      "summary": "Biar Fokus iOS menentukan senarai mana yang muncul dalam suapan Hari Ini anda.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "T'Day disepadukan dengan Fokus iOS. Pilih Fokus seperti Kerja atau Peribadi, tentukan senarai mana yang patut ditunjukkan, dan semasa Fokus itu aktif, suapan Hari Ini dan widget skrin utama anda menyembunyikan yang lain secara senyap. Matikan Fokus dan setiap tugasan kembali — tiada apa-apa yang dipadam."
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "Buka Tetapan ▸ Fokus pada iPhone dan pilih satu Fokus.",
+            "Tambah Penapis Fokus dan pilih T'Day, kemudian pilih senarai anda.",
+            "Aktifkan Fokus — Hari Ini dan widget kini hanya menunjukkan senarai tersebut."
+          ]
+        }
+      ],
+      "searchTitle": "penapis fokus",
+      "searchKeywords": "fokus, penapis, ios, kerja, peribadi, jangan ganggu, senarai, sembunyi, tumpuan, focus",
+      "searchBody": "biar fokus ios menentukan senarai mana yang muncul dalam suapan hari ini anda. t'day disepadukan dengan fokus ios. pilih fokus seperti kerja atau peribadi, tentukan senarai mana yang patut ditunjukkan, dan semasa fokus itu aktif, suapan hari ini dan widget skrin utama anda menyembunyikan yang lain secara senyap. matikan fokus dan setiap tugasan kembali — tiada apa-apa yang dipadam. buka tetapan ▸ fokus pada iphone dan pilih satu fokus. tambah penapis fokus dan pilih t'day, kemudian pilih senarai anda. aktifkan fokus — hari ini dan widget kini hanya menunjukkan senarai tersebut."
+    },
+    {
       "id": "local-mode",
       "section": "MODES_AND_SYNC",
       "sectionOrder": 6,

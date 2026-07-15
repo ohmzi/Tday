@@ -1116,6 +1116,41 @@
       "searchBody": "consultez et saisissez vos taches en toute securite au volant. sur carplay, t'day affiche une liste epuree et lisible d'un coup d'œil, concue pour la voiture, pour que vous puissiez voir ce qui suit ou ajouter une tache a la voix sans toucher votre telephone."
     },
     {
+      "id": "focus-filters",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "layout-grid",
+      "platforms": [
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.7.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Filtres de concentration",
+      "summary": "Laissez un mode de Concentration iOS décider quelles listes apparaissent dans votre flux Aujourd'hui.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "T'Day s'intègre au mode Concentration d'iOS. Choisissez une Concentration comme Travail ou Personnel, indiquez quelles listes elle doit afficher et, tant que cette Concentration est active, votre flux Aujourd'hui et le widget de l'écran d'accueil masquent discrètement tout le reste. Désactivez la Concentration et toutes les tâches reviennent — rien n'est supprimé."
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "Ouvrez Réglages ▸ Concentration sur l'iPhone et choisissez une Concentration.",
+            "Ajoutez un filtre de Concentration, choisissez T'Day, puis sélectionnez vos listes.",
+            "Activez la Concentration — Aujourd'hui et le widget n'affichent plus que ces listes."
+          ]
+        }
+      ],
+      "searchTitle": "filtres de concentration",
+      "searchKeywords": "concentration, filtre, ios, travail, personnel, ne pas deranger, listes, masquer, focus",
+      "searchBody": "laissez un mode de concentration ios decider quelles listes apparaissent dans votre flux aujourd'hui. t'day s'integre au mode concentration d'ios. choisissez une concentration comme travail ou personnel, indiquez quelles listes elle doit afficher et, tant que cette concentration est active, votre flux aujourd'hui et le widget de l'ecran d'accueil masquent discretement tout le reste. desactivez la concentration et toutes les taches reviennent — rien n'est supprime. ouvrez reglages ▸ concentration sur l'iphone et choisissez une concentration. ajoutez un filtre de concentration, choisissez t'day, puis selectionnez vos listes. activez la concentration — aujourd'hui et le widget n'affichent plus que ces listes."
+    },
+    {
       "id": "local-mode",
       "section": "MODES_AND_SYNC",
       "sectionOrder": 6,
