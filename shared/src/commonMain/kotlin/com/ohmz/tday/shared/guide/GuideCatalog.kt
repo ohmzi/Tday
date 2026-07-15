@@ -220,6 +220,11 @@ object GuideCatalog {
             body = listOf(para(GuideTopicIds.FOCUS_FILTERS), steps(GuideTopicIds.FOCUS_FILTERS, 3)),
         ),
         topic(
+            GuideTopicIds.APPLE_WATCH, GuideSectionId.WIDGETS_AND_SURFACES, "alarm-clock",
+            setOf(IOS), badge = GuideBadge.HIDDEN_GEM, sinceVersion = "0.7.0",
+            body = listOf(para(GuideTopicIds.APPLE_WATCH), steps(GuideTopicIds.APPLE_WATCH, 3)),
+        ),
+        topic(
             GuideTopicIds.ANDROID_CAR, GuideSectionId.WIDGETS_AND_SURFACES, "car-front",
             setOf(ANDROID), body = listOf(para(GuideTopicIds.ANDROID_CAR)),
         ),

@@ -1151,6 +1151,41 @@
       "searchBody": "let an ios focus decide which lists show in your today feed. t'day plugs into ios focus. pick a focus like work or personal, choose which of your lists it should show, and while that focus is on your today feed and home-screen widget quietly hide everything else. turn the focus off and every task comes back — nothing is deleted. open settings ▸ focus on iphone and pick a focus. add a focus filter and choose t'day, then pick your lists. enable the focus — today and the widget now show only those lists."
     },
     {
+      "id": "apple-watch",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "alarm-clock",
+      "platforms": [
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.7.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Apple Watch",
+      "summary": "Your Today tasks on the wrist, mirrored live from your iPhone.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Install T'Day on Apple Watch and today's tasks ride along on your wrist. The Watch mirrors the same Today list your iPhone builds — no separate login — and a complication on your watch face shows how many tasks are left so you can glance without opening the app. It updates whenever your iPhone syncs."
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "Open the Watch app on iPhone and install T'Day.",
+            "Add the T'Day complication to your watch face.",
+            "Glance at the count, or open the app for the full list."
+          ]
+        }
+      ],
+      "searchTitle": "apple watch",
+      "searchKeywords": "apple watch, watch, wrist, complication, watchos, today, glance, mirror",
+      "searchBody": "your today tasks on the wrist, mirrored live from your iphone. install t'day on apple watch and today's tasks ride along on your wrist. the watch mirrors the same today list your iphone builds — no separate login — and a complication on your watch face shows how many tasks are left so you can glance without opening the app. it updates whenever your iphone syncs. open the watch app on iphone and install t'day. add the t'day complication to your watch face. glance at the count, or open the app for the full list."
+    },
+    {
       "id": "local-mode",
       "section": "MODES_AND_SYNC",
       "sectionOrder": 6,

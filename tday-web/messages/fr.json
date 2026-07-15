@@ -1160,6 +1160,15 @@
         "step0": "Ouvrez Réglages ▸ Concentration sur l'iPhone et choisissez une Concentration.",
         "step1": "Ajoutez un filtre de Concentration, choisissez T'Day, puis sélectionnez vos listes.",
         "step2": "Activez la Concentration — Aujourd'hui et le widget n'affichent plus que ces listes."
+      },
+      "apple-watch": {
+        "title": "Apple Watch",
+        "summary": "Vos tâches d'Aujourd'hui au poignet, reflétées en direct depuis votre iPhone.",
+        "keywords": "apple watch, montre, poignet, complication, watchos, aujourd'hui, coup d'œil, miroir",
+        "body": "Installez T'Day sur l'Apple Watch et les tâches du jour vous suivent au poignet. La Watch reflète la même liste Aujourd'hui que celle créée par votre iPhone — sans connexion séparée — et une complication sur le cadran indique combien de tâches restent, pour un coup d'œil sans ouvrir l'app. Elle se met à jour dès que votre iPhone se synchronise.",
+        "step0": "Ouvrez l'app Watch sur l'iPhone et installez T'Day.",
+        "step1": "Ajoutez la complication T'Day à votre cadran.",
+        "step2": "Jetez un coup d'œil au nombre, ou ouvrez l'app pour la liste complète."
       }
     }
   },

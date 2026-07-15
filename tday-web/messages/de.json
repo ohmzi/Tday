@@ -1160,6 +1160,15 @@
         "step0": "Öffne Einstellungen ▸ Fokus auf dem iPhone und wähle einen Fokus.",
         "step1": "Füge einen Fokusfilter hinzu, wähle T'Day und dann deine Listen.",
         "step2": "Aktiviere den Fokus – Heute und das Widget zeigen jetzt nur diese Listen."
+      },
+      "apple-watch": {
+        "title": "Apple Watch",
+        "summary": "Deine Heute-Aufgaben am Handgelenk, live von deinem iPhone gespiegelt.",
+        "keywords": "apple watch, watch, uhr, handgelenk, komplikation, watchos, heute, blick, spiegeln",
+        "body": "Installiere T'Day auf der Apple Watch, und die heutigen Aufgaben wandern mit ans Handgelenk. Die Watch spiegelt genau die Heute-Liste, die dein iPhone erstellt – ohne separate Anmeldung – und eine Komplikation auf dem Zifferblatt zeigt, wie viele Aufgaben noch offen sind, sodass du sie mit einem Blick siehst, ohne die App zu öffnen. Sie aktualisiert sich, sobald dein iPhone synchronisiert.",
+        "step0": "Öffne die Watch-App auf dem iPhone und installiere T'Day.",
+        "step1": "Füge die T'Day-Komplikation zu deinem Zifferblatt hinzu.",
+        "step2": "Wirf einen Blick auf die Anzahl oder öffne die App für die vollständige Liste."
       }
     }
   },

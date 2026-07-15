@@ -1151,6 +1151,41 @@
       "searchBody": "lascia che una full immersion di ios decida quali liste appaiono nel tuo feed oggi. t'day si integra con full immersion di ios. scegli una full immersion come lavoro o personale, indica quali liste deve mostrare e, mentre quella full immersion e attiva, il tuo feed oggi e il widget della schermata home nascondono discretamente tutto il resto. disattiva la full immersion e ogni attivita ritorna: non viene eliminato nulla. apri impostazioni ▸ full immersion su iphone e scegli una full immersion. aggiungi un filtro full immersion, scegli t'day e poi seleziona le tue liste. attiva la full immersion — oggi e il widget ora mostrano solo quelle liste."
     },
     {
+      "id": "apple-watch",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "alarm-clock",
+      "platforms": [
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.7.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Apple Watch",
+      "summary": "Le tue attività di Oggi al polso, rispecchiate in tempo reale dal tuo iPhone.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Installa T'Day su Apple Watch e le attività di oggi ti seguono al polso. Il Watch rispecchia la stessa lista Oggi creata dal tuo iPhone — senza un accesso separato — e una complicazione sul quadrante mostra quante attività restano, così puoi dare un'occhiata senza aprire l'app. Si aggiorna ogni volta che il tuo iPhone si sincronizza."
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "Apri l'app Watch su iPhone e installa T'Day.",
+            "Aggiungi la complicazione T'Day al tuo quadrante.",
+            "Dai un'occhiata al conteggio, o apri l'app per la lista completa."
+          ]
+        }
+      ],
+      "searchTitle": "apple watch",
+      "searchKeywords": "apple watch, orologio, polso, complicazione, watchos, oggi, occhiata, specchio",
+      "searchBody": "le tue attivita di oggi al polso, rispecchiate in tempo reale dal tuo iphone. installa t'day su apple watch e le attivita di oggi ti seguono al polso. il watch rispecchia la stessa lista oggi creata dal tuo iphone — senza un accesso separato — e una complicazione sul quadrante mostra quante attivita restano, cosi puoi dare un'occhiata senza aprire l'app. si aggiorna ogni volta che il tuo iphone si sincronizza. apri l'app watch su iphone e installa t'day. aggiungi la complicazione t'day al tuo quadrante. dai un'occhiata al conteggio, o apri l'app per la lista completa."
+    },
+    {
       "id": "local-mode",
       "section": "MODES_AND_SYNC",
       "sectionOrder": 6,
