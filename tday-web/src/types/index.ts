@@ -34,6 +34,7 @@ export interface FloaterListItemMetaType {
   name: string;
   color?: ListColor;
   iconKey?: string | null;
+  reusable?: boolean;
   todoCount?: number;
   userID?: string | null;
   createdAt?: Date | null;

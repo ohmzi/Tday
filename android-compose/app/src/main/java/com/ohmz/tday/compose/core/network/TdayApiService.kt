@@ -381,6 +381,11 @@ interface TdayApiService {
         @Path("id") listId: String,
     ): Response<ListMembersResponse>
 
+    @POST("/api/floaterList/{id}/reset")
+    suspend fun resetFloaterList(
+        @Path("id") listId: String,
+    ): Response<MessageResponse>
+
     @POST("/api/floaterList/{id}/members")
     suspend fun addFloaterListMember(
         @Path("id") listId: String,

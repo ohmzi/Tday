@@ -41,7 +41,7 @@ fun Route.floaterListRoutes() {
                     val body = call.receive<FloaterListCreateRequest>()
                     validateCreateFloaterList.validateOrFail(body).bind()
                     val color = validateOptionalEnumValue<ListColor>(body.color, "color").bind()
-                    val list = floaterListService.create(user.id, body.name, color, body.iconKey).bind()
+                    val list = floaterListService.create(user.id, body.name, color, body.iconKey, body.reusable).bind()
                     CreateFloaterListResponse(message = "floater list created", list = list)
                 }
             }
@@ -53,8 +53,21 @@ fun Route.floaterListRoutes() {
                     val body = call.receive<FloaterListPatchRequest>()
                     validatePatchFloaterList.validateOrFail(body).bind()
                     val color = validateOptionalEnumValue<ListColor>(body.color, "color").bind()
-                    floaterListService.update(user.id, body.id, body.name, color, body.iconKey).bind()
+                    floaterListService.update(user.id, body.id, body.name, color, body.iconKey, body.reusable).bind()
                     mapOf("message" to "floater list updated")
+                }
+            }
+        }
+
+        // Reusable-list Reset: un-complete every floater in the list.
+        post("/{id}/reset") {
+            call.withAuth { user ->
+                val listId = call.parameters["id"].orEmpty()
+                if (listId.isBlank()) {
+                    Either.Left(AppError.BadRequest("floater list id is required"))
+                } else {
+                    floaterListService.resetFloaters(user.id, listId)
+                        .map { mapOf("message" to "floater list reset", "resetCount" to it.toString()) }
                 }
             }
         }

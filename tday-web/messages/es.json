@@ -368,7 +368,11 @@
     "sweepSkip": "Omitir",
     "sweepAllToToday": "Barrer todo a hoy",
     "sweptToast": "{{count}} tareas barridas",
-    "sweepDone": "Todo al día"
+    "sweepDone": "Todo al día",
+    "reusableList": "Lista reutilizable",
+    "reusableListHint": "Muestra Reiniciar para desmarcar todo y volver a usarla",
+    "resetFloaterList": "Reiniciar lista",
+    "floaterListReset": "Lista reiniciada: todo desmarcado"
   },
   "today": {
     "saveInstance": "Guardar instancia",
@@ -1104,6 +1108,15 @@
         "keywords": "reposo, flotante, anytime, atenuar, envejecer, inactivo, viejo, calma",
         "body": "Las tareas de Anytime que no tocas en un mes se atenúan suavemente, y tras tres meses se agrupan en un tranquilo grupo \"En reposo\" al final. Nada se borra: solo dejan de reclamar atención hasta que vuelvas.",
         "tip": "Es solo una señal visual; un toque despierta un flotante al instante."
+      },
+      "reusable-lists": {
+        "title": "Listas reutilizables",
+        "summary": "Reinicia una lista para volver a usarla: maletas, tareas, compras.",
+        "keywords": "reutilizable, reiniciar, lista, flotante, repetir, plantilla",
+        "body": "Marca una lista de Anytime como reutilizable y aparece Reiniciar. Un toque desmarca todos los elementos para volver a usar la misma lista, sin recrearla.",
+        "step0": "Abre una lista flotante y activa \"Reutilizable\" en sus ajustes.",
+        "step1": "Ve marcando los elementos como siempre.",
+        "step2": "Cuando la necesites otra vez, toca Reiniciar para desmarcar todo."
       }
     }
   },

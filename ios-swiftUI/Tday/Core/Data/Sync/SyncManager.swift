@@ -258,7 +258,7 @@ final class SyncManager {
         let pendingFloaterListTargets = Set(
             localState.pendingMutations.compactMap { mutation -> String? in
                 switch mutation.kind {
-                case .createFloaterList, .updateFloaterList, .deleteFloaterList:
+                case .createFloaterList, .updateFloaterList, .deleteFloaterList, .resetFloaterList:
                     return mutation.targetId
                 default:
                     return nil
@@ -455,7 +455,7 @@ final class SyncManager {
         let pendingFloaterListTargets = Set(
             localState.pendingMutations.compactMap { mutation -> String? in
                 switch mutation.kind {
-                case .createFloaterList, .updateFloaterList, .deleteFloaterList:
+                case .createFloaterList, .updateFloaterList, .deleteFloaterList, .resetFloaterList:
                     return mutation.targetId
                 default:
                     return nil
@@ -684,6 +684,13 @@ final class SyncManager {
                 return
             }
             _ = try await api.deleteFloaterListByBody(payload: DeleteFloaterListRequest(id: targetID))
+
+        case .resetFloaterList:
+            guard let targetID else { return }
+            if targetID.hasPrefix(LOCAL_FLOATER_LIST_PREFIX) {
+                return
+            }
+            _ = try await api.resetFloaterList(id: targetID)
 
         case .createTodo:
             guard let localTodoID = mutation.targetId else { return }
@@ -1263,6 +1270,7 @@ private extension MutationKind {
              .createFloaterList,
              .updateFloaterList,
              .deleteFloaterList,
+             .resetFloaterList,
              .createFloater,
              .updateFloater,
              .deleteFloater,
@@ -1280,6 +1288,8 @@ private extension MutationKind {
              .deleteFloater,
              .completeFloater,
              .uncompleteFloater,
+             // Un-completes every floater in the list.
+             .resetFloaterList,
              // Consumes a floater (its optimistic todo is local-prefixed and
              // therefore already merge-protected).
              .promoteFloater:
