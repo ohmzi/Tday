@@ -25,9 +25,13 @@ struct RealtimeEvent: Equatable {
 
 actor RealtimeClient {
     private let configuration: NetworkConfiguration
-    private var task: URLSessionWebSocketTask?
-    private var reconnectTask: Task<Void, Never>?
-    private var isConnecting = false
+    // A SINGLE task owns the whole lifecycle: connect → listen → (on drop) back off → reconnect,
+    // looping until stop() cancels it. This replaces the old task/isConnecting/reconnectTask
+    // machine, whose receive loop could exit on clean cancellation without clearing state or
+    // scheduling a reconnect — after which connectIfNeeded() no-op'd forever and iOS silently
+    // stopped receiving live events. Now there is no "connected but not listening" state to wedge.
+    private var connectionTask: Task<Void, Never>?
+    private var currentSocket: URLSessionWebSocketTask?
     private var eventHandler: (@Sendable (RealtimeEvent) async -> Void)?
 
     init(configuration: NetworkConfiguration) {
@@ -35,48 +39,59 @@ actor RealtimeClient {
     }
 
     func start(handler: @escaping @Sendable (RealtimeEvent) async -> Void) {
+        // Always refresh the handler (the running loop reads it fresh per event).
         eventHandler = handler
-        reconnectTask?.cancel()
-        reconnectTask = Task {
-            await connectIfNeeded()
+        if connectionTask == nil {
+            connectionTask = Task { [weak self] in
+                await self?.runConnectionLoop()
+            }
+        } else {
+            // Loop already running (re-invoked on foreground / network-restore): nudge a fresh
+            // connection by dropping the current socket. The loop catches the resulting error
+            // and reconnects — safe now, because it can no longer wedge.
+            currentSocket?.cancel(with: .goingAway, reason: nil)
         }
     }
 
     func stop() {
-        reconnectTask?.cancel()
-        task?.cancel(with: .goingAway, reason: nil)
-        task = nil
+        connectionTask?.cancel()
+        connectionTask = nil
+        currentSocket?.cancel(with: .goingAway, reason: nil)
+        currentSocket = nil
         eventHandler = nil
-        isConnecting = false
     }
 
-    private func connectIfNeeded() async {
-        guard task == nil, !isConnecting else {
-            return
+    private func runConnectionLoop() async {
+        var failures = 0
+        while !Task.isCancelled {
+            let wasEstablished = await connectAndListen()
+            if Task.isCancelled { break }
+            failures = wasEstablished ? 0 : min(failures + 1, 5)
+            // Quick reconnect after a real connection dropped; escalating backoff (2,4,8,16,30s)
+            // when we can't even establish one (bad URL, auth, server down).
+            let delaySeconds = wasEstablished ? 2 : min(30, 1 << min(failures, 5))
+            try? await Task.sleep(for: .seconds(delaySeconds))
         }
-        isConnecting = true
-        defer { isConnecting = false }
+        currentSocket = nil
+    }
 
-        guard let baseURL = try? configuration.currentBaseURL(), var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false) else {
-            return
+    /// Opens a socket and pumps events until it errors/closes or the loop is cancelled.
+    /// Returns true if the connection stayed up long enough to count as "established".
+    private func connectAndListen() async -> Bool {
+        guard let url = websocketURL() else {
+            return false
         }
-
-        components.scheme = components.scheme == "http" ? "ws" : "wss"
-        components.path = "/ws"
-        components.query = nil
-        guard let url = components.url else {
-            return
-        }
-
-        let request = URLRequest(url: url)
-        let webSocketTask = configuration.session.webSocketTask(with: request)
-        task = webSocketTask
+        let webSocketTask = configuration.session.webSocketTask(with: URLRequest(url: url))
+        currentSocket = webSocketTask
         TdayTelemetry.addBreadcrumb("realtime.connect", data: ["phase": "start"])
         webSocketTask.resume()
-        await listen(on: webSocketTask)
-    }
 
-    private func listen(on webSocketTask: URLSessionWebSocketTask) async {
+        // Keepalive: a periodic ping tears down a silently-dead socket (NAT/idle timeout that
+        // never surfaces as a receive error) so the loop below throws and reconnects.
+        let keepAlive = Self.startKeepAlive(for: webSocketTask)
+        defer { keepAlive.cancel() }
+
+        let openedAt = Date()
         do {
             while !Task.isCancelled {
                 let message = try await webSocketTask.receive()
@@ -104,9 +119,39 @@ actor RealtimeClient {
                     "code": nsError.code
                 ]
             )
-            task = nil
-            scheduleReconnect()
         }
+        webSocketTask.cancel(with: .goingAway, reason: nil)
+        if currentSocket === webSocketTask {
+            currentSocket = nil
+        }
+        return Date().timeIntervalSince(openedAt) >= 5
+    }
+
+    private nonisolated static func startKeepAlive(for socket: URLSessionWebSocketTask) -> Task<Void, Never> {
+        Task {
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(25))
+                if Task.isCancelled {
+                    return
+                }
+                socket.sendPing { error in
+                    if error != nil {
+                        socket.cancel(with: .abnormalClosure, reason: nil)
+                    }
+                }
+            }
+        }
+    }
+
+    private func websocketURL() -> URL? {
+        guard let baseURL = try? configuration.currentBaseURL(),
+              var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false) else {
+            return nil
+        }
+        components.scheme = components.scheme == "http" ? "ws" : "wss"
+        components.path = "/ws"
+        components.query = nil
+        return components.url
     }
 
     private func parse(text: String) -> RealtimeEvent? {
@@ -132,14 +177,5 @@ actor RealtimeClient {
             return typeName
         }
         return trimmed
-    }
-
-    private func scheduleReconnect() {
-        TdayTelemetry.addBreadcrumb("realtime.disconnect")
-        reconnectTask?.cancel()
-        reconnectTask = Task {
-            try? await Task.sleep(for: .seconds(3))
-            await connectIfNeeded()
-        }
     }
 }
