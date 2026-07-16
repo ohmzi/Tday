@@ -256,6 +256,8 @@ export function parseTodoTitle(input: ParseTodoTitleInput): ParseTodoTitleOutput
   const dateCleaned = `${before}${after}`;
   const rp = parseRecurrencePriority(dateCleaned);
 
+  dueDate.setSeconds(0, 0);
+
   return {
     cleanTitle: rp.cleanTitle,
     matchedText: matchedText || null,

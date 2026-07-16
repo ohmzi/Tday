@@ -114,6 +114,7 @@ import java.time.ZoneId
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 import java.util.Locale
 import android.graphics.Color as AndroidColor
 
@@ -209,7 +210,7 @@ fun CreateTaskBottomSheet(
                 ?: defaultListId?.takeIf { id -> lists.any { it.id == id } },
         )
     }
-    val nowEpochMs = remember { System.currentTimeMillis() }
+    val nowEpochMs = remember { val ms = System.currentTimeMillis(); ms - (ms % 60_000L) }
     val resolvedDueEpochMs = editingTask?.due?.toEpochMilli()
         ?: (initialDueEpochMs ?: (nowEpochMs + DEFAULT_TASK_DURATION_MS))
     var dueEpochMs by rememberSaveable(editingTask?.id, initialDueEpochMs) {
@@ -357,7 +358,11 @@ fun CreateTaskBottomSheet(
 
     fun submitTask() {
         val due =
-            if (scheduleEnabled && showScheduleControls) Instant.ofEpochMilli(dueEpochMs) else null
+            if (scheduleEnabled && showScheduleControls) {
+                Instant.ofEpochMilli(dueEpochMs).truncatedTo(ChronoUnit.MINUTES)
+            } else {
+                null
+            }
 
         // Strip the highlighted date phrase from the saved title (it stays visible
         // in the field but isn't part of the task name) — same as the web.

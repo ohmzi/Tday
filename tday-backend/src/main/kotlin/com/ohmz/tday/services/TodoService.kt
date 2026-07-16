@@ -244,7 +244,9 @@ class TodoServiceImpl(
             }.firstOrNull() ?: return@newSuspendedTransaction
 
             val now = LocalDateTime.now(ZoneOffset.UTC)
-            val todoDue = todo[Todos.due]
+            // Deadlines are minute-precision; floor the parent due in case a legacy row still
+            // carries seconds (pre-migration), so the completed snapshot + on-time check align.
+            val todoDue = todo[Todos.due].withSecond(0).withNano(0)
             val daysToComplete = Duration.between(todo[Todos.createdAt], now).toDays().toDouble()
             // Access was already checked against the todo; the list row is only
             // denormalized metadata, so no owner filter here (shared lists belong
@@ -289,7 +291,8 @@ class TodoServiceImpl(
                     it[CompletedTodos.priority] = todo[Todos.priority]
                     it[CompletedTodos.completedAt] = now
                     it[CompletedTodos.due] = todoDue
-                    it[CompletedTodos.completedOnTime] = !now.isAfter(todoDue)
+                    // Compare at minute granularity: completing within the due minute is on time.
+                    it[CompletedTodos.completedOnTime] = !now.withSecond(0).withNano(0).isAfter(todoDue)
                     it[CompletedTodos.daysToComplete] = BigDecimal.valueOf(daysToComplete).setScale(2, RoundingMode.HALF_UP)
                     it[CompletedTodos.rrule] = todo[Todos.rrule]
                     it[CompletedTodos.userID] = userId

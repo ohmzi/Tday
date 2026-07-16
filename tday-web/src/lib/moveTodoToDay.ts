@@ -19,8 +19,8 @@ export function moveTodoToDay(
       day,
       dueInTimeZone.getHours(),
       dueInTimeZone.getMinutes(),
-      dueInTimeZone.getSeconds(),
-      dueInTimeZone.getMilliseconds(),
+      0,
+      0,
     ),
     resolvedTimeZone,
   );

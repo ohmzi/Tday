@@ -461,6 +461,13 @@ extension Date {
     init(epochMilliseconds: Int64) {
         self = Date(timeIntervalSince1970: TimeInterval(epochMilliseconds) / 1_000)
     }
+
+    /// Floors this instant to the start of its minute (seconds & nanoseconds = 0).
+    /// Task due/deadline times are minute-precision app-wide; the backend floors
+    /// server-side, and this keeps the optimistic cache + outgoing mutations on-minute.
+    func flooredToMinute() -> Date {
+        Date(timeIntervalSince1970: (timeIntervalSince1970 / 60).rounded(.down) * 60)
+    }
 }
 
 // MARK: - Resting floaters (client-only aging)

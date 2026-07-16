@@ -15,7 +15,7 @@ export type QuickDeferOption = {
  */
 export function quickDeferOptions(now: Date = new Date()): QuickDeferOption[] {
   const options: QuickDeferOption[] = [
-    { key: "laterToday", due: addHours(now, 3) },
+    { key: "laterToday", due: set(addHours(now, 3), { seconds: 0, milliseconds: 0 }) },
   ];
   const eveningCutoff = set(startOfDay(now), { hours: 18, minutes: 30 });
   if (now < eveningCutoff) {
