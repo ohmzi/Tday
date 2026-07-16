@@ -30,7 +30,8 @@ class WidgetCompleteTaskSubmitter @Inject constructor(
             val record = cacheManager.loadOfflineState().todos
                 .firstOrNull { it.id == taskId && !it.completed }
                 ?: return@withContext
-            todoRepository.completeTodo(todoFromCache(record))
+            // eagerSync=false: refresh the widget immediately, sync the queued mutation later.
+            todoRepository.completeTodo(todoFromCache(record), eagerSync = false)
         }.onFailure { error ->
             TdayTelemetry.capture(error, operation = "widget_complete_task.submit")
             todayTasksWidgetRefresher.refreshNow()
@@ -42,7 +43,7 @@ class WidgetCompleteTaskSubmitter @Inject constructor(
             val record = cacheManager.loadOfflineState().floaters
                 .firstOrNull { it.id == taskId && !it.completed }
                 ?: return@withContext
-            todoRepository.completeFloater(floaterFromCache(record))
+            todoRepository.completeFloater(floaterFromCache(record), eagerSync = false)
         }.onFailure { error ->
             TdayTelemetry.capture(error, operation = "widget_complete_floater.submit")
             floaterTasksWidgetRefresher.refreshNow()

@@ -870,7 +870,7 @@ class TodoRepository @Inject constructor(
         }
     }
 
-    suspend fun completeTodo(todo: TodoItem) {
+    suspend fun completeTodo(todo: TodoItem, eagerSync: Boolean = true) {
         val timestampMs = System.currentTimeMillis()
         val mutationId = UUID.randomUUID().toString()
         cacheManager.updateOfflineState { state ->
@@ -926,6 +926,13 @@ class TodoRepository @Inject constructor(
         }
         refreshTodayWidgetNow()
 
+        // Widget-initiated completions pass eagerSync=false so the tap returns the moment the
+        // optimistic write + widget refresh are done, instead of the Glance action holding the
+        // widget's re-render until this network call finishes (which looked like the check-off
+        // "not updating", worst offline). The queued COMPLETE_TODO mutation still syncs on the
+        // next sync (foreground/periodic/realtime).
+        if (!eagerSync) return
+
         if (syncManager.isLocalMode()) return
 
         if (todo.canonicalId.startsWith(LOCAL_TODO_PREFIX)) return
@@ -958,7 +965,7 @@ class TodoRepository @Inject constructor(
         }
     }
 
-    suspend fun completeFloater(floater: TodoItem) {
+    suspend fun completeFloater(floater: TodoItem, eagerSync: Boolean = true) {
         val timestampMs = System.currentTimeMillis()
         val mutationId = UUID.randomUUID().toString()
         cacheManager.updateOfflineState { state ->
@@ -996,6 +1003,10 @@ class TodoRepository @Inject constructor(
             )
         }
         refreshFloaterWidgetNow()
+
+        // See completeTodo: widget taps skip the blocking eager sync so the widget re-renders
+        // immediately; the queued COMPLETE_FLOATER mutation syncs on the next sync.
+        if (!eagerSync) return
 
         if (syncManager.isLocalMode()) return
 
