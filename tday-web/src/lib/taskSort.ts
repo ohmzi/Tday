@@ -112,18 +112,20 @@ export function sortFloaters<T>(items: T[], key: (item: T) => TaskSortKey): T[] 
 }
 
 /**
- * 0 = highest priority (sorts first). Only the exact API values "High"/"Medium"/
- * "Low" are recognised; anything else (unknown/absent) falls back to Low, exactly
- * like the Kotlin `Priority.fromApiOrDefault`.
+ * 0 = highest priority (sorts first). Tolerant of every priority spelling the app
+ * stores: canonical Low/Medium/High, the server/legacy vocabulary normal/important/
+ * urgent, and any case. Realtime-synced rows arrive un-normalized, so a strict match
+ * would collapse them to Low and the sort would ignore priority. Unknown/absent → Low.
+ * Mirrors the shared Kotlin `TaskSortEngine.priorityRank(String?)`.
  */
 export function priorityRank(priority: string | null | undefined): number {
-  switch (priority) {
-    case "High":
+  switch (priority?.trim().toLowerCase()) {
+    case "high":
+    case "urgent":
       return 0;
-    case "Medium":
+    case "medium":
+    case "important":
       return 1;
-    case "Low":
-      return 2;
     default:
       return LOWEST_PRIORITY_RANK;
   }
