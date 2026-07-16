@@ -61,19 +61,45 @@ func todoMergeKey(record: CachedTodoRecord) -> String {
     todoMergeKey(canonicalId: record.canonicalId, instanceDateEpochMs: record.instanceDateEpochMs)
 }
 
+// MARK: - Fixed task ordering (TaskSortEngine)
+//
+// The ONE mapping from each iOS task model onto the shared, non-configurable
+// ordering. Every task-ordering site derives its sort from these keys so the
+// presentation order matches web, Android, and the widgets exactly.
+
+func taskSortKey(_ item: TodoItem) -> TaskSortKey {
+    TaskSortKey(
+        id: item.id,
+        pinned: item.pinned,
+        dueEpochMs: item.due.map { Int64($0.timeIntervalSince1970 * 1000.0) },
+        priorityRank: TaskSortEngine.priorityRank(item.priority),
+        updatedAtEpochMs: item.updatedAt.map { Int64($0.timeIntervalSince1970 * 1000.0) }
+    )
+}
+
+func taskSortKey(_ record: CachedTodoRecord) -> TaskSortKey {
+    TaskSortKey(
+        id: record.id,
+        pinned: record.pinned,
+        dueEpochMs: record.dueEpochMs,
+        priorityRank: TaskSortEngine.priorityRank(record.priority),
+        updatedAtEpochMs: record.updatedAtEpochMs > 0 ? record.updatedAtEpochMs : nil
+    )
+}
+
+func taskSortKey(_ record: CachedFloaterRecord) -> TaskSortKey {
+    TaskSortKey(
+        id: record.id,
+        pinned: record.pinned,
+        dueEpochMs: nil,
+        priorityRank: TaskSortEngine.priorityRank(record.priority),
+        updatedAtEpochMs: record.updatedAtEpochMs > 0 ? record.updatedAtEpochMs : nil
+    )
+}
+
+// Fixed TODO ordering (pinned, due asc nulls-last, priority, modified desc, id).
 func todoSortPrecedes(_ lhs: TodoItem, _ rhs: TodoItem) -> Bool {
-    if lhs.pinned != rhs.pinned {
-        return lhs.pinned && !rhs.pinned
-    }
-    if lhs.due != rhs.due {
-        return (lhs.due ?? .distantFuture) < (rhs.due ?? .distantFuture)
-    }
-    let lhsKey = todoMergeKey(item: lhs)
-    let rhsKey = todoMergeKey(item: rhs)
-    if lhsKey != rhsKey {
-        return lhsKey < rhsKey
-    }
-    return lhs.id < rhs.id
+    TaskSortEngine.precedesTodo(taskSortKey(lhs), taskSortKey(rhs))
 }
 
 func cachedTodoSortPrecedes(_ lhs: CachedTodoRecord, _ rhs: CachedTodoRecord) -> Bool {
@@ -116,16 +142,11 @@ private func floaterPriorityRank(_ priority: String) -> Int {
     return 2
 }
 
+// Fixed TODO ordering applied WITHIN each day group (scheduled screen, custom
+// lists, Today buckets). Same total order as `todoSortPrecedes`; day-bucket
+// grouping is unchanged, only the within-day order follows the fixed sequence.
 func todoTimelineSortPrecedes(_ lhs: TodoItem, _ rhs: TodoItem) -> Bool {
-    if lhs.due != rhs.due {
-        return (lhs.due ?? .distantFuture) < (rhs.due ?? .distantFuture)
-    }
-    let lhsKey = todoMergeKey(item: lhs)
-    let rhsKey = todoMergeKey(item: rhs)
-    if lhsKey != rhsKey {
-        return lhsKey < rhsKey
-    }
-    return lhs.id < rhs.id
+    TaskSortEngine.precedesTodo(taskSortKey(lhs), taskSortKey(rhs))
 }
 
 func completedMergeKey(originalTodoId: String?, fallbackId: String, instanceDateEpochMs: Int64?) -> String {

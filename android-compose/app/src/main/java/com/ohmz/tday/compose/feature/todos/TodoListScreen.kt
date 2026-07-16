@@ -107,6 +107,8 @@ import androidx.compose.ui.platform.LocalContext
 import com.ohmz.tday.compose.core.data.RestingFloatersPreferenceStore
 import com.ohmz.tday.shared.floater.FloaterResting
 import com.ohmz.tday.shared.floater.FloaterRestingTier
+import com.ohmz.tday.shared.sort.TaskSortEngine
+import com.ohmz.tday.shared.sort.TaskSortKey
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -3369,6 +3371,16 @@ private fun buildTimelineSections(
     }
 }
 
+// Maps a domain TodoItem onto the shared, platform-neutral sort key so every
+// feed and widget orders tasks through the one TaskSortEngine.
+private fun TodoItem.toTaskSortKey(): TaskSortKey = TaskSortKey(
+    id = id,
+    pinned = pinned,
+    dueEpochMs = due?.toEpochMilli(),
+    priorityRank = TaskSortEngine.priorityRank(priority),
+    updatedAtEpochMs = updatedAt?.toEpochMilli(),
+)
+
 private fun buildOverdueSections(
     items: List<TodoItem>,
     zoneId: ZoneId,
@@ -3383,7 +3395,7 @@ private fun buildOverdueSections(
     val sections = mutableListOf<TodoSection>()
 
     overdueByDate[today]
-        ?.sortedBy { it.due ?: Instant.MAX }
+        ?.let { dayItems -> TaskSortEngine.sortedTodos(dayItems) { it.toTaskSortKey() } }
         ?.takeIf { it.isNotEmpty() }
         ?.let { todaysItems ->
             sections += TodoSection(
@@ -3405,7 +3417,7 @@ private fun buildOverdueSections(
             sections += TodoSection(
                 key = "day-$date",
                 title = date.format(SCHEDULED_DAY_FORMATTER),
-                items = overdueByDate[date].orEmpty().sortedBy { it.due ?: Instant.MAX },
+                items = TaskSortEngine.sortedTodos(overdueByDate[date].orEmpty()) { it.toTaskSortKey() },
                 quickAddDefaults = null,
             )
         }
@@ -3417,7 +3429,7 @@ private fun buildTodaySections(
     items: List<TodoItem>,
     zoneId: ZoneId,
 ): List<TodoSection> {
-    val sorted = items.filter { it.due != null }.sortedBy { it.due ?: Instant.MAX }
+    val sorted = TaskSortEngine.sortedTodos(items.filter { it.due != null }) { it.toTaskSortKey() }
     val today = LocalDate.now(zoneId)
     val noon = LocalTime.NOON
     val eveningStartBoundary = LocalTime.of(18, 0)
@@ -3473,13 +3485,7 @@ private fun buildTodaySections(
 }
 
 private fun buildFloaterSections(items: List<TodoItem>): List<TodoSection> {
-    val floaterItems = items
-        .sortedWith(
-            compareByDescending<TodoItem> { it.pinned }
-                .thenBy { floaterPriorityRank(it.priority) }
-                .thenByDescending { it.updatedAt }
-                .thenBy { it.title.lowercase(Locale.getDefault()) },
-        )
+    val floaterItems = TaskSortEngine.sortedFloaters(items) { it.toTaskSortKey() }
 
     return listOf(
         TodoSection(
@@ -3506,11 +3512,11 @@ private fun buildScheduledSections(
     includeEmptyEarlierTarget: Boolean = false,
 ): List<TodoSection> {
     val now = Instant.now()
-    val sorted = items.asSequence().mapNotNull { todo ->
-        todo.due?.let { due -> due to todo }
-    }.filter { (due, _) ->
+    val dueItems = items.filter { todo ->
+        val due = todo.due ?: return@filter false
         if (futureOnly) !due.isBefore(now) else true
-    }.sortedBy { (due, _) -> due }.map { (_, todo) -> todo }.toList()
+    }
+    val sorted = TaskSortEngine.sortedTodos(dueItems) { it.toTaskSortKey() }
     val groupedByDate = sorted.groupBy { todo ->
         LocalDate.ofInstant(todo.due ?: Instant.MAX, zoneId)
     }
@@ -3547,9 +3553,10 @@ private fun buildScheduledSections(
     }
 
     val earlierSection = if (!futureOnly) {
-        val earlierItems = groupedByDate.asSequence().filter { (date, _) -> date < today }
-            .flatMap { (_, dayItems) -> dayItems.asSequence() }.sortedBy { it.due ?: Instant.MAX }
-            .toList()
+        val earlierItems = TaskSortEngine.sortedTodos(
+            groupedByDate.asSequence().filter { (date, _) -> date < today }
+                .flatMap { (_, dayItems) -> dayItems.asSequence() }.toList(),
+        ) { it.toTaskSortKey() }
         if (earlierItems.isNotEmpty() || includeEmptyEarlierTarget) {
             TodoSection(
                 key = "earlier",
@@ -3585,9 +3592,11 @@ private fun buildScheduledSections(
         )
     }
 
-    val restOfCurrentMonthItems = groupedByDate.asSequence().filter { (date, _) ->
-        date >= horizonStart && YearMonth.from(date) == currentMonth
-    }.flatMap { (_, dayItems) -> dayItems.asSequence() }.sortedBy { it.due ?: Instant.MAX }.toList()
+    val restOfCurrentMonthItems = TaskSortEngine.sortedTodos(
+        groupedByDate.asSequence().filter { (date, _) ->
+            date >= horizonStart && YearMonth.from(date) == currentMonth
+        }.flatMap { (_, dayItems) -> dayItems.asSequence() }.toList(),
+    ) { it.toTaskSortKey() }
     val monthName = currentMonth.month.getDisplayName(TextStyle.FULL, Locale.getDefault())
     sections += TodoSection(
         key = "rest-$currentMonth",
@@ -3611,10 +3620,11 @@ private fun buildScheduledSections(
 
     var targetMonth = currentMonth.plusMonths(1)
     while (targetMonth <= finalMonth) {
-        val monthItems = groupedByDate.asSequence().filter { (date, _) ->
-            date >= horizonStart && YearMonth.from(date) == targetMonth
-        }.flatMap { (_, dayItems) -> dayItems.asSequence() }.sortedBy { it.due ?: Instant.MAX }
-            .toList()
+        val monthItems = TaskSortEngine.sortedTodos(
+            groupedByDate.asSequence().filter { (date, _) ->
+                date >= horizonStart && YearMonth.from(date) == targetMonth
+            }.flatMap { (_, dayItems) -> dayItems.asSequence() }.toList(),
+        ) { it.toTaskSortKey() }
         sections += TodoSection(
             key = "month-$targetMonth",
             title = monthTitle(targetMonth, currentMonth.year),

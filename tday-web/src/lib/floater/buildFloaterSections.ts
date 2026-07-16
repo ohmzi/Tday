@@ -1,5 +1,7 @@
 import { getPriorityFlag } from "@/lib/priority";
 import type { FloaterItemType } from "@/types";
+import { compareFloaters, priorityRank, type TaskSortKey } from "@/lib/taskSort";
+import { floaterUpdatedEpochMs } from "@/lib/floaterResting";
 
 export type FloaterSectionId = "urgent" | "important" | "normal";
 
@@ -18,34 +20,22 @@ function sectionIdForPriority(priority: FloaterItemType["priority"]): FloaterSec
   return "normal";
 }
 
-function compareFloaters(a: FloaterItemType, b: FloaterItemType) {
-  if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
-  const orderDiff = a.order - b.order;
-  if (orderDiff !== 0) return orderDiff;
-  return a.title.localeCompare(b.title, undefined, { sensitivity: "base" });
-}
+const floaterSortKey = (floater: FloaterItemType): TaskSortKey => ({
+  id: floater.id,
+  pinned: floater.pinned,
+  dueEpochMs: null, // floaters are undated
+  priorityRank: priorityRank(floater.priority),
+  updatedAtEpochMs: floaterUpdatedEpochMs(floater),
+});
 
-function priorityRank(priority: FloaterItemType["priority"]): number {
-  const flag = getPriorityFlag(priority);
-  if (flag?.label === "Urgent") return 0;
-  if (flag?.label === "Important") return 1;
-  return 2;
-}
+// The FIXED floater order (see src/lib/taskSort.ts / the shared Kotlin
+// TaskSortEngine): pinned first, priority High→Low, modified desc, id.
+const compareFloaterItems = (a: FloaterItemType, b: FloaterItemType): number =>
+  compareFloaters(floaterSortKey(a), floaterSortKey(b));
 
-function compareByPriorityThenCreated(a: FloaterItemType, b: FloaterItemType) {
-  if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
-  const pDiff = priorityRank(a.priority) - priorityRank(b.priority);
-  if (pDiff !== 0) return pDiff;
-  // createdAt descending (newest first) for same priority
-  const aTime = new Date(a.createdAt ?? 0).getTime();
-  const bTime = new Date(b.createdAt ?? 0).getTime();
-  if (aTime !== bTime) return bTime - aTime;
-  return a.title.localeCompare(b.title, undefined, { sensitivity: "base" });
-}
-
-/** Flat list sorted by priority (urgent → important → normal), then created date. */
+/** Flat list in the fixed floater order (pinned, priority, modified desc, id). */
 export function sortFloatersByPriority(floaters: FloaterItemType[]): FloaterItemType[] {
-  return floaters.filter((f) => !f.completed).sort(compareByPriorityThenCreated);
+  return floaters.filter((f) => !f.completed).sort(compareFloaterItems);
 }
 
 export function buildFloaterSections(floaters: FloaterItemType[]): FloaterSection[] {
@@ -64,7 +54,7 @@ export function buildFloaterSections(floaters: FloaterItemType[]): FloaterSectio
     .map((id) => ({
       id,
       labelKey: id,
-      items: grouped[id].sort(compareFloaters),
+      items: grouped[id].sort(compareFloaterItems),
     }))
     .filter((section) => section.items.length > 0);
 }

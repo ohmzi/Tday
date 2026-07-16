@@ -47,19 +47,39 @@ struct TodayTasksWidgetTaskSnapshot: Codable, Equatable, Identifiable {
     let priority: String
     // Optional so previously persisted snapshots without this field still decode (as nil).
     let description: String?
+    // Inputs for the fixed ordering (TaskSortEngine), so the widget row carries
+    // enough to sort identically to the app. Defaulted/optional so snapshots
+    // persisted before these existed still decode.
+    let pinned: Bool
+    let updatedAtEpochMs: Int64?
 
     init(
         id: String,
         title: String,
         dueEpochMs: Int64,
         priority: String,
-        description: String? = nil
+        description: String? = nil,
+        pinned: Bool = false,
+        updatedAtEpochMs: Int64? = nil
     ) {
         self.id = id
         self.title = title
         self.dueEpochMs = dueEpochMs
         self.priority = priority
         self.description = description
+        self.pinned = pinned
+        self.updatedAtEpochMs = updatedAtEpochMs
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        title = try container.decode(String.self, forKey: .title)
+        dueEpochMs = try container.decode(Int64.self, forKey: .dueEpochMs)
+        priority = try container.decode(String.self, forKey: .priority)
+        description = try container.decodeIfPresent(String.self, forKey: .description)
+        pinned = try container.decodeIfPresent(Bool.self, forKey: .pinned) ?? false
+        updatedAtEpochMs = try container.decodeIfPresent(Int64.self, forKey: .updatedAtEpochMs)
     }
 }
 
@@ -100,25 +120,21 @@ enum TodayTasksWidgetSnapshotStore {
 
         // An active iOS Focus filter (R6-3) narrows the widget to its chosen lists.
         let focusListIDs = TdayFocusFilterStore.activeListIDs()
-        let todayTasks = state.todos
-            .filter {
-                guard let dueEpochMs = $0.dueEpochMs else {
+        // Fixed TODO ordering (TaskSortEngine), identical to the app, applied
+        // before the display cap so the widget shows the same leading tasks.
+        let todayTasks = TaskSortEngine.sortedTodos(
+            state.todos.filter { record in
+                guard let dueEpochMs = record.dueEpochMs else {
                     return false
                 }
-                guard !$0.completed && dueEpochMs >= dayStartEpochMs && dueEpochMs < dayEndEpochMs else {
+                guard !record.completed && dueEpochMs >= dayStartEpochMs && dueEpochMs < dayEndEpochMs else {
                     return false
                 }
                 guard let focusListIDs else { return true }
-                return $0.listId.map(focusListIDs.contains) ?? false
-            }
-            .sorted { left, right in
-                let leftDue = left.dueEpochMs ?? Int64.max
-                let rightDue = right.dueEpochMs ?? Int64.max
-                if leftDue == rightDue {
-                    return left.title.localizedStandardCompare(right.title) == .orderedAscending
-                }
-                return leftDue < rightDue
-            }
+                return record.listId.map(focusListIDs.contains) ?? false
+            },
+            key: taskSortKey
+        )
 
         return TodayTasksWidgetSnapshot(
             generatedAtEpochMs: Int64(now.timeIntervalSince1970 * 1_000),
@@ -131,7 +147,9 @@ enum TodayTasksWidgetSnapshotStore {
                     title: $0.title,
                     dueEpochMs: $0.dueEpochMs ?? dayStartEpochMs,
                     priority: $0.priority,
-                    description: $0.description
+                    description: $0.description,
+                    pinned: $0.pinned,
+                    updatedAtEpochMs: $0.updatedAtEpochMs > 0 ? $0.updatedAtEpochMs : nil
                 )
             }
         )
@@ -217,6 +235,34 @@ struct FloaterTasksWidgetTaskSnapshot: Codable, Equatable, Identifiable {
     let id: String
     let title: String
     let priority: String
+    // Inputs for the fixed ordering (TaskSortEngine), so the widget row carries
+    // enough to sort identically to the app. Defaulted/optional so snapshots
+    // persisted before these existed still decode.
+    let pinned: Bool
+    let updatedAtEpochMs: Int64?
+
+    init(
+        id: String,
+        title: String,
+        priority: String,
+        pinned: Bool = false,
+        updatedAtEpochMs: Int64? = nil
+    ) {
+        self.id = id
+        self.title = title
+        self.priority = priority
+        self.pinned = pinned
+        self.updatedAtEpochMs = updatedAtEpochMs
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        title = try container.decode(String.self, forKey: .title)
+        priority = try container.decode(String.self, forKey: .priority)
+        pinned = try container.decodeIfPresent(Bool.self, forKey: .pinned) ?? false
+        updatedAtEpochMs = try container.decodeIfPresent(Int64.self, forKey: .updatedAtEpochMs)
+    }
 }
 
 enum FloaterTasksWidgetSnapshotStatus: String, Codable, Equatable {
@@ -248,9 +294,12 @@ enum FloaterTasksWidgetSnapshotStore {
             )
         }
 
-        let floaterTasks = state.floaters
-            .filter { !$0.completed }
-            .sorted(by: floaterWidgetSortPrecedes)
+        // Fixed FLOATER ordering (TaskSortEngine), identical to the app, applied
+        // before the display cap so the widget shows the same leading tasks.
+        let floaterTasks = TaskSortEngine.sortedFloaters(
+            state.floaters.filter { !$0.completed },
+            key: taskSortKey
+        )
 
         return FloaterTasksWidgetSnapshot(
             generatedAtEpochMs: Int64(now.timeIntervalSince1970 * 1_000),
@@ -261,7 +310,9 @@ enum FloaterTasksWidgetSnapshotStore {
                 FloaterTasksWidgetTaskSnapshot(
                     id: $0.id,
                     title: $0.title,
-                    priority: $0.priority
+                    priority: $0.priority,
+                    pinned: $0.pinned,
+                    updatedAtEpochMs: $0.updatedAtEpochMs > 0 ? $0.updatedAtEpochMs : nil
                 )
             }
         )
@@ -301,31 +352,6 @@ enum FloaterTasksWidgetSnapshotStore {
         }
         stores.append(.standard)
         return stores
-    }
-
-    private static func floaterWidgetSortPrecedes(_ lhs: CachedFloaterRecord, _ rhs: CachedFloaterRecord) -> Bool {
-        if lhs.pinned != rhs.pinned {
-            return lhs.pinned && !rhs.pinned
-        }
-        let lhsRank = floaterWidgetPriorityRank(lhs.priority)
-        let rhsRank = floaterWidgetPriorityRank(rhs.priority)
-        if lhsRank != rhsRank {
-            return lhsRank < rhsRank
-        }
-        if lhs.title.localizedCaseInsensitiveCompare(rhs.title) != .orderedSame {
-            return lhs.title.localizedCaseInsensitiveCompare(rhs.title) == .orderedAscending
-        }
-        return lhs.id < rhs.id
-    }
-
-    private static func floaterWidgetPriorityRank(_ priority: String) -> Int {
-        if TaskPriorityDisplay.isUrgent(priority) {
-            return 0
-        }
-        if TaskPriorityDisplay.isImportant(priority) {
-            return 1
-        }
-        return 2
     }
 }
 

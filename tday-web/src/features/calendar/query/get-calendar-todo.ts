@@ -1,7 +1,7 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
 import { TodoApiItemType, TodoItemType } from "@/types";
-import parseApiDateTime from "@/lib/date/parseApiDateTime";
+import parseApiDateTime, { parseOptionalApiDateTime } from "@/lib/date/parseApiDateTime";
 
 export const useCalendarTodo = (calendarRange: { start: Date; end: Date }) => {
   const {
@@ -37,6 +37,7 @@ export const useCalendarTodo = (calendarRange: { start: Date; end: Date }) => {
         return {
           ...todo,
           id: todoId,
+          updatedAt: parseOptionalApiDateTime(todo.updatedAt),
           due: parseApiDateTime(todo.due!),
           instanceDate: todoInstanceDate,
           listID: todo.listID ?? null,

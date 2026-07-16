@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
 import { TodoApiItemType, TodoItemType } from "@/types";
-import parseApiDateTime from "@/lib/date/parseApiDateTime";
+import parseApiDateTime, { parseOptionalApiDateTime } from "@/lib/date/parseApiDateTime";
 
 export const useList = ({ id }: { id: string }) => {
   const {
@@ -31,6 +31,7 @@ export const useList = ({ id }: { id: string }) => {
           ...todo,
           id: todoId,
           createdAt: parseApiDateTime(todo.createdAt),
+          updatedAt: parseOptionalApiDateTime(todo.updatedAt),
           due: parseApiDateTime(todo.due!),
           instanceDate: todoInstanceDate,
           listID: todo.listID ?? null,

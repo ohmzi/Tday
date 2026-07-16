@@ -159,6 +159,8 @@ import com.ohmz.tday.compose.ui.theme.TdayTitleIconNightAccent
 import com.ohmz.tday.compose.ui.theme.tdayListAccentColor
 import com.ohmz.tday.compose.ui.theme.tdayListIconForKey
 import com.ohmz.tday.compose.ui.theme.tdayPriorityColor
+import com.ohmz.tday.shared.sort.TaskSortEngine
+import com.ohmz.tday.shared.sort.TaskSortKey
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.Instant
@@ -167,6 +169,16 @@ import java.time.LocalTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+
+// Maps a domain TodoItem onto the shared sort key so this feed orders tasks
+// through the one TaskSortEngine (identical order to every other T'Day surface).
+private fun TodoItem.toTaskSortKey(): TaskSortKey = TaskSortKey(
+    id = id,
+    pinned = pinned,
+    dueEpochMs = due?.toEpochMilli(),
+    priorityRank = TaskSortEngine.priorityRank(priority),
+    updatedAtEpochMs = updatedAt?.toEpochMilli(),
+)
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
 @Composable
@@ -314,9 +326,9 @@ fun HomeScreen(
                         (todo.listId?.let { listById[it]?.name }?.lowercase(Locale.getDefault())
                             ?.contains(normalizedSearchQuery) == true)
                 }
-                .sortedBy { it.due ?: Instant.MAX }
-                .take(20)
                 .toList()
+                .let { filtered -> TaskSortEngine.sortedTodos(filtered) { it.toTaskSortKey() } }
+                .take(20)
         }
     }
     val showSearchResultsOverlay = searchExpanded && searchQuery.isNotBlank()
