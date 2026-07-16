@@ -13,6 +13,7 @@
 		03A0CCC6A8AAE2DB065E6DE6 /* ServerURLPersistenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D206496BC88FF6272CFC286C /* ServerURLPersistenceTests.swift */; };
 		041712E33446975E528F050E /* RealtimeClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CC7B17CE45842F8DF7D522B /* RealtimeClient.swift */; };
 		04EFD8B7BFDF9261BE3D88BE /* CacheMappers.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3CD3233C5F5D5FC1E058708 /* CacheMappers.swift */; };
+		7A5C0F7E900000000000A103 /* TaskSortEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A5C0F7E900000000000A102 /* TaskSortEngine.swift */; };
 		0536D5C87C017F1DAC4F316C /* ThemeStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD41A49221B1A947AF8A94D0 /* ThemeStore.swift */; };
 		07D1F4A0C9434C54853E9D29 /* AppDataMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E4F3B64B40942F48202C32E /* AppDataMode.swift */; };
 		0A6188D6B8C9FC92A9927F1C /* SettingsRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DE0A20E66DEF6FD2146DB10 /* SettingsRepository.swift */; };
@@ -338,6 +339,7 @@
 		D24DBD8CA3EE648D4560B880 /* ServerURLState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServerURLState.swift; sourceTree = "<group>"; };
 		D26B48A87B57A0417CC3F578 /* TdayTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TdayTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		D3CD3233C5F5D5FC1E058708 /* CacheMappers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CacheMappers.swift; sourceTree = "<group>"; };
+		7A5C0F7E900000000000A102 /* TaskSortEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskSortEngine.swift; sourceTree = "<group>"; };
 		D4A100000000000000000010 /* TdayWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TdayWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		D4A100000000000000000013 /* TodayTasksWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayTasksWidget.swift; sourceTree = "<group>"; };
 		D4A100000000000000000014 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -625,6 +627,14 @@
 			path = Home;
 			sourceTree = "<group>";
 		};
+		7A5C0F7E900000000000A101 /* Sort */ = {
+			isa = PBXGroup;
+			children = (
+				7A5C0F7E900000000000A102 /* TaskSortEngine.swift */,
+			);
+			path = Sort;
+			sourceTree = "<group>";
+		};
 		7EE08339CAFC6311E33197B7 /* Sync */ = {
 			isa = PBXGroup;
 			children = (
@@ -701,6 +711,7 @@
 				05ADD4FAA554BDBEA68C7904 /* List */,
 				EFBAA9912D7DFA7C8B8C2BD0 /* Server */,
 				CBFE1162EFBEBE3E95E1E0BE /* Settings */,
+				7A5C0F7E900000000000A101 /* Sort */,
 				7EE08339CAFC6311E33197B7 /* Sync */,
 				CF66D0E8B85B6BE3E20C256D /* Todo */,
 			);
@@ -1184,6 +1195,7 @@
 				E1BD58F3802B8806874A2E29 /* AuthViewModel.swift in Sources */,
 				527A4947BD0D1BE156122F96 /* BootstrapSessionUseCase.swift in Sources */,
 				04EFD8B7BFDF9261BE3D88BE /* CacheMappers.swift in Sources */,
+				7A5C0F7E900000000000A103 /* TaskSortEngine.swift in Sources */,
 				91660A57CFA826E39338BD33 /* CalendarScreen.swift in Sources */,
 				64E0A2B205D80764F2BF52FB /* CalendarViewModel.swift in Sources */,
 				B10000000000000000000022 /* CarPlayCoordinator.swift in Sources */,

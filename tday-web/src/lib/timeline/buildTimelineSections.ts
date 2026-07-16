@@ -1,5 +1,6 @@
 import { TodoItemType } from "@/types";
 import { getTodoDayKey } from "@/lib/todoToastNavigation";
+import { compareTodos, priorityRank, type TaskSortKey } from "@/lib/taskSort";
 
 /**
  * Builds the vertically ordered, date-bucketed task timeline that mirrors the
@@ -75,12 +76,26 @@ const monthLabel = (year: number, month: number, currentYear: number, locale: st
   }).format(date);
 };
 
-// Within a single calendar day: manual order, then due time.
-const compareWithinDay = (a: TodoItemType, b: TodoItemType) => {
-  const orderDelta = a.order - b.order;
-  if (orderDelta !== 0) return orderDelta;
-  return a.due.getTime() - b.due.getTime();
+const toEpochMs = (date: Date | null | undefined): number | null => {
+  const ms = date?.getTime();
+  return ms == null || Number.isNaN(ms) ? null : ms;
 };
+
+const todoSortKey = (todo: TodoItemType): TaskSortKey => ({
+  id: todo.id,
+  pinned: todo.pinned,
+  dueEpochMs: toEpochMs(todo.due),
+  priorityRank: priorityRank(todo.priority),
+  // Modified time is the tiebreak; todos carry `updatedAt` from the API and fall
+  // back to `createdAt` when it is absent.
+  updatedAtEpochMs: toEpochMs(todo.updatedAt ?? todo.createdAt),
+});
+
+// The FIXED within-day todo order (see src/lib/taskSort.ts / the shared Kotlin
+// TaskSortEngine): pinned first, due asc (undated last), priority High→Low,
+// modified desc, id. The day-bucket grouping itself is unchanged.
+export const compareTodosWithinDay = (a: TodoItemType, b: TodoItemType): number =>
+  compareTodos(todoSortKey(a), todoSortKey(b));
 
 const hasValidDue = (todo: TodoItemType) =>
   todo.due instanceof Date && !Number.isNaN(todo.due.getTime());
@@ -128,7 +143,7 @@ export function buildTimelineSections({
     else byDayKey.set(key, [todo]);
   }
 
-  const dayBucket = (key: string) => (byDayKey.get(key) ?? []).slice().sort(compareWithinDay);
+  const dayBucket = (key: string) => (byDayKey.get(key) ?? []).slice().sort(compareTodosWithinDay);
 
   // Items across multiple days, ordered oldest → newest, then within-day order.
   const sortAcrossDays = (items: TodoItemType[]) =>
@@ -136,7 +151,7 @@ export function buildTimelineSections({
       const ka = getTodoDayKey(a.due, timeZone);
       const kb = getTodoDayKey(b.due, timeZone);
       if (ka !== kb) return ka < kb ? -1 : 1;
-      return compareWithinDay(a, b);
+      return compareTodosWithinDay(a, b);
     });
 
   const sections: TimelineSection[] = [];

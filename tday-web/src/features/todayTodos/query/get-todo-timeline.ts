@@ -1,7 +1,7 @@
 import { TodoApiItemType, TodoItemType } from "@/types";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
-import parseApiDateTime from "@/lib/date/parseApiDateTime";
+import parseApiDateTime, { parseOptionalApiDateTime } from "@/lib/date/parseApiDateTime";
 
 const getTodoTimeline = async () => {
   const data = await api.GET({
@@ -24,6 +24,7 @@ const getTodoTimeline = async () => {
       ...todo,
       id: todoId,
       createdAt: parseApiDateTime(todo.createdAt),
+      updatedAt: parseOptionalApiDateTime(todo.updatedAt),
       due: parseApiDateTime(todo.due!),
       instanceDate: todoInstanceDate,
     };

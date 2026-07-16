@@ -143,9 +143,7 @@ struct HomeScreen: View {
                 (todo.description.map { homeSearchText($0).contains(normalizedSearchQuery) } ?? false) ||
                 (todo.listId.flatMap { listByID[$0]?.name }.map { homeSearchText($0).contains(normalizedSearchQuery) } ?? false)
         }
-        .sorted {
-            ($0.due ?? .distantFuture) < ($1.due ?? .distantFuture)
-        }
+        .sorted(by: todoSortPrecedes)
         .prefix(20)
         .map { $0 }
     }

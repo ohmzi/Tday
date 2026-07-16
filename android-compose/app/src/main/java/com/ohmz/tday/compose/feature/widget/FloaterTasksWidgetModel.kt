@@ -2,9 +2,8 @@ package com.ohmz.tday.compose.feature.widget
 
 import com.ohmz.tday.compose.core.data.CachedFloaterRecord
 import com.ohmz.tday.compose.core.data.OfflineSyncState
-import com.ohmz.tday.compose.ui.priority.isImportantPriority
-import com.ohmz.tday.compose.ui.priority.isUrgentPriority
-import java.util.Locale
+import com.ohmz.tday.shared.sort.TaskSortEngine
+import com.ohmz.tday.shared.sort.TaskSortKey
 
 enum class FloaterTasksWidgetStatus {
     SETUP,
@@ -37,11 +36,16 @@ fun buildFloaterTasksWidgetModel(
         )
     }
 
-    val floaterTasks = state.floaters
-        .asSequence()
-        .filter { !it.completed }
-        .sortedWith(floaterWidgetComparator)
-        .toList()
+    val floaterTasks = TaskSortEngine.sortedFloaters(
+        state.floaters.filter { !it.completed },
+    ) { floater ->
+        TaskSortKey(
+            id = floater.id,
+            pinned = floater.pinned,
+            priorityRank = TaskSortEngine.priorityRank(floater.priority),
+            updatedAtEpochMs = floater.updatedAtEpochMs.takeIf { it > 0L },
+        )
+    }
 
     return FloaterTasksWidgetModel(
         title = title,
@@ -49,19 +53,6 @@ fun buildFloaterTasksWidgetModel(
         taskCount = floaterTasks.size,
         tasks = floaterTasks.take(taskLimit),
     )
-}
-
-private val floaterWidgetComparator = compareByDescending<CachedFloaterRecord> { it.pinned }
-    .thenBy { floaterWidgetPriorityRank(it.priority) }
-    .thenBy { it.title.lowercase(Locale.getDefault()) }
-    .thenBy { it.id }
-
-private fun floaterWidgetPriorityRank(priority: String): Int {
-    return when {
-        isUrgentPriority(priority) -> 0
-        isImportantPriority(priority) -> 1
-        else -> 2
-    }
 }
 
 const val FLOATER_TASKS_WIDGET_TASK_LIMIT = 50

@@ -192,7 +192,10 @@ final class TodayTasksWidgetSnapshotStoreTests: XCTestCase {
         XCTAssertEqual(snapshot.tasks.map(\.id), ["listed", "open"])
     }
 
-    func testFloaterSnapshotSortsPinnedPriorityTitleAndID() {
+    func testFloaterSnapshotSortsByFixedOrdering() {
+        // Fixed FLOATER ordering: pinned, priority High->Low, modified desc, id.
+        // Only canonical "High"/"Medium"/"Low" rank; non-canonical ("Urgent",
+        // "Important") fall through to Low, matching the shared engine exactly.
         let state = OfflineSyncState(
             floaters: [
                 floater(id: "low-a", title: "Alpha", priority: "Low"),
@@ -208,15 +211,38 @@ final class TodayTasksWidgetSnapshotStoreTests: XCTestCase {
 
         XCTAssertEqual(
             snapshot.tasks.map(\.id),
-            ["pinned-low", "urgent-a", "high-b", "medium-a", "urgent-b", "low-a"]
+            ["pinned-low", "high-b", "medium-a", "low-a", "urgent-a", "urgent-b"]
+        )
+    }
+
+    func testFloaterSnapshotBreaksPriorityTiesByModifiedThenID() {
+        // Same priority: most-recently-modified first, then id when unmodified.
+        let state = OfflineSyncState(
+            floaters: [
+                floater(id: "older", title: "Older", priority: "Low", updatedAtEpochMs: 1_000),
+                floater(id: "newer", title: "Newer", priority: "Low", updatedAtEpochMs: 2_000),
+                floater(id: "b-untouched", title: "Untouched B", priority: "Low"),
+                floater(id: "a-untouched", title: "Untouched A", priority: "Low")
+            ]
+        )
+
+        let snapshot = FloaterTasksWidgetSnapshotStore.makeSnapshot(from: state)
+
+        // newer/older lead by modified desc; the two unmodified fall last by id asc.
+        XCTAssertEqual(
+            snapshot.tasks.map(\.id),
+            ["newer", "older", "a-untouched", "b-untouched"]
         )
     }
 
     func testFloaterSnapshotCapsTasksForWidgetDisplay() {
+        // Descending updatedAt so the fixed ordering (modified desc) yields
+        // task-0 (newest) first through task-54 (oldest) last.
         let floaters = (0..<55).map { index in
             floater(
                 id: "task-\(index)",
-                title: "Task \(String(format: "%02d", index))"
+                title: "Task \(String(format: "%02d", index))",
+                updatedAtEpochMs: Int64(10_000 - index)
             )
         }
 
@@ -304,7 +330,8 @@ final class TodayTasksWidgetSnapshotStoreTests: XCTestCase {
         priority: String = "low",
         pinned: Bool = false,
         completed: Bool = false,
-        listId: String? = nil
+        listId: String? = nil,
+        updatedAtEpochMs: Int64 = 0
     ) -> CachedFloaterRecord {
         CachedFloaterRecord(
             id: id,
@@ -315,7 +342,7 @@ final class TodayTasksWidgetSnapshotStoreTests: XCTestCase {
             pinned: pinned,
             completed: completed,
             listId: listId,
-            updatedAtEpochMs: 0
+            updatedAtEpochMs: updatedAtEpochMs
         )
     }
 }

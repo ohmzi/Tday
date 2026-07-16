@@ -4109,30 +4109,9 @@ private func buildFloaterTimelineSections(items: [TodoItem]) -> [TodoTimelineSec
     ]
 }
 
+// Fixed FLOATER ordering (pinned, priority High->Low, modified desc, id).
 private func floaterTodoSortPrecedes(_ lhs: TodoItem, _ rhs: TodoItem) -> Bool {
-    if lhs.pinned != rhs.pinned {
-        return lhs.pinned && !rhs.pinned
-    }
-    let lhsPriority = floaterPriorityRank(lhs.priority)
-    let rhsPriority = floaterPriorityRank(rhs.priority)
-    if lhsPriority != rhsPriority {
-        return lhsPriority < rhsPriority
-    }
-    // Same priority — sort by updatedAt (newest first), then title
-    if let lhsUpdated = lhs.updatedAt, let rhsUpdated = rhs.updatedAt, lhsUpdated != rhsUpdated {
-        return lhsUpdated > rhsUpdated
-    }
-    return lhs.title.localizedCaseInsensitiveCompare(rhs.title) == .orderedAscending
-}
-
-private func floaterPriorityRank(_ priority: String) -> Int {
-    if TaskPriorityDisplay.isUrgent(priority) {
-        return 0
-    }
-    if TaskPriorityDisplay.isImportant(priority) {
-        return 1
-    }
-    return 2
+    TaskSortEngine.precedesFloater(taskSortKey(lhs), taskSortKey(rhs))
 }
 
 private func scheduledSectionTitle(for date: Date, calendar: Calendar) -> String {

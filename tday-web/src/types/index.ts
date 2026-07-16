@@ -69,6 +69,7 @@ export interface TodoItemType {
   description: string | null;
   pinned: boolean;
   createdAt: Date;
+  updatedAt?: Date | null;
   order: number;
   priority: "Low" | "Medium" | "High";
   due: Date;
