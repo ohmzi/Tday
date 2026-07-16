@@ -12,19 +12,21 @@ import androidx.work.OutOfQuotaPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
+import com.ohmz.tday.compose.core.data.sync.SyncManager
 import com.ohmz.tday.compose.feature.widget.WidgetSyncWorker.Companion.schedule
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import java.util.concurrent.TimeUnit
 
 /**
- * Periodic WorkManager worker that refreshes both Today and Floater widgets
- * on a 15-minute schedule (Android's minimum for PeriodicWorkRequest).
+ * Periodic WorkManager worker that syncs with the server every ~30 minutes so both widgets
+ * stay fresh even when the app process has been killed.
  *
- * This ensures widgets stay reasonably fresh even when the app process has
- * been killed and SyncManager isn't running. The existing refreshers
- * ([TodayTasksWidgetRefresher] and [FloaterTasksWidgetRefresher]) handle
- * immediate updates on task mutations; this worker is the safety net.
+ * It runs a full [SyncManager.syncCachedData] (network), then writes through the single cache
+ * path. The reload itself is CONDITIONAL: the refreshers only re-render when the widget's
+ * displayed content actually changed (see [TodayTasksWidgetRefresher]). So a sync that finds
+ * nothing new for the widget leaves it untouched while the app still holds the latest data.
+ * It runs quietly — no offline toast — because it's a background refresh, not user-initiated.
  *
  * Enqueue once at app start via [schedule] from [TdayApplication.runDeferredStartup].
  */
@@ -32,14 +34,18 @@ import java.util.concurrent.TimeUnit
 class WidgetSyncWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted params: WorkerParameters,
-    private val todayRefresher: TodayTasksWidgetRefresher,
-    private val floaterRefresher: FloaterTasksWidgetRefresher,
+    private val syncManager: SyncManager,
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
         return runCatching {
-            todayRefresher.refreshNow()
-            floaterRefresher.refreshNow()
+            // force = true so the 30-min cadence actually reaches the server (bypasses the
+            // time-based throttle). notifyOfflineFailure = false so a background run is silent.
+            syncManager.syncCachedData(
+                force = true,
+                replayPendingMutations = true,
+                notifyOfflineFailure = false,
+            )
             Result.success()
         }.getOrElse { e ->
             Log.e(TAG, "Widget sync failed (attempt $runAttemptCount)", e)
@@ -53,11 +59,12 @@ class WidgetSyncWorker @AssistedInject constructor(
 
         /**
          * Call from [TdayApplication.runDeferredStartup].
-         * Uses KEEP so re-installs after reboot without resetting the timer.
+         * Uses UPDATE so an app update picks up the current 30-min network-sync definition
+         * (an older install may still have the previous 15-min cache-only worker enqueued).
          */
         fun schedule(context: Context) {
             val request = PeriodicWorkRequestBuilder<WidgetSyncWorker>(
-                repeatInterval = 15,
+                repeatInterval = 30,
                 repeatIntervalTimeUnit = TimeUnit.MINUTES,
                 flexTimeInterval = 5,
                 flexTimeIntervalUnit = TimeUnit.MINUTES,
@@ -72,7 +79,7 @@ class WidgetSyncWorker @AssistedInject constructor(
             WorkManager.getInstance(context)
                 .enqueueUniquePeriodicWork(
                     WORK_NAME,
-                    ExistingPeriodicWorkPolicy.KEEP,
+                    ExistingPeriodicWorkPolicy.UPDATE,
                     request,
                 )
         }

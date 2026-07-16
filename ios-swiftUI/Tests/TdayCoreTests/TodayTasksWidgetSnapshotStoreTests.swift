@@ -88,6 +88,35 @@ final class TodayTasksWidgetSnapshotStoreTests: XCTestCase {
         XCTAssertTrue(snapshot.tasks.isEmpty)
     }
 
+    func testHasSameContentIgnoresGeneratedAtButCatchesContentChanges() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let now = Date(timeIntervalSince1970: 1_764_072_600)
+        let startOfDay = calendar.startOfDay(for: now)
+        let dueSoon = startOfDay.addingTimeInterval(9 * 3_600).epochMs
+
+        let state = OfflineSyncState(
+            todos: [todo(id: "soon", title: "Soon", dueEpochMs: dueSoon)]
+        )
+        let first = TodayTasksWidgetSnapshotStore.makeSnapshot(from: state, now: now, calendar: calendar)
+        // Same displayed content, generated 30s later -> only generatedAtEpochMs differs.
+        let later = TodayTasksWidgetSnapshotStore.makeSnapshot(
+            from: state,
+            now: now.addingTimeInterval(30),
+            calendar: calendar
+        )
+        XCTAssertNotEqual(first.generatedAtEpochMs, later.generatedAtEpochMs)
+        XCTAssertTrue(first.hasSameContent(as: later), "same displayed content must compare equal despite a newer timestamp")
+
+        // A real visible change (title) must break the content comparison.
+        let renamed = TodayTasksWidgetSnapshotStore.makeSnapshot(
+            from: OfflineSyncState(todos: [todo(id: "soon", title: "Soon (edited)", dueEpochMs: dueSoon)]),
+            now: now,
+            calendar: calendar
+        )
+        XCTAssertFalse(first.hasSameContent(as: renamed))
+    }
+
     func testSnapshotDecodesLegacyPayloads() throws {
         let legacyJSON = """
         {
@@ -124,10 +153,12 @@ final class TodayTasksWidgetSnapshotStoreTests: XCTestCase {
         let startOfDay = calendar.startOfDay(for: now)
         let due = startOfDay.addingTimeInterval(9 * 3_600).epochMs
 
+        // Distinct minutes so due-time ordering is unambiguous (dues within the same
+        // minute floor-tie and fall through to the modified/id tiebreak).
         let state = OfflineSyncState(
             todos: [
                 todo(id: "with-note", title: "With note", dueEpochMs: due, description: "Bring the receipts"),
-                todo(id: "without-note", title: "Without note", dueEpochMs: due + 1)
+                todo(id: "without-note", title: "Without note", dueEpochMs: due + 60_000)
             ]
         )
 
@@ -194,8 +225,9 @@ final class TodayTasksWidgetSnapshotStoreTests: XCTestCase {
 
     func testFloaterSnapshotSortsByFixedOrdering() {
         // Fixed FLOATER ordering: pinned, priority High->Low, modified desc, id.
-        // Only canonical "High"/"Medium"/"Low" rank; non-canonical ("Urgent",
-        // "Important") fall through to Low, matching the shared engine exactly.
+        // priorityRank is vocabulary-tolerant to match the shared engine: "Urgent"
+        // ranks as High and "Important" as Medium (not Low). All modified times are
+        // equal here, so within a rank the tiebreak falls to id ascending.
         let state = OfflineSyncState(
             floaters: [
                 floater(id: "low-a", title: "Alpha", priority: "Low"),
@@ -211,7 +243,8 @@ final class TodayTasksWidgetSnapshotStoreTests: XCTestCase {
 
         XCTAssertEqual(
             snapshot.tasks.map(\.id),
-            ["pinned-low", "high-b", "medium-a", "low-a", "urgent-a", "urgent-b"]
+            // High rank: high-b, urgent-a (id asc) | Medium rank: medium-a, urgent-b | Low: low-a
+            ["pinned-low", "high-b", "urgent-a", "medium-a", "urgent-b", "low-a"]
         )
     }
 
