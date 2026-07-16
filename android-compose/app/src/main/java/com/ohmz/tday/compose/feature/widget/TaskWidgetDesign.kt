@@ -2,6 +2,7 @@ package com.ohmz.tday.compose.feature.widget
 
 import android.util.TypedValue
 import android.view.Gravity
+import android.view.View
 import android.widget.RemoteViews
 import androidx.annotation.ColorRes
 import androidx.compose.runtime.Composable
@@ -441,15 +442,20 @@ private fun TaskWidgetList(
 ) {
     LazyColumn(modifier = modifier) {
         itemsIndexed(rows, itemId = { _, row -> row.key }) { index, row ->
-            TaskWidgetRow(
-                row = row,
-                layout = layout,
-                metrics = metrics,
-                visuals = visuals,
-                openAction = openAction,
-            )
-            if (index < rows.lastIndex) {
-                TaskWidgetRowDivider(gap = metrics.rowSpacing)
+            // Row + divider must live under ONE root per item: Glance wraps multiple
+            // item children in a Box (which overlaps them), so the divider landed on top
+            // of the row instead of below it. A Column stacks them vertically.
+            Column(modifier = GlanceModifier.fillMaxWidth()) {
+                TaskWidgetRow(
+                    row = row,
+                    layout = layout,
+                    metrics = metrics,
+                    visuals = visuals,
+                    openAction = openAction,
+                )
+                if (index < rows.lastIndex) {
+                    TaskWidgetRowDivider(gap = metrics.rowSpacing)
+                }
             }
         }
     }
@@ -527,28 +533,22 @@ private fun TaskWidgetRow(
                 )
                 Spacer(modifier = GlanceModifier.width(7.dp))
             }
-            // The title is an AndroidRemoteViews (RemoteViews TextView, for the
-            // Nunito font). Glance does NOT reliably honour defaultWeight() applied
-            // directly to an AndroidRemoteViews wrapper: in a Row that also has a
-            // trailing element (the TimeChip) the wrapper collapses to zero width and
-            // the title renders blank. Floater rows have no time chip, so the collapse
-            // never showed there. Fix: give the weight to a native Glance Box (which
-            // Glance sizes reliably as a 0dp+weight LinearLayout child) and let the
-            // RemoteViews fill that box via fillMaxWidth(). Height still wraps, so the
-            // 2-line title and top-aligned dot/time behaviour are unchanged.
+            // Title + trailing time are ONE AndroidRemoteViews. The title is a
+            // RemoteViews TextView (Nunito font), and Glance collapses a weighted
+            // AndroidRemoteViews to zero width when the Row has a *trailing* Glance
+            // sibling — which is exactly why medium/large (with a time chip) rendered
+            // blank titles while small (no time) was fine. Folding the time INTO the
+            // same RemoteViews removes that sibling: the title's 0dp+weight=1 now lives
+            // inside the RemoteViews' own LinearLayout, which the framework sizes
+            // reliably (same structure as the static previews).
+            val trailing = row.trailingText?.takeIf { taskWidgetShowsTrailingText(layout) }
             Box(modifier = GlanceModifier.defaultWeight()) {
-                WidgetText(
+                TaskTitleAndTime(
                     modifier = GlanceModifier.fillMaxWidth(),
-                    text = row.title,
-                    color = TaskWidgetTextColor.PRIMARY,
-                    fontSize = metrics.rowFontSize,
-                    maxLines = 2,
-                    fillWidth = true,
+                    title = row.title,
+                    trailingText = trailing,
+                    titleFontSize = metrics.rowFontSize,
                 )
-            }
-            if (taskWidgetShowsTrailingText(layout) && row.trailingText != null) {
-                Spacer(modifier = GlanceModifier.width(6.dp))
-                TimeChip(text = row.trailingText)
             }
         }
         if (description != null) {
@@ -565,19 +565,34 @@ private fun TaskWidgetRow(
     }
 }
 
+// Renders the task title and its optional trailing time as a SINGLE RemoteViews
+// (see widget_task_row_line.xml). This is the fix for blank titles on any widget
+// size that shows the time: the title's 0dp+weight=1 lives inside the RemoteViews,
+// so there is no trailing Glance sibling to collapse the weighted wrapper.
 @Composable
-private fun TimeChip(text: String) {
-    WidgetText(
-        // Sit on the first line (top-aligned row) rather than a fixed-height box
-        // that would centre the time across a two-line title.
-        modifier = GlanceModifier
-            .padding(start = 7.dp, end = 7.dp, top = 1.dp),
-        text = text,
-        color = TaskWidgetTextColor.SECONDARY,
-        fontSize = 11.sp,
-        textAlign = TextAlign.Center,
-        maxLines = 1,
-    )
+private fun TaskTitleAndTime(
+    title: String,
+    trailingText: String?,
+    titleFontSize: TextUnit,
+    modifier: GlanceModifier = GlanceModifier,
+) {
+    require(titleFontSize.isSp) { "Widget font sizes must be expressed in sp." }
+    val context = LocalContext.current
+    val remoteViews = RemoteViews(context.packageName, R.layout.widget_task_row_line).apply {
+        setTextViewText(R.id.widget_row_title, title)
+        setTextViewTextSize(R.id.widget_row_title, TypedValue.COMPLEX_UNIT_SP, titleFontSize.value)
+        setTextColor(R.id.widget_row_title, ContextCompat.getColor(context, TaskWidgetTextColor.PRIMARY.resourceId))
+        setInt(R.id.widget_row_title, "setMaxLines", 2)
+        if (trailingText != null) {
+            setViewVisibility(R.id.widget_row_time, View.VISIBLE)
+            setTextViewText(R.id.widget_row_time, trailingText)
+            setTextViewTextSize(R.id.widget_row_time, TypedValue.COMPLEX_UNIT_SP, 11f)
+            setTextColor(R.id.widget_row_time, ContextCompat.getColor(context, TaskWidgetTextColor.SECONDARY.resourceId))
+        } else {
+            setViewVisibility(R.id.widget_row_time, View.GONE)
+        }
+    }
+    AndroidRemoteViews(remoteViews = remoteViews, modifier = modifier)
 }
 
 @Composable
