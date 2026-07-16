@@ -134,7 +134,7 @@ fun Route.floaterRoutes() {
                         if (body.due.isBlank()) {
                             raise(AppError.BadRequest("due is required"))
                         }
-                        val due = parseTodoDateTime(body.due)
+                        val due = parseDueMinute(body.due)
                             ?: raise(AppError.BadRequest("due must be a valid ISO-8601 datetime"))
                         val rrule = body.rrule?.takeIf { it.isNotBlank() }
                         val todo = floaterService.promoteToTodo(user.id, floaterId, due, rrule).bind()

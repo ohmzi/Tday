@@ -88,6 +88,8 @@ export default function NLPTitleInput({
       // NLP (Natty) used by iOS/Android: dueDate = dates.size > 1 ? dates[1] : start.
       const from = parsed.start.date();
       const due = parsed.end?.date() ?? from;
+      from.setSeconds(0, 0);
+      due.setSeconds(0, 0);
       setDateRange({ from: due, to: due });
 
       const before = text.slice(0, idx);

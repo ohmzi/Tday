@@ -28,18 +28,35 @@ class TaskSortEngineTest {
 
     @Test
     fun todosSortByDueThenPriorityThenModified() {
+        // Minute-separated dues (60_000 = minute 1, 180_000 = minute 3) so due sorts BEFORE
+        // priority. Within the same minute, priority (High before Low) then modified DESC decide.
         val items = listOf(
-            task("late", due = 300, priority = "High"),
-            task("early-low", due = 100, priority = "Low"),
-            task("early-high", due = 100, priority = "High"),
-            task("early-high-newer", due = 100, priority = "High", updated = 900),
+            task("late", due = 180_000, priority = "High"),
+            task("early-low", due = 60_000, priority = "Low"),
+            task("early-high", due = 60_000, priority = "High"),
+            task("early-high-newer", due = 60_000, priority = "High", updated = 900),
         )
-        // due asc first (100 group before 300); within 100: priority High before Low;
-        // within same due+High: most recently modified first.
         assertEquals(
             listOf("early-high-newer", "early-high", "early-low", "late"),
             todoIds(items),
         )
+    }
+
+    @Test
+    fun sameMinuteDifferentSecondsTiebreaksByPriority() {
+        // Real reported bug: two overdue tasks both shown at "9:41 PM" but differing by a few
+        // seconds. Same displayed minute => priority must win (High first), not the 5s-earlier
+        // low-priority one.
+        val biotech = task("biotech", due = 6_029_000, priority = "Low") // 9:41:29
+        val go = task("go", due = 6_034_000, priority = "High")          // 9:41:34
+        assertEquals(listOf("go", "biotech"), todoIds(listOf(biotech, go)))
+    }
+
+    @Test
+    fun differentMinutesStillOrderByDue() {
+        val earlier = task("earlier", due = 6_000_000, priority = "Low")  // 9:40:00
+        val later = task("later", due = 6_070_000, priority = "High")     // 9:41:10 (next minute)
+        assertEquals(listOf("earlier", "later"), todoIds(listOf(earlier, later)))
     }
 
     @Test

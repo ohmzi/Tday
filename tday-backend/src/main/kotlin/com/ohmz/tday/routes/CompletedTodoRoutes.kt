@@ -53,7 +53,7 @@ fun Route.completedTodoRoutes() {
                     if (due.isBlank()) {
                         return@withAuth Either.Left(AppError.BadRequest("due is required"))
                     } else {
-                        val parsed = parseTodoDateTime(due)
+                        val parsed = parseDueMinute(due)
                             ?: return@withAuth Either.Left(
                                 AppError.BadRequest("due must be a valid ISO-8601 datetime"),
                             )

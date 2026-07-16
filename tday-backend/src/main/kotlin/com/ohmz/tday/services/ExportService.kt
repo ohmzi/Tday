@@ -18,6 +18,7 @@ import com.ohmz.tday.db.tables.UserPreferences
 import com.ohmz.tday.db.util.CuidGenerator
 import com.ohmz.tday.domain.AppError
 import com.ohmz.tday.domain.DomainEvent
+import com.ohmz.tday.routes.parseDueMinute
 import com.ohmz.tday.routes.parseTodoDateTime
 import com.ohmz.tday.security.FieldEncryption
 import com.ohmz.tday.shared.model.CompletedFloaterDto
@@ -205,7 +206,7 @@ class ExportServiceImpl(
                 it[Todos.description] = fieldEncryption.encryptIfSensitive("description", todo.description)
                 it[Todos.priority] = Priority.fromApiOrDefault(todo.priority)
                 it[Todos.pinned] = todo.pinned
-                it[Todos.due] = parseTodoDateTime(todo.due) ?: now
+                it[Todos.due] = parseDueMinute(todo.due) ?: now
                 it[Todos.rrule] = todo.rrule
                 it[Todos.timeZone] = todo.timeZone ?: "UTC"
                 it[Todos.completed] = todo.completed
@@ -213,7 +214,7 @@ class ExportServiceImpl(
                 it[Todos.userID] = userId
                 it[Todos.createdAt] = parseTodoDateTime(todo.createdAt) ?: now
                 it[Todos.updatedAt] = parseTodoDateTime(todo.updatedAt) ?: now
-                it[Todos.exdates] = exported.exdates.mapNotNull(::parseTodoDateTime)
+                it[Todos.exdates] = exported.exdates.mapNotNull(::parseDueMinute)
             }
             insertTodoInstances(todo.id, exported.instances)
         }
@@ -244,7 +245,7 @@ class ExportServiceImpl(
 
     private fun insertTodoInstances(todoId: String, instances: List<TodoInstanceDto>) {
         instances.forEach { inst ->
-            val instanceDate = parseTodoDateTime(inst.instanceDate)
+            val instanceDate = parseDueMinute(inst.instanceDate)
                 ?: throw IllegalArgumentException("a recurring override is missing its date")
             TodoInstances.insert {
                 it[TodoInstances.id] = inst.id
@@ -255,7 +256,7 @@ class ExportServiceImpl(
                 it[TodoInstances.overriddenDescription] =
                     fieldEncryption.encryptIfSensitive("overriddenDescription", inst.overriddenDescription)
                 it[TodoInstances.overriddenPriority] = inst.overriddenPriority?.let(Priority::fromApiOrDefault)
-                it[TodoInstances.overriddenDue] = inst.overriddenDue?.let(::parseTodoDateTime)
+                it[TodoInstances.overriddenDue] = inst.overriddenDue?.let(::parseDueMinute)
                 it[TodoInstances.completedAt] = inst.completedAt?.let(::parseTodoDateTime)
             }
         }
@@ -277,12 +278,12 @@ class ExportServiceImpl(
                     fieldEncryption.encryptIfSensitive("description", completed.description)
                 it[CompletedTodos.priority] = Priority.fromApiOrDefault(completed.priority)
                 it[CompletedTodos.completedAt] = parseTodoDateTime(completed.completedAt) ?: now
-                it[CompletedTodos.due] = parseTodoDateTime(completed.due) ?: now
+                it[CompletedTodos.due] = parseDueMinute(completed.due) ?: now
                 it[CompletedTodos.completedOnTime] = completed.completedOnTime
                 it[CompletedTodos.daysToComplete] = decimal(completed.daysToComplete)
                 it[CompletedTodos.rrule] = completed.rrule
                 it[CompletedTodos.userID] = userId
-                it[CompletedTodos.instanceDate] = completed.instanceDate?.let(::parseTodoDateTime)
+                it[CompletedTodos.instanceDate] = completed.instanceDate?.let(::parseDueMinute)
                 it[CompletedTodos.listID] = completed.listID?.takeIf(validListIds::contains)
                 it[CompletedTodos.listName] = completed.listName
                 it[CompletedTodos.listColor] = completed.listColor

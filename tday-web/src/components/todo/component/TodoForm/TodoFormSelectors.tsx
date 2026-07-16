@@ -97,7 +97,8 @@ export default function TaskSelectorOverlays({
   const onPickTime = (value: string) => {
     const parsed = parse(value, "HH:mm", dateRange.to);
     if (!isValid(parsed)) return;
-    setDateRange({ from: parsed, to: parsed });
+    const combined = setDateParts(parsed, { seconds: 0, milliseconds: 0 });
+    setDateRange({ from: combined, to: combined });
   };
 
   return (

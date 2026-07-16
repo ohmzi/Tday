@@ -91,7 +91,7 @@ private fun Route.todoCreateRoute(todoService: TodoService) {
             either {
                 val body = call.receive<TodoCreateRequest>()
                 validateCreateTodo.validateOrFail(body).bind()
-                val due = parseTodoDateTime(body.due)
+                val due = parseDueMinute(body.due)
                 if (body.due.isBlank()) {
                     raise(AppError.BadRequest(ERR_DUE_REQUIRED))
                 }
@@ -146,12 +146,12 @@ private fun Route.todoPatchRoute(todoService: TodoService) {
                     if (body.due.isNullOrBlank()) {
                         raise(AppError.BadRequest(ERR_DUE_REQUIRED))
                     } else {
-                        val parsed = parseTodoDateTime(body.due)
+                        val parsed = parseDueMinute(body.due)
                             ?: raise(AppError.BadRequest(ERR_INVALID_DUE))
                         fields["due"] = parsed
                     }
                 } else if (!body.due.isNullOrBlank()) {
-                    val parsed = parseTodoDateTime(body.due)
+                    val parsed = parseDueMinute(body.due)
                         ?: raise(AppError.BadRequest(ERR_INVALID_DUE))
                     fields["due"] = parsed
                 }
@@ -183,7 +183,7 @@ private fun Route.todoCompleteRoutes(todoService: TodoService) {
             call.withAuth { user ->
                 val body = call.receive<TodoCompleteRequest>()
                 val instanceDate = body.instanceDate?.let {
-                    parseTodoDateTime(it)
+                    parseDueMinute(it)
                         ?: return@withAuth arrow.core.Either.Left(AppError.BadRequest(ERR_INVALID_INSTANCE_DATE))
                 }
                 todoService.completeTodo(user.id, body.id, instanceDate)
@@ -197,7 +197,7 @@ private fun Route.todoCompleteRoutes(todoService: TodoService) {
             call.withAuth { user ->
                 val body = call.receive<TodoCompleteRequest>()
                 val instanceDate = body.instanceDate?.let {
-                    parseTodoDateTime(it)
+                    parseDueMinute(it)
                         ?: return@withAuth arrow.core.Either.Left(AppError.BadRequest(ERR_INVALID_INSTANCE_DATE))
                 }
                 todoService.uncompleteTodo(user.id, body.id, instanceDate)
@@ -235,7 +235,7 @@ private fun Route.todoInstanceRoutes(todoService: TodoService) {
         patch {
             call.withAuth { user ->
                 val body = call.receive<TodoInstancePatchRequest>()
-                val instanceDate = parseTodoDateTime(body.instanceDate)
+                val instanceDate = parseDueMinute(body.instanceDate)
                     ?: return@withAuth arrow.core.Either.Left(AppError.BadRequest(ERR_INVALID_INSTANCE_DATE))
                 val fields = mutableMapOf<String, Any?>()
                 body.title?.let { fields["title"] = it }
@@ -245,7 +245,7 @@ private fun Route.todoInstanceRoutes(todoService: TodoService) {
                     is arrow.core.Either.Right -> priority.value?.let { fields["priority"] = it }
                 }
                 body.due?.let {
-                    val parsed = parseTodoDateTime(it)
+                    val parsed = parseDueMinute(it)
                         ?: return@withAuth arrow.core.Either.Left(AppError.BadRequest(ERR_INVALID_DUE))
                     fields["due"] = parsed
                 }
@@ -257,7 +257,7 @@ private fun Route.todoInstanceRoutes(todoService: TodoService) {
         delete {
             call.withAuth { user ->
                 val body = call.receive<TodoInstanceDeleteRequest>()
-                val instanceDate = parseTodoDateTime(body.instanceDate)
+                val instanceDate = parseDueMinute(body.instanceDate)
                     ?: return@withAuth arrow.core.Either.Left(AppError.BadRequest(ERR_INVALID_INSTANCE_DATE))
                 todoService.deleteInstance(user.id, body.todoId, instanceDate)
                     .map { mapOf(MSG to "instance deleted") }
@@ -620,3 +620,16 @@ internal fun parseTodoDateTime(value: String?): LocalDateTime? {
                 .toLocalDateTime()
         }.getOrNull()
 }
+
+/**
+ * Parse a due / instance-date / occurrence timestamp and FLOOR it to the minute (drop
+ * seconds & fractional seconds). Deadlines are minute-precision app-wide, so every due,
+ * instanceDate and overriddenDue write goes through this instead of [parseTodoDateTime].
+ * The plain parser is kept for audit timestamps (createdAt/updatedAt/completedAt on import)
+ * that must retain sub-minute precision for last-writer-wins sync.
+ */
+internal fun parseDueMinute(value: String?): LocalDateTime? =
+    parseTodoDateTime(value)?.withSecond(0)?.withNano(0)
+
+/** Floor an already-parsed timestamp to the minute (equivalent of SQL date_trunc('minute')). */
+internal fun LocalDateTime.flooredToMinute(): LocalDateTime = withSecond(0).withNano(0)
