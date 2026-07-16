@@ -19,6 +19,8 @@ struct TdayApp: App {
         SentryConfiguration.start()
         NotificationDeepLinkDelegate.shared.install()
         WatchSessionManager.shared.activate()
+        // Register the ~30-min background widget-refresh handler before launch completes.
+        WidgetBackgroundRefresh.register()
     }
 
     var body: some Scene {
