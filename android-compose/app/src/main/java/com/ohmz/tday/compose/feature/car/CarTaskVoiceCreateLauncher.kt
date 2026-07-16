@@ -3,7 +3,7 @@ package com.ohmz.tday.compose.feature.car
 import android.app.Activity
 import android.content.Intent
 import android.speech.RecognizerIntent
-import android.widget.Toast
+import com.ohmz.tday.compose.core.ui.LocalSnackbarManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
@@ -16,6 +16,7 @@ fun rememberCarTaskVoiceCreateLauncher(
     onVoiceUnavailable: (CarTaskMode) -> Unit,
 ): (CarTaskMode) -> Unit {
     val context = LocalContext.current
+    val snackbarManager = LocalSnackbarManager.current
     val launcher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult(),
     ) { result ->
@@ -26,11 +27,7 @@ fun rememberCarTaskVoiceCreateLauncher(
             ?.trim()
             .orEmpty()
         if (voiceTitle.isBlank()) {
-            Toast.makeText(
-                context,
-                context.getString(R.string.car_voice_empty_result),
-                Toast.LENGTH_SHORT,
-            ).show()
+            snackbarManager?.showInfo(context.getString(R.string.car_voice_empty_result))
         } else {
             onVoiceTitle(voiceTitle)
         }

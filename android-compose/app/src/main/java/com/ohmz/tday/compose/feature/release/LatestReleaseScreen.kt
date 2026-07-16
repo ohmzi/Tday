@@ -3,7 +3,7 @@ package com.ohmz.tday.compose.feature.release
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.widget.Toast
+import com.ohmz.tday.compose.core.ui.LocalSnackbarManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateDpAsState
@@ -94,6 +94,7 @@ fun LatestReleaseScreen(
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val context = LocalContext.current
+    val snackbarManager = LocalSnackbarManager.current
     val view = LocalView.current
     val scrollState = rememberScrollState()
     val titleScrollBehavior = rememberScrollCollapsingTitleScrollBehavior(
@@ -233,11 +234,9 @@ fun LatestReleaseScreen(
                         if (!InAppApkUpdater.canInstallPackages(context)) {
                             pendingInstallAsset = asset
                             installUiState = ApkInstallUiState.AwaitingPermission
-                            Toast.makeText(
-                                context,
+                            snackbarManager?.showInfo(
                                 context.getString(R.string.release_install_permission_return_hint),
-                                Toast.LENGTH_LONG,
-                            ).show()
+                            )
                             installPermissionLauncher.launch(InAppApkUpdater.buildInstallPermissionIntent(context))
                         } else {
                             pendingInstallAsset = null

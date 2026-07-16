@@ -70,6 +70,7 @@ import com.ohmz.tday.compose.core.model.DashboardSummary
 import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TodoListMode
 import com.ohmz.tday.compose.core.navigation.AppRoute
+import com.ohmz.tday.compose.core.ui.LocalSnackbarManager
 import com.ohmz.tday.compose.core.ui.SnackbarEvent
 import com.ohmz.tday.compose.core.ui.SnackbarKind
 import com.ohmz.tday.compose.core.ui.TdayToastData
@@ -294,6 +295,9 @@ fun TdayApp(
                         launchSingleTop = true
                     }
                 },
+                // Every screen can raise the unified frosted toast (TdayToastHost) via
+                // LocalSnackbarManager, instead of the plain system Toast.makeText.
+                LocalSnackbarManager provides appViewModel.snackbarManager,
             ) {
                 NavHost(
                     navController = navController,
