@@ -56,6 +56,11 @@ class MainActivity : AppCompatActivity() {
         _deepLinkIntent.value = intent.withTdayDeepLinkData()
     }
 
+    /** Clears the pending deep link once it has been navigated, so it fires exactly once. */
+    fun consumeDeepLink() {
+        _deepLinkIntent.value = null
+    }
+
     private fun dismissUpdateReadyNotification() {
         getSystemService(NotificationManager::class.java)
             .cancel(BootRescheduleReceiver.UPDATE_NOTIFICATION_ID)

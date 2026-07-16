@@ -201,9 +201,16 @@ fun TdayApp(
     val deepLinkIntent by activity?.deepLinkIntent?.collectAsStateWithLifecycle()
         ?: remember { mutableStateOf(null) }
 
-    LaunchedEffect(deepLinkIntent) {
+    LaunchedEffect(deepLinkIntent, appUiState.isWorkspaceAvailable) {
         val intent = deepLinkIntent ?: return@LaunchedEffect
+        // Defer deep links (e.g. the Floater widget's tday://floater) until the session is
+        // restored and the workspace is available. Handling one during cold-start bootstrap
+        // navigated the target route UNDER the login overlay and mounted its screen before
+        // auth was ready — which flashed the login screen and fired a generic
+        // "something went wrong" error toast before settling. Consume it after so it fires once.
+        if (!appUiState.isWorkspaceAvailable) return@LaunchedEffect
         navController.handleDeepLink(intent)
+        activity?.consumeDeepLink()
     }
     LaunchedEffect(
         pendingRootFloaterCreateTask,
