@@ -1,6 +1,6 @@
 package com.ohmz.tday.compose.feature.settings
 
-import android.widget.Toast
+import com.ohmz.tday.compose.core.ui.LocalSnackbarManager
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateDpAsState
@@ -1450,6 +1450,7 @@ private fun QuietHoursTimeRow(label: String, value: String, onClick: () -> Unit)
 private fun UnifiedPushRow() {
     val colorScheme = MaterialTheme.colorScheme
     val context = LocalContext.current
+    val snackbarManager = LocalSnackbarManager.current
     var registered by remember { mutableStateOf(UnifiedPush.getAckDistributor(context) != null) }
 
     Row(
@@ -1463,11 +1464,9 @@ private fun UnifiedPushRow() {
                 } else {
                     val distributors = UnifiedPush.getDistributors(context)
                     if (distributors.isEmpty()) {
-                        Toast.makeText(
-                            context,
+                        snackbarManager?.showInfo(
                             context.getString(R.string.settings_unifiedpush_none),
-                            Toast.LENGTH_LONG,
-                        ).show()
+                        )
                     } else {
                         UnifiedPush.registerAppWithDialog(context)
                         registered = true
