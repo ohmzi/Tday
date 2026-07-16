@@ -558,7 +558,7 @@ private struct TdayTasksWidgetContent: View {
     private var addButton: some View {
         Link(destination: mode.createURL) {
             Image(systemName: "plus")
-                .font(.system(size: family == .systemSmall ? 16 : 17, weight: .heavy, design: .rounded))
+                .font(.system(size: 17, weight: .heavy, design: .rounded))
                 .foregroundStyle(accentColor)
                 .frame(width: metrics.addButtonSize, height: metrics.addButtonSize)
                 .background(
@@ -783,18 +783,23 @@ private struct WidgetLayoutMetrics {
     init(family: WidgetFamily) {
         switch family {
         case .systemSmall:
-            contentSpacing = 5
-            headerHeight = 38
-            addButtonSize = 38
-            addButtonCornerRadius = 12
-            rowHeight = 21
-            rowSpacing = 2
+            // Small shares medium's insets, header, + button, row height, spacing and font so
+            // its padding and task placement match the wider sizes exactly (parity with the
+            // Android small widget). Only the row capacity, notes and watermark stay small — a
+            // 2x2 just shows fewer rows, and its header still leads with the count (the title +
+            // count + button can't fit a 2x2 width).
+            contentSpacing = 7
+            headerHeight = 42
+            addButtonSize = 42
+            addButtonCornerRadius = 13
+            rowHeight = 22
+            rowSpacing = 3
             rowFontSize = 12
             rowUnitCapacity = 2
             showsNotes = false
-            horizontalInset = 13
-            topInset = 11
-            bottomInset = 9
+            horizontalInset = 14
+            topInset = 13
+            bottomInset = 11
             watermarkSize = 116
             watermarkTrailingOffset = 18
             watermarkVerticalFraction = 0.70
