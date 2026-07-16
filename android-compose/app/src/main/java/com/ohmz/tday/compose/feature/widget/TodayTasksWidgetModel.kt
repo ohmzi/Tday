@@ -2,6 +2,8 @@ package com.ohmz.tday.compose.feature.widget
 
 import com.ohmz.tday.compose.core.data.CachedTodoRecord
 import com.ohmz.tday.compose.core.data.OfflineSyncState
+import com.ohmz.tday.shared.sort.TaskSortEngine
+import com.ohmz.tday.shared.sort.TaskSortKey
 import java.time.LocalDate
 import java.time.ZoneId
 
@@ -40,17 +42,20 @@ fun buildTodayTasksWidgetModel(
 
     val dayStart = today.atStartOfDay(zoneId).toInstant().toEpochMilli()
     val dayEnd = today.plusDays(1).atStartOfDay(zoneId).toInstant().toEpochMilli()
-    val todayTasks = state.todos
-        .asSequence()
-        .filter { task ->
+    val todayTasks = TaskSortEngine.sortedTodos(
+        state.todos.filter { task ->
             val dueEpochMs = task.dueEpochMs ?: return@filter false
             !task.completed && dueEpochMs >= dayStart && dueEpochMs < dayEnd
-        }
-        .sortedWith(
-            compareBy<CachedTodoRecord> { it.dueEpochMs ?: Long.MAX_VALUE }
-                .thenBy(String.CASE_INSENSITIVE_ORDER) { it.title },
+        },
+    ) { task ->
+        TaskSortKey(
+            id = task.id,
+            pinned = task.pinned,
+            dueEpochMs = task.dueEpochMs,
+            priorityRank = TaskSortEngine.priorityRank(task.priority),
+            updatedAtEpochMs = task.updatedAtEpochMs.takeIf { it > 0L },
         )
-        .toList()
+    }
 
     return TodayTasksWidgetModel(
         title = title,

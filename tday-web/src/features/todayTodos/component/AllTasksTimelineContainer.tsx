@@ -40,6 +40,7 @@ import { getDisplayDate } from "@/lib/date/displayDate";
 import { useSearchParams } from "react-router-dom";
 import {
   buildTimelineSections,
+  compareTodosWithinDay,
   findSectionKeyForDayKey,
 } from "@/lib/timeline/buildTimelineSections";
 import {
@@ -152,12 +153,9 @@ const compareTimelineItems = (a: TimelineItem, b: TimelineItem) => {
     }
   }
 
-  const orderDelta = a.todo.order - b.todo.order;
-  if (orderDelta !== 0) {
-    return orderDelta;
-  }
-
-  return a.todo.due.getTime() - b.todo.due.getTime();
+  // Same day group: fall back to the FIXED within-day todo ordering (pinned,
+  // due asc, priority, modified desc, id) — see src/lib/taskSort.ts.
+  return compareTodosWithinDay(a.todo, b.todo);
 };
 
 const compareOverdueTimelineItems = (a: TimelineItem, b: TimelineItem) => {
