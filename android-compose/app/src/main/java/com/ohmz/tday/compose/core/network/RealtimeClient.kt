@@ -47,6 +47,17 @@ class RealtimeClient @Inject constructor(
 
     val isConnected: Boolean get() = connected
 
+    // Dedicated WebSocket client with a keepalive ping. It keeps the socket warm (so idle/NAT
+    // timeouts don't silently kill live updates) AND detects a dead socket: if no pong arrives,
+    // OkHttp fails the connection -> onFailure -> Disconnected -> the app reconnects. The shared
+    // OkHttpClient has no pingInterval, so without this a half-open socket wedges "connected"
+    // and Android silently receives nothing.
+    private val wsClient: OkHttpClient by lazy {
+        okHttpClient.newBuilder()
+            .pingInterval(20, java.util.concurrent.TimeUnit.SECONDS)
+            .build()
+    }
+
     fun connect() {
         if (socket != null) return
 
@@ -59,7 +70,7 @@ class RealtimeClient @Inject constructor(
             .url(wsUrl)
             .build()
 
-        socket = okHttpClient.newWebSocket(request, object : WebSocketListener() {
+        socket = wsClient.newWebSocket(request, object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: Response) {
                 connected = true
                 TdayTelemetry.addBreadcrumb("realtime.connect", data = mapOf("status" to "open"))
