@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Title + trailing time as a SINGLE RemoteViews so the title uses an internal
+  0dp+weight=1 (the pattern the framework sizes reliably, same as the static
+  previews). Rendering the title as a Glance AndroidRemoteViews with a *trailing*
+  Glance sibling (the time chip) collapsed it to zero width -> blank titles on any
+  size that shows the time. Keeping both in one LinearLayout removes that sibling.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="top"
+    android:orientation="horizontal">
+
+    <TextView
+        android:id="@+id/widget_row_title"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:ellipsize="end"
+        android:fontFamily="@font/nunito_app"
+        android:gravity="start"
+        android:includeFontPadding="false"
+        android:textDirection="locale"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/widget_row_time"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="6dp"
+        android:layout_marginTop="1dp"
+        android:fontFamily="@font/nunito_app"
+        android:gravity="center"
+        android:includeFontPadding="false"
+        android:maxLines="1"
+        android:paddingStart="7dp"
+        android:paddingEnd="7dp"
+        android:singleLine="true"
+        android:textStyle="bold" />
+</LinearLayout>
