@@ -1142,12 +1142,13 @@ class AppViewModel @Inject constructor(
             realtimeClient.events.collect { event ->
                 when (event) {
                     is RealtimeEvent.Connected -> {
-                        if (_uiState.value.isOffline) {
-                            syncAndUpdateOfflineState(
-                                replayPending = true,
-                                suppressAuthenticationExpired = true,
-                            )
-                        }
+                        // (Re)connected: pull anything that changed while the socket was down so a
+                        // dropped-then-restored connection never leaves the UI stale. Replay
+                        // pending mutations too when we were offline.
+                        syncAndUpdateOfflineState(
+                            replayPending = _uiState.value.isOffline,
+                            suppressAuthenticationExpired = true,
+                        )
                     }
                     is RealtimeEvent.TodoChanged,
                     is RealtimeEvent.FloaterChanged,
