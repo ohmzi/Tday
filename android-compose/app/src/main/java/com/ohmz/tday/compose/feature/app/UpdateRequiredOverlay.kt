@@ -1,7 +1,7 @@
 package com.ohmz.tday.compose.feature.app
 
 import android.content.Context
-import android.widget.Toast
+import com.ohmz.tday.compose.core.ui.LocalSnackbarManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateContentSize
@@ -69,6 +69,7 @@ fun UpdateRequiredOverlay(
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val context = LocalContext.current
+    val snackbarManager = LocalSnackbarManager.current
     val installPermissionToast = stringResource(R.string.install_permission_return_to_app)
     val consumeAllTouchesSource = remember { MutableInteractionSource() }
     val scope = rememberCoroutineScope()
@@ -207,11 +208,7 @@ fun UpdateRequiredOverlay(
                                             pendingAsset = apkAsset
                                             installState =
                                                 OverlayInstallState.AwaitingPermission
-                                            Toast.makeText(
-                                                context,
-                                                installPermissionToast,
-                                                Toast.LENGTH_LONG,
-                                            ).show()
+                                            snackbarManager?.showInfo(installPermissionToast)
                                             installPermissionLauncher.launch(
                                                 InAppApkUpdater
                                                     .buildInstallPermissionIntent(context),

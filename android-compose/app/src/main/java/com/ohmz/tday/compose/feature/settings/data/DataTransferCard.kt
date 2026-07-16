@@ -1,6 +1,6 @@
 package com.ohmz.tday.compose.feature.settings.data
 
-import android.widget.Toast
+import com.ohmz.tday.compose.core.ui.LocalSnackbarManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
@@ -75,9 +75,11 @@ fun DataTransferCard(modifier: Modifier = Modifier) {
         }
     }
 
-    // Surface each export/import outcome once as a toast.
+    // Surface each export/import outcome once via the unified frosted toast.
+    val snackbarManager = LocalSnackbarManager.current
     LaunchedEffect(state.message) {
-        val text = when (val message = state.message) {
+        val message = state.message
+        val text = when (message) {
             DataTransferMessage.ExportDone -> context.getString(R.string.settings_data_export_done)
             is DataTransferMessage.ImportDone ->
                 context.getString(R.string.settings_data_import_done, message.count)
@@ -86,7 +88,11 @@ fun DataTransferCard(modifier: Modifier = Modifier) {
             null -> null
         }
         if (text != null) {
-            Toast.makeText(context, text, Toast.LENGTH_SHORT).show()
+            if (message is DataTransferMessage.Error) {
+                snackbarManager?.showError(text)
+            } else {
+                snackbarManager?.showSuccess(text)
+            }
             viewModel.consumeMessage()
         }
     }
