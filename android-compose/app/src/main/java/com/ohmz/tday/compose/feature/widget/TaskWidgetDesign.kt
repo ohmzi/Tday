@@ -185,20 +185,36 @@ private fun TaskWidgetHeader(
             .fillMaxWidth()
             .height(metrics.headerHeight),
     ) {
-        Row(
-            modifier = GlanceModifier
-                .fillMaxSize()
-                .padding(end = metrics.addButtonSize + 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            if (layout == TaskWidgetLayout.COMPACT) {
+        if (layout == TaskWidgetLayout.COMPACT) {
+            // Compact lays the add button out INLINE as the trailing Row child. The
+            // overlay-Box approach the wider layouts use silently dropped the button here
+            // (the weighted count lockup left it no room), so the small widget had no way
+            // to add a task. A leading weighted cell pushes the button to the right edge.
+            Row(
+                modifier = GlanceModifier.fillMaxSize(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 if (showCount) {
                     CompactCountLockup(
                         countLabel = countLabel,
                         modifier = GlanceModifier.defaultWeight(),
                     )
+                } else {
+                    Spacer(modifier = GlanceModifier.defaultWeight())
                 }
-            } else {
+                AddButton(
+                    visuals = visuals,
+                    action = addAction,
+                    size = metrics.addButtonSize,
+                )
+            }
+        } else {
+            Row(
+                modifier = GlanceModifier
+                    .fillMaxSize()
+                    .padding(end = metrics.addButtonSize + 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 HeaderText(
                     modifier = GlanceModifier
                         .width(metrics.headerTitleWidth)
@@ -216,17 +232,17 @@ private fun TaskWidgetHeader(
                     )
                 }
             }
-        }
 
-        Box(
-            modifier = GlanceModifier.fillMaxSize(),
-            contentAlignment = Alignment.CenterEnd,
-        ) {
-            AddButton(
-                visuals = visuals,
-                action = addAction,
-                size = metrics.addButtonSize,
-            )
+            Box(
+                modifier = GlanceModifier.fillMaxSize(),
+                contentAlignment = Alignment.CenterEnd,
+            ) {
+                AddButton(
+                    visuals = visuals,
+                    action = addAction,
+                    size = metrics.addButtonSize,
+                )
+            }
         }
     }
 }
