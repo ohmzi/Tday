@@ -286,6 +286,8 @@ struct AppRootView: View {
                 }
             case .inactive, .background:
                 hasLeftActiveScene = true
+                // Arm the ~30-min background widget refresh each time we leave the foreground.
+                WidgetBackgroundRefresh.scheduleNext()
             @unknown default:
                 break
             }

@@ -55,6 +55,7 @@
 		64E0A2B205D80764F2BF52FB /* CalendarViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53EFEAE1EE18AB86477A56BC /* CalendarViewModel.swift */; };
 		701E03BE9BBC8792CAD5919C /* CreateTaskSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AEFA6E39FBCB063E54C61AF7 /* CreateTaskSheet.swift */; };
 		72304EA28CF49303A8CCB6B0 /* TodayTasksWidgetSnapshotStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC80072C8B232C0C09CE3139 /* TodayTasksWidgetSnapshotStore.swift */; };
+		7A1C0FE30B2D4A9C8E5F1A20 /* WidgetBackgroundRefresh.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A1C0FE30B2D4A9C8E5F1A21 /* WidgetBackgroundRefresh.swift */; };
 		A1B2C3D4E5F600000000WA01 /* WatchSessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F600000000WA02 /* WatchSessionManager.swift */; };
 		765ED719B3CCBB90176C55EB /* DomainModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A6D006E491513605369E7D5 /* DomainModels.swift */; };
 		846AE66C58EF435FB506E3E6 /* OnboardingWizardOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = D617DF23936179DDFF13A36D /* OnboardingWizardOverlay.swift */; };
@@ -330,6 +331,7 @@
 		CAFE0D1E000000000000005A /* MorningSweepScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MorningSweepScreen.swift; sourceTree = "<group>"; };
 		CAFE0D1E000000000000005D /* DayAhead.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayAhead.swift; sourceTree = "<group>"; };
 		CC80072C8B232C0C09CE3139 /* TodayTasksWidgetSnapshotStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayTasksWidgetSnapshotStore.swift; sourceTree = "<group>"; };
+		7A1C0FE30B2D4A9C8E5F1A21 /* WidgetBackgroundRefresh.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetBackgroundRefresh.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F600000000WA02 /* WatchSessionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchSessionManager.swift; sourceTree = "<group>"; };
 		CE3297DCE3ECD21F5B0A4635 /* VersionCompatibility.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VersionCompatibility.swift; sourceTree = "<group>"; };
 		CEFF55971ADA0C60CD0F3074 /* AppRoute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRoute.swift; sourceTree = "<group>"; };
@@ -524,6 +526,7 @@
 			isa = PBXGroup;
 			children = (
 				CC80072C8B232C0C09CE3139 /* TodayTasksWidgetSnapshotStore.swift */,
+				7A1C0FE30B2D4A9C8E5F1A21 /* WidgetBackgroundRefresh.swift */,
 				A1B2C3D4E5F600000000WA02 /* WatchSessionManager.swift */,
 			);
 			path = Widget;
@@ -1265,6 +1268,7 @@
 				9F8E7D6C5B4A00000000B103 /* Bundle+Language.swift in Sources */,
 				9F8E7D6C5B4A00000000B104 /* Localization.swift in Sources */,
 				72304EA28CF49303A8CCB6B0 /* TodayTasksWidgetSnapshotStore.swift in Sources */,
+				7A1C0FE30B2D4A9C8E5F1A20 /* WidgetBackgroundRefresh.swift in Sources */,
 				A1B2C3D4E5F600000000WA01 /* WatchSessionManager.swift in Sources */,
 				A1C0FFEE000000000000B001 /* ListShareText.swift in Sources */,
 				2E1D50F9EEE6B8D7D9B14AEA /* TodoListScreen.swift in Sources */,

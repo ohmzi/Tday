@@ -38,6 +38,17 @@ struct TodayTasksWidgetSnapshot: Codable, Equatable {
         taskCount = try container.decodeIfPresent(Int.self, forKey: .taskCount) ?? decodedTasks.count
         tasks = decodedTasks
     }
+
+    /// True when the DISPLAYED content matches, ignoring `generatedAtEpochMs` (which changes
+    /// on every rebuild). Used to skip needless WidgetKit reloads on a background sync that
+    /// didn't alter what the widget actually shows.
+    func hasSameContent(as other: TodayTasksWidgetSnapshot) -> Bool {
+        schemaVersion == other.schemaVersion &&
+            title == other.title &&
+            status == other.status &&
+            taskCount == other.taskCount &&
+            tasks == other.tasks
+    }
 }
 
 struct TodayTasksWidgetTaskSnapshot: Codable, Equatable, Identifiable {
@@ -157,6 +168,13 @@ enum TodayTasksWidgetSnapshotStore {
 
     static func saveTodayTasks(from state: OfflineSyncState) {
         let snapshot = makeSnapshot(from: state)
+        // Conditional reload: if the DISPLAYED content is unchanged (ignoring the volatile
+        // generatedAt timestamp), skip the write + WidgetKit reload. This is what lets a
+        // background sync that only touched non-today data leave the widget untouched while
+        // the app still holds the latest state.
+        if let existing = loadSnapshot(), existing.hasSameContent(as: snapshot) {
+            return
+        }
         guard let data = try? JSONEncoder().encode(snapshot) else {
             return
         }
@@ -228,6 +246,16 @@ struct FloaterTasksWidgetSnapshot: Codable, Equatable {
         status = (try? container.decodeIfPresent(FloaterTasksWidgetSnapshotStatus.self, forKey: .status)) ?? (decodedTasks.isEmpty ? .empty : .tasks)
         taskCount = try container.decodeIfPresent(Int.self, forKey: .taskCount) ?? decodedTasks.count
         tasks = decodedTasks
+    }
+
+    /// True when the DISPLAYED content matches, ignoring `generatedAtEpochMs`. Lets a
+    /// background sync that didn't change the floater list leave the widget untouched.
+    func hasSameContent(as other: FloaterTasksWidgetSnapshot) -> Bool {
+        schemaVersion == other.schemaVersion &&
+            title == other.title &&
+            status == other.status &&
+            taskCount == other.taskCount &&
+            tasks == other.tasks
     }
 }
 
@@ -320,6 +348,12 @@ enum FloaterTasksWidgetSnapshotStore {
 
     static func saveFloaterTasks(from state: OfflineSyncState) {
         let snapshot = makeSnapshot(from: state)
+        // Conditional reload: skip the write + WidgetKit reload when the displayed floater
+        // content is unchanged (see saveTodayTasks). A background sync that didn't touch the
+        // floater list leaves the widget untouched while the app still holds the latest state.
+        if let existing = loadSnapshot(), existing.hasSameContent(as: snapshot) {
+            return
+        }
         guard let data = try? JSONEncoder().encode(snapshot) else {
             return
         }
