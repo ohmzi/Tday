@@ -39,6 +39,8 @@ import com.ohmz.tday.compose.core.network.TdayApiService
 import com.ohmz.tday.compose.feature.widget.FloaterTasksWidgetRefresher
 import com.ohmz.tday.compose.feature.widget.TodayTasksWidgetRefresher
 import com.ohmz.tday.compose.ui.priority.canonicalPriorityValue
+import com.ohmz.tday.shared.sort.TaskSortEngine
+import com.ohmz.tday.shared.sort.TaskSortKey
 import com.ohmz.tday.shared.summary.SummaryEngine
 import com.ohmz.tday.shared.summary.SummaryScope
 import com.ohmz.tday.shared.summary.SummaryTaskInput
@@ -1270,22 +1272,39 @@ class TodoRepository @Inject constructor(
             .toList()
         val now = Instant.now()
 
+        // Apply the shared cross-platform ordering HERE, at the single source, so every
+        // consumer (the Home "today" preview that renders this list directly, the widgets,
+        // and the list screens) shows the same order — due-minute → priority → most-recently
+        // modified. Previously this returned raw cache order and only the list-screen section
+        // builders re-sorted, so the Home feed ignored priority.
         return when (mode) {
-            TodoListMode.TODAY -> activeTodos.filter(::isTodayTodo)
-            TodoListMode.OVERDUE -> activeTodos.filter { isOverdueTodo(it, now) }
-            TodoListMode.ALL -> activeTodos
-            TodoListMode.SCHEDULED -> activeTodos.filter { isScheduledTodo(it, now) }
-            TodoListMode.PRIORITY -> activeTodos.filter { isPriorityTodo(it.priority) }
+            TodoListMode.TODAY -> activeTodos.filter(::isTodayTodo).sortedAsTodos()
+            TodoListMode.OVERDUE -> activeTodos.filter { isOverdueTodo(it, now) }.sortedAsTodos()
+            TodoListMode.ALL -> activeTodos.sortedAsTodos()
+            TodoListMode.SCHEDULED -> activeTodos.filter { isScheduledTodo(it, now) }.sortedAsTodos()
+            TodoListMode.PRIORITY -> activeTodos.filter { isPriorityTodo(it.priority) }.sortedAsTodos()
             TodoListMode.FLOATER -> {
-                if (listId.isNullOrBlank()) activeFloaters
+                val floaters = if (listId.isNullOrBlank()) activeFloaters
                 else activeFloaters.filter { it.listId == listId }
+                TaskSortEngine.sortedFloaters(floaters) { it.toSortKey() }
             }
             TodoListMode.LIST -> {
                 if (listId.isNullOrBlank()) emptyList()
-                else activeTodos.filter { it.listId == listId }
+                else activeTodos.filter { it.listId == listId }.sortedAsTodos()
             }
         }
     }
+
+    private fun List<TodoItem>.sortedAsTodos(): List<TodoItem> =
+        TaskSortEngine.sortedTodos(this) { it.toSortKey() }
+
+    private fun TodoItem.toSortKey(): TaskSortKey = TaskSortKey(
+        id = id,
+        pinned = pinned,
+        dueEpochMs = due?.toEpochMilli(),
+        priorityRank = TaskSortEngine.priorityRank(priority),
+        updatedAtEpochMs = updatedAt?.toEpochMilli(),
+    )
 
     private fun isTodayTodo(todo: TodoItem): Boolean {
         val start = Instant.ofEpochMilli(startOfTodayMillis())
