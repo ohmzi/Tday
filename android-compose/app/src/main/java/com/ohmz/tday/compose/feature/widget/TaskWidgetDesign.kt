@@ -527,14 +527,25 @@ private fun TaskWidgetRow(
                 )
                 Spacer(modifier = GlanceModifier.width(7.dp))
             }
-            WidgetText(
-                modifier = GlanceModifier.defaultWeight(),
-                text = row.title,
-                color = TaskWidgetTextColor.PRIMARY,
-                fontSize = metrics.rowFontSize,
-                maxLines = 2,
-                fillWidth = true,
-            )
+            // The title is an AndroidRemoteViews (RemoteViews TextView, for the
+            // Nunito font). Glance does NOT reliably honour defaultWeight() applied
+            // directly to an AndroidRemoteViews wrapper: in a Row that also has a
+            // trailing element (the TimeChip) the wrapper collapses to zero width and
+            // the title renders blank. Floater rows have no time chip, so the collapse
+            // never showed there. Fix: give the weight to a native Glance Box (which
+            // Glance sizes reliably as a 0dp+weight LinearLayout child) and let the
+            // RemoteViews fill that box via fillMaxWidth(). Height still wraps, so the
+            // 2-line title and top-aligned dot/time behaviour are unchanged.
+            Box(modifier = GlanceModifier.defaultWeight()) {
+                WidgetText(
+                    modifier = GlanceModifier.fillMaxWidth(),
+                    text = row.title,
+                    color = TaskWidgetTextColor.PRIMARY,
+                    fontSize = metrics.rowFontSize,
+                    maxLines = 2,
+                    fillWidth = true,
+                )
+            }
             if (taskWidgetShowsTrailingText(layout) && row.trailingText != null) {
                 Spacer(modifier = GlanceModifier.width(6.dp))
                 TimeChip(text = row.trailingText)
