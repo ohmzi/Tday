@@ -131,7 +131,77 @@
                 android:fontFamily="@font/nunito_app"
                 android:includeFontPadding="false"
                 android:maxLines="1"
-                android:text="Queue reading"
+                android:text="Brainstorm the side project name"
+                android:textColor="@color/tday_widget_on_surface"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="1dp"
+            android:layout_height="2dp"
+            android:includeFontPadding="false"
+            android:text="" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="22dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="2dp"
+            android:paddingEnd="2dp">
+
+            <ImageView
+                android:layout_width="7dp"
+                android:layout_height="7dp"
+                android:contentDescription="@null"
+                android:src="@drawable/widget_priority_dot_low" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="7dp"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:fontFamily="@font/nunito_app"
+                android:includeFontPadding="false"
+                android:maxLines="1"
+                android:text="Learn to juggle"
+                android:textColor="@color/tday_widget_on_surface"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="1dp"
+            android:layout_height="2dp"
+            android:includeFontPadding="false"
+            android:text="" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="22dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="2dp"
+            android:paddingEnd="2dp">
+
+            <ImageView
+                android:layout_width="7dp"
+                android:layout_height="7dp"
+                android:contentDescription="@null"
+                android:src="@drawable/widget_priority_dot_high" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="7dp"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:fontFamily="@font/nunito_app"
+                android:includeFontPadding="false"
+                android:maxLines="1"
+                android:text="Plan the road trip"
                 android:textColor="@color/tday_widget_on_surface"
                 android:textSize="12sp"
                 android:textStyle="bold" />
