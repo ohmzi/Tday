@@ -64,6 +64,7 @@ const TodoFormProvider = ({ children, todoItem, overrideFields }: TodoFormProvid
   );
   const now = new Date();
   now.setHours(now.getHours() + 3);
+  now.setSeconds(0, 0);
 
   const due = todoItem?.due ?? now;
   const [dateRange, setDateRange] = useState<FormDateRange>({

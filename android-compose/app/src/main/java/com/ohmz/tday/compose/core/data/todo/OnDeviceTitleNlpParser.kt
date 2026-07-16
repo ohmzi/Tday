@@ -70,7 +70,7 @@ object OnDeviceTitleNlpParser {
                 cleanTitle = grammar.cleanTitle,
                 matchedText = null,
                 matchStart = 0,
-                dueEpochMs = dueDate.time,
+                dueEpochMs = dueDate.time - (dueDate.time % 60_000L),
                 rrule = grammar.rrule,
                 priority = grammar.priority,
             )
@@ -87,7 +87,7 @@ object OnDeviceTitleNlpParser {
             cleanTitle = grammar.cleanTitle,
             matchedText = matchedText.ifEmpty { null },
             matchStart = matchStart,
-            dueEpochMs = dueDate.time,
+            dueEpochMs = dueDate.time - (dueDate.time % 60_000L),
             rrule = grammar.rrule,
             priority = grammar.priority,
         )

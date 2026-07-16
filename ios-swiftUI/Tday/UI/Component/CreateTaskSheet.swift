@@ -489,7 +489,7 @@ struct CreateTaskSheet: View {
             title: effectiveTitle(),
             description: notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : notes.trimmingCharacters(in: .whitespacesAndNewlines),
             priority: TaskPriorityDisplay.canonicalValue(priority),
-            due: showScheduleControls && scheduleEnabled ? dueDate : nil,
+            due: showScheduleControls && scheduleEnabled ? dueDate.flooredToMinute() : nil,
             rrule: showScheduleControls && scheduleEnabled ? repeatRule : nil,
             listId: selectedListID
         )

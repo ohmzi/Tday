@@ -1003,9 +1003,11 @@ export default function CalendarClient() {
   const selectedDayTasks = tasksByDay.get(dayKey(selectedDate)) ?? [];
 
   const openCreateForSelectedDate = useCallback(() => {
+    const end = endOfDay(selectedDate);
+    end.setSeconds(0, 0);
     setSelectDateRange({
       start: startOfDay(selectedDate),
-      end: endOfDay(selectedDate),
+      end,
     });
     setShowCreateForm(true);
   }, [selectedDate]);

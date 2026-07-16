@@ -48,6 +48,7 @@ import kotlinx.coroutines.withContext
 import java.time.Instant
 import java.time.ZoneId
 import java.time.ZonedDateTime
+import java.time.temporal.ChronoUnit
 import java.util.Locale
 import java.util.UUID
 import javax.inject.Inject
@@ -133,7 +134,7 @@ class TodoRepository @Inject constructor(
         if (trimmedTitle.isBlank()) return
 
         val normalizedPriority = canonicalPriorityValue(payload.priority)
-        val normalizedDue = payload.due ?: ZonedDateTime.now(zoneId).plusHours(1).toInstant()
+        val normalizedDue = (payload.due ?: ZonedDateTime.now(zoneId).plusHours(1).toInstant()).truncatedTo(ChronoUnit.MINUTES)
         val normalizedRrule = payload.rrule?.takeIf { it.isNotBlank() }
         val normalizedDescription = payload.description?.trim()?.ifBlank { null }
         val normalizedListId = payload.listId?.takeIf { it.isNotBlank() }
@@ -242,7 +243,8 @@ class TodoRepository @Inject constructor(
 
         val normalizedPriority = canonicalPriorityValue(payload.priority)
         val normalizedDue =
-            payload.due ?: todo.due ?: ZonedDateTime.now(zoneId).plusHours(1).toInstant()
+            (payload.due ?: todo.due ?: ZonedDateTime.now(zoneId).plusHours(1).toInstant())
+                .truncatedTo(ChronoUnit.MINUTES)
         val normalizedDescription = payload.description?.trim()?.ifBlank { null }
         val normalizedRrule = payload.rrule?.takeIf { it.isNotBlank() }
         val normalizedListId = payload.listId?.takeIf { it.isNotBlank() }
@@ -523,6 +525,7 @@ class TodoRepository @Inject constructor(
     }
 
     suspend fun moveTodo(todo: TodoItem, due: Instant) {
+        val due = due.truncatedTo(ChronoUnit.MINUTES)
         val canonicalId = todo.canonicalId
         if (canonicalId.isBlank()) return
 
@@ -1015,6 +1018,7 @@ class TodoRepository @Inject constructor(
      * server id — CREATE_TODO-style reconciliation.
      */
     suspend fun promoteFloater(floater: TodoItem, dueEpochMs: Long, rrule: String? = null) {
+        val dueEpochMs = dueEpochMs - (dueEpochMs % 60_000L)
         val timestampMs = System.currentTimeMillis()
         val mutationId = UUID.randomUUID().toString()
         val localTodoId = "$LOCAL_TODO_PREFIX${UUID.randomUUID()}"

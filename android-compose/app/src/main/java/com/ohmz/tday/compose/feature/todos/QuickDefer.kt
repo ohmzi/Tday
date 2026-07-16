@@ -24,7 +24,10 @@ data class QuickDeferOption(val choice: QuickDeferChoice, val dueEpochMs: Long)
 fun quickDeferOptions(now: ZonedDateTime = ZonedDateTime.now()): List<QuickDeferOption> {
     val startOfDay = now.toLocalDate().atStartOfDay(now.zone)
     val options = mutableListOf(
-        QuickDeferOption(QuickDeferChoice.LATER_TODAY, now.plusHours(3).toInstant().toEpochMilli()),
+        QuickDeferOption(
+            QuickDeferChoice.LATER_TODAY,
+            now.plusHours(3).withSecond(0).withNano(0).toInstant().toEpochMilli(),
+        ),
     )
     val eveningCutoff = startOfDay.withHour(18).withMinute(30)
     if (now.isBefore(eveningCutoff)) {

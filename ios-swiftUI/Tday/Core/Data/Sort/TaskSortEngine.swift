@@ -112,7 +112,13 @@ enum TaskSortEngine {
         return delta != 0 ? delta : nil
     }
 
+    /// Floor a UTC-epoch-millis instant to its minute (drop seconds/millis).
+    private static func floorToMinute(_ epochMs: Int64) -> Int64 { epochMs - (epochMs % 60_000) }
+
     private static func dueAscNullsLast(_ a: TaskSortKey, _ b: TaskSortKey) -> Int? {
+        // Minute precision: times are shown to the minute ("9:41 PM"), so two tasks in the
+        // same clock minute differing only by seconds are the "same time" and fall through
+        // to the priority tiebreak.
         let delta: Int
         switch (a.dueEpochMs, b.dueEpochMs) {
         case (nil, nil):
@@ -122,7 +128,7 @@ enum TaskSortEngine {
         case (_, nil):
             delta = -1
         case let (x?, y?):
-            delta = compareInt64(x, y)
+            delta = compareInt64(floorToMinute(x), floorToMinute(y))
         }
         return delta != 0 ? delta : nil
     }

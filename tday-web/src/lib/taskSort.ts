@@ -37,10 +37,17 @@ const pinRank = (pinned: boolean): number => (pinned ? 1 : 0);
 const comparePinned = (a: TaskSortKey, b: TaskSortKey): number =>
   pinRank(b.pinned) - pinRank(a.pinned);
 
-/** Due ascending (soonest first); a null/absent due sorts LAST. */
+/** Floor a UTC-epoch-millis instant to its minute (drop seconds/millis). */
+const floorToMinute = (epochMs: number): number => epochMs - (epochMs % 60_000);
+
+/**
+ * Due ascending (soonest first); a null/absent due sorts LAST. Compared at MINUTE precision:
+ * times are shown to the minute ("9:41 PM"), so two tasks in the same clock minute differing
+ * only by seconds are the "same time" and fall through to the priority tiebreak.
+ */
 const compareDueAscNullsLast = (a: TaskSortKey, b: TaskSortKey): number => {
-  const x = a.dueEpochMs;
-  const y = b.dueEpochMs;
+  const x = a.dueEpochMs === null ? null : floorToMinute(a.dueEpochMs);
+  const y = b.dueEpochMs === null ? null : floorToMinute(b.dueEpochMs);
   if (x === null && y === null) return 0;
   if (x === null) return 1;
   if (y === null) return -1;

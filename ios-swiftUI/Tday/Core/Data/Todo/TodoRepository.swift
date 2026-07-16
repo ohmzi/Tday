@@ -90,7 +90,7 @@ final class TodoRepository {
         let normalizedDescription = payload.description.nilIfBlank
         let normalizedListID = payload.listId.nilIfBlank
         let normalizedPriorityValue = normalizedPriority(payload.priority)
-        let normalizedDue = payload.due ?? Date().addingTimeInterval(60 * 60)
+        let normalizedDue = (payload.due ?? Date().addingTimeInterval(60 * 60)).flooredToMinute()
         let mutationID = UUID().uuidString
         let mutation = PendingMutationRecord(
             mutationId: mutationID,
@@ -223,7 +223,7 @@ final class TodoRepository {
         let normalizedDescription = payload.description.nilIfBlank
         let normalizedListID = payload.listId.nilIfBlank
         let normalizedPriorityValue = normalizedPriority(payload.priority)
-        let normalizedDue = payload.due ?? todo.due ?? Date().addingTimeInterval(60 * 60)
+        let normalizedDue = (payload.due ?? todo.due ?? Date().addingTimeInterval(60 * 60)).flooredToMinute()
         _ = try await cacheManager.updateOfflineState { state in
             var nextState = state
             nextState.todos = state.todos.map { current in
@@ -373,7 +373,7 @@ final class TodoRepository {
 
     func moveTodo(_ todo: TodoItem, due: Date) async throws {
         let now = Date().epochMilliseconds
-        let dueEpochMs = due.epochMilliseconds
+        let dueEpochMs = due.flooredToMinute().epochMilliseconds
         let isLocalOnly = todo.canonicalId.hasPrefix(LOCAL_TODO_PREFIX)
 
         _ = try await cacheManager.updateOfflineState { state in
@@ -818,6 +818,7 @@ final class TodoRepository {
     /// server id, exactly like CREATE_TODO reconciliation.
     func promoteFloater(_ floater: TodoItem, due: Date, rrule: String?) async throws {
         let now = Date().epochMilliseconds
+        let dueEpochMs = due.flooredToMinute().epochMilliseconds
         let mutationID = UUID().uuidString
         let localTodoID = LOCAL_TODO_PREFIX + UUID().uuidString.lowercased()
         _ = try await cacheManager.updateOfflineState { state in
@@ -830,7 +831,7 @@ final class TodoRepository {
                     title: floater.title,
                     description: floater.description,
                     priority: floater.priority,
-                    dueEpochMs: due.epochMilliseconds,
+                    dueEpochMs: dueEpochMs,
                     rrule: rrule,
                     instanceDateEpochMs: nil,
                     pinned: floater.pinned,
@@ -847,7 +848,7 @@ final class TodoRepository {
                     targetId: floater.canonicalId,
                     timestampEpochMs: now,
                     title: nil, description: nil, priority: nil,
-                    dueEpochMs: due.epochMilliseconds,
+                    dueEpochMs: dueEpochMs,
                     rrule: rrule,
                     listId: nil, pinned: nil, completed: nil,
                     instanceDateEpochMs: nil,
@@ -1181,7 +1182,7 @@ enum OnDeviceTitleNlpParser {
                     cleanTitle: grammar.cleanTitle,
                     matchedText: matchedText,
                     matchStart: match.range.location,
-                    dueEpochMs: date.epochMilliseconds,
+                    dueEpochMs: date.flooredToMinute().epochMilliseconds,
                     rrule: grammar.rrule,
                     priority: grammar.priority
                 )

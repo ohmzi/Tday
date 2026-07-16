@@ -71,8 +71,11 @@ object TaskSortEngine {
         a.priorityRank.compareTo(b.priorityRank).takeIf { it != 0 }
 
     private fun dueAscNullsLast(a: TaskSortKey, b: TaskSortKey): Int? {
-        val x = a.dueEpochMs
-        val y = b.dueEpochMs
+        // Compare due at MINUTE precision. Times are shown to the minute ("9:41 PM"), so two
+        // tasks in the same clock minute that differ only by seconds are the "same time" to
+        // the user — we treat them as equal here so the next key (priority) breaks the tie.
+        val x = a.dueEpochMs?.let(::floorToMinute)
+        val y = b.dueEpochMs?.let(::floorToMinute)
         val d = when {
             x == null && y == null -> 0
             x == null -> 1
@@ -81,6 +84,9 @@ object TaskSortEngine {
         }
         return d.takeIf { it != 0 }
     }
+
+    /** Floor a UTC-epoch-millis instant to its minute (drop seconds/millis). */
+    private fun floorToMinute(epochMs: Long): Long = epochMs - (epochMs % 60_000L)
 
     private fun modifiedDesc(a: TaskSortKey, b: TaskSortKey): Int? {
         val x = a.updatedAtEpochMs

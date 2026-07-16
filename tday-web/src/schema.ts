@@ -36,7 +36,13 @@ export const todoSchema = z.object({
   priority: z.enum(["Low", "Medium", "High"], {
     errorMap: () => ({ message: "priority must be one of: low, medium, high" }),
   }),
-  due: z.date({ message: "end date is not identified" }),
+  due: z
+    .date({ message: "end date is not identified" })
+    .transform((d) => {
+      const x = new Date(d);
+      x.setSeconds(0, 0);
+      return x;
+    }),
   rrule: z.string().nullable(),
   listID: z.string().nullable().optional(),
 });
@@ -52,7 +58,13 @@ export const todoInstanceSchema = z.object({
   priority: z.enum(["Low", "Medium", "High"], {
     errorMap: () => ({ message: "priority must be one of: low, medium, high" }),
   }),
-  due: z.date({ message: "end date is not identified" }),
+  due: z
+    .date({ message: "end date is not identified" })
+    .transform((d) => {
+      const x = new Date(d);
+      x.setSeconds(0, 0);
+      return x;
+    }),
   instanceDate: z.date({ message: "instance date is not identified" }),
   rrule: z.string().nullable(),
 });

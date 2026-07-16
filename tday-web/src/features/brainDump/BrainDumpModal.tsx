@@ -58,12 +58,14 @@ export default function BrainDumpModal({
     for (const item of chosen) {
       try {
         if (item.dueEpochMs != null) {
+          const d = new Date(item.dueEpochMs);
+          d.setSeconds(0, 0);
           await api.POST({
             url: "/api/todo",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               title: item.title,
-              due: new Date(item.dueEpochMs).toISOString(),
+              due: d.toISOString(),
               priority: item.priority ?? "Low",
               rrule: item.rrule ?? null,
             }),
