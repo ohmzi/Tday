@@ -62,7 +62,17 @@ object TaskSortEngine {
         Priority.Low -> 2
     }
 
-    fun priorityRank(priority: String?): Int = priorityRank(Priority.fromApiOrDefault(priority))
+    // Tolerant of every priority spelling the app stores: canonical Low/Medium/High, the
+    // server/legacy vocabulary normal/important/urgent, and any case. Realtime-synced rows
+    // arrive un-normalized, so a strict enum-name match would collapse them all to Low and the
+    // sort would silently ignore priority (the reported "flag updates but list doesn't re-sort"
+    // bug). Unknown/null → Low. Mirrors android canonicalPriorityValue; keep the iOS/web twins
+    // identical.
+    fun priorityRank(priority: String?): Int = when (priority?.trim()?.lowercase()) {
+        "high", "urgent" -> priorityRank(Priority.High)
+        "medium", "important" -> priorityRank(Priority.Medium)
+        else -> priorityRank(Priority.Low)
+    }
 
     private fun pin(a: TaskSortKey, b: TaskSortKey): Int? =
         (rank(b.pinned) - rank(a.pinned)).takeIf { it != 0 }
