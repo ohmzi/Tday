@@ -105,4 +105,27 @@ class TaskSortEngineTest {
         assertEquals(2, TaskSortEngine.priorityRank(Priority.Low))
         assertEquals(2, TaskSortEngine.priorityRank("nonsense"))
     }
+
+    @Test
+    fun priorityRankToleratesServerVocabularyAndCase() {
+        // The realtime re-sort bug: un-normalized server rows carry these spellings and must
+        // NOT all collapse to Low, or a priority change never moves the row.
+        for (high in listOf("High", "high", "HIGH", "urgent", "Urgent", " urgent ")) {
+            assertEquals(0, TaskSortEngine.priorityRank(high), "high vocab: '$high'")
+        }
+        for (medium in listOf("Medium", "medium", "important", "IMPORTANT")) {
+            assertEquals(1, TaskSortEngine.priorityRank(medium), "medium vocab: '$medium'")
+        }
+        for (low in listOf("Low", "low", "normal", "NORMAL", null, "", "weird")) {
+            assertEquals(2, TaskSortEngine.priorityRank(low), "low/default vocab: '$low'")
+        }
+    }
+
+    @Test
+    fun floatersReorderWhenPriorityChangesFromServerVocabulary() {
+        // Two floaters; the "urgent" one must lead even though it isn't spelled "High".
+        val normal = task("normal", priority = "normal", updated = 900)
+        val urgent = task("urgent", priority = "urgent", updated = 100)
+        assertEquals(listOf("urgent", "normal"), floaterIds(listOf(normal, urgent)))
+    }
 }

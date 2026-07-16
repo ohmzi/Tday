@@ -84,17 +84,17 @@ enum TaskSortEngine {
         compareFloaters(a, b) < 0
     }
 
-    /// 0 = highest priority (sorts first). Only the canonical enum names
-    /// "High"/"Medium"/"Low" rank; anything else -> Low. Mirrors Kotlin
-    /// `Priority.fromApiOrDefault` + `priorityRank` (exact enum-name match).
+    /// 0 = highest priority (sorts first). Tolerant of every priority spelling the app stores:
+    /// canonical Low/Medium/High, the server/legacy vocabulary normal/important/urgent, and any
+    /// case. Realtime-synced rows arrive un-normalized, so a strict match would collapse them to
+    /// Low and the sort would ignore priority. Unknown/absent -> Low. Mirrors the shared Kotlin
+    /// `TaskSortEngine.priorityRank(String?)`.
     static func priorityRank(_ priority: String) -> Int {
-        switch priority {
-        case "High":
+        switch priority.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+        case "high", "urgent":
             return 0
-        case "Medium":
+        case "medium", "important":
             return 1
-        case "Low":
-            return 2
         default:
             return lowestPriorityRank
         }
