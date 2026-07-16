@@ -659,17 +659,21 @@ private fun taskWidgetMetrics(layout: TaskWidgetLayout): TaskWidgetMetrics {
         // Metrics mirror the iOS widget (WidgetLayoutMetrics) so both platforms breathe the
         // same: matched horizontal inset, top/bottom inset, row spacing and row height. Row
         // font is bumped +1 over iOS because Nunito renders ~1pt smaller than iOS's SF Rounded.
+        // COMPACT (the small 2x2) shares the SAME insets, header height, + button, row height,
+        // spacing and font as the wider sizes, so the padding and task placement match exactly.
+        // It only differs in the header CONTENT — the count leads instead of the title, because
+        // "Floater Tasks" + count + button can't fit a 2x2 width. Watermark stays small.
         TaskWidgetLayout.COMPACT -> TaskWidgetMetrics(
-            horizontalPadding = 13.dp,
-            topPadding = 11.dp,
-            bottomPadding = 9.dp,
-            headerHeight = 38.dp,
+            horizontalPadding = 14.dp,
+            topPadding = 13.dp,
+            bottomPadding = 11.dp,
+            headerHeight = 42.dp,
             headerTitleWidth = 0.dp,
             headerCountWidth = 0.dp,
-            addButtonSize = 38.dp,
-            contentSpacing = 5.dp,
-            rowHeight = 21.dp,
-            rowSpacing = 2.dp,
+            addButtonSize = 42.dp,
+            contentSpacing = 7.dp,
+            rowHeight = 22.dp,
+            rowSpacing = 3.dp,
             rowFontSize = 13.sp,
             messageWatermarkSize = 112.dp,
         )
