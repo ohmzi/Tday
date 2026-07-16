@@ -31,16 +31,16 @@ class TaskWidgetDesignTest {
     }
 
     @Test
-    fun `priority dot resource follows task priority`() {
-        assertEquals(R.drawable.widget_priority_dot_high, taskWidgetPriorityDotResource("High"))
-        assertEquals(R.drawable.widget_priority_dot_high, taskWidgetPriorityDotResource("urgent"))
+    fun `priority check ring resource follows task priority`() {
+        assertEquals(R.drawable.widget_priority_ring_high, taskWidgetPriorityRingResource("High"))
+        assertEquals(R.drawable.widget_priority_ring_high, taskWidgetPriorityRingResource("urgent"))
         assertEquals(
-            R.drawable.widget_priority_dot_medium,
-            taskWidgetPriorityDotResource(" Important ")
+            R.drawable.widget_priority_ring_medium,
+            taskWidgetPriorityRingResource(" Important ")
         )
-        assertEquals(R.drawable.widget_priority_dot_medium, taskWidgetPriorityDotResource("Medium"))
-        assertEquals(R.drawable.widget_priority_dot_low, taskWidgetPriorityDotResource("Low"))
-        assertEquals(R.drawable.widget_priority_dot_low, taskWidgetPriorityDotResource("unknown"))
+        assertEquals(R.drawable.widget_priority_ring_medium, taskWidgetPriorityRingResource("Medium"))
+        assertEquals(R.drawable.widget_priority_ring_low, taskWidgetPriorityRingResource("Low"))
+        assertEquals(R.drawable.widget_priority_ring_low, taskWidgetPriorityRingResource("unknown"))
     }
 
     @Test

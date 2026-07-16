@@ -68,9 +68,9 @@ internal data class TaskWidgetVisuals(
     val addIcon: Int,
     val emptyWatermark: Int,
     val setupWatermark: Int,
-    // When set, every task row uses this dot instead of a priority-coloured one
+    // When set, every task row uses this check ring instead of a priority-coloured one
     // (floater tasks have no priority, so they use the widget's green accent).
-    val priorityDotOverride: Int? = null,
+    val priorityRingOverride: Int? = null,
 )
 
 internal data class TaskWidgetRow(
@@ -505,31 +505,30 @@ private fun TaskWidgetRow(
             // two-line title rather than centring across both lines.
             verticalAlignment = Alignment.Top,
         ) {
-            // Widgets v2: the leading dot doubles as an inline complete target.
-            // The clickable box pads well past the 7dp dot so the tap target
-            // stays usable at home-screen sizes without moving the layout.
+            // Widgets v2: the leading check ring is an inline complete target — tap it
+            // to check the task off in place (parity with the iOS widget). The clickable
+            // box pads past the 14dp ring so the tap target stays usable at home-screen
+            // sizes without moving the layout.
             if (row.completeAction != null) {
                 Box(
                     modifier = GlanceModifier
                         .clickable(row.completeAction)
-                        .padding(top = 1.dp, bottom = 3.dp, end = 3.dp),
+                        .padding(top = 1.dp, bottom = 3.dp, end = 4.dp),
                 ) {
-                    PriorityDot(
+                    PriorityCheckRing(
                         priority = row.priority,
-                        size = 7.dp,
-                        dotResourceOverride = visuals.priorityDotOverride,
-                        // Nudge the dot down to the vertical centre of the first line.
-                        modifier = GlanceModifier.padding(top = 3.dp),
+                        size = 14.dp,
+                        ringResourceOverride = visuals.priorityRingOverride,
                     )
                 }
                 Spacer(modifier = GlanceModifier.width(4.dp))
             } else {
-                PriorityDot(
+                PriorityCheckRing(
                     priority = row.priority,
-                    size = 7.dp,
-                    dotResourceOverride = visuals.priorityDotOverride,
-                    // Nudge the dot down to the vertical centre of the first line.
-                    modifier = GlanceModifier.padding(top = 4.dp),
+                    size = 14.dp,
+                    ringResourceOverride = visuals.priorityRingOverride,
+                    // Nudge down slightly to sit on the first line of a wrapped title.
+                    modifier = GlanceModifier.padding(top = 1.dp),
                 )
                 Spacer(modifier = GlanceModifier.width(7.dp))
             }
@@ -595,25 +594,28 @@ private fun TaskTitleAndTime(
     AndroidRemoteViews(remoteViews = remoteViews, modifier = modifier)
 }
 
+// The leading bullet is a hollow priority-coloured CHECK RING (matching the iOS
+// widget's tappable Circle().strokeBorder), not a solid dot — so it reads as a
+// checkbox you tap to complete the task in place.
 @Composable
-private fun PriorityDot(
+private fun PriorityCheckRing(
     priority: String,
     size: Dp,
     modifier: GlanceModifier = GlanceModifier,
-    dotResourceOverride: Int? = null,
+    ringResourceOverride: Int? = null,
 ) {
     Image(
-        provider = ImageProvider(dotResourceOverride ?: taskWidgetPriorityDotResource(priority)),
+        provider = ImageProvider(ringResourceOverride ?: taskWidgetPriorityRingResource(priority)),
         contentDescription = null,
         modifier = modifier.size(size),
     )
 }
 
-internal fun taskWidgetPriorityDotResource(priority: String): Int {
+internal fun taskWidgetPriorityRingResource(priority: String): Int {
     return when {
-        isUrgentPriority(priority) -> R.drawable.widget_priority_dot_high
-        isImportantPriority(priority) -> R.drawable.widget_priority_dot_medium
-        else -> R.drawable.widget_priority_dot_low
+        isUrgentPriority(priority) -> R.drawable.widget_priority_ring_high
+        isImportantPriority(priority) -> R.drawable.widget_priority_ring_medium
+        else -> R.drawable.widget_priority_ring_low
     }
 }
 

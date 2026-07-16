@@ -22,7 +22,7 @@ private val FloaterWidgetVisuals = TaskWidgetVisuals(
     addIcon = R.drawable.widget_add_icon_floater,
     emptyWatermark = R.drawable.widget_empty_watermark_floater,
     setupWatermark = R.drawable.widget_empty_watermark_floater,
-    priorityDotOverride = R.drawable.widget_priority_dot_floater,
+    priorityRingOverride = R.drawable.widget_priority_ring_floater,
 )
 
 class FloaterTasksWidget : GlanceAppWidget() {
