@@ -216,20 +216,18 @@ private fun TaskWidgetHeader(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 HeaderText(
-                    modifier = GlanceModifier
-                        .width(metrics.headerTitleWidth)
-                        .height(metrics.headerHeight),
+                    modifier = GlanceModifier.height(metrics.headerHeight),
                     text = title,
                     color = TaskWidgetTextColor.PRIMARY,
-                    fontSize = if (layout == TaskWidgetLayout.TALL) 17.sp else 16.sp,
+                    // Roughly matches iOS's 16/17 title; natural width (fillWidth=false) so a
+                    // slightly larger title never truncates and the count hugs it like iOS.
+                    fontSize = if (layout == TaskWidgetLayout.TALL) 18.sp else 17.sp,
                     maxLines = 1,
+                    fillWidth = false,
                 )
                 if (showCount) {
                     Spacer(modifier = GlanceModifier.width(8.dp))
-                    CountPill(
-                        label = countLabel,
-                        modifier = GlanceModifier.width(metrics.headerCountWidth),
-                    )
+                    CountPill(label = countLabel)
                 }
             }
 
@@ -276,12 +274,12 @@ private fun CountPill(
         contentAlignment = Alignment.Center,
     ) {
         HeaderText(
-            modifier = GlanceModifier.fillMaxWidth(),
             text = label,
             color = TaskWidgetTextColor.SECONDARY,
             fontSize = 12.sp,
             textAlign = TextAlign.Center,
             maxLines = 1,
+            fillWidth = false,
         )
     }
 }
@@ -318,6 +316,7 @@ private fun HeaderText(
     modifier: GlanceModifier = GlanceModifier,
     textAlign: TextAlign = TextAlign.Start,
     maxLines: Int = 1,
+    fillWidth: Boolean = true,
 ) {
     require(fontSize.isSp) { "Widget font sizes must be expressed in sp." }
 
@@ -333,7 +332,10 @@ private fun HeaderText(
     ) {
         Text(
             text = text,
-            modifier = GlanceModifier.fillMaxWidth(),
+            // fillWidth=false lets the title size to its own text (natural width) so the
+            // count sits right after it (like iOS) instead of a fixed-width column that
+            // both wastes space AND truncates a slightly larger title.
+            modifier = if (fillWidth) GlanceModifier.fillMaxWidth() else GlanceModifier,
             style = TextStyle(
                 color = ColorProvider(color.resourceId),
                 fontSize = fontSize,
@@ -654,63 +656,66 @@ internal fun taskWidgetShowsTrailingText(layout: TaskWidgetLayout): Boolean {
 
 private fun taskWidgetMetrics(layout: TaskWidgetLayout): TaskWidgetMetrics {
     return when (layout) {
+        // Metrics mirror the iOS widget (WidgetLayoutMetrics) so both platforms breathe the
+        // same: matched horizontal inset, top/bottom inset, row spacing and row height. Row
+        // font is bumped +1 over iOS because Nunito renders ~1pt smaller than iOS's SF Rounded.
         TaskWidgetLayout.COMPACT -> TaskWidgetMetrics(
-            horizontalPadding = 12.dp,
-            topPadding = 5.dp,
-            bottomPadding = 6.dp,
+            horizontalPadding = 13.dp,
+            topPadding = 11.dp,
+            bottomPadding = 9.dp,
             headerHeight = 38.dp,
             headerTitleWidth = 0.dp,
             headerCountWidth = 0.dp,
             addButtonSize = 38.dp,
             contentSpacing = 5.dp,
-            rowHeight = 22.dp,
+            rowHeight = 21.dp,
             rowSpacing = 2.dp,
-            rowFontSize = 12.sp,
+            rowFontSize = 13.sp,
             messageWatermarkSize = 112.dp,
         )
 
         TaskWidgetLayout.WIDE -> TaskWidgetMetrics(
-            horizontalPadding = 12.dp,
-            topPadding = 6.dp,
-            bottomPadding = 7.dp,
-            headerHeight = 42.dp,
-            headerTitleWidth = 108.dp,
-            headerCountWidth = 50.dp,
-            addButtonSize = 42.dp,
-            contentSpacing = 7.dp,
-            rowHeight = 23.dp,
-            rowSpacing = 2.dp,
-            rowFontSize = 12.sp,
-            messageWatermarkSize = 128.dp,
-        )
-
-        TaskWidgetLayout.MEDIUM -> TaskWidgetMetrics(
-            horizontalPadding = 12.dp,
-            topPadding = 6.dp,
-            bottomPadding = 7.dp,
+            horizontalPadding = 14.dp,
+            topPadding = 13.dp,
+            bottomPadding = 11.dp,
             headerHeight = 42.dp,
             headerTitleWidth = 108.dp,
             headerCountWidth = 50.dp,
             addButtonSize = 42.dp,
             contentSpacing = 7.dp,
             rowHeight = 22.dp,
-            rowSpacing = 2.dp,
-            rowFontSize = 12.sp,
+            rowSpacing = 3.dp,
+            rowFontSize = 13.sp,
+            messageWatermarkSize = 128.dp,
+        )
+
+        TaskWidgetLayout.MEDIUM -> TaskWidgetMetrics(
+            horizontalPadding = 14.dp,
+            topPadding = 13.dp,
+            bottomPadding = 11.dp,
+            headerHeight = 42.dp,
+            headerTitleWidth = 108.dp,
+            headerCountWidth = 50.dp,
+            addButtonSize = 42.dp,
+            contentSpacing = 7.dp,
+            rowHeight = 22.dp,
+            rowSpacing = 3.dp,
+            rowFontSize = 13.sp,
             messageWatermarkSize = 148.dp,
         )
 
         TaskWidgetLayout.TALL -> TaskWidgetMetrics(
-            horizontalPadding = 12.dp,
-            topPadding = 8.dp,
-            bottomPadding = 9.dp,
+            horizontalPadding = 15.dp,
+            topPadding = 14.dp,
+            bottomPadding = 12.dp,
             headerHeight = 45.dp,
             headerTitleWidth = 108.dp,
             headerCountWidth = 50.dp,
             addButtonSize = 46.dp,
             contentSpacing = 8.dp,
-            rowHeight = 25.dp,
-            rowSpacing = 3.dp,
-            rowFontSize = 13.sp,
+            rowHeight = 24.dp,
+            rowSpacing = 4.dp,
+            rowFontSize = 14.sp,
             messageWatermarkSize = 208.dp,
         )
     }
