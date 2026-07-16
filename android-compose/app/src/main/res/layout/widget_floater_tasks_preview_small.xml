@@ -63,10 +63,10 @@
             android:paddingEnd="2dp">
 
             <ImageView
-                android:layout_width="7dp"
-                android:layout_height="7dp"
+                android:layout_width="14dp"
+                android:layout_height="14dp"
                 android:contentDescription="@null"
-                android:src="@drawable/widget_priority_dot_high" />
+                android:src="@drawable/widget_priority_ring_high" />
 
             <TextView
                 android:layout_width="0dp"
@@ -98,10 +98,10 @@
             android:paddingEnd="2dp">
 
             <ImageView
-                android:layout_width="7dp"
-                android:layout_height="7dp"
+                android:layout_width="14dp"
+                android:layout_height="14dp"
                 android:contentDescription="@null"
-                android:src="@drawable/widget_priority_dot_medium" />
+                android:src="@drawable/widget_priority_ring_medium" />
 
             <TextView
                 android:layout_width="0dp"
@@ -133,10 +133,10 @@
             android:paddingEnd="2dp">
 
             <ImageView
-                android:layout_width="7dp"
-                android:layout_height="7dp"
+                android:layout_width="14dp"
+                android:layout_height="14dp"
                 android:contentDescription="@null"
-                android:src="@drawable/widget_priority_dot_low" />
+                android:src="@drawable/widget_priority_ring_low" />
 
             <TextView
                 android:layout_width="0dp"
