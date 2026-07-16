@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Hollow check ring (widgets v2), matching the iOS widget's tappable
+     Circle().strokeBorder: a 14dp outline in the priority colour that reads as a
+     checkbox you tap to complete, replacing the old solid bullet dot. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="14dp"
+    android:height="14dp"
+    android:viewportWidth="14"
+    android:viewportHeight="14">
+    <path
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="@color/tday_widget_priority_medium"
+        android:strokeWidth="1.6"
+        android:pathData="M7,1 A6,6 0 1,0 7,13 A6,6 0 1,0 7,1 Z" />
+</vector>
