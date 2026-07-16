@@ -219,9 +219,9 @@ private fun TaskWidgetHeader(
                     modifier = GlanceModifier.height(metrics.headerHeight),
                     text = title,
                     color = TaskWidgetTextColor.PRIMARY,
-                    // Roughly matches iOS's 16/17 title; natural width (fillWidth=false) so a
-                    // slightly larger title never truncates and the count hugs it like iOS.
-                    fontSize = if (layout == TaskWidgetLayout.TALL) 18.sp else 17.sp,
+                    // One title size across all sizes (natural width, fillWidth=false) so the
+                    // count hugs it like iOS and resizing never changes the header.
+                    fontSize = 17.sp,
                     maxLines = 1,
                     fillWidth = false,
                 )
@@ -704,18 +704,21 @@ private fun taskWidgetMetrics(layout: TaskWidgetLayout): TaskWidgetMetrics {
             messageWatermarkSize = 148.dp,
         )
 
+        // TALL deliberately shares WIDE/MEDIUM's insets, header, row height and font, so
+        // resizing medium -> large -> extra-large never jumps the padding: the bigger widget
+        // just shows MORE rows at the same density. Only the empty-state watermark scales up.
         TaskWidgetLayout.TALL -> TaskWidgetMetrics(
-            horizontalPadding = 15.dp,
-            topPadding = 14.dp,
-            bottomPadding = 12.dp,
-            headerHeight = 45.dp,
+            horizontalPadding = 14.dp,
+            topPadding = 13.dp,
+            bottomPadding = 11.dp,
+            headerHeight = 42.dp,
             headerTitleWidth = 108.dp,
             headerCountWidth = 50.dp,
-            addButtonSize = 46.dp,
-            contentSpacing = 8.dp,
-            rowHeight = 24.dp,
-            rowSpacing = 4.dp,
-            rowFontSize = 14.sp,
+            addButtonSize = 42.dp,
+            contentSpacing = 7.dp,
+            rowHeight = 22.dp,
+            rowSpacing = 3.dp,
+            rowFontSize = 13.sp,
             messageWatermarkSize = 208.dp,
         )
     }
