@@ -122,6 +122,16 @@ class TaskSortEngineTest {
     }
 
     @Test
+    fun sameMinuteTodosOrderByPriorityEvenWithServerVocabularyAndOlderModified() {
+        // The exact Android report: two todos at the same due-minute, one flagged "important"
+        // (foreign edit, server vocabulary). Priority must beat the modified-time tiebreak, so
+        // "important" leads even though the un-flagged "normal" one was modified more recently.
+        val normal = task("normal", due = 90_000, priority = "normal", updated = 500)
+        val important = task("important", due = 90_000, priority = "important", updated = 100)
+        assertEquals(listOf("important", "normal"), todoIds(listOf(normal, important)))
+    }
+
+    @Test
     fun floatersReorderWhenPriorityChangesFromServerVocabulary() {
         // Two floaters; the "urgent" one must lead even though it isn't spelled "High".
         val normal = task("normal", priority = "normal", updated = 900)
