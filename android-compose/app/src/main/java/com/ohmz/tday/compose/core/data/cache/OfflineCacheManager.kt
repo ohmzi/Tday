@@ -2,6 +2,7 @@ package com.ohmz.tday.compose.core.data.cache
 
 import android.util.Log
 import com.ohmz.tday.compose.core.data.OfflineSyncState
+import com.ohmz.tday.compose.core.data.PendingMutationRecord
 import com.ohmz.tday.compose.core.data.SecureConfigStore
 import com.ohmz.tday.compose.core.data.ThemePreferenceStore
 import com.ohmz.tday.compose.core.data.db.SyncMetadataEntity
@@ -121,13 +122,30 @@ class OfflineCacheManager @Inject constructor(
         return state
     }
 
-    suspend fun saveOfflineState(state: OfflineSyncState) =
-        withContext(Dispatchers.IO) { saveOfflineStateBlocking(state) }
+    suspend fun saveOfflineState(
+        state: OfflineSyncState,
+        consumedMutationIds: Set<String>? = null,
+    ) = withContext(Dispatchers.IO) { saveOfflineStateBlocking(state, consumedMutationIds) }
 
-    fun saveOfflineStateBlocking(state: OfflineSyncState) {
+    /**
+     * [consumedMutationIds] opts into concurrent-mutation preservation and is passed ONLY by
+     * SyncManager, whose saves are derived from a snapshot loaded before a multi-second network
+     * phase: any mutation persisted now but absent from [state] and not in the set was queued by
+     * a concurrent writer mid-sync (e.g. a widget check-off) — clobbering it would silently drop
+     * that completion, so it is re-attached instead. The set holds the ids the sync legitimately
+     * consumed (replayed to the server / dropped as unrecoverable). Transform-based writers
+     * (updateOfflineState) leave it null: their removals (e.g. Undo discarding a queued
+     * COMPLETE) are intentional and must NOT be resurrected. Writers are serialized
+     * (@Synchronized) so the preserve check can't itself race.
+     */
+    @Synchronized
+    fun saveOfflineStateBlocking(
+        state: OfflineSyncState,
+        consumedMutationIds: Set<String>? = null,
+    ) {
         ensureMigrated()
         val previous = lastPersistedState ?: loadOfflineStateBlocking()
-        val normalizedState = if (secureConfigStore.isLocalMode()) {
+        var normalizedState = if (secureConfigStore.isLocalMode()) {
             state.copy(
                 lastSuccessfulSyncEpochMs = 0L,
                 lastSyncAttemptEpochMs = 0L,
@@ -135,6 +153,15 @@ class OfflineCacheManager @Inject constructor(
             )
         } else {
             state
+        }
+        if (consumedMutationIds != null && !secureConfigStore.isLocalMode()) {
+            normalizedState = normalizedState.copy(
+                pendingMutations = mergeConcurrentlyQueuedMutations(
+                    persisted = previous.pendingMutations,
+                    next = normalizedState.pendingMutations,
+                    consumedMutationIds = consumedMutationIds,
+                ),
+            )
         }
         if (previous == normalizedState) return
 
@@ -270,4 +297,30 @@ class OfflineCacheManager @Inject constructor(
     private companion object {
         const val LOG_TAG = "OfflineCacheManager"
     }
+}
+
+/**
+ * Re-attaches mutations that a concurrent writer queued while a sync was mid-flight.
+ *
+ * A sync builds its saves from a snapshot loaded BEFORE a multi-second network phase, so a
+ * mutation queued during that window (a widget check-off is the common case) is absent from
+ * [next] purely because the sync never saw it — writing [next] verbatim would silently drop
+ * that completion. [consumedMutationIds] is the set the sync legitimately owns (the ids it
+ * loaded, i.e. replayed or deliberately dropped); anything persisted but in neither [next] nor
+ * that set was queued concurrently and is preserved, ordered back into the queue by timestamp.
+ *
+ * Pure + internal so the rule is directly testable — the race it guards is impractical to
+ * reproduce by hand.
+ */
+internal fun mergeConcurrentlyQueuedMutations(
+    persisted: List<PendingMutationRecord>,
+    next: List<PendingMutationRecord>,
+    consumedMutationIds: Set<String>,
+): List<PendingMutationRecord> {
+    val keptIds = next.mapTo(HashSet()) { it.mutationId }
+    val preserved = persisted.filter { queued ->
+        queued.mutationId !in keptIds && queued.mutationId !in consumedMutationIds
+    }
+    if (preserved.isEmpty()) return next
+    return (next + preserved).sortedBy { it.timestampEpochMs }
 }

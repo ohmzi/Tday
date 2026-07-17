@@ -200,6 +200,14 @@ class SyncManager @Inject constructor(
         state = state.copy(lastSyncAttemptEpochMs = now)
         cacheManager.saveOfflineState(state)
 
+        // Every save below is derived from THIS pre-network snapshot, but the network
+        // phase takes seconds — long enough for a concurrent writer (a widget check-off
+        // is the common one) to queue a mutation the snapshot never saw. Handing the
+        // cache the ids this sync is authoritative over lets it tell "this sync
+        // deliberately consumed the mutation" from "someone queued it mid-flight, keep
+        // it" — otherwise the save silently drops that completion.
+        val syncStartPendingIds = state.pendingMutations.mapTo(HashSet()) { it.mutationId }
+
         val initialPendingCount = state.pendingMutations.size
         val firstRemote = fetchRemoteSnapshot()
 
@@ -226,12 +234,16 @@ class SyncManager @Inject constructor(
                     lastSyncAttemptEpochMs = now,
                     lastSuccessfulSyncEpochMs = now,
                 ),
+                consumedMutationIds = syncStartPendingIds,
             )
             return true
         }
 
         val afterPending = applyPendingMutations(state, firstRemote)
-        cacheManager.saveOfflineState(afterPending.copy(lastSyncAttemptEpochMs = now))
+        cacheManager.saveOfflineState(
+            afterPending.copy(lastSyncAttemptEpochMs = now),
+            consumedMutationIds = syncStartPendingIds,
+        )
         val shouldRefetchRemote = afterPending.pendingMutations.size < initialPendingCount
         val latestRemote = if (shouldRefetchRemote) fetchRemoteSnapshot() else firstRemote
         val mergedState = mergeRemoteWithLocal(
@@ -242,7 +254,7 @@ class SyncManager @Inject constructor(
             lastSuccessfulSyncEpochMs = now,
         )
 
-        cacheManager.saveOfflineState(mergedState)
+        cacheManager.saveOfflineState(mergedState, consumedMutationIds = syncStartPendingIds)
         return true
     }
 
@@ -336,6 +348,9 @@ class SyncManager @Inject constructor(
         if (initialState.pendingMutations.isEmpty()) return initialState
 
         var state = initialState
+        // The mutation ids this replay owns; anything else in the cache was queued
+        // concurrently and must survive our saves (see the bail-out save below).
+        val replayStartPendingIds = initialState.pendingMutations.mapTo(HashSet()) { it.mutationId }
         val pending = initialState.pendingMutations.sortedBy { it.timestampEpochMs }.toMutableList()
         val resolvedTodoIds = mutableMapOf<String, String>()
         val resolvedListIds = mutableMapOf<String, String>()
@@ -912,7 +927,14 @@ class SyncManager @Inject constructor(
                             .drop(1)
                             .map { queued -> resolveLatestMutationSnapshot(state, queued) },
                     )
-                    cacheManager.saveOfflineState(state.copy(pendingMutations = remaining))
+                    // Same concurrent-writer hazard as the caller's saves: `remaining` is
+                    // built from this replay's starting snapshot, so a mutation queued
+                    // mid-replay (e.g. a widget check-off) isn't in it and would be
+                    // dropped. Only the ids this replay owns may be removed.
+                    cacheManager.saveOfflineState(
+                        state.copy(pendingMutations = remaining),
+                        consumedMutationIds = replayStartPendingIds,
+                    )
                     return state.copy(pendingMutations = remaining)
                 }
                 if (isLikelyUnrecoverableMutationError(error, mutation)) {
