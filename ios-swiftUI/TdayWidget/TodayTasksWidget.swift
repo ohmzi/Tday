@@ -12,6 +12,7 @@ import WidgetKit
 /// queued ids so the row disappears immediately.
 enum WidgetPendingCompletionStore {
     static let queueKey = "tday.widget.pendingCompletions"
+    static let checkingKey = "tday.widget.checkingCompletions"
     static let appGroupSuiteName = "group.com.ohmz.tday"
     static let todoKind = "todo"
     static let floaterKind = "floater"
@@ -20,6 +21,20 @@ enum WidgetPendingCompletionStore {
         let kind: String
         let id: String
     }
+
+    /// A row mid check-off animation: shown as checked + struck-through until it
+    /// expires, then the pending queue hides it. Timestamped so a process killed
+    /// mid-animation can't strand a row in the struck state — a stale entry is
+    /// simply ignored (the row falls back to the pending-hide / normal rendering).
+    struct CheckEntry: Codable, Equatable {
+        let kind: String
+        let id: String
+        let atEpochMs: Int64
+    }
+
+    /// The checked-and-struck frame lasts this long before the pending queue removes
+    /// the row. Also the staleness cutoff for a crashed animation.
+    static let checkingWindowMs: Int64 = 900
 
     static func load() -> [Entry] {
         guard let data = store().data(forKey: queueKey),
@@ -43,6 +58,40 @@ enum WidgetPendingCompletionStore {
 
     static func pendingIds(kind: String) -> Set<String> {
         Set(load().filter { $0.kind == kind }.map(\.id))
+    }
+
+    // MARK: Check-off animation
+
+    private static func loadChecking() -> [CheckEntry] {
+        guard let data = store().data(forKey: checkingKey),
+              let entries = try? JSONDecoder().decode([CheckEntry].self, from: data) else {
+            return []
+        }
+        return entries
+    }
+
+    static func beginChecking(kind: String, id: String, nowEpochMs: Int64) {
+        var entries = loadChecking().filter { $0.id != id || $0.kind != kind }
+        entries.append(CheckEntry(kind: kind, id: id, atEpochMs: nowEpochMs))
+        if let data = try? JSONEncoder().encode(entries) {
+            store().set(data, forKey: checkingKey)
+        }
+    }
+
+    static func endChecking(kind: String, id: String) {
+        let entries = loadChecking().filter { $0.id != id || $0.kind != kind }
+        if let data = try? JSONEncoder().encode(entries) {
+            store().set(data, forKey: checkingKey)
+        }
+    }
+
+    /// Ids currently in the (non-stale) checked+struck frame.
+    static func checkingIds(kind: String, nowEpochMs: Int64) -> Set<String> {
+        Set(
+            loadChecking()
+                .filter { $0.kind == kind && (nowEpochMs - $0.atEpochMs) < checkingWindowMs }
+                .map(\.id)
+        )
     }
 
     private static func store() -> UserDefaults {
@@ -203,16 +252,33 @@ struct CompleteWidgetTaskIntent: AppIntent {
     }
 
     func perform() async throws -> some IntentResult {
-        // Optimistic UI + offline fallback: record the tap and refresh the timeline
-        // first, so the row disappears immediately regardless of network outcome.
+        let widgetKind = kind == WidgetPendingCompletionStore.floaterKind
+            ? "FloaterTasksWidget" : "TodayTasksWidget"
+        let nowMs = Int64(Date().timeIntervalSince1970 * 1_000)
+
+        // Durability first: queue the completion (offline fallback + what ultimately
+        // hides the row). Then mark it "checking" so the row is shown checked +
+        // struck-through for one beat before the pending queue removes it — the app's
+        // check → strikethrough → fade, as far as WidgetKit will animate it. Ordering
+        // this way means a completion is never lost even if the animation is cut short.
         WidgetPendingCompletionStore.append(kind: kind, id: taskID)
-        WidgetCenter.shared.reloadTimelines(
-            ofKind: kind == WidgetPendingCompletionStore.floaterKind ? "FloaterTasksWidget" : "TodayTasksWidget"
-        )
-        // Best-effort instant backend sync. The pending-completion queue (kept above,
-        // and the backend complete endpoints are idempotent) remains the fallback,
-        // so any failure here is swallowed — the app reconciles on next activation.
+        WidgetPendingCompletionStore.beginChecking(kind: kind, id: taskID, nowEpochMs: nowMs)
+        WidgetCenter.shared.reloadTimelines(ofKind: widgetKind)
+
+        // Best-effort instant backend sync (idempotent endpoints; the queue is the
+        // fallback, so any failure is swallowed).
         await sendBackendCompletion()
+
+        // Hold the checked+struck frame, then end it so the pending filter drops the
+        // row — WidgetKit animates the removal. sendBackendCompletion may already have
+        // consumed part of the window; sleep only the remainder so the beat is bounded.
+        let elapsedMs = Int64(Date().timeIntervalSince1970 * 1_000) - nowMs
+        let remainingMs = WidgetPendingCompletionStore.checkingWindowMs - elapsedMs
+        if remainingMs > 0 {
+            try? await Task.sleep(for: .milliseconds(remainingMs))
+        }
+        WidgetPendingCompletionStore.endChecking(kind: kind, id: taskID)
+        WidgetCenter.shared.reloadTimelines(ofKind: widgetKind)
         return .result()
     }
 
@@ -326,6 +392,8 @@ private struct TodayTasksEntry: TimelineEntry {
     let status: TodayTasksSnapshotStatus
     let taskCount: Int
     let tasks: [TodayTaskSnapshot]
+    // Ids in the transient checked+struck frame of the check-off animation.
+    var checkingIds: Set<String> = []
 }
 
 private struct TodayTaskSnapshot: Codable, Identifiable {
@@ -446,16 +514,21 @@ private struct TodayTasksProvider: TimelineProvider {
             )
         }
 
-        // Hide rows completed from the widget that the app has not drained yet.
+        // Hide rows completed from the widget that the app has not drained yet — but
+        // keep a row that's mid check-off animation (still shown, checked + struck)
+        // until its beat ends, at which point the pending filter removes it.
+        let nowMs = Int64(date.timeIntervalSince1970 * 1_000)
         let pending = WidgetPendingCompletionStore.pendingIds(kind: WidgetPendingCompletionStore.todoKind)
-        let tasks = snapshot.tasks.filter { !pending.contains($0.id) }
+        let checking = WidgetPendingCompletionStore.checkingIds(kind: WidgetPendingCompletionStore.todoKind, nowEpochMs: nowMs)
+        let tasks = snapshot.tasks.filter { checking.contains($0.id) || !pending.contains($0.id) }
         let taskCount = max(0, snapshot.taskCount - (snapshot.tasks.count - tasks.count))
         return TodayTasksEntry(
             date: date,
             title: snapshot.title,
             status: snapshot.status == .tasks && taskCount == 0 ? .empty : snapshot.status,
             taskCount: taskCount,
-            tasks: tasks
+            tasks: tasks,
+            checkingIds: checking
         )
     }
 
@@ -539,7 +612,8 @@ private struct TodayTasksWidgetView: View {
                     title: $0.title,
                     priority: $0.priority,
                     dueEpochMs: $0.dueEpochMs,
-                    description: $0.description
+                    description: $0.description,
+                    isChecking: entry.checkingIds.contains($0.id)
                 )
             },
             date: entry.date,
@@ -554,6 +628,8 @@ private struct WidgetTaskRowModel: Identifiable {
     let priority: String
     let dueEpochMs: Int64?
     let description: String?
+    /// Mid check-off: render the ring filled + the title struck-through for one beat.
+    var isChecking: Bool = false
 
     var note: String? {
         guard let trimmed = description?.trimmingCharacters(in: .whitespacesAndNewlines), !trimmed.isEmpty else {
@@ -946,11 +1022,13 @@ private struct TdayTasksWidgetContent: View {
             VStack(alignment: .leading, spacing: 1) {
                 Text(row.title)
                     .font(.system(size: metrics.rowFontSize, weight: .bold, design: .rounded))
+                    .strikethrough(row.isChecking, color: secondaryTextColor)
                     .lineLimit(2)
                 if metrics.showsNotes, let note = row.note {
                     Text(note)
                         .font(.system(size: metrics.rowFontSize - 2, weight: .semibold, design: .rounded))
                         .foregroundStyle(secondaryTextColor)
+                        .strikethrough(row.isChecking, color: secondaryTextColor)
                         .lineLimit(2)
                 }
             }
@@ -960,7 +1038,12 @@ private struct TdayTasksWidgetContent: View {
             }
         }
         .foregroundStyle(.primary)
+        // Dim the whole row as it's checked off, so the fade reads as "leaving".
+        .opacity(row.isChecking ? 0.55 : 1)
         .frame(minHeight: metrics.rowHeight, alignment: .leading)
+        // WidgetKit tweens between reloads; naming the animated values lets the ring
+        // fill + strikethrough + dim animate rather than hard-cut.
+        .animation(.easeInOut(duration: 0.2), value: row.isChecking)
         .accessibilityLabel(accessibilityLabel(for: row))
     }
 
@@ -986,14 +1069,23 @@ private struct TdayTasksWidgetContent: View {
     /// Tappable check ring (widgets v2): completes the task in place without
     /// opening the app. Keeps the priority colour the old leading dot carried.
     private func completeButton(for row: WidgetTaskRowModel) -> some View {
-        Button(intent: CompleteWidgetTaskIntent(kind: mode.completionKind, taskID: row.id)) {
-            Circle()
-                .strokeBorder(
-                    mode == .floater ? accentColor : widgetPriorityColor(row.priority),
-                    lineWidth: 1.6
-                )
-                .frame(width: 14, height: 14)
-                .contentShape(Circle())
+        let ringColor = mode == .floater ? accentColor : widgetPriorityColor(row.priority)
+        return Button(intent: CompleteWidgetTaskIntent(kind: mode.completionKind, taskID: row.id)) {
+            ZStack {
+                Circle()
+                    .strokeBorder(ringColor, lineWidth: 1.6)
+                // Fill + checkmark for the checked frame of the animation.
+                Circle()
+                    .fill(ringColor)
+                    .opacity(row.isChecking ? 1 : 0)
+                Image(systemName: "checkmark")
+                    .font(.system(size: 8, weight: .heavy))
+                    .foregroundStyle(.white)
+                    .opacity(row.isChecking ? 1 : 0)
+            }
+            .frame(width: 14, height: 14)
+            .contentShape(Circle())
+            .animation(.easeInOut(duration: 0.2), value: row.isChecking)
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Complete \(row.title)")
@@ -1129,6 +1221,8 @@ private struct FloaterTasksEntry: TimelineEntry {
     let status: FloaterTasksSnapshotStatus
     let taskCount: Int
     let tasks: [FloaterTaskSnapshot]
+    // Ids in the transient checked+struck frame of the check-off animation.
+    var checkingIds: Set<String> = []
 }
 
 private struct FloaterTaskSnapshot: Codable, Identifiable {
@@ -1214,16 +1308,20 @@ private struct FloaterTasksProvider: TimelineProvider {
             )
         }
 
-        // Hide rows completed from the widget that the app has not drained yet.
+        // Hide rows completed from the widget that the app has not drained yet — but
+        // keep a row mid check-off animation (checked + struck) until its beat ends.
+        let nowMs = Int64(Date().timeIntervalSince1970 * 1_000)
         let pending = WidgetPendingCompletionStore.pendingIds(kind: WidgetPendingCompletionStore.floaterKind)
-        let tasks = snapshot.tasks.filter { !pending.contains($0.id) }
+        let checking = WidgetPendingCompletionStore.checkingIds(kind: WidgetPendingCompletionStore.floaterKind, nowEpochMs: nowMs)
+        let tasks = snapshot.tasks.filter { checking.contains($0.id) || !pending.contains($0.id) }
         let taskCount = max(0, snapshot.taskCount - (snapshot.tasks.count - tasks.count))
         return FloaterTasksEntry(
             date: Date(timeIntervalSince1970: TimeInterval(snapshot.generatedAtEpochMs) / 1_000),
             title: snapshot.title,
             status: snapshot.status == .tasks && taskCount == 0 ? .empty : snapshot.status,
             taskCount: taskCount,
-            tasks: tasks
+            tasks: tasks,
+            checkingIds: checking
         )
     }
 
@@ -1307,7 +1405,8 @@ private struct FloaterTasksWidgetView: View {
                     title: $0.title,
                     priority: $0.priority,
                     dueEpochMs: nil,
-                    description: nil
+                    description: nil,
+                    isChecking: entry.checkingIds.contains($0.id)
                 )
             },
             date: entry.date,
