@@ -155,6 +155,17 @@ final class SyncManager {
             if contactedServer || syncedRemoteData {
                 NotificationCenter.default.post(name: .offlineSyncAttemptSucceeded, object: nil)
             }
+            // Refresh the widget's shared backend session (base URL + current auth
+            // cookie) so a check-ring tap can sync to the backend instantly. Only
+            // reached in server mode (local mode returns early above) and after the
+            // server calls succeeded, i.e. a valid session exists. No-ops if there
+            // is no cookie yet.
+            if let baseURL = try? api.currentBaseURL() {
+                WidgetBackendSession.save(
+                    baseURL: baseURL,
+                    pinnedFingerprint: api.trustedFingerprint(for: baseURL)
+                )
+            }
             return .success(())
         } catch {
             if isLikelyConnectivityIssue(error) {

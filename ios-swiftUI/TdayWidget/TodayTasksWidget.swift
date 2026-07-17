@@ -1,5 +1,7 @@
 #if canImport(WidgetKit) && canImport(SwiftUI)
 import AppIntents
+import CryptoKit
+import Security
 import SwiftUI
 import WidgetKit
 
@@ -48,9 +50,139 @@ enum WidgetPendingCompletionStore {
     }
 }
 
+/// Widget-side reader for the shared backend session the app writes after auth/sync
+/// (widgets v2 instant sync). Lets the check-ring intent fire an authenticated
+/// completion straight to the backend without opening the app. The app-side writer
+/// (`WidgetBackendSession.save/clear`) is duplicated in
+/// Tday/Core/Widget/TodayTasksWidgetSnapshotStore.swift; the file/key shapes must
+/// stay in lockstep. Stored with `.completeUntilFirstUserAuthentication`, so the
+/// widget can read it after the device's first unlock.
+enum WidgetBackendSession {
+    static let appGroupSuiteName = "group.com.ohmz.tday"
+    static let fileName = "widget-backend-session.json"
+
+    struct Payload: Codable {
+        let baseURL: String
+        let cookieHeader: String
+        /// The host's TOFU-pinned fingerprint when the app pinned one (self-signed /
+        /// privately-issued cert). Decoded leniently so a session written by an older
+        /// build (before pinning was shared) still loads.
+        let pinnedFingerprint: String?
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            baseURL = try container.decode(String.self, forKey: .baseURL)
+            cookieHeader = try container.decode(String.self, forKey: .cookieHeader)
+            pinnedFingerprint = try container.decodeIfPresent(String.self, forKey: .pinnedFingerprint)
+        }
+    }
+
+    private static func fileURL() -> URL? {
+        FileManager.default
+            .containerURL(forSecurityApplicationGroupIdentifier: appGroupSuiteName)?
+            .appendingPathComponent(fileName)
+    }
+
+    static func load() -> (baseURL: URL, cookieHeader: String, pinnedFingerprint: String?)? {
+        guard let fileURL = fileURL(),
+              let data = try? Data(contentsOf: fileURL),
+              let payload = try? JSONDecoder().decode(Payload.self, from: data),
+              let baseURL = URL(string: payload.baseURL),
+              !payload.cookieHeader.isEmpty else {
+            return nil
+        }
+        return (baseURL, payload.cookieHeader, payload.pinnedFingerprint)
+    }
+}
+
+/// Reproduces the app's TOFU certificate pinning for the widget's one-shot
+/// completion call. The widget has no keychain access, so the app hands it the
+/// pinned fingerprint through the shared session; without this delegate a plain
+/// URLSession rejects self-signed / privately-issued certs outright and instant
+/// sync would be silently dead on exactly the self-hosted setups the app's pinning
+/// exists to support. Mirrors NetworkConfiguration.urlSession(_:didReceive:):
+/// local hosts and system-trusted chains use default handling; anything else must
+/// match the pin. Unlike the app this never pins on first use — the widget only
+/// enforces a pin the app already established.
+private final class WidgetPinnedTrustDelegate: NSObject, URLSessionDelegate {
+    private let pinnedFingerprint: String?
+
+    init(pinnedFingerprint: String?) {
+        self.pinnedFingerprint = pinnedFingerprint
+    }
+
+    func urlSession(
+        _ session: URLSession,
+        didReceive challenge: URLAuthenticationChallenge,
+        completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void
+    ) {
+        guard challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodServerTrust,
+              let trust = challenge.protectionSpace.serverTrust else {
+            completionHandler(.performDefaultHandling, nil)
+            return
+        }
+
+        let host = challenge.protectionSpace.host.lowercased()
+        if Self.isLocalAddress(host: host) {
+            completionHandler(.performDefaultHandling, nil)
+            return
+        }
+
+        let policy = SecPolicyCreateSSL(true, host as CFString)
+        SecTrustSetPolicies(trust, policy)
+        if SecTrustEvaluateWithError(trust, nil) {
+            // Public-CA chain: standard validation, exactly like the app.
+            completionHandler(.performDefaultHandling, nil)
+            return
+        }
+
+        // Self-signed / privately issued: only proceed if it matches the app's pin.
+        guard let pinnedFingerprint,
+              let fingerprint = Self.fingerprintForTrust(trust),
+              fingerprint == pinnedFingerprint else {
+            completionHandler(.cancelAuthenticationChallenge, nil)
+            return
+        }
+        completionHandler(.useCredential, URLCredential(trust: trust))
+    }
+
+    private static func isLocalAddress(host: String) -> Bool {
+        host == "localhost" ||
+        host == "127.0.0.1" ||
+        host == "10.0.2.2" ||
+        host.hasPrefix("192.168.") ||
+        host.hasPrefix("10.") ||
+        host.hasSuffix(".local")
+    }
+
+    /// Must stay byte-identical to NetworkConfiguration.fingerprintForTrust, or a
+    /// pin the app stored would never match here.
+    private static func fingerprintForTrust(_ trust: SecTrust) -> String? {
+        guard let key = SecTrustCopyKey(trust) else {
+            return leafCertificateHash(for: trust)
+        }
+        var error: Unmanaged<CFError>?
+        guard let external = SecKeyCopyExternalRepresentation(key, &error) as Data? else {
+            return leafCertificateHash(for: trust)
+        }
+        return Data(SHA256.hash(data: external)).base64EncodedString()
+    }
+
+    private static func leafCertificateHash(for trust: SecTrust) -> String? {
+        guard let certificates = SecTrustCopyCertificateChain(trust) as? [SecCertificate],
+              let certificate = certificates.first else {
+            return nil
+        }
+        let data = SecCertificateCopyData(certificate) as Data
+        return Data(SHA256.hash(data: data)).base64EncodedString()
+    }
+}
+
 /// Completes a task straight from a widget row without opening the app.
-/// Runs in the widget process, so it only records the tap and refreshes the
-/// timeline; the app performs the real completion when it next activates.
+/// Runs in the widget process, so it records the tap (offline fallback), refreshes
+/// the timeline, and — best-effort — fires an authenticated completion to the
+/// backend so a checked-off task syncs instantly instead of waiting for the next
+/// app launch. Any network failure is swallowed: the app drains the queue later.
 struct CompleteWidgetTaskIntent: AppIntent {
     static let title: LocalizedStringResource = "Complete Task"
     // Widget-button plumbing only — never surfaced in Shortcuts or Spotlight.
@@ -71,11 +203,120 @@ struct CompleteWidgetTaskIntent: AppIntent {
     }
 
     func perform() async throws -> some IntentResult {
+        // Optimistic UI + offline fallback: record the tap and refresh the timeline
+        // first, so the row disappears immediately regardless of network outcome.
         WidgetPendingCompletionStore.append(kind: kind, id: taskID)
         WidgetCenter.shared.reloadTimelines(
             ofKind: kind == WidgetPendingCompletionStore.floaterKind ? "FloaterTasksWidget" : "TodayTasksWidget"
         )
+        // Best-effort instant backend sync. The pending-completion queue (kept above,
+        // and the backend complete endpoints are idempotent) remains the fallback,
+        // so any failure here is swallowed — the app reconciles on next activation.
+        await sendBackendCompletion()
         return .result()
+    }
+
+    private func sendBackendCompletion() async {
+        guard let session = WidgetBackendSession.load(),
+              let request = Self.completionRequest(
+                  kind: kind,
+                  taskID: taskID,
+                  baseURL: session.baseURL,
+                  cookieHeader: session.cookieHeader
+              ) else {
+            return
+        }
+        let configuration = URLSessionConfiguration.ephemeral
+        // perform() must await this call (returning early would let the system tear
+        // the process down mid-flight), and the system spins the tapped ring until
+        // perform() returns — so keep the ceiling tight. A completion PATCH is tiny;
+        // if it can't land in this window the queue fallback covers it anyway.
+        configuration.timeoutIntervalForRequest = 6
+        configuration.timeoutIntervalForResource = 6
+        configuration.waitsForConnectivity = false
+        // Delegate reproduces the app's TOFU pin so self-hosted servers with
+        // self-signed certs work here too (a delegate-less session rejects them).
+        let urlSession = URLSession(
+            configuration: configuration,
+            delegate: WidgetPinnedTrustDelegate(pinnedFingerprint: session.pinnedFingerprint),
+            delegateQueue: nil
+        )
+        defer { urlSession.finishTasksAndInvalidate() }
+        // Swallow every error — the queue is the fallback and must never surface a
+        // failure to the user from a widget tap.
+        _ = try? await urlSession.data(for: request)
+    }
+
+    /// Resolves the completion payload from the App Group snapshot (canonical id +,
+    /// for todos, the recurring-instance date) and builds the authenticated PATCH.
+    /// Returns nil when the task isn't found — the queue still handles it.
+    private static func completionRequest(
+        kind: String,
+        taskID: String,
+        baseURL: URL,
+        cookieHeader: String
+    ) -> URLRequest? {
+        let path: String
+        var body: [String: Any] = [:]
+        if kind == WidgetPendingCompletionStore.floaterKind {
+            guard let canonicalId = floaterCanonicalId(taskID: taskID) else {
+                return nil
+            }
+            path = "/api/floater/complete"
+            body["id"] = canonicalId
+        } else {
+            guard let payload = todoCompletionPayload(taskID: taskID) else {
+                return nil
+            }
+            path = "/api/todo/complete"
+            body["id"] = payload.canonicalId
+            // Present as an explicit JSON null for non-recurring todos, matching the
+            // app's own TodoCompleteRequest encoding.
+            if let instanceDateEpochMs = payload.instanceDateEpochMs {
+                body["instanceDate"] = Date(timeIntervalSince1970: TimeInterval(instanceDateEpochMs) / 1_000).ISO8601Format()
+            } else {
+                body["instanceDate"] = NSNull()
+            }
+        }
+
+        let url = baseURL.appendingPathComponent(path.trimmingCharacters(in: CharacterSet(charactersIn: "/")))
+        guard let data = try? JSONSerialization.data(withJSONObject: body) else {
+            return nil
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "PATCH"
+        request.httpBody = data
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(cookieHeader, forHTTPHeaderField: "Cookie")
+        // Identify as the iOS client at the app's version, exactly like
+        // NetworkConfiguration.defaultHeaders. Without these the backend's mobile
+        // version gate (which returns 426/409 for incompatible builds) skips this
+        // request entirely, letting the widget write to a server the app itself is
+        // deliberately fenced off from. The extension's CFBundleShortVersionString
+        // is the app's MARKETING_VERSION, so it blocks identically.
+        request.setValue("ios", forHTTPHeaderField: "X-Tday-Client")
+        request.setValue(
+            Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown",
+            forHTTPHeaderField: "X-Tday-App-Version"
+        )
+        request.setValue(TimeZone.current.identifier, forHTTPHeaderField: "X-User-Timezone")
+        return request
+    }
+
+    private static func todoCompletionPayload(taskID: String) -> (canonicalId: String, instanceDateEpochMs: Int64?)? {
+        guard let snapshot = TodayTasksProvider.loadWidgetSnapshot(),
+              let task = snapshot.tasks.first(where: { $0.id == taskID }) else {
+            return nil
+        }
+        return (task.canonicalId, task.instanceDateEpochMs)
+    }
+
+    private static func floaterCanonicalId(taskID: String) -> String? {
+        guard let snapshot = FloaterTasksProvider.loadWidgetSnapshot(),
+              let task = snapshot.tasks.first(where: { $0.id == taskID }) else {
+            return nil
+        }
+        return task.canonicalId
     }
 }
 
@@ -94,19 +335,41 @@ private struct TodayTaskSnapshot: Codable, Identifiable {
     let priority: String
     // Optional so snapshots persisted before this field existed still decode (as nil).
     let description: String?
+    // Backend-completion payload (widgets v2 instant sync): the CANONICAL id the
+    // /api/todo/complete endpoint expects, plus the recurring-instance date.
+    // Defaulted so snapshots persisted before these existed still decode
+    // (canonicalId falls back to the display id).
+    let canonicalId: String
+    let instanceDateEpochMs: Int64?
 
     init(
         id: String,
         title: String,
         dueEpochMs: Int64,
         priority: String,
-        description: String? = nil
+        description: String? = nil,
+        canonicalId: String? = nil,
+        instanceDateEpochMs: Int64? = nil
     ) {
         self.id = id
         self.title = title
         self.dueEpochMs = dueEpochMs
         self.priority = priority
         self.description = description
+        self.canonicalId = canonicalId ?? id
+        self.instanceDateEpochMs = instanceDateEpochMs
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let decodedId = try container.decode(String.self, forKey: .id)
+        id = decodedId
+        title = try container.decode(String.self, forKey: .title)
+        dueEpochMs = try container.decode(Int64.self, forKey: .dueEpochMs)
+        priority = try container.decode(String.self, forKey: .priority)
+        description = try container.decodeIfPresent(String.self, forKey: .description)
+        canonicalId = try container.decodeIfPresent(String.self, forKey: .canonicalId) ?? decodedId
+        instanceDateEpochMs = try container.decodeIfPresent(Int64.self, forKey: .instanceDateEpochMs)
     }
 }
 
@@ -205,6 +468,11 @@ private struct TodayTasksProvider: TimelineProvider {
             return snapshot
         }
         return nil
+    }
+
+    /// Snapshot access for the completion intent's canonical-id resolution.
+    static func loadWidgetSnapshot() -> TodayTasksSnapshot? {
+        loadSnapshot()
     }
 
     private static func defaultsStores() -> [UserDefaults] {
@@ -867,6 +1135,31 @@ private struct FloaterTaskSnapshot: Codable, Identifiable {
     let id: String
     let title: String
     let priority: String
+    // Backend-completion payload (widgets v2 instant sync): the CANONICAL id the
+    // /api/floater/complete endpoint expects. Defaulted so snapshots persisted
+    // before this existed still decode (canonicalId falls back to the display id).
+    let canonicalId: String
+
+    init(
+        id: String,
+        title: String,
+        priority: String,
+        canonicalId: String? = nil
+    ) {
+        self.id = id
+        self.title = title
+        self.priority = priority
+        self.canonicalId = canonicalId ?? id
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let decodedId = try container.decode(String.self, forKey: .id)
+        id = decodedId
+        title = try container.decode(String.self, forKey: .title)
+        priority = try container.decode(String.self, forKey: .priority)
+        canonicalId = try container.decodeIfPresent(String.self, forKey: .canonicalId) ?? decodedId
+    }
 }
 
 private enum FloaterTasksSnapshotStatus: String, Codable {
@@ -943,6 +1236,11 @@ private struct FloaterTasksProvider: TimelineProvider {
             return snapshot
         }
         return nil
+    }
+
+    /// Snapshot access for the completion intent's canonical-id resolution.
+    static func loadWidgetSnapshot() -> FloaterTasksSnapshot? {
+        loadSnapshot()
     }
 
     private static func defaultsStores() -> [UserDefaults] {
