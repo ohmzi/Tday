@@ -123,6 +123,18 @@ final class TdayAPIService {
         self.configuration = configuration
     }
 
+    /// The configured server base URL, for callers that need it directly (e.g.
+    /// persisting the widget's shared backend session for instant check-off sync).
+    func currentBaseURL() throws -> URL {
+        try configuration.currentBaseURL()
+    }
+
+    /// The TOFU-pinned certificate fingerprint for `url`'s host, if the app has one.
+    /// Passed to the widget so its instant-completion call can honour the same pin.
+    func trustedFingerprint(for url: URL) -> String? {
+        configuration.trustedFingerprint(for: url)
+    }
+
     /// True (and clears the record) if the last connection to `host` was cancelled
     /// by the TLS pinning check because its certificate fingerprint changed.
     func consumeTrustFailure(forHost host: String) -> Bool {
