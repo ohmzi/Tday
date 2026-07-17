@@ -63,6 +63,13 @@ struct TodayTasksWidgetTaskSnapshot: Codable, Equatable, Identifiable {
     // persisted before these existed still decode.
     let pinned: Bool
     let updatedAtEpochMs: Int64?
+    // Backend-completion payload (widgets v2 instant sync): the CANONICAL id the
+    // /api/todo/complete endpoint expects, plus the recurring-instance date. `id`
+    // (the display id) is not always the canonical id for recurring instances, so
+    // the widget carries both. Defaulted so snapshots persisted before these
+    // existed still decode (canonicalId falls back to the display id).
+    let canonicalId: String
+    let instanceDateEpochMs: Int64?
 
     init(
         id: String,
@@ -71,7 +78,9 @@ struct TodayTasksWidgetTaskSnapshot: Codable, Equatable, Identifiable {
         priority: String,
         description: String? = nil,
         pinned: Bool = false,
-        updatedAtEpochMs: Int64? = nil
+        updatedAtEpochMs: Int64? = nil,
+        canonicalId: String? = nil,
+        instanceDateEpochMs: Int64? = nil
     ) {
         self.id = id
         self.title = title
@@ -80,17 +89,22 @@ struct TodayTasksWidgetTaskSnapshot: Codable, Equatable, Identifiable {
         self.description = description
         self.pinned = pinned
         self.updatedAtEpochMs = updatedAtEpochMs
+        self.canonicalId = canonicalId ?? id
+        self.instanceDateEpochMs = instanceDateEpochMs
     }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        id = try container.decode(String.self, forKey: .id)
+        let decodedId = try container.decode(String.self, forKey: .id)
+        id = decodedId
         title = try container.decode(String.self, forKey: .title)
         dueEpochMs = try container.decode(Int64.self, forKey: .dueEpochMs)
         priority = try container.decode(String.self, forKey: .priority)
         description = try container.decodeIfPresent(String.self, forKey: .description)
         pinned = try container.decodeIfPresent(Bool.self, forKey: .pinned) ?? false
         updatedAtEpochMs = try container.decodeIfPresent(Int64.self, forKey: .updatedAtEpochMs)
+        canonicalId = try container.decodeIfPresent(String.self, forKey: .canonicalId) ?? decodedId
+        instanceDateEpochMs = try container.decodeIfPresent(Int64.self, forKey: .instanceDateEpochMs)
     }
 }
 
@@ -160,7 +174,9 @@ enum TodayTasksWidgetSnapshotStore {
                     priority: $0.priority,
                     description: $0.description,
                     pinned: $0.pinned,
-                    updatedAtEpochMs: $0.updatedAtEpochMs > 0 ? $0.updatedAtEpochMs : nil
+                    updatedAtEpochMs: $0.updatedAtEpochMs > 0 ? $0.updatedAtEpochMs : nil,
+                    canonicalId: $0.canonicalId,
+                    instanceDateEpochMs: $0.instanceDateEpochMs
                 )
             }
         )
@@ -268,28 +284,37 @@ struct FloaterTasksWidgetTaskSnapshot: Codable, Equatable, Identifiable {
     // persisted before these existed still decode.
     let pinned: Bool
     let updatedAtEpochMs: Int64?
+    // Backend-completion payload (widgets v2 instant sync): the CANONICAL id the
+    // /api/floater/complete endpoint expects. Floaters have no instance date.
+    // Defaulted so snapshots persisted before this existed still decode
+    // (canonicalId falls back to the display id).
+    let canonicalId: String
 
     init(
         id: String,
         title: String,
         priority: String,
         pinned: Bool = false,
-        updatedAtEpochMs: Int64? = nil
+        updatedAtEpochMs: Int64? = nil,
+        canonicalId: String? = nil
     ) {
         self.id = id
         self.title = title
         self.priority = priority
         self.pinned = pinned
         self.updatedAtEpochMs = updatedAtEpochMs
+        self.canonicalId = canonicalId ?? id
     }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        id = try container.decode(String.self, forKey: .id)
+        let decodedId = try container.decode(String.self, forKey: .id)
+        id = decodedId
         title = try container.decode(String.self, forKey: .title)
         priority = try container.decode(String.self, forKey: .priority)
         pinned = try container.decodeIfPresent(Bool.self, forKey: .pinned) ?? false
         updatedAtEpochMs = try container.decodeIfPresent(Int64.self, forKey: .updatedAtEpochMs)
+        canonicalId = try container.decodeIfPresent(String.self, forKey: .canonicalId) ?? decodedId
     }
 }
 
@@ -340,7 +365,8 @@ enum FloaterTasksWidgetSnapshotStore {
                     title: $0.title,
                     priority: $0.priority,
                     pinned: $0.pinned,
-                    updatedAtEpochMs: $0.updatedAtEpochMs > 0 ? $0.updatedAtEpochMs : nil
+                    updatedAtEpochMs: $0.updatedAtEpochMs > 0 ? $0.updatedAtEpochMs : nil,
+                    canonicalId: $0.canonicalId
                 )
             }
         )
@@ -418,5 +444,104 @@ enum WidgetPendingCompletionQueue {
         }
         store.removeObject(forKey: queueKey)
         return entries
+    }
+}
+
+/// App-side writer for the shared backend session the widget uses to fire an
+/// authenticated completion straight from a tapped check ring (widgets v2 instant
+/// sync). The widget process has no login session of its own, so the app hands it
+/// the base URL + a pre-built Cookie header through the App Group container.
+///
+/// The session cookie is sensitive, so it is stored in a file (NOT UserDefaults,
+/// which is unencrypted on disk) with `.completeUntilFirstUserAuthentication`
+/// protection — encrypted at rest, readable by the widget after the first unlock,
+/// mirroring the app's AfterFirstUnlock keychain semantics. A widget-side reader
+/// (`WidgetBackendSession.load()`) is duplicated in TdayWidget/TodayTasksWidget.swift.
+enum WidgetBackendSession {
+    static let appGroupSuiteName = "group.com.ohmz.tday"
+    static let fileName = "widget-backend-session.json"
+
+    /// Mirrors CookieStore.authCookieNames. The session cookie is the ONLY one that
+    /// authenticates; auth.js also sets `authjs.csrf-token` / `authjs.callback-url`,
+    /// which linger after the session cookie expires.
+    private static let authCookieNames: Set<String> = [
+        "authjs.session-token",
+        "__Secure-authjs.session-token",
+    ]
+
+    struct Payload: Codable {
+        let baseURL: String
+        let cookieHeader: String
+        /// The host's TOFU-pinned public-key fingerprint, when the app has one (i.e.
+        /// a self-signed / privately-issued cert). The widget has no keychain access,
+        /// so without this it could not reproduce the app's pinning and its TLS
+        /// handshake to such a server would simply fail. Defaulted for old payloads.
+        let pinnedFingerprint: String?
+
+        init(baseURL: String, cookieHeader: String, pinnedFingerprint: String? = nil) {
+            self.baseURL = baseURL
+            self.cookieHeader = cookieHeader
+            self.pinnedFingerprint = pinnedFingerprint
+        }
+    }
+
+    private static func fileURL() -> URL? {
+        FileManager.default
+            .containerURL(forSecurityApplicationGroupIdentifier: appGroupSuiteName)?
+            .appendingPathComponent(fileName)
+    }
+
+    /// Captures the current cookies for `baseURL` and persists them (encrypted at
+    /// rest) so the widget can authenticate its instant completion call. No-op if
+    /// the App Group container is unavailable; clears the session when there is no
+    /// live auth cookie to hand over.
+    ///
+    /// `pinnedFingerprint` carries the app's TOFU pin for this host (nil for
+    /// system-trusted or local servers, which need no pin).
+    static func save(baseURL: URL, pinnedFingerprint: String? = nil) {
+        guard let fileURL = fileURL() else {
+            return
+        }
+        let cookies = HTTPCookieStorage.shared.cookies(for: baseURL) ?? []
+        // Require the SESSION cookie specifically — not merely a non-empty header.
+        // CookieStore.removeExpiredAuthCookies() drops only the expired session
+        // cookie, leaving csrf/callback-url behind; keying off "any cookie" would
+        // keep overwriting the file with a session-less header, so every widget tap
+        // would 401 forever (silently) instead of clearing the stale session here.
+        guard cookies.contains(where: { authCookieNames.contains($0.name) }) else {
+            clear()
+            return
+        }
+        let cookieHeader = cookies
+            .map { "\($0.name)=\($0.value)" }
+            .joined(separator: "; ")
+        let payload = Payload(
+            baseURL: baseURL.absoluteString,
+            cookieHeader: cookieHeader,
+            pinnedFingerprint: pinnedFingerprint
+        )
+        guard let data = try? JSONEncoder().encode(payload) else {
+            return
+        }
+        do {
+            try data.write(to: fileURL, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+            // Keep the session token out of device backups. Protected-until-first-unlock
+            // files still land in the clear inside an UNENCRYPTED Finder/iTunes backup,
+            // whereas the Keychain copy this mirrors is sealed to the device. Excluding
+            // it keeps the widget's copy device-bound like the original.
+            var resourceValues = URLResourceValues()
+            resourceValues.isExcludedFromBackup = true
+            var mutableURL = fileURL
+            try? mutableURL.setResourceValues(resourceValues)
+        } catch {
+            // Best-effort: the pending-completion queue remains the fallback.
+        }
+    }
+
+    static func clear() {
+        guard let fileURL = fileURL() else {
+            return
+        }
+        try? FileManager.default.removeItem(at: fileURL)
     }
 }

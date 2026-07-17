@@ -165,6 +165,16 @@ final class NetworkConfiguration: NSObject, URLSessionDelegate {
         return !isLocalAddress(host: host)
     }
 
+    /// The TOFU pin stored for `url`'s host, if any. Nil for local or system-trusted
+    /// servers (which never get pinned). Handed to the widget alongside the session
+    /// so its own URLSession can reproduce this pinning — it has no keychain access.
+    func trustedFingerprint(for url: URL) -> String? {
+        guard let host = url.host?.lowercased() else {
+            return nil
+        }
+        return secureStore.trustedFingerprint(for: host)
+    }
+
     /// True if the server trust chains up to a system-trusted (public CA) anchor and
     /// passes hostname validation. Such certificates are left to standard CA
     /// validation rather than TOFU pinning.

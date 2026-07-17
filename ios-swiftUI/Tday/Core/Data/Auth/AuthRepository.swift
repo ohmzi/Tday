@@ -155,6 +155,14 @@ final class AuthRepository: AuthRepositoryServicing {
                 secureStore.saveLastUsername(normalizedUsername)
                 serverConfigRepository.persistRuntimeServerURL()
                 await syncTimezone()
+                // Hand the widget a fresh backend session so a check-ring tap can
+                // sync to the backend instantly (widgets v2 instant sync).
+                if let baseURL = try? api.currentBaseURL() {
+                    WidgetBackendSession.save(
+                        baseURL: baseURL,
+                        pinnedFingerprint: api.trustedFingerprint(for: baseURL)
+                    )
+                }
                 return .success
             }
             return .error("Sign in failed. Please check backend URL and credentials.")
@@ -296,6 +304,9 @@ final class AuthRepository: AuthRepositoryServicing {
         secureStore.clearCachedSessionUser()
         cacheManager.clearSessionOnly()
         cookieStore.clearAll()
+        // The widget's shared session mirrors the auth cookie — drop it in lockstep
+        // so the widget can't fire completions with a now-invalid cookie.
+        WidgetBackendSession.clear()
     }
 
     @MainActor
@@ -307,6 +318,9 @@ final class AuthRepository: AuthRepositoryServicing {
     private func clearAllLocalUserDataForUnauthenticatedState(preservingServerConfiguration: Bool) {
         cacheManager.clearAllLocalData()
         cookieStore.clearAll()
+        // Logout / entering local mode / unauthenticated reset all funnel here — drop
+        // the widget's shared backend session so it stops firing instant completions.
+        WidgetBackendSession.clear()
         secureStore.clearAllUserValues(preservingServerURL: preservingServerConfiguration)
         themeStore.clear()
         reminderPreferenceStore.clear()
