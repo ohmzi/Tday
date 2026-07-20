@@ -13,7 +13,10 @@ import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -46,6 +49,16 @@ interface PushNotificationService {
     ): Either<AppError, Unit>
     suspend fun unsubscribe(userId: String, endpoint: String): Either<AppError, Unit>
     suspend fun sendToUser(userId: String, title: String, body: String, url: String? = null, todoId: String? = null): Either<AppError, Unit>
+
+    /**
+     * Fire-and-forget SILENT "data changed" ping so a backgrounded device can refresh its
+     * home-screen widgets even when the app process is dead. Delivered ONLY to UnifiedPush
+     * endpoints (a plain POST the device turns into a widget sync — no user-visible notification);
+     * Web Push endpoints are skipped so browsers don't surface a junk notification. Returns
+     * immediately; delivery runs on a detached scope so a mutation's response never waits on it.
+     */
+    fun notifyDataChanged(userIds: Collection<String>)
+
     fun isConfigured(): Boolean
     fun getVapidPublicKey(): String?
 }
@@ -79,6 +92,7 @@ class PushNotificationServiceImpl(private val config: AppConfig) : PushNotificat
 
     private companion object {
         const val UNIFIEDPUSH_TIMEOUT_MS = 10_000L
+        const val DATA_CHANGED_TYPE = "data-changed"
     }
 
     override fun getVapidPublicKey(): String? = config.vapidPublicKey
@@ -190,6 +204,71 @@ class PushNotificationServiceImpl(private val config: AppConfig) : PushNotificat
         }
 
         return Unit.right()
+    }
+
+    // Detached scope for fire-and-forget silent pushes so a mutation's response is never blocked
+    // on the distributor POST (mirrors WebhookDispatchService).
+    private val dataChangedScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    override fun notifyDataChanged(userIds: Collection<String>) {
+        val users = userIds.toSet()
+        if (users.isEmpty()) return
+        dataChangedScope.launch {
+            runCatching { sendDataChanged(users) }
+                .onFailure { logger.warn("data-changed push failed: {}", it.message) }
+        }
+    }
+
+    private suspend fun sendDataChanged(userIds: Set<String>) {
+        val userIdList = userIds.toList()
+        // UnifiedPush only: a plain POST the device converts into a widget sync. Web Push endpoints
+        // are excluded so browsers never surface a silent-notification placeholder.
+        val targets = newSuspendedTransaction(Dispatchers.IO) {
+            PushSubscriptions.selectAll()
+                .where {
+                    (PushSubscriptions.userID inList userIdList) and
+                        (PushSubscriptions.transport eq TRANSPORT_UNIFIEDPUSH)
+                }
+                .map { row ->
+                    PushTarget(
+                        id = row[PushSubscriptions.id],
+                        endpoint = row[PushSubscriptions.endpoint],
+                        p256dh = row[PushSubscriptions.p256dh],
+                        auth = row[PushSubscriptions.auth],
+                        transport = row[PushSubscriptions.transport],
+                    )
+                }
+        }
+
+        if (targets.isEmpty()) return
+
+        val payload = buildJsonObject { put("type", DATA_CHANGED_TYPE) }.toString()
+        val staleIds = mutableListOf<String>()
+
+        withContext(Dispatchers.IO) {
+            for (target in targets) {
+                try {
+                    val statusCode = httpClient.post(target.endpoint) {
+                        contentType(ContentType.Application.Json)
+                        setBody(payload)
+                    }.status.value
+                    if (statusCode in listOf(404, 410)) {
+                        staleIds.add(target.id)
+                        logger.debug("Push endpoint gone ({}), marking stale: {}", statusCode, target.endpoint.take(60))
+                    }
+                } catch (e: Exception) {
+                    logger.warn("Failed to send data-changed push to {}: {}", target.endpoint.take(60), e.message)
+                }
+            }
+        }
+
+        if (staleIds.isNotEmpty()) {
+            newSuspendedTransaction(Dispatchers.IO) {
+                for (id in staleIds) {
+                    PushSubscriptions.deleteWhere { PushSubscriptions.id eq id }
+                }
+            }
+        }
     }
 
     private data class PushTarget(

@@ -12,6 +12,7 @@ import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.model.PushSubscribeRequest
 import com.ohmz.tday.compose.core.model.PushUnsubscribeRequest
 import com.ohmz.tday.compose.core.notification.TaskReminderReceiver
+import com.ohmz.tday.compose.feature.widget.WidgetSyncWorker
 import dagger.hilt.android.EntryPointAccessors
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -68,6 +69,15 @@ class UnifiedPushReceiver : MessagingReceiver() {
         fun field(name: String): String? =
             runCatching { payload[name]?.jsonPrimitive?.content }.getOrNull()
 
+        // Silent "data changed" ping: the backend fires this on every mutation so a backgrounded
+        // device refreshes its home-screen widgets even with the app process dead. No notification —
+        // just kick the widget sync worker (it syncs the cache, which re-renders both widgets).
+        if (field("type") == DATA_CHANGED_TYPE) {
+            runCatching { WidgetSyncWorker.runOnce(context) }
+                .onFailure { Log.w(TAG, "Failed to trigger widget sync from push: ${it.message}") }
+            return
+        }
+
         val title = field("title") ?: context.getString(R.string.reminder_notification_default_title)
         val body = field("body").orEmpty()
         val todoId = field("todoId")
@@ -110,5 +120,6 @@ class UnifiedPushReceiver : MessagingReceiver() {
 
     private companion object {
         const val TAG = "UnifiedPushReceiver"
+        const val DATA_CHANGED_TYPE = "data-changed"
     }
 }
