@@ -95,7 +95,7 @@ val serviceModule = module {
     single<ListShareService> { ListShareServiceImpl(get(), get()) }
     single<WebhookDispatchService> { WebhookDispatchServiceImpl(get()) }
     single<WebhookService> { WebhookServiceImpl(get()) }
-    single { RealtimePublisher(get(), get(), get(), get()) }
+    single { RealtimePublisher(get(), get(), get(), get(), get()) }
     single<TodoService> { TodoServiceImpl(get(), get(), get(), get()) }
     single<FloaterService> { FloaterServiceImpl(get(), get(), get(), get()) }
     single<ListService> { ListServiceImpl(get(), get(), get()) }

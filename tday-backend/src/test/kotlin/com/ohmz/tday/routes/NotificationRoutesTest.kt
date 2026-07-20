@@ -105,6 +105,8 @@ class NotificationRoutesTest {
             todoId: String?,
         ): Either<AppError, Unit> = Unit.right()
 
+        override fun notifyDataChanged(userIds: Collection<String>) = Unit
+
         override fun isConfigured(): Boolean = true
 
         override fun getVapidPublicKey(): String? = null
