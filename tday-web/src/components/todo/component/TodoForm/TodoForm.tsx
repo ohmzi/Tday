@@ -34,6 +34,7 @@ import TaskStepsSection from "./TaskStepsSection";
 import TaskSelectorOverlays, { type TaskSelector } from "./TodoFormSelectors";
 import { priorityLabelKey, repeatLabelKey } from "./labels";
 import { getPriorityFlag } from "@/lib/priority";
+import { isSubmitEnter } from "@/lib/utils";
 
 interface TodoFormProps {
   editInstanceOnly?: boolean;
@@ -141,6 +142,11 @@ const TodoForm = ({
         <input
           value={desc}
           onChange={(e) => setDesc(e.target.value)}
+          onKeyDown={(e) => {
+            if (!isSubmitEnter(e)) return;
+            e.preventDefault();
+            handleForm();
+          }}
           name="description"
           placeholder={appDict("notes")}
           className="w-full bg-transparent px-[18px] py-3 text-base font-bold text-foreground placeholder:font-bold placeholder:text-muted-foreground/60 focus:outline-hidden"
