@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/sheet-chrome/CenteredSelectorOverlay";
 import { prioritySwatchClass } from "@/components/ui/sheet-chrome/swatches";
 import { getPriorityFlag } from "@/lib/priority";
+import { isSubmitEnter } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useCreateFloater } from "@/features/floater/query/create-floater";
 import { useEditFloater } from "@/features/floater/query/update-floater";
@@ -144,9 +145,14 @@ export default function FloaterFormSheet({
               onChange={(event) => setTitle(event.target.value)}
               enterKeyHint="done"
               onKeyDown={(event) => {
-                if (event.key === "Enter" && !event.shiftKey) {
-                  // Enter dismisses the keyboard (like native); Shift+Enter adds a newline.
-                  event.preventDefault();
+                if (event.key !== "Enter" || event.shiftKey) return;
+                // Shift+Enter adds a newline. Plain Enter saves and closes the
+                // sheet on desktop, and dismisses the keyboard (like native) on
+                // touch.
+                event.preventDefault();
+                if (isSubmitEnter(event)) {
+                  handleSubmit();
+                } else {
                   event.currentTarget.blur();
                 }
               }}
@@ -158,6 +164,11 @@ export default function FloaterFormSheet({
           <input
             value={description}
             onChange={(event) => setDescription(event.target.value)}
+            onKeyDown={(event) => {
+              if (!isSubmitEnter(event)) return;
+              event.preventDefault();
+              handleSubmit();
+            }}
             name="description"
             placeholder={appDict("notes")}
             className="w-full bg-transparent px-[18px] py-3 text-base font-bold text-foreground placeholder:font-bold placeholder:text-muted-foreground/60 focus:outline-hidden"
