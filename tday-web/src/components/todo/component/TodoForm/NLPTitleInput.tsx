@@ -2,7 +2,7 @@ import { getCaretOffset } from "@/components/todo/lib/getCaretOffset";
 import { setCaretOffset } from "@/components/todo/lib/setCaretOffset";
 import { parseRecurrencePriority, type TodoPriority } from "@/lib/todoNlp";
 import { useLocale } from "@/lib/navigation";
-import { cn, isDesktopPointer } from "@/lib/utils";
+import { cn, isSubmitEnter } from "@/lib/utils";
 import * as chrono from "chrono-node";
 import { RRule, type Options } from "rrule";
 import React, { SetStateAction, useEffect, useRef } from "react";
@@ -138,18 +138,13 @@ export default function NLPTitleInput({
         onKeyDown={(e) => {
           if (isComposing.current) return;
           if (e.key === "Enter") {
-            const plainEnter =
-              !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey;
-            const nativeComposing =
-              e.nativeEvent.isComposing || e.keyCode === 229;
-            if (onSubmit && plainEnter && !nativeComposing && isDesktopPointer()) {
+            e.preventDefault();
+            if (onSubmit && isSubmitEnter(e)) {
               // Desktop: plain Enter submits the form.
-              e.preventDefault();
               onSubmit();
               return;
             }
             // Enter dismisses the keyboard (like native) instead of submitting.
-            e.preventDefault();
             titleRef.current?.blur();
           }
         }}
