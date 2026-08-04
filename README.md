@@ -10,7 +10,8 @@ a single product expressed across web, Android, and iOS:
 - Floater/Anytime tasks for unscheduled work, with their own lists and completed history.
 - Calendar with month, week, and day views, anchored headers, bounded navigation, overdue
   visibility, and cross-platform paging rules.
-- Local Mode on Android and iOS for offline-only use without server setup or login.
+- Local Mode on Android, iOS, and the web for offline-only use without server setup or login.
+  On the web the workspace lives in the browser's own storage, so clearing site data clears it.
 - Server Mode for self-hosted sync, realtime updates, encrypted sessions, and private PostgreSQL
   storage.
 - Local-first mobile data backed by Room on Android and SwiftData on iOS.
@@ -178,7 +179,7 @@ Tday/
 | List              | Project/group for scheduled tasks                                                                 |
 | Floater list      | Project/group for floaters                                                                        |
 | Completed history | Completed todo and completed floater records, preserving list metadata where possible             |
-| Local Mode        | Mobile-only workspace that never requires server setup or login                                   |
+| Local Mode        | Workspace that never requires server setup or login; on the web it lives in browser storage       |
 | Server Mode       | Authenticated self-hosted workspace with local optimistic writes and sync replay                  |
 
 The detailed data contract lives in [`docs/DATA_MODEL.md`](docs/DATA_MODEL.md).

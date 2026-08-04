@@ -673,7 +673,8 @@
       "confirmBody": "Isto adiciona {{count}} itens à sua conta. Nada do que já tem é alterado ou removido.",
       "confirmRemapped": "{{count}} itens com IDs em conflito serão adicionados como novas cópias.",
       "confirmCancel": "Cancelar",
-      "confirmImport": "Importar"
+      "confirmImport": "Importar",
+      "summaryLocal": "{{tasks}} tarefas · {{lists}} listas · {{completed}} concluídas, tudo neste navegador."
     },
     "calendarFeed": {
       "title": "Feed de calendário",
@@ -702,6 +703,18 @@
     "restingFloaters": {
       "title": "Flutuantes em repouso",
       "toggle": "Desbotar tarefas Anytime intocadas"
+    },
+    "workspace": {
+      "title": "Espaço de trabalho",
+      "localTitle": "Espaço local",
+      "localDetail": "Guardado apenas neste navegador — sem conta, sem sincronização.",
+      "leave": "Sair do espaço local",
+      "delete": "Eliminar os dados locais",
+      "deleteConfirmTitle": "Eliminar os dados locais?",
+      "deleteConfirmBody": "Isto remove definitivamente todas as tarefas, listas e entradas concluídas guardadas neste navegador. Não existe cópia num servidor — descarregue os seus dados antes se quiser mantê-los.",
+      "deleteConfirmCancel": "Cancelar",
+      "deleteConfirmAction": "Eliminar",
+      "deleteDone": "Dados locais eliminados."
     }
   },
   "summary": {
@@ -1002,7 +1015,7 @@
         "title": "Modo local",
         "summary": "Use o T'Day totalmente offline, sem servidor nem conta.",
         "keywords": "modo local, offline, privado, sem conta, sem servidor, no dispositivo",
-        "body": "O Modo local mantém tudo no seu dispositivo — sem início de sessão, sem servidor, sem envios. É uma forma de primeira classe de usar o T'Day em privado, e os seus dados locais nunca são enviados para lado nenhum por conta própria.",
+        "body": "O Modo local mantém tudo no seu dispositivo — sem início de sessão, sem servidor, sem envios. É uma forma de primeira classe de usar o T'Day em privado, e os seus dados locais nunca são enviados para lado nenhum por conta própria. Num navegador vive no armazenamento desse navegador, por isso limpar os cookies e os dados do site limpa também o espaço de trabalho — exporte-o antes se quiser mantê-lo.",
         "tip": "As funcionalidades exclusivas do servidor aparecem aqui com um selo “Modo servidor” para saber o que muda se iniciar sessão."
       },
       "server-mode": {

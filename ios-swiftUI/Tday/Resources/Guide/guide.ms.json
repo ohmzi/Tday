@@ -1191,6 +1191,7 @@
       "sectionOrder": 6,
       "icon": "wifi-off",
       "platforms": [
+        "WEB",
         "ANDROID",
         "IOS"
       ],
@@ -1205,7 +1206,7 @@
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Mod Tempatan menyimpan segalanya pada peranti anda — tiada log masuk, tiada pelayan, tiada muat naik. Ia cara utama untuk menggunakan T'Day secara peribadi, dan data tempatan anda tidak pernah dihantar ke mana-mana dengan sendirinya."
+            "Mod Tempatan menyimpan segalanya pada peranti anda — tiada log masuk, tiada pelayan, tiada muat naik. Ia cara utama untuk menggunakan T'Day secara peribadi, dan data tempatan anda tidak pernah dihantar ke mana-mana dengan sendirinya. Dalam pelayar ia disimpan dalam storan pelayar itu sendiri, jadi membersihkan kuki dan data tapak turut membuang ruang kerja itu — eksport dahulu jika mahu menyimpannya."
           ]
         },
         {
@@ -1217,7 +1218,7 @@
       ],
       "searchTitle": "mod tempatan",
       "searchKeywords": "mod tempatan, luar talian, peribadi, tanpa akaun, tanpa pelayan, pada peranti",
-      "searchBody": "guna t'day sepenuhnya luar talian, tanpa pelayan atau akaun. mod tempatan menyimpan segalanya pada peranti anda — tiada log masuk, tiada pelayan, tiada muat naik. ia cara utama untuk menggunakan t'day secara peribadi, dan data tempatan anda tidak pernah dihantar ke mana-mana dengan sendirinya. ciri khusus pelayan dipaparkan di sini dengan lencana “mod pelayan” supaya anda tahu apa yang berubah jika anda log masuk."
+      "searchBody": "guna t'day sepenuhnya luar talian, tanpa pelayan atau akaun. mod tempatan menyimpan segalanya pada peranti anda — tiada log masuk, tiada pelayan, tiada muat naik. ia cara utama untuk menggunakan t'day secara peribadi, dan data tempatan anda tidak pernah dihantar ke mana-mana dengan sendirinya. dalam pelayar ia disimpan dalam storan pelayar itu sendiri, jadi membersihkan kuki dan data tapak turut membuang ruang kerja itu — eksport dahulu jika mahu menyimpannya. ciri khusus pelayan dipaparkan di sini dengan lencana “mod pelayan” supaya anda tahu apa yang berubah jika anda log masuk."
     },
     {
       "id": "server-mode",

@@ -1191,6 +1191,7 @@
       "sectionOrder": 6,
       "icon": "wifi-off",
       "platforms": [
+        "WEB",
         "ANDROID",
         "IOS"
       ],
@@ -1205,7 +1206,7 @@
         {
           "type": "PARAGRAPH",
           "texts": [
-            "El Modo local mantiene todo en tu dispositivo: sin inicio de sesión, sin servidor, sin subidas. Es una forma de primer nivel de usar T'Day de manera privada, y tus datos locales nunca se envían a ningún sitio por sí solos."
+            "El Modo local mantiene todo en tu dispositivo: sin inicio de sesión, sin servidor, sin subidas. Es una forma de primer nivel de usar T'Day de manera privada, y tus datos locales nunca se envían a ningún sitio por sí solos. En un navegador vive en el almacenamiento de ese navegador, así que borrar las cookies y los datos del sitio borra también el espacio de trabajo: expórtalo antes si quieres conservarlo."
           ]
         },
         {
@@ -1217,7 +1218,7 @@
       ],
       "searchTitle": "modo local",
       "searchKeywords": "modo local, sin conexion, privado, sin cuenta, sin servidor, en el dispositivo",
-      "searchBody": "usa t'day totalmente sin conexion, sin servidor ni cuenta. el modo local mantiene todo en tu dispositivo: sin inicio de sesion, sin servidor, sin subidas. es una forma de primer nivel de usar t'day de manera privada, y tus datos locales nunca se envian a ningun sitio por si solos. las funciones exclusivas del servidor se muestran aqui con una insignia de «modo servidor» para que sepas que cambia si inicias sesion."
+      "searchBody": "usa t'day totalmente sin conexion, sin servidor ni cuenta. el modo local mantiene todo en tu dispositivo: sin inicio de sesion, sin servidor, sin subidas. es una forma de primer nivel de usar t'day de manera privada, y tus datos locales nunca se envian a ningun sitio por si solos. en un navegador vive en el almacenamiento de ese navegador, asi que borrar las cookies y los datos del sitio borra tambien el espacio de trabajo: exportalo antes si quieres conservarlo. las funciones exclusivas del servidor se muestran aqui con una insignia de «modo servidor» para que sepas que cambia si inicias sesion."
     },
     {
       "id": "server-mode",

@@ -1191,6 +1191,7 @@
       "sectionOrder": 6,
       "icon": "wifi-off",
       "platforms": [
+        "WEB",
         "ANDROID",
         "IOS"
       ],
@@ -1205,7 +1206,7 @@
         {
           "type": "PARAGRAPH",
           "texts": [
-            "La Modalità locale tiene tutto sul tuo dispositivo — nessun accesso, nessun server, nessun caricamento. È un modo di prim'ordine per usare T'Day in privato, e i tuoi dati locali non vengono mai inviati da nessuna parte per conto proprio."
+            "La Modalità locale tiene tutto sul tuo dispositivo — nessun accesso, nessun server, nessun caricamento. È un modo di prim'ordine per usare T'Day in privato, e i tuoi dati locali non vengono mai inviati da nessuna parte per conto proprio. In un browser risiede nella memoria di quel browser, quindi cancellare cookie e dati dei siti cancella anche lo spazio di lavoro: esportalo prima se vuoi conservarlo."
           ]
         },
         {
@@ -1217,7 +1218,7 @@
       ],
       "searchTitle": "modalita locale",
       "searchKeywords": "modalita locale, offline, privato, senza account, senza server, sul dispositivo",
-      "searchBody": "usa t'day completamente offline, senza server ne account. la modalita locale tiene tutto sul tuo dispositivo — nessun accesso, nessun server, nessun caricamento. e un modo di prim'ordine per usare t'day in privato, e i tuoi dati locali non vengono mai inviati da nessuna parte per conto proprio. le funzioni solo per server sono mostrate qui con un badge “modalita server” cosi sai cosa cambia se accedi."
+      "searchBody": "usa t'day completamente offline, senza server ne account. la modalita locale tiene tutto sul tuo dispositivo — nessun accesso, nessun server, nessun caricamento. e un modo di prim'ordine per usare t'day in privato, e i tuoi dati locali non vengono mai inviati da nessuna parte per conto proprio. in un browser risiede nella memoria di quel browser, quindi cancellare cookie e dati dei siti cancella anche lo spazio di lavoro: esportalo prima se vuoi conservarlo. le funzioni solo per server sono mostrate qui con un badge “modalita server” cosi sai cosa cambia se accedi."
     },
     {
       "id": "server-mode",

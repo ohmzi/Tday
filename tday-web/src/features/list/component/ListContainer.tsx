@@ -21,6 +21,7 @@ import ListDot from "@/components/ListDot";
 import ListFormSheet from "@/components/Sidebar/List/ListFormSheet";
 import ManageMembersSheet from "@/features/list/component/ManageMembersSheet";
 import { useShareListAsText } from "@/hooks/use-share-list";
+import { useIsLocalMode } from "@/hooks/useAppMode";
 import { Button } from "@/components/ui/button";
 import { useLocale } from "@/lib/navigation";
 import { useUserTimezone } from "@/features/user/query/get-timezone";
@@ -28,6 +29,7 @@ import { Pencil, Search, Users, X } from "lucide-react";
 
 const ListContainer = ({ id }: { id: string }) => {
     const locale = useLocale();
+    const isLocalMode = useIsLocalMode();
     const userTZ = useUserTimezone();
     const { t: appDict } = useTranslation("app");
     const { listMetaData } = useListMetaData();
@@ -190,7 +192,9 @@ const ListContainer = ({ id }: { id: string }) => {
                 open={editListOpen}
                 onOpenChange={setEditListOpen}
                 list={editableList}
-                onManageMembers={() => setMembersOpen(true)}
+                // Collaborators need accounts; a local workspace has none, so the
+                // Members entry disappears while plain-text sharing stays.
+                onManageMembers={isLocalMode ? undefined : () => setMembersOpen(true)}
                 onShareList={() => void shareListAsText()}
             />
             <ManageMembersSheet

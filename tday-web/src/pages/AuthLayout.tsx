@@ -16,9 +16,13 @@ export default function AuthLayout() {
     markReturningBrowser();
   }, []);
 
-  if (authState === "loading" || authState === "unavailable") {
+  // Only the brief initial probe blocks. When the backend is unreachable the
+  // wizard still has to render: its Mode step is how a visitor opens a local,
+  // no-login workspace, which works with no server at all. (The probe keeps
+  // retrying, so a recovered session still redirects into the app below.)
+  if (authState === "loading") {
     return <AuthBootstrapScreen />;
-  } 
+  }
 
   if (isApprovedUser) {
     return <Navigate to={`/${loc}/app/tday`} replace />;

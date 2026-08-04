@@ -1191,6 +1191,7 @@
       "sectionOrder": 6,
       "icon": "wifi-off",
       "platforms": [
+        "WEB",
         "ANDROID",
         "IOS"
       ],
@@ -1205,7 +1206,7 @@
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Der lokale Modus behält alles auf deinem Gerät — kein Login, kein Server, kein Upload. Es ist eine vollwertige Art, T'Day privat zu nutzen, und deine lokalen Daten werden von sich aus nirgendwohin gesendet."
+            "Der lokale Modus behält alles auf deinem Gerät — kein Login, kein Server, kein Upload. Es ist eine vollwertige Art, T'Day privat zu nutzen, und deine lokalen Daten werden von sich aus nirgendwohin gesendet. Im Browser liegt er im Speicher dieses Browsers – wer Cookies und Websitedaten löscht, löscht den Arbeitsbereich mit. Exportiere ihn vorher, wenn du ihn behalten möchtest."
           ]
         },
         {
@@ -1217,7 +1218,7 @@
       ],
       "searchTitle": "lokaler modus",
       "searchKeywords": "lokaler modus, offline, privat, kein konto, kein server, auf dem gerat",
-      "searchBody": "nutze t'day vollstandig offline, ohne server oder konto. der lokale modus behalt alles auf deinem gerat — kein login, kein server, kein upload. es ist eine vollwertige art, t'day privat zu nutzen, und deine lokalen daten werden von sich aus nirgendwohin gesendet. nur im servermodus verfugbare funktionen sind hier mit einem „servermodus“-abzeichen gekennzeichnet, damit du weist, was sich beim anmelden andert."
+      "searchBody": "nutze t'day vollstandig offline, ohne server oder konto. der lokale modus behalt alles auf deinem gerat — kein login, kein server, kein upload. es ist eine vollwertige art, t'day privat zu nutzen, und deine lokalen daten werden von sich aus nirgendwohin gesendet. im browser liegt er im speicher dieses browsers – wer cookies und websitedaten loscht, loscht den arbeitsbereich mit. exportiere ihn vorher, wenn du ihn behalten mochtest. nur im servermodus verfugbare funktionen sind hier mit einem „servermodus“-abzeichen gekennzeichnet, damit du weist, was sich beim anmelden andert."
     },
     {
       "id": "server-mode",

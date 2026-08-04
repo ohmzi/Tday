@@ -1,5 +1,8 @@
 import { addApiErrorBreadcrumb } from "@/lib/observability/sentry";
 import { notifySessionExpired } from "@/lib/auth/sessionExpiry";
+import { isLocalMode } from "@/lib/local/appMode";
+import { handleLocalRequest } from "@/lib/local/localApi";
+import { LocalApiError } from "@/lib/local/localError";
 
 type fetchOptions = {
   method: string;
@@ -29,7 +32,38 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * Local Mode answers `/api/*` from browser storage instead of the network, so
+ * every feature hook keeps using this client unchanged. Failures are rethrown as
+ * `ApiError` to keep both paths indistinguishable to callers.
+ */
+const localApi = (url: string, options: fetchOptions) => {
+  try {
+    const data = handleLocalRequest({
+      method: options.method,
+      url,
+      body: options.body,
+    });
+    return data ?? null;
+  } catch (error) {
+    if (error instanceof LocalApiError) {
+      addApiErrorBreadcrumb({
+        method: options.method,
+        url,
+        status: error.status,
+        code: error.code,
+      });
+      throw new ApiError(error.message, error.status, error.code, error.field);
+    }
+    throw error;
+  }
+};
+
 const fetchApi = async (url: string, options: fetchOptions) => {
+  if (isLocalMode() && url.startsWith("/api/")) {
+    return localApi(url, options);
+  }
+
   const res = await fetch(url, {
     method: options.method,
     headers: options.headers as HeadersInit | undefined,
