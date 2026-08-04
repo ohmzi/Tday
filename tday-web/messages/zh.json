@@ -715,6 +715,14 @@
       "deleteConfirmCancel": "取消",
       "deleteConfirmAction": "删除",
       "deleteDone": "本地数据已删除。"
+    },
+    "troubleshooting": {
+      "reset": "重置应用缓存",
+      "confirmTitle": "重置应用缓存？",
+      "confirmBody": "清除此设备的离线缓存并重新加载最新版本。您的任务、列表和登录状态不会受到影响。",
+      "confirmAction": "重置",
+      "confirmCancel": "取消",
+      "resetFailed": "无法重置缓存。请关闭并重新打开应用，然后重试。"
     }
   },
   "summary": {

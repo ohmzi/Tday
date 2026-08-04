@@ -715,6 +715,14 @@
       "deleteConfirmCancel": "Annulla",
       "deleteConfirmAction": "Elimina",
       "deleteDone": "Dati locali eliminati."
+    },
+    "troubleshooting": {
+      "reset": "Reimposta la cache dell'app",
+      "confirmTitle": "Reimpostare la cache dell'app?",
+      "confirmBody": "Cancella la cache offline di questo dispositivo e ricarica l'ultima versione. Le tue attività, le liste e l'accesso non vengono modificati.",
+      "confirmAction": "Reimposta",
+      "confirmCancel": "Annulla",
+      "resetFailed": "Impossibile reimpostare la cache. Chiudi e riapri l'app, poi riprova."
     }
   },
   "summary": {

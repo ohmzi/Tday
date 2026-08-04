@@ -715,6 +715,14 @@
       "deleteConfirmCancel": "Cancelar",
       "deleteConfirmAction": "Eliminar",
       "deleteDone": "Datos locales eliminados."
+    },
+    "troubleshooting": {
+      "reset": "Restablecer la caché de la app",
+      "confirmTitle": "¿Restablecer la caché de la app?",
+      "confirmBody": "Borra la caché sin conexión de este dispositivo y recarga la última versión. Tus tareas, listas y tu sesión no se ven afectadas.",
+      "confirmAction": "Restablecer",
+      "confirmCancel": "Cancelar",
+      "resetFailed": "No se pudo restablecer la caché. Cierra y vuelve a abrir la app e inténtalo de nuevo."
     }
   },
   "summary": {

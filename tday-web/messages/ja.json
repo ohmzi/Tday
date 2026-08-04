@@ -715,6 +715,14 @@
       "deleteConfirmCancel": "キャンセル",
       "deleteConfirmAction": "削除",
       "deleteDone": "ローカルデータを削除しました。"
+    },
+    "troubleshooting": {
+      "reset": "アプリのキャッシュをリセット",
+      "confirmTitle": "アプリのキャッシュをリセットしますか？",
+      "confirmBody": "このデバイスのオフラインキャッシュを消去し、最新バージョンを読み込みます。タスク、リスト、ログイン状態には影響しません。",
+      "confirmAction": "リセット",
+      "confirmCancel": "キャンセル",
+      "resetFailed": "キャッシュをリセットできませんでした。アプリを閉じてから開き直し、もう一度お試しください。"
     }
   },
   "summary": {
