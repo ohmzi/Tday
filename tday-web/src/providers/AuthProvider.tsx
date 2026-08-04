@@ -14,12 +14,24 @@ import { api, ApiError } from "@/lib/api-client";
 import { clearClientUserData } from "@/lib/security/clearClientUserData";
 import { clearPendingApproval } from "@/lib/pendingApproval";
 import { onSessionExpired } from "@/lib/auth/sessionExpiry";
+import { isLocalMode, setAppMode, APP_MODE_STORAGE_KEY } from "@/lib/local/appMode";
+import { LOCAL_WORKSPACE_STORAGE_KEY } from "@/lib/local/localDb";
 import {
   markReturningBrowser,
   RETURNING_BROWSER_STORAGE_KEY,
 } from "@/lib/security/returningBrowser";
 
 const AUTH_SESSION_RETRY_DELAY_MS = 15_000;
+
+// Kept across a sign-out / session expiry. The chosen workspace mode decides
+// which onboarding step the wizard reopens on, and the Local Mode workspace
+// belongs to the browser rather than to any server account — clearing a server
+// session must not silently delete it.
+const PRESERVED_STORAGE_KEYS = [
+  RETURNING_BROWSER_STORAGE_KEY,
+  APP_MODE_STORAGE_KEY,
+  LOCAL_WORKSPACE_STORAGE_KEY,
+];
 
 export type AuthSessionState =
   | "loading"
@@ -94,7 +106,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (hadAuthenticatedSession) {
           queryClient.clear();
           await clearClientUserData({
-            preserveLocalStorageKeys: [RETURNING_BROWSER_STORAGE_KEY],
+            preserveLocalStorageKeys: PRESERVED_STORAGE_KEYS,
           });
         }
 
@@ -115,7 +127,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     queryClient.clear();
     await clearClientUserData({
-      preserveLocalStorageKeys: [RETURNING_BROWSER_STORAGE_KEY],
+      preserveLocalStorageKeys: PRESERVED_STORAGE_KEYS,
     });
     applySessionState("unauthenticated", null);
     toast.error("Your session expired — please sign in again.");
@@ -176,6 +188,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(async () => {
     markReturningBrowser();
+
+    // Leaving the local workspace is a mode switch, not a session teardown:
+    // there is nothing to revoke server-side, and the browser's tasks stay put
+    // so the user can come back to them (or delete them from Settings).
+    if (isLocalMode()) {
+      setAppMode(null);
+      queryClient.clear();
+      applySessionState("unauthenticated", null);
+      window.location.replace(window.location.origin);
+      return;
+    }
+
     try {
       await api.POST({ url: "/api/auth/logout", body: "{}" });
     } catch (error) {
@@ -186,7 +210,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     queryClient.clear();
     await clearClientUserData({
-      preserveLocalStorageKeys: [RETURNING_BROWSER_STORAGE_KEY],
+      preserveLocalStorageKeys: PRESERVED_STORAGE_KEYS,
     });
     applySessionState("unauthenticated", null);
     window.location.replace(window.location.origin);

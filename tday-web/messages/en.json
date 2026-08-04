@@ -673,7 +673,8 @@
       "confirmBody": "This adds {{count}} items to your account. Nothing you already have is changed or removed.",
       "confirmRemapped": "{{count}} items with clashing IDs will be added as fresh copies.",
       "confirmCancel": "Cancel",
-      "confirmImport": "Import"
+      "confirmImport": "Import",
+      "summaryLocal": "{{tasks}} tasks · {{lists}} lists · {{completed}} completed, all in this browser."
     },
     "calendarFeed": {
       "title": "Calendar feed",
@@ -702,6 +703,18 @@
     "restingFloaters": {
       "title": "Resting floaters",
       "toggle": "Fade untouched Anytime tasks"
+    },
+    "workspace": {
+      "title": "Workspace",
+      "localTitle": "Local workspace",
+      "localDetail": "Saved in this browser only — no account, no sync.",
+      "leave": "Leave local workspace",
+      "delete": "Delete local data",
+      "deleteConfirmTitle": "Delete local data?",
+      "deleteConfirmBody": "This permanently removes every task, list and completed entry stored in this browser. There is no copy on a server — download your data first if you want to keep it.",
+      "deleteConfirmCancel": "Cancel",
+      "deleteConfirmAction": "Delete",
+      "deleteDone": "Local data deleted."
     }
   },
   "summary": {
@@ -1002,7 +1015,7 @@
         "title": "Local Mode",
         "summary": "Use T'Day fully offline, with no server or account.",
         "keywords": "local mode, offline, private, no account, no server, on device",
-        "body": "Local Mode keeps everything on your device — no login, no server, no upload. It's a first-class way to use T'Day privately, and your local data is never sent anywhere on its own.",
+        "body": "Local Mode keeps everything on your device — no login, no server, no upload. It's a first-class way to use T'Day privately, and your local data is never sent anywhere on its own. In a browser it lives in that browser's own storage, so clearing your cookies and site data clears the workspace with it — export first if you want to keep it.",
         "tip": "Server-only features are shown here with a “Server mode” badge so you know what changes if you sign in."
       },
       "server-mode": {

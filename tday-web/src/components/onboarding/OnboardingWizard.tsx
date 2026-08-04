@@ -4,8 +4,10 @@ import {
   Globe,
   Loader2,
   Lock,
+  MonitorSmartphone,
   MoonStar,
   Smartphone,
+  Sparkles,
   Sun,
   User,
   UserPlus,
@@ -16,6 +18,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/providers/AuthProvider";
 import { api } from "@/lib/api-client";
 import { getErrorMessage } from "@/lib/error-message";
+import { getAppMode, setAppMode } from "@/lib/local/appMode";
 import { createClientCredentialEnvelope } from "@/lib/security/clientCredentialEnvelope";
 import PendingApprovalScreen from "@/components/auth/PendingApprovalScreen";
 import {
@@ -34,14 +37,22 @@ import MockHomeBackdrop from "@/components/auth/MockHomeBackdrop";
 // intentionally theme-independent so the card reads identically across light
 // and dark mode, matching the apps.
 const TINT = {
-  modeGreen: "rgb(128, 184, 138)", // step chip · "Mode"
-  serverBlue: "rgb(110, 168, 224)", // step chip · "Server"
+  modeGreen: "rgb(128, 184, 138)", // step chip · "Mode" · "This device" tile
+  serverBlue: "rgb(110, 168, 224)", // step chip · "Server" · setup + self-hosted tiles
   loginRose: "rgb(212, 138, 140)", // step chip · "Login"
   heroRose: "rgb(201, 120, 128)", // hero tile · sign in / create
   sun: "rgb(245, 196, 66)",
 } as const;
 
 type AuthMode = "signin" | "create" | "forgot";
+
+/**
+ * Which step of the wizard is on screen. The native apps have three (Mode →
+ * Server → Login); on the web the Server step is already answered — the app is
+ * served by the very backend it would ask for — so choosing "Self-hosted" goes
+ * straight to Login, and the Server chip renders as completed.
+ */
+type WizardStep = "mode" | "login";
 
 const USERNAME_REGEX = /^[a-z0-9](?:[a-z0-9._-]{1,28}[a-z0-9])$/;
 
@@ -60,9 +71,20 @@ export default function OnboardingWizard({
   initialMode?: AuthMode;
 }) {
   const router = useRouter();
-  const { login } = useAuth();
+  const { login, refreshSession } = useAuth();
   const [searchParams] = useSearchParams();
 
+  // Returning browsers that already picked a workspace skip straight to Login,
+  // exactly as the native wizard skips Mode/Server once a server URL is saved.
+  // /register and /forgot-password are direct entry points into the Login step.
+  const [step, setStep] = React.useState<WizardStep>(() =>
+    getAppMode() != null ||
+    initialMode !== "signin" ||
+    getPendingApproval() != null
+      ? "login"
+      : "mode",
+  );
+  const [enteringLocalMode, setEnteringLocalMode] = React.useState(false);
   const [mode, setMode] = React.useState<AuthMode>(initialMode);
   const [username, setUsername] = React.useState("");
   const [password, setPassword] = React.useState("");
@@ -96,9 +118,49 @@ export default function OnboardingWizard({
   // reload) or the post-redirect ?pending=1 hint is set.
   React.useEffect(() => {
     if (searchParams.get("pending") === "1" || getPendingApproval()) {
+      setStep("login");
       setPendingApprovalOpen(true);
     }
   }, [searchParams]);
+
+  // "Self-hosted": the server step is already answered on the web, so record the
+  // choice (returning visits skip Mode) and drop straight into sign in.
+  const chooseServerMode = () => {
+    setAppMode("server");
+    setErrorMessage("");
+    setInfoMessage("");
+    setStep("login");
+  };
+
+  // "This device": no account, no network — the workspace lives in this browser's
+  // storage. Refreshing the session picks up the synthetic local user.
+  const chooseLocalMode = async () => {
+    setErrorMessage("");
+    setInfoMessage("");
+    setEnteringLocalMode(true);
+    setAppMode("local");
+    clearPendingApproval();
+    try {
+      await refreshSession();
+      router.replace("/app/tday");
+    } catch (error) {
+      console.error(error);
+      setAppMode(null);
+      setEnteringLocalMode(false);
+      setErrorMessage("Could not open a local workspace in this browser.");
+    }
+  };
+
+  const backToModeStep = () => {
+    setAppMode(null);
+    setStep("mode");
+    setMode("signin");
+    setErrorMessage("");
+    setInfoMessage("");
+    setPassword("");
+    setRegisterPassword("");
+    setConfirmPassword("");
+  };
 
   // Load the question catalogue when the user switches to account creation, then
   // default to the first two distinct questions.
@@ -360,12 +422,69 @@ export default function OnboardingWizard({
 
             {/* Step chips */}
             <div className="flex items-center gap-2">
-              <StepChip title="Mode" Icon={Smartphone} tint={TINT.modeGreen} completed />
-              <StepChip title="Server" Icon={Globe} tint={TINT.serverBlue} completed />
-              <StepChip title="Login" Icon={User} tint={TINT.loginRose} active />
+              <StepChip
+                title="Mode"
+                Icon={Smartphone}
+                tint={TINT.modeGreen}
+                active={step === "mode"}
+                completed={step === "login"}
+                // The one step you can actually walk back to on web. Server has
+                // no step of its own here, so its chip stays inert.
+                onClick={step === "login" ? backToModeStep : undefined}
+              />
+              <StepChip
+                title="Server"
+                Icon={Globe}
+                tint={TINT.serverBlue}
+                completed={step === "login"}
+              />
+              <StepChip
+                title="Login"
+                Icon={User}
+                tint={TINT.loginRose}
+                active={step === "login"}
+              />
             </div>
 
-            {mode === "forgot" ? (
+            {enteringLocalMode ? (
+              <WizardLoadingPanel
+                Icon={MonitorSmartphone}
+                title="Opening T'Day"
+                subtitle="Setting up a workspace in this browser."
+              />
+            ) : step === "mode" ? (
+              <div className="flex flex-col gap-[11px]">
+                <HeroTile
+                  title="Choose your setup"
+                  subtitle="Pick where T'Day keeps your tasks."
+                  Icon={Sparkles}
+                  tint={TINT.serverBlue}
+                />
+                <div className="flex items-stretch gap-2.5">
+                  <ModeChoiceTile
+                    title="Self-hosted"
+                    subtitle="Accounts and sync"
+                    Icon={Globe}
+                    tint={TINT.serverBlue}
+                    onClick={chooseServerMode}
+                  />
+                  <ModeChoiceTile
+                    title="This device"
+                    subtitle="No login"
+                    Icon={MonitorSmartphone}
+                    tint={TINT.modeGreen}
+                    onClick={() => void chooseLocalMode()}
+                  />
+                </div>
+                <p className="px-1 pt-0.5 text-[12.5px] font-bold leading-snug text-foreground/55">
+                  This device keeps everything in this browser — no account, no
+                  sync. Clearing your browsing data deletes it.
+                </p>
+                {errorMessage && (
+                  <p className="text-[14px] font-bold text-destructive">{errorMessage}</p>
+                )}
+              </div>
+            ) : mode === "forgot" ? (
               <ForgotPasswordPanel
                 initialUsername={username}
                 onBackToLogin={(resetUsername) => {
@@ -543,13 +662,16 @@ export default function OnboardingWizard({
                   enabled={primaryEnabled}
                 />
 
-                <div className="pt-1.5">
+                <div className="flex items-center justify-between gap-4 pt-1.5">
                   <WizardTextButton
                     onClick={() =>
                       switchMode(isCreating ? "signin" : "create")
                     }
                   >
                     {isCreating ? "I already have an account" : "Create account"}
+                  </WizardTextButton>
+                  <WizardTextButton onClick={backToModeStep}>
+                    Change setup
                   </WizardTextButton>
                 </div>
               </form>
@@ -611,45 +733,67 @@ function StepChip({
   tint,
   active = false,
   completed = false,
+  onClick,
 }: {
   title: string;
   Icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
   tint: string;
   active?: boolean;
   completed?: boolean;
+  /** Makes a completed chip a way back to that step. Inert without it. */
+  onClick?: () => void;
 }) {
-  // On web, Mode and Server are always satisfied (the app is served from, and
-  // talks to, its own backend), so completed chips are filled with their native
-  // tint just like the active Login chip — matching the iOS/Android wizard.
+  // A step keeps its colour once it is the active step or has been completed;
+  // completed steps swap their glyph for a checkmark, matching iOS/Android.
   const filled = active || completed;
-  return (
-    <div
-      className={cn(
-        "flex flex-1 items-center justify-center gap-1.5 rounded-[18px] border px-2.5 py-2 text-[13px] font-bold transition",
-        filled ? "border-transparent text-white" : "border-border bg-muted/50 text-foreground/65",
-      )}
-      style={
-        filled
-          ? { backgroundColor: tint, boxShadow: `0 5px 8px ${tint}2e` }
-          : undefined
-      }
-    >
+  const chipClass = cn(
+    "flex flex-1 items-center justify-center gap-1.5 rounded-[18px] border px-2.5 py-2 text-[13px] font-bold transition",
+    filled ? "border-transparent text-white" : "border-border bg-muted/50 text-foreground/65",
+    onClick && "cursor-pointer active:scale-[0.97] active:opacity-80",
+  );
+  const chipStyle = filled
+    ? { backgroundColor: tint, boxShadow: `0 5px 8px ${tint}2e` }
+    : undefined;
+  const chipBody = (
+    <>
       {completed ? (
         <Check className="h-3.5 w-3.5" strokeWidth={3} />
       ) : (
         <Icon className="h-3.5 w-3.5" strokeWidth={2.5} />
       )}
       <span className="truncate">{title}</span>
-    </div>
+    </>
+  );
+
+  if (!onClick) {
+    return (
+      <div className={chipClass} style={chipStyle}>
+        {chipBody}
+      </div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={`Back to ${title}`}
+      className={chipClass}
+      style={chipStyle}
+    >
+      {chipBody}
+    </button>
   );
 }
 
 function HeroTile({
   title,
+  subtitle,
   Icon,
   tint,
 }: {
   title: string;
+  subtitle?: string;
   Icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
   tint: string;
 }) {
@@ -677,9 +821,57 @@ function HeroTile({
           <p className="truncate text-[21px] font-bold leading-tight text-white">
             {title}
           </p>
+          {subtitle ? (
+            <p className="mt-0.5 truncate text-[13px] font-bold text-white/85">
+              {subtitle}
+            </p>
+          ) : null}
         </div>
       </div>
     </div>
+  );
+}
+
+/** One of the two workspace choices on the Mode step (native WizardModeChoiceButton). */
+function ModeChoiceTile({
+  title,
+  subtitle,
+  Icon,
+  tint,
+  onClick,
+}: {
+  title: string;
+  subtitle: string;
+  Icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
+  tint: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="relative flex h-[116px] flex-1 flex-col items-start overflow-hidden rounded-[26px] p-[13px] text-left transition active:scale-[0.985] active:opacity-90"
+      style={{ backgroundColor: tint, boxShadow: `0 7px 9px ${tint}29` }}
+    >
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(140px at 22% 18%, rgba(255,255,255,0.24), rgba(255,255,255,0.08) 38%, transparent 70%)",
+        }}
+      />
+      <Icon
+        className="pointer-events-none absolute -bottom-2 -right-1 h-[70px] w-[70px] text-white/20"
+        strokeWidth={1.5}
+      />
+      <Icon className="relative h-5 w-5 text-white" strokeWidth={2.5} />
+      <span className="relative mt-auto block text-[16px] font-bold leading-tight text-white">
+        {title}
+      </span>
+      <span className="relative mt-1 block text-[12px] font-bold leading-snug text-white/85">
+        {subtitle}
+      </span>
+    </button>
   );
 }
 

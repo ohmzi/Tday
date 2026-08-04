@@ -12,7 +12,9 @@
     "widget": [
       "api-key-homarr"
     ],
-    "offline": [],
+    "offline": [
+      "local-mode"
+    ],
     "date": [
       "nlp-date-syntax",
       "floaters-vs-todos",
