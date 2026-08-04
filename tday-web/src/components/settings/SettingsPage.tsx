@@ -1844,32 +1844,34 @@ export default function SettingsPage() {
         </ModalOverlay>
       </Modal>
 
-      <Modal open={deleteLocalOpen} onOpenChange={setDeleteLocalOpen}>
-        <ModalOverlay>
-          <ModalContent>
-            <ModalHeader>
-              <ModalTitle>{t("workspace.deleteConfirmTitle")}</ModalTitle>
-              <ModalDescription>{t("workspace.deleteConfirmBody")}</ModalDescription>
-            </ModalHeader>
-            <ModalFooter className="mt-4">
-              <Button
-                variant="outline"
-                className="bg-popover w-full sm:w-auto"
-                onClick={() => setDeleteLocalOpen(false)}
-              >
-                {t("workspace.deleteConfirmCancel")}
-              </Button>
-              <Button
-                variant="destructive"
-                className="w-full sm:w-auto"
-                onClick={() => void handleDeleteLocalData()}
-              >
-                {t("workspace.deleteConfirmAction")}
-              </Button>
-            </ModalFooter>
-          </ModalContent>
-        </ModalOverlay>
-      </Modal>
+      {/* Same chrome as the task form's Repeat / Priority pickers — the app's
+          centered selector card — so a confirm reads like the rest of the UI.
+          Actions stack like the picker's Done button (destructive one first). */}
+      <CenteredSelectorOverlay
+        open={deleteLocalOpen}
+        onOpenChange={setDeleteLocalOpen}
+        title={t("workspace.deleteConfirmTitle")}
+      >
+        <p className="px-5 pb-1 text-sm font-bold leading-relaxed text-muted-foreground">
+          {t("workspace.deleteConfirmBody")}
+        </p>
+        <div className="flex flex-col gap-2 px-4 pb-1 pt-3">
+          <button
+            type="button"
+            onClick={() => void handleDeleteLocalData()}
+            className="w-full rounded-2xl bg-destructive/10 py-3 text-base font-black text-destructive transition-colors hover:bg-destructive/20"
+          >
+            {t("workspace.deleteConfirmAction")}
+          </button>
+          <button
+            type="button"
+            onClick={() => setDeleteLocalOpen(false)}
+            className="w-full rounded-2xl bg-muted/70 py-3 text-base font-black text-foreground transition-colors hover:bg-muted"
+          >
+            {t("workspace.deleteConfirmCancel")}
+          </button>
+        </div>
+      </CenteredSelectorOverlay>
     </div>
   );
 }
