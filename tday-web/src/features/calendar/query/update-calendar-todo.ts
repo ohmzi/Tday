@@ -15,7 +15,7 @@ export const useEditCalendarTodo = () => {
   const { mutate: editCalendarTodo, status: editTodoStatus } = useMutation({
     mutationFn: (params: TodoItemTypeWithChecksum) =>
       patchTodo(params, {
-        instanceDate: params.instanceDate?.getTime(),
+        instanceDate: params.instanceDate ?? null,
         listID: params.listID ?? null,
       }),
     onMutate: async (newTodo) => {
