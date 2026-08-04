@@ -1,6 +1,6 @@
 import { Hourglass, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import MockHomeBackdrop from "@/components/auth/MockHomeBackdrop";
+import MockScheduledTaskHomeBackdrop from "@/components/auth/MockScheduledTaskHomeBackdrop";
 
 type PendingApprovalScreenProps = {
   open: boolean;
@@ -10,9 +10,9 @@ type PendingApprovalScreenProps = {
   onUseDifferentAccount: () => void;
 };
 
-// Full-screen "Waiting for approval" takeover, mirroring the native apps: the home
+// Full-screen "Waiting for approval" takeover, mirroring the native apps: the scheduled task home screen
 // dashboard sits blurred behind a centered, non-dismissible card. A pending account
-// has no session/data, so the backdrop is a static mock of the home (desktop on lg,
+// has no session/data, so the backdrop is a static mock of the scheduled task home screen (desktop on lg,
 // the native category-tile layout on mobile) — the same trick the login screen uses.
 export default function PendingApprovalScreen({
   open,
@@ -30,10 +30,10 @@ export default function PendingApprovalScreen({
       aria-modal="true"
       aria-label="Waiting for approval"
     >
-      {/* Blurred, dimmed mock home behind the card. */}
+      {/* Blurred, dimmed mock scheduled task home screen behind the card. */}
       <div className="absolute inset-0 overflow-hidden" aria-hidden>
         <div className="h-full w-full scale-[1.06] blur-lg">
-          <MockHomeBackdrop />
+          <MockScheduledTaskHomeBackdrop />
         </div>
         <div className="absolute inset-0 bg-background/45" />
       </div>

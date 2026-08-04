@@ -559,13 +559,13 @@ All user-facing strings must live in `res/values/strings.xml`. Never hardcode di
 - Use `stringResource(R.string.key)` in Composables.
 - Use `context.getString(R.string.key)` in ViewModels or non-Composable code when a string is needed (pass the resource ID when possible instead).
 - Parameterized strings use XML placeholders: `<string name="task_count">%d tasks</string>` → `stringResource(R.string.task_count, count)`.
-- Group keys with a consistent prefix per feature: `home_`, `todo_`, `settings_`, `auth_`, `error_`.
+- Group keys with a consistent prefix per feature: `scheduled_task_home_`, `todo_`, `settings_`, `auth_`, `error_`.
 - Plural forms use `<plurals>` resources.
 - Internal log messages passed to `Log.d` / `Log.w` / `Log.e` are exempt — those are developer-facing and should not be translated.
 
 ```kotlin
 // Good: string from resources
-Text(text = stringResource(R.string.home_title))
+Text(text = stringResource(R.string.scheduled_task_home_title))
 Text(text = stringResource(R.string.todo_due_date, formattedDate))
 
 // Bad: hardcoded string in Composable
@@ -648,7 +648,7 @@ These rules apply to the iOS SwiftUI codebase.
 
 - Preserve dark mode and rounded typography.
 - Prefer platform-native gestures and controls unless the product behavior requires custom handling.
-- Keep root-feed behavior aligned with Android: Home and Floater/Anytime are sibling root feeds controlled by `RootFeedDock`.
+- Keep root-feed behavior aligned with Android: the scheduled task home screen and the floater task home screen (Floater/Anytime) are sibling root feeds controlled by `RootFeedDock`.
 - Use shared sheet chrome and swipe helpers before creating one-off variants.
 - Keep text fitting in compact layouts with `lineLimit`, `minimumScaleFactor`, or layout changes where needed.
 
@@ -666,8 +666,8 @@ These rules apply to the iOS SwiftUI codebase.
 
 - **Web**: group by technical layer at root (`src/lib/`, `src/components/`, `src/providers/`) and by feature domain in `src/features/`.
 - **Backend**: group by layer (`routes/`, `services/`, `db/`, `security/`, `domain/`, `config/`, `plugins/`).
-- **Android**: group by feature (`feature/home/`, `feature/todos/`), shared code in `core/` and `ui/`.
-- **iOS**: group by feature (`Feature/Home/`, `Feature/Todos/`), shared app code in `Core/`, reusable UI in `UI/`.
+- **Android**: group by feature (`feature/scheduledtaskhome/`, `feature/todos/`), shared code in `core/` and `ui/`.
+- **iOS**: group by feature (`Feature/ScheduledTaskHome/`, `Feature/Todos/`), shared app code in `Core/`, reusable UI in `UI/`.
 - **Shared KMP**: DTOs, enums, validators, and route constants in `shared/` consumed by backend/Android and mirrored by iOS models/tests.
 - A new feature should create its own subdirectory, not grow an existing file.
 

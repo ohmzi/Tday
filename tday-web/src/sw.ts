@@ -67,7 +67,7 @@ registerRoute(/^\/version\.json/, new NetworkOnly());
 /* Network-first (not stale-while-revalidate): after a mutation the app           */
 /* refetches these lists, and SWR would hand back the pre-mutation cache first —   */
 /* clobbering the optimistic update so a newly added task/floater appears to       */
-/* "not update right away" on the home and floater screens. Network-first returns  */
+/* "not update right away" on the scheduled task home and floater task home screens. Network-first returns  */
 /* fresh data online and only falls back to the cache when the network fails       */
 /* (offline), keeping the PWA usable offline.                                      */
 const apiCacheConfig = {

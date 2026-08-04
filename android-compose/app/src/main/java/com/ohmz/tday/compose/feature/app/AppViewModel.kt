@@ -410,7 +410,7 @@ class AppViewModel @Inject constructor(
         }
     }
 
-    /** Re-attempt login with the stored pending credentials; on approval, route to Home
+    /** Re-attempt login with the stored pending credentials; on approval, route to the scheduled task home screen
      *  via a fresh bootstrap. */
     fun checkPendingApproval() {
         if (_uiState.value.isCheckingApproval) return

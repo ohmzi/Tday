@@ -12,7 +12,7 @@ Current feature surface:
 - Local Mode for offline-only planning without server setup.
 - Server Mode with JWE cookie auth, optimistic local writes, realtime refresh, and pending mutation
   replay.
-- Home and Floater/Anytime root feeds controlled by `RootFeedDock`.
+- Scheduled task home and Floater task home root feeds controlled by `RootFeedDock`.
 - Scheduled tasks, floaters, scheduled-task lists, floater lists, completed history, calendar,
   search, settings, reminders, Glance Today/Floater widgets, an internal car-mode task surface,
   and in-app APK updates.
@@ -37,7 +37,7 @@ android-compose/app/src/main/java/com/ohmz/tday/compose/
 ├── feature/
 │   ├── app/           # Bootstrap, Local/Server Mode, sync, version state
 │   ├── auth/          # Login/register and credential handoff
-│   ├── home/          # Home root feed
+│   ├── scheduledtaskhome/ # Scheduled task home root feed
 │   ├── todos/         # Todo/Floater/List screens
 │   ├── calendar/      # Month/week/day calendar
 │   ├── car/           # Internal car-mode Today/Floater surface
@@ -160,7 +160,7 @@ the recognized phrase in place, and strips it from the saved task title.
   title, and the due instant (mirroring the previous backend parser, so a bare "8pm" is never
   shifted).
 - `TodoRepository.parseTodoTitleNlp` is the single entry point used by every create-task surface
-  (Home, Calendar, List, widget); swapping it to the local parser made them all offline at once.
+  (scheduled task home, Calendar, List, widget); swapping it to the local parser made them all offline at once.
 - `CreateTaskBottomSheet` keeps the full typed text, highlights the phrase via a Compose
   `VisualTransformation`, sets the Due, and removes the phrase from the title only on submit.
 - Parsing runs in the device timezone; the due is saved as a UTC instant. Release builds keep

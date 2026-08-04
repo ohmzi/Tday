@@ -1,6 +1,6 @@
 import SwiftUI
 
-private enum HomeMetrics {
+private enum ScheduledTaskHomeMetrics {
     static let screenPadding: CGFloat = 18
     static let sectionSpacing: CGFloat = 14
     static let tileGap: CGFloat = 10
@@ -18,20 +18,20 @@ private enum HomeMetrics {
     static let tileWatermarkTrailingInset: CGFloat = 22
 }
 
-private func isHomeDaytime(_ date: Date) -> Bool {
+private func isScheduledTaskHomeDaytime(_ date: Date) -> Bool {
     let hour = Calendar.current.component(.hour, from: date)
     return (6..<18).contains(hour)
 }
 
-private func normalizedHomeSearchQuery(_ value: String) -> String {
+private func normalizedScheduledTaskHomeSearchQuery(_ value: String) -> String {
     value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(with: .current)
 }
 
-private func homeSearchText(_ value: String) -> String {
+private func scheduledTaskHomeSearchText(_ value: String) -> String {
     value.lowercased(with: .current)
 }
 
-private struct HomeSearchBarFrameKey: PreferenceKey {
+private struct ScheduledTaskHomeSearchBarFrameKey: PreferenceKey {
     static var defaultValue: CGRect = .zero
 
     static func reduce(value: inout CGRect, nextValue: () -> CGRect) {
@@ -39,7 +39,7 @@ private struct HomeSearchBarFrameKey: PreferenceKey {
     }
 }
 
-private struct HomeSearchResultsFrameKey: PreferenceKey {
+private struct ScheduledTaskHomeSearchResultsFrameKey: PreferenceKey {
     static var defaultValue: CGRect = .zero
 
     static func reduce(value: inout CGRect, nextValue: () -> CGRect) {
@@ -47,12 +47,12 @@ private struct HomeSearchResultsFrameKey: PreferenceKey {
     }
 }
 
-private struct HomeListColorOption {
+private struct ScheduledTaskHomeListColorOption {
     let key: String
     let color: Color
 }
 
-private struct HomeListIconOption {
+private struct ScheduledTaskHomeListIconOption {
     let key: String
     let symbolName: String
 }
@@ -63,9 +63,9 @@ private enum CreateListSheetMetrics {
     static let bottomContentPadding: CGFloat = 8
 }
 
-private let homeScrollTopID = "home-scroll-top"
+private let scheduledTaskHomeScrollTopID = "scheduled-task-home-scroll-top"
 
-struct HomeScreen: View {
+struct ScheduledTaskHomeScreen: View {
     let onRootFeedTabSelected: (RootFeedTab) -> Void
     let showsRootControls: Bool
     let createTaskRequestID: Int
@@ -80,7 +80,7 @@ struct HomeScreen: View {
     let summaryAvailable: Bool
     let onNavigate: (AppRoute) -> Void
 
-    @State private var viewModel: HomeViewModel
+    @State private var viewModel: ScheduledTaskHomeViewModel
     @Environment(\.tdayColors) private var colors
     @FocusState private var searchFieldFocused: Bool
 
@@ -94,7 +94,7 @@ struct HomeScreen: View {
     @State private var showingCreateList = false
     @State private var showingSummary = false
     @State private var editingTodo: TodoItem?
-    @State private var homeScrollOffset: CGFloat = 0
+    @State private var scheduledTaskHomeScrollOffset: CGFloat = 0
     @State private var openSwipeTaskID: String?
 
     init(
@@ -122,11 +122,11 @@ struct HomeScreen: View {
         self.pullRefreshEnabled = pullRefreshEnabled
         self.summaryAvailable = summaryAvailable
         self.onNavigate = onNavigate
-        _viewModel = State(initialValue: HomeViewModel(container: container))
+        _viewModel = State(initialValue: ScheduledTaskHomeViewModel(container: container))
     }
 
     private var normalizedSearchQuery: String {
-        normalizedHomeSearchQuery(searchQuery)
+        normalizedScheduledTaskHomeSearchQuery(searchQuery)
     }
 
     private var listByID: [String: ListSummary] {
@@ -139,9 +139,9 @@ struct HomeScreen: View {
         }
 
         return viewModel.searchableTodos.filter { todo in
-            homeSearchText(todo.title).contains(normalizedSearchQuery) ||
-                (todo.description.map { homeSearchText($0).contains(normalizedSearchQuery) } ?? false) ||
-                (todo.listId.flatMap { listByID[$0]?.name }.map { homeSearchText($0).contains(normalizedSearchQuery) } ?? false)
+            scheduledTaskHomeSearchText(todo.title).contains(normalizedSearchQuery) ||
+                (todo.description.map { scheduledTaskHomeSearchText($0).contains(normalizedSearchQuery) } ?? false) ||
+                (todo.listId.flatMap { listByID[$0]?.name }.map { scheduledTaskHomeSearchText($0).contains(normalizedSearchQuery) } ?? false)
         }
         .sorted(by: todoSortPrecedes)
         .prefix(20)
@@ -158,16 +158,16 @@ struct HomeScreen: View {
     }
 
     private var shouldCollapseRootDock: Bool {
-        max(homeScrollOffset, 0) > HomeMetrics.rootDockCollapseThreshold
+        max(scheduledTaskHomeScrollOffset, 0) > ScheduledTaskHomeMetrics.rootDockCollapseThreshold
     }
 
     var body: some View {
         GeometryReader { proxy in
             let fallbackSearchBarFrame = CGRect(
-                x: HomeMetrics.screenPadding,
-                y: HomeMetrics.screenPadding,
-                width: max(HomeMetrics.topBarButtonSize, proxy.size.width - (HomeMetrics.screenPadding * 2)),
-                height: HomeMetrics.topBarButtonSize
+                x: ScheduledTaskHomeMetrics.screenPadding,
+                y: ScheduledTaskHomeMetrics.screenPadding,
+                width: max(ScheduledTaskHomeMetrics.topBarButtonSize, proxy.size.width - (ScheduledTaskHomeMetrics.screenPadding * 2)),
+                height: ScheduledTaskHomeMetrics.topBarButtonSize
             )
             let activeSearchBarFrame = searchBarFrame.width > 0 && searchBarFrame.height > 0
                 ? searchBarFrame
@@ -175,7 +175,7 @@ struct HomeScreen: View {
 
             ZStack(alignment: .topLeading) {
                 TimelineView(.periodic(from: .now, by: 60)) { context in
-                    let daytime = isHomeDaytime(context.date)
+                    let daytime = isScheduledTaskHomeDaytime(context.date)
                     EmptyTaskWatermark(
                         systemName: daytime ? "sun.max.fill" : "moon.stars.fill",
                         accentColor: Color.tdayTodayBlue
@@ -191,14 +191,14 @@ struct HomeScreen: View {
                 ) {
                     ScrollViewReader { scrollProxy in
                         ScrollView(showsIndicators: false) {
-                            LazyVStack(alignment: .leading, spacing: HomeMetrics.sectionSpacing) {
-                                TimelineScrollOffsetObserver { homeScrollOffset = $0 }
+                            LazyVStack(alignment: .leading, spacing: ScheduledTaskHomeMetrics.sectionSpacing) {
+                                TimelineScrollOffsetObserver { scheduledTaskHomeScrollOffset = $0 }
                                     .frame(height: 0)
                                     .allowsHitTesting(false)
-                                    .id(homeScrollTopID)
+                                    .id(scheduledTaskHomeScrollTopID)
 
-                                HomeTopBar(
-                                    totalWidth: proxy.size.width - (HomeMetrics.screenPadding * 2),
+                                ScheduledTaskHomeTopBar(
+                                    totalWidth: proxy.size.width - (ScheduledTaskHomeMetrics.screenPadding * 2),
                                     searchExpanded: $searchExpanded,
                                     searchQuery: $searchQuery,
                                     searchFieldFocused: $searchFieldFocused,
@@ -215,11 +215,11 @@ struct HomeScreen: View {
                                     }
                                 )
                                 .onTopPartialScrollSnap(
-                                    anchorDistance: HomeMetrics.titleAnchorDistance,
+                                    anchorDistance: ScheduledTaskHomeMetrics.titleAnchorDistance,
                                     isDisabled: searchExpanded
                                 )
 
-                                HomeTodayCard(
+                                ScheduledTaskHomeTodayCard(
                                     count: viewModel.summary.todayCount,
                                     action: {
                                         closeSearch()
@@ -230,7 +230,7 @@ struct HomeScreen: View {
                                 if !viewModel.todayTodos.isEmpty {
                                     VStack(spacing: 0) {
                                         ForEach(viewModel.todayTodos) { todo in
-                                            homeTodayTaskRow(todo)
+                                            scheduledTaskHomeTodayTaskRow(todo)
                                                 .transition(.opacity.combined(with: .move(edge: .top)))
                                         }
                                     }
@@ -240,7 +240,7 @@ struct HomeScreen: View {
                                     )
                                 }
 
-                                HomeCategoryBoard(
+                                ScheduledTaskHomeCategoryBoard(
                                     overdueCount: overdueCount,
                                     scheduledCount: viewModel.summary.scheduledCount,
                                     allCount: viewModel.summary.allCount,
@@ -274,7 +274,7 @@ struct HomeScreen: View {
                                 )
 
                                 if !viewModel.summary.lists.isEmpty {
-                                    HomeListsSection(
+                                    ScheduledTaskHomeListsSection(
                                         lists: viewModel.summary.lists,
                                         displayName: displayName(for:)
                                     ) { list, name in
@@ -290,8 +290,8 @@ struct HomeScreen: View {
                                 }
 
                             }
-                            .padding(.horizontal, HomeMetrics.screenPadding)
-                            .padding(.top, HomeMetrics.screenPadding)
+                            .padding(.horizontal, ScheduledTaskHomeMetrics.screenPadding)
+                            .padding(.top, ScheduledTaskHomeMetrics.screenPadding)
 
                         }
                         .scrollBounceBehavior(.always, axes: .vertical)
@@ -299,7 +299,7 @@ struct HomeScreen: View {
                             if showsRootControls {
                                 HStack(alignment: .bottom) {
                                     RootFeedDock(
-                                        activeTab: .home,
+                                        activeTab: .scheduledTaskHome,
                                         collapsed: shouldCollapseRootDock,
                                         accentColor: .tdayTodayBlue,
                                         onSelect: onRootFeedTabSelected
@@ -325,14 +325,14 @@ struct HomeScreen: View {
                             guard requestID > 0 else { return }
                             closeSearch()
                             withAnimation(.easeInOut(duration: 0.34)) {
-                                scrollProxy.scrollTo(homeScrollTopID, anchor: .top)
+                                scrollProxy.scrollTo(scheduledTaskHomeScrollTopID, anchor: .top)
                             }
                         }
                     }
                 }
 
                 if showSearchResultsOverlay {
-                    HomeSearchResultsOverlay(
+                    ScheduledTaskHomeSearchResultsOverlay(
                         todos: filteredTodos,
                         listsByID: listByID,
                         onOpenTodo: { todo in
@@ -345,18 +345,18 @@ struct HomeScreen: View {
                         GeometryReader { resultsProxy in
                             Color.clear
                                 .preference(
-                                    key: HomeSearchResultsFrameKey.self,
-                                    value: resultsProxy.frame(in: .named("home-root"))
+                                    key: ScheduledTaskHomeSearchResultsFrameKey.self,
+                                    value: resultsProxy.frame(in: .named("scheduled-task-home-root"))
                             )
                         }
                     )
                     .zIndex(100)
                 }
             }
-            .coordinateSpace(name: "home-root")
+            .coordinateSpace(name: "scheduled-task-home-root")
             .background(colors.background)
             .simultaneousGesture(
-                DragGesture(minimumDistance: 0, coordinateSpace: .named("home-root"))
+                DragGesture(minimumDistance: 0, coordinateSpace: .named("scheduled-task-home-root"))
                     .onEnded { value in
                         let isTap = abs(value.translation.width) < 8 && abs(value.translation.height) < 8
                         guard isTap else { return }
@@ -364,10 +364,10 @@ struct HomeScreen: View {
                     }
             )
         }
-        .onPreferenceChange(HomeSearchBarFrameKey.self) { frame in
+        .onPreferenceChange(ScheduledTaskHomeSearchBarFrameKey.self) { frame in
             searchBarFrame = frame
         }
-        .onPreferenceChange(HomeSearchResultsFrameKey.self) { frame in
+        .onPreferenceChange(ScheduledTaskHomeSearchResultsFrameKey.self) { frame in
             searchResultsFrame = frame
         }
         .onChange(of: searchExpanded) { _, expanded in
@@ -384,8 +384,8 @@ struct HomeScreen: View {
                 searchResultsFrame = .zero
             }
         }
-        .onChange(of: homeScrollOffset, initial: true) { _, offset in
-            onRootDockCollapsedChange(max(offset, 0) > HomeMetrics.rootDockCollapseThreshold)
+        .onChange(of: scheduledTaskHomeScrollOffset, initial: true) { _, offset in
+            onRootDockCollapsedChange(max(offset, 0) > ScheduledTaskHomeMetrics.rootDockCollapseThreshold)
         }
         .onChange(of: createTaskRequestID) { _, requestID in
             handleCreateTaskRequest(requestID)
@@ -473,8 +473,8 @@ struct HomeScreen: View {
     }
 
     @ViewBuilder
-    private func homeTodayTaskRow(_ todo: TodoItem) -> some View {
-        HomeTodayTaskRow(
+    private func scheduledTaskHomeTodayTaskRow(_ todo: TodoItem) -> some View {
+        ScheduledTaskHomeTodayTaskRow(
             todo: todo,
             lists: viewModel.lists,
             onComplete: { await viewModel.complete(todo) },
@@ -565,7 +565,7 @@ struct HomeScreen: View {
     }
 }
 
-private struct HomeTopBar: View {
+private struct ScheduledTaskHomeTopBar: View {
     let totalWidth: CGFloat
     @Binding var searchExpanded: Bool
     @Binding var searchQuery: String
@@ -577,7 +577,7 @@ private struct HomeTopBar: View {
     @Environment(\.tdayColors) private var colors
 
     var body: some View {
-        let buttonSize = HomeMetrics.topBarButtonSize
+        let buttonSize = ScheduledTaskHomeMetrics.topBarButtonSize
         let buttonGap: CGFloat = 8
         let actionCount: CGFloat = 2
         let expandedSearchWidth = max(buttonSize, totalWidth)
@@ -587,7 +587,7 @@ private struct HomeTopBar: View {
 
         ZStack(alignment: .trailing) {
             TimelineView(.periodic(from: .now, by: 60)) { context in
-                let daytime = isHomeDaytime(context.date)
+                let daytime = isScheduledTaskHomeDaytime(context.date)
 
                 HStack(spacing: 8) {
                     Image(systemName: daytime ? "sun.max.fill" : "moon.stars.fill")
@@ -605,12 +605,12 @@ private struct HomeTopBar: View {
             }
 
             HStack(spacing: buttonGap) {
-                HomeIconCircleButton(icon: "NavListPlus") {
+                ScheduledTaskHomeIconCircleButton(icon: "NavListPlus") {
                     HapticManager.buttonTap()
                     onCreateList()
                 }
 
-                HomeIconCircleButton(icon: "NavEllipsis") {
+                ScheduledTaskHomeIconCircleButton(icon: "NavEllipsis") {
                     HapticManager.gentleTap()
                     onOpenSettings()
                 }
@@ -633,7 +633,7 @@ private struct HomeTopBar: View {
                         .foregroundStyle(colors.onSurface)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
-                .buttonStyle(HomeIconButtonStyle(compact: false))
+                .buttonStyle(ScheduledTaskHomeIconButtonStyle(compact: false))
                 .opacity(searchExpanded ? 0 : 1)
                 .allowsHitTesting(!searchExpanded)
                 .accessibilityLabel("Search")
@@ -645,7 +645,7 @@ private struct HomeTopBar: View {
                         .scaledToFit()
                         .frame(width: 20, height: 20)
                         .foregroundStyle(colors.onSurface)
-                        .frame(width: HomeMetrics.compactButtonSize, height: HomeMetrics.compactButtonSize)
+                        .frame(width: ScheduledTaskHomeMetrics.compactButtonSize, height: ScheduledTaskHomeMetrics.compactButtonSize)
 
                     TextField("", text: $searchQuery, prompt: Text("Search").foregroundStyle(colors.onSurfaceVariant))
                         .focused(searchFieldFocused)
@@ -690,17 +690,17 @@ private struct HomeTopBar: View {
             .background(
                 GeometryReader { proxy in
                     Color.clear
-                        .preference(key: HomeSearchBarFrameKey.self, value: proxy.frame(in: .named("home-root")))
+                        .preference(key: ScheduledTaskHomeSearchBarFrameKey.self, value: proxy.frame(in: .named("scheduled-task-home-root")))
                 }
             )
             .zIndex(2)
             .animation(.spring(response: 0.28, dampingFraction: 0.86), value: searchExpanded)
         }
-        .frame(maxWidth: .infinity, minHeight: HomeMetrics.topBarButtonSize)
+        .frame(maxWidth: .infinity, minHeight: ScheduledTaskHomeMetrics.topBarButtonSize)
     }
 }
 
-private struct HomeIconCircleButton: View {
+private struct ScheduledTaskHomeIconCircleButton: View {
     /// Asset-catalog name of the lucide template glyph (shared with web/Android).
     let icon: String
     var compact = false
@@ -717,8 +717,8 @@ private struct HomeIconCircleButton: View {
                 .frame(width: compact ? 20 : 22, height: compact ? 20 : 22)
                 .foregroundStyle(colors.onSurface)
                 .frame(
-                    width: compact ? HomeMetrics.compactButtonSize : HomeMetrics.topBarButtonSize,
-                    height: compact ? HomeMetrics.compactButtonSize : HomeMetrics.topBarButtonSize
+                    width: compact ? ScheduledTaskHomeMetrics.compactButtonSize : ScheduledTaskHomeMetrics.topBarButtonSize,
+                    height: compact ? ScheduledTaskHomeMetrics.compactButtonSize : ScheduledTaskHomeMetrics.topBarButtonSize
                 )
                 .background(compact ? Color.clear : colors.surface)
                 .clipShape(Circle())
@@ -729,18 +729,18 @@ private struct HomeIconCircleButton: View {
                     }
                 }
         }
-        .buttonStyle(HomeIconButtonStyle(compact: compact))
+        .buttonStyle(ScheduledTaskHomeIconButtonStyle(compact: compact))
     }
 }
 
-private enum HomeTodayTaskCompletionPhase {
+private enum ScheduledTaskHomeTodayTaskCompletionPhase {
     case active
     case checked
     case struck
     case fading
 }
 
-private struct HomeTodayTaskRow: View {
+private struct ScheduledTaskHomeTodayTaskRow: View {
     let todo: TodoItem
     let lists: [ListSummary]
     let onComplete: () async -> Void
@@ -750,7 +750,7 @@ private struct HomeTodayTaskRow: View {
 
     @Environment(\.tdayColors) private var colors
 
-    @State private var completionPhase = HomeTodayTaskCompletionPhase.active
+    @State private var completionPhase = ScheduledTaskHomeTodayTaskCompletionPhase.active
 
     private var listMeta: ListSummary? {
         todo.listId.flatMap { id in lists.first { $0.id == id } }
@@ -800,7 +800,7 @@ private struct HomeTodayTaskRow: View {
             .disabled(isCompleting)
 
             VStack(alignment: .leading, spacing: 3) {
-                HomeTodayTaskTitle(
+                ScheduledTaskHomeTodayTaskTitle(
                     text: todo.title,
                     isCompleted: showStrikethrough,
                     titleColor: titleColor,
@@ -826,7 +826,7 @@ private struct HomeTodayTaskRow: View {
                 HStack(spacing: 8) {
                     if let listMeta {
                         TdayListIcon(iconKey: listMeta.iconKey, size: 14)
-                            .foregroundStyle(homeListAccentColor(for: listMeta.color))
+                            .foregroundStyle(scheduledTaskHomeListAccentColor(for: listMeta.color))
                     }
                     if let priorityIcon {
                         Image(systemName: priorityIcon)
@@ -873,7 +873,7 @@ private struct HomeTodayTaskRow: View {
     }
 }
 
-private struct HomeTodayTaskTitle: View {
+private struct ScheduledTaskHomeTodayTaskTitle: View {
     let text: String
     let isCompleted: Bool
     let titleColor: Color
@@ -904,7 +904,7 @@ private struct HomeTodayTaskTitle: View {
     }
 }
 
-private struct HomeTodayCard: View {
+private struct ScheduledTaskHomeTodayCard: View {
     let count: Int
     let action: () -> Void
 
@@ -914,7 +914,7 @@ private struct HomeTodayCard: View {
 
     var body: some View {
         let color = Color(hex: 0x6EA8E1)
-        let shape = RoundedRectangle(cornerRadius: HomeMetrics.tileCornerRadius, style: .continuous)
+        let shape = RoundedRectangle(cornerRadius: ScheduledTaskHomeMetrics.tileCornerRadius, style: .continuous)
 
         Button(action: action) {
             ZStack {
@@ -945,15 +945,15 @@ private struct HomeTodayCard: View {
                 .padding(.vertical, 14)
             }
             .frame(maxWidth: .infinity)
-            .frame(height: HomeMetrics.todayCardHeight)
+            .frame(height: ScheduledTaskHomeMetrics.todayCardHeight)
             .clipShape(shape)
             .contentShape(shape)
         }
-        .buttonStyle(HomeTileButtonStyle())
+        .buttonStyle(ScheduledTaskHomeTileButtonStyle())
     }
 }
 
-private struct HomeCategoryBoard: View {
+private struct ScheduledTaskHomeCategoryBoard: View {
     let overdueCount: Int
     let scheduledCount: Int
     let allCount: Int
@@ -968,9 +968,9 @@ private struct HomeCategoryBoard: View {
     let onOpenCalendar: () -> Void
 
     var body: some View {
-        VStack(spacing: HomeMetrics.tileGap) {
-            HStack(spacing: HomeMetrics.tileGap) {
-                HomeCategoryTile(
+        VStack(spacing: ScheduledTaskHomeMetrics.tileGap) {
+            HStack(spacing: ScheduledTaskHomeMetrics.tileGap) {
+                ScheduledTaskHomeCategoryTile(
                     color: Color(hex: 0xD98F4B),
                     icon: "TileScheduled",
                     watermark: "TileScheduled",
@@ -979,7 +979,7 @@ private struct HomeCategoryBoard: View {
                     action: onOpenScheduled
                 )
 
-                HomeCategoryTile(
+                ScheduledTaskHomeCategoryTile(
                     color: Color(hex: 0xC97880),
                     icon: "TilePriority",
                     watermark: "TilePriority",
@@ -989,8 +989,8 @@ private struct HomeCategoryBoard: View {
                 )
             }
 
-            HStack(spacing: HomeMetrics.tileGap) {
-                HomeCategoryTile(
+            HStack(spacing: ScheduledTaskHomeMetrics.tileGap) {
+                ScheduledTaskHomeCategoryTile(
                     color: Color(hex: 0xE06F66),
                     icon: "TileOverdue",
                     watermark: "TileOverdue",
@@ -999,7 +999,7 @@ private struct HomeCategoryBoard: View {
                     action: onOpenOverdue
                 )
 
-                HomeCategoryTile(
+                ScheduledTaskHomeCategoryTile(
                     color: Color(hex: 0x68717A),
                     icon: "TileAll",
                     watermark: "TileAll",
@@ -1009,8 +1009,8 @@ private struct HomeCategoryBoard: View {
                 )
             }
 
-            HStack(spacing: HomeMetrics.tileGap) {
-                HomeCategoryTile(
+            HStack(spacing: ScheduledTaskHomeMetrics.tileGap) {
+                ScheduledTaskHomeCategoryTile(
                     color: Color(hex: 0x719F84),
                     icon: "TileComplete",
                     watermark: "TileComplete",
@@ -1019,7 +1019,7 @@ private struct HomeCategoryBoard: View {
                     action: onOpenCompleted
                 )
 
-                HomeCategoryTile(
+                ScheduledTaskHomeCategoryTile(
                     color: Color(hex: 0x9A89D2),
                     icon: "TileCalendar",
                     watermark: "TileCalendar",
@@ -1032,7 +1032,7 @@ private struct HomeCategoryBoard: View {
     }
 }
 
-private struct HomeCategoryTile: View {
+private struct ScheduledTaskHomeCategoryTile: View {
     let color: Color
     /// Asset-catalog name of the lucide glyph (template-rendered), shared with web.
     let icon: String
@@ -1042,7 +1042,7 @@ private struct HomeCategoryTile: View {
     let action: () -> Void
 
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: HomeMetrics.tileCornerRadius, style: .continuous)
+        let shape = RoundedRectangle(cornerRadius: ScheduledTaskHomeMetrics.tileCornerRadius, style: .continuous)
 
         Button(action: action) {
             ZStack {
@@ -1082,9 +1082,9 @@ private struct HomeCategoryTile: View {
                         .renderingMode(.template)
                         .resizable()
                         .scaledToFit()
-                        .frame(width: HomeMetrics.tileWatermarkSize, height: HomeMetrics.tileWatermarkSize)
+                        .frame(width: ScheduledTaskHomeMetrics.tileWatermarkSize, height: ScheduledTaskHomeMetrics.tileWatermarkSize)
                         .foregroundStyle(color.blended(with: .white, amount: 0.28).opacity(0.4))
-                        .offset(x: HomeMetrics.tileWatermarkTrailingInset, y: 12)
+                        .offset(x: ScheduledTaskHomeMetrics.tileWatermarkTrailingInset, y: 12)
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
                         .allowsHitTesting(false)
                 }
@@ -1107,18 +1107,18 @@ private struct HomeCategoryTile: View {
                         .font(.tdayRounded(size: 20, weight: .bold))
                         .foregroundStyle(.white)
                 }
-                .padding(HomeMetrics.tileInnerPadding)
+                .padding(ScheduledTaskHomeMetrics.tileInnerPadding)
             }
             .frame(maxWidth: .infinity, alignment: .topLeading)
-            .frame(height: HomeMetrics.tileHeight)
+            .frame(height: ScheduledTaskHomeMetrics.tileHeight)
             .clipShape(shape)
             .contentShape(shape)
         }
-        .buttonStyle(HomeTileButtonStyle())
+        .buttonStyle(ScheduledTaskHomeTileButtonStyle())
     }
 }
 
-private struct HomeListsHeader: View {
+private struct ScheduledTaskHomeListsHeader: View {
     @Environment(\.tdayColors) private var colors
 
     var body: some View {
@@ -1129,18 +1129,18 @@ private struct HomeListsHeader: View {
     }
 }
 
-private struct HomeListsSection: View {
+private struct ScheduledTaskHomeListsSection: View {
     let lists: [ListSummary]
     let displayName: (String) -> String
     let onOpenList: (ListSummary, String) -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: HomeMetrics.sectionSpacing) {
-            HomeListsHeader()
+        VStack(alignment: .leading, spacing: ScheduledTaskHomeMetrics.sectionSpacing) {
+            ScheduledTaskHomeListsHeader()
 
             ForEach(lists) { list in
                 let name = displayName(list.name)
-                HomeListRow(
+                ScheduledTaskHomeListRow(
                     name: name,
                     colorKey: list.color,
                     iconKey: list.iconKey,
@@ -1153,7 +1153,7 @@ private struct HomeListsSection: View {
     }
 }
 
-private struct HomeListRow: View {
+private struct ScheduledTaskHomeListRow: View {
     let name: String
     let colorKey: String?
     let iconKey: String?
@@ -1163,19 +1163,19 @@ private struct HomeListRow: View {
     @Environment(\.tdayColors) private var colors
 
     private var accent: Color {
-        homeListAccentColor(for: colorKey)
+        scheduledTaskHomeListAccentColor(for: colorKey)
     }
 
     private var symbolName: String {
-        homeListSymbolName(for: iconKey)
+        scheduledTaskHomeListSymbolName(for: iconKey)
     }
 
     private var containerColor: Color {
-        colors.surfaceVariant.blended(with: accent, amount: HomeMetrics.listContainerColorWeight)
+        colors.surfaceVariant.blended(with: accent, amount: ScheduledTaskHomeMetrics.listContainerColorWeight)
     }
 
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: HomeMetrics.tileCornerRadius, style: .continuous)
+        let shape = RoundedRectangle(cornerRadius: ScheduledTaskHomeMetrics.tileCornerRadius, style: .continuous)
 
         Button(action: action) {
             ZStack {
@@ -1237,15 +1237,15 @@ private struct HomeListRow: View {
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
             }
-            .frame(maxWidth: .infinity, minHeight: HomeMetrics.listRowHeight, maxHeight: HomeMetrics.listRowHeight)
+            .frame(maxWidth: .infinity, minHeight: ScheduledTaskHomeMetrics.listRowHeight, maxHeight: ScheduledTaskHomeMetrics.listRowHeight)
             .clipShape(shape)
             .contentShape(shape)
         }
-        .buttonStyle(HomeListButtonStyle())
+        .buttonStyle(ScheduledTaskHomeListButtonStyle())
     }
 }
 
-private struct HomeSearchResultsOverlay: View {
+private struct ScheduledTaskHomeSearchResultsOverlay: View {
     let todos: [TodoItem]
     let listsByID: [String: ListSummary]
     let onOpenTodo: (TodoItem) -> Void
@@ -1288,7 +1288,7 @@ private struct HomeSearchResultsOverlay: View {
                     VStack(spacing: 0) {
                         ForEach(Array(todos.enumerated()), id: \.element.id) { index, todo in
                             let list = todo.listId.flatMap { listsByID[$0] }
-                            let tint = homeListAccentColor(for: list?.color)
+                            let tint = scheduledTaskHomeListAccentColor(for: list?.color)
 
                             HStack(spacing: 10) {
                                 TdayListIcon(iconKey: list?.iconKey, size: 17)
@@ -1354,7 +1354,7 @@ private struct HomeSearchResultsOverlay: View {
     }
 }
 
-private struct HomeTileButtonStyle: ButtonStyle {
+private struct ScheduledTaskHomeTileButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .tdayPressEffect(
@@ -1366,7 +1366,7 @@ private struct HomeTileButtonStyle: ButtonStyle {
     }
 }
 
-private struct HomeListButtonStyle: ButtonStyle {
+private struct ScheduledTaskHomeListButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .tdayPressEffect(
@@ -1378,7 +1378,7 @@ private struct HomeListButtonStyle: ButtonStyle {
     }
 }
 
-private struct HomeIconButtonStyle: ButtonStyle {
+private struct ScheduledTaskHomeIconButtonStyle: ButtonStyle {
     let compact: Bool
 
     func makeBody(configuration: Configuration) -> some View {
@@ -1390,7 +1390,7 @@ private struct HomeIconButtonStyle: ButtonStyle {
     }
 }
 
-private struct HomeTdayLogoMark: View {
+private struct ScheduledTaskHomeTdayLogoMark: View {
     var body: some View {
         GeometryReader { proxy in
             let size = min(proxy.size.width, proxy.size.height)
@@ -1489,11 +1489,11 @@ struct CreateListSheet: View {
     }
 
     private var accentColor: Color {
-        homeListAccentColor(for: color)
+        scheduledTaskHomeListAccentColor(for: color)
     }
 
     private var selectedSymbolName: String {
-        homeListSymbolName(for: iconKey)
+        scheduledTaskHomeListSymbolName(for: iconKey)
     }
 
     private var maximumSheetHeight: CGFloat {
@@ -1558,7 +1558,7 @@ struct CreateListSheet: View {
                     TdaySheetCard {
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 12) {
-                                ForEach(homeListColorOptions, id: \.key) { option in
+                                ForEach(scheduledTaskHomeListColorOptions, id: \.key) { option in
                                     let isSelected = option.key == color
                                     Button {
                                         color = option.key
@@ -1592,7 +1592,7 @@ struct CreateListSheet: View {
                     TdaySheetCard {
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 10) {
-                                ForEach(homeListIconOptions, id: \.key) { option in
+                                ForEach(scheduledTaskHomeListIconOptions, id: \.key) { option in
                                     let isSelected = option.key == iconKey
                                     Button {
                                         iconKey = option.key
@@ -1657,96 +1657,96 @@ struct CreateListSheet: View {
     }
 }
 
-private let homeListColorOptions: [HomeListColorOption] = [
-    HomeListColorOption(key: "PINK", color: Color(hex: 0xE05299)),
-    HomeListColorOption(key: "GOLD", color: Color(hex: 0xE8A530)),
-    HomeListColorOption(key: "DEEP_BLUE", color: Color(hex: 0x3C9ADD)),
-    HomeListColorOption(key: "CORAL", color: Color(hex: 0xE6664C)),
-    HomeListColorOption(key: "TEAL", color: Color(hex: 0x2EB8AC)),
-    HomeListColorOption(key: "SLATE", color: Color(hex: 0x3E4774)),
-    HomeListColorOption(key: "BLUE", color: Color(hex: 0x6EA8E1)),
-    HomeListColorOption(key: "PURPLE", color: Color(hex: 0x7D67B6)),
-    HomeListColorOption(key: "ROSE", color: Color(hex: 0xD1617D)),
-    HomeListColorOption(key: "LIGHT_RED", color: Color(hex: 0xE06C6C)),
-    HomeListColorOption(key: "BRICK", color: Color(hex: 0xC64C39)),
-    HomeListColorOption(key: "YELLOW", color: Color(hex: 0xE8BA30)),
-    HomeListColorOption(key: "LIME", color: Color(hex: 0x46B963)),
-    HomeListColorOption(key: "ORANGE", color: Color(hex: 0xE28736)),
-    HomeListColorOption(key: "RED", color: Color(hex: 0xDF3A3A)),
+private let scheduledTaskHomeListColorOptions: [ScheduledTaskHomeListColorOption] = [
+    ScheduledTaskHomeListColorOption(key: "PINK", color: Color(hex: 0xE05299)),
+    ScheduledTaskHomeListColorOption(key: "GOLD", color: Color(hex: 0xE8A530)),
+    ScheduledTaskHomeListColorOption(key: "DEEP_BLUE", color: Color(hex: 0x3C9ADD)),
+    ScheduledTaskHomeListColorOption(key: "CORAL", color: Color(hex: 0xE6664C)),
+    ScheduledTaskHomeListColorOption(key: "TEAL", color: Color(hex: 0x2EB8AC)),
+    ScheduledTaskHomeListColorOption(key: "SLATE", color: Color(hex: 0x3E4774)),
+    ScheduledTaskHomeListColorOption(key: "BLUE", color: Color(hex: 0x6EA8E1)),
+    ScheduledTaskHomeListColorOption(key: "PURPLE", color: Color(hex: 0x7D67B6)),
+    ScheduledTaskHomeListColorOption(key: "ROSE", color: Color(hex: 0xD1617D)),
+    ScheduledTaskHomeListColorOption(key: "LIGHT_RED", color: Color(hex: 0xE06C6C)),
+    ScheduledTaskHomeListColorOption(key: "BRICK", color: Color(hex: 0xC64C39)),
+    ScheduledTaskHomeListColorOption(key: "YELLOW", color: Color(hex: 0xE8BA30)),
+    ScheduledTaskHomeListColorOption(key: "LIME", color: Color(hex: 0x46B963)),
+    ScheduledTaskHomeListColorOption(key: "ORANGE", color: Color(hex: 0xE28736)),
+    ScheduledTaskHomeListColorOption(key: "RED", color: Color(hex: 0xDF3A3A)),
 ]
 
-private let homeListIconOptions: [HomeListIconOption] = [
-    HomeListIconOption(key: "inbox", symbolName: "tray.fill"),
-    HomeListIconOption(key: "sun", symbolName: "sun.max.fill"),
-    HomeListIconOption(key: "calendar", symbolName: "calendar"),
-    HomeListIconOption(key: "schedule", symbolName: "clock"),
-    HomeListIconOption(key: "flag", symbolName: "flag.fill"),
-    HomeListIconOption(key: "check", symbolName: "checkmark"),
-    HomeListIconOption(key: "smile", symbolName: "face.smiling"),
-    HomeListIconOption(key: "list", symbolName: "list.bullet"),
-    HomeListIconOption(key: "bookmark", symbolName: "bookmark.fill"),
-    HomeListIconOption(key: "key", symbolName: "key.fill"),
-    HomeListIconOption(key: "gift", symbolName: "gift.fill"),
-    HomeListIconOption(key: "cake", symbolName: "birthday.cake.fill"),
-    HomeListIconOption(key: "school", symbolName: "graduationcap.fill"),
-    HomeListIconOption(key: "bag", symbolName: "backpack.fill"),
-    HomeListIconOption(key: "edit", symbolName: "pencil"),
-    HomeListIconOption(key: "document", symbolName: "doc.text.fill"),
-    HomeListIconOption(key: "book", symbolName: "book.closed.fill"),
-    HomeListIconOption(key: "work", symbolName: "briefcase.fill"),
-    HomeListIconOption(key: "wallet", symbolName: "wallet.pass.fill"),
-    HomeListIconOption(key: "money", symbolName: "dollarsign.circle.fill"),
-    HomeListIconOption(key: "fitness", symbolName: "dumbbell.fill"),
-    HomeListIconOption(key: "run", symbolName: "figure.run"),
-    HomeListIconOption(key: "food", symbolName: "fork.knife"),
-    HomeListIconOption(key: "drink", symbolName: "wineglass.fill"),
-    HomeListIconOption(key: "health", symbolName: "cross.case.fill"),
-    HomeListIconOption(key: "monitor", symbolName: "display"),
-    HomeListIconOption(key: "music", symbolName: "music.note"),
-    HomeListIconOption(key: "computer", symbolName: "desktopcomputer"),
-    HomeListIconOption(key: "game", symbolName: "gamecontroller.fill"),
-    HomeListIconOption(key: "headphones", symbolName: "headphones"),
-    HomeListIconOption(key: "eco", symbolName: "leaf.fill"),
-    HomeListIconOption(key: "pets", symbolName: "pawprint.fill"),
-    HomeListIconOption(key: "child", symbolName: "figure.2.and.child.holdinghands"),
-    HomeListIconOption(key: "family", symbolName: "person.3.fill"),
-    HomeListIconOption(key: "basket", symbolName: "basket.fill"),
-    HomeListIconOption(key: "cart", symbolName: "cart.fill"),
-    HomeListIconOption(key: "mall", symbolName: "bag.fill"),
-    HomeListIconOption(key: "inventory", symbolName: "archivebox.fill"),
-    HomeListIconOption(key: "soccer", symbolName: "soccerball"),
-    HomeListIconOption(key: "baseball", symbolName: "baseball.fill"),
-    HomeListIconOption(key: "basketball", symbolName: "basketball.fill"),
-    HomeListIconOption(key: "football", symbolName: "football.fill"),
-    HomeListIconOption(key: "tennis", symbolName: "tennis.racket"),
-    HomeListIconOption(key: "train", symbolName: "tram.fill"),
-    HomeListIconOption(key: "flight", symbolName: "airplane"),
-    HomeListIconOption(key: "boat", symbolName: "ferry.fill"),
-    HomeListIconOption(key: "car", symbolName: "car.fill"),
-    HomeListIconOption(key: "umbrella", symbolName: "umbrella.fill"),
-    HomeListIconOption(key: "drop", symbolName: "drop.fill"),
-    HomeListIconOption(key: "snow", symbolName: "snowflake"),
-    HomeListIconOption(key: "fire", symbolName: "flame.fill"),
-    HomeListIconOption(key: "tools", symbolName: "hammer.fill"),
-    HomeListIconOption(key: "scissors", symbolName: "scissors"),
-    HomeListIconOption(key: "architecture", symbolName: "building.columns.fill"),
-    HomeListIconOption(key: "code", symbolName: "chevron.left.forwardslash.chevron.right"),
-    HomeListIconOption(key: "idea", symbolName: "lightbulb.fill"),
-    HomeListIconOption(key: "chat", symbolName: "bubble.left.fill"),
-    HomeListIconOption(key: "alert", symbolName: "exclamationmark.triangle.fill"),
-    HomeListIconOption(key: "star", symbolName: "star.fill"),
-    HomeListIconOption(key: "heart", symbolName: "heart.fill"),
-    HomeListIconOption(key: "circle", symbolName: "circle.fill"),
-    HomeListIconOption(key: "square", symbolName: "square.fill"),
-    HomeListIconOption(key: "triangle", symbolName: "triangle.fill"),
-    HomeListIconOption(key: "home", symbolName: "house.fill"),
-    HomeListIconOption(key: "city", symbolName: "building.2.fill"),
-    HomeListIconOption(key: "bank", symbolName: "building.columns.fill"),
-    HomeListIconOption(key: "camera", symbolName: "camera.fill"),
-    HomeListIconOption(key: "palette", symbolName: "paintpalette.fill"),
+private let scheduledTaskHomeListIconOptions: [ScheduledTaskHomeListIconOption] = [
+    ScheduledTaskHomeListIconOption(key: "inbox", symbolName: "tray.fill"),
+    ScheduledTaskHomeListIconOption(key: "sun", symbolName: "sun.max.fill"),
+    ScheduledTaskHomeListIconOption(key: "calendar", symbolName: "calendar"),
+    ScheduledTaskHomeListIconOption(key: "schedule", symbolName: "clock"),
+    ScheduledTaskHomeListIconOption(key: "flag", symbolName: "flag.fill"),
+    ScheduledTaskHomeListIconOption(key: "check", symbolName: "checkmark"),
+    ScheduledTaskHomeListIconOption(key: "smile", symbolName: "face.smiling"),
+    ScheduledTaskHomeListIconOption(key: "list", symbolName: "list.bullet"),
+    ScheduledTaskHomeListIconOption(key: "bookmark", symbolName: "bookmark.fill"),
+    ScheduledTaskHomeListIconOption(key: "key", symbolName: "key.fill"),
+    ScheduledTaskHomeListIconOption(key: "gift", symbolName: "gift.fill"),
+    ScheduledTaskHomeListIconOption(key: "cake", symbolName: "birthday.cake.fill"),
+    ScheduledTaskHomeListIconOption(key: "school", symbolName: "graduationcap.fill"),
+    ScheduledTaskHomeListIconOption(key: "bag", symbolName: "backpack.fill"),
+    ScheduledTaskHomeListIconOption(key: "edit", symbolName: "pencil"),
+    ScheduledTaskHomeListIconOption(key: "document", symbolName: "doc.text.fill"),
+    ScheduledTaskHomeListIconOption(key: "book", symbolName: "book.closed.fill"),
+    ScheduledTaskHomeListIconOption(key: "work", symbolName: "briefcase.fill"),
+    ScheduledTaskHomeListIconOption(key: "wallet", symbolName: "wallet.pass.fill"),
+    ScheduledTaskHomeListIconOption(key: "money", symbolName: "dollarsign.circle.fill"),
+    ScheduledTaskHomeListIconOption(key: "fitness", symbolName: "dumbbell.fill"),
+    ScheduledTaskHomeListIconOption(key: "run", symbolName: "figure.run"),
+    ScheduledTaskHomeListIconOption(key: "food", symbolName: "fork.knife"),
+    ScheduledTaskHomeListIconOption(key: "drink", symbolName: "wineglass.fill"),
+    ScheduledTaskHomeListIconOption(key: "health", symbolName: "cross.case.fill"),
+    ScheduledTaskHomeListIconOption(key: "monitor", symbolName: "display"),
+    ScheduledTaskHomeListIconOption(key: "music", symbolName: "music.note"),
+    ScheduledTaskHomeListIconOption(key: "computer", symbolName: "desktopcomputer"),
+    ScheduledTaskHomeListIconOption(key: "game", symbolName: "gamecontroller.fill"),
+    ScheduledTaskHomeListIconOption(key: "headphones", symbolName: "headphones"),
+    ScheduledTaskHomeListIconOption(key: "eco", symbolName: "leaf.fill"),
+    ScheduledTaskHomeListIconOption(key: "pets", symbolName: "pawprint.fill"),
+    ScheduledTaskHomeListIconOption(key: "child", symbolName: "figure.2.and.child.holdinghands"),
+    ScheduledTaskHomeListIconOption(key: "family", symbolName: "person.3.fill"),
+    ScheduledTaskHomeListIconOption(key: "basket", symbolName: "basket.fill"),
+    ScheduledTaskHomeListIconOption(key: "cart", symbolName: "cart.fill"),
+    ScheduledTaskHomeListIconOption(key: "mall", symbolName: "bag.fill"),
+    ScheduledTaskHomeListIconOption(key: "inventory", symbolName: "archivebox.fill"),
+    ScheduledTaskHomeListIconOption(key: "soccer", symbolName: "soccerball"),
+    ScheduledTaskHomeListIconOption(key: "baseball", symbolName: "baseball.fill"),
+    ScheduledTaskHomeListIconOption(key: "basketball", symbolName: "basketball.fill"),
+    ScheduledTaskHomeListIconOption(key: "football", symbolName: "football.fill"),
+    ScheduledTaskHomeListIconOption(key: "tennis", symbolName: "tennis.racket"),
+    ScheduledTaskHomeListIconOption(key: "train", symbolName: "tram.fill"),
+    ScheduledTaskHomeListIconOption(key: "flight", symbolName: "airplane"),
+    ScheduledTaskHomeListIconOption(key: "boat", symbolName: "ferry.fill"),
+    ScheduledTaskHomeListIconOption(key: "car", symbolName: "car.fill"),
+    ScheduledTaskHomeListIconOption(key: "umbrella", symbolName: "umbrella.fill"),
+    ScheduledTaskHomeListIconOption(key: "drop", symbolName: "drop.fill"),
+    ScheduledTaskHomeListIconOption(key: "snow", symbolName: "snowflake"),
+    ScheduledTaskHomeListIconOption(key: "fire", symbolName: "flame.fill"),
+    ScheduledTaskHomeListIconOption(key: "tools", symbolName: "hammer.fill"),
+    ScheduledTaskHomeListIconOption(key: "scissors", symbolName: "scissors"),
+    ScheduledTaskHomeListIconOption(key: "architecture", symbolName: "building.columns.fill"),
+    ScheduledTaskHomeListIconOption(key: "code", symbolName: "chevron.left.forwardslash.chevron.right"),
+    ScheduledTaskHomeListIconOption(key: "idea", symbolName: "lightbulb.fill"),
+    ScheduledTaskHomeListIconOption(key: "chat", symbolName: "bubble.left.fill"),
+    ScheduledTaskHomeListIconOption(key: "alert", symbolName: "exclamationmark.triangle.fill"),
+    ScheduledTaskHomeListIconOption(key: "star", symbolName: "star.fill"),
+    ScheduledTaskHomeListIconOption(key: "heart", symbolName: "heart.fill"),
+    ScheduledTaskHomeListIconOption(key: "circle", symbolName: "circle.fill"),
+    ScheduledTaskHomeListIconOption(key: "square", symbolName: "square.fill"),
+    ScheduledTaskHomeListIconOption(key: "triangle", symbolName: "triangle.fill"),
+    ScheduledTaskHomeListIconOption(key: "home", symbolName: "house.fill"),
+    ScheduledTaskHomeListIconOption(key: "city", symbolName: "building.2.fill"),
+    ScheduledTaskHomeListIconOption(key: "bank", symbolName: "building.columns.fill"),
+    ScheduledTaskHomeListIconOption(key: "camera", symbolName: "camera.fill"),
+    ScheduledTaskHomeListIconOption(key: "palette", symbolName: "paintpalette.fill"),
 ]
 
-private func homeListAccentColor(for key: String?) -> Color {
+private func scheduledTaskHomeListAccentColor(for key: String?) -> Color {
     let normalizedKey: String?
     switch key {
     case "GREEN":
@@ -1756,11 +1756,11 @@ private func homeListAccentColor(for key: String?) -> Color {
     default:
         normalizedKey = key
     }
-    return homeListColorOptions.first(where: { $0.key == normalizedKey })?.color ?? Color(hex: 0xE05299)
+    return scheduledTaskHomeListColorOptions.first(where: { $0.key == normalizedKey })?.color ?? Color(hex: 0xE05299)
 }
 
-private func homeListSymbolName(for key: String?) -> String {
-    homeListIconOptions.first(where: { $0.key == key })?.symbolName ?? "tray.fill"
+private func scheduledTaskHomeListSymbolName(for key: String?) -> String {
+    scheduledTaskHomeListIconOptions.first(where: { $0.key == key })?.symbolName ?? "tray.fill"
 }
 
 private extension Color {

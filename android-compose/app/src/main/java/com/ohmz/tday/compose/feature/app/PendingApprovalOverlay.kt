@@ -35,7 +35,7 @@ import com.ohmz.tday.compose.R
 /**
  * Persistent "waiting for admin approval" holding screen. Shown on every launch while a
  * registered account is still PENDING; a silent re-login (on launch and via "Check
- * status") advances to Home the moment approval lands.
+ * status") advances to the scheduled task home screen the moment approval lands.
  */
 @Composable
 fun PendingApprovalOverlay(

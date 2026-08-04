@@ -66,27 +66,27 @@
     <string name="label_version_name">v%1$s</string>
     <string name="label_server">Serveur</string>
 
-    <!-- Home screen -->
-    <string name="home_title">T\'Day</string>
-    <string name="home_category_today">Aujourd\'hui</string>
-    <string name="home_category_overdue">En retard</string>
-    <string name="home_category_scheduled">Planifiées</string>
-    <string name="home_category_all">Toutes</string>
-    <string name="home_category_priority">Priorité</string>
-    <string name="home_category_completed">Terminées</string>
-    <string name="home_category_calendar">Calendrier</string>
-    <string name="root_feed_tab_home">Accueil</string>
+    <!-- Scheduled task home screen -->
+    <string name="scheduled_task_home_title">T\'Day</string>
+    <string name="scheduled_task_home_category_today">Aujourd\'hui</string>
+    <string name="scheduled_task_home_category_overdue">En retard</string>
+    <string name="scheduled_task_home_category_scheduled">Planifiées</string>
+    <string name="scheduled_task_home_category_all">Toutes</string>
+    <string name="scheduled_task_home_category_priority">Priorité</string>
+    <string name="scheduled_task_home_category_completed">Terminées</string>
+    <string name="scheduled_task_home_category_calendar">Calendrier</string>
+    <string name="root_feed_tab_scheduled_task_home">Planifiées</string>
     <string name="root_feed_tab_floater">Sans date</string>
-    <string name="home_search_placeholder">Rechercher</string>
-    <string name="home_search_no_results">Aucune tâche correspondante</string>
-    <string name="home_my_lists">Mes listes</string>
-    <string name="home_new_list">Nouvelle liste</string>
-    <string name="home_list_name_placeholder">Nom de la liste</string>
-    <string name="home_section_list">Liste</string>
-    <string name="home_section_color">Couleur</string>
-    <string name="home_section_icon">Icône</string>
-    <string name="home_list_icon_option">Sélectionner l\'icône de la liste %1$s</string>
-    <string name="home_locked_list_name">Connectez-vous pour charger vos listes</string>
+    <string name="scheduled_task_home_search_placeholder">Rechercher</string>
+    <string name="scheduled_task_home_search_no_results">Aucune tâche correspondante</string>
+    <string name="scheduled_task_home_my_lists">Mes listes</string>
+    <string name="scheduled_task_home_new_list">Nouvelle liste</string>
+    <string name="scheduled_task_home_list_name_placeholder">Nom de la liste</string>
+    <string name="scheduled_task_home_section_list">Liste</string>
+    <string name="scheduled_task_home_section_color">Couleur</string>
+    <string name="scheduled_task_home_section_icon">Icône</string>
+    <string name="scheduled_task_home_list_icon_option">Sélectionner l\'icône de la liste %1$s</string>
+    <string name="scheduled_task_home_locked_list_name">Connectez-vous pour charger vos listes</string>
 
     <string-array name="splash_taglines">
         <item>Votre serveur s\'en souvient, vous n\'avez plus à le faire</item>

@@ -87,19 +87,19 @@
       "sinceVersion": null,
       "deepLink": null,
       "helpAnchors": [],
-      "title": "Accueil et À tout moment",
-      "summary": "Deux fils d'accueil paisibles entre lesquels vous basculez depuis le dock.",
+      "title": "Planifié et À tout moment",
+      "summary": "Deux fils principaux et paisibles entre lesquels vous basculez depuis le dock.",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "T'Day propose deux fils jumeaux. Accueil réunit vos tâches planifiées pour aujourd'hui et au-delà. À tout moment réunit les Floaters — les tâches sans date. Basculez de l'un à l'autre depuis le dock en bas, et créez une tâche depuis n'importe lequel."
+            "T'Day propose deux fils jumeaux. Le fil Planifié réunit vos tâches datées d'aujourd'hui et des jours à venir. À tout moment réunit les Floaters — les tâches sans date. Basculez de l'un à l'autre depuis le dock en bas, et créez une tâche depuis n'importe lequel."
           ]
         }
       ],
-      "searchTitle": "accueil et a tout moment",
-      "searchKeywords": "accueil, a tout moment, fil, dock, racine, naviguer, onglets",
-      "searchBody": "deux fils d'accueil paisibles entre lesquels vous basculez depuis le dock. t'day propose deux fils jumeaux. accueil reunit vos taches planifiees pour aujourd'hui et au-dela. a tout moment reunit les floaters — les taches sans date. basculez de l'un a l'autre depuis le dock en bas, et creez une tache depuis n'importe lequel."
+      "searchTitle": "planifie et a tout moment",
+      "searchKeywords": "planifie, a tout moment, fil, dock, racine, naviguer, onglets",
+      "searchBody": "deux fils principaux et paisibles entre lesquels vous basculez depuis le dock. t'day propose deux fils jumeaux. le fil planifie reunit vos taches datees d'aujourd'hui et des jours a venir. a tout moment reunit les floaters — les taches sans date. basculez de l'un a l'autre depuis le dock en bas, et creez une tache depuis n'importe lequel."
     },
     {
       "id": "create-task",
@@ -374,13 +374,13 @@
       "sinceVersion": null,
       "deepLink": null,
       "helpAnchors": [],
-      "title": "Floaters et tâches planifiées",
-      "summary": "Les tâches sans date vivent dans À tout moment ; les tâches datées dans Accueil.",
+      "title": "Floaters et tâches datées",
+      "summary": "Les tâches sans date vivent dans À tout moment ; les tâches datées dans Planifié.",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Une tâche planifiée a une date d'échéance et apparaît dans Accueil et le calendrier. Un Floater n'a pas de date — il attend tranquillement dans votre fil À tout moment jusqu'à ce que vous soyez prêt. Utilisez les Floaters pour le travail « un jour » qui ne devrait pas encombrer aujourd'hui."
+            "Une tâche datée a une échéance et apparaît dans Planifié et le calendrier. Un Floater n'a pas de date — il attend tranquillement dans votre fil À tout moment jusqu'à ce que vous soyez prêt. Utilisez les Floaters pour le travail « un jour » qui ne devrait pas encombrer aujourd'hui."
           ]
         },
         {
@@ -390,9 +390,9 @@
           ]
         }
       ],
-      "searchTitle": "floaters et taches planifiees",
+      "searchTitle": "floaters et taches datees",
       "searchKeywords": "floater, a tout moment, non planifie, sans date, tache, planifie, difference",
-      "searchBody": "les taches sans date vivent dans a tout moment ; les taches datees dans accueil. une tache planifiee a une date d'echeance et apparait dans accueil et le calendrier. un floater n'a pas de date — il attend tranquillement dans votre fil a tout moment jusqu'a ce que vous soyez pret. utilisez les floaters pour le travail « un jour » qui ne devrait pas encombrer aujourd'hui. les floaters n'apparaissent jamais sur le calendrier — cet espace est reserve au travail date."
+      "searchBody": "les taches sans date vivent dans a tout moment ; les taches datees dans planifie. une tache datee a une echeance et apparait dans planifie et le calendrier. un floater n'a pas de date — il attend tranquillement dans votre fil a tout moment jusqu'a ce que vous soyez pret. utilisez les floaters pour le travail « un jour » qui ne devrait pas encombrer aujourd'hui. les floaters n'apparaissent jamais sur le calendrier — cet espace est reserve au travail date."
     },
     {
       "id": "resting-floaters",
@@ -450,7 +450,7 @@
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Quand un flottant est prêt à devenir du vrai travail, utilisez son action Planifier : choisissez une heure et il rejoint l'Accueil comme tâche datée. L'inverse fonctionne aussi — une tâche en retard que vous repoussez sans cesse peut flotter discrètement : rétrogradez-la et elle revient dans À tout moment sans date, en gardant titre, notes et priorité."
+            "Quand un flottant est prêt à devenir du vrai travail, utilisez son action Planifier : choisissez une heure et il rejoint le fil Planifié comme tâche datée. L'inverse fonctionne aussi — une tâche en retard que vous repoussez sans cesse peut flotter discrètement : rétrogradez-la et elle revient dans À tout moment sans date, en gardant titre, notes et priorité."
           ]
         },
         {
@@ -462,7 +462,7 @@
       ],
       "searchTitle": "promouvoir et laisser flotter",
       "searchKeywords": "promouvoir, planifier flottant, retrograder, laisser flotter, convertir, a tout moment, deplacer, en retard",
-      "searchBody": "planifiez un flottant en vraie tache, ou laissez flotter une tache en retard. quand un flottant est pret a devenir du vrai travail, utilisez son action planifier : choisissez une heure et il rejoint l'accueil comme tache datee. l'inverse fonctionne aussi — une tache en retard que vous repoussez sans cesse peut flotter discretement : retrogradez-la et elle revient dans a tout moment sans date, en gardant titre, notes et priorite. les taches recurrentes ne peuvent pas flotter — terminez d'abord la serie si vous la voulez sans date."
+      "searchBody": "planifiez un flottant en vraie tache, ou laissez flotter une tache en retard. quand un flottant est pret a devenir du vrai travail, utilisez son action planifier : choisissez une heure et il rejoint le fil planifie comme tache datee. l'inverse fonctionne aussi — une tache en retard que vous repoussez sans cesse peut flotter discretement : retrogradez-la et elle revient dans a tout moment sans date, en gardant titre, notes et priorite. les taches recurrentes ne peuvent pas flotter — terminez d'abord la serie si vous la voulez sans date."
     },
     {
       "id": "quick-defer",

@@ -292,7 +292,7 @@ final class AppViewModel {
     }
 
     /// Re-attempt login with the stored pending credentials. Returns true once the account
-    /// is approved (and routes to Home via a fresh bootstrap); false while still pending.
+    /// is approved (and routes to the scheduled task home screen via a fresh bootstrap); false while still pending.
     @discardableResult
     func checkPendingApproval() async -> Bool {
         guard !isCheckingApproval else { return false }
@@ -305,7 +305,7 @@ final class AppViewModel {
         if case .success = result {
             container.authRepository.clearPendingApproval()
             // Stay on the holding screen through the re-bootstrap; the authenticated
-            // branch flips straight to Home without flashing the login screen.
+            // branch flips straight to the scheduled task home screen without flashing the login screen.
             await bootstrap()
             isCheckingApproval = false
             return true
@@ -628,7 +628,7 @@ final class AppViewModel {
 
     func navigate(to route: AppRoute) {
         switch route {
-        case .home, .floaterTodos:
+        case .scheduledTaskHome, .floaterTaskHome:
             navigationPath = []
         default:
             navigationPath.append(route)

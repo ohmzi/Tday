@@ -17,7 +17,7 @@ import {
   Search,
 } from "lucide-react";
 
-// Static, decorative stand-in for the home dashboard — mirrors NativeHomeDashboard's
+// Static, decorative stand-in for the scheduled task home dashboard — mirrors NativeScheduledTaskHomeDashboard's
 // real layout (centered max-w-6xl column: brand header, date hero, the 2×3 category-tile
 // grid, "My Lists" rows, plus the floating nav + Add Task FAB) so the blurred backdrop
 // behind the auth card looks like the actual app. It only ever shows blurred, so the
@@ -51,7 +51,7 @@ function TileOverlay() {
 const circleButtonClass =
   "flex h-14 w-14 items-center justify-center rounded-full border border-white/70 bg-card/90 text-foreground dark:border-white/10";
 
-export default function MockHomeBackdrop() {
+export default function MockScheduledTaskHomeBackdrop() {
   const titleDate = new Date().toLocaleDateString(undefined, {
     weekday: "short",
     month: "short",
@@ -144,7 +144,7 @@ export default function MockHomeBackdrop() {
       <div className="absolute bottom-6 left-1/2 flex -translate-x-1/2 items-center gap-1 rounded-full border border-white/10 bg-card/90 p-2 shadow-lg">
         <span className="flex items-center gap-2 rounded-full bg-muted/60 px-4 py-2 text-accent">
           <Home className="h-5 w-5" />
-          <span className="text-[15px] font-bold">Home</span>
+          <span className="text-[15px] font-bold">Scheduled</span>
         </span>
         <span className="px-3 py-2 text-muted-foreground">
           <Leaf className="h-5 w-5" />

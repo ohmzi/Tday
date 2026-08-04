@@ -1,4 +1,4 @@
-package com.ohmz.tday.compose.feature.home
+package com.ohmz.tday.compose.feature.scheduledtaskhome
 
 import androidx.activity.compose.BackHandler
 import androidx.annotation.DrawableRes
@@ -182,8 +182,8 @@ private fun TodoItem.toTaskSortKey(): TaskSortKey = TaskSortKey(
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
 @Composable
-fun HomeScreen(
-    uiState: HomeUiState,
+fun ScheduledTaskHomeScreen(
+    uiState: ScheduledTaskHomeUiState,
     onRefresh: () -> Unit,
     onOpenToday: () -> Unit,
     onOpenOverdue: () -> Unit,
@@ -482,7 +482,7 @@ fun HomeScreen(
                         )
                     }
                         item {
-                            HomeTodayCard(
+                            ScheduledTaskHomeTodayCard(
                                 count = uiState.summary.todayCount,
                                 onClick = {
                                     closeSearch()
@@ -493,10 +493,10 @@ fun HomeScreen(
 
                         itemsIndexed(
                             items = uiState.todayTodos,
-                            key = { _, todo -> "home-today-${todo.id}" },
-                            contentType = { _, _ -> "home_today_task" },
+                            key = { _, todo -> "scheduled-task-home-today-${todo.id}" },
+                            contentType = { _, _ -> "scheduled_task_home_today_task" },
                         ) { _, todo ->
-                            HomeTodayTaskRow(
+                            ScheduledTaskHomeTodayTaskRow(
                                 modifier = Modifier.animateItem(
                                     fadeInSpec = tween(
                                         durationMillis = 180,
@@ -616,7 +616,7 @@ fun HomeScreen(
                         ) {
                             if (searchResults.isEmpty()) {
                                 Text(
-                                    text = stringResource(R.string.home_search_no_results),
+                                    text = stringResource(R.string.scheduled_task_home_search_no_results),
                                     modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = colorScheme.onSurfaceVariant,
@@ -703,18 +703,18 @@ fun HomeScreen(
             }
             if (showRootFeedDock && !searchExpanded) {
                 RootFeedDock(
-                    activeTab = RootFeedTab.HOME,
+                    activeTab = RootFeedTab.SCHEDULED_TASK_HOME,
                     collapsed = dockCollapsed,
                     onTabSelected = { tab ->
                         when (tab) {
-                            RootFeedTab.HOME -> {
+                            RootFeedTab.SCHEDULED_TASK_HOME -> {
                                 searchResultScope.launch {
                                     closeSearch()
                                     listState.animateScrollToItem(index = 0, scrollOffset = 0)
                                 }
                             }
 
-                            RootFeedTab.FLOATER -> {
+                            RootFeedTab.FLOATER_TASK_HOME -> {
                                 closeSearch()
                                 onOpenFloater()
                             }
@@ -743,7 +743,7 @@ fun HomeScreen(
     }
 
     if (showSummarySheet) {
-        HomeSummaryBottomSheet(
+        ScheduledTaskHomeSummaryBottomSheet(
             isLoading = uiState.isSummarizing,
             summaryText = uiState.summaryText,
             summarySource = uiState.summarySource,
@@ -796,7 +796,7 @@ fun HomeScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun HomeSummaryBottomSheet(
+private fun ScheduledTaskHomeSummaryBottomSheet(
     isLoading: Boolean,
     summaryText: String?,
     summarySource: String?,
@@ -1007,7 +1007,7 @@ private fun CreateListBottomSheet(
                             verticalArrangement = Arrangement.spacedBy(14.dp),
                         ) {
                             TdaySheetHeader(
-                                title = stringResource(R.string.home_new_list),
+                                title = stringResource(R.string.scheduled_task_home_new_list),
                                 leftIcon = ImageVector.vectorResource(R.drawable.ic_lucide_x),
                                 leftContentDescription = stringResource(R.string.action_close),
                                 onLeftClick = {
@@ -1068,7 +1068,7 @@ private fun CreateListBottomSheet(
                                         ) {
                                             if (listName.isBlank()) {
                                                 Text(
-                                                    text = stringResource(R.string.home_list_name_placeholder),
+                                                    text = stringResource(R.string.scheduled_task_home_list_name_placeholder),
                                                     style = MaterialTheme.typography.headlineSmall,
                                                     color = colorScheme.onSurfaceVariant.copy(alpha = 0.78f),
                                                     fontWeight = FontWeight.ExtraBold,
@@ -1081,7 +1081,7 @@ private fun CreateListBottomSheet(
                             }
                         }
 
-                            TdaySheetSectionTitle(stringResource(R.string.home_section_color))
+                            TdaySheetSectionTitle(stringResource(R.string.scheduled_task_home_section_color))
                             TdaySheetCard {
                             Row(
                                 modifier = Modifier
@@ -1123,7 +1123,7 @@ private fun CreateListBottomSheet(
                             }
                         }
 
-                            TdaySheetSectionTitle(stringResource(R.string.home_section_icon))
+                            TdaySheetSectionTitle(stringResource(R.string.scheduled_task_home_section_icon))
                             TdaySheetCard {
                             Row(
                                 modifier = Modifier
@@ -1136,7 +1136,7 @@ private fun CreateListBottomSheet(
                                     val selected = listIconKey == option.key
                                     val interactionSource = remember { MutableInteractionSource() }
                                     val iconOptionDescription =
-                                        stringResource(R.string.home_list_icon_option, option.key)
+                                        stringResource(R.string.scheduled_task_home_list_icon_option, option.key)
                                     Box(
                                         modifier = Modifier
                                             .size(48.dp)
@@ -1242,11 +1242,11 @@ private fun TopSearchBar(
     val focusManager = LocalFocusManager.current
     val focusRequester = remember { FocusRequester() }
     val isDaytime = rememberIsDaytime()
-    val homeTitleIcon =
+    val scheduledTaskHomeTitleIcon =
         if (isDaytime) ImageVector.vectorResource(R.drawable.ic_lucide_sun) else ImageVector.vectorResource(
             R.drawable.ic_lucide_moon
         )
-    val homeTitleIconTint = if (isDaytime) TdayTitleIconDayAccent else TdayTitleIconNightAccent
+    val scheduledTaskHomeTitleIconTint = if (isDaytime) TdayTitleIconDayAccent else TdayTitleIconNightAccent
 
     LaunchedEffect(searchExpanded) {
         if (searchExpanded) {
@@ -1292,13 +1292,13 @@ private fun TopSearchBar(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Icon(
-                imageVector = homeTitleIcon,
+                imageVector = scheduledTaskHomeTitleIcon,
                 contentDescription = null,
-                tint = homeTitleIconTint,
+                tint = scheduledTaskHomeTitleIconTint,
                 modifier = Modifier.size(26.dp),
             )
             Text(
-                text = stringResource(R.string.home_title),
+                text = stringResource(R.string.scheduled_task_home_title),
                 style = MaterialTheme.typography.headlineLarge,
                 color = colorScheme.onBackground,
                 fontWeight = FontWeight.ExtraBold,
@@ -1407,7 +1407,7 @@ private fun TopSearchBar(
                             ) {
                                 if (searchQuery.isBlank()) {
                                     Text(
-                                        text = stringResource(R.string.home_search_placeholder),
+                                        text = stringResource(R.string.scheduled_task_home_search_placeholder),
                                         style = MaterialTheme.typography.bodyLarge,
                                         color = colorScheme.onSurfaceVariant,
                                     )
@@ -1454,7 +1454,7 @@ private fun MyListsHeader() {
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
          Text(
-            text = stringResource(R.string.home_my_lists),
+            text = stringResource(R.string.scheduled_task_home_my_lists),
             style = MaterialTheme.typography.headlineMedium,
             color = colorScheme.onBackground,
             fontWeight = FontWeight.ExtraBold,
@@ -1476,11 +1476,11 @@ private fun PressableIconButton(
     val pressed by interactionSource.collectIsPressedAsState()
     val scale by animateFloatAsState(
         targetValue = if (pressed) 0.93f else 1f,
-        label = "homeIconButtonScale",
+        label = "scheduledTaskHomeIconButtonScale",
     )
     val offsetY by animateDpAsState(
         targetValue = if (pressed) 2.dp else 0.dp,
-        label = "homeIconButtonOffsetY",
+        label = "scheduledTaskHomeIconButtonOffsetY",
     )
     val buttonSize = if (compact) 30.dp else TdayDimens.FabSize
     val defaultElevation = if (compact) 0.dp else TdayDimens.FabElevation
@@ -1521,13 +1521,13 @@ private fun PressableIconButton(
     }
 }
 
-private val HOME_TODAY_DUE_FORMATTER: DateTimeFormatter =
+private val SCHEDULED_TASK_HOME_TODAY_DUE_FORMATTER: DateTimeFormatter =
     DateTimeFormatter.ofPattern("h:mm a", Locale.getDefault()).withZone(ZoneId.systemDefault())
-private val HOME_TODAY_DATE_FORMATTER: DateTimeFormatter =
+private val SCHEDULED_TASK_HOME_TODAY_DATE_FORMATTER: DateTimeFormatter =
     DateTimeFormatter.ofPattern("EEE, MMM d", Locale.getDefault()).withZone(ZoneId.systemDefault())
 
 @Composable
-private fun HomeTodayCard(
+private fun ScheduledTaskHomeTodayCard(
     count: Int,
     onClick: () -> Unit,
 ) {
@@ -1546,7 +1546,7 @@ private fun HomeTodayCard(
         targetValue = if (isPressed) 2.dp else 9.dp,
         label = "todayCardElevation"
     )
-    val dateLabel = remember { HOME_TODAY_DATE_FORMATTER.format(Instant.now()) }
+    val dateLabel = remember { SCHEDULED_TASK_HOME_TODAY_DATE_FORMATTER.format(Instant.now()) }
     val color = Color(0xFF6EA8E1)
 
     Card(
@@ -1623,7 +1623,7 @@ private fun HomeTodayCard(
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun HomeTodayTaskRow(
+private fun ScheduledTaskHomeTodayTaskRow(
     modifier: Modifier = Modifier,
     todo: TodoItem,
     lists: List<ListSummary>,
@@ -1657,25 +1657,25 @@ private fun HomeTodayTaskRow(
     }
     val animatedOffsetX by animateTaskSwipeOffsetAsState(
         state = swipeRevealState,
-        label = "homeTodaySwipeOffset",
+        label = "scheduledTaskHomeTodaySwipeOffset",
     )
     val completionAlpha by animateFloatAsState(
         targetValue = if (completionFading) 0f else 1f,
         animationSpec = tween(durationMillis = 260, easing = FastOutSlowInEasing),
-        label = "homeTodayCompletionAlpha",
+        label = "scheduledTaskHomeTodayCompletionAlpha",
     )
     val completionOffsetY by animateDpAsState(
         targetValue = if (completionFading) (-10).dp else 0.dp,
         animationSpec = tween(durationMillis = 260, easing = FastOutSlowInEasing),
-        label = "homeTodayCompletionOffsetY",
+        label = "scheduledTaskHomeTodayCompletionOffsetY",
     )
     val titleStrikeProgress by animateFloatAsState(
         targetValue = if (localStruck) 1f else 0f,
         animationSpec = tween(durationMillis = 320, easing = FastOutSlowInEasing),
-        label = "homeTodayTitleStrikeProgress",
+        label = "scheduledTaskHomeTodayTitleStrikeProgress",
     )
     val actionRevealProgress = swipeRevealState.revealProgress(animatedOffsetX)
-    val dueText = todo.due?.let(HOME_TODAY_DUE_FORMATTER::format)
+    val dueText = todo.due?.let(SCHEDULED_TASK_HOME_TODAY_DUE_FORMATTER::format)
     val rowShape = RoundedCornerShape(16.dp)
     val listMeta = todo.listId?.let { listId -> lists.firstOrNull { it.id == listId } }
     val listIndicatorColor = tdayListAccentColor(listMeta?.color)
@@ -1970,7 +1970,7 @@ private fun CategoryGrid(
                 color = Color(0xFFD98F4B),
                 iconRes = R.drawable.ic_lucide_calendar_clock,
                 watermarkRes = R.drawable.ic_lucide_calendar_clock,
-                title = stringResource(R.string.home_category_scheduled),
+                title = stringResource(R.string.scheduled_task_home_category_scheduled),
                 count = scheduledCount,
                 onClick = onOpenScheduled,
             )
@@ -1979,7 +1979,7 @@ private fun CategoryGrid(
                 color = Color(0xFFC97880),
                 iconRes = R.drawable.ic_lucide_flag,
                 watermarkRes = R.drawable.ic_lucide_flag,
-                title = stringResource(R.string.home_category_priority),
+                title = stringResource(R.string.scheduled_task_home_category_priority),
                 count = priorityCount,
                 onClick = onOpenPriority,
             )
@@ -1990,7 +1990,7 @@ private fun CategoryGrid(
                 color = Color(0xFFE06F66),
                 iconRes = R.drawable.ic_lucide_clock_3,
                 watermarkRes = R.drawable.ic_lucide_clock_3,
-                title = stringResource(R.string.home_category_overdue),
+                title = stringResource(R.string.scheduled_task_home_category_overdue),
                 count = overdueCount,
                 onClick = onOpenOverdue,
             )
@@ -1999,7 +1999,7 @@ private fun CategoryGrid(
                 color = Color(0xFF68717A),
                 iconRes = R.drawable.ic_lucide_layers,
                 watermarkRes = R.drawable.ic_lucide_layers,
-                title = stringResource(R.string.home_category_all),
+                title = stringResource(R.string.scheduled_task_home_category_all),
                 count = allCount,
                 onClick = onOpenAll,
             )
@@ -2010,7 +2010,7 @@ private fun CategoryGrid(
                 color = completedColor,
                 iconRes = R.drawable.ic_lucide_circle_check_big,
                 watermarkRes = R.drawable.ic_lucide_circle_check_big,
-                title = stringResource(R.string.home_category_completed),
+                title = stringResource(R.string.scheduled_task_home_category_completed),
                 count = completedCount,
                 onClick = onOpenCompleted,
             )
@@ -2019,7 +2019,7 @@ private fun CategoryGrid(
                 color = calendarTileColor(colorScheme),
                 iconRes = R.drawable.ic_lucide_calendar_1,
                 watermarkRes = R.drawable.ic_lucide_calendar_1,
-                title = stringResource(R.string.home_category_calendar),
+                title = stringResource(R.string.scheduled_task_home_category_calendar),
                 count = calendarCount,
                 onClick = onOpenCalendar,
             )
@@ -2206,7 +2206,7 @@ private fun ListRow(
     )
     val accent = tdayListAccentColor(colorKey)
     val icon = tdayListIconForKey(iconKey)
-    val containerColor = lerp(colorScheme.surfaceVariant, accent, HOME_LIST_CONTAINER_COLOR_WEIGHT)
+    val containerColor = lerp(colorScheme.surfaceVariant, accent, SCHEDULED_TASK_HOME_LIST_CONTAINER_COLOR_WEIGHT)
     val displayName = capitalizeFirstListLetter(name)
 
     Card(
@@ -2344,7 +2344,7 @@ private fun ListRow(
     }
 }
 
-private const val HOME_LIST_CONTAINER_COLOR_WEIGHT = 0.66f
+private const val SCHEDULED_TASK_HOME_LIST_CONTAINER_COLOR_WEIGHT = 0.66f
 private const val CREATE_LIST_SHEET_MAX_HEIGHT_FRACTION = 0.80f
 private const val CREATE_LIST_SHEET_NORMAL_HEIGHT_FRACTION = 0.70f
 private const val CREATE_LIST_SHEET_KEYBOARD_HEIGHT_FRACTION = 0.80f

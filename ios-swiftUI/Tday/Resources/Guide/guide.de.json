@@ -87,19 +87,19 @@
       "sinceVersion": null,
       "deepLink": null,
       "helpAnchors": [],
-      "title": "Home und Jederzeit",
-      "summary": "Zwei ruhige Startfeeds, zwischen denen du über das Dock wechselst.",
+      "title": "Geplant und Jederzeit",
+      "summary": "Zwei ruhige Hauptfeeds, zwischen denen du über das Dock wechselst.",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "T'Day hat zwei verwandte Feeds. Home enthält deine geplanten Aufgaben für heute und darüber hinaus. Jederzeit enthält Floater — Aufgaben ohne Datum. Wechsle über das Dock unten zwischen ihnen und lege aus jedem von beiden eine Aufgabe an."
+            "T'Day hat zwei verwandte Feeds. Geplant enthält deine terminierten Aufgaben für heute und darüber hinaus. Jederzeit enthält Floater — Aufgaben ohne Datum. Wechsle über das Dock unten zwischen ihnen und lege aus jedem von beiden eine Aufgabe an."
           ]
         }
       ],
-      "searchTitle": "home und jederzeit",
-      "searchKeywords": "home, jederzeit, feed, dock, start, navigieren, tabs, wechseln",
-      "searchBody": "zwei ruhige startfeeds, zwischen denen du uber das dock wechselst. t'day hat zwei verwandte feeds. home enthalt deine geplanten aufgaben fur heute und daruber hinaus. jederzeit enthalt floater — aufgaben ohne datum. wechsle uber das dock unten zwischen ihnen und lege aus jedem von beiden eine aufgabe an."
+      "searchTitle": "geplant und jederzeit",
+      "searchKeywords": "geplant, jederzeit, feed, dock, hauptfeed, navigieren, tabs, wechseln",
+      "searchBody": "zwei ruhige hauptfeeds, zwischen denen du uber das dock wechselst. t'day hat zwei verwandte feeds. geplant enthalt deine terminierten aufgaben fur heute und daruber hinaus. jederzeit enthalt floater — aufgaben ohne datum. wechsle uber das dock unten zwischen ihnen und lege aus jedem von beiden eine aufgabe an."
     },
     {
       "id": "create-task",
@@ -375,12 +375,12 @@
       "deepLink": null,
       "helpAnchors": [],
       "title": "Floater vs. geplante Aufgaben",
-      "summary": "Aufgaben ohne Datum leben in Jederzeit; Aufgaben mit Datum in Home.",
+      "summary": "Aufgaben ohne Datum leben in Jederzeit; Aufgaben mit Datum in Geplant.",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Eine geplante Aufgabe hat ein Fälligkeitsdatum und erscheint in Home und im Kalender. Ein Floater hat kein Datum — er wartet still in deinem Jederzeit-Feed, bis du bereit bist. Nutze Floater für „irgendwann“-Vorhaben, die den heutigen Tag nicht überladen sollen."
+            "Eine terminierte Aufgabe hat ein Fälligkeitsdatum und erscheint in Geplant und im Kalender. Ein Floater hat kein Datum — er wartet still in deinem Jederzeit-Feed, bis du bereit bist. Nutze Floater für „irgendwann“-Vorhaben, die den heutigen Tag nicht überladen sollen."
           ]
         },
         {
@@ -392,7 +392,7 @@
       ],
       "searchTitle": "floater vs. geplante aufgaben",
       "searchKeywords": "floater, jederzeit, ungeplant, ohne datum, todo, geplant, unterschied",
-      "searchBody": "aufgaben ohne datum leben in jederzeit; aufgaben mit datum in home. eine geplante aufgabe hat ein falligkeitsdatum und erscheint in home und im kalender. ein floater hat kein datum — er wartet still in deinem jederzeit-feed, bis du bereit bist. nutze floater fur „irgendwann“-vorhaben, die den heutigen tag nicht uberladen sollen. floater erscheinen nie im kalender — dieser platz ist nur fur datierte vorhaben."
+      "searchBody": "aufgaben ohne datum leben in jederzeit; aufgaben mit datum in geplant. eine terminierte aufgabe hat ein falligkeitsdatum und erscheint in geplant und im kalender. ein floater hat kein datum — er wartet still in deinem jederzeit-feed, bis du bereit bist. nutze floater fur „irgendwann“-vorhaben, die den heutigen tag nicht uberladen sollen. floater erscheinen nie im kalender — dieser platz ist nur fur datierte vorhaben."
     },
     {
       "id": "resting-floaters",
@@ -450,7 +450,7 @@
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Wenn ein Floater zu echter Arbeit werden soll, nutze seine Planen-Aktion: Wähle eine Zeit, und er wandert als terminierte Aufgabe nach Start. Auch andersherum: Eine überfällige Aufgabe, die du immer wieder verschiebst, kann leise treiben – stufe sie herab und sie kehrt ohne Datum zu Jederzeit zurück, mit Titel, Notizen und Priorität."
+            "Wenn ein Floater zu echter Arbeit werden soll, nutze seine Planen-Aktion: Wähle eine Zeit, und er wandert als terminierte Aufgabe zu Geplant. Auch andersherum: Eine überfällige Aufgabe, die du immer wieder verschiebst, kann leise treiben – stufe sie herab und sie kehrt ohne Datum zu Jederzeit zurück, mit Titel, Notizen und Priorität."
           ]
         },
         {
@@ -462,7 +462,7 @@
       ],
       "searchTitle": "hochstufen & treiben lassen",
       "searchKeywords": "hochstufen, floater planen, herabstufen, treiben lassen, umwandeln, jederzeit, verschieben, uberfallig",
-      "searchBody": "plane einen floater als echte aufgabe ein – oder lass eine liegengebliebene aufgabe treiben. wenn ein floater zu echter arbeit werden soll, nutze seine planen-aktion: wahle eine zeit, und er wandert als terminierte aufgabe nach start. auch andersherum: eine uberfallige aufgabe, die du immer wieder verschiebst, kann leise treiben – stufe sie herab und sie kehrt ohne datum zu jederzeit zuruck, mit titel, notizen und prioritat. wiederholende aufgaben konnen nicht treiben – beende zuerst die serie, wenn sie datumslos sein soll."
+      "searchBody": "plane einen floater als echte aufgabe ein – oder lass eine liegengebliebene aufgabe treiben. wenn ein floater zu echter arbeit werden soll, nutze seine planen-aktion: wahle eine zeit, und er wandert als terminierte aufgabe zu geplant. auch andersherum: eine uberfallige aufgabe, die du immer wieder verschiebst, kann leise treiben – stufe sie herab und sie kehrt ohne datum zu jederzeit zuruck, mit titel, notizen und prioritat. wiederholende aufgaben konnen nicht treiben – beende zuerst die serie, wenn sie datumslos sein soll."
     },
     {
       "id": "quick-defer",

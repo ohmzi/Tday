@@ -11,7 +11,7 @@ const SonnerToaster = ({ ...props }: ToasterProps) => {
       position="bottom-center"
       // Lift the toast above the bottom RootDock (fixed at 18px + safe-area,
       // h-16 = 64px tall, so its top is ~82px up) so it never overlaps the
-      // Home/Floater dock + FAB. ~12px gap above the dock.
+      // Scheduled/Floater dock + FAB. ~12px gap above the dock.
       offset={{ bottom: "calc(env(safe-area-inset-bottom) + 94px)" }}
       mobileOffset={{ bottom: "calc(env(safe-area-inset-bottom) + 94px)" }}
       toastOptions={{
