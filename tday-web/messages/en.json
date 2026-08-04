@@ -715,6 +715,14 @@
       "deleteConfirmCancel": "Cancel",
       "deleteConfirmAction": "Delete",
       "deleteDone": "Local data deleted."
+    },
+    "troubleshooting": {
+      "reset": "Reset cached app data",
+      "confirmTitle": "Reset cached app data?",
+      "confirmBody": "Clears this device's offline cache and reloads the latest version. Your tasks, lists and sign-in are not affected.",
+      "confirmAction": "Reset",
+      "confirmCancel": "Cancel",
+      "resetFailed": "Couldn't reset the cache. Close and reopen the app, then try again."
     }
   },
   "summary": {
