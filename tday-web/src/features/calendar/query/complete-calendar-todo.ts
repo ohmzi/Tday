@@ -20,7 +20,8 @@ export const useCompleteCalendarTodo = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           id: todoId,
-          instanceDate: todoItem.rrule ? todoItem.instanceDate?.getTime() : null,
+          // Date, not epoch millis: the backend parses instanceDate as ISO-8601.
+          instanceDate: todoItem.rrule ? (todoItem.instanceDate ?? null) : null,
         }),
       });
     },

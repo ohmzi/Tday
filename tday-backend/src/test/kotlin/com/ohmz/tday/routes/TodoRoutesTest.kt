@@ -17,6 +17,7 @@ import com.ohmz.tday.shared.model.CreateTodoRequest
 import com.ohmz.tday.shared.model.TodoSummaryRequest
 import com.ohmz.tday.shared.model.TodoSummaryResponse
 import com.ohmz.tday.shared.model.UpdateTodoRequest
+import io.ktor.client.request.delete
 import io.ktor.client.request.patch
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
@@ -423,6 +424,125 @@ class TodoRoutesTest {
         assertTrue(fr.summary != en.summary, "expected localized difference: ${fr.summary} vs ${en.summary}")
     }
 
+    // instanceDate is an ISO-8601 string on the wire. `isLenient = true` means an
+    // unquoted JSON number still *deserializes* (into the literal digits), so the
+    // request only blows up later in parseDueMinute — these pin that down so a
+    // client sending epoch millis fails loudly in tests instead of in production.
+    @Test
+    fun `complete todo rejects epoch millis instanceDate`() = testApplication {
+        val todoService = RecordingTodoService()
+
+        application {
+            configureTodoRoutesTestApp(todoService)
+        }
+
+        val response = client.patch("/api/todo/complete") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"id":"todo_123","instanceDate":1774624920000}""")
+        }
+
+        assertEquals(HttpStatusCode.BadRequest, response.status)
+        val payload = json.parseToJsonElement(response.bodyAsText()).jsonObject
+        assertEquals(
+            "instanceDate must be a valid ISO-8601 datetime",
+            payload.getValue("message").jsonPrimitive.content,
+        )
+        assertEquals(0, todoService.completeCalls)
+    }
+
+    @Test
+    fun `complete todo accepts ISO-8601 instanceDate`() = testApplication {
+        val todoService = RecordingTodoService()
+
+        application {
+            configureTodoRoutesTestApp(todoService)
+        }
+
+        val response = client.patch("/api/todo/complete") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"id":"todo_123","instanceDate":"2026-03-27T15:42:00.000Z"}""")
+        }
+
+        assertEquals(HttpStatusCode.OK, response.status)
+        assertEquals(1, todoService.completeCalls)
+        assertEquals(LocalDateTime.of(2026, 3, 27, 15, 42, 0), todoService.lastCompleteInstanceDate)
+    }
+
+    @Test
+    fun `uncomplete todo rejects epoch millis instanceDate`() = testApplication {
+        val todoService = RecordingTodoService()
+
+        application {
+            configureTodoRoutesTestApp(todoService)
+        }
+
+        val response = client.patch("/api/todo/uncomplete") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"id":"todo_123","instanceDate":1774624920000}""")
+        }
+
+        assertEquals(HttpStatusCode.BadRequest, response.status)
+        assertEquals(
+            "instanceDate must be a valid ISO-8601 datetime",
+            json.parseToJsonElement(response.bodyAsText()).jsonObject
+                .getValue("message").jsonPrimitive.content,
+        )
+    }
+
+    @Test
+    fun `delete instance rejects epoch millis instanceDate`() = testApplication {
+        val todoService = RecordingTodoService()
+
+        application {
+            configureTodoRoutesTestApp(todoService)
+        }
+
+        val response = client.delete("/api/todo/instance") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"todoId":"todo_123","instanceDate":1774624920000}""")
+        }
+
+        assertEquals(HttpStatusCode.BadRequest, response.status)
+        assertEquals(0, todoService.deleteInstanceCalls)
+    }
+
+    @Test
+    fun `delete instance accepts ISO-8601 instanceDate`() = testApplication {
+        val todoService = RecordingTodoService()
+
+        application {
+            configureTodoRoutesTestApp(todoService)
+        }
+
+        val response = client.delete("/api/todo/instance") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"todoId":"todo_123","instanceDate":"2026-03-27T15:42:00.000Z"}""")
+        }
+
+        assertEquals(HttpStatusCode.OK, response.status)
+        assertEquals(1, todoService.deleteInstanceCalls)
+        assertEquals(LocalDateTime.of(2026, 3, 27, 15, 42, 0), todoService.lastDeleteInstanceDate)
+    }
+
+    // The web client was sending `id` here; the route reads `todoId`, so the body
+    // failed to deserialize before any of the instanceDate handling ran.
+    @Test
+    fun `delete instance rejects body that names the todo id as id`() = testApplication {
+        val todoService = RecordingTodoService()
+
+        application {
+            configureTodoRoutesTestApp(todoService)
+        }
+
+        val response = client.delete("/api/todo/instance") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"id":"todo_123","instanceDate":"2026-03-27T15:42:00.000Z"}""")
+        }
+
+        assertEquals(HttpStatusCode.BadRequest, response.status)
+        assertEquals(0, todoService.deleteInstanceCalls)
+    }
+
     private suspend fun io.ktor.client.HttpClient.postSummary(
         payload: TodoSummaryRequest,
     ) = post("/api/todo/summary") {
@@ -476,6 +596,10 @@ class TodoRoutesTest {
         var lastCreateDue: LocalDateTime? = null
         var lastUpdateFields: Map<String, Any?>? = null
         var lastDemoteId: String? = null
+        var completeCalls = 0
+        var lastCompleteInstanceDate: LocalDateTime? = null
+        var deleteInstanceCalls = 0
+        var lastDeleteInstanceDate: LocalDateTime? = null
 
         override suspend fun create(
             userId: String,
@@ -523,7 +647,11 @@ class TodoRoutesTest {
             userId: String,
             todoId: String,
             instanceDate: LocalDateTime?,
-        ) = Unit.right()
+        ): Either<com.ohmz.tday.domain.AppError, Unit> {
+            completeCalls++
+            lastCompleteInstanceDate = instanceDate
+            return Unit.right()
+        }
 
         override suspend fun uncompleteTodo(
             userId: String,
@@ -548,7 +676,11 @@ class TodoRoutesTest {
             userId: String,
             todoId: String,
             instanceDate: LocalDateTime,
-        ) = Unit.right()
+        ): Either<com.ohmz.tday.domain.AppError, Unit> {
+            deleteInstanceCalls++
+            lastDeleteInstanceDate = instanceDate
+            return Unit.right()
+        }
 
         override suspend fun demoteToFloater(userId: String, todoId: String): Either<com.ohmz.tday.domain.AppError, FloaterResponse> {
             lastDemoteId = todoId
