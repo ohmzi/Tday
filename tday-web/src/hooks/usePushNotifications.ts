@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/api-client";
+import { isLocalMode } from "@/lib/local/appMode";
 import { isPushSupported, urlBase64ToUint8Array } from "@/lib/push/vapid";
 
 const PUSH_ENABLED_KEY = "tday.push-enabled";
@@ -38,7 +39,10 @@ async function getExistingSubscription(): Promise<PushSubscription | null> {
 
 export function usePushNotifications() {
   const [state, setState] = useState<PushState>({
-    isSupported: isPushSupported(),
+    // Web push is delivered by the backend from a stored subscription, so it is
+    // a Server Mode feature — Local Mode reports it as unsupported and the
+    // Settings toggle disappears, matching Android's UnifiedPush row.
+    isSupported: isPushSupported() && !isLocalMode(),
     permission: typeof Notification !== "undefined" ? Notification.permission : "default",
     isSubscribed: false,
     isLoading: true,

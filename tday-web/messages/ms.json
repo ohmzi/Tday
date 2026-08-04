@@ -673,7 +673,8 @@
       "confirmBody": "Ini menambah {{count}} item ke akaun anda. Apa yang sedia ada tidak diubah atau dibuang.",
       "confirmRemapped": "{{count}} item dengan ID bercanggah akan ditambah sebagai salinan baharu.",
       "confirmCancel": "Batal",
-      "confirmImport": "Import"
+      "confirmImport": "Import",
+      "summaryLocal": "{{tasks}} tugasan · {{lists}} senarai · {{completed}} selesai, semuanya dalam pelayar ini."
     },
     "calendarFeed": {
       "title": "Suapan kalendar",
@@ -702,6 +703,18 @@
     "restingFloaters": {
       "title": "Floater berehat",
       "toggle": "Pudarkan tugasan Anytime yang tidak disentuh"
+    },
+    "workspace": {
+      "title": "Ruang kerja",
+      "localTitle": "Ruang kerja setempat",
+      "localDetail": "Disimpan dalam pelayar ini sahaja — tiada akaun, tiada penyegerakan.",
+      "leave": "Keluar dari ruang kerja setempat",
+      "delete": "Padam data setempat",
+      "deleteConfirmTitle": "Padam data setempat?",
+      "deleteConfirmBody": "Ini membuang secara kekal semua tugasan, senarai dan rekod selesai yang disimpan dalam pelayar ini. Tiada salinan pada mana-mana pelayan — muat turun data anda dahulu jika mahu menyimpannya.",
+      "deleteConfirmCancel": "Batal",
+      "deleteConfirmAction": "Padam",
+      "deleteDone": "Data setempat dipadam."
     }
   },
   "summary": {
@@ -1002,7 +1015,7 @@
         "title": "Mod Tempatan",
         "summary": "Guna T'Day sepenuhnya luar talian, tanpa pelayan atau akaun.",
         "keywords": "mod tempatan, luar talian, peribadi, tanpa akaun, tanpa pelayan, pada peranti",
-        "body": "Mod Tempatan menyimpan segalanya pada peranti anda — tiada log masuk, tiada pelayan, tiada muat naik. Ia cara utama untuk menggunakan T'Day secara peribadi, dan data tempatan anda tidak pernah dihantar ke mana-mana dengan sendirinya.",
+        "body": "Mod Tempatan menyimpan segalanya pada peranti anda — tiada log masuk, tiada pelayan, tiada muat naik. Ia cara utama untuk menggunakan T'Day secara peribadi, dan data tempatan anda tidak pernah dihantar ke mana-mana dengan sendirinya. Dalam pelayar ia disimpan dalam storan pelayar itu sendiri, jadi membersihkan kuki dan data tapak turut membuang ruang kerja itu — eksport dahulu jika mahu menyimpannya.",
         "tip": "Ciri khusus pelayan dipaparkan di sini dengan lencana “Mod pelayan” supaya anda tahu apa yang berubah jika anda log masuk."
       },
       "server-mode": {

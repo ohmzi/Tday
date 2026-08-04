@@ -8,6 +8,7 @@ import NativePageTitle from "@/components/app/NativePageTitle";
 import ScreenWatermark from "@/components/app/ScreenWatermark";
 import MobileSearchHeader from "@/components/ui/MobileSearchHeader";
 import { useShareListAsText } from "@/hooks/use-share-list";
+import { useIsLocalMode } from "@/hooks/useAppMode";
 import { Button } from "@/components/ui/button";
 import { getListIcon } from "@/lib/listIcons";
 import { listColorAccentColors, nativeScreenAccentColors } from "@/components/app/nativeScreenTheme";
@@ -21,6 +22,7 @@ import FloaterListDot from "./FloaterListDot";
 export default function FloaterListContainer({ id }: { id: string }) {
   const { t: appDict } = useTranslation("app");
   const { toast } = useToast();
+  const isLocalMode = useIsLocalMode();
   const resetList = useResetFloaterList();
   const { floaterListMetaData } = useFloaterListMetaData();
   const { floaterList, floaterListTodos, floaterListLoading } = useFloaterList({ id });
@@ -192,7 +194,9 @@ export default function FloaterListContainer({ id }: { id: string }) {
         open={editListOpen}
         onOpenChange={setEditListOpen}
         list={editableList}
-        onManageMembers={() => setMembersOpen(true)}
+        // Collaborators need accounts; a local workspace has none, so the
+        // Members entry disappears while plain-text sharing stays.
+        onManageMembers={isLocalMode ? undefined : () => setMembersOpen(true)}
         onShareList={() => void shareListAsText()}
       />
       <ManageMembersSheet

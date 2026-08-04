@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
+import { useIsLocalMode } from "@/hooks/useAppMode";
 
 const railButtonClass =
   "group flex h-10 min-h-10 w-10 shrink-0 items-center justify-center rounded-xl text-sidebar-foreground/70 transition-colors duration-200 hover:bg-sidebar-accent/70 hover:text-sidebar-foreground";
@@ -40,6 +41,8 @@ const UserCard = ({
 }) => {
   const { user, isLoading, logout } = useAuth();
   const { t: sidebarDict } = useTranslation("sidebar");
+  const { t: settingsDict } = useTranslation("settings");
+  const isLocalMode = useIsLocalMode();
   const { setTheme, theme } = useTheme();
   const router = useRouter();
   const { toast } = useToast();
@@ -52,6 +55,11 @@ const UserCard = ({
   if (isLoading) return <UserCardLoading collapsed={collapsed} />;
   if (!user) return null;
 
+  // A local workspace has no account, so the row reads as a workspace rather
+  // than a person, and "Sign out" becomes "Leave local workspace".
+  const displayName = isLocalMode
+    ? settingsDict("workspace.localTitle")
+    : user.name || user.username || "User";
   const initials =
     (user.name || user.username || "U")
       .split(" ")
@@ -140,7 +148,7 @@ const UserCard = ({
 
       {/* Inert user button — shows who's signed in; opens nothing for now. */}
       {collapsed ? (
-        <div className={railButtonClass} aria-label={user.name || user.username || "User"}>
+        <div className={railButtonClass} aria-label={displayName}>
           <span className={railIconSlot}>
             <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-border/60 bg-card/80 text-[9px] font-semibold leading-none text-sidebar-foreground">
               {initials}
@@ -152,9 +160,7 @@ const UserCard = ({
           <span className={expandedIconChip}>
             <span className="text-xs font-black leading-none text-foreground">{initials}</span>
           </span>
-          <span className="min-w-0 flex-1 truncate text-left">
-            {user.name || user.username || "User"}
-          </span>
+          <span className="min-w-0 flex-1 truncate text-left">{displayName}</span>
         </div>
       )}
 
@@ -163,7 +169,7 @@ const UserCard = ({
         router.push("/app/settings");
       })}
 
-      {user.role === "ADMIN"
+      {!isLocalMode && user.role === "ADMIN"
         ? renderAction("admin", Shield, sidebarDict("admin"), () => {
             onNavigate?.();
             router.push("/app/admin");
@@ -173,9 +179,11 @@ const UserCard = ({
       {renderAction(
         "logout",
         LogOut,
-        sidebarDict("settingMenu.logout"),
+        isLocalMode
+          ? settingsDict("workspace.leave")
+          : sidebarDict("settingMenu.logout"),
         () => void handleLogout(),
-        { destructive: true },
+        { destructive: !isLocalMode },
       )}
     </div>
   );

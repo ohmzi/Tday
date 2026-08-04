@@ -40,7 +40,18 @@ import { nativeScreenAccentColors } from "@/components/app/nativeScreenTheme";
 import NativeAppBrandButton from "@/components/app/NativeAppBrandButton";
 import { api } from "@/lib/api-client";
 import { getErrorMessage } from "@/lib/error-message";
+import { deleteLocalWorkspace } from "@/lib/local/localApi";
+import { useIsLocalMode } from "@/hooks/useAppMode";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
+import {
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalTitle,
+  ModalDescription,
+  ModalFooter,
+} from "@/components/ui/Modal";
 import {
   isRestingFloatersEnabled,
   setRestingFloatersEnabled,
@@ -282,6 +293,9 @@ export default function SettingsPage() {
   const { t } = useTranslation("settings");
   const { t: guideDict } = useTranslation("guide");
   const { user, refreshSession, logout } = useAuth();
+  // Local Mode has no account, no server and no collaborators, so everything
+  // that talks to one is hidden — mirroring the native settings screens.
+  const isLocalMode = useIsLocalMode();
   const { preferences, updatePreferences } = useUserPreferences();
   const { toast } = useToast();
   const { theme = "system", setTheme } = useTheme();
@@ -388,8 +402,10 @@ export default function SettingsPage() {
   const [showWebhookSecret, setShowWebhookSecret] = useState(false);
   const [revokingWebhookId, setRevokingWebhookId] = useState<string | null>(null);
   const [signingOut, setSigningOut] = useState(false);
+  const [deleteLocalOpen, setDeleteLocalOpen] = useState(false);
 
   useEffect(() => {
+    if (isLocalMode) return;
     let cancelled = false;
     fetchSecurityQuestionStatus()
       .then((status) => {
@@ -401,9 +417,10 @@ export default function SettingsPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [isLocalMode]);
 
   useEffect(() => {
+    if (isLocalMode) return;
     let cancelled = false;
     api
       .GET({ url: "/api/user/api-key" })
@@ -416,7 +433,7 @@ export default function SettingsPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [isLocalMode]);
 
   const handleGenerateApiKey = async () => {
     setApiKeyLoading(true);
@@ -474,6 +491,7 @@ export default function SettingsPage() {
   };
 
   useEffect(() => {
+    if (isLocalMode) return;
     let cancelled = false;
     api
       .GET({ url: "/api/user/calendar-feed" })
@@ -486,7 +504,7 @@ export default function SettingsPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [isLocalMode]);
 
   const handleGenerateFeed = async () => {
     setFeedLoading(true);
@@ -549,6 +567,7 @@ export default function SettingsPage() {
   };
 
   useEffect(() => {
+    if (isLocalMode) return;
     let cancelled = false;
     api
       .GET({ url: "/api/webhook" })
@@ -561,7 +580,7 @@ export default function SettingsPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [isLocalMode]);
 
   const toggleWebhookEvent = (event: string) => {
     setNewWebhookEvents((prev) =>
@@ -652,6 +671,15 @@ export default function SettingsPage() {
             : "Unable to log out. Please try again.",
       });
     }
+  };
+
+  // Destroys the browser workspace. Irreversible — there is no server copy, which
+  // is exactly what the confirmation spells out.
+  const handleDeleteLocalData = async () => {
+    deleteLocalWorkspace();
+    setDeleteLocalOpen(false);
+    toast({ description: t("workspace.deleteDone") });
+    await handleLogout();
   };
 
   const handleCopyApiKey = async () => {
@@ -846,6 +874,9 @@ export default function SettingsPage() {
         className="mb-1"
       />
 
+      {/* Account card — Server Mode only; a local workspace has no account,
+          password or recovery questions to manage. */}
+      {isLocalMode ? null : (
       <SettingsSection title={t("profile.title")}>
         <div className="space-y-4">
           {/* Name — collapsed summary with an Edit affordance, expands to an inline editor. */}
@@ -1212,6 +1243,7 @@ export default function SettingsPage() {
           </div>
         </div>
       </SettingsSection>
+      )}
 
       <SheetCard className="space-y-4 p-[18px]">
         <SectionHeading title={t("appearance.title")} />
@@ -1334,6 +1366,9 @@ export default function SettingsPage() {
 
       <DataTransferCard />
 
+      {/* Calendar feed, webhooks and dashboard API keys are all consumed by
+          something outside the browser, so they need a server to serve them. */}
+      {isLocalMode ? null : (
       <SettingsSection
         title={t("calendarFeed.title")}
         description={t("calendarFeed.blurb")}
@@ -1402,7 +1437,9 @@ export default function SettingsPage() {
           </div>
         )}
       </SettingsSection>
+      )}
 
+      {isLocalMode ? null : (
       <SettingsSection
         title={t("webhooks.title")}
         description={t("webhooks.blurb")}
@@ -1529,11 +1566,30 @@ export default function SettingsPage() {
           </p>
         )}
       </SettingsSection>
+      )}
 
       <SettingsSection
-        title={t("dashboard.title")}
-        titleAction={<GuideHelpLink topic="api-key-homarr" />}
+        title={isLocalMode ? t("workspace.title") : t("dashboard.title")}
+        titleAction={
+          isLocalMode ? undefined : <GuideHelpLink topic="api-key-homarr" />
+        }
       >
+        {isLocalMode ? (
+          <>
+            {/* Where this workspace lives — the web counterpart of the native
+                Workspace row (Android SettingsWorkspaceContent). */}
+            <div className="space-y-1">
+              <p className="text-[1.05rem] font-black text-foreground">
+                {t("workspace.localTitle")}
+              </p>
+              <p className="text-sm font-extrabold text-muted-foreground">
+                {t("workspace.localDetail")}
+              </p>
+            </div>
+            <CardDivider />
+          </>
+        ) : (
+        <>
         {/* Create a new scoped key. Read-only keys can only fetch data (safe for
             dashboards); full keys can modify the account. */}
         <div className="space-y-3">
@@ -1656,6 +1712,8 @@ export default function SettingsPage() {
         )}
 
         <CardDivider />
+        </>
+        )}
 
         {/* How-To & feature guide — a searchable index of everything T'Day can do,
             reachable by everyone (works offline / in every mode). */}
@@ -1672,7 +1730,7 @@ export default function SettingsPage() {
 
         {/* Admin entry point — only for admins. Opens the same admin screen as the
             desktop sidebar's Admin link (the route is already mobile-responsive). */}
-        {user?.role === "ADMIN" && (
+        {!isLocalMode && user?.role === "ADMIN" && (
           <>
             <Link
               href="/app/admin"
@@ -1687,16 +1745,67 @@ export default function SettingsPage() {
           </>
         )}
 
-        {/* Sign out — last row of the last card, matching the native settings design. */}
-        <button
-          type="button"
-          onClick={handleLogout}
-          disabled={signingOut}
-          className="flex w-full items-center py-1.5 text-left text-[1.05rem] font-black text-destructive transition active:opacity-60 disabled:opacity-50"
-        >
-          {t("signOut")}
-        </button>
+        {/* Last rows of the last card, matching the native settings design.
+            Leaving a local workspace is a mode switch that keeps the browser's
+            tasks; deleting is the only destructive action, so it stands alone. */}
+        {isLocalMode ? (
+          <>
+            <button
+              type="button"
+              onClick={handleLogout}
+              disabled={signingOut}
+              className="flex w-full items-center py-1.5 text-left text-[1.05rem] font-black text-foreground transition active:opacity-60 disabled:opacity-50"
+            >
+              {t("workspace.leave")}
+            </button>
+            <CardDivider />
+            <button
+              type="button"
+              onClick={() => setDeleteLocalOpen(true)}
+              disabled={signingOut}
+              className="flex w-full items-center py-1.5 text-left text-[1.05rem] font-black text-destructive transition active:opacity-60 disabled:opacity-50"
+            >
+              {t("workspace.delete")}
+            </button>
+          </>
+        ) : (
+          <button
+            type="button"
+            onClick={handleLogout}
+            disabled={signingOut}
+            className="flex w-full items-center py-1.5 text-left text-[1.05rem] font-black text-destructive transition active:opacity-60 disabled:opacity-50"
+          >
+            {t("signOut")}
+          </button>
+        )}
       </SettingsSection>
+
+      <Modal open={deleteLocalOpen} onOpenChange={setDeleteLocalOpen}>
+        <ModalOverlay>
+          <ModalContent>
+            <ModalHeader>
+              <ModalTitle>{t("workspace.deleteConfirmTitle")}</ModalTitle>
+              <ModalDescription>{t("workspace.deleteConfirmBody")}</ModalDescription>
+            </ModalHeader>
+            <ModalFooter className="mt-4">
+              <Button
+                variant="outline"
+                className="bg-popover w-full sm:w-auto"
+                onClick={() => setDeleteLocalOpen(false)}
+              >
+                {t("workspace.deleteConfirmCancel")}
+              </Button>
+              <Button
+                variant="destructive"
+                className="w-full sm:w-auto"
+                onClick={() => void handleDeleteLocalData()}
+              >
+                {t("workspace.deleteConfirmAction")}
+              </Button>
+            </ModalFooter>
+          </ModalContent>
+        </ModalOverlay>
+      </Modal>
     </div>
   );
 }

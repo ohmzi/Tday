@@ -673,7 +673,8 @@
       "confirmBody": "这会向你的账户添加 {{count}} 项。你已有的内容不会被更改或删除。",
       "confirmRemapped": "{{count}} 项 ID 冲突的内容将作为新副本添加。",
       "confirmCancel": "取消",
-      "confirmImport": "导入"
+      "confirmImport": "导入",
+      "summaryLocal": "{{tasks}} 个任务 · {{lists}} 个清单 · {{completed}} 个已完成，全部在这个浏览器中。"
     },
     "calendarFeed": {
       "title": "日历订阅",
@@ -702,6 +703,18 @@
     "restingFloaters": {
       "title": "休眠浮动任务",
       "toggle": "淡出长期未动的 Anytime 任务"
+    },
+    "workspace": {
+      "title": "工作区",
+      "localTitle": "本地工作区",
+      "localDetail": "仅保存在此浏览器中 — 无需账号，也不会同步。",
+      "leave": "退出本地工作区",
+      "delete": "删除本地数据",
+      "deleteConfirmTitle": "删除本地数据？",
+      "deleteConfirmBody": "这将永久删除保存在此浏览器中的所有任务、清单和已完成记录。服务器上没有副本 — 如果想保留，请先下载你的数据。",
+      "deleteConfirmCancel": "取消",
+      "deleteConfirmAction": "删除",
+      "deleteDone": "本地数据已删除。"
     }
   },
   "summary": {
@@ -1002,7 +1015,7 @@
         "title": "本地模式",
         "summary": "完全离线使用 T'Day，无需服务器或账户。",
         "keywords": "本地模式, 离线, 私密, 无账户, 无服务器, 设备本地, local mode, offline, private",
-        "body": "本地模式把一切都留在你的设备上——不登录、不用服务器、不上传。这是私密使用 T'Day 的一流方式，你的本地数据绝不会自行被发送到任何地方。",
+        "body": "本地模式把一切都留在你的设备上——不登录、不用服务器、不上传。这是私密使用 T'Day 的一流方式，你的本地数据绝不会自行被发送到任何地方。 在浏览器里，它保存在该浏览器自己的存储中，因此清除 Cookie 和网站数据也会一并清除这个工作区 — 想保留就先导出。",
         "tip": "仅限服务器的功能在这里会标注“服务器模式”徽标，让你知道登录后会有哪些变化。"
       },
       "server-mode": {

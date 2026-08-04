@@ -231,8 +231,10 @@ object GuideCatalog {
 
         // ── Modes & sync ─────────────────────────────────────────────────
         topic(
+            // The web joined Local Mode too: its workspace lives in the browser's
+            // own storage, so the topic is no longer mobile-only.
             GuideTopicIds.LOCAL_MODE, GuideSectionId.MODES_AND_SYNC, "wifi-off",
-            setOf(ANDROID, IOS),
+            setOf(WEB, ANDROID, IOS),
             body = listOf(para(GuideTopicIds.LOCAL_MODE), tip(GuideTopicIds.LOCAL_MODE)),
         ),
         topic(

@@ -49,14 +49,16 @@ Mobile is now the center of the product experience. Any user-facing Android or i
 
 ## Local Mode
 
-Local Mode is an offline-only workspace on Android and iOS.
+Local Mode is an offline-only workspace on Android, iOS, and the web.
 
 - It does not require server setup, login, or session cookies.
-- Data is written directly to the local cache.
+- Data is written directly to the local cache — the Room/SwiftData cache on mobile, the browser's own storage on the web.
 - Pending mutation queues are cleared/ignored because there is no remote target.
 - Server-only features such as manual sync, remote updates, admin AI settings, and pull-to-refresh should be hidden or disabled.
 - Settings should make the workspace mode explicit: Local Mode is described as on-device only, while Server Mode exposes calm sync status, last sync metadata, and pending change counts.
 - Local Mode data should not be silently uploaded later without an explicit migration/import design.
+- On the web the workspace is only as durable as the browser's site data: clearing cookies/site data deletes it, and the UI says so where the choice is made (onboarding) and where the data lives (Settings). Export is the escape hatch.
+- The onboarding wizard's Mode step is the same choice on every platform. On the web the Server step is implicit — the page is served by the backend it would ask for — so Self-hosted goes straight to Login.
 
 Server Mode remains the authenticated self-hosted workspace:
 

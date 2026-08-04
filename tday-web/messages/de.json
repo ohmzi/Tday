@@ -673,7 +673,8 @@
       "confirmBody": "Das fügt {{count}} Einträge zu deinem Konto hinzu. Vorhandenes wird nicht geändert oder entfernt.",
       "confirmRemapped": "{{count}} Einträge mit kollidierenden IDs werden als neue Kopien hinzugefügt.",
       "confirmCancel": "Abbrechen",
-      "confirmImport": "Importieren"
+      "confirmImport": "Importieren",
+      "summaryLocal": "{{tasks}} Aufgaben · {{lists}} Listen · {{completed}} abgeschlossen, alles in diesem Browser."
     },
     "calendarFeed": {
       "title": "Kalender-Feed",
@@ -702,6 +703,18 @@
     "restingFloaters": {
       "title": "Ruhende Floater",
       "toggle": "Unberührte Anytime-Aufgaben ausblenden"
+    },
+    "workspace": {
+      "title": "Arbeitsbereich",
+      "localTitle": "Lokaler Arbeitsbereich",
+      "localDetail": "Nur in diesem Browser gespeichert – ohne Konto, ohne Synchronisierung.",
+      "leave": "Lokalen Arbeitsbereich verlassen",
+      "delete": "Lokale Daten löschen",
+      "deleteConfirmTitle": "Lokale Daten löschen?",
+      "deleteConfirmBody": "Damit werden alle in diesem Browser gespeicherten Aufgaben, Listen und abgeschlossenen Einträge endgültig entfernt. Es gibt keine Kopie auf einem Server – lade deine Daten vorher herunter, wenn du sie behalten möchtest.",
+      "deleteConfirmCancel": "Abbrechen",
+      "deleteConfirmAction": "Löschen",
+      "deleteDone": "Lokale Daten gelöscht."
     }
   },
   "summary": {
@@ -1002,7 +1015,7 @@
         "title": "Lokaler Modus",
         "summary": "Nutze T'Day vollständig offline, ohne Server oder Konto.",
         "keywords": "lokaler modus, offline, privat, kein konto, kein server, auf dem gerät",
-        "body": "Der lokale Modus behält alles auf deinem Gerät — kein Login, kein Server, kein Upload. Es ist eine vollwertige Art, T'Day privat zu nutzen, und deine lokalen Daten werden von sich aus nirgendwohin gesendet.",
+        "body": "Der lokale Modus behält alles auf deinem Gerät — kein Login, kein Server, kein Upload. Es ist eine vollwertige Art, T'Day privat zu nutzen, und deine lokalen Daten werden von sich aus nirgendwohin gesendet. Im Browser liegt er im Speicher dieses Browsers – wer Cookies und Websitedaten löscht, löscht den Arbeitsbereich mit. Exportiere ihn vorher, wenn du ihn behalten möchtest.",
         "tip": "Nur im Servermodus verfügbare Funktionen sind hier mit einem „Servermodus“-Abzeichen gekennzeichnet, damit du weißt, was sich beim Anmelden ändert."
       },
       "server-mode": {

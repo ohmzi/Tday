@@ -673,7 +673,8 @@
       "confirmBody": "Cela ajoute {{count}} éléments à votre compte. Rien de ce que vous avez déjà n'est modifié ni supprimé.",
       "confirmRemapped": "{{count}} éléments aux ID en conflit seront ajoutés comme nouvelles copies.",
       "confirmCancel": "Annuler",
-      "confirmImport": "Importer"
+      "confirmImport": "Importer",
+      "summaryLocal": "{{tasks}} tâches · {{lists}} listes · {{completed}} terminées, le tout dans ce navigateur."
     },
     "calendarFeed": {
       "title": "Flux de calendrier",
@@ -702,6 +703,18 @@
     "restingFloaters": {
       "title": "Flottants au repos",
       "toggle": "Estomper les tâches Anytime intactes"
+    },
+    "workspace": {
+      "title": "Espace de travail",
+      "localTitle": "Espace local",
+      "localDetail": "Enregistré uniquement dans ce navigateur — sans compte ni synchronisation.",
+      "leave": "Quitter l'espace local",
+      "delete": "Supprimer les données locales",
+      "deleteConfirmTitle": "Supprimer les données locales ?",
+      "deleteConfirmBody": "Cela supprime définitivement toutes les tâches, listes et entrées terminées enregistrées dans ce navigateur. Il n'existe aucune copie sur un serveur — téléchargez vos données avant si vous voulez les conserver.",
+      "deleteConfirmCancel": "Annuler",
+      "deleteConfirmAction": "Supprimer",
+      "deleteDone": "Données locales supprimées."
     }
   },
   "summary": {
@@ -1002,7 +1015,7 @@
         "title": "Mode local",
         "summary": "Utilisez T'Day entièrement hors ligne, sans serveur ni compte.",
         "keywords": "mode local, hors ligne, privé, sans compte, sans serveur, sur l'appareil",
-        "body": "Le Mode local garde tout sur votre appareil — pas de connexion, pas de serveur, pas d'envoi. C'est une façon à part entière d'utiliser T'Day en toute confidentialité, et vos données locales ne sont jamais envoyées où que ce soit d'elles-mêmes.",
+        "body": "Le Mode local garde tout sur votre appareil — pas de connexion, pas de serveur, pas d'envoi. C'est une façon à part entière d'utiliser T'Day en toute confidentialité, et vos données locales ne sont jamais envoyées où que ce soit d'elles-mêmes. Dans un navigateur, il réside dans le stockage de ce navigateur : effacer vos cookies et données de site efface aussi l'espace de travail — exportez-le avant si vous voulez le conserver.",
         "tip": "Les fonctionnalités réservées au serveur sont signalées ici par un badge « Mode serveur » pour que vous sachiez ce qui change si vous vous connectez."
       },
       "server-mode": {
