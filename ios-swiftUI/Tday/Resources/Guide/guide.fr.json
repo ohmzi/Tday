@@ -1191,6 +1191,7 @@
       "sectionOrder": 6,
       "icon": "wifi-off",
       "platforms": [
+        "WEB",
         "ANDROID",
         "IOS"
       ],
@@ -1205,7 +1206,7 @@
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Le Mode local garde tout sur votre appareil — pas de connexion, pas de serveur, pas d'envoi. C'est une façon à part entière d'utiliser T'Day en toute confidentialité, et vos données locales ne sont jamais envoyées où que ce soit d'elles-mêmes."
+            "Le Mode local garde tout sur votre appareil — pas de connexion, pas de serveur, pas d'envoi. C'est une façon à part entière d'utiliser T'Day en toute confidentialité, et vos données locales ne sont jamais envoyées où que ce soit d'elles-mêmes. Dans un navigateur, il réside dans le stockage de ce navigateur : effacer vos cookies et données de site efface aussi l'espace de travail — exportez-le avant si vous voulez le conserver."
           ]
         },
         {
@@ -1217,7 +1218,7 @@
       ],
       "searchTitle": "mode local",
       "searchKeywords": "mode local, hors ligne, prive, sans compte, sans serveur, sur l'appareil",
-      "searchBody": "utilisez t'day entierement hors ligne, sans serveur ni compte. le mode local garde tout sur votre appareil — pas de connexion, pas de serveur, pas d'envoi. c'est une facon a part entiere d'utiliser t'day en toute confidentialite, et vos donnees locales ne sont jamais envoyees ou que ce soit d'elles-memes. les fonctionnalites reservees au serveur sont signalees ici par un badge « mode serveur » pour que vous sachiez ce qui change si vous vous connectez."
+      "searchBody": "utilisez t'day entierement hors ligne, sans serveur ni compte. le mode local garde tout sur votre appareil — pas de connexion, pas de serveur, pas d'envoi. c'est une facon a part entiere d'utiliser t'day en toute confidentialite, et vos donnees locales ne sont jamais envoyees ou que ce soit d'elles-memes. dans un navigateur, il reside dans le stockage de ce navigateur : effacer vos cookies et donnees de site efface aussi l'espace de travail — exportez-le avant si vous voulez le conserver. les fonctionnalites reservees au serveur sont signalees ici par un badge « mode serveur » pour que vous sachiez ce qui change si vous vous connectez."
     },
     {
       "id": "server-mode",

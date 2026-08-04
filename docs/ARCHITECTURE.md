@@ -49,7 +49,7 @@ T'Day is a **monorepo application** with a Kotlin/Ktor backend, a React SPA fron
 - Car surfaces are platform-native mobile extensions: iOS uses CarPlay templates and App Intents,
   while Android keeps an internal `tday://car` adaptive surface until Google Play supports or
   approves a fitting task/calendar productivity car category.
-- Local Mode is a mobile-only workspace with no server dependency.
+- Local Mode is a workspace with no server dependency, available on Android, iOS, and the web (where it lives in browser storage).
 - Server Mode uses optimistic local writes plus pending mutation replay.
 - Scheduled tasks and floaters are separate concepts; do not make `Todo.due` nullable to represent Anytime work.
 - Boundaries should stay readable and directional: clients render state, presentation layers coordinate work, repositories/services own domain/data operations, and transport/storage details sit at the edges.
@@ -245,6 +245,39 @@ The web SPA communicates with the Ktor backend via a thin `fetch` wrapper:
 - Browser `fetch` cache mode set to `no-store` on all private API requests
 - Dev: Vite proxy forwards `/api` to `http://localhost:8080`
 - Production: Ktor serves the SPA as static files from `STATIC_FILES_DIR`
+
+### Local Mode (Web)
+
+The web has the same two workspaces as the native apps. The onboarding wizard opens
+on a Mode step — **Self-hosted** (accounts and sync) or **This device** (no login) —
+and records the choice in `localStorage` under `tday.appMode`, so a returning browser
+skips straight to the step it left off at. The wizard's Server step is implicit on
+web: the page is served by the very backend it would otherwise ask for, so
+Self-hosted goes directly to Login with the Server chip already completed.
+
+In Local Mode the browser is the workspace:
+
+- `lib/local/appMode.ts` holds the mode flag; `hooks/useAppMode.ts` exposes it to React.
+- `lib/api-client.ts` routes every `/api/*` call to `lib/local/localApi.ts` instead of
+  `fetch`. The local handlers answer with the *same* DTO shapes the Ktor routes return,
+  so React Query, the feature hooks, and the optimistic-update paths are untouched by
+  the mode. Failures are rethrown as the same `ApiError` the network path throws.
+- `lib/local/localDb.ts` persists one JSON document in `localStorage`
+  (`tday.local.workspace.v1`) whose rows mirror the backend tables. Clearing the
+  browser's cookies/site data drops it — that is the documented contract, not a bug.
+- Recurrence, summaries, and brain-dump splitting reuse the code the app already
+  ships (`rrule`, `lib/todoSummary.ts`, `lib/todoNlp.ts`); summaries always report
+  `source: "logic"` because a browser workspace can't reach a model.
+- Server-only surfaces are hidden the way the native settings screens hide them:
+  account/password/security questions, push, calendar feed, webhooks, dashboard API
+  keys, admin, list members, and the realtime WebSocket. A stray call to one of those
+  routes fails as a plain 404 rather than silently pretending to succeed.
+- Settings gains a Workspace card with "Leave local workspace" (a mode switch that
+  keeps the browser's tasks) and "Delete local data" (the only destructive action).
+  Export/import work in both modes and are the only way to carry a local workspace
+  off the device.
+- Local Mode is reachable while the backend is unreachable, so `AuthLayout` only
+  blocks on the initial session probe, not on an `unavailable` session.
 
 ## Android Architecture
 
