@@ -41,6 +41,7 @@ import NativeAppBrandButton from "@/components/app/NativeAppBrandButton";
 import { api } from "@/lib/api-client";
 import { getErrorMessage } from "@/lib/error-message";
 import { deleteLocalWorkspace } from "@/lib/local/localApi";
+import { resetAppData } from "@/lib/resetAppData";
 import { useIsLocalMode } from "@/hooks/useAppMode";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import {
@@ -403,6 +404,8 @@ export default function SettingsPage() {
   const [revokingWebhookId, setRevokingWebhookId] = useState<string | null>(null);
   const [signingOut, setSigningOut] = useState(false);
   const [deleteLocalOpen, setDeleteLocalOpen] = useState(false);
+  const [resetCacheOpen, setResetCacheOpen] = useState(false);
+  const [resettingCache, setResettingCache] = useState(false);
 
   useEffect(() => {
     if (isLocalMode) return;
@@ -680,6 +683,22 @@ export default function SettingsPage() {
     setDeleteLocalOpen(false);
     toast({ description: t("workspace.deleteDone") });
     await handleLogout();
+  };
+
+  // Manual escape hatch for a client stuck on a half-updated build (see
+  // lib/resetAppData). No success toast — the page reloads immediately.
+  const handleResetAppData = async () => {
+    setResettingCache(true);
+    try {
+      await resetAppData();
+    } catch {
+      setResettingCache(false);
+      setResetCacheOpen(false);
+      toast({
+        description: t("troubleshooting.resetFailed"),
+        variant: "destructive",
+      });
+    }
   };
 
   const handleCopyApiKey = async () => {
@@ -1745,6 +1764,18 @@ export default function SettingsPage() {
           </>
         )}
 
+        {/* Recovery for a client stuck on a half-updated build after a deploy —
+            the in-app replacement for "delete the PWA and clear site data".
+            Available in every mode: it only touches caches, never stored data. */}
+        <button
+          type="button"
+          onClick={() => setResetCacheOpen(true)}
+          className="flex w-full items-center py-1.5 text-left text-[1.05rem] font-black text-foreground transition active:opacity-60"
+        >
+          {t("troubleshooting.reset")}
+        </button>
+        <CardDivider />
+
         {/* Last rows of the last card, matching the native settings design.
             Leaving a local workspace is a mode switch that keeps the browser's
             tasks; deleting is the only destructive action, so it stands alone. */}
@@ -1779,6 +1810,39 @@ export default function SettingsPage() {
           </button>
         )}
       </SettingsSection>
+
+      <Modal open={resetCacheOpen} onOpenChange={setResetCacheOpen}>
+        <ModalOverlay>
+          <ModalContent>
+            <ModalHeader>
+              <ModalTitle>{t("troubleshooting.confirmTitle")}</ModalTitle>
+              <ModalDescription>
+                {t("troubleshooting.confirmBody")}
+              </ModalDescription>
+            </ModalHeader>
+            <ModalFooter className="mt-4">
+              <Button
+                variant="outline"
+                className="bg-popover w-full sm:w-auto"
+                disabled={resettingCache}
+                onClick={() => setResetCacheOpen(false)}
+              >
+                {t("troubleshooting.confirmCancel")}
+              </Button>
+              <Button
+                className="w-full sm:w-auto"
+                disabled={resettingCache}
+                onClick={() => void handleResetAppData()}
+              >
+                {resettingCache ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : null}
+                {t("troubleshooting.confirmAction")}
+              </Button>
+            </ModalFooter>
+          </ModalContent>
+        </ModalOverlay>
+      </Modal>
 
       <Modal open={deleteLocalOpen} onOpenChange={setDeleteLocalOpen}>
         <ModalOverlay>

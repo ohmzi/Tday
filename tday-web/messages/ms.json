@@ -715,6 +715,14 @@
       "deleteConfirmCancel": "Batal",
       "deleteConfirmAction": "Padam",
       "deleteDone": "Data setempat dipadam."
+    },
+    "troubleshooting": {
+      "reset": "Set semula cache aplikasi",
+      "confirmTitle": "Set semula cache aplikasi?",
+      "confirmBody": "Mengosongkan cache luar talian pada peranti ini dan memuatkan semula versi terkini. Tugasan, senarai dan log masuk anda tidak terjejas.",
+      "confirmAction": "Set semula",
+      "confirmCancel": "Batal",
+      "resetFailed": "Cache tidak dapat ditetapkan semula. Tutup dan buka semula aplikasi, kemudian cuba lagi."
     }
   },
   "summary": {
