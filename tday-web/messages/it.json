@@ -673,7 +673,8 @@
       "confirmBody": "Questo aggiunge {{count}} elementi al tuo account. Nulla di ciò che hai già viene cambiato o rimosso.",
       "confirmRemapped": "{{count}} elementi con ID in conflitto verranno aggiunti come nuove copie.",
       "confirmCancel": "Annulla",
-      "confirmImport": "Importa"
+      "confirmImport": "Importa",
+      "summaryLocal": "{{tasks}} attività · {{lists}} liste · {{completed}} completate, tutto in questo browser."
     },
     "calendarFeed": {
       "title": "Feed calendario",
@@ -702,6 +703,18 @@
     "restingFloaters": {
       "title": "Floater a riposo",
       "toggle": "Sbiadisci le attività Anytime intatte"
+    },
+    "workspace": {
+      "title": "Spazio di lavoro",
+      "localTitle": "Spazio locale",
+      "localDetail": "Salvato solo in questo browser: nessun account, nessuna sincronizzazione.",
+      "leave": "Esci dallo spazio locale",
+      "delete": "Elimina i dati locali",
+      "deleteConfirmTitle": "Eliminare i dati locali?",
+      "deleteConfirmBody": "Questa azione rimuove definitivamente tutte le attività, le liste e le voci completate salvate in questo browser. Non esiste alcuna copia su un server: scarica prima i tuoi dati se vuoi conservarli.",
+      "deleteConfirmCancel": "Annulla",
+      "deleteConfirmAction": "Elimina",
+      "deleteDone": "Dati locali eliminati."
     }
   },
   "summary": {
@@ -1002,7 +1015,7 @@
         "title": "Modalità locale",
         "summary": "Usa T'Day completamente offline, senza server né account.",
         "keywords": "modalità locale, offline, privato, senza account, senza server, sul dispositivo",
-        "body": "La Modalità locale tiene tutto sul tuo dispositivo — nessun accesso, nessun server, nessun caricamento. È un modo di prim'ordine per usare T'Day in privato, e i tuoi dati locali non vengono mai inviati da nessuna parte per conto proprio.",
+        "body": "La Modalità locale tiene tutto sul tuo dispositivo — nessun accesso, nessun server, nessun caricamento. È un modo di prim'ordine per usare T'Day in privato, e i tuoi dati locali non vengono mai inviati da nessuna parte per conto proprio. In un browser risiede nella memoria di quel browser, quindi cancellare cookie e dati dei siti cancella anche lo spazio di lavoro: esportalo prima se vuoi conservarlo.",
         "tip": "Le funzioni solo per server sono mostrate qui con un badge “Modalità server” così sai cosa cambia se accedi."
       },
       "server-mode": {

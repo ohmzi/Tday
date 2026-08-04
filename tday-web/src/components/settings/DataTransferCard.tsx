@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/Modal";
 import { GuideHelpLink } from "@/features/guide/GuideHelpLink";
 import { useToast } from "@/hooks/use-toast";
+import { useIsLocalMode } from "@/hooks/useAppMode";
 import { api } from "@/lib/api-client";
 import { getErrorMessage } from "@/lib/error-message";
 import { downloadJson, fileTimestamp, readJsonFile } from "@/lib/fileTransfer";
@@ -57,12 +58,15 @@ const IMPORT_TOUCHED_KEYS = [
 ];
 
 /**
- * "Your data" trust card: shows what lives in this account, downloads it as one
- * portable JSON file, and imports a bundle back (with an additive-merge preview
- * the user confirms first). Server-mode only, so no local/last-sync concept.
+ * "Your data" trust card: shows what lives in this workspace, downloads it as
+ * one portable JSON file, and imports a bundle back (with an additive-merge
+ * preview the user confirms first). Works in both modes — in Local Mode the
+ * same bundle is read from and written to browser storage, which is also the
+ * only way to carry a local workspace off this device.
  */
 export default function DataTransferCard() {
   const { t } = useTranslation("settings");
+  const isLocalMode = useIsLocalMode();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -146,7 +150,11 @@ export default function DataTransferCard() {
           <GuideHelpLink topic="export-your-data" />
         </div>
         <p className="text-sm font-extrabold text-muted-foreground">
-          {t("data.summary", { tasks: taskCount, lists: listCount, completed: completedCount })}
+          {t(isLocalMode ? "data.summaryLocal" : "data.summary", {
+            tasks: taskCount,
+            lists: listCount,
+            completed: completedCount,
+          })}
         </p>
       </div>
 

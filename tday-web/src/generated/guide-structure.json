@@ -796,6 +796,38 @@
       "sinceVersion": "0.4.0"
     },
     {
+      "id": "local-mode",
+      "section": "MODES_AND_SYNC",
+      "icon": "wifi-off",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "titleKey": "guide.topics.local-mode.title",
+      "summaryKey": "guide.topics.local-mode.summary",
+      "keywordsKey": "guide.topics.local-mode.keywords",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "keys": [
+            "guide.topics.local-mode.body"
+          ]
+        },
+        {
+          "type": "TIP",
+          "keys": [
+            "guide.topics.local-mode.tip"
+          ]
+        }
+      ],
+      "badge": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "serverOnly": false,
+      "sinceVersion": null
+    },
+    {
       "id": "server-mode",
       "section": "MODES_AND_SYNC",
       "icon": "cloud",
