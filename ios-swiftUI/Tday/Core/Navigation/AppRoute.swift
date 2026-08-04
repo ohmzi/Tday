@@ -1,7 +1,7 @@
 import Foundation
 
 enum AppRoute: Hashable {
-    case home
+    case scheduledTaskHome
     case todayTodos
     case createTodayTodo
     case createFloaterTodo
@@ -9,7 +9,7 @@ enum AppRoute: Hashable {
     case scheduledTodos
     case allTodos(highlightTodoId: String?)
     case priorityTodos
-    case floaterTodos
+    case floaterTaskHome
     case floaterListTodos(listId: String, listName: String)
     case listTodos(listId: String, listName: String)
     case completed
@@ -22,7 +22,7 @@ enum AppRoute: Hashable {
 
     var deepLinkPath: String {
         switch self {
-        case .home:
+        case .scheduledTaskHome:
             return "home"
         case .todayTodos:
             return "todos/today"
@@ -41,7 +41,7 @@ enum AppRoute: Hashable {
             return "todos/all"
         case .priorityTodos:
             return "todos/priority"
-        case .floaterTodos:
+        case .floaterTaskHome:
             return "floater"
         case let .floaterListTodos(listId, listName):
             return "floater/list/\(listId)/\(listName)"
@@ -77,12 +77,12 @@ enum AppRoute: Hashable {
         let components = ([host].compactMap { $0 } + pathComponents)
 
         guard let first = components.first else {
-            return .home
+            return .scheduledTaskHome
         }
 
         switch first {
         case "home":
-            return .home
+            return .scheduledTaskHome
         case "completed":
             return .completed
         case "calendar":
@@ -136,7 +136,7 @@ enum AppRoute: Hashable {
                 if remaining.first == "list", remaining.count >= 3 {
                     return .floaterListTodos(listId: remaining[1], listName: remaining[2])
                 }
-                return .floaterTodos
+                return .floaterTaskHome
             case "list":
                 let remaining = Array(components.dropFirst(2))
                 guard remaining.count >= 2 else {
@@ -152,7 +152,7 @@ enum AppRoute: Hashable {
                 if remaining.first == "list", remaining.count >= 3 {
                     return .floaterListTodos(listId: remaining[1], listName: remaining[2])
                 }
-                return .floaterTodos
+                return .floaterTaskHome
             }
             return nil
         }

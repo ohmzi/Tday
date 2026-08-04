@@ -55,7 +55,7 @@ export default function FloaterItemContainer({
   >(null);
   const completeTimers = useRef<number[]>([]);
   const completing = completePhase !== null;
-  // Matches the home/scheduled row (TodoItemCard) so the swipe distance and the
+  // Matches the scheduled task home row (TodoItemCard) so the swipe distance and the
   // fully-revealed Edit + Delete pills sit in the same place — at 110 the pills
   // (~136px) outran the slide, leaving the priority flag on top of Edit.
   const ACTIONS_WIDTH = 140;

@@ -31,7 +31,7 @@ import {
   type SecurityQuestion,
 } from "@/lib/securityQuestions";
 import ForgotPasswordPanel from "@/components/auth/ForgotPasswordPanel";
-import MockHomeBackdrop from "@/components/auth/MockHomeBackdrop";
+import MockScheduledTaskHomeBackdrop from "@/components/auth/MockScheduledTaskHomeBackdrop";
 
 // Fixed tints lifted 1:1 from the native wizard (iOS/Android). These are
 // intentionally theme-independent so the card reads identically across light
@@ -392,12 +392,12 @@ export default function OnboardingWizard({
       <div className="absolute inset-0 bg-gradient-to-br from-background via-background to-muted/35" />
       <div className="absolute inset-0 bg-[radial-gradient(1200px_700px_at_12%_12%,hsla(var(--accent),0.11),transparent),radial-gradient(900px_500px_at_90%_18%,hsla(var(--primary),0.1),transparent)]" />
 
-      {/* Blurred home dashboard behind the dialog — the same responsive backdrop the
+      {/* Blurred scheduled task home dashboard behind the dialog — the same responsive backdrop the
           pending-approval and reset screens use (desktop layout on wide screens, the
-          mobile home view when narrow). */}
+          mobile scheduled task home view when narrow). */}
       <div className="absolute inset-0 overflow-hidden" aria-hidden>
         <div className="h-full w-full scale-[1.06] blur-lg">
-          <MockHomeBackdrop />
+          <MockScheduledTaskHomeBackdrop />
         </div>
         <div className="absolute inset-0 bg-background/45" />
       </div>

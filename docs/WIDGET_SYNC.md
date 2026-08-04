@@ -78,9 +78,9 @@ TdayWidget/
 - [ ] **Enable App Groups** on both the main app target and the TdayWidget extension
   (same identifier, e.g. `group.com.ohmz.tday`)
 - [ ] Set `kTdayAppGroupID` in `WidgetReloadHelper.swift` to your actual group ID
-- [ ] Call `WidgetReloadHelper.shared.reloadTodayWidget()` from `ScheduledTaskViewModel`
+- [ ] Call `WidgetReloadHelper.shared.reloadTodayWidget()` from `ScheduledTaskHomeViewModel`
   after add / edit / complete / delete
-- [ ] Call `WidgetReloadHelper.shared.reloadFloaterWidget()` from `FloaterViewModel`
+- [ ] Call `WidgetReloadHelper.shared.reloadFloaterWidget()` from `TodoListViewModel` (mode `.floater`)
   after add / edit / complete / delete
 - [ ] Add `.onChange(of: scenePhase)` in your `@main` App struct (see
   `WidgetLifecycleIntegration.swift`)

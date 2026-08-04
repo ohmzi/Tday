@@ -34,7 +34,7 @@ function renderTileOverlay() {
   );
 }
 
-export default function NativeFloaterDashboard() {
+export default function NativeFloaterTaskHomeDashboard() {
   const router = useRouter();
   const { t: appDict } = useTranslation("app");
   const { floaters, floaterLoading } = useFloater();

@@ -437,7 +437,7 @@ fun OnboardingWizardOverlay(
 
     // A failed or pending login drops back to the form (so the error shows). On
     // success this flag stays true, holding the loading panel until the overlay
-    // unmounts to home — no sign-in form flash. Mirrors iOS.
+    // unmounts to the scheduled task home screen — no sign-in form flash. Mirrors iOS.
     LaunchedEffect(authUiState.errorMessage, authUiState.pendingApproval) {
         if (authUiState.errorMessage != null || authUiState.pendingApproval) {
             isCompletingAuthentication = false

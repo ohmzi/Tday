@@ -66,11 +66,11 @@ import com.ohmz.tday.compose.ui.theme.TdayTodayBlue
 import kotlinx.coroutines.delay
 
 enum class RootFeedTab {
-    HOME,
-    FLOATER,
+    SCHEDULED_TASK_HOME,
+    FLOATER_TASK_HOME,
 }
 
-private val RootFeedTabs = listOf(RootFeedTab.HOME, RootFeedTab.FLOATER)
+private val RootFeedTabs = listOf(RootFeedTab.SCHEDULED_TASK_HOME, RootFeedTab.FLOATER_TASK_HOME)
 private val RootFeedDockHeight = TdayDimens.RootFeedDockHeight
 private val RootFeedDockCollapsedWidth = RootFeedDockHeight
 private val RootFeedDockInnerPadding = TdayDimens.RootFeedDockInnerPadding
@@ -83,23 +83,23 @@ private val RootFeedDockSelectorShape = RoundedCornerShape(TdayDimens.RootFeedDo
 @StringRes
 private fun RootFeedTab.labelRes(): Int {
     return when (this) {
-        RootFeedTab.HOME -> R.string.root_feed_tab_home
-        RootFeedTab.FLOATER -> R.string.root_feed_tab_floater
+        RootFeedTab.SCHEDULED_TASK_HOME -> R.string.root_feed_tab_scheduled_task_home
+        RootFeedTab.FLOATER_TASK_HOME -> R.string.root_feed_tab_floater
     }
 }
 
 @Composable
 private fun RootFeedTab.icon(): ImageVector {
     return when (this) {
-        RootFeedTab.HOME -> ImageVector.vectorResource(R.drawable.ic_lucide_house)
-        RootFeedTab.FLOATER -> ImageVector.vectorResource(R.drawable.ic_lucide_leaf)
+        RootFeedTab.SCHEDULED_TASK_HOME -> ImageVector.vectorResource(R.drawable.ic_lucide_house)
+        RootFeedTab.FLOATER_TASK_HOME -> ImageVector.vectorResource(R.drawable.ic_lucide_leaf)
     }
 }
 
 private fun RootFeedTab.accentColor(): Color {
     return when (this) {
-        RootFeedTab.HOME -> TdayTodayBlue
-        RootFeedTab.FLOATER -> TdayFloaterAccent
+        RootFeedTab.SCHEDULED_TASK_HOME -> TdayTodayBlue
+        RootFeedTab.FLOATER_TASK_HOME -> TdayFloaterAccent
     }
 }
 
@@ -391,7 +391,7 @@ fun RootFeedDock(
                     val iconAlpha = if (selected) 1f - expansionProgress else 0f
 
                     Icon(
-                        painter = if (tab == RootFeedTab.HOME) {
+                        painter = if (tab == RootFeedTab.SCHEDULED_TASK_HOME) {
                             painterResource(R.drawable.ic_lucide_house)
                         } else {
                             rememberVectorPainter(tab.icon())

@@ -242,7 +242,7 @@
   },
   "app": {
     "agenda": "agenda",
-    "home": "Início",
+    "scheduledTaskHome": "Agendado",
     "more": "Mais",
     "cancel": "Cancelar",
     "save": "Guardar",
@@ -526,7 +526,7 @@
     "brick": "Tijolo",
     "slate": "Ardosia"
   },
-  "home": {
+  "scheduledTaskHome": {
     "tileScheduled": "Agendado",
     "tilePriority": "Prioridade",
     "tileOverdue": "Atrasado",
@@ -820,10 +820,10 @@
     },
     "topics": {
       "root-feeds": {
-        "title": "Início e Qualquer altura",
-        "summary": "Dois feeds de início serenos entre os quais alterna a partir da barra.",
-        "keywords": "início, qualquer altura, feed, barra, raiz, navegar, separadores",
-        "body": "O T'Day tem dois feeds irmãos. O Início contém as suas tarefas agendadas para hoje e para os dias seguintes. O Qualquer altura contém os Flutuantes — tarefas sem data. Alterne entre eles pela barra ao fundo e crie uma tarefa a partir de qualquer um."
+        "title": "Agendado e Qualquer altura",
+        "summary": "Dois feeds principais e serenos entre os quais alterna a partir da barra.",
+        "keywords": "agendado, qualquer altura, feed, barra, raiz, navegar, separadores",
+        "body": "O T'Day tem dois feeds irmãos. O Agendado contém as suas tarefas com data para hoje e para os dias seguintes. O Qualquer altura contém os Flutuantes — tarefas sem data. Alterne entre eles pela barra ao fundo e crie uma tarefa a partir de qualquer um."
       },
       "create-task": {
         "title": "Criar uma tarefa",
@@ -878,16 +878,16 @@
       },
       "floaters-vs-todos": {
         "title": "Flutuantes vs tarefas agendadas",
-        "summary": "As tarefas sem data ficam em Qualquer altura; as tarefas com data ficam em Início.",
+        "summary": "As tarefas sem data ficam em Qualquer altura; as tarefas com data ficam no feed Agendado.",
         "keywords": "flutuante, qualquer altura, não agendada, sem data, tarefa, agendada, diferença",
-        "body": "Uma tarefa agendada tem data de conclusão e aparece no Início e no calendário. Um Flutuante não tem data — espera calmamente no seu feed Qualquer altura até estar pronto. Use os Flutuantes para trabalho de “um dia destes” que não deve atravancar o hoje.",
+        "body": "Uma tarefa com data de conclusão aparece no feed Agendado e no calendário. Um Flutuante não tem data — espera calmamente no seu feed Qualquer altura até estar pronto. Use os Flutuantes para trabalho de “um dia destes” que não deve atravancar o hoje.",
         "tip": "Os Flutuantes nunca aparecem no calendário — esse espaço é apenas para trabalho com data."
       },
       "promote-and-float": {
         "title": "Promover e deixar flutuar",
         "summary": "Agende um flutuante como tarefa real, ou deixe flutuar uma tarefa parada.",
         "keywords": "promover, agendar flutuante, rebaixar, deixar flutuar, converter, a qualquer momento, mover, atrasada",
-        "body": "Quando um flutuante estiver pronto para virar trabalho de verdade, use a ação Agendar: escolha um horário e ele passa para o Início como tarefa com data. O caminho inverso também funciona — uma tarefa atrasada que você vive adiando pode flutuar em silêncio: rebaixe-a e ela volta para Qualquer momento sem data, mantendo título, notas e prioridade.",
+        "body": "Quando um flutuante estiver pronto para virar trabalho de verdade, use a ação Agendar: escolha um horário e ele passa para o feed Agendado como tarefa com data. O caminho inverso também funciona — uma tarefa atrasada que você vive adiando pode flutuar em silêncio: rebaixe-a e ela volta para Qualquer momento sem data, mantendo título, notas e prioridade.",
         "tip": "Tarefas recorrentes não podem flutuar — encerre a série primeiro se quiser deixá-la sem data."
       },
       "quick-defer": {

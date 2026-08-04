@@ -242,7 +242,7 @@
   },
   "app": {
     "agenda": "agenda",
-    "home": "Home",
+    "scheduledTaskHome": "Scheduled",
     "more": "More",
     "cancel": "Cancel",
     "save": "Save",
@@ -526,7 +526,7 @@
     "brick": "Brick",
     "slate": "Slate"
   },
-  "home": {
+  "scheduledTaskHome": {
     "tileScheduled": "Scheduled",
     "tilePriority": "Priority",
     "tileOverdue": "Overdue",
@@ -820,10 +820,10 @@
     },
     "topics": {
       "root-feeds": {
-        "title": "Home and Anytime",
-        "summary": "Two calm home feeds you switch between from the dock.",
-        "keywords": "home, anytime, feed, dock, root, navigate, tabs",
-        "body": "T'Day has two sibling feeds. Home holds your scheduled tasks for today and beyond. Anytime holds Floaters — tasks with no date. Switch between them from the dock at the bottom, and create a task from either one."
+        "title": "Scheduled and Anytime",
+        "summary": "Two calm main feeds you switch between from the dock.",
+        "keywords": "scheduled, anytime, feed, dock, root, navigate, tabs",
+        "body": "T'Day has two sibling feeds. Scheduled holds your dated tasks for today and beyond. Anytime holds Floaters — tasks with no date. Switch between them from the dock at the bottom, and create a task from either one."
       },
       "create-task": {
         "title": "Create a task",
@@ -877,17 +877,17 @@
         "body": "Your lists keep the order you give them. Drag a task up or down to arrange your day the way you think about it."
       },
       "floaters-vs-todos": {
-        "title": "Floaters vs scheduled tasks",
-        "summary": "Dateless tasks live in Anytime; dated tasks live in Home.",
+        "title": "Floaters vs dated tasks",
+        "summary": "Dateless tasks live in Anytime; dated tasks live in Scheduled.",
         "keywords": "floater, anytime, unscheduled, dateless, todo, scheduled, difference",
-        "body": "A scheduled task has a due date and shows up in Home and the calendar. A Floater has no date — it waits quietly in your Anytime feed until you're ready. Use Floaters for “someday” work that shouldn't clutter today.",
+        "body": "A task with a due date shows up in Scheduled and on the calendar. A Floater has no date — it waits quietly in your Anytime feed until you're ready. Use Floaters for “someday” work that shouldn't clutter today.",
         "tip": "Floaters never appear on the calendar — that space is only for dated work."
       },
       "promote-and-float": {
         "title": "Promote & float",
         "summary": "Schedule a floater into a real task, or let a stale task float.",
         "keywords": "promote, schedule floater, demote, let it float, convert, anytime, move, overdue",
-        "body": "When a floater is ready to become real work, use its Schedule action: pick a time and it moves into Home as a dated task. The other direction works too — an overdue task you keep postponing can quietly float: demote it and it returns to Anytime with no date, keeping its title, notes and priority.",
+        "body": "When a floater is ready to become real work, use its Schedule action: pick a time and it moves into Scheduled as a dated task. The other direction works too — an overdue task you keep postponing can quietly float: demote it and it returns to Anytime with no date, keeping its title, notes and priority.",
         "tip": "Recurring tasks can't float — end the series first if you want it dateless."
       },
       "quick-defer": {

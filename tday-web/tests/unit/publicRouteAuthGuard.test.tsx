@@ -50,7 +50,7 @@ function renderAuthLayout(initialEntry = "/en/login") {
           <Route path="login" element={<div>Login Screen</div>} />
           <Route path="register" element={<div>Register Screen</div>} />
         </Route>
-        <Route path="/:locale/app/tday" element={<div>Home Screen</div>} />
+        <Route path="/:locale/app/tday" element={<div>Scheduled Task Home Screen</div>} />
       </Routes>
     </MemoryRouter>,
   );
@@ -62,7 +62,7 @@ function renderLandingPage(initialEntry = "/en") {
       <Routes>
         <Route path="/:locale" element={<LandingPage />} />
         <Route path="/:locale/login" element={<div>Login Screen</div>} />
-        <Route path="/:locale/app/tday" element={<div>Home Screen</div>} />
+        <Route path="/:locale/app/tday" element={<div>Scheduled Task Home Screen</div>} />
       </Routes>
     </MemoryRouter>,
   );
@@ -73,7 +73,7 @@ function renderProtectedRoute(initialEntry = "/en/app/tday") {
     <MemoryRouter initialEntries={[initialEntry]}>
       <Routes>
         <Route path="/:locale/app" element={<ProtectedRoute />}>
-          <Route path="tday" element={<div>Home Screen</div>} />
+          <Route path="tday" element={<div>Scheduled Task Home Screen</div>} />
         </Route>
         <Route path="/:locale/login" element={<div>Login Screen</div>} />
       </Routes>
@@ -116,7 +116,7 @@ describe("public auth route guards", () => {
     renderAuthLayout();
 
     await waitFor(() => {
-      expect(screen.queryByText("Home Screen")).not.toBeNull();
+      expect(screen.queryByText("Scheduled Task Home Screen")).not.toBeNull();
     });
     expect(screen.queryByText("Login Screen")).toBeNull();
   });
@@ -149,7 +149,7 @@ describe("public auth route guards", () => {
     renderLandingPage();
 
     await waitFor(() => {
-      expect(screen.queryByText("Home Screen")).not.toBeNull();
+      expect(screen.queryByText("Scheduled Task Home Screen")).not.toBeNull();
     });
     expect(screen.queryByText("Landing Screen")).toBeNull();
   });
@@ -189,7 +189,7 @@ describe("public auth route guards", () => {
 
     const { container } = renderProtectedRoute();
 
-    expect(screen.queryByText("Home Screen")).toBeNull();
+    expect(screen.queryByText("Scheduled Task Home Screen")).toBeNull();
     expect(container.querySelector("svg.animate-spin")).not.toBeNull();
   });
 });

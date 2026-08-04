@@ -212,7 +212,7 @@ tday-web/src/
 ├── globals.css           # Tailwind @theme tokens, CSS variables
 ├── i18n.ts               # i18next configuration (11 locales, path-based detection)
 ├── components/           # Shared UI (ui/* primitives, native app shell, auth, todo pieces)
-├── features/             # Feature modules (calendar, completed, home, list, release, todayTodos, user)
+├── features/             # Feature modules (calendar, completed, scheduledTaskHome, list, release, todayTodos, user)
 ├── hooks/                # Shared React hooks
 ├── lib/                  # Utilities (api-client, navigation, cache, performance, security, dates, todo)
 ├── pages/                # Route-level screens and layouts
@@ -230,10 +230,10 @@ tday-web/src/
 
 ### App Shell and Navigation (Web)
 
-- Authenticated web routes render through a native-style app shell rather than the legacy visible sidebar. The shell owns the bottom `Home / Floater / More` dock, circular create action, and More sheet.
-- `Home` routes to `/app/tday`, `Floater` routes to `/app/floater`, and `More` exposes existing secondary web routes such as Overdue, Scheduled, Priority, All Tasks, Completed, Calendar, Lists, Settings, and user controls.
-- The web Home screen is a dashboard-style scheduled root feed backed by the existing todo/list queries. The Floater screen is a sibling root feed backed by `/api/floater` and `/api/floaterList`, with floater list detail at `/app/floater-list/:id`.
-- The shell, Home tiles, and Floater tab share web-only route metadata and counts, while feature pages continue to own their own query/mutation behavior.
+- Authenticated web routes render through a native-style app shell rather than the legacy visible sidebar. The shell owns the bottom `Scheduled / Floater / More` dock, circular create action, and More sheet.
+- `Scheduled` routes to `/app/tday`, `Floater` routes to `/app/floater`, and `More` exposes existing secondary web routes such as Overdue, Scheduled, Priority, All Tasks, Completed, Calendar, Lists, Settings, and user controls.
+- The web scheduled task home screen is a dashboard-style scheduled root feed backed by the existing todo/list queries. The floater task home screen is a sibling root feed backed by `/api/floater` and `/api/floaterList`, with floater list detail at `/app/floater-list/:id`.
+- The shell, scheduled task home tiles, and floater task home tab share web-only route metadata and counts, while feature pages continue to own their own query/mutation behavior.
 
 ### API Communication (Web)
 
@@ -318,7 +318,7 @@ In Local Mode the browser is the workspace:
 - **Auth compatibility**: The Android client implements the JWE credential flow (CSRF token fetch → credential callback → session cookie) using Retrofit + an encrypted cookie store.
 - **Navigation**: Programmatic Compose Navigation (`NavHost`) with `sealed class AppRoute` — no XML navigation graphs.
 - **Server discovery**: Runtime server URL configuration with optional certificate fingerprint pinning for self-hosted instances.
-- **Root feeds**: `RootFeedDock` switches between Home and Floater/Anytime, with a shared root create action.
+- **Root feeds**: `RootFeedDock` switches between the scheduled task home and floater task home screens, with a shared root create action.
 
 ### Package Structure (Android)
 
@@ -336,7 +336,7 @@ com.ohmz.tday.compose/
 ├── feature/
 │   ├── app/           # AppViewModel (bootstrap, sync, session)
 │   ├── auth/          # AuthViewModel
-│   ├── home/          # HomeScreen + HomeViewModel
+│   ├── scheduledtaskhome/ # ScheduledTaskHomeScreen + ScheduledTaskHomeViewModel
 │   ├── todos/         # Todo/Floater list screens + ViewModel
 │   ├── completed/     # CompletedScreen + CompletedViewModel
 │   ├── calendar/      # CalendarScreen + CalendarViewModel
@@ -365,7 +365,7 @@ com.ohmz.tday.compose/
 ios-swiftUI/Tday/
 ├── Feature/
 │   ├── App/          # AppRootView + AppViewModel
-│   ├── Home/         # Home root feed
+│   ├── ScheduledTaskHome/ # Scheduled task home root feed
 │   ├── Todos/        # Todo/Floater management
 │   ├── Calendar/     # Calendar views
 │   ├── CarPlay/      # CarPlay templates, presenter, and App Intents

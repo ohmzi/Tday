@@ -103,7 +103,7 @@ export const nativeRoutes: NativeRouteItem[] = [
   },
 ];
 
-export const homeCategoryRoutes = nativeRoutes.filter((route) =>
+export const scheduledTaskHomeCategoryRoutes = nativeRoutes.filter((route) =>
   ["overdue", "scheduled", "all", "priority", "completed", "calendar"].includes(route.id),
 );
 

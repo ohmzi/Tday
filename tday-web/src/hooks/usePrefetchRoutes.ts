@@ -23,7 +23,7 @@ const cancelIdle: (handle: number) => void =
  * feels instant. Runs once per mount after a short idle delay.
  *
  * Today  → prefetches Floater, FloaterListPage
- * Floater → prefetches Today (TodayPage, TodayTasksPage)
+ * Floater → prefetches Today (ScheduledTaskHomePage, TodayTasksPage)
  */
 export function usePrefetchRoutes() {
   const pathname = usePathname();
@@ -32,10 +32,10 @@ export function usePrefetchRoutes() {
     const id = requestIdle(
       () => {
         if (pathname.includes("/app/tday") || pathname.includes("/app/today")) {
-          import("@/pages/FloaterPage");
+          import("@/pages/FloaterTaskHomePage");
           import("@/pages/FloaterListPage");
         } else if (pathname.includes("/app/floater")) {
-          import("@/pages/TodayPage");
+          import("@/pages/ScheduledTaskHomePage");
           import("@/pages/TodayTasksPage");
         } else if (pathname.includes("/app/settings")) {
           // Warm the guide chunk so tapping "How-To & Tips" feels instant.

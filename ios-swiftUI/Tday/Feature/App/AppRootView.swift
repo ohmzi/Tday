@@ -9,13 +9,13 @@ struct AppRootView: View {
     @State private var notificationDeepLinkRouter = NotificationDeepLinkRouter.shared
     @State private var hasLeftActiveScene = false
     @State private var isLaunchSplashHeld = false
-    @State private var rootFeedTab: RootFeedTab = .home
+    @State private var rootFeedTab: RootFeedTab = .scheduledTaskHome
     @State private var rootCreateTaskRequestID = 0
     @State private var pendingRootCreateTask: PendingRootCreateTask?
     // Prefill from a share-extension capture, applied to the next create sheet.
     @State private var rootCreateTaskPrefill: CreateTaskPayload?
-    @State private var rootHomeScrollToTopRequestID = 0
-    @State private var rootFloaterScrollToTopRequestID = 0
+    @State private var scheduledTaskHomeScrollToTopRequestID = 0
+    @State private var floaterTaskHomeScrollToTopRequestID = 0
     @State private var rootDockCollapsed = false
     @State private var rootControlsVisible = true
     @Environment(\.scenePhase) private var scenePhase
@@ -42,15 +42,15 @@ struct AppRootView: View {
                     TdayBackground {
                         ZStack(alignment: .bottom) {
                             switch rootFeedTab {
-                            case .home:
-                                HomeScreen(
+                            case .scheduledTaskHome:
+                                ScheduledTaskHomeScreen(
                                     container: container,
                                     onRootFeedTabSelected: handleRootFeedTabSelection,
                                     showsRootControls: false,
                                     createTaskRequestID: rootCreateTaskRequestID,
                                     createTaskPrefill: rootCreateTaskPrefill,
                                     onCreateTaskSheetClosed: { rootCreateTaskPrefill = nil },
-                                    scrollToTopRequestID: rootHomeScrollToTopRequestID,
+                                    scrollToTopRequestID: scheduledTaskHomeScrollToTopRequestID,
                                     onRootDockCollapsedChange: { rootDockCollapsed = $0 },
                                     onRootControlsVisibleChange: { rootControlsVisible = $0 },
                                     pullRefreshEnabled: !appViewModel.isLocalMode,
@@ -58,20 +58,20 @@ struct AppRootView: View {
                                 ) { route in
                                     handleRoute(route)
                                 }
-                            case .floater:
+                            case .floaterTaskHome:
                                 TodoListScreen(
                                     container: container,
                                     mode: .floater,
                                     listId: nil,
                                     listName: nil,
                                     highlightedTodoId: nil,
-                                    rootFeedTab: .floater,
+                                    rootFeedTab: .floaterTaskHome,
                                     onRootFeedTabSelected: handleRootFeedTabSelection,
                                     showsRootControls: false,
                                     pullRefreshEnabled: !appViewModel.isLocalMode,
                                     usesRootFeedHeader: true,
                                     createTaskRequestID: rootCreateTaskRequestID,
-                                    scrollToTopRequestID: rootFloaterScrollToTopRequestID,
+                                    scrollToTopRequestID: floaterTaskHomeScrollToTopRequestID,
                                     onRootDockCollapsedChange: { rootDockCollapsed = $0 },
                                     onRootControlsVisibleChange: { rootControlsVisible = $0 },
                                     onOpenFloaterList: { listId, listName in
@@ -301,8 +301,8 @@ struct AppRootView: View {
     @ViewBuilder
     private func destinationView(for route: AppRoute) -> some View {
         switch route {
-        case .home:
-            HomeScreen(
+        case .scheduledTaskHome:
+            ScheduledTaskHomeScreen(
                 container: container,
                 onRootFeedTabSelected: handleRootFeedTabSelection,
                 summaryAvailable: !appViewModel.isLocalMode && !appViewModel.isOffline
@@ -323,12 +323,12 @@ struct AppRootView: View {
             TodoListScreen(container: container, mode: .all, listId: nil, listName: nil, highlightedTodoId: highlightTodoId, summaryAvailable: !appViewModel.isLocalMode && !appViewModel.isOffline)
         case .priorityTodos:
             TodoListScreen(container: container, mode: .priority, listId: nil, listName: nil, highlightedTodoId: nil, summaryAvailable: !appViewModel.isLocalMode && !appViewModel.isOffline)
-        case .floaterTodos:
+        case .floaterTaskHome:
             Color.clear
                 .navigationBarBackButtonHidden(true)
                 .toolbar(.hidden, for: .navigationBar)
                 .onAppear {
-                    selectRootFeedTab(.floater)
+                    selectRootFeedTab(.floaterTaskHome)
                 }
         case let .floaterListTodos(listId, listName):
             TodoListScreen(
@@ -339,7 +339,7 @@ struct AppRootView: View {
                 highlightedTodoId: nil,
                 summaryAvailable: !appViewModel.isLocalMode && !appViewModel.isOffline,
                 onListDeleted: {
-                    handleRoute(.floaterTodos)
+                    handleRoute(.floaterTaskHome)
                 }
             )
         case let .listTodos(listId, listName):
@@ -351,7 +351,7 @@ struct AppRootView: View {
                 highlightedTodoId: nil,
                 summaryAvailable: !appViewModel.isLocalMode && !appViewModel.isOffline,
                 onListDeleted: {
-                    appViewModel.navigate(to: .home)
+                    appViewModel.navigate(to: .scheduledTaskHome)
                 }
             )
         case .completed:
@@ -386,14 +386,14 @@ struct AppRootView: View {
 
     private func handleRoute(_ route: AppRoute) {
         switch route {
-        case .home:
-            selectRootFeedTab(.home)
+        case .scheduledTaskHome:
+            selectRootFeedTab(.scheduledTaskHome)
         case .createTodayTodo:
-            requestRootCreateTask(on: .home)
+            requestRootCreateTask(on: .scheduledTaskHome)
         case .createFloaterTodo:
-            requestRootCreateTask(on: .floater)
-        case .floaterTodos:
-            selectRootFeedTab(.floater)
+            requestRootCreateTask(on: .floaterTaskHome)
+        case .floaterTaskHome:
+            selectRootFeedTab(.floaterTaskHome)
         default:
             appViewModel.navigate(to: route)
         }
@@ -415,10 +415,10 @@ struct AppRootView: View {
 
     private func requestRootFeedScrollToTop(for tab: RootFeedTab) {
         switch tab {
-        case .home:
-            rootHomeScrollToTopRequestID += 1
-        case .floater:
-            rootFloaterScrollToTopRequestID += 1
+        case .scheduledTaskHome:
+            scheduledTaskHomeScrollToTopRequestID += 1
+        case .floaterTaskHome:
+            floaterTaskHomeScrollToTopRequestID += 1
         }
     }
 
@@ -429,7 +429,7 @@ struct AppRootView: View {
     }
 
     /// Turns the oldest share-extension capture into a prefilled create sheet
-    /// on the Home tab. One per activation; the queue holds the rest. Skips
+    /// on the scheduled task home tab. One per activation; the queue holds the rest. Skips
     /// while another create request is mid-flight so the prefill can't attach
     /// to a sheet the user asked for manually.
     private func drainPendingShareIfReady() {
@@ -453,7 +453,7 @@ struct AppRootView: View {
             rrule: nil,
             listId: nil
         )
-        requestRootCreateTask(on: .home)
+        requestRootCreateTask(on: .scheduledTaskHome)
     }
 
     private func presentPendingRootCreateTaskIfReady() {
@@ -491,12 +491,12 @@ struct AppRootView: View {
 
     private func setNavigationPath(_ newPath: [AppRoute]) {
         if newPath.contains(.createTodayTodo) {
-            requestRootCreateTask(on: .home)
+            requestRootCreateTask(on: .scheduledTaskHome)
             return
         }
 
         if newPath.contains(.createFloaterTodo) {
-            requestRootCreateTask(on: .floater)
+            requestRootCreateTask(on: .floaterTaskHome)
             return
         }
 
@@ -527,14 +527,14 @@ struct AppRootView: View {
     private func normalizeRootNavigationPath(_ path: [AppRoute]) {
         if path.contains(.createTodayTodo) {
             DispatchQueue.main.async {
-                requestRootCreateTask(on: .home)
+                requestRootCreateTask(on: .scheduledTaskHome)
             }
             return
         }
 
         if path.contains(.createFloaterTodo) {
             DispatchQueue.main.async {
-                requestRootCreateTask(on: .floater)
+                requestRootCreateTask(on: .floaterTaskHome)
             }
             return
         }
@@ -570,7 +570,7 @@ struct AppRootView: View {
     }
 
     private var rootCreateTaskFillColor: Color {
-        rootFeedTab == .floater ? .tdayFloaterGreen : .tdayTodayBlue
+        rootFeedTab == .floaterTaskHome ? .tdayFloaterGreen : .tdayTodayBlue
     }
 
     /// Transient "you're offline" toast, gated the same way the old OfflineBanner was
@@ -814,10 +814,10 @@ private struct TdayKeyboardPrewarmView: UIViewRepresentable {
 private extension AppRoute {
     var rootFeedTab: RootFeedTab? {
         switch self {
-        case .home:
-            return .home
-        case .floaterTodos:
-            return .floater
+        case .scheduledTaskHome:
+            return .scheduledTaskHome
+        case .floaterTaskHome:
+            return .floaterTaskHome
         default:
             return nil
         }
@@ -1050,7 +1050,7 @@ private struct SplashTdayLogoMark: View {
 
 /// Persistent "waiting for admin approval" holding screen. Shown on every launch while a
 /// registered account is still PENDING; a silent re-login (on launch and via "Check
-/// status") advances to Home the moment approval lands.
+/// status") advances to the scheduled task home screen the moment approval lands.
 private struct PendingApprovalView: View {
     let username: String?
     let isChecking: Bool
