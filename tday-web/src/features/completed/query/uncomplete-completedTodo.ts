@@ -25,7 +25,7 @@ export const useUnCompleteTodo = () => {
 
       queryClient.setQueryData(
         ["completedTodo"],
-        (oldTodos: CompletedTodoItemType[]) =>
+        (oldTodos: CompletedTodoItemType[] = []) =>
           oldTodos.flatMap((oldTodo) => {
             if (oldTodo.id === todoItem.id) return [];
             return [oldTodo];

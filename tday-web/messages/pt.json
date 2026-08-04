@@ -715,6 +715,14 @@
       "deleteConfirmCancel": "Cancelar",
       "deleteConfirmAction": "Eliminar",
       "deleteDone": "Dados locais eliminados."
+    },
+    "troubleshooting": {
+      "reset": "Repor a cache da aplicação",
+      "confirmTitle": "Repor a cache da aplicação?",
+      "confirmBody": "Limpa a cache offline deste dispositivo e recarrega a versão mais recente. As suas tarefas, listas e sessão não são afetadas.",
+      "confirmAction": "Repor",
+      "confirmCancel": "Cancelar",
+      "resetFailed": "Não foi possível repor a cache. Feche e reabra a aplicação e tente novamente."
     }
   },
   "summary": {
