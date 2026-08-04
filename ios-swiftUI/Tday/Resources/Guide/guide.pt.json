@@ -1191,6 +1191,7 @@
       "sectionOrder": 6,
       "icon": "wifi-off",
       "platforms": [
+        "WEB",
         "ANDROID",
         "IOS"
       ],
@@ -1205,7 +1206,7 @@
         {
           "type": "PARAGRAPH",
           "texts": [
-            "O Modo local mantém tudo no seu dispositivo — sem início de sessão, sem servidor, sem envios. É uma forma de primeira classe de usar o T'Day em privado, e os seus dados locais nunca são enviados para lado nenhum por conta própria."
+            "O Modo local mantém tudo no seu dispositivo — sem início de sessão, sem servidor, sem envios. É uma forma de primeira classe de usar o T'Day em privado, e os seus dados locais nunca são enviados para lado nenhum por conta própria. Num navegador vive no armazenamento desse navegador, por isso limpar os cookies e os dados do site limpa também o espaço de trabalho — exporte-o antes se quiser mantê-lo."
           ]
         },
         {
@@ -1217,7 +1218,7 @@
       ],
       "searchTitle": "modo local",
       "searchKeywords": "modo local, offline, privado, sem conta, sem servidor, no dispositivo",
-      "searchBody": "use o t'day totalmente offline, sem servidor nem conta. o modo local mantem tudo no seu dispositivo — sem inicio de sessao, sem servidor, sem envios. e uma forma de primeira classe de usar o t'day em privado, e os seus dados locais nunca sao enviados para lado nenhum por conta propria. as funcionalidades exclusivas do servidor aparecem aqui com um selo “modo servidor” para saber o que muda se iniciar sessao."
+      "searchBody": "use o t'day totalmente offline, sem servidor nem conta. o modo local mantem tudo no seu dispositivo — sem inicio de sessao, sem servidor, sem envios. e uma forma de primeira classe de usar o t'day em privado, e os seus dados locais nunca sao enviados para lado nenhum por conta propria. num navegador vive no armazenamento desse navegador, por isso limpar os cookies e os dados do site limpa tambem o espaco de trabalho — exporte-o antes se quiser mante-lo. as funcionalidades exclusivas do servidor aparecem aqui com um selo “modo servidor” para saber o que muda se iniciar sessao."
     },
     {
       "id": "server-mode",

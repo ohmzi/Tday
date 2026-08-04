@@ -673,7 +673,8 @@
       "confirmBody": "Esto añade {{count}} elementos a tu cuenta. Nada de lo que ya tienes se cambia ni se elimina.",
       "confirmRemapped": "{{count}} elementos con ID en conflicto se añadirán como copias nuevas.",
       "confirmCancel": "Cancelar",
-      "confirmImport": "Importar"
+      "confirmImport": "Importar",
+      "summaryLocal": "{{tasks}} tareas · {{lists}} listas · {{completed}} completadas, todo en este navegador."
     },
     "calendarFeed": {
       "title": "Feed de calendario",
@@ -702,6 +703,18 @@
     "restingFloaters": {
       "title": "Flotantes en reposo",
       "toggle": "Atenuar tareas de Anytime sin tocar"
+    },
+    "workspace": {
+      "title": "Espacio de trabajo",
+      "localTitle": "Espacio local",
+      "localDetail": "Guardado solo en este navegador: sin cuenta ni sincronización.",
+      "leave": "Salir del espacio local",
+      "delete": "Eliminar los datos locales",
+      "deleteConfirmTitle": "¿Eliminar los datos locales?",
+      "deleteConfirmBody": "Esto elimina de forma permanente todas las tareas, listas y entradas completadas guardadas en este navegador. No hay ninguna copia en un servidor: descarga tus datos antes si quieres conservarlos.",
+      "deleteConfirmCancel": "Cancelar",
+      "deleteConfirmAction": "Eliminar",
+      "deleteDone": "Datos locales eliminados."
     }
   },
   "summary": {
@@ -1002,7 +1015,7 @@
         "title": "Modo local",
         "summary": "Usa T'Day totalmente sin conexión, sin servidor ni cuenta.",
         "keywords": "modo local, sin conexión, privado, sin cuenta, sin servidor, en el dispositivo",
-        "body": "El Modo local mantiene todo en tu dispositivo: sin inicio de sesión, sin servidor, sin subidas. Es una forma de primer nivel de usar T'Day de manera privada, y tus datos locales nunca se envían a ningún sitio por sí solos.",
+        "body": "El Modo local mantiene todo en tu dispositivo: sin inicio de sesión, sin servidor, sin subidas. Es una forma de primer nivel de usar T'Day de manera privada, y tus datos locales nunca se envían a ningún sitio por sí solos. En un navegador vive en el almacenamiento de ese navegador, así que borrar las cookies y los datos del sitio borra también el espacio de trabajo: expórtalo antes si quieres conservarlo.",
         "tip": "Las funciones exclusivas del servidor se muestran aquí con una insignia de «Modo servidor» para que sepas qué cambia si inicias sesión."
       },
       "server-mode": {

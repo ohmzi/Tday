@@ -1191,6 +1191,7 @@
       "sectionOrder": 6,
       "icon": "wifi-off",
       "platforms": [
+        "WEB",
         "ANDROID",
         "IOS"
       ],
@@ -1205,7 +1206,7 @@
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Local Mode keeps everything on your device — no login, no server, no upload. It's a first-class way to use T'Day privately, and your local data is never sent anywhere on its own."
+            "Local Mode keeps everything on your device — no login, no server, no upload. It's a first-class way to use T'Day privately, and your local data is never sent anywhere on its own. In a browser it lives in that browser's own storage, so clearing your cookies and site data clears the workspace with it — export first if you want to keep it."
           ]
         },
         {
@@ -1217,7 +1218,7 @@
       ],
       "searchTitle": "local mode",
       "searchKeywords": "local mode, offline, private, no account, no server, on device",
-      "searchBody": "use t'day fully offline, with no server or account. local mode keeps everything on your device — no login, no server, no upload. it's a first-class way to use t'day privately, and your local data is never sent anywhere on its own. server-only features are shown here with a “server mode” badge so you know what changes if you sign in."
+      "searchBody": "use t'day fully offline, with no server or account. local mode keeps everything on your device — no login, no server, no upload. it's a first-class way to use t'day privately, and your local data is never sent anywhere on its own. in a browser it lives in that browser's own storage, so clearing your cookies and site data clears the workspace with it — export first if you want to keep it. server-only features are shown here with a “server mode” badge so you know what changes if you sign in."
     },
     {
       "id": "server-mode",

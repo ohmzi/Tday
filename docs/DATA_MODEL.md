@@ -12,6 +12,7 @@ This document describes the durable and local data structures that define T'Day.
 | Android cache | `android-compose/app/src/main/java/com/ohmz/tday/compose/core/data/db/` and `core/data/OfflineSyncModels.kt` | Room entities plus cache records used by repositories |
 | iOS cache | `ios-swiftUI/Tday/Core/Data/Database/` and `Core/Model/OfflineSyncModels.swift` | SwiftData entities plus cache records used by repositories |
 | iOS widget snapshot | `ios-swiftUI/Tday/Core/Widget/TodayTasksWidgetSnapshotStore.swift` | Versioned App Group payload consumed by the WidgetKit extension |
+| Web Local Mode workspace | `tday-web/src/lib/local/localDb.ts` | Browser-storage rows backing the no-login web workspace |
 
 ## Core Entities
 
@@ -153,6 +154,32 @@ Current mutation kinds:
 - Floater: `CREATE_FLOATER`, `UPDATE_FLOATER`, `DELETE_FLOATER`, `COMPLETE_FLOATER`, `UNCOMPLETE_FLOATER`
 
 Server Mode replays pending mutations through `SyncManager`. Local Mode clears/ignores pending mutations because there is no remote target.
+
+## Web Local Mode Workspace
+
+The web's no-login workspace is one JSON document in `localStorage`
+(`tday.local.workspace.v1`, shaped by `LocalWorkspace` in `tday-web/src/lib/local/localDb.ts`).
+It has no sync layer at all — there is no remote target, so no local-ID prefixes and no
+pending mutations. Its rows mirror the backend tables one-for-one, and the handlers in
+`lib/local/*` answer with the same DTOs the Ktor routes return, so the app's queries and
+mutations are identical in both modes.
+
+Differences from the server contract, all deliberate:
+
+- Timestamps use the API's own wire format — a UTC wall clock with no offset
+  (`2026-08-04T09:30:00.000`) — because that is what `parseApiDateTime` expects. Due,
+  `instanceDate`, and `overriddenDue` are floored to the minute, matching `parseDueMinute`.
+- Sharing has no meaning in a single-browser workspace: every list reports
+  `myRole: "OWNER"`, `isShared: false`, `memberCount: 0`.
+- `ListDto.todoCount` carries the real pending-task count. The server currently leaves it
+  at `0` for scheduled lists (only floater lists compute it), and reporting a truthful
+  count locally is better than mirroring that gap.
+- Summaries always report `source: "logic"`; a browser workspace can't reach a model.
+- Server-only routes (accounts, sharing, admin, push, webhooks, API keys, calendar feed)
+  have no local handler and fail as a 404 rather than pretending to succeed.
+- Clearing the browser's cookies/site data deletes the workspace. Export/import
+  (`/api/export`, `/api/import`, same `TdayExport` bundle) is the only way to carry it off
+  the device; import stays additive with the same id-remap rule as `ExportRemap`.
 
 ## Tenant Isolation
 
