@@ -15,7 +15,9 @@ export interface TodoItemPatchInput extends TodoItemType {
 }
 
 type TodoPatchOptions = {
-  instanceDate?: Date | number | null;
+  // Date only — the backend parses instanceDate as ISO-8601, and epoch millis
+  // decode into a digit string it can't parse.
+  instanceDate?: Date | null;
   listID?: string | null;
 };
 

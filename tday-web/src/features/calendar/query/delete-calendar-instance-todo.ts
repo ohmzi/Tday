@@ -20,7 +20,8 @@ export const useDeleteCalendarInstanceTodo = () => {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             id: canonicalTodoId(todo.id),
-            instanceDate: todo.instanceDate?.getTime() ?? null,
+            // Date, not epoch millis: the backend parses instanceDate as ISO-8601.
+            instanceDate: todo.instanceDate ?? null,
           }),
         });
       },
