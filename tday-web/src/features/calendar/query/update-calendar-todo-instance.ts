@@ -28,7 +28,11 @@ async function patchTodo({ ghostTodo }: { ghostTodo: TodoItemType }) {
     url: "/api/todo/instance",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      id: canonicalTodoId(ghostTodo.id),
+      // `todoId`, not `id`: TodoInstancePatchRequest names the field todoId,
+      // and a missing required field 400s before the handler runs. `rrule` from
+      // todoSchema rides along unused — an instance override can't change the
+      // series, so the backend ignores it (ignoreUnknownKeys).
+      todoId: canonicalTodoId(ghostTodo.id),
       ...parsedObj.data,
       instanceDate: parsedObj.data.instanceDate,
     }),

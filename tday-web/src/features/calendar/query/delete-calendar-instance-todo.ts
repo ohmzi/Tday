@@ -19,7 +19,9 @@ export const useDeleteCalendarInstanceTodo = () => {
           url: "/api/todo/instance",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            id: canonicalTodoId(todo.id),
+            // `todoId`, not `id`: TodoInstanceDeleteRequest names the field
+            // todoId, and a missing required field 400s before the handler runs.
+            todoId: canonicalTodoId(todo.id),
             instanceDate: todo.instanceDate?.getTime() ?? null,
           }),
         });
