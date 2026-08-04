@@ -22,7 +22,8 @@ export const useDeleteCalendarInstanceTodo = () => {
             // `todoId`, not `id`: TodoInstanceDeleteRequest names the field
             // todoId, and a missing required field 400s before the handler runs.
             todoId: canonicalTodoId(todo.id),
-            instanceDate: todo.instanceDate?.getTime() ?? null,
+            // Date, not epoch millis: the backend parses instanceDate as ISO-8601.
+            instanceDate: todo.instanceDate ?? null,
           }),
         });
       },
