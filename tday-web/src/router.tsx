@@ -16,6 +16,7 @@ const TermsPage = lazy(() => import("@/pages/TermsPage"));
 const BlogsPage = lazy(() => import("@/pages/BlogsPage"));
 const BlogArticlePage = lazy(() => import("@/pages/BlogArticlePage"));
 const HelpGuidePage = lazy(() => import("@/pages/HelpGuidePage"));
+const GuideRedirectPage = lazy(() => import("@/pages/GuideRedirectPage"));
 const NotFoundPage = lazy(() => import("@/pages/NotFoundPage"));
 const AppLayout = lazy(() => import("@/pages/AppLayout"));
 const GeneralLayout = lazy(() => import("@/pages/GeneralLayout"));
@@ -81,8 +82,9 @@ export const router = sentryCreateBrowserRouter([
       },
       { path: "privacy", element: <PrivacyPage /> },
       { path: "terms", element: <TermsPage /> },
-      { path: "guide", element: <HelpGuidePage /> },
-      { path: "guide/:topicId", element: <HelpGuidePage /> },
+      // Legacy standalone guide URLs — the guide now renders inside the app shell.
+      { path: "guide", element: <GuideRedirectPage /> },
+      { path: "guide/:topicId", element: <GuideRedirectPage /> },
       { path: "blogs", element: <BlogsPage /> },
       { path: "blogs/page/:slug", element: <BlogArticlePage /> },
       {
@@ -106,6 +108,8 @@ export const router = sentryCreateBrowserRouter([
                   { path: "floater", element: <FloaterPage /> },
                   { path: "floater-list/:id", element: <FloaterListPage /> },
                   { path: "settings", element: <SettingsPage /> },
+                  { path: "guide", element: <HelpGuidePage /> },
+                  { path: "guide/:topicId", element: <HelpGuidePage /> },
                   {
                     element: <AdminRoute />,
                     children: [

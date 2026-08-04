@@ -21,6 +21,7 @@ export default function NativeAppShell({
   usePrefetchRoutes();
   const showTaskFab =
     !pathname.includes("/app/settings") &&
+    !pathname.includes("/app/guide") &&
     !pathname.includes("/app/admin");
 
   return (

@@ -45,15 +45,6 @@ import { resetAppData } from "@/lib/resetAppData";
 import { useIsLocalMode } from "@/hooks/useAppMode";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import {
-  Modal,
-  ModalOverlay,
-  ModalContent,
-  ModalHeader,
-  ModalTitle,
-  ModalDescription,
-  ModalFooter,
-} from "@/components/ui/Modal";
-import {
   isRestingFloatersEnabled,
   setRestingFloatersEnabled,
 } from "@/lib/floaterResting";
@@ -1737,7 +1728,7 @@ export default function SettingsPage() {
         {/* How-To & feature guide — a searchable index of everything T'Day can do,
             reachable by everyone (works offline / in every mode). */}
         <Link
-          href="/guide"
+          href="/app/guide"
           className="flex w-full items-center gap-3 py-1.5 text-left transition active:opacity-60"
         >
           <span className="min-w-0 flex-1 truncate text-[1.05rem] font-black text-foreground">
@@ -1811,38 +1802,36 @@ export default function SettingsPage() {
         )}
       </SettingsSection>
 
-      <Modal open={resetCacheOpen} onOpenChange={setResetCacheOpen}>
-        <ModalOverlay>
-          <ModalContent>
-            <ModalHeader>
-              <ModalTitle>{t("troubleshooting.confirmTitle")}</ModalTitle>
-              <ModalDescription>
-                {t("troubleshooting.confirmBody")}
-              </ModalDescription>
-            </ModalHeader>
-            <ModalFooter className="mt-4">
-              <Button
-                variant="outline"
-                className="bg-popover w-full sm:w-auto"
-                disabled={resettingCache}
-                onClick={() => setResetCacheOpen(false)}
-              >
-                {t("troubleshooting.confirmCancel")}
-              </Button>
-              <Button
-                className="w-full sm:w-auto"
-                disabled={resettingCache}
-                onClick={() => void handleResetAppData()}
-              >
-                {resettingCache ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : null}
-                {t("troubleshooting.confirmAction")}
-              </Button>
-            </ModalFooter>
-          </ModalContent>
-        </ModalOverlay>
-      </Modal>
+      {/* Non-destructive recovery, so the confirm action keeps the picker's
+          accent Done styling rather than the destructive tint below. */}
+      <CenteredSelectorOverlay
+        open={resetCacheOpen}
+        onOpenChange={(open) => !resettingCache && setResetCacheOpen(open)}
+        title={t("troubleshooting.confirmTitle")}
+      >
+        <p className="px-5 pb-1 text-sm font-bold leading-relaxed text-muted-foreground">
+          {t("troubleshooting.confirmBody")}
+        </p>
+        <div className="flex flex-col gap-2 px-4 pb-1 pt-3">
+          <button
+            type="button"
+            disabled={resettingCache}
+            onClick={() => void handleResetAppData()}
+            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-muted/70 py-3 text-base font-black text-accent transition-colors hover:bg-muted disabled:opacity-50"
+          >
+            {resettingCache ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+            {t("troubleshooting.confirmAction")}
+          </button>
+          <button
+            type="button"
+            disabled={resettingCache}
+            onClick={() => setResetCacheOpen(false)}
+            className="w-full rounded-2xl bg-muted/70 py-3 text-base font-black text-foreground transition-colors hover:bg-muted disabled:opacity-50"
+          >
+            {t("troubleshooting.confirmCancel")}
+          </button>
+        </div>
+      </CenteredSelectorOverlay>
 
       {/* Same chrome as the task form's Repeat / Priority pickers — the app's
           centered selector card — so a confirm reads like the rest of the UI.

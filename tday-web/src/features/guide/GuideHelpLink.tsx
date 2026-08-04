@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 
 /**
  * A quiet "?" that deep-links from a feature surface into its guide topic
- * (`/:locale/guide/:topicId`). Reference topic ids from the shared GuideTopicIds.
+ * (`/:locale/app/guide/:topicId`). Reference topic ids from the shared GuideTopicIds.
  */
 export function GuideHelpLink({
   topic,
@@ -20,7 +20,7 @@ export function GuideHelpLink({
   const { t } = useTranslation("guide");
   return (
     <Link
-      href={`/guide/${topic}`}
+      href={`/app/guide/${topic}`}
       aria-label={t("title")}
       title={t("title")}
       className={cn(
