@@ -3,6 +3,10 @@ import { useTranslation } from "react-i18next";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ArrowLeft, ChevronRight, Search, Sparkles, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  nativeAppContentClassName,
+  nativeAppHorizontalPaddingClassName,
+} from "@/components/app/nativeAppLayout";
 import { GuideIcon } from "./GuideIcon";
 import {
   GUIDE_CURRENT_VERSION,
@@ -81,82 +85,90 @@ export default function GuideScreen() {
 
   return (
     <div className="min-h-dvh bg-background text-foreground">
-      <div className="mx-auto w-full max-w-3xl px-4 pb-24 pt-6 sm:px-6">
-        <header className="mb-5">
-          <button
-            type="button"
-            onClick={() => navigate(-1)}
-            className="mb-4 inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-sm text-card-foreground-muted transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-accent"
-          >
-            <ArrowLeft className="size-4" aria-hidden="true" />
-            {t("settings.title", "Settings")}
-          </button>
-          <h1 className="text-2xl font-black tracking-tight sm:text-3xl">{t("guide.title")}</h1>
-          <p className="mt-1 max-w-prose text-sm text-card-foreground-muted">{t("guide.subtitle")}</p>
-        </header>
+      {/* The guide is its own route (outside AppLayout), so it re-uses the app
+          shell's gutters and content width instead of a narrower reading column. */}
+      <div className={cn(nativeAppHorizontalPaddingClassName, "pb-24 pt-4 sm:pt-6")}>
+        <div className={nativeAppContentClassName}>
+          <header className="mb-5">
+            <button
+              type="button"
+              onClick={() => navigate(-1)}
+              className="mb-4 inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-sm text-card-foreground-muted transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-accent"
+            >
+              <ArrowLeft className="size-4" aria-hidden="true" />
+              {t("settings.title", "Settings")}
+            </button>
+            <h1 className="text-2xl font-black tracking-tight sm:text-3xl">{t("guide.title")}</h1>
+            <p className="mt-1 max-w-prose text-sm text-card-foreground-muted">
+              {t("guide.subtitle")}
+            </p>
+          </header>
 
-        {/* Search */}
-        <div className="sticky top-2 z-10 mb-5">
-          <div className="relative">
-            <Search
-              className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-card-foreground-muted"
-              aria-hidden="true"
-            />
-            <input
-              type="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder={t("guide.searchPlaceholder")}
-              aria-label={t("guide.searchAria")}
-              className="w-full rounded-xl border border-border bg-card py-3 pl-10 pr-10 text-sm text-card-foreground shadow-sm outline-none transition-colors focus:border-accent"
-            />
-            {query && (
-              <button
-                type="button"
-                onClick={() => setQuery("")}
-                aria-label={t("guide.clearSearch")}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-card-foreground-muted transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-accent"
-              >
-                <X className="size-4" aria-hidden="true" />
-              </button>
+          {/* Search */}
+          <div className="sticky top-2 z-10 mb-5">
+            <div className="relative">
+              <Search
+                className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-card-foreground-muted"
+                aria-hidden="true"
+              />
+              <input
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder={t("guide.searchPlaceholder")}
+                aria-label={t("guide.searchAria")}
+                className="w-full rounded-xl border border-border bg-card py-3 pl-10 pr-10 text-sm text-card-foreground shadow-sm outline-none transition-colors focus:border-accent"
+              />
+              {query && (
+                <button
+                  type="button"
+                  onClick={() => setQuery("")}
+                  aria-label={t("guide.clearSearch")}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-card-foreground-muted transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-accent"
+                >
+                  <X className="size-4" aria-hidden="true" />
+                </button>
+              )}
+            </div>
+            {trimmed && (
+              <p className="mt-2 px-1 text-xs text-card-foreground-muted" aria-live="polite">
+                {t("guide.results", { count: rankedIds.length })}
+              </p>
             )}
           </div>
-          {trimmed && (
-            <p className="mt-2 px-1 text-xs text-card-foreground-muted" aria-live="polite">
-              {t("guide.results", { count: rankedIds.length })}
-            </p>
+
+          {/* Results */}
+          {trimmed ? (
+            rankedIds.length > 0 ? (
+              <div className="flex flex-col gap-2.5">
+                {rankedIds.map((id) => renderCard(byId[id]))}
+              </div>
+            ) : (
+              <p className="rounded-xl border border-dashed border-border px-4 py-10 text-center text-sm text-card-foreground-muted">
+                {t("guide.noResults")}
+              </p>
+            )
+          ) : (
+            <div className="flex flex-col gap-8">
+              {whatsNew.length > 0 && (
+                <section>
+                  <SectionHeading icon>{t("guide.whatsNew")}</SectionHeading>
+                  <div className="flex flex-col gap-2.5">{whatsNew.map(renderCard)}</div>
+                </section>
+              )}
+              {GUIDE_SECTIONS.map((section) => {
+                const topics = topicsInSection(section.id);
+                if (topics.length === 0) return null;
+                return (
+                  <section key={section.id}>
+                    <SectionHeading>{t(section.titleKey)}</SectionHeading>
+                    <div className="flex flex-col gap-2.5">{topics.map(renderCard)}</div>
+                  </section>
+                );
+              })}
+            </div>
           )}
         </div>
-
-        {/* Results */}
-        {trimmed ? (
-          rankedIds.length > 0 ? (
-            <div className="flex flex-col gap-2.5">{rankedIds.map((id) => renderCard(byId[id]))}</div>
-          ) : (
-            <p className="rounded-xl border border-dashed border-border px-4 py-10 text-center text-sm text-card-foreground-muted">
-              {t("guide.noResults")}
-            </p>
-          )
-        ) : (
-          <div className="flex flex-col gap-8">
-            {whatsNew.length > 0 && (
-              <section>
-                <SectionHeading icon>{t("guide.whatsNew")}</SectionHeading>
-                <div className="flex flex-col gap-2.5">{whatsNew.map(renderCard)}</div>
-              </section>
-            )}
-            {GUIDE_SECTIONS.map((section) => {
-              const topics = topicsInSection(section.id);
-              if (topics.length === 0) return null;
-              return (
-                <section key={section.id}>
-                  <SectionHeading>{t(section.titleKey)}</SectionHeading>
-                  <div className="flex flex-col gap-2.5">{topics.map(renderCard)}</div>
-                </section>
-              );
-            })}
-          </div>
-        )}
       </div>
     </div>
   );
