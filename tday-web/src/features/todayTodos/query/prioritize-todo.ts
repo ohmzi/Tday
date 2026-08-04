@@ -47,7 +47,7 @@ export const usePrioritizeTodo = () => {
         const oldTimelineTodos = queryClient.getQueryData<TodoItemType[]>([
           "todoTimeline",
         ]);
-        queryClient.setQueryData(["todo"], (oldTodos: TodoItemType[]) =>
+        queryClient.setQueryData(["todo"], (oldTodos: TodoItemType[] = []) =>
           oldTodos.map((oldTodo) => {
             if (oldTodo.id === id) {
               return {
