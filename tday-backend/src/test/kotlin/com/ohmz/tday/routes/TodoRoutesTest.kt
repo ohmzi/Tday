@@ -400,6 +400,100 @@ class TodoRoutesTest {
         assertEquals(0, body.taskCount)
     }
 
+    // TodoInstancePatchRequest declares `todoId` — no default, no @JsonNames
+    // alias. `ignoreUnknownKeys = true` drops a body that names the todo `id`,
+    // leaving the required todoId missing, so the request 400s in deserialization
+    // before any handler logic runs. Three web hooks were sending `id`, which
+    // made per-instance edits fail for every recurring task.
+    @Test
+    fun `patch instance rejects body that names the todo id as id`() = testApplication {
+        val todoService = RecordingTodoService()
+
+        application {
+            configureTodoRoutesTestApp(todoService)
+        }
+
+        val response = client.patch("/api/todo/instance") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """{"id":"todo_123","instanceDate":"2026-03-27T15:42:00.000Z","title":"Water the plants"}""",
+            )
+        }
+
+        assertEquals(HttpStatusCode.BadRequest, response.status)
+        assertEquals(0, todoService.patchInstanceCalls)
+    }
+
+    @Test
+    fun `patch instance applies overrides addressed by todoId`() = testApplication {
+        val todoService = RecordingTodoService()
+
+        application {
+            configureTodoRoutesTestApp(todoService)
+        }
+
+        val response = client.patch("/api/todo/instance") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """
+                {
+                  "todoId":"todo_123",
+                  "instanceDate":"2026-03-27T15:42:00.000Z",
+                  "title":"Water the plants",
+                  "description":"the ferns too",
+                  "priority":"High",
+                  "due":"2026-03-27T16:00:00.000Z"
+                }
+                """.trimIndent(),
+            )
+        }
+
+        assertEquals(HttpStatusCode.OK, response.status)
+        assertEquals(1, todoService.patchInstanceCalls)
+        assertEquals("todo_123", todoService.lastPatchInstanceTodoId)
+        assertEquals(LocalDateTime.of(2026, 3, 27, 15, 42, 0), todoService.lastPatchInstanceDate)
+        assertEquals(
+            mapOf<String, Any?>(
+                "title" to "Water the plants",
+                "description" to "the ferns too",
+                "priority" to "High",
+                "due" to LocalDateTime.of(2026, 3, 27, 16, 0, 0),
+            ),
+            todoService.lastPatchInstanceFields,
+        )
+    }
+
+    // An instance override cannot change the series, so `rrule` is not declared on
+    // TodoInstancePatchRequest. The web hooks spread their todo-schema output into
+    // the body, which carries `rrule` along; this pins that it stays ignored rather
+    // than leaking into the override fields.
+    @Test
+    fun `patch instance ignores rrule in the body`() = testApplication {
+        val todoService = RecordingTodoService()
+
+        application {
+            configureTodoRoutesTestApp(todoService)
+        }
+
+        val response = client.patch("/api/todo/instance") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """
+                {
+                  "todoId":"todo_123",
+                  "instanceDate":"2026-03-27T15:42:00.000Z",
+                  "title":"Water the plants",
+                  "rrule":"FREQ=WEEKLY"
+                }
+                """.trimIndent(),
+            )
+        }
+
+        assertEquals(HttpStatusCode.OK, response.status)
+        assertEquals(1, todoService.patchInstanceCalls)
+        assertEquals(mapOf<String, Any?>("title" to "Water the plants"), todoService.lastPatchInstanceFields)
+    }
+
     @Test
     fun `summary fallback is localized by request locale`() = testApplication {
         application {
@@ -476,6 +570,10 @@ class TodoRoutesTest {
         var lastCreateDue: LocalDateTime? = null
         var lastUpdateFields: Map<String, Any?>? = null
         var lastDemoteId: String? = null
+        var patchInstanceCalls = 0
+        var lastPatchInstanceTodoId: String? = null
+        var lastPatchInstanceDate: LocalDateTime? = null
+        var lastPatchInstanceFields: Map<String, Any?>? = null
 
         override suspend fun create(
             userId: String,
@@ -542,7 +640,13 @@ class TodoRoutesTest {
             todoId: String,
             instanceDate: LocalDateTime,
             fields: Map<String, Any?>,
-        ) = Unit.right()
+        ): Either<com.ohmz.tday.domain.AppError, Unit> {
+            patchInstanceCalls++
+            lastPatchInstanceTodoId = todoId
+            lastPatchInstanceDate = instanceDate
+            lastPatchInstanceFields = fields
+            return Unit.right()
+        }
 
         override suspend fun deleteInstance(
             userId: String,

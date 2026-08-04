@@ -25,7 +25,9 @@ async function patchTodo({ ghostTodo }: { ghostTodo: TodoItemType }) {
   await api.PATCH({
     url: "/api/todo/instance",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ ...parsedObj.data, id: todoId }),
+    // `todoId`, not `id`: TodoInstancePatchRequest names the field todoId, and a
+    // missing required field 400s before the handler runs.
+    body: JSON.stringify({ ...parsedObj.data, todoId }),
   });
 }
 
