@@ -66,27 +66,27 @@
     <string name="label_version_name">v%1$s</string>
     <string name="label_server">Сервер</string>
 
-    <!-- Home screen -->
-    <string name="home_title">T\'Day</string>
-    <string name="home_category_today">Сегодня</string>
-    <string name="home_category_overdue">Просроченные</string>
-    <string name="home_category_scheduled">Запланированные</string>
-    <string name="home_category_all">Все</string>
-    <string name="home_category_priority">Приоритет</string>
-    <string name="home_category_completed">Завершённые</string>
-    <string name="home_category_calendar">Календарь</string>
-    <string name="root_feed_tab_home">Главная</string>
+    <!-- Scheduled task home screen -->
+    <string name="scheduled_task_home_title">T\'Day</string>
+    <string name="scheduled_task_home_category_today">Сегодня</string>
+    <string name="scheduled_task_home_category_overdue">Просроченные</string>
+    <string name="scheduled_task_home_category_scheduled">Запланированные</string>
+    <string name="scheduled_task_home_category_all">Все</string>
+    <string name="scheduled_task_home_category_priority">Приоритет</string>
+    <string name="scheduled_task_home_category_completed">Завершённые</string>
+    <string name="scheduled_task_home_category_calendar">Календарь</string>
+    <string name="root_feed_tab_scheduled_task_home">Запланированные</string>
     <string name="root_feed_tab_floater">Без срока</string>
-    <string name="home_search_placeholder">Поиск</string>
-    <string name="home_search_no_results">Совпадений не найдено</string>
-    <string name="home_my_lists">Мои списки</string>
-    <string name="home_new_list">Новый список</string>
-    <string name="home_list_name_placeholder">Название списка</string>
-    <string name="home_section_list">Список</string>
-    <string name="home_section_color">Цвет</string>
-    <string name="home_section_icon">Значок</string>
-    <string name="home_list_icon_option">Выбрать значок списка %1$s</string>
-    <string name="home_locked_list_name">Войдите, чтобы загрузить списки</string>
+    <string name="scheduled_task_home_search_placeholder">Поиск</string>
+    <string name="scheduled_task_home_search_no_results">Совпадений не найдено</string>
+    <string name="scheduled_task_home_my_lists">Мои списки</string>
+    <string name="scheduled_task_home_new_list">Новый список</string>
+    <string name="scheduled_task_home_list_name_placeholder">Название списка</string>
+    <string name="scheduled_task_home_section_list">Список</string>
+    <string name="scheduled_task_home_section_color">Цвет</string>
+    <string name="scheduled_task_home_section_icon">Значок</string>
+    <string name="scheduled_task_home_list_icon_option">Выбрать значок списка %1$s</string>
+    <string name="scheduled_task_home_locked_list_name">Войдите, чтобы загрузить списки</string>
 
     <string-array name="splash_taglines">
         <item>Ваш сервер помнит, чтобы вам не пришлось</item>

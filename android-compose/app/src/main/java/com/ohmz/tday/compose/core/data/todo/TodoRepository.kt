@@ -1284,10 +1284,10 @@ class TodoRepository @Inject constructor(
         val now = Instant.now()
 
         // Apply the shared cross-platform ordering HERE, at the single source, so every
-        // consumer (the Home "today" preview that renders this list directly, the widgets,
+        // consumer (the scheduled task home screen's "today" preview that renders this list directly, the widgets,
         // and the list screens) shows the same order — due-minute → priority → most-recently
         // modified. Previously this returned raw cache order and only the list-screen section
-        // builders re-sorted, so the Home feed ignored priority.
+        // builders re-sorted, so the scheduled task home feed ignored priority.
         return when (mode) {
             TodoListMode.TODAY -> activeTodos.filter(::isTodayTodo).sortedAsTodos()
             TodoListMode.OVERDUE -> activeTodos.filter { isOverdueTodo(it, now) }.sortedAsTodos()

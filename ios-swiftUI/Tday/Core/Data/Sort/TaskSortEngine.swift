@@ -4,7 +4,7 @@ import Foundation
 /// ordering. Swift twin of the shared Kotlin `TaskSortKey`
 /// (shared/src/commonMain/kotlin/com/ohmz/tday/shared/sort/TaskSortEngine.kt).
 ///
-/// Every task-ordering site — scheduled screen, custom lists, floaters, the home
+/// Every task-ordering site — scheduled screen, custom lists, floaters, the scheduled task home
 /// feed, and the home-screen widgets — maps its own model onto this so the
 /// presentation order is identical no matter where the user opens their account.
 /// There is NO user setting; this is simply how lists are presented.

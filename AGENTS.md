@@ -102,7 +102,7 @@ T'Day is a task app, not a marketing site. Mobile screens should feel quiet, use
 - Text must fit in compact mobile layouts without overlap or truncation that hides meaning.
 - Empty states should be calm and short.
 - Preserve dark mode.
-- Root feed behavior should stay aligned: Home and Floater/Anytime are sibling root feeds controlled by `RootFeedDock`, with the create action available from the root controls.
+- Root feed behavior should stay aligned: the scheduled task home screen and the floater task home screen (Floater/Anytime) are sibling root feeds controlled by `RootFeedDock`, with the create action available from the root controls.
 
 ## Design Tokens And Strings
 

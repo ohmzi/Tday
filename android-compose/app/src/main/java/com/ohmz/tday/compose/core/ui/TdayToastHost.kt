@@ -60,7 +60,7 @@ private const val TOAST_FADE_DISTANCE_DP = 96
 private val TOAST_CORNER_RADIUS = 24.dp
 private val TOAST_BOTTOM_PADDING = 88.dp
 
-// Brand accent — the coral used by the overdue tile on the home screen. Non-error
+// Brand accent — the coral used by the overdue tile on the scheduled task home screen. Non-error
 // toasts share it so the toast accent matches the rest of the app; errors keep the
 // Material error red so the danger cue survives.
 private val TOAST_BRAND_ACCENT = Color(0xFFE06F66)

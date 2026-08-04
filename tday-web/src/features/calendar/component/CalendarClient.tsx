@@ -513,14 +513,14 @@ function CalendarTaskRow({
   });
   const priorityFlag = getPriorityFlag(todo.priority);
 
-  // Staged "checking off" sequence — identical to the home/scheduled row.
+  // Staged "checking off" sequence — identical to the scheduled task home row.
   const [completePhase, setCompletePhase] = useState<
     "checked" | "struck" | "removing" | null
   >(null);
   const completeTimers = useRef<number[]>([]);
   const completing = completePhase !== null;
 
-  // Mobile swipe-to-reveal Edit + Delete — mirrors the home row exactly (same
+  // Mobile swipe-to-reveal Edit + Delete — mirrors the scheduled task home row exactly (same
   // 140px slide distance, same pills) so the calendar matches it.
   const ACTIONS_WIDTH = 140;
   const [swipeX, setSwipeX] = useState(0);
@@ -629,7 +629,7 @@ function CalendarTaskRow({
           setDisplayForm={setDisplayForm}
         />
       )}
-      {/* Layout mirrors the home/scheduled row (TodoItemCard): flat transparent
+      {/* Layout mirrors the scheduled task home row (TodoItemCard): flat transparent
           row, swipe-to-reveal Edit/Delete on mobile, hover actions on desktop,
           flag + list dot right-aligned. Drag-to-reschedule + the recurring delete
           dialogs stay calendar-specific. */}

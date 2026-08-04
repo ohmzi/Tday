@@ -242,7 +242,7 @@
   },
   "app": {
     "agenda": "Agenda",
-    "home": "Start",
+    "scheduledTaskHome": "Geplant",
     "more": "Mehr",
     "cancel": "Abbrechen",
     "save": "Speichern",
@@ -526,7 +526,7 @@
     "brick": "Ziegelrot",
     "slate": "Schiefer"
   },
-  "home": {
+  "scheduledTaskHome": {
     "tileScheduled": "Geplant",
     "tilePriority": "Priorität",
     "tileOverdue": "Überfällig",
@@ -820,10 +820,10 @@
     },
     "topics": {
       "root-feeds": {
-        "title": "Home und Jederzeit",
-        "summary": "Zwei ruhige Startfeeds, zwischen denen du über das Dock wechselst.",
-        "keywords": "home, jederzeit, feed, dock, start, navigieren, tabs, wechseln",
-        "body": "T'Day hat zwei verwandte Feeds. Home enthält deine geplanten Aufgaben für heute und darüber hinaus. Jederzeit enthält Floater — Aufgaben ohne Datum. Wechsle über das Dock unten zwischen ihnen und lege aus jedem von beiden eine Aufgabe an."
+        "title": "Geplant und Jederzeit",
+        "summary": "Zwei ruhige Hauptfeeds, zwischen denen du über das Dock wechselst.",
+        "keywords": "geplant, jederzeit, feed, dock, hauptfeed, navigieren, tabs, wechseln",
+        "body": "T'Day hat zwei verwandte Feeds. Geplant enthält deine terminierten Aufgaben für heute und darüber hinaus. Jederzeit enthält Floater — Aufgaben ohne Datum. Wechsle über das Dock unten zwischen ihnen und lege aus jedem von beiden eine Aufgabe an."
       },
       "create-task": {
         "title": "Aufgabe erstellen",
@@ -878,16 +878,16 @@
       },
       "floaters-vs-todos": {
         "title": "Floater vs. geplante Aufgaben",
-        "summary": "Aufgaben ohne Datum leben in Jederzeit; Aufgaben mit Datum in Home.",
+        "summary": "Aufgaben ohne Datum leben in Jederzeit; Aufgaben mit Datum in Geplant.",
         "keywords": "floater, jederzeit, ungeplant, ohne datum, todo, geplant, unterschied",
-        "body": "Eine geplante Aufgabe hat ein Fälligkeitsdatum und erscheint in Home und im Kalender. Ein Floater hat kein Datum — er wartet still in deinem Jederzeit-Feed, bis du bereit bist. Nutze Floater für „irgendwann“-Vorhaben, die den heutigen Tag nicht überladen sollen.",
+        "body": "Eine terminierte Aufgabe hat ein Fälligkeitsdatum und erscheint in Geplant und im Kalender. Ein Floater hat kein Datum — er wartet still in deinem Jederzeit-Feed, bis du bereit bist. Nutze Floater für „irgendwann“-Vorhaben, die den heutigen Tag nicht überladen sollen.",
         "tip": "Floater erscheinen nie im Kalender — dieser Platz ist nur für datierte Vorhaben."
       },
       "promote-and-float": {
         "title": "Hochstufen & treiben lassen",
         "summary": "Plane einen Floater als echte Aufgabe ein – oder lass eine liegengebliebene Aufgabe treiben.",
         "keywords": "hochstufen, floater planen, herabstufen, treiben lassen, umwandeln, jederzeit, verschieben, überfällig",
-        "body": "Wenn ein Floater zu echter Arbeit werden soll, nutze seine Planen-Aktion: Wähle eine Zeit, und er wandert als terminierte Aufgabe nach Start. Auch andersherum: Eine überfällige Aufgabe, die du immer wieder verschiebst, kann leise treiben – stufe sie herab und sie kehrt ohne Datum zu Jederzeit zurück, mit Titel, Notizen und Priorität.",
+        "body": "Wenn ein Floater zu echter Arbeit werden soll, nutze seine Planen-Aktion: Wähle eine Zeit, und er wandert als terminierte Aufgabe zu Geplant. Auch andersherum: Eine überfällige Aufgabe, die du immer wieder verschiebst, kann leise treiben – stufe sie herab und sie kehrt ohne Datum zu Jederzeit zurück, mit Titel, Notizen und Priorität.",
         "tip": "Wiederholende Aufgaben können nicht treiben – beende zuerst die Serie, wenn sie datumslos sein soll."
       },
       "quick-defer": {

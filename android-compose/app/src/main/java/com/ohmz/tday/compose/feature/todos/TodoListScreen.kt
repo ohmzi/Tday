@@ -279,7 +279,7 @@ fun TodoListScreen(
     val todayTimeIconTint = if (isTodayDaytime) TdayTitleIconDayAccent else TdayTitleIconNightAccent
     val usesTodayStyle =
         uiState.mode == TodoListMode.TODAY || uiState.mode == TodoListMode.OVERDUE || uiState.mode == TodoListMode.SCHEDULED || uiState.mode == TodoListMode.ALL || uiState.mode == TodoListMode.PRIORITY || uiState.mode == TodoListMode.FLOATER || uiState.mode == TodoListMode.LIST
-    val isRootFloaterScreen =
+    val isFloaterTaskHomeScreen =
         uiState.mode == TodoListMode.FLOATER && uiState.listId.isNullOrBlank()
     val isListDetailScreen =
         uiState.mode == TodoListMode.LIST ||
@@ -288,7 +288,7 @@ fun TodoListScreen(
     // no swipe edit/delete, no complete taps, no drag.
     val isViewerList = isListDetailScreen && selectedList?.isViewer == true
     val usesRootFeedChrome =
-        usesRootFeedHeader || isRootFloaterScreen
+        usesRootFeedHeader || isFloaterTaskHomeScreen
     val titleColor = modeAccentColor(
         mode = uiState.mode,
         listColorKey = selectedListColorKey,
@@ -321,9 +321,9 @@ fun TodoListScreen(
             items = uiState.items,
         )
     }
-    val floaterListRows = remember(uiState.mode, uiState.listId, uiState.items, uiState.lists) {
+    val floaterTaskHomeListRows = remember(uiState.mode, uiState.listId, uiState.items, uiState.lists) {
         if (uiState.mode == TodoListMode.FLOATER && uiState.listId.isNullOrBlank()) {
-            val floaterCountsByList = uiState.items
+            val floaterTaskHomeCountsByList = uiState.items
                 .asSequence()
                 .mapNotNull { it.listId }
                 .groupingBy { it }
@@ -331,13 +331,13 @@ fun TodoListScreen(
             // Show every list, including ones with no tasks yet, so a newly
             // created (still-empty) list is always reachable here.
             uiState.lists.map { list ->
-                list to (floaterCountsByList[list.id] ?: 0)
+                list to (floaterTaskHomeCountsByList[list.id] ?: 0)
             }
         } else {
             emptyList()
         }
     }
-    val floaterListById = remember(uiState.lists) { uiState.lists.associateBy { it.id } }
+    val floaterTaskHomeListById = remember(uiState.lists) { uiState.lists.associateBy { it.id } }
     var timelineAnimationsReady by remember(uiState.mode, uiState.listId) {
         mutableStateOf(uiState.mode != TodoListMode.TODAY)
     }
@@ -395,30 +395,30 @@ fun TodoListScreen(
     var openSwipeTaskId by rememberSaveable(uiState.mode, uiState.listId) {
         mutableStateOf<String?>(null)
     }
-    var rootFloaterSearchExpanded by rememberSaveable { mutableStateOf(false) }
-    var rootFloaterSearchQuery by rememberSaveable { mutableStateOf("") }
-    val normalizedRootFloaterSearchQuery = remember(rootFloaterSearchQuery) {
-        rootFloaterSearchQuery.trim().lowercase(Locale.getDefault())
+    var floaterTaskHomeSearchExpanded by rememberSaveable { mutableStateOf(false) }
+    var floaterTaskHomeSearchQuery by rememberSaveable { mutableStateOf("") }
+    val normalizedFloaterTaskHomeSearchQuery = remember(floaterTaskHomeSearchQuery) {
+        floaterTaskHomeSearchQuery.trim().lowercase(Locale.getDefault())
     }
-    val rootFloaterSearchResults = remember(
-        isRootFloaterScreen,
-        normalizedRootFloaterSearchQuery,
+    val floaterTaskHomeSearchResults = remember(
+        isFloaterTaskHomeScreen,
+        normalizedFloaterTaskHomeSearchQuery,
         uiState.items,
-        floaterListById,
+        floaterTaskHomeListById,
     ) {
-        if (!isRootFloaterScreen || normalizedRootFloaterSearchQuery.isBlank()) {
+        if (!isFloaterTaskHomeScreen || normalizedFloaterTaskHomeSearchQuery.isBlank()) {
             emptyList()
         } else {
             uiState.items
                 .asSequence()
                 .filter { todo ->
                     todo.title.lowercase(Locale.getDefault())
-                        .contains(normalizedRootFloaterSearchQuery) ||
+                        .contains(normalizedFloaterTaskHomeSearchQuery) ||
                             (todo.description?.lowercase(Locale.getDefault())
-                                ?.contains(normalizedRootFloaterSearchQuery) == true) ||
-                            (todo.listId?.let { floaterListById[it]?.name }
+                                ?.contains(normalizedFloaterTaskHomeSearchQuery) == true) ||
+                            (todo.listId?.let { floaterTaskHomeListById[it]?.name }
                                 ?.lowercase(Locale.getDefault())
-                                ?.contains(normalizedRootFloaterSearchQuery) == true)
+                                ?.contains(normalizedFloaterTaskHomeSearchQuery) == true)
                 }
                 .sortedWith(
                     compareByDescending<TodoItem> { it.pinned }
@@ -429,15 +429,15 @@ fun TodoListScreen(
                 .toList()
         }
     }
-    val showRootFloaterSearchResults =
-        isRootFloaterScreen && rootFloaterSearchExpanded && rootFloaterSearchQuery.isNotBlank()
-    val closeRootFloaterSearch = {
-        rootFloaterSearchExpanded = false
-        rootFloaterSearchQuery = ""
+    val showFloaterTaskHomeSearchResults =
+        isFloaterTaskHomeScreen && floaterTaskHomeSearchExpanded && floaterTaskHomeSearchQuery.isNotBlank()
+    val closeFloaterTaskHomeSearch = {
+        floaterTaskHomeSearchExpanded = false
+        floaterTaskHomeSearchQuery = ""
     }
     LaunchedEffect(scrollToTopRequestKey) {
-        if (scrollToTopRequestKey <= 0 || !isRootFloaterScreen) return@LaunchedEffect
-        closeRootFloaterSearch()
+        if (scrollToTopRequestKey <= 0 || !isFloaterTaskHomeScreen) return@LaunchedEffect
+        closeFloaterTaskHomeSearch()
         if (listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 0) {
             listState.animateScrollToItem(index = 0, scrollOffset = 0)
         }
@@ -473,30 +473,30 @@ fun TodoListScreen(
         if (createTaskRequestKey > 0 && createTaskRequestKey != lastHandledCreateTaskRequestKey) {
             lastHandledCreateTaskRequestKey = createTaskRequestKey
             onCreateTaskRequestHandled(createTaskRequestKey)
-            closeRootFloaterSearch()
+            closeFloaterTaskHomeSearch()
             quickAddDueEpochMs = null
             showCreateTaskSheet = true
         }
     }
     LaunchedEffect(openCreateTaskOnStart) {
         if (openCreateTaskOnStart) {
-            closeRootFloaterSearch()
+            closeFloaterTaskHomeSearch()
             quickAddDueEpochMs = null
             showCreateTaskSheet = true
         }
     }
-    BackHandler(enabled = rootFloaterSearchExpanded) {
-        closeRootFloaterSearch()
+    BackHandler(enabled = floaterTaskHomeSearchExpanded) {
+        closeFloaterTaskHomeSearch()
     }
-    BackHandler(enabled = exitToLauncherOnBack && !showCreateTaskSheet && !rootFloaterSearchExpanded) {
+    BackHandler(enabled = exitToLauncherOnBack && !showCreateTaskSheet && !floaterTaskHomeSearchExpanded) {
         onBack()
     }
-    LaunchedEffect(isRootFloaterScreen, rootFloaterSearchExpanded) {
-        if (!isRootFloaterScreen) {
-            closeRootFloaterSearch()
+    LaunchedEffect(isFloaterTaskHomeScreen, floaterTaskHomeSearchExpanded) {
+        if (!isFloaterTaskHomeScreen) {
+            closeFloaterTaskHomeSearch()
             onRootControlsVisibleChange(true)
         } else {
-            onRootControlsVisibleChange(!rootFloaterSearchExpanded)
+            onRootControlsVisibleChange(!floaterTaskHomeSearchExpanded)
         }
     }
     var showListSettingsSheet by rememberSaveable { mutableStateOf(false) }
@@ -568,7 +568,7 @@ fun TodoListScreen(
                 uiState.items.isNotEmpty() &&
                 // Hidden on the root floater screen; kept on the per-mode screens
                 // (today/all/scheduled/etc.) and list detail.
-                !isRootFloaterScreen
+                !isFloaterTaskHomeScreen
     // Morning Sweep: guided triage entry, only where there is something to
     // triage (recurring occurrences reschedule via the edit flow instead).
     val hasSweepableTasks = uiState.mode == TodoListMode.OVERDUE &&
@@ -644,7 +644,7 @@ fun TodoListScreen(
         }
         return null
     }
-    fun rootFloaterTodoListTarget(todoId: String): Pair<Int, String>? {
+    fun floaterTaskHomeTodoListTarget(todoId: String): Pair<Int, String>? {
         var itemIndex = 1 // Root Floater header row.
         timelineSections.forEach { section ->
             val todoIndex = section.items.indexOfFirst { item ->
@@ -688,9 +688,9 @@ fun TodoListScreen(
             }
         }
     }
-    fun openRootFloaterSearchResult(todo: TodoItem) {
-        closeRootFloaterSearch()
-        val target = rootFloaterTodoListTarget(todo.id) ?: return
+    fun openFloaterTaskHomeSearchResult(todo: TodoItem) {
+        closeFloaterTaskHomeSearch()
+        val target = floaterTaskHomeTodoListTarget(todo.id) ?: return
         screenScope.launch {
             delay(SEARCH_RESULT_NAV_SETTLE_DELAY_MS)
             val viewportHeight =
@@ -890,20 +890,20 @@ fun TodoListScreen(
                             key = "root-feed-title",
                             contentType = "root-feed-title",
                         ) {
-                            if (isRootFloaterScreen) {
+                            if (isFloaterTaskHomeScreen) {
                                 RootFeedSearchHeaderRow(
                                     title = uiState.title,
-                                    searchExpanded = rootFloaterSearchExpanded,
-                                    searchQuery = rootFloaterSearchQuery,
-                                    onSearchQueryChange = { rootFloaterSearchQuery = it },
-                                    onSearchExpandedChange = { rootFloaterSearchExpanded = it },
-                                    onSearchClose = closeRootFloaterSearch,
+                                    searchExpanded = floaterTaskHomeSearchExpanded,
+                                    searchQuery = floaterTaskHomeSearchQuery,
+                                    onSearchQueryChange = { floaterTaskHomeSearchQuery = it },
+                                    onSearchExpandedChange = { floaterTaskHomeSearchExpanded = it },
+                                    onSearchClose = closeFloaterTaskHomeSearch,
                                     onCreateList = {
-                                        closeRootFloaterSearch()
+                                        closeFloaterTaskHomeSearch()
                                         showCreateListSheet = true
                                     },
                                     onOpenSettings = {
-                                        closeRootFloaterSearch()
+                                        closeFloaterTaskHomeSearch()
                                         onOpenSettings()
                                     },
                                 )
@@ -913,15 +913,15 @@ fun TodoListScreen(
                         }
                     }
 
-                    if (showRootFloaterSearchResults) {
+                    if (showFloaterTaskHomeSearchResults) {
                         item(
                             key = "root-floater-search-results",
                             contentType = "root-floater-search-results",
                         ) {
-                            RootFloaterSearchResultsCard(
-                                results = rootFloaterSearchResults,
-                                listsById = floaterListById,
-                                onOpenTodo = ::openRootFloaterSearchResult,
+                            FloaterTaskHomeSearchResultsCard(
+                                results = floaterTaskHomeSearchResults,
+                                listsById = floaterTaskHomeListById,
+                                onOpenTodo = ::openFloaterTaskHomeSearchResult,
                                 modifier = Modifier.padding(bottom = 10.dp),
                             )
                         }
@@ -1205,7 +1205,7 @@ fun TodoListScreen(
                     // centered "No floater tasks" message sitting in a gap in
                     // the middle of the screen, with the list names below it
                     // (instead of a full-screen watermark overlay).
-                    if (isRootFloaterScreen && uiState.items.isEmpty() && !uiState.isLoading) {
+                    if (isFloaterTaskHomeScreen && uiState.items.isEmpty() && !uiState.isLoading) {
                         item(
                             key = "floater-empty-message",
                             contentType = "floater-empty-message",
@@ -1230,21 +1230,21 @@ fun TodoListScreen(
                         }
                     }
 
-                    if (floaterListRows.isNotEmpty()) {
+                    if (floaterTaskHomeListRows.isNotEmpty()) {
                         item(
                             key = "floater-my-lists-header",
                             contentType = "floater-list-header",
                         ) {
-                            FloaterMyListsHeader(
+                            FloaterTaskHomeMyListsHeader(
                                 modifier = Modifier.padding(top = 4.dp, bottom = 10.dp),
                             )
                         }
                         items(
-                            items = floaterListRows,
+                            items = floaterTaskHomeListRows,
                             key = { (list, _) -> "floater-list-${list.id}" },
                             contentType = { "floater-list-row" },
                         ) { (list, count) ->
-                            FloaterListRow(
+                            FloaterTaskHomeListRow(
                                 modifier = Modifier.padding(bottom = 10.dp),
                                 name = list.name,
                                 colorKey = list.color,
@@ -1288,7 +1288,7 @@ fun TodoListScreen(
             }
             // Root floater shows its empty message inline (in the list, above
             // the list names) so the overlay version would double up.
-            if (uiState.items.isEmpty() && !uiState.isLoading && !suppressInitialTodayTimeline && !isRootFloaterScreen) {
+            if (uiState.items.isEmpty() && !uiState.isLoading && !suppressInitialTodayTimeline && !isFloaterTaskHomeScreen) {
                 // Day Done: "finished everything" earns its own calm state
                 // instead of the generic no-tasks watermark message.
                 val isDayDone = uiState.mode == TodoListMode.TODAY && uiState.completedTodayCount > 0
@@ -1317,9 +1317,9 @@ fun TodoListScreen(
                     activeTab = rootFeedTab,
                     collapsed = dockCollapsed,
                     onTabSelected = { tab ->
-                        if (tab == rootFeedTab && isRootFloaterScreen) {
+                        if (tab == rootFeedTab && isFloaterTaskHomeScreen) {
                             screenScope.launch {
-                                closeRootFloaterSearch()
+                                closeFloaterTaskHomeSearch()
                                 listState.animateScrollToItem(index = 0, scrollOffset = 0)
                             }
                         } else {
@@ -1529,9 +1529,9 @@ fun TodoListScreen(
         )
     }
 
-    if (showCreateListSheet && isRootFloaterScreen) {
+    if (showCreateListSheet && isFloaterTaskHomeScreen) {
         ListSettingsBottomSheet(
-            title = stringResource(R.string.home_new_list),
+            title = stringResource(R.string.scheduled_task_home_new_list),
             listName = createListName,
             onListNameChange = { createListName = capitalizeFirstListLetter(it) },
             listColor = createListColor,
@@ -1954,7 +1954,7 @@ private fun RootFeedSearchHeaderRow(
                             Box(contentAlignment = Alignment.CenterStart) {
                                 if (searchQuery.isBlank()) {
                                     Text(
-                                        text = stringResource(R.string.home_search_placeholder),
+                                        text = stringResource(R.string.scheduled_task_home_search_placeholder),
                                         style = MaterialTheme.typography.titleMedium,
                                         color = colorScheme.onSurfaceVariant,
                                         fontWeight = FontWeight.Bold,
@@ -1979,7 +1979,7 @@ private fun RootFeedSearchHeaderRow(
 }
 
 @Composable
-private fun RootFloaterSearchResultsCard(
+private fun FloaterTaskHomeSearchResultsCard(
     results: List<TodoItem>,
     listsById: Map<String, ListSummary>,
     onOpenTodo: (TodoItem) -> Unit,
@@ -1995,7 +1995,7 @@ private fun RootFloaterSearchResultsCard(
     ) {
         if (results.isEmpty()) {
             Text(
-                text = stringResource(R.string.home_search_no_results),
+                text = stringResource(R.string.scheduled_task_home_search_no_results),
                 modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
                 style = MaterialTheme.typography.bodyMedium,
                 color = colorScheme.onSurfaceVariant,
@@ -2054,11 +2054,11 @@ private fun RootFloaterSearchResultsCard(
 }
 
 @Composable
-private fun FloaterMyListsHeader(
+private fun FloaterTaskHomeMyListsHeader(
     modifier: Modifier = Modifier,
 ) {
     Text(
-        text = stringResource(R.string.home_my_lists),
+        text = stringResource(R.string.scheduled_task_home_my_lists),
         style = MaterialTheme.typography.headlineSmall,
         color = MaterialTheme.colorScheme.onBackground,
         fontWeight = FontWeight.ExtraBold,
@@ -2067,7 +2067,7 @@ private fun FloaterMyListsHeader(
 }
 
 @Composable
-private fun FloaterListRow(
+private fun FloaterTaskHomeListRow(
     modifier: Modifier = Modifier,
     name: String,
     colorKey: String?,
@@ -2081,20 +2081,20 @@ private fun FloaterListRow(
     val isPressed by interactionSource.collectIsPressedAsState()
     val animatedScale by animateFloatAsState(
         targetValue = if (isPressed) 0.98f else 1f,
-        label = "floaterListRowScale",
+        label = "floaterTaskHomeListRowScale",
     )
     val animatedOffsetY by animateDpAsState(
         targetValue = if (isPressed) 2.dp else 0.dp,
-        label = "floaterListRowOffsetY",
+        label = "floaterTaskHomeListRowOffsetY",
     )
     val animatedElevation by animateDpAsState(
         targetValue = if (isPressed) 2.dp else 8.dp,
-        label = "floaterListRowElevation",
+        label = "floaterTaskHomeListRowElevation",
     )
     val accent = tdayListAccentColor(colorKey)
     val icon = tdayListIconForKey(iconKey)
     val containerColor =
-        lerpColor(colorScheme.surfaceVariant, accent, FLOATER_LIST_CONTAINER_COLOR_WEIGHT)
+        lerpColor(colorScheme.surfaceVariant, accent, FLOATER_TASK_HOME_LIST_CONTAINER_COLOR_WEIGHT)
     val displayName = capitalizeFirstListLetter(name)
 
     Card(
@@ -2572,7 +2572,7 @@ private fun ListSettingsBottomSheet(
                 )
 
                 TdaySheetSectionTitle(
-                    text = stringResource(R.string.home_section_list),
+                    text = stringResource(R.string.scheduled_task_home_section_list),
                 )
                 TdaySheetCard {
                     Column(
@@ -2643,7 +2643,7 @@ private fun ListSettingsBottomSheet(
                                 ) {
                                     if (listName.isBlank()) {
                                         Text(
-                                            text = stringResource(R.string.home_list_name_placeholder),
+                                            text = stringResource(R.string.scheduled_task_home_list_name_placeholder),
                                             style = MaterialTheme.typography.headlineSmall,
                                             color = colorScheme.onSurfaceVariant.copy(alpha = 0.78f),
                                             fontWeight = FontWeight.ExtraBold,
@@ -2663,7 +2663,7 @@ private fun ListSettingsBottomSheet(
                 }
 
                 TdaySheetSectionTitle(
-                    text = stringResource(R.string.home_section_color),
+                    text = stringResource(R.string.scheduled_task_home_section_color),
                 )
                 TdaySheetCard {
                     Row(
@@ -2709,7 +2709,7 @@ private fun ListSettingsBottomSheet(
                 }
 
                 TdaySheetSectionTitle(
-                    text = stringResource(R.string.home_section_icon),
+                    text = stringResource(R.string.scheduled_task_home_section_icon),
                 )
                 TdaySheetCard {
                     Row(
@@ -2756,7 +2756,7 @@ private fun ListSettingsBottomSheet(
                             ) {
                                 Icon(
                                     painter = painterResource(option.iconRes),
-                                    contentDescription = stringResource(R.string.home_section_icon),
+                                    contentDescription = stringResource(R.string.scheduled_task_home_section_icon),
                                     tint = if (selected) selectedAccent else colorScheme.onSurfaceVariant,
                                 )
                             }
@@ -3701,7 +3701,7 @@ private fun emptyStateMessageForMode(mode: TodoListMode): String {
 }
 
 /**
- * Lucide drawable watermark for the home-category modes, mirroring the web app.
+ * Lucide drawable watermark for the scheduled task home category modes, mirroring the web app.
  * Returns null for modes that keep their Material vector watermark (today/floater/list).
  */
 @DrawableRes
@@ -4706,7 +4706,7 @@ private fun modeAccentColor(
     }
 }
 
-private const val FLOATER_LIST_CONTAINER_COLOR_WEIGHT = 0.66f
+private const val FLOATER_TASK_HOME_LIST_CONTAINER_COLOR_WEIGHT = 0.66f
 
 /** Dim factor for a "resting" floater row: 1f = normal, lower = faded/dormant. */
 private fun restingAlphaFor(

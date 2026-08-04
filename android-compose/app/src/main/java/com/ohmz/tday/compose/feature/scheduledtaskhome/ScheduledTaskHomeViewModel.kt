@@ -1,4 +1,4 @@
-package com.ohmz.tday.compose.feature.home
+package com.ohmz.tday.compose.feature.scheduledtaskhome
 
 import android.content.Context
 import androidx.lifecycle.ViewModel
@@ -32,7 +32,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-data class HomeUiState(
+data class ScheduledTaskHomeUiState(
     val isLoading: Boolean = true,
     val summary: DashboardSummary = DashboardSummary(
         todayCount = 0,
@@ -55,7 +55,7 @@ data class HomeUiState(
     val isSummarizing: Boolean = false,
 )
 
-private data class HomeSnapshot(
+private data class ScheduledTaskHomeSnapshot(
     val summary: DashboardSummary,
     val searchableTodos: List<TodoItem>,
     val todayTodos: List<TodoItem>,
@@ -64,7 +64,7 @@ private data class HomeSnapshot(
 )
 
 @HiltViewModel
-class HomeViewModel @Inject constructor(
+class ScheduledTaskHomeViewModel @Inject constructor(
     private val todoRepository: TodoRepository,
     private val completedRepository: com.ohmz.tday.compose.core.data.completed.CompletedRepository,
     private val listRepository: ListRepository,
@@ -95,7 +95,7 @@ class HomeViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(
         runCatching {
-            HomeUiState(
+            ScheduledTaskHomeUiState(
                 isLoading = false,
                 summary = todoRepository.fetchDashboardSummarySnapshot(),
                 searchableTodos = todoRepository.fetchTodosSnapshot(mode = TodoListMode.ALL),
@@ -104,9 +104,9 @@ class HomeViewModel @Inject constructor(
                 aiSummaryEnabled = settingsRepository.isAiSummaryEnabledSnapshot(),
                 aiSummaryConfigured = settingsRepository.aiSummaryConfiguredSnapshot(),
             )
-        }.getOrElse { HomeUiState() },
+        }.getOrElse { ScheduledTaskHomeUiState() },
     )
-    val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
+    val uiState: StateFlow<ScheduledTaskHomeUiState> = _uiState.asStateFlow()
 
     init {
         observeCacheChanges()
@@ -123,7 +123,7 @@ class HomeViewModel @Inject constructor(
 
     fun refreshFromCache() {
         runCatching {
-            HomeSnapshot(
+            ScheduledTaskHomeSnapshot(
                 summary = todoRepository.fetchDashboardSummarySnapshot(),
                 searchableTodos = todoRepository.fetchTodosSnapshot(mode = TodoListMode.ALL),
                 todayTodos = todoRepository.fetchTodosSnapshot(mode = TodoListMode.TODAY),
@@ -188,7 +188,7 @@ class HomeViewModel @Inject constructor(
                         )
                             .onFailure { /* fall back to local cache */ }
                     }
-                    HomeSnapshot(
+                    ScheduledTaskHomeSnapshot(
                         summary = todoRepository.fetchDashboardSummary(),
                         searchableTodos = todoRepository.fetchTodos(mode = TodoListMode.ALL),
                         todayTodos = todoRepository.fetchTodos(mode = TodoListMode.TODAY),
@@ -475,7 +475,7 @@ class HomeViewModel @Inject constructor(
             current.copy(todayTodos = current.todayTodos.filterNot { it.id == todo.id })
         }
         viewModelScope.launch {
-            // Delayed-commit delete; also gives HomeScreen deletes the same
+            // Delayed-commit delete; also gives ScheduledTaskHomeScreen deletes the same
             // "Task deleted" toast as every other surface.
             runCatching { todoRepository.stageDeleteTodo(todo) }
                 .onSuccess { staged ->

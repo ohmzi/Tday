@@ -60,7 +60,7 @@ Image("ActionEdit")
 | New list | `list-plus` | `ListPlus` | `ic_lucide_list_plus` | `NavListPlus` |
 | Settings / more | `ellipsis` | `Ellipsis` | `ic_lucide_ellipsis` | `NavEllipsis` |
 | Close / clear | `x` | `X` | `ic_lucide_x` | `NavClose` |
-| Home (root dock) | `house` | `Home` | `ic_lucide_house` | `NavHouse` |
+| Scheduled (root dock) | `house` | `Home` | `ic_lucide_house` | `NavHouse` |
 | Task edit | `square-pen` | `SquarePen` | `ic_lucide_square_pen` | `ActionEdit` |
 | Task delete | `trash` | `Trash` | `ic_lucide_trash` | `ActionDelete` |
 

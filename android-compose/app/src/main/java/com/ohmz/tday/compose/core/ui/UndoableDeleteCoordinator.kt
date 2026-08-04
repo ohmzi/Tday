@@ -25,7 +25,7 @@ import kotlinx.coroutines.withContext
  *   staged local state. The server row was never touched.
  *
  * Backed by its own [MainScope] (not a ViewModel scope) so the window survives
- * screen navigation — e.g. deleting a list navigates home immediately while the
+ * screen navigation — e.g. deleting a list navigates to the scheduled task home screen immediately while the
  * commit/undo decision is still pending. Each call owns independent state and
  * timer, so rapid successive deletes commit independently (the newest toast
  * simply replaces the previous one visually).

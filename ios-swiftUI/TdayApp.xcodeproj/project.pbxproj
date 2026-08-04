@@ -13,7 +13,6 @@
 		03A0CCC6A8AAE2DB065E6DE6 /* ServerURLPersistenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D206496BC88FF6272CFC286C /* ServerURLPersistenceTests.swift */; };
 		041712E33446975E528F050E /* RealtimeClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CC7B17CE45842F8DF7D522B /* RealtimeClient.swift */; };
 		04EFD8B7BFDF9261BE3D88BE /* CacheMappers.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3CD3233C5F5D5FC1E058708 /* CacheMappers.swift */; };
-		7A5C0F7E900000000000A103 /* TaskSortEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A5C0F7E900000000000A102 /* TaskSortEngine.swift */; };
 		0536D5C87C017F1DAC4F316C /* ThemeStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD41A49221B1A947AF8A94D0 /* ThemeStore.swift */; };
 		07D1F4A0C9434C54853E9D29 /* AppDataMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E4F3B64B40942F48202C32E /* AppDataMode.swift */; };
 		0A6188D6B8C9FC92A9927F1C /* SettingsRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DE0A20E66DEF6FD2146DB10 /* SettingsRepository.swift */; };
@@ -55,9 +54,9 @@
 		64E0A2B205D80764F2BF52FB /* CalendarViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53EFEAE1EE18AB86477A56BC /* CalendarViewModel.swift */; };
 		701E03BE9BBC8792CAD5919C /* CreateTaskSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AEFA6E39FBCB063E54C61AF7 /* CreateTaskSheet.swift */; };
 		72304EA28CF49303A8CCB6B0 /* TodayTasksWidgetSnapshotStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC80072C8B232C0C09CE3139 /* TodayTasksWidgetSnapshotStore.swift */; };
-		7A1C0FE30B2D4A9C8E5F1A20 /* WidgetBackgroundRefresh.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A1C0FE30B2D4A9C8E5F1A21 /* WidgetBackgroundRefresh.swift */; };
-		A1B2C3D4E5F600000000WA01 /* WatchSessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F600000000WA02 /* WatchSessionManager.swift */; };
 		765ED719B3CCBB90176C55EB /* DomainModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A6D006E491513605369E7D5 /* DomainModels.swift */; };
+		7A1C0FE30B2D4A9C8E5F1A20 /* WidgetBackgroundRefresh.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A1C0FE30B2D4A9C8E5F1A21 /* WidgetBackgroundRefresh.swift */; };
+		7A5C0F7E900000000000A103 /* TaskSortEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A5C0F7E900000000000A102 /* TaskSortEngine.swift */; };
 		846AE66C58EF435FB506E3E6 /* OnboardingWizardOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = D617DF23936179DDFF13A36D /* OnboardingWizardOverlay.swift */; };
 		84B6C4F440AD30E4EFA1FA3F /* ReminderOption.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FBC41C56EEEFC8869E762B3 /* ReminderOption.swift */; };
 		85B5397D25D2A1436CF34394 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = A64D35F145CD4F1CE4B6C558 /* LaunchScreen.storyboard */; };
@@ -67,13 +66,14 @@
 		9146B23E1A1F6A3A71DE7A5B /* Colors.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC2B21F3E1A43EAEECA86EE8 /* Colors.swift */; };
 		91660A57CFA826E39338BD33 /* CalendarScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25A90A443440754855071C9D /* CalendarScreen.swift */; };
 		957E83469CA6C09174B1B374 /* LoginCredentialCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5C31F2E171A73F2774E89A1 /* LoginCredentialCoordinator.swift */; };
-		9D9B4F301D7261C3F4F95B6D /* HomeViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42749601AFF38EAE17BD3213 /* HomeViewModel.swift */; };
+		9D9B4F301D7261C3F4F95B6D /* ScheduledTaskHomeViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42749601AFF38EAE17BD3213 /* ScheduledTaskHomeViewModel.swift */; };
 		9F8E7D6C5B4A00000000B101 /* LanguageStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F8E7D6C5B4A00000000F101 /* LanguageStore.swift */; };
 		9F8E7D6C5B4A00000000B102 /* AppLanguage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F8E7D6C5B4A00000000F102 /* AppLanguage.swift */; };
 		9F8E7D6C5B4A00000000B103 /* Bundle+Language.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F8E7D6C5B4A00000000F103 /* Bundle+Language.swift */; };
 		9F8E7D6C5B4A00000000B104 /* Localization.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F8E7D6C5B4A00000000F104 /* Localization.swift */; };
 		9F8E7D6C5B4A00000000B105 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 9F8E7D6C5B4A00000000F105 /* Localizable.xcstrings */; };
 		A03B553E316CEEDFAB8EBA69 /* OfflineSyncModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB49A43AFEE66EEDB3315F86 /* OfflineSyncModels.swift */; };
+		A1B2C3D4E5F600000000WA01 /* WatchSessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F600000000WA02 /* WatchSessionManager.swift */; };
 		A1C0FFEE000000000000B001 /* ListShareText.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE000000000000F001 /* ListShareText.swift */; };
 		A1C0FFEE000000000000B002 /* ListShareRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE000000000000F002 /* ListShareRepository.swift */; };
 		A1C0FFEE000000000000B003 /* ManageMembersSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE000000000000F003 /* ManageMembersSheet.swift */; };
@@ -93,7 +93,7 @@
 		B648A67EAD215BE5B74F7460 /* ApiModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6049166B683EE082F8C551DD /* ApiModels.swift */; };
 		BA2D51423497337836ADD5E9 /* TdayTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39ADD9E07BF8B32C3FC7B170 /* TdayTheme.swift */; };
 		C013C84CCBF84A849CE93963 /* NetworkConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91CFC3C0B9ADD376389DF63C /* NetworkConfiguration.swift */; };
-		C0768A60B1B807FCA7A6D37F /* HomeScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9D2CB40ACEE85331512EEC2 /* HomeScreen.swift */; };
+		C0768A60B1B807FCA7A6D37F /* ScheduledTaskHomeScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9D2CB40ACEE85331512EEC2 /* ScheduledTaskHomeScreen.swift */; };
 		C0ABAA1F11269C7FC0682201 /* PullToRefresh.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32538D5E9182018AFEAB8DEC /* PullToRefresh.swift */; };
 		C0DE000000000000000000A1 /* ForgotPasswordView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0DE000000000000000000A0 /* ForgotPasswordView.swift */; };
 		C0DE000000000000000000B1 /* SecurityQuestionsGateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0DE000000000000000000B0 /* SecurityQuestionsGateView.swift */; };
@@ -130,6 +130,11 @@
 		D4A100000000000000000012 /* TodayTasksWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4A100000000000000000013 /* TodayTasksWidget.swift */; };
 		DA7A000000000000000000001 /* DataExport.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA7A000000000000000000002 /* DataExport.swift */; };
 		DA7A000000000000000000003 /* DataExportMapperTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA7A000000000000000000004 /* DataExportMapperTests.swift */; };
+		DAD1CE000000000000000009 /* TdayWatchComplication.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAD1CE000000000000000008 /* TdayWatchComplication.swift */; };
+		DAD1CE00000000000000000F /* TdayWatchWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = DAD1CE000000000000000007 /* TdayWatchWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		DAD1CE00000000000000001D /* TdayWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAD1CE00000000000000001C /* TdayWatchApp.swift */; };
+		DAD1CE00000000000000001F /* WatchTodayListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAD1CE00000000000000001E /* WatchTodayListView.swift */; };
+		DAD1CE000000000000000025 /* TdayWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = DAD1CE00000000000000001B /* TdayWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		DCD00FC940427B88E235F7F4 /* OfflineCacheManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85ADE7E6DE0AADEF0E503DE5 /* OfflineCacheManager.swift */; };
 		DEA51B1F722372A094C125F9 /* ListRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = D19AB4B0B909242B323D5ABF /* ListRepository.swift */; };
 		E1BD58F3802B8806874A2E29 /* AuthViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DABE0225668571D48D55B96 /* AuthViewModel.swift */; };
@@ -139,11 +144,6 @@
 		F2E1D0C9B8A7F6E5D4C3B2A1 /* HapticManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6A7B8C9D0E1F2 /* HapticManager.swift */; };
 		F5D16EE508D6244152B8E4B2 /* ServerURLState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D24DBD8CA3EE648D4560B880 /* ServerURLState.swift */; };
 		FCDE195DEB990E58558699B1 /* ErrorRetryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE3D896A638869384B4CF1EF /* ErrorRetryView.swift */; };
-		DAD1CE000000000000000009 /* TdayWatchComplication.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAD1CE000000000000000008 /* TdayWatchComplication.swift */; };
-		DAD1CE00000000000000000F /* TdayWatchWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = DAD1CE000000000000000007 /* TdayWatchWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		DAD1CE00000000000000001D /* TdayWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAD1CE00000000000000001C /* TdayWatchApp.swift */; };
-		DAD1CE00000000000000001F /* WatchTodayListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAD1CE00000000000000001E /* WatchTodayListView.swift */; };
-		DAD1CE000000000000000025 /* TdayWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = DAD1CE00000000000000001B /* TdayWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -241,7 +241,7 @@
 		32538D5E9182018AFEAB8DEC /* PullToRefresh.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PullToRefresh.swift; sourceTree = "<group>"; };
 		37A754219844F42A2230F08B /* SwiftDataModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftDataModels.swift; sourceTree = "<group>"; };
 		39ADD9E07BF8B32C3FC7B170 /* TdayTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdayTheme.swift; sourceTree = "<group>"; };
-		42749601AFF38EAE17BD3213 /* HomeViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeViewModel.swift; sourceTree = "<group>"; };
+		42749601AFF38EAE17BD3213 /* ScheduledTaskHomeViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduledTaskHomeViewModel.swift; sourceTree = "<group>"; };
 		434143484D41505045525301 /* CacheMappersDateParsingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CacheMappersDateParsingTests.swift; sourceTree = "<group>"; };
 		4A7B9C0D1E2F3456789ABC02 /* CompletedSyncMergeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompletedSyncMergeTests.swift; sourceTree = "<group>"; };
 		4D2A9B7E2CE3424C9D111002 /* ConnectivityClassificationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectivityClassificationTests.swift; sourceTree = "<group>"; };
@@ -267,6 +267,8 @@
 		718528F64C339E527223D93F /* CreateTodoUseCase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateTodoUseCase.swift; sourceTree = "<group>"; };
 		7699A4200FA2F2970A1838D6 /* CompletedViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompletedViewModel.swift; sourceTree = "<group>"; };
 		78690CB92403D76DCA200972 /* TdayAPIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdayAPIService.swift; sourceTree = "<group>"; };
+		7A1C0FE30B2D4A9C8E5F1A21 /* WidgetBackgroundRefresh.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetBackgroundRefresh.swift; sourceTree = "<group>"; };
+		7A5C0F7E900000000000A102 /* TaskSortEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskSortEngine.swift; sourceTree = "<group>"; };
 		7BC4FF9081195466EE7C3E89 /* SystemCredentialService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemCredentialService.swift; sourceTree = "<group>"; };
 		7DE0A20E66DEF6FD2146DB10 /* SettingsRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsRepository.swift; sourceTree = "<group>"; };
 		84798381A9E2DF3C9468ED8F /* SwipeActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwipeActions.swift; sourceTree = "<group>"; };
@@ -284,6 +286,7 @@
 		9F8E7D6C5B4A00000000F103 /* Bundle+Language.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Bundle+Language.swift"; sourceTree = "<group>"; };
 		9F8E7D6C5B4A00000000F104 /* Localization.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Localization.swift; sourceTree = "<group>"; };
 		9F8E7D6C5B4A00000000F105 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
+		A1B2C3D4E5F600000000WA02 /* WatchSessionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchSessionManager.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F6A7B8C9D0E1F2 /* HapticManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HapticManager.swift; sourceTree = "<group>"; };
 		A1C0FFEE000000000000F001 /* ListShareText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListShareText.swift; sourceTree = "<group>"; };
 		A1C0FFEE000000000000F002 /* ListShareRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListShareRepository.swift; sourceTree = "<group>"; };
@@ -308,7 +311,7 @@
 		C0DE000000000000000000A0 /* ForgotPasswordView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForgotPasswordView.swift; sourceTree = "<group>"; };
 		C0DE000000000000000000B0 /* SecurityQuestionsGateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecurityQuestionsGateView.swift; sourceTree = "<group>"; };
 		C3407352DB3FED037D2A26BF /* ReminderPreferenceStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderPreferenceStore.swift; sourceTree = "<group>"; };
-		C9D2CB40ACEE85331512EEC2 /* HomeScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeScreen.swift; sourceTree = "<group>"; };
+		C9D2CB40ACEE85331512EEC2 /* ScheduledTaskHomeScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduledTaskHomeScreen.swift; sourceTree = "<group>"; };
 		CAFE0D1E0000000000000001 /* GuideContentStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuideContentStore.swift; sourceTree = "<group>"; };
 		CAFE0D1E0000000000000002 /* GuideSearch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuideSearch.swift; sourceTree = "<group>"; };
 		CAFE0D1E0000000000000003 /* GuideModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuideModels.swift; sourceTree = "<group>"; };
@@ -331,8 +334,6 @@
 		CAFE0D1E000000000000005A /* MorningSweepScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MorningSweepScreen.swift; sourceTree = "<group>"; };
 		CAFE0D1E000000000000005D /* DayAhead.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayAhead.swift; sourceTree = "<group>"; };
 		CC80072C8B232C0C09CE3139 /* TodayTasksWidgetSnapshotStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayTasksWidgetSnapshotStore.swift; sourceTree = "<group>"; };
-		7A1C0FE30B2D4A9C8E5F1A21 /* WidgetBackgroundRefresh.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetBackgroundRefresh.swift; sourceTree = "<group>"; };
-		A1B2C3D4E5F600000000WA02 /* WatchSessionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchSessionManager.swift; sourceTree = "<group>"; };
 		CE3297DCE3ECD21F5B0A4635 /* VersionCompatibility.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VersionCompatibility.swift; sourceTree = "<group>"; };
 		CEFF55971ADA0C60CD0F3074 /* AppRoute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRoute.swift; sourceTree = "<group>"; };
 		D0ACC8B538184310B385746A /* ServerConfigRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServerConfigRepository.swift; sourceTree = "<group>"; };
@@ -341,7 +342,6 @@
 		D24DBD8CA3EE648D4560B880 /* ServerURLState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServerURLState.swift; sourceTree = "<group>"; };
 		D26B48A87B57A0417CC3F578 /* TdayTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TdayTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		D3CD3233C5F5D5FC1E058708 /* CacheMappers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CacheMappers.swift; sourceTree = "<group>"; };
-		7A5C0F7E900000000000A102 /* TaskSortEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskSortEngine.swift; sourceTree = "<group>"; };
 		D4A100000000000000000010 /* TdayWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TdayWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		D4A100000000000000000013 /* TodayTasksWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayTasksWidget.swift; sourceTree = "<group>"; };
 		D4A100000000000000000014 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -351,15 +351,6 @@
 		D9D2A99D6C098B63352D4FB8 /* Nunito.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Nunito.ttf; sourceTree = "<group>"; };
 		DA7A000000000000000000002 /* DataExport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataExport.swift; sourceTree = "<group>"; };
 		DA7A000000000000000000004 /* DataExportMapperTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataExportMapperTests.swift; sourceTree = "<group>"; };
-		DCE08ADACC8F11CE2113C13B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		DF332994A97F93EBE1525BB5 /* Nunito-OFL.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "Nunito-OFL.txt"; sourceTree = "<group>"; };
-		E30D3242D00BC6C1C4BA862D /* CredentialEnvelope.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CredentialEnvelope.swift; sourceTree = "<group>"; };
-		E6E5E1DBE3F7999D219BE2EE /* AuthRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthRepository.swift; sourceTree = "<group>"; };
-		E867FA22FEB66EDCE837CF6D /* SecureStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureStore.swift; sourceTree = "<group>"; };
-		F1A2B3C4D5E6F708192A3B4C /* FloaterListRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloaterListRepository.swift; sourceTree = "<group>"; };
-		F2C4D6E8A1B3456790ABCDEF /* TdaySheetChrome.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdaySheetChrome.swift; sourceTree = "<group>"; };
-		FC47AEF5EB0B44524D8C20B1 /* SettingsScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsScreen.swift; sourceTree = "<group>"; };
-		FC92D6152EADEDF915AE116B /* TodayTasksWidgetSnapshotStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayTasksWidgetSnapshotStoreTests.swift; sourceTree = "<group>"; };
 		DAD1CE000000000000000007 /* TdayWatchWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TdayWatchWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		DAD1CE000000000000000008 /* TdayWatchComplication.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdayWatchComplication.swift; sourceTree = "<group>"; };
 		DAD1CE00000000000000000A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -369,6 +360,15 @@
 		DAD1CE00000000000000001E /* WatchTodayListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchTodayListView.swift; sourceTree = "<group>"; };
 		DAD1CE000000000000000020 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		DAD1CE000000000000000021 /* TdayWatch.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TdayWatch.entitlements; sourceTree = "<group>"; };
+		DCE08ADACC8F11CE2113C13B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		DF332994A97F93EBE1525BB5 /* Nunito-OFL.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "Nunito-OFL.txt"; sourceTree = "<group>"; };
+		E30D3242D00BC6C1C4BA862D /* CredentialEnvelope.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CredentialEnvelope.swift; sourceTree = "<group>"; };
+		E6E5E1DBE3F7999D219BE2EE /* AuthRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthRepository.swift; sourceTree = "<group>"; };
+		E867FA22FEB66EDCE837CF6D /* SecureStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureStore.swift; sourceTree = "<group>"; };
+		F1A2B3C4D5E6F708192A3B4C /* FloaterListRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloaterListRepository.swift; sourceTree = "<group>"; };
+		F2C4D6E8A1B3456790ABCDEF /* TdaySheetChrome.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdaySheetChrome.swift; sourceTree = "<group>"; };
+		FC47AEF5EB0B44524D8C20B1 /* SettingsScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsScreen.swift; sourceTree = "<group>"; };
+		FC92D6152EADEDF915AE116B /* TodayTasksWidgetSnapshotStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayTasksWidgetSnapshotStoreTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -542,7 +542,7 @@
 				FE3DA39BEFDCE31E8159D522 /* Completed */,
 				CAFE0D1E0000000000000022 /* Guide */,
 				CAFE0D1E000000000000005B /* Sweep */,
-				7BA4A69F753AF1C268BCD197 /* Home */,
+				7BA4A69F753AF1C268BCD197 /* ScheduledTaskHome */,
 				DA05A67258F74BF398DCADA3 /* Onboarding */,
 				9F18066D3B63DF80ECB870BB /* Settings */,
 				0D57A85AA8A54CBA3AB77925 /* Todos */,
@@ -621,21 +621,21 @@
 			path = Tests;
 			sourceTree = "<group>";
 		};
-		7BA4A69F753AF1C268BCD197 /* Home */ = {
-			isa = PBXGroup;
-			children = (
-				C9D2CB40ACEE85331512EEC2 /* HomeScreen.swift */,
-				42749601AFF38EAE17BD3213 /* HomeViewModel.swift */,
-			);
-			path = Home;
-			sourceTree = "<group>";
-		};
 		7A5C0F7E900000000000A101 /* Sort */ = {
 			isa = PBXGroup;
 			children = (
 				7A5C0F7E900000000000A102 /* TaskSortEngine.swift */,
 			);
 			path = Sort;
+			sourceTree = "<group>";
+		};
+		7BA4A69F753AF1C268BCD197 /* ScheduledTaskHome */ = {
+			isa = PBXGroup;
+			children = (
+				C9D2CB40ACEE85331512EEC2 /* ScheduledTaskHomeScreen.swift */,
+				42749601AFF38EAE17BD3213 /* ScheduledTaskHomeViewModel.swift */,
+			);
+			path = ScheduledTaskHome;
 			sourceTree = "<group>";
 		};
 		7EE08339CAFC6311E33197B7 /* Sync */ = {
@@ -884,6 +884,27 @@
 			path = Onboarding;
 			sourceTree = "<group>";
 		};
+		DAD1CE00000000000000000C /* TdayWatchWidget */ = {
+			isa = PBXGroup;
+			children = (
+				DAD1CE000000000000000008 /* TdayWatchComplication.swift */,
+				DAD1CE00000000000000000A /* Info.plist */,
+				DAD1CE00000000000000000B /* TdayWatchWidget.entitlements */,
+			);
+			path = TdayWatchWidget;
+			sourceTree = "<group>";
+		};
+		DAD1CE000000000000000022 /* TdayWatch */ = {
+			isa = PBXGroup;
+			children = (
+				DAD1CE00000000000000001C /* TdayWatchApp.swift */,
+				DAD1CE00000000000000001E /* WatchTodayListView.swift */,
+				DAD1CE000000000000000020 /* Info.plist */,
+				DAD1CE000000000000000021 /* TdayWatch.entitlements */,
+			);
+			path = TdayWatch;
+			sourceTree = "<group>";
+		};
 		DD5065F404F570ED9397862C /* Core */ = {
 			isa = PBXGroup;
 			children = (
@@ -933,27 +954,6 @@
 				7699A4200FA2F2970A1838D6 /* CompletedViewModel.swift */,
 			);
 			path = Completed;
-			sourceTree = "<group>";
-		};
-		DAD1CE00000000000000000C /* TdayWatchWidget */ = {
-			isa = PBXGroup;
-			children = (
-				DAD1CE000000000000000008 /* TdayWatchComplication.swift */,
-				DAD1CE00000000000000000A /* Info.plist */,
-				DAD1CE00000000000000000B /* TdayWatchWidget.entitlements */,
-			);
-			path = TdayWatchWidget;
-			sourceTree = "<group>";
-		};
-		DAD1CE000000000000000022 /* TdayWatch */ = {
-			isa = PBXGroup;
-			children = (
-				DAD1CE00000000000000001C /* TdayWatchApp.swift */,
-				DAD1CE00000000000000001E /* WatchTodayListView.swift */,
-				DAD1CE000000000000000020 /* Info.plist */,
-				DAD1CE000000000000000021 /* TdayWatch.entitlements */,
-			);
-			path = TdayWatch;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -1175,6 +1175,23 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		DAD1CE000000000000000005 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				DAD1CE000000000000000009 /* TdayWatchComplication.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DAD1CE000000000000000018 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				DAD1CE00000000000000001D /* TdayWatchApp.swift in Sources */,
+				DAD1CE00000000000000001F /* WatchTodayListView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		EE513C8DAF31C33B310B4E38 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -1220,8 +1237,8 @@
 				FCDE195DEB990E58558699B1 /* ErrorRetryView.swift in Sources */,
 				F2E1D0C9B8A7F6E5D4C3B2A1 /* HapticManager.swift in Sources */,
 				5DB03218BE341B7C186F01AE /* CalendarPagingScrollView.swift in Sources */,
-				C0768A60B1B807FCA7A6D37F /* HomeScreen.swift in Sources */,
-				9D9B4F301D7261C3F4F95B6D /* HomeViewModel.swift in Sources */,
+				C0768A60B1B807FCA7A6D37F /* ScheduledTaskHomeScreen.swift in Sources */,
+				9D9B4F301D7261C3F4F95B6D /* ScheduledTaskHomeViewModel.swift in Sources */,
 				DEA51B1F722372A094C125F9 /* ListRepository.swift in Sources */,
 				F1A2B3C4D5E6F708192A3B4D /* FloaterListRepository.swift in Sources */,
 				A1C0FFEE000000000000B002 /* ListShareRepository.swift in Sources */,
@@ -1277,23 +1294,6 @@
 				C7229E3F4839B156CDEFA453 /* UpdateRequiredView.swift in Sources */,
 				8F2E99D406CD695C364FE1DF /* UserFacingError.swift in Sources */,
 				D34840EBE7C4C90D2525F0DA /* VersionCompatibility.swift in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		DAD1CE000000000000000005 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				DAD1CE000000000000000009 /* TdayWatchComplication.swift in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		DAD1CE000000000000000018 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				DAD1CE00000000000000001D /* TdayWatchApp.swift in Sources */,
-				DAD1CE00000000000000001F /* WatchTodayListView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1452,6 +1452,7 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 12;
+				DEVELOPMENT_TEAM = JUFACN2FS3;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Tday/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
@@ -1481,6 +1482,7 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 12;
+				DEVELOPMENT_TEAM = JUFACN2FS3;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Tday/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
@@ -1641,24 +1643,6 @@
 			};
 			name = Release;
 		};
-		EF702053FF0F6973A8F8181C /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@loader_path/Frameworks",
-				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.ohmz.tday.ios.tests;
-				SDKROOT = iphoneos;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Tday.app/Tday";
-			};
-			name = Debug;
-		};
 		DAD1CE000000000000000003 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -1766,6 +1750,24 @@
 				WATCHOS_DEPLOYMENT_TARGET = 10.0;
 			};
 			name = Release;
+		};
+		EF702053FF0F6973A8F8181C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.ohmz.tday.ios.tests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Tday.app/Tday";
+			};
+			name = Debug;
 		};
 /* End XCBuildConfiguration section */
 

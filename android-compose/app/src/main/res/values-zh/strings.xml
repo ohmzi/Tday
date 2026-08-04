@@ -66,27 +66,27 @@
     <string name="label_version_name">v%1$s</string>
     <string name="label_server">服务器</string>
 
-    <!-- Home screen -->
-    <string name="home_title">T\'Day</string>
-    <string name="home_category_today">今天</string>
-    <string name="home_category_overdue">逾期</string>
-    <string name="home_category_scheduled">已安排</string>
-    <string name="home_category_all">全部</string>
-    <string name="home_category_priority">优先</string>
-    <string name="home_category_completed">已完成</string>
-    <string name="home_category_calendar">日历</string>
-    <string name="root_feed_tab_home">主页</string>
+    <!-- Scheduled task home screen -->
+    <string name="scheduled_task_home_title">T\'Day</string>
+    <string name="scheduled_task_home_category_today">今天</string>
+    <string name="scheduled_task_home_category_overdue">逾期</string>
+    <string name="scheduled_task_home_category_scheduled">已安排</string>
+    <string name="scheduled_task_home_category_all">全部</string>
+    <string name="scheduled_task_home_category_priority">优先</string>
+    <string name="scheduled_task_home_category_completed">已完成</string>
+    <string name="scheduled_task_home_category_calendar">日历</string>
+    <string name="root_feed_tab_scheduled_task_home">已安排</string>
     <string name="root_feed_tab_floater">浮动任务</string>
-    <string name="home_search_placeholder">搜索</string>
-    <string name="home_search_no_results">没有匹配的任务</string>
-    <string name="home_my_lists">我的列表</string>
-    <string name="home_new_list">新建列表</string>
-    <string name="home_list_name_placeholder">列表名称</string>
-    <string name="home_section_list">列表</string>
-    <string name="home_section_color">颜色</string>
-    <string name="home_section_icon">图标</string>
-    <string name="home_list_icon_option">选择 %1$s 列表图标</string>
-    <string name="home_locked_list_name">登录以加载你的列表</string>
+    <string name="scheduled_task_home_search_placeholder">搜索</string>
+    <string name="scheduled_task_home_search_no_results">没有匹配的任务</string>
+    <string name="scheduled_task_home_my_lists">我的列表</string>
+    <string name="scheduled_task_home_new_list">新建列表</string>
+    <string name="scheduled_task_home_list_name_placeholder">列表名称</string>
+    <string name="scheduled_task_home_section_list">列表</string>
+    <string name="scheduled_task_home_section_color">颜色</string>
+    <string name="scheduled_task_home_section_icon">图标</string>
+    <string name="scheduled_task_home_list_icon_option">选择 %1$s 列表图标</string>
+    <string name="scheduled_task_home_locked_list_name">登录以加载你的列表</string>
 
     <string-array name="splash_taglines">
         <item>你的服务器记着，所以你不必记</item>

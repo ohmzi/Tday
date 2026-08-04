@@ -242,7 +242,7 @@
   },
   "app": {
     "agenda": "agenda",
-    "home": "Home",
+    "scheduledTaskHome": "Pianificato",
     "more": "Altro",
     "cancel": "Annulla",
     "save": "Salva",
@@ -526,7 +526,7 @@
     "brick": "Mattone",
     "slate": "Ardesia"
   },
-  "home": {
+  "scheduledTaskHome": {
     "tileScheduled": "Pianificato",
     "tilePriority": "Priorità",
     "tileOverdue": "In ritardo",
@@ -820,10 +820,10 @@
     },
     "topics": {
       "root-feeds": {
-        "title": "Home e In qualsiasi momento",
+        "title": "Pianificato e In qualsiasi momento",
         "summary": "Due feed principali e tranquilli tra cui passare dalla dock.",
-        "keywords": "home, in qualsiasi momento, feed, dock, principale, naviga, schede",
-        "body": "T'Day ha due feed affiancati. Home raccoglie le tue attività pianificate per oggi e oltre. In qualsiasi momento raccoglie i Floater — attività senza data. Passa dall'uno all'altro dalla dock in basso e crea un'attività da entrambi."
+        "keywords": "pianificato, in qualsiasi momento, feed, dock, principale, naviga, schede",
+        "body": "T'Day ha due feed affiancati. Il feed Pianificato raccoglie le tue attività con data per oggi e oltre. In qualsiasi momento raccoglie i Floater — attività senza data. Passa dall'uno all'altro dalla dock in basso e crea un'attività da entrambi."
       },
       "create-task": {
         "title": "Crea un'attività",
@@ -877,17 +877,17 @@
         "body": "I tuoi elenchi mantengono l'ordine che imposti. Trascina un'attività in alto o in basso per organizzare la giornata nel modo in cui la pensi."
       },
       "floaters-vs-todos": {
-        "title": "Floater e attività pianificate",
-        "summary": "Le attività senza data vivono in In qualsiasi momento; quelle con data in Home.",
+        "title": "Floater e attività con data",
+        "summary": "Le attività senza data vivono in In qualsiasi momento; quelle con data nel feed Pianificato.",
         "keywords": "floater, in qualsiasi momento, non pianificato, senza data, attività, pianificato, differenza",
-        "body": "Un'attività pianificata ha una data di scadenza e appare in Home e nel calendario. Un Floater non ha data — attende in silenzio nel tuo feed In qualsiasi momento finché non sei pronto. Usa i Floater per il lavoro “un giorno” che non deve ingombrare l'oggi.",
+        "body": "Un'attività con una data di scadenza appare nel feed Pianificato e nel calendario. Un Floater non ha data — attende in silenzio nel tuo feed In qualsiasi momento finché non sei pronto. Usa i Floater per il lavoro “un giorno” che non deve ingombrare l'oggi.",
         "tip": "I Floater non appaiono mai nel calendario — quello spazio è riservato al lavoro con data."
       },
       "promote-and-float": {
         "title": "Promuovi e lascia fluttuare",
         "summary": "Pianifica un fluttuante come attività reale, o lascia fluttuare un'attività ferma.",
         "keywords": "promuovere, pianificare fluttuante, retrocedere, lascia fluttuare, convertire, in qualsiasi momento, spostare, in ritardo",
-        "body": "Quando un fluttuante è pronto a diventare lavoro vero, usa la sua azione Pianifica: scegli un orario e passerà in Home come attività con data. Vale anche il contrario: un'attività in ritardo che continui a rimandare può fluttuare in silenzio; retrocedila e tornerà in Qualsiasi momento senza data, conservando titolo, note e priorità.",
+        "body": "Quando un fluttuante è pronto a diventare lavoro vero, usa la sua azione Pianifica: scegli un orario e passerà nel feed Pianificato come attività con data. Vale anche il contrario: un'attività in ritardo che continui a rimandare può fluttuare in silenzio; retrocedila e tornerà in Qualsiasi momento senza data, conservando titolo, note e priorità.",
         "tip": "Le attività ricorrenti non possono fluttuare: termina prima la serie se la vuoi senza data."
       },
       "quick-defer": {

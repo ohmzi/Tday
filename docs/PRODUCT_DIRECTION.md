@@ -39,8 +39,8 @@ T'Day separates work by scheduling intent.
 Mobile is now the center of the product experience. Any user-facing Android or iOS change should ask whether the other platform exposes the same behavior, language, counts, empty states, and edge cases.
 
 - Build Android and iOS as siblings, not clones. Copy behavior and intent; use native APIs and local conventions.
-- Treat Home and Floater/Anytime as root feeds. `RootFeedDock` switches between them and collapses into a compact icon state while preserving quick creation.
-- Keep pull-to-refresh disabled in Local Mode. In Server Mode, treat it as a root-feed affordance for Home and Floater/Anytime rather than a default on detail, category, calendar, or completed screens.
+- Treat the scheduled task home screen and the floater task home screen (Floater/Anytime) as root feeds. `RootFeedDock` switches between them and collapses into a compact icon state while preserving quick creation.
+- Keep pull-to-refresh disabled in Local Mode. In Server Mode, treat it as a root-feed affordance for the scheduled task home and floater task home screens rather than a default on detail, category, calendar, or completed screens.
 - Use local cache as the screen source of truth. Network sync updates the cache; screens observe cache changes.
 - Keep offline notices calm and rate-limited. Do not interrupt normal use when cached data can satisfy the screen.
 - Preserve dark mode, compact layouts, and text fit. Avoid explanatory UI copy when a familiar control can do the job.
@@ -93,7 +93,7 @@ Documentation is part of the product.
 ## Near-Term Direction
 
 - Keep server/local data boundaries explicit and user-controlled.
-- Continue converging Android and iOS around Home, Floater/Anytime, Calendar, Completed, Settings, reminders, car surfaces, and update flows.
+- Continue converging Android and iOS around the scheduled task home screen, Floater/Anytime, Calendar, Completed, Settings, reminders, car surfaces, and update flows.
 - Make list and floater-list behavior clear in UI and contracts.
 - Keep backend contracts stable for mobile clients; add compatibility handling before making breaking changes.
 - Prefer focused cleanup that reduces future drift: shared DTOs, mirrored cache records, platform design tokens, and documented verification commands.

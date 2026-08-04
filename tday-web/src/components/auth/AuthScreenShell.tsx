@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
-import MockHomeBackdrop from "@/components/auth/MockHomeBackdrop";
+import MockScheduledTaskHomeBackdrop from "@/components/auth/MockScheduledTaskHomeBackdrop";
 
 /**
- * Full-screen auth shell that mirrors the login screen: a blurred, dimmed mock home
+ * Full-screen auth shell that mirrors the login screen: a blurred, dimmed mock scheduled task home screen
  * dashboard behind a centered card. Used for the reset-password wizard so it matches
  * the rest of the app instead of sitting on a flat black page.
  */
@@ -11,7 +11,7 @@ export default function AuthScreenShell({ children }: { children: ReactNode }) {
     <main className="relative min-h-screen overflow-hidden bg-background text-foreground">
       <div className="absolute inset-0 overflow-hidden" aria-hidden>
         <div className="h-full w-full scale-[1.06] blur-lg">
-          <MockHomeBackdrop />
+          <MockScheduledTaskHomeBackdrop />
         </div>
         <div className="absolute inset-0 bg-background/45" />
       </div>

@@ -16,7 +16,7 @@ import TodoGroup from "@/components/todo/component/TodoGroup";
 import TodoMutationProvider from "@/providers/TodoMutationProvider";
 import {
   type NativeRouteId,
-  homeCategoryRoutes,
+  scheduledTaskHomeCategoryRoutes,
   isNativeRouteActive,
   useNativeRouteCounts,
 } from "@/components/app/nativeRouteConfig";
@@ -41,10 +41,10 @@ const topButtonClass =
 
 const todayTileColor = "#6EA8E1";
 
-// Tile color + the i18n key (in the `home` namespace) for its label. Several of
-// these reuse the same wording as elsewhere in the app, but the home grid uses
+// Tile color + the i18n key (in the `scheduledTaskHome` namespace) for its label. Several of
+// these reuse the same wording as elsewhere in the app, but the scheduled task home grid uses
 // shorter forms (e.g. "All" rather than "All Tasks"), so they get their own keys.
-const homeTileConfig: Partial<
+const scheduledTaskHomeTileConfig: Partial<
   Record<NativeRouteId, { color: string; labelKey: string }>
 > = {
   scheduled: { color: "#D98F4B", labelKey: "tileScheduled" },
@@ -55,7 +55,7 @@ const homeTileConfig: Partial<
   calendar: { color: "#9A89D2", labelKey: "tileCalendar" },
 };
 
-const homeTileOrder: NativeRouteId[] = [
+const scheduledTaskHomeTileOrder: NativeRouteId[] = [
   "scheduled",
   "priority",
   "overdue",
@@ -97,11 +97,11 @@ function formatListName(value: string) {
   return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
 }
 
-export default function NativeHomeDashboard() {
+export default function NativeScheduledTaskHomeDashboard() {
   const router = useRouter();
   const pathname = usePathname();
   const locale = useLocale();
-  const { t: homeDict } = useTranslation("home");
+  const { t: scheduledTaskHomeDict } = useTranslation("scheduledTaskHome");
   const { t: appDict } = useTranslation("app");
   const { t: sidebarDict } = useTranslation("sidebar");
   const userTimeZone = useUserTimezone();
@@ -135,7 +135,7 @@ export default function NativeHomeDashboard() {
       .slice(0, 6);
   }, [listMetaData, listCounts]);
 
-  // Today's incomplete tasks, shown inline on the home screen (same data as the
+  // Today's incomplete tasks, shown inline on the scheduled task home screen (same data as the
   // Today screen), sorted by due time.
   const todayIncomplete = useMemo(
     () =>
@@ -218,7 +218,7 @@ export default function NativeHomeDashboard() {
                 type="search"
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
-                placeholder={homeDict("searchTasksPlaceholder")}
+                placeholder={scheduledTaskHomeDict("searchTasksPlaceholder")}
                 className="h-14 w-full rounded-full bg-transparent pl-11 pr-4 text-base font-extrabold outline-none transition-colors md:text-sm"
               />
             </div>
@@ -226,7 +226,7 @@ export default function NativeHomeDashboard() {
               <div className="mt-2 max-h-72 overflow-y-auto">
                 {searchableTodos.length === 0 ? (
                   <p className="px-3 py-4 text-sm font-extrabold text-muted-foreground">
-                    {homeDict("noMatchingTasks")}
+                    {scheduledTaskHomeDict("noMatchingTasks")}
                   </p>
                 ) : (
                   searchableTodos.map((todo) => (
@@ -279,14 +279,14 @@ export default function NativeHomeDashboard() {
         )}
 
         <section className="grid grid-cols-2 gap-2.5 lg:grid-cols-3">
-          {[...homeCategoryRoutes]
-            .sort((a, b) => homeTileOrder.indexOf(a.id) - homeTileOrder.indexOf(b.id))
+          {[...scheduledTaskHomeCategoryRoutes]
+            .sort((a, b) => scheduledTaskHomeTileOrder.indexOf(a.id) - scheduledTaskHomeTileOrder.indexOf(b.id))
             .map((route) => {
             const Icon = route.icon;
             const active = isNativeRouteActive(pathname, route);
             const count = counts[route.id];
-            const tile = homeTileConfig[route.id];
-            const tileLabel = tile ? homeDict(tile.labelKey) : route.label;
+            const tile = scheduledTaskHomeTileConfig[route.id];
+            const tileLabel = tile ? scheduledTaskHomeDict(tile.labelKey) : route.label;
 
             return (
               <Link
@@ -336,7 +336,7 @@ export default function NativeHomeDashboard() {
                   <Link
                     key={list.id}
                     href={`/app/list/${list.id}`}
-                    aria-label={homeDict("openList", { name: formatListName(list.name) })}
+                    aria-label={scheduledTaskHomeDict("openList", { name: formatListName(list.name) })}
                     className="relative flex h-[70px] items-center gap-3 overflow-hidden rounded-[26px] px-5 text-white shadow-[0_14px_30px_-18px_rgba(60,70,90,0.45)] transition-transform duration-200 hover:-translate-y-0.5 active:translate-y-0.5"
                     style={{
                       background: `color-mix(in srgb, hsl(var(--card-muted)) 34%, ${accent} 66%)`,

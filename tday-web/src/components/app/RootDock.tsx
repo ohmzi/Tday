@@ -11,18 +11,18 @@ import {
 import { nativeScreenAccentColors } from "@/components/app/nativeScreenTheme";
 import { cn } from "@/lib/utils";
 
-type DockTab = "home" | "floater" | "more";
+type DockTab = "scheduledTaskHome" | "floaterTaskHome" | "more";
 
 const dockTabs: Array<{
   id: DockTab;
-  labelKey: "home" | "root_feed_tab_floater" | "more";
+  labelKey: "scheduledTaskHome" | "root_feed_tab_floater" | "more";
   icon: typeof Home;
   path?: string;
   accentColor?: string;
 }> = [
-  { id: "home", labelKey: "home", icon: Home, path: "/app/tday", accentColor: nativeScreenAccentColors.today },
+  { id: "scheduledTaskHome", labelKey: "scheduledTaskHome", icon: Home, path: "/app/tday", accentColor: nativeScreenAccentColors.today },
   {
-    id: "floater",
+    id: "floaterTaskHome",
     labelKey: "root_feed_tab_floater",
     icon: Leaf,
     path: "/app/floater",
@@ -39,10 +39,10 @@ function scrollActiveScreenToTop() {
 
 function activeDockTab(pathname: string): DockTab {
   if (pathname.includes("/app/floater")) {
-    return "floater";
+    return "floaterTaskHome";
   }
   if (pathname.includes("/app/tday") || pathname.includes("/app/today")) {
-    return "home";
+    return "scheduledTaskHome";
   }
   return "more";
 }

@@ -58,7 +58,7 @@ enum TodoTimelineMetrics {
     static let rootFeedTitleTopInset: CGFloat = 32
     static let rootFeedTitleBottomInset: CGFloat = 12
     static let timelineBottomSpacerHeight: CGFloat = 120
-    static let rootFloaterBottomSpacerHeight: CGFloat = 12
+    static let floaterTaskHomeBottomSpacerHeight: CGFloat = 12
     static let rootDockCollapseThreshold: CGFloat = 44
     static let topBarRowHeight: CGFloat = 56
     static let topBarButtonFrame: CGFloat = 56
@@ -385,7 +385,7 @@ private struct RootFeedSearchTitleRow: View {
 }
 
 private struct RootFeedHeaderIconButton: View {
-    /// Asset-catalog name of the lucide template glyph (shared with home/web/Android).
+    /// Asset-catalog name of the lucide template glyph (shared with the scheduled task home screen/web/Android).
     let icon: String
     let action: () -> Void
 
@@ -414,7 +414,7 @@ private struct RootFeedHeaderIconButton: View {
     }
 }
 
-private struct FloaterSearchResultsCard: View {
+private struct FloaterTaskHomeSearchResultsCard: View {
     let todos: [TodoItem]
     let listsByID: [String: ListSummary]
     let onOpenTodo: (TodoItem) -> Void
@@ -483,7 +483,7 @@ private struct FloaterSearchResultsCard: View {
     }
 }
 
-private struct FloaterListCard: View {
+private struct FloaterTaskHomeListCard: View {
     let list: ListSummary
     let count: Int
     let onTap: () -> Void
@@ -580,7 +580,7 @@ struct TodoListScreen: View {
     @State private var viewModel: TodoListViewModel
     @Environment(\.tdayColors) private var colors
     @Environment(\.dismiss) private var dismiss
-    @FocusState private var rootFloaterSearchFieldFocused: Bool
+    @FocusState private var floaterTaskHomeSearchFieldFocused: Bool
     @State private var showingCreateTask = false
     @State private var showingCreateList = false
     @State private var editingTodo: TodoItem?
@@ -602,9 +602,9 @@ struct TodoListScreen: View {
     @State private var completionPhases: [String: TodoCompletionPhase] = [:]
     @State private var flashTodoId: String?
     @State private var highlightedScrollRequestID = 0
-    @State private var rootFloaterSearchExpanded = false
-    @State private var rootFloaterSearchQuery = ""
-    @State private var openingRootFloaterSearchResultID: String?
+    @State private var floaterTaskHomeSearchExpanded = false
+    @State private var floaterTaskHomeSearchQuery = ""
+    @State private var openingFloaterTaskHomeSearchResultID: String?
     @State private var openSwipeTaskID: String?
     @State private var hasOpenedCreateTaskOnAppear = false
 
@@ -656,7 +656,7 @@ struct TodoListScreen: View {
         )
     }
 
-    private var floaterListRows: [(list: ListSummary, count: Int)] {
+    private var floaterTaskHomeListRows: [(list: ListSummary, count: Int)] {
         guard viewModel.mode == .floater, viewModel.listId == nil else {
             return []
         }
@@ -668,17 +668,17 @@ struct TodoListScreen: View {
         }
     }
 
-    private var isRootFloaterScreen: Bool {
+    private var isFloaterTaskHomeScreen: Bool {
         viewModel.mode == .floater && viewModel.listId == nil
     }
 
     // Root floater empty state is shown inline (in the list, above the list
     // names) to mirror the web layout, rather than as a full-screen overlay.
-    private var showInlineFloaterEmpty: Bool {
-        isRootFloaterScreen && viewModel.items.isEmpty && !viewModel.isLoading
+    private var showInlineFloaterTaskHomeEmpty: Bool {
+        isFloaterTaskHomeScreen && viewModel.items.isEmpty && !viewModel.isLoading
     }
 
-    private var floaterEmptyGapHeight: CGFloat {
+    private var floaterTaskHomeEmptyGapHeight: CGFloat {
         UIScreen.main.bounds.height * 0.42
     }
 
@@ -702,24 +702,24 @@ struct TodoListScreen: View {
         viewModel.mode == .floater ? .floater : .scheduled
     }
 
-    private var floaterListByID: [String: ListSummary] {
+    private var floaterTaskHomeListByID: [String: ListSummary] {
         Dictionary(viewModel.lists.map { ($0.id, $0) }, uniquingKeysWith: { _, latest in latest })
     }
 
-    private var normalizedRootFloaterSearchQuery: String {
-        normalizedTodoSearchQuery(rootFloaterSearchQuery)
+    private var normalizedFloaterTaskHomeSearchQuery: String {
+        normalizedTodoSearchQuery(floaterTaskHomeSearchQuery)
     }
 
-    private var rootFloaterSearchResults: [TodoItem] {
-        guard isRootFloaterScreen, !normalizedRootFloaterSearchQuery.isEmpty else {
+    private var floaterTaskHomeSearchResults: [TodoItem] {
+        guard isFloaterTaskHomeScreen, !normalizedFloaterTaskHomeSearchQuery.isEmpty else {
             return []
         }
 
         return viewModel.items.filter { todo in
-            todoSearchText(todo.title).contains(normalizedRootFloaterSearchQuery) ||
-                (todo.description.map { todoSearchText($0).contains(normalizedRootFloaterSearchQuery) } ?? false) ||
-                (todo.listId.flatMap { floaterListByID[$0]?.name }.map {
-                    todoSearchText($0).contains(normalizedRootFloaterSearchQuery)
+            todoSearchText(todo.title).contains(normalizedFloaterTaskHomeSearchQuery) ||
+                (todo.description.map { todoSearchText($0).contains(normalizedFloaterTaskHomeSearchQuery) } ?? false) ||
+                (todo.listId.flatMap { floaterTaskHomeListByID[$0]?.name }.map {
+                    todoSearchText($0).contains(normalizedFloaterTaskHomeSearchQuery)
                 } ?? false)
         }
         .sorted(by: floaterTodoSortPrecedes)
@@ -727,8 +727,8 @@ struct TodoListScreen: View {
         .map { $0 }
     }
 
-    private var showRootFloaterSearchResults: Bool {
-        isRootFloaterScreen && rootFloaterSearchExpanded && !normalizedRootFloaterSearchQuery.isEmpty
+    private var showFloaterTaskHomeSearchResults: Bool {
+        isFloaterTaskHomeScreen && floaterTaskHomeSearchExpanded && !normalizedFloaterTaskHomeSearchQuery.isEmpty
     }
 
     private var isTodayMode: Bool {
@@ -775,7 +775,7 @@ struct TodoListScreen: View {
     }
 
     private var minimalTimelineBottomSpacerHeight: CGFloat {
-        isRootFloaterScreen ? TodoTimelineMetrics.rootFloaterBottomSpacerHeight : TodoTimelineMetrics.timelineBottomSpacerHeight
+        isFloaterTaskHomeScreen ? TodoTimelineMetrics.floaterTaskHomeBottomSpacerHeight : TodoTimelineMetrics.timelineBottomSpacerHeight
     }
 
     private var timelineItemAnimationKey: String {
@@ -788,7 +788,7 @@ struct TodoListScreen: View {
         // Summary button is intentionally hidden on the root floater screen; it
         // remains available on the per-mode screens (today/all/scheduled/etc.)
         // and list detail.
-        summaryAvailable && viewModel.aiSummaryEnabled && !viewModel.items.isEmpty && !isRootFloaterScreen
+        summaryAvailable && viewModel.aiSummaryEnabled && !viewModel.items.isEmpty && !isFloaterTaskHomeScreen
     }
 
     private var heroTopBarActions: [TimelineTopBarAction] {
@@ -910,34 +910,34 @@ struct TodoListScreen: View {
         .onChange(of: timelineScrollOffset, initial: true) { _, offset in
             onRootDockCollapsedChange(max(offset, 0) > TodoTimelineMetrics.rootDockCollapseThreshold)
         }
-        .onChange(of: rootFloaterSearchExpanded, initial: true) { _, expanded in
-            guard isRootFloaterScreen else {
+        .onChange(of: floaterTaskHomeSearchExpanded, initial: true) { _, expanded in
+            guard isFloaterTaskHomeScreen else {
                 onRootControlsVisibleChange(true)
                 return
             }
             onRootControlsVisibleChange(!expanded)
             if expanded {
-                rootFloaterSearchFieldFocused = false
+                floaterTaskHomeSearchFieldFocused = false
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.30) {
-                    if rootFloaterSearchExpanded {
-                        rootFloaterSearchFieldFocused = true
+                    if floaterTaskHomeSearchExpanded {
+                        floaterTaskHomeSearchFieldFocused = true
                     }
                 }
             } else {
-                rootFloaterSearchFieldFocused = false
+                floaterTaskHomeSearchFieldFocused = false
             }
         }
         .onChange(of: createTaskRequestID) { _, requestID in
             guard requestID > 0 else { return }
-            closeRootFloaterSearch()
+            closeFloaterTaskHomeSearch()
             showingCreateTask = true
         }
         .onAppear {
-            onRootControlsVisibleChange(!(isRootFloaterScreen && rootFloaterSearchExpanded))
+            onRootControlsVisibleChange(!(isFloaterTaskHomeScreen && floaterTaskHomeSearchExpanded))
             onRootDockCollapsedChange(shouldCollapseRootDock)
             if openCreateTaskOnAppear && !hasOpenedCreateTaskOnAppear {
                 hasOpenedCreateTaskOnAppear = true
-                closeRootFloaterSearch()
+                closeFloaterTaskHomeSearch()
                 showingCreateTask = true
             }
         }
@@ -1022,7 +1022,7 @@ struct TodoListScreen: View {
 
     @ViewBuilder
     private var refreshableModeContent: some View {
-        if isRootFloaterScreen {
+        if isFloaterTaskHomeScreen {
             PullToRefreshContainer(
                 isRefreshing: viewModel.isLoading,
                 isEnabled: pullRefreshEnabled,
@@ -1057,7 +1057,7 @@ struct TodoListScreen: View {
                                 listIconKey: viewModel.lists.first(where: { $0.id == viewModel.listId })?.iconKey
                             )
                         )
-                        if viewModel.items.isEmpty, !viewModel.isLoading, !isRootFloaterScreen {
+                        if viewModel.items.isEmpty, !viewModel.isLoading, !isFloaterTaskHomeScreen {
                             // Day Done: "finished everything" earns its own calm
                             // state instead of the generic no-tasks watermark.
                             if viewModel.mode == .today, viewModel.completedTodayCount > 0 {
@@ -1156,22 +1156,22 @@ struct TodoListScreen: View {
 
     private var rootFeedTitleRow: some View {
         Group {
-            if isRootFloaterScreen {
+            if isFloaterTaskHomeScreen {
                 RootFeedSearchTitleRow(
                     title: viewModel.title,
-                    searchExpanded: $rootFloaterSearchExpanded,
-                    searchQuery: $rootFloaterSearchQuery,
-                    searchFieldFocused: $rootFloaterSearchFieldFocused,
+                    searchExpanded: $floaterTaskHomeSearchExpanded,
+                    searchQuery: $floaterTaskHomeSearchQuery,
+                    searchFieldFocused: $floaterTaskHomeSearchFieldFocused,
                     onSearchClose: {
-                        closeRootFloaterSearch()
+                        closeFloaterTaskHomeSearch()
                     },
                     onCreateList: {
-                        closeRootFloaterSearch()
+                        closeFloaterTaskHomeSearch()
                         HapticManager.buttonTap()
                         showingCreateList = true
                     },
                     onOpenSettings: {
-                        closeRootFloaterSearch()
+                        closeFloaterTaskHomeSearch()
                         onOpenSettings()
                     }
                 )
@@ -1211,7 +1211,7 @@ struct TodoListScreen: View {
                 RootFeedDock(
                     activeTab: rootFeedTab,
                     collapsed: shouldCollapseRootDock,
-                    accentColor: rootFeedTab == .floater ? .tdayFloaterGreen : .tdayTodayBlue,
+                    accentColor: rootFeedTab == .floaterTaskHome ? .tdayFloaterGreen : .tdayTodayBlue,
                     onSelect: onRootFeedTabSelected
                 )
                 .padding(.leading, 18)
@@ -1628,20 +1628,20 @@ struct TodoListScreen: View {
         }
     }
 
-    private func closeRootFloaterSearch() {
-        rootFloaterSearchFieldFocused = false
+    private func closeFloaterTaskHomeSearch() {
+        floaterTaskHomeSearchFieldFocused = false
         withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
-            rootFloaterSearchExpanded = false
+            floaterTaskHomeSearchExpanded = false
         }
-        rootFloaterSearchQuery = ""
+        floaterTaskHomeSearchQuery = ""
     }
 
-    private func openRootFloaterSearchResult(_ todo: TodoItem, using proxy: ScrollViewProxy) {
-        guard openingRootFloaterSearchResultID == nil else {
+    private func openFloaterTaskHomeSearchResult(_ todo: TodoItem, using proxy: ScrollViewProxy) {
+        guard openingFloaterTaskHomeSearchResultID == nil else {
             return
         }
-        openingRootFloaterSearchResultID = todo.id
-        closeRootFloaterSearch()
+        openingFloaterTaskHomeSearchResultID = todo.id
+        closeFloaterTaskHomeSearch()
 
         highlightedScrollRequestID += 1
         let requestID = highlightedScrollRequestID
@@ -1649,7 +1649,7 @@ struct TodoListScreen: View {
             guard requestID == highlightedScrollRequestID else {
                 return
             }
-            openingRootFloaterSearchResultID = nil
+            openingFloaterTaskHomeSearchResultID = nil
             withAnimation(.easeInOut(duration: TodoTimelineMetrics.searchResultScrollDuration)) {
                 proxy.scrollTo(timelineTodoScrollID(todo.id), anchor: .center)
             }
@@ -1950,12 +1950,12 @@ struct TodoListScreen: View {
                     timelineHeroTitleRow
                         .id(todoTimelineScrollTopID)
 
-                    if showRootFloaterSearchResults {
-                        FloaterSearchResultsCard(
-                            todos: rootFloaterSearchResults,
-                            listsByID: floaterListByID,
+                    if showFloaterTaskHomeSearchResults {
+                        FloaterTaskHomeSearchResultsCard(
+                            todos: floaterTaskHomeSearchResults,
+                            listsByID: floaterTaskHomeListByID,
                             onOpenTodo: { todo in
-                                openRootFloaterSearchResult(todo, using: scrollProxy)
+                                openFloaterTaskHomeSearchResult(todo, using: scrollProxy)
                             }
                         )
                         .listRowInsets(
@@ -1990,7 +1990,7 @@ struct TodoListScreen: View {
                         )
                     }
 
-                    if showInlineFloaterEmpty {
+                    if showInlineFloaterTaskHomeEmpty {
                         Section {
                             Text(emptyTimelineMessage(for: viewModel.mode))
                                 .font(.tdayRounded(size: 28, weight: .bold))
@@ -1998,17 +1998,17 @@ struct TodoListScreen: View {
                                 .multilineTextAlignment(.center)
                                 .lineLimit(2)
                                 .minimumScaleFactor(0.82)
-                                .frame(maxWidth: .infinity, minHeight: floaterEmptyGapHeight, alignment: .center)
+                                .frame(maxWidth: .infinity, minHeight: floaterTaskHomeEmptyGapHeight, alignment: .center)
                                 .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
                                 .listRowBackground(colors.background)
                                 .listRowSeparator(.hidden)
                         }
                     }
 
-                    if !floaterListRows.isEmpty {
+                    if !floaterTaskHomeListRows.isEmpty {
                         Section {
-                            ForEach(floaterListRows, id: \.list.id) { row in
-                                FloaterListCard(
+                            ForEach(floaterTaskHomeListRows, id: \.list.id) { row in
+                                FloaterTaskHomeListCard(
                                     list: row.list,
                                     count: row.count,
                                     onTap: {
@@ -2063,8 +2063,8 @@ struct TodoListScreen: View {
                 scrollToHighlightedTodo(using: scrollProxy)
             }
             .onChange(of: scrollToTopRequestID) { _, requestID in
-                guard requestID > 0, isRootFloaterScreen else { return }
-                closeRootFloaterSearch()
+                guard requestID > 0, isFloaterTaskHomeScreen else { return }
+                closeFloaterTaskHomeSearch()
                 withAnimation(.easeInOut(duration: 0.34)) {
                     scrollProxy.scrollTo(todoTimelineScrollTopID, anchor: .top)
                 }
@@ -4350,7 +4350,7 @@ private func emptyTimelineMessage(for mode: TodoListMode) -> String {
     }
 }
 
-/// Lucide template-asset watermark for the home-category modes, mirroring web.
+/// Lucide template-asset watermark for the scheduled task home category modes, mirroring web.
 /// Returns nil for modes that keep their SF Symbol watermark (today/floater/list).
 private func emptyTimelineAssetName(for mode: TodoListMode, listIconKey: String?) -> String? {
     switch mode {

@@ -3,7 +3,7 @@ import Observation
 
 @MainActor
 @Observable
-final class HomeViewModel {
+final class ScheduledTaskHomeViewModel {
     private let container: AppContainer
     private static let recentSuccessfulSyncSkipWindowMs: Int64 = 8_000
 

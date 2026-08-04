@@ -1,23 +1,23 @@
 import SwiftUI
 
 enum RootFeedTab: Hashable {
-    case home
-    case floater
+    case scheduledTaskHome
+    case floaterTaskHome
 
     var title: String {
         switch self {
-        case .home:
-            return L("Home")
-        case .floater:
+        case .scheduledTaskHome:
+            return L("Scheduled")
+        case .floaterTaskHome:
             return L("Floater")
         }
     }
 
     var systemImage: String {
         switch self {
-        case .home:
+        case .scheduledTaskHome:
             return "house.fill"
-        case .floater:
+        case .floaterTaskHome:
             return "leaf"
         }
     }
@@ -29,7 +29,7 @@ struct RootFeedDock: View {
     let accentColor: Color
     let onSelect: (RootFeedTab) -> Void
 
-    private let tabs: [RootFeedTab] = [.home, .floater]
+    private let tabs: [RootFeedTab] = [.scheduledTaskHome, .floaterTaskHome]
     @Environment(\.tdayColors) private var colors
     @State private var expandedByTap = false
 
@@ -50,7 +50,7 @@ struct RootFeedDock: View {
     }
 
     // The dock expands when the feed is at the top, or when the user taps the collapsed pill.
-    // Tap-to-expand keeps Home/Floater immediately pressable instead of relying on a
+    // Tap-to-expand keeps Scheduled/Floater immediately pressable instead of relying on a
     // scroll-to-top to bring the dock back, which left it stuck as an icon if the feed didn't
     // scroll far enough. Mirrors the Android dock's `expandedByTap`.
     private var isExpanded: Bool {
@@ -90,13 +90,13 @@ struct RootFeedDock: View {
     }
 
     // Icon-only pill shown when scrolled down. Tapping expands the dock in place so the
-    // Home/Floater control becomes immediately pressable.
+    // Scheduled/Floater control becomes immediately pressable.
     private var collapsedButton: some View {
         Button {
             expandedByTap = true
         } label: {
             Group {
-                if activeTab == .home {
+                if activeTab == .scheduledTaskHome {
                     Image("NavHouse")
                         .renderingMode(.template)
                         .resizable()
@@ -105,7 +105,7 @@ struct RootFeedDock: View {
                 } else {
                     Image(systemName: activeTab.systemImage)
                         .font(.system(size: 22, weight: .semibold))
-                        .scaleEffect(x: activeTab == .floater ? -1 : 1, y: 1)
+                        .scaleEffect(x: activeTab == .floaterTaskHome ? -1 : 1, y: 1)
                 }
             }
             .foregroundStyle(accentColor)

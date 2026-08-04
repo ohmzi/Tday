@@ -87,19 +87,19 @@
       "sinceVersion": null,
       "deepLink": null,
       "helpAnchors": [],
-      "title": "Inicio y En cualquier momento",
-      "summary": "Dos vistas de inicio serenas entre las que cambias desde el dock.",
+      "title": "Programado y En cualquier momento",
+      "summary": "Dos vistas principales y serenas entre las que cambias desde el dock.",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "T'Day tiene dos vistas hermanas. Inicio guarda tus tareas programadas para hoy y más adelante. En cualquier momento guarda los Flotantes: tareas sin fecha. Cambia entre ellas desde el dock inferior y crea una tarea desde cualquiera de las dos."
+            "T'Day tiene dos vistas hermanas. Programado guarda tus tareas con fecha para hoy y más adelante. En cualquier momento guarda los Flotantes: tareas sin fecha. Cambia entre ellas desde el dock inferior y crea una tarea desde cualquiera de las dos."
           ]
         }
       ],
-      "searchTitle": "inicio y en cualquier momento",
-      "searchKeywords": "inicio, en cualquier momento, vista, dock, raiz, navegar, pestanas",
-      "searchBody": "dos vistas de inicio serenas entre las que cambias desde el dock. t'day tiene dos vistas hermanas. inicio guarda tus tareas programadas para hoy y mas adelante. en cualquier momento guarda los flotantes: tareas sin fecha. cambia entre ellas desde el dock inferior y crea una tarea desde cualquiera de las dos."
+      "searchTitle": "programado y en cualquier momento",
+      "searchKeywords": "programado, en cualquier momento, vista, dock, raiz, navegar, pestanas",
+      "searchBody": "dos vistas principales y serenas entre las que cambias desde el dock. t'day tiene dos vistas hermanas. programado guarda tus tareas con fecha para hoy y mas adelante. en cualquier momento guarda los flotantes: tareas sin fecha. cambia entre ellas desde el dock inferior y crea una tarea desde cualquiera de las dos."
     },
     {
       "id": "create-task",
@@ -374,13 +374,13 @@
       "sinceVersion": null,
       "deepLink": null,
       "helpAnchors": [],
-      "title": "Flotantes frente a tareas programadas",
-      "summary": "Las tareas sin fecha viven en En cualquier momento; las que tienen fecha, en Inicio.",
+      "title": "Flotantes frente a tareas con fecha",
+      "summary": "Las tareas sin fecha viven en En cualquier momento; las que tienen fecha, en Programado.",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Una tarea programada tiene fecha de vencimiento y aparece en Inicio y en el calendario. Un Flotante no tiene fecha: espera con calma en tu vista En cualquier momento hasta que estés listo. Usa los Flotantes para lo de «algún día» que no debería llenar el hoy."
+            "Una tarea con fecha de vencimiento aparece en Programado y en el calendario. Un Flotante no tiene fecha: espera con calma en tu vista En cualquier momento hasta que estés listo. Usa los Flotantes para lo de «algún día» que no debería llenar el hoy."
           ]
         },
         {
@@ -390,9 +390,9 @@
           ]
         }
       ],
-      "searchTitle": "flotantes frente a tareas programadas",
+      "searchTitle": "flotantes frente a tareas con fecha",
       "searchKeywords": "flotante, en cualquier momento, sin programar, sin fecha, tarea, programada, diferencia",
-      "searchBody": "las tareas sin fecha viven en en cualquier momento; las que tienen fecha, en inicio. una tarea programada tiene fecha de vencimiento y aparece en inicio y en el calendario. un flotante no tiene fecha: espera con calma en tu vista en cualquier momento hasta que estes listo. usa los flotantes para lo de «algun dia» que no deberia llenar el hoy. los flotantes nunca aparecen en el calendario: ese espacio es solo para lo que tiene fecha."
+      "searchBody": "las tareas sin fecha viven en en cualquier momento; las que tienen fecha, en programado. una tarea con fecha de vencimiento aparece en programado y en el calendario. un flotante no tiene fecha: espera con calma en tu vista en cualquier momento hasta que estes listo. usa los flotantes para lo de «algun dia» que no deberia llenar el hoy. los flotantes nunca aparecen en el calendario: ese espacio es solo para lo que tiene fecha."
     },
     {
       "id": "resting-floaters",
@@ -450,7 +450,7 @@
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Cuando un flotante esté listo para convertirse en trabajo real, usa su acción Programar: elige una hora y pasará a Inicio como tarea con fecha. También funciona al revés: una tarea atrasada que sigues posponiendo puede flotar tranquilamente; degrádala y volverá a Cualquier momento sin fecha, conservando su título, notas y prioridad."
+            "Cuando un flotante esté listo para convertirse en trabajo real, usa su acción Programar: elige una hora y pasará a Programado como tarea con fecha. También funciona al revés: una tarea atrasada que sigues posponiendo puede flotar tranquilamente; degrádala y volverá a Cualquier momento sin fecha, conservando su título, notas y prioridad."
           ]
         },
         {
@@ -462,7 +462,7 @@
       ],
       "searchTitle": "promover y flotar",
       "searchKeywords": "promover, programar flotante, degradar, dejar flotar, convertir, en cualquier momento, mover, atrasada",
-      "searchBody": "programa un flotante como tarea real, o deja flotar una tarea estancada. cuando un flotante este listo para convertirse en trabajo real, usa su accion programar: elige una hora y pasara a inicio como tarea con fecha. tambien funciona al reves: una tarea atrasada que sigues posponiendo puede flotar tranquilamente; degradala y volvera a cualquier momento sin fecha, conservando su titulo, notas y prioridad. las tareas recurrentes no pueden flotar: termina primero la serie si quieres que quede sin fecha."
+      "searchBody": "programa un flotante como tarea real, o deja flotar una tarea estancada. cuando un flotante este listo para convertirse en trabajo real, usa su accion programar: elige una hora y pasara a programado como tarea con fecha. tambien funciona al reves: una tarea atrasada que sigues posponiendo puede flotar tranquilamente; degradala y volvera a cualquier momento sin fecha, conservando su titulo, notas y prioridad. las tareas recurrentes no pueden flotar: termina primero la serie si quieres que quede sin fecha."
     },
     {
       "id": "quick-defer",

@@ -242,7 +242,7 @@
   },
   "app": {
     "agenda": "agenda",
-    "home": "Inicio",
+    "scheduledTaskHome": "Programado",
     "more": "Más",
     "cancel": "Cancelar",
     "save": "Guardar",
@@ -526,7 +526,7 @@
     "brick": "Ladrillo",
     "slate": "Pizarra"
   },
-  "home": {
+  "scheduledTaskHome": {
     "tileScheduled": "Programado",
     "tilePriority": "Prioridad",
     "tileOverdue": "Vencido",
@@ -820,10 +820,10 @@
     },
     "topics": {
       "root-feeds": {
-        "title": "Inicio y En cualquier momento",
-        "summary": "Dos vistas de inicio serenas entre las que cambias desde el dock.",
-        "keywords": "inicio, en cualquier momento, vista, dock, raíz, navegar, pestañas",
-        "body": "T'Day tiene dos vistas hermanas. Inicio guarda tus tareas programadas para hoy y más adelante. En cualquier momento guarda los Flotantes: tareas sin fecha. Cambia entre ellas desde el dock inferior y crea una tarea desde cualquiera de las dos."
+        "title": "Programado y En cualquier momento",
+        "summary": "Dos vistas principales y serenas entre las que cambias desde el dock.",
+        "keywords": "programado, en cualquier momento, vista, dock, raíz, navegar, pestañas",
+        "body": "T'Day tiene dos vistas hermanas. Programado guarda tus tareas con fecha para hoy y más adelante. En cualquier momento guarda los Flotantes: tareas sin fecha. Cambia entre ellas desde el dock inferior y crea una tarea desde cualquiera de las dos."
       },
       "create-task": {
         "title": "Crear una tarea",
@@ -877,17 +877,17 @@
         "body": "Tus listas conservan el orden que les des. Arrastra una tarea arriba o abajo para organizar tu día tal como lo piensas."
       },
       "floaters-vs-todos": {
-        "title": "Flotantes frente a tareas programadas",
-        "summary": "Las tareas sin fecha viven en En cualquier momento; las que tienen fecha, en Inicio.",
+        "title": "Flotantes frente a tareas con fecha",
+        "summary": "Las tareas sin fecha viven en En cualquier momento; las que tienen fecha, en Programado.",
         "keywords": "flotante, en cualquier momento, sin programar, sin fecha, tarea, programada, diferencia",
-        "body": "Una tarea programada tiene fecha de vencimiento y aparece en Inicio y en el calendario. Un Flotante no tiene fecha: espera con calma en tu vista En cualquier momento hasta que estés listo. Usa los Flotantes para lo de «algún día» que no debería llenar el hoy.",
+        "body": "Una tarea con fecha de vencimiento aparece en Programado y en el calendario. Un Flotante no tiene fecha: espera con calma en tu vista En cualquier momento hasta que estés listo. Usa los Flotantes para lo de «algún día» que no debería llenar el hoy.",
         "tip": "Los Flotantes nunca aparecen en el calendario: ese espacio es solo para lo que tiene fecha."
       },
       "promote-and-float": {
         "title": "Promover y flotar",
         "summary": "Programa un flotante como tarea real, o deja flotar una tarea estancada.",
         "keywords": "promover, programar flotante, degradar, dejar flotar, convertir, en cualquier momento, mover, atrasada",
-        "body": "Cuando un flotante esté listo para convertirse en trabajo real, usa su acción Programar: elige una hora y pasará a Inicio como tarea con fecha. También funciona al revés: una tarea atrasada que sigues posponiendo puede flotar tranquilamente; degrádala y volverá a Cualquier momento sin fecha, conservando su título, notas y prioridad.",
+        "body": "Cuando un flotante esté listo para convertirse en trabajo real, usa su acción Programar: elige una hora y pasará a Programado como tarea con fecha. También funciona al revés: una tarea atrasada que sigues posponiendo puede flotar tranquilamente; degrádala y volverá a Cualquier momento sin fecha, conservando su título, notas y prioridad.",
         "tip": "Las tareas recurrentes no pueden flotar: termina primero la serie si quieres que quede sin fecha."
       },
       "quick-defer": {

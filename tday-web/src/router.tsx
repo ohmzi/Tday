@@ -21,14 +21,14 @@ const NotFoundPage = lazy(() => import("@/pages/NotFoundPage"));
 const AppLayout = lazy(() => import("@/pages/AppLayout"));
 const GeneralLayout = lazy(() => import("@/pages/GeneralLayout"));
 const CalendarLayout = lazy(() => import("@/pages/CalendarLayout"));
-const TodayPage = lazy(() => import("@/pages/TodayPage"));
+const ScheduledTaskHomePage = lazy(() => import("@/pages/ScheduledTaskHomePage"));
 const TodayTasksPage = lazy(() => import("@/pages/TodayTasksPage"));
 const OverduePage = lazy(() => import("@/pages/OverduePage"));
 const TodoPage = lazy(() => import("@/pages/TodoPage"));
 const PriorityPage = lazy(() => import("@/pages/PriorityPage"));
 const ScheduledPage = lazy(() => import("@/pages/ScheduledPage"));
 const CompletedPage = lazy(() => import("@/pages/CompletedPage"));
-const FloaterPage = lazy(() => import("@/pages/FloaterPage"));
+const FloaterTaskHomePage = lazy(() => import("@/pages/FloaterTaskHomePage"));
 const FloaterListPage = lazy(() => import("@/pages/FloaterListPage"));
 const AdminPage = lazy(() => import("@/pages/AdminPage"));
 const AdminRoute = lazy(() => import("@/pages/AdminRoute"));
@@ -98,14 +98,14 @@ export const router = sentryCreateBrowserRouter([
               {
                 element: <GeneralLayout />,
                 children: [
-                  { path: "tday", element: <TodayPage /> },
+                  { path: "tday", element: <ScheduledTaskHomePage /> },
                   { path: "today", element: <TodayTasksPage /> },
                   { path: "overdue", element: <OverduePage /> },
                   { path: "todo", element: <TodoPage /> },
                   { path: "priority", element: <PriorityPage /> },
                   { path: "scheduled", element: <ScheduledPage /> },
                   { path: "completed", element: <CompletedPage /> },
-                  { path: "floater", element: <FloaterPage /> },
+                  { path: "floater", element: <FloaterTaskHomePage /> },
                   { path: "floater-list/:id", element: <FloaterListPage /> },
                   { path: "settings", element: <SettingsPage /> },
                   { path: "guide", element: <HelpGuidePage /> },

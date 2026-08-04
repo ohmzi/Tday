@@ -90,9 +90,9 @@ import com.ohmz.tday.compose.feature.car.CarTaskSurfaceViewModel
 import com.ohmz.tday.compose.feature.car.rememberCarTaskVoiceCreateLauncher
 import com.ohmz.tday.compose.feature.completed.CompletedScreen
 import com.ohmz.tday.compose.feature.completed.CompletedViewModel
-import com.ohmz.tday.compose.feature.home.HomeScreen
-import com.ohmz.tday.compose.feature.home.HomeUiState
-import com.ohmz.tday.compose.feature.home.HomeViewModel
+import com.ohmz.tday.compose.feature.scheduledtaskhome.ScheduledTaskHomeScreen
+import com.ohmz.tday.compose.feature.scheduledtaskhome.ScheduledTaskHomeUiState
+import com.ohmz.tday.compose.feature.scheduledtaskhome.ScheduledTaskHomeViewModel
 import com.ohmz.tday.compose.feature.onboarding.OnboardingWizardOverlay
 import com.ohmz.tday.compose.feature.guide.HelpGuideScreen
 import com.ohmz.tday.compose.feature.guide.LocalOpenGuideTopic
@@ -133,8 +133,8 @@ fun TdayApp(
     val startupTagline = rememberSaveable(splashTaglineOptions.contentHashCode()) {
         splashTaglineOptions.random()
     }
-    val unauthenticatedHomeUiState = unauthenticatedHomeUiState(
-        lockedListName = stringResource(R.string.home_locked_list_name),
+    val unauthenticatedScheduledTaskHomeUiState = unauthenticatedScheduledTaskHomeUiState(
+        lockedListName = stringResource(R.string.scheduled_task_home_locked_list_name),
     )
     var hasDrawnStartupFrame by remember { mutableStateOf(false) }
     val currentOnFirstFrameDrawn by rememberUpdatedState(onFirstFrameDrawn)
@@ -178,12 +178,12 @@ fun TdayApp(
     var activeToast by remember { mutableStateOf<TdayToastData?>(null) }
     var hasShownLaunchUpdateToast by rememberSaveable { mutableStateOf(false) }
     var isStartupSplashHeld by remember { mutableStateOf(false) }
-    var rootFeedTab by rememberSaveable { mutableStateOf(RootFeedTab.HOME) }
+    var rootFeedTab by rememberSaveable { mutableStateOf(RootFeedTab.SCHEDULED_TASK_HOME) }
     var rootCreateTaskRequestSerial by rememberSaveable { mutableStateOf(0) }
     var rootCreateTaskRequestKey by rememberSaveable { mutableStateOf(0) }
-    var pendingRootFloaterCreateTask by rememberSaveable { mutableStateOf(false) }
-    var rootHomeScrollToTopRequestKey by remember { mutableStateOf(0) }
-    var rootFloaterScrollToTopRequestKey by remember { mutableStateOf(0) }
+    var pendingFloaterTaskHomeCreateTask by rememberSaveable { mutableStateOf(false) }
+    var scheduledTaskHomeScrollToTopRequestKey by remember { mutableStateOf(0) }
+    var floaterTaskHomeScrollToTopRequestKey by remember { mutableStateOf(0) }
     var rootDockCollapsed by rememberSaveable { mutableStateOf(false) }
     var rootControlsVisible by rememberSaveable { mutableStateOf(true) }
     val context = LocalContext.current
@@ -214,18 +214,18 @@ fun TdayApp(
         activity?.consumeDeepLink()
     }
     LaunchedEffect(
-        pendingRootFloaterCreateTask,
+        pendingFloaterTaskHomeCreateTask,
         currentRoute,
         rootFeedTab,
         appUiState.isWorkspaceAvailable,
     ) {
         if (
-            pendingRootFloaterCreateTask &&
-            currentRoute == AppRoute.Home.route &&
-            rootFeedTab == RootFeedTab.FLOATER &&
+            pendingFloaterTaskHomeCreateTask &&
+            currentRoute == AppRoute.ScheduledTaskHome.route &&
+            rootFeedTab == RootFeedTab.FLOATER_TASK_HOME &&
             appUiState.isWorkspaceAvailable
         ) {
-            pendingRootFloaterCreateTask = false
+            pendingFloaterTaskHomeCreateTask = false
             requestRootCreateTask()
         }
     }
@@ -250,8 +250,8 @@ fun TdayApp(
     fun handleRootFeedTabSelection(tab: RootFeedTab) {
         if (rootFeedTab == tab) {
             when (tab) {
-                RootFeedTab.HOME -> rootHomeScrollToTopRequestKey += 1
-                RootFeedTab.FLOATER -> rootFloaterScrollToTopRequestKey += 1
+                RootFeedTab.SCHEDULED_TASK_HOME -> scheduledTaskHomeScrollToTopRequestKey += 1
+                RootFeedTab.FLOATER_TASK_HOME -> floaterTaskHomeScrollToTopRequestKey += 1
             }
         } else {
             rootFeedTab = tab
@@ -405,7 +405,7 @@ fun TdayApp(
                     }
 
                     composable(
-                        route = AppRoute.Home.route,
+                        route = AppRoute.ScheduledTaskHome.route,
                         deepLinks = listOf(navDeepLink { uriPattern = "tday://home" }),
                     ) {
                         val authViewModel: AuthViewModel = hiltViewModel()
@@ -437,16 +437,16 @@ fun TdayApp(
                                 if (appUiState.isWorkspaceAvailable) {
                                     Box(modifier = Modifier.fillMaxSize()) {
                                         when (rootFeedTab) {
-                                            RootFeedTab.HOME -> {
-                                                val homeViewModel: HomeViewModel = hiltViewModel()
-                                                val homeUiState by homeViewModel.uiState.collectAsStateWithLifecycle()
+                                            RootFeedTab.SCHEDULED_TASK_HOME -> {
+                                                val scheduledTaskHomeViewModel: ScheduledTaskHomeViewModel = hiltViewModel()
+                                                val scheduledTaskHomeUiState by scheduledTaskHomeViewModel.uiState.collectAsStateWithLifecycle()
                                                 OnRouteResume {
-                                                    homeViewModel.refreshFromCache()
+                                                    scheduledTaskHomeViewModel.refreshFromCache()
                                                     appViewModel.refreshVersionInfo()
                                                 }
-                                                HomeScreen(
-                                                    uiState = homeUiState,
-                                                    onRefresh = { homeViewModel.refresh(userInitiated = true) },
+                                                ScheduledTaskHomeScreen(
+                                                    uiState = scheduledTaskHomeUiState,
+                                                    onRefresh = { scheduledTaskHomeViewModel.refresh(userInitiated = true) },
                                                     pullRefreshEnabled = !appUiState.isLocalMode,
                                                     onOpenToday = { navController.navigate(AppRoute.TodayTodos.route) },
                                                     onOpenOverdue = { navController.navigate(AppRoute.OverdueTodos.route) },
@@ -456,7 +456,7 @@ fun TdayApp(
                                                     onOpenCompleted = { navController.navigate(AppRoute.Completed.route) },
                                                     onOpenCalendar = { navController.navigate(AppRoute.Calendar.route) },
                                                     onOpenFloater = {
-                                                        rootFeedTab = RootFeedTab.FLOATER
+                                                        rootFeedTab = RootFeedTab.FLOATER_TASK_HOME
                                                     },
                                                     onOpenSettings = { navController.navigate(AppRoute.Settings.route) },
                                                     onOpenTaskFromSearch = { todoId ->
@@ -477,40 +477,40 @@ fun TdayApp(
                                                         )
                                                     },
                                                     onCreateTask = { payload ->
-                                                        homeViewModel.createTask(payload)
+                                                        scheduledTaskHomeViewModel.createTask(payload)
                                                     },
-                                                    onParseTaskTitleNlp = homeViewModel::parseTaskTitleNlp,
-                                                    onSuggestRepeat = homeViewModel::suggestRepeatRrule,
+                                                    onParseTaskTitleNlp = scheduledTaskHomeViewModel::parseTaskTitleNlp,
+                                                    onSuggestRepeat = scheduledTaskHomeViewModel::suggestRepeatRrule,
                                                     onCreateList = { name, color, iconKey ->
-                                                        homeViewModel.createList(
+                                                        scheduledTaskHomeViewModel.createList(
                                                             name = name,
                                                             color = color,
                                                             iconKey = iconKey,
                                                         )
                                                     },
                                                     onCompleteTask = { todo ->
-                                                        homeViewModel.completeTodo(
+                                                        scheduledTaskHomeViewModel.completeTodo(
                                                             todo
                                                         )
                                                     },
                                                     onDeleteTask = { todo ->
-                                                        homeViewModel.deleteTodo(
+                                                        scheduledTaskHomeViewModel.deleteTodo(
                                                             todo
                                                         )
                                                     },
                                                     onUpdateTask = { todo, payload ->
-                                                        homeViewModel.updateTask(
+                                                        scheduledTaskHomeViewModel.updateTask(
                                                             todo,
                                                             payload
                                                         )
                                                     },
-                                                    onSummarize = homeViewModel::summarizeToday,
+                                                    onSummarize = scheduledTaskHomeViewModel::summarizeToday,
                                                     summaryAvailable = !appUiState.isLocalMode,
                                                     showRootFeedDock = false,
                                                     showCreateTaskButton = false,
                                                     createTaskRequestKey = rootCreateTaskRequestKey,
                                                     onCreateTaskRequestHandled = ::consumeRootCreateTaskRequest,
-                                                    scrollToTopRequestKey = rootHomeScrollToTopRequestKey,
+                                                    scrollToTopRequestKey = scheduledTaskHomeScrollToTopRequestKey,
                                                     onRootDockCollapsedChange = {
                                                         rootDockCollapsed = it
                                                     },
@@ -520,10 +520,10 @@ fun TdayApp(
                                                 )
                                             }
 
-                                            RootFeedTab.FLOATER -> {
+                                            RootFeedTab.FLOATER_TASK_HOME -> {
                                                 TodosRoute(
                                                     mode = TodoListMode.FLOATER,
-                                                    onBack = { rootFeedTab = RootFeedTab.HOME },
+                                                    onBack = { rootFeedTab = RootFeedTab.SCHEDULED_TASK_HOME },
                                                     pullRefreshEnabled = !appUiState.isLocalMode,
                                                     summaryAvailable = !appUiState.isLocalMode,
                                                     onOpenFloaterList = { id, name ->
@@ -542,7 +542,7 @@ fun TdayApp(
                                                     usesRootFeedHeader = true,
                                                     createTaskRequestKey = rootCreateTaskRequestKey,
                                                     onCreateTaskRequestHandled = ::consumeRootCreateTaskRequest,
-                                                    scrollToTopRequestKey = rootFloaterScrollToTopRequestKey,
+                                                    scrollToTopRequestKey = floaterTaskHomeScrollToTopRequestKey,
                                                     onRootDockCollapsedChange = {
                                                         rootDockCollapsed = it
                                                     },
@@ -555,7 +555,7 @@ fun TdayApp(
 
                                         if (rootControlsVisible) {
                                             val rootCreateTaskButtonColor =
-                                                if (rootFeedTab == RootFeedTab.FLOATER) {
+                                                if (rootFeedTab == RootFeedTab.FLOATER_TASK_HOME) {
                                                     TdayFloaterAccent
                                                 } else {
                                                     TdayTodayBlue
@@ -584,8 +584,8 @@ fun TdayApp(
                                         }
                                     }
                                 } else {
-                                    HomeScreen(
-                                        uiState = unauthenticatedHomeUiState,
+                                    ScheduledTaskHomeScreen(
+                                        uiState = unauthenticatedScheduledTaskHomeUiState,
                                         onRefresh = {},
                                         onOpenToday = {},
                                         onOpenOverdue = {},
@@ -738,12 +738,12 @@ fun TdayApp(
                     }
 
                     composable(
-                        route = AppRoute.FloaterTodos.route,
+                        route = AppRoute.FloaterTaskHome.route,
                         deepLinks = listOf(navDeepLink { uriPattern = "tday://floater" }),
                     ) { entry ->
                         LaunchedEffect(entry.destination.id) {
-                            rootFeedTab = RootFeedTab.FLOATER
-                            navController.navigate(AppRoute.Home.route) {
+                            rootFeedTab = RootFeedTab.FLOATER_TASK_HOME
+                            navController.navigate(AppRoute.ScheduledTaskHome.route) {
                                 popUpTo(entry.destination.id) { inclusive = true }
                                 launchSingleTop = true
                             }
@@ -778,9 +778,9 @@ fun TdayApp(
                         val createTarget = entry.arguments?.getString("target") ?: "today"
                         if (createTarget.equals("floater", ignoreCase = true)) {
                             LaunchedEffect(entry.destination.id, createTarget) {
-                                rootFeedTab = RootFeedTab.FLOATER
-                                pendingRootFloaterCreateTask = true
-                                navController.navigate(AppRoute.Home.route) {
+                                rootFeedTab = RootFeedTab.FLOATER_TASK_HOME
+                                pendingFloaterTaskHomeCreateTask = true
+                                navController.navigate(AppRoute.ScheduledTaskHome.route) {
                                     popUpTo(entry.destination.id) { inclusive = true }
                                     launchSingleTop = true
                                 }
@@ -788,13 +788,13 @@ fun TdayApp(
                             Box(modifier = Modifier.fillMaxSize())
                         } else {
                             val finishCreateTodayFlow = {
-                                rootFeedTab = RootFeedTab.HOME
-                                val returnedToHome = navController.popBackStack(
-                                    route = AppRoute.Home.route,
+                                rootFeedTab = RootFeedTab.SCHEDULED_TASK_HOME
+                                val returnedToScheduledTaskHome = navController.popBackStack(
+                                    route = AppRoute.ScheduledTaskHome.route,
                                     inclusive = false,
                                 )
-                                if (!returnedToHome) {
-                                    navController.navigate(AppRoute.Home.route) {
+                                if (!returnedToScheduledTaskHome) {
+                                    navController.navigate(AppRoute.ScheduledTaskHome.route) {
                                         popUpTo(AppRoute.CreateTodayTodo.route) { inclusive = true }
                                         launchSingleTop = true
                                     }
@@ -906,8 +906,8 @@ fun TdayApp(
                             pullRefreshEnabled = !appUiState.isLocalMode,
                             summaryAvailable = !appUiState.isLocalMode,
                             onListDeleted = {
-                                navController.navigate(AppRoute.Home.route) {
-                                    popUpTo(AppRoute.Home.route) { inclusive = false }
+                                navController.navigate(AppRoute.ScheduledTaskHome.route) {
+                                    popUpTo(AppRoute.ScheduledTaskHome.route) { inclusive = false }
                                     launchSingleTop = true
                                 }
                             },
@@ -934,9 +934,9 @@ fun TdayApp(
                             pullRefreshEnabled = !appUiState.isLocalMode,
                             summaryAvailable = !appUiState.isLocalMode,
                             onListDeleted = {
-                                rootFeedTab = RootFeedTab.FLOATER
-                                navController.navigate(AppRoute.Home.route) {
-                                    popUpTo(AppRoute.Home.route) { inclusive = false }
+                                rootFeedTab = RootFeedTab.FLOATER_TASK_HOME
+                                navController.navigate(AppRoute.ScheduledTaskHome.route) {
+                                    popUpTo(AppRoute.ScheduledTaskHome.route) { inclusive = false }
                                     launchSingleTop = true
                                 }
                             },
@@ -1279,30 +1279,30 @@ private fun HandleStartupNavigation(
                 AppRoute.ServerSetup.route,
             )
             if (currentRoute in unauthenticatedRoutes) {
-                navigateHome(navController, currentRoute)
+                navigateScheduledTaskHome(navController, currentRoute)
             }
             return@LaunchedEffect
         }
 
         // The reset-password screen is reachable while logged out — don't bounce it
-        // back to the login/home overlay.
-        if (currentRoute != AppRoute.Home.route &&
+        // back to the login/scheduled-task-home overlay.
+        if (currentRoute != AppRoute.ScheduledTaskHome.route &&
             currentRoute != AppRoute.ForgotPassword.route
         ) {
-            navigateHome(navController, currentRoute)
+            navigateScheduledTaskHome(navController, currentRoute)
         }
     }
 }
 
-private fun navigateHome(
+private fun navigateScheduledTaskHome(
     navController: NavHostController,
     currentRoute: String?,
 ) {
-    navController.navigate(AppRoute.Home.route) {
+    navController.navigate(AppRoute.ScheduledTaskHome.route) {
         when (currentRoute) {
             AppRoute.Splash.route -> popUpTo(AppRoute.Splash.route) { inclusive = true }
             AppRoute.Login.route -> popUpTo(AppRoute.Login.route) { inclusive = true }
-            AppRoute.Home.route -> popUpTo(AppRoute.Home.route) { inclusive = true }
+            AppRoute.ScheduledTaskHome.route -> popUpTo(AppRoute.ScheduledTaskHome.route) { inclusive = true }
             AppRoute.ServerSetup.route -> popUpTo(AppRoute.ServerSetup.route) { inclusive = true }
         }
         launchSingleTop = true
@@ -1597,8 +1597,8 @@ private fun SplashScreen(
     }
 }
 
-private fun unauthenticatedHomeUiState(lockedListName: String): HomeUiState {
-    return HomeUiState(
+private fun unauthenticatedScheduledTaskHomeUiState(lockedListName: String): ScheduledTaskHomeUiState {
+    return ScheduledTaskHomeUiState(
         isLoading = false,
         summary = DashboardSummary(
             todayCount = 0,

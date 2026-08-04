@@ -87,19 +87,19 @@
       "sinceVersion": null,
       "deepLink": null,
       "helpAnchors": [],
-      "title": "Utama dan Bila-bila",
+      "title": "Dijadualkan dan Bila-bila",
       "summary": "Dua suapan utama yang tenang, boleh ditukar dari dok.",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "T'Day mempunyai dua suapan seiring. Utama menyimpan tugasan berjadual anda untuk hari ini dan seterusnya. Bila-bila menyimpan Floater — tugasan tanpa tarikh. Tukar antara keduanya dari dok di bahagian bawah, dan cipta tugasan dari mana-mana satu."
+            "T'Day mempunyai dua suapan seiring. Tugasan bertarikh anda untuk hari ini dan seterusnya tersimpan dalam suapan Dijadualkan. Bila-bila menyimpan Floater — tugasan tanpa tarikh. Tukar antara keduanya dari dok di bahagian bawah, dan cipta tugasan dari mana-mana satu."
           ]
         }
       ],
-      "searchTitle": "utama dan bila-bila",
-      "searchKeywords": "utama, bila-bila, suapan, dok, akar, navigasi, tab",
-      "searchBody": "dua suapan utama yang tenang, boleh ditukar dari dok. t'day mempunyai dua suapan seiring. utama menyimpan tugasan berjadual anda untuk hari ini dan seterusnya. bila-bila menyimpan floater — tugasan tanpa tarikh. tukar antara keduanya dari dok di bahagian bawah, dan cipta tugasan dari mana-mana satu."
+      "searchTitle": "dijadualkan dan bila-bila",
+      "searchKeywords": "dijadualkan, bila-bila, suapan, dok, akar, navigasi, tab",
+      "searchBody": "dua suapan utama yang tenang, boleh ditukar dari dok. t'day mempunyai dua suapan seiring. tugasan bertarikh anda untuk hari ini dan seterusnya tersimpan dalam suapan dijadualkan. bila-bila menyimpan floater — tugasan tanpa tarikh. tukar antara keduanya dari dok di bahagian bawah, dan cipta tugasan dari mana-mana satu."
     },
     {
       "id": "create-task",
@@ -375,12 +375,12 @@
       "deepLink": null,
       "helpAnchors": [],
       "title": "Floater vs tugasan berjadual",
-      "summary": "Tugasan tanpa tarikh tinggal di Bila-bila; tugasan bertarikh tinggal di Utama.",
+      "summary": "Tugasan tanpa tarikh tinggal dalam suapan Bila-bila; tugasan bertarikh tinggal dalam suapan Dijadualkan.",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Tugasan berjadual mempunyai tarikh tamat tempoh dan muncul di Utama serta kalendar. Floater tiada tarikh — ia menunggu dengan tenang dalam suapan Bila-bila anda sehingga anda bersedia. Guna Floater untuk kerja “suatu hari nanti” yang tidak sepatutnya menyesakkan hari ini."
+            "Tugasan yang mempunyai tarikh tamat tempoh muncul dalam suapan Dijadualkan serta kalendar. Floater tiada tarikh — ia menunggu dengan tenang dalam suapan Bila-bila anda sehingga anda bersedia. Guna Floater untuk kerja “suatu hari nanti” yang tidak sepatutnya menyesakkan hari ini."
           ]
         },
         {
@@ -391,8 +391,8 @@
         }
       ],
       "searchTitle": "floater vs tugasan berjadual",
-      "searchKeywords": "floater, bila-bila, tak berjadual, tanpa tarikh, tugasan, berjadual, perbezaan",
-      "searchBody": "tugasan tanpa tarikh tinggal di bila-bila; tugasan bertarikh tinggal di utama. tugasan berjadual mempunyai tarikh tamat tempoh dan muncul di utama serta kalendar. floater tiada tarikh — ia menunggu dengan tenang dalam suapan bila-bila anda sehingga anda bersedia. guna floater untuk kerja “suatu hari nanti” yang tidak sepatutnya menyesakkan hari ini. floater tidak pernah muncul pada kalendar — ruang itu hanya untuk kerja bertarikh."
+      "searchKeywords": "floater, bila-bila, tak berjadual, tanpa tarikh, tugasan, dijadualkan, perbezaan",
+      "searchBody": "tugasan tanpa tarikh tinggal dalam suapan bila-bila; tugasan bertarikh tinggal dalam suapan dijadualkan. tugasan yang mempunyai tarikh tamat tempoh muncul dalam suapan dijadualkan serta kalendar. floater tiada tarikh — ia menunggu dengan tenang dalam suapan bila-bila anda sehingga anda bersedia. guna floater untuk kerja “suatu hari nanti” yang tidak sepatutnya menyesakkan hari ini. floater tidak pernah muncul pada kalendar — ruang itu hanya untuk kerja bertarikh."
     },
     {
       "id": "resting-floaters",
@@ -450,7 +450,7 @@
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Apabila tugasan terapung sedia menjadi kerja sebenar, gunakan tindakan Jadualkan: pilih masa dan ia berpindah ke Laman Utama sebagai tugasan bertarikh. Arah sebaliknya juga boleh — tugasan tertunggak yang asyik ditangguhkan boleh terapung secara senyap: turunkan tarafnya dan ia kembali ke Bila-bila masa tanpa tarikh, dengan tajuk, nota dan keutamaan dikekalkan."
+            "Apabila tugasan terapung sedia menjadi kerja sebenar, gunakan tindakan Jadualkan: pilih masa dan ia berpindah ke suapan Dijadualkan sebagai tugasan bertarikh. Arah sebaliknya juga boleh — tugasan tertunggak yang asyik ditangguhkan boleh terapung secara senyap: turunkan tarafnya dan ia kembali ke Bila-bila masa tanpa tarikh, dengan tajuk, nota dan keutamaan dikekalkan."
           ]
         },
         {
@@ -462,7 +462,7 @@
       ],
       "searchTitle": "naik taraf & biar terapung",
       "searchKeywords": "naik taraf, jadualkan terapung, turun taraf, biar terapung, tukar, bila-bila masa, alih, tertunggak",
-      "searchBody": "jadualkan tugasan terapung sebagai tugasan sebenar, atau biarkan tugasan tersekat terapung. apabila tugasan terapung sedia menjadi kerja sebenar, gunakan tindakan jadualkan: pilih masa dan ia berpindah ke laman utama sebagai tugasan bertarikh. arah sebaliknya juga boleh — tugasan tertunggak yang asyik ditangguhkan boleh terapung secara senyap: turunkan tarafnya dan ia kembali ke bila-bila masa tanpa tarikh, dengan tajuk, nota dan keutamaan dikekalkan. tugasan berulang tidak boleh terapung — tamatkan siri itu dahulu jika mahu ia tanpa tarikh."
+      "searchBody": "jadualkan tugasan terapung sebagai tugasan sebenar, atau biarkan tugasan tersekat terapung. apabila tugasan terapung sedia menjadi kerja sebenar, gunakan tindakan jadualkan: pilih masa dan ia berpindah ke suapan dijadualkan sebagai tugasan bertarikh. arah sebaliknya juga boleh — tugasan tertunggak yang asyik ditangguhkan boleh terapung secara senyap: turunkan tarafnya dan ia kembali ke bila-bila masa tanpa tarikh, dengan tajuk, nota dan keutamaan dikekalkan. tugasan berulang tidak boleh terapung — tamatkan siri itu dahulu jika mahu ia tanpa tarikh."
     },
     {
       "id": "quick-defer",

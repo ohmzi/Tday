@@ -87,19 +87,19 @@
       "sinceVersion": null,
       "deepLink": null,
       "helpAnchors": [],
-      "title": "Home e In qualsiasi momento",
+      "title": "Pianificato e In qualsiasi momento",
       "summary": "Due feed principali e tranquilli tra cui passare dalla dock.",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "T'Day ha due feed affiancati. Home raccoglie le tue attività pianificate per oggi e oltre. In qualsiasi momento raccoglie i Floater — attività senza data. Passa dall'uno all'altro dalla dock in basso e crea un'attività da entrambi."
+            "T'Day ha due feed affiancati. Il feed Pianificato raccoglie le tue attività con data per oggi e oltre. In qualsiasi momento raccoglie i Floater — attività senza data. Passa dall'uno all'altro dalla dock in basso e crea un'attività da entrambi."
           ]
         }
       ],
-      "searchTitle": "home e in qualsiasi momento",
-      "searchKeywords": "home, in qualsiasi momento, feed, dock, principale, naviga, schede",
-      "searchBody": "due feed principali e tranquilli tra cui passare dalla dock. t'day ha due feed affiancati. home raccoglie le tue attivita pianificate per oggi e oltre. in qualsiasi momento raccoglie i floater — attivita senza data. passa dall'uno all'altro dalla dock in basso e crea un'attivita da entrambi."
+      "searchTitle": "pianificato e in qualsiasi momento",
+      "searchKeywords": "pianificato, in qualsiasi momento, feed, dock, principale, naviga, schede",
+      "searchBody": "due feed principali e tranquilli tra cui passare dalla dock. t'day ha due feed affiancati. il feed pianificato raccoglie le tue attivita con data per oggi e oltre. in qualsiasi momento raccoglie i floater — attivita senza data. passa dall'uno all'altro dalla dock in basso e crea un'attivita da entrambi."
     },
     {
       "id": "create-task",
@@ -374,13 +374,13 @@
       "sinceVersion": null,
       "deepLink": null,
       "helpAnchors": [],
-      "title": "Floater e attività pianificate",
-      "summary": "Le attività senza data vivono in In qualsiasi momento; quelle con data in Home.",
+      "title": "Floater e attività con data",
+      "summary": "Le attività senza data vivono in In qualsiasi momento; quelle con data nel feed Pianificato.",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Un'attività pianificata ha una data di scadenza e appare in Home e nel calendario. Un Floater non ha data — attende in silenzio nel tuo feed In qualsiasi momento finché non sei pronto. Usa i Floater per il lavoro “un giorno” che non deve ingombrare l'oggi."
+            "Un'attività con una data di scadenza appare nel feed Pianificato e nel calendario. Un Floater non ha data — attende in silenzio nel tuo feed In qualsiasi momento finché non sei pronto. Usa i Floater per il lavoro “un giorno” che non deve ingombrare l'oggi."
           ]
         },
         {
@@ -390,9 +390,9 @@
           ]
         }
       ],
-      "searchTitle": "floater e attivita pianificate",
+      "searchTitle": "floater e attivita con data",
       "searchKeywords": "floater, in qualsiasi momento, non pianificato, senza data, attivita, pianificato, differenza",
-      "searchBody": "le attivita senza data vivono in in qualsiasi momento; quelle con data in home. un'attivita pianificata ha una data di scadenza e appare in home e nel calendario. un floater non ha data — attende in silenzio nel tuo feed in qualsiasi momento finche non sei pronto. usa i floater per il lavoro “un giorno” che non deve ingombrare l'oggi. i floater non appaiono mai nel calendario — quello spazio e riservato al lavoro con data."
+      "searchBody": "le attivita senza data vivono in in qualsiasi momento; quelle con data nel feed pianificato. un'attivita con una data di scadenza appare nel feed pianificato e nel calendario. un floater non ha data — attende in silenzio nel tuo feed in qualsiasi momento finche non sei pronto. usa i floater per il lavoro “un giorno” che non deve ingombrare l'oggi. i floater non appaiono mai nel calendario — quello spazio e riservato al lavoro con data."
     },
     {
       "id": "resting-floaters",
@@ -450,7 +450,7 @@
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Quando un fluttuante è pronto a diventare lavoro vero, usa la sua azione Pianifica: scegli un orario e passerà in Home come attività con data. Vale anche il contrario: un'attività in ritardo che continui a rimandare può fluttuare in silenzio; retrocedila e tornerà in Qualsiasi momento senza data, conservando titolo, note e priorità."
+            "Quando un fluttuante è pronto a diventare lavoro vero, usa la sua azione Pianifica: scegli un orario e passerà nel feed Pianificato come attività con data. Vale anche il contrario: un'attività in ritardo che continui a rimandare può fluttuare in silenzio; retrocedila e tornerà in Qualsiasi momento senza data, conservando titolo, note e priorità."
           ]
         },
         {
@@ -462,7 +462,7 @@
       ],
       "searchTitle": "promuovi e lascia fluttuare",
       "searchKeywords": "promuovere, pianificare fluttuante, retrocedere, lascia fluttuare, convertire, in qualsiasi momento, spostare, in ritardo",
-      "searchBody": "pianifica un fluttuante come attivita reale, o lascia fluttuare un'attivita ferma. quando un fluttuante e pronto a diventare lavoro vero, usa la sua azione pianifica: scegli un orario e passera in home come attivita con data. vale anche il contrario: un'attivita in ritardo che continui a rimandare puo fluttuare in silenzio; retrocedila e tornera in qualsiasi momento senza data, conservando titolo, note e priorita. le attivita ricorrenti non possono fluttuare: termina prima la serie se la vuoi senza data."
+      "searchBody": "pianifica un fluttuante come attivita reale, o lascia fluttuare un'attivita ferma. quando un fluttuante e pronto a diventare lavoro vero, usa la sua azione pianifica: scegli un orario e passera nel feed pianificato come attivita con data. vale anche il contrario: un'attivita in ritardo che continui a rimandare puo fluttuare in silenzio; retrocedila e tornera in qualsiasi momento senza data, conservando titolo, note e priorita. le attivita ricorrenti non possono fluttuare: termina prima la serie se la vuoi senza data."
     },
     {
       "id": "quick-defer",
