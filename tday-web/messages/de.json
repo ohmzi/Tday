@@ -715,6 +715,14 @@
       "deleteConfirmCancel": "Abbrechen",
       "deleteConfirmAction": "Löschen",
       "deleteDone": "Lokale Daten gelöscht."
+    },
+    "troubleshooting": {
+      "reset": "App-Cache zurücksetzen",
+      "confirmTitle": "App-Cache zurücksetzen?",
+      "confirmBody": "Löscht den Offline-Cache dieses Geräts und lädt die neueste Version. Deine Aufgaben, Listen und Anmeldung bleiben erhalten.",
+      "confirmAction": "Zurücksetzen",
+      "confirmCancel": "Abbrechen",
+      "resetFailed": "Cache konnte nicht zurückgesetzt werden. Schließe die App, öffne sie erneut und versuche es nochmal."
     }
   },
   "summary": {

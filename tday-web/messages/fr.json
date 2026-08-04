@@ -715,6 +715,14 @@
       "deleteConfirmCancel": "Annuler",
       "deleteConfirmAction": "Supprimer",
       "deleteDone": "Données locales supprimées."
+    },
+    "troubleshooting": {
+      "reset": "Réinitialiser le cache de l'app",
+      "confirmTitle": "Réinitialiser le cache de l'app ?",
+      "confirmBody": "Efface le cache hors ligne de cet appareil et recharge la dernière version. Vos tâches, listes et votre connexion ne sont pas affectées.",
+      "confirmAction": "Réinitialiser",
+      "confirmCancel": "Annuler",
+      "resetFailed": "Impossible de réinitialiser le cache. Fermez puis rouvrez l'app et réessayez."
     }
   },
   "summary": {

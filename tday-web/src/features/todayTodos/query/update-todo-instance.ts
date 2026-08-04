@@ -49,7 +49,7 @@ export const useEditTodoInstance = (
           "todoTimeline",
         ]);
 
-        queryClient.setQueryData(["todo"], (oldTodos: TodoItemType[]) =>
+        queryClient.setQueryData(["todo"], (oldTodos: TodoItemType[] = []) =>
           oldTodos.flatMap((oldTodo) => {
             if (oldTodo.id === newTodo.id) {
               if (newTodo.due > endOfDay(new Date())) {
