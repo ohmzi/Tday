@@ -635,6 +635,7 @@ fun TdayApp(
                                             initialServerUrl = appUiState.serverUrl,
                                             serverErrorMessage = appUiState.error,
                                             serverCanResetTrust = appUiState.canResetServerTrust,
+                                            serverTrustFingerprint = appUiState.pendingServerTrustFingerprint,
                                             pendingApprovalMessage = appUiState.pendingApprovalMessage,
                                             authUiState = authUiState,
                                             onUseLocalMode = {
@@ -662,6 +663,19 @@ fun TdayApp(
                                                     },
                                                 )
                                             },
+                                            onConfirmServerTrust = { rawUrl, fingerprint, onResult ->
+                                                appViewModel.confirmServerTrust(
+                                                    rawUrl = rawUrl,
+                                                    fingerprint = fingerprint,
+                                                    onSuccess = { serverUrl ->
+                                                        onResult(Result.success(serverUrl))
+                                                    },
+                                                    onFailure = { message ->
+                                                        onResult(Result.failure(IllegalStateException(message)))
+                                                    },
+                                                )
+                                            },
+                                            onDismissServerTrust = appViewModel::dismissServerTrustPrompt,
                                             onLogin = { username, password, source ->
                                                 lastAuthUsername = username
                                                 lastAuthPassword = password

@@ -21,6 +21,8 @@ import com.ohmz.tday.domain.DomainEvent
 import com.ohmz.tday.routes.parseDueMinute
 import com.ohmz.tday.routes.parseTodoDateTime
 import com.ohmz.tday.security.FieldEncryption
+import com.ohmz.tday.security.decryptRequired
+import com.ohmz.tday.security.encryptRequired
 import com.ohmz.tday.shared.model.CompletedFloaterDto
 import com.ohmz.tday.shared.model.CompletedTodoDto
 import com.ohmz.tday.shared.model.ExportedTodoDto
@@ -202,7 +204,7 @@ class ExportServiceImpl(
             val todo = exported.todo
             Todos.insert {
                 it[Todos.id] = todo.id
-                it[Todos.title] = todo.title
+                it[Todos.title] = fieldEncryption.encryptRequired("title", todo.title)
                 it[Todos.description] = fieldEncryption.encryptIfSensitive("description", todo.description)
                 it[Todos.priority] = Priority.fromApiOrDefault(todo.priority)
                 it[Todos.pinned] = todo.pinned
@@ -222,7 +224,7 @@ class ExportServiceImpl(
         bundle.floaters.sortedBy { it.order ?: Int.MAX_VALUE }.forEach { floater ->
             Floaters.insert {
                 it[Floaters.id] = floater.id
-                it[Floaters.title] = floater.title
+                it[Floaters.title] = fieldEncryption.encryptRequired("title", floater.title)
                 it[Floaters.description] = fieldEncryption.encryptIfSensitive("description", floater.description)
                 it[Floaters.priority] = Priority.fromApiOrDefault(floater.priority)
                 it[Floaters.pinned] = floater.pinned
@@ -252,7 +254,8 @@ class ExportServiceImpl(
                 it[TodoInstances.todoId] = todoId
                 it[TodoInstances.recurId] = inst.recurId
                 it[TodoInstances.instanceDate] = instanceDate
-                it[TodoInstances.overriddenTitle] = inst.overriddenTitle
+                it[TodoInstances.overriddenTitle] =
+                    fieldEncryption.encryptIfSensitive("overriddenTitle", inst.overriddenTitle)
                 it[TodoInstances.overriddenDescription] =
                     fieldEncryption.encryptIfSensitive("overriddenDescription", inst.overriddenDescription)
                 it[TodoInstances.overriddenPriority] = inst.overriddenPriority?.let(Priority::fromApiOrDefault)
@@ -273,7 +276,7 @@ class ExportServiceImpl(
             CompletedTodos.insert {
                 it[CompletedTodos.id] = completed.id
                 it[CompletedTodos.originalTodoID] = completed.originalTodoID ?: completed.id
-                it[CompletedTodos.title] = completed.title
+                it[CompletedTodos.title] = fieldEncryption.encryptRequired("title", completed.title)
                 it[CompletedTodos.description] =
                     fieldEncryption.encryptIfSensitive("description", completed.description)
                 it[CompletedTodos.priority] = Priority.fromApiOrDefault(completed.priority)
@@ -293,7 +296,7 @@ class ExportServiceImpl(
             CompletedFloaters.insert {
                 it[CompletedFloaters.id] = completed.id
                 it[CompletedFloaters.originalFloaterID] = completed.originalFloaterID ?: completed.id
-                it[CompletedFloaters.title] = completed.title
+                it[CompletedFloaters.title] = fieldEncryption.encryptRequired("title", completed.title)
                 it[CompletedFloaters.description] =
                     fieldEncryption.encryptIfSensitive("description", completed.description)
                 it[CompletedFloaters.priority] = Priority.fromApiOrDefault(completed.priority)
@@ -387,7 +390,7 @@ class ExportServiceImpl(
 
     private fun ResultRow.toTodoDto() = TodoDto(
         id = this[Todos.id],
-        title = this[Todos.title],
+        title = fieldEncryption.decryptRequired(this[Todos.title]),
         description = fieldEncryption.decryptIfEncrypted(this[Todos.description]),
         pinned = this[Todos.pinned],
         priority = this[Todos.priority].name,
@@ -406,7 +409,7 @@ class ExportServiceImpl(
         id = this[TodoInstances.id],
         recurId = this[TodoInstances.recurId],
         instanceDate = this[TodoInstances.instanceDate].toString(),
-        overriddenTitle = this[TodoInstances.overriddenTitle],
+        overriddenTitle = fieldEncryption.decryptIfEncrypted(this[TodoInstances.overriddenTitle]),
         overriddenDescription = fieldEncryption.decryptIfEncrypted(this[TodoInstances.overriddenDescription]),
         overriddenPriority = this[TodoInstances.overriddenPriority]?.name,
         overriddenDue = this[TodoInstances.overriddenDue]?.toString(),
@@ -415,7 +418,7 @@ class ExportServiceImpl(
 
     private fun ResultRow.toFloaterDto() = FloaterDto(
         id = this[Floaters.id],
-        title = this[Floaters.title],
+        title = fieldEncryption.decryptRequired(this[Floaters.title]),
         description = fieldEncryption.decryptIfEncrypted(this[Floaters.description]),
         pinned = this[Floaters.pinned],
         priority = this[Floaters.priority].name,
@@ -430,7 +433,7 @@ class ExportServiceImpl(
     private fun ResultRow.toCompletedTodoDto() = CompletedTodoDto(
         id = this[CompletedTodos.id],
         originalTodoID = this[CompletedTodos.originalTodoID],
-        title = this[CompletedTodos.title],
+        title = fieldEncryption.decryptRequired(this[CompletedTodos.title]),
         description = fieldEncryption.decryptIfEncrypted(this[CompletedTodos.description]),
         priority = this[CompletedTodos.priority].name,
         due = this[CompletedTodos.due].toString(),
@@ -448,7 +451,7 @@ class ExportServiceImpl(
     private fun ResultRow.toCompletedFloaterDto() = CompletedFloaterDto(
         id = this[CompletedFloaters.id],
         originalFloaterID = this[CompletedFloaters.originalFloaterID],
-        title = this[CompletedFloaters.title],
+        title = fieldEncryption.decryptRequired(this[CompletedFloaters.title]),
         description = fieldEncryption.decryptIfEncrypted(this[CompletedFloaters.description]),
         priority = this[CompletedFloaters.priority].name,
         completedAt = this[CompletedFloaters.completedAt].toString(),

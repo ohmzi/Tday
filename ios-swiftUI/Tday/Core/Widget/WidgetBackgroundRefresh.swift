@@ -61,6 +61,10 @@ enum WidgetBackgroundRefresh {
                 replayPendingMutations: true,
                 notifyOfflineFailure: false
             )
+            // Rides the same wake-up rather than adding a background mode of its own. It is a
+            // no-op for anyone who is not a signed-in admin, and it never throws, so the
+            // completion below is still reached on every path.
+            await AppContainer.shared.securityAlertPoller.pollForNewAlerts()
             if case .success = result {
                 task.setTaskCompleted(success: true)
             } else {

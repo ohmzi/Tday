@@ -16,9 +16,14 @@ fun Route.loginChallengeRoutes() {
     val userService by inject<UserService>()
     val authThrottle by inject<AuthThrottle>()
     val passwordProof by inject<PasswordProof>()
+    val abuseGuard by inject<AbuseGuard>()
 
     route("/login-challenge") {
         post {
+            // Part of the sign-in path: blocked here too, or an abuser keeps the free PBKDF2
+            // parameter lookup that precedes every credential attempt.
+            if (call.rejectIfAbuseBlocked(abuseGuard, AbuseScope.auth)) return@post
+
             val body = call.receive<LoginChallengeRequest>()
             val username = passwordProof.normalizeUsername(body.username)
             if (username.isNullOrBlank()) {

@@ -3,6 +3,8 @@ package com.ohmz.tday.services
 import com.ohmz.tday.db.tables.CronLogs
 import com.ohmz.tday.db.tables.Todos
 import com.ohmz.tday.db.util.CuidGenerator
+import com.ohmz.tday.security.FieldEncryption
+import com.ohmz.tday.security.decryptRequired
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
@@ -44,6 +46,7 @@ import java.time.ZoneOffset
  */
 class ReminderPushScheduler(
     private val pushService: PushNotificationService,
+    private val fieldEncryption: FieldEncryption,
 ) {
     private val logger = LoggerFactory.getLogger(ReminderPushScheduler::class.java)
 
@@ -80,7 +83,10 @@ class ReminderPushScheduler(
                         (Todos.due greater windowStart) and
                         (Todos.due lessEq now)
                 }
-                .map { Triple(it[Todos.id], it[Todos.userID], it[Todos.title]) }
+                // Titles are encrypted at rest; the push body must carry plaintext.
+                .map {
+                    Triple(it[Todos.id], it[Todos.userID], fieldEncryption.decryptRequired(it[Todos.title]))
+                }
         }
 
         var sent = 0

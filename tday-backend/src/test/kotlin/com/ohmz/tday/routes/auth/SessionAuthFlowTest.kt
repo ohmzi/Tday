@@ -12,7 +12,10 @@ import com.ohmz.tday.plugins.configureSecurity
 import com.ohmz.tday.plugins.configureSerialization
 import com.ohmz.tday.routes.userRoutes
 import com.ohmz.tday.security.AuthCachedUser
+import com.ohmz.tday.security.AbuseGuard
 import com.ohmz.tday.security.AuthThrottle
+import com.ohmz.tday.security.FailureOutcome
+import com.ohmz.tday.security.FakeAbuseGuard
 import com.ohmz.tday.security.AuthUserCache
 import com.ohmz.tday.security.CredentialEnvelope
 import com.ohmz.tday.security.CredentialEnvelopeInput
@@ -355,6 +358,7 @@ class SessionAuthFlowTest {
                     single<CredentialEnvelope> { FakeCredentialEnvelope() }
                     single<PasswordProof> { FakePasswordProof() }
                     single<PasswordService> { ValidPasswordService() }
+                    single<AbuseGuard> { FakeAbuseGuard() }
                 },
             )
         }
@@ -481,7 +485,7 @@ class SessionAuthFlowTest {
         override suspend fun recordFailure(
             request: io.ktor.server.request.ApplicationRequest,
             identifier: String?,
-        ) = Unit
+        ): FailureOutcome = FailureOutcome()
 
         override suspend fun clearFailures(
             request: io.ktor.server.request.ApplicationRequest,

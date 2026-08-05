@@ -2,6 +2,8 @@ package com.ohmz.tday.di
 
 import com.ohmz.tday.config.AppConfig
 import com.ohmz.tday.config.DatabaseConfig
+import com.ohmz.tday.security.AbuseGuard
+import com.ohmz.tday.security.AbuseGuardImpl
 import com.ohmz.tday.security.AuthThrottle
 import com.ohmz.tday.security.AuthThrottleImpl
 import com.ohmz.tday.security.AuthUserCache
@@ -49,6 +51,8 @@ import com.ohmz.tday.services.PushNotificationServiceImpl
 import com.ohmz.tday.services.RealtimeService
 import com.ohmz.tday.services.RealtimeServiceImpl
 import com.ohmz.tday.services.ReminderPushScheduler
+import com.ohmz.tday.services.SecurityAlertService
+import com.ohmz.tday.services.SecurityAlertServiceImpl
 import com.ohmz.tday.services.SecurityQuestionService
 import com.ohmz.tday.services.SecurityQuestionServiceImpl
 import com.ohmz.tday.services.TaskStepService
@@ -83,7 +87,8 @@ val securityModule = module {
     single<FieldEncryption> { FieldEncryptionImpl(get()) }
     single<PasswordService> { PasswordServiceImpl(get()) }
     single<PasswordProof> { PasswordProofImpl(get(), get()) }
-    single<AuthThrottle> { AuthThrottleImpl(get(), get(), get()) }
+    single<AuthThrottle> { AuthThrottleImpl(get(), get(), get(), get()) }
+    single<AbuseGuard> { AbuseGuardImpl(get(), get(), get(), get()) }
     single<CredentialEnvelope> { CredentialEnvelopeImpl(get()) }
     single<RequestRateLimiter> { InMemoryRequestRateLimiter(get(), get()) }
     single { AuthUserCache() }
@@ -101,12 +106,12 @@ val serviceModule = module {
     single { RealtimePublisher(get(), get(), get(), get(), get()) }
     single<TodoService> { TodoServiceImpl(get(), get(), get(), get()) }
     single<FloaterService> { FloaterServiceImpl(get(), get(), get(), get()) }
-    single<ListService> { ListServiceImpl(get(), get(), get()) }
-    single<FloaterListService> { FloaterListServiceImpl(get(), get(), get()) }
+    single<ListService> { ListServiceImpl(get(), get(), get(), get()) }
+    single<FloaterListService> { FloaterListServiceImpl(get(), get(), get(), get()) }
     single<UserService> { UserServiceImpl(get()) }
     single<SecurityQuestionService> { SecurityQuestionServiceImpl(get(), get(), get(), get()) }
     single<CompletedTodoService> { CompletedTodoServiceImpl(get(), get()) }
-    single<TaskStepService> { TaskStepServiceImpl(get(), get()) }
+    single<TaskStepService> { TaskStepServiceImpl(get(), get(), get()) }
     single<CompletedFloaterService> { CompletedFloaterServiceImpl(get(), get()) }
     single<ExportService> { ExportServiceImpl(get(), get(), get()) }
     single<PreferencesService> { PreferencesServiceImpl() }
@@ -115,7 +120,8 @@ val serviceModule = module {
     single<RealtimeService> { RealtimeServiceImpl() }
     single<AdminService> { AdminServiceImpl(get(), get()) }
     single<PushNotificationService> { PushNotificationServiceImpl(get()) }
-    single { ReminderPushScheduler(get()) }
+    single<SecurityAlertService> { SecurityAlertServiceImpl(get(), get()) }
+    single { ReminderPushScheduler(get(), get()) }
     single { com.ohmz.tday.services.RetentionScheduler(get()) }
     single<UserApiKeyService> { UserApiKeyServiceImpl(get()) }
     single<CalendarFeedService> { CalendarFeedServiceImpl(get()) }

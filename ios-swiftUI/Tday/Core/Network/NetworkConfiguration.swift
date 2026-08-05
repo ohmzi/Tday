@@ -17,6 +17,10 @@ final class NetworkConfiguration: NSObject, URLSessionDelegate {
     /// Hosts that presented an unrecognised certificate, with the fingerprint they offered, so the
     /// setup screen can show it and ask the user to confirm.
     private var trustUnknownHosts: [String: String?] = [:]
+    /// Public hosts refused for presenting a certificate the system could not verify. Kept apart
+    /// from `trustUnknownHosts` because that one drives the "Trust this certificate" prompt, which
+    /// must never appear for a public host.
+    private var publicTrustRefusalHosts: Set<String> = []
     /// Host -> the exact fingerprint the user just approved. Pinning the *expected* value (rather
     /// than "whatever answers next") means a certificate swapped between the confirm and the retry
     /// still fails.
@@ -109,10 +113,11 @@ final class NetworkConfiguration: NSObject, URLSessionDelegate {
         }
 
         let host = challenge.protectionSpace.host.lowercased()
-        if isLocalAddress(host: host) {
-            completionHandler(.performDefaultHandling, nil)
-            return
-        }
+        // Whether this host is reachable only from a private network. It decides whether the
+        // user may ever be OFFERED certificate enrollment below; it does not by itself grant
+        // any trust. Local hosts used to short-circuit to `performDefaultHandling` here, which
+        // meant a self-signed LAN server simply failed the handshake with no way through.
+        let isPrivateHost = isLocalAddress(host: host)
 
         // Certificates that already validate against the system (public CA) trust
         // store use standard CA validation — no pinning. This is the common case and
@@ -137,7 +142,8 @@ final class NetworkConfiguration: NSObject, URLSessionDelegate {
         let decision = Self.decideTrust(
             fingerprint: fingerprint,
             storedPin: secureStore.trustedFingerprint(for: host),
-            enrollmentExpecting: consumeEnrollmentExpectation(for: host)
+            enrollmentExpecting: consumeEnrollmentExpectation(for: host),
+            isPrivateHost: isPrivateHost
         )
 
         switch decision {
@@ -152,6 +158,12 @@ final class NetworkConfiguration: NSObject, URLSessionDelegate {
         case .rejectUnknown:
             recordTrustUnknown(host: host, fingerprint: fingerprint)
             completionHandler(.cancelAuthenticationChallenge, nil)
+        case .rejectUntrustedPublic:
+            // Deliberately NOT recorded as `trustUnknown`: that record is what makes the setup
+            // screen offer a "Trust this certificate" button, and on hostile wifi that prompt is
+            // the attack. This host gets a plain refusal instead.
+            recordPublicTrustRefusal(host: host)
+            completionHandler(.cancelAuthenticationChallenge, nil)
         }
     }
 
@@ -163,16 +175,39 @@ final class NetworkConfiguration: NSObject, URLSessionDelegate {
         case enroll(String)
         /// A pin exists and this certificate is not it — the server changed, or someone is in the middle.
         case rejectMismatch
-        /// No pin, no approval, or no usable fingerprint. Refuse and let the UI offer enrollment.
+        /// No pin, no approval, or no usable fingerprint, on a PRIVATE host. Refuse, and let the
+        /// UI offer enrollment so a self-signed LAN server can be adopted deliberately.
         case rejectUnknown
+        /// A public host presented a certificate the system cannot verify. Refuse outright — the
+        /// UI must not offer to trust it.
+        case rejectUntrustedPublic
     }
 
     /// Pure so the trust rules can be unit-tested without fabricating a `SecTrust`.
+    ///
+    /// `isPrivateHost` is the LAN/private-network fact from `isLocalAddress`. It gates
+    /// ENROLLMENT: a certificate the system cannot verify is only ever adoptable on a host that
+    /// is unreachable from the public internet. For a public hostname the honest answer is that
+    /// the certificate should have chained to a public CA and did not, so there is no safe story
+    /// to tell the user — on hostile public wifi, offering them a "trust this fingerprint" button
+    /// hands the attacker the one confirmation they need. Note this is only reached AFTER system
+    /// validation has already failed, so the owner's real setup (public host, public CA) never
+    /// gets here and never sees a prompt.
     static func decideTrust(
         fingerprint: String?,
         storedPin: String?,
-        enrollmentExpecting: String?
+        enrollmentExpecting: String?,
+        isPrivateHost: Bool
     ) -> TrustDecision {
+        guard isPrivateHost else {
+            // An existing pin is still honoured (and a change still reads as a mismatch): pinning
+            // one exact key is strictly stronger than CA validation, and that pin can only have
+            // come from a deliberate, on-screen approval. What a public host can never do is
+            // acquire a NEW pin — no enrollment, no prompt, whatever it presents.
+            guard let storedPin, let fingerprint else { return .rejectUntrustedPublic }
+            return storedPin == fingerprint ? .accept : .rejectMismatch
+        }
+
         // A trust whose fingerprint cannot be derived can never be pinned or compared, so it must
         // never be accepted — the old code fell through to `.useCredential` here.
         guard let fingerprint else { return .rejectUnknown }
@@ -213,6 +248,21 @@ final class NetworkConfiguration: NSObject, URLSessionDelegate {
         trustFailureLock.lock()
         defer { trustFailureLock.unlock() }
         return trustUnknownHosts.removeValue(forKey: host.lowercased())
+    }
+
+    private func recordPublicTrustRefusal(host: String) {
+        trustFailureLock.lock()
+        defer { trustFailureLock.unlock() }
+        publicTrustRefusalHosts.insert(host.lowercased())
+    }
+
+    /// Returns true (and clears the record) if the last connection to `host` was refused because
+    /// it is a public host whose certificate the system could not verify. No enrollment is on
+    /// offer for it, so the caller must surface a plain refusal rather than a trust prompt.
+    func consumePublicTrustRefusal(host: String) -> Bool {
+        trustFailureLock.lock()
+        defer { trustFailureLock.unlock() }
+        return publicTrustRefusalHosts.remove(host.lowercased()) != nil
     }
 
     /// Authorises pinning one specific fingerprint for `host` on the next handshake.

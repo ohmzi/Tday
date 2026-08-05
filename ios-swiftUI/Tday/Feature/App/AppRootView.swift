@@ -18,6 +18,8 @@ struct AppRootView: View {
     @State private var floaterTaskHomeScrollToTopRequestID = 0
     @State private var rootDockCollapsed = false
     @State private var rootControlsVisible = true
+    // Optional biometric gate, default OFF. When disabled every member below is inert.
+    @State private var appLock = AppLockController()
     @Environment(\.scenePhase) private var scenePhase
 
     init(container: AppContainer) {
@@ -228,6 +230,29 @@ struct AppRootView: View {
                 .animation(.snappy(duration: 0.3), value: container.snackbarManager.content?.id)
             }
         }
+        // FALLBACK layer only. Applied INSIDE the theme/locale modifiers below so it is themed
+        // and localized like the rest of the app, and it covers every state above it — splash,
+        // onboarding, all pushed destinations. What it CANNOT cover is a `.sheet` or
+        // `.fullScreenCover`: those are presented in their own layer on top of this whole view,
+        // so a create-task sheet left open at backgrounding used to stay fully readable over the
+        // "locked" app. `AppLockWindowHost` below is the real gate; this stays for the case where
+        // no window scene is available yet. Renders nothing while the setting is off.
+        .overlay {
+            switch appLockCoverMode {
+            case .gate:
+                AppLockGateView(
+                    isAuthenticating: appLock.isAuthenticating,
+                    failureMessage: appLock.failureMessage,
+                    onUnlock: {
+                        await appLock.authenticate()
+                    }
+                )
+            case .privacyCover:
+                AppLockPrivacyCover()
+            case .hidden:
+                EmptyView()
+            }
+        }
         .tdayAppTheme(themeMode: appViewModel.themeMode)
         // One provider for every contextual "?" help link (GuideHelpLink):
         // pushes the guide onto the main navigation stack, pre-scrolled.
@@ -244,6 +269,25 @@ struct AppRootView: View {
                 isEnabled: scenePhase == .active
             )
         )
+        // The gate that actually holds: a separate UIWindow above every presented surface.
+        // Values are read here, in `body`, so Observation re-runs this view (and therefore the
+        // representable's update) whenever the lock state changes.
+        .background(
+            AppLockWindowHost(
+                mode: appLockCoverMode,
+                isAuthenticating: appLock.isAuthenticating,
+                failureMessage: appLock.failureMessage,
+                themeMode: appViewModel.themeMode,
+                onUnlock: {
+                    await appLock.authenticate()
+                }
+            )
+        )
+        // Cold start: `.onChange(of: scenePhase)` never fires for the launch value, so the
+        // first prompt has to come from here. No-op while the setting is off.
+        .task {
+            await appLock.authenticateIfNeeded()
+        }
         .task {
             if !appViewModel.hasCompletedInitialBootstrap {
                 await appViewModel.bootstrap()
@@ -278,6 +322,11 @@ struct AppRootView: View {
         .onChange(of: scenePhase) { _, phase in
             switch phase {
             case .active:
+                // Foreground return: re-prompt while the gate is armed.
+                Task {
+                    await appLock.authenticateIfNeeded()
+                }
+                container.reapplyDatabaseProtection()
                 Task {
                     await container.todoRepository.drainWidgetCompletions()
                 }
@@ -291,14 +340,28 @@ struct AppRootView: View {
                 Task {
                     await appViewModel.reconnectAfterForeground()
                 }
-            case .inactive, .background:
+            case .background:
+                // Re-arm the gate only on a real backgrounding. Doing it on .inactive would
+                // fire while the Face ID sheet itself is up (and on every notification-centre
+                // pull), which would relock mid-prompt and loop.
+                appLock.lockIfEnabled()
+                // Sidecars SQLite recreated during this session are born with the container
+                // default; re-stamp before the app is suspended and the files sit at rest.
+                container.reapplyDatabaseProtection()
                 hasLeftActiveScene = true
                 // Arm the ~30-min background widget refresh each time we leave the foreground.
+                WidgetBackgroundRefresh.scheduleNext()
+            case .inactive:
+                hasLeftActiveScene = true
                 WidgetBackgroundRefresh.scheduleNext()
             @unknown default:
                 break
             }
         }
+    }
+
+    private var appLockCoverMode: AppLockCoverMode {
+        appLock.coverMode(isSceneActive: scenePhase == .active)
     }
 
     // Kept out of `body`: as part of the ~300-line body expression this switch
@@ -741,6 +804,203 @@ private struct AppSnackbar: View {
 
 private struct PendingRootCreateTask {
     let tab: RootFeedTab
+}
+
+/// Full-screen cover shown while the optional app lock is armed. Opaque on purpose: it has to
+/// hide the content underneath, including in the app-switcher snapshot.
+private struct AppLockGateView: View {
+    let isAuthenticating: Bool
+    let failureMessage: String?
+    let onUnlock: () async -> Void
+
+    @Environment(\.tdayColors) private var colors
+
+    var body: some View {
+        ZStack {
+            colors.background
+                .ignoresSafeArea()
+
+            VStack(spacing: 18) {
+                Image(systemName: "lock.fill")
+                    .font(.system(size: 34, weight: .semibold))
+                    .foregroundStyle(colors.primary)
+
+                Text(L("T'Day is locked"))
+                    .font(.tdayRounded(size: 20, weight: .heavy))
+                    .foregroundStyle(colors.onSurface)
+
+                if let failureMessage {
+                    Text(failureMessage)
+                        .font(.tdayRounded(size: 14, weight: .bold))
+                        .foregroundStyle(colors.error)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Button {
+                    Task { await onUnlock() }
+                } label: {
+                    HStack(spacing: 8) {
+                        if isAuthenticating {
+                            ProgressView().tint(colors.onPrimary)
+                        }
+                        Text(L("Unlock"))
+                            .font(.tdayRounded(size: 15, weight: .bold))
+                            .foregroundStyle(colors.onPrimary)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 48)
+                    .background {
+                        Capsule(style: .continuous).fill(colors.primary)
+                    }
+                }
+                .buttonStyle(.plain)
+                .opacity(isAuthenticating ? 0.72 : 1)
+                .disabled(isAuthenticating)
+            }
+            .padding(.horizontal, 40)
+            .frame(maxWidth: 430)
+        }
+        // Swallow taps so nothing underneath can be driven blind through the cover.
+        .contentShape(Rectangle())
+        .onTapGesture {}
+    }
+}
+
+/// Hosts the app-lock UI in its OWN `UIWindow`, above every presented surface.
+///
+/// A root-level `.overlay` renders inside the app's view hierarchy, and a `.sheet` /
+/// `.fullScreenCover` is presented on top of that hierarchy — so a create-task sheet that was
+/// open when the app was backgrounded stayed fully readable over the "locked" app, and showed up
+/// in the app-switcher snapshot. A window at `.alert + 1` sits above those presentation layers,
+/// so modals get covered too. The biometric prompt is drawn by the system out of process and
+/// still appears above this window.
+///
+/// Itself invisible: it is only here to give the coordinator a view (and therefore a window
+/// scene) to hang the lock window off, and to be re-run whenever `mode` changes.
+private struct AppLockWindowHost: UIViewRepresentable {
+    let mode: AppLockCoverMode
+    let isAuthenticating: Bool
+    let failureMessage: String?
+    let themeMode: AppThemeMode
+    let onUnlock: () async -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator()
+    }
+
+    func makeUIView(context: Context) -> UIView {
+        let view = UIView(frame: .zero)
+        view.isUserInteractionEnabled = false
+        view.alpha = 0.01
+        return view
+    }
+
+    func updateUIView(_ uiView: UIView, context: Context) {
+        context.coordinator.update(
+            isPresenting: mode != .hidden,
+            content: AnyView(lockContent),
+            hostView: uiView
+        )
+    }
+
+    static func dismantleUIView(_ uiView: UIView, coordinator: Coordinator) {
+        // SwiftUI tears representables down on the main thread; the window must go with the
+        // view or it would stay on screen with nothing left to drive it.
+        MainActor.assumeIsolated {
+            coordinator.teardown()
+        }
+    }
+
+    // The theme has to be re-applied here: this content is rendered into a different window, so
+    // it inherits nothing from the modifiers wrapping the app's own root view. `L()` resolves
+    // through the swizzled main bundle, so localization needs no environment.
+    @ViewBuilder
+    private var lockContent: some View {
+        Group {
+            switch mode {
+            case .gate:
+                AppLockGateView(
+                    isAuthenticating: isAuthenticating,
+                    failureMessage: failureMessage,
+                    onUnlock: onUnlock
+                )
+            case .privacyCover:
+                AppLockPrivacyCover()
+            case .hidden:
+                EmptyView()
+            }
+        }
+        .tdayAppTheme(themeMode: themeMode)
+        .tdayAppTypography()
+    }
+
+    @MainActor
+    final class Coordinator {
+        private var window: UIWindow?
+        private var host: UIHostingController<AnyView>?
+
+        func update(isPresenting: Bool, content: AnyView, hostView: UIView) {
+            guard isPresenting else {
+                teardown()
+                return
+            }
+
+            guard let scene = hostView.window?.windowScene ?? Self.foregroundWindowScene() else {
+                // No scene yet (cold start, before the view is in a window). The in-hierarchy
+                // fallback overlay is already covering the content in this window.
+                return
+            }
+
+            if let host, let window, window.windowScene === scene {
+                host.rootView = content
+                window.isHidden = false
+                return
+            }
+
+            teardown()
+            let controller = UIHostingController(rootView: content)
+            let lockWindow = UIWindow(windowScene: scene)
+            lockWindow.rootViewController = controller
+            // Above sheets and fullScreenCovers (which live at `.normal`) and above UIKit alerts.
+            lockWindow.windowLevel = .alert + 1
+            // Visible but never made key: the app's own window keeps first-responder duties,
+            // while hit-testing still reaches this one first because it sits higher.
+            lockWindow.isHidden = false
+            window = lockWindow
+            host = controller
+        }
+
+        func teardown() {
+            window?.isHidden = true
+            window?.rootViewController = nil
+            window = nil
+            host = nil
+        }
+
+        private static func foregroundWindowScene() -> UIWindowScene? {
+            UIApplication.shared.connectedScenes
+                .compactMap { $0 as? UIWindowScene }
+                .first { $0.activationState != .unattached }
+        }
+    }
+}
+
+/// Plain opaque cover for the app-switcher snapshot while the lock is enabled but not yet
+/// re-armed. Carries no task content by design.
+private struct AppLockPrivacyCover: View {
+    @Environment(\.tdayColors) private var colors
+
+    var body: some View {
+        ZStack {
+            colors.background
+                .ignoresSafeArea()
+
+            Image(systemName: "lock.fill")
+                .font(.system(size: 34, weight: .semibold))
+                .foregroundStyle(colors.primary)
+        }
+    }
 }
 
 private struct TdayKeyboardPrewarmView: UIViewRepresentable {

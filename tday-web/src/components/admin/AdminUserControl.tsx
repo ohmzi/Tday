@@ -1,7 +1,6 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/providers/AuthProvider";
 import { Button } from "@/components/ui/button";
-import { SheetCard } from "@/components/ui/sheet-chrome";
 import { ArrowUpRight, Check, Copy, KeyRound, Loader2, Trash2, Users, X } from "lucide-react";
 import {
   Dialog,
@@ -19,17 +18,14 @@ import { api } from "@/lib/api-client";
 import { getErrorMessage } from "@/lib/error-message";
 import { cn } from "@/lib/utils";
 import { Link } from "@/lib/navigation";
-
-// Cohesive action-button styling shared by every row button (approve/deny/reset/
-// delete) so they read as one family: same height, radius, weight, and icon gap —
-// full-width on mobile, auto-width from sm up. Colour conveys intent.
-const ACTION_BUTTON_BASE =
-  "h-10 flex-1 gap-2 rounded-xl text-sm font-bold transition-colors sm:flex-none sm:px-4";
-const ACTION_PRIMARY = "bg-primary text-primary-foreground hover:bg-primary/90";
-const ACTION_NEUTRAL =
-  "border border-border/60 bg-muted/50 text-foreground hover:bg-muted";
-const ACTION_DESTRUCTIVE =
-  "border border-destructive/30 bg-destructive/10 text-destructive hover:bg-destructive/20";
+import {
+  ACTION_BUTTON_BASE,
+  ACTION_DESTRUCTIVE,
+  ACTION_NEUTRAL,
+  ACTION_PRIMARY,
+  SectionCard,
+} from "@/components/admin/adminChrome";
+import AdminSecurityPanel from "@/components/admin/AdminSecurityPanel";
 import { CURRENT_APP_VERSION, formatDisplayVersion } from "@/features/release/lib/release";
 
 type AdminUser = {
@@ -63,15 +59,6 @@ type ApprovedUserRowProps = {
   onResetPassword: (userId: string) => void;
   onClearResetRequest: (userId: string) => void;
 };
-
-/** Rounded grouped section card with a big ExtraBold title — mirrors the
- * native settings cards so the admin page feels at home on mobile. */
-const SectionCard = ({ title, children }: { title: string; children: ReactNode }) => (
-  <SheetCard className="space-y-4 p-[18px]">
-    <h2 className="text-[1.4rem] font-black leading-tight text-foreground">{title}</h2>
-    {children}
-  </SheetCard>
-);
 
 /** Renders a pending-user row with the approve action wired to the current request state. */
 const PendingApprovalRow = ({
@@ -553,6 +540,8 @@ export default function AdminUserControl() {
           />
         </div>
       </SectionCard>
+
+      <AdminSecurityPanel />
 
       <SectionCard title="App version">
         <VersionLinkRow />

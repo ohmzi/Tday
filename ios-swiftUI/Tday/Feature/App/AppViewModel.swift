@@ -243,6 +243,9 @@ final class AppViewModel {
             startSyncLoop()
             await container.reminderScheduler.requestAuthorization()
             await rescheduleReminders()
+            // Reuses the authorization just requested above; no-op unless this session is an
+            // approved admin. Runs after `finishBootstrap()`, so it never delays first paint.
+            await container.securityAlertPoller.pollForNewAlerts()
             await refreshVersionInfo()
             return
         }
@@ -658,6 +661,8 @@ final class AppViewModel {
 
         isForegroundReconnectInFlight = true
         await reconnectWithServer(showOfflineNotice: true)
+        // Foreground half of the security-alert delivery (the other is the background refresh).
+        await container.securityAlertPoller.pollForNewAlerts()
         isForegroundReconnectInFlight = false
     }
 
@@ -1038,6 +1043,8 @@ final class AppViewModel {
                 return "This server's certificate changed. Reset saved server trust only if you recognize this server."
             case .untrustedCertificate:
                 return "This server uses a certificate your device can't verify. Check the fingerprint before trusting it."
+            case .untrustedPublicCertificate:
+                return "This server's certificate can't be verified, and it isn't on your local network. Someone may be intercepting this connection, so T'Day won't offer to trust it. Use a server with a valid certificate."
             }
         }
 
@@ -1082,6 +1089,12 @@ final class AppViewModel {
     private func shouldOfferServerTrustReset(for error: Error) -> Bool {
         if case .certificateChanged? = error as? ServerProbeError {
             return true
+        }
+        // Nothing is pinned for a refused public host, so "reset saved server trust" has nothing
+        // to clear — it would just look like a way to push past the refusal. Match the message
+        // fallback below explicitly rather than letting the word "certificate" trip it.
+        if case .untrustedPublicCertificate? = error as? ServerProbeError {
+            return false
         }
 
         let message = (error as? APIError)?.message ?? error.localizedDescription

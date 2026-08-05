@@ -160,6 +160,13 @@ struct SettingsScreen: View {
 
             settingsListRow {
                 SettingsSectionCard {
+                    SettingsSectionTitle("Privacy")
+                    SettingsAppLockSection()
+                }
+            }
+
+            settingsListRow {
+                SettingsSectionCard {
                     SettingsWorkspaceContent(
                         syncStatus: viewModel.syncStatus,
                         onSyncNow: {
@@ -318,6 +325,38 @@ private struct SettingsRestingFloatersSection: View {
         }
         .tint(colors.secondary)
         .onChange(of: enabled) { _, value in store.isEnabled = value }
+    }
+}
+
+// MARK: - App lock
+
+/// Opt-in biometric gate. DEFAULT OFF, and nothing else in the app changes until it is on.
+/// The lock hides the UI only — it holds no key material, which is why home-screen widgets
+/// keep rendering with it enabled.
+private struct SettingsAppLockSection: View {
+    @Environment(\.tdayColors) private var colors
+    private let store = AppLockStore()
+    @State private var enabled: Bool
+
+    init() {
+        _enabled = State(initialValue: AppLockStore().isEnabled)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Toggle(isOn: $enabled) {
+                Text(L("Require Face ID to open T'Day"))
+                    .font(.body.weight(.heavy))
+                    .foregroundStyle(colors.onSurface)
+            }
+            .tint(colors.secondary)
+            .onChange(of: enabled) { _, value in store.isEnabled = value }
+
+            Text(L("Asks for Face ID, Touch ID or your passcode when you open T'Day. Your widgets keep working while the app is locked."))
+                .font(.tdayRounded(size: 12, weight: .bold))
+                .foregroundStyle(colors.onSurfaceVariant)
+                .fixedSize(horizontal: false, vertical: true)
+        }
     }
 }
 

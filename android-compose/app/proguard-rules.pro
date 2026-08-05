@@ -62,6 +62,13 @@
 -dontwarn org.antlr.**
 -dontwarn org.apache.commons.**
 
+# ── SQLCipher (encrypted offline cache) ─────────────────────────────
+# The native layer looks these classes and their members up by name through JNI, so R8 renaming
+# any of them turns into an UnsatisfiedLinkError at the first query — in release builds only.
+-keep class net.zetetic.database.** { *; }
+-keep interface net.zetetic.database.** { *; }
+-dontwarn net.zetetic.database.**
+
 # ── General ─────────────────────────────────────────────────────────
 -keepattributes SourceFile,LineNumberTable
 -renamesourcefileattribute SourceFile
