@@ -54,7 +54,10 @@ class FieldEncryptionTest {
         val svc = encryptionService()
         assertTrue(svc.isSensitiveField("description"))
         assertTrue(svc.isSensitiveField("content"))
-        assertFalse(svc.isSensitiveField("title"))
+        // Task titles are the primary sensitive content of a task app.
+        assertTrue(svc.isSensitiveField("title"))
+        assertTrue(svc.isSensitiveField("overriddenTitle"))
+        assertFalse(svc.isSensitiveField("priority"))
     }
 
     @Test
@@ -63,8 +66,19 @@ class FieldEncryptionTest {
         val encrypted = svc.encryptIfSensitive("description", "test data")
         assertTrue(svc.isEncrypted(assertNotNull(encrypted)))
 
-        val notEncrypted = svc.encryptIfSensitive("title", "test data")
+        val notEncrypted = svc.encryptIfSensitive("priority", "test data")
         assertEquals("test data", notEncrypted)
+    }
+
+    @Test
+    fun `title round-trips through encryptIfSensitive`() {
+        val svc = encryptionService()
+        for (field in listOf("title", "overriddenTitle")) {
+            val plaintext = "Call the clinic about the results"
+            val stored = assertNotNull(svc.encryptIfSensitive(field, plaintext))
+            assertTrue(svc.isEncrypted(stored), "$field should be stored encrypted")
+            assertEquals(plaintext, svc.decryptIfEncrypted(stored))
+        }
     }
 
     @Test
@@ -72,6 +86,27 @@ class FieldEncryptionTest {
         val svc = encryptionService()
         assertNull(svc.decryptIfEncrypted(null))
         assertEquals("plain", svc.decryptIfEncrypted("plain"))
+    }
+
+    /**
+     * The no-backfill property: rows written before titles were encrypted carry no
+     * "enc:v1:" prefix and must keep reading back verbatim, so mixed plaintext and
+     * ciphertext can coexist in the same column indefinitely.
+     */
+    @Test
+    fun `pre-existing plaintext titles pass through unchanged`() {
+        val svc = encryptionService()
+        val legacyTitle = "Buy milk"
+        assertEquals(legacyTitle, svc.decryptIfEncrypted(legacyTitle))
+        assertEquals(legacyTitle, svc.decryptRequired(legacyTitle))
+    }
+
+    @Test
+    fun `encryptIfSensitive returns input unchanged when no key is configured`() {
+        val svc = encryptionService(key = null)
+        assertEquals("Buy milk", svc.encryptIfSensitive("title", "Buy milk"))
+        assertEquals("Buy milk", svc.encryptRequired("title", "Buy milk"))
+        assertNull(svc.encryptIfSensitive("title", null))
     }
 
     @Test

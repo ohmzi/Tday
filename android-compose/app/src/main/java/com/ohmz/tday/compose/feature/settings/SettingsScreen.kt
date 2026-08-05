@@ -2,6 +2,7 @@ package com.ohmz.tday.compose.feature.settings
 
 import com.ohmz.tday.compose.core.ui.LocalSnackbarManager
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.biometric.BiometricManager
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -77,7 +78,10 @@ import androidx.core.view.ViewCompat
 import com.ohmz.tday.compose.BuildConfig
 import com.ohmz.tday.compose.R
 import org.unifiedpush.android.connector.UnifiedPush
+import com.ohmz.tday.compose.core.data.AppSecurityPreferenceStore
+import com.ohmz.tday.compose.core.data.db.hasUnmigratedPlaintextCache
 import com.ohmz.tday.compose.core.data.server.VersionCheckResult
+import com.ohmz.tday.compose.feature.lock.canSatisfyAppLock
 import com.ohmz.tday.compose.core.model.SecurityAnswerInput
 import com.ohmz.tday.compose.core.model.SecurityQuestion
 import com.ohmz.tday.compose.core.model.SecurityQuestionStatusResponse
@@ -229,6 +233,14 @@ fun SettingsScreen(
                 }
                 SettingsDivider()
                 RestingFloatersRow()
+            }
+
+            SettingsSectionCard {
+                SettingsSectionTitle(title = stringResource(R.string.settings_privacy))
+                ScreenshotProtectionRow()
+                SettingsDivider()
+                AppLockRow()
+                UnencryptedLegacyCacheWarning()
             }
 
             SettingsSectionCard {
@@ -1345,6 +1357,139 @@ private fun RestingFloatersRow() {
                 enabled = it
                 store.setEnabled(it)
             },
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = Color.White,
+                checkedTrackColor = colorScheme.secondary,
+                checkedBorderColor = Color.Transparent,
+            ),
+        )
+    }
+}
+
+/**
+ * FLAG_SECURE toggle. Default on; Android cannot hide only the recents thumbnail, so this also
+ * blocks deliberate screenshots — which is exactly why it is a setting and not a hard-coded flag.
+ * Takes effect on the next foreground (MainActivity re-applies it in onStart).
+ */
+@Composable
+private fun ScreenshotProtectionRow() {
+    val context = LocalContext.current
+    val store = remember { AppSecurityPreferenceStore(context.applicationContext) }
+    var enabled by remember { mutableStateOf(store.isScreenshotProtectionEnabled()) }
+
+    SettingsToggleRow(
+        title = stringResource(R.string.settings_screenshot_protection),
+        subtitle = stringResource(R.string.settings_screenshot_protection_subtitle),
+        checked = enabled,
+        onCheckedChange = {
+            enabled = it
+            store.setScreenshotProtectionEnabled(it)
+        },
+    )
+}
+
+/**
+ * Opt-in biometric/device-credential gate, default off. Turning it on is refused when the device
+ * has no screen lock to authenticate against, so the user cannot lock themselves out.
+ */
+@Composable
+private fun AppLockRow() {
+    val colorScheme = MaterialTheme.colorScheme
+    val context = LocalContext.current
+    val store = remember { AppSecurityPreferenceStore(context.applicationContext) }
+    var enabled by remember { mutableStateOf(store.isAppLockEnabled()) }
+    var showUnavailable by remember { mutableStateOf(false) }
+
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        SettingsToggleRow(
+            title = stringResource(R.string.settings_app_lock),
+            subtitle = stringResource(R.string.settings_app_lock_subtitle),
+            checked = enabled,
+            onCheckedChange = { requested ->
+                if (requested && !canSatisfyAppLock(BiometricManager.from(context))) {
+                    showUnavailable = true
+                    return@SettingsToggleRow
+                }
+                showUnavailable = false
+                enabled = requested
+                store.setAppLockEnabled(requested)
+            },
+        )
+        if (showUnavailable) {
+            Text(
+                text = stringResource(R.string.settings_app_lock_unavailable),
+                style = MaterialTheme.typography.labelSmall,
+                color = colorScheme.error,
+            )
+        }
+    }
+}
+
+/**
+ * Renders only when the pre-encryption cache file is still on disk — a migration that failed often
+ * enough to be abandoned, or one still waiting for the pending-mutation queue to drain.
+ *
+ * It exists because that state is otherwise invisible: the file is readable to anyone who images the
+ * device and it may hold offline edits the server has never seen, and a `Log.e` is not a way to tell
+ * the owner of the data that it is exposed.
+ */
+@Composable
+private fun UnencryptedLegacyCacheWarning() {
+    val context = LocalContext.current
+    // Read once per composition entry; the migration only ever runs at database injection time, so
+    // this cannot change while Settings is open.
+    val stranded = remember { hasUnmigratedPlaintextCache(context.applicationContext) }
+    if (!stranded) return
+
+    val colorScheme = MaterialTheme.colorScheme
+    SettingsDivider()
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text(
+            text = stringResource(R.string.settings_legacy_cache_warning_title),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.ExtraBold,
+            color = colorScheme.error,
+        )
+        Text(
+            text = stringResource(R.string.settings_legacy_cache_warning_body),
+            style = MaterialTheme.typography.bodySmall,
+            color = colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+private fun SettingsToggleRow(
+    title: String,
+    subtitle: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.ExtraBold,
+                color = colorScheme.onSurface,
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = colorScheme.onSurface.copy(alpha = 0.58f),
+            )
+        }
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
             colors = SwitchDefaults.colors(
                 checkedThumbColor = Color.White,
                 checkedTrackColor = colorScheme.secondary,

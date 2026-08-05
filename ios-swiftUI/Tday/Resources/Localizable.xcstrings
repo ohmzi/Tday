@@ -20,6 +20,16 @@
         }
       }
     },
+    "%@ uses a certificate your device can't verify.\n\nFingerprint:\n%@\n\nOnly continue if this matches your server. If you're on public Wi-Fi and weren't expecting this, cancel." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ uses a certificate your device can't verify.\n\nFingerprint:\n%2$@\n\nOnly continue if this matches your server. If you're on public Wi-Fi and weren't expecting this, cancel."
+          }
+        }
+      }
+    },
     "%1$d tasks today, %2$d carried over" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -75,6 +85,65 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "今天有 %1$d 项任务，%2$d 项积压"
+          }
+        }
+      }
+    },
+    "%d security alerts" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%d Sicherheitswarnungen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%d alertas de seguridad"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%d alertes de sécurité"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%d avvisi di sicurezza"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "セキュリティ警告 %d 件"
+          }
+        },
+        "ms" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%d amaran keselamatan"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%d alertas de segurança"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Оповещений безопасности: %d"
+          }
+        },
+        "zh" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%d 条安全警报"
           }
         }
       }
@@ -11451,6 +11520,65 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "T'Day 在此设备上找到了已保存的服务器网址。"
+          }
+        }
+      }
+    },
+    "T'Day security alert" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "T'Day-Sicherheitswarnung"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alerta de seguridad de T'Day"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alerte de sécurité T'Day"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Avviso di sicurezza T'Day"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "T'Day セキュリティ警告"
+          }
+        },
+        "ms" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Amaran keselamatan T'Day"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alerta de segurança do T'Day"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Предупреждение безопасности T'Day"
+          }
+        },
+        "zh" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "T'Day 安全警报"
           }
         }
       }

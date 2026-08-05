@@ -5,6 +5,7 @@ import QueryProvider from "@/providers/QueryProvider";
 import { AuthProvider } from "@/providers/AuthProvider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import LocalWorkspaceGate from "@/components/local/LocalWorkspaceGate";
 import { SonnerToaster } from "@/components/ui/sonner";
 import VersionGate from "@/components/app/VersionGate";
 import ConnectivityGate from "@/components/app/ConnectivityGate";
@@ -23,7 +24,11 @@ export default function App() {
         <AuthProvider>
           <TooltipProvider>
             <ErrorBoundary>
-              <RouterProvider router={router} />
+              {/* Local Mode keeps everything in this browser, encrypted: no route
+                  renders until the passphrase has been entered for this session. */}
+              <LocalWorkspaceGate>
+                <RouterProvider router={router} />
+              </LocalWorkspaceGate>
             </ErrorBoundary>
           </TooltipProvider>
         </AuthProvider>

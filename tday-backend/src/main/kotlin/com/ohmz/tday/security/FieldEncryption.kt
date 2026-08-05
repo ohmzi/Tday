@@ -22,7 +22,16 @@ class FieldEncryptionImpl(private val config: AppConfig) : FieldEncryption {
     private val ivLengthBytes = 12
     private val keyLengthBytes = 32
     private val tagLengthBits = 128
-    private val sensitiveFields = setOf("description", "content", "overriddenDescription", "webhookSecret")
+    // Titles carry the same user content as descriptions — and no query anywhere
+    // sorts, searches or filters on a title column, so encrypting them costs nothing.
+    private val sensitiveFields = setOf(
+        "title",
+        "overriddenTitle",
+        "description",
+        "content",
+        "overriddenDescription",
+        "webhookSecret",
+    )
     private val random = SecureRandom()
 
     private val keyring: Map<String, ByteArray> by lazy { parseKeyring() }
@@ -138,6 +147,16 @@ class FieldEncryptionImpl(private val config: AppConfig) : FieldEncryption {
         throw IllegalArgumentException("Invalid field encryption key. Expected 32-byte base64 or 64-char hex.")
     }
 }
+
+/**
+ * Non-null wrappers for NOT NULL columns (task titles). The delegates are
+ * null-in/null-out, so the elvis branches only exist to satisfy the type system.
+ */
+fun FieldEncryption.encryptRequired(fieldName: String, value: String): String =
+    encryptIfSensitive(fieldName, value) ?: value
+
+fun FieldEncryption.decryptRequired(value: String): String =
+    decryptIfEncrypted(value) ?: value
 
 fun ByteArray.toBase64Url(): String =
     Base64.getUrlEncoder().withoutPadding().encodeToString(this)

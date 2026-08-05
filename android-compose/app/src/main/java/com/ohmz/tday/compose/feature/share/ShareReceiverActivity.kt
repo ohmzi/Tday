@@ -8,6 +8,7 @@ import androidx.annotation.AnimRes
 import androidx.appcompat.app.AppCompatActivity
 import com.ohmz.tday.compose.MainActivity
 import com.ohmz.tday.compose.R
+import com.ohmz.tday.compose.core.data.applyScreenshotProtection
 import com.ohmz.tday.compose.feature.widget.WidgetCreateTarget
 import com.ohmz.tday.compose.feature.widget.WidgetCreateTaskSubmitter
 import com.ohmz.tday.compose.feature.widget.WidgetCreateTaskSurface
@@ -53,6 +54,14 @@ class ShareReceiverActivity : AppCompatActivity() {
                 initialNotes = share.notes,
             )
         }
+    }
+
+    // Same create sheet as the widget's, so it shows and accepts task text: FLAG_SECURE here too.
+    // excludeFromRecents already keeps it out of the app switcher, but not out of screenshots or
+    // screen recordings.
+    override fun onStart() {
+        super.onStart()
+        applyScreenshotProtection()
     }
 
     private fun exitToSender() {

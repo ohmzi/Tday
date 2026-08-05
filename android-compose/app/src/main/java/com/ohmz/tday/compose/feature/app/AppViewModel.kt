@@ -70,6 +70,9 @@ data class AppUiState(
     val user: SessionUser? = null,
     val error: String? = null,
     val canResetServerTrust: Boolean = false,
+    // Fingerprint of a server certificate the device cannot verify, awaiting the user's explicit
+    // confirmation on the setup screen. Nothing is pinned until they confirm this exact value.
+    val pendingServerTrustFingerprint: String? = null,
     val pendingApprovalMessage: String? = null,
     // Persistent "waiting for admin approval" holding screen (survives relaunch via the
     // secure pending marker; cleared once approved or signed out).
@@ -640,51 +643,90 @@ class AppViewModel @Inject constructor(
     ) {
         viewModelScope.launch {
             TdayTelemetry.addBreadcrumb("server.probe", data = mapOf("phase" to "start"))
-            val result = probeAndSaveWithAutomaticTrustRecovery(rawUrl)
-            result.onSuccess { probeResult ->
-                TdayTelemetry.addBreadcrumb(
-                    "server.probe",
-                    data = mapOf("phase" to "success", "version" to probeResult.versionCheck::class.simpleName),
-                )
-                val versionResult = probeResult.versionCheck
-                val isBlocking = versionResult is VersionCheckResult.AppUpdateRequired ||
-                    versionResult is VersionCheckResult.ServerUpdateRequired
-                _uiState.update {
-                    it.copy(
-                        requiresServerSetup = false,
-                        requiresLogin = !isBlocking,
-                        serverUrl = probeResult.serverUrl,
-                        dataMode = AppDataMode.SERVER,
-                        error = null,
-                        canResetServerTrust = false,
-                        pendingApprovalMessage = null,
-                        versionCheckResult = versionResult,
-                        backendVersion = probeResult.backendVersion,
-                    )
-                }
-                onSuccess(probeResult.serverUrl)
-            }.onFailure { error ->
-                TdayTelemetry.addBreadcrumb(
-                    "server.probe",
-                    level = io.sentry.SentryLevel.WARNING,
-                    data = mapOf("phase" to "failure", "error" to error.javaClass.simpleName),
-                )
-                val message = toServerSetupMessage(error)
-                _uiState.update {
-                    it.copy(
-                        error = message,
-                        canResetServerTrust = false,
-                        pendingApprovalMessage = null,
-                    )
-                }
-                onFailure(message)
-            }
-            val probeResult = result.getOrNull() ?: return@launch
-            appVersionManager.applyServerCompatibility(
-                probeResult.versionCheck,
-                probeResult.backendVersion,
+            applyProbeResult(serverConfigRepository.probeAndSave(rawUrl), onSuccess, onFailure)
+        }
+    }
+
+    /**
+     * Trusts one specific certificate the user has just seen and confirmed on screen, then
+     * connects. Nothing is ever pinned without going through here.
+     */
+    fun confirmServerTrust(
+        rawUrl: String,
+        fingerprint: String,
+        onSuccess: (String) -> Unit,
+        onFailure: (String) -> Unit = {},
+    ) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(pendingServerTrustFingerprint = null) }
+            TdayTelemetry.addBreadcrumb("server.probe", data = mapOf("phase" to "trust_confirmed"))
+            applyProbeResult(
+                serverConfigRepository.confirmServerTrust(rawUrl, fingerprint),
+                onSuccess,
+                onFailure,
             )
         }
+    }
+
+    /// Dismisses the certificate-confirmation prompt without trusting anything.
+    fun dismissServerTrustPrompt() {
+        _uiState.update { it.copy(pendingServerTrustFingerprint = null) }
+    }
+
+    private suspend fun applyProbeResult(
+        result: Result<ServerConfigRepository.ProbeResult>,
+        onSuccess: (String) -> Unit,
+        onFailure: (String) -> Unit,
+    ) {
+        result.onSuccess { probeResult ->
+            TdayTelemetry.addBreadcrumb(
+                "server.probe",
+                data = mapOf("phase" to "success", "version" to probeResult.versionCheck::class.simpleName),
+            )
+            val versionResult = probeResult.versionCheck
+            val isBlocking = versionResult is VersionCheckResult.AppUpdateRequired ||
+                versionResult is VersionCheckResult.ServerUpdateRequired
+            _uiState.update {
+                it.copy(
+                    requiresServerSetup = false,
+                    requiresLogin = !isBlocking,
+                    serverUrl = probeResult.serverUrl,
+                    dataMode = AppDataMode.SERVER,
+                    error = null,
+                    canResetServerTrust = false,
+                    pendingServerTrustFingerprint = null,
+                    pendingApprovalMessage = null,
+                    versionCheckResult = versionResult,
+                    backendVersion = probeResult.backendVersion,
+                )
+            }
+            onSuccess(probeResult.serverUrl)
+        }.onFailure { error ->
+            TdayTelemetry.addBreadcrumb(
+                "server.probe",
+                level = io.sentry.SentryLevel.WARNING,
+                data = mapOf("phase" to "failure", "error" to error.javaClass.simpleName),
+            )
+            val message = toServerSetupMessage(error)
+            _uiState.update {
+                it.copy(
+                    error = message,
+                    // A mismatch is never recovered from automatically: the user either resets the
+                    // saved trust deliberately and confirms the new fingerprint, or nothing happens.
+                    canResetServerTrust = isServerTrustMismatch(error),
+                    pendingServerTrustFingerprint =
+                    (error as? ServerProbeException.CertificateUntrusted)?.fingerprint,
+                    pendingApprovalMessage = null,
+                )
+            }
+            onFailure(message)
+        }
+
+        val probeResult = result.getOrNull() ?: return
+        appVersionManager.applyServerCompatibility(
+            probeResult.versionCheck,
+            probeResult.backendVersion,
+        )
     }
 
     fun recheckVersion() {
@@ -721,6 +763,7 @@ class AppViewModel @Inject constructor(
                     it.copy(
                         error = null,
                         canResetServerTrust = false,
+                        pendingServerTrustFingerprint = null,
                         pendingApprovalMessage = null,
                     )
                 }
@@ -762,6 +805,7 @@ class AppViewModel @Inject constructor(
                     error = null,
                     loading = false,
                     canResetServerTrust = false,
+                    pendingServerTrustFingerprint = null,
                     pendingApprovalMessage = null,
                     isManualSyncing = false,
                     aiSummaryEnabled = true,
@@ -1292,27 +1336,6 @@ class AppViewModel @Inject constructor(
         realtimeClient.disconnect()
     }
 
-    private suspend fun probeAndSaveWithAutomaticTrustRecovery(
-        rawUrl: String,
-    ): Result<ServerConfigRepository.ProbeResult> {
-        val firstAttempt = serverConfigRepository.probeAndSave(rawUrl)
-        val firstError = firstAttempt.exceptionOrNull() ?: return firstAttempt
-        if (!isServerTrustMismatch(firstError)) return firstAttempt
-
-        val resetAttempt = serverConfigRepository.resetTrustedServer(rawUrl)
-        if (resetAttempt.isFailure) {
-            return Result.failure(AutomaticTrustRefreshFailedException(resetAttempt.exceptionOrNull()))
-        }
-
-        val secondAttempt = serverConfigRepository.probeAndSave(rawUrl)
-        val secondError = secondAttempt.exceptionOrNull() ?: return secondAttempt
-        return if (isServerTrustMismatch(secondError)) {
-            Result.failure(AutomaticTrustRefreshFailedException(secondError))
-        } else {
-            secondAttempt
-        }
-    }
-
     private fun toServerSetupMessage(error: Throwable): String {
         return when (error) {
             is TimeoutCancellationException -> appContext.getString(R.string.server_setup_error_probe_timeout)
@@ -1321,13 +1344,13 @@ class AppViewModel @Inject constructor(
                 appContext.getString(R.string.server_setup_error_insecure_transport)
             is ServerProbeException.NotTdayServer ->
                 appContext.getString(R.string.server_setup_error_not_tday_server)
-            is AutomaticTrustRefreshFailedException ->
-                staleServerTrustMessage()
             is ServerProbeException.CertificateChanged ->
-                automaticTrustRefreshMessage()
+                appContext.getString(R.string.server_setup_trust_mismatch)
+            is ServerProbeException.CertificateUntrusted ->
+                appContext.getString(R.string.server_setup_trust_unknown)
             is SSLPeerUnverifiedException ->
                 if (isServerTrustMismatch(error)) {
-                    automaticTrustRefreshMessage()
+                    appContext.getString(R.string.server_setup_trust_mismatch)
                 } else {
                     error.userFacingMessage(appContext, R.string.error_connect_server_failed)
                 }
@@ -1342,18 +1365,6 @@ class AppViewModel @Inject constructor(
     private fun isPinnedCertificateMismatch(error: Throwable): Boolean {
         return error.message?.contains("Pinned certificate mismatch", ignoreCase = true) == true
     }
-
-    private fun automaticTrustRefreshMessage(): String {
-        return appContext.getString(R.string.server_setup_trust_refreshing)
-    }
-
-    private fun staleServerTrustMessage(): String {
-        return appContext.getString(R.string.server_setup_trust_refresh_failed)
-    }
-
-    private class AutomaticTrustRefreshFailedException(
-        cause: Throwable?,
-    ) : IllegalStateException("Automatic server trust refresh failed.", cause)
 
     private data class SessionBootstrapResult(
         val user: SessionUser,

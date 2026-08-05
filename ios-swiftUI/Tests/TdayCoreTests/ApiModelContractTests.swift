@@ -228,4 +228,127 @@ final class ApiModelContractTests: XCTestCase {
         XCTAssertEqual(payload.appVersion, "1.44.0")
         XCTAssertNil(payload.encryptedCompatibility)
     }
+
+    // MARK: - Security alerts
+
+    private func alert(id: String, createdAt: String, detail: String = "Abuse block applied") -> SecurityAlertDTO {
+        SecurityAlertDTO(
+            id: id,
+            type: "abuse_block_applied",
+            detail: detail,
+            suppressedCount: 0,
+            pushed: true,
+            createdAt: createdAt
+        )
+    }
+
+    func testSecurityAlertsResponseDecodesAdminPayload() throws {
+        let data = """
+        {
+          "alerts": [
+            {
+              "id": "alert-2",
+              "type": "auth_alert_lockout_burst",
+              "detail": "4 lockouts in 10 minutes",
+              "suppressedCount": 3,
+              "pushed": true,
+              "createdAt": "2026-08-05T12:00"
+            }
+          ]
+        }
+        """.data(using: .utf8)!
+
+        let payload = try JSONDecoder().decode(SecurityAlertsResponse.self, from: data)
+
+        XCTAssertEqual(payload.alerts.count, 1)
+        XCTAssertEqual(payload.alerts[0].suppressedCount, 3)
+        XCTAssertEqual(payload.alerts[0].createdAt, "2026-08-05T12:00")
+    }
+
+    /// The backend emits `LocalDateTime.toString()`, which drops the seconds when they are zero
+    /// and never carries a timezone — a fixed "…HH:mm:ss" formatter would fail on half of these.
+    func testSecurityAlertCreatedAtParsesEveryBackendShape() {
+        let secondsOmitted = SecurityAlertNotifier.parseCreatedAt("2026-08-05T12:00")
+        let wholeSeconds = SecurityAlertNotifier.parseCreatedAt("2026-08-05T12:00:00")
+        let fractional = SecurityAlertNotifier.parseCreatedAt("2026-08-05T12:00:03.123")
+
+        XCTAssertNotNil(secondsOmitted)
+        XCTAssertNotNil(wholeSeconds)
+        XCTAssertNotNil(fractional)
+        // Seconds-omitted and explicit-zero-seconds must land on the same instant, and both are
+        // read as UTC (the value carries no offset).
+        XCTAssertEqual(secondsOmitted, wholeSeconds)
+        XCTAssertEqual(secondsOmitted?.timeIntervalSince1970, 1785931200)
+        XCTAssertEqual(fractional?.timeIntervalSince1970 ?? 0, 1785931203.123, accuracy: 0.001)
+        XCTAssertNil(SecurityAlertNotifier.parseCreatedAt("not-a-date"))
+    }
+
+    func testFirstPollSeedsBaselineWithoutNotifying() {
+        let alerts = [
+            alert(id: "a3", createdAt: "2026-08-05T12:00"),
+            alert(id: "a2", createdAt: "2026-08-05T11:00"),
+        ]
+
+        XCTAssertEqual(SecurityAlertNotifier.unseenAlerts(in: alerts, since: nil), [])
+        XCTAssertEqual(SecurityAlertNotifier.newestMarker(in: alerts)?.id, "a3")
+    }
+
+    func testOnlyAlertsNewerThanTheMarkerAreUnseen() {
+        let alerts = [
+            alert(id: "a4", createdAt: "2026-08-05T13:30:05"),
+            alert(id: "a3", createdAt: "2026-08-05T12:00"),
+            alert(id: "a2", createdAt: "2026-08-05T11:00"),
+        ]
+        let marker = SecurityAlertMarker(
+            id: "a3",
+            createdAt: SecurityAlertNotifier.parseCreatedAt("2026-08-05T12:00")
+        )
+
+        let unseen = SecurityAlertNotifier.unseenAlerts(in: alerts, since: marker)
+
+        XCTAssertEqual(unseen.map(\.id), ["a4"])
+    }
+
+    func testAlreadySeenNewestAlertNotifiesNothing() {
+        let alerts = [alert(id: "a3", createdAt: "2026-08-05T12:00")]
+        let marker = SecurityAlertMarker(
+            id: "a3",
+            createdAt: SecurityAlertNotifier.parseCreatedAt("2026-08-05T12:00")
+        )
+
+        XCTAssertEqual(SecurityAlertNotifier.unseenAlerts(in: alerts, since: marker), [])
+    }
+
+    /// The marker's own alert can age out of the server's 50-row window; the timestamp is then
+    /// the only thing stopping the remaining history from being announced a second time.
+    func testTimestampSuppressesHistoryWhenMarkerIDHasAgedOut() {
+        let alerts = [
+            alert(id: "a9", createdAt: "2026-08-05T14:00"),
+            alert(id: "a8", createdAt: "2026-08-05T11:00"),
+        ]
+        let marker = SecurityAlertMarker(
+            id: "gone",
+            createdAt: SecurityAlertNotifier.parseCreatedAt("2026-08-05T12:00")
+        )
+
+        XCTAssertEqual(SecurityAlertNotifier.unseenAlerts(in: alerts, since: marker).map(\.id), ["a9"])
+    }
+
+    func testNotificationBodyCoalescesABurstIntoOneMessage() {
+        let single = [alert(id: "a1", createdAt: "2026-08-05T12:00", detail: "Abuse block applied")]
+        let burst = [
+            alert(id: "a3", createdAt: "2026-08-05T12:02", detail: "Repeated sign-in lockouts"),
+            alert(id: "a2", createdAt: "2026-08-05T12:01"),
+            alert(id: "a1", createdAt: "2026-08-05T12:00"),
+        ]
+
+        XCTAssertEqual(SecurityAlertNotifier.notificationBody(for: single), "Abuse block applied")
+
+        let coalesced = SecurityAlertNotifier.notificationBody(for: burst)
+        XCTAssertNotNil(coalesced)
+        XCTAssertTrue(coalesced?.contains("3") == true)
+        // The newest alert's own wording still leads the body.
+        XCTAssertTrue(coalesced?.contains("Repeated sign-in lockouts") == true)
+        XCTAssertNil(SecurityAlertNotifier.notificationBody(for: []))
+    }
 }

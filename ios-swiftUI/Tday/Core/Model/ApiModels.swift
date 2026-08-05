@@ -67,6 +67,27 @@ struct SessionUser: Codable, Equatable, Hashable {
     }
 }
 
+/// One row of `GET /api/admin/security/alerts` (admin-only; 401 signed out, 403 for a
+/// non-admin). Newest first, capped at 50 rows server-side, no paging.
+struct SecurityAlertDTO: Codable, Equatable {
+    let id: String
+    let type: String
+    /// Already carries the coalesced-count phrasing the backend built for the push body.
+    /// Subjects are hashed server-side, so this never contains a raw username or IP.
+    let detail: String
+    let suppressedCount: Int
+    let pushed: Bool
+    /// A UTC `LocalDateTime.toString()`: NO timezone suffix, and the seconds field is OMITTED
+    /// when it is zero ("2026-08-05T12:00" as often as "2026-08-05T12:00:03.123"). A fixed
+    /// "yyyy-MM-dd'T'HH:mm:ss" formatter fails on half the values — parse it through
+    /// `SecurityAlertNotifier.parseCreatedAt`.
+    let createdAt: String
+}
+
+struct SecurityAlertsResponse: Codable {
+    let alerts: [SecurityAlertDTO]
+}
+
 struct SecurityQuestion: Codable, Equatable, Hashable, Identifiable {
     let id: Int
     let text: String

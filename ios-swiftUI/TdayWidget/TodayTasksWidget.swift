@@ -99,6 +99,28 @@ enum WidgetPendingCompletionStore {
     }
 }
 
+/// Widget-side reader for the widget CONTENT snapshots (task titles, notes, due times).
+/// The app writes these into the App Group container with
+/// `.completeUntilFirstUserAuthentication` protection instead of UserDefaults, which is
+/// unencrypted and backed up. That protection class is what keeps the widget renderable on
+/// a locked device; the writer is `WidgetSnapshotFileStore` in
+/// Tday/Core/Widget/TodayTasksWidgetSnapshotStore.swift and the file names must stay in
+/// lockstep with it.
+enum WidgetSnapshotFileStore {
+    static let appGroupSuiteName = "group.com.ohmz.tday"
+    static let todayFileName = "widget-today-snapshot.json"
+    static let floaterFileName = "widget-floater-snapshot.json"
+
+    static func read(_ fileName: String) -> Data? {
+        guard let fileURL = FileManager.default
+            .containerURL(forSecurityApplicationGroupIdentifier: appGroupSuiteName)?
+            .appendingPathComponent(fileName) else {
+            return nil
+        }
+        return try? Data(contentsOf: fileURL)
+    }
+}
+
 /// Widget-side reader for the shared backend session the app writes after auth/sync
 /// (widgets v2 instant sync). Lets the check-ring intent fire an authenticated
 /// completion straight to the backend without opening the app. The app-side writer
@@ -533,8 +555,20 @@ private struct TodayTasksProvider: TimelineProvider {
     }
 
     private static func loadSnapshot() -> TodayTasksSnapshot? {
-        for store in defaultsStores() {
-            guard let data = store.data(forKey: snapshotKey),
+        if let data = WidgetSnapshotFileStore.read(WidgetSnapshotFileStore.todayFileName),
+           let snapshot = try? JSONDecoder().decode(TodayTasksSnapshot.self, from: data) {
+            return snapshot
+        }
+        return legacyDefaultsSnapshot()
+    }
+
+    /// Transitional read of the pre-migration UserDefaults copy, so the widget still renders
+    /// between installing this build and the app's first launch (which is what moves the
+    /// snapshot into the protected file and deletes these keys). Read-only on purpose — the
+    /// widget must not resurrect the plaintext copy.
+    private static func legacyDefaultsSnapshot() -> TodayTasksSnapshot? {
+        for store in legacyDefaultsStores() {
+            guard let data = store.data(forKey: legacySnapshotKey),
                   let snapshot = try? JSONDecoder().decode(TodayTasksSnapshot.self, from: data) else {
                 continue
             }
@@ -548,7 +582,7 @@ private struct TodayTasksProvider: TimelineProvider {
         loadSnapshot()
     }
 
-    private static func defaultsStores() -> [UserDefaults] {
+    private static func legacyDefaultsStores() -> [UserDefaults] {
         var stores = [UserDefaults]()
         if let shared = UserDefaults(suiteName: appGroupSuiteName) {
             stores.append(shared)
@@ -558,7 +592,7 @@ private struct TodayTasksProvider: TimelineProvider {
     }
 
     private static let appGroupSuiteName = "group.com.ohmz.tday"
-    private static let snapshotKey = "tday.widget.todayTasksSnapshot"
+    private static let legacySnapshotKey = "tday.widget.todayTasksSnapshot"
 }
 
 private extension TodayTasksEntry {
@@ -1326,8 +1360,17 @@ private struct FloaterTasksProvider: TimelineProvider {
     }
 
     private static func loadSnapshot() -> FloaterTasksSnapshot? {
-        for store in defaultsStores() {
-            guard let data = store.data(forKey: snapshotKey),
+        if let data = WidgetSnapshotFileStore.read(WidgetSnapshotFileStore.floaterFileName),
+           let snapshot = try? JSONDecoder().decode(FloaterTasksSnapshot.self, from: data) {
+            return snapshot
+        }
+        return legacyDefaultsSnapshot()
+    }
+
+    /// Transitional read of the pre-migration UserDefaults copy — see the Today provider.
+    private static func legacyDefaultsSnapshot() -> FloaterTasksSnapshot? {
+        for store in legacyDefaultsStores() {
+            guard let data = store.data(forKey: legacySnapshotKey),
                   let snapshot = try? JSONDecoder().decode(FloaterTasksSnapshot.self, from: data) else {
                 continue
             }
@@ -1341,7 +1384,7 @@ private struct FloaterTasksProvider: TimelineProvider {
         loadSnapshot()
     }
 
-    private static func defaultsStores() -> [UserDefaults] {
+    private static func legacyDefaultsStores() -> [UserDefaults] {
         var stores = [UserDefaults]()
         if let shared = UserDefaults(suiteName: appGroupSuiteName) {
             stores.append(shared)
@@ -1351,7 +1394,7 @@ private struct FloaterTasksProvider: TimelineProvider {
     }
 
     private static let appGroupSuiteName = "group.com.ohmz.tday"
-    private static let snapshotKey = "tday.widget.floaterTasksSnapshot"
+    private static let legacySnapshotKey = "tday.widget.floaterTasksSnapshot"
 }
 
 private extension FloaterTasksEntry {
