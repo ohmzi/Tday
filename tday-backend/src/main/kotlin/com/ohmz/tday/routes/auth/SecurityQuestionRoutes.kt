@@ -1,6 +1,7 @@
 package com.ohmz.tday.routes.auth
 
 import com.ohmz.tday.di.inject
+import com.ohmz.tday.domain.respondRateLimit
 import com.ohmz.tday.models.request.RequestAdminResetRequest
 import com.ohmz.tday.models.request.SelfServiceResetRequest
 import com.ohmz.tday.models.request.VerifySecurityAnswersRequest
@@ -42,13 +43,10 @@ fun Route.securityQuestionRoutes() {
 
             val throttle = authThrottle.enforceRateLimit(ThrottleAction.credentials, call.request, username)
             if (!throttle.allowed) {
-                call.respond(
-                    HttpStatusCode.TooManyRequests,
-                    mapOf(
-                        "message" to "Too many requests. Try again in ${authThrottle.formatRetryWait(throttle.retryAfterSeconds)}.",
-                        "reason" to (throttle.reasonCode ?: "auth_limit"),
-                        "retryAfterSeconds" to throttle.retryAfterSeconds,
-                    ),
+                call.respondRateLimit(
+                    message = "Too many requests. Try again in ${authThrottle.formatRetryWait(throttle.retryAfterSeconds)}.",
+                    reason = throttle.reasonCode ?: "auth_limit",
+                    retryAfterSeconds = throttle.retryAfterSeconds,
                 )
                 return@get
             }
@@ -76,13 +74,10 @@ fun Route.securityQuestionRoutes() {
 
             val throttle = authThrottle.enforceRateLimit(ThrottleAction.credentials, call.request, body.username)
             if (!throttle.allowed) {
-                call.respond(
-                    HttpStatusCode.TooManyRequests,
-                    mapOf(
-                        "message" to "Too many requests. Try again in ${authThrottle.formatRetryWait(throttle.retryAfterSeconds)}.",
-                        "reason" to (throttle.reasonCode ?: "auth_limit"),
-                        "retryAfterSeconds" to throttle.retryAfterSeconds,
-                    ),
+                call.respondRateLimit(
+                    message = "Too many requests. Try again in ${authThrottle.formatRetryWait(throttle.retryAfterSeconds)}.",
+                    reason = throttle.reasonCode ?: "auth_limit",
+                    retryAfterSeconds = throttle.retryAfterSeconds,
                 )
                 return@post
             }
@@ -128,13 +123,10 @@ fun Route.securityQuestionRoutes() {
 
             val throttle = authThrottle.enforceRateLimit(ThrottleAction.credentials, call.request, body.username)
             if (!throttle.allowed) {
-                call.respond(
-                    HttpStatusCode.TooManyRequests,
-                    mapOf(
-                        "message" to "Too many requests. Try again in ${authThrottle.formatRetryWait(throttle.retryAfterSeconds)}.",
-                        "reason" to (throttle.reasonCode ?: "auth_limit"),
-                        "retryAfterSeconds" to throttle.retryAfterSeconds,
-                    ),
+                call.respondRateLimit(
+                    message = "Too many requests. Try again in ${authThrottle.formatRetryWait(throttle.retryAfterSeconds)}.",
+                    reason = throttle.reasonCode ?: "auth_limit",
+                    retryAfterSeconds = throttle.retryAfterSeconds,
                 )
                 return@post
             }
@@ -194,13 +186,10 @@ fun Route.securityQuestionRoutes() {
 
             val throttle = authThrottle.enforceRateLimit(ThrottleAction.credentials, call.request, body.username)
             if (!throttle.allowed) {
-                call.respond(
-                    HttpStatusCode.TooManyRequests,
-                    mapOf(
-                        "message" to "Too many requests. Try again in ${authThrottle.formatRetryWait(throttle.retryAfterSeconds)}.",
-                        "reason" to (throttle.reasonCode ?: "auth_limit"),
-                        "retryAfterSeconds" to throttle.retryAfterSeconds,
-                    ),
+                call.respondRateLimit(
+                    message = "Too many requests. Try again in ${authThrottle.formatRetryWait(throttle.retryAfterSeconds)}.",
+                    reason = throttle.reasonCode ?: "auth_limit",
+                    retryAfterSeconds = throttle.retryAfterSeconds,
                 )
                 return@post
             }

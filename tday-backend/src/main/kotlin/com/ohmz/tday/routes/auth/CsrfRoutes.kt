@@ -1,5 +1,6 @@
 package com.ohmz.tday.routes.auth
 
+import com.ohmz.tday.domain.respondRateLimit
 import com.ohmz.tday.security.AuthThrottle
 import com.ohmz.tday.security.ThrottleAction
 import io.ktor.http.*
@@ -15,10 +16,11 @@ fun Route.csrfRoutes() {
         get {
             val throttle = authThrottle.enforceRateLimit(ThrottleAction.csrf, call.request)
             if (!throttle.allowed) {
-                call.respond(HttpStatusCode.TooManyRequests, mapOf(
-                    "message" to "Too many requests. Try again in ${authThrottle.formatRetryWait(throttle.retryAfterSeconds)}.",
-                    "reason" to (throttle.reasonCode ?: "auth_limit"),
-                ))
+                call.respondRateLimit(
+                    message = "Too many requests. Try again in ${authThrottle.formatRetryWait(throttle.retryAfterSeconds)}.",
+                    reason = throttle.reasonCode ?: "auth_limit",
+                    retryAfterSeconds = throttle.retryAfterSeconds,
+                )
                 return@get
             }
 

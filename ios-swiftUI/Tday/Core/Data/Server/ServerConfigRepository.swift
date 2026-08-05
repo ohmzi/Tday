@@ -5,6 +5,9 @@ enum ServerProbeError: Error, Equatable, LocalizedError {
     case insecureTransport
     case notTdayServer
     case certificateChanged
+    /// The server presented a certificate the system does not trust and that we have never pinned.
+    /// Carries the fingerprint so the UI can show it and ask the user to confirm.
+    case untrustedCertificate(host: String, fingerprint: String?)
 
     var errorDescription: String? {
         switch self {
@@ -16,6 +19,8 @@ enum ServerProbeError: Error, Equatable, LocalizedError {
             return "This server does not look like a T'Day instance"
         case .certificateChanged:
             return "The trusted certificate changed for this server"
+        case .untrustedCertificate:
+            return "This server's certificate is not trusted"
         }
     }
 }
@@ -60,6 +65,10 @@ final class ServerConfigRepository {
     struct VersionRecheckResult {
         let versionCheck: VersionCheckResult
         let backendVersion: String?
+        /// True when the probe was refused by the TLS trust check rather than merely failing.
+        /// Without this the caller cannot tell "server unreachable" from "someone may be
+        /// intercepting this connection", and both would report `.compatible`.
+        var trustFailed: Bool = false
     }
 
     func saveServerURL(rawURL: String) async throws -> MobileProbeResponse {
@@ -103,7 +112,13 @@ final class ServerConfigRepository {
         }
         let probeURL = url.appending(path: "api/mobile/probe")
         guard let response = try? await api.probeServer(url: probeURL) else {
-            return VersionRecheckResult(versionCheck: .compatible, backendVersion: nil)
+            // Now that the trust check fails closed, a refused certificate reaches this path as a
+            // bare cancellation. Reporting ".compatible" here would silently mask exactly the
+            // interception the fail-closed change exists to catch.
+            let trustFailed = url.host.map { host in
+                api.consumeTrustFailure(forHost: host) || api.consumeTrustUnknown(forHost: host) != nil
+            } ?? false
+            return VersionRecheckResult(versionCheck: .compatible, backendVersion: nil, trustFailed: trustFailed)
         }
         let compatibility = response.encryptedCompatibility.flatMap { ProbeDecryptor.decrypt($0) }
         return VersionRecheckResult(
@@ -112,25 +127,24 @@ final class ServerConfigRepository {
         )
     }
 
+    /// Forgets the stored pin and re-probes.
+    ///
+    /// Dropping the pin does not mean "trust whatever answers next": the probe goes through the
+    /// same fail-closed path, so an unrecognised certificate comes back as
+    /// [ServerProbeError.untrustedCertificate] and the user still has to confirm the fingerprint.
     func resetTrustedServer(rawURL: String) async throws -> MobileProbeResponse {
         let normalizedURL = try normalize(rawURL: rawURL)
         if let host = normalizedURL.host {
             secureStore.clearTrustedFingerprint(for: host)
         }
-        let response = try await api.probeServer(url: normalizedURL.appending(path: "api/mobile/probe"))
+        let (serverURL, response) = try await probe(rawURL: rawURL)
         guard response.service.compare("tday", options: .caseInsensitive) == .orderedSame,
               response.version == "1" else {
             throw ServerProbeError.notTdayServer
         }
-        serverURLState.currentURL = normalizedURL
+        serverURLState.currentURL = serverURL
         persistRuntimeServerURL()
         return response
-    }
-
-    func resetTrustedServer(_ rawURL: String) {
-        Task {
-            _ = try? await resetTrustedServer(rawURL: rawURL)
-        }
     }
 
     func persistRuntimeServerURL() {
@@ -202,6 +216,33 @@ final class ServerConfigRepository {
             if let host = normalizedURL.host, api.consumeTrustFailure(forHost: host) {
                 throw ServerProbeError.certificateChanged
             }
+            // Unrecognised certificate: refused rather than trusted-on-first-use. Surface the
+            // fingerprint so the setup screen can ask the user to confirm it explicitly. The outer
+            // `if let` only tests that a refusal was recorded — the fingerprint itself may be nil.
+            if let host = normalizedURL.host, let fingerprint = api.consumeTrustUnknown(forHost: host) {
+                throw ServerProbeError.untrustedCertificate(host: host, fingerprint: fingerprint)
+            }
+            throw error
+        }
+    }
+
+    /// Pins `fingerprint` for `host` and re-probes, after the user has confirmed it on screen.
+    ///
+    /// The approval names the exact fingerprint, so a certificate swapped between the prompt and
+    /// this retry is still refused — this is a confirmation, not a blanket "trust anything next".
+    func approveCertificate(rawURL: String, host: String, fingerprint: String) async throws -> MobileProbeResponse {
+        api.allowTrustEnrollment(host: host, expecting: fingerprint)
+        do {
+            let (serverURL, response) = try await probe(rawURL: rawURL)
+            guard response.service.compare("tday", options: .caseInsensitive) == .orderedSame,
+                  response.version == "1" else {
+                throw ServerProbeError.notTdayServer
+            }
+            serverURLState.currentURL = serverURL
+            persistRuntimeServerURL()
+            return response
+        } catch {
+            api.cancelTrustEnrollment(host: host)
             throw error
         }
     }

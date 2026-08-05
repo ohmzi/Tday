@@ -14,6 +14,7 @@ import com.ohmz.tday.plugins.configureSecurity
 import com.ohmz.tday.plugins.configureSecurityHeaders
 import com.ohmz.tday.plugins.configureSerialization
 import com.ohmz.tday.plugins.configureStatusPages
+import com.ohmz.tday.security.FieldEncryption
 import io.ktor.server.application.Application
 import io.ktor.server.application.install
 import io.ktor.server.engine.embeddedServer
@@ -84,11 +85,13 @@ fun Application.module(config: AppConfig = AppConfig.load()) {
     configureSecurityHeaders()
     configureStatusPages()
     configureSecurity()
-    logStartupSecurityWarnings(config)
+    val fieldEncryption by inject<FieldEncryption>()
+    logStartupSecurityWarnings(config, fieldEncryption)
     configureRateLimiting()
     configureRouting()
     warmUpSummaryModel()
     startReminderPushScheduler()
+    startRetentionScheduler()
     logger.info("Tday backend started successfully")
 }
 
@@ -108,8 +111,26 @@ private fun Application.startReminderPushScheduler() {
     }
 }
 
-private fun logStartupSecurityWarnings(config: AppConfig) {
+private fun Application.startRetentionScheduler() {
+    val scheduler by inject<com.ohmz.tday.services.RetentionScheduler>()
+    launch {
+        runCatching { scheduler.run() }
+            .onFailure { logger.warn("Retention scheduler stopped: ${it.message}") }
+    }
+}
+
+private fun logStartupSecurityWarnings(config: AppConfig, fieldEncryption: FieldEncryption) {
     if (!config.isProduction) return
+
+    // Field encryption is fail-open: with no usable key, encryptIfSensitive returns the
+    // plaintext unchanged and nothing else signals it. Say so loudly, because the operator
+    // otherwise has no way to tell an encrypted column from an unencrypted one.
+    if (!fieldEncryption.isConfigured()) {
+        logger.warn(
+            "DATA_ENCRYPTION_KEY/DATA_ENCRYPTION_KEYS is unset in production; " +
+                "sensitive fields are being stored as PLAINTEXT in Postgres",
+        )
+    }
 
     if (config.credentialsPrivateKeyPem.isNullOrBlank()) {
         logger.warn("AUTH_CREDENTIALS_PRIVATE_KEY is unset in production; credential envelope encryption will use an ephemeral key")

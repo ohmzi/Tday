@@ -1,5 +1,6 @@
 package com.ohmz.tday.routes.auth
 
+import com.ohmz.tday.domain.respondRateLimit
 import com.ohmz.tday.models.request.RegisterRequest
 import com.ohmz.tday.security.*
 import com.ohmz.tday.services.UserService
@@ -23,11 +24,11 @@ fun Route.registerRoutes() {
 
             val throttle = authThrottle.enforceRateLimit(ThrottleAction.register, call.request, body.username)
             if (!throttle.allowed) {
-                call.respond(HttpStatusCode.TooManyRequests, mapOf(
-                    "message" to "Too many authentication requests. Try again in ${authThrottle.formatRetryWait(throttle.retryAfterSeconds)}.",
-                    "reason" to (throttle.reasonCode ?: "auth_limit"),
-                    "retryAfterSeconds" to throttle.retryAfterSeconds,
-                ))
+                call.respondRateLimit(
+                    message = "Too many authentication requests. Try again in ${authThrottle.formatRetryWait(throttle.retryAfterSeconds)}.",
+                    reason = throttle.reasonCode ?: "auth_limit",
+                    retryAfterSeconds = throttle.retryAfterSeconds,
+                )
                 return@post
             }
 

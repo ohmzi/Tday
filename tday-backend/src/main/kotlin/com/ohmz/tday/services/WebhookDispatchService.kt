@@ -52,7 +52,13 @@ interface WebhookDispatchService {
 class WebhookDispatchServiceImpl(
     private val fieldEncryption: FieldEncryption,
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
-    private val client: HttpClient = HttpClient(CIO) { engine { requestTimeout = REQUEST_TIMEOUT_MS } },
+    // followRedirects = false: the destination URL is validated at creation time, but a redirect
+    // would let a validated public host bounce the request to a private one after the fact.
+    // A legitimate webhook receiver has no reason to 3xx.
+    private val client: HttpClient = HttpClient(CIO) {
+        followRedirects = false
+        engine { requestTimeout = REQUEST_TIMEOUT_MS }
+    },
 ) : WebhookDispatchService {
 
     private val logger = LoggerFactory.getLogger(WebhookDispatchServiceImpl::class.java)

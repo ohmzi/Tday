@@ -5,6 +5,12 @@ WORKDIR /web
 # timestamp-only build id otherwise, which is still unique per build.
 ARG GIT_SHA=dev
 ENV GIT_SHA=$GIT_SHA
+# Vite inlines VITE_* at build time, so the DSN has to be present in THIS stage — env_file only
+# applies at runtime, which is why browser Sentry silently reported nothing before.
+ARG VITE_SENTRY_DSN=
+ENV VITE_SENTRY_DSN=$VITE_SENTRY_DSN
+ARG VITE_SENTRY_TRACES_SAMPLE_RATE=
+ENV VITE_SENTRY_TRACES_SAMPLE_RATE=$VITE_SENTRY_TRACES_SAMPLE_RATE
 COPY tday-web/package*.json ./
 RUN npm ci
 COPY tday-web/ .
