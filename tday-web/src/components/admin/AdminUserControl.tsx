@@ -52,7 +52,7 @@ type PendingApprovalRowProps = {
   onReject: (userId: string) => void;
 };
 
-type AdminActionType = "approve" | "reject" | "delete" | "reset" | null;
+type AdminActionType = "approve" | "reject" | "delete" | "reset" | "clearReset" | null;
 
 type ApprovedUserRowProps = {
   user: AdminUser;
@@ -61,6 +61,7 @@ type ApprovedUserRowProps = {
   actionType: AdminActionType;
   onDelete: (userId: string) => void;
   onResetPassword: (userId: string) => void;
+  onClearResetRequest: (userId: string) => void;
 };
 
 /** Rounded grouped section card with a big ExtraBold title — mirrors the
@@ -131,6 +132,7 @@ const ApprovedUserRow = ({
   actionType,
   onDelete,
   onResetPassword,
+  onClearResetRequest,
 }: ApprovedUserRowProps) => {
   const isCurrentUser = sessionUserId === user.id;
   const busy = actionUserId === user.id;
@@ -165,6 +167,24 @@ const ApprovedUserRow = ({
         )}
       </div>
       <div className="flex items-center gap-2 sm:shrink-0">
+        {/* Available for admin rows too: it's the only in-app way to clear an admin's
+            failed-answer lockout, since "Reset password" refuses admin targets. */}
+        {resetRequested && (
+          <Button
+            onClick={() => {
+              onClearResetRequest(user.id);
+            }}
+            disabled={busy}
+            className={cn(ACTION_BUTTON_BASE, ACTION_NEUTRAL)}
+          >
+            {busy && actionType === "clearReset" ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <X className="h-4 w-4" />
+            )}
+            Dismiss
+          </Button>
+        )}
         {/* Admins can't have their password reset from here — they manage it
             themselves under Settings → Change password. */}
         {user.role !== "ADMIN" && (
@@ -279,6 +299,7 @@ const ApprovedUsersContent = ({
   actionType,
   onDelete,
   onResetPassword,
+  onClearResetRequest,
 }: {
   loading: boolean;
   approvedUsers: AdminUser[];
@@ -287,6 +308,7 @@ const ApprovedUsersContent = ({
   actionType: AdminActionType;
   onDelete: (userId: string) => void;
   onResetPassword: (userId: string) => void;
+  onClearResetRequest: (userId: string) => void;
 }) => {
   if (loading) {
     return <p className="text-sm font-extrabold text-muted-foreground">Loading users...</p>;
@@ -309,6 +331,7 @@ const ApprovedUsersContent = ({
       actionType={actionType}
       onDelete={onDelete}
       onResetPassword={onResetPassword}
+      onClearResetRequest={onClearResetRequest}
     />
   ));
 };
@@ -451,6 +474,37 @@ export default function AdminUserControl() {
     }
   };
 
+  // Anyone can request a reset for any username without signing in, so an admin needs a way to
+  // dismiss a request they didn't expect. This also clears the self-service lockout, which is the
+  // only in-app route back for an admin account (reset-password refuses admin targets).
+  const clearResetRequest = async (userId: string) => {
+    const target = users.find((u) => u.id === userId);
+    const confirmed = window.confirm(
+      `Dismiss the password reset request for ${target?.username ?? "this user"}? This clears their failed-answer lockout without changing their password.`,
+    );
+    if (!confirmed) return;
+
+    setActionUserId(userId);
+    setActionType("clearReset");
+    try {
+      await api.POST({
+        url: `/api/admin/users/${userId}/clear-reset-request`,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      toast({ description: "Reset request dismissed" });
+      await fetchUsers();
+    } catch (error) {
+      toast({
+        description: getErrorMessage(error, "Failed to dismiss reset request"),
+        variant: "destructive",
+      });
+    } finally {
+      setActionUserId(null);
+      setActionType(null);
+    }
+  };
+
   const copyPassword = async () => {
     if (!resetResult) return;
     try {
@@ -495,6 +549,7 @@ export default function AdminUserControl() {
             actionType={actionType}
             onDelete={deleteUser}
             onResetPassword={resetPassword}
+            onClearResetRequest={clearResetRequest}
           />
         </div>
       </SectionCard>

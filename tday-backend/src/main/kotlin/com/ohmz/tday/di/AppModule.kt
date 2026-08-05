@@ -87,7 +87,10 @@ val securityModule = module {
     single<CredentialEnvelope> { CredentialEnvelopeImpl(get()) }
     single<RequestRateLimiter> { InMemoryRequestRateLimiter(get(), get()) }
     single { AuthUserCache() }
-    single<SessionControl> { SessionControlImpl(get(), get()) }
+    single<SessionControl> {
+        val calendarFeedService = get<CalendarFeedService>()
+        SessionControlImpl(get(), get()) { userId -> calendarFeedService.revoke(userId) }
+    }
 }
 
 val serviceModule = module {
@@ -113,6 +116,7 @@ val serviceModule = module {
     single<AdminService> { AdminServiceImpl(get(), get()) }
     single<PushNotificationService> { PushNotificationServiceImpl(get()) }
     single { ReminderPushScheduler(get()) }
+    single { com.ohmz.tday.services.RetentionScheduler(get()) }
     single<UserApiKeyService> { UserApiKeyServiceImpl(get()) }
     single<CalendarFeedService> { CalendarFeedServiceImpl(get()) }
 }

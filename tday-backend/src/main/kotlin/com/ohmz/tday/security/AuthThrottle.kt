@@ -20,7 +20,14 @@ import kotlin.math.pow
 
 enum class ThrottleAction { credentials, register, csrf, sessionGet, credentialsKey }
 
-enum class ThrottleDimension { ip, username, device }
+/**
+ * [ipUsername] is the punitive bucket for sign-in: failures lock the (IP, account) pair, not the
+ * account. A bare [username] lockout let anyone who knew the owner's username keep them locked out
+ * of their own server indefinitely, from anywhere, for the cost of one wrong password per backoff
+ * window. Account-wide pressure is now handled by a non-punitive quota instead — see
+ * [AuthThrottleImpl.accountCeilingPolicy].
+ */
+enum class ThrottleDimension { ip, username, device, ipUsername }
 
 data class ThrottleResult(
     val allowed: Boolean,
@@ -30,6 +37,68 @@ data class ThrottleResult(
 )
 
 data class SubjectKey(val scope: String, val bucketKey: String, val dimension: ThrottleDimension)
+
+/** Scope of the account-wide sign-in quota. Deliberately not derived from [ThrottleAction]. */
+internal const val CREDENTIALS_ACCOUNT_SCOPE = "credentials_account:username"
+
+/**
+ * Dimensions a failed sign-in is allowed to *lock*. Anything outside this set may still consume a
+ * request quota, but must never reach [AuthThrottleImpl.incrementFailureCounter] — a lockout keyed
+ * on something an unauthenticated stranger controls (an account name) is a remote denial of service
+ * against the account's owner, not a defense.
+ */
+internal val LOCKABLE_DIMENSIONS = setOf(
+    ThrottleDimension.ip,
+    ThrottleDimension.device,
+    ThrottleDimension.ipUsername,
+)
+
+/**
+ * Derives the throttle buckets a request belongs to. Pure — no DB, no clock, no request object —
+ * so the keying rules can be unit-tested directly (this repo has no test database).
+ *
+ * Sign-in binds the account to the source IP; every other action keeps the plain username bucket,
+ * because only [ThrottleAction.credentials] feeds [AuthThrottle.recordFailure] and so only it can
+ * produce a lockout.
+ */
+internal fun buildSubjectKeys(
+    action: ThrottleAction,
+    ip: String,
+    deviceHint: String?,
+    normalizedIdentifier: String?,
+    hash: (String) -> String,
+): List<SubjectKey> {
+    val subjects = mutableListOf<SubjectKey>()
+    subjects.add(makeSubjectKey(action, ThrottleDimension.ip, ip, hash))
+
+    if (deviceHint != null) {
+        subjects.add(makeSubjectKey(action, ThrottleDimension.device, deviceHint, hash))
+    }
+
+    if (action != ThrottleAction.csrf && normalizedIdentifier != null) {
+        if (action == ThrottleAction.credentials) {
+            subjects.add(makeSubjectKey(action, ThrottleDimension.ipUsername, "$ip|$normalizedIdentifier", hash))
+        } else {
+            subjects.add(makeSubjectKey(action, ThrottleDimension.username, normalizedIdentifier, hash))
+        }
+    }
+    return subjects
+}
+
+internal fun makeSubjectKey(
+    action: ThrottleAction,
+    dimension: ThrottleDimension,
+    value: String,
+    hash: (String) -> String,
+): SubjectKey = SubjectKey("${action.name}:${dimension.name}", hash("${dimension.name}:$value"), dimension)
+
+/** Client-facing reason code for a blocked bucket. */
+internal fun reasonCodeFor(dimension: ThrottleDimension): String = when (dimension) {
+    ThrottleDimension.username -> "auth_limit_username"
+    // From the caller's seat an (IP, account) block is still "too many attempts from here"; the
+    // precise dimension is carried in the security event log rather than the HTTP response.
+    ThrottleDimension.ip, ThrottleDimension.device, ThrottleDimension.ipUsername -> "auth_limit_ip"
+}
 
 interface AuthThrottle {
     suspend fun enforceRateLimit(action: ThrottleAction, request: ApplicationRequest, identifier: String? = null): ThrottleResult
@@ -51,6 +120,20 @@ class AuthThrottleImpl(
         Policy(config.limitRegisterBurstWindowSec * 1000L, config.limitRegisterBurstMax)
     }
 
+    /**
+     * Account-wide sign-in ceiling — the backstop against a distributed guessing attack now that
+     * failures lock (IP, account) rather than the account.
+     *
+     * This is a *quota*, never a lockout: it is enforced only through [consumeRequestQuota] and is
+     * never handed to [incrementFailureCounter]. A quota self-heals at the end of its fixed window
+     * and its worst-case wait is bounded by the window; a lockout compounds and is bounded only by
+     * `lockoutMaxSec`. That difference is what stops this from becoming the very denial of service
+     * the username lockout used to be.
+     */
+    private val accountCeilingPolicy by lazy {
+        Policy(config.limitCredentialsAccountWindowSec * 1000L, config.limitCredentialsAccountMax)
+    }
+
     private val policies by lazy {
         mapOf(
             ThrottleAction.credentials to Policy(config.limitCredentialsWindowSec * 1000L, config.limitCredentialsMax),
@@ -70,6 +153,24 @@ class AuthThrottleImpl(
             val verdict = consumeRequestQuota(policy, subject)
             if (!verdict.allowed) {
                 blocked = pickStronger(blocked, verdict)
+            }
+        }
+
+        // Sign-in gets an account-wide ceiling so that binding lockouts to (IP, account) does not
+        // hand a distributed attacker unlimited guesses against one account. Quota only — it can
+        // slow an account down for at most one window, but it can never lock it.
+        if (action == ThrottleAction.credentials) {
+            val norm = clientSignals.normalizeIdentifier(identifier)
+            if (norm != null) {
+                val accountSubject = SubjectKey(
+                    scope = CREDENTIALS_ACCOUNT_SCOPE,
+                    bucketKey = clientSignals.hashSecurityValue("username:$norm"),
+                    dimension = ThrottleDimension.username,
+                )
+                val accountVerdict = consumeRequestQuota(accountCeilingPolicy, accountSubject)
+                if (!accountVerdict.allowed) {
+                    blocked = pickStronger(blocked, accountVerdict.copy(reasonCode = "auth_limit_account"))
+                }
             }
         }
 
@@ -109,7 +210,10 @@ class AuthThrottleImpl(
         var longestLock = 0
         var highestIpFailures = 0
 
-        for (subject in subjects) {
+        // Only lockable dimensions may accrue a lock. buildSubjectKeys already avoids emitting an
+        // account-scoped subject here, but this guard is what makes that a property of the lockout
+        // path itself rather than of one call site.
+        for (subject in subjects.filter { it.dimension in LOCKABLE_DIMENSIONS }) {
             val result = incrementFailureCounter(subject)
             longestLock = max(longestLock, result.first)
             if (subject.dimension == ThrottleDimension.ip) {
@@ -201,20 +305,14 @@ class AuthThrottleImpl(
         return if (s == 0) "${m}m" else "${m}m ${s}s"
     }
 
-    private fun buildSubjects(action: ThrottleAction, request: ApplicationRequest, identifier: String?): List<SubjectKey> {
-        val subjects = mutableListOf<SubjectKey>()
-        val ip = clientSignals.getClientIp(request)
-        subjects.add(makeSubject(action, ThrottleDimension.ip, ip))
-
-        val device = clientSignals.getDeviceHint(request)
-        if (device != null) subjects.add(makeSubject(action, ThrottleDimension.device, device))
-
-        if (action != ThrottleAction.csrf) {
-            val norm = clientSignals.normalizeIdentifier(identifier)
-            if (norm != null) subjects.add(makeSubject(action, ThrottleDimension.username, norm))
-        }
-        return subjects
-    }
+    private fun buildSubjects(action: ThrottleAction, request: ApplicationRequest, identifier: String?): List<SubjectKey> =
+        buildSubjectKeys(
+            action = action,
+            ip = clientSignals.getClientIp(request),
+            deviceHint = clientSignals.getDeviceHint(request),
+            normalizedIdentifier = clientSignals.normalizeIdentifier(identifier),
+            hash = clientSignals::hashSecurityValue,
+        )
 
     private fun makeSubject(action: ThrottleAction, dimension: ThrottleDimension, value: String): SubjectKey =
         SubjectKey("${action.name}:${dimension.name}", clientSignals.hashSecurityValue("${dimension.name}:$value"), dimension)
@@ -268,7 +366,7 @@ class AuthThrottleImpl(
             val windowEndsAt = nextWindowStart.plusNanos(policy.windowMs * 1_000_000)
             ThrottleResult(
                 allowed = false,
-                reasonCode = if (subject.dimension == ThrottleDimension.username) "auth_limit_username" else "auth_limit_ip",
+                reasonCode = reasonCodeFor(subject.dimension),
                 retryAfterSeconds = retryAfterFromDateTime(windowEndsAt, now),
                 dimension = subject.dimension,
             )
