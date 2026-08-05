@@ -187,6 +187,15 @@ dependencies {
     implementation("androidx.room:room-ktx:2.6.1")
     ksp("androidx.room:room-compiler:2.6.1")
 
+    // The offline cache holds task titles, notes and unsynced mutations, so it is encrypted at
+    // rest with SQLCipher. androidx-compatible artifact (net.zetetic:sqlcipher-android) so it
+    // plugs into Room's openHelperFactory directly. See DatabaseModule / DatabasePassphraseStore.
+    implementation("net.zetetic:sqlcipher-android:4.17.0")
+    implementation("androidx.sqlite:sqlite:2.4.0")
+
+    // Optional, opt-in app lock (BiometricPrompt with device-credential fallback).
+    implementation("androidx.biometric:biometric:1.1.0")
+
     implementation("androidx.glance:glance-appwidget:1.1.1")
     implementation("androidx.glance:glance-material3:1.1.1")
 

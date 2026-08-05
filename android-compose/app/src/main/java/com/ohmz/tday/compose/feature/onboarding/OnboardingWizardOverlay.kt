@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -80,6 +81,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -123,10 +125,13 @@ fun OnboardingWizardOverlay(
     initialServerUrl: String?,
     serverErrorMessage: String?,
     serverCanResetTrust: Boolean,
+    serverTrustFingerprint: String?,
     pendingApprovalMessage: String?,
     authUiState: AuthUiState,
     onConnectServer: (String, (Result<String>) -> Unit) -> Unit,
     onResetServerTrust: (String, (Result<Unit>) -> Unit) -> Unit,
+    onConfirmServerTrust: (String, String, (Result<String>) -> Unit) -> Unit,
+    onDismissServerTrust: () -> Unit,
     onLogin: (String, String, LoginCredentialSource) -> Unit,
     onRegister: (
         firstName: String,
@@ -450,6 +455,60 @@ fun OnboardingWizardOverlay(
         step == WizardStep.LOGIN -> WizardViewState.LOGIN
         step == WizardStep.SERVER -> WizardViewState.SERVER
         else -> WizardViewState.MODE
+    }
+
+    // A certificate the device cannot verify is never trusted silently: the user sees the exact
+    // fingerprint and confirms it here, and only that fingerprint is then pinned.
+    serverTrustFingerprint?.let { fingerprint ->
+        AlertDialog(
+            onDismissRequest = onDismissServerTrust,
+            title = { Text(stringResource(R.string.onboarding_trust_dialog_title)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(
+                        text = stringResource(R.string.onboarding_trust_dialog_body),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Text(
+                        text = fingerprint,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontFamily = FontFamily.Monospace,
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = confirm@{
+                        val value = serverUrl.trim()
+                        if (value.isBlank()) return@confirm
+                        serverError = null
+                        isConnecting = true
+                        canRequestSavedLoginCredential = false
+                        onConfirmServerTrust(value, fingerprint) { result ->
+                            result.onSuccess {
+                                finishServerConnection(it)
+                            }.onFailure { error ->
+                                isConnecting = false
+                                canRequestSavedLoginCredential = false
+                                step = WizardStep.SERVER
+                                serverError = onboardingServerErrorMessage(
+                                    error = error,
+                                    fallback = connectErrorFallback,
+                                    appOutdatedMessage = appOutdatedError,
+                                )
+                            }
+                        }
+                    },
+                ) {
+                    Text(stringResource(R.string.onboarding_trust_dialog_confirm))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = onDismissServerTrust) {
+                    Text(stringResource(R.string.onboarding_trust_dialog_cancel))
+                }
+            },
+        )
     }
 
     val fieldColors = OutlinedTextFieldDefaults.colors(

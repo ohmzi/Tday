@@ -210,6 +210,10 @@
     <string name="onboarding_server_url_placeholder">https://app.example.com</string>
     <string name="onboarding_reset_trust">Reset trusted server</string>
     <string name="onboarding_resetting_trust">Resetting trust…</string>
+    <string name="onboarding_trust_dialog_title">Trust this server certificate?</string>
+    <string name="onboarding_trust_dialog_body">Your device cannot verify this server\'s certificate. Continue only if this fingerprint matches the one on your server:</string>
+    <string name="onboarding_trust_dialog_confirm">Trust this certificate</string>
+    <string name="onboarding_trust_dialog_cancel">Cancel</string>
     <string name="onboarding_connect">Connect</string>
     <string name="onboarding_connecting_title">Connecting to server…</string>
     <string name="onboarding_connecting_subtitle">Checking endpoint, TLS, and workspace settings</string>
@@ -483,6 +487,8 @@
     <string name="server_setup_error_not_tday_server">Server is reachable but does not appear to be a T\'Day server.</string>
     <string name="server_setup_trust_refreshing">Saved server trust changed. Trying again with a refreshed certificate.</string>
     <string name="server_setup_trust_refresh_failed">The app could not recover from a saved server trust mismatch automatically. Clear app storage or reinstall the app, then try again.</string>
+    <string name="server_setup_trust_mismatch">This server\'s certificate does not match the one you trusted. Someone may be intercepting the connection. Only reset the trusted server if you changed the certificate yourself.</string>
+    <string name="server_setup_trust_unknown">This server\'s certificate is not trusted by your device. Check its fingerprint before continuing.</string>
 
     <string name="notification_channel_task_reminders_name">Task Reminders</string>
     <string name="notification_channel_task_reminders_description">Reminders for upcoming task due dates</string>
@@ -636,4 +642,16 @@
     <string name="settings_quiet_hours_start">Start</string>
     <string name="settings_quiet_hours_end">End</string>
     <string name="settings_resting_floaters">Fade resting floaters</string>
+    <string name="settings_privacy">Privacy</string>
+    <string name="settings_screenshot_protection">Hide content in screenshots</string>
+    <string name="settings_screenshot_protection_subtitle">Keeps task text out of screenshots, screen recordings and the app switcher</string>
+    <string name="settings_app_lock">Require unlock to open T\'Day</string>
+    <string name="settings_app_lock_subtitle">Ask for your fingerprint, face or device PIN each time the app opens</string>
+    <string name="settings_app_lock_unavailable">Set up a screen lock on this device first.</string>
+    <string name="settings_legacy_cache_warning_title">Older data is not encrypted yet</string>
+    <string name="settings_legacy_cache_warning_body">A cache file from an earlier version of T\'Day could not be moved into the encrypted database, so it is still readable on this device and may contain offline changes that never reached the server. Check that everything here also appears on your other devices, then reinstall T\'Day to remove the old file.</string>
+    <string name="app_lock_title">T\'Day is locked</string>
+    <string name="app_lock_unlock">Unlock</string>
+    <string name="app_lock_prompt_title">Unlock T\'Day</string>
+    <string name="app_lock_prompt_subtitle">Confirm it\'s you to see your tasks</string>
 </resources>

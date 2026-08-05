@@ -19,6 +19,8 @@ import java.net.CookieManager
 import java.net.CookiePolicy
 import java.util.TimeZone
 import javax.inject.Singleton
+import javax.net.ssl.SSLContext
+import javax.net.ssl.TrustManager
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -42,6 +44,7 @@ object NetworkModule {
     fun provideOkHttpClient(
         cookieManager: CookieManager,
         secureConfigStore: SecureConfigStore,
+        serverTrustManager: ServerTrustManager,
     ): OkHttpClient {
         val logging = HttpLoggingInterceptor().apply {
             redactHeader("Cookie")
@@ -53,8 +56,13 @@ object NetworkModule {
             }
         }
 
-        return OkHttpClient.Builder()
+        val sslContext = SSLContext.getInstance("TLS").apply {
+            init(null, arrayOf<TrustManager>(serverTrustManager), null)
+        }
+
+        val client = OkHttpClient.Builder()
             .cookieJar(JavaNetCookieJar(cookieManager))
+            .sslSocketFactory(sslContext.socketFactory, serverTrustManager)
             // NextAuth callback responses may issue absolute redirects; keep auth flow
             // in-app and avoid jumping to unreachable localhost targets on Android.
             .followRedirects(false)
@@ -82,16 +90,23 @@ object NetworkModule {
                     .header("X-Tday-App-Version", BuildConfig.VERSION_NAME)
                     .header("X-Tday-Device-Id", secureConfigStore.getOrCreateDeviceId())
                     .build()
-                // TLS trust is enforced by OkHttp's default trust manager during the
-                // handshake (system/public CA validation + hostname check), so any cert
-                // that reaches here is already CA-validated. We deliberately do NOT add a
-                // post-handshake public-key pin: it was redundant with CA validation and
-                // false-tripped on routine renewals (e.g. Let's Encrypt rotating to a new
-                // key), surfacing a bogus "certificate changed" during URL validation.
+                // TLS trust is enforced during the handshake by ServerTrustManager: public CA
+                // validation first (no pin, so routine renewals never false-trip), and for
+                // anything the system cannot vouch for, an exact pin the user confirmed once.
                 chain.proceed(updated)
             }
             .addInterceptor(SentryOkHttpInterceptor())
             .addInterceptor(logging)
+            .build()
+
+        // Certificates pinned by fingerprint are self-signed as a rule and routinely fail
+        // hostname verification; for those the pin is the identity check. Everything else still
+        // goes through OkHttp's default verifier.
+        return client.newBuilder()
+            .hostnameVerifier { hostname, session ->
+                client.hostnameVerifier.verify(hostname, session) ||
+                    serverTrustManager.isPinnedSession(hostname, session)
+            }
             .build()
     }
 
