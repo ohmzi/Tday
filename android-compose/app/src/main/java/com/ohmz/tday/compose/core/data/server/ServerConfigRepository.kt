@@ -6,21 +6,22 @@ import com.ohmz.tday.compose.core.data.AppDataMode
 import com.ohmz.tday.compose.core.data.SecureConfigStore
 import com.ohmz.tday.compose.core.data.ServerProbeException
 import com.ohmz.tday.compose.core.data.extractApiErrorMessage
+import com.ohmz.tday.compose.core.network.ServerTrustManager
+import com.ohmz.tday.compose.core.network.isPrivateNetworkHost
 import com.ohmz.tday.compose.core.network.TdayApiService
 import com.ohmz.tday.compose.core.security.ProbeDecryptor
 import kotlinx.coroutines.withTimeout
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
-import retrofit2.Response
-import java.security.MessageDigest
-import java.security.cert.X509Certificate
 import javax.inject.Inject
 import javax.inject.Singleton
+import javax.net.ssl.SSLException
 
 @Singleton
 class ServerConfigRepository @Inject constructor(
     private val api: TdayApiService,
     private val secureConfigStore: SecureConfigStore,
+    private val serverTrustManager: ServerTrustManager,
 ) {
     fun getAppDataMode(): AppDataMode = secureConfigStore.getAppDataMode()
 
@@ -61,8 +62,12 @@ class ServerConfigRepository @Inject constructor(
             .build()
             .toString()
 
-        val probeResponse = withTimeout(PROBE_TIMEOUT_MS) {
-            api.probeServer(probeUrl = probeUrl)
+        val probeResponse = try {
+            withTimeout(PROBE_TIMEOUT_MS) {
+                api.probeServer(probeUrl = probeUrl)
+            }
+        } catch (error: Exception) {
+            throw describeTrustFailure(parsedServerUrl, error)
         }
 
         if (!probeResponse.isSuccessful) {
@@ -78,7 +83,6 @@ class ServerConfigRepository @Inject constructor(
             ?: throw ServerProbeException.NotTdayServer()
 
         validateProbeContract(probeBody)
-        verifyAndPersistServerTrust(parsedServerUrl, probeResponse)
 
         val saved = secureConfigStore.saveServerUrl(
             rawUrl = normalizedServerUrl,
@@ -130,6 +134,23 @@ class ServerConfigRepository @Inject constructor(
         return secureConfigStore.clearTrustedServerFingerprintForUrl(rawUrl)
     }
 
+    /**
+     * Probes again with a one-shot authorisation to pin [fingerprint] — the value the user just
+     * saw and confirmed. The authorisation names the expected certificate, so one swapped between
+     * the prompt and this retry is still refused.
+     */
+    suspend fun confirmServerTrust(rawUrl: String, fingerprint: String): Result<ProbeResult> {
+        val serverTrustKey = secureConfigStore.serverTrustKeyForUrl(rawUrl)
+            ?: return Result.failure(ServerProbeException.InvalidUrl())
+
+        serverTrustManager.allowEnrollment(serverTrustKey, fingerprint)
+        val result = probeAndSave(rawUrl)
+        if (result.isFailure) {
+            serverTrustManager.cancelEnrollment(serverTrustKey)
+        }
+        return result
+    }
+
     private fun validateProbeContract(probeBody: com.ohmz.tday.compose.core.model.MobileProbeResponse) {
         val serviceOk = probeBody.service.equals("tday", ignoreCase = true)
         val versionOk = probeBody.version == "1"
@@ -143,58 +164,46 @@ class ServerConfigRepository @Inject constructor(
         throw ServerProbeException.NotTdayServer()
     }
 
-    private fun verifyAndPersistServerTrust(
-        serverUrl: HttpUrl,
-        probeResponse: Response<*>,
-    ) {
-        if (serverUrl.scheme != "https") return
+    /**
+     * Turns a refused handshake into the typed error the setup screen acts on: a changed
+     * certificate (stored pin did not match) or an unrecognised one, carrying the fingerprint the
+     * user has to confirm. Anything else — timeouts, DNS, plain connection failures — is rethrown
+     * untouched.
+     */
+    private fun describeTrustFailure(serverUrl: HttpUrl, error: Exception): Exception {
+        if (serverUrl.scheme != "https") return error
+        if (!error.isTlsFailure()) return error
 
         val serverTrustKey = secureConfigStore.serverTrustKeyForUrl(serverUrl.toString())
-            ?: throw ServerProbeException.InvalidUrl()
+            ?: return error
 
-        val certificate = probeResponse.raw()
-            .handshake
-            ?.peerCertificates
-            ?.firstOrNull() as? X509Certificate
-            ?: throw IllegalStateException("TLS certificate not available for server trust check")
-
-        val fingerprint = certificatePublicKeyFingerprint(certificate)
-        val trustedFingerprint = secureConfigStore.getTrustedServerFingerprint(serverTrustKey)
-
-        if (trustedFingerprint.isNullOrBlank()) {
-            secureConfigStore.saveTrustedServerFingerprint(
-                serverTrustKey = serverTrustKey,
-                fingerprint = fingerprint,
-            )
-            return
+        if (serverTrustManager.consumeMismatch(serverTrustKey)) {
+            return ServerProbeException.CertificateChanged(serverTrustKey)
         }
 
-        if (!trustedFingerprint.equals(fingerprint, ignoreCase = true)) {
-            throw ServerProbeException.CertificateChanged(serverTrustKey)
+        val offeredFingerprint = serverTrustManager.consumeUnknownFingerprint(serverTrustKey)
+            ?: return error
+
+        return ServerProbeException.CertificateUntrusted(serverTrustKey, offeredFingerprint)
+    }
+
+    /// Handshake refusals surface as an SSLException, sometimes wrapped by OkHttp's route retry.
+    private fun Throwable.isTlsFailure(): Boolean {
+        var current: Throwable? = this
+        while (current != null) {
+            if (current is SSLException) return true
+            current = current.cause?.takeIf { it !== current }
         }
+        return false
     }
 
     private fun ensureSecureTransport(serverUrl: HttpUrl) {
         if (serverUrl.scheme == "https") return
-        if (BuildConfig.DEBUG && isLocalDevelopmentHost(serverUrl.host)) return
+        // Shares isPrivateNetworkHost with the trust manager on purpose: "is this host reachable
+        // only from the LAN?" now gates both cleartext and certificate enrollment, and a second
+        // copy of the rule is how the two drift apart.
+        if (BuildConfig.DEBUG && isPrivateNetworkHost(serverUrl.host)) return
         throw ServerProbeException.InsecureTransport()
-    }
-
-    private fun isLocalDevelopmentHost(host: String): Boolean {
-        val normalizedHost = host.lowercase()
-        if (normalizedHost == "localhost") return true
-        if (normalizedHost == "10.0.2.2") return true
-        if (normalizedHost.endsWith(".local")) return true
-        if (normalizedHost.matches(Regex("^127\\.\\d+\\.\\d+\\.\\d+$"))) return true
-        if (normalizedHost.matches(Regex("^10\\.\\d+\\.\\d+\\.\\d+$"))) return true
-        if (normalizedHost.matches(Regex("^192\\.168\\.\\d+\\.\\d+$"))) return true
-        return normalizedHost.matches(Regex("^172\\.(1[6-9]|2\\d|3[0-1])\\.\\d+\\.\\d+$"))
-    }
-
-    private fun certificatePublicKeyFingerprint(certificate: X509Certificate): String {
-        val digest = MessageDigest.getInstance("SHA-256")
-            .digest(certificate.publicKey.encoded)
-        return digest.joinToString(":") { "%02X".format(it) }
     }
 
     private companion object {

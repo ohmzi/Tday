@@ -13,4 +13,15 @@ sealed class ServerProbeException(message: String) : Exception(message) {
         ServerProbeException(
             "Server certificate changed for $trustedServerKey. This may indicate a MITM or cert rotation. Reset trust to continue.",
         )
+
+    /**
+     * The certificate is neither system-trusted nor the pinned one, and carries the fingerprint the
+     * user must confirm before it can be trusted.
+     */
+    class CertificateUntrusted(
+        val trustedServerKey: String,
+        val fingerprint: String,
+    ) : ServerProbeException(
+        "The certificate presented by $trustedServerKey is not trusted by this device. Confirm its fingerprint to continue.",
+    )
 }

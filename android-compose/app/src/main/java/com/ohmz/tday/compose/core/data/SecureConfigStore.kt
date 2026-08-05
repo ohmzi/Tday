@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import com.ohmz.tday.compose.BuildConfig
+import com.ohmz.tday.compose.core.network.isPrivateNetworkHost
 import dagger.hilt.android.qualifiers.ApplicationContext
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import org.json.JSONObject
@@ -175,10 +176,14 @@ class SecureConfigStore @Inject constructor(
         val serverTrustKey = serverTrustKeyForUrl(rawUrl)
             ?: return Result.failure(IllegalArgumentException("Invalid server URL"))
 
+        clearTrustedServerFingerprintForServerKey(serverTrustKey)
+        return Result.success(Unit)
+    }
+
+    fun clearTrustedServerFingerprintForServerKey(serverTrustKey: String) {
         prefs.edit()
             .remove(fingerprintPrefKey(serverTrustKey))
             .apply()
-        return Result.success(Unit)
     }
 
     fun getLastUsername(): String? =
@@ -298,19 +303,11 @@ class SecureConfigStore @Inject constructor(
         return "$KEY_CERT_FINGERPRINT_PREFIX$serverTrustKey"
     }
 
-    private fun isLocalDevelopmentHost(host: String): Boolean {
-        val normalizedHost = host.lowercase()
-        if (normalizedHost == "localhost") return true
-        if (normalizedHost == "10.0.2.2") return true
-        if (normalizedHost.endsWith(".local")) return true
-        if (normalizedHost.matches(Regex("^127\\.\\d+\\.\\d+\\.\\d+$"))) return true
-        if (normalizedHost.matches(Regex("^10\\.\\d+\\.\\d+\\.\\d+$"))) return true
-        if (normalizedHost.matches(Regex("^192\\.168\\.\\d+\\.\\d+$"))) return true
-        return normalizedHost.matches(Regex("^172\\.(1[6-9]|2\\d|3[0-1])\\.\\d+\\.\\d+$"))
-    }
-
+    // Shares isPrivateNetworkHost with the trust manager on purpose: "is this host reachable only
+    // from the LAN?" now gates both cleartext and certificate enrollment, and a second copy of the
+    // rule is how the two drift apart.
     private fun canUseLocalHttp(host: String): Boolean {
-        return BuildConfig.DEBUG && isLocalDevelopmentHost(host)
+        return BuildConfig.DEBUG && isPrivateNetworkHost(host)
     }
 
     private companion object {
