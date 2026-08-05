@@ -3,6 +3,7 @@ import { notifySessionExpired } from "@/lib/auth/sessionExpiry";
 import { isLocalMode } from "@/lib/local/appMode";
 import { handleLocalRequest } from "@/lib/local/localApi";
 import { LocalApiError } from "@/lib/local/localError";
+import { LocalVaultError } from "@/lib/local/localCrypto";
 
 type fetchOptions = {
   method: string;
@@ -54,6 +55,11 @@ const localApi = (url: string, options: fetchOptions) => {
         code: error.code,
       });
       throw new ApiError(error.message, error.status, error.code, error.field);
+    }
+    if (error instanceof LocalVaultError) {
+      // A read that raced the passphrase gate (or a relock). Surfaced as a plain
+      // 423 so callers show an error instead of a blank screen.
+      throw new ApiError(error.message, 423, `local_vault_${error.code}`);
     }
     throw error;
   }
