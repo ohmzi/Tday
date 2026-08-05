@@ -4,8 +4,8 @@ import React from "react";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-// Enter-to-submit only fires on desktop pointers; the tests flip this to cover
-// the touch fallback (Enter dismisses the keyboard instead).
+// Enter confirms the sheet on desktop keyboards and mobile "done" keys alike;
+// the pointer type is flipped here only to prove it makes no difference.
 let desktopPointer = true;
 
 const createFloaterMutateFn = vi.fn();
@@ -117,15 +117,14 @@ describe("floater sheet Enter-to-submit", () => {
     expect(createFloaterMutateFn).not.toHaveBeenCalled();
   });
 
-  it("does nothing when the title is empty", () => {
-    fireEvent.keyDown(titleField(), { key: "Enter" });
+  it("leaves the composing Enter of an IME alone", () => {
+    fireEvent.change(titleField(), { target: { value: "水やり" } });
+    fireEvent.keyDown(titleField(), { key: "Enter", keyCode: 229 });
 
     expect(createFloaterMutateFn).not.toHaveBeenCalled();
   });
 
-  it("dismisses the keyboard instead of submitting on touch devices", () => {
-    desktopPointer = false;
-    fireEvent.change(titleField(), { target: { value: "Water the plants" } });
+  it("dismisses the keyboard when there is nothing to save", () => {
     titleField().focus();
     expect(document.activeElement).toBe(titleField());
 
@@ -133,5 +132,13 @@ describe("floater sheet Enter-to-submit", () => {
 
     expect(createFloaterMutateFn).not.toHaveBeenCalled();
     expect(document.activeElement).not.toBe(titleField());
+  });
+
+  it("submits on touch devices too, not just desktop pointers", () => {
+    desktopPointer = false;
+    fireEvent.change(titleField(), { target: { value: "Water the plants" } });
+    fireEvent.keyDown(titleField(), { key: "Enter" });
+
+    expect(createFloaterMutateFn).toHaveBeenCalledTimes(1);
   });
 });

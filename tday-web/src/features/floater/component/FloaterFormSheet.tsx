@@ -146,15 +146,12 @@ export default function FloaterFormSheet({
               enterKeyHint="done"
               onKeyDown={(event) => {
                 if (event.key !== "Enter" || event.shiftKey) return;
-                // Shift+Enter adds a newline. Plain Enter saves and closes the
-                // sheet on desktop, and dismisses the keyboard (like native) on
-                // touch.
+                if (!isSubmitEnter(event)) return;
+                // Shift+Enter adds a newline; plain Enter is the header ✓. With
+                // nothing to save it just dismisses the keyboard.
                 event.preventDefault();
-                if (isSubmitEnter(event)) {
-                  handleSubmit();
-                } else {
-                  event.currentTarget.blur();
-                }
+                if (canSubmit) handleSubmit();
+                else event.currentTarget.blur();
               }}
               placeholder={appDict("floaterTitlePlaceholder")}
               className="min-h-12 w-full resize-none bg-transparent text-lg font-black text-foreground placeholder:text-muted-foreground/60 focus:outline-hidden"
@@ -164,10 +161,12 @@ export default function FloaterFormSheet({
           <input
             value={description}
             onChange={(event) => setDescription(event.target.value)}
+            enterKeyHint="done"
             onKeyDown={(event) => {
               if (!isSubmitEnter(event)) return;
               event.preventDefault();
-              handleSubmit();
+              if (canSubmit) handleSubmit();
+              else event.currentTarget.blur();
             }}
             name="description"
             placeholder={appDict("notes")}

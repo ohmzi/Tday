@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/sheet-chrome";
 import ListDot from "@/components/ListDot";
 import { useListMetaData } from "@/components/Sidebar/List/query/get-list-meta";
+import { isSubmitEnter } from "@/lib/utils";
 
 type DateRange = { from: Date; to: Date };
 
@@ -80,12 +81,20 @@ export default function CalendarTaskFormBody({
             setDateRange={setDateRange}
             setPriority={setPriority}
             setRruleOptions={setRruleOptions}
+            onSubmit={onSubmit}
           />
         </div>
         <SheetDivider />
         <input
           value={description}
           onChange={(e) => setDescription(e.target.value)}
+          enterKeyHint="done"
+          onKeyDown={(e) => {
+            if (!isSubmitEnter(e)) return;
+            e.preventDefault();
+            if (title.trim().length > 0) onSubmit();
+            else e.currentTarget.blur();
+          }}
           name="description"
           placeholder={appDict("notes")}
           className="w-full bg-transparent px-[18px] py-3 text-base font-bold text-foreground placeholder:font-bold placeholder:text-muted-foreground/60 focus:outline-hidden"

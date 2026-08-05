@@ -142,10 +142,12 @@ const TodoForm = ({
         <input
           value={desc}
           onChange={(e) => setDesc(e.target.value)}
+          enterKeyHint="done"
           onKeyDown={(e) => {
             if (!isSubmitEnter(e)) return;
             e.preventDefault();
-            handleForm();
+            if (title.trim().length > 0) handleForm();
+            else e.currentTarget.blur();
           }}
           name="description"
           placeholder={appDict("notes")}

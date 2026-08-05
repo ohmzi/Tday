@@ -16,12 +16,12 @@ export function isDesktopPointer(): boolean {
 }
 
 // True when a keydown in a sheet text field means "confirm this sheet" — plain
-// Enter (no modifiers, not mid-IME) on a desktop pointer, the keyboard
-// equivalent of tapping the header ✓. On touch, Enter keeps the native
-// behaviour of dismissing the on-screen keyboard, so callers blur instead.
+// Enter with no modifiers and not mid-IME composition. Every sheet treats it as
+// a press of the header ✓, on desktop keyboards and on the mobile "done" key
+// alike. Callers fall back to blurring when there is nothing to save, so the
+// key still dismisses the on-screen keyboard.
 export function isSubmitEnter(event: ReactKeyboardEvent): boolean {
   if (event.key !== "Enter") return false
   if (event.shiftKey || event.ctrlKey || event.metaKey || event.altKey) return false
-  if (event.nativeEvent.isComposing || event.keyCode === 229) return false
-  return isDesktopPointer()
+  return !(event.nativeEvent.isComposing || event.keyCode === 229)
 }

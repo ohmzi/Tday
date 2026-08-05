@@ -10,7 +10,7 @@ import {
   SheetSectionTitle,
 } from "@/components/ui/sheet-chrome";
 import { api } from "@/lib/api-client";
-import { cn } from "@/lib/utils";
+import { cn, isSubmitEnter } from "@/lib/utils";
 import { hapticTick, hapticConfirm } from "@/lib/haptics";
 import { listColorMap } from "@/lib/listColorMap";
 import {
@@ -207,11 +207,12 @@ export default function ListFormSheet({
               onChange={(event) => setName(event.target.value)}
               enterKeyHint="done"
               onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  // Enter dismisses the keyboard (like native) instead of submitting.
-                  event.preventDefault();
-                  event.currentTarget.blur();
-                }
+                if (!isSubmitEnter(event)) return;
+                // Enter is the header ✓. With nothing to save it just dismisses
+                // the keyboard.
+                event.preventDefault();
+                if (canSubmit) void handleSubmit();
+                else event.currentTarget.blur();
               }}
               placeholder={appDict("listName")}
               className={cn(
