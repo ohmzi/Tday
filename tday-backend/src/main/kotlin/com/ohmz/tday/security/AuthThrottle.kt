@@ -4,6 +4,8 @@ import com.ohmz.tday.config.AppConfig
 import com.ohmz.tday.db.tables.AuthSignals
 import com.ohmz.tday.db.tables.AuthThrottles
 import com.ohmz.tday.db.util.CuidGenerator
+import com.ohmz.tday.services.SecurityAlertService
+import com.ohmz.tday.services.SecurityAlertType
 import io.ktor.server.request.ApplicationRequest
 import kotlinx.coroutines.Dispatchers
 import org.jetbrains.exposed.sql.and
@@ -37,6 +39,15 @@ data class ThrottleResult(
 )
 
 data class SubjectKey(val scope: String, val bucketKey: String, val dimension: ThrottleDimension)
+
+/**
+ * What one recorded failure did.
+ *
+ * [lockoutTriggered] is true only on the failure that *crosses* the lockout threshold, so it
+ * counts lockout EPISODES rather than individual wrong passwords. [AbuseGuard] escalates on
+ * repeated episodes; counting raw failures there would turn one forgetful session into a block.
+ */
+data class FailureOutcome(val lockoutTriggered: Boolean = false, val lockSeconds: Int = 0)
 
 /** Scope of the account-wide sign-in quota. Deliberately not derived from [ThrottleAction]. */
 internal const val CREDENTIALS_ACCOUNT_SCOPE = "credentials_account:username"
@@ -102,7 +113,7 @@ internal fun reasonCodeFor(dimension: ThrottleDimension): String = when (dimensi
 
 interface AuthThrottle {
     suspend fun enforceRateLimit(action: ThrottleAction, request: ApplicationRequest, identifier: String? = null): ThrottleResult
-    suspend fun recordFailure(request: ApplicationRequest, identifier: String? = null)
+    suspend fun recordFailure(request: ApplicationRequest, identifier: String? = null): FailureOutcome
     suspend fun clearFailures(request: ApplicationRequest, identifier: String? = null)
     suspend fun recordSuccessSignal(request: ApplicationRequest, identifier: String? = null)
     fun formatRetryWait(seconds: Int): String
@@ -112,6 +123,7 @@ class AuthThrottleImpl(
     private val config: AppConfig,
     private val clientSignals: ClientSignals,
     private val eventLogger: SecurityEventLogger,
+    private val alertService: SecurityAlertService,
 ) : AuthThrottle {
     private data class Policy(val windowMs: Long, val maxRequests: Int)
 
@@ -205,19 +217,21 @@ class AuthThrottleImpl(
         return ThrottleResult(allowed = true)
     }
 
-    override suspend fun recordFailure(request: ApplicationRequest, identifier: String?) {
+    override suspend fun recordFailure(request: ApplicationRequest, identifier: String?): FailureOutcome {
         val subjects = buildSubjects(ThrottleAction.credentials, request, identifier)
         var longestLock = 0
         var highestIpFailures = 0
+        var lockoutTriggered = false
 
         // Only lockable dimensions may accrue a lock. buildSubjectKeys already avoids emitting an
         // account-scoped subject here, but this guard is what makes that a property of the lockout
         // path itself rather than of one call site.
         for (subject in subjects.filter { it.dimension in LOCKABLE_DIMENSIONS }) {
             val result = incrementFailureCounter(subject)
-            longestLock = max(longestLock, result.first)
+            longestLock = max(longestLock, result.lockSeconds)
+            if (result.crossedThreshold) lockoutTriggered = true
             if (subject.dimension == ThrottleDimension.ip) {
-                highestIpFailures = max(highestIpFailures, result.second)
+                highestIpFailures = max(highestIpFailures, result.failures)
             }
         }
 
@@ -225,11 +239,20 @@ class AuthThrottleImpl(
             eventLogger.log("auth_lockout", mapOf("action" to "credentials", "retryAfterSeconds" to longestLock))
             if (longestLock >= config.alertLockoutBurstSec) {
                 eventLogger.log("auth_alert_lockout_burst", mapOf("retryAfterSeconds" to longestLock))
+                alertService.raise(
+                    SecurityAlertType.LOCKOUT_BURST,
+                    "Sign-in lockout now at ${formatRetryWait(longestLock)} for one source.",
+                )
             }
         }
         if (highestIpFailures >= config.alertIpFailureThreshold) {
             eventLogger.log("auth_alert_ip_concentration", mapOf("ipFailureCount" to highestIpFailures))
+            alertService.raise(
+                SecurityAlertType.IP_CONCENTRATION,
+                "$highestIpFailures failed sign-ins from one source.",
+            )
         }
+        return FailureOutcome(lockoutTriggered = lockoutTriggered, lockSeconds = longestLock)
     }
 
     override suspend fun clearFailures(request: ApplicationRequest, identifier: String?) {
@@ -274,6 +297,12 @@ class AuthThrottleImpl(
                                 "reason" to "ip_and_device_changed",
                                 "identifierHash" to identifierHash,
                             ),
+                        )
+                        // A single new device is routine (new phone, new laptop); the alert
+                        // service only pages once these repeat.
+                        alertService.raise(
+                            SecurityAlertType.SIGNAL_ANOMALY,
+                            "A sign-in succeeded from both a new address and a new device.",
                         )
                     }
                 }
@@ -373,7 +402,9 @@ class AuthThrottleImpl(
         }
     }
 
-    private suspend fun incrementFailureCounter(subject: SubjectKey): Pair<Int, Int> {
+    private data class FailureCounterResult(val lockSeconds: Int, val failures: Int, val crossedThreshold: Boolean)
+
+    private suspend fun incrementFailureCounter(subject: SubjectKey): FailureCounterResult {
         val now = LocalDateTime.now(ZoneOffset.UTC)
         val lockoutResetMs = config.lockoutResetSec * 1000L
 
@@ -418,7 +449,12 @@ class AuthThrottleImpl(
             }
 
             val lockSec = if (lockUntil != null) retryAfterFromDateTime(lockUntil, now) else 0
-            Pair(lockSec, nextFailures)
+            FailureCounterResult(
+                lockSeconds = lockSec,
+                failures = nextFailures,
+                // Exactly the failure that crosses the threshold, so one lockout episode counts once.
+                crossedThreshold = nextFailures == config.lockoutFailThreshold,
+            )
         }
     }
 
