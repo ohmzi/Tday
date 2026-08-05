@@ -135,18 +135,19 @@ export default function NLPTitleInput({
         onCompositionStart={() => (isComposing.current = true)}
         onCompositionEnd={() => (isComposing.current = false)}
         onInput={handleNLPInput}
+        enterKeyHint="done"
         onKeyDown={(e) => {
           if (isComposing.current) return;
-          if (e.key === "Enter") {
-            e.preventDefault();
-            if (onSubmit && isSubmitEnter(e)) {
-              // Desktop: plain Enter submits the form.
-              onSubmit();
-              return;
-            }
-            // Enter dismisses the keyboard (like native) instead of submitting.
-            titleRef.current?.blur();
+          if (e.key !== "Enter") return;
+          // The title is single-line — Enter never inserts a newline.
+          e.preventDefault();
+          if (onSubmit && isSubmitEnter(e) && title.trim().length > 0) {
+            // Enter is the header ✓: save and close the sheet.
+            onSubmit();
+            return;
           }
+          // Nothing to submit — dismiss the keyboard, like native.
+          titleRef.current?.blur();
         }}
         ref={titleRef}
         className="z-50 focus:outline-hidden"
