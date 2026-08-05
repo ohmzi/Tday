@@ -8,6 +8,9 @@ import com.ohmz.tday.db.tables.Todos
 import com.ohmz.tday.db.util.CuidGenerator
 import com.ohmz.tday.domain.AppError
 import com.ohmz.tday.domain.DomainEvent
+import com.ohmz.tday.security.FieldEncryption
+import com.ohmz.tday.security.decryptRequired
+import com.ohmz.tday.security.encryptRequired
 import com.ohmz.tday.shared.model.TaskStepDto
 import kotlinx.coroutines.Dispatchers
 import org.jetbrains.exposed.sql.ResultRow
@@ -37,6 +40,7 @@ interface TaskStepService {
 }
 
 class TaskStepServiceImpl(
+    private val fieldEncryption: FieldEncryption,
     private val cache: CacheService,
     private val publisher: RealtimePublisher,
 ) : TaskStepService {
@@ -66,7 +70,7 @@ class TaskStepServiceImpl(
             TaskSteps.insert {
                 it[TaskSteps.id] = id
                 it[TaskSteps.todoID] = todoId
-                it[TaskSteps.title] = trimmed
+                it[TaskSteps.title] = fieldEncryption.encryptRequired("title", trimmed)
                 it[TaskSteps.completed] = false
                 it[TaskSteps.position] = nextPosition
                 it[TaskSteps.createdAt] = now
@@ -139,7 +143,7 @@ class TaskStepServiceImpl(
     private fun ResultRow.toDto() = TaskStepDto(
         id = this[TaskSteps.id],
         todoID = this[TaskSteps.todoID],
-        title = this[TaskSteps.title],
+        title = fieldEncryption.decryptRequired(this[TaskSteps.title]),
         completed = this[TaskSteps.completed],
         position = this[TaskSteps.position],
         createdAt = this[TaskSteps.createdAt].toString(),

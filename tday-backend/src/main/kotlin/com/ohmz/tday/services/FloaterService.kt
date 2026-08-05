@@ -13,6 +13,8 @@ import com.ohmz.tday.domain.DomainEvent
 import com.ohmz.tday.models.response.FloaterResponse
 import com.ohmz.tday.models.response.TodoResponse
 import com.ohmz.tday.security.FieldEncryption
+import com.ohmz.tday.security.decryptRequired
+import com.ohmz.tday.security.encryptRequired
 import kotlinx.coroutines.Dispatchers
 import org.jetbrains.exposed.sql.Op
 import org.jetbrains.exposed.sql.ResultRow
@@ -65,7 +67,7 @@ class FloaterServiceImpl(
         newSuspendedTransaction(Dispatchers.IO) {
             Floaters.insert {
                 it[Floaters.id] = id
-                it[Floaters.title] = title
+                it[Floaters.title] = fieldEncryption.encryptRequired("title", title)
                 it[Floaters.description] = fieldEncryption.encryptIfSensitive("description", description)
                 it[Floaters.priority] = Priority.valueOf(priority)
                 it[Floaters.listID] = normalizedListID
@@ -113,7 +115,9 @@ class FloaterServiceImpl(
         val editableListIds = editableListIdsFor(userId)
         newSuspendedTransaction(Dispatchers.IO) {
             Floaters.update({ (Floaters.id eq id) and mutableFloaters(userId, editableListIds) }) { stmt ->
-                fields["title"]?.let { stmt[Floaters.title] = it as String }
+                fields["title"]?.let {
+                    stmt[Floaters.title] = fieldEncryption.encryptRequired("title", it as String)
+                }
                 fields["description"]?.let {
                     stmt[Floaters.description] = fieldEncryption.encryptIfSensitive("description", it as? String)
                 }
@@ -165,6 +169,7 @@ class FloaterServiceImpl(
                 CompletedFloaters.insert {
                     it[CompletedFloaters.id] = CuidGenerator.newCuid()
                     it[CompletedFloaters.originalFloaterID] = floaterId
+                    // Copied at rest: both tables encrypt "title"/"description".
                     it[CompletedFloaters.title] = floater[Floaters.title]
                     it[CompletedFloaters.description] = floater[Floaters.description]
                     it[CompletedFloaters.priority] = floater[Floaters.priority]
@@ -248,8 +253,8 @@ class FloaterServiceImpl(
 
             Todos.insert {
                 it[Todos.id] = newTodoId
+                // Ciphertext copies straight across — both tables encrypt "title"/"description".
                 it[Todos.title] = floater[Floaters.title]
-                // Ciphertext copies straight across — both tables encrypt "description".
                 it[Todos.description] = floater[Floaters.description]
                 it[Todos.priority] = floater[Floaters.priority]
                 it[Todos.pinned] = floater[Floaters.pinned]
@@ -275,7 +280,7 @@ class FloaterServiceImpl(
         publisher.publishToCollaborators(userId, DomainEvent.TodoChanged())
         return TodoResponse(
             id = newTodoId,
-            title = promoted[Floaters.title],
+            title = fieldEncryption.decryptRequired(promoted[Floaters.title]),
             description = fieldEncryption.decryptIfEncrypted(promoted[Floaters.description]),
             pinned = promoted[Floaters.pinned],
             priority = promoted[Floaters.priority].name,
@@ -293,7 +298,7 @@ class FloaterServiceImpl(
 
     private fun ResultRow.toFloaterResponse(): FloaterResponse = FloaterResponse(
         id = this[Floaters.id],
-        title = this[Floaters.title],
+        title = fieldEncryption.decryptRequired(this[Floaters.title]),
         description = fieldEncryption.decryptIfEncrypted(this[Floaters.description]),
         createdAt = this[Floaters.createdAt].toString(),
         updatedAt = this[Floaters.updatedAt].toString(),

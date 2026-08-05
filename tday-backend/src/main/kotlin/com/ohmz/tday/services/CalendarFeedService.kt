@@ -8,6 +8,7 @@ import com.ohmz.tday.db.tables.Todos
 import com.ohmz.tday.db.util.CuidGenerator
 import com.ohmz.tday.domain.AppError
 import com.ohmz.tday.security.FieldEncryption
+import com.ohmz.tday.security.decryptRequired
 import com.ohmz.tday.security.toHex
 import kotlinx.coroutines.Dispatchers
 import kotlinx.serialization.Serializable
@@ -175,7 +176,7 @@ class CalendarFeedServiceImpl(
                     val over = ResultRowOverride(
                         todoId = row[TodoInstances.todoId],
                         recurrenceDate = row[TodoInstances.instanceDate],
-                        overriddenTitle = row[TodoInstances.overriddenTitle],
+                        overriddenTitle = fieldEncryption.decryptIfEncrypted(row[TodoInstances.overriddenTitle]),
                         overriddenDescription = row[TodoInstances.overriddenDescription],
                         overriddenDue = row[TodoInstances.overriddenDue],
                     )
@@ -186,7 +187,7 @@ class CalendarFeedServiceImpl(
         val events = buildList {
             todoRows.forEach { row ->
                 val id = row[Todos.id]
-                val title = row[Todos.title]
+                val title = fieldEncryption.decryptRequired(row[Todos.title])
                 val description = fieldEncryption.decryptIfEncrypted(row[Todos.description])
                 val timeZone = row[Todos.timeZone].ifBlank { "UTC" }
 
