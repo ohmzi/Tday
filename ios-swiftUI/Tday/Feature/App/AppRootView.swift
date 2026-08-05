@@ -136,6 +136,7 @@ struct AppRootView: View {
                                     initialServerURL: appViewModel.serverURL,
                                     serverErrorMessage: appViewModel.error,
                                     serverCanResetTrust: appViewModel.canResetServerTrust,
+                                    pendingCertificateApproval: appViewModel.pendingCertificateApproval,
                                     pendingApprovalMessage: appViewModel.pendingApprovalMessage,
                                     authViewModel: authViewModel,
                                     systemCredentialService: container.systemCredentialService,
@@ -144,6 +145,12 @@ struct AppRootView: View {
                                     },
                                     onResetServerTrust: { rawURL in
                                         await appViewModel.resetTrustedServer(rawURL: rawURL)
+                                    },
+                                    onApproveCertificate: {
+                                        await appViewModel.approveServerCertificate()
+                                    },
+                                    onDismissCertificate: {
+                                        appViewModel.dismissCertificateApproval()
                                     },
                                     onLogin: { username, password, source in
                                         let success = await authViewModel.login(username: username, password: password, source: source)
