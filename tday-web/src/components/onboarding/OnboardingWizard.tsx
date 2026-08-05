@@ -471,7 +471,7 @@ export default function OnboardingWizard({
                   <ModeChoiceTile
                     title="This device"
                     subtitle="No login"
-                    Icon={MonitorSmartphone}
+                    Icon={Smartphone}
                     tint={TINT.modeGreen}
                     onClick={() => void chooseLocalMode()}
                   />
