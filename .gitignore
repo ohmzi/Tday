@@ -32,11 +32,20 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files
+# env files — these hold real secrets (AUTH_SECRET, DATA_ENCRYPTION_KEY, DATABASE_URL).
+# The wildcards matter: a copy like `.env.docker.bak` or `.env.prod` is just as sensitive as
+# the original, and an exact-match rule silently leaves those committable.
 .env
+.env.*
 .env.docker
+.env.docker.*
 .env.local
 *.env.local
+*.env.bak
+*.env.backup
+# ...but keep the placeholder template tracked.
+!.env.example
+!**/.env.example
 
 # typescript
 *.tsbuildinfo
