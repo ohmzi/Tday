@@ -141,6 +141,25 @@ final class TdayAPIService {
         configuration.consumeTrustFailure(host: host)
     }
 
+    /// The record left when `host`'s unrecognised certificate was refused.
+    ///
+    /// Double optional on purpose: the outer level says whether the refusal happened at all, the
+    /// inner one carries the fingerprint (nil when it could not be derived). Both cases still need
+    /// a clear "untrusted certificate" message rather than a bare `URLError.cancelled`.
+    func consumeTrustUnknown(forHost host: String) -> String?? {
+        configuration.consumeTrustUnknown(host: host)
+    }
+
+    /// Authorises pinning one specific fingerprint for `host` on the next handshake.
+    /// Only call this after the user has seen that fingerprint and confirmed it.
+    func allowTrustEnrollment(host: String, expecting fingerprint: String) {
+        configuration.allowTrustEnrollment(host: host, expecting: fingerprint)
+    }
+
+    func cancelTrustEnrollment(host: String) {
+        configuration.cancelTrustEnrollment(host: host)
+    }
+
     func probeServer(at url: URL) async throws -> MobileProbeResponse {
         try await probeServer(url: url)
     }

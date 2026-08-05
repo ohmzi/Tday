@@ -61,6 +61,18 @@ fun Route.adminRoutes() {
                         }
                     }
                 }
+
+                // Dismiss a pending reset request and clear the self-service lockout without
+                // issuing a new password. Works on admin targets, which /reset-password refuses.
+                route("/clear-reset-request") {
+                    post {
+                        call.withAuth { user ->
+                            val targetId = call.parameters["id"]
+                                ?: return@withAuth arrow.core.Either.Left(AppError.BadRequest("user id is required"))
+                            adminService.clearResetRequest(targetId, user).map { mapOf("message" to it) }
+                        }
+                    }
+                }
             }
         }
     }

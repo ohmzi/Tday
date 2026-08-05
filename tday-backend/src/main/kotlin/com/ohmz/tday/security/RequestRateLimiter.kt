@@ -1,5 +1,6 @@
 package com.ohmz.tday.security
 
+import com.ohmz.tday.observability.TdayObservability
 import io.ktor.server.request.ApplicationRequest
 import io.ktor.server.request.path
 import java.util.ArrayDeque
@@ -91,7 +92,9 @@ class InMemoryRequestRateLimiter(
                 "reason" to policy.reasonCode,
                 "subjectType" to subject.type.name,
                 "retryAfterSeconds" to retryAfterSeconds,
-                "path" to request.path(),
+                // Sanitized: /calendar/{token} carries the secret feed token in the path,
+                // and this event is persisted to the eventLog table.
+                "path" to TdayObservability.sanitizePath(request.path()),
             ),
         )
 

@@ -22,6 +22,7 @@ import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.greaterEq
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.inList
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.isNull
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.lessEq
 import kotlinx.coroutines.Dispatchers
@@ -171,7 +172,18 @@ class TodoServiceImpl(
     override suspend fun delete(userId: String, id: String): Either<AppError, Int> {
         val editableListIds = editableListIdsFor(userId)
         val count = newSuspendedTransaction(Dispatchers.IO) {
-            Todos.deleteWhere { (Todos.id eq id) and mutableTodos(userId, editableListIds) }
+            // todo_instances -> todos is ON DELETE RESTRICT, so a recurring todo that has any
+            // per-occurrence override fails the delete unless its instances go first.
+            val deletableIds = Todos
+                .select(Todos.id)
+                .where { (Todos.id eq id) and mutableTodos(userId, editableListIds) }
+                .map { it[Todos.id] }
+            if (deletableIds.isEmpty()) {
+                0
+            } else {
+                TodoInstances.deleteWhere { TodoInstances.todoId inList deletableIds }
+                Todos.deleteWhere { Todos.id inList deletableIds }
+            }
         }
         cache.invalidateTodoCaches(userId)
         publisher.publishToCollaborators(userId, DomainEvent.TodoChanged())
