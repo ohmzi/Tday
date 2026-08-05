@@ -2,11 +2,16 @@ package com.ohmz.tday.routes.auth
 
 import com.ohmz.tday.plugins.configureSerialization
 import com.ohmz.tday.plugins.configureStatusPages
+import com.ohmz.tday.security.AbuseGuard
 import com.ohmz.tday.security.AuthThrottle
+import com.ohmz.tday.security.FailureOutcome
+import com.ohmz.tday.security.FakeAbuseGuard
+import com.ohmz.tday.security.FakeSecurityAlertService
 import com.ohmz.tday.security.PasswordProof
 import com.ohmz.tday.security.PasswordProofChallengePayload
 import com.ohmz.tday.security.ThrottleAction
 import com.ohmz.tday.security.ThrottleResult
+import com.ohmz.tday.services.SecurityAlertService
 import io.ktor.client.request.get
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
@@ -168,6 +173,8 @@ class AuthRateLimitResponseTest {
                         )
                     }
                     single<PasswordProof> { PassThroughPasswordProof() }
+                    single<AbuseGuard> { FakeAbuseGuard() }
+                    single<SecurityAlertService> { FakeSecurityAlertService() }
                 },
             )
         }
@@ -196,7 +203,7 @@ class AuthRateLimitResponseTest {
         override suspend fun recordFailure(
             request: io.ktor.server.request.ApplicationRequest,
             identifier: String?,
-        ) = Unit
+        ): FailureOutcome = FailureOutcome()
 
         override suspend fun clearFailures(
             request: io.ktor.server.request.ApplicationRequest,

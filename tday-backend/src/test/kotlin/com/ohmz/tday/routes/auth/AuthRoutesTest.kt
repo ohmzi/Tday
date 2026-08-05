@@ -3,6 +3,7 @@ package com.ohmz.tday.routes.auth
 import com.ohmz.tday.plugins.AuthUserKey
 import com.ohmz.tday.plugins.configureSerialization
 import com.ohmz.tday.security.AuthThrottle
+import com.ohmz.tday.security.FailureOutcome
 import com.ohmz.tday.security.CredentialEnvelope
 import com.ohmz.tday.security.CredentialEnvelopeInput
 import com.ohmz.tday.security.CredentialPublicKeyDescriptor
@@ -198,7 +199,7 @@ class AuthRoutesTest {
         override suspend fun recordFailure(
             request: io.ktor.server.request.ApplicationRequest,
             identifier: String?,
-        ) = Unit
+        ): FailureOutcome = FailureOutcome()
 
         override suspend fun clearFailures(
             request: io.ktor.server.request.ApplicationRequest,

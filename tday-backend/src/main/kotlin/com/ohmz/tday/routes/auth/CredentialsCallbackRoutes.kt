@@ -14,6 +14,7 @@ import com.ohmz.tday.di.inject
 fun Route.credentialsCallbackRoutes() {
     val userService by inject<UserService>()
     val authThrottle by inject<AuthThrottle>()
+    val abuseGuard by inject<AbuseGuard>()
     val eventLogger by inject<SecurityEventLogger>()
     val credentialEnvelope by inject<CredentialEnvelope>()
     val passwordProof by inject<PasswordProof>()
@@ -23,6 +24,8 @@ fun Route.credentialsCallbackRoutes() {
 
     route("/callback/credentials") {
         post {
+            if (call.rejectIfAbuseBlocked(abuseGuard, AbuseScope.auth)) return@post
+
             val body = call.receive<CredentialsCallbackRequest>()
 
             var username: String? = null
@@ -51,6 +54,8 @@ fun Route.credentialsCallbackRoutes() {
 
             val throttle = authThrottle.enforceRateLimit(ThrottleAction.credentials, call.request, identifier)
             if (!throttle.allowed) {
+                // Still knocking while locked out — the signal that makes an auth block reachable.
+                abuseGuard.noteLockoutPressure(call.request, throttle)
                 val wait = authThrottle.formatRetryWait(throttle.retryAfterSeconds)
                 val msg = if (throttle.reasonCode == "auth_lockout")
                     "Too many failed sign-in attempts. Try again in $wait."
@@ -71,14 +76,14 @@ fun Route.credentialsCallbackRoutes() {
             val user = userService.findByUsername(username)
             if (user == null) {
                 body.passwordProofChallengeId?.let { passwordProof.consume(it) }
-                authThrottle.recordFailure(call.request, identifier)
+                authThrottle.recordFailureWithAbuse(abuseGuard, call.request, identifier)
                 call.respond(HttpStatusCode.Unauthorized, mapOf("message" to "Invalid credentials"))
                 return@post
             }
 
             val storedHash = user["password"] as? String
             if (storedHash.isNullOrBlank()) {
-                authThrottle.recordFailure(call.request, identifier)
+                authThrottle.recordFailureWithAbuse(abuseGuard, call.request, identifier)
                 call.respond(HttpStatusCode.Unauthorized, mapOf("message" to "Invalid credentials"))
                 return@post
             }
@@ -110,7 +115,7 @@ fun Route.credentialsCallbackRoutes() {
             }
 
             if (!authenticated) {
-                authThrottle.recordFailure(call.request, identifier)
+                authThrottle.recordFailureWithAbuse(abuseGuard, call.request, identifier)
                 call.respond(HttpStatusCode.Unauthorized, mapOf("message" to "Invalid credentials"))
                 return@post
             }
@@ -126,6 +131,10 @@ fun Route.credentialsCallbackRoutes() {
 
             authThrottle.clearFailures(call.request, identifier)
             authThrottle.recordSuccessSignal(call.request, identifier)
+            // Lockout safety: proving you hold an approved account's password wipes this
+            // address's auth-path strikes and any live auth block. Reached only after the
+            // APPROVED check above, so a pending account cannot clear anything.
+            abuseGuard.clearAuthPressure(call.request)
 
             call.issueSessionCookie(config, jwtService, JwtUserClaims(
                 id = user["id"] as String,
