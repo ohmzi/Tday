@@ -4,11 +4,13 @@ import android.content.Context
 import androidx.room.Room
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
+import com.ohmz.tday.compose.core.data.SecureConfigStore
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
 import javax.inject.Singleton
 
 // v8: sharing metadata on cached lists (myRole/isShared/memberCount/ownerUsername).
@@ -31,12 +33,37 @@ object DatabaseModule {
 
     @Provides
     @Singleton
-    fun provideDatabase(@ApplicationContext context: Context): TdayDatabase {
+    fun provideDatabase(
+        @ApplicationContext context: Context,
+        secureConfigStore: SecureConfigStore,
+    ): TdayDatabase {
+        // Required once per process before any SQLCipher database is opened.
+        System.loadLibrary("sqlcipher")
+
+        val passphraseStore = DatabasePassphraseStore(context)
+
+        // Runs before the builder so the encrypted file already holds the legacy rows by the time
+        // Room opens it. One-time and on a small personal cache, so the cost of doing it on the
+        // injecting thread is a single slow first launch rather than an ongoing tax.
+        // Takes the store, not a key: the migration may need several passphrase copies in one pass
+        // (inspecting the encrypted cache, then exporting) and SQLCipher zeroes each array it gets.
+        // The data mode has to come in too: in local mode this database is the only copy of the
+        // user's tasks, so the migration must never treat it as a re-fetchable cache.
+        migrateLegacyPlaintextCacheIfNeeded(
+            context = context,
+            passphraseStore = passphraseStore,
+            dataMode = secureConfigStore.getAppDataMode(),
+        )
+
         return Room.databaseBuilder(
             context,
             TdayDatabase::class.java,
-            "tday_offline_cache.db",
+            ENCRYPTED_DB_NAME,
         )
+            // Task titles, notes and unsynced mutations live here, so the file is encrypted at
+            // rest; the key is Keystore-wrapped in DatabasePassphraseStore. SQLCipher zeroes the
+            // array it is given, hence a fresh one here.
+            .openHelperFactory(SupportOpenHelperFactory(passphraseStore.getOrCreatePassphrase()))
             // The DB holds unsynced pending mutations, not just re-fetchable
             // cache, so schema bumps must ship a real Migration. Pre-v7 schemas
             // (no exported history) still fall back destructively.

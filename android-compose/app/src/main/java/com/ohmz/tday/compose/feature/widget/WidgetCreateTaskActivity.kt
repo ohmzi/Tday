@@ -26,6 +26,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ohmz.tday.compose.MainActivity
 import com.ohmz.tday.compose.R
+import com.ohmz.tday.compose.core.data.applyScreenshotProtection
 import com.ohmz.tday.compose.core.model.TodoListMode
 import com.ohmz.tday.compose.feature.app.AppViewModel
 import com.ohmz.tday.compose.feature.todos.TodoListViewModel
@@ -58,6 +59,13 @@ class WidgetCreateTaskActivity : AppCompatActivity() {
                 onOpenMainApp = ::openMainApp,
             )
         }
+    }
+
+    // This sheet is where a task title is typed, so it needs the same FLAG_SECURE treatment as
+    // MainActivity; without it the recents thumbnail and any screenshot show what was being typed.
+    override fun onStart() {
+        super.onStart()
+        applyScreenshotProtection()
     }
 
     private fun exitToLauncher() {
