@@ -17,6 +17,7 @@ data class AppConfig(
     val dataEncryptionKey: String?,
     val dataEncryptionKeys: String?,
     val dataEncryptionAad: String?,
+    val requireEncryptionAtRest: Boolean,
     val ollamaUrl: String,
     val ollamaModel: String,
     val ollamaTimeoutMs: Long,
@@ -51,6 +52,15 @@ data class AppConfig(
     val alertIpFailureThreshold: Int,
     val alertLockoutBurstSec: Int,
     val signalAnomalyWindowSec: Int,
+    val abuseSignalWindowSec: Int,
+    val abuseRegisterViolationMax: Int,
+    val abuseRegisterPendingMax: Int,
+    val abuseAuthLockoutMax: Int,
+    val abuseBlockBaseSec: Int,
+    val abuseBlockMaxSec: Int,
+    val abuseStrikeDecaySec: Int,
+    val securityAlertCooldownSec: Int,
+    val securityAlertAnomalyMinCount: Int,
     val passwordProofChallengeTtlSec: Int,
     val passwordProofMaxActive: Int,
     val probeAppVersion: String?,
@@ -102,6 +112,9 @@ data class AppConfig(
                 dataEncryptionKey = secret("DATA_ENCRYPTION_KEY", "DATA_ENCRYPTION_KEY_FILE"),
                 dataEncryptionKeys = secret("DATA_ENCRYPTION_KEYS", "DATA_ENCRYPTION_KEYS_FILE"),
                 dataEncryptionAad = env("DATA_ENCRYPTION_AAD"),
+                // Field encryption is opt-in. Off by default so a missing key can never take a
+                // self-hosted server down; set this to make a missing key a hard startup failure.
+                requireEncryptionAtRest = env("REQUIRE_ENCRYPTION_AT_REST", "false").equals("true", ignoreCase = true),
                 ollamaUrl = env("OLLAMA_URL", ""),
                 ollamaModel = env("OLLAMA_MODEL", "qwen3.5:0.8b"),
                 ollamaTimeoutMs = env("OLLAMA_TIMEOUT_MS", "15000").toLong(),
@@ -136,6 +149,27 @@ data class AppConfig(
                 alertIpFailureThreshold = envInt("AUTH_ALERT_IP_FAILURE_THRESHOLD", 12),
                 alertLockoutBurstSec = envInt("AUTH_ALERT_LOCKOUT_BURST_SEC", 900),
                 signalAnomalyWindowSec = envInt("AUTH_SIGNAL_ANOMALY_WINDOW_SEC", 86400),
+                // Adaptive abuse blocking. Registration stays open and the reset lookup keeps
+                // telling callers whether a username exists — these knobs only decide when one
+                // source has abused those paths enough to lose access to them for a while.
+                // Deliberately longer than AUTH_LOCKOUT_RESET_SEC (24h): the failure counter resets after a
+                // day of quiet, so a window of the same length let signals age out exactly as fast as
+                // they could be earned and no auth block was ever reachable.
+                abuseSignalWindowSec = envInt("ABUSE_SIGNAL_WINDOW_SEC", 604_800),
+                abuseRegisterViolationMax = envInt("ABUSE_REGISTER_VIOLATION_MAX", 5),
+                // A real person registers once. More than this many accounts from one source still
+                // sitting unapproved is the strongest available signal of mass registration.
+                abuseRegisterPendingMax = envInt("ABUSE_REGISTER_PENDING_MAX", 3),
+                // Counts attempts made while ALREADY locked out. Set well above what a person who forgot
+                // their password produces — they read "try again in 30s" and wait; a script does not.
+                abuseAuthLockoutMax = envInt("ABUSE_AUTH_LOCKOUT_MAX", 10),
+                // 1h, then x24 per strike, capped at 7d. Blocks always expire on their own.
+                abuseBlockBaseSec = envInt("ABUSE_BLOCK_BASE_SEC", 3600),
+                abuseBlockMaxSec = envInt("ABUSE_BLOCK_MAX_SEC", 604800),
+                abuseStrikeDecaySec = envInt("ABUSE_STRIKE_DECAY_SEC", 2592000),
+                // At most one admin push per alert type per cooldown, no matter the event volume.
+                securityAlertCooldownSec = envInt("SECURITY_ALERT_COOLDOWN_SEC", 900),
+                securityAlertAnomalyMinCount = envInt("SECURITY_ALERT_ANOMALY_MIN_COUNT", 3),
                 passwordProofChallengeTtlSec = envInt("AUTH_PASSWORD_PROOF_CHALLENGE_TTL_SEC", 120),
                 passwordProofMaxActive = envInt("AUTH_PASSWORD_PROOF_MAX_ACTIVE", 5000),
                 probeAppVersion = env("TDAY_APP_VERSION") ?: versionDefaults.version,
