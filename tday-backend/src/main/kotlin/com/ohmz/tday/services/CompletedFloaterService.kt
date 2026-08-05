@@ -8,6 +8,8 @@ import com.ohmz.tday.db.enums.Priority
 import com.ohmz.tday.domain.AppError
 import com.ohmz.tday.models.response.CompletedFloaterResponse
 import com.ohmz.tday.security.FieldEncryption
+import com.ohmz.tday.security.decryptRequired
+import com.ohmz.tday.security.encryptRequired
 import kotlinx.coroutines.Dispatchers
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.SortOrder
@@ -66,7 +68,9 @@ class CompletedFloaterServiceImpl(
                 return@newSuspendedTransaction null
             }
             CompletedFloaters.update({ (CompletedFloaters.id eq id) and (CompletedFloaters.userID eq userId) }) { stmt ->
-                fields["title"]?.let { stmt[CompletedFloaters.title] = it as String }
+                fields["title"]?.let {
+                    stmt[CompletedFloaters.title] = fieldEncryption.encryptRequired("title", it as String)
+                }
                 fields["description"]?.let {
                     stmt[CompletedFloaters.description] = fieldEncryption.encryptIfSensitive("description", it as? String)
                 }
@@ -86,7 +90,7 @@ class CompletedFloaterServiceImpl(
     private fun ResultRow.toCompletedFloaterResponse(): CompletedFloaterResponse = CompletedFloaterResponse(
         id = this[CompletedFloaters.id],
         originalFloaterID = this[CompletedFloaters.originalFloaterID],
-        title = this[CompletedFloaters.title],
+        title = fieldEncryption.decryptRequired(this[CompletedFloaters.title]),
         description = fieldEncryption.decryptIfEncrypted(this[CompletedFloaters.description]),
         priority = this[CompletedFloaters.priority].name,
         completedAt = this[CompletedFloaters.completedAt].toString(),

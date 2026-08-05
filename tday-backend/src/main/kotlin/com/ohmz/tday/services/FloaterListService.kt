@@ -15,6 +15,8 @@ import com.ohmz.tday.domain.AppError
 import com.ohmz.tday.domain.DomainEvent
 import com.ohmz.tday.models.response.FloaterListResponse
 import com.ohmz.tday.models.response.FloaterListTodoResponse
+import com.ohmz.tday.security.FieldEncryption
+import com.ohmz.tday.security.decryptRequired
 import com.ohmz.tday.shared.model.ShareRole
 import kotlinx.coroutines.Dispatchers
 import org.jetbrains.exposed.sql.*
@@ -40,6 +42,7 @@ interface FloaterListService {
 }
 
 class FloaterListServiceImpl(
+    private val fieldEncryption: FieldEncryption,
     private val cache: CacheService,
     private val shareService: ListShareService,
     private val publisher: RealtimePublisher,
@@ -140,7 +143,7 @@ class FloaterListServiceImpl(
                 .map { row ->
                     FloaterListTodoResponse(
                         id = row[Floaters.id],
-                        title = row[Floaters.title],
+                        title = fieldEncryption.decryptRequired(row[Floaters.title]),
                         priority = row[Floaters.priority].name,
                         completed = row[Floaters.completed],
                         order = row[Floaters.order],

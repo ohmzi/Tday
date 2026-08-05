@@ -7,6 +7,8 @@ import com.ohmz.tday.db.tables.Lists
 import com.ohmz.tday.domain.AppError
 import com.ohmz.tday.models.response.CompletedTodoResponse
 import com.ohmz.tday.security.FieldEncryption
+import com.ohmz.tday.security.decryptRequired
+import com.ohmz.tday.security.encryptRequired
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
@@ -67,7 +69,9 @@ class CompletedTodoServiceImpl(
                 return@newSuspendedTransaction null
             }
             CompletedTodos.update({ (CompletedTodos.id eq id) and (CompletedTodos.userID eq userId) }) { stmt ->
-                fields["title"]?.let { stmt[CompletedTodos.title] = it as String }
+                fields["title"]?.let {
+                    stmt[CompletedTodos.title] = fieldEncryption.encryptRequired("title", it as String)
+                }
                 fields["description"]?.let {
                     stmt[CompletedTodos.description] = fieldEncryption.encryptIfSensitive("description", it as? String)
                 }
@@ -89,7 +93,7 @@ class CompletedTodoServiceImpl(
     private fun ResultRow.toCompletedResponse(): CompletedTodoResponse = CompletedTodoResponse(
         id = this[CompletedTodos.id],
         originalTodoID = this[CompletedTodos.originalTodoID],
-        title = this[CompletedTodos.title],
+        title = fieldEncryption.decryptRequired(this[CompletedTodos.title]),
         description = fieldEncryption.decryptIfEncrypted(this[CompletedTodos.description]),
         priority = this[CompletedTodos.priority].name,
         completedAt = this[CompletedTodos.completedAt].toString(),

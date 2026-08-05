@@ -16,6 +16,8 @@ import com.ohmz.tday.domain.AppError
 import com.ohmz.tday.domain.DomainEvent
 import com.ohmz.tday.models.response.ListResponse
 import com.ohmz.tday.models.response.ListTodoResponse
+import com.ohmz.tday.security.FieldEncryption
+import com.ohmz.tday.security.decryptRequired
 import com.ohmz.tday.shared.model.ShareRole
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
@@ -40,6 +42,7 @@ interface ListService {
 }
 
 class ListServiceImpl(
+    private val fieldEncryption: FieldEncryption,
     private val cache: CacheService,
     private val shareService: ListShareService,
     private val publisher: RealtimePublisher,
@@ -124,7 +127,7 @@ class ListServiceImpl(
             }.orderBy(Todos.order, SortOrder.ASC).map { row ->
                 ListTodoResponse(
                     id = row[Todos.id],
-                    title = row[Todos.title],
+                    title = fieldEncryption.decryptRequired(row[Todos.title]),
                     priority = row[Todos.priority].name,
                     due = row[Todos.due]?.toString(),
                     completed = row[Todos.completed],
