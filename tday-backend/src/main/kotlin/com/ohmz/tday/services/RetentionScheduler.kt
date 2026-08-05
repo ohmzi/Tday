@@ -1,10 +1,12 @@
 package com.ohmz.tday.services
 
 import com.ohmz.tday.config.AppConfig
+import com.ohmz.tday.db.tables.AbuseBlocks
 import com.ohmz.tday.db.tables.AuthSignals
 import com.ohmz.tday.db.tables.AuthThrottles
 import com.ohmz.tday.db.tables.CronLogs
 import com.ohmz.tday.db.tables.EventLogs
+import com.ohmz.tday.db.tables.SecurityAlerts
 import com.ohmz.tday.db.tables.Users
 import com.ohmz.tday.db.util.CuidGenerator
 import kotlinx.coroutines.CancellationException
@@ -30,7 +32,7 @@ import java.time.ZoneOffset
 /**
  * Ages out the security bookkeeping tables.
  *
- * These four grow on every request an attacker makes and nothing ever deleted from them, so a slow
+ * These grow on every request an attacker makes and nothing ever deleted from them, so a slow
  * unauthenticated drip against any throttled endpoint filled the disk indefinitely — refusing
  * traffic cost the server more than serving it.
  *
@@ -89,6 +91,19 @@ class RetentionScheduler(
         }
         purge("cronLog", config.retentionCronLogDays, summary) { cutoff ->
             CronLogs.deleteWhere { CronLogs.runAt less cutoff }
+        }
+        purge("securityAlert", config.retentionEventLogDays, summary) { cutoff ->
+            // Dispatch history only. security_alert_state is never swept: it is one row per alert
+            // type, and dropping it would reset a cooldown and let an alert storm restart.
+            SecurityAlerts.deleteWhere { SecurityAlerts.createdAt less cutoff }
+        }
+        purge("abuseBlock", config.retentionAuthThrottleDays, summary) { cutoff ->
+            // Same rule as authThrottle above: a row still serving a block is never dropped,
+            // because deleting it would hand the abuser an early release.
+            AbuseBlocks.deleteWhere {
+                (AbuseBlocks.updatedAt less cutoff) and
+                    (AbuseBlocks.blockedUntil.isNull() or (AbuseBlocks.blockedUntil less now))
+            }
         }
 
         // Anyone can raise pendingAdminReset for any username without signing in, so a request
