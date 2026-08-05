@@ -27,11 +27,24 @@ GET /health                       ->  {"status":"ok"}
 **Live today:** HSTS (so the server runs `TDAY_ENV=production`), frame-deny, nosniff,
 referrer-policy, strict CORS.
 
-**Written but NOT deployed:** Content-Security-Policy, Permissions-Policy, the (IP, account)
-throttle re-keying, the SSRF egress guard, the retention scheduler, the `purgeUser` foreign-key
-fix, calendar-feed revocation on credential change, and the iOS fail-closed TLS rewrite. None of
-it is committed yet. Anything marked *recently hardened* below is in this category and takes
-effect only after `docker compose up -d --build tday-backend` plus an app rebuild.
+**Written but NOT deployed.** Everything below is in the working tree and takes effect only after
+`docker compose up -d --build tday-backend` (backend/web) plus a store or sideload build (mobile):
+
+*Backend:* Content-Security-Policy and Permissions-Policy · the (IP, account) throttle re-keying and
+the non-punitive account ceiling · real 429s at all eight auth rejection sites (previously 500s) ·
+the SSRF egress guard · field encryption extended to task titles, and made opt-in via
+`REQUIRE_ENCRYPTION_AT_REST` · the retention scheduler (ships in dry-run) · the `purgeUser`
+foreign-key fix · calendar-feed revocation on credential change · `pids_limit` on every container.
+
+*Android:* SQLCipher on the offline cache · LAN-only certificate enrollment · `FLAG_SECURE` ·
+optional biometric app lock.
+
+*iOS:* fail-closed TLS with LAN-only enrollment · Data Protection + backup exclusion on the SwiftData
+store and widget snapshots · optional biometric app lock.
+
+*Web:* passphrase-encrypted Local Mode · the salted-digest fix for suggestion dismissals.
+
+Anything marked *recently hardened* below is in this list.
 
 Two standing items, independent of this document:
 
@@ -45,11 +58,11 @@ Two standing items, independent of this document:
 ## Threat model
 
 - **An internet attacker who finds the hostname.** Defended. Public access is a Cloudflare Tunnel to a loopback-bound port, so there is nothing below HTTP to attack. Registration is open, but the first user became ADMIN/APPROVED and everyone after lands PENDING and gets no session, no read, and no write until an admin approves. What remains reachable is the auth surface: login, register, and the recovery wizard — all rate-limited, all lockout-guarded, all backed by 310,000-iteration PBKDF2. The realistic outcome of a scanner finding this box is a row in the Users table and a 429.
-- **Someone on the same public wifi as the owner.** Defended for the browser and iOS; weaker on Android. TLS terminates at the Cloudflare edge with a public CA certificate, and both mobile clients block cleartext HTTP in release builds. iOS fails closed on any certificate the OS cannot verify and requires a user-confirmed fingerprint to enroll one. Android relies purely on system CA validation, and its stored fingerprint auto-resets on mismatch — treat Android as CA-validation-only, not pinned. A password sent at login never appears in a request body (RSA-OAEP + AES-GCM envelope), but registration, password change, and recovery reset all send it in the clear inside TLS.
+- **Someone on the same public wifi.** Defended on all three clients. TLS terminates at the Cloudflare edge with a public CA certificate; both mobile clients block cleartext in release builds and now fail closed on any certificate the OS cannot verify, offering enrollment **only** for private/LAN hosts — so a bad certificate on a public hostname is refused outright with no button to accept it. Android additionally ignores user-installed CAs (no `network_security_config` on a modern `targetSdk`), which defeats the install-a-profile-then-intercept attack. The login password is never in a request body (RSA-OAEP + AES-GCM envelope), though registration, password change and recovery send it inside TLS.
 - **Someone on the owner's LAN.** Mostly defended by topology, and that is the load-bearing part. Postgres and Ollama publish no host ports at all; only the backend does, and the compose default binds it to 127.0.0.1. **Caveat that must be verified on the deploy host:** this checkout's root `.env` sets `TDAY_HOST_BIND=0.0.0.0`, which exposes the backend on every host interface. If that is the live value, anything on the LAN can reach the API directly and can forge `CF-Connecting-IP` to get a fresh rate-limit bucket per request, because there is no trusted-proxy allowlist.
 - **Someone who is already an approved user.** Partially defended. Ownership scoping is enforced in Kotlin on every query and share access flows through one `accessFor` decision point, but there is no database row-level security beneath it, any approved user can enumerate other approved usernames via the share picker, and there is no way to suspend an approved account short of deleting it and all its data.
-- **Someone with a shell on the host. Explicitly out of scope.** They have `AUTH_SECRET`, so they can mint sessions offline for any user; they have `DATA_ENCRYPTION_KEY`, which sits in the same `.env.docker` as the Postgres volume, so field encryption buys nothing against them; and they have the Docker socket. Field encryption here protects a stolen `pg_dump` or a detached volume, nothing more. Do not read any control below as defending against host compromise.
-- **Not defended at all: loss.** There is no backup mechanism in the repo, automated or otherwise. A corrupted volume or a `docker compose down -v` is total data loss.
+- **Someone with a shell on the host. Explicitly out of scope.** They have `AUTH_SECRET`, so they can mint sessions offline for any user; if field encryption is enabled at all, `DATA_ENCRYPTION_KEY` sits in the same `.env.docker` as the Postgres volume, so it buys nothing against them; and they have the Docker socket. Field encryption here protects a stolen `pg_dump` or a detached volume, nothing more. Do not read any control below as defending against host compromise.
+- **Loss is now defended, but only if you use it.** `scripts/backup-database.sh` + `restore-database.sh` ship with the repo (see [backups.md](backups.md)), with optional encryption and retention pruning. They are not scheduled for you — an unscheduled backup script is not a backup, so wire up the cron and test a restore.
 
 ## Posture at a glance
 
@@ -58,14 +71,14 @@ Two standing items, independent of this document:
 | Authentication & sessions | Solid | 310k PBKDF2, encrypted JWE sessions, server-side revocation, absolute 90-day cap. No MFA, no session inventory, one fail-open branch on a null `tokenVersion` claim, and login timing still leaks account existence. |
 | Brute-force & rate limiting | Strong | Two independent layers; sign-in lockouts key on (IP, account) and survive restarts in Postgres; real 429 + Retry-After everywhere. No CAPTCHA, no body-size cap, and the counting arithmetic itself has no test coverage. |
 | Authorization & multi-tenancy | Solid | One `withAuth` gate on all 82 authenticated handlers, ownership predicate compiled into every query, one central share ACL. No DB-level isolation, API keys cannot be scoped below the account's admin rights, no suspend. |
-| Data at rest & crypto | Adequate | Every credential is hash-only; AES-256-GCM field encryption exists but is off by default, fails open to plaintext, and covers descriptions — not task titles. Key lives beside the data. A real `AUTH_SECRET` is in public git history. |
+| Data at rest & crypto | Solid | AES-256-GCM field encryption now covers task titles as well as descriptions, is a tested opt-in (REQUIRE_ENCRYPTION_AT_REST, default false) that boots with a plaintext INFO line rather than crash-looping, and every credential is hash-only with constant-time comparison; this box deliberately runs without a backend key and relies on encrypted backups instead, which leaves task content and all metadata plaintext in Postgres. |
 | Network, TLS & headers | Solid | No inbound ports, outbound-only tunnel, enforcing CSP with `script-src 'self'`, CORS empty by default. TLS terminates at Cloudflare (full MITM by design); HSTS and the Secure cookie flag both hang off `TDAY_ENV=production`. |
 | Container & runtime | Solid | Backend runs non-root with `cap_drop: ALL`, `no-new-privileges`, `pids_limit: 512`; multi-stage build, no toolchain in the runtime image. Hardening is backend-only, no read-only rootfs, no memory limits, no image scanning, deploy over SSH password. |
 | Logging & privacy | Solid | Access log is four fields, query strings are dropped wholesale, IPs and usernames are HMAC'd before storage. Retention scheduler ships in dry-run so nothing is actually pruned, and Docker's own container logs are never rotated. |
 | Input validation & injection | Strong | Typed Exposed DSL throughout, exactly one raw SQL statement and it is parameter-bound, no subprocess and no unsafe deserialization, new SSRF egress guard on user-supplied URLs. No request body size limit anywhere. |
-| Android client | Solid | Cleartext blocked in release, session cookie in Keystore-backed EncryptedSharedPreferences, no custom TLS trust code, backups disabled. Task database is unencrypted SQLite, server fingerprint auto-resets on mismatch, no app lock. |
-| iOS client & widget | Strong | Fail-closed `decideTrust`, one-shot user-confirmed fingerprint enrollment, Keychain storage, widget inherits pinning and can never enroll. Stores a recoverable password while awaiting approval; widget content snapshot sits unencrypted in App Group defaults. |
-| Web SPA | Solid | HttpOnly cookie the JS never sees, enforcing CSP, exactly two HTML sinks and both bounded, full storage wipe on logout and on 401. No CSRF token validation, source maps are publicly served, and `GET /api/timezone` mutates state. |
+| Android client | Strong | offline cache encrypted whole-file with SQLCipher under a Keystore-wrapped key, fail-closed certificate pinning with LAN-only enrollment, FLAG_SECURE on by default, optional biometric app lock (off by default); the DB key is deliberately not auth-bound so a rooted or unlocked-and-running device still reads everything, widget content still renders in the launcher, and reminder titles still ride in notifications and AlarmManager extras. |
+| iOS client & widget | Strong | fail-closed TLS with LAN-only certificate enrollment and a never-enrolling widget, Data Protection + backup exclusion on the SwiftData store and widget snapshots, Keychain secrets; but task data at rest is OS-protected (readable after first unlock), not app-encrypted, the biometric lock is opt-in and off by default, and task titles still sit in plaintext UserDefaults in three places (repeat-suggestion dismissals, share queue, Apple Watch mirror). |
+| Web SPA | Strong | Local Mode is now passphrase-encrypted at rest (AES-GCM-256, PBKDF2-SHA256 310k, fresh IV per write, non-extractable memory-only key), the session stays an HttpOnly cookie the JS never touches, and the repeat-suggestion title leak is closed with per-workspace salted HMAC digests; the honest costs are that a lost passphrase is unrecoverable with no rekey path, the vault does nothing against script in an already-unlocked page (no idle auto-lock), and Server Mode task data still sits plaintext in the service worker's API cache for up to an hour. |
 
 ## The five controls that matter most here
 
@@ -117,7 +130,7 @@ Take these to any other self-hosted service. T'Day's own answer follows each.
     **T'Day:** No. TOTP, WebAuthn, passkeys, email/SMS second factors, and recovery codes are all absent. Password (or an HMAC proof over the stored hash) is the only factor; the security questions are a recovery path, not a second factor.
 
 12. **Exactly which columns are encrypted at rest, where does the key live, and what happens if it is missing?**
-    **T'Day:** Only `description`, `overriddenDescription`, and `webhookSecret` (AES-256-GCM, 12-byte random IV, 128-bit tag). Task titles, checklist steps, list names, usernames, OAuth tokens, and push keys are plaintext. Off unless `DATA_ENCRYPTION_KEY` is set, fails open to plaintext with a production-only boot warning, and the key sits in the same `.env.docker` as the database volume.
+    **T'Day:** `title`, `overriddenTitle`, `description`, `content`, `overriddenDescription`, `webhookSecret` — AES-256-GCM, 32-byte key, fresh 12-byte IV per value, 128-bit tag, `enc:v1:<keyId>:<iv>:<ct>` envelope with keyring rotation. **Opt-in and off by default**: with no `DATA_ENCRYPTION_KEY` the server boots and logs that content is plaintext; `REQUIRE_ENCRYPTION_AT_REST=true` turns a missing key into a startup failure. Usernames, list names, push keys and OAuth tokens stay plaintext regardless, and encryption is not retroactive.
 
 13. **When a user hands the service a URL it will call, what blocks private and metadata addresses — and does it follow redirects?**
     **T'Day:** `validateOutboundUrl` blocks non-http(s) schemes, embedded userinfo, bare container hostnames, and IPv4/IPv6 loopback, RFC1918, link-local (incl. 169.254.169.254), CGNAT, ULA, multicast, and IPv4-mapped forms; wired into webhook creation and push subscribe. Webhook dispatch sets `followRedirects = false`. DNS rebinding is explicitly not covered — hostnames are not resolved at validation time.
@@ -164,10 +177,9 @@ Take these to any other self-hosted service. T'Day's own answer follows each.
 
 ### Data at rest and recovery
 
-- **Task titles are plaintext by design.** Field encryption covers descriptions, not titles — and for a task app the title is where the information is. Also plaintext: checklist steps, list names, usernames, `CompletedTodo.steps`, webhook destination URLs, push endpoints and keys, and OAuth `access_token`/`refresh_token`/`id_token`.
-- **Field encryption fails open and does not follow the data.** No key means plaintext with no marker on the row. Separately, the portable export bundle explicitly decrypts descriptions and the ICS calendar feed renders them into every VEVENT — so the at-rest control does not survive export or a subscribed third-party calendar.
+- **Field encryption is opt-in and off by default, and does not follow the data.** With no `DATA_ENCRYPTION_KEY` the affected columns are plaintext and nothing on the row marks them as such — a deliberate, supported configuration (`REQUIRE_ENCRYPTION_AT_REST=true` makes a missing key a hard startup failure instead). Independently of that: the portable export bundle decrypts descriptions, and the ICS calendar feed renders them into every VEVENT, so the at-rest control does not survive export or a subscribed third-party calendar.
 - **A real `AUTH_SECRET` sits in public git history.** The initial commit's `.env.example` contains a well-formed 32-byte base64 value, since replaced by a placeholder. `AUTH_SECRET` is the HKDF input for the session key, the HMAC key for every throttle bucket, and the login-challenge salt key. If the running deployment ever used it, sessions can be minted offline. Verify the server's live value and rotate; scrubbing history does not un-publish it.
-- **No backups, no volume encryption, no KMS.** Postgres data is a plain Docker volume. There is no `pg_dump` cron, no snapshot, no off-box copy, and no rotation backfill (retiring an old encryption key makes rows written under it throw on read).
+- **No volume encryption and no KMS.** The field-encryption key is an env var in the same `.env.docker` the Compose stack feeds the backend, on the same host as the Postgres volume. It protects a dump that leaves the host, not the host itself. Backups exist now (see above) but are not scheduled by default.
 - **Vestigial `enableEncryption` / `protectedSymmetricKey` columns.** They exist in the schema and the user API, `enableEncryption` defaults to `true`, and no client implements client-side encryption anywhere. Reading the DB or the API would give a false impression that E2EE is on.
 
 ### Observability and accountability
@@ -180,15 +192,13 @@ Take these to any other self-hosted service. T'Day's own answer follows each.
 
 ### Clients
 
-- **Android's local task database is unencrypted SQLite.** No SQLCipher, no passphrase. In Local Mode it is the only copy of the user's data. A rooted device, a forensic extraction, or an unlocked handset with adb yields the full task list. The session cookie and server URL *are* Keystore-encrypted; the task data is not.
-- **Android's server fingerprint is not a control.** Enrolled silently on first probe, skipped entirely for non-HTTPS, and automatically cleared and re-enrolled on mismatch by `probeAndSaveWithAutomaticTrustRecovery`. Do not count it when comparing against iOS's fail-closed implementation.
-- **No app lock on either mobile client.** No biometric or passcode gate, no screenshot/recents protection on Android, no jailbreak detection on iOS. Device unlock is the only boundary between a bystander and the full signed-in session.
+- **App lock is available but off by default.** Both mobile clients now ship an optional biometric/device-credential gate, and Android adds `FLAG_SECURE` screenshot and recents protection. Neither is enabled unless you turn it on, so out of the box device unlock is still the only boundary.
 - **Both mobile clients store a recoverable password while awaiting admin approval.** Android's `pending_approval_password_v1` and iOS's `pending-approval-password` hold the actual password (encrypted at rest) so the holding screen can silently retry login. iOS's Keychain class is `AfterFirstUnlock` and not `…ThisDeviceOnly`, so it is eligible for encrypted device backup and restore onto another device.
-- **iOS's widget content snapshot is unencrypted.** The session hand-off file is deliberately written with `completeFileProtectionUntilFirstUserAuthentication` and excluded from backup; the widget *content* snapshots (task titles, notes, due times, IDs) go to App Group and standard `UserDefaults` as plain JSON with only the platform default protection, and land in backups.
+- **iOS relies on Data Protection, not application-level encryption.** The SwiftData store and the widget content snapshots use `completeUntilFirstUserAuthentication` and are excluded from backups — protected while the device is off or before first unlock, readable after it. That class is required, not chosen: anything stricter stops the widget rendering on a locked device. Android's equivalent store is genuinely encrypted (SQLCipher); iOS's is not.
 - **Android widget content is rendered into the launcher process.** Task titles and notes are handed to the home-screen launcher as RemoteViews, visible wherever it displays them including lock-screen widgets, with no per-widget hide-content setting and no `FLAG_SECURE` equivalent.
 - **iOS contacts api.github.com on every launch** via `URLSession.shared` — bypassing the app's own TLS delegate — even in Local Mode, with no setting to disable it.
 - **Web source maps are built and publicly served.** 105 `.map` files ship in `dist/assets` and are served with `max-age=31536000, immutable`, including the admin screens. No secrets leak, but it removes all friction from mapping the attack surface.
-- **Web Local Mode stores the whole workspace unencrypted in one localStorage key,** and logging out of a server account deliberately preserves it. Only Settings → Delete local data or clearing browser site data removes it.
+- **Web Local Mode is passphrase-encrypted, and the passphrase is unrecoverable.** AES-GCM-256 with a PBKDF2-SHA256 310k-iteration key, fresh IV per write, key held only in memory. The tradeoff is absolute: lose the passphrase and the Local Mode workspace is gone, with no reset path.
 
 ### Supply chain and operations
 
