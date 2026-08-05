@@ -6,8 +6,12 @@ enum ServerProbeError: Error, Equatable, LocalizedError {
     case notTdayServer
     case certificateChanged
     /// The server presented a certificate the system does not trust and that we have never pinned.
-    /// Carries the fingerprint so the UI can show it and ask the user to confirm.
+    /// Carries the fingerprint so the UI can show it and ask the user to confirm. Only ever raised
+    /// for private/LAN hosts — see `untrustedPublicCertificate`.
     case untrustedCertificate(host: String, fingerprint: String?)
+    /// A PUBLIC host presented a certificate the system cannot verify. Carries no fingerprint on
+    /// purpose: there is nothing for the user to approve, because approving it is the attack.
+    case untrustedPublicCertificate(host: String)
 
     var errorDescription: String? {
         switch self {
@@ -21,6 +25,8 @@ enum ServerProbeError: Error, Equatable, LocalizedError {
             return "The trusted certificate changed for this server"
         case .untrustedCertificate:
             return "This server's certificate is not trusted"
+        case .untrustedPublicCertificate:
+            return "This server's certificate could not be verified"
         }
     }
 }
@@ -116,7 +122,9 @@ final class ServerConfigRepository {
             // bare cancellation. Reporting ".compatible" here would silently mask exactly the
             // interception the fail-closed change exists to catch.
             let trustFailed = url.host.map { host in
-                api.consumeTrustFailure(forHost: host) || api.consumeTrustUnknown(forHost: host) != nil
+                api.consumeTrustFailure(forHost: host) ||
+                    api.consumePublicTrustRefusal(forHost: host) ||
+                    api.consumeTrustUnknown(forHost: host) != nil
             } ?? false
             return VersionRecheckResult(versionCheck: .compatible, backendVersion: nil, trustFailed: trustFailed)
         }
@@ -216,9 +224,15 @@ final class ServerConfigRepository {
             if let host = normalizedURL.host, api.consumeTrustFailure(forHost: host) {
                 throw ServerProbeError.certificateChanged
             }
-            // Unrecognised certificate: refused rather than trusted-on-first-use. Surface the
-            // fingerprint so the setup screen can ask the user to confirm it explicitly. The outer
-            // `if let` only tests that a refusal was recorded — the fingerprint itself may be nil.
+            // Public host we could not verify: refused with no fingerprint to approve. Checked
+            // before the enrollment path below so this can never fall through into a trust prompt.
+            if let host = normalizedURL.host, api.consumePublicTrustRefusal(forHost: host) {
+                throw ServerProbeError.untrustedPublicCertificate(host: host)
+            }
+            // Unrecognised certificate on a private/LAN host: refused rather than
+            // trusted-on-first-use. Surface the fingerprint so the setup screen can ask the user to
+            // confirm it explicitly. The outer `if let` only tests that a refusal was recorded —
+            // the fingerprint itself may be nil.
             if let host = normalizedURL.host, let fingerprint = api.consumeTrustUnknown(forHost: host) {
                 throw ServerProbeError.untrustedCertificate(host: host, fingerprint: fingerprint)
             }

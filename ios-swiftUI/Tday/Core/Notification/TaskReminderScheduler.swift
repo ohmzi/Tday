@@ -137,6 +137,210 @@ final class TaskReminderScheduler {
     }
 }
 
+// MARK: - Backend security alerts
+
+/// The newest alert this device has already notified about. `createdAt` is the backstop for
+/// when that alert has aged out of the server's 50-row window and its id is no longer returned.
+struct SecurityAlertMarker: Equatable {
+    let id: String
+    let createdAt: Date?
+}
+
+/// Persists the marker in UserDefaults, like `QuietHoursStore` above and
+/// `ReminderPreferenceStore`'s notified markers. Not the keychain: an alert id is a server cuid,
+/// not a secret, and a background wake-up should not have to reach into the keychain to decide
+/// whether it has anything to say. Surviving relaunch is the whole point — without it every cold
+/// start would re-announce the same alerts.
+struct SecurityAlertSeenStore {
+    private let defaults: UserDefaults
+    private static let idKey = "securityAlerts.lastNotifiedId"
+    private static let createdAtKey = "securityAlerts.lastNotifiedEpochSeconds"
+
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+    }
+
+    var marker: SecurityAlertMarker? {
+        guard let id = defaults.string(forKey: Self.idKey) else {
+            return nil
+        }
+        let seconds = defaults.double(forKey: Self.createdAtKey)
+        return SecurityAlertMarker(id: id, createdAt: seconds > 0 ? Date(timeIntervalSince1970: seconds) : nil)
+    }
+
+    func record(_ marker: SecurityAlertMarker) {
+        defaults.set(marker.id, forKey: Self.idKey)
+        defaults.set(marker.createdAt?.timeIntervalSince1970 ?? 0, forKey: Self.createdAtKey)
+    }
+}
+
+/// Pure decisions behind the security-alert notification — kept free of network, clock and
+/// UNUserNotificationCenter so they can be tested without a live server.
+enum SecurityAlertNotifier {
+    /// The backend emits `LocalDateTime.toString()`: no timezone suffix, and the seconds field
+    /// is dropped when it is zero, so "2026-08-05T12:00" and "2026-08-05T12:00:03.123" both
+    /// occur. `parseOptionalDate` already walks that whole family of patterns (it exists for the
+    /// same backend quirk on task timestamps), so reuse it rather than a fixed formatter that
+    /// would silently fail on every top-of-the-minute alert.
+    static func parseCreatedAt(_ raw: String) -> Date? {
+        parseOptionalDate(raw)
+    }
+
+    /// The alerts worth notifying about, given what this device last announced.
+    ///
+    /// A nil marker means this device has never looked: seed the baseline silently instead of
+    /// announcing up to 50 rows of history the owner has likely already seen on the web admin.
+    static func unseenAlerts(in alerts: [SecurityAlertDTO], since marker: SecurityAlertMarker?) -> [SecurityAlertDTO] {
+        guard let marker else {
+            return []
+        }
+        var unseen: [SecurityAlertDTO] = []
+        for alert in alerts {
+            // The server returns newest-first, so everything from the marker down is old news.
+            if alert.id == marker.id {
+                break
+            }
+            // ...but the marker's alert can have aged out of the 50-row window, in which case the
+            // id above never matches and only the timestamp keeps the history from re-announcing.
+            if let seenAt = marker.createdAt,
+               let createdAt = parseCreatedAt(alert.createdAt),
+               createdAt <= seenAt {
+                continue
+            }
+            unseen.append(alert)
+        }
+        return unseen
+    }
+
+    /// The newest row, i.e. where the marker should stand after this poll.
+    static func newestMarker(in alerts: [SecurityAlertDTO]) -> SecurityAlertMarker? {
+        guard let newest = alerts.first else {
+            return nil
+        }
+        return SecurityAlertMarker(id: newest.id, createdAt: parseCreatedAt(newest.createdAt))
+    }
+
+    /// One body for the whole batch — a burst of alerts must never become a burst of banners.
+    /// The single-alert case is just the server's own detail text, which already spells out how
+    /// many events it stands for.
+    static func notificationBody(for unseen: [SecurityAlertDTO]) -> String? {
+        guard let newest = unseen.first else {
+            return nil
+        }
+        guard unseen.count > 1 else {
+            return newest.detail
+        }
+        return "\(L("%d security alerts", unseen.count)) — \(newest.detail)"
+    }
+}
+
+/// Polls `GET /api/admin/security/alerts` and raises a LOCAL notification for anything new.
+///
+/// This is deliberately NOT push. The backend delivers security alerts over Web Push and
+/// UnifiedPush only — there is no APNs transport and this app never registers for remote
+/// notifications — so an iPhone-only owner would otherwise never hear about them. Instead we
+/// piggy-back on the two wake-ups the app already has: the ~30-min `BGAppRefreshTask` in
+/// `WidgetBackgroundRefresh` and the foreground reconnect. No new background mode, no timer, and
+/// no polling while suspended. An alert therefore surfaces on the next such wake-up, which iOS
+/// may delay by hours — the notification is a nicety, not parity with the Android/web push path.
+@MainActor
+final class SecurityAlertPoller {
+    private let api: TdayAPIService
+    private let secureStore: SecureStore
+    private let seenStore: SecurityAlertSeenStore
+    /// The background task and a foreground return can land together; a second concurrent poll
+    /// could read the marker before the first one advanced it and notify twice.
+    private var isPolling = false
+
+    init(
+        api: TdayAPIService,
+        secureStore: SecureStore,
+        seenStore: SecurityAlertSeenStore = SecurityAlertSeenStore()
+    ) {
+        self.api = api
+        self.secureStore = secureStore
+        self.seenStore = seenStore
+    }
+
+    /// Never throws and never surfaces anything to the user: offline, 401, 403 and malformed
+    /// JSON all end the same way — quietly, leaving the marker where it was.
+    func pollForNewAlerts() async {
+        guard !isPolling, isApprovedAdminSession() else {
+            return
+        }
+        isPolling = true
+        defer { isPolling = false }
+
+        let alerts: [SecurityAlertDTO]
+        do {
+            alerts = try await api.getSecurityAlerts().alerts
+        } catch {
+            TdayTelemetry.addBreadcrumb(
+                "security.alerts",
+                level: .warning,
+                data: ["phase": "fetch_failed"]
+            )
+            return
+        }
+
+        guard let newest = SecurityAlertNotifier.newestMarker(in: alerts) else {
+            return
+        }
+        let unseen = SecurityAlertNotifier.unseenAlerts(in: alerts, since: seenStore.marker)
+        // Advance before posting. `add` can fail silently (notifications denied), and a duplicate
+        // security banner every 30 minutes is a far worse failure than one missed banner.
+        seenStore.record(newest)
+        guard let body = SecurityAlertNotifier.notificationBody(for: unseen) else {
+            return
+        }
+        await post(body: body)
+    }
+
+    /// The endpoint is admin-only, so the app must not touch it at all unless this session is one.
+    ///
+    /// Three independent gates: Local Mode has no server to ask; a signed-out device has no
+    /// cached session (it is cleared on logout, and on reinstall); and a signed-in non-admin
+    /// fails the role/approval check. `cachedSessionUser` is the same session snapshot
+    /// `AuthRepository` writes on every session restore, so it tracks the live session — and it
+    /// is readable from the background task, where no view model exists.
+    private func isApprovedAdminSession() -> Bool {
+        guard !secureStore.isLocalMode(), secureStore.hasServerURL() else {
+            return false
+        }
+        guard let data = secureStore.loadCachedSessionUserData(),
+              let user = try? JSONDecoder().decode(SessionUser.self, from: data),
+              user.id != nil else {
+            return false
+        }
+        return user.role?.caseInsensitiveCompare("ADMIN") == .orderedSame
+            && user.approvalStatus?.caseInsensitiveCompare("APPROVED") == .orderedSame
+    }
+
+    private func post(body: String) async {
+        // Same guard the reminder scheduler uses: no notification centre outside a real app
+        // bundle (unit tests, previews).
+        guard Bundle.main.bundleURL.pathExtension == "app" else {
+            return
+        }
+        let content = UNMutableNotificationContent()
+        content.title = L("T'Day security alert")
+        content.body = body
+        content.sound = .default
+        // No `deepLink` in userInfo on purpose: this app has no admin screen (`AppRoute` has no
+        // admin route), so a tap simply opens T'Day. Nothing identifying goes in the payload
+        // either — the backend only ever stores hashed subjects.
+        let request = UNNotificationRequest(
+            identifier: "tday.security.\(UUID().uuidString)",
+            content: content,
+            trigger: nil
+        )
+        // Authorization is the one the reminder feature already requested at bootstrap; if the
+        // user denied it, this throws and we stay quiet rather than prompting a second time.
+        try? await UNUserNotificationCenter.current().add(request)
+        TdayTelemetry.addBreadcrumb("security.alerts", data: ["phase": "notified"])
+    }
+}
+
 /// Local "hold reminders between HH:MM and HH:MM" setting (UserDefaults). Times are
 /// minute-of-day (0..1439). Off by default.
 struct QuietHoursStore {

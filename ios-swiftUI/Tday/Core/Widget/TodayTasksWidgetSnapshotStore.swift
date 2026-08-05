@@ -114,11 +114,64 @@ enum TodayTasksWidgetSnapshotStatus: String, Codable, Equatable {
     case tasks
 }
 
+/// Protected on-disk home for the widget CONTENT snapshots — task titles, notes and due
+/// times, i.e. exactly the text the user typed.
+///
+/// These used to be written as plain JSON into App Group + standard UserDefaults. A
+/// UserDefaults plist is unencrypted, gets only default protection, and lands in device
+/// backups, so anyone with the device or a backup could read the task text. This is the
+/// same mechanism `WidgetBackendSession` already uses for the session cookie.
+///
+/// `.completeUntilFirstUserAuthentication` is REQUIRED here, not a weaker compromise: the
+/// widget has to keep rendering while the device is locked, and `.complete` would make the
+/// file unreadable exactly then. The tradeoff is that between a reboot and the first unlock
+/// the widget falls back to its setup/empty state — the same deal the session file takes.
+enum WidgetSnapshotFileStore {
+    static let appGroupSuiteName = "group.com.ohmz.tday"
+    static let todayFileName = "widget-today-snapshot.json"
+    static let floaterFileName = "widget-floater-snapshot.json"
+
+    static func read(_ fileName: String) -> Data? {
+        guard let fileURL = fileURL(fileName) else {
+            return nil
+        }
+        return try? Data(contentsOf: fileURL)
+    }
+
+    static func write(_ data: Data, to fileName: String) {
+        guard let fileURL = fileURL(fileName) else {
+            return
+        }
+        do {
+            try data.write(to: fileURL, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+            // Keep task text out of device backups. A protected-until-first-unlock file is
+            // still written in the clear into an UNENCRYPTED Finder/iTunes backup, which
+            // would hand over the very content this move exists to protect. An atomic write
+            // replaces the file, so the flag has to be re-applied every time.
+            var resourceValues = URLResourceValues()
+            resourceValues.isExcludedFromBackup = true
+            var mutableURL = fileURL
+            try? mutableURL.setResourceValues(resourceValues)
+        } catch {
+            // Best-effort: the widget keeps showing its previous timeline entry.
+        }
+    }
+
+    private static func fileURL(_ fileName: String) -> URL? {
+        FileManager.default
+            .containerURL(forSecurityApplicationGroupIdentifier: appGroupSuiteName)?
+            .appendingPathComponent(fileName)
+    }
+}
+
 enum TodayTasksWidgetSnapshotStore {
     static let snapshotSchemaVersion = 2
     static let widgetKind = "TodayTasksWidget"
     static let appGroupSuiteName = "group.com.ohmz.tday"
-    static let snapshotKey = "tday.widget.todayTasksSnapshot"
+    static let snapshotFileName = WidgetSnapshotFileStore.todayFileName
+    /// Pre-migration home of the snapshot (unencrypted UserDefaults). Read once on the first
+    /// load after the upgrade, then deleted — see `drainLegacyDefaultsSnapshot()`.
+    static let legacySnapshotKey = "tday.widget.todayTasksSnapshot"
     static let defaultTitle = "Today's Tasks"
     static let taskLimit = 50
 
@@ -195,10 +248,7 @@ enum TodayTasksWidgetSnapshotStore {
             return
         }
 
-        let stores = defaultsStores()
-        stores.forEach { store in
-            store.set(data, forKey: snapshotKey)
-        }
+        WidgetSnapshotFileStore.write(data, to: snapshotFileName)
 
         #if canImport(WidgetKit)
         WidgetCenter.shared.reloadTimelines(ofKind: widgetKind)
@@ -209,17 +259,43 @@ enum TodayTasksWidgetSnapshotStore {
     }
 
     static func loadSnapshot() -> TodayTasksWidgetSnapshot? {
-        for store in defaultsStores() {
-            guard let data = store.data(forKey: snapshotKey),
-                  let snapshot = try? JSONDecoder().decode(TodayTasksWidgetSnapshot.self, from: data) else {
-                continue
-            }
+        // Runs before the file read so an upgrade never leaves the old plaintext behind,
+        // whichever copy ends up being the newer one.
+        let legacy = drainLegacyDefaultsSnapshot()
+        if let data = WidgetSnapshotFileStore.read(snapshotFileName),
+           let snapshot = try? JSONDecoder().decode(TodayTasksWidgetSnapshot.self, from: data) {
             return snapshot
         }
-        return nil
+        return legacy
     }
 
-    private static func defaultsStores() -> [UserDefaults] {
+    /// One-shot migration off UserDefaults: take the old copy, mirror it into the protected
+    /// file (so the widget keeps rendering across the upgrade), and delete the key from BOTH
+    /// defaults so the plaintext task titles stop lingering in a backed-up plist. A no-op on
+    /// every later call — the keys are gone.
+    @discardableResult
+    private static func drainLegacyDefaultsSnapshot() -> TodayTasksWidgetSnapshot? {
+        var legacyData: Data?
+        for store in legacyDefaultsStores() {
+            guard let data = store.data(forKey: legacySnapshotKey) else {
+                continue
+            }
+            if legacyData == nil {
+                legacyData = data
+            }
+            store.removeObject(forKey: legacySnapshotKey)
+        }
+        guard let legacyData,
+              let snapshot = try? JSONDecoder().decode(TodayTasksWidgetSnapshot.self, from: legacyData) else {
+            return nil
+        }
+        if WidgetSnapshotFileStore.read(snapshotFileName) == nil {
+            WidgetSnapshotFileStore.write(legacyData, to: snapshotFileName)
+        }
+        return snapshot
+    }
+
+    private static func legacyDefaultsStores() -> [UserDefaults] {
         var stores = [UserDefaults]()
         if let shared = UserDefaults(suiteName: appGroupSuiteName) {
             stores.append(shared)
@@ -328,7 +404,9 @@ enum FloaterTasksWidgetSnapshotStore {
     static let snapshotSchemaVersion = 1
     static let widgetKind = "FloaterTasksWidget"
     static let appGroupSuiteName = "group.com.ohmz.tday"
-    static let snapshotKey = "tday.widget.floaterTasksSnapshot"
+    static let snapshotFileName = WidgetSnapshotFileStore.floaterFileName
+    /// Pre-migration home of the snapshot (unencrypted UserDefaults). See the Today store.
+    static let legacySnapshotKey = "tday.widget.floaterTasksSnapshot"
     static let defaultTitle = "Floater Tasks"
     static let taskLimit = 50
 
@@ -384,10 +462,7 @@ enum FloaterTasksWidgetSnapshotStore {
             return
         }
 
-        let stores = defaultsStores()
-        stores.forEach { store in
-            store.set(data, forKey: snapshotKey)
-        }
+        WidgetSnapshotFileStore.write(data, to: snapshotFileName)
 
         #if canImport(WidgetKit)
         WidgetCenter.shared.reloadTimelines(ofKind: widgetKind)
@@ -395,17 +470,38 @@ enum FloaterTasksWidgetSnapshotStore {
     }
 
     static func loadSnapshot() -> FloaterTasksWidgetSnapshot? {
-        for store in defaultsStores() {
-            guard let data = store.data(forKey: snapshotKey),
-                  let snapshot = try? JSONDecoder().decode(FloaterTasksWidgetSnapshot.self, from: data) else {
-                continue
-            }
+        let legacy = drainLegacyDefaultsSnapshot()
+        if let data = WidgetSnapshotFileStore.read(snapshotFileName),
+           let snapshot = try? JSONDecoder().decode(FloaterTasksWidgetSnapshot.self, from: data) {
             return snapshot
         }
-        return nil
+        return legacy
     }
 
-    private static func defaultsStores() -> [UserDefaults] {
+    /// One-shot migration off UserDefaults — see the Today store's twin.
+    @discardableResult
+    private static func drainLegacyDefaultsSnapshot() -> FloaterTasksWidgetSnapshot? {
+        var legacyData: Data?
+        for store in legacyDefaultsStores() {
+            guard let data = store.data(forKey: legacySnapshotKey) else {
+                continue
+            }
+            if legacyData == nil {
+                legacyData = data
+            }
+            store.removeObject(forKey: legacySnapshotKey)
+        }
+        guard let legacyData,
+              let snapshot = try? JSONDecoder().decode(FloaterTasksWidgetSnapshot.self, from: legacyData) else {
+            return nil
+        }
+        if WidgetSnapshotFileStore.read(snapshotFileName) == nil {
+            WidgetSnapshotFileStore.write(legacyData, to: snapshotFileName)
+        }
+        return snapshot
+    }
+
+    private static func legacyDefaultsStores() -> [UserDefaults] {
         var stores = [UserDefaults]()
         if let shared = UserDefaults(suiteName: appGroupSuiteName) {
             stores.append(shared)

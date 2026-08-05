@@ -150,6 +150,13 @@ final class TdayAPIService {
         configuration.consumeTrustUnknown(host: host)
     }
 
+    /// True (and clears the record) if `host` was refused because it is a PUBLIC host whose
+    /// certificate the system could not verify. Unlike `consumeTrustUnknown`, this refusal comes
+    /// with no enrollment offer — a public host must chain to a public CA.
+    func consumePublicTrustRefusal(forHost host: String) -> Bool {
+        configuration.consumePublicTrustRefusal(host: host)
+    }
+
     /// Authorises pinning one specific fingerprint for `host` on the next handshake.
     /// Only call this after the user has seen that fingerprint and confirmed it.
     func allowTrustEnrollment(host: String, expecting fingerprint: String) {
@@ -269,6 +276,13 @@ final class TdayAPIService {
 
     func setUserSecurityQuestions(payload: SetSecurityQuestionsRequest) async throws -> MessageResponse {
         try await request(path: "/api/user/security-questions", method: "POST", body: payload, responseType: MessageResponse.self)
+    }
+
+    /// Admin-only. Callers MUST establish that the current session is an APPROVED ADMIN before
+    /// calling (see `SecurityAlertPoller`); the server answers 403 for anyone else and there is
+    /// no reason to make a signed-out or non-admin device talk to an admin endpoint at all.
+    func getSecurityAlerts() async throws -> SecurityAlertsResponse {
+        try await request(path: "/api/admin/security/alerts", method: "GET", responseType: SecurityAlertsResponse.self)
     }
 
     func getTodos(start: Int64? = nil, end: Int64? = nil, timeline: Bool? = nil, recurringFutureDays: Int? = nil) async throws -> TodosResponse {

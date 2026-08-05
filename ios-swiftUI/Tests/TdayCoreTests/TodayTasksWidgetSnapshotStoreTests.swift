@@ -200,7 +200,10 @@ final class TodayTasksWidgetSnapshotStoreTests: XCTestCase {
     func testWidgetConstantsStayAlignedWithExtension() {
         XCTAssertEqual(TodayTasksWidgetSnapshotStore.widgetKind, "TodayTasksWidget")
         XCTAssertEqual(TodayTasksWidgetSnapshotStore.appGroupSuiteName, "group.com.ohmz.tday")
-        XCTAssertEqual(TodayTasksWidgetSnapshotStore.snapshotKey, "tday.widget.todayTasksSnapshot")
+        // Task text lives in the protected App Group file, not UserDefaults. The extension
+        // hardcodes the same name, so a rename here has to be mirrored there.
+        XCTAssertEqual(TodayTasksWidgetSnapshotStore.snapshotFileName, "widget-today-snapshot.json")
+        XCTAssertEqual(TodayTasksWidgetSnapshotStore.legacySnapshotKey, "tday.widget.todayTasksSnapshot")
         XCTAssertEqual(TodayTasksWidgetSnapshotStore.snapshotSchemaVersion, 2)
     }
 
@@ -319,8 +322,183 @@ final class TodayTasksWidgetSnapshotStoreTests: XCTestCase {
     func testFloaterWidgetConstantsStayAlignedWithExtension() {
         XCTAssertEqual(FloaterTasksWidgetSnapshotStore.widgetKind, "FloaterTasksWidget")
         XCTAssertEqual(FloaterTasksWidgetSnapshotStore.appGroupSuiteName, "group.com.ohmz.tday")
-        XCTAssertEqual(FloaterTasksWidgetSnapshotStore.snapshotKey, "tday.widget.floaterTasksSnapshot")
+        XCTAssertEqual(FloaterTasksWidgetSnapshotStore.snapshotFileName, "widget-floater-snapshot.json")
+        XCTAssertEqual(FloaterTasksWidgetSnapshotStore.legacySnapshotKey, "tday.widget.floaterTasksSnapshot")
         XCTAssertEqual(FloaterTasksWidgetSnapshotStore.snapshotSchemaVersion, 1)
+    }
+
+    // MARK: - Snapshot storage (task text at rest)
+    //
+    // The snapshots carry task titles, notes and due times. They used to be written as plain
+    // JSON into UserDefaults, whose plist is unencrypted and lands in device backups. These
+    // pin the replacement: an App Group file, encrypted at rest, out of backups, and still
+    // readable by the widget on a locked device.
+
+    func testSnapshotFileIsEncryptedAtRestAndExcludedFromBackup() throws {
+        let fileURL = try appGroupFileURL(TodayTasksWidgetSnapshotStore.snapshotFileName)
+        addTeardownBlock { try? FileManager.default.removeItem(at: fileURL) }
+
+        WidgetSnapshotFileStore.write(Data("task text".utf8), to: TodayTasksWidgetSnapshotStore.snapshotFileName)
+
+        let attributes = try FileManager.default.attributesOfItem(atPath: fileURL.path)
+        // .completeUntilFirstUserAuthentication and NOT .complete: the widget has to keep
+        // rendering while the device is locked, which .complete would break.
+        //
+        // The Simulator does not implement data protection at all, so the attribute is simply
+        // absent there — asserting it unconditionally would fail on every simulator run. Assert
+        // it whenever the platform records one, and demand it on real hardware, which is where
+        // the guarantee actually has to hold.
+        if let protection = attributes[.protectionKey] as? FileProtectionType {
+            XCTAssertEqual(protection, .completeUntilFirstUserAuthentication)
+        } else {
+            #if !targetEnvironment(simulator)
+            XCTFail("widget snapshot was written with no file protection class")
+            #endif
+        }
+        XCTAssertTrue(
+            try fileURL.resourceValues(forKeys: [.isExcludedFromBackupKey]).isExcludedFromBackup ?? false,
+            "task text must not ride along in an unencrypted device backup"
+        )
+        XCTAssertEqual(WidgetSnapshotFileStore.read(TodayTasksWidgetSnapshotStore.snapshotFileName), Data("task text".utf8))
+    }
+
+    func testLegacyDefaultsSnapshotIsMigratedOnceAndThenDeleted() throws {
+        let fileURL = try appGroupFileURL(TodayTasksWidgetSnapshotStore.snapshotFileName)
+        let stores = [
+            UserDefaults(suiteName: TodayTasksWidgetSnapshotStore.appGroupSuiteName),
+            .standard
+        ].compactMap { $0 }
+        let key = TodayTasksWidgetSnapshotStore.legacySnapshotKey
+
+        try? FileManager.default.removeItem(at: fileURL)
+        addTeardownBlock {
+            try? FileManager.default.removeItem(at: fileURL)
+            stores.forEach { $0.removeObject(forKey: key) }
+        }
+
+        let legacy = TodayTasksWidgetSnapshot(
+            generatedAtEpochMs: 1_764_072_600_000,
+            title: "Today's Tasks",
+            status: .tasks,
+            taskCount: 1,
+            tasks: [
+                TodayTasksWidgetTaskSnapshot(
+                    id: "legacy",
+                    title: "Buy the thing",
+                    dueEpochMs: 1_764_076_200_000,
+                    priority: "low"
+                )
+            ]
+        )
+        let legacyData = try JSONEncoder().encode(legacy)
+        stores.forEach { $0.set(legacyData, forKey: key) }
+
+        // The upgrade must not lose the widget's content...
+        let loaded = TodayTasksWidgetSnapshotStore.loadSnapshot()
+        XCTAssertEqual(loaded?.tasks.first?.title, "Buy the thing")
+        // ...it moves into the protected file...
+        XCTAssertNotNil(WidgetSnapshotFileStore.read(TodayTasksWidgetSnapshotStore.snapshotFileName))
+        // ...and the plaintext copies are gone rather than left behind to be backed up.
+        for store in stores {
+            XCTAssertNil(store.data(forKey: key), "legacy plaintext snapshot still present in UserDefaults")
+        }
+        // Still readable afterwards, now from the file alone.
+        XCTAssertEqual(TodayTasksWidgetSnapshotStore.loadSnapshot()?.tasks.first?.title, "Buy the thing")
+    }
+
+    // MARK: - Local SwiftData store at rest
+    //
+    // Same threat as the snapshots above, bigger prize: the SwiftData store holds every task
+    // title, note and list name plus the UNSYNCED pending mutations. It is a plain SQLite file
+    // (SwiftData offers no cipher hook), so what these pin is the protection that IS achievable
+    // — Data Protection class and, above all, exclusion from device/iCloud backups.
+
+    func testStoreProtectionCoversTheWalAndShmSidecars() {
+        let storeURL = URL(fileURLWithPath: "/tmp/tday-test/default.store")
+
+        XCTAssertEqual(
+            LocalStoreFileProtection.protectedURLs(for: storeURL).map(\.lastPathComponent),
+            ["default.store", "default.store-wal", "default.store-shm"],
+            "the -wal holds the most recently typed rows; protecting only the .store protects nothing"
+        )
+    }
+
+    func testStoreProtectionKeepsTaskTextOutOfBackupsAndSkipsMissingFiles() throws {
+        let directory = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("tday-store-protection-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+
+        let storeURL = directory.appendingPathComponent("default.store")
+        let walURL = directory.appendingPathComponent("default.store-wal")
+        // No -shm on disk: SQLite creates and drops the sidecars as it checkpoints, so applying
+        // protection must tolerate a partially present set rather than bail on the first miss.
+        try Data("task title".utf8).write(to: storeURL)
+        try Data("unsynced mutation".utf8).write(to: walURL)
+
+        let stamped = LocalStoreFileProtection.apply(to: storeURL)
+
+        XCTAssertEqual(stamped, [storeURL, walURL])
+        for url in stamped {
+            XCTAssertTrue(
+                try url.resourceValues(forKeys: [.isExcludedFromBackupKey]).isExcludedFromBackup ?? false,
+                "\(url.lastPathComponent) must not ride along in an unencrypted device backup"
+            )
+            // The Simulator does not implement data protection, so the attribute is simply absent
+            // there. Assert it whenever the platform records one, and demand it on real hardware.
+            let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
+            if let protection = attributes[.protectionKey] as? FileProtectionType {
+                // NOT .complete: that would make the store unreadable while the device is locked
+                // and break the widgets' background refresh.
+                XCTAssertEqual(protection, .completeUntilFirstUserAuthentication)
+            } else {
+                #if !targetEnvironment(simulator)
+                XCTFail("\(url.lastPathComponent) was left with no file protection class")
+                #endif
+            }
+        }
+    }
+
+    // MARK: - App lock cover
+
+    func testAppLockRendersNothingWhileTheSettingIsOff() {
+        for isLocked in [true, false] {
+            for isSceneActive in [true, false] {
+                XCTAssertEqual(
+                    AppLockController.coverMode(isEnabled: false, isLocked: isLocked, isSceneActive: isSceneActive),
+                    .hidden,
+                    "the lock is default OFF and must stay completely inert then"
+                )
+            }
+        }
+    }
+
+    func testAppLockCoversContentWhenArmedAndWhenLeavingTheForeground() {
+        XCTAssertEqual(
+            AppLockController.coverMode(isEnabled: true, isLocked: true, isSceneActive: false),
+            .gate
+        )
+        XCTAssertEqual(
+            AppLockController.coverMode(isEnabled: true, isLocked: true, isSceneActive: true),
+            .gate
+        )
+        // Leaving the foreground before the gate re-arms at .background: this is the state the
+        // app-switcher snapshot is taken in, so it must not show task text.
+        XCTAssertEqual(
+            AppLockController.coverMode(isEnabled: true, isLocked: false, isSceneActive: false),
+            .privacyCover
+        )
+        XCTAssertEqual(
+            AppLockController.coverMode(isEnabled: true, isLocked: false, isSceneActive: true),
+            .hidden
+        )
+    }
+
+    private func appGroupFileURL(_ fileName: String) throws -> URL {
+        let container = FileManager.default.containerURL(
+            forSecurityApplicationGroupIdentifier: TodayTasksWidgetSnapshotStore.appGroupSuiteName
+        )
+        return try XCTUnwrap(container, "App Group container unavailable").appendingPathComponent(fileName)
     }
 
     func testCreateFloaterDeepLinkRoute() {
