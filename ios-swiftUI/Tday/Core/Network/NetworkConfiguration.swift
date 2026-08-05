@@ -14,6 +14,13 @@ final class NetworkConfiguration: NSObject, URLSessionDelegate {
     // affordance). Accessed from the URLSession delegate queue and async callers.
     private let trustFailureLock = NSLock()
     private var trustFailureHosts: Set<String> = []
+    /// Hosts that presented an unrecognised certificate, with the fingerprint they offered, so the
+    /// setup screen can show it and ask the user to confirm.
+    private var trustUnknownHosts: [String: String?] = [:]
+    /// Host -> the exact fingerprint the user just approved. Pinning the *expected* value (rather
+    /// than "whatever answers next") means a certificate swapped between the confirm and the retry
+    /// still fails.
+    private var enrollmentExpectations: [String: String] = [:]
 
     lazy var session: URLSession = {
         let configuration = URLSessionConfiguration.default
@@ -120,20 +127,63 @@ final class NetworkConfiguration: NSObject, URLSessionDelegate {
             return
         }
 
-        // Otherwise the certificate is self-signed / privately issued: the system
-        // can't vouch for it, so we trust it on first use, pin its key, and enforce
-        // that pin thereafter to guard against MITM on self-hosted servers.
+        // Otherwise the certificate is self-signed / privately issued and the system cannot vouch
+        // for it. This used to trust-on-first-use. That was fail-open in the worst place: a
+        // public-CA host never stores a pin (the branch above actively clears one), so an on-path
+        // attacker presenting any self-signed certificate for the real server landed here with no
+        // pin stored on EVERY connection and was accepted silently. Now nothing is trusted unless
+        // it matches a stored pin, or the user has just approved this exact fingerprint on screen.
         let fingerprint = fingerprintForTrust(trust)
-        if let stored = secureStore.trustedFingerprint(for: host), let fingerprint, stored != fingerprint {
+        let decision = Self.decideTrust(
+            fingerprint: fingerprint,
+            storedPin: secureStore.trustedFingerprint(for: host),
+            enrollmentExpecting: consumeEnrollmentExpectation(for: host)
+        )
+
+        switch decision {
+        case .accept:
+            completionHandler(.useCredential, URLCredential(trust: trust))
+        case let .enroll(approved):
+            secureStore.saveTrustedFingerprint(approved, for: host)
+            completionHandler(.useCredential, URLCredential(trust: trust))
+        case .rejectMismatch:
             recordTrustFailure(host: host)
             completionHandler(.cancelAuthenticationChallenge, nil)
-            return
+        case .rejectUnknown:
+            recordTrustUnknown(host: host, fingerprint: fingerprint)
+            completionHandler(.cancelAuthenticationChallenge, nil)
         }
-        if let fingerprint, secureStore.trustedFingerprint(for: host) == nil {
-            secureStore.saveTrustedFingerprint(fingerprint, for: host)
-        }
+    }
 
-        completionHandler(.useCredential, URLCredential(trust: trust))
+    /// The outcome for a certificate the system trust store could not verify.
+    enum TrustDecision: Equatable {
+        /// Matches the pin already stored for this host.
+        case accept
+        /// The user approved this exact fingerprint; store it and proceed.
+        case enroll(String)
+        /// A pin exists and this certificate is not it — the server changed, or someone is in the middle.
+        case rejectMismatch
+        /// No pin, no approval, or no usable fingerprint. Refuse and let the UI offer enrollment.
+        case rejectUnknown
+    }
+
+    /// Pure so the trust rules can be unit-tested without fabricating a `SecTrust`.
+    static func decideTrust(
+        fingerprint: String?,
+        storedPin: String?,
+        enrollmentExpecting: String?
+    ) -> TrustDecision {
+        // A trust whose fingerprint cannot be derived can never be pinned or compared, so it must
+        // never be accepted — the old code fell through to `.useCredential` here.
+        guard let fingerprint else { return .rejectUnknown }
+
+        if let storedPin {
+            return storedPin == fingerprint ? .accept : .rejectMismatch
+        }
+        if let enrollmentExpecting, enrollmentExpecting == fingerprint {
+            return .enroll(fingerprint)
+        }
+        return .rejectUnknown
     }
 
     private func recordTrustFailure(host: String) {
@@ -148,6 +198,43 @@ final class NetworkConfiguration: NSObject, URLSessionDelegate {
         trustFailureLock.lock()
         defer { trustFailureLock.unlock() }
         return trustFailureHosts.remove(host.lowercased()) != nil
+    }
+
+    private func recordTrustUnknown(host: String, fingerprint: String?) {
+        trustFailureLock.lock()
+        defer { trustFailureLock.unlock() }
+        trustUnknownHosts[host.lowercased()] = fingerprint
+    }
+
+    /// Returns (and clears) the fingerprint offered by `host` when its certificate was refused for
+    /// being unrecognised. The outer optional distinguishes "no such record" from "refused, but the
+    /// fingerprint could not be derived".
+    func consumeTrustUnknown(host: String) -> String?? {
+        trustFailureLock.lock()
+        defer { trustFailureLock.unlock() }
+        return trustUnknownHosts.removeValue(forKey: host.lowercased())
+    }
+
+    /// Authorises pinning one specific fingerprint for `host` on the next handshake.
+    ///
+    /// Call this **only** after the user has seen that fingerprint and confirmed it. It is consumed
+    /// by the next challenge for the host, so an approval cannot be reused.
+    func allowTrustEnrollment(host: String, expecting fingerprint: String) {
+        trustFailureLock.lock()
+        defer { trustFailureLock.unlock() }
+        enrollmentExpectations[host.lowercased()] = fingerprint
+    }
+
+    func cancelTrustEnrollment(host: String) {
+        trustFailureLock.lock()
+        defer { trustFailureLock.unlock() }
+        enrollmentExpectations.removeValue(forKey: host.lowercased())
+    }
+
+    private func consumeEnrollmentExpectation(for host: String) -> String? {
+        trustFailureLock.lock()
+        defer { trustFailureLock.unlock() }
+        return enrollmentExpectations.removeValue(forKey: host.lowercased())
     }
 
     func clearCookies() {

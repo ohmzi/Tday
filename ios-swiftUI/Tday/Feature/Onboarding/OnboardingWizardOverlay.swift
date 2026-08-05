@@ -33,11 +33,14 @@ struct OnboardingWizardOverlay: View {
     let initialServerURL: String?
     let serverErrorMessage: String?
     let serverCanResetTrust: Bool
+    let pendingCertificateApproval: PendingCertificateApproval?
     let pendingApprovalMessage: String?
     let authViewModel: AuthViewModel
     let systemCredentialService: SystemCredentialServicing
     let onConnectServer: (String) async -> Result<Void, MessageError>
     let onResetServerTrust: (String) async -> Result<Void, MessageError>
+    let onApproveCertificate: () async -> Result<Void, MessageError>
+    let onDismissCertificate: () -> Void
     let onLogin: (String, String, LoginCredentialSource) async -> Bool
     let onRegister: (String, String, String, [SecurityAnswerInput]) async -> Bool
     let onLoadSecurityQuestions: () async -> [SecurityQuestion]
@@ -151,6 +154,51 @@ struct OnboardingWizardOverlay: View {
             }
         } message: {
             Text("T'Day found a server URL saved on this device.")
+        }
+        // The device could not verify this certificate, so nothing is pinned until the user
+        // confirms this exact fingerprint. Destructive role on the trust action: on a hostile
+        // network this prompt is the attack.
+        .alert("Trust this server?", isPresented: certificateApprovalBinding) {
+            Button("Cancel", role: .cancel) {
+                isConnecting = false
+                onDismissCertificate()
+            }
+            Button("Trust", role: .destructive) {
+                Task { await approveCertificate() }
+            }
+        } message: {
+            if let pending = pendingCertificateApproval {
+                Text(
+                    """
+                    \(pending.host) uses a certificate your device can't verify.
+
+                    Fingerprint:
+                    \(pending.displayFingerprint)
+
+                    Only continue if this matches your server. If you're on public Wi-Fi and \
+                    weren't expecting this, cancel.
+                    """
+                )
+            }
+        }
+    }
+
+    private var certificateApprovalBinding: Binding<Bool> {
+        Binding(
+            get: { pendingCertificateApproval != nil },
+            set: { isPresented in
+                if !isPresented { onDismissCertificate() }
+            }
+        )
+    }
+
+    private func approveCertificate() async {
+        isConnecting = true
+        defer { isConnecting = false }
+        localError = nil
+        let result = await onApproveCertificate()
+        if case let .failure(error) = result {
+            localError = error.message
         }
     }
 

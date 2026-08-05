@@ -3,6 +3,7 @@ services:
     image: postgres:15
     container_name: tday_db
     restart: always
+    pids_limit: 512
     healthcheck:
       test: ["CMD-SHELL", "pg_isready"]
       interval: 1s
@@ -24,6 +25,7 @@ services:
     container_name: tday_ollama
     profiles: ["ai"]
     restart: always
+    pids_limit: 512
     # CPU by default so `up` works on any host. For NVIDIA GPU acceleration,
     # add the override: `docker compose -f docker-compose.yaml
     # -f docker-compose.gpu.yaml --profile ai up` (requires the NVIDIA
@@ -59,9 +61,18 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.backend
+      args:
+        # Build-time only: Vite bakes these into the SPA bundle. Both are public values.
+        VITE_SENTRY_DSN: ${VITE_SENTRY_DSN:-}
+        VITE_SENTRY_TRACES_SAMPLE_RATE: ${VITE_SENTRY_TRACES_SAMPLE_RATE:-}
     image: tday-backend:latest
     container_name: tday_backend
     restart: always
+    # Caps runaway thread/process creation. Memory limits are deliberately NOT set here: the JVM
+    # under `restart: always` would OOM-crash-loop on a too-low value, which is worse than the DoS
+    # it defends against. Set mem_limit only after measuring real RSS, together with
+    # -XX:MaxRAMPercentage on the entrypoint.
+    pids_limit: 512
     ports:
       - "${TDAY_HOST_BIND:-127.0.0.1}:${TDAY_HOST_PORT:-2525}:8080"
     env_file:

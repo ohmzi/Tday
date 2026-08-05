@@ -1,6 +1,7 @@
 package com.ohmz.tday.routes.auth
 
 import com.ohmz.tday.config.AppConfig
+import com.ohmz.tday.domain.respondRateLimit
 import com.ohmz.tday.models.request.CredentialsCallbackRequest
 import com.ohmz.tday.security.*
 import com.ohmz.tday.services.UserService
@@ -54,11 +55,11 @@ fun Route.credentialsCallbackRoutes() {
                 val msg = if (throttle.reasonCode == "auth_lockout")
                     "Too many failed sign-in attempts. Try again in $wait."
                 else "Too many authentication requests. Try again in $wait."
-                call.respond(HttpStatusCode.TooManyRequests, mapOf(
-                    "message" to msg,
-                    "reason" to (throttle.reasonCode ?: "auth_limit"),
-                    "retryAfterSeconds" to throttle.retryAfterSeconds,
-                ))
+                call.respondRateLimit(
+                    message = msg,
+                    reason = throttle.reasonCode ?: "auth_limit",
+                    retryAfterSeconds = throttle.retryAfterSeconds,
+                )
                 return@post
             }
 
