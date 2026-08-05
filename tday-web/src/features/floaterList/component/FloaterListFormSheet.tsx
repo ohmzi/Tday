@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { SheetCard, SheetSectionTitle } from "@/components/ui/sheet-chrome";
 import { api } from "@/lib/api-client";
 import { usePathname, useRouter } from "@/lib/navigation";
-import { cn } from "@/lib/utils";
+import { cn, isSubmitEnter } from "@/lib/utils";
 import { hapticTick, hapticConfirm } from "@/lib/haptics";
 import { listColorMap } from "@/lib/listColorMap";
 import {
@@ -260,11 +260,14 @@ export default function FloaterListFormSheet({
             <Input
               value={name}
               onChange={(event) => setName(event.target.value)}
+              enterKeyHint="done"
               onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  event.preventDefault();
-                  void handleSubmit();
-                }
+                if (!isSubmitEnter(event)) return;
+                // Enter is the header ✓. With nothing to save it just dismisses
+                // the keyboard.
+                event.preventDefault();
+                if (canSubmit) void handleSubmit();
+                else event.currentTarget.blur();
               }}
               placeholder={appDict("floaterListName")}
               className={cn(
