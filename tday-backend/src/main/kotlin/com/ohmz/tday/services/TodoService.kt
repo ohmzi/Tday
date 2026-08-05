@@ -16,6 +16,8 @@ import com.ohmz.tday.domain.DomainEvent
 import com.ohmz.tday.models.response.FloaterResponse
 import com.ohmz.tday.models.response.TodoResponse
 import com.ohmz.tday.security.FieldEncryption
+import com.ohmz.tday.security.decryptRequired
+import com.ohmz.tday.security.encryptRequired
 import com.ohmz.tday.shared.model.TaskStepDto
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -72,7 +74,7 @@ class TodoServiceImpl(
         newSuspendedTransaction(Dispatchers.IO) {
             Todos.insert {
                 it[Todos.id] = id
-                it[Todos.title] = title
+                it[Todos.title] = fieldEncryption.encryptRequired("title", title)
                 it[Todos.description] = fieldEncryption.encryptIfSensitive("description", description)
                 it[Todos.priority] = Priority.valueOf(priority)
                 it[Todos.due] = due
@@ -151,7 +153,9 @@ class TodoServiceImpl(
         val editableListIds = editableListIdsFor(userId)
         newSuspendedTransaction(Dispatchers.IO) {
             Todos.update({ (Todos.id eq id) and mutableTodos(userId, editableListIds) }) { stmt ->
-                fields["title"]?.let { stmt[Todos.title] = it as String }
+                fields["title"]?.let {
+                    stmt[Todos.title] = fieldEncryption.encryptRequired("title", it as String)
+                }
                 fields["description"]?.let {
                     stmt[Todos.description] = fieldEncryption.encryptIfSensitive("description", it as? String)
                 }
@@ -210,8 +214,8 @@ class TodoServiceImpl(
 
             Floaters.insert {
                 it[Floaters.id] = newFloaterId
+                // Ciphertext copies straight across — both tables encrypt "title"/"description".
                 it[Floaters.title] = todo[Todos.title]
-                // Ciphertext copies straight across — both tables encrypt "description".
                 it[Floaters.description] = todo[Todos.description]
                 it[Floaters.priority] = todo[Todos.priority]
                 it[Floaters.pinned] = todo[Todos.pinned]
@@ -235,7 +239,7 @@ class TodoServiceImpl(
         publisher.publishToCollaborators(userId, DomainEvent.FloaterChanged())
         return FloaterResponse(
             id = newFloaterId,
-            title = demoted[Todos.title],
+            title = fieldEncryption.decryptRequired(demoted[Todos.title]),
             description = fieldEncryption.decryptIfEncrypted(demoted[Todos.description]),
             pinned = demoted[Todos.pinned],
             priority = demoted[Todos.priority].name,
@@ -280,7 +284,10 @@ class TodoServiceImpl(
 
             if (existingCompleted == null) {
                 // Snapshot the todo's steps as JSON so history survives the parent's
-                // deletion (R6-2). Null when the todo has no steps.
+                // deletion (R6-2). Null when the todo has no steps. Step titles are
+                // copied at rest, i.e. still encrypted, so the snapshot column never
+                // holds plaintext a step row wouldn't; any future reader of
+                // CompletedTodos.steps must decryptIfEncrypted each title.
                 val stepSnapshot = TaskSteps.selectAll()
                     .where { TaskSteps.todoID eq todoId }
                     .orderBy(TaskSteps.position to SortOrder.ASC, TaskSteps.createdAt to SortOrder.ASC)
@@ -298,6 +305,7 @@ class TodoServiceImpl(
                 CompletedTodos.insert {
                     it[CompletedTodos.id] = CuidGenerator.newCuid()
                     it[CompletedTodos.originalTodoID] = todoId
+                    // Copied at rest: both tables encrypt "title"/"description".
                     it[CompletedTodos.title] = todo[Todos.title]
                     it[CompletedTodos.description] = todo[Todos.description]
                     it[CompletedTodos.priority] = todo[Todos.priority]
@@ -445,7 +453,10 @@ class TodoServiceImpl(
                 TodoInstances.update({
                     (TodoInstances.todoId eq todoId) and (TodoInstances.instanceDate eq instanceDate)
                 }) { stmt ->
-                    fields["title"]?.let { stmt[TodoInstances.overriddenTitle] = it as? String }
+                    fields["title"]?.let {
+                        stmt[TodoInstances.overriddenTitle] =
+                            fieldEncryption.encryptIfSensitive("overriddenTitle", it as? String)
+                    }
                     fields["description"]?.let {
                         stmt[TodoInstances.overriddenDescription] =
                             fieldEncryption.encryptIfSensitive("overriddenDescription", it as? String)
@@ -461,7 +472,10 @@ class TodoServiceImpl(
                     stmt[TodoInstances.todoId] = todoId
                     stmt[TodoInstances.recurId] = instanceDate.toString()
                     stmt[TodoInstances.instanceDate] = instanceDate
-                    fields["title"]?.let { stmt[TodoInstances.overriddenTitle] = it as? String }
+                    fields["title"]?.let {
+                        stmt[TodoInstances.overriddenTitle] =
+                            fieldEncryption.encryptIfSensitive("overriddenTitle", it as? String)
+                    }
                     fields["description"]?.let {
                         stmt[TodoInstances.overriddenDescription] =
                             fieldEncryption.encryptIfSensitive("overriddenDescription", it as? String)
@@ -506,7 +520,7 @@ class TodoServiceImpl(
 
     private fun ResultRow.toTodoResponse(): TodoResponse = TodoResponse(
         id = this[Todos.id],
-        title = this[Todos.title],
+        title = fieldEncryption.decryptRequired(this[Todos.title]),
         description = fieldEncryption.decryptIfEncrypted(this[Todos.description]),
         createdAt = this[Todos.createdAt].toString(),
         updatedAt = this[Todos.updatedAt].toString(),

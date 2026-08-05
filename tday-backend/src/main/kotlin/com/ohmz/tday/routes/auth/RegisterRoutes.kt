@@ -17,13 +17,19 @@ private val USERNAME_REGEX = Regex("^[a-z0-9](?:[a-z0-9._-]{1,28}[a-z0-9])$")
 fun Route.registerRoutes() {
     val userService by inject<UserService>()
     val authThrottle by inject<AuthThrottle>()
+    val abuseGuard by inject<AbuseGuard>()
 
     route("/register") {
         post {
+            // Registration stays open; only a source that has already demonstrated abuse of THIS
+            // path loses it, and only until the block expires.
+            if (call.rejectIfAbuseBlocked(abuseGuard, AbuseScope.register)) return@post
+
             val body = call.receive<RegisterRequest>()
 
             val throttle = authThrottle.enforceRateLimit(ThrottleAction.register, call.request, body.username)
             if (!throttle.allowed) {
+                abuseGuard.recordSignal(AbuseScope.register, AbuseSignal.registerViolation, call.request)
                 call.respondRateLimit(
                     message = "Too many authentication requests. Try again in ${authThrottle.formatRetryWait(throttle.retryAfterSeconds)}.",
                     reason = throttle.reasonCode ?: "auth_limit",
@@ -71,6 +77,12 @@ fun Route.registerRoutes() {
                     call.respond(HttpStatusCode.InternalServerError, mapOf("message" to error.message))
                 },
                 { reg ->
+                    // The behavioural signal: an account that was created but still needs the
+                    // owner's approval. One is a new user; a pile of them from one source in a
+                    // day is mass registration, however slowly it was paced.
+                    if (reg.requiresApproval) {
+                        abuseGuard.recordSignal(AbuseScope.register, AbuseSignal.pendingSignup, call.request)
+                    }
                     call.respond(
                         HttpStatusCode.OK,
                         buildJsonObject {

@@ -1,5 +1,7 @@
 import Foundation
 import CryptoKit
+import LocalAuthentication
+import Observation
 
 struct ProbeCompatibilityPayload: Codable, Equatable {
     let appVersion: String
@@ -43,5 +45,150 @@ enum ProbeDecryptor {
             base64.append(String(repeating: "=", count: 4 - remainder))
         }
         return Data(base64Encoded: base64)
+    }
+}
+
+// MARK: - App lock
+
+/// Opt-in "Require Face ID / Touch ID to open T'Day". DEFAULT OFF — with nothing stored, the
+/// app behaves exactly as it did before this setting existed. UserDefaults-backed, mirroring
+/// ThemeStore's style; the flag itself is not a secret.
+struct AppLockStore {
+    private let defaults = UserDefaults.standard
+    private static let key = "app.lock.enabled"
+
+    var isEnabled: Bool {
+        get { defaults.object(forKey: Self.key) as? Bool ?? false }
+        nonmutating set { defaults.set(newValue, forKey: Self.key) }
+    }
+}
+
+/// What the lock layer has to be rendering right now.
+///
+/// Extracted from the view so the two places that draw it — the window that sits above every
+/// presented sheet, and the in-hierarchy fallback overlay — cannot drift apart, and so the
+/// "inert while disabled" promise is testable without a running scene.
+enum AppLockCoverMode: Equatable {
+    /// Draw nothing at all. The only mode reachable while the setting is off.
+    case hidden
+    /// Full gate with the Unlock button.
+    case gate
+    /// Contentless cover for the app-switcher snapshot, before the gate re-arms.
+    case privacyCover
+}
+
+/// Drives the biometric gate: the locked state, the LocalAuthentication call, and (via the
+/// view) the app-switcher privacy cover.
+///
+/// This gate hides the UI. It deliberately holds NO key material and gates nothing on disk:
+/// the widget snapshot and the widget's session file stay readable at
+/// `.completeUntilFirstUserAuthentication`, so home-screen widgets keep rendering while the
+/// device is locked whether or not this setting is on.
+@MainActor
+@Observable
+final class AppLockController {
+    private(set) var isLocked: Bool
+    private(set) var isAuthenticating = false
+    /// Set only when authentication actually failed — a user-initiated cancel leaves it nil so
+    /// the gate doesn't accuse them of anything.
+    private(set) var failureMessage: String?
+
+    private let store: AppLockStore
+
+    var isEnabled: Bool { store.isEnabled }
+
+    init(store: AppLockStore = AppLockStore()) {
+        self.store = store
+        // Cold start: locked from the first frame when enabled, so no content renders first.
+        isLocked = store.isEnabled
+    }
+
+    func coverMode(isSceneActive: Bool) -> AppLockCoverMode {
+        Self.coverMode(isEnabled: isEnabled, isLocked: isLocked, isSceneActive: isSceneActive)
+    }
+
+    /// `isEnabled` is checked first and wins outright: with the setting off there is no state
+    /// this can be in that renders anything, which is what keeps the default configuration
+    /// byte-for-byte the app it was before the lock existed.
+    nonisolated static func coverMode(isEnabled: Bool, isLocked: Bool, isSceneActive: Bool) -> AppLockCoverMode {
+        guard isEnabled else {
+            return .hidden
+        }
+        if isLocked {
+            return .gate
+        }
+        // Covers the snapshot iOS takes for the app switcher while the app is merely leaving the
+        // foreground — the gate itself only re-arms at .background.
+        return isSceneActive ? .hidden : .privacyCover
+    }
+
+    /// Re-arms the gate when the app leaves the foreground.
+    ///
+    /// Also the point where a toggle flipped in Settings takes effect: the setting is read
+    /// fresh from the store here rather than cached, so turning the lock on arms it at the next
+    /// backgrounding, and turning it off clears the armed state.
+    func lockIfEnabled() {
+        guard store.isEnabled else {
+            isLocked = false
+            return
+        }
+        isLocked = true
+        failureMessage = nil
+    }
+
+    /// Prompts only when the gate is actually armed, so this is a no-op in the default
+    /// (disabled) configuration and cannot stack prompts.
+    func authenticateIfNeeded() async {
+        guard store.isEnabled, isLocked, !isAuthenticating else {
+            return
+        }
+        await authenticate()
+    }
+
+    func authenticate() async {
+        guard store.isEnabled else {
+            isLocked = false
+            return
+        }
+        isAuthenticating = true
+        defer { isAuthenticating = false }
+
+        let context = LAContext()
+        // .deviceOwnerAuthentication, not .deviceOwnerAuthenticationWithBiometrics: the device
+        // passcode is the fallback, so a failed/unavailable Face ID still has a way through.
+        guard context.canEvaluatePolicy(.deviceOwnerAuthentication, error: nil) else {
+            // No biometrics AND no passcode enrolled: there is no credential left to check, so
+            // staying locked would brick the app with no recovery. Fail open — this gate hides
+            // the UI, it is not what protects data at rest (file protection is).
+            isLocked = false
+            failureMessage = nil
+            return
+        }
+
+        do {
+            let succeeded = try await context.evaluatePolicy(
+                .deviceOwnerAuthentication,
+                localizedReason: L("Unlock T'Day")
+            )
+            isLocked = !succeeded
+            failureMessage = succeeded ? nil : L("Could not verify it's you. Try again.")
+        } catch {
+            isLocked = true
+            failureMessage = Self.isUserCancellation(error) ? nil : L("Could not verify it's you. Try again.")
+        }
+    }
+
+    /// A cancel (user tapped Cancel, or the system pulled the prompt for a call/notification)
+    /// is not a failure to report — the gate just stays up with its Unlock button.
+    private static func isUserCancellation(_ error: Error) -> Bool {
+        guard let laError = error as? LAError else {
+            return false
+        }
+        switch laError.code {
+        case .userCancel, .systemCancel, .appCancel:
+            return true
+        default:
+            return false
+        }
     }
 }

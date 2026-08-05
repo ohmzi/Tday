@@ -51,7 +51,8 @@ final class ConnectivityClassificationTests: XCTestCase {
         let decision = NetworkConfiguration.decideTrust(
             fingerprint: "attacker-fingerprint",
             storedPin: nil,
-            enrollmentExpecting: nil
+            enrollmentExpecting: nil,
+            isPrivateHost: true
         )
         XCTAssertEqual(decision, .rejectUnknown)
     }
@@ -60,7 +61,8 @@ final class ConnectivityClassificationTests: XCTestCase {
         let decision = NetworkConfiguration.decideTrust(
             fingerprint: "pinned",
             storedPin: "pinned",
-            enrollmentExpecting: nil
+            enrollmentExpecting: nil,
+            isPrivateHost: true
         )
         XCTAssertEqual(decision, .accept)
     }
@@ -69,7 +71,8 @@ final class ConnectivityClassificationTests: XCTestCase {
         let decision = NetworkConfiguration.decideTrust(
             fingerprint: "different",
             storedPin: "pinned",
-            enrollmentExpecting: nil
+            enrollmentExpecting: nil,
+            isPrivateHost: true
         )
         XCTAssertEqual(decision, .rejectMismatch)
     }
@@ -78,7 +81,8 @@ final class ConnectivityClassificationTests: XCTestCase {
         let decision = NetworkConfiguration.decideTrust(
             fingerprint: "approved",
             storedPin: nil,
-            enrollmentExpecting: "approved"
+            enrollmentExpecting: "approved",
+            isPrivateHost: true
         )
         XCTAssertEqual(decision, .enroll("approved"))
     }
@@ -89,7 +93,8 @@ final class ConnectivityClassificationTests: XCTestCase {
         let decision = NetworkConfiguration.decideTrust(
             fingerprint: "swapped-after-approval",
             storedPin: nil,
-            enrollmentExpecting: "approved"
+            enrollmentExpecting: "approved",
+            isPrivateHost: true
         )
         XCTAssertEqual(decision, .rejectUnknown)
     }
@@ -98,7 +103,8 @@ final class ConnectivityClassificationTests: XCTestCase {
         let decision = NetworkConfiguration.decideTrust(
             fingerprint: "attacker",
             storedPin: "pinned",
-            enrollmentExpecting: "attacker"
+            enrollmentExpecting: "attacker",
+            isPrivateHost: true
         )
         XCTAssertEqual(decision, .rejectMismatch)
     }
@@ -106,16 +112,123 @@ final class ConnectivityClassificationTests: XCTestCase {
     func testUnderivableFingerprintIsNeverAccepted() {
         // The old code fell through to .useCredential here.
         XCTAssertEqual(
-            NetworkConfiguration.decideTrust(fingerprint: nil, storedPin: nil, enrollmentExpecting: nil),
+            NetworkConfiguration.decideTrust(
+                fingerprint: nil,
+                storedPin: nil,
+                enrollmentExpecting: nil,
+                isPrivateHost: true
+            ),
             .rejectUnknown
         )
         XCTAssertEqual(
-            NetworkConfiguration.decideTrust(fingerprint: nil, storedPin: "pinned", enrollmentExpecting: nil),
+            NetworkConfiguration.decideTrust(
+                fingerprint: nil,
+                storedPin: "pinned",
+                enrollmentExpecting: nil,
+                isPrivateHost: true
+            ),
             .rejectUnknown
         )
         XCTAssertEqual(
-            NetworkConfiguration.decideTrust(fingerprint: nil, storedPin: nil, enrollmentExpecting: "approved"),
+            NetworkConfiguration.decideTrust(
+                fingerprint: nil,
+                storedPin: nil,
+                enrollmentExpecting: "approved",
+                isPrivateHost: true
+            ),
             .rejectUnknown
+        )
+    }
+
+    // MARK: Enrollment is private/LAN hosts only
+    //
+    // A certificate that fails system validation is only adoptable on a host that can't be
+    // reached from the public internet. On a public hostname the same situation means the
+    // certificate should have chained to a public CA and didn't — so the "Trust this
+    // fingerprint" button the UI puts on .rejectUnknown IS the attack on hostile wifi.
+
+    func testPublicHostWithUntrustedCertificateIsRefusedWithoutOfferingEnrollment() {
+        // .rejectUntrustedPublic is the whole point: it is the one refusal the setup screen
+        // does not attach a Trust button to.
+        XCTAssertEqual(
+            NetworkConfiguration.decideTrust(
+                fingerprint: "attacker-on-public-wifi",
+                storedPin: nil,
+                enrollmentExpecting: nil,
+                isPrivateHost: false
+            ),
+            .rejectUntrustedPublic
+        )
+        // No fingerprint derivable — still a flat refusal, still no enrollment.
+        XCTAssertEqual(
+            NetworkConfiguration.decideTrust(
+                fingerprint: nil,
+                storedPin: nil,
+                enrollmentExpecting: nil,
+                isPrivateHost: false
+            ),
+            .rejectUntrustedPublic
+        )
+    }
+
+    func testPrivateHostWithUntrustedCertificateIsOfferedEnrollment() {
+        // Self-signed LAN server: refused for now, but .rejectUnknown is what makes the UI show
+        // the fingerprint and let the user adopt it deliberately.
+        XCTAssertEqual(
+            NetworkConfiguration.decideTrust(
+                fingerprint: "lan-self-signed",
+                storedPin: nil,
+                enrollmentExpecting: nil,
+                isPrivateHost: true
+            ),
+            .rejectUnknown
+        )
+        // And once the user has confirmed that exact fingerprint, it enrolls.
+        XCTAssertEqual(
+            NetworkConfiguration.decideTrust(
+                fingerprint: "lan-self-signed",
+                storedPin: nil,
+                enrollmentExpecting: "lan-self-signed",
+                isPrivateHost: true
+            ),
+            .enroll("lan-self-signed")
+        )
+    }
+
+    func testPublicHostCannotEnrollEvenWithAnApprovalPending() {
+        // Belt and braces: even if an approval were somehow recorded for a public host, the
+        // host class alone must refuse it. No path exists that pins a new key for a public host.
+        XCTAssertEqual(
+            NetworkConfiguration.decideTrust(
+                fingerprint: "approved",
+                storedPin: nil,
+                enrollmentExpecting: "approved",
+                isPrivateHost: false
+            ),
+            .rejectUntrustedPublic
+        )
+    }
+
+    func testPublicHostStillHonoursAnAlreadyEstablishedPin() {
+        // An existing pin came from a deliberate approval and is strictly stronger than CA
+        // validation, so it keeps working; a changed certificate still reads as a mismatch.
+        XCTAssertEqual(
+            NetworkConfiguration.decideTrust(
+                fingerprint: "pinned",
+                storedPin: "pinned",
+                enrollmentExpecting: nil,
+                isPrivateHost: false
+            ),
+            .accept
+        )
+        XCTAssertEqual(
+            NetworkConfiguration.decideTrust(
+                fingerprint: "swapped",
+                storedPin: "pinned",
+                enrollmentExpecting: nil,
+                isPrivateHost: false
+            ),
+            .rejectMismatch
         )
     }
 
