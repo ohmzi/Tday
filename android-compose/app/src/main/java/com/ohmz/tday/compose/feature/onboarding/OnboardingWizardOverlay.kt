@@ -609,7 +609,7 @@ fun OnboardingWizardOverlay(
                         WizardStepChip(
                             modifier = Modifier.weight(1f),
                             title = stringResource(R.string.onboarding_step_server),
-                            imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_languages),
+                            imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_globe),
                             color = Color(0xFF6EA8E1),
                             active = step == WizardStep.SERVER,
                             completed = step == WizardStep.LOGIN,
@@ -630,7 +630,7 @@ fun OnboardingWizardOverlay(
                                     WizardHeroTile(
                                         title = stringResource(R.string.onboarding_mode_title),
                                         subtitle = stringResource(R.string.onboarding_mode_subtitle),
-                                        imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_smartphone),
+                                        imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_sparkles),
                                         color = Color(0xFF6EA8E1),
                                     )
                                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -638,7 +638,7 @@ fun OnboardingWizardOverlay(
                                             modifier = Modifier.weight(1f),
                                             title = stringResource(R.string.onboarding_mode_server_short_title),
                                             subtitle = stringResource(R.string.onboarding_mode_server_short_subtitle),
-                                            imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_languages),
+                                            imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_globe),
                                             color = Color(0xFF6EA8E1),
                                             enabled = !isResettingTrust,
                                             onClick = {
@@ -673,7 +673,7 @@ fun OnboardingWizardOverlay(
                                     WizardHeroTile(
                                         title = stringResource(R.string.onboarding_mode_server_title),
                                         subtitle = stringResource(R.string.onboarding_server_hero_subtitle),
-                                        imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_languages),
+                                        imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_globe),
                                         color = Color(0xFF6EA8E1),
                                     )
                                     OutlinedTextField(
