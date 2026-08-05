@@ -15,7 +15,11 @@ import { clearClientUserData } from "@/lib/security/clearClientUserData";
 import { clearPendingApproval } from "@/lib/pendingApproval";
 import { onSessionExpired } from "@/lib/auth/sessionExpiry";
 import { isLocalMode, setAppMode, APP_MODE_STORAGE_KEY } from "@/lib/local/appMode";
-import { LOCAL_WORKSPACE_STORAGE_KEY } from "@/lib/local/localDb";
+import {
+  LOCAL_WORKSPACE_STORAGE_KEY,
+  flushWorkspaceWrites,
+  lockLocalVault,
+} from "@/lib/local/localDb";
 import {
   markReturningBrowser,
   RETURNING_BROWSER_STORAGE_KEY,
@@ -193,6 +197,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // there is nothing to revoke server-side, and the browser's tasks stay put
     // so the user can come back to them (or delete them from Settings).
     if (isLocalMode()) {
+      // Leaving relocks the workspace: the derived key and the decrypted rows go
+      // now rather than waiting on the redirect to tear the page down.
+      await flushWorkspaceWrites();
+      lockLocalVault();
       setAppMode(null);
       queryClient.clear();
       applySessionState("unauthenticated", null);

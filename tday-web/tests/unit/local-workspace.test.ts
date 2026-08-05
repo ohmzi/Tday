@@ -4,9 +4,15 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { ApiError, api } from "@/lib/api-client";
 import { setAppMode } from "@/lib/local/appMode";
 import {
-  LOCAL_WORKSPACE_STORAGE_KEY,
+  createLocalVault,
+  flushWorkspaceWrites,
+  getLocalVaultState,
+  protectLegacyWorkspace,
   resetWorkspaceCache,
+  unlockLocalVault,
+  LOCAL_WORKSPACE_STORAGE_KEY,
 } from "@/lib/local/localDb";
+import { isVaultEnvelope } from "@/lib/local/localCrypto";
 
 /**
  * Local Mode is exercised through the shared api client, because that is how
@@ -28,6 +34,13 @@ const json = (body: unknown) => ({
   body: JSON.stringify(body),
 });
 
+/** A page reload: pending writes land, memory goes, the passphrase reopens it. */
+async function reopenWorkspace(passphrase: string = PASSPHRASE) {
+  await flushWorkspaceWrites();
+  resetWorkspaceCache();
+  await unlockLocalVault(passphrase);
+}
+
 async function createTodo(overrides: Record<string, unknown> = {}) {
   const res = await api.POST({
     url: "/api/todo",
@@ -42,10 +55,15 @@ async function createTodo(overrides: Record<string, unknown> = {}) {
   return (res as { todo: TodoDto }).todo;
 }
 
-beforeEach(() => {
+// Every test starts from a fresh workspace sealed under this passphrase, because
+// that is the only way a Local Mode browser can reach its rows at all.
+const PASSPHRASE = "a river runs through it";
+
+beforeEach(async () => {
   window.localStorage.clear();
   resetWorkspaceCache();
   setAppMode("local");
+  await createLocalVault(PASSPHRASE);
 });
 
 afterEach(() => {
@@ -314,7 +332,7 @@ describe("local mode preferences", () => {
       ...json({ sortBy: "priority", aiSummaryEnabled: false }),
     });
 
-    resetWorkspaceCache();
+    await reopenWorkspace();
     const prefs = await api.GET({ url: "/api/preferences" });
     expect(prefs.sortBy).toBe("priority");
     expect(prefs.aiSummaryEnabled).toBe(false);
@@ -414,15 +432,120 @@ describe("local mode data transfer", () => {
 describe("local mode persistence", () => {
   it("survives a page reload and disappears when site data is cleared", async () => {
     await createTodo();
+    await flushWorkspaceWrites();
     expect(window.localStorage.getItem(LOCAL_WORKSPACE_STORAGE_KEY)).toBeTruthy();
 
     // Reload: a fresh module cache reading the same storage.
-    resetWorkspaceCache();
+    await reopenWorkspace();
     expect((await api.GET({ url: "/api/todo?timeline=true" })).todos).toHaveLength(1);
 
     // "Clear cookies and site data" — the documented way to lose a local workspace.
     window.localStorage.clear();
     resetWorkspaceCache();
+    await createLocalVault(PASSPHRASE);
     expect((await api.GET({ url: "/api/todo?timeline=true" })).todos).toHaveLength(0);
+  });
+
+  it("stores nothing but ciphertext, and stays shut without the passphrase", async () => {
+    await createTodo({ title: "Call the clinic about the results" });
+    await flushWorkspaceWrites();
+
+    const stored = window.localStorage.getItem(LOCAL_WORKSPACE_STORAGE_KEY);
+    expect(stored).not.toContain("clinic");
+    expect(isVaultEnvelope(JSON.parse(stored ?? "null"))).toBe(true);
+
+    // Snooping the profile after the tab closed finds a locked workspace.
+    await flushWorkspaceWrites();
+    resetWorkspaceCache();
+    expect(getLocalVaultState()).toBe("locked");
+    await expect(unlockLocalVault("not the passphrase")).rejects.toMatchObject({
+      code: "wrong-passphrase",
+    });
+    expect(getLocalVaultState()).toBe("locked");
+
+    // The real passphrase still opens it — a failed attempt breaks nothing.
+    await unlockLocalVault(PASSPHRASE);
+    expect((await api.GET({ url: "/api/todo?timeline=true" })).todos).toHaveLength(1);
+  });
+
+  it("encrypts a legacy plaintext workspace in place instead of wiping it", async () => {
+    // A workspace exactly as a build before encryption left it.
+    resetWorkspaceCache();
+    window.localStorage.setItem(
+      LOCAL_WORKSPACE_STORAGE_KEY,
+      JSON.stringify({
+        schemaVersion: 1,
+        todos: [
+          {
+            id: "legacy-1",
+            title: "Renew the passport",
+            description: null,
+            pinned: false,
+            priority: "Low",
+            due: "2026-08-04T09:30:00.000",
+            rrule: null,
+            timeZone: null,
+            completed: false,
+            order: 0,
+            listID: null,
+            createdAt: "2026-08-01T09:00:00.000",
+            updatedAt: "2026-08-01T09:00:00.000",
+            exdates: [],
+          },
+        ],
+        preferences: { sortBy: "priority", groupBy: null, direction: null, aiSummaryEnabled: true },
+      }),
+    );
+    expect(getLocalVaultState()).toBe("legacy");
+
+    await protectLegacyWorkspace(PASSPHRASE);
+    expect(getLocalVaultState()).toBe("unlocked");
+
+    const stored = window.localStorage.getItem(LOCAL_WORKSPACE_STORAGE_KEY);
+    expect(stored).not.toContain("passport");
+    expect(isVaultEnvelope(JSON.parse(stored ?? "null"))).toBe(true);
+
+    // The rows came through the migration unharmed.
+    await reopenWorkspace();
+    const todos = (await api.GET({ url: "/api/todo?timeline=true" })).todos;
+    expect(todos).toHaveLength(1);
+    expect(todos[0].title).toBe("Renew the passport");
+    expect((await api.GET({ url: "/api/preferences" })).sortBy).toBe("priority");
+  });
+
+  it("fails the migration loudly when the browser refuses to store the envelope", async () => {
+    // The dangerous shape of a storage failure: the legacy plaintext is still on
+    // disk, so reporting success would open the app while claiming an encryption
+    // that never happened.
+    resetWorkspaceCache();
+    window.localStorage.setItem(
+      LOCAL_WORKSPACE_STORAGE_KEY,
+      JSON.stringify({
+        schemaVersion: 1,
+        todos: [],
+        preferences: { sortBy: null, groupBy: null, direction: null, aiSummaryEnabled: true },
+      }),
+    );
+
+    const realSetItem = window.localStorage.setItem.bind(window.localStorage);
+    Object.defineProperty(window.localStorage, "setItem", {
+      configurable: true,
+      value: () => {
+        throw new DOMException("quota", "QuotaExceededError");
+      },
+    });
+    try {
+      await expect(protectLegacyWorkspace(PASSPHRASE)).rejects.toMatchObject({
+        code: "storage",
+      });
+    } finally {
+      Object.defineProperty(window.localStorage, "setItem", {
+        configurable: true,
+        value: realSetItem,
+      });
+    }
+
+    // Nothing was adopted: the gate keeps asking rather than opening the app.
+    expect(getLocalVaultState()).toBe("legacy");
   });
 });
