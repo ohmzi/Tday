@@ -42,6 +42,8 @@ data class AppConfig(
     val limitRegisterMax: Int,
     val limitRegisterBurstWindowSec: Int,
     val limitRegisterBurstMax: Int,
+    val limitCredentialsAccountWindowSec: Int,
+    val limitCredentialsAccountMax: Int,
     val lockoutFailThreshold: Int,
     val lockoutBaseSec: Int,
     val lockoutMaxSec: Int,
@@ -61,6 +63,13 @@ data class AppConfig(
     val androidSha256CertFingerprints: List<String>,
     val vapidPublicKey: String?,
     val vapidPrivateKey: String?,
+    val retentionEventLogDays: Int,
+    val retentionAuthThrottleDays: Int,
+    val retentionAuthSignalDays: Int,
+    val retentionCronLogDays: Int,
+    val retentionDryRun: Boolean,
+    val cspMode: String?,
+    val cspConnectExtra: List<String>,
     val sentryDsn: String?,
     val sentryTracesSampleRate: Double,
     val backendVersion: String,
@@ -118,6 +127,8 @@ data class AppConfig(
                 limitRegisterMax = envInt("AUTH_LIMIT_REGISTER_MAX", 6),
                 limitRegisterBurstWindowSec = envInt("AUTH_LIMIT_REGISTER_BURST_WINDOW_SEC", 600),
                 limitRegisterBurstMax = envInt("AUTH_LIMIT_REGISTER_BURST_MAX", 3),
+                limitCredentialsAccountWindowSec = envInt("AUTH_LIMIT_CREDENTIALS_ACCOUNT_WINDOW_SEC", 900),
+                limitCredentialsAccountMax = envInt("AUTH_LIMIT_CREDENTIALS_ACCOUNT_MAX", 50),
                 lockoutFailThreshold = envInt("AUTH_LOCKOUT_FAIL_THRESHOLD", 5),
                 lockoutBaseSec = envInt("AUTH_LOCKOUT_BASE_SEC", 30),
                 lockoutMaxSec = envInt("AUTH_LOCKOUT_MAX_SEC", 1800),
@@ -140,6 +151,19 @@ data class AppConfig(
                 androidSha256CertFingerprints = envCsv("ANDROID_SHA256_CERT_FINGERPRINTS"),
                 vapidPublicKey = secret("VAPID_PUBLIC_KEY", "VAPID_PUBLIC_KEY_FILE"),
                 vapidPrivateKey = secret("VAPID_PRIVATE_KEY", "VAPID_PRIVATE_KEY_FILE"),
+                // enforce | report-only | off. The escape hatch: a missed directive white-screens
+                // the SPA, and flipping this beats rebuilding the image to recover.
+                // 0 disables retention for a table. cronLog is floored because it holds the
+                // reminder scheduler's last-run bookmark — trimming it too hard drops reminders.
+                retentionEventLogDays = envInt("RETENTION_EVENTLOG_DAYS", 90),
+                retentionAuthThrottleDays = envInt("RETENTION_AUTHTHROTTLE_DAYS", 30),
+                retentionAuthSignalDays = envInt("RETENTION_AUTHSIGNAL_DAYS", 180),
+                retentionCronLogDays = envInt("RETENTION_CRONLOG_DAYS", 90).coerceAtLeast(7),
+                // Defaults on for one release: the operator reads a cycle's CronLog output before
+                // the first real DELETE runs against their only copy of the data.
+                retentionDryRun = env("RETENTION_DRY_RUN", "true").equals("true", ignoreCase = true),
+                cspMode = env("CSP_MODE"),
+                cspConnectExtra = envCsv("CSP_CONNECT_EXTRA"),
                 sentryDsn = env("SENTRY_DSN"),
                 sentryTracesSampleRate = envDouble("SENTRY_TRACES_SAMPLE_RATE", if (resolveEnvironmentName().equals("production", ignoreCase = true)) 0.2 else 1.0)
                     .coerceIn(0.0, 1.0),

@@ -137,8 +137,12 @@ class SecurityQuestionServiceImpl(
             }
 
             val userId = userRow[Users.id]
-            val locked = userRow[Users.securityQuestionFailCount] > SECURITY_QUESTION_FAIL_LIMIT ||
-                userRow[Users.pendingAdminReset]
+            // pendingAdminReset is a NOTIFICATION to the admin, not a lock. It used to gate this
+            // branch, which meant one unauthenticated POST to /api/auth/request-admin-reset
+            // permanently disabled the owner's own recovery — and, for an admin target, nothing
+            // could clear it (AdminService.resetPassword refuses admins). Only the fail counter,
+            // which an attacker must actually spend wrong answers to raise, may lock recovery.
+            val locked = userRow[Users.securityQuestionFailCount] > SECURITY_QUESTION_FAIL_LIMIT
             if (locked) {
                 passwordService.verifyPassword("x", dummyHash)
                 return@newSuspendedTransaction VerifyAnswersResult(locked = true, valid = false, results = emptyList())
@@ -194,8 +198,12 @@ class SecurityQuestionServiceImpl(
             }
 
             val userId = userRow[Users.id]
-            val locked = userRow[Users.securityQuestionFailCount] > SECURITY_QUESTION_FAIL_LIMIT ||
-                userRow[Users.pendingAdminReset]
+            // pendingAdminReset is a NOTIFICATION to the admin, not a lock. It used to gate this
+            // branch, which meant one unauthenticated POST to /api/auth/request-admin-reset
+            // permanently disabled the owner's own recovery — and, for an admin target, nothing
+            // could clear it (AdminService.resetPassword refuses admins). Only the fail counter,
+            // which an attacker must actually spend wrong answers to raise, may lock recovery.
+            val locked = userRow[Users.securityQuestionFailCount] > SECURITY_QUESTION_FAIL_LIMIT
             if (locked) {
                 passwordService.verifyPassword("x", dummyHash)
                 return@newSuspendedTransaction ResetOutcome.LOCKED to null

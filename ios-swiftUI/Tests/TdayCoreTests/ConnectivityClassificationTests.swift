@@ -37,6 +37,115 @@ final class ConnectivityClassificationTests: XCTestCase {
         XCTAssertNil(configuration.probeSession.configuration.urlCache)
     }
 
+    // MARK: - TLS trust decisions
+    //
+    // These pin the fail-closed rule. Previously, a certificate the system could not verify was
+    // trusted on first use and pinned silently. Because a public-CA host never stores a pin (the
+    // system-trusted branch clears it), that path was reachable on EVERY connection — so anyone
+    // on the same network could present a self-signed certificate for the real server and be
+    // accepted without a prompt.
+    //
+    // decideTrust is pure precisely so this is testable: a real SecTrust cannot be fabricated.
+
+    func testUnknownCertificateIsRefusedRatherThanTrustedOnFirstUse() {
+        let decision = NetworkConfiguration.decideTrust(
+            fingerprint: "attacker-fingerprint",
+            storedPin: nil,
+            enrollmentExpecting: nil
+        )
+        XCTAssertEqual(decision, .rejectUnknown)
+    }
+
+    func testStoredPinIsAcceptedWhenItMatches() {
+        let decision = NetworkConfiguration.decideTrust(
+            fingerprint: "pinned",
+            storedPin: "pinned",
+            enrollmentExpecting: nil
+        )
+        XCTAssertEqual(decision, .accept)
+    }
+
+    func testChangedCertificateIsRejectedAsMismatch() {
+        let decision = NetworkConfiguration.decideTrust(
+            fingerprint: "different",
+            storedPin: "pinned",
+            enrollmentExpecting: nil
+        )
+        XCTAssertEqual(decision, .rejectMismatch)
+    }
+
+    func testApprovedFingerprintEnrolls() {
+        let decision = NetworkConfiguration.decideTrust(
+            fingerprint: "approved",
+            storedPin: nil,
+            enrollmentExpecting: "approved"
+        )
+        XCTAssertEqual(decision, .enroll("approved"))
+    }
+
+    func testApprovalDoesNotTrustADifferentCertificate() {
+        // The approval names one exact fingerprint, so swapping the certificate between the
+        // prompt and the retry must still fail. Otherwise the confirm step is just delayed TOFU.
+        let decision = NetworkConfiguration.decideTrust(
+            fingerprint: "swapped-after-approval",
+            storedPin: nil,
+            enrollmentExpecting: "approved"
+        )
+        XCTAssertEqual(decision, .rejectUnknown)
+    }
+
+    func testExistingPinWinsOverAnApproval() {
+        let decision = NetworkConfiguration.decideTrust(
+            fingerprint: "attacker",
+            storedPin: "pinned",
+            enrollmentExpecting: "attacker"
+        )
+        XCTAssertEqual(decision, .rejectMismatch)
+    }
+
+    func testUnderivableFingerprintIsNeverAccepted() {
+        // The old code fell through to .useCredential here.
+        XCTAssertEqual(
+            NetworkConfiguration.decideTrust(fingerprint: nil, storedPin: nil, enrollmentExpecting: nil),
+            .rejectUnknown
+        )
+        XCTAssertEqual(
+            NetworkConfiguration.decideTrust(fingerprint: nil, storedPin: "pinned", enrollmentExpecting: nil),
+            .rejectUnknown
+        )
+        XCTAssertEqual(
+            NetworkConfiguration.decideTrust(fingerprint: nil, storedPin: nil, enrollmentExpecting: "approved"),
+            .rejectUnknown
+        )
+    }
+
+    func testEnrollmentApprovalIsConsumedSoItCannotBeReused() {
+        let suiteName = "com.ohmz.tday.tests.trust.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        let secureStore = SecureStore(
+            service: "com.ohmz.tday.tests.trust.secure-store.\(UUID().uuidString)",
+            defaults: defaults
+        )
+        let configuration = NetworkConfiguration(
+            secureStore: secureStore,
+            serverURLState: ServerURLState(currentURL: URL(string: "https://tday.example.com")),
+            cookieStore: CookieStore(secureStore: secureStore)
+        )
+        defer {
+            configuration.session.invalidateAndCancel()
+            configuration.probeSession.invalidateAndCancel()
+            secureStore.clearAllUserValues()
+            defaults.removePersistentDomain(forName: suiteName)
+        }
+
+        configuration.allowTrustEnrollment(host: "Tday.Example.com", expecting: "fp-1")
+        // Host lookup is case-insensitive, and the approval is one-shot.
+        XCTAssertNil(configuration.consumeTrustUnknown(host: "tday.example.com") ?? nil)
+        configuration.cancelTrustEnrollment(host: "tday.example.com")
+        XCTAssertNil(configuration.consumeTrustUnknown(host: "tday.example.com") ?? nil)
+    }
+
     func testServerUnavailableResponsesAreConnectivityIssues() {
         // 500 = database down (backend up), 502/503/504 = backend container down behind a
         // live proxy — all are "server can't sync right now", treated the same as offline.

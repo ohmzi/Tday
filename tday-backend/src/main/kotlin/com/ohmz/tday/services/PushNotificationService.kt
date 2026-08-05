@@ -7,6 +7,7 @@ import com.ohmz.tday.config.AppConfig
 import com.ohmz.tday.db.tables.PushSubscriptions
 import com.ohmz.tday.db.util.CuidGenerator
 import com.ohmz.tday.domain.AppError
+import com.ohmz.tday.domain.validateOutboundUrl
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
 import io.ktor.client.request.post
@@ -105,8 +106,12 @@ class PushNotificationServiceImpl(private val config: AppConfig) : PushNotificat
         transport: String,
     ): Either<AppError, Unit> {
         val normalizedTransport = if (transport == TRANSPORT_UNIFIEDPUSH) TRANSPORT_UNIFIEDPUSH else TRANSPORT_WEBPUSH
-        if (endpoint.isBlank()) {
-            return AppError.BadRequest("endpoint is required").left()
+        // The server POSTs to this endpoint on every mutation and on every reminder tick, so an
+        // unvalidated value is a blind request forger pointed at the host's own network. Validated
+        // before the transaction so it stays exercisable without a database.
+        when (val validated = validateOutboundUrl(endpoint, "endpoint")) {
+            is Either.Left -> return validated
+            is Either.Right -> Unit
         }
         // Web Push needs the encryption keys; UnifiedPush is endpoint-only.
         if (normalizedTransport == TRANSPORT_WEBPUSH && (p256dh.isBlank() || auth.isBlank())) {

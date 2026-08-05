@@ -31,6 +31,25 @@ enum ProfileEditResult: Equatable {
     case failure(String)
 }
 
+/// A server certificate the device could not verify, held while the user decides whether to trust
+/// it. Nothing is pinned until they confirm this exact fingerprint.
+struct PendingCertificateApproval: Equatable, Identifiable {
+    let rawURL: String
+    let host: String
+    let fingerprint: String
+
+    var id: String { "\(host)|\(fingerprint)" }
+
+    /// Fingerprint in short groups, so it can actually be compared against the server by eye.
+    var displayFingerprint: String {
+        stride(from: 0, to: fingerprint.count, by: 8).map { offset in
+            let start = fingerprint.index(fingerprint.startIndex, offsetBy: offset)
+            let end = fingerprint.index(start, offsetBy: min(8, fingerprint.count - offset))
+            return String(fingerprint[start..<end])
+        }.joined(separator: " ")
+    }
+}
+
 @MainActor
 @Observable
 final class AppViewModel {
@@ -57,6 +76,8 @@ final class AppViewModel {
     var user: SessionUser?
     var error: String?
     var canResetServerTrust = false
+    /// Set when a server presented a certificate we refused; drives the confirm prompt.
+    var pendingCertificateApproval: PendingCertificateApproval?
     var pendingApprovalMessage: String?
     var isManualSyncing = false
     /// The user's own AI-summary on/off preference (default ON). Per-user now — the
@@ -389,11 +410,51 @@ final class AppViewModel {
                 level: .warning,
                 data: ["phase": "failure", "error": String(describing: type(of: error))]
             )
+            // An unrecognised certificate is not a plain failure: the user has to see the
+            // fingerprint and approve it before anything is pinned.
+            if case let ServerProbeError.untrustedCertificate(host, fingerprint) = error,
+               let fingerprint {
+                pendingCertificateApproval = PendingCertificateApproval(
+                    rawURL: rawURL,
+                    host: host,
+                    fingerprint: fingerprint
+                )
+            }
             let msg = serverConnectionMessage(for: error)
             self.error = msg
             canResetServerTrust = shouldOfferServerTrustReset(for: error)
             return .failure(MessageError(message: msg))
         }
+    }
+
+    /// Pins the fingerprint the user just confirmed, then completes the connection.
+    func approveServerCertificate() async -> Result<Void, MessageError> {
+        guard let pending = pendingCertificateApproval else {
+            return .failure(MessageError(message: "No certificate is awaiting approval"))
+        }
+        pendingCertificateApproval = nil
+        do {
+            _ = try await container.serverConfigRepository.approveCertificate(
+                rawURL: pending.rawURL,
+                host: pending.host,
+                fingerprint: pending.fingerprint
+            )
+            serverURL = container.serverConfigRepository.getServerURL()?.absoluteString ?? pending.rawURL
+            dataMode = .server
+            requiresServerSetup = false
+            requiresLogin = true
+            error = nil
+            canResetServerTrust = true
+            return .success(())
+        } catch {
+            let msg = serverConnectionMessage(for: error)
+            self.error = msg
+            return .failure(MessageError(message: msg))
+        }
+    }
+
+    func dismissCertificateApproval() {
+        pendingCertificateApproval = nil
     }
 
     func recheckVersion() async {
@@ -975,6 +1036,8 @@ final class AppViewModel {
                 return "That server responded, but it does not look like a T'Day server."
             case .certificateChanged:
                 return "This server's certificate changed. Reset saved server trust only if you recognize this server."
+            case .untrustedCertificate:
+                return "This server uses a certificate your device can't verify. Check the fingerprint before trusting it."
             }
         }
 

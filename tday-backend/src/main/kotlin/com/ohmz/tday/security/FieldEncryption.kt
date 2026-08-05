@@ -22,7 +22,7 @@ class FieldEncryptionImpl(private val config: AppConfig) : FieldEncryption {
     private val ivLengthBytes = 12
     private val keyLengthBytes = 32
     private val tagLengthBits = 128
-    private val sensitiveFields = setOf("description", "content", "overriddenDescription")
+    private val sensitiveFields = setOf("description", "content", "overriddenDescription", "webhookSecret")
     private val random = SecureRandom()
 
     private val keyring: Map<String, ByteArray> by lazy { parseKeyring() }

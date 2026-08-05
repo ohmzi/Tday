@@ -6,6 +6,7 @@ import arrow.core.right
 import com.ohmz.tday.db.tables.WebhookSubscriptions
 import com.ohmz.tday.db.util.CuidGenerator
 import com.ohmz.tday.domain.AppError
+import com.ohmz.tday.domain.validateOutboundUrl
 import com.ohmz.tday.security.FieldEncryption
 import kotlinx.coroutines.Dispatchers
 import kotlinx.serialization.Serializable
@@ -99,12 +100,11 @@ class WebhookServiceImpl(
         url: String,
         events: List<String>,
     ): Either<AppError, CreatedWebhook> {
-        val cleanUrl = url.trim()
-        if (!cleanUrl.startsWith("http://") && !cleanUrl.startsWith("https://")) {
-            return AppError.BadRequest("url must be an http(s) URL").left()
-        }
-        if (cleanUrl.length > MAX_URL_LENGTH) {
-            return AppError.BadRequest("url is too long").left()
+        // Rejects loopback/private/link-local destinations as well as the scheme check this
+        // used to do alone — the server calls this URL from inside the Docker network.
+        val cleanUrl = when (val validated = validateOutboundUrl(url, "url")) {
+            is Either.Left -> return validated
+            is Either.Right -> validated.value.toString()
         }
         // Unknown event names are dropped; an empty selection means "all events".
         val cleanEvents = events.map { it.trim() }.filter { it in WEBHOOK_EVENT_TYPES }.distinct()
@@ -150,7 +150,6 @@ class WebhookServiceImpl(
 
     private companion object {
         const val SECRET_BYTES = 32
-        const val MAX_URL_LENGTH = 2048
     }
 }
 

@@ -21,12 +21,22 @@ import java.time.LocalDateTime
 import java.time.ZoneOffset
 import kotlin.random.asKotlinRandom
 
+/** How long an unauthenticated "please reset my password" request stays visible to the admin. */
+internal const val ADMIN_RESET_REQUEST_TTL_DAYS = 7L
+
+/** True when [requestedAt] is older than [ADMIN_RESET_REQUEST_TTL_DAYS]. Null timestamps never expire. */
+internal fun isResetRequestExpired(
+    requestedAt: LocalDateTime?,
+    now: LocalDateTime = LocalDateTime.now(ZoneOffset.UTC),
+): Boolean = requestedAt != null && requestedAt.isBefore(now.minusDays(ADMIN_RESET_REQUEST_TTL_DAYS))
+
 interface AdminService {
     suspend fun listUsers(admin: AuthenticatedUser): Either<AppError, List<AdminUserResponse>>
     suspend fun approveUser(targetId: String, admin: AuthenticatedUser): Either<AppError, String>
     suspend fun deleteUser(targetId: String, admin: AuthenticatedUser): Either<AppError, String>
     suspend fun rejectUser(targetId: String, admin: AuthenticatedUser): Either<AppError, String>
     suspend fun resetPassword(targetId: String, admin: AuthenticatedUser): Either<AppError, String>
+    suspend fun clearResetRequest(targetId: String, admin: AuthenticatedUser): Either<AppError, String>
 }
 
 class AdminServiceImpl(
@@ -44,6 +54,11 @@ class AdminServiceImpl(
                     Users.createdAt to SortOrder.DESC,
                 )
                 .map { row ->
+                    // Anyone on the internet can raise this flag for any username, so a stale
+                    // request stops being reported after ADMIN_RESET_REQUEST_TTL_DAYS rather than
+                    // pinning that user to the top of the list forever.
+                    val requestedAt = row[Users.adminResetRequestedAt]
+                    val stillPending = row[Users.pendingAdminReset] && !isResetRequestExpired(requestedAt)
                     AdminUserResponse(
                         id = row[Users.id],
                         name = row[Users.name],
@@ -52,8 +67,8 @@ class AdminServiceImpl(
                         approvalStatus = row[Users.approvalStatus].name,
                         createdAt = row[Users.createdAt].toString(),
                         approvedAt = row[Users.approvedAt]?.toString(),
-                        pendingAdminReset = row[Users.pendingAdminReset],
-                        adminResetRequestedAt = row[Users.adminResetRequestedAt]?.toString(),
+                        pendingAdminReset = stillPending,
+                        adminResetRequestedAt = requestedAt?.toString().takeIf { stillPending },
                     )
                 }
         }
@@ -125,7 +140,13 @@ class AdminServiceImpl(
         "registration rejected"
     }
 
-    /** Deletes a user and every record they own. */
+    /**
+     * Deletes a user and every record they own.
+     *
+     * Child rows are removed before their parents wherever the schema uses ON DELETE RESTRICT —
+     * `todo_instances`, `account` and the `approvedById` self-reference all block the delete
+     * otherwise, which used to roll the whole purge back and return a 500.
+     */
     private suspend fun purgeUser(targetId: String) {
         newSuspendedTransaction(Dispatchers.IO) {
             // Share rows have no DB-level cascade (see ListShares), so clean up
@@ -151,14 +172,40 @@ class AdminServiceImpl(
             CompletedTodos.deleteWhere { CompletedTodos.userID eq targetId }
             CompletedFloaters.deleteWhere { CompletedFloaters.userID eq targetId }
             Files.deleteWhere { Files.userID eq targetId }
+
+            // todo_instances -> todos is ON DELETE RESTRICT, so per-occurrence overrides must go
+            // first or the whole purge rolls back with a 500. Same child-first order as
+            // ListService.deleteLists.
+            val ownedTodoIds = Todos
+                .select(Todos.id)
+                .where { Todos.userID eq targetId }
+                .map { it[Todos.id] }
+            if (ownedTodoIds.isNotEmpty()) {
+                TodoInstances.deleteWhere { TodoInstances.todoId inList ownedTodoIds }
+            }
             Todos.deleteWhere { Todos.userID eq targetId }
+
             Floaters.deleteWhere { Floaters.userID eq targetId }
             Lists.deleteWhere { Lists.userID eq targetId }
             FloaterLists.deleteWhere { FloaterLists.userID eq targetId }
             UserPreferences.deleteWhere { UserPreferences.userID eq targetId }
             UserSecurityQuestions.deleteWhere { UserSecurityQuestions.userID eq targetId }
+
+            // account -> "User" is also RESTRICT; OAuth rows would otherwise block the delete.
+            Accounts.deleteWhere { Accounts.userId eq targetId }
+            // "User".approvedById is a RESTRICT self-reference, so an admin who approved anyone
+            // cannot be deleted while those rows still point at them. The column is nullable.
+            Users.update({ Users.approvedById eq targetId }) {
+                it[Users.approvedById] = null
+            }
+
             Users.deleteWhere { Users.id eq targetId }
         }
+
+        // AuthUserCache holds a 30s TTL, so without this a deleted user's session keeps
+        // authenticating against a row that no longer exists. Runs after the commit because
+        // revocation also touches the API-key service and the cache.
+        sessionControl.revokeUserSessions(targetId, revokeApiKeys = true)
     }
 
     override suspend fun resetPassword(
@@ -199,6 +246,35 @@ class AdminServiceImpl(
         sessionControl.revokeUserSessions(targetId, revokeApiKeys = true)
 
         generatedPassword
+    }
+
+    /**
+     * Dismisses a pending reset request and clears the self-service lockout, without touching the
+     * password or any session.
+     *
+     * Unlike [resetPassword] this is allowed against ADMIN targets, including the caller. Anyone
+     * can POST /api/auth/request-admin-reset for any username, so without this an admin who was
+     * flagged — or who simply mistyped their own security answers four times — had no in-app way
+     * back: [resetPassword] refuses admin targets by design. Clearing a notification flag and a
+     * failure counter grants no capability an admin does not already have.
+     */
+    override suspend fun clearResetRequest(
+        targetId: String,
+        admin: AuthenticatedUser,
+    ): Either<AppError, String> = either {
+        admin.requireAdminAccess().bind()
+
+        val updated = newSuspendedTransaction(Dispatchers.IO) {
+            Users.update({ Users.id eq targetId }) {
+                it[Users.securityQuestionFailCount] = 0
+                it[Users.pendingAdminReset] = false
+                it[Users.adminResetRequestedAt] = null
+                it[Users.updatedAt] = LocalDateTime.now(ZoneOffset.UTC)
+            }
+        }
+        if (updated == 0) raise(AppError.NotFound("user not found"))
+
+        "reset request cleared"
     }
 
     /**
