@@ -27,6 +27,10 @@
 	<string>6.0</string>
 	<key>CFBundleName</key>
 	<string>T'Day</string>
+	<!-- Required before LocalAuthentication may use Face ID at all; without it the optional
+	     app lock can only ever fall back to the passcode. -->
+	<key>NSFaceIDUsageDescription</key>
+	<string>Face ID unlocks T'Day when you turn on the app lock.</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
