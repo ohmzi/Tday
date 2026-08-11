@@ -7,6 +7,7 @@ import LocalWorkspaceGate from "@/components/local/LocalWorkspaceGate";
 import { setAppMode } from "@/lib/local/appMode";
 import {
   createLocalVault,
+  createOpenLocalWorkspace,
   flushWorkspaceWrites,
   resetWorkspaceCache,
   updateWorkspace,
@@ -42,6 +43,13 @@ async function seedEncryptedWorkspace() {
   });
   await flushWorkspaceWrites();
   // Close the tab: the key goes, the ciphertext stays.
+  resetWorkspaceCache();
+}
+
+async function seedOpenWorkspace() {
+  createOpenLocalWorkspace();
+  await flushWorkspaceWrites();
+  // Close the tab: the cache goes, the open document stays on disk.
   resetWorkspaceCache();
 }
 
@@ -83,6 +91,41 @@ describe("local workspace gate", () => {
     expect((submit as HTMLButtonElement).disabled).toBe(true);
   });
 
+  it("only opens an unencrypted workspace after two deliberate taps", () => {
+    setAppMode("local");
+    render(
+      <LocalWorkspaceGate>
+        <p>workspace</p>
+      </LocalWorkspaceGate>,
+    );
+
+    // The risk isn't shown, and the app isn't open, until the trigger is pressed.
+    expect(screen.queryByText(/Anyone who can use this browser profile/i)).toBeNull();
+    fireEvent.click(screen.getByText("Skip encryption on this device"));
+
+    expect(screen.getByText(/Anyone who can use this browser profile/i)).toBeTruthy();
+    expect(screen.queryByText("workspace")).toBeNull();
+
+    // The first tap only reveals the consequence — the app opens on the second.
+    fireEvent.click(screen.getByText("Store unencrypted"));
+    expect(screen.getByText("workspace")).toBeTruthy();
+  });
+
+  it("opens an unencrypted workspace without asking for anything", async () => {
+    await seedOpenWorkspace();
+    setAppMode("local");
+
+    render(
+      <LocalWorkspaceGate>
+        <p>workspace</p>
+      </LocalWorkspaceGate>,
+    );
+
+    // Adopted in the lazy state initialiser: the app is already there on the
+    // very first render, not after an effect resolves.
+    expect(screen.getByText("workspace")).toBeTruthy();
+  });
+
   it("keeps the app sealed until the right passphrase is entered", async () => {
     await seedEncryptedWorkspace();
     setAppMode("local");
@@ -106,5 +149,37 @@ describe("local workspace gate", () => {
     fireEvent.change(field, { target: { value: PASSPHRASE } });
     fireEvent.click(screen.getByRole("button", { name: "Unlock" }));
     await waitFor(() => expect(screen.getByText("workspace")).toBeTruthy());
+  });
+
+  it("still offers an unencrypted workspace on an origin without crypto.subtle", () => {
+    // A self-hosted LAN origin over plain http: `crypto.subtle` doesn't exist,
+    // but `getRandomValues` still does — `newLocalId` needs it, and it isn't
+    // gated behind a secure context the way `subtle` is.
+    const realCrypto = globalThis.crypto;
+    Object.defineProperty(globalThis, "crypto", {
+      configurable: true,
+      value: { getRandomValues: realCrypto.getRandomValues.bind(realCrypto) },
+    });
+
+    try {
+      setAppMode("local");
+      render(
+        <LocalWorkspaceGate>
+          <p>workspace</p>
+        </LocalWorkspaceGate>,
+      );
+
+      expect(screen.getByText("Encryption unavailable here")).toBeTruthy();
+      expect(screen.queryByText("workspace")).toBeNull();
+
+      fireEvent.click(screen.getByText("Skip encryption on this device"));
+      fireEvent.click(screen.getByText("Store unencrypted"));
+      expect(screen.getByText("workspace")).toBeTruthy();
+    } finally {
+      Object.defineProperty(globalThis, "crypto", {
+        configurable: true,
+        value: realCrypto,
+      });
+    }
   });
 });

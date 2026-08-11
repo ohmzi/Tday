@@ -3,11 +3,14 @@ import {
   deriveVaultKey,
   envelopeSalt,
   isLegacyPlaintextWorkspace,
+  isOpenWorkspaceDocument,
   isVaultEnvelope,
   LocalVaultError,
+  LOCAL_OPEN_VERSION,
   LOCAL_VAULT_ITERATIONS,
   LOCAL_VAULT_VERSION,
   openVault,
+  openWorkspaceDocumentJson,
   randomVaultSalt,
   sealVault,
 } from "@/lib/local/localCrypto";
@@ -99,6 +102,35 @@ describe("local vault crypto", () => {
     expect(isVaultEnvelope({ ...envelope, version: LOCAL_VAULT_VERSION + 1 })).toBe(
       false,
     );
+  });
+
+  it("tells an unencrypted-by-choice workspace apart from a legacy plaintext one", async () => {
+    const rows = { schemaVersion: 1, todos: [], lists: [] };
+    const open = JSON.parse(openWorkspaceDocumentJson(JSON.stringify(rows)));
+
+    // The whole point of the wrapper: an open document must never be read as a
+    // legacy one, or the migration prompt fires on every load forever.
+    expect(isOpenWorkspaceDocument(open)).toBe(true);
+    expect(isLegacyPlaintextWorkspace(open)).toBe(false);
+    expect(isVaultEnvelope(open)).toBe(false);
+    expect(open.workspace).toEqual(rows);
+
+    // And the other two shapes are not open documents.
+    expect(isOpenWorkspaceDocument(rows)).toBe(false);
+    const salt = randomVaultSalt();
+    const envelope = await sealVault(
+      await deriveVaultKey(PASSPHRASE, salt),
+      salt,
+      DOCUMENT,
+    );
+    expect(isOpenWorkspaceDocument(envelope)).toBe(false);
+
+    expect(isOpenWorkspaceDocument(null)).toBe(false);
+    expect(isOpenWorkspaceDocument({ protection: "none" })).toBe(false);
+    // A future wrapper is not readable by this build, as with the envelope.
+    expect(
+      isOpenWorkspaceDocument({ ...open, version: LOCAL_OPEN_VERSION + 1 }),
+    ).toBe(false);
   });
 
   it("stretches the passphrase at the backend's PBKDF2 policy", () => {

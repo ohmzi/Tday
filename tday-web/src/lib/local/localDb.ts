@@ -7,10 +7,16 @@
  * are stored the way the API sends them — a UTC wall clock with no offset, e.g.
  * `2026-08-04T09:30:00.000` — which is what `parseApiDateTime` expects.
  *
- * That document is encrypted at rest with a passphrase only the user knows (see
- * `localCrypto`), so a browser profile someone else gets hold of yields nothing
- * but ciphertext. The derived key lives in this module's memory for the session
- * and is never written anywhere — losing the passphrase loses the workspace.
+ * By default that document is encrypted at rest with a passphrase only the user
+ * knows (see `localCrypto`), so a browser profile someone else gets hold of
+ * yields nothing but ciphertext. The derived key lives in this module's memory
+ * for the session and is never written anywhere — losing the passphrase loses
+ * the workspace.
+ *
+ * A user can decline the passphrase, in which case the same rows are stored in
+ * the clear inside an open document. Everything below is written so the two
+ * differ only in the form the bytes take on the way to storage: one cache, one
+ * write queue, one cancellation guard. `protection` says which form is in play.
  *
  * Clearing the browser's cookies/site data drops this document too. That is the
  * documented contract of Local Mode on the web, not a failure mode.
@@ -20,10 +26,12 @@ import {
   deriveVaultKey,
   envelopeSalt,
   isLegacyPlaintextWorkspace,
+  isOpenWorkspaceDocument,
   isVaultCryptoAvailable,
   isVaultEnvelope,
   LocalVaultError,
   openVault,
+  openWorkspaceDocumentJson,
   randomVaultSalt,
   sealVault,
   type VaultBytes,
@@ -200,24 +208,37 @@ function coerceWorkspace(parsed: unknown): LocalWorkspace {
 /**
  * What the gate has to ask the user for before the workspace can be read.
  *
- * - `unsupported`: no `crypto.subtle` on this origin (plain http) — nothing can
- *   be encrypted here, so nothing is opened.
- * - `empty`:       no workspace yet; the user picks a passphrase.
- * - `legacy`:      a plaintext workspace from a build before encryption; it is
- *                  migrated in place once the user picks a passphrase.
+ * - `unsupported`: no `crypto.subtle` on this origin (plain http) and nothing
+ *                  readable stored — the user is offered an open workspace,
+ *                  because encryption is the one thing that can't be had here.
+ * - `empty`:       no workspace yet; the user picks a passphrase or declines one.
+ * - `legacy`:      a plaintext workspace from a build before encryption existed;
+ *                  the user is offered the passphrase, and may decline it.
  * - `locked`:      an encrypted workspace waiting for its passphrase.
- * - `unlocked`:    the key is in memory and `loadWorkspace` will answer.
+ * - `open`:        stored in the clear by choice — readable with no key, but not
+ *                  yet held by this session. Distinct from `unlocked` because
+ *                  `inspectStorage` is a pure probe: nothing is cached yet, so
+ *                  `loadWorkspace` would still throw.
+ * - `unlocked`:    the workspace is in memory and `loadWorkspace` will answer,
+ *                  whichever protection it uses.
  */
 export type LocalVaultState =
   | "unsupported"
   | "empty"
   | "legacy"
   | "locked"
+  | "open"
   | "unlocked";
 
-// The decrypted workspace and the key that seals it. Both are memory-only: the
-// key never reaches localStorage/sessionStorage, and both are dropped on lock.
+/** How the document this session holds is stored. */
+export type LocalProtection = "passphrase" | "none";
+
+// The workspace this session holds, and how it is written back. `protection` is
+// the single "something is held" flag; the key and salt exist only alongside
+// `"passphrase"`. All memory-only: the key never reaches localStorage or
+// sessionStorage, and everything here is dropped on lock.
 let cached: LocalWorkspace | null = null;
+let protection: LocalProtection | null = null;
 let vaultKey: CryptoKey | null = null;
 let vaultSalt: VaultBytes | null = null;
 
@@ -237,10 +258,14 @@ function readStoredDocument(): unknown {
   }
 }
 
-/** What the browser holds right now, ignoring the in-memory key. */
+/** What the browser holds right now, ignoring what this session already has. */
 function inspectStorage(): LocalVaultState {
-  if (!isVaultCryptoAvailable()) return "unsupported";
   const stored = readStoredDocument();
+  // Probed before the crypto check on purpose: a plain-http origin has no
+  // `crypto.subtle`, but an open document needs none to be read. Refusing here
+  // would lock the user out of rows sitting in front of us in the clear.
+  if (isOpenWorkspaceDocument(stored)) return "open";
+  if (!isVaultCryptoAvailable()) return "unsupported";
   if (isVaultEnvelope(stored)) return "locked";
   if (isLegacyPlaintextWorkspace(stored)) return "legacy";
   return "empty";
@@ -248,13 +273,18 @@ function inspectStorage(): LocalVaultState {
 
 /** Drives the unlock gate; see [LocalVaultState]. */
 export function getLocalVaultState(): LocalVaultState {
-  if (vaultKey && cached) return "unlocked";
+  if (cached && protection) return "unlocked";
   return inspectStorage();
 }
 
+/** How the held workspace is stored, or `null` when this session holds none. */
+export function getLocalProtection(): LocalProtection | null {
+  return cached ? protection : null;
+}
+
 function requireUnlocked(): LocalWorkspace {
-  if (!cached || !vaultKey) {
-    throw new LocalVaultError("locked", "The local workspace is locked.");
+  if (!cached || !protection) {
+    throw new LocalVaultError("locked", "The local workspace is not open in this tab.");
   }
   return cached;
 }
@@ -264,25 +294,31 @@ export function loadWorkspace(): LocalWorkspace {
 }
 
 export function saveWorkspace(workspace: LocalWorkspace): void {
+  // Captured synchronously: a lock (or an upgrade to a passphrase) between here
+  // and the queued task must not change which form this particular write takes.
+  const mode = protection;
   const key = vaultKey;
   const salt = vaultSalt;
-  if (!key || !salt) {
-    throw new LocalVaultError("locked", "The local workspace is locked.");
+  if (!mode || (mode === "passphrase" && (!key || !salt))) {
+    throw new LocalVaultError("locked", "The local workspace is not open in this tab.");
   }
   cached = workspace;
   // Serialised now, not inside the queued task: `updateWorkspace` hands back the
   // same object it mutated, so a later edit would otherwise leak into this write.
   const plaintext = JSON.stringify(workspace);
   const generation = writeGeneration;
+  // The open form needs no await, but it still goes through the queue: that keeps
+  // write ordering against a later upgrade, and one cancellation guard rather
+  // than two.
   writeQueue = writeQueue.then(async () => {
     if (generation !== writeGeneration) return;
     try {
-      const envelope = await sealVault(key, salt, plaintext);
+      const document =
+        key && salt
+          ? JSON.stringify(await sealVault(key, salt, plaintext))
+          : openWorkspaceDocumentJson(plaintext);
       if (generation !== writeGeneration) return;
-      window.localStorage.setItem(
-        LOCAL_WORKSPACE_STORAGE_KEY,
-        JSON.stringify(envelope),
-      );
+      window.localStorage.setItem(LOCAL_WORKSPACE_STORAGE_KEY, document);
     } catch (error) {
       // Quota, a storage-blocked context or a crypto failure: the in-memory copy
       // stays authoritative for this session so the user's work isn't lost mid-edit.
@@ -329,8 +365,37 @@ async function openWith(passphrase: string, workspace: LocalWorkspace): Promise<
       "This browser wouldn't save the encrypted workspace. Free up site storage and try again.",
     );
   }
+  protection = "passphrase";
   vaultKey = key;
   vaultSalt = salt;
+  cached = workspace;
+}
+
+/**
+ * The open-document counterpart of [openWith]: writes [workspace] in the clear
+ * and adopts it. Synchronous, because there is no key to derive — an async
+ * version would add a paint where the gate is neither open nor closed.
+ *
+ * Writes loudly for the same reason [openWith] does: if this failed quietly the
+ * gate would open the app over a document that isn't there.
+ */
+function openInTheClear(workspace: LocalWorkspace): void {
+  const document = openWorkspaceDocumentJson(JSON.stringify(workspace));
+  try {
+    // Cancels anything a previous session still had queued, so a stale write
+    // can't land on top of the document we just wrote.
+    writeGeneration += 1;
+    window.localStorage.setItem(LOCAL_WORKSPACE_STORAGE_KEY, document);
+  } catch (error) {
+    console.warn("Local workspace could not be stored", error);
+    throw new LocalVaultError(
+      "storage",
+      "This browser wouldn't save the workspace. Free up site storage and try again.",
+    );
+  }
+  protection = "none";
+  vaultKey = null;
+  vaultSalt = null;
   cached = workspace;
 }
 
@@ -343,15 +408,61 @@ export function createLocalVault(passphrase: string): Promise<void> {
 }
 
 /**
- * Migration: takes the plaintext workspace written by an older build and seals
- * it in place under [passphrase]. The rows survive; only the storage form changes.
+ * First-time setup for a user who declined the passphrase: a brand-new empty
+ * workspace, stored in the clear. Anyone with this browser profile can read it.
  */
-export function protectLegacyWorkspace(passphrase: string): Promise<void> {
+export function createOpenLocalWorkspace(): void {
+  openInTheClear(emptyWorkspace());
+}
+
+/** Adopts the open document already in storage into this session. */
+export function openLocalWorkspace(): void {
+  const stored = readStoredDocument();
+  if (!isOpenWorkspaceDocument(stored)) {
+    throw new LocalVaultError("corrupt", "This browser has no unencrypted workspace.");
+  }
+  writeGeneration += 1;
+  protection = "none";
+  vaultKey = null;
+  vaultSalt = null;
+  cached = coerceWorkspace(stored.workspace);
+}
+
+/**
+ * The "skip" answer to the migration prompt: wraps the plaintext rows an older
+ * build left behind into an open document, recording that staying unencrypted
+ * was a choice. Without the wrapper the prompt would fire again on every load.
+ */
+export function keepLegacyWorkspaceOpen(): void {
   const legacy = readStoredDocument();
   if (!isLegacyPlaintextWorkspace(legacy)) {
-    throw new LocalVaultError("corrupt", "There is no unprotected workspace to protect.");
+    throw new LocalVaultError("corrupt", "There is no unprotected workspace here.");
   }
-  return openWith(passphrase, coerceWorkspace(legacy));
+  openInTheClear(coerceWorkspace(legacy));
+}
+
+/**
+ * Seals whatever unencrypted rows this browser holds — a pre-encryption legacy
+ * document, or one stored in the clear by choice — under [passphrase], in place.
+ * The rows survive; only the storage form changes.
+ *
+ * One-way: there is no downgrade and no rekey.
+ */
+export async function protectPlaintextWorkspace(passphrase: string): Promise<void> {
+  // Load-bearing: `openWith` bumps `writeGeneration` before its write, so a
+  // queued open write left in flight here would be cancelled while the session
+  // carried on — an edit made moments ago would reach neither document.
+  await flushWorkspaceWrites();
+  // The in-memory rows win: sealing the stored copy would drop newer edits.
+  if (cached && protection === "none") return openWith(passphrase, cached);
+  const stored = readStoredDocument();
+  if (isOpenWorkspaceDocument(stored)) {
+    return openWith(passphrase, coerceWorkspace(stored.workspace));
+  }
+  if (isLegacyPlaintextWorkspace(stored)) {
+    return openWith(passphrase, coerceWorkspace(stored));
+  }
+  throw new LocalVaultError("corrupt", "There is no unprotected workspace to protect.");
 }
 
 /**
@@ -372,17 +483,24 @@ export async function unlockLocalVault(passphrase: string): Promise<void> {
   } catch {
     throw new LocalVaultError("corrupt", "This local workspace is unreadable.");
   }
+  protection = "passphrase";
   vaultKey = key;
   vaultSalt = salt;
   cached = coerceWorkspace(parsed);
 }
 
 /**
- * Explicit lock / sign-out: drops the derived key and the decrypted rows, and
- * cancels anything still queued so nothing is written after the lock.
+ * Explicit lock / sign-out: drops this session's hold on the workspace and
+ * cancels anything still queued, so nothing is written after this point.
+ *
+ * For an encrypted workspace that is a real lock — the derived key goes with the
+ * rows. For one stored in the clear there is no key to drop, so it is only the
+ * cache: the document stays where it is and the next load adopts it again
+ * without asking. That is what the user chose.
  */
 export function lockLocalVault(): void {
   writeGeneration += 1;
+  protection = null;
   vaultKey = null;
   vaultSalt = null;
   cached = null;
@@ -397,9 +515,9 @@ export function clearWorkspace(): void {
   } catch {
     // Ignore storage failures — the reset below still clears this session.
   }
-  // The key stays held: the user is still in this session, and the next edit
-  // simply seals a fresh empty document under it.
-  cached = vaultKey ? emptyWorkspace() : null;
+  // The session keeps its hold: the user is still here, and the next edit simply
+  // writes a fresh empty document in whatever form this workspace uses.
+  cached = protection ? emptyWorkspace() : null;
 }
 
 /** Drops the in-memory copy and key so the next read must unlock again (tests). */

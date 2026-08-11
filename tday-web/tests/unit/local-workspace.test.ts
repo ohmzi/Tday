@@ -4,15 +4,23 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { ApiError, api } from "@/lib/api-client";
 import { setAppMode } from "@/lib/local/appMode";
 import {
+  clearWorkspace,
   createLocalVault,
+  createOpenLocalWorkspace,
   flushWorkspaceWrites,
+  getLocalProtection,
   getLocalVaultState,
-  protectLegacyWorkspace,
+  keepLegacyWorkspaceOpen,
+  openLocalWorkspace,
+  protectPlaintextWorkspace,
   resetWorkspaceCache,
   unlockLocalVault,
   LOCAL_WORKSPACE_STORAGE_KEY,
 } from "@/lib/local/localDb";
-import { isVaultEnvelope } from "@/lib/local/localCrypto";
+import {
+  isOpenWorkspaceDocument,
+  isVaultEnvelope,
+} from "@/lib/local/localCrypto";
 
 /**
  * Local Mode is exercised through the shared api client, because that is how
@@ -41,6 +49,23 @@ async function reopenWorkspace(passphrase: string = PASSPHRASE) {
   await unlockLocalVault(passphrase);
 }
 
+/**
+ * Makes every `localStorage` write throw, the way a browser out of quota does.
+ *
+ * Patched on the prototype, not the instance: jsdom's `Storage` is a proxy whose
+ * `defineProperty` trap writes a stored *item* rather than shadowing the method,
+ * so an instance-level stub is silently ignored and the failure never happens.
+ */
+function refuseStorageWrites(): () => void {
+  const real = Storage.prototype.setItem;
+  Storage.prototype.setItem = () => {
+    throw new DOMException("quota", "QuotaExceededError");
+  };
+  return () => {
+    Storage.prototype.setItem = real;
+  };
+}
+
 async function createTodo(overrides: Record<string, unknown> = {}) {
   const res = await api.POST({
     url: "/api/todo",
@@ -55,8 +80,9 @@ async function createTodo(overrides: Record<string, unknown> = {}) {
   return (res as { todo: TodoDto }).todo;
 }
 
-// Every test starts from a fresh workspace sealed under this passphrase, because
-// that is the only way a Local Mode browser can reach its rows at all.
+// Every test below starts from a fresh workspace sealed under this passphrase,
+// which is how Local Mode is set up by default. The unencrypted alternative gets
+// its own describe block at the bottom, with its own setup.
 const PASSPHRASE = "a river runs through it";
 
 beforeEach(async () => {
@@ -498,7 +524,7 @@ describe("local mode persistence", () => {
     );
     expect(getLocalVaultState()).toBe("legacy");
 
-    await protectLegacyWorkspace(PASSPHRASE);
+    await protectPlaintextWorkspace(PASSPHRASE);
     expect(getLocalVaultState()).toBe("unlocked");
 
     const stored = window.localStorage.getItem(LOCAL_WORKSPACE_STORAGE_KEY);
@@ -527,25 +553,174 @@ describe("local mode persistence", () => {
       }),
     );
 
-    const realSetItem = window.localStorage.setItem.bind(window.localStorage);
-    Object.defineProperty(window.localStorage, "setItem", {
-      configurable: true,
-      value: () => {
-        throw new DOMException("quota", "QuotaExceededError");
-      },
-    });
+    const restore = refuseStorageWrites();
     try {
-      await expect(protectLegacyWorkspace(PASSPHRASE)).rejects.toMatchObject({
+      await expect(protectPlaintextWorkspace(PASSPHRASE)).rejects.toMatchObject({
         code: "storage",
       });
     } finally {
-      Object.defineProperty(window.localStorage, "setItem", {
-        configurable: true,
-        value: realSetItem,
-      });
+      restore();
     }
 
     // Nothing was adopted: the gate keeps asking rather than opening the app.
     expect(getLocalVaultState()).toBe("legacy");
+  });
+});
+
+describe("local mode without encryption", () => {
+  // This block starts from nothing rather than the sealed-workspace beforeEach
+  // above: the whole point here is that no passphrase is ever involved.
+  beforeEach(() => {
+    window.localStorage.clear();
+    resetWorkspaceCache();
+    setAppMode("local");
+    createOpenLocalWorkspace();
+  });
+
+  it("round-trips a workspace with no key at all", async () => {
+    await createTodo({ title: "Water the plants" });
+    await flushWorkspaceWrites();
+    resetWorkspaceCache();
+
+    // A reload finds it readable without asking for anything.
+    expect(getLocalVaultState()).toBe("open");
+    openLocalWorkspace();
+    expect(getLocalVaultState()).toBe("unlocked");
+    expect(getLocalProtection()).toBe("none");
+    const todos = (await api.GET({ url: "/api/todo?timeline=true" })).todos;
+    expect(todos).toHaveLength(1);
+    expect(todos[0].title).toBe("Water the plants");
+  });
+
+  it("stores rows in the clear, honestly, inside the open wrapper", async () => {
+    await createTodo({ title: "Call the clinic about the results" });
+    await flushWorkspaceWrites();
+
+    const stored = window.localStorage.getItem(LOCAL_WORKSPACE_STORAGE_KEY);
+    // Unlike the encrypted path, the title really is readable in storage — that
+    // is the documented trade the user opted into, not a leak to catch.
+    expect(stored).toContain("clinic");
+    const parsed = JSON.parse(stored ?? "null");
+    expect(isOpenWorkspaceDocument(parsed)).toBe(true);
+    expect(isVaultEnvelope(parsed)).toBe(false);
+  });
+
+  it("never reads back as the legacy migration prompt", async () => {
+    // Cold, right after creation — a fresh session probing storage from scratch.
+    resetWorkspaceCache();
+    expect(getLocalVaultState()).toBe("open");
+
+    // And again after a write and a reload — a wrapper written only on first
+    // save, rather than on every save, would regress exactly this.
+    openLocalWorkspace();
+    await createTodo();
+    await flushWorkspaceWrites();
+    resetWorkspaceCache();
+    expect(getLocalVaultState()).toBe("open");
+    expect(getLocalVaultState()).not.toBe("legacy");
+  });
+
+  it("cancels a queued write on clear, the same as the encrypted path", async () => {
+    await createTodo();
+    // Deliberately not flushed: the write is still queued when the wipe happens.
+    clearWorkspace();
+    await flushWorkspaceWrites();
+    expect(window.localStorage.getItem(LOCAL_WORKSPACE_STORAGE_KEY)).toBeNull();
+  });
+
+  it("keeps answering after Delete local data instead of throwing 423", async () => {
+    await createTodo();
+    await flushWorkspaceWrites();
+    clearWorkspace();
+    const todos = (await api.GET({ url: "/api/todo?timeline=true" })).todos;
+    expect(todos).toHaveLength(0);
+  });
+
+  it("upgrades to encrypted in place, preserving the rows", async () => {
+    await createTodo({ title: "Renew the passport" });
+    await flushWorkspaceWrites();
+
+    await protectPlaintextWorkspace(PASSPHRASE);
+    expect(getLocalVaultState()).toBe("unlocked");
+    expect(getLocalProtection()).toBe("passphrase");
+
+    const stored = window.localStorage.getItem(LOCAL_WORKSPACE_STORAGE_KEY);
+    expect(stored).not.toContain("passport");
+    expect(isVaultEnvelope(JSON.parse(stored ?? "null"))).toBe(true);
+
+    await reopenWorkspace();
+    const todos = (await api.GET({ url: "/api/todo?timeline=true" })).todos;
+    expect(todos).toHaveLength(1);
+    expect(todos[0].title).toBe("Renew the passport");
+  });
+
+  it("fails an upgrade loudly, leaving the workspace open rather than half-sealed", async () => {
+    await createTodo({ title: "Renew the passport" });
+    await flushWorkspaceWrites();
+
+    const restore = refuseStorageWrites();
+    try {
+      await expect(protectPlaintextWorkspace(PASSPHRASE)).rejects.toMatchObject({
+        code: "storage",
+      });
+    } finally {
+      restore();
+    }
+
+    // The failed upgrade left this session's own state untouched — still open,
+    // not silently promoted to a passphrase it never actually applied.
+    expect(getLocalProtection()).toBe("none");
+
+    // And a fresh session finds the same thing on disk: still readable without a
+    // key, not a document half-sealed by the failed write.
+    resetWorkspaceCache();
+    expect(getLocalVaultState()).toBe("open");
+    openLocalWorkspace();
+    const todos = (await api.GET({ url: "/api/todo?timeline=true" })).todos;
+    expect(todos).toHaveLength(1);
+    expect(todos[0].title).toBe("Renew the passport");
+  });
+
+  it("wraps a legacy plaintext workspace when the migration prompt is declined", async () => {
+    resetWorkspaceCache();
+    window.localStorage.setItem(
+      LOCAL_WORKSPACE_STORAGE_KEY,
+      JSON.stringify({
+        schemaVersion: 1,
+        todos: [
+          {
+            id: "t1",
+            title: "Pick up the dry cleaning",
+            description: null,
+            pinned: false,
+            priority: "Low",
+            due: "2026-08-04T09:30:00.000",
+            rrule: null,
+            timeZone: null,
+            completed: false,
+            order: 0,
+            listID: null,
+            createdAt: "2026-08-01T09:00:00.000",
+            updatedAt: "2026-08-01T09:00:00.000",
+            exdates: [],
+          },
+        ],
+        preferences: { sortBy: null, groupBy: null, direction: null, aiSummaryEnabled: true },
+      }),
+    );
+    expect(getLocalVaultState()).toBe("legacy");
+
+    keepLegacyWorkspaceOpen();
+    expect(getLocalVaultState()).toBe("unlocked");
+    expect(getLocalProtection()).toBe("none");
+
+    // Persisted as an open document, so the prompt does not return on reload.
+    await flushWorkspaceWrites();
+    resetWorkspaceCache();
+    expect(getLocalVaultState()).toBe("open");
+    openLocalWorkspace();
+    const todos = (await api.GET({ url: "/api/todo?timeline=true" })).todos;
+    expect(todos).toHaveLength(1);
+    expect(todos[0].title).toBe("Pick up the dry cleaning");
   });
 });

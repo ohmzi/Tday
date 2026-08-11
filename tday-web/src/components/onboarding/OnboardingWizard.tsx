@@ -478,7 +478,8 @@ export default function OnboardingWizard({
                 </div>
                 <p className="px-1 pt-0.5 text-[12.5px] font-bold leading-snug text-foreground/55">
                   This device keeps everything in this browser — no account, no
-                  sync. Clearing your browsing data deletes it.
+                  sync. Clearing your browsing data deletes it. You&apos;ll
+                  choose whether to encrypt it with a passphrase.
                 </p>
                 {errorMessage && (
                   <p className="text-[14px] font-bold text-destructive">{errorMessage}</p>
