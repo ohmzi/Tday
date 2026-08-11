@@ -179,7 +179,7 @@ Tday/
 | List              | Project/group for scheduled tasks                                                                 |
 | Floater list      | Project/group for floaters                                                                        |
 | Completed history | Completed todo and completed floater records, preserving list metadata where possible             |
-| Local Mode        | Workspace that never requires server setup or login; on the web it lives in browser storage       |
+| Local Mode        | Workspace that never requires server setup or login; on the web it lives in browser storage, encrypted with a user passphrase by default, or unencrypted if the user opts out |
 | Server Mode       | Authenticated self-hosted workspace with local optimistic writes and sync replay                  |
 
 The detailed data contract lives in [`docs/DATA_MODEL.md`](docs/DATA_MODEL.md).

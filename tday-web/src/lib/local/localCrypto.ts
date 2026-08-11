@@ -1,17 +1,25 @@
 /**
- * Passphrase encryption for the Local Mode workspace.
+ * The shapes a Local Mode workspace takes on disk, and the passphrase
+ * encryption behind the protected one.
  *
  * Everything here is pure — it takes a passphrase and a string and hands back an
  * envelope — so it can be unit-tested without touching storage or React.
- * `localDb` owns where the envelope lives and when the derived key is dropped.
+ * `localDb` owns where the document lives and when the derived key is dropped.
  *
- * Format v1: PBKDF2-SHA256 (310,000 rounds, matching the backend's password
- * policy) → AES-GCM-256, with a fresh random 96-bit IV on every write. The
- * version pins those parameters, so the only things that ever reach storage are
- * `{version, salt, iv, ciphertext}` — never the passphrase, never the key.
+ * Encrypted format v1: PBKDF2-SHA256 (310,000 rounds, matching the backend's
+ * password policy) → AES-GCM-256, with a fresh random 96-bit IV on every write.
+ * The version pins those parameters, so the only things that ever reach storage
+ * are `{version, salt, iv, ciphertext}` — never the passphrase, never the key.
+ *
+ * Encryption is the default but not compulsory: a user who declines it gets the
+ * open document below instead. Three shapes share one storage key, and the
+ * predicates here are what keep them apart.
  */
 
 export const LOCAL_VAULT_VERSION = 1;
+
+/** Pins the open document's wrapper, as [LOCAL_VAULT_VERSION] pins the envelope. */
+export const LOCAL_OPEN_VERSION = 1;
 
 /** Matches the backend's PBKDF2 policy; raising it requires a new version. */
 export const LOCAL_VAULT_ITERATIONS = 310_000;
@@ -34,6 +42,23 @@ export type LocalVaultEnvelope = {
   iv: string;
   /** base64 ciphertext with the GCM tag appended (WebCrypto's own layout). */
   ciphertext: string;
+};
+
+/**
+ * A workspace the user chose not to encrypt.
+ *
+ * The wrapper earns its place as a discriminator: a bare workspace object on
+ * disk is indistinguishable from the pre-encryption legacy document, so without
+ * it every load of an intentionally open workspace would re-fire the "Protect
+ * your tasks" migration prompt. `protection` states the choice explicitly, in
+ * the document itself rather than a side flag that could drift out of step with
+ * what is actually stored.
+ */
+export type LocalOpenWorkspaceDocument = {
+  protection: "none";
+  version: number;
+  /** A `LocalWorkspace`, coerced by `localDb` on read like any stored shape. */
+  workspace: unknown;
 };
 
 export type LocalVaultErrorCode =
@@ -106,12 +131,43 @@ export function isVaultEnvelope(value: unknown): value is LocalVaultEnvelope {
   );
 }
 
+/** True when [value] is an open document this build knows how to read. */
+export function isOpenWorkspaceDocument(
+  value: unknown,
+): value is LocalOpenWorkspaceDocument {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Partial<LocalOpenWorkspaceDocument>;
+  return (
+    candidate.protection === "none" &&
+    // A future wrapper is not adopted, exactly as a future envelope is not.
+    candidate.version === LOCAL_OPEN_VERSION &&
+    typeof candidate.workspace === "object" &&
+    candidate.workspace !== null
+  );
+}
+
+/**
+ * Wraps an already-serialised workspace as an open document.
+ *
+ * Takes the JSON *text* rather than the object so `saveWorkspace` can serialise
+ * eagerly, before any await — the same rule the sealed path follows, so a later
+ * edit can't leak into a write that is already in flight.
+ */
+export function openWorkspaceDocumentJson(workspaceJson: string): string {
+  return `{"protection":"none","version":${LOCAL_OPEN_VERSION},"workspace":${workspaceJson}}`;
+}
+
 /**
  * True for the pre-encryption plaintext document (a workspace written by a build
  * before this one). Detected by shape, because the storage key is unchanged.
+ *
+ * The other two shapes are ruled out first: an open document also holds rows in
+ * the clear, and mistaking one for a legacy document would send the user back to
+ * the migration prompt they already declined.
  */
 export function isLegacyPlaintextWorkspace(value: unknown): boolean {
-  if (!value || typeof value !== "object" || isVaultEnvelope(value)) return false;
+  if (!value || typeof value !== "object") return false;
+  if (isVaultEnvelope(value) || isOpenWorkspaceDocument(value)) return false;
   const candidate = value as Record<string, unknown>;
   return typeof candidate.schemaVersion === "number" || Array.isArray(candidate.todos);
 }
