@@ -1,5 +1,14 @@
 import React from "react";
-import { KeyRound, Loader2, Lock, ShieldAlert, TriangleAlert } from "lucide-react";
+import {
+  ChevronLeft,
+  KeyRound,
+  Loader2,
+  Lock,
+  ShieldAlert,
+  ShieldOff,
+  Trash2,
+  TriangleAlert,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useIsLocalMode } from "@/hooks/useAppMode";
 import { setAppMode } from "@/lib/local/appMode";
@@ -111,17 +120,34 @@ function GateShell({ children }: { children: React.ReactNode }) {
   );
 }
 
+/**
+ * `onBack` is a real navigation exit — it leaves Local Mode entirely, back to
+ * the wizard's mode picker — so it sits where a modal's back arrow normally
+ * does, above the icon, not folded into the page's other choices below.
+ */
 function GateHeader({
   Icon,
   title,
   subtitle,
+  onBack,
 }: {
   Icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
   title: string;
   subtitle: string;
+  onBack?: () => void;
 }) {
   return (
     <div className="flex flex-col gap-2 pb-1">
+      {onBack && (
+        <button
+          type="button"
+          onClick={onBack}
+          className="-ml-1.5 -mt-1 flex w-fit items-center gap-0.5 rounded-full py-1 pl-1.5 pr-2.5 text-[13px] font-bold text-foreground/45 transition hover:text-primary active:opacity-60"
+        >
+          <ChevronLeft className="h-4 w-4" strokeWidth={2.75} />
+          Change setup
+        </button>
+      )}
       <div className="flex h-[42px] w-[42px] items-center justify-center rounded-2xl bg-primary/12">
         <Icon className="h-[22px] w-[22px] text-primary" strokeWidth={2.25} />
       </div>
@@ -160,23 +186,43 @@ function GateInput({
   );
 }
 
+type GateButtonTone = "primary" | "warning" | "destructive";
+
+const GATE_BUTTON_TONE: Record<GateButtonTone, string> = {
+  primary: "bg-primary text-primary-foreground shadow-lg shadow-primary/20",
+  warning: "bg-amber-500 text-white shadow-lg shadow-amber-500/25 hover:bg-amber-500/90",
+  destructive:
+    "bg-destructive text-destructive-foreground shadow-lg shadow-destructive/20 hover:bg-destructive/90",
+};
+
+/**
+ * The screen's one filled, unmissable action. `onClick` makes it a plain
+ * button rather than a form submit — every non-form use (the skip and delete
+ * confirm screens) is a single deliberate press, not something Enter should
+ * trigger from an unrelated field.
+ */
 function GateButton({
   label,
   enabled,
   busy = false,
+  tone = "primary",
+  onClick,
 }: {
   label: string;
   enabled: boolean;
   busy?: boolean;
+  tone?: GateButtonTone;
+  onClick?: () => void;
 }) {
   return (
     <button
-      type="submit"
+      type={onClick ? "button" : "submit"}
+      onClick={onClick}
       disabled={!enabled}
       className={cn(
         "flex h-12 w-full items-center justify-center gap-2 rounded-full text-[15px] font-bold transition active:scale-[0.985]",
         enabled
-          ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
+          ? GATE_BUTTON_TONE[tone]
           : "cursor-not-allowed bg-muted text-muted-foreground/60 opacity-70",
       )}
     >
@@ -186,43 +232,63 @@ function GateButton({
   );
 }
 
-function GateTextButton({
-  children,
+/**
+ * An outlined counterpart to [GateButton] — same size and shape, so it pairs
+ * visually with the primary action, but unfilled: this is "consider this
+ * option," not yet the commitment. That happens a step later, once the
+ * consequence has been spelled out and the option becomes a filled [GateButton].
+ */
+function GateSecondaryButton({
+  label,
   onClick,
-  destructive = false,
+  tone = "neutral",
 }: {
-  children: React.ReactNode;
+  label: string;
   onClick: () => void;
-  destructive?: boolean;
+  tone?: "neutral" | "warning";
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
       className={cn(
-        "text-[14px] font-bold transition active:opacity-60",
-        destructive ? "text-destructive" : "text-primary",
+        "flex h-12 w-full items-center justify-center rounded-full border text-[15px] font-bold transition active:scale-[0.985]",
+        tone === "warning"
+          ? "border-amber-500/40 text-amber-700 hover:bg-amber-500/10 dark:border-amber-400/35 dark:text-amber-400"
+          : "border-border text-foreground/70 hover:bg-muted/60",
       )}
     >
-      {children}
+      {label}
     </button>
   );
 }
 
 /**
- * A quieter option than [GateTextButton] — sized and colored like a footnote,
- * not a call to action. This is what "Use a self-hosted account instead" and
- * "Skip encryption" read as: alternatives worth mentioning, not competing with
- * the primary button above them for attention.
+ * What kind of return path a footer link represents, so hovering hints at the
+ * consequence before the tap: a plain reconsideration (neutral) or a
+ * destructive recovery action (red).
+ */
+type GateFooterLinkTone = "neutral" | "destructive";
+
+const GATE_FOOTER_LINK_TONE: Record<GateFooterLinkTone, string> = {
+  neutral: "text-foreground/50 hover:text-foreground/80",
+  destructive: "text-destructive/75 hover:text-destructive",
+};
+
+/**
+ * A quiet, minor return path — canceling a confirm screen back to the one
+ * before it, or a rare recovery action like "I forgot my passphrase." Idle,
+ * it reads as a footnote, not a call to action: the screen's real choices are
+ * the filled [GateButton] and the outlined [GateSecondaryButton] above it.
  */
 function GateFooterLink({
   children,
   onClick,
-  destructive = false,
+  tone = "neutral",
 }: {
   children: React.ReactNode;
   onClick: () => void;
-  destructive?: boolean;
+  tone?: GateFooterLinkTone;
 }) {
   return (
     <button
@@ -230,38 +296,11 @@ function GateFooterLink({
       onClick={onClick}
       className={cn(
         "text-[12.5px] font-bold underline decoration-dotted decoration-1 underline-offset-[3px] transition active:opacity-60",
-        destructive
-          ? "text-destructive/75 hover:text-destructive"
-          : "text-foreground/50 hover:text-foreground/80",
+        GATE_FOOTER_LINK_TONE[tone],
       )}
     >
       {children}
     </button>
-  );
-}
-
-/**
- * The gate's other paths — leaving Local Mode, declining encryption, recovery —
- * read as one line of footnote links rather than a stack of buttons, so the
- * screen keeps a single obvious next step (the form above) and everything else
- * stays clearly secondary.
- */
-function GateOptionsRow({
-  options,
-}: {
-  options: { label: string; onClick: () => void; destructive?: boolean }[];
-}) {
-  return (
-    <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 pt-1 text-center">
-      {options.map((option, index) => (
-        <React.Fragment key={option.label}>
-          {index > 0 && <span className="text-[12px] text-foreground/25">·</span>}
-          <GateFooterLink destructive={option.destructive} onClick={option.onClick}>
-            {option.label}
-          </GateFooterLink>
-        </React.Fragment>
-      ))}
-    </div>
   );
 }
 
@@ -286,37 +325,42 @@ function GateWarning({ children }: { children: React.ReactNode }) {
 }
 
 /**
- * The second tap of declining the passphrase — the first is the "Skip
- * encryption" link in [GateOptionsRow], which just brings this into view.
- * Storing a workspace in the clear is not undone by a reload, so accepting it
- * is deliberately a separate, later press than the one that opened this.
+ * The second step of declining the passphrase — the first is a
+ * [GateSecondaryButton] on the previous screen that just brings this into
+ * view. Its own screen, not appended below the form that led here, so the
+ * choice is read on its own rather than tacked under fields that no longer
+ * apply. Storing a workspace in the clear is not undone by a reload, so
+ * accepting it is deliberately a separate, later press than the one that
+ * opened this.
  */
 function SkipEncryptionConfirm({
   reason,
   onSkip,
   onCancel,
+  cancelLabel = "Choose a passphrase instead",
 }: {
   /** Why this workspace would be unencrypted, in the user's terms. */
   reason: React.ReactNode;
   onSkip: () => void;
   onCancel: () => void;
+  cancelLabel?: string;
 }) {
   const [error, setError] = React.useState("");
 
   return (
-    <div className="flex w-full flex-col items-center gap-2 pt-1">
-      <p className="px-1 text-center text-[14px] font-bold text-foreground">
-        Store these tasks unencrypted?
-      </p>
+    <div className="flex flex-col gap-[11px]">
+      <GateHeader
+        Icon={ShieldOff}
+        title="Store these tasks unencrypted?"
+        subtitle="You can turn encryption on later from Settings — there's no route back the other way."
+        onBack={changeSetup}
+      />
       <GateWarning>{reason}</GateWarning>
-      <p className="px-2 text-center text-[13px] font-bold leading-snug text-foreground/60">
-        In exchange there is no passphrase to remember and nothing to lose. You
-        can turn encryption on later from Settings, and your tasks will be
-        encrypted in place.
-      </p>
       <GateError message={error} />
-      <GateTextButton
-        destructive
+      <GateButton
+        label="Store unencrypted"
+        enabled
+        tone="warning"
         onClick={() => {
           setError("");
           try {
@@ -326,10 +370,10 @@ function SkipEncryptionConfirm({
             setError(messageFor(caught, "Could not open a workspace in this browser."));
           }
         }}
-      >
-        Store unencrypted
-      </GateTextButton>
-      <GateTextButton onClick={onCancel}>Choose a passphrase instead</GateTextButton>
+      />
+      <div className="flex justify-center pt-1">
+        <GateFooterLink onClick={onCancel}>{cancelLabel}</GateFooterLink>
+      </div>
     </div>
   );
 }
@@ -340,7 +384,18 @@ const PLAINTEXT_RISK =
 
 /** Leaves Local Mode entirely, dropping the visitor back on the wizard. */
 function changeSetup() {
+  // A hard reload, not a client-side state flip: the router is already
+  // sitting on a protected app route by the time any panel here is visible —
+  // `chooseLocalMode` in the wizard navigates to /app before this gate ever
+  // shows a setup screen. Flipping appMode alone would leave every query
+  // mounted under Local Mode (Sidebar meta, dashboard cards) to refetch
+  // against the real backend, fail with 401s, and race AuthProvider's
+  // session-expiry handler into firing "Your session expired" once per
+  // failing query for a session that was never real. `AuthProvider.logout()`
+  // already solves exactly this for "Leave local workspace" with the same
+  // reload-to-origin; this is that same fix, reached one screen earlier.
   setAppMode(null);
+  window.location.replace(window.location.origin);
 }
 
 function messageFor(error: unknown, fallback: string): string {
@@ -403,6 +458,31 @@ function SetupPanel({
     }
   };
 
+  if (skipping) {
+    return (
+      <SkipEncryptionConfirm
+        reason={
+          migrating ? (
+            <>
+              These tasks are already stored unencrypted in this browser.
+              Skipping keeps them that way. {PLAINTEXT_RISK}
+            </>
+          ) : (
+            PLAINTEXT_RISK
+          )
+        }
+        onSkip={() => {
+          // The legacy rows are wrapped rather than left bare, so declining is
+          // recorded and the migration prompt stops asking on every load.
+          if (migrating) keepLegacyWorkspaceOpen();
+          else createOpenLocalWorkspace();
+          onReady();
+        }}
+        onCancel={() => setSkipping(false)}
+      />
+    );
+  }
+
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-[11px]">
       <GateHeader
@@ -413,6 +493,7 @@ function SetupPanel({
             ? "This browser already holds tasks in the clear. Pick a passphrase and they'll be encrypted in place — nothing is lost."
             : "Everything you write in this browser is encrypted with it. Nothing is sent to a server."
         }
+        onBack={changeSetup}
       />
 
       <GateWarning>
@@ -457,35 +538,11 @@ function SetupPanel({
         enabled={ready}
         busy={busy}
       />
-      {!skipping ? (
-        <GateOptionsRow
-          options={[
-            { label: "Use a self-hosted account instead", onClick: changeSetup },
-            { label: "Skip encryption on this device", onClick: () => setSkipping(true) },
-          ]}
-        />
-      ) : (
-        <SkipEncryptionConfirm
-          reason={
-            migrating ? (
-              <>
-                These tasks are already stored unencrypted in this browser.
-                Skipping keeps them that way. {PLAINTEXT_RISK}
-              </>
-            ) : (
-              PLAINTEXT_RISK
-            )
-          }
-          onSkip={() => {
-            // The legacy rows are wrapped rather than left bare, so declining is
-            // recorded and the migration prompt stops asking on every load.
-            if (migrating) keepLegacyWorkspaceOpen();
-            else createOpenLocalWorkspace();
-            onReady();
-          }}
-          onCancel={() => setSkipping(false)}
-        />
-      )}
+      <GateSecondaryButton
+        label="Skip encryption on this device"
+        tone="warning"
+        onClick={() => setSkipping(true)}
+      />
     </form>
   );
 }
@@ -518,12 +575,41 @@ function UnlockPanel({
     }
   };
 
+  if (confirmingWipe) {
+    return (
+      <div className="flex flex-col gap-[11px]">
+        <GateHeader
+          Icon={Trash2}
+          title="Delete this workspace?"
+          subtitle="Deleting is the only way past a forgotten passphrase, and it erases every task in this browser permanently."
+          onBack={changeSetup}
+        />
+        <GateButton
+          label="Yes, delete this workspace"
+          enabled
+          tone="destructive"
+          onClick={() => {
+            clearWorkspace();
+            setConfirmingWipe(false);
+            setPassphrase("");
+            setError("");
+            onForget();
+          }}
+        />
+        <div className="flex justify-center pt-1">
+          <GateFooterLink onClick={() => setConfirmingWipe(false)}>Keep it</GateFooterLink>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-[11px]">
       <GateHeader
         Icon={Lock}
         title="Unlock this device"
         subtitle="Your tasks are encrypted in this browser. Enter the passphrase you chose to open them."
+        onBack={changeSetup}
       />
 
       <GateInput
@@ -539,38 +625,11 @@ function UnlockPanel({
       <GateError message={error} />
       <GateButton label="Unlock" enabled={passphrase.length > 0 && !busy} busy={busy} />
 
-      {!confirmingWipe ? (
-        <GateOptionsRow
-          options={[
-            { label: "Use a self-hosted account instead", onClick: changeSetup },
-            {
-              label: "I forgot my passphrase",
-              onClick: () => setConfirmingWipe(true),
-              destructive: true,
-            },
-          ]}
-        />
-      ) : (
-        <div className="flex flex-col items-center gap-2 pt-1">
-          <p className="px-2 text-center text-[13px] font-bold leading-snug text-foreground/70">
-            Deleting is the only way past a forgotten passphrase, and it erases
-            every task in this browser permanently.
-          </p>
-          <GateTextButton
-            destructive
-            onClick={() => {
-              clearWorkspace();
-              setConfirmingWipe(false);
-              setPassphrase("");
-              setError("");
-              onForget();
-            }}
-          >
-            Yes, delete this workspace
-          </GateTextButton>
-          <GateTextButton onClick={() => setConfirmingWipe(false)}>Keep it</GateTextButton>
-        </div>
-      )}
+      <div className="flex justify-center pt-1">
+        <GateFooterLink tone="destructive" onClick={() => setConfirmingWipe(true)}>
+          I forgot my passphrase
+        </GateFooterLink>
+      </div>
     </form>
   );
 }
@@ -587,44 +646,44 @@ function UnlockPanel({
 function UnsupportedPanel({ onReady }: { onReady: () => void }) {
   const [skipping, setSkipping] = React.useState(false);
 
+  if (skipping) {
+    return (
+      <SkipEncryptionConfirm
+        reason={
+          <>
+            This page is served over plain http, so the browser will not give
+            T&apos;Day the encryption API. Your tasks would be stored in this
+            browser in the clear. {PLAINTEXT_RISK}
+          </>
+        }
+        onSkip={() => {
+          createOpenLocalWorkspace();
+          onReady();
+        }}
+        onCancel={() => setSkipping(false)}
+        cancelLabel="Go back"
+      />
+    );
+  }
+
   return (
     <div className="flex flex-col gap-[11px]">
       <GateHeader
         Icon={ShieldAlert}
         title="Encryption unavailable here"
         subtitle="This page is served over an insecure origin, so the browser withholds the encryption API T'Day needs to protect a local workspace."
+        onBack={changeSetup}
       />
       <p className="px-1 text-[13px] font-bold leading-snug text-foreground/70">
         Open T'Day over https://, or on http://localhost, and this device
         workspace can be encrypted as normal. Any tasks already stored in this
         browser are untouched.
       </p>
-      <p className="px-1 text-[13px] font-bold leading-snug text-foreground/70">
-        You can still use this device workspace without encryption.
-      </p>
-      {!skipping ? (
-        <GateOptionsRow
-          options={[
-            { label: "Use a self-hosted account instead", onClick: changeSetup },
-            { label: "Skip encryption on this device", onClick: () => setSkipping(true) },
-          ]}
-        />
-      ) : (
-        <SkipEncryptionConfirm
-          reason={
-            <>
-              This page is served over plain http, so the browser will not give
-              T&apos;Day the encryption API. Your tasks would be stored in this
-              browser in the clear. {PLAINTEXT_RISK}
-            </>
-          }
-          onSkip={() => {
-            createOpenLocalWorkspace();
-            onReady();
-          }}
-          onCancel={() => setSkipping(false)}
-        />
-      )}
+      <GateSecondaryButton
+        label="Continue without encryption"
+        tone="warning"
+        onClick={() => setSkipping(true)}
+      />
     </div>
   );
 }

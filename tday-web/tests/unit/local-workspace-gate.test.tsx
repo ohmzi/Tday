@@ -172,7 +172,7 @@ describe("local workspace gate", () => {
       expect(screen.getByText("Encryption unavailable here")).toBeTruthy();
       expect(screen.queryByText("workspace")).toBeNull();
 
-      fireEvent.click(screen.getByText("Skip encryption on this device"));
+      fireEvent.click(screen.getByText("Continue without encryption"));
       fireEvent.click(screen.getByText("Store unencrypted"));
       expect(screen.getByText("workspace")).toBeTruthy();
     } finally {
