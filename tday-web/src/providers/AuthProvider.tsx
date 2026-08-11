@@ -197,8 +197,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // there is nothing to revoke server-side, and the browser's tasks stay put
     // so the user can come back to them (or delete them from Settings).
     if (isLocalMode()) {
-      // Leaving relocks the workspace: the derived key and the decrypted rows go
-      // now rather than waiting on the redirect to tear the page down.
+      // Queued writes land first, then this session's hold on the workspace goes
+      // now rather than waiting on the redirect to tear the page down. For an
+      // encrypted workspace that relocks it — the derived key goes with the rows.
+      // For one stored in the clear there is no key to drop, and re-entering
+      // Local Mode opens it again without asking; that is what the user chose.
       await flushWorkspaceWrites();
       lockLocalVault();
       setAppMode(null);

@@ -41,6 +41,15 @@ import NativeAppBrandButton from "@/components/app/NativeAppBrandButton";
 import { api } from "@/lib/api-client";
 import { getErrorMessage } from "@/lib/error-message";
 import { deleteLocalWorkspace } from "@/lib/local/localApi";
+import {
+  getLocalProtection,
+  protectPlaintextWorkspace,
+  type LocalProtection,
+} from "@/lib/local/localDb";
+import {
+  MIN_PASSPHRASE_LENGTH,
+  validatePassphrase,
+} from "@/lib/local/passphrasePolicy";
 import { resetAppData } from "@/lib/resetAppData";
 import { useIsLocalMode } from "@/hooks/useAppMode";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
@@ -395,6 +404,17 @@ export default function SettingsPage() {
   const [revokingWebhookId, setRevokingWebhookId] = useState<string | null>(null);
   const [signingOut, setSigningOut] = useState(false);
   const [deleteLocalOpen, setDeleteLocalOpen] = useState(false);
+  // Read once per render pass rather than subscribed to: the only thing that can
+  // change it while this screen is open is the encrypt flow just below.
+  const [localProtection, setLocalProtection] = useState<LocalProtection | null>(
+    () => getLocalProtection(),
+  );
+  const [encryptOpen, setEncryptOpen] = useState(false);
+  const [encryptPassphrase, setEncryptPassphrase] = useState("");
+  const [encryptConfirmation, setEncryptConfirmation] = useState("");
+  const [encryptAcknowledged, setEncryptAcknowledged] = useState(false);
+  const [encryptBusy, setEncryptBusy] = useState(false);
+  const [encryptError, setEncryptError] = useState("");
   const [resetCacheOpen, setResetCacheOpen] = useState(false);
   const [resettingCache, setResettingCache] = useState(false);
 
@@ -674,6 +694,43 @@ export default function SettingsPage() {
     setDeleteLocalOpen(false);
     toast({ description: t("workspace.deleteDone") });
     await handleLogout();
+  };
+
+  const closeEncryptDialog = () => {
+    setEncryptOpen(false);
+    // Nothing keeps a copy of the passphrase once the dialog is done with it.
+    setEncryptPassphrase("");
+    setEncryptConfirmation("");
+    setEncryptAcknowledged(false);
+    setEncryptError("");
+  };
+
+  // Seals a workspace the user chose to leave in the clear. One-way: there is no
+  // matching "decrypt", because a vault anyone at an unlocked session can undo
+  // protects nothing.
+  const handleEncryptWorkspace = async () => {
+    const problem = validatePassphrase(encryptPassphrase, encryptConfirmation);
+    if (problem === "too-short") {
+      setEncryptError(t("workspace.encryptTooShort", { count: MIN_PASSPHRASE_LENGTH }));
+      return;
+    }
+    if (problem === "mismatch") {
+      setEncryptError(t("workspace.encryptMismatch"));
+      return;
+    }
+    setEncryptBusy(true);
+    setEncryptError("");
+    try {
+      await protectPlaintextWorkspace(encryptPassphrase);
+      setLocalProtection(getLocalProtection());
+      closeEncryptDialog();
+      toast({ description: t("workspace.encryptDone") });
+    } catch (error) {
+      console.error(error);
+      setEncryptError(getErrorMessage(error, t("workspace.encryptFailed")));
+    } finally {
+      setEncryptBusy(false);
+    }
   };
 
   // Manual escape hatch for a client stuck on a half-updated build (see
@@ -1595,7 +1652,26 @@ export default function SettingsPage() {
               <p className="text-sm font-extrabold text-muted-foreground">
                 {t("workspace.localDetail")}
               </p>
+              {/* How this browser stores it — the one thing the user chose at
+                  setup, and the only thing still changeable afterwards. */}
+              <p className="text-sm font-extrabold text-muted-foreground">
+                {localProtection === "passphrase"
+                  ? t("workspace.encryptedDetail")
+                  : t("workspace.unencryptedDetail")}
+              </p>
             </div>
+            {localProtection === "none" && (
+              <>
+                <CardDivider />
+                <button
+                  type="button"
+                  onClick={() => setEncryptOpen(true)}
+                  className="flex w-full items-center py-1.5 text-left text-[1.05rem] font-black text-foreground transition active:opacity-60"
+                >
+                  {t("workspace.encrypt")}
+                </button>
+              </>
+            )}
             <CardDivider />
           </>
         ) : (
@@ -1836,6 +1912,77 @@ export default function SettingsPage() {
       {/* Same chrome as the task form's Repeat / Priority pickers — the app's
           centered selector card — so a confirm reads like the rest of the UI.
           Actions stack like the picker's Done button (destructive one first). */}
+      {/* Turning on encryption after the fact. Same chrome as the delete confirm
+          below, because it is the other one-way door on this screen. */}
+      <CenteredSelectorOverlay
+        open={encryptOpen}
+        onOpenChange={(open) => (open ? setEncryptOpen(true) : closeEncryptDialog())}
+        title={t("workspace.encryptTitle")}
+      >
+        <p className="px-5 pb-1 text-sm font-bold leading-relaxed text-muted-foreground">
+          {t("workspace.encryptBody")}
+        </p>
+        <div className="flex flex-col gap-2 px-4 pb-1 pt-3">
+          <Input
+            type="password"
+            value={encryptPassphrase}
+            onChange={(event) => {
+              setEncryptPassphrase(event.target.value);
+              setEncryptError("");
+            }}
+            placeholder={t("workspace.encryptPassphrase")}
+            aria-label={t("workspace.encryptPassphrase")}
+            // Never offered to a password manager: this passphrase is the key.
+            autoComplete="off"
+          />
+          <Input
+            type="password"
+            value={encryptConfirmation}
+            onChange={(event) => {
+              setEncryptConfirmation(event.target.value);
+              setEncryptError("");
+            }}
+            placeholder={t("workspace.encryptRepeat")}
+            aria-label={t("workspace.encryptRepeat")}
+            autoComplete="off"
+          />
+          <label className="flex cursor-pointer items-start gap-2.5 py-1">
+            <input
+              type="checkbox"
+              checked={encryptAcknowledged}
+              onChange={(event) => setEncryptAcknowledged(event.target.checked)}
+              className="mt-[3px] h-4 w-4 shrink-0 accent-[hsl(var(--primary))]"
+            />
+            <span className="text-sm font-bold leading-snug text-muted-foreground">
+              {t("workspace.encryptAcknowledge")}
+            </span>
+          </label>
+          {encryptError && (
+            <p className="text-sm font-bold text-destructive">{encryptError}</p>
+          )}
+          <button
+            type="button"
+            onClick={() => void handleEncryptWorkspace()}
+            disabled={
+              encryptBusy ||
+              !encryptAcknowledged ||
+              encryptPassphrase.length < MIN_PASSPHRASE_LENGTH ||
+              encryptConfirmation.length === 0
+            }
+            className="w-full rounded-2xl bg-primary/10 py-3 text-base font-black text-primary transition-colors hover:bg-primary/20 disabled:opacity-50"
+          >
+            {t("workspace.encryptAction")}
+          </button>
+          <button
+            type="button"
+            onClick={closeEncryptDialog}
+            className="w-full rounded-2xl bg-muted/70 py-3 text-base font-black text-foreground transition-colors hover:bg-muted"
+          >
+            {t("workspace.encryptCancel")}
+          </button>
+        </div>
+      </CenteredSelectorOverlay>
+
       <CenteredSelectorOverlay
         open={deleteLocalOpen}
         onOpenChange={setDeleteLocalOpen}

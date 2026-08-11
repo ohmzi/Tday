@@ -7,11 +7,15 @@ import { LocalVaultError } from "@/lib/local/localCrypto";
 import {
   clearWorkspace,
   createLocalVault,
+  createOpenLocalWorkspace,
   getLocalVaultState,
-  protectLegacyWorkspace,
+  keepLegacyWorkspaceOpen,
+  openLocalWorkspace,
+  protectPlaintextWorkspace,
   unlockLocalVault,
   type LocalVaultState,
 } from "@/lib/local/localDb";
+import { MIN_PASSPHRASE_LENGTH, validatePassphrase } from "@/lib/local/passphrasePolicy";
 
 /**
  * Stands in front of the app while Local Mode is active and the browser
@@ -23,12 +27,37 @@ import {
  * lost passphrase is unrecoverable, and why this screen says so before the user
  * commits to one.
  *
+ * The passphrase is the default, not a toll gate: a user who would rather not
+ * carry one can decline it here and store the workspace in the clear. That is a
+ * real trade, so it takes two deliberate taps and the warning says exactly what
+ * is given up.
+ *
  * Server mode never sees this gate: that workspace lives behind the account.
  */
 
-// Long enough to survive an offline guessing attack on the stored ciphertext,
-// where nothing rate-limits the attacker. Server passwords get 8; this gets more.
-const MIN_PASSPHRASE_LENGTH = 10;
+/**
+ * An open workspace needs no key, so it is adopted here rather than shown a
+ * panel — `"open"` never reaches the dispatch below. Done in the state resolver
+ * so `getLocalVaultState` stays free of side effects, and so the first paint is
+ * already the app rather than a flash of gate.
+ *
+ * Only called while Local Mode is actually selected: "Leave local workspace"
+ * preserves the stored document across a switch to Server Mode, and this must
+ * not reach into storage and decrypt it into memory for a session that isn't
+ * using it.
+ */
+function resolveVaultState(): LocalVaultState {
+  const state = getLocalVaultState();
+  if (state !== "open") return state;
+  try {
+    openLocalWorkspace();
+    return "unlocked";
+  } catch {
+    // A document that claims to be open but won't read. Fall back to setup
+    // rather than rendering the app over nothing.
+    return "empty";
+  }
+}
 
 export default function LocalWorkspaceGate({
   children,
@@ -37,14 +66,14 @@ export default function LocalWorkspaceGate({
 }) {
   const isLocal = useIsLocalMode();
   const [vaultState, setVaultState] = React.useState<LocalVaultState>(() =>
-    getLocalVaultState(),
+    isLocal ? resolveVaultState() : "unlocked",
   );
 
   // Picking "This device" in the wizard flips the mode under us — re-inspect so
   // the setup step appears without a reload.
   React.useEffect(() => {
     if (!isLocal) return;
-    setVaultState(getLocalVaultState());
+    setVaultState(resolveVaultState());
   }, [isLocal]);
 
   if (!isLocal || vaultState === "unlocked") return <>{children}</>;
@@ -52,11 +81,11 @@ export default function LocalWorkspaceGate({
   return (
     <GateShell>
       {vaultState === "unsupported" ? (
-        <UnsupportedPanel />
+        <UnsupportedPanel onReady={() => setVaultState("unlocked")} />
       ) : vaultState === "locked" ? (
         <UnlockPanel
           onUnlocked={() => setVaultState("unlocked")}
-          onForget={() => setVaultState(getLocalVaultState())}
+          onForget={() => setVaultState(resolveVaultState())}
         />
       ) : (
         <SetupPanel
@@ -185,6 +214,85 @@ function GateError({ message }: { message: string }) {
   return <p className="text-[14px] font-bold text-destructive">{message}</p>;
 }
 
+/** The red block the setup screens use to say what is at stake. */
+function GateWarning({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex gap-2.5 rounded-[22px] border border-destructive/35 bg-destructive/10 p-3">
+      <TriangleAlert
+        className="mt-0.5 h-[18px] w-[18px] shrink-0 text-destructive"
+        strokeWidth={2.5}
+      />
+      <p className="text-[13px] font-bold leading-snug text-foreground/80">
+        {children}
+      </p>
+    </div>
+  );
+}
+
+/**
+ * Declining the passphrase, in two deliberate taps.
+ *
+ * The same two-step shape `UnlockPanel` uses for "I forgot my passphrase": the
+ * trigger only reveals the consequence, and a second, separate press accepts it.
+ * Storing a workspace in the clear is not undone by a reload, so it should not
+ * be reachable by one stray tap.
+ */
+function SkipEncryptionBlock({
+  reason,
+  onSkip,
+}: {
+  /** Why this workspace would be unencrypted, in the user's terms. */
+  reason: React.ReactNode;
+  onSkip: () => void;
+}) {
+  const [confirming, setConfirming] = React.useState(false);
+  const [error, setError] = React.useState("");
+
+  if (!confirming) {
+    return (
+      <GateTextButton onClick={() => setConfirming(true)}>
+        Skip encryption on this device
+      </GateTextButton>
+    );
+  }
+
+  return (
+    <div className="flex w-full flex-col items-center gap-2">
+      <p className="px-1 text-center text-[14px] font-bold text-foreground">
+        Store these tasks unencrypted?
+      </p>
+      <GateWarning>{reason}</GateWarning>
+      <p className="px-2 text-center text-[13px] font-bold leading-snug text-foreground/60">
+        In exchange there is no passphrase to remember and nothing to lose. You
+        can turn encryption on later from Settings, and your tasks will be
+        encrypted in place.
+      </p>
+      <GateError message={error} />
+      <GateTextButton
+        destructive
+        onClick={() => {
+          setError("");
+          try {
+            onSkip();
+          } catch (caught) {
+            console.error(caught);
+            setError(messageFor(caught, "Could not open a workspace in this browser."));
+          }
+        }}
+      >
+        Store unencrypted
+      </GateTextButton>
+      <GateTextButton onClick={() => setConfirming(false)}>
+        Choose a passphrase instead
+      </GateTextButton>
+    </div>
+  );
+}
+
+/** What an unencrypted workspace costs, said plainly. */
+const PLAINTEXT_RISK =
+  "Anyone who can use this browser profile — or read this computer's disk, or restore a backup of it — will be able to read every task, list and note you keep here. Nothing is sent to a server either way; encryption is what stops someone with the device from reading it.";
+
 /** Leaves Local Mode entirely, dropping the visitor back on the wizard. */
 function changeSetup() {
   setAppMode(null);
@@ -222,18 +330,19 @@ function SetupPanel({
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError("");
-    if (passphrase.length < MIN_PASSPHRASE_LENGTH) {
+    const problem = validatePassphrase(passphrase, confirmation);
+    if (problem === "too-short") {
       setError(`Use at least ${MIN_PASSPHRASE_LENGTH} characters.`);
       return;
     }
-    if (passphrase !== confirmation) {
+    if (problem === "mismatch") {
       setError("The two passphrases don't match.");
       return;
     }
     setBusy(true);
     try {
       if (migrating) {
-        await protectLegacyWorkspace(passphrase);
+        await protectPlaintextWorkspace(passphrase);
       } else {
         await createLocalVault(passphrase);
       }
@@ -260,17 +369,11 @@ function SetupPanel({
         }
       />
 
-      <div className="flex gap-2.5 rounded-[22px] border border-destructive/35 bg-destructive/10 p-3">
-        <TriangleAlert
-          className="mt-0.5 h-[18px] w-[18px] shrink-0 text-destructive"
-          strokeWidth={2.5}
-        />
-        <p className="text-[13px] font-bold leading-snug text-foreground/80">
-          There is no recovery. No reset link, no backup key, no support account —
-          if you forget this passphrase, these tasks are gone for good. Write it
-          down somewhere safe.
-        </p>
-      </div>
+      <GateWarning>
+        There is no recovery. No reset link, no backup key, no support account —
+        if you forget this passphrase, these tasks are gone for good. Write it
+        down somewhere safe.
+      </GateWarning>
 
       <GateInput
         placeholder="Passphrase"
@@ -308,10 +411,29 @@ function SetupPanel({
         enabled={ready}
         busy={busy}
       />
-      <div className="flex justify-center pt-1">
+      <div className="flex flex-col items-center gap-2 pt-1">
         <GateTextButton onClick={changeSetup}>
           Use a self-hosted account instead
         </GateTextButton>
+        <SkipEncryptionBlock
+          reason={
+            migrating ? (
+              <>
+                These tasks are already stored unencrypted in this browser.
+                Skipping keeps them that way. {PLAINTEXT_RISK}
+              </>
+            ) : (
+              PLAINTEXT_RISK
+            )
+          }
+          onSkip={() => {
+            // The legacy rows are wrapped rather than left bare, so declining is
+            // recorded and the migration prompt stops asking on every load.
+            if (migrating) keepLegacyWorkspaceOpen();
+            else createOpenLocalWorkspace();
+            onReady();
+          }}
+        />
       </div>
     </form>
   );
@@ -404,10 +526,14 @@ function UnlockPanel({
 
 /**
  * `crypto.subtle` is only handed to secure contexts, so a T'Day served over
- * plain http on a LAN address can't encrypt anything. Refusing to open is the
- * honest answer — the alternative is writing the user's tasks out in the clear.
+ * plain http on a LAN address can't encrypt anything.
+ *
+ * Encryption is the one thing this origin cannot offer, so the honest answer is
+ * to say so and let the user decide — the same unencrypted workspace they could
+ * choose on https is still available here, and refusing it would only mean an
+ * https user can have a device workspace while a LAN user can't.
  */
-function UnsupportedPanel() {
+function UnsupportedPanel({ onReady }: { onReady: () => void }) {
   return (
     <div className="flex flex-col gap-[11px]">
       <GateHeader
@@ -417,13 +543,29 @@ function UnsupportedPanel() {
       />
       <p className="px-1 text-[13px] font-bold leading-snug text-foreground/70">
         Open T'Day over https://, or on http://localhost, and this device
-        workspace will work as normal. Any tasks already stored in this browser
-        are untouched.
+        workspace can be encrypted as normal. Any tasks already stored in this
+        browser are untouched.
       </p>
-      <div className="flex justify-center pt-1">
+      <p className="px-1 text-[13px] font-bold leading-snug text-foreground/70">
+        You can still use this device workspace without encryption.
+      </p>
+      <div className="flex flex-col items-center gap-2 pt-1">
         <GateTextButton onClick={changeSetup}>
           Use a self-hosted account instead
         </GateTextButton>
+        <SkipEncryptionBlock
+          reason={
+            <>
+              This page is served over plain http, so the browser will not give
+              T&apos;Day the encryption API. Your tasks would be stored in this
+              browser in the clear. {PLAINTEXT_RISK}
+            </>
+          }
+          onSkip={() => {
+            createOpenLocalWorkspace();
+            onReady();
+          }}
+        />
       </div>
     </div>
   );

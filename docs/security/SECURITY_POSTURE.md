@@ -42,7 +42,7 @@ optional biometric app lock.
 *iOS:* fail-closed TLS with LAN-only enrollment · Data Protection + backup exclusion on the SwiftData
 store and widget snapshots · optional biometric app lock.
 
-*Web:* passphrase-encrypted Local Mode · the salted-digest fix for suggestion dismissals.
+*Web:* passphrase-encrypted Local Mode, with a warned, two-step opt-out to store it unencrypted instead · the salted-digest fix for suggestion dismissals.
 
 Anything marked *recently hardened* below is in this list.
 
@@ -78,7 +78,7 @@ Two standing items, independent of this document:
 | Input validation & injection | Strong | Typed Exposed DSL throughout, exactly one raw SQL statement and it is parameter-bound, no subprocess and no unsafe deserialization, new SSRF egress guard on user-supplied URLs. No request body size limit anywhere. |
 | Android client | Strong | offline cache encrypted whole-file with SQLCipher under a Keystore-wrapped key, fail-closed certificate pinning with LAN-only enrollment, FLAG_SECURE on by default, optional biometric app lock (off by default); the DB key is deliberately not auth-bound so a rooted or unlocked-and-running device still reads everything, widget content still renders in the launcher, and reminder titles still ride in notifications and AlarmManager extras. |
 | iOS client & widget | Strong | fail-closed TLS with LAN-only certificate enrollment and a never-enrolling widget, Data Protection + backup exclusion on the SwiftData store and widget snapshots, Keychain secrets; but task data at rest is OS-protected (readable after first unlock), not app-encrypted, the biometric lock is opt-in and off by default, and task titles still sit in plaintext UserDefaults in three places (repeat-suggestion dismissals, share queue, Apple Watch mirror). |
-| Web SPA | Strong | Local Mode is now passphrase-encrypted at rest (AES-GCM-256, PBKDF2-SHA256 310k, fresh IV per write, non-extractable memory-only key), the session stays an HttpOnly cookie the JS never touches, and the repeat-suggestion title leak is closed with per-workspace salted HMAC digests; the honest costs are that a lost passphrase is unrecoverable with no rekey path, the vault does nothing against script in an already-unlocked page (no idle auto-lock), and Server Mode task data still sits plaintext in the service worker's API cache for up to an hour. |
+| Web SPA | Strong | Local Mode is passphrase-encrypted at rest by default (AES-GCM-256, PBKDF2-SHA256 310k, fresh IV per write, non-extractable memory-only key), the session stays an HttpOnly cookie the JS never touches, and the repeat-suggestion title leak is closed with per-workspace salted HMAC digests; the honest costs are that a lost passphrase is unrecoverable with no rekey path, the vault does nothing against script in an already-unlocked page (no idle auto-lock), Server Mode task data still sits plaintext in the service worker's API cache for up to an hour, and the user can opt a given browser workspace out of encryption entirely — behind a warned, two-step confirmation, but with no technical barrier once taken. |
 
 ## The five controls that matter most here
 
@@ -198,7 +198,8 @@ Take these to any other self-hosted service. T'Day's own answer follows each.
 - **Android widget content is rendered into the launcher process.** Task titles and notes are handed to the home-screen launcher as RemoteViews, visible wherever it displays them including lock-screen widgets, with no per-widget hide-content setting and no `FLAG_SECURE` equivalent.
 - **iOS contacts api.github.com on every launch** via `URLSession.shared` — bypassing the app's own TLS delegate — even in Local Mode, with no setting to disable it.
 - **Web source maps are built and publicly served.** 105 `.map` files ship in `dist/assets` and are served with `max-age=31536000, immutable`, including the admin screens. No secrets leak, but it removes all friction from mapping the attack surface.
-- **Web Local Mode is passphrase-encrypted, and the passphrase is unrecoverable.** AES-GCM-256 with a PBKDF2-SHA256 310k-iteration key, fresh IV per write, key held only in memory. The tradeoff is absolute: lose the passphrase and the Local Mode workspace is gone, with no reset path.
+- **Web Local Mode is passphrase-encrypted by default, and the passphrase is unrecoverable.** AES-GCM-256 with a PBKDF2-SHA256 310k-iteration key, fresh IV per write, key held only in memory. The tradeoff is absolute: lose the passphrase and the Local Mode workspace is gone, with no reset path.
+- **Web Local Mode encryption can be declined per browser.** A two-step "Skip encryption on this device" confirmation, shown wherever the passphrase would otherwise be asked for, stores the workspace as plain JSON instead — readable by anything with access to that browser profile or its disk. The choice can be reversed one-way from Settings (unencrypted → encrypted, in place); there is no reverse of that reverse.
 
 ### Supply chain and operations
 
