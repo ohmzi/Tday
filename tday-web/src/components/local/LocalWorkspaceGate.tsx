@@ -209,6 +209,62 @@ function GateTextButton({
   );
 }
 
+/**
+ * A quieter option than [GateTextButton] — sized and colored like a footnote,
+ * not a call to action. This is what "Use a self-hosted account instead" and
+ * "Skip encryption" read as: alternatives worth mentioning, not competing with
+ * the primary button above them for attention.
+ */
+function GateFooterLink({
+  children,
+  onClick,
+  destructive = false,
+}: {
+  children: React.ReactNode;
+  onClick: () => void;
+  destructive?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "text-[12.5px] font-bold underline decoration-dotted decoration-1 underline-offset-[3px] transition active:opacity-60",
+        destructive
+          ? "text-destructive/75 hover:text-destructive"
+          : "text-foreground/50 hover:text-foreground/80",
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
+/**
+ * The gate's other paths — leaving Local Mode, declining encryption, recovery —
+ * read as one line of footnote links rather than a stack of buttons, so the
+ * screen keeps a single obvious next step (the form above) and everything else
+ * stays clearly secondary.
+ */
+function GateOptionsRow({
+  options,
+}: {
+  options: { label: string; onClick: () => void; destructive?: boolean }[];
+}) {
+  return (
+    <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 pt-1 text-center">
+      {options.map((option, index) => (
+        <React.Fragment key={option.label}>
+          {index > 0 && <span className="text-[12px] text-foreground/25">·</span>}
+          <GateFooterLink destructive={option.destructive} onClick={option.onClick}>
+            {option.label}
+          </GateFooterLink>
+        </React.Fragment>
+      ))}
+    </div>
+  );
+}
+
 function GateError({ message }: { message: string }) {
   if (!message) return null;
   return <p className="text-[14px] font-bold text-destructive">{message}</p>;
@@ -230,34 +286,25 @@ function GateWarning({ children }: { children: React.ReactNode }) {
 }
 
 /**
- * Declining the passphrase, in two deliberate taps.
- *
- * The same two-step shape `UnlockPanel` uses for "I forgot my passphrase": the
- * trigger only reveals the consequence, and a second, separate press accepts it.
- * Storing a workspace in the clear is not undone by a reload, so it should not
- * be reachable by one stray tap.
+ * The second tap of declining the passphrase — the first is the "Skip
+ * encryption" link in [GateOptionsRow], which just brings this into view.
+ * Storing a workspace in the clear is not undone by a reload, so accepting it
+ * is deliberately a separate, later press than the one that opened this.
  */
-function SkipEncryptionBlock({
+function SkipEncryptionConfirm({
   reason,
   onSkip,
+  onCancel,
 }: {
   /** Why this workspace would be unencrypted, in the user's terms. */
   reason: React.ReactNode;
   onSkip: () => void;
+  onCancel: () => void;
 }) {
-  const [confirming, setConfirming] = React.useState(false);
   const [error, setError] = React.useState("");
 
-  if (!confirming) {
-    return (
-      <GateTextButton onClick={() => setConfirming(true)}>
-        Skip encryption on this device
-      </GateTextButton>
-    );
-  }
-
   return (
-    <div className="flex w-full flex-col items-center gap-2">
+    <div className="flex w-full flex-col items-center gap-2 pt-1">
       <p className="px-1 text-center text-[14px] font-bold text-foreground">
         Store these tasks unencrypted?
       </p>
@@ -282,9 +329,7 @@ function SkipEncryptionBlock({
       >
         Store unencrypted
       </GateTextButton>
-      <GateTextButton onClick={() => setConfirming(false)}>
-        Choose a passphrase instead
-      </GateTextButton>
+      <GateTextButton onClick={onCancel}>Choose a passphrase instead</GateTextButton>
     </div>
   );
 }
@@ -320,6 +365,7 @@ function SetupPanel({
   const [acknowledged, setAcknowledged] = React.useState(false);
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState("");
+  const [skipping, setSkipping] = React.useState(false);
 
   const ready =
     passphrase.length >= MIN_PASSPHRASE_LENGTH &&
@@ -411,11 +457,15 @@ function SetupPanel({
         enabled={ready}
         busy={busy}
       />
-      <div className="flex flex-col items-center gap-2 pt-1">
-        <GateTextButton onClick={changeSetup}>
-          Use a self-hosted account instead
-        </GateTextButton>
-        <SkipEncryptionBlock
+      {!skipping ? (
+        <GateOptionsRow
+          options={[
+            { label: "Use a self-hosted account instead", onClick: changeSetup },
+            { label: "Skip encryption on this device", onClick: () => setSkipping(true) },
+          ]}
+        />
+      ) : (
+        <SkipEncryptionConfirm
           reason={
             migrating ? (
               <>
@@ -433,8 +483,9 @@ function SetupPanel({
             else createOpenLocalWorkspace();
             onReady();
           }}
+          onCancel={() => setSkipping(false)}
         />
-      </div>
+      )}
     </form>
   );
 }
@@ -488,38 +539,38 @@ function UnlockPanel({
       <GateError message={error} />
       <GateButton label="Unlock" enabled={passphrase.length > 0 && !busy} busy={busy} />
 
-      <div className="flex flex-col items-center gap-2 pt-1">
-        <GateTextButton onClick={changeSetup}>
-          Use a self-hosted account instead
-        </GateTextButton>
-        {confirmingWipe ? (
-          <>
-            <p className="px-2 text-center text-[13px] font-bold leading-snug text-foreground/70">
-              Deleting is the only way past a forgotten passphrase, and it erases
-              every task in this browser permanently.
-            </p>
-            <GateTextButton
-              destructive
-              onClick={() => {
-                clearWorkspace();
-                setConfirmingWipe(false);
-                setPassphrase("");
-                setError("");
-                onForget();
-              }}
-            >
-              Yes, delete this workspace
-            </GateTextButton>
-            <GateTextButton onClick={() => setConfirmingWipe(false)}>
-              Keep it
-            </GateTextButton>
-          </>
-        ) : (
-          <GateTextButton destructive onClick={() => setConfirmingWipe(true)}>
-            I forgot my passphrase
+      {!confirmingWipe ? (
+        <GateOptionsRow
+          options={[
+            { label: "Use a self-hosted account instead", onClick: changeSetup },
+            {
+              label: "I forgot my passphrase",
+              onClick: () => setConfirmingWipe(true),
+              destructive: true,
+            },
+          ]}
+        />
+      ) : (
+        <div className="flex flex-col items-center gap-2 pt-1">
+          <p className="px-2 text-center text-[13px] font-bold leading-snug text-foreground/70">
+            Deleting is the only way past a forgotten passphrase, and it erases
+            every task in this browser permanently.
+          </p>
+          <GateTextButton
+            destructive
+            onClick={() => {
+              clearWorkspace();
+              setConfirmingWipe(false);
+              setPassphrase("");
+              setError("");
+              onForget();
+            }}
+          >
+            Yes, delete this workspace
           </GateTextButton>
-        )}
-      </div>
+          <GateTextButton onClick={() => setConfirmingWipe(false)}>Keep it</GateTextButton>
+        </div>
+      )}
     </form>
   );
 }
@@ -534,6 +585,8 @@ function UnlockPanel({
  * https user can have a device workspace while a LAN user can't.
  */
 function UnsupportedPanel({ onReady }: { onReady: () => void }) {
+  const [skipping, setSkipping] = React.useState(false);
+
   return (
     <div className="flex flex-col gap-[11px]">
       <GateHeader
@@ -549,11 +602,15 @@ function UnsupportedPanel({ onReady }: { onReady: () => void }) {
       <p className="px-1 text-[13px] font-bold leading-snug text-foreground/70">
         You can still use this device workspace without encryption.
       </p>
-      <div className="flex flex-col items-center gap-2 pt-1">
-        <GateTextButton onClick={changeSetup}>
-          Use a self-hosted account instead
-        </GateTextButton>
-        <SkipEncryptionBlock
+      {!skipping ? (
+        <GateOptionsRow
+          options={[
+            { label: "Use a self-hosted account instead", onClick: changeSetup },
+            { label: "Skip encryption on this device", onClick: () => setSkipping(true) },
+          ]}
+        />
+      ) : (
+        <SkipEncryptionConfirm
           reason={
             <>
               This page is served over plain http, so the browser will not give
@@ -565,8 +622,9 @@ function UnsupportedPanel({ onReady }: { onReady: () => void }) {
             createOpenLocalWorkspace();
             onReady();
           }}
+          onCancel={() => setSkipping(false)}
         />
-      </div>
+      )}
     </div>
   );
 }
