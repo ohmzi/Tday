@@ -112,10 +112,8 @@ internal fun TaskWidgetContent(
     val watermark = when (state) {
         TaskWidgetContentState.SETUP -> visuals.setupWatermark
         TaskWidgetContentState.EMPTY,
-        TaskWidgetContentState.TASKS -> visuals.emptyWatermark
-        // No background watermark while locked — a decorative sun/leaf graphic behind a
-        // privacy message reads as mixed signals.
-        TaskWidgetContentState.LOCKED -> null
+        TaskWidgetContentState.TASKS,
+        TaskWidgetContentState.LOCKED -> visuals.emptyWatermark
     }
 
     Box(
@@ -124,12 +122,10 @@ internal fun TaskWidgetContent(
             .background(ImageProvider(R.drawable.widget_preview_background))
             .clickable(openAction),
     ) {
-        if (watermark != null) {
-            TaskWidgetMessageBackground(
-                watermark = watermark,
-                metrics = metrics,
-            )
-        }
+        TaskWidgetMessageBackground(
+            watermark = watermark,
+            metrics = metrics,
+        )
 
         if (state != TaskWidgetContentState.TASKS) {
             TaskWidgetMessage(
