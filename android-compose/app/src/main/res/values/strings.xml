@@ -530,6 +530,8 @@
     <string name="widget_floater_tasks_add">Add a floater</string>
     <string name="widget_floater_tasks_count">%1$d open</string>
     <string name="widget_floater_tasks_count_unit">open</string>
+    <string name="widget_locked_title">T\'Day is locked</string>
+    <string name="widget_locked_message">Tasks are hidden while app lock is on</string>
     <string name="widget_loading">Loading tasks…</string>
 
     <!-- Settings: updates -->
@@ -646,7 +648,7 @@
     <string name="settings_screenshot_protection">Hide content in screenshots</string>
     <string name="settings_screenshot_protection_subtitle">Keeps task text out of screenshots, screen recordings and the app switcher</string>
     <string name="settings_app_lock">Require unlock to open T\'Day</string>
-    <string name="settings_app_lock_subtitle">Ask for your fingerprint, face or device PIN each time the app opens</string>
+    <string name="settings_app_lock_subtitle">Ask for your fingerprint, face or device PIN each time the app opens. Home-screen widgets hide your tasks while this is on.</string>
     <string name="settings_app_lock_unavailable">Set up a screen lock on this device first.</string>
     <string name="settings_legacy_cache_warning_title">Older data is not encrypted yet</string>
     <string name="settings_legacy_cache_warning_body">A cache file from an earlier version of T\'Day could not be moved into the encrypted database, so it is still readable on this device and may contain offline changes that never reached the server. Check that everything here also appears on your other devices, then reinstall T\'Day to remove the old file.</string>

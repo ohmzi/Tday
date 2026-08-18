@@ -14,6 +14,7 @@ import com.ohmz.tday.compose.BuildConfig
 import com.ohmz.tday.compose.MainActivity
 import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.data.AppDataMode
+import com.ohmz.tday.compose.core.data.AppSecurityPreferenceStore
 import dagger.hilt.android.EntryPointAccessors
 import java.text.DateFormat
 import java.time.Instant
@@ -46,6 +47,8 @@ class TodayTasksWidget : GlanceAppWidget() {
         )
         val cacheManager = entryPoint.offlineCacheManager()
         val secureConfigStore = entryPoint.secureConfigStore()
+        val securityPreferenceStore = AppSecurityPreferenceStore(context.applicationContext)
+        val isAppLocked = securityPreferenceStore.isAppLockEnabled()
         val state = cacheManager.loadOfflineState()
         val model = buildTodayTasksWidgetModel(
             state = state,
@@ -65,22 +68,30 @@ class TodayTasksWidget : GlanceAppWidget() {
             GlanceTheme {
                 TaskWidgetContent(
                     title = model.title,
-                    state = model.status.toContentState(),
+                    // Checked BEFORE any task content is touched below, so a locked device
+                    // never even builds rows carrying real titles into the Glance tree.
+                    state = if (isAppLocked) TaskWidgetContentState.LOCKED else model.status.toContentState(),
                     taskCount = model.taskCount,
                     countLabel = strings.countLabel(model.taskCount),
                     setupTitle = strings.setupTitle,
                     setupMessage = strings.setupMessage,
                     emptyTitle = strings.emptyMessage,
                     emptyMessage = strings.addTaskLabel,
-                    rows = model.tasks.map { task ->
-                        TaskWidgetRow(
-                            key = task.id.hashCode().toLong(),
-                            title = task.title,
-                            priority = task.priority,
-                            trailingText = task.dueEpochMs?.let(::dueTimeText),
-                            description = task.description,
-                            completeAction = completeTodayTaskAction(task.id),
-                        )
+                    lockedTitle = context.getString(R.string.widget_locked_title),
+                    lockedMessage = context.getString(R.string.widget_locked_message),
+                    rows = if (isAppLocked) {
+                        emptyList()
+                    } else {
+                        model.tasks.map { task ->
+                            TaskWidgetRow(
+                                key = task.id.hashCode().toLong(),
+                                title = task.title,
+                                priority = task.priority,
+                                trailingText = task.dueEpochMs?.let(::dueTimeText),
+                                description = task.description,
+                                completeAction = completeTodayTaskAction(task.id),
+                            )
+                        }
                     },
                     visuals = visuals,
                     openAction = openAppAction(),

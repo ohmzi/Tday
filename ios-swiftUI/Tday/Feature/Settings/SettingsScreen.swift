@@ -1,4 +1,7 @@
 import SwiftUI
+#if canImport(WidgetKit)
+import WidgetKit
+#endif
 
 private let settingsSegmentedControlAccentColor = Color.tdayTodayBlue
 
@@ -331,8 +334,9 @@ private struct SettingsRestingFloatersSection: View {
 // MARK: - App lock
 
 /// Opt-in biometric gate. DEFAULT OFF, and nothing else in the app changes until it is on.
-/// The lock hides the UI only — it holds no key material, which is why home-screen widgets
-/// keep rendering with it enabled.
+/// The lock hides the UI only — it holds no key material. Home-screen widgets and the watch
+/// complication also hide task content while it's on (see `WidgetAppLockStore` in
+/// TdayWidget/TodayTasksWidget.swift), so this isn't just a screen gate for the app itself.
 private struct SettingsAppLockSection: View {
     @Environment(\.tdayColors) private var colors
     private let store = AppLockStore()
@@ -350,9 +354,17 @@ private struct SettingsAppLockSection: View {
                     .foregroundStyle(colors.onSurface)
             }
             .tint(colors.secondary)
-            .onChange(of: enabled) { _, value in store.isEnabled = value }
+            .onChange(of: enabled) { _, value in
+                store.isEnabled = value
+                // Widgets read this flag fresh on every timeline reload, but nothing else
+                // would prompt one right now — without this they'd keep showing (or hiding)
+                // task content until their next unrelated refresh.
+                #if canImport(WidgetKit)
+                WidgetCenter.shared.reloadAllTimelines()
+                #endif
+            }
 
-            Text(L("Asks for Face ID, Touch ID or your passcode when you open T'Day. Your widgets keep working while the app is locked."))
+            Text(L("Asks for Face ID, Touch ID or your passcode when you open T'Day. Home-screen widgets and the watch complication hide your tasks while this is on."))
                 .font(.tdayRounded(size: 12, weight: .bold))
                 .foregroundStyle(colors.onSurfaceVariant)
                 .fixedSize(horizontal: false, vertical: true)

@@ -408,6 +408,18 @@ struct CompleteWidgetTaskIntent: AppIntent {
     }
 }
 
+/// Widget-side reader for the App Lock flag the app mirrors into the shared App Group suite
+/// (`AppLockStore` in Tday/Core/Security/ProbeDecryptor.swift). Plain UserDefaults is fine —
+/// the flag itself is not a secret, only the task content it gates is.
+private enum WidgetAppLockStore {
+    static let appGroupSuiteName = "group.com.ohmz.tday"
+    private static let key = "app.lock.enabled"
+
+    static var isEnabled: Bool {
+        (UserDefaults(suiteName: appGroupSuiteName) ?? .standard).bool(forKey: key)
+    }
+}
+
 private struct TodayTasksEntry: TimelineEntry {
     let date: Date
     let title: String
@@ -416,6 +428,8 @@ private struct TodayTasksEntry: TimelineEntry {
     let tasks: [TodayTaskSnapshot]
     // Ids in the transient checked+struck frame of the check-off animation.
     var checkingIds: Set<String> = []
+    // App Lock is on: render the lock message instead, regardless of `status`/`tasks`.
+    var isLocked: Bool = false
 }
 
 private struct TodayTaskSnapshot: Codable, Identifiable {
@@ -526,6 +540,11 @@ private struct TodayTasksProvider: TimelineProvider {
     }
 
     private func loadEntry(date: Date = Date()) -> TodayTasksEntry {
+        // Checked before the snapshot is even read, so a locked device never decodes real
+        // task titles into memory it isn't going to render.
+        guard !WidgetAppLockStore.isEnabled else {
+            return TodayTasksEntry(date: date, title: "Today's Tasks", status: .setup, taskCount: 0, tasks: [], isLocked: true)
+        }
         guard let snapshot = Self.loadSnapshot() else {
             return TodayTasksEntry(
                 date: date,
@@ -630,6 +649,15 @@ private extension TodayTasksEntry {
         taskCount: 0,
         tasks: []
     )
+
+    static let previewLocked = TodayTasksEntry(
+        date: Date(),
+        title: "Today's Tasks",
+        status: .setup,
+        taskCount: 0,
+        tasks: [],
+        isLocked: true
+    )
 }
 
 private struct TodayTasksWidgetView: View {
@@ -638,7 +666,7 @@ private struct TodayTasksWidgetView: View {
     var body: some View {
         TdayTasksWidgetContent(
             title: entry.title,
-            status: TaskWidgetStatus(entry.status),
+            status: entry.isLocked ? .locked : TaskWidgetStatus(entry.status),
             taskCount: entry.taskCount,
             rows: entry.tasks.map {
                 WidgetTaskRowModel(
@@ -677,6 +705,7 @@ private enum TaskWidgetStatus: Equatable {
     case setup
     case empty
     case tasks
+    case locked
 
     init(_ status: TodayTasksSnapshotStatus) {
         switch status {
@@ -810,13 +839,19 @@ private struct TdayTasksWidgetContent: View {
 
     var body: some View {
         ZStack(alignment: .topLeading) {
-            messageWatermark
+            // No decorative watermark behind the lock message — mixing a sun/leaf graphic
+            // with a privacy message reads as mixed signals (matches the Android widget).
+            if status != .locked {
+                messageWatermark
+            }
 
             switch status {
             case .setup:
                 message(title: "Open T'Day", subtitle: "Set up your workspace")
             case .empty:
                 message(title: mode.emptyTitle, subtitle: "")
+            case .locked:
+                lockedMessage
             case .tasks:
                 EmptyView()
             }
@@ -1023,6 +1058,29 @@ private struct TdayTasksWidgetContent: View {
             usedUnits += cost
         }
         return visible
+    }
+
+    private var lockedMessage: some View {
+        VStack(alignment: .center, spacing: family == .systemSmall ? 4 : 6) {
+            Image(systemName: "lock.fill")
+                .font(.system(size: family == .systemSmall ? 15 : 18, weight: .semibold))
+                .foregroundStyle(secondaryTextColor)
+            Text("T'Day is locked")
+                .font(.system(size: family == .systemSmall ? 14 : (family == .systemLarge ? 17 : 15), weight: .bold, design: .rounded))
+                .lineLimit(family == .systemSmall ? 1 : 2)
+                .minimumScaleFactor(family == .systemSmall ? 0.75 : 0.85)
+
+            if family != .systemSmall {
+                Text("Tasks are hidden while app lock is on")
+                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                    .foregroundStyle(secondaryTextColor)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.85)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+        .multilineTextAlignment(.center)
+        .padding(.horizontal, metrics.horizontalInset)
     }
 
     private func message(title: String, subtitle: String) -> some View {
@@ -1257,6 +1315,8 @@ private struct FloaterTasksEntry: TimelineEntry {
     let tasks: [FloaterTaskSnapshot]
     // Ids in the transient checked+struck frame of the check-off animation.
     var checkingIds: Set<String> = []
+    // App Lock is on: render the lock message instead, regardless of `status`/`tasks`.
+    var isLocked: Bool = false
 }
 
 private struct FloaterTaskSnapshot: Codable, Identifiable {
@@ -1332,6 +1392,11 @@ private struct FloaterTasksProvider: TimelineProvider {
     }
 
     private func loadEntry() -> FloaterTasksEntry {
+        // Checked before the snapshot is even read, so a locked device never decodes real
+        // task titles into memory it isn't going to render.
+        guard !WidgetAppLockStore.isEnabled else {
+            return FloaterTasksEntry(date: Date(), title: "Floater Tasks", status: .setup, taskCount: 0, tasks: [], isLocked: true)
+        }
         guard let snapshot = Self.loadSnapshot() else {
             return FloaterTasksEntry(
                 date: Date(),
@@ -1432,6 +1497,15 @@ private extension FloaterTasksEntry {
         taskCount: 0,
         tasks: []
     )
+
+    static let previewLocked = FloaterTasksEntry(
+        date: Date(),
+        title: "Floater Tasks",
+        status: .setup,
+        taskCount: 0,
+        tasks: [],
+        isLocked: true
+    )
 }
 
 private struct FloaterTasksWidgetView: View {
@@ -1440,7 +1514,7 @@ private struct FloaterTasksWidgetView: View {
     var body: some View {
         TdayTasksWidgetContent(
             title: entry.title,
-            status: TaskWidgetStatus(entry.status),
+            status: entry.isLocked ? .locked : TaskWidgetStatus(entry.status),
             taskCount: entry.taskCount,
             rows: entry.tasks.map {
                 WidgetTaskRowModel(
@@ -1532,6 +1606,12 @@ private extension Date {
     TodayTasksEntry.previewSetup
 }
 
+#Preview("Locked", as: .systemMedium) {
+    TodayTasksWidget()
+} timeline: {
+    TodayTasksEntry.previewLocked
+}
+
 #Preview("Floater Small Tasks", as: .systemSmall) {
     FloaterTasksWidget()
 } timeline: {
@@ -1560,6 +1640,12 @@ private extension Date {
     FloaterTasksWidget()
 } timeline: {
     FloaterTasksEntry.previewSetup
+}
+
+#Preview("Floater Locked", as: .systemMedium) {
+    FloaterTasksWidget()
+} timeline: {
+    FloaterTasksEntry.previewLocked
 }
 #endif
 #endif

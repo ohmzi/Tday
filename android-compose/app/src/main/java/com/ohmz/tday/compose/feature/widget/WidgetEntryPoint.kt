@@ -12,4 +12,6 @@ interface WidgetEntryPoint {
     fun offlineCacheManager(): OfflineCacheManager
     fun secureConfigStore(): SecureConfigStore
     fun widgetCompleteTaskSubmitter(): WidgetCompleteTaskSubmitter
+    fun todayTasksWidgetRefresher(): TodayTasksWidgetRefresher
+    fun floaterTasksWidgetRefresher(): FloaterTasksWidgetRefresher
 }
