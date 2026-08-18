@@ -47,6 +47,7 @@ internal enum class TaskWidgetContentState {
     SETUP,
     EMPTY,
     TASKS,
+    LOCKED,
 }
 
 internal enum class TaskWidgetLayout {
@@ -98,6 +99,8 @@ internal fun TaskWidgetContent(
     setupMessage: String,
     emptyTitle: String,
     emptyMessage: String,
+    lockedTitle: String,
+    lockedMessage: String,
     rows: List<TaskWidgetRow>,
     visuals: TaskWidgetVisuals,
     openAction: Action,
@@ -110,6 +113,9 @@ internal fun TaskWidgetContent(
         TaskWidgetContentState.SETUP -> visuals.setupWatermark
         TaskWidgetContentState.EMPTY,
         TaskWidgetContentState.TASKS -> visuals.emptyWatermark
+        // No background watermark while locked — a decorative sun/leaf graphic behind a
+        // privacy message reads as mixed signals.
+        TaskWidgetContentState.LOCKED -> null
     }
 
     Box(
@@ -118,17 +124,28 @@ internal fun TaskWidgetContent(
             .background(ImageProvider(R.drawable.widget_preview_background))
             .clickable(openAction),
     ) {
-        TaskWidgetMessageBackground(
-            watermark = watermark,
-            metrics = metrics,
-        )
+        if (watermark != null) {
+            TaskWidgetMessageBackground(
+                watermark = watermark,
+                metrics = metrics,
+            )
+        }
 
         if (state != TaskWidgetContentState.TASKS) {
             TaskWidgetMessage(
-                title = if (state == TaskWidgetContentState.SETUP) setupTitle else emptyTitle,
-                message = if (state == TaskWidgetContentState.SETUP) setupMessage else "",
+                title = when (state) {
+                    TaskWidgetContentState.SETUP -> setupTitle
+                    TaskWidgetContentState.LOCKED -> lockedTitle
+                    else -> emptyTitle
+                },
+                message = when (state) {
+                    TaskWidgetContentState.SETUP -> setupMessage
+                    TaskWidgetContentState.LOCKED -> lockedMessage
+                    else -> ""
+                },
                 compact = layout == TaskWidgetLayout.COMPACT,
                 openAction = openAction,
+                icon = if (state == TaskWidgetContentState.LOCKED) R.drawable.widget_lock_icon else null,
             )
         }
 
@@ -396,6 +413,7 @@ private fun TaskWidgetMessage(
     message: String,
     compact: Boolean,
     openAction: Action,
+    icon: Int? = null,
 ) {
     Box(
         modifier = GlanceModifier
@@ -407,6 +425,14 @@ private fun TaskWidgetMessage(
             modifier = GlanceModifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
+            if (icon != null) {
+                Image(
+                    provider = ImageProvider(icon),
+                    contentDescription = null,
+                    modifier = GlanceModifier.size(if (compact) 20.dp else 24.dp),
+                )
+                Spacer(modifier = GlanceModifier.height(if (compact) 4.dp else 6.dp))
+            }
             WidgetText(
                 modifier = GlanceModifier.fillMaxWidth(),
                 text = title,
