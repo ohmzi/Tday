@@ -4,6 +4,9 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.glance.GlanceId
 import androidx.glance.GlanceTheme
 import androidx.glance.appwidget.GlanceAppWidget
@@ -37,22 +40,39 @@ class FloaterTasksWidget : GlanceAppWidget() {
         val cacheManager = entryPoint.offlineCacheManager()
         val secureConfigStore = entryPoint.secureConfigStore()
         val securityPreferenceStore = AppSecurityPreferenceStore(context.applicationContext)
-        val isAppLocked = securityPreferenceStore.isAppLockEnabled()
-        val state = cacheManager.loadOfflineState()
-        val model = buildFloaterTasksWidgetModel(
-            state = state,
-            title = context.getString(R.string.widget_floater_tasks_title),
-            workspaceConfigured = secureConfigStore.getAppDataMode() != AppDataMode.UNSET,
-        )
+        val appContext = context.applicationContext
+        val title = appContext.getString(R.string.widget_floater_tasks_title)
+        val loadModel: suspend () -> FloaterTasksWidgetModel = {
+            buildFloaterTasksWidgetModel(
+                state = cacheManager.loadOfflineState(),
+                title = title,
+                workspaceConfigured = secureConfigStore.getAppDataMode() != AppDataMode.UNSET,
+            )
+        }
+        // Seeded once so the first frame paints real content instead of flashing empty; the
+        // composition below is what keeps it current from then on.
+        val initialVersion = cacheManager.cacheDataVersion.value
+        val initialModel = loadModel()
         val strings = FloaterTasksWidgetStrings(
-            emptyMessage = context.getString(R.string.widget_floater_tasks_empty),
-            setupTitle = context.getString(R.string.widget_today_tasks_setup_title),
-            setupMessage = context.getString(R.string.widget_today_tasks_setup_message),
-            addTaskLabel = context.getString(R.string.widget_floater_tasks_add),
-            countLabelFormat = context.getString(R.string.widget_floater_tasks_count),
+            emptyMessage = appContext.getString(R.string.widget_floater_tasks_empty),
+            setupTitle = appContext.getString(R.string.widget_today_tasks_setup_title),
+            setupMessage = appContext.getString(R.string.widget_today_tasks_setup_message),
+            addTaskLabel = appContext.getString(R.string.widget_floater_tasks_add),
+            countLabelFormat = appContext.getString(R.string.widget_floater_tasks_count),
         )
 
         provideContent {
+            // See TodayTasksWidget: provideGlance runs once per Glance session, so reading
+            // the cache or the lock flag outside this lambda freezes the widget until the
+            // session is recreated. Both are collected as composable state so a change
+            // recomposes in place.
+            val cacheVersion by cacheManager.cacheDataVersion.collectAsState()
+            val isAppLocked by securityPreferenceStore.appLockEnabled.collectAsState()
+            val model by produceState(initialModel, cacheVersion) {
+                if (cacheVersion == initialVersion) return@produceState
+                value = loadModel()
+            }
+
             GlanceTheme {
                 TaskWidgetContent(
                     title = model.title,
@@ -65,8 +85,8 @@ class FloaterTasksWidget : GlanceAppWidget() {
                     setupMessage = strings.setupMessage,
                     emptyTitle = strings.emptyMessage,
                     emptyMessage = strings.addTaskLabel,
-                    lockedTitle = context.getString(R.string.widget_locked_title),
-                    lockedMessage = context.getString(R.string.widget_locked_message),
+                    lockedTitle = appContext.getString(R.string.widget_locked_title),
+                    lockedMessage = appContext.getString(R.string.widget_locked_message),
                     rows = if (isAppLocked) {
                         emptyList()
                     } else {

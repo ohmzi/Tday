@@ -2,7 +2,11 @@ package com.ohmz.tday.compose.core.data
 
 import android.app.Activity
 import android.content.Context
+import android.content.SharedPreferences
 import android.view.WindowManager
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 /**
  * The two user-facing privacy switches for task content on this device.
@@ -44,10 +48,62 @@ class AppSecurityPreferenceStore(context: Context) {
         preferences.edit().putBoolean(KEY_APP_LOCK, enabled).apply()
     }
 
+    /**
+     * Observable form of [isAppLockEnabled], for the Glance widgets.
+     *
+     * A widget's `provideGlance` runs only ONCE per Glance session, so a plain read there is
+     * frozen until the session is recreated (process death, or re-adding the widget). The
+     * widgets collect this inside their composition instead, so flipping the toggle recomposes
+     * them in place. Process-wide because every reader lives in the same process; a fresh
+     * process seeds it from disk on first access.
+     */
+    val appLockEnabled: StateFlow<Boolean>
+        get() {
+            ensureAppLockFlowStarted(preferences)
+            return appLockEnabledFlow
+        }
+
     private companion object {
         const val PREF_NAME = "tday_app_security_prefs"
         const val KEY_SCREENSHOT_PROTECTION = "screenshot_protection_enabled"
         const val KEY_APP_LOCK = "app_lock_enabled"
+
+        val appLockEnabledMutable = MutableStateFlow(false)
+
+        /**
+         * Hoisted so every read hands back the SAME instance. `asStateFlow()` allocates a new
+         * wrapper per call, and `collectAsState` remembers keyed on the flow instance — handing
+         * out a fresh one each recomposition would restart the collector, emit, and recompose
+         * again in a loop.
+         */
+        val appLockEnabledFlow: StateFlow<Boolean> = appLockEnabledMutable.asStateFlow()
+
+        @Volatile
+        var appLockFlowStarted = false
+
+        /**
+         * Seeds the flow from disk and keeps it current via a preference listener, so ANY write
+         * path updates it — not just [setAppLockEnabled]. The listener is held in a field
+         * because SharedPreferences only keeps a weak reference to it.
+         */
+        @Suppress("unused")
+        var appLockListener: SharedPreferences.OnSharedPreferenceChangeListener? = null
+
+        fun ensureAppLockFlowStarted(preferences: SharedPreferences) {
+            if (appLockFlowStarted) return
+            synchronized(this) {
+                if (appLockFlowStarted) return
+                appLockEnabledMutable.value = preferences.getBoolean(KEY_APP_LOCK, false)
+                val listener = SharedPreferences.OnSharedPreferenceChangeListener { prefs, key ->
+                    if (key == KEY_APP_LOCK) {
+                        appLockEnabledMutable.value = prefs.getBoolean(KEY_APP_LOCK, false)
+                    }
+                }
+                preferences.registerOnSharedPreferenceChangeListener(listener)
+                appLockListener = listener
+                appLockFlowStarted = true
+            }
+        }
     }
 }
 
