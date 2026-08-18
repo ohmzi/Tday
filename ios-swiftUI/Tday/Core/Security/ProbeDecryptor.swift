@@ -53,13 +53,30 @@ enum ProbeDecryptor {
 /// Opt-in "Require Face ID / Touch ID to open T'Day". DEFAULT OFF — with nothing stored, the
 /// app behaves exactly as it did before this setting existed. UserDefaults-backed, mirroring
 /// ThemeStore's style; the flag itself is not a secret.
+///
+/// Also mirrored into the App Group suite so the widget extension — a separate process with
+/// its own `UserDefaults.standard` container — can read it too (see
+/// `TdayWidget/TodayTasksWidget.swift`'s `WidgetAppLockStore`). `.standard` stays the primary
+/// store so no existing install's saved value moves or resets.
 struct AppLockStore {
     private let defaults = UserDefaults.standard
+    private let sharedDefaults = UserDefaults(suiteName: appGroupSuiteName)
     private static let key = "app.lock.enabled"
+    static let appGroupSuiteName = "group.com.ohmz.tday"
 
     var isEnabled: Bool {
         get { defaults.object(forKey: Self.key) as? Bool ?? false }
-        nonmutating set { defaults.set(newValue, forKey: Self.key) }
+        nonmutating set {
+            defaults.set(newValue, forKey: Self.key)
+            sharedDefaults?.set(newValue, forKey: Self.key)
+        }
+    }
+
+    /// Re-mirrors the current value into the App Group suite. Called once at every cold
+    /// launch (see `AppLockController.init`) so an install that already had the lock on
+    /// before the widget learned about this flag gets covered too, not just future toggles.
+    nonmutating func mirrorToSharedStore() {
+        sharedDefaults?.set(isEnabled, forKey: Self.key)
     }
 }
 
@@ -101,6 +118,9 @@ final class AppLockController {
         self.store = store
         // Cold start: locked from the first frame when enabled, so no content renders first.
         isLocked = store.isEnabled
+        // Covers an install that already had the lock on before the widget learned to read
+        // this flag — every launch re-syncs it, not just the next toggle.
+        store.mirrorToSharedStore()
     }
 
     func coverMode(isSceneActive: Bool) -> AppLockCoverMode {

@@ -82,6 +82,8 @@ import com.ohmz.tday.compose.core.data.AppSecurityPreferenceStore
 import com.ohmz.tday.compose.core.data.db.hasUnmigratedPlaintextCache
 import com.ohmz.tday.compose.core.data.server.VersionCheckResult
 import com.ohmz.tday.compose.feature.lock.canSatisfyAppLock
+import com.ohmz.tday.compose.feature.widget.WidgetEntryPoint
+import dagger.hilt.android.EntryPointAccessors
 import com.ohmz.tday.compose.core.model.SecurityAnswerInput
 import com.ohmz.tday.compose.core.model.SecurityQuestion
 import com.ohmz.tday.compose.core.model.SecurityQuestionStatusResponse
@@ -1397,6 +1399,9 @@ private fun AppLockRow() {
     val colorScheme = MaterialTheme.colorScheme
     val context = LocalContext.current
     val store = remember { AppSecurityPreferenceStore(context.applicationContext) }
+    val widgetEntryPoint = remember {
+        EntryPointAccessors.fromApplication(context.applicationContext, WidgetEntryPoint::class.java)
+    }
     var enabled by remember { mutableStateOf(store.isAppLockEnabled()) }
     var showUnavailable by remember { mutableStateOf(false) }
 
@@ -1413,6 +1418,11 @@ private fun AppLockRow() {
                 showUnavailable = false
                 enabled = requested
                 store.setAppLockEnabled(requested)
+                // Immediate effect: the home-screen widgets read this flag fresh on every
+                // render, but nothing else would prompt a render right now — without this
+                // they'd keep showing task content until the next unrelated sync.
+                widgetEntryPoint.todayTasksWidgetRefresher().requestRefresh()
+                widgetEntryPoint.floaterTasksWidgetRefresher().requestRefresh()
             },
         )
         if (showUnavailable) {
