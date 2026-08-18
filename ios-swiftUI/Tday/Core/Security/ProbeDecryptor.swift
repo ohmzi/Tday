@@ -2,6 +2,9 @@ import Foundation
 import CryptoKit
 import LocalAuthentication
 import Observation
+#if canImport(WidgetKit)
+import WidgetKit
+#endif
 
 struct ProbeCompatibilityPayload: Codable, Equatable {
     let appVersion: String
@@ -121,6 +124,16 @@ final class AppLockController {
         // Covers an install that already had the lock on before the widget learned to read
         // this flag — every launch re-syncs it, not just the next toggle.
         store.mirrorToSharedStore()
+        // Mirroring alone doesn't repaint an already-on-screen widget — WidgetKit only
+        // re-renders on an explicit reload or its own timeline schedule (up to ~30 min
+        // away). Without this, a device that already had the lock on before this build
+        // installed would keep showing its last (unlocked-era) snapshot until then.
+        // Scoped to the enabled case: when the lock is off there is nothing stale to hide.
+        #if canImport(WidgetKit)
+        if store.isEnabled {
+            WidgetCenter.shared.reloadAllTimelines()
+        }
+        #endif
     }
 
     func coverMode(isSceneActive: Bool) -> AppLockCoverMode {
