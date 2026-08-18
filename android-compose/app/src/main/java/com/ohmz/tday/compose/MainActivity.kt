@@ -24,10 +24,13 @@ import com.ohmz.tday.compose.feature.lock.AppLockOverlay
 import com.ohmz.tday.compose.feature.lock.appLockAuthenticators
 import com.ohmz.tday.compose.feature.lock.canSatisfyAppLock
 import com.ohmz.tday.compose.feature.lock.shouldLockOnForeground
+import com.ohmz.tday.compose.feature.widget.FloaterTasksWidgetRefresher
+import com.ohmz.tday.compose.feature.widget.TodayTasksWidgetRefresher
 import com.ohmz.tday.compose.ui.theme.TdayTheme
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
@@ -39,6 +42,9 @@ class MainActivity : AppCompatActivity() {
     val deepLinkIntent = _deepLinkIntent.asStateFlow()
 
     private val securityPreferences by lazy { AppSecurityPreferenceStore(applicationContext) }
+
+    @Inject lateinit var todayTasksWidgetRefresher: TodayTasksWidgetRefresher
+    @Inject lateinit var floaterTasksWidgetRefresher: FloaterTasksWidgetRefresher
 
     private val _locked = MutableStateFlow(false)
 
@@ -85,6 +91,13 @@ class MainActivity : AppCompatActivity() {
         ) {
             _locked.value = true
         }
+        // Belt-and-braces: the Settings toggle already forces a widget re-render, but an
+        // install that already had the lock on before this feature shipped (or any other
+        // drift between the flag and the last-rendered widget) would otherwise sit stale
+        // until an unrelated data sync happens to fire. Every foreground is cheap to cover —
+        // both refreshers are unconditional, so a re-render with nothing changed is a no-op.
+        todayTasksWidgetRefresher.requestRefresh()
+        floaterTasksWidgetRefresher.requestRefresh()
     }
 
     override fun onStop() {

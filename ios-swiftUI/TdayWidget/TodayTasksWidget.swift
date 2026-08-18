@@ -839,11 +839,7 @@ private struct TdayTasksWidgetContent: View {
 
     var body: some View {
         ZStack(alignment: .topLeading) {
-            // No decorative watermark behind the lock message — mixing a sun/leaf graphic
-            // with a privacy message reads as mixed signals (matches the Android widget).
-            if status != .locked {
-                messageWatermark
-            }
+            messageWatermark
 
             switch status {
             case .setup:
