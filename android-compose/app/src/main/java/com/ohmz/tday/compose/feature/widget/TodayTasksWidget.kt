@@ -4,6 +4,9 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.glance.GlanceId
 import androidx.glance.GlanceTheme
 import androidx.glance.appwidget.GlanceAppWidget
@@ -48,23 +51,45 @@ class TodayTasksWidget : GlanceAppWidget() {
         val cacheManager = entryPoint.offlineCacheManager()
         val secureConfigStore = entryPoint.secureConfigStore()
         val securityPreferenceStore = AppSecurityPreferenceStore(context.applicationContext)
-        val isAppLocked = securityPreferenceStore.isAppLockEnabled()
-        val state = cacheManager.loadOfflineState()
-        val model = buildTodayTasksWidgetModel(
-            state = state,
-            title = context.getString(R.string.widget_today_tasks_title),
-            workspaceConfigured = secureConfigStore.getAppDataMode() != AppDataMode.UNSET,
-        )
-        val visuals = todayWidgetVisuals(taskWidgetIsDaytime(LocalTime.now().hour))
+        val appContext = context.applicationContext
+        val title = appContext.getString(R.string.widget_today_tasks_title)
+        val loadModel: suspend () -> TodayTasksWidgetModel = {
+            buildTodayTasksWidgetModel(
+                state = cacheManager.loadOfflineState(),
+                title = title,
+                workspaceConfigured = secureConfigStore.getAppDataMode() != AppDataMode.UNSET,
+            )
+        }
+        // Seeded once so the first frame paints real content instead of flashing empty; the
+        // composition below is what keeps it current from then on.
+        val initialVersion = cacheManager.cacheDataVersion.value
+        val initialModel = loadModel()
         val strings = TodayTasksWidgetStrings(
-            emptyMessage = context.getString(R.string.widget_today_tasks_empty),
-            setupTitle = context.getString(R.string.widget_today_tasks_setup_title),
-            setupMessage = context.getString(R.string.widget_today_tasks_setup_message),
-            addTaskLabel = context.getString(R.string.widget_today_tasks_add),
-            countLabelFormat = context.getString(R.string.widget_today_tasks_count),
+            emptyMessage = appContext.getString(R.string.widget_today_tasks_empty),
+            setupTitle = appContext.getString(R.string.widget_today_tasks_setup_title),
+            setupMessage = appContext.getString(R.string.widget_today_tasks_setup_message),
+            addTaskLabel = appContext.getString(R.string.widget_today_tasks_add),
+            countLabelFormat = appContext.getString(R.string.widget_today_tasks_count),
         )
 
         provideContent {
+            // Glance runs provideGlance ONCE per session (AppWidgetSession does
+            // `remember { widget.runGlance(...) }` with no keys), and update() on a live
+            // session only re-reads the state definition — it never re-runs provideGlance.
+            // So anything read outside this lambda stays frozen until the session is
+            // recreated (process death, or re-adding the widget), which is why the widget
+            // used to sit stale after a task edit or an app-lock toggle no matter how many
+            // refreshes were requested. Reading both signals as composable state here means
+            // a change recomposes the widget in place.
+            val cacheVersion by cacheManager.cacheDataVersion.collectAsState()
+            val isAppLocked by securityPreferenceStore.appLockEnabled.collectAsState()
+            val model by produceState(initialModel, cacheVersion) {
+                if (cacheVersion == initialVersion) return@produceState
+                value = loadModel()
+            }
+            // Inside the composition so the day/night artwork follows the clock too.
+            val visuals = todayWidgetVisuals(taskWidgetIsDaytime(LocalTime.now().hour))
+
             GlanceTheme {
                 TaskWidgetContent(
                     title = model.title,
@@ -77,8 +102,8 @@ class TodayTasksWidget : GlanceAppWidget() {
                     setupMessage = strings.setupMessage,
                     emptyTitle = strings.emptyMessage,
                     emptyMessage = strings.addTaskLabel,
-                    lockedTitle = context.getString(R.string.widget_locked_title),
-                    lockedMessage = context.getString(R.string.widget_locked_message),
+                    lockedTitle = appContext.getString(R.string.widget_locked_title),
+                    lockedMessage = appContext.getString(R.string.widget_locked_message),
                     rows = if (isAppLocked) {
                         emptyList()
                     } else {
