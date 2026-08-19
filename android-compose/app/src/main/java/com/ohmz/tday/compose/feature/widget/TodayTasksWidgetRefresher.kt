@@ -78,14 +78,20 @@ class TodayTasksWidgetRefresher @Inject constructor(
         renderMutex.withLock {
             val widget = TodayTasksWidget()
             val manager = AppWidgetManager.getInstance(context)
+            var updated = 0
             for (receiverClass in receiverClasses) {
                 val componentName = ComponentName(context, receiverClass)
                 val ids = runCatching { manager.getAppWidgetIds(componentName) }.getOrNull() ?: continue
                 for (appWidgetId in ids) {
                     runCatching { widget.update(context, AppWidgetId(appWidgetId)) }
+                        .onSuccess { updated++ }
+                        .onFailure { android.util.Log.w(WIDGET_LOG_TAG, "today: update($appWidgetId) failed", it) }
                 }
             }
             runCatching { widget.updateAll(context) }
+            // A count of 0 means no Today widget is placed (or the ids could not be read) — the
+            // difference between "nothing to paint" and "painted nothing".
+            android.util.Log.i(WIDGET_LOG_TAG, "today: render requested for $updated widget id(s)")
         }
     }
 

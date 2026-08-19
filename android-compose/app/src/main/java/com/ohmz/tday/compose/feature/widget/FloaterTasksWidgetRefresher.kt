@@ -54,14 +54,20 @@ class FloaterTasksWidgetRefresher @Inject constructor(
         renderMutex.withLock {
             val widget = FloaterTasksWidget()
             val manager = AppWidgetManager.getInstance(context)
+            var updated = 0
             for (receiverClass in receiverClasses) {
                 val componentName = ComponentName(context, receiverClass)
                 val ids = runCatching { manager.getAppWidgetIds(componentName) }.getOrNull() ?: continue
                 for (appWidgetId in ids) {
                     runCatching { widget.update(context, AppWidgetId(appWidgetId)) }
+                        .onSuccess { updated++ }
+                        .onFailure { android.util.Log.w(WIDGET_LOG_TAG, "floater: update($appWidgetId) failed", it) }
                 }
             }
             runCatching { widget.updateAll(context) }
+            // See TodayTasksWidgetRefresher: 0 distinguishes "no widget placed" from "painted
+            // nothing".
+            android.util.Log.i(WIDGET_LOG_TAG, "floater: render requested for $updated widget id(s)")
         }
     }
 
