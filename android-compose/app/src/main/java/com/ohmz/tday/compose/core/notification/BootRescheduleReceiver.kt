@@ -15,6 +15,7 @@ import androidx.core.content.ContextCompat
 import com.ohmz.tday.compose.MainActivity
 import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.observability.TdayTelemetry
+import com.ohmz.tday.compose.feature.widget.WIDGET_LOG_TAG
 import com.ohmz.tday.compose.feature.widget.WidgetEntryPoint
 import com.ohmz.tday.compose.feature.widget.WidgetSyncWorker
 import dagger.hilt.android.EntryPointAccessors
@@ -33,6 +34,9 @@ class BootRescheduleReceiver : BroadcastReceiver() {
 
         TdayTelemetry.addBreadcrumb("reminder.reschedule", data = mapOf("source" to "boot_receiver"))
         Log.d(LOG_TAG, "Received boot/update action for reminder reschedule")
+        // Logged under the widget tag too: whether this receiver ran at all is the first fork in
+        // diagnosing a widget that stays blank after a reboot.
+        Log.i(WIDGET_LOG_TAG, "boot: receiver fired (action=$action)")
 
         val pending = goAsync()
         CoroutineScope(Dispatchers.Default).launch {
@@ -61,20 +65,28 @@ class BootRescheduleReceiver : BroadcastReceiver() {
                         context.applicationContext,
                         WidgetEntryPoint::class.java,
                     )
+                    Log.i(WIDGET_LOG_TAG, "boot: cache render starting (action=$action)")
+                    val startedAtMs = System.currentTimeMillis()
                     // Bounded because this runs inside goAsync's window, which the system
                     // closes if we take too long — a slow render must not hold the broadcast.
                     withTimeout(WIDGET_CACHE_RENDER_TIMEOUT_MS) {
                         widgetEntryPoint.todayTasksWidgetRefresher().refreshNow()
                         widgetEntryPoint.floaterTasksWidgetRefresher().refreshNow()
                     }
-                }.onFailure { Log.w(LOG_TAG, "Widget cache render after boot/update failed", it) }
+                    Log.i(
+                        WIDGET_LOG_TAG,
+                        "boot: cache render finished in ${System.currentTimeMillis() - startedAtMs}ms",
+                    )
+                }.onFailure { Log.w(WIDGET_LOG_TAG, "boot: cache render FAILED", it) }
 
                 // Phase two — fresh data from the server. Handed to WorkManager rather than run
                 // here: it owns the retry/backoff, survives this receiver, and can wait for
                 // connectivity that may not exist yet seconds after a boot. Its cache
                 // write-through is what repaints the widgets with whatever the server returned.
-                runCatching { WidgetSyncWorker.runOnce(context.applicationContext) }
-                    .onFailure { Log.w(LOG_TAG, "Widget server sync after boot/update failed to enqueue", it) }
+                runCatching {
+                    WidgetSyncWorker.runOnce(context.applicationContext)
+                    Log.i(WIDGET_LOG_TAG, "boot: server sync enqueued")
+                }.onFailure { Log.w(WIDGET_LOG_TAG, "boot: server sync FAILED to enqueue", it) }
                 if (action == Intent.ACTION_MY_PACKAGE_REPLACED) {
                     showUpdateReadyNotification(context)
                 }
