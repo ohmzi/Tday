@@ -1,4 +1,4 @@
-package com.ohmz.tday.compose.feature.widget
+package com.ohmz.tday.compose.feature.widget.snapshot
 
 import com.ohmz.tday.compose.core.data.CachedTodoRecord
 import com.ohmz.tday.compose.core.data.OfflineSyncState
@@ -8,14 +8,14 @@ import org.junit.Test
 import java.time.LocalDate
 import java.time.ZoneId
 
-class TodayTasksWidgetModelTest {
+class TodayWidgetSnapshotBuilderTest {
     private val zoneId = ZoneId.of("UTC")
     private val today = LocalDate.of(2026, 5, 30)
     private val dayStart = today.atStartOfDay(zoneId).toInstant().toEpochMilli()
 
     @Test
-    fun `model includes only pending scheduled tasks due today`() {
-        val model = buildTodayTasksWidgetModel(
+    fun `snapshot includes only pending scheduled tasks due today`() {
+        val snapshot = buildTodayWidgetSnapshot(
             state = OfflineSyncState(
                 todos = listOf(
                     todo(id = "yesterday", title = "Yesterday", dueEpochMs = dayStart - 1),
@@ -31,38 +31,36 @@ class TodayTasksWidgetModelTest {
                     todo(id = "floater-shaped", title = "No due", dueEpochMs = null),
                 ),
             ),
-            title = "Today's Tasks",
             workspaceConfigured = true,
             today = today,
             zoneId = zoneId,
         )
 
-        assertEquals(TodayTasksWidgetStatus.TASKS, model.status)
-        assertEquals(2, model.taskCount)
-        assertEquals(listOf("soon", "later"), model.tasks.map { it.id })
+        assertEquals(WidgetSnapshotStatus.TASKS, snapshot.status)
+        assertEquals(2, snapshot.taskCount)
+        assertEquals(listOf("soon", "later"), snapshot.rows.map { it.id })
     }
 
     @Test
-    fun `model sorts same-time tasks by title`() {
+    fun `snapshot sorts same-time tasks by title`() {
         val due = dayStart + 10 * 3_600_000
-        val model = buildTodayTasksWidgetModel(
+        val snapshot = buildTodayWidgetSnapshot(
             state = OfflineSyncState(
                 todos = listOf(
                     todo(id = "b", title = "Beta", dueEpochMs = due),
                     todo(id = "a", title = "Alpha", dueEpochMs = due),
                 ),
             ),
-            title = "Today's Tasks",
             workspaceConfigured = true,
             today = today,
             zoneId = zoneId,
         )
 
-        assertEquals(listOf("a", "b"), model.tasks.map { it.id })
+        assertEquals(listOf("a", "b"), snapshot.rows.map { it.id })
     }
 
     @Test
-    fun `model caps display tasks but preserves total count`() {
+    fun `snapshot caps display tasks but preserves total count`() {
         val todos = (0 until 55).map { index ->
             todo(
                 id = "task-$index",
@@ -71,51 +69,78 @@ class TodayTasksWidgetModelTest {
             )
         }
 
-        val model = buildTodayTasksWidgetModel(
+        val snapshot = buildTodayWidgetSnapshot(
             state = OfflineSyncState(todos = todos),
-            title = "Today's Tasks",
             workspaceConfigured = true,
             today = today,
             zoneId = zoneId,
         )
 
-        assertEquals(55, model.taskCount)
-        assertEquals(50, model.tasks.size)
-        assertEquals(5, model.overflowCount)
-        assertEquals("task-0", model.tasks.first().id)
-        assertEquals("task-49", model.tasks.last().id)
+        assertEquals(55, snapshot.taskCount)
+        assertEquals(50, snapshot.rows.size)
+        assertEquals(5, snapshot.overflowCount)
+        assertEquals("task-0", snapshot.rows.first().id)
+        assertEquals("task-49", snapshot.rows.last().id)
     }
 
     @Test
-    fun `model exposes empty state for configured workspaces without due-today tasks`() {
-        val model = buildTodayTasksWidgetModel(
+    fun `snapshot exposes empty state for configured workspaces without due-today tasks`() {
+        val snapshot = buildTodayWidgetSnapshot(
             state = OfflineSyncState(),
-            title = "Today's Tasks",
             workspaceConfigured = true,
             today = today,
             zoneId = zoneId,
         )
 
-        assertEquals(TodayTasksWidgetStatus.EMPTY, model.status)
-        assertEquals(0, model.taskCount)
-        assertTrue(model.tasks.isEmpty())
+        assertEquals(WidgetSnapshotStatus.EMPTY, snapshot.status)
+        assertEquals(0, snapshot.taskCount)
+        assertTrue(snapshot.rows.isEmpty())
     }
 
     @Test
-    fun `model exposes setup state before workspace configuration`() {
-        val model = buildTodayTasksWidgetModel(
+    fun `snapshot exposes setup state before workspace configuration`() {
+        val snapshot = buildTodayWidgetSnapshot(
             state = OfflineSyncState(
                 todos = listOf(todo(id = "today", title = "Today", dueEpochMs = dayStart + 60_000)),
             ),
-            title = "Today's Tasks",
             workspaceConfigured = false,
             today = today,
             zoneId = zoneId,
         )
 
-        assertEquals(TodayTasksWidgetStatus.SETUP, model.status)
-        assertEquals(0, model.taskCount)
-        assertTrue(model.tasks.isEmpty())
+        assertEquals(WidgetSnapshotStatus.SETUP, snapshot.status)
+        assertEquals(0, snapshot.taskCount)
+        assertTrue(snapshot.rows.isEmpty())
+    }
+
+    @Test
+    fun `snapshot buckets priority into the ring`() {
+        val snapshot = buildTodayWidgetSnapshot(
+            state = OfflineSyncState(
+                todos = listOf(
+                    todo(id = "high", title = "High", dueEpochMs = dayStart, priority = "High"),
+                    todo(
+                        id = "medium",
+                        title = "Medium",
+                        dueEpochMs = dayStart + 60_000,
+                        priority = "Medium",
+                    ),
+                    todo(id = "low", title = "Low", dueEpochMs = dayStart + 120_000, priority = "Low"),
+                ),
+            ),
+            workspaceConfigured = true,
+            today = today,
+            zoneId = zoneId,
+        )
+
+        assertEquals(
+            mapOf(
+                "high" to WidgetPriorityRing.HIGH,
+                "medium" to WidgetPriorityRing.MEDIUM,
+                "low" to WidgetPriorityRing.LOW,
+            ),
+            snapshot.rows.associate { it.id to it.priorityRing },
+        )
     }
 
     private fun todo(
@@ -123,12 +148,14 @@ class TodayTasksWidgetModelTest {
         title: String,
         dueEpochMs: Long?,
         completed: Boolean = false,
+        priority: String = "Low",
     ) = CachedTodoRecord(
         id = id,
         canonicalId = id,
         title = title,
         dueEpochMs = dueEpochMs,
         completed = completed,
+        priority = priority,
         updatedAtEpochMs = dueEpochMs ?: 0L,
     )
 }
