@@ -64,6 +64,14 @@ class TodayTasksWidget : GlanceAppWidget() {
         // composition below is what keeps it current from then on.
         val initialVersion = cacheManager.cacheDataVersion.value
         val initialModel = loadModel()
+        // Fires once per Glance session. Its absence after a reboot means the widget was never
+        // composed at all; its presence with status=EMPTY means it composed against an empty
+        // cache — two very different faults.
+        android.util.Log.i(
+            WIDGET_LOG_TAG,
+            "today: provideGlance session start, status=${initialModel.status} " +
+                "count=${initialModel.taskCount} cacheVersion=$initialVersion",
+        )
         val strings = TodayTasksWidgetStrings(
             emptyMessage = appContext.getString(R.string.widget_today_tasks_empty),
             setupTitle = appContext.getString(R.string.widget_today_tasks_setup_title),
@@ -85,7 +93,13 @@ class TodayTasksWidget : GlanceAppWidget() {
             val isAppLocked by securityPreferenceStore.appLockEnabled.collectAsState()
             val model by produceState(initialModel, cacheVersion) {
                 if (cacheVersion == initialVersion) return@produceState
-                value = loadModel()
+                val reloaded = loadModel()
+                android.util.Log.i(
+                    WIDGET_LOG_TAG,
+                    "today: recomposed on cacheVersion=$cacheVersion, " +
+                        "status=${reloaded.status} count=${reloaded.taskCount}",
+                )
+                value = reloaded
             }
             // Inside the composition so the day/night artwork follows the clock too.
             val visuals = todayWidgetVisuals(taskWidgetIsDaytime(LocalTime.now().hour))
