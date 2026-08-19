@@ -58,7 +58,12 @@ class MainActivity : AppCompatActivity() {
         setTheme(R.style.Theme_Tday)
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        val launchIntent = intent.withTdayDeepLinkData()
+        // withoutTaskRestartFlags: Navigation handles the activity's launch intent itself when the
+        // graph is set, and its handleDeepLink RESTARTS the whole task (TaskStackBuilder +
+        // finish()) whenever that intent carries FLAG_ACTIVITY_NEW_TASK — which every widget and
+        // notification PendingIntent must set. Clearing the flags on the activity's own intent is
+        // what stops the restart; doing it only at our handleDeepLink call site is not enough.
+        val launchIntent = intent.withTdayDeepLinkData().withoutTaskRestartFlags()
         setIntent(launchIntent)
         dispatchDeepLinkIntent(launchIntent)
         setContent {
@@ -146,7 +151,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        val deepLinkIntent = intent.withTdayDeepLinkData()
+        val deepLinkIntent = intent.withTdayDeepLinkData().withoutTaskRestartFlags()
         setIntent(deepLinkIntent)
         dismissUpdateReadyNotification()
         dispatchDeepLinkIntent(deepLinkIntent)
