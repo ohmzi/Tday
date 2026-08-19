@@ -16,10 +16,12 @@ import com.ohmz.tday.compose.MainActivity
 import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.observability.TdayTelemetry
 import com.ohmz.tday.compose.feature.widget.WidgetEntryPoint
+import com.ohmz.tday.compose.feature.widget.WidgetSyncWorker
 import dagger.hilt.android.EntryPointAccessors
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeout
 
 class BootRescheduleReceiver : BroadcastReceiver() {
 
@@ -40,10 +42,18 @@ class BootRescheduleReceiver : BroadcastReceiver() {
                     ReminderReceiverEntryPoint::class.java,
                 )
                 entryPoint.taskReminderScheduler().rescheduleAll()
-                // Paint the widgets from cache right away. A reboot leaves them showing their
-                // initialLayout ("Loading tasks…") until something starts this process, and
-                // updatePeriodMillis only promises a render every 30 minutes — so without this
-                // the home screen can sit on the placeholder for a long while after a restart.
+                // Two-phase widget refresh after a reboot, the way the stock system widgets
+                // behave: show the PREVIOUSLY LOADED data immediately, then catch up to the
+                // server.
+                //
+                // Phase one — paint from the offline cache (no network), so the home screen is
+                // useful straight away. The static initialLayout ("Loading tasks…") is
+                // unavoidable as the very first frame, because Android does not persist a
+                // widget's RemoteViews across a reboot and the launcher inflates that XML until
+                // some provider renders. This turns it into a blink rather than a wait for the
+                // next updatePeriodMillis tick, which the system schedules a full period out
+                // from boot.
+                //
                 // runCatching so a widget failure can never cost the reminder reschedule above;
                 // refreshNow (not requestRefresh) because goAsync's window closes on return.
                 runCatching {
@@ -51,9 +61,20 @@ class BootRescheduleReceiver : BroadcastReceiver() {
                         context.applicationContext,
                         WidgetEntryPoint::class.java,
                     )
-                    widgetEntryPoint.todayTasksWidgetRefresher().refreshNow()
-                    widgetEntryPoint.floaterTasksWidgetRefresher().refreshNow()
-                }.onFailure { Log.w(LOG_TAG, "Widget refresh after boot/update failed", it) }
+                    // Bounded because this runs inside goAsync's window, which the system
+                    // closes if we take too long — a slow render must not hold the broadcast.
+                    withTimeout(WIDGET_CACHE_RENDER_TIMEOUT_MS) {
+                        widgetEntryPoint.todayTasksWidgetRefresher().refreshNow()
+                        widgetEntryPoint.floaterTasksWidgetRefresher().refreshNow()
+                    }
+                }.onFailure { Log.w(LOG_TAG, "Widget cache render after boot/update failed", it) }
+
+                // Phase two — fresh data from the server. Handed to WorkManager rather than run
+                // here: it owns the retry/backoff, survives this receiver, and can wait for
+                // connectivity that may not exist yet seconds after a boot. Its cache
+                // write-through is what repaints the widgets with whatever the server returned.
+                runCatching { WidgetSyncWorker.runOnce(context.applicationContext) }
+                    .onFailure { Log.w(LOG_TAG, "Widget server sync after boot/update failed to enqueue", it) }
                 if (action == Intent.ACTION_MY_PACKAGE_REPLACED) {
                     showUpdateReadyNotification(context)
                 }
@@ -117,5 +138,12 @@ class BootRescheduleReceiver : BroadcastReceiver() {
         const val LOG_TAG = "BootRescheduleReceiver"
         const val UPDATE_CHANNEL_ID = "app_updates"
         const val UPDATE_NOTIFICATION_ID = 20_026
+
+        /**
+         * Ceiling for the cache-only widget render. Comfortably longer than a Room read plus a
+         * Glance composition, while staying well inside the window the system allows a
+         * goAsync() broadcast — boot is congested, so this is a backstop, not a budget.
+         */
+        private const val WIDGET_CACHE_RENDER_TIMEOUT_MS = 10_000L
     }
 }
