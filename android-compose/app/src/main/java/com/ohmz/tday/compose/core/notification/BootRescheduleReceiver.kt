@@ -15,6 +15,7 @@ import androidx.core.content.ContextCompat
 import com.ohmz.tday.compose.MainActivity
 import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.observability.TdayTelemetry
+import com.ohmz.tday.compose.feature.widget.WidgetEntryPoint
 import dagger.hilt.android.EntryPointAccessors
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -39,6 +40,20 @@ class BootRescheduleReceiver : BroadcastReceiver() {
                     ReminderReceiverEntryPoint::class.java,
                 )
                 entryPoint.taskReminderScheduler().rescheduleAll()
+                // Paint the widgets from cache right away. A reboot leaves them showing their
+                // initialLayout ("Loading tasks…") until something starts this process, and
+                // updatePeriodMillis only promises a render every 30 minutes — so without this
+                // the home screen can sit on the placeholder for a long while after a restart.
+                // runCatching so a widget failure can never cost the reminder reschedule above;
+                // refreshNow (not requestRefresh) because goAsync's window closes on return.
+                runCatching {
+                    val widgetEntryPoint = EntryPointAccessors.fromApplication(
+                        context.applicationContext,
+                        WidgetEntryPoint::class.java,
+                    )
+                    widgetEntryPoint.todayTasksWidgetRefresher().refreshNow()
+                    widgetEntryPoint.floaterTasksWidgetRefresher().refreshNow()
+                }.onFailure { Log.w(LOG_TAG, "Widget refresh after boot/update failed", it) }
                 if (action == Intent.ACTION_MY_PACKAGE_REPLACED) {
                     showUpdateReadyNotification(context)
                 }
