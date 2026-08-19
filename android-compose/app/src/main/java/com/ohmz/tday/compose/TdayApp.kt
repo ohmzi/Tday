@@ -1,5 +1,6 @@
 package com.ohmz.tday.compose
 
+import android.content.Intent
 import android.net.Uri
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.EnterTransition
@@ -210,7 +211,7 @@ fun TdayApp(
         // auth was ready — which flashed the login screen and fired a generic
         // "something went wrong" error toast before settling. Consume it after so it fires once.
         if (!appUiState.isWorkspaceAvailable) return@LaunchedEffect
-        navController.handleDeepLink(intent)
+        navController.handleDeepLink(intent.withoutTaskRestartFlags())
         activity?.consumeDeepLink()
     }
     LaunchedEffect(
@@ -1633,4 +1634,32 @@ private fun unauthenticatedScheduledTaskHomeUiState(lockedListName: String): Sch
         ),
         errorMessage = null,
     )
+}
+
+/**
+ * A copy of a deep-link intent with the task-restart flags cleared.
+ *
+ * `NavController.handleDeepLink` does not navigate in place when the intent carries
+ * `FLAG_ACTIVITY_NEW_TASK`: it deliberately rebuilds the whole task through a `TaskStackBuilder`
+ * and calls `finish()` on the current activity, because it cannot know what state a
+ * externally-started task is in. Every widget and notification PendingIntent has to set
+ * `NEW_TASK` to launch from outside the app, so tapping a widget landed us in that path — the
+ * launcher started MainActivity, and ~0.4s later Navigation finished it and started a second one
+ * (visible in logcat as two `START ... dat=tday://floater` lines, the second with
+ * `flg=0x1400c000`, plus `Duplicate finish request`).
+ *
+ * That teardown is what the user sees: the first instance dies mid-bootstrap, its in-flight
+ * `/api/auth/session` and `/api/mobile/probe` calls abort with "stream was reset: CANCEL", the app
+ * falls back to the login screen and fires the generic "something went wrong" toast, and only then
+ * does the replacement instance finish bootstrapping and navigate to the deep-linked screen.
+ *
+ * Stripping the flags here (and only here — the PendingIntent still needs them) keeps the deep
+ * link a normal in-place navigation on the activity that is already running.
+ */
+internal fun Intent.withoutTaskRestartFlags(): Intent {
+    val taskRestartFlags = Intent.FLAG_ACTIVITY_NEW_TASK or
+        Intent.FLAG_ACTIVITY_CLEAR_TASK or
+        Intent.FLAG_ACTIVITY_TASK_ON_HOME
+    if (flags and taskRestartFlags == 0) return this
+    return Intent(this).apply { flags = this@withoutTaskRestartFlags.flags and taskRestartFlags.inv() }
 }

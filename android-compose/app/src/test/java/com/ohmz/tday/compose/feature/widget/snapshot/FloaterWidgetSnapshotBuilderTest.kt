@@ -1,4 +1,4 @@
-package com.ohmz.tday.compose.feature.widget
+package com.ohmz.tday.compose.feature.widget.snapshot
 
 import com.ohmz.tday.compose.core.data.CachedFloaterRecord
 import com.ohmz.tday.compose.core.data.OfflineSyncState
@@ -6,10 +6,10 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class FloaterTasksWidgetModelTest {
+class FloaterWidgetSnapshotBuilderTest {
     @Test
-    fun `model includes only pending floater tasks`() {
-        val model = buildFloaterTasksWidgetModel(
+    fun `snapshot includes only pending floater tasks`() {
+        val snapshot = buildFloaterWidgetSnapshot(
             state = OfflineSyncState(
                 floaters = listOf(
                     floater(id = "open", title = "Open"),
@@ -17,18 +17,17 @@ class FloaterTasksWidgetModelTest {
                     floater(id = "completed", title = "Completed", completed = true),
                 ),
             ),
-            title = "Floater Tasks",
             workspaceConfigured = true,
         )
 
-        assertEquals(FloaterTasksWidgetStatus.TASKS, model.status)
-        assertEquals(2, model.taskCount)
-        assertEquals(listOf("listed", "open"), model.tasks.map { it.id })
+        assertEquals(WidgetSnapshotStatus.TASKS, snapshot.status)
+        assertEquals(2, snapshot.taskCount)
+        assertEquals(listOf("listed", "open"), snapshot.rows.map { it.id })
     }
 
     @Test
-    fun `model sorts by pinned priority title and id`() {
-        val model = buildFloaterTasksWidgetModel(
+    fun `snapshot sorts by pinned priority title and id`() {
+        val snapshot = buildFloaterWidgetSnapshot(
             state = OfflineSyncState(
                 floaters = listOf(
                     floater(id = "low-a", title = "Alpha", priority = "Low"),
@@ -39,61 +38,57 @@ class FloaterTasksWidgetModelTest {
                     floater(id = "urgent-b", title = "Alpha", priority = "Important"),
                 ),
             ),
-            title = "Floater Tasks",
             workspaceConfigured = true,
         )
 
         assertEquals(
             listOf("pinned-low", "urgent-a", "high-b", "medium-a", "urgent-b", "low-a"),
-            model.tasks.map { it.id },
+            snapshot.rows.map { it.id },
         )
     }
 
     @Test
-    fun `model caps display tasks but preserves total count`() {
+    fun `snapshot caps display tasks but preserves total count`() {
         val floaters = (0 until 55).map { index ->
             floater(id = "task-$index", title = "Task ${index.toString().padStart(2, '0')}")
         }
 
-        val model = buildFloaterTasksWidgetModel(
+        val snapshot = buildFloaterWidgetSnapshot(
             state = OfflineSyncState(floaters = floaters),
-            title = "Floater Tasks",
             workspaceConfigured = true,
         )
 
-        assertEquals(55, model.taskCount)
-        assertEquals(50, model.tasks.size)
-        assertEquals(5, model.overflowCount)
-        assertEquals("task-0", model.tasks.first().id)
-        assertEquals("task-49", model.tasks.last().id)
+        assertEquals(55, snapshot.taskCount)
+        assertEquals(50, snapshot.rows.size)
+        assertEquals(5, snapshot.overflowCount)
+        assertEquals("task-0", snapshot.rows.first().id)
+        assertEquals("task-49", snapshot.rows.last().id)
     }
 
     @Test
-    fun `model exposes empty state for configured workspaces without floater tasks`() {
-        val model = buildFloaterTasksWidgetModel(
+    fun `snapshot exposes empty state for configured workspaces without floater tasks`() {
+        val snapshot = buildFloaterWidgetSnapshot(
             state = OfflineSyncState(),
-            title = "Floater Tasks",
             workspaceConfigured = true,
         )
 
-        assertEquals(FloaterTasksWidgetStatus.EMPTY, model.status)
-        assertEquals(0, model.taskCount)
-        assertTrue(model.tasks.isEmpty())
+        assertEquals(WidgetSnapshotStatus.EMPTY, snapshot.status)
+        assertEquals(0, snapshot.taskCount)
+        assertTrue(snapshot.rows.isEmpty())
     }
 
     @Test
-    fun `model exposes setup state before workspace configuration`() {
-        val model = buildFloaterTasksWidgetModel(
+    fun `snapshot exposes setup state before workspace configuration`() {
+        val snapshot = buildFloaterWidgetSnapshot(
             state = OfflineSyncState(
                 floaters = listOf(floater(id = "floater", title = "Floater")),
             ),
-            title = "Floater Tasks",
             workspaceConfigured = false,
         )
 
-        assertEquals(FloaterTasksWidgetStatus.SETUP, model.status)
-        assertEquals(0, model.taskCount)
-        assertTrue(model.tasks.isEmpty())
+        assertEquals(WidgetSnapshotStatus.SETUP, snapshot.status)
+        assertEquals(0, snapshot.taskCount)
+        assertTrue(snapshot.rows.isEmpty())
     }
 
     private fun floater(
