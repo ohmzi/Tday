@@ -198,7 +198,7 @@ extension View {
             get: { isPresented.wrappedValue },
             set: { newValue in
                 if newValue {
-                    TdayFullScreenCoverTransitionSwizzle.pendingCrossDissolve = true
+                    TdayFullScreenCoverTransitionSwizzle.pendingUnanimatedPresentation = true
                 }
                 isPresented.wrappedValue = newValue
             }
@@ -219,7 +219,7 @@ extension View {
             get: { item.wrappedValue },
             set: { newValue in
                 if newValue != nil {
-                    TdayFullScreenCoverTransitionSwizzle.pendingCrossDissolve = true
+                    TdayFullScreenCoverTransitionSwizzle.pendingUnanimatedPresentation = true
                 }
                 item.wrappedValue = newValue
             }
@@ -361,29 +361,38 @@ private struct TdayBottomSheetContentHeightPreferenceKey: PreferenceKey {
 
 /// SwiftUI gives `fullScreenCover` no way to opt out of its default
 /// `coverVertical` modal transition, which slides the whole presented view
-/// controller — our scrim included — up from the bottom on presentation
-/// (and back down on dismissal). UIKit reads `modalTransitionStyle` at
-/// `present(_:animated:completion:)` call time, before the presented
-/// content's view is ever loaded, so nothing running from inside that
-/// content (a child `UIViewControllerRepresentable`, `.onAppear`, etc.) can
-/// reach the presented controller in time — by the time such code runs,
-/// `present()` has already committed to the default transition. Inspecting
-/// `viewControllerToPresent` itself doesn't work either: SwiftUI type-erases
-/// fullScreenCover content to `PresentationHostingController<AnyView>`, and
-/// the real view value is buried behind SwiftUI's internal view-graph
-/// plumbing, not reachable via `Mirror` in any reasonably bounded walk.
+/// controller — our scrim included — up from the bottom, so the dim layer
+/// arrives as a hard-edged band climbing the screen instead of a fade.
 ///
-/// So this swizzles `present(_:animated:completion:)` itself — the one place
-/// guaranteed to run before UIKit reads the transition style — and scopes it
-/// with a flag set synchronously the instant our own binding flips to
-/// true/non-nil in `tdayBottomSheetPresentation`, which happens before
-/// SwiftUI's next run-loop pass actually calls `present()`. Any present()
-/// call that fires while the flag is set is presumed to be ours; the flag is
-/// consumed (reset) on first use so it can't leak onto an unrelated present.
-/// `TdayBottomSheetPresentationHost` then supplies the card's own slide via
-/// `contentOffset`, leaving the scrim to fade in isolation like a native sheet.
+/// Setting `modalTransitionStyle = .crossDissolve` does NOT fix this: SwiftUI
+/// presents transparent-background covers through its own presentation path
+/// (the controller carries `legacyPresentationWantsTransparentBackground` /
+/// `bridgedPresentationWantsTransparentBackground`), and that path ignores
+/// `modalTransitionStyle` — verified on device, the band survived it.
+///
+/// So instead of trying to pick a different container animation, this removes
+/// the container animation entirely: present with `animated: false`, so the
+/// cover simply exists, with the scrim already at opacity 0 and the card
+/// already parked offscreen via `contentOffset`. There is no container slide
+/// for the scrim to ride on, and `TdayBottomSheetPresentationHost.onAppear`
+/// then does all the visible work — the scrim fades in place while only the
+/// card travels upward, which is how native `.sheet()` reads.
+///
+/// The presentation is identified by a flag set synchronously the instant our
+/// own binding flips to true/non-nil in `tdayBottomSheetPresentation`, which
+/// happens before SwiftUI's next run-loop pass actually calls `present()`.
+/// Matching on the presented controller instead is not viable: SwiftUI
+/// type-erases the content to `PresentationHostingController<AnyView>` and
+/// buries the real view value behind view-graph plumbing `Mirror` can't
+/// reach in any bounded walk. The flag is consumed on first use so it cannot
+/// leak onto an unrelated presentation.
+///
+/// Dismissal is deliberately left animated — the container's downward slide
+/// is masked by the scrim's own 0.18s fade-out, so it reads correctly and
+/// still covers dismissals that bypass `dismissSheet()` (e.g. a caller just
+/// setting `isPresented = false` after saving).
 private enum TdayFullScreenCoverTransitionSwizzle {
-    static var pendingCrossDissolve = false
+    static var pendingUnanimatedPresentation = false
 
     static let installOnce: Void = {
         guard
@@ -408,9 +417,10 @@ extension UIViewController {
         animated: Bool,
         completion: (() -> Void)?
     ) {
-        if TdayFullScreenCoverTransitionSwizzle.pendingCrossDissolve {
-            TdayFullScreenCoverTransitionSwizzle.pendingCrossDissolve = false
-            viewControllerToPresent.modalTransitionStyle = .crossDissolve
+        var animated = animated
+        if TdayFullScreenCoverTransitionSwizzle.pendingUnanimatedPresentation {
+            TdayFullScreenCoverTransitionSwizzle.pendingUnanimatedPresentation = false
+            animated = false
         }
         // Swapped via method_exchangeImplementations, so this recurses into
         // the original present(_:animated:completion:), not itself.
