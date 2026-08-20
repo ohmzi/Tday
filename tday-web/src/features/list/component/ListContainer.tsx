@@ -26,6 +26,7 @@ import { Button } from "@/components/ui/button";
 import { useLocale } from "@/lib/navigation";
 import { useUserTimezone } from "@/features/user/query/get-timezone";
 import { Pencil, Search, Users, X } from "lucide-react";
+import { flattenNotesToPlainText } from "@/lib/richNotes";
 
 const ListContainer = ({ id }: { id: string }) => {
     const locale = useLocale();
@@ -44,7 +45,7 @@ const ListContainer = ({ id }: { id: string }) => {
         if (!query) return listTodos;
         return listTodos.filter((todo) => {
             const title = todo.title.toLowerCase();
-            const description = (todo.description || "").toLowerCase();
+            const description = flattenNotesToPlainText(todo.description).toLowerCase();
             return title.includes(query) || description.includes(query);
         });
     }, [listTodos, searchQuery]);

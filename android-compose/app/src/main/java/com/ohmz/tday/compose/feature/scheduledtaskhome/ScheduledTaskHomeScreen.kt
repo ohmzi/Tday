@@ -169,6 +169,7 @@ import java.time.LocalTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import com.ohmz.tday.compose.core.text.flattenNotesToPlainText
 
 // Maps a domain TodoItem onto the shared sort key so this feed orders tasks
 // through the one TaskSortEngine (identical order to every other T'Day surface).
@@ -322,7 +323,8 @@ fun ScheduledTaskHomeScreen(
                 .asSequence()
                 .filter { todo ->
                     todo.title.lowercase(Locale.getDefault()).contains(normalizedSearchQuery) ||
-                        (todo.description?.lowercase(Locale.getDefault())?.contains(normalizedSearchQuery) == true) ||
+                        flattenNotesToPlainText(todo.description).lowercase(Locale.getDefault())
+                            .contains(normalizedSearchQuery) ||
                         (todo.listId?.let { listById[it]?.name }?.lowercase(Locale.getDefault())
                             ?.contains(normalizedSearchQuery) == true)
                 }
@@ -1902,7 +1904,7 @@ private fun ScheduledTaskHomeTodayTaskRow(
                                 color = subtitleColor,
                             )
                         }
-                        todo.description?.takeIf { it.isNotBlank() }?.let { note ->
+                        flattenNotesToPlainText(todo.description).takeIf { it.isNotBlank() }?.let { note ->
                             Text(
                                 text = note,
                                 style = MaterialTheme.typography.bodySmall,
