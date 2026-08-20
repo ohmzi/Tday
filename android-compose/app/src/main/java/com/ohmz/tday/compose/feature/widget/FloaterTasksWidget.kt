@@ -6,19 +6,22 @@ import android.content.Intent
 import android.net.Uri
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import androidx.glance.GlanceId
 import androidx.glance.GlanceTheme
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.provideContent
+import androidx.glance.state.GlanceStateDefinition
 import com.ohmz.tday.compose.BuildConfig
 import com.ohmz.tday.compose.MainActivity
 import com.ohmz.tday.compose.R
-import com.ohmz.tday.compose.core.data.AppDataMode
 import com.ohmz.tday.compose.core.data.AppSecurityPreferenceStore
-import dagger.hilt.android.EntryPointAccessors
+import com.ohmz.tday.compose.feature.widget.snapshot.WidgetSnapshot
+import com.ohmz.tday.compose.feature.widget.snapshot.WidgetSnapshotKind
+import com.ohmz.tday.compose.feature.widget.snapshot.WidgetSnapshotSignal
+import com.ohmz.tday.compose.feature.widget.snapshot.WidgetSnapshotStore
 import java.util.Locale
 
 private val FloaterWidgetVisuals = TaskWidgetVisuals(
@@ -32,27 +35,16 @@ private val FloaterWidgetVisuals = TaskWidgetVisuals(
 class FloaterTasksWidget : GlanceAppWidget() {
     override val sizeMode: SizeMode = SizeMode.Responsive(TaskWidgetResponsiveSizes)
 
+    // See TodayTasksWidget: this app never reads Glance's own state store.
+    override val stateDefinition: GlanceStateDefinition<*>? = null
+
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val entryPoint = EntryPointAccessors.fromApplication(
-            context.applicationContext,
-            WidgetEntryPoint::class.java,
-        )
-        val cacheManager = entryPoint.offlineCacheManager()
-        val secureConfigStore = entryPoint.secureConfigStore()
-        val securityPreferenceStore = AppSecurityPreferenceStore(context.applicationContext)
+        // See TodayTasksWidget for the full rationale — no EntryPointAccessors / Hilt / DB on
+        // this path. Both stores below are constructed directly from applicationContext.
         val appContext = context.applicationContext
+        val securityPreferenceStore = AppSecurityPreferenceStore(appContext)
+        val snapshotStore = WidgetSnapshotStore(appContext)
         val title = appContext.getString(R.string.widget_floater_tasks_title)
-        val loadModel: suspend () -> FloaterTasksWidgetModel = {
-            buildFloaterTasksWidgetModel(
-                state = cacheManager.loadOfflineState(),
-                title = title,
-                workspaceConfigured = secureConfigStore.getAppDataMode() != AppDataMode.UNSET,
-            )
-        }
-        // Seeded once so the first frame paints real content instead of flashing empty; the
-        // composition below is what keeps it current from then on.
-        val initialVersion = cacheManager.cacheDataVersion.value
-        val initialModel = loadModel()
         val strings = FloaterTasksWidgetStrings(
             emptyMessage = appContext.getString(R.string.widget_floater_tasks_empty),
             setupTitle = appContext.getString(R.string.widget_today_tasks_setup_title),
@@ -61,42 +53,53 @@ class FloaterTasksWidget : GlanceAppWidget() {
             countLabelFormat = appContext.getString(R.string.widget_floater_tasks_count),
         )
 
+        // App lock is checked FIRST, before anything reads a snapshot off disk — a locked
+        // device never touches task content at all. Plain SharedPreferences, no Keystore.
+        val initialLocked = securityPreferenceStore.appLockEnabled.value
+        // No snapshot yet and not locked: a fresh install, an upgrade that rebooted before the
+        // app was ever opened, or a file that fails to decrypt/decode (WidgetSnapshotStore.read
+        // deletes it in that case, so `exists` stays truthful). Hydrate off the render path.
+        if (!initialLocked && !snapshotStore.exists(WidgetSnapshotKind.FLOATER)) {
+            WidgetHydrateWorker.runOnce(appContext)
+        }
+
         provideContent {
-            // See TodayTasksWidget: provideGlance runs once per Glance session, so reading
-            // the cache or the lock flag outside this lambda freezes the widget until the
-            // session is recreated. Both are collected as composable state so a change
-            // recomposes in place.
-            val cacheVersion by cacheManager.cacheDataVersion.collectAsState()
+            // See TodayTasksWidget: provideGlance runs once per Glance session, so reading the
+            // snapshot or the lock flag outside this lambda freezes the widget until the session
+            // is recreated. Both are collected as composable state so a change recomposes in
+            // place.
             val isAppLocked by securityPreferenceStore.appLockEnabled.collectAsState()
-            val model by produceState(initialModel, cacheVersion) {
-                if (cacheVersion == initialVersion) return@produceState
-                value = loadModel()
+            val snapshotVersion by WidgetSnapshotSignal.version.collectAsState()
+            // `remember`, not `produceState` — see TodayTasksWidget for why: this widget is what
+            // actually caught the LOADING → hydrate → repaint race that left it stuck on
+            // "Loading tasks…" indefinitely. `remember` recomputes inline in the same recompose
+            // pass, so there's no async gap for that race to happen in.
+            val currentSnapshot = remember(snapshotVersion, isAppLocked) {
+                if (isAppLocked) null else snapshotStore.readFloater()
             }
 
             GlanceTheme {
                 TaskWidgetContent(
-                    title = model.title,
-                    // Checked BEFORE any task content is touched below, so a locked device
-                    // never even builds rows carrying real titles into the Glance tree.
-                    state = if (isAppLocked) TaskWidgetContentState.LOCKED else model.status.toContentState(),
-                    taskCount = model.taskCount,
-                    countLabel = strings.countLabel(model.taskCount),
+                    title = title,
+                    state = floaterContentState(isAppLocked, currentSnapshot),
+                    countLabel = strings.countLabel(currentSnapshot?.taskCount ?: 0),
                     setupTitle = strings.setupTitle,
                     setupMessage = strings.setupMessage,
                     emptyTitle = strings.emptyMessage,
                     emptyMessage = strings.addTaskLabel,
                     lockedTitle = appContext.getString(R.string.widget_locked_title),
                     lockedMessage = appContext.getString(R.string.widget_locked_message),
-                    rows = if (isAppLocked) {
+                    loadingTitle = appContext.getString(R.string.widget_loading),
+                    rows = if (isAppLocked || currentSnapshot == null) {
                         emptyList()
                     } else {
-                        model.tasks.map { task ->
+                        currentSnapshot.rows.map { row ->
                             TaskWidgetRow(
-                                key = task.id.hashCode().toLong(),
-                                title = task.title,
-                                priority = task.priority,
-                                description = task.description,
-                                completeAction = completeFloaterTaskAction(task.id),
+                                key = row.key,
+                                title = row.title,
+                                priority = row.priorityRing.toPriorityValue(),
+                                description = row.description,
+                                completeAction = completeFloaterTaskAction(row.id),
                             )
                         }
                     },
@@ -117,12 +120,13 @@ private data class FloaterTasksWidgetStrings(
     val countLabelFormat: String,
 )
 
-private fun FloaterTasksWidgetStatus.toContentState(): TaskWidgetContentState {
-    return when (this) {
-        FloaterTasksWidgetStatus.SETUP -> TaskWidgetContentState.SETUP
-        FloaterTasksWidgetStatus.EMPTY -> TaskWidgetContentState.EMPTY
-        FloaterTasksWidgetStatus.TASKS -> TaskWidgetContentState.TASKS
-    }
+private fun floaterContentState(
+    isAppLocked: Boolean,
+    snapshot: WidgetSnapshot?,
+): TaskWidgetContentState = when {
+    isAppLocked -> TaskWidgetContentState.LOCKED
+    snapshot == null -> TaskWidgetContentState.LOADING
+    else -> snapshot.status.toContentState()
 }
 
 private fun FloaterTasksWidgetStrings.countLabel(count: Int): String {
