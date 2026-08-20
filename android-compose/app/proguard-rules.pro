@@ -61,6 +61,14 @@
 -dontwarn com.joestelmach.natty.**
 -dontwarn org.antlr.**
 -dontwarn org.apache.commons.**
+# ANTLR's old concurrent backport (edu.emory.mathcs) and its optional SLF4J
+# logging binding, plus the JDK-internal classes it probes for a perf
+# counter, are never actually present/used at runtime on Android — only
+# referenced defensively — so R8 just needs to stop treating them as errors.
+-dontwarn edu.emory.mathcs.backport.**
+-dontwarn org.slf4j.**
+-dontwarn sun.misc.Perf
+-dontwarn sun.misc.Unsafe
 
 # ── SQLCipher (encrypted offline cache) ─────────────────────────────
 # The native layer looks these classes and their members up by name through JNI, so R8 renaming
