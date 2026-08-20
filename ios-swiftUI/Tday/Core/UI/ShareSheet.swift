@@ -4,7 +4,8 @@ import UIKit
 struct ShareSheet {
     static func shareTask(_ todo: TodoItem) {
         var parts: [String] = [todo.title]
-        if let description = todo.description, !description.isEmpty {
+        let description = flattenNotesToPlainText(todo.description)
+        if !description.isEmpty {
             parts.append(description)
         }
         if let due = todo.due {

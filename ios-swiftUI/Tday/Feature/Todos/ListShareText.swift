@@ -17,8 +17,11 @@ func listShareText(listName: String, items: [TodoItem]) -> String {
         if let due = todo.due {
             lines.append("   " + L("Due: %@", dateFormatter.string(from: due)))
         }
-        if let notes = todo.description?.trimmingCharacters(in: .whitespacesAndNewlines), !notes.isEmpty {
-            lines.append("   \(notes)")
+        let notes = flattenNotesToPlainText(todo.description).trimmingCharacters(in: .whitespacesAndNewlines)
+        if !notes.isEmpty {
+            for line in notes.components(separatedBy: "\n") {
+                lines.append("   \(line)")
+            }
         }
     }
     lines.append("")

@@ -2968,8 +2968,10 @@ private struct CalendarPendingTaskRow: View {
                             .foregroundStyle(colors.onSurfaceVariant.opacity(0.8))
                     }
 
-                    if let description = todo.description?.trimmingCharacters(in: .whitespacesAndNewlines), !description.isEmpty {
-                        Text(description)
+                    let flattenedDescription = flattenNotesToPlainText(todo.description)
+                        .trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !flattenedDescription.isEmpty {
+                        Text(flattenedDescription)
                             .font(.tdayRounded(size: 12, weight: .semibold))
                             .foregroundStyle(colors.onSurfaceVariant)
                     }
