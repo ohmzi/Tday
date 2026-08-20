@@ -193,7 +193,17 @@ extension View {
         isPresented: Binding<Bool>,
         @ViewBuilder content: @escaping () -> SheetContent
     ) -> some View {
-        fullScreenCover(isPresented: isPresented) {
+        _ = TdayFullScreenCoverTransitionSwizzle.installOnce
+        let markedBinding = Binding<Bool>(
+            get: { isPresented.wrappedValue },
+            set: { newValue in
+                if newValue {
+                    TdayFullScreenCoverTransitionSwizzle.pendingCrossDissolve = true
+                }
+                isPresented.wrappedValue = newValue
+            }
+        )
+        return fullScreenCover(isPresented: markedBinding) {
             TdayBottomSheetPresentationHost {
                 content()
             }
@@ -204,7 +214,17 @@ extension View {
         item: Binding<Item?>,
         @ViewBuilder content: @escaping (Item) -> SheetContent
     ) -> some View {
-        fullScreenCover(item: item) { item in
+        _ = TdayFullScreenCoverTransitionSwizzle.installOnce
+        let markedBinding = Binding<Item?>(
+            get: { item.wrappedValue },
+            set: { newValue in
+                if newValue != nil {
+                    TdayFullScreenCoverTransitionSwizzle.pendingCrossDissolve = true
+                }
+                item.wrappedValue = newValue
+            }
+        )
+        return fullScreenCover(item: markedBinding) { item in
             TdayBottomSheetPresentationHost {
                 content(item)
             }
@@ -223,7 +243,7 @@ private struct TdayBottomSheetPresentationHost<SheetContent: View>: View {
     // container — scrim included — up from the bottom, so the dim layer
     // visibly rides along with the card instead of just fading (very
     // noticeable in light mode against a bright background behind it).
-    // TdayFullScreenCoverTransitionFixer neutralizes that container slide;
+    // TdayFullScreenCoverTransitionSwizzle neutralizes that container slide;
     // this offset supplies the card's own slide-up motion instead, so only
     // the card moves and the scrim purely fades, matching native .sheet().
     @State private var contentOffset: CGFloat = UIScreen.main.bounds.height
@@ -264,7 +284,6 @@ private struct TdayBottomSheetPresentationHost<SheetContent: View>: View {
         .ignoresSafeArea(.container, edges: .bottom)
         .ignoresSafeArea(.keyboard, edges: .bottom)
         .presentationBackground(.clear)
-        .background(TdayFullScreenCoverTransitionFixer())
         .onAppear {
             withAnimation(.easeOut(duration: 0.22)) {
                 scrimVisible = true
@@ -343,24 +362,59 @@ private struct TdayBottomSheetContentHeightPreferenceKey: PreferenceKey {
 /// SwiftUI gives `fullScreenCover` no way to opt out of its default
 /// `coverVertical` modal transition, which slides the whole presented view
 /// controller — our scrim included — up from the bottom on presentation
-/// (and back down on dismissal). Dropping an invisible UIViewController into
-/// the hierarchy lets us reach up to the actual presented controller and set
-/// `modalTransitionStyle = .crossDissolve`, so the container just fades;
+/// (and back down on dismissal). UIKit reads `modalTransitionStyle` at
+/// `present(_:animated:completion:)` call time, before the presented
+/// content's view is ever loaded, so nothing running from inside that
+/// content (a child `UIViewControllerRepresentable`, `.onAppear`, etc.) can
+/// reach the presented controller in time — by the time such code runs,
+/// `present()` has already committed to the default transition. Inspecting
+/// `viewControllerToPresent` itself doesn't work either: SwiftUI type-erases
+/// fullScreenCover content to `PresentationHostingController<AnyView>`, and
+/// the real view value is buried behind SwiftUI's internal view-graph
+/// plumbing, not reachable via `Mirror` in any reasonably bounded walk.
+///
+/// So this swizzles `present(_:animated:completion:)` itself — the one place
+/// guaranteed to run before UIKit reads the transition style — and scopes it
+/// with a flag set synchronously the instant our own binding flips to
+/// true/non-nil in `tdayBottomSheetPresentation`, which happens before
+/// SwiftUI's next run-loop pass actually calls `present()`. Any present()
+/// call that fires while the flag is set is presumed to be ours; the flag is
+/// consumed (reset) on first use so it can't leak onto an unrelated present.
 /// `TdayBottomSheetPresentationHost` then supplies the card's own slide via
 /// `contentOffset`, leaving the scrim to fade in isolation like a native sheet.
-private struct TdayFullScreenCoverTransitionFixer: UIViewControllerRepresentable {
-    func makeUIViewController(context: Context) -> UIViewController {
-        UIViewController()
-    }
+private enum TdayFullScreenCoverTransitionSwizzle {
+    static var pendingCrossDissolve = false
 
-    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
-        // Must run synchronously: modalTransitionStyle is read by UIKit at
-        // present(_:animated:) time. SwiftUI builds this representable's
-        // child controller (and sets its `parent`) before it calls present()
-        // on the fullScreenCover, so setting it here — not deferred via
-        // DispatchQueue.main.async — lands before that call and actually
-        // takes effect.
-        uiViewController.parent?.modalTransitionStyle = .crossDissolve
+    static let installOnce: Void = {
+        guard
+            let originalMethod = class_getInstanceMethod(
+                UIViewController.self,
+                #selector(UIViewController.present(_:animated:completion:))
+            ),
+            let swizzledMethod = class_getInstanceMethod(
+                UIViewController.self,
+                #selector(UIViewController.tdayBottomSheet_present(_:animated:completion:))
+            )
+        else {
+            return
+        }
+        method_exchangeImplementations(originalMethod, swizzledMethod)
+    }()
+}
+
+extension UIViewController {
+    @objc fileprivate func tdayBottomSheet_present(
+        _ viewControllerToPresent: UIViewController,
+        animated: Bool,
+        completion: (() -> Void)?
+    ) {
+        if TdayFullScreenCoverTransitionSwizzle.pendingCrossDissolve {
+            TdayFullScreenCoverTransitionSwizzle.pendingCrossDissolve = false
+            viewControllerToPresent.modalTransitionStyle = .crossDissolve
+        }
+        // Swapped via method_exchangeImplementations, so this recurses into
+        // the original present(_:animated:completion:), not itself.
+        tdayBottomSheet_present(viewControllerToPresent, animated: animated, completion: completion)
     }
 }
 
