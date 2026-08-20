@@ -219,6 +219,14 @@ private struct TdayBottomSheetPresentationHost<SheetContent: View>: View {
     @State private var keyboardFrame: CGRect?
     @State private var contentHeight: CGFloat = 0
     @State private var scrimVisible = false
+    // fullScreenCover's default UIKit transition slides the whole presented
+    // container — scrim included — up from the bottom, so the dim layer
+    // visibly rides along with the card instead of just fading (very
+    // noticeable in light mode against a bright background behind it).
+    // TdayFullScreenCoverTransitionFixer neutralizes that container slide;
+    // this offset supplies the card's own slide-up motion instead, so only
+    // the card moves and the scrim purely fades, matching native .sheet().
+    @State private var contentOffset: CGFloat = UIScreen.main.bounds.height
 
     init(@ViewBuilder content: () -> SheetContent) {
         self.content = content()
@@ -248,7 +256,7 @@ private struct TdayBottomSheetPresentationHost<SheetContent: View>: View {
                             )
                         }
                     }
-                    .offset(y: -keyboardBottomInset)
+                    .offset(y: contentOffset - keyboardBottomInset)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
         }
@@ -256,9 +264,13 @@ private struct TdayBottomSheetPresentationHost<SheetContent: View>: View {
         .ignoresSafeArea(.container, edges: .bottom)
         .ignoresSafeArea(.keyboard, edges: .bottom)
         .presentationBackground(.clear)
+        .background(TdayFullScreenCoverTransitionFixer())
         .onAppear {
             withAnimation(.easeOut(duration: 0.22)) {
                 scrimVisible = true
+            }
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.86)) {
+                contentOffset = 0
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillChangeFrameNotification)) { notification in
@@ -283,6 +295,9 @@ private struct TdayBottomSheetPresentationHost<SheetContent: View>: View {
         )
         withAnimation(.easeIn(duration: 0.18)) {
             scrimVisible = false
+        }
+        withAnimation(.easeIn(duration: 0.22)) {
+            contentOffset = UIScreen.main.bounds.height
         }
         dismiss()
     }
@@ -322,6 +337,26 @@ private struct TdayBottomSheetContentHeightPreferenceKey: PreferenceKey {
 
     static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
         value = max(value, nextValue())
+    }
+}
+
+/// SwiftUI gives `fullScreenCover` no way to opt out of its default
+/// `coverVertical` modal transition, which slides the whole presented view
+/// controller — our scrim included — up from the bottom on presentation
+/// (and back down on dismissal). Dropping an invisible UIViewController into
+/// the hierarchy lets us reach up to the actual presented controller and set
+/// `modalTransitionStyle = .crossDissolve`, so the container just fades;
+/// `TdayBottomSheetPresentationHost` then supplies the card's own slide via
+/// `contentOffset`, leaving the scrim to fade in isolation like a native sheet.
+private struct TdayFullScreenCoverTransitionFixer: UIViewControllerRepresentable {
+    func makeUIViewController(context: Context) -> UIViewController {
+        UIViewController()
+    }
+
+    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
+        DispatchQueue.main.async {
+            uiViewController.parent?.modalTransitionStyle = .crossDissolve
+        }
     }
 }
 
