@@ -414,6 +414,8 @@ fun CreateTaskBottomSheet(
             decorFitsSystemWindows = false,
         ),
     ) {
+        TdaySheetFullBleedWindow()
+
         Box(
             modifier = Modifier
                 .fillMaxSize(),
@@ -1439,6 +1441,8 @@ private fun SpectrumPickerDialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false),
     ) {
+        TdaySheetFullBleedWindow()
+
         Box(
             modifier = Modifier
                 .fillMaxSize()
