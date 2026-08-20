@@ -140,6 +140,7 @@ import com.ohmz.tday.compose.ui.component.RootFeedDock
 import com.ohmz.tday.compose.ui.component.RootFeedTab
 import com.ohmz.tday.compose.ui.component.TdayCenteredSheetContent
 import com.ohmz.tday.compose.ui.component.TdayModalBottomSheet
+import com.ohmz.tday.compose.ui.component.TdaySheetFullBleedWindow
 import com.ohmz.tday.compose.ui.component.TdayPullToRefreshBox
 import com.ohmz.tday.compose.ui.component.TdaySheetCard
 import com.ohmz.tday.compose.ui.component.TdaySheetDefaults
@@ -952,6 +953,8 @@ private fun CreateListBottomSheet(
             decorFitsSystemWindows = false,
         ),
     ) {
+        TdaySheetFullBleedWindow()
+
         Box(
             modifier = Modifier
                 .fillMaxSize(),
