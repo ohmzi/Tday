@@ -91,7 +91,7 @@ function getInlineText(el: Node): string {
   return out;
 }
 
-function extractBlockLines(container: Node): string[] {
+function extractBlockLines(container: Node, includeListPrefixes: boolean): string[] {
   const lines: string[] = [];
   container.childNodes.forEach((child) => {
     if (child.nodeType !== Node.ELEMENT_NODE) {
@@ -108,7 +108,7 @@ function extractBlockLines(container: Node): string[] {
         const li = liNode as Element;
         if (li.tagName.toLowerCase() !== "li") return;
         counter += 1;
-        const prefix = tag === "ul" ? "• " : `${counter}. `;
+        const prefix = includeListPrefixes ? (tag === "ul" ? "• " : `${counter}. `) : "";
         getInlineText(li)
           .split("\n")
           .forEach((part, idx) => lines.push(idx === 0 ? prefix + part : part));
@@ -120,15 +120,20 @@ function extractBlockLines(container: Node): string[] {
     } else if (tag === "br") {
       lines.push("");
     } else {
-      lines.push(...extractBlockLines(el));
+      lines.push(...extractBlockLines(el, includeListPrefixes));
     }
   });
   return lines;
 }
 
-export function htmlToPlainText(html: string): string {
+// `includeListPrefixes` controls whether list items keep their "• "/"1. "
+// text prefix: true for previews (list rows, search, share text — where the
+// structure should still read), false for genuinely stripping all
+// formatting (the "clear formatting" button, which should remove bullets
+// and numbers, not just the marks around them).
+export function htmlToPlainText(html: string, includeListPrefixes = true): string {
   const doc = new DOMParser().parseFromString(html, "text/html");
-  return extractBlockLines(doc.body).join("\n").trim();
+  return extractBlockLines(doc.body, includeListPrefixes).join("\n").trim();
 }
 
 function escapeHtml(text: string): string {
@@ -163,6 +168,18 @@ export function flattenNotesToPlainText(value: string | null | undefined): strin
   if (!value) return "";
   if (isRichNotes(value)) {
     return htmlToPlainText(sanitizeHtml(value.slice(RICH_NOTES_MARKER.length)));
+  }
+  return value;
+}
+
+// Saved string → fully plain text for the "clear formatting" action: unlike
+// flattenNotesToPlainText, list bullets/numbers are removed entirely rather
+// than kept as text prefixes — "clear formatting" means the user wants back
+// to genuinely plain text, not a preview that still reads as a list.
+export function stripToPlainText(value: string | null | undefined): string {
+  if (!value) return "";
+  if (isRichNotes(value)) {
+    return htmlToPlainText(sanitizeHtml(value.slice(RICH_NOTES_MARKER.length)), false);
   }
   return value;
 }
