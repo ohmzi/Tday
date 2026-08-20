@@ -1,10 +1,9 @@
 {
   "version": "0.7.0",
-  "publishedAt": "2026-04-02T08:21:06-04:00",
+  "publishedAt": "2026-08-20T12:06:45-04:00",
   "notes": [
-    "Keep overdue tasks out of today",
-    "Simplify UI and remove redundant descriptions in Admin and Release components"
+    "Maintenance improvements across the app."
   ],
   "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v0.7.0",
-  "compareUrl": null
+  "compareUrl": "https://github.com/ohmzi/Tday/compare/true..v0.7.0"
 }
