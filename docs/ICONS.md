@@ -63,5 +63,12 @@ Image("ActionEdit")
 | Scheduled (root dock) | `house` | `Home` | `ic_lucide_house` | `NavHouse` |
 | Task edit | `square-pen` | `SquarePen` | `ic_lucide_square_pen` | `ActionEdit` |
 | Task delete | `trash` | `Trash` | `ic_lucide_trash` | `ActionDelete` |
+| Notes: bold | `bold` | `Bold` | `ic_lucide_bold` | `LucideBold` |
+| Notes: italic | `italic` | `Italic` | `ic_lucide_italic` | `LucideItalic` |
+| Notes: underline | `underline` | `Underline` | `ic_lucide_underline` | `LucideUnderline` |
+| Notes: strikethrough | `strikethrough` | `Strikethrough` | `ic_lucide_strikethrough` | `LucideStrikethrough` |
+| Notes: bulleted list | `list` | `List` | `ic_lucide_list` | `LucideList` |
+| Notes: numbered list | `list-ordered` | `ListOrdered` | `ic_lucide_list_ordered` | `LucideListOrdered` |
+| Notes: Format submenu (iOS-only — web/Android have no parent "Format" trigger to icon) | `type` | — | — | `LucideType` |
 
 These tile/screen icons are also reused as the faint full-screen background watermark on each corresponding screen, and list icons are resolved per list from the shared icon registry (`lib/listIcons.ts` on web, `TdayListIcons.kt` on Android, `todoListSymbolName` on iOS) — keep those registries Lucide-based too.
