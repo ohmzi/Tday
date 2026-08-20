@@ -17,6 +17,7 @@ import {
 import { prioritySwatchClass } from "@/components/ui/sheet-chrome/swatches";
 import { getPriorityFlag } from "@/lib/priority";
 import { isSubmitEnter } from "@/lib/utils";
+import NotesField from "@/components/todo/component/NotesField/NotesField";
 import { useToast } from "@/hooks/use-toast";
 import { useCreateFloater } from "@/features/floater/query/create-floater";
 import { useEditFloater } from "@/features/floater/query/update-floater";
@@ -158,19 +159,12 @@ export default function FloaterFormSheet({
             />
           </div>
           <SheetDivider />
-          <input
+          <NotesField
             value={description}
-            onChange={(event) => setDescription(event.target.value)}
-            enterKeyHint="done"
-            onKeyDown={(event) => {
-              if (!isSubmitEnter(event)) return;
-              event.preventDefault();
-              if (canSubmit) handleSubmit();
-              else event.currentTarget.blur();
-            }}
-            name="description"
+            onChange={setDescription}
             placeholder={appDict("notes")}
-            className="w-full bg-transparent px-[18px] py-3 text-base font-bold text-foreground placeholder:font-bold placeholder:text-muted-foreground/60 focus:outline-hidden"
+            onSubmit={handleSubmit}
+            canSubmit={canSubmit}
           />
         </SheetCard>
 

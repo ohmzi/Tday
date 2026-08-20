@@ -35,6 +35,7 @@ import { useEditTodo } from "@/features/todayTodos/query/update-todo";
 import { useEditTodoInstance } from "@/features/todayTodos/query/update-todo-instance";
 import { usePrioritizeTodo } from "@/features/todayTodos/query/prioritize-todo";
 import { useReorderTodo } from "@/features/todayTodos/query/reorder-todo";
+import { flattenNotesToPlainText } from "@/lib/richNotes";
 
 const topButtonClass =
   "flex h-14 w-14 items-center justify-center rounded-full border border-white/70 bg-card/90 text-foreground shadow-[0_12px_28px_-22px_hsl(var(--shadow)/0.55)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-card active:translate-y-0 dark:border-white/10";
@@ -154,7 +155,7 @@ export default function NativeScheduledTaskHomeDashboard() {
         const listName = todo.listID ? listMetaData[todo.listID]?.name ?? "" : "";
         return (
           todo.title.toLowerCase().includes(query) ||
-          (todo.description ?? "").toLowerCase().includes(query) ||
+          flattenNotesToPlainText(todo.description).toLowerCase().includes(query) ||
           listName.toLowerCase().includes(query)
         );
       })

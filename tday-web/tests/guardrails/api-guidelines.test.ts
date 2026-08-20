@@ -65,6 +65,10 @@ describe("Ktor API route conventions", () => {
         "MobileProbeRoutes",
         "TimezoneRoutes",
         "AppSettingsRoutes",
+        // Public-by-design: an opaque per-user token in the URL path is the
+        // credential (calendar clients can't send auth headers) — see the
+        // route file's own doc comment.
+        "CalendarFeedRoutes",
       ].includes(name);
     });
 

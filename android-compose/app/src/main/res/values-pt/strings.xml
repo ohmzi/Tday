@@ -330,6 +330,7 @@
     <string name="create_task_repeat_yearly">Anualmente</string>
     <string name="create_task_title_placeholder">Título</string>
     <string name="create_task_notes_placeholder">Notas</string>
+    <string name="create_task_clear_formatting">Limpar formatação</string>
     <string name="create_task_schedule_enabled">A tarefa tem data de vencimento</string>
     <string name="create_task_schedule_disabled">Tarefa avulsa</string>
     <string name="create_task_select_date">Selecionar data</string>

@@ -82,33 +82,31 @@ describe("web architecture guardrails", () => {
   });
 
   describe("internationalization completeness", () => {
-    const localesDir = path.join(ROOT, "public", "locales");
+    // Locales are bundled straight from messages/<locale>.json (see
+    // src/i18n.ts) — no public/locales HTTP-backend layout is used.
+    const localesDir = path.join(ROOT, "messages");
     const EXPECTED_LOCALES = [
-      "en", "zh", "de", "ja", "ar", "ru", "es", "fr", "ms", "it", "pt",
+      "en", "zh", "de", "ja", "ru", "es", "fr", "ms", "it", "pt",
     ];
 
     it.each(EXPECTED_LOCALES)(
-      "locale file %s/translation.json should exist",
+      "locale file %s.json should exist",
       (locale) => {
-        expect(
-          existsSync(path.join(localesDir, locale, "translation.json")),
-        ).toBe(true);
+        expect(existsSync(path.join(localesDir, `${locale}.json`))).toBe(true);
       },
     );
 
-    it("en/translation.json should be valid JSON", () => {
-      const content = readSource(path.join(localesDir, "en", "translation.json"));
+    it("en.json should be valid JSON", () => {
+      const content = readSource(path.join(localesDir, "en.json"));
       expect(() => JSON.parse(content)).not.toThrow();
     });
 
-    it("all locale files should have the same top-level keys as english", () => {
-      const enContent = JSON.parse(
-        readSource(path.join(localesDir, "en", "translation.json")),
-      );
+    it("all locale files should have the same top-level (namespace) keys as english", () => {
+      const enContent = JSON.parse(readSource(path.join(localesDir, "en.json")));
       const enKeys = Object.keys(enContent).sort();
 
       for (const locale of EXPECTED_LOCALES.filter((l) => l !== "en")) {
-        const localePath = path.join(localesDir, locale, "translation.json");
+        const localePath = path.join(localesDir, `${locale}.json`);
         if (!existsSync(localePath)) continue;
         const localeContent = JSON.parse(readSource(localePath));
         const localeKeys = Object.keys(localeContent).sort();

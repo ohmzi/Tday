@@ -1,0 +1,56 @@
+/* This file is a standalone CSS module (imported directly by the component,
+   not through globals.css's cascade), so Tailwind v4 needs an explicit
+   @reference to resolve the project's theme tokens/utilities for @apply. */
+@reference "../../../../globals.css";
+
+/* Tiptap's Placeholder extension marks the empty paragraph with these
+   classes/attributes; Tailwind has no utility for pseudo-element `content`,
+   so this stays a plain stylesheet rule instead of an arbitrary variant. */
+.notes-field-prose p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+  @apply font-bold text-muted-foreground/60;
+}
+
+.notes-field-prose {
+  outline: none;
+}
+
+.notes-field-prose p {
+  margin: 0;
+}
+
+.notes-field-prose p + p {
+  margin-top: 0.5em;
+}
+
+/* The field's base weight is already font-bold (700); a "Bold" mark needs a
+   visibly heavier weight to read as a distinct style rather than a no-op. */
+.notes-field-prose strong,
+.notes-field-prose b {
+  font-weight: 900;
+}
+
+.notes-field-prose ul,
+.notes-field-prose ol {
+  margin: 0.25em 0;
+  padding-left: 1.25em;
+}
+
+.notes-field-prose ul {
+  list-style-type: disc;
+}
+
+.notes-field-prose ol {
+  list-style-type: decimal;
+}
+
+.notes-field-prose li {
+  margin: 0.15em 0;
+}
+
+.notes-field-prose li p {
+  margin: 0;
+}

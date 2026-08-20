@@ -330,6 +330,7 @@
     <string name="create_task_repeat_yearly">Jährlich</string>
     <string name="create_task_title_placeholder">Titel</string>
     <string name="create_task_notes_placeholder">Notizen</string>
+    <string name="create_task_clear_formatting">Formatierung entfernen</string>
     <string name="create_task_schedule_enabled">Aufgabe hat ein Fälligkeitsdatum</string>
     <string name="create_task_schedule_disabled">Floater-Aufgabe</string>
     <string name="create_task_select_date">Datum auswählen</string>
