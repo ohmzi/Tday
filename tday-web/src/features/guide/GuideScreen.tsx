@@ -224,11 +224,15 @@ function TopicRow({
 
   return (
     <div ref={registerRef} className="scroll-mt-24">
+      {/* data-no-press: the app-wide press ripple assumes a roughly square
+          target — on this wide, short row it balloons into an ugly clipped
+          band, so this row gets its own contained background highlight. */}
       <button
         type="button"
         onClick={onToggle}
         aria-expanded={expanded}
-        className="flex w-full items-center gap-3.5 py-3 text-left transition active:opacity-60"
+        data-no-press
+        className="-mx-2 flex w-[calc(100%+1rem)] items-center gap-3.5 rounded-2xl px-2 py-3 text-left transition-colors hover:bg-muted-foreground/5 active:bg-muted-foreground/10"
       >
         <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-muted/70">
           <GuideIcon name={topic.icon} className="size-5 stroke-[2.4] text-accent" />
