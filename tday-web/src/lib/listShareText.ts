@@ -1,6 +1,7 @@
 import { format } from "date-fns";
 import type { TFunction } from "i18next";
 import { getDateFnsLocale } from "@/lib/date/dateFnsLocale";
+import { flattenNotesToPlainText } from "@/lib/richNotes";
 
 // Minimal shape shared by TodoItemType and FloaterItemType so both scheduled
 // lists and floater lists export through the same builder.
@@ -32,9 +33,9 @@ export function buildListShareText({
     if (todo.due) {
       lines.push(`   ${t("shareDueLabel", { date: format(todo.due, "PPp", { locale }) })}`);
     }
-    const notes = todo.description?.trim();
+    const notes = flattenNotesToPlainText(todo.description).trim();
     if (notes) {
-      lines.push(`   ${notes}`);
+      notes.split("\n").forEach((line) => lines.push(`   ${line}`));
     }
   }
   lines.push("");

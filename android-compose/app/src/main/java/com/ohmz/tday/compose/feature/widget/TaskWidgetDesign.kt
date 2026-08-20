@@ -47,6 +47,7 @@ import com.ohmz.tday.compose.ui.priority.PRIORITY_NORMAL_VALUE
 import com.ohmz.tday.compose.ui.priority.PRIORITY_URGENT_VALUE
 import com.ohmz.tday.compose.ui.priority.isImportantPriority
 import com.ohmz.tday.compose.ui.priority.isUrgentPriority
+import com.ohmz.tday.compose.core.text.flattenNotesToPlainText
 
 internal enum class TaskWidgetContentState {
     SETUP,
@@ -566,7 +567,7 @@ private fun TaskWidgetRow(
     visuals: TaskWidgetVisuals,
     openAction: Action,
 ) {
-    val description = row.description?.takeIf { it.isNotBlank() }
+    val description = flattenNotesToPlainText(row.description).takeIf { it.isNotBlank() }
 
     Column(
         modifier = GlanceModifier

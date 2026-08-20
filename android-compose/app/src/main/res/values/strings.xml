@@ -391,6 +391,7 @@
     <string name="create_task_repeat_yearly">Yearly</string>
     <string name="create_task_title_placeholder">Title</string>
     <string name="create_task_notes_placeholder">Notes</string>
+    <string name="create_task_clear_formatting">Clear formatting</string>
     <string name="create_task_schedule_enabled">Task has a due date</string>
     <string name="create_task_schedule_disabled">Floater task</string>
     <string name="create_task_select_date">Select date</string>

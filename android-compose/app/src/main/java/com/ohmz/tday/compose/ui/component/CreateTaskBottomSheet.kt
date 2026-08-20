@@ -772,11 +772,11 @@ private fun TaskTextCard(
             )
         }
         RowDivider()
-        TaskField(
+        NotesField(
             value = notes,
-            placeholder = stringResource(R.string.create_task_notes_placeholder),
             onValueChange = onNotesChange,
-            onKeyboardDone = onKeyboardDone,
+            placeholder = stringResource(R.string.create_task_notes_placeholder),
+            modifier = Modifier.fillMaxWidth(),
         )
     }
 }

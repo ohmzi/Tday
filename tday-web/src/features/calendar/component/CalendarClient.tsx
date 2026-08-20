@@ -73,6 +73,7 @@ import { isToday } from "date-fns";
 import { getPriorityFlag } from "@/lib/priority";
 import i18n from "@/i18n";
 import { getDateFnsLocale } from "@/lib/date/dateFnsLocale";
+import { flattenNotesToPlainText } from "@/lib/richNotes";
 
 const ConfirmDelete = lazy(() => import("./ConfirmationModals/ConfirmDelete"));
 const ConfirmDeleteAll = lazy(() => import("./ConfirmationModals/ConfirmDeleteAll"));
@@ -752,7 +753,7 @@ function CalendarTaskRow({
               </div>
               {todo.description && (
                 <pre className="w-48 whitespace-pre-wrap pb-2 text-xs font-extrabold leading-4 text-muted-foreground sm:w-full">
-                  {todo.description}
+                  {flattenNotesToPlainText(todo.description)}
                 </pre>
               )}
               <div className="flex flex-wrap items-center justify-start gap-2 text-xs font-black">
@@ -966,7 +967,7 @@ export default function CalendarClient() {
       .filter((todo) => !todo.completed && todo.due >= now)
       .filter((todo) => {
         const title = todo.title.toLowerCase();
-        const description = (todo.description || "").toLowerCase();
+        const description = flattenNotesToPlainText(todo.description).toLowerCase();
         const listId = todo.listID ?? "";
         const listName = (listMetaData[listId]?.name || "").toLowerCase();
         return title.includes(query) || description.includes(query) || listName.includes(query);
