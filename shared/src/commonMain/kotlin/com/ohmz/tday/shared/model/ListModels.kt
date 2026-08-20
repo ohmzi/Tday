@@ -68,6 +68,7 @@ data class DeleteListRequest(
 data class ListTodoDto(
     val id: String,
     val title: String,
+    val description: String? = null,
     val priority: String,
     val due: String? = null,
     val completed: Boolean,
@@ -144,6 +145,7 @@ data class DeleteFloaterListResponse(
 data class FloaterListTodoDto(
     val id: String,
     val title: String,
+    val description: String? = null,
     val priority: String,
     val completed: Boolean,
     val order: Int,
