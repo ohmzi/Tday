@@ -112,15 +112,16 @@ describe("floater sheet Enter-to-submit", () => {
     });
   });
 
-  it("creates the floater when Enter is pressed in the notes field", () => {
+  // Notes is the one field where Enter must NOT submit: it is a multi-line
+  // rich-text field, so Enter is a newline (and, inside a list, what continues
+  // the list to the next bullet/number). Submitting from here also dismissed
+  // the keyboard mid-note. Title keeps submit-on-Enter — see the case above.
+  it("does not submit when Enter is pressed in the notes field, leaving it to insert a newline", () => {
     fireEvent.change(titleField(), { target: { value: "Water the plants" } });
     pasteIntoNotes("the big one");
     fireEvent.keyDown(notesField(), { key: "Enter" });
 
-    expect(createFloaterMutateFn.mock.calls[0][0]).toMatchObject({
-      title: "Water the plants",
-      description: "the big one",
-    });
+    expect(createFloaterMutateFn).not.toHaveBeenCalled();
   });
 
   it("leaves Shift+Enter to insert a newline in the title", () => {
