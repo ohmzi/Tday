@@ -76,6 +76,7 @@ export default function NotesField({
       attributes: {
         class:
           "notes-field-prose w-full bg-transparent text-base font-bold text-foreground focus:outline-hidden",
+        "data-testid": "notes-editor",
       },
       handleKeyDown: (_view, event) => {
         if (

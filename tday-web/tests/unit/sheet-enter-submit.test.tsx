@@ -64,7 +64,20 @@ function titleField() {
 }
 
 function notesField() {
-  return screen.getByPlaceholderText("notes");
+  return screen.getByTestId("notes-editor");
+}
+
+// NotesField is a Tiptap/ProseMirror contenteditable, not a plain <input>, so
+// fireEvent.change (which only understands a real `.value`) can't type into
+// it. Pasting plain text is the one input path ProseMirror handles through a
+// clean dispatch rather than live DOM-mutation observation, so it's the
+// reliable way to set content in jsdom.
+function pasteIntoNotes(text: string) {
+  const dataTransfer = {
+    getData: (type: string) => (type === "text/plain" ? text : ""),
+    types: ["text/plain"],
+  };
+  fireEvent.paste(notesField(), { clipboardData: dataTransfer });
 }
 
 describe("floater sheet Enter-to-submit", () => {
@@ -101,7 +114,7 @@ describe("floater sheet Enter-to-submit", () => {
 
   it("creates the floater when Enter is pressed in the notes field", () => {
     fireEvent.change(titleField(), { target: { value: "Water the plants" } });
-    fireEvent.change(notesField(), { target: { value: "the big one" } });
+    pasteIntoNotes("the big one");
     fireEvent.keyDown(notesField(), { key: "Enter" });
 
     expect(createFloaterMutateFn.mock.calls[0][0]).toMatchObject({
