@@ -74,6 +74,7 @@ import { getPriorityFlag } from "@/lib/priority";
 import i18n from "@/i18n";
 import { getDateFnsLocale } from "@/lib/date/dateFnsLocale";
 import { flattenNotesToPlainText } from "@/lib/richNotes";
+import { SWIPE_DELETE_COLOR, SWIPE_EDIT_COLOR } from "@/lib/swipeActionColors";
 
 const ConfirmDelete = lazy(() => import("./ConfirmationModals/ConfirmDelete"));
 const ConfirmDeleteAll = lazy(() => import("./ConfirmationModals/ConfirmDeleteAll"));
@@ -667,7 +668,7 @@ function CalendarTaskRow({
           >
             <span
               className="flex h-[34px] w-14 items-center justify-center rounded-[17px]"
-              style={{ backgroundColor: "#4C7DDE" }}
+              style={{ backgroundColor: SWIPE_EDIT_COLOR }}
             >
               <SquarePen className="h-5 w-5 text-white" strokeWidth={2.2} />
             </span>
@@ -687,7 +688,7 @@ function CalendarTaskRow({
           >
             <span
               className="flex h-[34px] w-14 items-center justify-center rounded-[17px]"
-              style={{ backgroundColor: "#FF453A" }}
+              style={{ backgroundColor: SWIPE_DELETE_COLOR }}
             >
               <Trash className="h-5 w-5 text-white" strokeWidth={2.2} />
             </span>
