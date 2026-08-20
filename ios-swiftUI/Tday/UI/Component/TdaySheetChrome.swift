@@ -354,9 +354,13 @@ private struct TdayFullScreenCoverTransitionFixer: UIViewControllerRepresentable
     }
 
     func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
-        DispatchQueue.main.async {
-            uiViewController.parent?.modalTransitionStyle = .crossDissolve
-        }
+        // Must run synchronously: modalTransitionStyle is read by UIKit at
+        // present(_:animated:) time. SwiftUI builds this representable's
+        // child controller (and sets its `parent`) before it calls present()
+        // on the fullScreenCover, so setting it here — not deferred via
+        // DispatchQueue.main.async — lands before that call and actually
+        // takes effect.
+        uiViewController.parent?.modalTransitionStyle = .crossDissolve
     }
 }
 
