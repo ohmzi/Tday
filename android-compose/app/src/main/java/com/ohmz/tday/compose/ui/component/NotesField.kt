@@ -38,11 +38,12 @@ import androidx.compose.ui.unit.dp
 import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.text.RichNotesListKind
 import com.ohmz.tday.compose.core.text.RichNotesMark
+import com.ohmz.tday.compose.core.text.applyingMarks
+import com.ohmz.tday.compose.core.text.continuingListOnNewline
 import com.ohmz.tday.compose.core.text.decodeNotesToAnnotatedString
 import com.ohmz.tday.compose.core.text.encodeAnnotatedNotes
 import com.ohmz.tday.compose.core.text.isListActive
 import com.ohmz.tday.compose.core.text.isMarkActive
-import com.ohmz.tday.compose.core.text.applyingMarks
 import com.ohmz.tday.compose.core.text.isRichNotes
 import com.ohmz.tday.compose.core.text.sanitizeHtml
 import com.ohmz.tday.compose.core.text.stripToPlainText
@@ -115,6 +116,26 @@ fun NotesField(
             val previous = fieldValue
             val enriched = enrichPastedRun(clipboard, previous, newValue)
             val typedRange = typedRunRange(previous.text, previous.selection, enriched.text)
+
+            // Enter on a list line continues (or ends) the list rather than
+            // dropping an untagged, unprefixed line that silently breaks it.
+            val newlineTyped = typedRange != null &&
+                enriched.text.substring(typedRange.min, typedRange.max) == "\n"
+            val continued = if (newlineTyped) {
+                continuingListOnNewline(previous.annotatedString, previous.selection.start)
+            } else {
+                null
+            }
+            if (continued != null) {
+                val (updatedText, updatedSelection) = continued
+                val updated = TextFieldValue(updatedText, updatedSelection)
+                fieldValue = updated
+                val encodedList = encodeAnnotatedNotes(updated.annotatedString)
+                lastEmitted = encodedList
+                onValueChangeState.value(encodedList)
+                return@BasicTextField
+            }
+
             val stamped = if (pendingMarks.isNotEmpty() && typedRange != null) {
                 TextFieldValue(
                     applyingMarks(pendingMarks, enriched.annotatedString, typedRange),

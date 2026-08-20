@@ -89,8 +89,6 @@ export default function CalendarTaskFormBody({
           value={description}
           onChange={setDescription}
           placeholder={appDict("notes")}
-          onSubmit={onSubmit}
-          canSubmit={title.trim().length > 0}
         />
       </SheetCard>
 

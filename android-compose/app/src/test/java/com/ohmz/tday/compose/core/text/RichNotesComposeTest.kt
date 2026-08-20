@@ -318,6 +318,65 @@ class RichNotesComposeTest {
         assertTrue(isListActive(RichNotesListKind.BULLET, result, TextRange(2, 2)))
     }
 
+    // MARK: - Enter continues a list
+
+    @Test
+    fun `enter at the end of a bullet item starts the next one`() {
+        val (listed, _) = togglingList(RichNotesListKind.BULLET, AnnotatedString("milk"), TextRange(0, 4))
+        assertEquals("• milk", listed.text)
+
+        val (result, selection) = continuingListOnNewline(listed, listed.text.length)!!
+        assertEquals("• milk\n• ", result.text)
+        // Caret sits after the new bullet, ready to type.
+        assertEquals(TextRange(9, 9), selection)
+        assertTrue(isListActive(RichNotesListKind.BULLET, result, TextRange(9, 9)))
+    }
+
+    @Test
+    fun `enter in the middle of an ordered list renumbers everything after it`() {
+        val (listed, _) = togglingList(RichNotesListKind.ORDERED, AnnotatedString("a\nb\nc"), TextRange(0, 5))
+        assertEquals("1. a\n2. b\n3. c", listed.text)
+
+        // Enter at the end of item 1 — the old items 2 and 3 must become 3 and 4.
+        val (result, _) = continuingListOnNewline(listed, 4)!!
+        assertEquals("1. a\n2. \n3. b\n4. c", result.text)
+    }
+
+    @Test
+    fun `enter on an item that holds only its prefix ends the list`() {
+        val (listed, _) = togglingList(RichNotesListKind.BULLET, AnnotatedString("milk"), TextRange(0, 4))
+        val (withEmpty, _) = continuingListOnNewline(listed, listed.text.length)!!
+        assertEquals("• milk\n• ", withEmpty.text)
+
+        // Enter again on the empty item: the only way out of a list.
+        val (ended, selection) = continuingListOnNewline(withEmpty, withEmpty.text.length)!!
+        assertEquals("• milk\n", ended.text)
+        assertEquals(TextRange(7, 7), selection)
+        assertFalse(isListActive(RichNotesListKind.BULLET, ended, TextRange(7, 7)))
+    }
+
+    @Test
+    fun `enter on a plain line is left alone for a normal newline`() {
+        assertEquals(null, continuingListOnNewline(AnnotatedString("just text"), 9))
+    }
+
+    @Test
+    fun `renumberOrderedLists is idempotent on already-correct numbering`() {
+        val (listed, _) = togglingList(RichNotesListKind.ORDERED, AnnotatedString("a\nb"), TextRange(0, 3))
+        assertEquals(listed.text, renumberOrderedLists(listed).text)
+    }
+
+    @Test
+    fun `enter-continued list still encodes as a real ol`() {
+        val (listed, _) = togglingList(RichNotesListKind.ORDERED, AnnotatedString("a"), TextRange(0, 1))
+        val (continued, _) = continuingListOnNewline(listed, listed.text.length)!!
+        // The second item is empty, but the structure must survive encoding.
+        assertEquals(
+            RICH_NOTES_MARKER + "<ol><li><p>a</p></li><li><p></p></li></ol>",
+            encodeAnnotatedNotes(continued),
+        )
+    }
+
     @Test
     fun `isListActive answers for a collapsed caret on a tagged line`() {
         val base = AnnotatedString("a\nb")

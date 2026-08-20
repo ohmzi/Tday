@@ -361,6 +361,71 @@ final class RichNotesManualFormattingTests: XCTestCase {
         XCTAssertFalse(isRichNotes(reEncoded))
     }
 
+    // MARK: - Enter continues a list
+
+    func testEnterAtEndOfBulletItemStartsTheNextOne() {
+        let style = makeStyle()
+        let stored = encodeNotes("<ul><li>milk</li></ul>")
+        let decoded = decodeNotesToAttributedString(stored, style: style)
+        XCTAssertEqual(decoded.string, "\u{2022} milk")
+
+        let result = continuingListOnNewline(decoded, cursor: decoded.length, style: style)
+        XCTAssertNotNil(result)
+        XCTAssertEqual(result?.text.string, "\u{2022} milk\n\u{2022} ")
+        // Cursor lands after the new bullet, ready to type.
+        XCTAssertEqual(result?.selection, NSRange(location: 9, length: 0))
+    }
+
+    func testEnterMidOrderedListRenumbersEverythingAfterIt() {
+        let style = makeStyle()
+        let stored = encodeNotes("<ol><li>a</li><li>b</li><li>c</li></ol>")
+        let decoded = decodeNotesToAttributedString(stored, style: style)
+        XCTAssertEqual(decoded.string, "1. a\n2. b\n3. c")
+
+        // Enter at the end of item 1 — old items 2 and 3 must become 3 and 4.
+        let result = continuingListOnNewline(decoded, cursor: 4, style: style)
+        XCTAssertEqual(result?.text.string, "1. a\n2. \n3. b\n4. c")
+    }
+
+    func testEnterOnAnItemHoldingOnlyItsPrefixEndsTheList() {
+        let style = makeStyle()
+        let stored = encodeNotes("<ul><li>milk</li></ul>")
+        let decoded = decodeNotesToAttributedString(stored, style: style)
+        guard let withEmpty = continuingListOnNewline(decoded, cursor: decoded.length, style: style) else {
+            return XCTFail("expected the first Enter to continue the list")
+        }
+        XCTAssertEqual(withEmpty.text.string, "\u{2022} milk\n\u{2022} ")
+
+        // Enter again on the empty item: the only way out of a list.
+        let ended = continuingListOnNewline(withEmpty.text, cursor: withEmpty.text.length, style: style)
+        XCTAssertEqual(ended?.text.string, "\u{2022} milk\n")
+        XCTAssertEqual(ended?.selection, NSRange(location: 7, length: 0))
+    }
+
+    func testEnterOnAPlainLineIsLeftAloneForANormalNewline() {
+        let style = makeStyle()
+        let plain = decodeNotesToAttributedString("just text", style: style)
+        XCTAssertNil(continuingListOnNewline(plain, cursor: plain.length, style: style))
+    }
+
+    func testRenumberOrderedListsIsIdempotent() {
+        let style = makeStyle()
+        let decoded = decodeNotesToAttributedString(encodeNotes("<ol><li>a</li><li>b</li></ol>"), style: style)
+        XCTAssertEqual(renumberOrderedLists(decoded, style: style).string, decoded.string)
+    }
+
+    func testEnterContinuedListStillEncodesAsARealOrderedList() {
+        let style = makeStyle()
+        let decoded = decodeNotesToAttributedString(encodeNotes("<ol><li>a</li></ol>"), style: style)
+        guard let continued = continuingListOnNewline(decoded, cursor: decoded.length, style: style) else {
+            return XCTFail("expected Enter to continue the list")
+        }
+        XCTAssertEqual(
+            encodeAttributedNotes(continued.text, style: style),
+            richNotesMarker + "<ol><li><p>a</p></li><li><p></p></li></ol>"
+        )
+    }
+
     // MARK: - Typing attributes ("format what I type next")
 
     func testTogglingMarkInTypingAttributesArmsAndDisarmsEachMark() {

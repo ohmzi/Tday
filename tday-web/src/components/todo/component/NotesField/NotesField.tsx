@@ -27,12 +27,6 @@ type NotesFieldProps = {
   value: string;
   onChange: (value: string) => void;
   placeholder: string;
-  // Enter submits the form when true; otherwise it just blurs (nothing to
-  // save yet) — mirrors the plain-Enter-submits convention used by every
-  // other sheet text field (see isSubmitEnter). Shift+Enter always inserts a
-  // line break instead of submitting.
-  onSubmit?: () => void;
-  canSubmit?: boolean;
   className?: string;
 };
 
@@ -89,14 +83,10 @@ export default function NotesField({
   value,
   onChange,
   placeholder,
-  onSubmit,
-  canSubmit = true,
   className,
 }: NotesFieldProps) {
   const { t: appDict } = useTranslation("app");
   const lastEmittedRef = useRef(value);
-  const onSubmitRef = useRef(onSubmit);
-  const canSubmitRef = useRef(canSubmit);
   const [hasFormatting, setHasFormatting] = useState(() =>
     htmlHasFormatting(decodeNotesToHtml(value)),
   );
@@ -106,13 +96,6 @@ export default function NotesField({
   // etc.) needs to stay current as the selection itself moves, which
   // doesn't otherwise trigger React to re-read it.
   const [, forceRerender] = useState(0);
-
-  useEffect(() => {
-    onSubmitRef.current = onSubmit;
-  }, [onSubmit]);
-  useEffect(() => {
-    canSubmitRef.current = canSubmit;
-  }, [canSubmit]);
 
   const editor = useEditor({
     extensions: [
@@ -134,25 +117,6 @@ export default function NotesField({
         class:
           "notes-field-prose w-full bg-transparent text-base font-bold text-foreground focus:outline-hidden",
         "data-testid": "notes-editor",
-      },
-      handleKeyDown: (_view, event) => {
-        if (
-          event.key !== "Enter" ||
-          event.shiftKey ||
-          event.ctrlKey ||
-          event.metaKey ||
-          event.altKey ||
-          event.isComposing
-        ) {
-          return false;
-        }
-        event.preventDefault();
-        if (canSubmitRef.current) {
-          onSubmitRef.current?.();
-        } else {
-          (event.target as HTMLElement | null)?.blur();
-        }
-        return true;
       },
     },
     onUpdate: ({ editor: liveEditor }) => {
@@ -190,7 +154,6 @@ export default function NotesField({
     // user asked to clear formatting, not to keep a plain-text list.
     const plainText = htmlToPlainText(sanitizeHtml(editor.getHTML()), false);
     editor.commands.setContent(decodeNotesToHtml(plainText), true);
-    editor.commands.focus();
     setHasFormatting(false);
   }
 
@@ -203,9 +166,13 @@ export default function NotesField({
       {hasFormatting && (
         <button
           type="button"
-          // See the matching comment on FormatButton above — same vaul
-          // drag-gesture false-positive, same fix.
+          // See the matching comments on FormatButton above — same vaul
+          // drag-gesture false-positive, and the same need to not steal focus
+          // from the editor. Letting focus leave here is what made the whole
+          // sheet lurch: DrawerContent's onFocus (drawer.tsx) smooth-scrolls
+          // its scroll body to centre any refocused contenteditable.
           data-vaul-no-drag
+          onMouseDown={(event) => event.preventDefault()}
           onClick={handleClearFormatting}
           aria-label={appDict("clearFormatting")}
           title={appDict("clearFormatting")}

@@ -163,8 +163,6 @@ export default function FloaterFormSheet({
             value={description}
             onChange={setDescription}
             placeholder={appDict("notes")}
-            onSubmit={handleSubmit}
-            canSubmit={canSubmit}
           />
         </SheetCard>
 

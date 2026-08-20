@@ -389,6 +389,97 @@ fun togglingList(kind: RichNotesListKind, text: AnnotatedString, range: TextRang
     return result to TextRange(newSelStart.coerceAtLeast(0), newSelEnd.coerceAtLeast(0))
 }
 
+// Rewrites every maximal run of consecutive ORDERED lines as 1..n. Run as a
+// whole-text normalisation rather than patching only the edited line, so an
+// insertion in the *middle* of a list renumbers everything after it too.
+// Idempotent: already-correct numbering rewrites to itself.
+fun renumberOrderedLists(text: AnnotatedString): AnnotatedString {
+    val fullText = text.text
+    if (fullText.isEmpty()) return text
+    val allLines = splitLines(fullText, SimpleRange(0, fullText.length))
+    var counter = 0
+    var changed = false
+
+    val rebuilt = buildAnnotatedString {
+        for ((idx, line) in allLines.withIndex()) {
+            if (idx > 0) append("\n")
+            val kind = listKindAtLineStart(text, line)
+            if (kind != RichNotesListKind.ORDERED) {
+                counter = 0
+                append(text.subSequence(line.start, line.end))
+                continue
+            }
+            counter += 1
+            val oldPrefixLen = listPrefixLength(fullText, line, kind)
+            val newPrefix = "$counter. "
+            if (newPrefix != fullText.substring(line.start, line.start + oldPrefixLen)) changed = true
+            val content = withoutListAnnotation(text.subSequence(line.start + oldPrefixLen, line.end))
+            val prefixStart = length
+            append(newPrefix)
+            append(content)
+            addStringAnnotation(LIST_ANNOTATION_TAG, kind.name, prefixStart, length)
+        }
+    }
+    return if (changed) rebuilt else text
+}
+
+// Enter pressed on a list line: continue the list with the next prefix, or —
+// if the line holds nothing but its own prefix — end the list instead, which
+// is the only way out of one. Returns null when the caret isn't on a list
+// line, meaning the newline should be inserted normally.
+//
+// `previous` is the state *before* the newline was typed, so this decides
+// what the edit should have been rather than patching up after it.
+fun continuingListOnNewline(
+    previous: AnnotatedString,
+    caret: Int,
+): Pair<AnnotatedString, TextRange>? {
+    val fullText = previous.text
+    if (caret < 0 || caret > fullText.length) return null
+    val allLines = splitLines(fullText, SimpleRange(0, fullText.length))
+    val line = lineContaining(allLines, caret) ?: return null
+    val kind = listKindAtLineStart(previous, line) ?: return null
+    val prefixLen = listPrefixLength(fullText, line, kind)
+
+    // Nothing typed on this item yet — Enter ends the list.
+    if (line.end - line.start <= prefixLen) {
+        val stripped = buildAnnotatedString {
+            append(previous.subSequence(0, line.start))
+            append(withoutListAnnotation(previous.subSequence(line.start + prefixLen, previous.text.length)))
+        }
+        return renumberOrderedLists(stripped) to TextRange(line.start, line.start)
+    }
+
+    val newPrefix = if (kind == RichNotesListKind.ORDERED) "0. " else "• "
+    val inserted = buildAnnotatedString {
+        append(previous.subSequence(0, caret))
+        append("\n")
+        val prefixStart = length
+        append(newPrefix)
+        addStringAnnotation(LIST_ANNOTATION_TAG, kind.name, prefixStart, length)
+        append(previous.subSequence(caret, previous.text.length))
+    }
+    // The "0. " above is a placeholder; renumbering assigns the real value,
+    // which also fixes up every following item in the same run.
+    val renumbered = renumberOrderedLists(inserted)
+    val caretAfter = caret + 1 + prefixLengthAfterRenumber(renumbered, caret + 1, kind, newPrefix.length)
+    return renumbered to TextRange(caretAfter, caretAfter)
+}
+
+// Where the caret lands after the freshly inserted prefix. Renumbering can
+// change that prefix's width ("9. " -> "10. "), so it's measured on the
+// renumbered text rather than assumed from the placeholder.
+private fun prefixLengthAfterRenumber(
+    text: AnnotatedString,
+    lineStart: Int,
+    kind: RichNotesListKind,
+    fallback: Int,
+): Int {
+    val allLines = splitLines(text.text, SimpleRange(0, text.text.length))
+    val line = allLines.firstOrNull { it.start == lineStart } ?: return fallback
+    return listPrefixLength(text.text, line, kind)
+}
+
 // MARK: - Encode
 
 private fun encodeInlineHtml(text: AnnotatedString, start: Int, end: Int): String {
