@@ -332,6 +332,7 @@
     <string name="create_task_repeat_yearly">Ежегодно</string>
     <string name="create_task_title_placeholder">Заголовок</string>
     <string name="create_task_notes_placeholder">Заметки</string>
+    <string name="create_task_clear_formatting">Очистить форматирование</string>
     <string name="create_task_schedule_enabled">У задачи есть срок</string>
     <string name="create_task_schedule_disabled">Задача без срока</string>
     <string name="create_task_select_date">Выбрать дату</string>

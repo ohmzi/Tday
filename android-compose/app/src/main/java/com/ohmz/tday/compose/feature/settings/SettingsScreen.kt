@@ -1819,8 +1819,8 @@ private fun LanguageSelector() {
 
     // AppCompatDelegate is the persisted source of truth (no extra store needed).
     val currentTag = AppCompatDelegate.getApplicationLocales().toLanguageTags()
-    val current = AppLanguage.entries.firstOrNull {
-        it.tag != null && currentTag.startsWith(it.tag!!)
+    val current = AppLanguage.entries.firstOrNull { lang ->
+        lang.tag?.let { currentTag.startsWith(it) } == true
     } ?: AppLanguage.SYSTEM
 
     fun labelFor(lang: AppLanguage) = if (lang == AppLanguage.SYSTEM) systemLabel else lang.endonym

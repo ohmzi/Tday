@@ -21,6 +21,7 @@ import { useFloater } from "@/features/floater/query/get-floater";
 import { useFloaterListMetaData } from "@/features/floaterList/query/get-floater-list-meta";
 import FloaterGroup from "./FloaterGroup";
 import FloaterListFormSheet from "@/features/floaterList/component/FloaterListFormSheet";
+import { flattenNotesToPlainText } from "@/lib/richNotes";
 
 const topButtonClass =
   "flex h-14 w-14 items-center justify-center rounded-full border border-white/70 bg-card/90 text-foreground shadow-[0_12px_28px_-22px_hsl(var(--shadow)/0.55)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-card active:translate-y-0 dark:border-white/10";
@@ -71,7 +72,7 @@ export default function NativeFloaterTaskHomeDashboard() {
         : "";
       return (
         floater.title.toLowerCase().includes(query) ||
-        (floater.description ?? "").toLowerCase().includes(query) ||
+        flattenNotesToPlainText(floater.description).toLowerCase().includes(query) ||
         listName.toLowerCase().includes(query)
       );
     });

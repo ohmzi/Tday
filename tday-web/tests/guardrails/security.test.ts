@@ -77,7 +77,9 @@ describe("security guardrails", () => {
     const backendFiles = walkFiles(BACKEND_SRC, ".kt");
 
     const SECRET_PATTERNS = [
-      /(?:password|secret|token|apiKey)\s*=\s*"[^"]{8,}"/i,
+      // [^"$] excludes Kotlin string templates ("$id_$secret") — those are
+      // built from other variables at runtime, not a hardcoded literal.
+      /(?:password|secret|token|apiKey)\s*=\s*"[^"$]{8,}"/i,
       /-----BEGIN\s+(RSA\s+)?PRIVATE\s+KEY-----/,
     ];
 

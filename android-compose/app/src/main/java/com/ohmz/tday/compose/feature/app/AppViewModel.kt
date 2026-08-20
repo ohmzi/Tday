@@ -630,8 +630,8 @@ class AppViewModel @Inject constructor(
     /// (4xx) errors — e.g. "current password is incorrect" — and otherwise maps
     /// to a generic user-facing message.
     private fun Throwable.accountEditMessage(@androidx.annotation.StringRes fallbackRes: Int): String {
-        if (this is ApiCallException && (statusCode == 400 || statusCode == 422) && !message.isNullOrBlank()) {
-            return message!!
+        if (this is ApiCallException && (statusCode == 400 || statusCode == 422)) {
+            message?.takeIf { it.isNotBlank() }?.let { return it }
         }
         return userFacingMessage(appContext, fallbackRes)
     }
