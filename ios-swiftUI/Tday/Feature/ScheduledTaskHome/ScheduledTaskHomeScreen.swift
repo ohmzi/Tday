@@ -140,7 +140,7 @@ struct ScheduledTaskHomeScreen: View {
 
         return viewModel.searchableTodos.filter { todo in
             scheduledTaskHomeSearchText(todo.title).contains(normalizedSearchQuery) ||
-                (todo.description.map { scheduledTaskHomeSearchText($0).contains(normalizedSearchQuery) } ?? false) ||
+                scheduledTaskHomeSearchText(flattenNotesToPlainText(todo.description)).contains(normalizedSearchQuery) ||
                 (todo.listId.flatMap { listByID[$0]?.name }.map { scheduledTaskHomeSearchText($0).contains(normalizedSearchQuery) } ?? false)
         }
         .sorted(by: todoSortPrecedes)
@@ -813,8 +813,10 @@ private struct ScheduledTaskHomeTodayTaskRow: View {
                         .foregroundStyle(subtitleColor)
                 }
 
-                if let description = todo.description?.trimmingCharacters(in: .whitespacesAndNewlines), !description.isEmpty {
-                    Text(description)
+                let flattenedDescription = flattenNotesToPlainText(todo.description)
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                if !flattenedDescription.isEmpty {
+                    Text(flattenedDescription)
                         .font(.tdayRounded(size: 12, weight: .semibold))
                         .foregroundStyle(colors.onSurfaceVariant)
                 }

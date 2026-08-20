@@ -717,7 +717,7 @@ struct TodoListScreen: View {
 
         return viewModel.items.filter { todo in
             todoSearchText(todo.title).contains(normalizedFloaterTaskHomeSearchQuery) ||
-                (todo.description.map { todoSearchText($0).contains(normalizedFloaterTaskHomeSearchQuery) } ?? false) ||
+                todoSearchText(flattenNotesToPlainText(todo.description)).contains(normalizedFloaterTaskHomeSearchQuery) ||
                 (todo.listId.flatMap { floaterTaskHomeListByID[$0]?.name }.map {
                     todoSearchText($0).contains(normalizedFloaterTaskHomeSearchQuery)
                 } ?? false)
@@ -2100,8 +2100,9 @@ struct TodoListScreen: View {
                         .foregroundStyle(colors.onSurfaceVariant)
                 }
             }
-            if let description = todo.description, !description.isEmpty {
-                Text(description)
+            let flattenedDescription = flattenNotesToPlainText(todo.description)
+            if !flattenedDescription.isEmpty {
+                Text(flattenedDescription)
                     .font(.tdayRounded(size: 12, weight: .semibold))
                     .foregroundStyle(colors.onSurfaceVariant)
             }
@@ -2222,8 +2223,10 @@ struct TodoListScreen: View {
                             .foregroundStyle(subtitleColor)
                     }
 
-                    if let description = todo.description?.trimmingCharacters(in: .whitespacesAndNewlines), !description.isEmpty {
-                        Text(description)
+                    let flattenedDescription = flattenNotesToPlainText(todo.description)
+                        .trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !flattenedDescription.isEmpty {
+                        Text(flattenedDescription)
                             .font(.tdayRounded(size: 12, weight: .semibold))
                             .foregroundStyle(colors.onSurfaceVariant)
                     }

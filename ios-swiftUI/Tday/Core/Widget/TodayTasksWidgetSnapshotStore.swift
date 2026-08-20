@@ -225,7 +225,7 @@ enum TodayTasksWidgetSnapshotStore {
                     title: $0.title,
                     dueEpochMs: $0.dueEpochMs ?? dayStartEpochMs,
                     priority: $0.priority,
-                    description: $0.description,
+                    description: $0.description.map(flattenNotesToPlainText),
                     pinned: $0.pinned,
                     updatedAtEpochMs: $0.updatedAtEpochMs > 0 ? $0.updatedAtEpochMs : nil,
                     canonicalId: $0.canonicalId,

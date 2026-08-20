@@ -101,7 +101,8 @@ final class TaskReminderScheduler {
 
             let content = UNMutableNotificationContent()
             content.title = task.title
-            content.body = task.description ?? "Due soon"
+            let flattenedBody = flattenNotesToPlainText(task.description)
+            content.body = flattenedBody.isEmpty ? "Due soon" : flattenedBody
             content.sound = .default
             content.categoryIdentifier = Self.reminderCategoryID
             content.userInfo = [

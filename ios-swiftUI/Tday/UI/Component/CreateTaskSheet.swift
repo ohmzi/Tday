@@ -656,12 +656,13 @@ private struct CreateTaskSheetTextCard: View {
 
             TdaySheetDivider()
 
-            CreateTaskSheetTextField(
+            NotesField(
+                value: $notes,
                 placeholder: L("Notes"),
-                text: $notes,
-                lineLimit: 1 ... 1,
-                field: .notes,
-                focusedInputField: focusedInputField
+                isFocused: Binding(
+                    get: { focusedInputField.wrappedValue == .notes },
+                    set: { focusedInputField.wrappedValue = $0 ? .notes : nil }
+                )
             )
         }
     }
