@@ -17,9 +17,12 @@ private enum NotesFieldMetrics {
 // Multi-line rich-text notes field: retains bold/italic/underline/
 // strikethrough pasted in from elsewhere (font size/color/family are always
 // discarded — see RichNotes.swift) and downgrades pasted lists to plain
-// "\u{2022} "/"1. "-prefixed lines. There is no manual formatting toolbar;
-// formatting only ever arrives via paste, and a "clear formatting" button
-// appears only once real formatting is present in the field.
+// "\u{2022} "/"1. "-prefixed lines. Selecting text and using the system edit
+// menu's "Format" submenu (see Coordinator.textView(_:editMenuForTextIn:
+// suggestedActions:) below) lets the user apply the same marks manually —
+// there is no separate formatting toolbar, matching iOS Notes/Gmail's
+// selection-menu convention. A "clear formatting" button appears only once
+// real formatting is present in the field.
 //
 // Unlike web/Android, this sheet's form isn't inside a ScrollView (it's a
 // fixed-height bottom sheet), so the field grows up to a bounded height and
@@ -43,7 +46,11 @@ struct NotesField: View {
             NotesTextViewRepresentable(
                 value: $value,
                 placeholder: placeholder,
-                font: TdayFont.uiFont(size: 18, weight: .heavy),
+                // Semibold rather than the Title field's heavy: bold marks
+                // map to Nunito's heaviest weight (.black — see
+                // RichNotesTextStyle), and that needs two real weight steps
+                // of headroom above the base to read as "bold" at all.
+                font: TdayFont.uiFont(size: 18, weight: .semibold),
                 textColor: UIColor(colors.onSurface),
                 placeholderColor: UIColor(colors.onSurfaceVariant.opacity(0.65)),
                 contentHeight: $contentHeight,
@@ -137,7 +144,13 @@ private struct NotesTextViewRepresentable: UIViewRepresentable {
         textView.style = style
         textView.textColor = textColor
         textView.placeholderLabel?.textColor = placeholderColor
-        textView.typingAttributes = [.font: font, .foregroundColor: textColor]
+        // typingAttributes is intentionally NOT reset here on every pass —
+        // this method runs on every SwiftUI update, including the one
+        // immediately after a manual Format toggle, and resetting it
+        // unconditionally would wipe the "continue typing in bold" state
+        // that toggle just set. It's only ever set on external value
+        // changes below (switching which task is open) and once in
+        // makeUIView (first load).
         if value != context.coordinator.lastEmitted {
             context.coordinator.lastEmitted = value
             textView.attributedText = decodeNotesToAttributedString(value, style: style)
@@ -204,6 +217,61 @@ private struct NotesTextViewRepresentable: UIViewRepresentable {
                 isFocused.wrappedValue = false
             }
         }
+
+        // Adds a "Format" submenu (Bold/Italic/Underline/Strikethrough/
+        // Bulleted list/Numbered list, with checkmarks reflecting the
+        // current selection) to the system's Copy/Paste/Select All popup —
+        // the same place iOS Notes and Gmail put manual formatting. Only
+        // offered for a real (non-empty) selection; an empty range leaves
+        // the system's own menu untouched.
+        func textView(
+            _ textView: UITextView,
+            editMenuForTextIn range: NSRange,
+            suggestedActions: [UIMenuElement]
+        ) -> UIMenu? {
+            guard range.length > 0,
+                  let richTextView = textView as? RichNotesTextView,
+                  let style = richTextView.style else {
+                return nil
+            }
+            let text = textView.attributedText ?? NSAttributedString()
+
+            func markAction(_ mark: RichNotesMark, title: String, imageName: String) -> UIAction {
+                let active = isMarkActive(mark, in: text, range: range, style: style)
+                return UIAction(
+                    title: title,
+                    image: UIImage(named: imageName)?.withRenderingMode(.alwaysTemplate),
+                    state: active ? .on : .off
+                ) { [weak richTextView] _ in
+                    richTextView?.applyMark(mark, in: range)
+                }
+            }
+
+            func listAction(_ kind: RichNotesListKind, title: String, imageName: String) -> UIAction {
+                let active = isListActive(kind, in: text, range: range)
+                return UIAction(
+                    title: title,
+                    image: UIImage(named: imageName)?.withRenderingMode(.alwaysTemplate),
+                    state: active ? .on : .off
+                ) { [weak richTextView] _ in
+                    richTextView?.applyList(kind, in: range)
+                }
+            }
+
+            let formatMenu = UIMenu(
+                title: L("Format"),
+                image: UIImage(named: "LucideType")?.withRenderingMode(.alwaysTemplate),
+                children: [
+                    markAction(.bold, title: L("Bold"), imageName: "LucideBold"),
+                    markAction(.italic, title: L("Italic"), imageName: "LucideItalic"),
+                    markAction(.underline, title: L("Underline"), imageName: "LucideUnderline"),
+                    markAction(.strikethrough, title: L("Strikethrough"), imageName: "LucideStrikethrough"),
+                    listAction(.bullet, title: L("Bulleted list"), imageName: "LucideList"),
+                    listAction(.ordered, title: L("Numbered list"), imageName: "LucideListOrdered"),
+                ]
+            )
+            return UIMenu(children: suggestedActions + [formatMenu])
+        }
     }
 }
 
@@ -236,6 +304,47 @@ final class RichNotesTextView: UITextView {
         mutable.replaceCharacters(in: range, with: fragment)
         attributedText = mutable
         selectedRange = NSRange(location: range.location + fragment.length, length: 0)
+        delegate?.textViewDidChange?(self)
+    }
+
+    // Called from the Format submenu (see Coordinator.textView(_:editMenuForTextIn:suggestedActions:)).
+    func applyMark(_ mark: RichNotesMark, in range: NSRange) {
+        guard let style, range.length > 0 else { return }
+        let updated = togglingMark(mark, in: attributedText, range: range, style: style)
+        replaceAttributedText(with: updated, selection: range)
+        // Sample the LAST character of the (still-selected) range, which now
+        // carries the toggled mark — sampling range.location + range.length
+        // would read the character just *after* the selection instead,
+        // which was never touched by this toggle.
+        typingAttributes = markAttributes(at: range.location + range.length - 1, in: updated, style: style)
+    }
+
+    func applyList(_ kind: RichNotesListKind, in range: NSRange) {
+        guard let style else { return }
+        let (updated, selection) = togglingList(kind, in: attributedText, range: range, style: style)
+        replaceAttributedText(with: updated, selection: selection)
+        typingAttributes = markAttributes(at: selection.location, in: updated, style: style)
+    }
+
+    // Mutates through textStorage inside begin/endEditing and registers a
+    // matching undo action, so ⌘Z / shake-to-undo work for a manual Format
+    // action the same way they already do for ordinary typing (UITextView's
+    // own undo support is keyed off exactly this — self.undoManager — so
+    // this hooks into the same mechanism rather than inventing a new one).
+    private func replaceAttributedText(with newText: NSAttributedString, selection: NSRange) {
+        let previousText = NSAttributedString(attributedString: attributedText)
+        let previousSelection = selectedRange
+
+        textStorage.beginEditing()
+        textStorage.replaceCharacters(in: NSRange(location: 0, length: textStorage.length), with: newText)
+        textStorage.endEditing()
+        selectedRange = selection
+
+        undoManager?.setActionName(L("Format"))
+        undoManager?.registerUndo(withTarget: self) { target in
+            target.replaceAttributedText(with: previousText, selection: previousSelection)
+        }
+
         delegate?.textViewDidChange?(self)
     }
 }

@@ -1,3 +1,4 @@
+import UIKit
 import XCTest
 
 #if SWIFT_PACKAGE
@@ -172,5 +173,178 @@ final class RichNotesTests: XCTestCase {
     func testFlattenOfNilOrEmptyIsEmptyString() {
         XCTAssertEqual(flattenNotesToPlainText(nil), "")
         XCTAssertEqual(flattenNotesToPlainText(""), "")
+    }
+}
+
+// MARK: - Manual formatting (RichNotesAttributedString.swift)
+
+final class RichNotesManualFormattingTests: XCTestCase {
+    private func makeStyle() -> RichNotesTextStyle {
+        RichNotesTextStyle(baseFont: TdayFont.uiFont(size: 18, weight: .semibold), baseColor: .black)
+    }
+
+    // The whole bold-detection scheme hinges on baseFont and boldFont having
+    // different fontNames — if font resolution ever collapsed them to the
+    // same font (e.g. a bundling regression), every note would silently
+    // encode as permanently bold. Fail loudly instead.
+    func testStyleBoldFontIsDistinctFromBaseFont() {
+        let style = makeStyle()
+        XCTAssertNotEqual(style.baseFont.fontName, style.boldFont.fontName)
+    }
+
+    // MARK: isMarkActive / togglingMark
+
+    func testIsMarkActiveTrueOnlyWhenWholeRangeHasTheMark() {
+        let style = makeStyle()
+        let plain = NSAttributedString(string: "hello", attributes: [.font: style.baseFont])
+        let bolded = togglingMark(.bold, in: plain, range: NSRange(location: 0, length: 3), style: style)
+
+        // Fully inside the bolded run.
+        XCTAssertTrue(isMarkActive(.bold, in: bolded, range: NSRange(location: 0, length: 3), style: style))
+        // Fully inside the untouched tail.
+        XCTAssertFalse(isMarkActive(.bold, in: bolded, range: NSRange(location: 3, length: 2), style: style))
+        // Straddles both — mixed, so not "active".
+        XCTAssertFalse(isMarkActive(.bold, in: bolded, range: NSRange(location: 0, length: 5), style: style))
+    }
+
+    func testTogglingMarkAppliesThenRemovesEachMark() {
+        let style = makeStyle()
+        let base = NSAttributedString(string: "hello", attributes: [.font: style.baseFont, .foregroundColor: style.baseColor])
+        let range = NSRange(location: 0, length: 5)
+
+        for mark in [RichNotesMark.bold, .italic, .underline, .strikethrough] {
+            XCTAssertFalse(isMarkActive(mark, in: base, range: range, style: style), "\(mark) should start inactive")
+            let applied = togglingMark(mark, in: base, range: range, style: style)
+            XCTAssertTrue(isMarkActive(mark, in: applied, range: range, style: style), "\(mark) should be active after toggling on")
+            XCTAssertEqual(applied.string, "hello", "toggling a mark must never change the text itself")
+            let removed = togglingMark(mark, in: applied, range: range, style: style)
+            XCTAssertFalse(isMarkActive(mark, in: removed, range: range, style: style), "\(mark) should be inactive after toggling off")
+        }
+    }
+
+    func testTogglingBoldOnMixedSelectionAppliesRatherThanRemoves() {
+        // Notes/Gmail semantics: a selection that's only partially bold gets
+        // bolded in full on first toggle, not stripped.
+        let style = makeStyle()
+        let base = NSAttributedString(string: "helloworld", attributes: [.font: style.baseFont])
+        let halfBold = togglingMark(.bold, in: base, range: NSRange(location: 0, length: 5), style: style)
+        let range = NSRange(location: 0, length: 10)
+        XCTAssertFalse(isMarkActive(.bold, in: halfBold, range: range, style: style))
+        let fullyBold = togglingMark(.bold, in: halfBold, range: range, style: style)
+        XCTAssertTrue(isMarkActive(.bold, in: fullyBold, range: range, style: style))
+    }
+
+    func testTogglingMarkOnEmptyRangeIsANoOp() {
+        let style = makeStyle()
+        let base = NSAttributedString(string: "hello", attributes: [.font: style.baseFont])
+        let result = togglingMark(.bold, in: base, range: NSRange(location: 2, length: 0), style: style)
+        XCTAssertEqual(result.string, base.string)
+        XCTAssertFalse(isMarkActive(.bold, in: result, range: NSRange(location: 0, length: 5), style: style))
+    }
+
+    // MARK: togglingList / isListActive
+
+    func testTogglingBulletListInsertsPrefixAndTagsBothLines() {
+        let style = makeStyle()
+        let base = NSAttributedString(string: "first\nsecond", attributes: [.font: style.baseFont])
+        let full = NSRange(location: 0, length: base.length)
+
+        XCTAssertFalse(isListActive(.bullet, in: base, range: full))
+        let (result, selection) = togglingList(.bullet, in: base, range: full, style: style)
+        XCTAssertEqual(result.string, "\u{2022} first\n\u{2022} second")
+        XCTAssertEqual(selection, NSRange(location: 0, length: result.length))
+        XCTAssertTrue(isListActive(.bullet, in: result, range: NSRange(location: 0, length: result.length)))
+    }
+
+    func testTogglingOrderedListRenumbersSequentially() {
+        let style = makeStyle()
+        let base = NSAttributedString(string: "a\nb\nc", attributes: [.font: style.baseFont])
+        let (result, _) = togglingList(.ordered, in: base, range: NSRange(location: 0, length: base.length), style: style)
+        XCTAssertEqual(result.string, "1. a\n2. b\n3. c")
+    }
+
+    func testTogglingListOffRemovesPrefixAndTagWhenAlreadyActive() {
+        let style = makeStyle()
+        let base = NSAttributedString(string: "first\nsecond", attributes: [.font: style.baseFont])
+        let full = NSRange(location: 0, length: base.length)
+        let (bulleted, bulletedSelection) = togglingList(.bullet, in: base, range: full, style: style)
+        let (removed, _) = togglingList(.bullet, in: bulleted, range: bulletedSelection, style: style)
+        XCTAssertEqual(removed.string, "first\nsecond")
+        XCTAssertFalse(isListActive(.bullet, in: removed, range: NSRange(location: 0, length: removed.length)))
+    }
+
+    func testTogglingListConvertsBulletToOrderedRatherThanStacking() {
+        let style = makeStyle()
+        let base = NSAttributedString(string: "a\nb", attributes: [.font: style.baseFont])
+        let (bulleted, bulletedSelection) = togglingList(.bullet, in: base, range: NSRange(location: 0, length: base.length), style: style)
+        let (ordered, _) = togglingList(.ordered, in: bulleted, range: bulletedSelection, style: style)
+        XCTAssertEqual(ordered.string, "1. a\n2. b")
+    }
+
+    func testTogglingListOnCollapsedCursorAffectsOnlyThatLine() {
+        let style = makeStyle()
+        let base = NSAttributedString(string: "first\nsecond", attributes: [.font: style.baseFont])
+        // Collapsed cursor inside "second" (index 6 = start of "second").
+        let (result, selection) = togglingList(.bullet, in: base, range: NSRange(location: 6, length: 0), style: style)
+        XCTAssertEqual(result.string, "first\n\u{2022} second")
+        XCTAssertEqual(selection, NSRange(location: 8, length: 0))
+    }
+
+    // MARK: encodeAttributedNotes — the round-trip regression coverage
+
+    // This is the fix for the pre-existing bug: decode used to expand
+    // <ul><li> into plain "• "-prefixed text, but encode only ever emitted
+    // <p> — so editing a single character anywhere in a note that contained
+    // a list silently destroyed the list on save. encodeAttributedNotes now
+    // promotes consecutive same-kind tagged lines back into a real list.
+    func testEncodeAttributedNotesPromotesTaggedLinesBackIntoRealList() {
+        let style = makeStyle()
+        let stored = richNotesMarker + "<ul><li>a</li><li>b</li></ul>"
+        let decoded = decodeNotesToAttributedString(stored, style: style)
+        let reEncoded = encodeAttributedNotes(decoded, style: style)
+        // The inner <p> is intentional — it matches exactly what web's
+        // Tiptap listItem emits, so edits from either platform converge on
+        // the same bytes instead of churning back and forth.
+        XCTAssertEqual(reEncoded, richNotesMarker + "<ul><li><p>a</p></li><li><p>b</p></li></ul>")
+    }
+
+    func testEncodeAttributedNotesRoundTripIsStableOnSecondPass() {
+        let style = makeStyle()
+        let once = encodeAttributedNotes(
+            decodeNotesToAttributedString(richNotesMarker + "<ol><li>a</li><li>b</li></ol>", style: style),
+            style: style
+        )
+        let twice = encodeAttributedNotes(decodeNotesToAttributedString(once, style: style), style: style)
+        XCTAssertEqual(once, twice)
+    }
+
+    func testEncodeAttributedNotesEncodesManuallyAppliedBold() {
+        let style = makeStyle()
+        let base = NSAttributedString(string: "say hi", attributes: [.font: style.baseFont, .foregroundColor: style.baseColor])
+        let bolded = togglingMark(.bold, in: base, range: NSRange(location: 4, length: 2), style: style)
+        let encoded = encodeAttributedNotes(bolded, style: style)
+        XCTAssertEqual(encoded, richNotesMarker + "<p>say <b>hi</b></p>")
+    }
+
+    func testEncodeAttributedNotesEncodesManuallyAppliedList() {
+        let style = makeStyle()
+        let base = NSAttributedString(string: "eggs\nbread", attributes: [.font: style.baseFont, .foregroundColor: style.baseColor])
+        let (listed, _) = togglingList(.bullet, in: base, range: NSRange(location: 0, length: base.length), style: style)
+        let encoded = encodeAttributedNotes(listed, style: style)
+        XCTAssertEqual(encoded, richNotesMarker + "<ul><li><p>eggs</p></li><li><p>bread</p></li></ul>")
+    }
+
+    // Invariant this whole design protects: a plain note that happens to
+    // contain a literal "• " line (typed by hand, or from data written
+    // before this feature existed) must never be promoted into a rich list
+    // just because the text looks like one — only the tracked attribute
+    // (set exclusively by decode-from-real-<ul> and the list toggle) counts.
+    func testEncodeAttributedNotesNeverPromotesUntaggedLiteralBulletText() {
+        let style = makeStyle()
+        let plain = "\u{2022} just a bullet character, never tagged"
+        let decoded = decodeNotesToAttributedString(plain, style: style)
+        let reEncoded = encodeAttributedNotes(decoded, style: style)
+        XCTAssertEqual(reEncoded, plain)
+        XCTAssertFalse(isRichNotes(reEncoded))
     }
 }

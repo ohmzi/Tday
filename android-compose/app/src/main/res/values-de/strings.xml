@@ -331,6 +331,12 @@
     <string name="create_task_title_placeholder">Titel</string>
     <string name="create_task_notes_placeholder">Notizen</string>
     <string name="create_task_clear_formatting">Formatierung entfernen</string>
+    <string name="create_task_format_bold">Fett</string>
+    <string name="create_task_format_italic">Kursiv</string>
+    <string name="create_task_format_underline">Unterstrichen</string>
+    <string name="create_task_format_strikethrough">Durchgestrichen</string>
+    <string name="create_task_format_bulleted_list">Aufzählungsliste</string>
+    <string name="create_task_format_numbered_list">Nummerierte Liste</string>
     <string name="create_task_schedule_enabled">Aufgabe hat ein Fälligkeitsdatum</string>
     <string name="create_task_schedule_disabled">Floater-Aufgabe</string>
     <string name="create_task_select_date">Datum auswählen</string>

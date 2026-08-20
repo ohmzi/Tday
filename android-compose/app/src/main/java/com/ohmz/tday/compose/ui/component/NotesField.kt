@@ -2,6 +2,9 @@ package com.ohmz.tday.compose.ui.component
 
 import android.content.ClipboardManager
 import android.content.Context
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.BasicTextField
@@ -17,6 +20,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -32,9 +36,16 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import com.ohmz.tday.compose.R
+import com.ohmz.tday.compose.core.text.RichNotesListKind
+import com.ohmz.tday.compose.core.text.RichNotesMark
 import com.ohmz.tday.compose.core.text.decodeNotesToAnnotatedString
 import com.ohmz.tday.compose.core.text.encodeAnnotatedNotes
+import com.ohmz.tday.compose.core.text.isListActive
+import com.ohmz.tday.compose.core.text.isMarkActive
+import com.ohmz.tday.compose.core.text.isRichNotes
 import com.ohmz.tday.compose.core.text.sanitizeHtml
+import com.ohmz.tday.compose.core.text.togglingList
+import com.ohmz.tday.compose.core.text.togglingMark
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 import org.jsoup.nodes.Node
@@ -43,9 +54,12 @@ import org.jsoup.nodes.TextNode
 // Multi-line rich-text notes field: retains bold/italic/underline/strikethrough
 // pasted in from elsewhere (font size/color/family are always discarded — see
 // RichNotes.kt) and downgrades pasted lists to plain "• "/"1. "-prefixed
-// lines. There is no manual formatting toolbar; formatting only ever arrives
-// via paste, and a "clear formatting" button appears only once real
-// formatting is present in the field.
+// lines. Focusing the field also shows a format bar with the same six marks/
+// lists so they can be applied manually to the current selection, not just
+// via paste — Compose has no equivalent of a text-selection popup menu
+// (unlike iOS/web), so this surfaces as a persistent row instead, matching
+// how most Android editors (Docs, Keep) put manual formatting controls. A
+// "clear formatting" button appears only once real formatting is present.
 @Composable
 fun NotesField(
     value: String,
@@ -61,6 +75,7 @@ fun NotesField(
 
     var fieldValue by remember { mutableStateOf(TextFieldValue(decodeNotesToAnnotatedString(value))) }
     var lastEmitted by remember { mutableStateOf(value) }
+    var isFocused by remember { mutableStateOf(false) }
 
     // Sync content set from outside (switching which task is being edited) —
     // guarded so it never fires as an echo of this field's own onValueChange.
@@ -69,9 +84,21 @@ fun NotesField(
         fieldValue = TextFieldValue(decodeNotesToAnnotatedString(value))
     }
 
-    val hasFormatting = fieldValue.annotatedString.spanStyles.isNotEmpty()
+    // Ground truth is the encoded string's marker, not the live spans —
+    // spanStyles alone would miss a list-only note (bullets/numbers carry
+    // only a string annotation, never a SpanStyle), leaving no way back to
+    // plain text after using the format bar's list buttons.
+    val hasFormatting = isRichNotes(lastEmitted)
 
     val onValueChangeState = rememberUpdatedState(onValueChange)
+
+    fun applyFormatEdit(newAnnotated: AnnotatedString, newSelection: TextRange) {
+        val updated = TextFieldValue(newAnnotated, newSelection)
+        fieldValue = updated
+        val encoded = encodeAnnotatedNotes(updated.annotatedString)
+        lastEmitted = encoded
+        onValueChangeState.value(encoded)
+    }
 
     BasicTextField(
         value = fieldValue,
@@ -88,7 +115,8 @@ fun NotesField(
             fontWeight = FontWeight.ExtraBold,
         ),
         modifier = modifier
-            .padding(horizontal = 18.dp, vertical = 16.dp),
+            .padding(horizontal = 18.dp, vertical = 16.dp)
+            .onFocusChanged { isFocused = it.isFocused },
         decorationBox = { innerTextField ->
             if (fieldValue.text.isEmpty()) {
                 Text(
@@ -120,6 +148,104 @@ fun NotesField(
                 modifier = Modifier.size(18.dp),
             )
         }
+    }
+
+    if (isFocused) {
+        val selection = fieldValue.selection
+        val annotated = fieldValue.annotatedString
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag("notesFormatBar")
+                .padding(horizontal = 8.dp, vertical = 2.dp),
+            horizontalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            FormatBarButton(
+                iconRes = R.drawable.ic_lucide_bold,
+                contentDescription = stringResource(R.string.create_task_format_bold),
+                active = isMarkActive(RichNotesMark.BOLD, annotated, selection),
+                enabled = !selection.collapsed,
+                testTag = "formatBold",
+            ) {
+                applyFormatEdit(togglingMark(RichNotesMark.BOLD, annotated, selection), selection)
+            }
+            FormatBarButton(
+                iconRes = R.drawable.ic_lucide_italic,
+                contentDescription = stringResource(R.string.create_task_format_italic),
+                active = isMarkActive(RichNotesMark.ITALIC, annotated, selection),
+                enabled = !selection.collapsed,
+                testTag = "formatItalic",
+            ) {
+                applyFormatEdit(togglingMark(RichNotesMark.ITALIC, annotated, selection), selection)
+            }
+            FormatBarButton(
+                iconRes = R.drawable.ic_lucide_underline,
+                contentDescription = stringResource(R.string.create_task_format_underline),
+                active = isMarkActive(RichNotesMark.UNDERLINE, annotated, selection),
+                enabled = !selection.collapsed,
+                testTag = "formatUnderline",
+            ) {
+                applyFormatEdit(togglingMark(RichNotesMark.UNDERLINE, annotated, selection), selection)
+            }
+            FormatBarButton(
+                iconRes = R.drawable.ic_lucide_strikethrough,
+                contentDescription = stringResource(R.string.create_task_format_strikethrough),
+                active = isMarkActive(RichNotesMark.STRIKETHROUGH, annotated, selection),
+                enabled = !selection.collapsed,
+                testTag = "formatStrikethrough",
+            ) {
+                applyFormatEdit(togglingMark(RichNotesMark.STRIKETHROUGH, annotated, selection), selection)
+            }
+            FormatBarButton(
+                iconRes = R.drawable.ic_lucide_list,
+                contentDescription = stringResource(R.string.create_task_format_bulleted_list),
+                active = isListActive(RichNotesListKind.BULLET, annotated, selection),
+                enabled = !selection.collapsed,
+                testTag = "formatBulletedList",
+            ) {
+                val (updated, newSelection) = togglingList(RichNotesListKind.BULLET, annotated, selection)
+                applyFormatEdit(updated, newSelection)
+            }
+            FormatBarButton(
+                iconRes = R.drawable.ic_lucide_list_ordered,
+                contentDescription = stringResource(R.string.create_task_format_numbered_list),
+                active = isListActive(RichNotesListKind.ORDERED, annotated, selection),
+                enabled = !selection.collapsed,
+                testTag = "formatNumberedList",
+            ) {
+                val (updated, newSelection) = togglingList(RichNotesListKind.ORDERED, annotated, selection)
+                applyFormatEdit(updated, newSelection)
+            }
+        }
+    }
+}
+
+@Composable
+private fun FormatBarButton(
+    iconRes: Int,
+    contentDescription: String,
+    active: Boolean,
+    enabled: Boolean,
+    testTag: String,
+    onClick: () -> Unit,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    val tint = when {
+        !enabled -> colorScheme.onSurfaceVariant.copy(alpha = 0.35f)
+        active -> colorScheme.primary
+        else -> colorScheme.onSurfaceVariant.copy(alpha = 0.75f)
+    }
+    IconButton(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = Modifier.size(36.dp).testTag(testTag),
+    ) {
+        Icon(
+            imageVector = ImageVector.vectorResource(iconRes),
+            contentDescription = contentDescription,
+            tint = tint,
+            modifier = Modifier.size(18.dp),
+        )
     }
 }
 

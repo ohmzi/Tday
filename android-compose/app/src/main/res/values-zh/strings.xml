@@ -330,6 +330,12 @@
     <string name="create_task_title_placeholder">标题</string>
     <string name="create_task_notes_placeholder">备注</string>
     <string name="create_task_clear_formatting">清除格式</string>
+    <string name="create_task_format_bold">粗体</string>
+    <string name="create_task_format_italic">斜体</string>
+    <string name="create_task_format_underline">下划线</string>
+    <string name="create_task_format_strikethrough">删除线</string>
+    <string name="create_task_format_bulleted_list">项目符号列表</string>
+    <string name="create_task_format_numbered_list">编号列表</string>
     <string name="create_task_schedule_enabled">任务有截止日期</string>
     <string name="create_task_schedule_disabled">浮动任务</string>
     <string name="create_task_select_date">选择日期</string>

@@ -392,6 +392,12 @@
     <string name="create_task_title_placeholder">Title</string>
     <string name="create_task_notes_placeholder">Notes</string>
     <string name="create_task_clear_formatting">Clear formatting</string>
+    <string name="create_task_format_bold">Bold</string>
+    <string name="create_task_format_italic">Italic</string>
+    <string name="create_task_format_underline">Underline</string>
+    <string name="create_task_format_strikethrough">Strikethrough</string>
+    <string name="create_task_format_bulleted_list">Bulleted list</string>
+    <string name="create_task_format_numbered_list">Numbered list</string>
     <string name="create_task_schedule_enabled">Task has a due date</string>
     <string name="create_task_schedule_disabled">Floater task</string>
     <string name="create_task_select_date">Select date</string>

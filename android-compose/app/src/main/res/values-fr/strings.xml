@@ -331,6 +331,12 @@
     <string name="create_task_title_placeholder">Titre</string>
     <string name="create_task_notes_placeholder">Notes</string>
     <string name="create_task_clear_formatting">Effacer la mise en forme</string>
+    <string name="create_task_format_bold">Gras</string>
+    <string name="create_task_format_italic">Italique</string>
+    <string name="create_task_format_underline">Souligné</string>
+    <string name="create_task_format_strikethrough">Barré</string>
+    <string name="create_task_format_bulleted_list">Liste à puces</string>
+    <string name="create_task_format_numbered_list">Liste numérotée</string>
     <string name="create_task_schedule_enabled">La tâche a une échéance</string>
     <string name="create_task_schedule_disabled">Tâche sans date</string>
     <string name="create_task_select_date">Sélectionner la date</string>
