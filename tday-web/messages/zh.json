@@ -604,7 +604,10 @@
       "scopeReadHint": "可读取但无法修改你的任务——适合仪表盘使用。",
       "scopeFullHint": "可读取并修改你的账户。仅在信任的应用中使用。",
       "unnamedKey": "未命名密钥",
-      "expired": "已过期"
+      "expired": "已过期",
+      "createdAt": "创建于 {{date}}",
+      "lastUsedAt": "最后使用于 {{date}}",
+      "neverUsed": "从未使用"
     },
     "toast": {
       "apiKeyGenerated": "已生成 API 密钥。立即复制——它不会再次显示。",

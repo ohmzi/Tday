@@ -604,7 +604,10 @@
       "scopeReadHint": "タスクを読み取れますが変更はできません。ダッシュボードに安全です。",
       "scopeFullHint": "アカウントの読み取りと変更ができます。信頼できるアプリでのみ使用してください。",
       "unnamedKey": "名称未設定のキー",
-      "expired": "期限切れ"
+      "expired": "期限切れ",
+      "createdAt": "{{date}} に作成",
+      "lastUsedAt": "最終使用: {{date}}",
+      "neverUsed": "未使用"
     },
     "toast": {
       "apiKeyGenerated": "APIキーを生成しました。今すぐコピーしてください。二度と表示されません。",

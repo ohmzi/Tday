@@ -604,7 +604,10 @@
       "scopeReadHint": "Pode ler suas tarefas, mas não alterá-las — seguro para painéis.",
       "scopeFullHint": "Pode ler e alterar sua conta. Use apenas em apps confiáveis.",
       "unnamedKey": "Chave sem nome",
-      "expired": "Expirada"
+      "expired": "Expirada",
+      "createdAt": "Criada em {{date}}",
+      "lastUsedAt": "Usada pela última vez em {{date}}",
+      "neverUsed": "Nunca usada"
     },
     "toast": {
       "apiKeyGenerated": "Chave de API gerada. Copie-a agora — não será mostrada novamente.",
