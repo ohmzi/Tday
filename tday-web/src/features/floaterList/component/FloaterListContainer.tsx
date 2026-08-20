@@ -18,6 +18,7 @@ import { useFloaterList } from "@/features/floaterList/query/get-floater-list";
 import { useFloaterListMetaData } from "@/features/floaterList/query/get-floater-list-meta";
 import FloaterListFormSheet from "./FloaterListFormSheet";
 import FloaterListDot from "./FloaterListDot";
+import { flattenNotesToPlainText } from "@/lib/richNotes";
 
 export default function FloaterListContainer({ id }: { id: string }) {
   const { t: appDict } = useTranslation("app");
@@ -57,7 +58,7 @@ export default function FloaterListContainer({ id }: { id: string }) {
     return floaterListTodos.filter((floater) => {
       return (
         floater.title.toLowerCase().includes(query) ||
-        (floater.description ?? "").toLowerCase().includes(query)
+        flattenNotesToPlainText(floater.description).toLowerCase().includes(query)
       );
     });
   }, [floaterListTodos, searchQuery]);

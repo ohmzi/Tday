@@ -10,6 +10,18 @@ plugins {
     id("io.sentry.android.gradle")
 }
 
+// Several AndroidX artifacts' dependency metadata resolves kotlin-stdlib to
+// whatever the latest published release is (currently newer than this
+// project's pinned Kotlin plugin version above), which the older compiler
+// can't read ("compiled with an incompatible version of Kotlin"). Force it
+// back down to match so `./gradlew :app:compileDebugKotlin` builds at all —
+// pre-existing/unrelated to any one feature, found while working on notes.
+configurations.all {
+    resolutionStrategy {
+        force("org.jetbrains.kotlin:kotlin-stdlib:2.2.10")
+    }
+}
+
 val localProps: Properties = Properties().apply {
     val f = rootProject.file("local.properties")
     if (f.exists()) f.reader().use { load(it) }
@@ -152,6 +164,10 @@ dependencies {
     // On-device natural-language date parsing for the task-title field (offline,
     // no AI/network). Same engine the backend uses, so behaviour matches.
     implementation("com.joestelmach:natty:0.13")
+
+    // HTML sanitizer for the notes rich-text encoding — allow-lists the same
+    // small tag set as tday-web's DOMParser-based sanitizer (see richNotes.ts).
+    implementation("org.jsoup:jsoup:1.23.1")
 
     implementation("androidx.core:core-ktx:1.15.0")
     // Per-app language override (AppCompatDelegate.setApplicationLocales); works

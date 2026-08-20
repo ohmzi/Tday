@@ -29,12 +29,12 @@ import ListDot from "@/components/ListDot";
 import FloaterListDot from "@/features/floaterList/component/FloaterListDot";
 import { GuideHelpLink } from "@/features/guide/GuideHelpLink";
 import NLPTitleInput from "./NLPTitleInput";
+import NotesField from "@/components/todo/component/NotesField/NotesField";
 import RepeatSuggestionChip from "./RepeatSuggestionChip";
 import TaskStepsSection from "./TaskStepsSection";
 import TaskSelectorOverlays, { type TaskSelector } from "./TodoFormSelectors";
 import { priorityLabelKey, repeatLabelKey } from "./labels";
 import { getPriorityFlag } from "@/lib/priority";
-import { isSubmitEnter } from "@/lib/utils";
 
 interface TodoFormProps {
   editInstanceOnly?: boolean;
@@ -139,19 +139,12 @@ const TodoForm = ({
           <GuideHelpLink topic="nlp-date-syntax" className="mt-0.5" />
         </div>
         <SheetDivider />
-        <input
+        <NotesField
           value={desc}
-          onChange={(e) => setDesc(e.target.value)}
-          enterKeyHint="done"
-          onKeyDown={(e) => {
-            if (!isSubmitEnter(e)) return;
-            e.preventDefault();
-            if (title.trim().length > 0) handleForm();
-            else e.currentTarget.blur();
-          }}
-          name="description"
+          onChange={setDesc}
           placeholder={appDict("notes")}
-          className="w-full bg-transparent px-[18px] py-3 text-base font-bold text-foreground placeholder:font-bold placeholder:text-muted-foreground/60 focus:outline-hidden"
+          onSubmit={handleForm}
+          canSubmit={title.trim().length > 0}
         />
       </SheetCard>
 
