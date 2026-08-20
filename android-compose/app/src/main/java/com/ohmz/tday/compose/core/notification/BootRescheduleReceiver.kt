@@ -12,9 +12,12 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import androidx.work.ExistingPeriodicWorkPolicy
 import com.ohmz.tday.compose.MainActivity
 import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.observability.TdayTelemetry
+import com.ohmz.tday.compose.feature.widget.WidgetEntryPoint
+import com.ohmz.tday.compose.feature.widget.WidgetSyncWorker
 import dagger.hilt.android.EntryPointAccessors
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -34,6 +37,15 @@ class BootRescheduleReceiver : BroadcastReceiver() {
         val pending = goAsync()
         CoroutineScope(Dispatchers.Default).launch {
             try {
+                repaintWidgets(context)
+
+                // KEEP, not UPDATE: a boot is not an app update, so re-enqueueing with UPDATE
+                // here would reset the periodic window on every single reboot. UPDATE is still
+                // used from TdayApplication.runDeferredStartup, which IS the right place to pick
+                // up a changed worker definition after an app update.
+                WidgetSyncWorker.schedule(context, ExistingPeriodicWorkPolicy.KEEP)
+                WidgetSyncWorker.runOnce(context)
+
                 val entryPoint = EntryPointAccessors.fromApplication(
                     context.applicationContext,
                     ReminderReceiverEntryPoint::class.java,
@@ -49,6 +61,38 @@ class BootRescheduleReceiver : BroadcastReceiver() {
                 pending.finish()
             }
         }
+    }
+
+    /**
+     * Repaints both widgets after a boot or an app update.
+     *
+     * Also covers the `MY_PACKAGE_REPLACED` case: an install-over-install doesn't clear
+     * `filesDir`, so the previous snapshot survives and this repaint renders it immediately; if it
+     * doesn't survive, `provideGlance`'s own missing-snapshot check (see `TodayTasksWidget.kt`)
+     * enqueues `WidgetHydrateWorker` the moment this repaint runs `provideGlance`. Nothing extra
+     * is needed on this path.
+     *
+     * A reboot drops every widget's RemoteViews (AppWidgetService persists the provider/host
+     * *bindings* but not the rendered views), so without this the widget sits on
+     * `android:initialLayout` until something repaints it. Uses [TodayTasksWidgetRefresher.refreshNow]
+     * rather than the fire-and-forget request so the render completes while [goAsync] still holds
+     * the process alive.
+     */
+    private suspend fun repaintWidgets(context: Context) {
+        val widgets = runCatching {
+            EntryPointAccessors.fromApplication(
+                context.applicationContext,
+                WidgetEntryPoint::class.java,
+            )
+        }.getOrElse { e ->
+            Log.e(LOG_TAG, "Unable to reach the widget refreshers after boot", e)
+            return
+        }
+
+        runCatching { widgets.todayTasksWidgetRefresher().refreshNow() }
+            .onFailure { Log.e(LOG_TAG, "Failed to repaint the Today widget after boot", it) }
+        runCatching { widgets.floaterTasksWidgetRefresher().refreshNow() }
+            .onFailure { Log.e(LOG_TAG, "Failed to repaint the Floater widget after boot", it) }
     }
 
     private fun showUpdateReadyNotification(context: Context) {

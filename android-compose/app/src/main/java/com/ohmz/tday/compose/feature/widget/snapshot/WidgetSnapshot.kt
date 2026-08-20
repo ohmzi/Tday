@@ -2,14 +2,6 @@ package com.ohmz.tday.compose.feature.widget.snapshot
 
 import kotlinx.serialization.Serializable
 
-/**
- * Bump ONLY for a genuinely incompatible change (a field removed or retyped). New fields must be
- * nullable or defaulted so an older writer's file still decodes. [WidgetSnapshotStore] rejects a
- * file whose [WidgetSnapshot.schemaVersion] is greater than this — an app downgrade after a newer
- * build wrote the file — treating it as missing rather than risking a half-decoded row.
- */
-internal const val WIDGET_SNAPSHOT_SCHEMA_VERSION = 1
-
 internal const val TODAY_TASKS_WIDGET_TASK_LIMIT = 50
 internal const val FLOATER_TASKS_WIDGET_TASK_LIMIT = 50
 
@@ -39,7 +31,6 @@ internal enum class WidgetPriorityRing { HIGH, MEDIUM, LOW }
  */
 @Serializable
 internal data class WidgetSnapshot(
-    val schemaVersion: Int = WIDGET_SNAPSHOT_SCHEMA_VERSION,
     val generatedAtEpochMs: Long,
     val status: WidgetSnapshotStatus,
     val taskCount: Int,
@@ -47,31 +38,7 @@ internal data class WidgetSnapshot(
     val dayStartEpochMs: Long? = null,
     val dayEndEpochMs: Long? = null,
     val rows: List<WidgetSnapshotRow> = emptyList(),
-) {
-    /** How many tasks past the builder's row cap were dropped from [rows]. Not currently rendered. */
-    val overflowCount: Int
-        get() = (taskCount - rows.size).coerceAtLeast(0)
-
-    /**
-     * Displayed-content equality, ignoring [generatedAtEpochMs] — used by [WidgetSnapshotWriter]
-     * to skip an encrypt-and-write when nothing the widget shows actually changed. Never used to
-     * skip a repaint: `TodayTasksWidgetRefresher`'s renders stay unconditional on purpose.
-     */
-    fun hasSameContent(other: WidgetSnapshot): Boolean {
-        return status == other.status &&
-            taskCount == other.taskCount &&
-            dayStartEpochMs == other.dayStartEpochMs &&
-            dayEndEpochMs == other.dayEndEpochMs &&
-            rows == other.rows
-    }
-
-    /**
-     * False for a file written by a NEWER build than this one understands (an app downgrade).
-     * Pure and standalone so the rejection rule is unit-testable without Android/Keystore —
-     * [WidgetSnapshotStore.read] treats an unsupported snapshot identically to a missing file.
-     */
-    fun isSupported(): Boolean = schemaVersion <= WIDGET_SNAPSHOT_SCHEMA_VERSION
-}
+)
 
 @Serializable
 internal data class WidgetSnapshotRow(

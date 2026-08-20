@@ -3,6 +3,7 @@ package com.ohmz.tday.compose.feature.widget
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Context
+import android.util.Log
 import androidx.glance.appwidget.AppWidgetId
 import androidx.glance.appwidget.updateAll
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -83,13 +84,16 @@ class TodayTasksWidgetRefresher @Inject constructor(
                 val ids = runCatching { manager.getAppWidgetIds(componentName) }.getOrNull() ?: continue
                 for (appWidgetId in ids) {
                     runCatching { widget.update(context, AppWidgetId(appWidgetId)) }
+                        .onFailure { Log.e(TAG, "update(id=$appWidgetId) failed", it) }
                 }
             }
             runCatching { widget.updateAll(context) }
+                .onFailure { Log.e(TAG, "updateAll failed", it) }
         }
     }
 
     private companion object {
+        const val TAG = "TodayTasksWidgetRefresher"
         val receiverClasses = listOf(
             TodayTasksWidgetSmallReceiver::class.java,
             TodayTasksWidgetReceiver::class.java,

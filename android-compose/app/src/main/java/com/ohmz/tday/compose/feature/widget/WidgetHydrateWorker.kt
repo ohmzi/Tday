@@ -34,7 +34,10 @@ class WidgetHydrateWorker @AssistedInject constructor(
 
     override suspend fun doWork(): Result {
         return runCatching {
-            hydrate(cacheManager, snapshotWriter, todayTasksWidgetRefresher, floaterTasksWidgetRefresher)
+            val state = cacheManager.loadOfflineState()
+            snapshotWriter.write(state)
+            todayTasksWidgetRefresher.refreshNow()
+            floaterTasksWidgetRefresher.refreshNow()
             Result.success()
         }.getOrElse { e ->
             // Best-effort: if this fails, the widget simply stays in LOADING until the app is
@@ -48,25 +51,6 @@ class WidgetHydrateWorker @AssistedInject constructor(
     companion object {
         private const val TAG = "WidgetHydrateWorker"
         private const val WORK_NAME = "tday_widget_hydrate"
-
-        /**
-         * The actual hydrate work, as a plain function over its dependencies rather than this
-         * Worker's injected fields — so [BootRescheduleReceiver]'s `MY_PACKAGE_REPLACED` backfill
-         * can run the SAME logic synchronously inside its own `goAsync` scope (via
-         * [com.ohmz.tday.compose.core.notification.BootBackfillEntryPoint]) instead of enqueueing
-         * this worker and risking the process dying before WorkManager gets to it.
-         */
-        suspend fun hydrate(
-            cacheManager: OfflineCacheManager,
-            snapshotWriter: WidgetSnapshotWriter,
-            todayTasksWidgetRefresher: TodayTasksWidgetRefresher,
-            floaterTasksWidgetRefresher: FloaterTasksWidgetRefresher,
-        ) {
-            val state = cacheManager.loadOfflineState()
-            snapshotWriter.write(state)
-            todayTasksWidgetRefresher.refreshNow()
-            floaterTasksWidgetRefresher.refreshNow()
-        }
 
         /**
          * Fire-and-forget from a widget's `provideGlance`. Six widget instances (three sizes x

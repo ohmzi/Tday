@@ -60,7 +60,6 @@ class FloaterWidgetSnapshotBuilderTest {
 
         assertEquals(55, snapshot.taskCount)
         assertEquals(50, snapshot.rows.size)
-        assertEquals(5, snapshot.overflowCount)
         assertEquals("task-0", snapshot.rows.first().id)
         assertEquals("task-49", snapshot.rows.last().id)
     }
