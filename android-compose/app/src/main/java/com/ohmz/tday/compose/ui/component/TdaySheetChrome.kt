@@ -1,5 +1,8 @@
 package com.ohmz.tday.compose.ui.component
 
+import android.view.Gravity
+import android.view.ViewParent
+import android.view.WindowManager
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
@@ -34,6 +37,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -52,7 +56,9 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.DialogWindowProvider
 import androidx.core.view.HapticFeedbackConstantsCompat
+import androidx.core.view.WindowCompat
 import androidx.core.view.ViewCompat
 import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.ui.theme.TdayDimens
@@ -136,7 +142,58 @@ fun TdayModalBottomSheet(
         scrimColor = TdaySheetDefaults.scrimColor(),
         modifier = modifier,
     ) {
+        TdaySheetFullBleedWindow()
         TdayCenteredSheetContent(content = content)
+    }
+}
+
+/**
+ * Lets a sheet's scrim dim the status bar area too.
+ *
+ * A sheet — scrim included — lives in its own window, and that window is laid
+ * out inside the *inset* area rather than against the display, so the scrim
+ * stops below the status bar and leaves a visible seam there. Measured on a
+ * Pixel 7: the sheet's content view sat at y=136 (exactly the status bar
+ * height) with the window's decor padding at 0, so it is the window placement,
+ * not padding, that has to be corrected. The activity window escapes this via
+ * `enableEdgeToEdge()`, but window flags are not inherited by child windows.
+ *
+ * Giving the window the same layout flags the activity already uses, plus TOP
+ * gravity and a MATCH_PARENT size, makes it span the display; the content view
+ * then sits at y=0 and the scrim covers the full screen.
+ *
+ * Insets are still dispatched normally — this is deliberately not
+ * FLAG_LAYOUT_NO_LIMITS — so sheet content keeps its navigation-bar padding and
+ * the keyboard still resizes correctly.
+ *
+ * Status bar icons are forced light for the lifetime of the sheet, since the
+ * scrim is dark in both themes and the app's normal dark-on-light icons would
+ * otherwise be unreadable against it.
+ */
+@Composable
+internal fun TdaySheetFullBleedWindow() {
+    val view = LocalView.current
+    SideEffect {
+        var parent: ViewParent? = view.parent
+        while (parent != null && parent !is DialogWindowProvider) {
+            parent = parent.parent
+        }
+        val window = (parent as? DialogWindowProvider)?.window ?: return@SideEffect
+        window.setLayout(
+            WindowManager.LayoutParams.MATCH_PARENT,
+            WindowManager.LayoutParams.MATCH_PARENT,
+        )
+        window.attributes = window.attributes.apply {
+            gravity = Gravity.TOP or Gravity.START
+        }
+        @Suppress("DEPRECATION")
+        window.addFlags(
+            WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                WindowManager.LayoutParams.FLAG_LAYOUT_INSET_DECOR or
+                WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS,
+        )
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = false
     }
 }
 
@@ -179,6 +236,8 @@ fun <T> TdayCenteredSelectorDialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false),
     ) {
+        TdaySheetFullBleedWindow()
+
         Box(
             modifier = Modifier
                 .fillMaxSize()
