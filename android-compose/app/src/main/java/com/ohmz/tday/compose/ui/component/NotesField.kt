@@ -44,6 +44,7 @@ import com.ohmz.tday.compose.core.text.isListActive
 import com.ohmz.tday.compose.core.text.isMarkActive
 import com.ohmz.tday.compose.core.text.isRichNotes
 import com.ohmz.tday.compose.core.text.sanitizeHtml
+import com.ohmz.tday.compose.core.text.stripToPlainText
 import com.ohmz.tday.compose.core.text.togglingList
 import com.ohmz.tday.compose.core.text.togglingMark
 import org.jsoup.Jsoup
@@ -133,7 +134,7 @@ fun NotesField(
     if (hasFormatting) {
         IconButton(
             onClick = {
-                val plain = TextFieldValue(fieldValue.text)
+                val plain = TextFieldValue(stripToPlainText(fieldValue.annotatedString))
                 fieldValue = plain
                 val encoded = encodeAnnotatedNotes(plain.annotatedString)
                 lastEmitted = encoded

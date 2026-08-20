@@ -415,5 +415,24 @@ fun encodeAnnotatedNotes(annotated: AnnotatedString): String {
     return encodeNotes(html.toString())
 }
 
+// Live editor AnnotatedString → fully plain text for the "clear formatting"
+// action: unlike just stripping SpanStyles (bold/italic/…), list bullets/
+// numbers are removed entirely rather than left behind as literal text —
+// "clear formatting" means the user wants back to genuinely plain text, not
+// a preview that still reads as a list.
+fun stripToPlainText(annotated: AnnotatedString): String {
+    val text = annotated.text
+    if (text.isEmpty()) return ""
+    val lines = splitLines(text, SimpleRange(0, text.length))
+    val result = StringBuilder()
+    for ((idx, line) in lines.withIndex()) {
+        if (idx > 0) result.append("\n")
+        val kind = listKindAtLineStart(annotated, line)
+        val prefixLen = if (kind != null) listPrefixLength(text, line, kind) else 0
+        result.append(text.substring(line.start + prefixLen, line.end))
+    }
+    return result.toString()
+}
+
 private fun escapeForHtml(text: String): String =
     text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")

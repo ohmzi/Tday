@@ -170,6 +170,19 @@ final class RichNotesTests: XCTestCase {
         XCTAssertEqual(flattenNotesToPlainText(stored), "Buy milk\n\u{2022} eggs\n\u{2022} bread")
     }
 
+    func testStripToPlainTextRemovesListPrefixesEntirely() {
+        // Unlike flattenNotesToPlainText (used for previews, where the "• "
+        // still reads as a list), "clear formatting" should leave no trace
+        // of the list structure at all.
+        let stored = richNotesMarker + "<p><b>Buy</b> milk</p><ul><li>eggs</li><li>bread</li></ul>"
+        XCTAssertEqual(stripToPlainText(stored), "Buy milk\neggs\nbread")
+    }
+
+    func testStripToPlainTextOfPlainOrNilPassesThrough() {
+        XCTAssertEqual(stripToPlainText("plain\nnotes"), "plain\nnotes")
+        XCTAssertEqual(stripToPlainText(nil), "")
+    }
+
     func testFlattenOfNilOrEmptyIsEmptyString() {
         XCTAssertEqual(flattenNotesToPlainText(nil), "")
         XCTAssertEqual(flattenNotesToPlainText(""), "")

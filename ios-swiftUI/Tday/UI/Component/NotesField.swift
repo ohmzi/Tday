@@ -12,17 +12,20 @@ private enum NotesFieldMetrics {
     static let verticalPadding: CGFloat = 12
     static let eraserButtonSize: CGFloat = 32
     static let eraserIconSize: CGFloat = 18
+    static let barButtonSize: CGFloat = 34
+    static let barIconSize: CGFloat = 17
 }
 
 // Multi-line rich-text notes field: retains bold/italic/underline/
 // strikethrough pasted in from elsewhere (font size/color/family are always
 // discarded — see RichNotes.swift) and downgrades pasted lists to plain
-// "\u{2022} "/"1. "-prefixed lines. Selecting text and using the system edit
-// menu's "Format" submenu (see Coordinator.textView(_:editMenuForTextIn:
-// suggestedActions:) below) lets the user apply the same marks manually —
-// there is no separate formatting toolbar, matching iOS Notes/Gmail's
-// selection-menu convention. A "clear formatting" button appears only once
-// real formatting is present in the field.
+// "\u{2022} "/"1. "-prefixed lines. Focusing the field also shows a format
+// bar below it with the same six marks/lists so they can be applied
+// manually to the current selection — matching Android's format bar
+// (Compose has no text-selection popup equivalent, and this keeps every
+// platform's affordance in the same place instead of iOS getting a
+// different pattern). A "clear formatting" button appears only once real
+// formatting is present in the field.
 //
 // Unlike web/Android, this sheet's form isn't inside a ScrollView (it's a
 // fixed-height bottom sheet), so the field grows up to a bounded height and
@@ -38,44 +41,171 @@ struct NotesField: View {
 
     @Environment(\.tdayColors) private var colors
     @State private var contentHeight: CGFloat = NotesFieldMetrics.minHeight
+    @State private var textView: RichNotesTextView?
+    // Bumped by the Coordinator on every selection change so the format
+    // bar's active-state highlighting stays current — reading
+    // textView.selectedRange/.attributedText directly doesn't otherwise
+    // trigger a SwiftUI re-render on its own, since neither is @State.
+    @State private var selectionTick: Int = 0
 
     private var hasFormatting: Bool { isRichNotes(value) }
 
-    var body: some View {
-        ZStack(alignment: .topTrailing) {
-            NotesTextViewRepresentable(
-                value: $value,
-                placeholder: placeholder,
-                // Semibold rather than the Title field's heavy: bold marks
-                // map to Nunito's heaviest weight (.black — see
-                // RichNotesTextStyle), and that needs two real weight steps
-                // of headroom above the base to read as "bold" at all.
-                font: TdayFont.uiFont(size: 18, weight: .semibold),
-                textColor: UIColor(colors.onSurface),
-                placeholderColor: UIColor(colors.onSurfaceVariant.opacity(0.65)),
-                contentHeight: $contentHeight,
-                isFocused: isFocused
-            )
-            .frame(height: min(max(contentHeight, NotesFieldMetrics.minHeight), NotesFieldMetrics.maxHeight))
+    private var style: RichNotesTextStyle {
+        RichNotesTextStyle(baseFont: TdayFont.uiFont(size: 18, weight: .semibold), baseColor: UIColor(colors.onSurface))
+    }
 
-            if hasFormatting {
-                Button {
-                    value = flattenNotesToPlainText(value)
-                } label: {
-                    Image("LucideEraser")
-                        .renderingMode(.template)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: NotesFieldMetrics.eraserIconSize, height: NotesFieldMetrics.eraserIconSize)
-                        .foregroundStyle(colors.onSurfaceVariant.opacity(0.7))
-                        .frame(width: NotesFieldMetrics.eraserButtonSize, height: NotesFieldMetrics.eraserButtonSize)
-                        .contentShape(Rectangle())
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ZStack(alignment: .topTrailing) {
+                NotesTextViewRepresentable(
+                    value: $value,
+                    placeholder: placeholder,
+                    // Semibold rather than the Title field's heavy: bold
+                    // marks map to Nunito's heaviest weight (.black — see
+                    // RichNotesTextStyle), and that needs two real weight
+                    // steps of headroom above the base to read as "bold".
+                    font: TdayFont.uiFont(size: 18, weight: .semibold),
+                    textColor: UIColor(colors.onSurface),
+                    placeholderColor: UIColor(colors.onSurfaceVariant.opacity(0.65)),
+                    contentHeight: $contentHeight,
+                    isFocused: isFocused,
+                    textView: $textView,
+                    selectionTick: $selectionTick
+                )
+                .frame(height: min(max(contentHeight, NotesFieldMetrics.minHeight), NotesFieldMetrics.maxHeight))
+
+                if hasFormatting {
+                    Button {
+                        value = stripToPlainText(value)
+                    } label: {
+                        Image("LucideEraser")
+                            .renderingMode(.template)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: NotesFieldMetrics.eraserIconSize, height: NotesFieldMetrics.eraserIconSize)
+                            .foregroundStyle(colors.onSurfaceVariant.opacity(0.7))
+                            .frame(width: NotesFieldMetrics.eraserButtonSize, height: NotesFieldMetrics.eraserButtonSize)
+                            .contentShape(Rectangle())
+                    }
+                    .accessibilityLabel(L("Clear formatting"))
+                    .padding(.top, 6)
+                    .padding(.trailing, 6)
                 }
-                .accessibilityLabel(L("Clear formatting"))
-                .padding(.top, 6)
-                .padding(.trailing, 6)
+            }
+
+            if isFocused.wrappedValue, let textView {
+                NotesFormatBar(textView: textView, style: style, tick: selectionTick)
             }
         }
+    }
+}
+
+// Reads the live UITextView's selection/attributed text directly (via
+// `tick`, which the parent bumps on every selection change to force this
+// view to re-render and re-read them — neither is @State on its own).
+private struct NotesFormatBar: View {
+    let textView: RichNotesTextView
+    let style: RichNotesTextStyle
+    let tick: Int
+
+    @Environment(\.tdayColors) private var colors
+
+    private var selection: NSRange { textView.selectedRange }
+    private var attributed: NSAttributedString { textView.attributedText ?? NSAttributedString() }
+    private var hasSelection: Bool { selection.length > 0 }
+
+    var body: some View {
+        HStack(spacing: 2) {
+            NotesFormatBarButton(
+                imageName: "LucideBold",
+                label: L("Bold"),
+                active: isMarkActive(.bold, in: attributed, range: selection, style: style),
+                enabled: hasSelection
+            ) {
+                textView.applyMark(.bold, in: selection)
+            }
+            NotesFormatBarButton(
+                imageName: "LucideItalic",
+                label: L("Italic"),
+                active: isMarkActive(.italic, in: attributed, range: selection, style: style),
+                enabled: hasSelection
+            ) {
+                textView.applyMark(.italic, in: selection)
+            }
+            NotesFormatBarButton(
+                imageName: "LucideUnderline",
+                label: L("Underline"),
+                active: isMarkActive(.underline, in: attributed, range: selection, style: style),
+                enabled: hasSelection
+            ) {
+                textView.applyMark(.underline, in: selection)
+            }
+            NotesFormatBarButton(
+                imageName: "LucideStrikethrough",
+                label: L("Strikethrough"),
+                active: isMarkActive(.strikethrough, in: attributed, range: selection, style: style),
+                enabled: hasSelection
+            ) {
+                textView.applyMark(.strikethrough, in: selection)
+            }
+
+            Rectangle()
+                .fill(colors.onSurfaceVariant.opacity(0.2))
+                .frame(width: 1, height: 20)
+                .padding(.horizontal, 2)
+
+            NotesFormatBarButton(
+                imageName: "LucideList",
+                label: L("Bulleted list"),
+                active: isListActive(.bullet, in: attributed, range: selection),
+                enabled: hasSelection
+            ) {
+                textView.applyList(.bullet, in: selection)
+            }
+            NotesFormatBarButton(
+                imageName: "LucideListOrdered",
+                label: L("Numbered list"),
+                active: isListActive(.ordered, in: attributed, range: selection),
+                enabled: hasSelection
+            ) {
+                textView.applyList(.ordered, in: selection)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 2)
+    }
+}
+
+private struct NotesFormatBarButton: View {
+    let imageName: String
+    let label: String
+    let active: Bool
+    let enabled: Bool
+    let action: () -> Void
+
+    @Environment(\.tdayColors) private var colors
+
+    var body: some View {
+        Button(action: action) {
+            Image(imageName)
+                .renderingMode(.template)
+                .resizable()
+                .scaledToFit()
+                .frame(width: NotesFieldMetrics.barIconSize, height: NotesFieldMetrics.barIconSize)
+                .foregroundStyle(tint)
+                .frame(width: NotesFieldMetrics.barButtonSize, height: NotesFieldMetrics.barButtonSize)
+                .contentShape(Rectangle())
+        }
+        .disabled(!enabled)
+        .accessibilityLabel(label)
+    }
+
+    private var tint: Color {
+        if !enabled { return colors.onSurfaceVariant.opacity(0.3) }
+        if active { return colors.primary }
+        return colors.onSurfaceVariant.opacity(0.75)
     }
 }
 
@@ -87,32 +217,34 @@ private struct NotesTextViewRepresentable: UIViewRepresentable {
     let placeholderColor: UIColor
     @Binding var contentHeight: CGFloat
     let isFocused: Binding<Bool>
+    @Binding var textView: RichNotesTextView?
+    @Binding var selectionTick: Int
 
     func makeUIView(context: Context) -> RichNotesTextView {
         let style = RichNotesTextStyle(baseFont: font, baseColor: textColor)
-        let textView = RichNotesTextView()
-        textView.style = style
-        textView.backgroundColor = .clear
-        textView.font = font
-        textView.textColor = textColor
-        textView.isScrollEnabled = true
-        textView.showsVerticalScrollIndicator = false
-        textView.textContainerInset = UIEdgeInsets(
+        let newTextView = RichNotesTextView()
+        newTextView.style = style
+        newTextView.backgroundColor = .clear
+        newTextView.font = font
+        newTextView.textColor = textColor
+        newTextView.isScrollEnabled = true
+        newTextView.showsVerticalScrollIndicator = false
+        newTextView.textContainerInset = UIEdgeInsets(
             top: NotesFieldMetrics.verticalPadding,
             left: NotesFieldMetrics.horizontalPadding,
             bottom: NotesFieldMetrics.verticalPadding,
             right: NotesFieldMetrics.horizontalPadding
         )
-        textView.textContainer.lineFragmentPadding = 0
-        textView.allowsEditingTextAttributes = false
-        textView.tintColor = textColor
-        textView.delegate = context.coordinator
-        textView.attributedText = decodeNotesToAttributedString(value, style: style)
+        newTextView.textContainer.lineFragmentPadding = 0
+        newTextView.allowsEditingTextAttributes = false
+        newTextView.tintColor = textColor
+        newTextView.delegate = context.coordinator
+        newTextView.attributedText = decodeNotesToAttributedString(value, style: style)
         // Pin what newly-typed text looks like: an empty attributedText (new
         // task) carries no attributes of its own, and this app's global
         // UITextView.appearance() proxy would otherwise silently override
         // the field's font once the view enters the window.
-        textView.typingAttributes = [.font: font, .foregroundColor: textColor]
+        newTextView.typingAttributes = [.font: font, .foregroundColor: textColor]
 
         let placeholderLabel = UILabel()
         placeholderLabel.text = placeholder
@@ -120,23 +252,26 @@ private struct NotesTextViewRepresentable: UIViewRepresentable {
         placeholderLabel.textColor = placeholderColor
         placeholderLabel.numberOfLines = 1
         placeholderLabel.translatesAutoresizingMaskIntoConstraints = false
-        textView.addSubview(placeholderLabel)
+        newTextView.addSubview(placeholderLabel)
         NSLayoutConstraint.activate([
             placeholderLabel.leadingAnchor.constraint(
-                equalTo: textView.leadingAnchor, constant: NotesFieldMetrics.horizontalPadding
+                equalTo: newTextView.leadingAnchor, constant: NotesFieldMetrics.horizontalPadding
             ),
             placeholderLabel.trailingAnchor.constraint(
-                lessThanOrEqualTo: textView.trailingAnchor, constant: -NotesFieldMetrics.horizontalPadding
+                lessThanOrEqualTo: newTextView.trailingAnchor, constant: -NotesFieldMetrics.horizontalPadding
             ),
             placeholderLabel.topAnchor.constraint(
-                equalTo: textView.topAnchor, constant: NotesFieldMetrics.verticalPadding
+                equalTo: newTextView.topAnchor, constant: NotesFieldMetrics.verticalPadding
             ),
         ])
-        textView.placeholderLabel = placeholderLabel
+        newTextView.placeholderLabel = placeholderLabel
         placeholderLabel.isHidden = !value.isEmpty
 
-        scheduleHeightUpdate(for: textView)
-        return textView
+        scheduleHeightUpdate(for: newTextView)
+        DispatchQueue.main.async {
+            textView = newTextView
+        }
+        return newTextView
     }
 
     func updateUIView(_ textView: RichNotesTextView, context: Context) {
@@ -161,15 +296,31 @@ private struct NotesTextViewRepresentable: UIViewRepresentable {
         textView.placeholderLabel?.isHidden = !textView.text.isEmpty
         scheduleHeightUpdate(for: textView)
 
-        if isFocused.wrappedValue, !textView.isFirstResponder {
-            textView.becomeFirstResponder()
-        } else if !isFocused.wrappedValue, textView.isFirstResponder {
-            textView.resignFirstResponder()
+        // Only call become/resignFirstResponder on an actual transition —
+        // this method runs on every SwiftUI update (including one per
+        // keystroke, since editing changes `value`), and an earlier version
+        // called either unconditionally every single time, even when the
+        // text view was already in the desired state. That's the prime
+        // suspect for a keyboard-dismiss-on-every-keystroke bug reported
+        // from real device testing, though it couldn't be confirmed on this
+        // machine (no Xcode/device here) — verify on a real device before
+        // considering it fixed. Removing editMenuForTextIn (this field used
+        // to add a Format submenu to the system edit menu; formatting is
+        // now applied via NotesFormatBar below the field instead) is a
+        // second plausible contributor, since it's gone now too.
+        let desiredFocus = isFocused.wrappedValue
+        if desiredFocus != context.coordinator.lastAppliedFocus {
+            context.coordinator.lastAppliedFocus = desiredFocus
+            if desiredFocus, !textView.isFirstResponder {
+                textView.becomeFirstResponder()
+            } else if !desiredFocus, textView.isFirstResponder {
+                textView.resignFirstResponder()
+            }
         }
     }
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(value: $value, isFocused: isFocused)
+        Coordinator(value: $value, isFocused: isFocused, selectionTick: $selectionTick)
     }
 
     private func scheduleHeightUpdate(for textView: UITextView) {
@@ -187,11 +338,18 @@ private struct NotesTextViewRepresentable: UIViewRepresentable {
     final class Coordinator: NSObject, UITextViewDelegate {
         let value: Binding<String>
         let isFocused: Binding<Bool>
+        let selectionTick: Binding<Int>
         var lastEmitted: String
+        // Tracks the last focus state this coordinator itself applied (or
+        // observed via begin/endEditing), so updateUIView only ever calls
+        // become/resignFirstResponder on a genuine transition instead of
+        // redundantly on every render.
+        var lastAppliedFocus = false
 
-        init(value: Binding<String>, isFocused: Binding<Bool>) {
+        init(value: Binding<String>, isFocused: Binding<Bool>, selectionTick: Binding<Int>) {
             self.value = value
             self.isFocused = isFocused
+            self.selectionTick = selectionTick
             lastEmitted = value.wrappedValue
         }
 
@@ -203,11 +361,17 @@ private struct NotesTextViewRepresentable: UIViewRepresentable {
             richTextView.placeholderLabel?.isHidden = !textView.text.isEmpty
         }
 
+        func textViewDidChangeSelection(_ textView: UITextView) {
+            selectionTick.wrappedValue += 1
+        }
+
         func textViewDidBeginEditing(_ textView: UITextView) {
+            lastAppliedFocus = true
             isFocused.wrappedValue = true
         }
 
         func textViewDidEndEditing(_ textView: UITextView) {
+            lastAppliedFocus = false
             // Only clear focus if this field still owns it. UIKit's resign
             // callback can arrive after a different field has already taken
             // focus (they're on separate systems — SwiftUI's @FocusState vs
@@ -216,61 +380,6 @@ private struct NotesTextViewRepresentable: UIViewRepresentable {
             if isFocused.wrappedValue {
                 isFocused.wrappedValue = false
             }
-        }
-
-        // Adds a "Format" submenu (Bold/Italic/Underline/Strikethrough/
-        // Bulleted list/Numbered list, with checkmarks reflecting the
-        // current selection) to the system's Copy/Paste/Select All popup —
-        // the same place iOS Notes and Gmail put manual formatting. Only
-        // offered for a real (non-empty) selection; an empty range leaves
-        // the system's own menu untouched.
-        func textView(
-            _ textView: UITextView,
-            editMenuForTextIn range: NSRange,
-            suggestedActions: [UIMenuElement]
-        ) -> UIMenu? {
-            guard range.length > 0,
-                  let richTextView = textView as? RichNotesTextView,
-                  let style = richTextView.style else {
-                return nil
-            }
-            let text = textView.attributedText ?? NSAttributedString()
-
-            func markAction(_ mark: RichNotesMark, title: String, imageName: String) -> UIAction {
-                let active = isMarkActive(mark, in: text, range: range, style: style)
-                return UIAction(
-                    title: title,
-                    image: UIImage(named: imageName)?.withRenderingMode(.alwaysTemplate),
-                    state: active ? .on : .off
-                ) { [weak richTextView] _ in
-                    richTextView?.applyMark(mark, in: range)
-                }
-            }
-
-            func listAction(_ kind: RichNotesListKind, title: String, imageName: String) -> UIAction {
-                let active = isListActive(kind, in: text, range: range)
-                return UIAction(
-                    title: title,
-                    image: UIImage(named: imageName)?.withRenderingMode(.alwaysTemplate),
-                    state: active ? .on : .off
-                ) { [weak richTextView] _ in
-                    richTextView?.applyList(kind, in: range)
-                }
-            }
-
-            let formatMenu = UIMenu(
-                title: L("Format"),
-                image: UIImage(named: "LucideType")?.withRenderingMode(.alwaysTemplate),
-                children: [
-                    markAction(.bold, title: L("Bold"), imageName: "LucideBold"),
-                    markAction(.italic, title: L("Italic"), imageName: "LucideItalic"),
-                    markAction(.underline, title: L("Underline"), imageName: "LucideUnderline"),
-                    markAction(.strikethrough, title: L("Strikethrough"), imageName: "LucideStrikethrough"),
-                    listAction(.bullet, title: L("Bulleted list"), imageName: "LucideList"),
-                    listAction(.ordered, title: L("Numbered list"), imageName: "LucideListOrdered"),
-                ]
-            )
-            return UIMenu(children: suggestedActions + [formatMenu])
         }
     }
 }
@@ -307,7 +416,7 @@ final class RichNotesTextView: UITextView {
         delegate?.textViewDidChange?(self)
     }
 
-    // Called from the Format submenu (see Coordinator.textView(_:editMenuForTextIn:suggestedActions:)).
+    // Called from the format bar (see NotesFormatBar in this file).
     func applyMark(_ mark: RichNotesMark, in range: NSRange) {
         guard let style, range.length > 0 else { return }
         let updated = togglingMark(mark, in: attributedText, range: range, style: style)
@@ -320,7 +429,7 @@ final class RichNotesTextView: UITextView {
     }
 
     func applyList(_ kind: RichNotesListKind, in range: NSRange) {
-        guard let style else { return }
+        guard let style, range.length > 0 else { return }
         let (updated, selection) = togglingList(kind, in: attributedText, range: range, style: style)
         replaceAttributedText(with: updated, selection: selection)
         typingAttributes = markAttributes(at: selection.location, in: updated, style: style)
