@@ -607,7 +607,10 @@
       "expired": "Tamat tempoh",
       "createdAt": "Dicipta {{date}}",
       "lastUsedAt": "Terakhir digunakan {{date}}",
-      "neverUsed": "Tidak pernah digunakan"
+      "neverUsed": "Tidak pernah digunakan",
+      "newKeyTitle": "Kunci API baharu",
+      "cancel": "Batal",
+      "done": "Selesai"
     },
     "toast": {
       "apiKeyGenerated": "Kunci API dijana. Salin sekarang — ia tidak akan ditunjukkan lagi.",
