@@ -607,7 +607,10 @@
       "expired": "已过期",
       "createdAt": "创建于 {{date}}",
       "lastUsedAt": "最后使用于 {{date}}",
-      "neverUsed": "从未使用"
+      "neverUsed": "从未使用",
+      "newKeyTitle": "新建 API 密钥",
+      "cancel": "取消",
+      "done": "完成"
     },
     "toast": {
       "apiKeyGenerated": "已生成 API 密钥。立即复制——它不会再次显示。",

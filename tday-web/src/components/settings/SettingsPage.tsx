@@ -40,6 +40,7 @@ import { nativeScreenAccentColors } from "@/components/app/nativeScreenTheme";
 import NativeAppBrandButton from "@/components/app/NativeAppBrandButton";
 import { api } from "@/lib/api-client";
 import parseApiDateTime from "@/lib/date/parseApiDateTime";
+import { hapticTick } from "@/lib/haptics";
 import { getErrorMessage } from "@/lib/error-message";
 import { deleteLocalWorkspace } from "@/lib/local/localApi";
 import {
@@ -396,6 +397,8 @@ export default function SettingsPage() {
   const [newKeyLabel, setNewKeyLabel] = useState("");
   const [newKeyScope, setNewKeyScope] = useState<ApiKeyScope>("READ");
   const [revokingKeyId, setRevokingKeyId] = useState<string | null>(null);
+  const [generateKeyDialogOpen, setGenerateKeyDialogOpen] = useState(false);
+  const [expandedKeyId, setExpandedKeyId] = useState<string | null>(null);
   const [calendarFeed, setCalendarFeed] = useState<{
     enabled: boolean;
     tokenPreview?: string | null;
@@ -766,6 +769,22 @@ export default function SettingsPage() {
     } catch {
       toast({ description: t("toast.apiKeyCopyFailed"), variant: "destructive" });
     }
+  };
+
+  const openGenerateKeyDialog = () => {
+    setNewKeyLabel("");
+    setNewKeyScope("READ");
+    setGeneratedApiKey(null);
+    setShowApiKey(false);
+    setGenerateKeyDialogOpen(true);
+  };
+
+  const closeGenerateKeyDialog = () => {
+    if (apiKeyLoading) return;
+    setGenerateKeyDialogOpen(false);
+    setGeneratedApiKey(null);
+    setShowApiKey(false);
+    setNewKeyLabel("");
   };
 
   const handlePushToggle = async () => {
@@ -1685,127 +1704,89 @@ export default function SettingsPage() {
           </>
         ) : (
         <>
-        {/* Create a new scoped key. Read-only keys can only fetch data (safe for
-            dashboards); full keys can modify the account. */}
-        <div className="space-y-3">
-          <Input
-            type="text"
-            value={newKeyLabel}
-            onChange={(event) => setNewKeyLabel(event.target.value)}
-            maxLength={60}
-            placeholder={t("dashboard.labelPlaceholder")}
-            className="h-11 rounded-2xl font-extrabold"
-          />
-          <div className="flex rounded-2xl bg-muted/60 p-1.5">
-            {(["READ", "FULL"] as ApiKeyScope[]).map((scope) => (
-              <button
-                key={scope}
-                type="button"
-                onClick={() => setNewKeyScope(scope)}
-                aria-pressed={newKeyScope === scope}
-                className={cn(
-                  "flex flex-1 items-center justify-center rounded-[13px] py-2 text-[0.9rem] font-black transition-colors",
-                  newKeyScope === scope
-                    ? "bg-card text-accent shadow-sm"
-                    : "text-muted-foreground",
-                )}
-              >
-                {scope === "READ" ? t("dashboard.scopeRead") : t("dashboard.scopeFull")}
-              </button>
-            ))}
-          </div>
-          <p className="text-xs font-extrabold text-muted-foreground">
-            {newKeyScope === "READ"
-              ? t("dashboard.scopeReadHint")
-              : t("dashboard.scopeFullHint")}
-          </p>
-          <Button
-            type="button"
-            disabled={apiKeyLoading}
-            onClick={handleGenerateApiKey}
-            className="h-11 w-full rounded-2xl font-black"
-          >
-            {apiKeyLoading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                {t("dashboard.generating")}
-              </>
-            ) : (
-              <>
-                <Key className="mr-2 h-4 w-4" />
-                {t("dashboard.generateKey")}
-              </>
-            )}
-          </Button>
-        </div>
+        {/* Name + access level now live in the generate dialog, keeping this
+            list uncluttered. */}
+        <Button
+          type="button"
+          onClick={openGenerateKeyDialog}
+          className="h-11 w-full rounded-2xl font-black"
+        >
+          <Key className="mr-2 h-4 w-4" />
+          {t("dashboard.generateKey")}
+        </Button>
 
-        {generatedApiKey && (
-          <div className="space-y-2 rounded-2xl border border-border/60 bg-muted/40 p-3">
-            <p className="text-xs font-extrabold text-muted-foreground">
-              {t("dashboard.copyNow")}
-            </p>
-            <div className="flex gap-2">
-              <Input
-                type={showApiKey ? "text" : "password"}
-                value={generatedApiKey}
-                readOnly
-                className="h-10 flex-1 rounded-xl bg-background/50 font-mono text-xs"
-              />
-              <Button type="button" variant="outline" size="icon" className="h-10 w-10 shrink-0 rounded-xl" onClick={() => setShowApiKey(!showApiKey)}>
-                {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </Button>
-              <Button type="button" variant="outline" size="icon" className="h-10 w-10 shrink-0 rounded-xl" onClick={handleCopyApiKey}>
-                <Copy className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* Existing keys — each revocable independently. */}
+        {/* Existing keys — tap a row to expand it in place with created/last-used
+            details; the trash icon revokes directly without expanding anything. */}
         {apiKeys !== null && apiKeys.length > 0 && (
           <div className="space-y-2">
-            {apiKeys.map((key) => (
-              <div
-                key={key.id}
-                className="flex items-center justify-between gap-3 rounded-2xl border border-border/60 bg-muted/30 p-3"
-              >
-                <div className="min-w-0 text-sm">
-                  <p className="truncate font-black text-foreground">
-                    {key.label?.trim() || t("dashboard.unnamedKey")}
-                  </p>
-                  <p className="text-xs font-extrabold text-muted-foreground">
-                    {t("dashboard.activeKeyEnding", { preview: key.keyPreview })}
-                    {" · "}
-                    {key.scope === "READ" ? t("dashboard.scopeRead") : t("dashboard.scopeFull")}
-                    {key.expired ? ` · ${t("dashboard.expired")}` : ""}
-                  </p>
-                  <p className="mt-0.5 truncate text-[11px] font-bold text-muted-foreground/70">
-                    {key.createdAt
-                      ? t("dashboard.createdAt", { date: formatKeyTimestamp(key.createdAt) })
-                      : null}
-                    {key.createdAt ? " · " : ""}
-                    {key.lastUsedAt
-                      ? t("dashboard.lastUsedAt", { date: formatKeyTimestamp(key.lastUsedAt) })
-                      : t("dashboard.neverUsed")}
-                  </p>
-                </div>
-                <Button
-                  type="button"
-                  variant="destructive"
-                  size="icon"
-                  disabled={revokingKeyId === key.id}
-                  onClick={() => handleRevokeApiKey(key.id)}
-                  aria-label={t("dashboard.revokeKey")}
-                  className="h-10 w-10 shrink-0 rounded-xl"
+            {apiKeys.map((key) => {
+              const expanded = expandedKeyId === key.id;
+              return (
+                <div
+                  key={key.id}
+                  className="rounded-2xl border border-border/60 bg-muted/30"
                 >
-                  {revokingKeyId === key.id ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Trash2 className="h-4 w-4" />
-                  )}
-                </Button>
-              </div>
-            ))}
+                  <div className="flex items-center gap-2 p-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        hapticTick();
+                        setExpandedKeyId(expanded ? null : key.id);
+                      }}
+                      aria-expanded={expanded}
+                      className="flex min-w-0 flex-1 items-center gap-2 text-left transition active:opacity-60"
+                    >
+                      <div className="min-w-0 flex-1 text-sm">
+                        <p className="truncate font-black text-foreground">
+                          {key.label?.trim() || t("dashboard.unnamedKey")}
+                        </p>
+                        <p className="truncate text-xs font-extrabold text-muted-foreground">
+                          {t("dashboard.activeKeyEnding", { preview: key.keyPreview })}
+                          {" · "}
+                          {key.scope === "READ" ? t("dashboard.scopeRead") : t("dashboard.scopeFull")}
+                          {key.expired ? ` · ${t("dashboard.expired")}` : ""}
+                        </p>
+                      </div>
+                      <ChevronRight
+                        className={cn(
+                          "h-4 w-4 shrink-0 text-muted-foreground/40 transition-transform duration-200",
+                          expanded && "rotate-90",
+                        )}
+                      />
+                    </button>
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="icon"
+                      disabled={revokingKeyId === key.id}
+                      onClick={() => handleRevokeApiKey(key.id)}
+                      aria-label={t("dashboard.revokeKey")}
+                      className="h-10 w-10 shrink-0 rounded-xl"
+                    >
+                      {revokingKeyId === key.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                  <Collapse open={expanded}>
+                    <div className="space-y-1.5 border-t border-border/40 px-3 pb-3 pt-2.5">
+                      {key.createdAt && (
+                        <p className="text-xs font-bold text-muted-foreground">
+                          {t("dashboard.createdAt", { date: formatKeyTimestamp(key.createdAt) })}
+                        </p>
+                      )}
+                      <p className="text-xs font-bold text-muted-foreground">
+                        {key.lastUsedAt
+                          ? t("dashboard.lastUsedAt", { date: formatKeyTimestamp(key.lastUsedAt) })
+                          : t("dashboard.neverUsed")}
+                      </p>
+                    </div>
+                  </Collapse>
+                </div>
+              );
+            })}
           </div>
         )}
 
@@ -1999,6 +1980,104 @@ export default function SettingsPage() {
             {t("workspace.encryptCancel")}
           </button>
         </div>
+      </CenteredSelectorOverlay>
+
+      {/* API key creation: name + access level, then (on success) the
+          one-time reveal — all in one dialog so the settings list stays clean. */}
+      <CenteredSelectorOverlay
+        open={generateKeyDialogOpen}
+        onOpenChange={(open) => (open ? setGenerateKeyDialogOpen(true) : closeGenerateKeyDialog())}
+        title={t("dashboard.newKeyTitle")}
+      >
+        {generatedApiKey ? (
+          <div className="space-y-3 px-4 pb-1 pt-1">
+            <p className="text-xs font-extrabold text-muted-foreground">
+              {t("dashboard.copyNow")}
+            </p>
+            <div className="flex gap-2">
+              <Input
+                type={showApiKey ? "text" : "password"}
+                value={generatedApiKey}
+                readOnly
+                className="h-10 flex-1 rounded-xl bg-background/50 font-mono text-xs"
+              />
+              <Button type="button" variant="outline" size="icon" className="h-10 w-10 shrink-0 rounded-xl" onClick={() => setShowApiKey(!showApiKey)}>
+                {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </Button>
+              <Button type="button" variant="outline" size="icon" className="h-10 w-10 shrink-0 rounded-xl" onClick={handleCopyApiKey}>
+                <Copy className="h-4 w-4" />
+              </Button>
+            </div>
+            <button
+              type="button"
+              onClick={closeGenerateKeyDialog}
+              className="w-full rounded-2xl bg-muted/70 py-3 text-base font-black text-accent transition-colors hover:bg-muted"
+            >
+              {t("dashboard.done")}
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-3 px-4 pb-1 pt-1">
+            <Input
+              type="text"
+              value={newKeyLabel}
+              onChange={(event) => setNewKeyLabel(event.target.value)}
+              maxLength={60}
+              placeholder={t("dashboard.labelPlaceholder")}
+              className="h-11 rounded-2xl font-extrabold"
+              autoFocus
+            />
+            <div className="flex rounded-2xl bg-muted/60 p-1.5">
+              {(["READ", "FULL"] as ApiKeyScope[]).map((scope) => (
+                <button
+                  key={scope}
+                  type="button"
+                  onClick={() => setNewKeyScope(scope)}
+                  aria-pressed={newKeyScope === scope}
+                  className={cn(
+                    "flex flex-1 items-center justify-center rounded-[13px] py-2 text-[0.9rem] font-black transition-colors",
+                    newKeyScope === scope
+                      ? "bg-card text-accent shadow-sm"
+                      : "text-muted-foreground",
+                  )}
+                >
+                  {scope === "READ" ? t("dashboard.scopeRead") : t("dashboard.scopeFull")}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs font-extrabold text-muted-foreground">
+              {newKeyScope === "READ"
+                ? t("dashboard.scopeReadHint")
+                : t("dashboard.scopeFullHint")}
+            </p>
+            <Button
+              type="button"
+              disabled={apiKeyLoading}
+              onClick={handleGenerateApiKey}
+              className="h-11 w-full rounded-2xl font-black"
+            >
+              {apiKeyLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {t("dashboard.generating")}
+                </>
+              ) : (
+                <>
+                  <Key className="mr-2 h-4 w-4" />
+                  {t("dashboard.generateKey")}
+                </>
+              )}
+            </Button>
+            <button
+              type="button"
+              onClick={closeGenerateKeyDialog}
+              disabled={apiKeyLoading}
+              className="w-full rounded-2xl bg-muted/70 py-3 text-base font-black text-foreground transition-colors hover:bg-muted disabled:opacity-50"
+            >
+              {t("dashboard.cancel")}
+            </button>
+          </div>
+        )}
       </CenteredSelectorOverlay>
 
       <CenteredSelectorOverlay

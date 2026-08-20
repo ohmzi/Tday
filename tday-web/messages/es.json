@@ -607,7 +607,10 @@
       "expired": "Caducada",
       "createdAt": "Creada el {{date}}",
       "lastUsedAt": "Usada por última vez el {{date}}",
-      "neverUsed": "Nunca usada"
+      "neverUsed": "Nunca usada",
+      "newKeyTitle": "Nueva clave de API",
+      "cancel": "Cancelar",
+      "done": "Listo"
     },
     "toast": {
       "apiKeyGenerated": "Clave de API generada. Cópiala ahora — no se volverá a mostrar.",
