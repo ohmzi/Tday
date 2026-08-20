@@ -3,6 +3,7 @@ package com.ohmz.tday.compose.feature.widget
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Context
+import android.util.Log
 import androidx.glance.appwidget.AppWidgetId
 import androidx.glance.appwidget.updateAll
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -61,13 +62,14 @@ class FloaterTasksWidgetRefresher @Inject constructor(
                 for (appWidgetId in ids) {
                     runCatching { widget.update(context, AppWidgetId(appWidgetId)) }
                         .onSuccess { updated++ }
-                        .onFailure { android.util.Log.w(WIDGET_LOG_TAG, "floater: update($appWidgetId) failed", it) }
+                        .onFailure { Log.e(WIDGET_LOG_TAG, "floater: update($appWidgetId) failed", it) }
                 }
             }
             runCatching { widget.updateAll(context) }
-            // See TodayTasksWidgetRefresher: 0 distinguishes "no widget placed" from "painted
-            // nothing".
-            android.util.Log.i(WIDGET_LOG_TAG, "floater: render requested for $updated widget id(s)")
+                .onFailure { Log.e(WIDGET_LOG_TAG, "floater: updateAll failed", it) }
+            // 0 distinguishes "no widget placed" from "painted nothing" when diagnosing a blank
+            // widget after a reboot.
+            Log.i(WIDGET_LOG_TAG, "floater: render requested for $updated widget id(s)")
         }
     }
 

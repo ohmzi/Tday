@@ -11,6 +11,7 @@ import com.ohmz.tday.compose.core.data.db.toEntity
 import com.ohmz.tday.compose.core.data.db.toRecord
 import com.ohmz.tday.compose.feature.widget.FloaterTasksWidgetRefresher
 import com.ohmz.tday.compose.feature.widget.TodayTasksWidgetRefresher
+import com.ohmz.tday.compose.feature.widget.snapshot.WidgetSnapshotWriter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -33,6 +34,7 @@ class OfflineCacheManager @Inject constructor(
     private val cookieManager: CookieManager,
     private val todayTasksWidgetRefresher: TodayTasksWidgetRefresher,
     private val floaterTasksWidgetRefresher: FloaterTasksWidgetRefresher,
+    private val widgetSnapshotWriter: WidgetSnapshotWriter,
 ) {
     private val todoDao = database.todoDao()
     private val floaterDao = database.floaterDao()
@@ -83,6 +85,14 @@ class OfflineCacheManager @Inject constructor(
 
         persistStateToDaos(state)
         secureConfigStore.clearOfflineSyncState()
+        // This path bypasses saveOfflineStateBlocking entirely, so it must repeat its widget
+        // side effects by hand: without this, a migrating install's widgets sit stale (wrong
+        // cacheDataVersion, no snapshot on disk, no repaint requested) until an unrelated write.
+        widgetSnapshotWriter.write(state)
+        lastPersistedState = state
+        cacheDataVersionMutable.value = cacheDataVersionMutable.value + 1L
+        todayTasksWidgetRefresher.requestRefresh()
+        floaterTasksWidgetRefresher.requestRefresh()
         Log.i(LOG_TAG, "Migrated offline cache from SharedPreferences to Room")
     }
 
@@ -163,7 +173,14 @@ class OfflineCacheManager @Inject constructor(
                 ),
             )
         }
-        if (previous == normalizedState) return
+        if (previous == normalizedState) {
+            // Nothing changed from what's already persisted — but on the very first save call
+            // this process makes, nothing else has written a snapshot to disk yet either. Without
+            // this, a first run with no changes never seeds the file and the widget sits in
+            // LOADING until an unrelated write happens to land.
+            widgetSnapshotWriter.ensureSeeded(normalizedState)
+            return
+        }
 
         val hasUiChanges = hasUiDataChanges(previous, normalizedState)
         val hasSyncMetadataChanges = hasSyncMetadataChanges(previous, normalizedState)
@@ -171,6 +188,9 @@ class OfflineCacheManager @Inject constructor(
         persistStateToDaos(normalizedState)
         lastPersistedState = normalizedState
         if (hasUiChanges) {
+            // Must land on disk BEFORE the refresh is requested below, or the repaint races the
+            // write and paints the previous snapshot.
+            widgetSnapshotWriter.write(normalizedState)
             cacheDataVersionMutable.value = cacheDataVersionMutable.value + 1L
             todayTasksWidgetRefresher.requestRefresh()
             floaterTasksWidgetRefresher.requestRefresh()
@@ -214,6 +234,9 @@ class OfflineCacheManager @Inject constructor(
 
         lastPersistedState = cleared
         if (hasUiDataChanges(previous, cleared)) {
+            // secureConfigStore.clearAllLocalData() already ran above, so getAppDataMode() here
+            // correctly reads UNSET — this writes a SETUP snapshot, not a stale TASKS one.
+            widgetSnapshotWriter.write(cleared)
             cacheDataVersionMutable.value = cacheDataVersionMutable.value + 1L
             todayTasksWidgetRefresher.requestRefresh()
             floaterTasksWidgetRefresher.requestRefresh()
@@ -233,6 +256,7 @@ class OfflineCacheManager @Inject constructor(
 
         lastPersistedState = cleared
         if (hasUiDataChanges(previous, cleared)) {
+            widgetSnapshotWriter.write(cleared)
             cacheDataVersionMutable.value = cacheDataVersionMutable.value + 1L
             todayTasksWidgetRefresher.requestRefresh()
             floaterTasksWidgetRefresher.requestRefresh()

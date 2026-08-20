@@ -40,6 +40,11 @@ import androidx.glance.text.TextAlign
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 import com.ohmz.tday.compose.R
+import com.ohmz.tday.compose.feature.widget.snapshot.WidgetPriorityRing
+import com.ohmz.tday.compose.feature.widget.snapshot.WidgetSnapshotStatus
+import com.ohmz.tday.compose.ui.priority.PRIORITY_IMPORTANT_VALUE
+import com.ohmz.tday.compose.ui.priority.PRIORITY_NORMAL_VALUE
+import com.ohmz.tday.compose.ui.priority.PRIORITY_URGENT_VALUE
 import com.ohmz.tday.compose.ui.priority.isImportantPriority
 import com.ohmz.tday.compose.ui.priority.isUrgentPriority
 
@@ -48,6 +53,30 @@ internal enum class TaskWidgetContentState {
     EMPTY,
     TASKS,
     LOCKED,
+
+    /**
+     * No snapshot on disk yet — a fresh install or an upgrade rebooted before the app was ever
+     * opened (see `WidgetHydrateWorker`). Pixel-matched to the XML `initialLayout` placeholders
+     * (`widget_loading.xml`, `widget_today_tasks_loading.xml`, `widget_floater_tasks_loading.xml`)
+     * so the handoff from that static layout to the first real composition is invisible: same
+     * header, a centred "Loading tasks…" line, no watermark. Never used once a snapshot decodes
+     * to SETUP/EMPTY/TASKS, even an empty one — this is specifically "haven't read anything yet".
+     */
+    LOADING,
+}
+
+internal fun WidgetSnapshotStatus.toContentState(): TaskWidgetContentState = when (this) {
+    WidgetSnapshotStatus.SETUP -> TaskWidgetContentState.SETUP
+    WidgetSnapshotStatus.EMPTY -> TaskWidgetContentState.EMPTY
+    WidgetSnapshotStatus.TASKS -> TaskWidgetContentState.TASKS
+}
+
+/** The ring was already bucketed at write time; map it back to a canonical priority value for
+ *  [taskWidgetPriorityRingResource], which re-buckets it (a cheap, idempotent string compare). */
+internal fun WidgetPriorityRing.toPriorityValue(): String = when (this) {
+    WidgetPriorityRing.HIGH -> PRIORITY_URGENT_VALUE
+    WidgetPriorityRing.MEDIUM -> PRIORITY_IMPORTANT_VALUE
+    WidgetPriorityRing.LOW -> PRIORITY_NORMAL_VALUE
 }
 
 internal enum class TaskWidgetLayout {
@@ -93,7 +122,6 @@ private enum class TaskWidgetTextColor(@ColorRes val resourceId: Int) {
 internal fun TaskWidgetContent(
     title: String,
     state: TaskWidgetContentState,
-    taskCount: Int,
     countLabel: String,
     setupTitle: String,
     setupMessage: String,
@@ -101,6 +129,7 @@ internal fun TaskWidgetContent(
     emptyMessage: String,
     lockedTitle: String,
     lockedMessage: String,
+    loadingTitle: String,
     rows: List<TaskWidgetRow>,
     visuals: TaskWidgetVisuals,
     openAction: Action,
@@ -114,6 +143,10 @@ internal fun TaskWidgetContent(
         TaskWidgetContentState.EMPTY,
         TaskWidgetContentState.TASKS,
         TaskWidgetContentState.LOCKED -> visuals.emptyWatermark
+        // Matches the loading XML layouts: no watermark image, just the title and a centred
+        // loading line. Showing one here would flash in on the first composition, then vanish
+        // the moment a real snapshot lands — the opposite of the invisible handoff this is for.
+        TaskWidgetContentState.LOADING -> null
     }
 
     Box(
@@ -122,16 +155,19 @@ internal fun TaskWidgetContent(
             .background(ImageProvider(R.drawable.widget_preview_background))
             .clickable(openAction),
     ) {
-        TaskWidgetMessageBackground(
-            watermark = watermark,
-            metrics = metrics,
-        )
+        if (watermark != null) {
+            TaskWidgetMessageBackground(
+                watermark = watermark,
+                metrics = metrics,
+            )
+        }
 
         if (state != TaskWidgetContentState.TASKS) {
             TaskWidgetMessage(
                 title = when (state) {
                     TaskWidgetContentState.SETUP -> setupTitle
                     TaskWidgetContentState.LOCKED -> lockedTitle
+                    TaskWidgetContentState.LOADING -> loadingTitle
                     else -> emptyTitle
                 },
                 message = when (state) {
