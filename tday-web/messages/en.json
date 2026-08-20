@@ -604,7 +604,10 @@
       "scopeReadHint": "Can read your tasks but not change them — safe for dashboards.",
       "scopeFullHint": "Can read and modify your account. Only use where you trust the app.",
       "unnamedKey": "Unnamed key",
-      "expired": "Expired"
+      "expired": "Expired",
+      "createdAt": "Created {{date}}",
+      "lastUsedAt": "Last used {{date}}",
+      "neverUsed": "Never used"
     },
     "toast": {
       "apiKeyGenerated": "API key generated. Copy it now — it won't be shown again.",

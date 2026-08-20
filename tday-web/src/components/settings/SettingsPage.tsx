@@ -39,6 +39,7 @@ import DataTransferCard from "./DataTransferCard";
 import { nativeScreenAccentColors } from "@/components/app/nativeScreenTheme";
 import NativeAppBrandButton from "@/components/app/NativeAppBrandButton";
 import { api } from "@/lib/api-client";
+import parseApiDateTime from "@/lib/date/parseApiDateTime";
 import { getErrorMessage } from "@/lib/error-message";
 import { deleteLocalWorkspace } from "@/lib/local/localApi";
 import {
@@ -273,6 +274,14 @@ const fieldClass =
 const editorCancelClass =
   "h-12 flex-1 rounded-full font-black bg-foreground/[0.06] text-foreground/70 hover:bg-foreground/10 hover:text-foreground/80 active:opacity-80";
 const editorSaveClass = "h-12 flex-1 rounded-full font-black";
+
+/** API key timestamps are zoneless-UTC strings from the backend; parse first,
+ * then show the viewer's local wall-clock time. */
+const formatKeyTimestamp = (value: string) =>
+  parseApiDateTime(value).toLocaleString(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
 
 /** Inline expand/collapse that animates height via the grid-rows trick — used
  * for the hidden-until-edit account editors. */
@@ -1769,6 +1778,15 @@ export default function SettingsPage() {
                     {" · "}
                     {key.scope === "READ" ? t("dashboard.scopeRead") : t("dashboard.scopeFull")}
                     {key.expired ? ` · ${t("dashboard.expired")}` : ""}
+                  </p>
+                  <p className="mt-0.5 truncate text-[11px] font-bold text-muted-foreground/70">
+                    {key.createdAt
+                      ? t("dashboard.createdAt", { date: formatKeyTimestamp(key.createdAt) })
+                      : null}
+                    {key.createdAt ? " · " : ""}
+                    {key.lastUsedAt
+                      ? t("dashboard.lastUsedAt", { date: formatKeyTimestamp(key.lastUsedAt) })
+                      : t("dashboard.neverUsed")}
                   </p>
                 </div>
                 <Button

@@ -604,7 +604,10 @@
       "scopeReadHint": "Peut lire vos tâches mais pas les modifier — sûr pour les tableaux de bord.",
       "scopeFullHint": "Peut lire et modifier votre compte. À utiliser uniquement en toute confiance.",
       "unnamedKey": "Clé sans nom",
-      "expired": "Expirée"
+      "expired": "Expirée",
+      "createdAt": "Créée le {{date}}",
+      "lastUsedAt": "Dernière utilisation le {{date}}",
+      "neverUsed": "Jamais utilisée"
     },
     "toast": {
       "apiKeyGenerated": "Clé API générée. Copiez-la maintenant — elle ne sera plus affichée.",

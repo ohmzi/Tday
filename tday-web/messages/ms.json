@@ -604,7 +604,10 @@
       "scopeReadHint": "Boleh baca tugasan anda tetapi tidak boleh ubah — selamat untuk papan pemuka.",
       "scopeFullHint": "Boleh baca dan ubah akaun anda. Guna hanya pada apl yang dipercayai.",
       "unnamedKey": "Kunci tanpa nama",
-      "expired": "Tamat tempoh"
+      "expired": "Tamat tempoh",
+      "createdAt": "Dicipta {{date}}",
+      "lastUsedAt": "Terakhir digunakan {{date}}",
+      "neverUsed": "Tidak pernah digunakan"
     },
     "toast": {
       "apiKeyGenerated": "Kunci API dijana. Salin sekarang — ia tidak akan ditunjukkan lagi.",

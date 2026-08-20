@@ -604,7 +604,10 @@
       "scopeReadHint": "Kann deine Aufgaben lesen, aber nicht ändern – sicher für Dashboards.",
       "scopeFullHint": "Kann dein Konto lesen und ändern. Nur bei vertrauenswürdigen Apps verwenden.",
       "unnamedKey": "Unbenannter Schlüssel",
-      "expired": "Abgelaufen"
+      "expired": "Abgelaufen",
+      "createdAt": "Erstellt am {{date}}",
+      "lastUsedAt": "Zuletzt verwendet am {{date}}",
+      "neverUsed": "Nie verwendet"
     },
     "toast": {
       "apiKeyGenerated": "API-Schlüssel generiert. Kopieren Sie ihn jetzt — er wird nicht erneut angezeigt.",
