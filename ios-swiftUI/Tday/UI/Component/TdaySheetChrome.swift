@@ -193,62 +193,201 @@ extension View {
         isPresented: Binding<Bool>,
         @ViewBuilder content: @escaping () -> SheetContent
     ) -> some View {
-        _ = TdayFullScreenCoverTransitionSwizzle.installOnce
-        let markedBinding = Binding<Bool>(
-            get: { isPresented.wrappedValue },
-            set: { newValue in
-                if newValue {
-                    TdayFullScreenCoverTransitionSwizzle.pendingUnanimatedPresentation = true
-                }
-                isPresented.wrappedValue = newValue
-            }
-        )
-        return fullScreenCover(isPresented: markedBinding) {
-            TdayBottomSheetPresentationHost {
-                content()
-            }
-        }
+        modifier(TdayBottomSheetPresentationModifier(isPresented: isPresented, sheetContent: content))
     }
 
     func tdayBottomSheetPresentation<Item: Identifiable, SheetContent: View>(
         item: Binding<Item?>,
         @ViewBuilder content: @escaping (Item) -> SheetContent
     ) -> some View {
-        _ = TdayFullScreenCoverTransitionSwizzle.installOnce
-        let markedBinding = Binding<Item?>(
-            get: { item.wrappedValue },
+        modifier(TdayBottomSheetItemPresentationModifier(item: item, sheetContent: content))
+    }
+}
+
+/// Timing for the sheet's entrance and exit, kept in one place so the card
+/// animation and the deferred teardown can't drift apart.
+private enum TdayBottomSheetMotion {
+    static let exitDuration: TimeInterval = 0.24
+
+    static let scrimIn = Animation.easeOut(duration: 0.22)
+    static let scrimOut = Animation.easeIn(duration: 0.2)
+    static let cardIn = Animation.spring(response: 0.4, dampingFraction: 0.86)
+    static let cardOut = Animation.easeIn(duration: exitDuration)
+}
+
+/// Applies a state change with SwiftUI animations suppressed, so a
+/// `fullScreenCover` driven by that state appears/disappears with no
+/// container transition of its own.
+private func withoutPresentationAnimation(_ body: () -> Void) {
+    var transaction = Transaction()
+    transaction.disablesAnimations = true
+    withTransaction(transaction, body)
+}
+
+/// Re-entrancy guard for the deferred dismissal both presentation modifiers
+/// use. A dismissal can be requested from several directions at once (the
+/// caller clearing its binding *and* SwiftUI writing `false` through the
+/// cover's binding); only the first may start the exit animation.
+private struct TdayBottomSheetDismissal {
+    /// Incremented to ask the presented host to animate itself out.
+    private(set) var requestID = 0
+    private var isDismissing = false
+
+    mutating func begin() {
+        guard !isDismissing else {
+            return
+        }
+        isDismissing = true
+        requestID += 1
+    }
+
+    mutating func reset() {
+        isDismissing = false
+    }
+}
+
+/// Drives the bottom sheet's own entrance/exit instead of letting
+/// `fullScreenCover` animate its container.
+///
+/// The container animation is the problem being avoided: it slides the *whole*
+/// presented view, and the dim scrim lives inside that view, so the dim
+/// arrives and leaves as a hard-edged band travelling up and down the screen.
+/// Presenting and tearing down with animations suppressed means there is
+/// nothing to slide — the cover simply exists, and
+/// `TdayBottomSheetPresentationHost` fades the scrim in place while only the
+/// card travels, which is how a native `.sheet()` reads.
+///
+/// Two details matter:
+/// - Presentation is triggered from `onChange` of the caller's binding, not
+///   from a wrapper `Binding`'s setter. Call sites flip their own `@State`
+///   directly (`showingCreateList = true`), which never routes through a
+///   wrapper's `set`, so a wrapper-based hook would silently never run.
+/// - Teardown is deferred. Every dismissal request — including
+///   `@Environment(\.dismiss)` from inside sheet content, which writes `false`
+///   through the cover's binding — is intercepted so the host can animate out
+///   first; the (by then invisible) cover is removed afterwards.
+private struct TdayBottomSheetPresentationModifier<SheetContent: View>: ViewModifier {
+    @Binding var isPresented: Bool
+    @ViewBuilder let sheetContent: () -> SheetContent
+
+    @State private var isCoverPresented = false
+    @State private var dismissal = TdayBottomSheetDismissal()
+
+    private var coverBinding: Binding<Bool> {
+        Binding(
+            get: { isCoverPresented },
             set: { newValue in
-                if newValue != nil {
-                    TdayFullScreenCoverTransitionSwizzle.pendingUnanimatedPresentation = true
+                if newValue {
+                    isCoverPresented = true
+                } else {
+                    dismissal.begin()
                 }
-                item.wrappedValue = newValue
             }
         )
-        return fullScreenCover(item: markedBinding) { item in
-            TdayBottomSheetPresentationHost {
-                content(item)
+    }
+
+    func body(content: Content) -> some View {
+        content
+            .onChange(of: isPresented) { _, newValue in
+                if newValue {
+                    dismissal.reset()
+                    withoutPresentationAnimation { isCoverPresented = true }
+                } else if isCoverPresented {
+                    dismissal.begin()
+                }
             }
-        }
+            .fullScreenCover(isPresented: coverBinding) {
+                TdayBottomSheetPresentationHost(
+                    dismissRequestID: dismissal.requestID,
+                    onDismissAnimationCompleted: finishDismissal
+                ) {
+                    sheetContent()
+                }
+            }
+    }
+
+    private func finishDismissal() {
+        withoutPresentationAnimation { isCoverPresented = false }
+        dismissal.reset()
+        isPresented = false
+    }
+}
+
+/// `item`-driven counterpart of `TdayBottomSheetPresentationModifier`.
+private struct TdayBottomSheetItemPresentationModifier<Item: Identifiable, SheetContent: View>: ViewModifier {
+    @Binding var item: Item?
+    @ViewBuilder let sheetContent: (Item) -> SheetContent
+
+    // Held separately from `item` so the sheet still has content to render
+    // while it animates out after the caller has already cleared `item`.
+    @State private var presentedItem: Item?
+    @State private var dismissal = TdayBottomSheetDismissal()
+
+    private var coverBinding: Binding<Item?> {
+        Binding(
+            get: { presentedItem },
+            set: { newValue in
+                if let newValue {
+                    presentedItem = newValue
+                } else {
+                    dismissal.begin()
+                }
+            }
+        )
+    }
+
+    func body(content: Content) -> some View {
+        content
+            .onChange(of: item?.id) { _, _ in
+                if let item {
+                    dismissal.reset()
+                    withoutPresentationAnimation { presentedItem = item }
+                } else if presentedItem != nil {
+                    dismissal.begin()
+                }
+            }
+            .fullScreenCover(item: coverBinding) { presented in
+                TdayBottomSheetPresentationHost(
+                    dismissRequestID: dismissal.requestID,
+                    onDismissAnimationCompleted: finishDismissal
+                ) {
+                    sheetContent(presented)
+                }
+            }
+    }
+
+    private func finishDismissal() {
+        withoutPresentationAnimation { presentedItem = nil }
+        dismissal.reset()
+        item = nil
     }
 }
 
 private struct TdayBottomSheetPresentationHost<SheetContent: View>: View {
+    /// Bumped by the presenting modifier to ask for an animated exit. The
+    /// cover is only torn down once `onDismissAnimationCompleted` fires.
+    let dismissRequestID: Int
+    let onDismissAnimationCompleted: () -> Void
     let content: SheetContent
+
     @Environment(\.tdayColors) private var colors
     @Environment(\.dismiss) private var dismiss
     @State private var keyboardFrame: CGRect?
     @State private var contentHeight: CGFloat = 0
-    @State private var scrimVisible = false
-    // fullScreenCover's default UIKit transition slides the whole presented
-    // container — scrim included — up from the bottom, so the dim layer
-    // visibly rides along with the card instead of just fading (very
-    // noticeable in light mode against a bright background behind it).
-    // TdayFullScreenCoverTransitionSwizzle neutralizes that container slide;
-    // this offset supplies the card's own slide-up motion instead, so only
-    // the card moves and the scrim purely fades, matching native .sheet().
-    @State private var contentOffset: CGFloat = UIScreen.main.bounds.height
+    // The cover is presented and torn down with animations suppressed (see
+    // TdayBottomSheetPresentationModifier), so these two flags supply the
+    // entire visible entrance and exit: the scrim fades where it already is,
+    // and only the card travels.
+    @State private var isScrimVisible = false
+    @State private var isCardRaised = false
 
-    init(@ViewBuilder content: () -> SheetContent) {
+    init(
+        dismissRequestID: Int,
+        onDismissAnimationCompleted: @escaping () -> Void,
+        @ViewBuilder content: () -> SheetContent
+    ) {
+        self.dismissRequestID = dismissRequestID
+        self.onDismissAnimationCompleted = onDismissAnimationCompleted
         self.content = content()
     }
 
@@ -261,7 +400,7 @@ private struct TdayBottomSheetPresentationHost<SheetContent: View>: View {
                 // screen behind it. Tapping it dismisses, matching the platform's
                 // standard bottom-sheet behavior.
                 colors.bottomSheetScrim
-                    .opacity(scrimVisible ? 1 : 0)
+                    .opacity(isScrimVisible ? 1 : 0)
                     .contentShape(Rectangle())
                     .ignoresSafeArea()
                     .onTapGesture { dismissSheet() }
@@ -276,7 +415,10 @@ private struct TdayBottomSheetPresentationHost<SheetContent: View>: View {
                             )
                         }
                     }
-                    .offset(y: contentOffset - keyboardBottomInset)
+                    // Parked a full screen height down until raised, so the card
+                    // starts (and ends) fully offscreen without needing a
+                    // measured height on the very first render.
+                    .offset(y: (isCardRaised ? 0 : proxy.size.height) - keyboardBottomInset)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
         }
@@ -285,12 +427,15 @@ private struct TdayBottomSheetPresentationHost<SheetContent: View>: View {
         .ignoresSafeArea(.keyboard, edges: .bottom)
         .presentationBackground(.clear)
         .onAppear {
-            withAnimation(.easeOut(duration: 0.22)) {
-                scrimVisible = true
+            withAnimation(TdayBottomSheetMotion.scrimIn) {
+                isScrimVisible = true
             }
-            withAnimation(.spring(response: 0.4, dampingFraction: 0.86)) {
-                contentOffset = 0
+            withAnimation(TdayBottomSheetMotion.cardIn) {
+                isCardRaised = true
             }
+        }
+        .onChange(of: dismissRequestID) { _, _ in
+            animateOut()
         }
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillChangeFrameNotification)) { notification in
             updateKeyboardFrame(from: notification)
@@ -312,13 +457,24 @@ private struct TdayBottomSheetPresentationHost<SheetContent: View>: View {
             from: nil,
             for: nil
         )
-        withAnimation(.easeIn(duration: 0.18)) {
-            scrimVisible = false
-        }
-        withAnimation(.easeIn(duration: 0.22)) {
-            contentOffset = UIScreen.main.bounds.height
-        }
+        // Routed through `dismiss()` rather than animating here, so a scrim tap
+        // takes exactly the same path as a `dismiss()` from inside the sheet:
+        // the presenting modifier intercepts it and drives `animateOut()`.
         dismiss()
+    }
+
+    /// Fades the scrim out where it stands and slides only the card away, then
+    /// lets the presenting modifier remove the (by then invisible) cover.
+    private func animateOut() {
+        withAnimation(TdayBottomSheetMotion.scrimOut) {
+            isScrimVisible = false
+        }
+        withAnimation(TdayBottomSheetMotion.cardOut) {
+            isCardRaised = false
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + TdayBottomSheetMotion.exitDuration) {
+            onDismissAnimationCompleted()
+        }
     }
 
     private func keyboardBottomInset(for proxy: GeometryProxy, contentHeight: CGFloat) -> CGFloat {
@@ -356,75 +512,6 @@ private struct TdayBottomSheetContentHeightPreferenceKey: PreferenceKey {
 
     static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
         value = max(value, nextValue())
-    }
-}
-
-/// SwiftUI gives `fullScreenCover` no way to opt out of its default
-/// `coverVertical` modal transition, which slides the whole presented view
-/// controller — our scrim included — up from the bottom, so the dim layer
-/// arrives as a hard-edged band climbing the screen instead of a fade.
-///
-/// Setting `modalTransitionStyle = .crossDissolve` does NOT fix this: SwiftUI
-/// presents transparent-background covers through its own presentation path
-/// (the controller carries `legacyPresentationWantsTransparentBackground` /
-/// `bridgedPresentationWantsTransparentBackground`), and that path ignores
-/// `modalTransitionStyle` — verified on device, the band survived it.
-///
-/// So instead of trying to pick a different container animation, this removes
-/// the container animation entirely: present with `animated: false`, so the
-/// cover simply exists, with the scrim already at opacity 0 and the card
-/// already parked offscreen via `contentOffset`. There is no container slide
-/// for the scrim to ride on, and `TdayBottomSheetPresentationHost.onAppear`
-/// then does all the visible work — the scrim fades in place while only the
-/// card travels upward, which is how native `.sheet()` reads.
-///
-/// The presentation is identified by a flag set synchronously the instant our
-/// own binding flips to true/non-nil in `tdayBottomSheetPresentation`, which
-/// happens before SwiftUI's next run-loop pass actually calls `present()`.
-/// Matching on the presented controller instead is not viable: SwiftUI
-/// type-erases the content to `PresentationHostingController<AnyView>` and
-/// buries the real view value behind view-graph plumbing `Mirror` can't
-/// reach in any bounded walk. The flag is consumed on first use so it cannot
-/// leak onto an unrelated presentation.
-///
-/// Dismissal is deliberately left animated — the container's downward slide
-/// is masked by the scrim's own 0.18s fade-out, so it reads correctly and
-/// still covers dismissals that bypass `dismissSheet()` (e.g. a caller just
-/// setting `isPresented = false` after saving).
-private enum TdayFullScreenCoverTransitionSwizzle {
-    static var pendingUnanimatedPresentation = false
-
-    static let installOnce: Void = {
-        guard
-            let originalMethod = class_getInstanceMethod(
-                UIViewController.self,
-                #selector(UIViewController.present(_:animated:completion:))
-            ),
-            let swizzledMethod = class_getInstanceMethod(
-                UIViewController.self,
-                #selector(UIViewController.tdayBottomSheet_present(_:animated:completion:))
-            )
-        else {
-            return
-        }
-        method_exchangeImplementations(originalMethod, swizzledMethod)
-    }()
-}
-
-extension UIViewController {
-    @objc fileprivate func tdayBottomSheet_present(
-        _ viewControllerToPresent: UIViewController,
-        animated: Bool,
-        completion: (() -> Void)?
-    ) {
-        var animated = animated
-        if TdayFullScreenCoverTransitionSwizzle.pendingUnanimatedPresentation {
-            TdayFullScreenCoverTransitionSwizzle.pendingUnanimatedPresentation = false
-            animated = false
-        }
-        // Swapped via method_exchangeImplementations, so this recurses into
-        // the original present(_:animated:completion:), not itself.
-        tdayBottomSheet_present(viewControllerToPresent, animated: animated, completion: completion)
     }
 }
 
