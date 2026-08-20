@@ -329,6 +329,7 @@
     <string name="create_task_repeat_yearly">每年</string>
     <string name="create_task_title_placeholder">标题</string>
     <string name="create_task_notes_placeholder">备注</string>
+    <string name="create_task_clear_formatting">清除格式</string>
     <string name="create_task_schedule_enabled">任务有截止日期</string>
     <string name="create_task_schedule_disabled">浮动任务</string>
     <string name="create_task_select_date">选择日期</string>

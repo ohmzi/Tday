@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.model.TodoItem
+import com.ohmz.tday.compose.core.text.flattenNotesToPlainText
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
@@ -15,7 +16,7 @@ private val SHARE_DATE_FORMATTER: DateTimeFormatter =
 fun shareTask(context: Context, todo: TodoItem) {
     val parts = buildList {
         add(todo.title)
-        todo.description?.takeIf { it.isNotBlank() }?.let { add(it) }
+        flattenNotesToPlainText(todo.description).takeIf { it.isNotBlank() }?.let { add(it) }
         todo.due?.let {
             add(context.getString(R.string.share_due_label, SHARE_DATE_FORMATTER.format(it)))
         }
@@ -49,7 +50,9 @@ fun buildListShareText(context: Context, listName: String, items: List<TodoItem>
                     )
                 )
             }
-            todo.description?.takeIf { it.isNotBlank() }?.let { add("   $it") }
+            flattenNotesToPlainText(todo.description).takeIf { it.isNotBlank() }?.let { note ->
+                note.split("\n").forEach { line -> add("   $line") }
+            }
         }
         add("")
         add(context.resources.getQuantityString(R.plurals.share_task_count, items.size, items.size))

@@ -138,6 +138,7 @@ import java.time.format.TextStyle
 import java.time.temporal.ChronoUnit
 import java.util.Locale
 import kotlin.math.roundToInt
+import com.ohmz.tday.compose.core.text.flattenNotesToPlainText
 
 private val CalendarAccentPurple = Color(0xFF7D67B6)
 private val CalendarTodayBlue = Color(0xFF509AE6)
@@ -2502,7 +2503,7 @@ private fun CalendarTodoRow(
                                 style = MaterialTheme.typography.bodySmall,
                             )
                         }
-                        todo.description?.takeIf { it.isNotBlank() }?.let { note ->
+                        flattenNotesToPlainText(todo.description).takeIf { it.isNotBlank() }?.let { note ->
                             Text(
                                 text = note,
                                 color = colorScheme.onSurfaceVariant.copy(alpha = 0.8f),

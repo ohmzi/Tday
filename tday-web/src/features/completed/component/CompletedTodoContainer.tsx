@@ -10,6 +10,7 @@ import NativeAppBrandButton from "@/components/app/NativeAppBrandButton";
 import ScreenWatermark from "@/components/app/ScreenWatermark";
 import { nativeScreenAccentColors } from "@/components/app/nativeScreenTheme";
 import { CheckCircle, Search, X } from "lucide-react";
+import { flattenNotesToPlainText } from "@/lib/richNotes";
 
 const CompletedTodoContainer = () => {
   const { t: completedDict } = useTranslation("completed")
@@ -21,7 +22,7 @@ const CompletedTodoContainer = () => {
     if (!query) return completedTodos;
     return completedTodos.filter((todo) => {
       const title = todo.title.toLowerCase();
-      const description = (todo.description || "").toLowerCase();
+      const description = flattenNotesToPlainText(todo.description).toLowerCase();
       return title.includes(query) || description.includes(query);
     });
   }, [completedTodos, searchQuery]);

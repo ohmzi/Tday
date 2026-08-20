@@ -329,6 +329,7 @@
     <string name="create_task_repeat_yearly">毎年</string>
     <string name="create_task_title_placeholder">タイトル</string>
     <string name="create_task_notes_placeholder">メモ</string>
+    <string name="create_task_clear_formatting">書式をクリア</string>
     <string name="create_task_schedule_enabled">タスクに期限があります</string>
     <string name="create_task_schedule_disabled">フロータータスク</string>
     <string name="create_task_select_date">日付を選択</string>

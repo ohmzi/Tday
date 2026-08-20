@@ -202,6 +202,7 @@ import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.roundToInt
 import androidx.compose.ui.graphics.lerp as lerpColor
+import com.ohmz.tday.compose.core.text.flattenNotesToPlainText
 
 private val TimelineSameDateTaskSpacing = 2.dp
 private val TimelineDateGroupSpacing = 6.dp
@@ -414,8 +415,8 @@ fun TodoListScreen(
                 .filter { todo ->
                     todo.title.lowercase(Locale.getDefault())
                         .contains(normalizedFloaterTaskHomeSearchQuery) ||
-                            (todo.description?.lowercase(Locale.getDefault())
-                                ?.contains(normalizedFloaterTaskHomeSearchQuery) == true) ||
+                            flattenNotesToPlainText(todo.description).lowercase(Locale.getDefault())
+                                .contains(normalizedFloaterTaskHomeSearchQuery) ||
                             (todo.listId?.let { floaterTaskHomeListById[it]?.name }
                                 ?.lowercase(Locale.getDefault())
                                 ?.contains(normalizedFloaterTaskHomeSearchQuery) == true)
@@ -4432,7 +4433,7 @@ private fun SwipeTaskRow(
                                         style = MaterialTheme.typography.bodySmall,
                                     )
                                 }
-                                todo.description?.takeIf { it.isNotBlank() }?.let { note ->
+                                flattenNotesToPlainText(todo.description).takeIf { it.isNotBlank() }?.let { note ->
                                     Text(
                                         text = note,
                                         color = colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
@@ -4539,7 +4540,7 @@ private fun TodayTodoRow(
                             style = MaterialTheme.typography.bodySmall,
                         )
                     }
-                    todo.description?.takeIf { it.isNotBlank() }?.let { note ->
+                    flattenNotesToPlainText(todo.description).takeIf { it.isNotBlank() }?.let { note ->
                         Text(
                             text = note,
                             color = colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
@@ -4614,7 +4615,7 @@ private fun TodoRow(
                             style = MaterialTheme.typography.bodySmall,
                         )
                     }
-                    todo.description?.takeIf { it.isNotBlank() }?.let { note ->
+                    flattenNotesToPlainText(todo.description).takeIf { it.isNotBlank() }?.let { note ->
                         Text(
                             text = note,
                             color = colorScheme.onSurfaceVariant,

@@ -51,6 +51,7 @@ import {
   getTodoDayKey,
   isTodoFocusDateKey,
 } from "@/lib/todoToastNavigation";
+import { flattenNotesToPlainText } from "@/lib/richNotes";
 
 const PAGE_SIZE = 10;
 const MS_IN_DAY = 1000 * 60 * 60 * 24;
@@ -270,7 +271,7 @@ const AllTasksTimelineContainer = ({
 
     return timelineItems.filter(({ todo }) => {
       const title = todo.title.toLowerCase();
-      const description = (todo.description || "").toLowerCase();
+      const description = flattenNotesToPlainText(todo.description).toLowerCase();
       const listId = todo.listID ?? "";
       const listName = normalizeListName(listMetaData[listId]?.name)
         .toLowerCase();
@@ -291,7 +292,7 @@ const AllTasksTimelineContainer = ({
     return timelineItems
       .filter(({ todo }) => {
         const title = todo.title.toLowerCase();
-        const description = (todo.description || "").toLowerCase();
+        const description = flattenNotesToPlainText(todo.description).toLowerCase();
         const listId = todo.listID ?? "";
         const listName = normalizeListName(listMetaData[listId]?.name).toLowerCase();
         return (
