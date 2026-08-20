@@ -36,18 +36,15 @@ type NotesFieldProps = {
   className?: string;
 };
 
-// How far above the selection the menu sits, and roughly how tall it is —
-// used to position it before it's actually painted (no ResizeObserver
-// round-trip). Matches the button row's own sizing (h-7 buttons + p-1).
-const FORMAT_MENU_OFFSET = 44;
-
 function FormatButton({
   active,
+  disabled,
   label,
   onClick,
   children,
 }: {
   active: boolean;
+  disabled: boolean;
   label: string;
   onClick: () => void;
   children: React.ReactNode;
@@ -58,14 +55,15 @@ function FormatButton({
       aria-label={label}
       aria-pressed={active}
       title={label}
-      // Toolbar buttons that live outside the contenteditable area steal
-      // focus (and with it, the text selection toggleBold() etc. need to
-      // operate on) on mousedown, before the click handler ever runs —
-      // this is the standard Tiptap/ProseMirror fix.
+      disabled={disabled}
+      // A toolbar button outside the contenteditable area steals focus (and
+      // with it, the text selection toggleBold() etc. need to operate on)
+      // on mousedown, before the click handler ever runs — the standard
+      // Tiptap/ProseMirror fix.
       onMouseDown={(event) => event.preventDefault()}
       onClick={onClick}
       className={cn(
-        "flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted-foreground/10 hover:text-foreground active:scale-95",
+        "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted-foreground/10 hover:text-foreground active:scale-95 disabled:pointer-events-none disabled:opacity-30",
         active && "bg-foreground/10 text-foreground",
       )}
     >
@@ -78,10 +76,12 @@ function FormatButton({
 // bulleted/numbered lists pasted in from elsewhere, discards everything else
 // (font size/color/family, links, images, headings, …) by construction —
 // those marks/nodes simply aren't part of the editor's schema below, so
-// ProseMirror's paste parser drops them automatically. Selecting text also
-// shows a floating menu with the same six marks/lists so they can be applied
-// manually, not just via paste. Shows a "clear formatting" button only once
-// real formatting is present.
+// ProseMirror's paste parser drops them automatically. Focusing the field
+// also shows a format bar below it with the same six marks/lists so they
+// can be applied manually to the current selection — matching Android/iOS's
+// format bar (a persistent row, not a selection-triggered popup, so every
+// platform's affordance lives in the same place). Shows a "clear
+// formatting" button only once real formatting is present.
 export default function NotesField({
   value,
   onChange,
@@ -94,19 +94,15 @@ export default function NotesField({
   const lastEmittedRef = useRef(value);
   const onSubmitRef = useRef(onSubmit);
   const canSubmitRef = useRef(canSubmit);
-  const wrapperRef = useRef<HTMLDivElement>(null);
   const [hasFormatting, setHasFormatting] = useState(() =>
     htmlHasFormatting(decodeNotesToHtml(value)),
   );
-  // Position (relative to wrapperRef) of the floating format menu, or null
-  // when there's no non-empty selection to show it for. Deliberately a
-  // plain absolute position rather than @tiptap/extension-bubble-menu's
-  // <BubbleMenu> (which positions via tippy.js) — tippy.js's default export
-  // doesn't unwrap through this project's test runtime's CJS/ESM interop,
-  // crashing any test that so much as pastes into an editor with BubbleMenu
-  // mounted. This has no such dependency and every button's active state
-  // (editor.isActive("bold") etc.) is read fresh on each of these updates.
-  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
+  const [isFocused, setIsFocused] = useState(false);
+  // Forces a re-render on every transaction, not just content changes —
+  // the format bar's active-state highlighting (editor.isActive("bold")
+  // etc.) needs to stay current as the selection itself moves, which
+  // doesn't otherwise trigger React to re-read it.
+  const [, forceRerender] = useState(0);
 
   useEffect(() => {
     onSubmitRef.current = onSubmit;
@@ -163,60 +159,12 @@ export default function NotesField({
       lastEmittedRef.current = encoded;
       onChange(encoded);
     },
+    onFocus: () => setIsFocused(true),
+    onBlur: () => setIsFocused(false),
+    onTransaction: () => {
+      forceRerender((n) => n + 1);
+    },
   });
-
-  // Tracks the current selection's screen position (for the format menu)
-  // across every transaction, not just content changes — this is also what
-  // keeps FormatButton's active-state highlighting current as the selection
-  // itself moves without the text changing (e.g. arrow-key navigation).
-  useEffect(() => {
-    if (!editor) return;
-    // Narrows `editor` once so the closures below (invoked later, async,
-    // from editor.on()) keep TypeScript's non-null narrowing — it doesn't
-    // otherwise carry into nested function bodies.
-    const activeEditor = editor;
-
-    function updateMenuPosition() {
-      if (!activeEditor.isFocused) {
-        setMenuPosition(null);
-        return;
-      }
-      const { from, to } = activeEditor.state.selection;
-      const domSelection = window.getSelection();
-      const wrapperRect = wrapperRef.current?.getBoundingClientRect();
-      if (from === to || !domSelection || domSelection.rangeCount === 0 || !wrapperRect) {
-        setMenuPosition(null);
-        return;
-      }
-      const selectionRect = domSelection.getRangeAt(0).getBoundingClientRect();
-      if (selectionRect.width === 0 && selectionRect.height === 0) {
-        setMenuPosition(null);
-        return;
-      }
-      setMenuPosition({
-        // Clamped to 0: a selection on the field's first line would
-        // otherwise place the menu above the wrapper's own top edge,
-        // clipped under whatever sheet chrome sits above it.
-        top: Math.max(0, selectionRect.top - wrapperRect.top - FORMAT_MENU_OFFSET),
-        left: selectionRect.left - wrapperRect.left + selectionRect.width / 2,
-      });
-    }
-
-    function hideMenuPosition() {
-      setMenuPosition(null);
-    }
-
-    activeEditor.on("selectionUpdate", updateMenuPosition);
-    activeEditor.on("transaction", updateMenuPosition);
-    activeEditor.on("focus", updateMenuPosition);
-    activeEditor.on("blur", hideMenuPosition);
-    return () => {
-      activeEditor.off("selectionUpdate", updateMenuPosition);
-      activeEditor.off("transaction", updateMenuPosition);
-      activeEditor.off("focus", updateMenuPosition);
-      activeEditor.off("blur", hideMenuPosition);
-    };
-  }, [editor]);
 
   // Sync content set from outside (switching which task is being edited) —
   // guarded so it never fires as an echo of this field's own onChange.
@@ -234,69 +182,23 @@ export default function NotesField({
     // Tiptap's own getText({blockSeparator}) double-counts the <li><p>
     // nesting StarterKit's list items use (an extra blank line per item), so
     // this reuses the same block-line extraction the read-only previews use
-    // instead — it also keeps list items recognizable as "• "/"1. " lines.
-    const plainText = htmlToPlainText(sanitizeHtml(editor.getHTML()));
+    // instead. Unlike those previews, list bullets/numbers are dropped
+    // entirely (includeListPrefixes: false) rather than kept as text — the
+    // user asked to clear formatting, not to keep a plain-text list.
+    const plainText = htmlToPlainText(sanitizeHtml(editor.getHTML()), false);
     editor.commands.setContent(decodeNotesToHtml(plainText), true);
     editor.commands.focus();
     setHasFormatting(false);
   }
 
+  const selectionEmpty = editor?.state.selection.empty ?? true;
+
   return (
-    <div ref={wrapperRef} className={cn("relative w-full", className)}>
+    <div className={cn("relative w-full", className)}>
       <EditorContent
         editor={editor}
         className={cn("w-full px-[18px] py-3", hasFormatting && "pr-11")}
       />
-      {editor && menuPosition && (
-        <div
-          className="absolute z-10 flex -translate-x-1/2 items-center gap-0.5 rounded-xl border border-border bg-popover p-1 shadow-lg"
-          style={{ top: menuPosition.top, left: menuPosition.left }}
-        >
-          <FormatButton
-            active={editor.isActive("bold")}
-            label={appDict("bold")}
-            onClick={() => editor.chain().focus().toggleBold().run()}
-          >
-            <Bold className="h-4 w-4" />
-          </FormatButton>
-          <FormatButton
-            active={editor.isActive("italic")}
-            label={appDict("italic")}
-            onClick={() => editor.chain().focus().toggleItalic().run()}
-          >
-            <Italic className="h-4 w-4" />
-          </FormatButton>
-          <FormatButton
-            active={editor.isActive("underline")}
-            label={appDict("underline")}
-            onClick={() => editor.chain().focus().toggleUnderline().run()}
-          >
-            <UnderlineIcon className="h-4 w-4" />
-          </FormatButton>
-          <FormatButton
-            active={editor.isActive("strike")}
-            label={appDict("strikethrough")}
-            onClick={() => editor.chain().focus().toggleStrike().run()}
-          >
-            <Strikethrough className="h-4 w-4" />
-          </FormatButton>
-          <div className="mx-0.5 h-5 w-px bg-border" aria-hidden="true" />
-          <FormatButton
-            active={editor.isActive("bulletList")}
-            label={appDict("bulletedList")}
-            onClick={() => editor.chain().focus().toggleBulletList().run()}
-          >
-            <List className="h-4 w-4" />
-          </FormatButton>
-          <FormatButton
-            active={editor.isActive("orderedList")}
-            label={appDict("numberedList")}
-            onClick={() => editor.chain().focus().toggleOrderedList().run()}
-          >
-            <ListOrdered className="h-4 w-4" />
-          </FormatButton>
-        </div>
-      )}
       {hasFormatting && (
         <button
           type="button"
@@ -307,6 +209,59 @@ export default function NotesField({
         >
           <Eraser className="h-4 w-4" />
         </button>
+      )}
+      {editor && isFocused && (
+        <div className="flex items-center gap-0.5 border-t border-border px-2 py-1">
+          <FormatButton
+            active={editor.isActive("bold")}
+            disabled={selectionEmpty}
+            label={appDict("bold")}
+            onClick={() => editor.chain().focus().toggleBold().run()}
+          >
+            <Bold className="h-4 w-4" />
+          </FormatButton>
+          <FormatButton
+            active={editor.isActive("italic")}
+            disabled={selectionEmpty}
+            label={appDict("italic")}
+            onClick={() => editor.chain().focus().toggleItalic().run()}
+          >
+            <Italic className="h-4 w-4" />
+          </FormatButton>
+          <FormatButton
+            active={editor.isActive("underline")}
+            disabled={selectionEmpty}
+            label={appDict("underline")}
+            onClick={() => editor.chain().focus().toggleUnderline().run()}
+          >
+            <UnderlineIcon className="h-4 w-4" />
+          </FormatButton>
+          <FormatButton
+            active={editor.isActive("strike")}
+            disabled={selectionEmpty}
+            label={appDict("strikethrough")}
+            onClick={() => editor.chain().focus().toggleStrike().run()}
+          >
+            <Strikethrough className="h-4 w-4" />
+          </FormatButton>
+          <div className="mx-0.5 h-5 w-px bg-border" aria-hidden="true" />
+          <FormatButton
+            active={editor.isActive("bulletList")}
+            disabled={selectionEmpty}
+            label={appDict("bulletedList")}
+            onClick={() => editor.chain().focus().toggleBulletList().run()}
+          >
+            <List className="h-4 w-4" />
+          </FormatButton>
+          <FormatButton
+            active={editor.isActive("orderedList")}
+            disabled={selectionEmpty}
+            label={appDict("numberedList")}
+            onClick={() => editor.chain().focus().toggleOrderedList().run()}
+          >
+            <ListOrdered className="h-4 w-4" />
+          </FormatButton>
+        </div>
       )}
     </div>
   );

@@ -37,6 +37,16 @@ class RichNotesComposeTest {
     }
 
     @Test
+    fun `stripToPlainText removes list prefixes entirely, unlike the decoded text`() {
+        // "Clear formatting" should remove bullets/numbers, not just the
+        // marks around them — different from decodeNotesToAnnotatedString's
+        // preview-oriented "keep the • as text" behavior.
+        val encoded = encodeNotes("<p>Todo:</p><ul><li>Milk</li><li>Eggs</li></ul>")
+        val annotated = decodeNotesToAnnotatedString(encoded)
+        assertEquals("Todo:\nMilk\nEggs", stripToPlainText(annotated))
+    }
+
+    @Test
     fun `encoding a plain unstyled AnnotatedString produces a marker-free string`() {
         val plain = buildAnnotatedString { append("Just typing\nsome lines") }
         val encoded = encodeAnnotatedNotes(plain)

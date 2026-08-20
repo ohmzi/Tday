@@ -379,7 +379,7 @@ private func getInlineText(_ node: RichHTMLNode) -> String {
     }
 }
 
-private func extractBlockLines(_ nodes: [RichHTMLNode], into lines: inout [String]) {
+private func extractBlockLines(_ nodes: [RichHTMLNode], into lines: inout [String], includeListPrefixes: Bool) {
     for node in nodes {
         switch node {
         case .text(let t):
@@ -394,7 +394,7 @@ private func extractBlockLines(_ nodes: [RichHTMLNode], into lines: inout [Strin
                 for child in children {
                     guard case .element("li", let liChildren) = child else { continue }
                     counter += 1
-                    let prefix = ordered ? "\(counter). " : "\u{2022} "
+                    let prefix = includeListPrefixes ? (ordered ? "\(counter). " : "\u{2022} ") : ""
                     let text = liChildren.map(getInlineText).joined()
                     for (idx, part) in text.components(separatedBy: "\n").enumerated() {
                         lines.append(idx == 0 ? prefix + part : part)
@@ -406,15 +406,20 @@ private func extractBlockLines(_ nodes: [RichHTMLNode], into lines: inout [Strin
             case "br":
                 lines.append("")
             default:
-                extractBlockLines(children, into: &lines)
+                extractBlockLines(children, into: &lines, includeListPrefixes: includeListPrefixes)
             }
         }
     }
 }
 
-func htmlToPlainText(_ html: String) -> String {
+// `includeListPrefixes` controls whether list items keep their "• "/"1. "
+// text prefix: true for previews (list rows, search, share text — where the
+// structure should still read), false for genuinely stripping all
+// formatting (the "clear formatting" button, which should remove bullets
+// and numbers, not just the marks around them).
+func htmlToPlainText(_ html: String, includeListPrefixes: Bool = true) -> String {
     var lines: [String] = []
-    extractBlockLines(htmlNodes(from: html), into: &lines)
+    extractBlockLines(htmlNodes(from: html), into: &lines, includeListPrefixes: includeListPrefixes)
     return lines.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
 }
 
@@ -449,6 +454,18 @@ func flattenNotesToPlainText(_ value: String?) -> String {
     guard let value, !value.isEmpty else { return "" }
     if isRichNotes(value) {
         return htmlToPlainText(sanitizeHtml(String(value.dropFirst(richNotesMarker.count))))
+    }
+    return value
+}
+
+// Saved string → fully plain text for the "clear formatting" action: unlike
+// flattenNotesToPlainText, list bullets/numbers are removed entirely rather
+// than kept as text prefixes — "clear formatting" means the user wants back
+// to genuinely plain text, not a preview that still reads as a list.
+func stripToPlainText(_ value: String?) -> String {
+    guard let value, !value.isEmpty else { return "" }
+    if isRichNotes(value) {
+        return htmlToPlainText(sanitizeHtml(String(value.dropFirst(richNotesMarker.count))), includeListPrefixes: false)
     }
     return value
 }
