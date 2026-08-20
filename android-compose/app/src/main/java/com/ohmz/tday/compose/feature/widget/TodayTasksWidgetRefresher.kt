@@ -3,6 +3,7 @@ package com.ohmz.tday.compose.feature.widget
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Context
+import android.util.Log
 import androidx.glance.appwidget.AppWidgetId
 import androidx.glance.appwidget.updateAll
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -85,13 +86,14 @@ class TodayTasksWidgetRefresher @Inject constructor(
                 for (appWidgetId in ids) {
                     runCatching { widget.update(context, AppWidgetId(appWidgetId)) }
                         .onSuccess { updated++ }
-                        .onFailure { android.util.Log.w(WIDGET_LOG_TAG, "today: update($appWidgetId) failed", it) }
+                        .onFailure { Log.e(WIDGET_LOG_TAG, "today: update($appWidgetId) failed", it) }
                 }
             }
             runCatching { widget.updateAll(context) }
+                .onFailure { Log.e(WIDGET_LOG_TAG, "today: updateAll failed", it) }
             // A count of 0 means no Today widget is placed (or the ids could not be read) — the
             // difference between "nothing to paint" and "painted nothing".
-            android.util.Log.i(WIDGET_LOG_TAG, "today: render requested for $updated widget id(s)")
+            Log.i(WIDGET_LOG_TAG, "today: render requested for $updated widget id(s)")
         }
     }
 

@@ -12,6 +12,7 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import androidx.work.ExistingPeriodicWorkPolicy
 import com.ohmz.tday.compose.MainActivity
 import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.observability.TdayTelemetry
@@ -41,52 +42,20 @@ class BootRescheduleReceiver : BroadcastReceiver() {
         val pending = goAsync()
         CoroutineScope(Dispatchers.Default).launch {
             try {
+                repaintWidgets(context)
+
+                // KEEP, not UPDATE: a boot is not an app update, so re-enqueueing with UPDATE
+                // here would reset the periodic window on every single reboot. UPDATE is still
+                // used from TdayApplication.runDeferredStartup, which IS the right place to pick
+                // up a changed worker definition after an app update.
+                WidgetSyncWorker.schedule(context, ExistingPeriodicWorkPolicy.KEEP)
+                WidgetSyncWorker.runOnce(context)
+
                 val entryPoint = EntryPointAccessors.fromApplication(
                     context.applicationContext,
                     ReminderReceiverEntryPoint::class.java,
                 )
                 entryPoint.taskReminderScheduler().rescheduleAll()
-                // Two-phase widget refresh after a reboot, the way the stock system widgets
-                // behave: show the PREVIOUSLY LOADED data immediately, then catch up to the
-                // server.
-                //
-                // Phase one — paint from the offline cache (no network), so the home screen is
-                // useful straight away. The static initialLayout ("Loading tasks…") is
-                // unavoidable as the very first frame, because Android does not persist a
-                // widget's RemoteViews across a reboot and the launcher inflates that XML until
-                // some provider renders. This turns it into a blink rather than a wait for the
-                // next updatePeriodMillis tick, which the system schedules a full period out
-                // from boot.
-                //
-                // runCatching so a widget failure can never cost the reminder reschedule above;
-                // refreshNow (not requestRefresh) because goAsync's window closes on return.
-                runCatching {
-                    val widgetEntryPoint = EntryPointAccessors.fromApplication(
-                        context.applicationContext,
-                        WidgetEntryPoint::class.java,
-                    )
-                    Log.i(WIDGET_LOG_TAG, "boot: cache render starting (action=$action)")
-                    val startedAtMs = System.currentTimeMillis()
-                    // Bounded because this runs inside goAsync's window, which the system
-                    // closes if we take too long — a slow render must not hold the broadcast.
-                    withTimeout(WIDGET_CACHE_RENDER_TIMEOUT_MS) {
-                        widgetEntryPoint.todayTasksWidgetRefresher().refreshNow()
-                        widgetEntryPoint.floaterTasksWidgetRefresher().refreshNow()
-                    }
-                    Log.i(
-                        WIDGET_LOG_TAG,
-                        "boot: cache render finished in ${System.currentTimeMillis() - startedAtMs}ms",
-                    )
-                }.onFailure { Log.w(WIDGET_LOG_TAG, "boot: cache render FAILED", it) }
-
-                // Phase two — fresh data from the server. Handed to WorkManager rather than run
-                // here: it owns the retry/backoff, survives this receiver, and can wait for
-                // connectivity that may not exist yet seconds after a boot. Its cache
-                // write-through is what repaints the widgets with whatever the server returned.
-                runCatching {
-                    WidgetSyncWorker.runOnce(context.applicationContext)
-                    Log.i(WIDGET_LOG_TAG, "boot: server sync enqueued")
-                }.onFailure { Log.w(WIDGET_LOG_TAG, "boot: server sync FAILED to enqueue", it) }
                 if (action == Intent.ACTION_MY_PACKAGE_REPLACED) {
                     showUpdateReadyNotification(context)
                 }
@@ -97,6 +66,45 @@ class BootRescheduleReceiver : BroadcastReceiver() {
                 pending.finish()
             }
         }
+    }
+
+    /**
+     * Repaints both widgets after a boot or an app update.
+     *
+     * Also covers the `MY_PACKAGE_REPLACED` case: an install-over-install doesn't clear
+     * `filesDir`, so the previous snapshot survives and this repaint renders it immediately; if it
+     * doesn't survive, `provideGlance`'s own missing-snapshot check (see `TodayTasksWidget.kt`)
+     * enqueues `WidgetHydrateWorker` the moment this repaint runs `provideGlance`. Nothing extra
+     * is needed on this path.
+     *
+     * A reboot drops every widget's RemoteViews (AppWidgetService persists the provider/host
+     * *bindings* but not the rendered views), so without this the widget sits on
+     * `android:initialLayout` until something repaints it. Uses [TodayTasksWidgetRefresher.refreshNow]
+     * rather than the fire-and-forget request so the render completes while [goAsync] still holds
+     * the process alive.
+     */
+    private suspend fun repaintWidgets(context: Context) {
+        val widgets = runCatching {
+            EntryPointAccessors.fromApplication(
+                context.applicationContext,
+                WidgetEntryPoint::class.java,
+            )
+        }.getOrElse { e ->
+            Log.e(LOG_TAG, "Unable to reach the widget refreshers after boot", e)
+            return
+        }
+
+        Log.i(WIDGET_LOG_TAG, "boot: repaint starting")
+        val startedAtMs = System.currentTimeMillis()
+        runCatching {
+            // Bounded because this runs inside goAsync's window, which the system closes if we
+            // take too long — a slow render must not hold the broadcast.
+            withTimeout(WIDGET_REPAINT_TIMEOUT_MS) {
+                widgets.todayTasksWidgetRefresher().refreshNow()
+                widgets.floaterTasksWidgetRefresher().refreshNow()
+            }
+        }.onFailure { Log.e(LOG_TAG, "Failed to repaint widgets after boot", it) }
+        Log.i(WIDGET_LOG_TAG, "boot: repaint finished in ${System.currentTimeMillis() - startedAtMs}ms")
     }
 
     private fun showUpdateReadyNotification(context: Context) {
@@ -152,10 +160,10 @@ class BootRescheduleReceiver : BroadcastReceiver() {
         const val UPDATE_NOTIFICATION_ID = 20_026
 
         /**
-         * Ceiling for the cache-only widget render. Comfortably longer than a Room read plus a
-         * Glance composition, while staying well inside the window the system allows a
-         * goAsync() broadcast — boot is congested, so this is a backstop, not a budget.
+         * Ceiling for [repaintWidgets]. Comfortably longer than a Room read plus a Glance
+         * composition, while staying well inside the window the system allows a goAsync()
+         * broadcast — boot is congested, so this is a backstop, not a budget.
          */
-        private const val WIDGET_CACHE_RENDER_TIMEOUT_MS = 10_000L
+        private const val WIDGET_REPAINT_TIMEOUT_MS = 10_000L
     }
 }

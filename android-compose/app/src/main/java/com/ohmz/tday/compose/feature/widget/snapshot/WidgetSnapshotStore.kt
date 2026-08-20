@@ -48,43 +48,22 @@ internal object WidgetSnapshotSignal {
 }
 
 /**
- * Reads and writes the per-widget render snapshot as a Keystore-encrypted file, deliberately with
- * no Hilt dependency — a widget's `provideGlance` constructs this directly from
- * `applicationContext` exactly the way it already constructs
- * [com.ohmz.tday.compose.core.data.AppSecurityPreferenceStore]. That is the structural fix for the
- * 20s post-reboot blank window: nothing on the render path may call `EntryPointAccessors`, because
- * that is what drags in [com.ohmz.tday.compose.core.data.db.TdayDatabase] and its ~9.5s cold
- * SQLCipher open.
+ * Reads and writes the per-widget render snapshot as a Keystore-encrypted file under
+ * `filesDir/widget/`, with no Hilt dependency — a widget's `provideGlance` constructs this
+ * directly from `applicationContext`, so nothing on the render path calls `EntryPointAccessors`
+ * or touches [com.ohmz.tday.compose.core.data.db.TdayDatabase].
  *
- * **Storage choice.** Not a plain file: `docs/security/SECURITY_POSTURE.md` documents the Android
- * cache as encrypted at rest, and `LegacyPlaintextCacheMigration` exists specifically to remove a
- * plaintext task-title file from disk — shipping a new one here would be a posture regression, not
- * a tradeoff. Not `EncryptedSharedPreferences`: two widgets' worth of up to 50 rows is tens of KB
- * of XML value that SharedPreferences parses wholly into memory on first access, and offers no
- * atomic multi-key swap; that shape is exactly what `OfflineCacheManager`'s Room migration replaced.
- *
- * **Not `androidx.security.crypto.EncryptedFile` either — measured, not assumed.** The plan this
- * store was built from called for exactly this check: instrument the cold read and swap to a
- * hand-rolled Keystore cipher if it came in over 150ms. On a post-reboot Pixel 7 the first
- * `EncryptedFile.openFileInput()` this process ever makes costs ~765ms — Tink's keyset unwrap on
- * top of the Keystore round trip, not the Keystore round trip itself — against a ~1s total budget
- * from process start to painted content. So this talks to `AndroidKeyStore` directly: one
- * `KeyStore.getInstance("AndroidKeyStore")` + `getKey`/`generateKey`, then `Cipher` in AES/GCM
- * directly over the file bytes, no Tink keyset layer. Same key alias, `setUserAuthenticationRequired(false)`
- * like every other Keystore key this app already uses, so it stays readable on a locked device —
- * the same property `EncryptedFile` was chosen for in the first place, just without the extra
- * unwrap. The 12-byte GCM IV is generated fresh per write and stored as a prefix on the ciphertext;
- * GCM's authentication tag makes a truncated or tampered file fail to decrypt rather than decrypt
- * to a wrong-but-plausible result, so [read] can still treat "fails to decrypt" and "missing" as
- * the same `null` outcome.
- *
- * **Write safety without atomic rename.** Same reasoning as the `EncryptedFile` version this
- * replaced: this deletes the target then writes fresh rather than write-to-tmp-then-`renameTo`.
- * The two failure windows that leaves — a reader arriving after the delete but before the write
- * completes, or a process death mid-write leaving a truncated ciphertext — are both already
- * first-class outcomes here: [read] treats "missing" and "fails to decrypt" identically, as `null`,
- * and the read path (LOADING + [WidgetHydrateWorker]) already has to handle "no snapshot yet" for
- * the fresh-install case.
+ * Not a plain file (this app's cache is encrypted at rest by policy) and not
+ * `EncryptedSharedPreferences` (parses wholly into memory, no atomic multi-key swap). Not
+ * `androidx.security.crypto.EncryptedFile` either: measured at ~765ms for its first cold read on a
+ * Pixel 7 (Tink's keyset unwrap on top of the Keystore round trip), so this talks to
+ * `AndroidKeyStore` directly instead — `AES/GCM/NoPadding`, no Tink layer, same
+ * `setUserAuthenticationRequired(false)` key every other Keystore use in this app already relies
+ * on to stay readable on a locked device. The 12-byte GCM IV is generated fresh per write and
+ * prefixed onto the ciphertext; GCM's auth tag makes a truncated/tampered file fail to decrypt
+ * rather than decrypt wrong, so [read] treats "missing" and "fails to decrypt" identically as
+ * `null` — which the read path already has to handle for the fresh-install case anyway. [write]
+ * deletes the target then writes fresh rather than write-to-tmp-then-rename for the same reason.
  */
 internal class WidgetSnapshotStore(
     context: Context,
@@ -115,17 +94,19 @@ internal class WidgetSnapshotStore(
     private fun read(kind: WidgetSnapshotKind): WidgetSnapshot? {
         val target = fileFor(kind)
         if (!target.exists()) return null
-        val bytes = WidgetTiming.time("WidgetSnapshotStore.read(${kind.name}) decrypt") {
-            runCatching { decrypt(target.readBytes()) }.getOrNull()
-        } ?: return null
-        val snapshot = WidgetTiming.time("WidgetSnapshotStore.read(${kind.name}) json decode") {
-            runCatching {
-                json.decodeFromString(WidgetSnapshot.serializer(), bytes.toString(Charsets.UTF_8))
-            }.getOrNull()
-        } ?: return null
-        // A downgrade after a newer build wrote a file with fields this reader doesn't know how
-        // to interpret. Treat it as missing rather than silently rendering a half-decoded row.
-        return snapshot.takeIf { it.isSupported() }
+        val bytes = runCatching { decrypt(target.readBytes()) }.getOrNull()
+        if (bytes == null) {
+            // Undecryptable (a stale key, a truncated write). Delete it so `exists()` stays
+            // truthful — callers use it as a cheap "do we already have something to show" check
+            // without paying for a full decrypt.
+            target.delete()
+            return null
+        }
+        val snapshot = runCatching {
+            json.decodeFromString(WidgetSnapshot.serializer(), bytes.toString(Charsets.UTF_8))
+        }.getOrNull()
+        if (snapshot == null) target.delete()
+        return snapshot
     }
 
     private fun fileFor(kind: WidgetSnapshotKind) = File(directory, kind.fileName)
