@@ -37,15 +37,17 @@ class TdayApplication : Application(), Configuration.Provider {
             .setWorkerFactory(workerFactory)
             .build()
 
-    override fun onCreate() {
-        super.onCreate()
-        TodayTasksWidgetPreviewPublisher.publish(this)
-        // Re-arm the Day Ahead digest across process restarts (no-op when off).
-        DayAheadScheduling.scheduleNext(this, dayAheadPreferenceStore.getOption())
-    }
-
     fun runDeferredStartup() {
         if (!deferredStartupRan.compareAndSet(false, true)) return
+
+        // Not on onCreate: onCreate also runs for a widget-only process start (the
+        // APPWIDGET_UPDATE broadcast after a reboot), and neither of these is needed for that
+        // path — the picker preview already refreshes from each provider's own onEnabled, and
+        // the Day Ahead digest already re-arms itself after every run. Keeping them off onCreate
+        // keeps a widget-only cold start from paying for a WorkManager bring-up and 6
+        // setWidgetPreview binder calls it doesn't need.
+        TodayTasksWidgetPreviewPublisher.publish(this)
+        DayAheadScheduling.scheduleNext(this, dayAheadPreferenceStore.getOption())
 
         CoroutineScope(Dispatchers.Default).launch {
             SentryAndroid.init(this@TdayApplication) { options ->
