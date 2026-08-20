@@ -128,6 +128,7 @@ class ListServiceImpl(
                 ListTodoResponse(
                     id = row[Todos.id],
                     title = fieldEncryption.decryptRequired(row[Todos.title]),
+                    description = fieldEncryption.decryptIfEncrypted(row[Todos.description]),
                     priority = row[Todos.priority].name,
                     due = row[Todos.due]?.toString(),
                     completed = row[Todos.completed],

@@ -144,6 +144,7 @@ class FloaterListServiceImpl(
                     FloaterListTodoResponse(
                         id = row[Floaters.id],
                         title = fieldEncryption.decryptRequired(row[Floaters.title]),
+                        description = fieldEncryption.decryptIfEncrypted(row[Floaters.description]),
                         priority = row[Floaters.priority].name,
                         completed = row[Floaters.completed],
                         order = row[Floaters.order],
