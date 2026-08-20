@@ -330,6 +330,12 @@
     <string name="create_task_title_placeholder">Tajuk</string>
     <string name="create_task_notes_placeholder">Nota</string>
     <string name="create_task_clear_formatting">Kosongkan pemformatan</string>
+    <string name="create_task_format_bold">Tebal</string>
+    <string name="create_task_format_italic">Condong</string>
+    <string name="create_task_format_underline">Garis bawah</string>
+    <string name="create_task_format_strikethrough">Coret</string>
+    <string name="create_task_format_bulleted_list">Senarai bulet</string>
+    <string name="create_task_format_numbered_list">Senarai bernombor</string>
     <string name="create_task_schedule_enabled">Tugasan mempunyai tarikh akhir</string>
     <string name="create_task_schedule_disabled">Tugasan apungan</string>
     <string name="create_task_select_date">Pilih tarikh</string>

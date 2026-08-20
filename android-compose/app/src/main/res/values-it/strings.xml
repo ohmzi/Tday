@@ -331,6 +331,12 @@
     <string name="create_task_title_placeholder">Titolo</string>
     <string name="create_task_notes_placeholder">Note</string>
     <string name="create_task_clear_formatting">Cancella formattazione</string>
+    <string name="create_task_format_bold">Grassetto</string>
+    <string name="create_task_format_italic">Corsivo</string>
+    <string name="create_task_format_underline">Sottolineato</string>
+    <string name="create_task_format_strikethrough">Barrato</string>
+    <string name="create_task_format_bulleted_list">Elenco puntato</string>
+    <string name="create_task_format_numbered_list">Elenco numerato</string>
     <string name="create_task_schedule_enabled">L\'attività ha una scadenza</string>
     <string name="create_task_schedule_disabled">Attività senza data</string>
     <string name="create_task_select_date">Seleziona data</string>
