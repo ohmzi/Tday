@@ -607,7 +607,10 @@
       "expired": "Abgelaufen",
       "createdAt": "Erstellt am {{date}}",
       "lastUsedAt": "Zuletzt verwendet am {{date}}",
-      "neverUsed": "Nie verwendet"
+      "neverUsed": "Nie verwendet",
+      "newKeyTitle": "Neuer API-Schlüssel",
+      "cancel": "Abbrechen",
+      "done": "Fertig"
     },
     "toast": {
       "apiKeyGenerated": "API-Schlüssel generiert. Kopieren Sie ihn jetzt — er wird nicht erneut angezeigt.",

@@ -607,7 +607,10 @@
       "expired": "期限切れ",
       "createdAt": "{{date}} に作成",
       "lastUsedAt": "最終使用: {{date}}",
-      "neverUsed": "未使用"
+      "neverUsed": "未使用",
+      "newKeyTitle": "新しいAPIキー",
+      "cancel": "キャンセル",
+      "done": "完了"
     },
     "toast": {
       "apiKeyGenerated": "APIキーを生成しました。今すぐコピーしてください。二度と表示されません。",
