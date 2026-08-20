@@ -93,6 +93,34 @@ describe("NotesField manual formatting", () => {
     expect(lastCall).toBe("plain again");
   });
 
+  it("keeps the format bar usable with no selection, so a mark can be armed for what gets typed next", () => {
+    const handleChange = vi.fn();
+    render(<NotesField value="" onChange={handleChange} placeholder="Notes" />);
+
+    // .focus() sets activeElement (which ProseMirror checks); the
+    // fireEvent is what flushes the resulting React state update inside act.
+    notesField().focus();
+    fireEvent.focus(notesField());
+
+    // Regression guard for two linked bugs reported from real use: the
+    // buttons used to carry disabled={selection.empty}, and `disabled` also
+    // applies pointer-events-none — so a mousedown with no selection fell
+    // through to the wrapper instead of hitting the button's own
+    // preventDefault, the editor blurred, and the whole bar unmounted
+    // mid-tap. Enabled buttons are also what make "put the cursor down, tap
+    // Bold, then type" possible at all.
+    const bold = screen.getByLabelText("bold") as HTMLButtonElement;
+    expect(bold.disabled).toBe(false);
+    expect((screen.getByLabelText("bulletedList") as HTMLButtonElement).disabled).toBe(false);
+
+    fireEvent.mouseDown(bold);
+    fireEvent.click(bold);
+
+    // Still mounted after being tapped with an empty selection, and the mark
+    // is now armed (ProseMirror storedMarks) for whatever gets typed next.
+    expect(screen.getByLabelText("bold").getAttribute("aria-pressed")).toBe("true");
+  });
+
   it("does not crash when the field is focused with no selection (menu-position effect stays inert)", () => {
     const handleChange = vi.fn();
     render(<NotesField value="" onChange={handleChange} placeholder="Notes" />);

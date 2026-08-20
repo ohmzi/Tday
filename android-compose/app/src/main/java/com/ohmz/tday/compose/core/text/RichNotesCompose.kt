@@ -120,9 +120,10 @@ private fun markStyle(mark: RichNotesMark): SpanStyle = when (mark) {
 // A mark is "active" for a selection only if every character in it already
 // has the mark — same semantics as iOS/Notes/Gmail: toggling a mixed
 // selection always applies it first, a fully-marked selection removes it.
-// Only meaningful for a real (non-empty) selection — Compose's BasicTextField
-// has no "typingAttributes" hook to carry a toggle into a collapsed cursor's
-// next keystroke, so the format bar only ever acts on an actual selection.
+// Only meaningful for a real (non-empty) selection: Compose's BasicTextField
+// has no typingAttributes hook, so a collapsed caret's "format what I type
+// next" state is tracked separately by NotesField (pendingMarks) and stamped
+// on via applyingMarks once characters actually arrive.
 fun isMarkActive(mark: RichNotesMark, text: AnnotatedString, range: TextRange): Boolean {
     val start = range.min
     val end = range.max
@@ -198,6 +199,45 @@ fun togglingMark(mark: RichNotesMark, text: AnnotatedString, range: TextRange): 
     }
 }
 
+// Applies every mark in `marks` to `range`, never removing anything — this
+// stamps armed ("format what I type next") marks onto freshly typed
+// characters, where togglingMark's flip semantics would be wrong.
+fun applyingMarks(marks: Set<RichNotesMark>, text: AnnotatedString, range: TextRange): AnnotatedString {
+    if (marks.isEmpty() || range.min >= range.max) return text
+    var result = text
+    for (mark in marks) {
+        val add = SimpleRange(range.min, range.max)
+        val existingOfMark = result.spanStyles.filter { markMatches(mark, it.item) }.map { SimpleRange(it.start, it.end) }
+        val otherSpans = result.spanStyles.filter { !markMatches(mark, it.item) }
+        val listAnnotations = result.getStringAnnotations(LIST_ANNOTATION_TAG, 0, result.text.length)
+        val newRanges = unionRange(existingOfMark, add)
+        val text2 = result
+        result = buildAnnotatedString {
+            append(text2.text)
+            for (span in otherSpans) addStyle(span.item, span.start, span.end)
+            for (r in newRanges) addStyle(markStyle(mark), r.start, r.end)
+            for (ann in listAnnotations) addStringAnnotation(ann.tag, ann.item, ann.start, ann.end)
+        }
+    }
+    return result
+}
+
+// The range of characters a plain keystroke just inserted, or null if this
+// edit was anything else (a deletion, a replacement, or an insertion over a
+// selection). Anchoring on the known caret rather than a prefix/suffix diff
+// avoids the ambiguity of repeated characters — typing "b" at index 1 of
+// "ab" is indistinguishable from typing it at index 2 by diff alone.
+fun typedRunRange(previousText: String, previousSelection: TextRange, newText: String): TextRange? {
+    if (!previousSelection.collapsed) return null
+    if (newText.length <= previousText.length) return null
+    val caret = previousSelection.start
+    if (caret < 0 || caret > previousText.length) return null
+    val insertedLength = newText.length - previousText.length
+    if (newText.substring(0, caret) != previousText.substring(0, caret)) return null
+    if (newText.substring(caret + insertedLength) != previousText.substring(caret)) return null
+    return TextRange(caret, caret + insertedLength)
+}
+
 // MARK: - Manual list toggling
 
 private fun listKindAtLineStart(text: AnnotatedString, line: SimpleRange): RichNotesListKind? {
@@ -253,16 +293,26 @@ private fun splitLines(text: String, region: SimpleRange): List<SimpleRange> {
 private fun touchedLines(allLines: List<SimpleRange>, start: Int, end: Int): List<SimpleRange> =
     allLines.filter { it.start < end && it.end > start }
 
+// The line a collapsed caret sits on. touchedLines' strict overlap test can't
+// answer this: a zero-width caret resting exactly on a line boundary overlaps
+// nothing.
+private fun lineContaining(allLines: List<SimpleRange>, position: Int): SimpleRange? =
+    allLines.firstOrNull { position >= it.start && position <= it.end }
+
+// Lines a selection acts on, whether or not it's collapsed. A list is a
+// line-level format, so an unselected caret still has an unambiguous target.
+private fun linesForSelection(allLines: List<SimpleRange>, start: Int, end: Int): List<SimpleRange> =
+    if (start >= end) listOfNotNull(lineContaining(allLines, start)) else touchedLines(allLines, start, end)
+
 // Whether every line touched by `range` is already tagged `kind` — used to
-// show the format bar's list buttons as active. Mirrors isMarkActive's
-// selection-only scope (no collapsed-cursor support, see its doc comment).
+// show the format bar's list buttons as active. Unlike isMarkActive this does
+// handle a collapsed caret, since a list applies to whole lines.
 fun isListActive(kind: RichNotesListKind, text: AnnotatedString, range: TextRange): Boolean {
     if (text.text.isEmpty()) return false
     val start = range.min
     val end = range.max
-    if (start >= end) return false
     val allLines = splitLines(text.text, SimpleRange(0, text.text.length))
-    val lines = touchedLines(allLines, start, end).filter { it.end > it.start }
+    val lines = linesForSelection(allLines, start, end).filter { it.end > it.start }
     if (lines.isEmpty()) return false
     return lines.all { listKindAtLineStart(text, it) == kind }
 }
@@ -278,10 +328,10 @@ fun togglingList(kind: RichNotesListKind, text: AnnotatedString, range: TextRang
     if (fullText.isEmpty()) return text to range
     val selStart = range.min
     val selEnd = range.max
-    if (selStart >= selEnd) return text to range
+    val collapsed = selStart >= selEnd
 
     val allLines = splitLines(fullText, SimpleRange(0, fullText.length))
-    val touched = touchedLines(allLines, selStart, selEnd)
+    val touched = linesForSelection(allLines, selStart, selEnd)
     val nonEmptyTouched = touched.filter { it.end > it.start }
     if (nonEmptyTouched.isEmpty()) return text to range
     val removing = nonEmptyTouched.all { listKindAtLineStart(text, it) == kind }
@@ -324,9 +374,10 @@ fun togglingList(kind: RichNotesListKind, text: AnnotatedString, range: TextRang
             // shrinks the window itself (its far edge moves, its start
             // doesn't) — matching the "selecting text and having its start
             // line gain a prefix should still leave that prefix selected"
-            // expectation from a real, non-empty selection (this function
-            // never runs on a collapsed one — see the guard above).
-            if (lineStartBefore < selStart) {
+            // expectation from a real, non-empty selection. A collapsed caret
+            // also shifts when its own line gains a prefix, so it lands after
+            // the new bullet rather than stranded in front of it.
+            if (lineStartBefore < selStart || (collapsed && lineStartBefore == selStart)) {
                 newSelStart += delta
                 newSelEnd += delta
             } else if (lineStartBefore < selEnd) {

@@ -246,4 +246,84 @@ class RichNotesComposeTest {
         assertEquals(plain, reEncoded)
         assertFalse(isRichNotes(reEncoded))
     }
+
+    // MARK: - Pending marks ("format what I type next")
+
+    @Test
+    fun `typedRunRange locates a single keystroke at the caret`() {
+        assertEquals(TextRange(2, 3), typedRunRange("ab", TextRange(2, 2), "abc"))
+        // Ambiguous by prefix-diff alone: typing 'b' at index 1 of "ab" looks
+        // identical to typing it at index 2 unless the caret anchors it.
+        assertEquals(TextRange(1, 2), typedRunRange("ab", TextRange(1, 1), "abb"))
+    }
+
+    @Test
+    fun `typedRunRange returns null for anything that is not a plain insertion`() {
+        assertEquals(null, typedRunRange("abc", TextRange(3, 3), "ab")) // deletion
+        assertEquals(null, typedRunRange("abc", TextRange(0, 3), "x")) // replaced a selection
+        assertEquals(null, typedRunRange("abc", TextRange(3, 3), "abc")) // no change
+    }
+
+    @Test
+    fun `typing with a pending mark bolds only the newly typed characters`() {
+        val base = AnnotatedString("hi ")
+        val typed = typedRunRange("hi ", TextRange(3, 3), "hi x")!!
+        val result = applyingMarks(setOf(RichNotesMark.BOLD), AnnotatedString("hi x"), typed)
+
+        assertEquals("hi x", result.text)
+        assertTrue(isMarkActive(RichNotesMark.BOLD, result, TextRange(3, 4)))
+        assertFalse(isMarkActive(RichNotesMark.BOLD, result, TextRange(0, 3)))
+        assertEquals(base.text, "hi ")
+    }
+
+    @Test
+    fun `pending marks stamped across several keystrokes merge into one span`() {
+        var text = AnnotatedString("")
+        val marks = setOf(RichNotesMark.BOLD)
+        for (ch in "abc") {
+            val previous = text.text
+            val next = previous + ch
+            val range = typedRunRange(previous, TextRange(previous.length, previous.length), next)!!
+            text = applyingMarks(marks, AnnotatedString(next).let { plain ->
+                buildAnnotatedString {
+                    append(plain.text)
+                    for (span in text.spanStyles) addStyle(span.item, span.start, span.end)
+                }
+            }, range)
+        }
+
+        assertEquals("abc", text.text)
+        assertTrue(isMarkActive(RichNotesMark.BOLD, text, TextRange(0, 3)))
+        // unionRange merges touching ranges, so three keystrokes leave one span.
+        assertEquals(1, text.spanStyles.count { it.item.fontWeight == FontWeight.Black })
+    }
+
+    @Test
+    fun `applyingMarks with no armed marks leaves the text untouched`() {
+        val plain = AnnotatedString("nothing armed")
+        val result = applyingMarks(emptySet(), plain, TextRange(0, 7))
+        assertEquals(plain.text, result.text)
+        assertTrue(result.spanStyles.isEmpty())
+    }
+
+    @Test
+    fun `togglingList works from a collapsed caret and leaves it after the bullet`() {
+        val base = AnnotatedString("milk")
+        val (result, selection) = togglingList(RichNotesListKind.BULLET, base, TextRange(0, 0))
+
+        assertEquals("• milk", result.text)
+        // Caret was at the line start; the prefix went in ahead of it, so it
+        // should now sit after the bullet rather than stranded before it.
+        assertEquals(TextRange(2, 2), selection)
+        assertTrue(isListActive(RichNotesListKind.BULLET, result, TextRange(2, 2)))
+    }
+
+    @Test
+    fun `isListActive answers for a collapsed caret on a tagged line`() {
+        val base = AnnotatedString("a\nb")
+        val (listed, _) = togglingList(RichNotesListKind.BULLET, base, TextRange(0, base.text.length))
+        // Caret parked inside the first bulleted line, nothing selected.
+        assertTrue(isListActive(RichNotesListKind.BULLET, listed, TextRange(3, 3)))
+        assertFalse(isListActive(RichNotesListKind.ORDERED, listed, TextRange(3, 3)))
+    }
 }

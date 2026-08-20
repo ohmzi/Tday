@@ -38,13 +38,11 @@ type NotesFieldProps = {
 
 function FormatButton({
   active,
-  disabled,
   label,
   onClick,
   children,
 }: {
   active: boolean;
-  disabled: boolean;
   label: string;
   onClick: () => void;
   children: React.ReactNode;
@@ -55,7 +53,12 @@ function FormatButton({
       aria-label={label}
       aria-pressed={active}
       title={label}
-      disabled={disabled}
+      // Opts this button out of vaul's drag-gesture tracking: the drawer
+      // treats a pointerdown ANYWHERE inside the sheet as a possible
+      // swipe-to-dismiss start, and without this attribute a plain tap here
+      // reads as a (near-zero-distance) drag whose release still runs the
+      // drawer's snap-back animation — the whole sheet visibly "presses".
+      data-vaul-no-drag
       // A toolbar button outside the contenteditable area steals focus (and
       // with it, the text selection toggleBold() etc. need to operate on)
       // on mousedown, before the click handler ever runs — the standard
@@ -63,7 +66,7 @@ function FormatButton({
       onMouseDown={(event) => event.preventDefault()}
       onClick={onClick}
       className={cn(
-        "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted-foreground/10 hover:text-foreground active:scale-95 disabled:pointer-events-none disabled:opacity-30",
+        "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted-foreground/10 hover:text-foreground active:scale-95",
         active && "bg-foreground/10 text-foreground",
       )}
     >
@@ -191,8 +194,6 @@ export default function NotesField({
     setHasFormatting(false);
   }
 
-  const selectionEmpty = editor?.state.selection.empty ?? true;
-
   return (
     <div className={cn("relative w-full", className)}>
       <EditorContent
@@ -202,6 +203,9 @@ export default function NotesField({
       {hasFormatting && (
         <button
           type="button"
+          // See the matching comment on FormatButton above — same vaul
+          // drag-gesture false-positive, same fix.
+          data-vaul-no-drag
           onClick={handleClearFormatting}
           aria-label={appDict("clearFormatting")}
           title={appDict("clearFormatting")}
@@ -214,7 +218,6 @@ export default function NotesField({
         <div className="flex items-center gap-0.5 border-t border-border px-2 py-1">
           <FormatButton
             active={editor.isActive("bold")}
-            disabled={selectionEmpty}
             label={appDict("bold")}
             onClick={() => editor.chain().focus().toggleBold().run()}
           >
@@ -222,7 +225,6 @@ export default function NotesField({
           </FormatButton>
           <FormatButton
             active={editor.isActive("italic")}
-            disabled={selectionEmpty}
             label={appDict("italic")}
             onClick={() => editor.chain().focus().toggleItalic().run()}
           >
@@ -230,7 +232,6 @@ export default function NotesField({
           </FormatButton>
           <FormatButton
             active={editor.isActive("underline")}
-            disabled={selectionEmpty}
             label={appDict("underline")}
             onClick={() => editor.chain().focus().toggleUnderline().run()}
           >
@@ -238,7 +239,6 @@ export default function NotesField({
           </FormatButton>
           <FormatButton
             active={editor.isActive("strike")}
-            disabled={selectionEmpty}
             label={appDict("strikethrough")}
             onClick={() => editor.chain().focus().toggleStrike().run()}
           >
@@ -247,7 +247,6 @@ export default function NotesField({
           <div className="mx-0.5 h-5 w-px bg-border" aria-hidden="true" />
           <FormatButton
             active={editor.isActive("bulletList")}
-            disabled={selectionEmpty}
             label={appDict("bulletedList")}
             onClick={() => editor.chain().focus().toggleBulletList().run()}
           >
@@ -255,7 +254,6 @@ export default function NotesField({
           </FormatButton>
           <FormatButton
             active={editor.isActive("orderedList")}
-            disabled={selectionEmpty}
             label={appDict("numberedList")}
             onClick={() => editor.chain().focus().toggleOrderedList().run()}
           >

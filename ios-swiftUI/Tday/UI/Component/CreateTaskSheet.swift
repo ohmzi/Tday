@@ -191,6 +191,16 @@ struct CreateTaskSheet: View {
         .onChange(of: activeSelector) { _, selector in
             if selector != nil {
                 focusedInputField = nil
+                // Clearing focusedInputField only dismisses the Title field —
+                // Notes is a UITextView (UIViewRepresentable) that never
+                // registers a @FocusState anchor, so it needs an explicit
+                // resign broadcast to give up the keyboard.
+                UIApplication.shared.sendAction(
+                    #selector(UIResponder.resignFirstResponder),
+                    to: nil,
+                    from: nil,
+                    for: nil
+                )
             }
         }
         .onChange(of: scheduleEnabled) { _, isEnabled in

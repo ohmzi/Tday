@@ -42,6 +42,16 @@ struct NotesField: View {
     @Environment(\.tdayColors) private var colors
     @State private var contentHeight: CGFloat = NotesFieldMetrics.minHeight
     @State private var textView: RichNotesTextView?
+    // UIKit owns the truth about whether this field is being edited. The
+    // external `isFocused` binding can't: it's backed by a @FocusState whose
+    // `.notes` case no SwiftUI view ever claims (this field is a
+    // UIViewRepresentable, and only the Title TextField registers a
+    // `.focused(…)` anchor), so SwiftUI resets it to nil the moment the
+    // coordinator writes `.notes` into it. Reading it back as "am I focused"
+    // therefore always answered false — which both hid the format bar and,
+    // via updateUIView's resign branch, dismissed the keyboard on the first
+    // keystroke.
+    @State private var isEditing = false
     // Bumped by the Coordinator on every selection change so the format
     // bar's active-state highlighting stays current — reading
     // textView.selectedRange/.attributedText directly doesn't otherwise
@@ -69,6 +79,7 @@ struct NotesField: View {
                     placeholderColor: UIColor(colors.onSurfaceVariant.opacity(0.65)),
                     contentHeight: $contentHeight,
                     isFocused: isFocused,
+                    isEditing: $isEditing,
                     textView: $textView,
                     selectionTick: $selectionTick
                 )
@@ -93,7 +104,7 @@ struct NotesField: View {
                 }
             }
 
-            if isFocused.wrappedValue, let textView {
+            if isEditing, let textView {
                 NotesFormatBar(textView: textView, style: style, tick: selectionTick)
             }
         }
@@ -112,41 +123,46 @@ private struct NotesFormatBar: View {
 
     private var selection: NSRange { textView.selectedRange }
     private var attributed: NSAttributedString { textView.attributedText ?? NSAttributedString() }
-    private var hasSelection: Bool { selection.length > 0 }
+
+    // With a real selection, "active" means the whole selection carries the
+    // mark. With a collapsed cursor it means the mark is armed for whatever
+    // gets typed next, which lives in typingAttributes.
+    private func active(_ mark: RichNotesMark) -> Bool {
+        if selection.length > 0 {
+            return isMarkActive(mark, in: attributed, range: selection, style: style)
+        }
+        return markIsActive(mark, inAttributes: textView.typingAttributes, style: style)
+    }
 
     var body: some View {
         HStack(spacing: 2) {
             NotesFormatBarButton(
                 imageName: "LucideBold",
                 label: L("Bold"),
-                active: isMarkActive(.bold, in: attributed, range: selection, style: style),
-                enabled: hasSelection
+                active: active(.bold)
             ) {
-                textView.applyMark(.bold, in: selection)
+                textView.applyMark(.bold)
             }
             NotesFormatBarButton(
                 imageName: "LucideItalic",
                 label: L("Italic"),
-                active: isMarkActive(.italic, in: attributed, range: selection, style: style),
-                enabled: hasSelection
+                active: active(.italic)
             ) {
-                textView.applyMark(.italic, in: selection)
+                textView.applyMark(.italic)
             }
             NotesFormatBarButton(
                 imageName: "LucideUnderline",
                 label: L("Underline"),
-                active: isMarkActive(.underline, in: attributed, range: selection, style: style),
-                enabled: hasSelection
+                active: active(.underline)
             ) {
-                textView.applyMark(.underline, in: selection)
+                textView.applyMark(.underline)
             }
             NotesFormatBarButton(
                 imageName: "LucideStrikethrough",
                 label: L("Strikethrough"),
-                active: isMarkActive(.strikethrough, in: attributed, range: selection, style: style),
-                enabled: hasSelection
+                active: active(.strikethrough)
             ) {
-                textView.applyMark(.strikethrough, in: selection)
+                textView.applyMark(.strikethrough)
             }
 
             Rectangle()
@@ -157,18 +173,16 @@ private struct NotesFormatBar: View {
             NotesFormatBarButton(
                 imageName: "LucideList",
                 label: L("Bulleted list"),
-                active: isListActive(.bullet, in: attributed, range: selection),
-                enabled: hasSelection
+                active: isListActive(.bullet, in: attributed, range: selection)
             ) {
-                textView.applyList(.bullet, in: selection)
+                textView.applyList(.bullet)
             }
             NotesFormatBarButton(
                 imageName: "LucideListOrdered",
                 label: L("Numbered list"),
-                active: isListActive(.ordered, in: attributed, range: selection),
-                enabled: hasSelection
+                active: isListActive(.ordered, in: attributed, range: selection)
             ) {
-                textView.applyList(.ordered, in: selection)
+                textView.applyList(.ordered)
             }
 
             Spacer(minLength: 0)
@@ -182,7 +196,6 @@ private struct NotesFormatBarButton: View {
     let imageName: String
     let label: String
     let active: Bool
-    let enabled: Bool
     let action: () -> Void
 
     @Environment(\.tdayColors) private var colors
@@ -194,18 +207,11 @@ private struct NotesFormatBarButton: View {
                 .resizable()
                 .scaledToFit()
                 .frame(width: NotesFieldMetrics.barIconSize, height: NotesFieldMetrics.barIconSize)
-                .foregroundStyle(tint)
+                .foregroundStyle(active ? colors.primary : colors.onSurfaceVariant.opacity(0.75))
                 .frame(width: NotesFieldMetrics.barButtonSize, height: NotesFieldMetrics.barButtonSize)
                 .contentShape(Rectangle())
         }
-        .disabled(!enabled)
         .accessibilityLabel(label)
-    }
-
-    private var tint: Color {
-        if !enabled { return colors.onSurfaceVariant.opacity(0.3) }
-        if active { return colors.primary }
-        return colors.onSurfaceVariant.opacity(0.75)
     }
 }
 
@@ -217,6 +223,7 @@ private struct NotesTextViewRepresentable: UIViewRepresentable {
     let placeholderColor: UIColor
     @Binding var contentHeight: CGFloat
     let isFocused: Binding<Bool>
+    @Binding var isEditing: Bool
     @Binding var textView: RichNotesTextView?
     @Binding var selectionTick: Int
 
@@ -296,31 +303,21 @@ private struct NotesTextViewRepresentable: UIViewRepresentable {
         textView.placeholderLabel?.isHidden = !textView.text.isEmpty
         scheduleHeightUpdate(for: textView)
 
-        // Only call become/resignFirstResponder on an actual transition —
-        // this method runs on every SwiftUI update (including one per
-        // keystroke, since editing changes `value`), and an earlier version
-        // called either unconditionally every single time, even when the
-        // text view was already in the desired state. That's the prime
-        // suspect for a keyboard-dismiss-on-every-keystroke bug reported
-        // from real device testing, though it couldn't be confirmed on this
-        // machine (no Xcode/device here) — verify on a real device before
-        // considering it fixed. Removing editMenuForTextIn (this field used
-        // to add a Format submenu to the system edit menu; formatting is
-        // now applied via NotesFormatBar below the field instead) is a
-        // second plausible contributor, since it's gone now too.
-        let desiredFocus = isFocused.wrappedValue
-        if desiredFocus != context.coordinator.lastAppliedFocus {
-            context.coordinator.lastAppliedFocus = desiredFocus
-            if desiredFocus, !textView.isFirstResponder {
-                textView.becomeFirstResponder()
-            } else if !desiredFocus, textView.isFirstResponder {
-                textView.resignFirstResponder()
-            }
+        // Focus-in only. There is deliberately no resign branch here: the
+        // `isFocused` binding reads back false even while this field is
+        // being edited (see the isEditing note on NotesField), so any
+        // "binding says false → resign" rule fires on the first keystroke
+        // and dismisses the keyboard. Dismissal is driven from the other
+        // direction instead — CreateTaskSheet broadcasts a resignFirstResponder
+        // when it opens a selector, which reaches this text view without
+        // needing @FocusState to model it.
+        if isFocused.wrappedValue, !textView.isFirstResponder {
+            textView.becomeFirstResponder()
         }
     }
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(value: $value, isFocused: isFocused, selectionTick: $selectionTick)
+        Coordinator(value: $value, isFocused: isFocused, isEditing: $isEditing, selectionTick: $selectionTick)
     }
 
     private func scheduleHeightUpdate(for textView: UITextView) {
@@ -338,17 +335,19 @@ private struct NotesTextViewRepresentable: UIViewRepresentable {
     final class Coordinator: NSObject, UITextViewDelegate {
         let value: Binding<String>
         let isFocused: Binding<Bool>
+        let isEditing: Binding<Bool>
         let selectionTick: Binding<Int>
         var lastEmitted: String
-        // Tracks the last focus state this coordinator itself applied (or
-        // observed via begin/endEditing), so updateUIView only ever calls
-        // become/resignFirstResponder on a genuine transition instead of
-        // redundantly on every render.
-        var lastAppliedFocus = false
 
-        init(value: Binding<String>, isFocused: Binding<Bool>, selectionTick: Binding<Int>) {
+        init(
+            value: Binding<String>,
+            isFocused: Binding<Bool>,
+            isEditing: Binding<Bool>,
+            selectionTick: Binding<Int>
+        ) {
             self.value = value
             self.isFocused = isFocused
+            self.isEditing = isEditing
             self.selectionTick = selectionTick
             lastEmitted = value.wrappedValue
         }
@@ -366,12 +365,15 @@ private struct NotesTextViewRepresentable: UIViewRepresentable {
         }
 
         func textViewDidBeginEditing(_ textView: UITextView) {
-            lastAppliedFocus = true
+            isEditing.wrappedValue = true
+            // Still written even though it reads back false immediately: this
+            // is what blurs the Title TextField, which *does* claim its
+            // @FocusState case.
             isFocused.wrappedValue = true
         }
 
         func textViewDidEndEditing(_ textView: UITextView) {
-            lastAppliedFocus = false
+            isEditing.wrappedValue = false
             // Only clear focus if this field still owns it. UIKit's resign
             // callback can arrive after a different field has already taken
             // focus (they're on separate systems — SwiftUI's @FocusState vs
@@ -417,8 +419,16 @@ final class RichNotesTextView: UITextView {
     }
 
     // Called from the format bar (see NotesFormatBar in this file).
-    func applyMark(_ mark: RichNotesMark, in range: NSRange) {
-        guard let style, range.length > 0 else { return }
+    func applyMark(_ mark: RichNotesMark) {
+        guard let style else { return }
+        let range = selectedRange
+        // Collapsed cursor: nothing to restyle, so arm the mark for whatever
+        // gets typed next instead of no-oping. This is what makes "tap Bold,
+        // then start typing" work the way it does in Notes/Gmail/Docs.
+        guard range.length > 0 else {
+            typingAttributes = togglingMarkInTypingAttributes(mark, in: typingAttributes, style: style)
+            return
+        }
         let updated = togglingMark(mark, in: attributedText, range: range, style: style)
         replaceAttributedText(with: updated, selection: range)
         // Sample the LAST character of the (still-selected) range, which now
@@ -428,9 +438,12 @@ final class RichNotesTextView: UITextView {
         typingAttributes = markAttributes(at: range.location + range.length - 1, in: updated, style: style)
     }
 
-    func applyList(_ kind: RichNotesListKind, in range: NSRange) {
-        guard let style, range.length > 0 else { return }
-        let (updated, selection) = togglingList(kind, in: attributedText, range: range, style: style)
+    // No collapsed-cursor special case: a list is a line-level format, so
+    // togglingList works off the cursor's whole line via lineRange(for:)
+    // whether or not anything is selected.
+    func applyList(_ kind: RichNotesListKind) {
+        guard let style else { return }
+        let (updated, selection) = togglingList(kind, in: attributedText, range: selectedRange, style: style)
         replaceAttributedText(with: updated, selection: selection)
         typingAttributes = markAttributes(at: selection.location, in: updated, style: style)
     }
