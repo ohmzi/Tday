@@ -321,6 +321,50 @@ func markAttributes(at location: Int, in text: NSAttributedString, style: RichNo
     return attrs
 }
 
+// Whether an attribute dictionary (in practice a UITextView's
+// typingAttributes) already carries `mark` — the collapsed-cursor
+// counterpart to isMarkActive, which needs a range of existing text.
+func markIsActive(_ mark: RichNotesMark, inAttributes attrs: [NSAttributedString.Key: Any], style: RichNotesTextStyle) -> Bool {
+    markIsSet(mark, in: attrs, style: style)
+}
+
+// `attrs` with `mark` flipped. Setting this as typingAttributes at a
+// collapsed cursor is what makes "tap Bold, then type" produce bold text —
+// the format applies to what comes next rather than needing a selection.
+func togglingMarkInTypingAttributes(
+    _ mark: RichNotesMark,
+    in attrs: [NSAttributedString.Key: Any],
+    style: RichNotesTextStyle
+) -> [NSAttributedString.Key: Any] {
+    var updated = attrs
+    let active = markIsSet(mark, in: attrs, style: style)
+    switch mark {
+    case .bold:
+        updated[.font] = active ? style.baseFont : style.boldFont
+    case .italic:
+        if active {
+            updated.removeValue(forKey: .obliqueness)
+        } else {
+            updated[.obliqueness] = obliquenessValue
+        }
+    case .underline:
+        if active {
+            updated.removeValue(forKey: .underlineStyle)
+        } else {
+            updated[.underlineStyle] = NSUnderlineStyle.single.rawValue
+        }
+    case .strikethrough:
+        if active {
+            updated.removeValue(forKey: .strikethroughStyle)
+        } else {
+            updated[.strikethroughStyle] = NSUnderlineStyle.single.rawValue
+        }
+    }
+    if updated[.font] == nil { updated[.font] = style.baseFont }
+    if updated[.foregroundColor] == nil { updated[.foregroundColor] = style.baseColor }
+    return updated
+}
+
 // MARK: - Manual list toggling
 
 private func listKind(atLineStart lineRange: NSRange, in text: NSAttributedString) -> RichNotesListKind? {

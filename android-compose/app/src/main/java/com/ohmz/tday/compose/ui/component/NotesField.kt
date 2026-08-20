@@ -42,11 +42,13 @@ import com.ohmz.tday.compose.core.text.decodeNotesToAnnotatedString
 import com.ohmz.tday.compose.core.text.encodeAnnotatedNotes
 import com.ohmz.tday.compose.core.text.isListActive
 import com.ohmz.tday.compose.core.text.isMarkActive
+import com.ohmz.tday.compose.core.text.applyingMarks
 import com.ohmz.tday.compose.core.text.isRichNotes
 import com.ohmz.tday.compose.core.text.sanitizeHtml
 import com.ohmz.tday.compose.core.text.stripToPlainText
 import com.ohmz.tday.compose.core.text.togglingList
 import com.ohmz.tday.compose.core.text.togglingMark
+import com.ohmz.tday.compose.core.text.typedRunRange
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 import org.jsoup.nodes.Node
@@ -56,11 +58,12 @@ import org.jsoup.nodes.TextNode
 // pasted in from elsewhere (font size/color/family are always discarded — see
 // RichNotes.kt) and downgrades pasted lists to plain "• "/"1. "-prefixed
 // lines. Focusing the field also shows a format bar with the same six marks/
-// lists so they can be applied manually to the current selection, not just
-// via paste — Compose has no equivalent of a text-selection popup menu
-// (unlike iOS/web), so this surfaces as a persistent row instead, matching
-// how most Android editors (Docs, Keep) put manual formatting controls. A
-// "clear formatting" button appears only once real formatting is present.
+// lists so they can be applied manually, not just via paste — as a persistent
+// row rather than a selection popup, which is both what Android editors
+// (Docs, Keep) do and what web/iOS now match. A mark applies to the selection
+// when there is one, and otherwise arms for whatever gets typed next (see
+// pendingMarks). A "clear formatting" button appears only once real
+// formatting is present.
 @Composable
 fun NotesField(
     value: String,
@@ -77,12 +80,17 @@ fun NotesField(
     var fieldValue by remember { mutableStateOf(TextFieldValue(decodeNotesToAnnotatedString(value))) }
     var lastEmitted by remember { mutableStateOf(value) }
     var isFocused by remember { mutableStateOf(false) }
+    // Marks armed at a collapsed caret, waiting to be stamped onto whatever
+    // gets typed next. Compose has no typingAttributes equivalent, so this is
+    // the "tap Bold, then type" state iOS gets from UIKit for free.
+    var pendingMarks by remember { mutableStateOf(emptySet<RichNotesMark>()) }
 
     // Sync content set from outside (switching which task is being edited) —
     // guarded so it never fires as an echo of this field's own onValueChange.
     if (value != lastEmitted) {
         lastEmitted = value
         fieldValue = TextFieldValue(decodeNotesToAnnotatedString(value))
+        pendingMarks = emptySet()
     }
 
     // Ground truth is the encoded string's marker, not the live spans —
@@ -104,9 +112,26 @@ fun NotesField(
     BasicTextField(
         value = fieldValue,
         onValueChange = { newValue ->
-            val enriched = enrichPastedRun(clipboard, fieldValue, newValue)
-            fieldValue = enriched
-            val encoded = encodeAnnotatedNotes(enriched.annotatedString)
+            val previous = fieldValue
+            val enriched = enrichPastedRun(clipboard, previous, newValue)
+            val typedRange = typedRunRange(previous.text, previous.selection, enriched.text)
+            val stamped = if (pendingMarks.isNotEmpty() && typedRange != null) {
+                TextFieldValue(
+                    applyingMarks(pendingMarks, enriched.annotatedString, typedRange),
+                    enriched.selection,
+                    enriched.composition,
+                )
+            } else {
+                enriched
+            }
+            // A caret that moved with nothing typed means the user tapped or
+            // arrowed somewhere else; armed marks belong to the spot they
+            // were armed at, not wherever the caret went next.
+            if (typedRange == null && stamped.text == previous.text && stamped.selection != previous.selection) {
+                pendingMarks = emptySet()
+            }
+            fieldValue = stamped
+            val encoded = encodeAnnotatedNotes(stamped.annotatedString)
             lastEmitted = encoded
             onValueChangeState.value(encoded)
         },
@@ -117,7 +142,10 @@ fun NotesField(
         ),
         modifier = modifier
             .padding(horizontal = 18.dp, vertical = 16.dp)
-            .onFocusChanged { isFocused = it.isFocused },
+            .onFocusChanged {
+                isFocused = it.isFocused
+                if (!it.isFocused) pendingMarks = emptySet()
+            },
         decorationBox = { innerTextField ->
             if (fieldValue.text.isEmpty()) {
                 Text(
@@ -136,6 +164,7 @@ fun NotesField(
             onClick = {
                 val plain = TextFieldValue(stripToPlainText(fieldValue.annotatedString))
                 fieldValue = plain
+                pendingMarks = emptySet()
                 val encoded = encodeAnnotatedNotes(plain.annotatedString)
                 lastEmitted = encoded
                 onValueChangeState.value(encoded)
@@ -154,6 +183,19 @@ fun NotesField(
     if (isFocused) {
         val selection = fieldValue.selection
         val annotated = fieldValue.annotatedString
+
+        // With a real selection a mark button restyles it; with a collapsed
+        // caret it arms the mark for what gets typed next instead of no-oping.
+        fun markActive(mark: RichNotesMark): Boolean =
+            if (selection.collapsed) mark in pendingMarks else isMarkActive(mark, annotated, selection)
+
+        fun toggleMark(mark: RichNotesMark) {
+            if (selection.collapsed) {
+                pendingMarks = if (mark in pendingMarks) pendingMarks - mark else pendingMarks + mark
+            } else {
+                applyFormatEdit(togglingMark(mark, annotated, selection), selection)
+            }
+        }
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -164,44 +206,39 @@ fun NotesField(
             FormatBarButton(
                 iconRes = R.drawable.ic_lucide_bold,
                 contentDescription = stringResource(R.string.create_task_format_bold),
-                active = isMarkActive(RichNotesMark.BOLD, annotated, selection),
-                enabled = !selection.collapsed,
+                active = markActive(RichNotesMark.BOLD),
                 testTag = "formatBold",
             ) {
-                applyFormatEdit(togglingMark(RichNotesMark.BOLD, annotated, selection), selection)
+                toggleMark(RichNotesMark.BOLD)
             }
             FormatBarButton(
                 iconRes = R.drawable.ic_lucide_italic,
                 contentDescription = stringResource(R.string.create_task_format_italic),
-                active = isMarkActive(RichNotesMark.ITALIC, annotated, selection),
-                enabled = !selection.collapsed,
+                active = markActive(RichNotesMark.ITALIC),
                 testTag = "formatItalic",
             ) {
-                applyFormatEdit(togglingMark(RichNotesMark.ITALIC, annotated, selection), selection)
+                toggleMark(RichNotesMark.ITALIC)
             }
             FormatBarButton(
                 iconRes = R.drawable.ic_lucide_underline,
                 contentDescription = stringResource(R.string.create_task_format_underline),
-                active = isMarkActive(RichNotesMark.UNDERLINE, annotated, selection),
-                enabled = !selection.collapsed,
+                active = markActive(RichNotesMark.UNDERLINE),
                 testTag = "formatUnderline",
             ) {
-                applyFormatEdit(togglingMark(RichNotesMark.UNDERLINE, annotated, selection), selection)
+                toggleMark(RichNotesMark.UNDERLINE)
             }
             FormatBarButton(
                 iconRes = R.drawable.ic_lucide_strikethrough,
                 contentDescription = stringResource(R.string.create_task_format_strikethrough),
-                active = isMarkActive(RichNotesMark.STRIKETHROUGH, annotated, selection),
-                enabled = !selection.collapsed,
+                active = markActive(RichNotesMark.STRIKETHROUGH),
                 testTag = "formatStrikethrough",
             ) {
-                applyFormatEdit(togglingMark(RichNotesMark.STRIKETHROUGH, annotated, selection), selection)
+                toggleMark(RichNotesMark.STRIKETHROUGH)
             }
             FormatBarButton(
                 iconRes = R.drawable.ic_lucide_list,
                 contentDescription = stringResource(R.string.create_task_format_bulleted_list),
                 active = isListActive(RichNotesListKind.BULLET, annotated, selection),
-                enabled = !selection.collapsed,
                 testTag = "formatBulletedList",
             ) {
                 val (updated, newSelection) = togglingList(RichNotesListKind.BULLET, annotated, selection)
@@ -211,7 +248,6 @@ fun NotesField(
                 iconRes = R.drawable.ic_lucide_list_ordered,
                 contentDescription = stringResource(R.string.create_task_format_numbered_list),
                 active = isListActive(RichNotesListKind.ORDERED, annotated, selection),
-                enabled = !selection.collapsed,
                 testTag = "formatNumberedList",
             ) {
                 val (updated, newSelection) = togglingList(RichNotesListKind.ORDERED, annotated, selection)
@@ -226,19 +262,13 @@ private fun FormatBarButton(
     iconRes: Int,
     contentDescription: String,
     active: Boolean,
-    enabled: Boolean,
     testTag: String,
     onClick: () -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
-    val tint = when {
-        !enabled -> colorScheme.onSurfaceVariant.copy(alpha = 0.35f)
-        active -> colorScheme.primary
-        else -> colorScheme.onSurfaceVariant.copy(alpha = 0.75f)
-    }
+    val tint = if (active) colorScheme.primary else colorScheme.onSurfaceVariant.copy(alpha = 0.75f)
     IconButton(
         onClick = onClick,
-        enabled = enabled,
         modifier = Modifier.size(36.dp).testTag(testTag),
     ) {
         Icon(
