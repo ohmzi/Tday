@@ -1800,6 +1800,7 @@
       }
     },
     "Bold" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1858,6 +1859,7 @@
       }
     },
     "Bulleted list" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4741,6 +4743,7 @@
       }
     },
     "Format" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4976,6 +4979,7 @@
       }
     },
     "Italic" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -8035,6 +8039,7 @@
       }
     },
     "Numbered list" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -11042,6 +11047,7 @@
       }
     },
     "Strikethrough" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -12935,6 +12941,7 @@
       }
     },
     "Underline" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
