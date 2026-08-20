@@ -75,12 +75,48 @@ vi.mock("@/features/todayTodos/query/create-todo", () => ({
   }),
 }));
 
+vi.mock("@/components/Sidebar/List/query/get-list-meta", () => ({
+  useListMetaData: () => ({
+    listMetaData: {},
+    listMetaLoading: false,
+    isFetching: false,
+    isPending: false,
+  }),
+}));
+
+vi.mock("@/features/floater/query/create-floater", () => ({
+  useCreateFloater: () => ({
+    createMutateFn: vi.fn(),
+    createStatus: "idle",
+  }),
+}));
+
+vi.mock("@/features/floaterList/query/get-floater-list-meta", () => ({
+  useFloaterListMetaData: () => ({
+    floaterListMetaData: {},
+    listMetaLoading: false,
+    isFetching: false,
+    isPending: false,
+  }),
+}));
+
+vi.mock("@/features/completed/query/get-completedTodo", () => ({
+  useCompletedTodo: () => ({
+    completedTodos: [],
+    todoLoading: false,
+  }),
+}));
+
 vi.mock("@/components/todo/component/TodoForm/TodoInlineActionBar/TodoInlineActionBar", () => ({
   default: () => <div data-testid="todo-inline-action-bar" />,
 }));
 
 vi.mock("@/components/todo/component/TodoForm/NLPTitleInput", () => ({
   default: () => <div data-testid="todo-title-input" />,
+}));
+
+vi.mock("@/features/guide/GuideHelpLink", () => ({
+  GuideHelpLink: () => <div data-testid="guide-help-link" />,
 }));
 
 vi.mock("@/components/todo/component/TodoForm/ListDropdownMenu", () => ({
