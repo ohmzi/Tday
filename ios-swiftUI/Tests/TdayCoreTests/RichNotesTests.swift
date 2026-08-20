@@ -360,4 +360,45 @@ final class RichNotesManualFormattingTests: XCTestCase {
         XCTAssertEqual(reEncoded, plain)
         XCTAssertFalse(isRichNotes(reEncoded))
     }
+
+    // MARK: - Typing attributes ("format what I type next")
+
+    func testTogglingMarkInTypingAttributesArmsAndDisarmsEachMark() {
+        let style = makeStyle()
+        let base: [NSAttributedString.Key: Any] = [.font: style.baseFont, .foregroundColor: style.baseColor]
+
+        for mark in [RichNotesMark.bold, .italic, .underline, .strikethrough] {
+            XCTAssertFalse(markIsActive(mark, inAttributes: base, style: style))
+            let armed = togglingMarkInTypingAttributes(mark, in: base, style: style)
+            XCTAssertTrue(markIsActive(mark, inAttributes: armed, style: style))
+            let disarmed = togglingMarkInTypingAttributes(mark, in: armed, style: style)
+            XCTAssertFalse(markIsActive(mark, inAttributes: disarmed, style: style))
+        }
+    }
+
+    // Arming a mark for the next keystroke must not disturb the others —
+    // tapping Bold then Italic should give bold-italic, not italic alone.
+    func testTypingAttributeMarksStack() {
+        let style = makeStyle()
+        let base: [NSAttributedString.Key: Any] = [.font: style.baseFont, .foregroundColor: style.baseColor]
+        let bold = togglingMarkInTypingAttributes(.bold, in: base, style: style)
+        let boldItalic = togglingMarkInTypingAttributes(.italic, in: bold, style: style)
+
+        XCTAssertTrue(markIsActive(.bold, inAttributes: boldItalic, style: style))
+        XCTAssertTrue(markIsActive(.italic, inAttributes: boldItalic, style: style))
+    }
+
+    // Text typed with armed attributes has to survive the trip through
+    // encode — otherwise "tap Bold, type" looks right on screen and then
+    // silently saves as plain text.
+    func testTextTypedWithArmedAttributesEncodesAsBold() {
+        let style = makeStyle()
+        let base: [NSAttributedString.Key: Any] = [.font: style.baseFont, .foregroundColor: style.baseColor]
+        let armed = togglingMarkInTypingAttributes(.bold, in: base, style: style)
+
+        let typed = NSMutableAttributedString(string: "plain ", attributes: base)
+        typed.append(NSAttributedString(string: "bold", attributes: armed))
+
+        XCTAssertEqual(encodeAttributedNotes(typed, style: style), richNotesMarker + "<p>plain <b>bold</b></p>")
+    }
 }
