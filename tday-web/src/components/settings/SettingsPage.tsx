@@ -988,7 +988,7 @@ export default function SettingsPage() {
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="shrink-0 rounded-xl font-black text-accent hover:text-accent"
+                  className="shrink-0 rounded-xl font-black text-accent"
                   onClick={() => {
                     setName(user?.name ?? "");
                     setEditing("name");
@@ -1060,7 +1060,7 @@ export default function SettingsPage() {
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="shrink-0 rounded-xl font-black text-accent hover:text-accent"
+                  className="shrink-0 rounded-xl font-black text-accent"
                   onClick={() => setEditing("password")}
                 >
                   <Key className="mr-1.5 h-3.5 w-3.5" />
@@ -1225,7 +1225,7 @@ export default function SettingsPage() {
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="shrink-0 rounded-xl font-black text-accent hover:text-accent"
+                  className="shrink-0 rounded-xl font-black text-accent"
                   onClick={openSecurityQuestions}
                 >
                   <ShieldQuestion className="mr-1.5 h-3.5 w-3.5" />
@@ -1727,6 +1727,10 @@ export default function SettingsPage() {
                   className="rounded-2xl border border-border/60 bg-muted/30"
                 >
                   <div className="flex items-center gap-2 p-3">
+                    {/* data-no-press: the app-wide press ripple assumes a
+                        roughly square target — on this wide, short row it
+                        balloons into an ugly clipped band, so this row gets
+                        its own contained background highlight instead. */}
                     <button
                       type="button"
                       onClick={() => {
@@ -1734,7 +1738,8 @@ export default function SettingsPage() {
                         setExpandedKeyId(expanded ? null : key.id);
                       }}
                       aria-expanded={expanded}
-                      className="flex min-w-0 flex-1 items-center gap-2 text-left transition active:opacity-60"
+                      data-no-press
+                      className="-mx-1.5 flex min-w-0 flex-1 items-center gap-2 rounded-xl px-1.5 py-1 text-left transition-colors hover:bg-muted-foreground/5 active:bg-muted-foreground/10"
                     >
                       <div className="min-w-0 flex-1 text-sm">
                         <p className="truncate font-black text-foreground">
