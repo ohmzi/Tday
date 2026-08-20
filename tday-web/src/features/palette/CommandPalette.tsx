@@ -156,7 +156,6 @@ export default function CommandPalette({ open, onOpenChange, onOpenBrainDump }: 
         <DialogTitle className="sr-only">{t("title")}</DialogTitle>
         <div className="flex items-center gap-2 border-b border-border px-4">
           <input
-            // eslint-disable-next-line jsx-a11y/no-autofocus
             autoFocus
             value={query}
             onChange={(event) => setQuery(event.target.value)}
