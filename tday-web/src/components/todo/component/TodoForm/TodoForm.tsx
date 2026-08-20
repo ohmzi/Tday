@@ -143,8 +143,6 @@ const TodoForm = ({
           value={desc}
           onChange={setDesc}
           placeholder={appDict("notes")}
-          onSubmit={handleForm}
-          canSubmit={title.trim().length > 0}
         />
       </SheetCard>
 

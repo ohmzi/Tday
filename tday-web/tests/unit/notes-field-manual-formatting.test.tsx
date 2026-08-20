@@ -121,6 +121,25 @@ describe("NotesField manual formatting", () => {
     expect(screen.getByLabelText("bold").getAttribute("aria-pressed")).toBe("true");
   });
 
+  it("continues a list on Enter instead of ending it", () => {
+    const handleChange = vi.fn();
+    render(<NotesField value="" onChange={handleChange} placeholder="Notes" />);
+
+    // No select-all here: paste leaves the cursor collapsed at the end of
+    // "milk", and splitListItem (what Enter runs) needs a collapsed cursor.
+    pasteIntoNotes("milk");
+    fireShortcut("8", { shiftKey: true }); // Mod-Shift-8: toggleBulletList
+    expect(handleChange.mock.calls.at(-1)?.[0]).toContain("<ul>");
+
+    // NotesField used to intercept plain Enter to submit the form, which
+    // pre-empted StarterKit's ListItem Enter binding (splitListItem) — so a
+    // list silently ended at the first newline. Now Enter reaches ProseMirror.
+    fireEvent.keyDown(notesField(), { key: "Enter", code: "Enter", keyCode: 13 });
+
+    const html = handleChange.mock.calls.at(-1)?.[0] as string;
+    expect(html.match(/<li>/g)?.length).toBe(2);
+  });
+
   it("does not crash when the field is focused with no selection (menu-position effect stays inert)", () => {
     const handleChange = vi.fn();
     render(<NotesField value="" onChange={handleChange} placeholder="Notes" />);

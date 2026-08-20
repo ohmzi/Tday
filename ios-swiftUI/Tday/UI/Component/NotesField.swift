@@ -364,6 +364,15 @@ private struct NotesTextViewRepresentable: UIViewRepresentable {
             selectionTick.wrappedValue += 1
         }
 
+        func textView(
+            _ textView: UITextView,
+            shouldChangeTextIn range: NSRange,
+            replacementText text: String
+        ) -> Bool {
+            guard text == "\n", let richTextView = textView as? RichNotesTextView else { return true }
+            return !richTextView.continueListIfNeeded(at: range)
+        }
+
         func textViewDidBeginEditing(_ textView: UITextView) {
             isEditing.wrappedValue = true
             // Still written even though it reads back false immediately: this
@@ -436,6 +445,18 @@ final class RichNotesTextView: UITextView {
         // would read the character just *after* the selection instead,
         // which was never touched by this toggle.
         typingAttributes = markAttributes(at: range.location + range.length - 1, in: updated, style: style)
+    }
+
+    // Enter on a list line: continue the list instead of dropping a bare,
+    // untagged newline that silently ends it. Returns whether it handled the
+    // keystroke, so the delegate knows to suppress the default insertion.
+    func continueListIfNeeded(at range: NSRange) -> Bool {
+        guard let style, range.length == 0,
+              let (updated, selection) = continuingListOnNewline(attributedText, cursor: range.location, style: style)
+        else { return false }
+        replaceAttributedText(with: updated, selection: selection)
+        typingAttributes = markAttributes(at: selection.location, in: updated, style: style)
+        return true
     }
 
     // No collapsed-cursor special case: a list is a line-level format, so

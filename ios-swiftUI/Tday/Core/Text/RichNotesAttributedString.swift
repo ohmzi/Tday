@@ -365,6 +365,128 @@ func togglingMarkInTypingAttributes(
     return updated
 }
 
+// MARK: - Enter continues a list
+
+// Rewrites every maximal run of consecutive .ordered lines as 1...n. Run as a
+// whole-text normalization rather than patching only the edited line, so an
+// insertion in the MIDDLE of a list renumbers everything after it too.
+// Idempotent: already-correct numbering rewrites to itself.
+func renumberOrderedLists(_ text: NSAttributedString, style: RichNotesTextStyle) -> NSAttributedString {
+    let nsText = text.string as NSString
+    guard nsText.length > 0 else { return text }
+    var counter = 0
+
+    // Back to front: renumbering can change a prefix's width ("9. " → "10. "),
+    // which would invalidate the ranges of every line after it.
+    let lines = splitIntoLines(nsText, region: NSRange(location: 0, length: nsText.length))
+    var replacements: [(range: NSRange, prefix: String, kind: RichNotesListKind, contentLength: Int)] = []
+    for line in lines {
+        guard let kind = listKind(atLineStart: line, in: text), kind == .ordered else {
+            counter = 0
+            continue
+        }
+        counter += 1
+        let oldPrefixLength = listPrefixLength(nsText, lineRange: line, kind: kind)
+        let newPrefix = "\(counter). "
+        let existing = nsText.substring(with: NSRange(location: line.location, length: oldPrefixLength))
+        guard existing != newPrefix else { continue }
+        replacements.append((
+            range: NSRange(location: line.location, length: oldPrefixLength),
+            prefix: newPrefix,
+            kind: kind,
+            contentLength: line.length - oldPrefixLength
+        ))
+    }
+    guard !replacements.isEmpty else { return text }
+
+    let mutable = NSMutableAttributedString(attributedString: text)
+    mutable.beginEditing()
+    for replacement in replacements.reversed() {
+        mutable.replaceCharacters(
+            in: replacement.range,
+            with: NSAttributedString(
+                string: replacement.prefix,
+                attributes: [.font: style.baseFont, .foregroundColor: style.baseColor]
+            )
+        )
+        mutable.addAttribute(
+            .richNotesListItem,
+            value: replacement.kind.rawValue,
+            range: NSRange(
+                location: replacement.range.location,
+                length: (replacement.prefix as NSString).length + replacement.contentLength
+            )
+        )
+    }
+    mutable.endEditing()
+    return mutable
+}
+
+// Enter pressed on a list line: continue the list with the next prefix, or —
+// if the line holds nothing but its own prefix — end the list instead, which
+// is the only way out of one. Returns nil when the cursor isn't on a list
+// line, meaning the newline should just be inserted normally.
+func continuingListOnNewline(
+    _ text: NSAttributedString,
+    cursor: Int,
+    style: RichNotesTextStyle
+) -> (text: NSAttributedString, selection: NSRange)? {
+    let nsText = text.string as NSString
+    guard cursor >= 0, cursor <= nsText.length else { return nil }
+    let lineRange = nsText.lineRange(for: NSRange(location: cursor, length: 0))
+    // lineRange(for:) includes the trailing newline; the list helpers all work
+    // on lines that exclude it.
+    var line = lineRange
+    if line.length > 0, nsText.substring(with: NSRange(location: line.location + line.length - 1, length: 1)) == "\n" {
+        line = NSRange(location: line.location, length: line.length - 1)
+    }
+    guard let kind = listKind(atLineStart: line, in: text) else { return nil }
+    let prefixLength = listPrefixLength(nsText, lineRange: line, kind: kind)
+
+    // Nothing typed on this item yet — Enter ends the list.
+    if line.length <= prefixLength {
+        let mutable = NSMutableAttributedString(attributedString: text)
+        mutable.beginEditing()
+        mutable.deleteCharacters(in: NSRange(location: line.location, length: prefixLength))
+        mutable.removeAttribute(
+            .richNotesListItem,
+            range: NSRange(location: line.location, length: max(0, line.length - prefixLength))
+        )
+        mutable.endEditing()
+        return (renumberOrderedLists(mutable, style: style), NSRange(location: line.location, length: 0))
+    }
+
+    // The "0. " is a placeholder; renumbering assigns the real value, which
+    // also fixes up every following item in the same run.
+    let newPrefix = kind == .ordered ? "0. " : "\u{2022} "
+    let insertion = NSMutableAttributedString(
+        string: "\n" + newPrefix,
+        attributes: [.font: style.baseFont, .foregroundColor: style.baseColor]
+    )
+    insertion.addAttribute(
+        .richNotesListItem,
+        value: kind.rawValue,
+        range: NSRange(location: 1, length: (newPrefix as NSString).length)
+    )
+    let mutable = NSMutableAttributedString(attributedString: text)
+    mutable.beginEditing()
+    mutable.insert(insertion, at: cursor)
+    mutable.endEditing()
+
+    let renumbered = renumberOrderedLists(mutable, style: style)
+    // Measure the prefix on the renumbered text: its width may have changed.
+    let renumberedNs = renumbered.string as NSString
+    let newLineStart = cursor + 1
+    var newLine = renumberedNs.lineRange(for: NSRange(location: newLineStart, length: 0))
+    if newLine.length > 0,
+       renumberedNs.substring(with: NSRange(location: newLine.location + newLine.length - 1, length: 1)) == "\n" {
+        newLine = NSRange(location: newLine.location, length: newLine.length - 1)
+    }
+    let finalPrefixLength = listPrefixLength(renumberedNs, lineRange: newLine, kind: kind)
+    let caret = newLine.location + finalPrefixLength
+    return (renumbered, NSRange(location: caret, length: 0))
+}
+
 // MARK: - Manual list toggling
 
 private func listKind(atLineStart lineRange: NSRange, in text: NSAttributedString) -> RichNotesListKind? {
