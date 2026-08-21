@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import clsx from "clsx";
-import { Check, Flag, GripVertical, SquarePen, Trash } from "lucide-react";
+import { Check, Flag, SquarePen, Trash } from "lucide-react";
 import TodoCheckbox from "@/components/ui/TodoCheckbox";
 import { TaskActionButtons } from "@/components/ui/TaskActionButtons";
 import FloaterListDot from "@/features/floaterList/component/FloaterListDot";
@@ -33,7 +33,8 @@ export default function FloaterItemContainer({
   highlighted = false,
   readOnly = false,
 }: FloaterItemContainerProps) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+  // attributes/listeners intentionally unused — see TodoItemContainer.
+  const { setNodeRef, transform, transition, isDragging } =
     useSortable({ id: floater.id });
   const style = {
     transform: CSS.Translate.toString(transform),
@@ -147,8 +148,6 @@ export default function FloaterItemContainer({
             ? { ...style, opacity: 0, transition: "opacity 300ms ease" }
             : style
         }
-        {...attributes}
-        {...listeners}
         className={clsx(
           "group relative max-w-full overflow-hidden transition-opacity sm:overflow-visible",
           isDragging && "opacity-70",
@@ -204,9 +203,8 @@ export default function FloaterItemContainer({
         </div>
 
         <div
-          onDoubleClick={() => {
-            if (!readOnly) setDisplayForm(true);
-          }}
+          // Deliberately not interactive — see TodoItemContainer. Edit is the
+          // Edit button, complete is the checkbox.
           onMouseOver={() => setShowHandle(true)}
           onMouseOut={() => setShowHandle(false)}
           onClick={() => {
@@ -227,19 +225,10 @@ export default function FloaterItemContainer({
             // (34px pill + label ≈ 52px) from being clipped by the row's
             // overflow-hidden on a single-line floater. Desktop is unaffected.
             "relative z-10 flex min-h-[54px] items-center justify-between gap-3 px-1 py-2.5 sm:min-h-0",
-            "sm:cursor-grab sm:rounded-lg sm:active:cursor-grabbing sm:hover:bg-muted/40",
+            "sm:rounded-lg",
             highlighted && "rounded-lg ring-2 ring-accent/25 sm:bg-accent/5 sm:ring-0",
           )}
         >
-          <div
-            className={clsx(
-              "absolute bottom-1/2 -left-5 hidden translate-y-1/2 p-1 transition-colors sm:block",
-              showHandle ? "text-muted-foreground" : "text-transparent",
-            )}
-          >
-            <GripVertical className="h-4 w-4" />
-          </div>
-
           <div className="flex min-w-0 items-start gap-3">
             <div className="shrink-0">
               <TodoCheckbox
@@ -264,7 +253,13 @@ export default function FloaterItemContainer({
                 {title}
               </p>
               {description ? (
-                <pre className="w-48 whitespace-pre-wrap pt-1 text-xs font-extrabold leading-4 text-muted-foreground sm:w-full">
+                <pre
+                  className={clsx(
+                    "w-48 whitespace-pre-wrap pt-1 text-xs font-extrabold leading-4 text-muted-foreground transition-colors duration-300 sm:w-full",
+                    (completePhase === "struck" || completePhase === "removing") &&
+                      "line-through",
+                  )}
+                >
                   {description}
                 </pre>
               ) : null}

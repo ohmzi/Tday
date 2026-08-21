@@ -819,6 +819,12 @@ private struct ScheduledTaskHomeTodayTaskRow: View {
                     Text(flattenedDescription)
                         .font(.tdayRounded(size: 12, weight: .semibold))
                         .foregroundStyle(colors.onSurfaceVariant)
+                        // Struck alongside the title so the whole task reads as
+                        // done during the completion animation. Uses the real
+                        // per-line strikethrough (not the title's animated
+                        // sweep) because notes wrap to several lines.
+                        .strikethrough(showStrikethrough, color: colors.onSurfaceVariant)
+                        .animation(.easeInOut(duration: 0.32), value: showStrikethrough)
                 }
             }
 

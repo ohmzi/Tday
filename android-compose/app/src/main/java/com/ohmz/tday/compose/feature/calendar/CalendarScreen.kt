@@ -2508,6 +2508,9 @@ private fun CalendarTodoRow(
                                 text = note,
                                 color = colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                                 style = MaterialTheme.typography.bodySmall,
+                                // Struck alongside the title so the whole task
+                                // reads as done during the completion animation.
+                                textDecoration = if (localStruck) TextDecoration.LineThrough else null,
                             )
                         }
                     }
