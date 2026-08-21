@@ -52,6 +52,18 @@ private fun resolvePolicies(
         )
     }
 
+    // The MCP endpoint sits outside /api, so it needs the API budget applied explicitly.
+    if (path == "/mcp" || path.startsWith("/mcp/")) {
+        add(
+            RequestRateLimitPolicy(
+                name = "mcp",
+                reasonCode = "api_rate_limit",
+                windowSec = config.apiRateLimitWindowSec,
+                maxRequests = config.apiRateLimitMax,
+            ),
+        )
+    }
+
     if (path == "/health" || path == "/api/mobile/probe" || path.startsWith("/calendar/")) {
         add(
             RequestRateLimitPolicy(

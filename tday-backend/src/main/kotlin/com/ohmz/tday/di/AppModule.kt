@@ -1,6 +1,8 @@
 package com.ohmz.tday.di
 
 import com.ohmz.tday.config.AppConfig
+import com.ohmz.tday.mcp.McpToolDispatcher
+import com.ohmz.tday.mcp.TdayMcpService
 import com.ohmz.tday.config.DatabaseConfig
 import com.ohmz.tday.security.AbuseGuard
 import com.ohmz.tday.security.AbuseGuardImpl
@@ -35,6 +37,8 @@ import com.ohmz.tday.services.CompletedTodoService
 import com.ohmz.tday.services.CompletedTodoServiceImpl
 import com.ohmz.tday.services.ExportService
 import com.ohmz.tday.services.ExportServiceImpl
+import com.ohmz.tday.services.IntegrationContextService
+import com.ohmz.tday.services.IntegrationContextServiceImpl
 import com.ohmz.tday.services.FloaterListService
 import com.ohmz.tday.services.FloaterListServiceImpl
 import com.ohmz.tday.services.FloaterService
@@ -44,6 +48,8 @@ import com.ohmz.tday.services.ListServiceImpl
 import com.ohmz.tday.services.ListShareService
 import com.ohmz.tday.services.ListShareServiceImpl
 import com.ohmz.tday.services.RealtimePublisher
+import com.ohmz.tday.services.RecurrenceExpander
+import com.ohmz.tday.services.RecurrenceExpanderImpl
 import com.ohmz.tday.services.PreferencesService
 import com.ohmz.tday.services.PreferencesServiceImpl
 import com.ohmz.tday.services.PushNotificationService
@@ -125,4 +131,8 @@ val serviceModule = module {
     single { com.ohmz.tday.services.RetentionScheduler(get()) }
     single<UserApiKeyService> { UserApiKeyServiceImpl(get()) }
     single<CalendarFeedService> { CalendarFeedServiceImpl(get()) }
+    single<IntegrationContextService> { IntegrationContextServiceImpl(get(), get(), get()) }
+    single<RecurrenceExpander> { RecurrenceExpanderImpl() }
+    single { TdayMcpService(get(), get(), get(), get(), get(), get(), get(), get()) }
+    single { McpToolDispatcher(get()) }
 }
