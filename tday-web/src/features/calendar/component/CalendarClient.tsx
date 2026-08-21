@@ -753,7 +753,13 @@ function CalendarTaskRow({
                 </p>
               </div>
               {todo.description && (
-                <pre className="w-48 whitespace-pre-wrap pb-2 text-xs font-extrabold leading-4 text-muted-foreground sm:w-full">
+                <pre
+                  className={cn(
+                    "w-48 whitespace-pre-wrap pb-2 text-xs font-extrabold leading-4 text-muted-foreground transition-colors duration-300 sm:w-full",
+                    (completePhase === "struck" || completePhase === "removing") &&
+                      "line-through",
+                  )}
+                >
                   {flattenNotesToPlainText(todo.description)}
                 </pre>
               )}
