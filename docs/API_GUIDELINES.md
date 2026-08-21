@@ -178,7 +178,7 @@ Shared route constants live in `shared/src/commonMain/kotlin/com/ohmz/tday/share
 | POST | `/api/auth/login-challenge` | Password-proof challenge | Public |
 | GET | `/api/auth/credentials-key` | Public key for credential envelope encryption | Public |
 | POST | `/api/auth/callback/credentials` | Login (plain or encrypted envelope) | Public |
-| GET | `/api/auth/session` | Get current session | Required |
+| GET | `/api/auth/session` | Get current session; also returns `apiKey: { scope, label, keyPreview }` when an API key authenticated the request | Required |
 | POST | `/api/auth/logout` | Logout (invalidate session) | Required |
 
 ### Todos
@@ -304,6 +304,31 @@ Floater lists group floaters.
 | Method | Path | Purpose |
 |--------|------|---------|
 | GET | `/api/app-settings` | Get public app settings (Summary enabled) |
+
+### Integrations
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET | `/api/integration/context` | One-call grounding for external integrations: key scope, user + timezone, server time, `capabilities.canWrite`, and both list namespaces |
+
+### MCP
+
+| Method | Path | Purpose | Auth |
+|--------|------|---------|------|
+| POST | `/mcp` | Model Context Protocol endpoint (JSON-RPC 2.0, stateless Streamable HTTP) | Required |
+| GET / DELETE | `/mcp` | `405 Method Not Allowed` — the server keeps no per-connection state | Required |
+
+`/mcp` is mounted **outside** `/api`, next to `/calendar/{token}.ics`, so the connector URL a user
+pastes into an AI client is just `<origin>/mcp`. Two consequences are load-bearing:
+
+- It is the one path exempt from the API-key read-only method guard in `Security.kt`. MCP tunnels
+  every message — including `initialize` and `tools/list` — through a POST, so a `READ` key would
+  otherwise be rejected before routing. Scope is enforced **per tool** in `McpToolDispatcher`, which
+  fails closed.
+- It gets no rate limiting from the `/api/` prefix rule, so `RateLimiting.kt` adds an explicit `mcp`
+  policy using the same window and budget as `api_global`.
+
+See [`MCP.md`](MCP.md).
 
 ### Mobile
 

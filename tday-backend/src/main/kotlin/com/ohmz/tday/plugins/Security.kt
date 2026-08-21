@@ -13,6 +13,7 @@ import com.ohmz.tday.security.issueSessionCookie
 import com.ohmz.tday.security.sessionCookieNames
 import com.ohmz.tday.security.shouldRenewSession
 import com.ohmz.tday.services.ApiKeyScope
+import com.ohmz.tday.services.ResolvedApiKey
 import com.ohmz.tday.services.UserApiKeyService
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
@@ -40,18 +41,50 @@ import org.koin.ktor.ext.inject
 private const val EVENT_DETAIL_USER_ID = "userId"
 private const val EVENT_DETAIL_PATH = "path"
 private const val API_KEY_PREFIX = "tday_"
+private const val MCP_PATH = "/mcp"
+
+/**
+ * Header names an API key may arrive under, besides `Authorization: Bearer`.
+ *
+ * Hosted MCP clients differ on how they attach a static credential: Claude Code and
+ * Cursor let you set `Authorization` directly, while the claude.ai / Claude Desktop
+ * "custom connector" dialog reserves `Authorization` for its OAuth flow and offers a
+ * fixed dropdown of extra header names instead. Accepting that dropdown's key-ish
+ * names is what makes one T'Day server work across all of them.
+ *
+ * These are only ever read as **API keys** — a value here that isn't a `tday_` key is
+ * ignored rather than falling through to the session path, so this adds no new way to
+ * present a session token.
+ */
+private val API_KEY_HEADERS = listOf("X-API-Key", "X-Api-Key", "Api-Key", "X-Auth-Token", "X-API-Token")
 
 val AuthUserKey = AttributeKey<JwtUserClaims>("AuthUser")
 
-/** Present only when the request authenticated via an API key; carries that key's scope. */
-val ApiKeyScopeKey = AttributeKey<ApiKeyScope>("ApiKeyScope")
+/** Present only when the request authenticated via an API key; carries that key's identity + scope. */
+val ResolvedApiKeyKey = AttributeKey<ResolvedApiKey>("ResolvedApiKey")
 
 fun ApplicationCall.authUser(): JwtUserClaims? = attributes.getOrNull(AuthUserKey)
 
-fun ApplicationCall.apiKeyScope(): ApiKeyScope? = attributes.getOrNull(ApiKeyScopeKey)
+fun ApplicationCall.resolvedApiKey(): ResolvedApiKey? = attributes.getOrNull(ResolvedApiKeyKey)
+
+fun ApplicationCall.apiKeyScope(): ApiKeyScope? = resolvedApiKey()?.scope
 
 private fun isSafeMethod(method: HttpMethod): Boolean =
     method == HttpMethod.Get || method == HttpMethod.Head || method == HttpMethod.Options
+
+/**
+ * The MCP endpoint is exempt from the blanket read-only method guard below.
+ *
+ * MCP's Streamable HTTP transport tunnels every JSON-RPC message — `initialize`,
+ * `tools/list`, and read-only `tools/call` alike — through a single POST, so the
+ * method says nothing about whether the request mutates anything. Rejecting POST
+ * here would stop a READ key from connecting at all. Scope is instead enforced
+ * per tool in `McpToolDispatcher`, which fails closed: a tool that writes runs
+ * only when the scope is explicitly FULL.
+ *
+ * Matches the exact path only — nothing under `/api` is affected.
+ */
+private fun isScopeExemptPath(path: String): Boolean = path.trimEnd('/') == MCP_PATH
 
 fun ApplicationCall.requireUser(): JwtUserClaims =
     authUser() ?: throw IllegalStateException("Authentication required")
@@ -80,7 +113,7 @@ fun Application.configureSecurity() {
             return@intercept
         }
 
-        val token = resolveSessionToken(call)
+        val token = resolveApiKey(call) ?: resolveSessionToken(call)
         if (token != null && token.startsWith(API_KEY_PREFIX)) {
             // Per-user API key (e.g. dashboard widgets). Resolves to the owning user and
             // populates the same auth principal the session path uses, then skips renewal.
@@ -88,7 +121,10 @@ fun Application.configureSecurity() {
             if (resolved != null) {
                 // READ-scoped keys may only issue safe requests. A mutating method is
                 // rejected before any handler runs, regardless of route.
-                if (resolved.scope == ApiKeyScope.READ && !isSafeMethod(call.request.httpMethod)) {
+                if (resolved.scope == ApiKeyScope.READ &&
+                    !isSafeMethod(call.request.httpMethod) &&
+                    !isScopeExemptPath(call.request.path())
+                ) {
                     call.respond(
                         HttpStatusCode.Forbidden,
                         buildJsonObject {
@@ -102,7 +138,7 @@ fun Application.configureSecurity() {
                 }
                 val user = loadCachedAuthUser(authUserCache, resolved.userId)
                 if (user != null) {
-                    call.attributes.put(ApiKeyScopeKey, resolved.scope)
+                    call.attributes.put(ResolvedApiKeyKey, resolved)
                     call.attributes.put(
                         AuthUserKey,
                         JwtUserClaims(
@@ -259,6 +295,29 @@ private fun compareVersions(a: String, b: String): Int {
         if (av != bv) return av.compareTo(bv)
     }
     return 0
+}
+
+/**
+ * A `tday_` API key from any accepted header, or null. Checked before the session path
+ * so an API key always wins over a stale cookie on the same request.
+ */
+private fun resolveApiKey(call: ApplicationCall): String? {
+    val authHeader = call.request.headers[HttpHeaders.Authorization]?.trim()
+    if (authHeader != null) {
+        // Both "Bearer tday_…" and a bare "tday_…" — some clients send the raw value.
+        val bearer = if (authHeader.startsWith("Bearer ", ignoreCase = true)) {
+            authHeader.substring("Bearer ".length).trim()
+        } else {
+            authHeader
+        }
+        if (bearer.startsWith(API_KEY_PREFIX)) return bearer.ifEmpty { null }
+    }
+
+    for (header in API_KEY_HEADERS) {
+        val value = call.request.headers[header]?.trim()?.removePrefix("Bearer ")?.trim()
+        if (!value.isNullOrEmpty() && value.startsWith(API_KEY_PREFIX)) return value
+    }
+    return null
 }
 
 private fun resolveSessionToken(call: ApplicationCall): String? {

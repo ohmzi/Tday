@@ -5,6 +5,7 @@ import com.ohmz.tday.domain.AppError
 import com.ohmz.tday.domain.respondError
 import com.ohmz.tday.domain.respondRateLimit
 import com.ohmz.tday.plugins.authUser
+import com.ohmz.tday.plugins.resolvedApiKey
 import com.ohmz.tday.security.AuthThrottle
 import com.ohmz.tday.security.ThrottleAction
 import io.ktor.server.response.respond
@@ -35,6 +36,7 @@ fun Route.sessionRoutes() {
                 call.respondError(AppError.Unauthorized("Not authenticated"))
                 return@get
             }
+            val apiKey = call.resolvedApiKey()
             call.respond(
                 io.ktor.http.HttpStatusCode.OK,
                 buildJsonObject {
@@ -47,6 +49,16 @@ fun Route.sessionRoutes() {
                         put("timeZone", user.timeZone)
                         put("requirePasswordChange", user.requirePasswordChange)
                         put("requireSecurityQuestions", user.requireSecurityQuestions)
+                    }
+                    // Additive, and present only for API-key callers: lets an integration
+                    // discover its own scope up front instead of learning it from a 403
+                    // after a write has already been attempted.
+                    if (apiKey != null) {
+                        putJsonObject("apiKey") {
+                            put("scope", apiKey.scope.name)
+                            put("label", apiKey.label)
+                            put("keyPreview", apiKey.keyPreview)
+                        }
                     }
                 },
             )

@@ -50,6 +50,13 @@ interface TodoService {
     suspend fun patchInstance(userId: String, todoId: String, instanceDate: LocalDateTime, fields: Map<String, Any?>): Either<AppError, Unit>
     suspend fun deleteInstance(userId: String, todoId: String, instanceDate: LocalDateTime): Either<AppError, Unit>
     suspend fun demoteToFloater(userId: String, todoId: String): Either<AppError, FloaterResponse>
+
+    /**
+     * The recurrence state that [TodoResponse] cannot carry — cancelled occurrences
+     * and per-occurrence overrides — keyed by todo id. Feeds [RecurrenceExpander];
+     * ids not owned by (or shared with) [userId] are simply absent from the result.
+     */
+    suspend fun getRecurrenceStates(userId: String, todoIds: List<String>): Either<AppError, Map<String, RecurrenceState>>
 }
 
 class TodoServiceImpl(
@@ -517,6 +524,46 @@ class TodoServiceImpl(
         publisher.publishToCollaborators(userId, DomainEvent.TodoChanged())
         return Unit.right()
     }
+
+    override suspend fun getRecurrenceStates(
+        userId: String,
+        todoIds: List<String>,
+    ): Either<AppError, Map<String, RecurrenceState>> {
+        val ids = todoIds.distinct().filter { it.isNotBlank() }
+        if (ids.isEmpty()) return emptyMap<String, RecurrenceState>().right()
+
+        val visibleListIds = shareService.sharedListIdsFor(userId, ListType.SCHEDULED)
+        val states = newSuspendedTransaction(Dispatchers.IO) {
+            // Re-select the todos through the visibility predicate so an id the caller
+            // guessed at can never leak another user's exdates.
+            val exdatesById = Todos.selectAll()
+                .where { (Todos.id inList ids) and visibleTodos(userId, visibleListIds) }
+                .associate { it[Todos.id] to it[Todos.exdates] }
+            if (exdatesById.isEmpty()) return@newSuspendedTransaction emptyMap()
+
+            val visibleIds = exdatesById.keys.toList()
+            val overridesById = TodoInstances.selectAll()
+                .where { TodoInstances.todoId inList visibleIds }
+                .groupBy({ it[TodoInstances.todoId] }, { it.toOccurrenceOverride() })
+
+            visibleIds.associateWith { id ->
+                RecurrenceState(
+                    exdates = exdatesById[id].orEmpty(),
+                    overrides = overridesById[id].orEmpty(),
+                )
+            }
+        }
+        return states.right()
+    }
+
+    private fun ResultRow.toOccurrenceOverride(): OccurrenceOverride = OccurrenceOverride(
+        instanceDate = this[TodoInstances.instanceDate],
+        overriddenTitle = fieldEncryption.decryptIfEncrypted(this[TodoInstances.overriddenTitle]),
+        overriddenDescription = fieldEncryption.decryptIfEncrypted(this[TodoInstances.overriddenDescription]),
+        overriddenPriority = this[TodoInstances.overriddenPriority]?.name,
+        overriddenDue = this[TodoInstances.overriddenDue],
+        completedAt = this[TodoInstances.completedAt],
+    )
 
     private fun ResultRow.toTodoResponse(): TodoResponse = TodoResponse(
         id = this[Todos.id],

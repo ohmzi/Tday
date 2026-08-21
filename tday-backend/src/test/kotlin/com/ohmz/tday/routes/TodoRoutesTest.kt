@@ -790,6 +790,12 @@ class TodoRoutesTest {
             lastDemoteId = todoId
             return makeFloater(id = "floater_demoted", title = "Let it float").right()
         }
+
+        override suspend fun getRecurrenceStates(
+            userId: String,
+            todoIds: List<String>,
+        ): Either<com.ohmz.tday.domain.AppError, Map<String, com.ohmz.tday.services.RecurrenceState>> =
+            emptyMap<String, com.ohmz.tday.services.RecurrenceState>().right()
     }
 
     private class RecordingFloaterService(

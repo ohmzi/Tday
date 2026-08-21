@@ -74,6 +74,12 @@ data class ApiKeyInfo(
 data class ResolvedApiKey(
     val userId: String,
     val scope: ApiKeyScope,
+    /** Id of the key row that authenticated this request. */
+    val keyId: String = "",
+    /** The key's user-chosen label, when it has one. */
+    val label: String? = null,
+    /** Last 4 characters of the secret, for "ending in …" display. */
+    val keyPreview: String = "",
 )
 
 interface UserApiKeyService {
@@ -240,7 +246,13 @@ class UserApiKeyServiceImpl(
                         it[UserApiKeys.lastUsedAt] = now
                     }
                 }
-                ResolvedApiKey(userId = userId, scope = scope)
+                ResolvedApiKey(
+                    userId = userId,
+                    scope = scope,
+                    keyId = keyId,
+                    label = row[UserApiKeys.label],
+                    keyPreview = row[UserApiKeys.keyPreview],
+                )
             }
         } catch (e: Exception) {
             logger.warn("Failed to resolve API key: {}", e.message)

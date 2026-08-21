@@ -264,6 +264,28 @@ end-user docs in [`ohmzi/documentation`](https://github.com/ohmzi/documentation/
 build your own integration against the same API, see
 [`docs/API_INTEGRATION.md`](docs/API_INTEGRATION.md).
 
+## AI assistant (MCP)
+
+T'Day speaks the [Model Context Protocol](https://modelcontextprotocol.io), so an AI assistant can
+read and change your tasks by talking to your own server. The endpoint is built into the backend at
+`https://<your-tday>/mcp` and authenticates with the same API key the REST API uses — there is
+nothing extra to install or run.
+
+```bash
+claude mcp add --transport http tday https://tday.example.com/mcp --header "Authorization: Bearer tday_<keyId>_<secret>"
+```
+
+That is Claude Code. In the claude.ai / Claude Desktop connector UI, set **Authentication → None**
+and pass the key as an `api-key` header instead — T'Day accepts it on `Authorization` or
+`X-API-Key`, so one server works across clients. Per-client setup is in
+[`docs/MCP.md`](docs/MCP.md#connecting-it-up).
+
+Generate the key in **Settings → Dashboard access**. A **Full access** key lets the assistant create
+and change tasks; a **Read-only** key lets it read them and tells it plainly why it cannot write.
+The tools understand T'Day's own shape: a task with a date becomes a scheduled task and one without
+becomes an Anytime task, and naming a list that doesn't exist gets you a list of the ones that do
+rather than a surprise new list. Full setup and tool reference in [`docs/MCP.md`](docs/MCP.md).
+
 ## Product Direction
 
 Future coding should preserve these expectations:
@@ -297,6 +319,7 @@ The fuller north star is in [`docs/PRODUCT_DIRECTION.md`](docs/PRODUCT_DIRECTION
 | [`docs/CODING_STANDARDS.md`](docs/CODING_STANDARDS.md)   | Code quality rules, naming, patterns                                                      |
 | [`docs/API_GUIDELINES.md`](docs/API_GUIDELINES.md)       | REST API contracts and conventions                                                        |
 | [`docs/API_INTEGRATION.md`](docs/API_INTEGRATION.md)     | API-key auth + endpoints for external integrations (e.g. the Homarr Tday Tasks widget)    |
+| [`docs/MCP.md`](docs/MCP.md)                             | Model Context Protocol endpoint: connecting an AI assistant, scopes, tool reference        |
 | [`docs/TESTING.md`](docs/TESTING.md)                     | Testing strategy and expectations                                                         |
 | [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)               | Docker, CI/CD, secrets, releases                                                          |
 | [`docs/REMOTE_ACCESS.md`](docs/REMOTE_ACCESS.md)         | Remote access methods (Cloudflare Tunnel, Tailscale, WireGuard, etc.)                     |

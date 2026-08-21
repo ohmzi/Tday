@@ -64,6 +64,76 @@ class ApiKeyScopeGuardTest {
     }
 
     @Test
+    fun `read-only key reaches the MCP endpoint despite it being a POST`() = testApplication {
+        application { configureGuardApp() }
+
+        // Every MCP message is a POST, including read-only ones, so the method-based
+        // guard is bypassed for this one path and scope is enforced per tool instead.
+        // See isScopeExemptPath in Security.kt and McpToolDispatcher.
+        val response = client.post("/mcp") {
+            header(HttpHeaders.Authorization, "Bearer $readKey")
+        }
+
+        assertEquals(HttpStatusCode.OK, response.status)
+    }
+
+    @Test
+    fun `the MCP exemption does not leak to neighbouring paths`() = testApplication {
+        application { configureGuardApp() }
+
+        for (path in listOf("/api/mcp", "/mcp/tools", "/mcpx")) {
+            val response = client.post(path) {
+                header(HttpHeaders.Authorization, "Bearer $readKey")
+            }
+            assertEquals(HttpStatusCode.Forbidden, response.status, "$path should stay guarded")
+        }
+    }
+
+    @Test
+    fun `a key is accepted from the header names hosted connector UIs offer`() = testApplication {
+        application { configureGuardApp() }
+
+        // The claude.ai / Claude Desktop custom-connector dialog reserves Authorization
+        // for its OAuth flow and only lets you add headers from a fixed dropdown, so the
+        // key has to be readable from those names too.
+        for (header in listOf("X-API-Key", "x-api-key", "Api-Key", "X-Auth-Token", "X-API-Token")) {
+            val response = client.get("/api/thing") { header(header, fullKey) }
+            assertEquals(HttpStatusCode.OK, response.status, "$header should authenticate")
+        }
+    }
+
+    @Test
+    fun `a bare key without the Bearer prefix is accepted`() = testApplication {
+        application { configureGuardApp() }
+
+        val response = client.get("/api/thing") { header(HttpHeaders.Authorization, fullKey) }
+
+        assertEquals(HttpStatusCode.OK, response.status)
+    }
+
+    @Test
+    fun `scope is still enforced when the key arrives on an alternate header`() = testApplication {
+        application { configureGuardApp() }
+
+        val response = client.post("/api/thing") { header("X-API-Key", readKey) }
+
+        assertEquals(HttpStatusCode.Forbidden, response.status)
+        val payload = json.parseToJsonElement(response.bodyAsText()).jsonObject
+        assertEquals("api_key_read_only", payload.getValue("reason").jsonPrimitive.content)
+    }
+
+    @Test
+    fun `alternate headers are not a new way to present a session token`() = testApplication {
+        application { configureGuardApp() }
+
+        // Only tday_ values are read from these headers; anything else is ignored rather
+        // than being tried as a JWE session token.
+        val response = client.get("/api/thing") { header("X-API-Key", "some.jwe.session.token") }
+
+        assertEquals(HttpStatusCode.Unauthorized, response.status)
+    }
+
+    @Test
     fun `full key is allowed on a mutating request`() = testApplication {
         application { configureGuardApp() }
 
@@ -108,6 +178,18 @@ class ApiKeyScopeGuardTest {
                 post("/thing") {
                     call.withAuth { mapOf("ok" to true).right() }
                 }
+                post("/mcp") {
+                    call.withAuth { mapOf("ok" to true).right() }
+                }
+            }
+            post("/mcp") {
+                call.withAuth { mapOf("ok" to true).right() }
+            }
+            post("/mcp/tools") {
+                call.withAuth { mapOf("ok" to true).right() }
+            }
+            post("/mcpx") {
+                call.withAuth { mapOf("ok" to true).right() }
             }
         }
     }

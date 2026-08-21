@@ -1,6 +1,7 @@
 package com.ohmz.tday.routes.auth
 
 import com.ohmz.tday.plugins.AuthUserKey
+import com.ohmz.tday.plugins.ResolvedApiKeyKey
 import com.ohmz.tday.plugins.configureSerialization
 import com.ohmz.tday.security.AuthThrottle
 import com.ohmz.tday.security.FailureOutcome
@@ -11,6 +12,8 @@ import com.ohmz.tday.security.DecryptedCredentials
 import com.ohmz.tday.security.JwtUserClaims
 import com.ohmz.tday.security.ThrottleAction
 import com.ohmz.tday.security.ThrottleResult
+import com.ohmz.tday.services.ApiKeyScope
+import com.ohmz.tday.services.ResolvedApiKey
 import io.ktor.client.request.get
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpStatusCode
@@ -25,6 +28,7 @@ import org.junit.jupiter.api.Test
 import org.koin.dsl.module
 import org.koin.ktor.plugin.Koin
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 
 class AuthRoutesTest {
     private val json = Json { ignoreUnknownKeys = true }
@@ -73,6 +77,39 @@ class AuthRoutesTest {
         assertEquals("APPROVED", user.getValue("approvalStatus").jsonPrimitive.content)
         assertEquals("America/Toronto", user.getValue("timeZone").jsonPrimitive.content)
         assertEquals(listOf(ThrottleAction.sessionGet), throttle.actions)
+    }
+
+    @Test
+    fun `session reports the scope of the API key that authenticated it`() = testApplication {
+        application {
+            configureAuthRoutesTestApp(
+                authThrottle = RecordingAuthThrottle(),
+                authUser = JwtUserClaims(id = "user_123", username = "testuser", approvalStatus = "APPROVED"),
+                apiKey = ResolvedApiKey("user_123", ApiKeyScope.READ, "readkey", "Dashboard", "cret"),
+            )
+        }
+
+        val payload = json.parseToJsonElement(client.get("/api/auth/session").bodyAsText()).jsonObject
+        val apiKey = payload.getValue("apiKey").jsonObject
+
+        // An integration otherwise only learns its scope from a 403 after a failed write.
+        assertEquals("READ", apiKey.getValue("scope").jsonPrimitive.content)
+        assertEquals("Dashboard", apiKey.getValue("label").jsonPrimitive.content)
+        assertEquals("cret", apiKey.getValue("keyPreview").jsonPrimitive.content)
+    }
+
+    @Test
+    fun `session omits apiKey for a session-authenticated caller`() = testApplication {
+        application {
+            configureAuthRoutesTestApp(
+                authThrottle = RecordingAuthThrottle(),
+                authUser = JwtUserClaims(id = "user_123", username = "testuser", approvalStatus = "APPROVED"),
+            )
+        }
+
+        val payload = json.parseToJsonElement(client.get("/api/auth/session").bodyAsText()).jsonObject
+
+        assertNull(payload["apiKey"])
     }
 
     @Test
@@ -155,6 +192,7 @@ class AuthRoutesTest {
         authThrottle: AuthThrottle,
         credentialEnvelope: CredentialEnvelope = FakeCredentialEnvelope(),
         authUser: JwtUserClaims? = null,
+        apiKey: ResolvedApiKey? = null,
     ) {
         install(Koin) {
             modules(
@@ -169,6 +207,7 @@ class AuthRoutesTest {
             intercept(io.ktor.server.application.ApplicationCallPipeline.Plugins) {
                 if (call.attributes.getOrNull(AuthUserKey) == null) {
                     call.attributes.put(AuthUserKey, authUser)
+                    if (apiKey != null) call.attributes.put(ResolvedApiKeyKey, apiKey)
                 }
             }
         }
