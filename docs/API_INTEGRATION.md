@@ -49,6 +49,11 @@ Send the key as a **Bearer token** on every request to `/api/*`:
 Authorization: Bearer tday_<keyId>_<secret>
 ```
 
+The `Bearer ` prefix is optional, and the key is also read from `X-API-Key` (aliases: `Api-Key`,
+`X-Auth-Token`, `X-API-Token`) for clients that reserve `Authorization` for their own OAuth flow —
+see [`MCP.md`](MCP.md#connecting-it-up). Only values starting with `tday_` are read from those
+alternate headers, so they are never a way to present a session token.
+
 - The key authenticates as its **owning user**. A `FULL` key carries the **same authorization as that
   user's web session**; a `READ` key is limited to safe methods (see [Scopes](#the-api-key)). Account
   approval status still applies. Any `Authorization` value that does **not** start with `tday_` is
@@ -63,6 +68,37 @@ curl -H "Authorization: Bearer tday_<keyId>_<secret>" https://tday.example.com/a
 # 200 → { "user": { "id", "name", "username", "role", "approvalStatus", "timeZone", ... } }
 # 401 → key missing, invalid, disabled, or revoked
 ```
+
+## Discovering what a key can do
+
+A key holder can read its own scope instead of learning it from a 403 after a failed write:
+
+| Method | Path | Returns |
+|--------|------|---------|
+| `GET` | `/api/auth/session` | The usual `{ user }`, plus `apiKey: { scope, label, keyPreview }` when an API key authenticated the request (absent for session callers) |
+| `GET` | `/api/integration/context` | `{ apiKey, user, serverTime, capabilities: { canWrite }, lists, anytimeLists }` — one call for scope, identity, timezone, and both list namespaces |
+
+`/api/integration/context` exists so an integration can ground itself in a single round trip. The
+two list collections are separate namespaces: `lists` group scheduled todos, `anytimeLists` group
+floaters, and the same name may exist in one and not the other.
+
+```bash
+curl -H "Authorization: Bearer tday_<keyId>_<secret>" https://tday.example.com/api/integration/context
+```
+
+## AI assistants (MCP)
+
+The same API keys authenticate T'Day's **Model Context Protocol** endpoint at `<origin>/mcp`, which
+lets Claude Code, Claude Desktop, Cursor and similar clients read and change tasks conversationally.
+A `FULL` key can write; a `READ` key connects, reads, and refuses writes with an explanation rather
+than a bare 403 — MCP tunnels every message through a POST, so scope is enforced per tool there
+rather than per HTTP method.
+
+```bash
+claude mcp add --transport http tday https://tday.example.com/mcp --header "Authorization: Bearer tday_<keyId>_<secret>"
+```
+
+Setup, the tool reference, and the protocol details are in [`MCP.md`](MCP.md).
 
 ## Calendar feed (read-only ICS)
 

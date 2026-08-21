@@ -105,4 +105,17 @@ object ApiRoutes {
     object Mobile {
         const val Probe = "$ApiPrefix/mobile/probe"
     }
+
+    /** Grounding data for external integrations (API-key holders, AI assistants). */
+    object Integration {
+        const val Context = "$ApiPrefix/integration/context"
+    }
+
+    /**
+     * Model Context Protocol endpoint. Deliberately outside `/api` so the connector
+     * URL a user pastes into their AI client is just `<origin>/mcp`.
+     */
+    object Mcp {
+        const val Base = "/mcp"
+    }
 }

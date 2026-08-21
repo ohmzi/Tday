@@ -34,6 +34,10 @@ fun Application.configureRouting() {
         // Public iCalendar feed — token-in-path, no session/API-key auth.
         calendarFeedRoutes()
 
+        // Model Context Protocol endpoint for AI assistants. Outside /api so the
+        // connector URL is just <origin>/mcp; authenticated with a per-user API key.
+        mcpRoutes()
+
         route("/api") {
             todoRoutes()
             taskStepRoutes()
@@ -52,6 +56,7 @@ fun Application.configureRouting() {
             adminRoutes()
             notificationRoutes()
             mobileProbeRoutes(config)
+            integrationRoutes()
 
             route("/auth") {
                 csrfRoutes()
@@ -89,7 +94,11 @@ fun Application.configureRouting() {
             if (dir.isDirectory) {
                 get("{path...}") {
                     val relPath = call.parameters.getAll("path")?.joinToString("/") ?: ""
-                    if (relPath.startsWith("api/") || relPath.startsWith("ws")) return@get
+                    if (relPath.startsWith("api/") || relPath.startsWith("ws") ||
+                        relPath == "mcp" || relPath.startsWith("mcp/")
+                    ) {
+                        return@get
+                    }
 
                     val candidate: java.io.File = java.io.File(dir, relPath).canonicalFile
                     if (candidate.isFile && candidate.path.startsWith(dir.path)) {

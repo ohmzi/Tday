@@ -333,6 +333,11 @@ class RateLimitingTest {
             todoId: String,
         ): Either<AppError, FloaterResponse> = unsupported()
 
+        override suspend fun getRecurrenceStates(
+            userId: String,
+            todoIds: List<String>,
+        ): Either<AppError, Map<String, com.ohmz.tday.services.RecurrenceState>> = unsupported()
+
         private fun <T> unsupported(): Either<AppError, T> =
             Either.Left(AppError.Internal("unsupported in rate limit test"))
     }
