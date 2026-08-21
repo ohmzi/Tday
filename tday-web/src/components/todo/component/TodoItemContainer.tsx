@@ -4,7 +4,6 @@ import clsx from "clsx";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { TodoItemType } from "@/types";
-import GripVertical from "@/components/ui/icon/gripVertical";
 import { Check, Flag, SquarePen, Trash } from "lucide-react";
 import { getDisplayTime } from "@/lib/date/displayDate";
 import { useLocale } from "@/lib/navigation";
@@ -63,7 +62,7 @@ export const TodoItemCard = ({
   const [editInstanceOnly, setEditInstanceOnly] = useState(false);
   const [showHandle, setShowHandle] = useState(false);
   // Staged "checking off" sequence so each step is visible with a small gap:
-  //   checked (green tick) → struck (title line-through) → removing (fade) → remove.
+  //   checked (green tick) → struck (title + notes line-through) → removing (fade) → remove.
   const [completePhase, setCompletePhase] = useState<
     "checked" | "struck" | "removing" | null
   >(null);
@@ -132,7 +131,7 @@ export const TodoItemCard = ({
     if (completing) return;
     setCompletePhase("checked"); // 1. green tick + pop
     completeTimers.current.push(
-      window.setTimeout(() => setCompletePhase("struck"), 280), // 2. strike the title
+      window.setTimeout(() => setCompletePhase("struck"), 280), // 2. strike the title + notes
       window.setTimeout(() => setCompletePhase("removing"), 620), // 3. start fading
       window.setTimeout(() => completeMutateFn(todoItem), 960), // 4. remove from cache
     );
@@ -238,9 +237,12 @@ export const TodoItemCard = ({
 
         {/* Foreground row — slides left on swipe to reveal the actions. */}
         <div
-          onDoubleClick={() => {
-            if (!readOnly) setDisplayForm(true);
-          }}
+          // The row itself is deliberately NOT interactive: editing is the Edit
+          // button (desktop hover / mobile swipe) and completing is the
+          // checkbox. It used to carry dnd-kit's drag listeners plus a
+          // double-click-to-edit handler, which made it feel pressable while
+          // doing nothing on a single press — drag-to-reorder is retired on web
+          // (see TodoGroup), so those affordances no longer mean anything.
           onMouseOver={() => setShowHandle(true)}
           onMouseOut={() => setShowHandle(false)}
           onClick={() => {
@@ -260,19 +262,10 @@ export const TodoItemCard = ({
             // Flat native-style row; transparent so the screen watermark shows
             // through. Swipe actions are hidden via opacity when the row is closed.
             "relative z-10 flex items-center justify-between gap-3 px-1 py-2.5",
-            "sm:cursor-grab sm:rounded-lg sm:active:cursor-grabbing sm:hover:bg-muted/40",
+            "sm:rounded-lg",
             highlighted && "rounded-lg ring-2 ring-accent/25 sm:bg-accent/5 sm:ring-0",
           )}
         >
-          <div
-            className={clsx(
-              "absolute bottom-1/2 -left-5 hidden translate-y-1/2 p-1 transition-colors sm:block",
-              showHandle ? "text-muted-foreground" : "text-transparent",
-            )}
-          >
-            <GripVertical className="h-4 w-4" />
-          </div>
-
       <div className="flex min-w-0 items-start gap-3">
         <div className="shrink-0">
           <TodoCheckbox
@@ -297,7 +290,13 @@ export const TodoItemCard = ({
             </p>
           </div>
           {description && (
-            <pre className="w-48 whitespace-pre-wrap pb-2 text-xs font-extrabold leading-4 text-muted-foreground sm:w-full">
+            <pre
+              className={clsx(
+                "w-48 whitespace-pre-wrap pb-2 text-xs font-extrabold leading-4 text-muted-foreground transition-colors duration-300 sm:w-full",
+                (completePhase === "struck" || completePhase === "removing") &&
+                  "line-through",
+              )}
+            >
               {description}
             </pre>
           )}
@@ -397,7 +396,10 @@ export const TodoItemContainer = ({
   showOverdueTag = true,
 }: TodoItemContainerProps) => {
   //dnd kit setups
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+  // attributes/listeners are intentionally not destructured: drag-to-reorder is
+  // retired on web (see TodoGroup), so the row takes only the node ref and the
+  // transform, never the drag handlers.
+  const { setNodeRef, transform, transition, isDragging } =
     useSortable({ id: todoItem.id });
   const style = {
     transform: CSS.Translate.toString(transform),
@@ -410,7 +412,10 @@ export const TodoItemContainer = ({
       perTaskOverdue={perTaskOverdue}
       highlighted={highlighted}
       showOverdueTag={showOverdueTag}
-      containerProps={{ ...attributes, ...listeners }}
+      // No {...attributes, ...listeners}: spreading dnd-kit's drag props made
+      // the row a pointer-capturing, role="button" target for a drag that is
+      // retired, which is what made pressing a task feel broken.
+      containerProps={{}}
       dragging={isDragging}
       style={style}
       setDragNodeRef={setNodeRef}

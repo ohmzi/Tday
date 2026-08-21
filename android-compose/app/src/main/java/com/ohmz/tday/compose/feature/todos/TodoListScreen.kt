@@ -4441,6 +4441,9 @@ private fun SwipeTaskRow(
                                         text = note,
                                         color = colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                                         style = MaterialTheme.typography.bodySmall,
+                                        // Struck alongside the title so the whole
+                                        // task reads as done during the animation.
+                                        textDecoration = if (visuallyStruck) TextDecoration.LineThrough else null,
                                     )
                                 }
                             }

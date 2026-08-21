@@ -117,6 +117,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -1916,6 +1917,9 @@ private fun ScheduledTaskHomeTodayTaskRow(
                                 fontWeight = FontWeight.Bold,
                                 lineHeight = 18.sp,
                                 color = colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                                // Struck alongside the title so the whole task
+                                // reads as done during the completion animation.
+                                textDecoration = if (localStruck) TextDecoration.LineThrough else null,
                             )
                         }
                     }
