@@ -8,7 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		50DB00000000000000000000 /* SoundManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50DF00000000000000000000 /* SoundManager.swift */; };
-		50DB10000000000000000000 /* task_complete.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 50DF10000000000000000000 /* task_complete.mp3 */; };
+		50DB10000000000000000000 /* task_complete.wav in Resources */ = {isa = PBXBuildFile; fileRef = 50DF10000000000000000000 /* task_complete.wav */; };
 		CA1E7E020000000000000000 /* RecurrenceRuleParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA1E7E010000000000000000 /* RecurrenceRuleParserTests.swift */; };
 		CA1EBF000000000000000000 /* CalendarSyncPreferenceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA1EFE000000000000000000 /* CalendarSyncPreferenceStore.swift */; };
 		CA1EBF010000000000000000 /* RecurrenceRuleParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA1EFE010000000000000000 /* RecurrenceRuleParser.swift */; };
@@ -235,7 +235,7 @@
 
 /* Begin PBXFileReference section */
 		50DF00000000000000000000 /* SoundManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundManager.swift; sourceTree = "<group>"; };
-		50DF10000000000000000000 /* task_complete.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = task_complete.mp3; sourceTree = "<group>"; };
+		50DF10000000000000000000 /* task_complete.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = task_complete.wav; sourceTree = "<group>"; };
 		CA1E7E010000000000000000 /* RecurrenceRuleParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecurrenceRuleParserTests.swift; sourceTree = "<group>"; };
 		CA1EFE000000000000000000 /* CalendarSyncPreferenceStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarSyncPreferenceStore.swift; sourceTree = "<group>"; };
 		CA1EFE010000000000000000 /* RecurrenceRuleParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecurrenceRuleParser.swift; sourceTree = "<group>"; };
@@ -435,10 +435,10 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		50DG00000000000000000000 /* Sounds */ = {
+		50DC00000000000000000000 /* Sounds */ = {
 			isa = PBXGroup;
 			children = (
-				50DF10000000000000000000 /* task_complete.mp3 */,
+				50DF10000000000000000000 /* task_complete.wav */,
 			);
 			path = Sounds;
 			sourceTree = "<group>";
@@ -459,8 +459,7 @@
 			children = (
 				E6E5E1DBE3F7999D219BE2EE /* AuthRepository.swift */,
 				E30D3242D00BC6C1C4BA862D /* CredentialEnvelope.swift */,
-				7BC4FF908				50DG00000000000000000000 /* Sounds */,
-1195466EE7C3E89 /* SystemCredentialService.swift */,
+				7BC4FF9081195466EE7C3E89 /* SystemCredentialService.swift */,
 			);
 			path = Auth;
 			sourceTree = "<group>";
@@ -471,6 +470,7 @@
 				9F8E7D6C5B4A00000000F105 /* Localizable.xcstrings */,
 				2D679EC9EE22239446D1DE67 /* Fonts */,
 				CAFE0D1E0000000000000023 /* Guide */,
+				50DC00000000000000000000 /* Sounds */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -1177,7 +1177,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				50DB10000000000000000000 /* task_complete.mp3 in Resources */,
+				50DB10000000000000000000 /* task_complete.wav in Resources */,
 				9F8E7D6C5B4A00000000B105 /* Localizable.xcstrings in Resources */,
 				B34A31B1812FC676A3AC1871 /* Assets.xcassets in Resources */,
 				85B5397D25D2A1436CF34394 /* LaunchScreen.storyboard in Resources */,

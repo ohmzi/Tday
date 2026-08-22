@@ -145,7 +145,7 @@
       },
       "3": {
         "title": "Penyimpanan & Keselamatan Data",
-        "content": "T'Day menggunakan NextAuth untuk pengesahan, NeonDB untuk penyimpanan, dan Vercel untuk pengehosan. Fail disulitkan di mana berkenaan. Walaupun tiada sistem yang benar-benar selamat, langkah-langkah munasabah diambil untuk melindungi data anda."
+        "content": "T'Day dihoskan sendiri: bahagian belakang Kotlin menyimpan data anda dalam pangkalan data PostgreSQL pada pelayan yang dikendalikan oleh anda atau penyedia hos anda. Medan sensitif boleh disulitkan semasa disimpan dan trafik dihantar melalui HTTPS. Walaupun tiada sistem yang benar-benar selamat, langkah-langkah munasabah diambil untuk melindungi data anda."
       },
       "4": {
         "title": "Perkongsian Data",

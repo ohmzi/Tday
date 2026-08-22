@@ -145,7 +145,7 @@
       },
       "3": {
         "title": "Armazenamento de Dados e Segurança",
-        "content": "O T'Day utiliza NextAuth para autenticação, NeonDB para armazenamento e Vercel para alojamento. Os ficheiros são encriptados onde aplicável. Embora nenhum sistema seja perfeitamente seguro, são tomadas medidas razoáveis para proteger os seus dados."
+        "content": "O T'Day é auto-hospedado: um backend em Kotlin guarda os seus dados numa base de dados PostgreSQL no servidor gerido por si ou pelo seu fornecedor. Os campos sensíveis podem ser encriptados em repouso e o tráfego é servido por HTTPS. Embora nenhum sistema seja perfeitamente seguro, são tomadas medidas razoáveis para proteger os seus dados."
       },
       "4": {
         "title": "Partilha de Dados",
