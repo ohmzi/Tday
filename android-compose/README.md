@@ -14,7 +14,7 @@ Current feature surface:
   replay.
 - Scheduled task home and Floater task home root feeds controlled by `RootFeedDock`.
 - Scheduled tasks, floaters, scheduled-task lists, floater lists, completed history, calendar,
-  search, settings, reminders, Glance Today/Floater widgets, an internal car-mode task surface,
+  search, settings, reminders, an opt-in device-calendar mirror, Glance Today/Floater widgets, an internal car-mode task surface,
   and in-app APK updates.
 - Room-backed local cache with a one-time migration from the older encrypted JSON cache.
 
@@ -31,6 +31,8 @@ android-compose/app/src/main/java/com/ohmz/tday/compose/
 │   ├── model/         # API/domain models and UI-facing data
 │   ├── navigation/    # AppRoute
 │   ├── network/       # Retrofit, cookies, realtime, connectivity
+│   ├── attachment/    # Task pictures (upload/download, Server Mode only)
+│   ├── calendar/      # Opt-in device-calendar mirror (CalendarContract)
 │   ├── notification/  # Reminders, boot receiver, workers
 │   ├── security/      # Probe/decryption helpers
 │   └── ui/            # Shared app UI helpers

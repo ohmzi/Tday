@@ -91,6 +91,7 @@ import androidx.core.view.ViewCompat
 import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.ListSummary
+import com.ohmz.tday.compose.core.model.AttachmentTaskType
 import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
 import com.ohmz.tday.compose.feature.guide.GuideHelpLink
@@ -567,6 +568,19 @@ fun CreateTaskBottomSheet(
                                     onNotesChange = { notes = it },
                                     onKeyboardDone = dismissKeyboard,
                                 )
+
+                                // Pictures, for both task types. Edit-only: an attachment needs a
+                                // saved task id to hang off. A task with no due date is a floater.
+                                editingTask?.takeIf { it.id.isNotBlank() }?.let { task ->
+                                    TaskAttachmentsSection(
+                                        taskType = if (task.due == null) {
+                                            AttachmentTaskType.FLOATER
+                                        } else {
+                                            AttachmentTaskType.TODO
+                                        },
+                                        taskId = task.id,
+                                    )
+                                }
 
                                 suggestedRepeatRrule?.let { rrule ->
                                     RepeatSuggestionChip(

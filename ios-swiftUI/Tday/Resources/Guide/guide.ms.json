@@ -1347,6 +1347,42 @@
       "searchBody": "bawa tugasan dalam peranti anda apabila beralih ke mod pelayan. bermula dalam mod tempatan dan kemudian menyediakan pelayan? tiada apa-apa dimuat naik dengan sendirinya. untuk memindahkan data anda: eksport dahulu daripada tetapan, log masuk ke pelayan anda, kemudian import fail itu di sana. tugasan, senarai dan sejarah berpindah dalam satu langkah yang disengajakan — anda pilih masanya, dan data dalam peranti kekal tidak tersentuh sehingga itu. selepas import, simpan fail yang dieksport sehingga anda sahkan semuanya tiba — ia juga berfungsi sebagai sandaran."
     },
     {
+      "id": "device-calendar-sync",
+      "section": "INTEGRATIONS",
+      "sectionOrder": 7,
+      "icon": "calendar",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.7.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Tugas dalam kalendar peranti",
+      "summary": "Salin tugas bertarikh anda ke kalendar T'Day pada telefon anda.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Apabila dihidupkan, setiap tugas yang bertarikh akan disalin ke kalendar bernama T'Day pada telefon anda, bersama kalendar anda yang lain. Tugas Anytime tidak disertakan kerana ia tiada tarikh. Ia sehala sahaja: T'Day menulis ke kalendar itu, jadi suntingan yang anda buat di sana akan diganti apabila tugas anda berubah."
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "Dalam Tetapan, hidupkan “Tambah tugas berjadual ke kalendar saya”.",
+            "Benarkan akses kalendar apabila telefon anda meminta.",
+            "Buka aplikasi kalendar anda — tugas bertarikh anda ada dalam kalendar T'Day."
+          ]
+        }
+      ],
+      "searchTitle": "tugas dalam kalendar peranti",
+      "searchKeywords": "kalendar, kalendar peranti, segerak, google calendar, apple calendar, eventkit, kalendar telefon, salin",
+      "searchBody": "salin tugas bertarikh anda ke kalendar t'day pada telefon anda. apabila dihidupkan, setiap tugas yang bertarikh akan disalin ke kalendar bernama t'day pada telefon anda, bersama kalendar anda yang lain. tugas anytime tidak disertakan kerana ia tiada tarikh. ia sehala sahaja: t'day menulis ke kalendar itu, jadi suntingan yang anda buat di sana akan diganti apabila tugas anda berubah. dalam tetapan, hidupkan “tambah tugas berjadual ke kalendar saya”. benarkan akses kalendar apabila telefon anda meminta. buka aplikasi kalendar anda — tugas bertarikh anda ada dalam kalendar t'day."
+    },
+    {
       "id": "ai-summary",
       "section": "INTEGRATIONS",
       "sectionOrder": 7,
