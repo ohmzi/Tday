@@ -9,8 +9,6 @@ interface BlogPost {
   date: string;
   readTime: string;
   category: string;
-  heroImage: string;
-  heroAlt: string;
   contentFile: string;
 }
 

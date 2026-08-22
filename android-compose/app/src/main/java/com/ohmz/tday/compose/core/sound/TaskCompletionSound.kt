@@ -10,10 +10,10 @@ import androidx.compose.ui.platform.LocalContext
 import com.ohmz.tday.compose.R
 
 /**
- * The short pop played when a task is checked off — the same `pop.mp3` the web app has always
- * used, so completing a task sounds identical on web, Android and iOS.
+ * The short pop played when a task is checked off — the same clip the web app plays, so
+ * completing a task sounds identical on web, Android and iOS.
  *
- * SoundPool rather than MediaPlayer: the clip is ~1.5KB and fires on a tap, so it has to be
+ * SoundPool rather than MediaPlayer: the clip is ~13KB and fires on a tap, so it has to be
  * decoded once up front and replayed with no setup cost. MediaPlayer would re-prepare on every
  * completion and lag behind the animation.
  *

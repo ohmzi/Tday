@@ -6,8 +6,6 @@
     "date": "2024-12-14",
     "readTime": "6 min read",
     "category": "documentation",
-    "heroImage": "/sunflowers.png",
-    "heroAlt": "Sunflowers header for recurrence documentation",
     "contentFile": "content/blog/RRULE_todo_scheduling_system.html"
   },
   {
@@ -17,8 +15,6 @@
     "date": "2024-12-08",
     "readTime": "5 min read",
     "category": "documentation",
-    "heroImage": "/coffee.jpg",
-    "heroAlt": "Coffee header for instance date drift documentation",
     "contentFile": "content/blog/instanceDate_drifting_problem.html"
   }
 ]

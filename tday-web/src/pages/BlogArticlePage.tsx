@@ -13,8 +13,6 @@ interface BlogPost {
   date: string;
   readTime: string;
   category: string;
-  heroImage: string;
-  heroAlt: string;
   contentFile: string;
 }
 
@@ -76,14 +74,6 @@ export default function BlogArticlePage() {
   return (
     <div className="py-10 overflow-y-auto">
       <div className="relative mx-auto max-w-3xl px-6">
-        <div className="relative mb-8 h-[100px] w-full overflow-hidden rounded-lg md:h-[150px] lg:h-[200px]">
-          <img
-            src={post.heroImage}
-            alt={post.heroAlt}
-            className="h-full w-full object-cover object-bottom"
-          />
-        </div>
-
         <article className="space-y-6 text-sm leading-7 text-foreground/85 sm:text-base [&_code]:rounded [&_code]:bg-muted/40 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:font-mono [&_h1]:text-2xl [&_h1]:font-semibold [&_h2]:mt-8 [&_h2]:text-xl [&_h2]:font-semibold [&_ol]:space-y-2 [&_pre_code]:bg-transparent [&_pre_code]:px-0 [&_pre_code]:py-0 [&_ul]:space-y-2">
           <header className="space-y-2">
             <p className="text-xs uppercase tracking-[0.18em] text-accent/80">

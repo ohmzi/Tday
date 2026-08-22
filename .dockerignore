@@ -1,6 +1,4 @@
 node_modules
-.next
-out
 .DS_Store
 *.pem
 npm-debug.log*
@@ -8,13 +6,10 @@ yarn-debug.log*
 .pnpm-debug.log*
 .env*
 !.env.example
-.vercel
 *.tsbuildinfo
-next-env.d.ts
 .git
 .cursor
 android-compose
-prisma
 tday-web/node_modules
 tday-web/dist
 tday-backend/build

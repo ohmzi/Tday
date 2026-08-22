@@ -21,8 +21,8 @@ export default function TodoCheckbox({
   const unpopAudio = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    popAudio.current = new Audio("/pop.mp3");
-    unpopAudio.current = new Audio("/unPop.mp3");
+    popAudio.current = new Audio("/task-complete.wav");
+    unpopAudio.current = new Audio("/task-uncomplete.wav");
   }, []);
 
   useEffect(() => {
