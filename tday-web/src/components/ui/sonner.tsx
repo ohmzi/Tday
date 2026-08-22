@@ -46,11 +46,17 @@ const SonnerToaster = ({ ...props }: ToasterProps) => {
             "group-[.toast]:mt-0.5 group-[.toast]:text-current/75 group-[.toast]:font-medium group-[.toast]:leading-snug group-[.toast]:text-center",
           // Plain text, not a filled pill — iOS renders the action as a bare
           // Button(.plain) in `.subheadline` heavy on the snackbar accent (see
-          // AppRootView.AppSnackbar). `!bg-transparent` and `!px-0` are needed because
-          // sonner injects its own [data-button] background/padding at runtime, which a
-          // plain utility ties with and loses to on source order.
+          // AppRootView.AppSnackbar).
+          //
+          // EVERY property here needs `!`. Sonner injects
+          // `[data-sonner-toast][data-styled=true] [data-button]` at runtime — specificity
+          // (0,3,0), which outranks any utility class, so a plain utility silently loses.
+          // Colour especially: sonner paints the action `color: var(--normal-bg)`, i.e. the
+          // toast's OWN surface colour, because it normally sits on a filled chip. Drop the
+          // chip without forcing the colour and the label is painted in the surface it sits
+          // on — invisible. It also forces 12px/500, so size and weight are pinned too.
           actionButton:
-            "group-[.toast]:!bg-transparent group-[.toast]:!px-0 group-[.toast]:!h-auto group-[.toast]:shrink-0 group-[.toast]:font-extrabold group-[.toast]:text-[hsl(var(--toast-action))]",
+            "group-[.toast]:!bg-transparent group-[.toast]:!px-0 group-[.toast]:!h-auto group-[.toast]:shrink-0 group-[.toast]:!text-[15px] group-[.toast]:!font-extrabold group-[.toast]:!text-[hsl(var(--toast-action))]",
           cancelButton:
             "group-[.toast]:rounded-full group-[.toast]:bg-muted group-[.toast]:px-3 group-[.toast]:font-bold group-[.toast]:text-muted-foreground",
         },
