@@ -28,26 +28,33 @@ export const useCompleteListTodo = () => {
         onError: (error) => {
             toast({ description: error.message, variant: "destructive" });
         },
-        onSettled: (_data, _error, todoItem) => {
+        onSettled: () => {
             queryClient.invalidateQueries({ queryKey: ["calendarTodo"] });
             queryClient.invalidateQueries({ queryKey: ["completedTodo"] });
             queryClient.invalidateQueries({ queryKey: ["todo"] });
-            queryClient.invalidateQueries({ queryKey: ["list", todoItem.listID] });
+            queryClient.invalidateQueries({ queryKey: ["todoTimeline"] });
+            // Prefix match, not ["list", <id>]: rows on a list screen carry no listID (see below).
+            queryClient.invalidateQueries({ queryKey: ["list"] });
         },
     });
 
     const completeMutateFn = (todoItem: TodoItemType) => {
-        void queryClient.cancelQueries({ queryKey: ["list", todoItem.listID] });
-        queryClient.setQueryData<TodoItemType[]>(
-            ["list", todoItem.listID],
-            (oldTodos = []) => oldTodos.filter((oldTodo) => oldTodo.id !== todoItem.id),
+        // Prefix match over ["list"], the same way delete-list-todo does, rather than keying on
+        // ["list", todoItem.listID]. The list-detail endpoint returns ListTodoDto, which has no
+        // listID field at all, so every row on a list screen carries listID === null — keying on
+        // it wrote to ["list", null], a query no screen observes, and the ticked row simply never
+        // left the list.
+        void queryClient.cancelQueries({ queryKey: ["list"] });
+        queryClient.setQueriesData<TodoItemType[]>(
+            { queryKey: ["list"] },
+            (oldTodos) => oldTodos?.filter((oldTodo) => oldTodo.id !== todoItem.id),
         );
 
         showTodoCompletedToast({
             commit: () => commitComplete(todoItem),
             undo: () => {
                 // The server still has the row (incomplete) — a refetch restores it.
-                void queryClient.invalidateQueries({ queryKey: ["list", todoItem.listID] });
+                void queryClient.invalidateQueries({ queryKey: ["list"] });
             },
         });
     };

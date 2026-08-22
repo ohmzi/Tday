@@ -1,16 +1,16 @@
 // @vitest-environment jsdom
 
 /**
- * Reproduction for "ticking a task's checkbox never removes it from the list".
+ * Ticking a task must close the gap in the list straight away.
  *
- * The row runs a staged completion animation and only calls `completeMutateFn` from the LAST
- * timer (~960ms). Everything the user sees afterwards — the row leaving, the rows below moving
- * up — depends on that timer firing while the row is still mounted. This test drives the real
- * checkbox and asserts the cache actually gets pruned.
+ * The row used to run a staged strike-through animation and only call `completeMutateFn` from the
+ * last timer (~960ms), so the list sat with a hole in it — the row was invisible from 620ms but
+ * still occupied its full height — until the animation finished. Completion now prunes in the
+ * same tick, and the undo toast is what puts the row back.
  */
 
 import type { ReactNode } from "react";
-import { act, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -103,9 +103,12 @@ describe("ticking a task row's checkbox", () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    // This config has no globals-based auto cleanup, so a second render would otherwise find
+    // two checkboxes in the same container.
+    cleanup();
   });
 
-  it("prunes the task from the caches once the completion animation finishes", async () => {
+  it("prunes the task in the same tick, with no timers advanced", async () => {
     const queryClient = renderRow();
 
     const checkbox = screen.getByRole("checkbox");
@@ -113,14 +116,24 @@ describe("ticking a task row's checkbox", () => {
       checkbox.click();
     });
 
-    // The animation stages at 280 / 620 / 960ms; the last one is what prunes.
+    // Deliberately no timer advance: the rows below have to move up immediately.
+    expect(queryClient.getQueryData<TodoItemType[]>(["todoTimeline"])?.map((t) => t.id)).toEqual([
+      "todo-2",
+    ]);
+    expect(queryClient.getQueryData<TodoItemType[]>(["todo"])?.map((t) => t.id)).toEqual(["todo-2"]);
+  });
+
+  it("does not re-fire if the checkbox is tapped twice", async () => {
+    const queryClient = renderRow();
+    const checkbox = screen.getByRole("checkbox");
+
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(1200);
+      checkbox.click();
+      checkbox.click();
     });
 
     expect(queryClient.getQueryData<TodoItemType[]>(["todoTimeline"])?.map((t) => t.id)).toEqual([
       "todo-2",
     ]);
-    expect(queryClient.getQueryData<TodoItemType[]>(["todo"])?.map((t) => t.id)).toEqual(["todo-2"]);
   });
 });
