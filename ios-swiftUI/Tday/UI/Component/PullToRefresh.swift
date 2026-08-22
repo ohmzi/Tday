@@ -4,24 +4,33 @@ import UIKit
 struct PullToRefreshContainer<Content: View>: View {
     let isRefreshing: Bool
     let isEnabled: Bool
+    /// Distance from the top of the content to the refresh pill. Screens with a
+    /// pinned header push it clear of the header's toolbar strip.
+    let indicatorTopPadding: CGFloat
     let action: @Sendable () async -> Void
     private let content: Content
 
     init(
         isRefreshing: Bool,
         isEnabled: Bool = true,
+        indicatorTopPadding: CGFloat = TdayRefreshIndicatorMetrics.defaultTopPadding,
         action: @escaping @Sendable () async -> Void,
         @ViewBuilder content: () -> Content
     ) {
         self.isRefreshing = isRefreshing
         self.isEnabled = isEnabled
+        self.indicatorTopPadding = indicatorTopPadding
         self.action = action
         self.content = content()
     }
 
     var body: some View {
         if isEnabled {
-            RefreshContainerBody(isRefreshing: isRefreshing, action: action) {
+            RefreshContainerBody(
+                isRefreshing: isRefreshing,
+                indicatorTopPadding: indicatorTopPadding,
+                action: action
+            ) {
                 content
             }
         } else {
@@ -34,9 +43,15 @@ extension View {
     func tdayPullToRefresh(
         isRefreshing: Bool,
         isEnabled: Bool = true,
+        indicatorTopPadding: CGFloat = TdayRefreshIndicatorMetrics.defaultTopPadding,
         action: @escaping @Sendable () async -> Void
     ) -> some View {
-        PullToRefreshContainer(isRefreshing: isRefreshing, isEnabled: isEnabled, action: action) {
+        PullToRefreshContainer(
+            isRefreshing: isRefreshing,
+            isEnabled: isEnabled,
+            indicatorTopPadding: indicatorTopPadding,
+            action: action
+        ) {
             self
         }
     }
@@ -44,6 +59,7 @@ extension View {
 
 private struct RefreshContainerBody<Content: View>: View {
     let isRefreshing: Bool
+    let indicatorTopPadding: CGFloat
     let action: @Sendable () async -> Void
     private let content: Content
 
@@ -55,10 +71,12 @@ private struct RefreshContainerBody<Content: View>: View {
 
     init(
         isRefreshing: Bool,
+        indicatorTopPadding: CGFloat,
         action: @escaping @Sendable () async -> Void,
         @ViewBuilder content: () -> Content
     ) {
         self.isRefreshing = isRefreshing
+        self.indicatorTopPadding = indicatorTopPadding
         self.action = action
         self.content = content()
     }
@@ -86,7 +104,7 @@ private struct RefreshContainerBody<Content: View>: View {
                     isRefreshing: effectiveRefreshing,
                     pullProgress: pullProgress
                 )
-                .padding(.top, 10)
+                .padding(.top, indicatorTopPadding)
                 .allowsHitTesting(false)
             }
             .onChange(of: isRefreshing) { _, refreshing in
@@ -145,7 +163,8 @@ private struct RefreshContainerBody<Content: View>: View {
     }
 }
 
-private enum TdayRefreshIndicatorMetrics {
+enum TdayRefreshIndicatorMetrics {
+    static let defaultTopPadding: CGFloat = 10
     static let triggerDistance: CGFloat = 112
     static let nativeRefreshReleaseNanoseconds: UInt64 = 250_000_000
     static let handoffHoldNanoseconds: UInt64 = 1_500_000_000
@@ -881,14 +900,18 @@ private struct TopPartialScrollSnapObserver: UIViewRepresentable {
 
         private func maybeSnap(scrollView: UIScrollView) {
             guard !isDisabled, !isSnapping, anchorDistance > 0 else { return }
-            guard maxScrollableOffset(for: scrollView) > 0.5 else { return }
+            let maxOffset = maxScrollableOffset(for: scrollView)
+            guard maxOffset > 0.5 else { return }
 
             let currentOffset = normalizedOffset(for: scrollView)
             guard currentOffset > 0.5 && currentOffset < anchorDistance - 0.5 else {
                 return
             }
 
-            animate(scrollView: scrollView, toNormalizedOffset: 0)
+            // Settle on whichever end of the header morph is nearer, so the hero
+            // header is never left frozen half-collapsed.
+            let target = currentOffset < (anchorDistance / 2) ? 0 : min(anchorDistance, maxOffset)
+            animate(scrollView: scrollView, toNormalizedOffset: target)
         }
 
         private func normalizedOffset(for scrollView: UIScrollView) -> CGFloat {

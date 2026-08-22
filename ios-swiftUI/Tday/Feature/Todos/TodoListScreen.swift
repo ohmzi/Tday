@@ -55,8 +55,6 @@ enum TodoTimelineMetrics {
     static let sectionTopSpacing: CGFloat = 6
     static let sectionHeaderBottomPadding: CGFloat = 2
     static let titleCollapseDistance: CGFloat = 64
-    static let rootFeedTitleTopInset: CGFloat = 32
-    static let rootFeedTitleBottomInset: CGFloat = 12
     static let timelineBottomSpacerHeight: CGFloat = 120
     static let floaterTaskHomeBottomSpacerHeight: CGFloat = 12
     static let rootDockCollapseThreshold: CGFloat = 44
@@ -227,190 +225,6 @@ struct TimelineTopBarAction {
         self.tint = tint
         self.usesCircularChrome = usesCircularChrome
         self.action = action
-    }
-}
-
-private struct RootFeedTitleRow: View {
-    let title: String
-
-    @Environment(\.tdayColors) private var colors
-
-    var body: some View {
-        let daytime = isTodoRootDaytime(Date())
-        let iconColor = daytime
-            ? Color(red: 244.0 / 255.0, green: 197.0 / 255.0, blue: 66.0 / 255.0)
-            : Color(red: 168.0 / 255.0, green: 184.0 / 255.0, blue: 232.0 / 255.0)
-
-        HStack(spacing: 8) {
-            Image(systemName: daytime ? "sun.max.fill" : "moon.stars.fill")
-                .font(.system(size: 26, weight: .regular))
-                .foregroundStyle(iconColor)
-
-            Text(title)
-                .font(.tdayRounded(size: 32, weight: .heavy))
-                .foregroundStyle(colors.onSurface)
-                .lineLimit(1)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.leading, 2)
-        .frame(height: 56)
-    }
-}
-
-private struct RootFeedSearchTitleRow: View {
-    let title: String
-    @Binding var searchExpanded: Bool
-    @Binding var searchQuery: String
-    var searchFieldFocused: FocusState<Bool>.Binding
-    let onSearchClose: () -> Void
-    let onCreateList: () -> Void
-    let onOpenSettings: () -> Void
-
-    @Environment(\.tdayColors) private var colors
-
-    var body: some View {
-        let buttonSize = TodoTimelineMetrics.topBarButtonFrame
-        let buttonGap: CGFloat = 8
-
-        GeometryReader { proxy in
-            let totalWidth = proxy.size.width
-            let searchWidth = searchExpanded ? max(buttonSize, totalWidth) : buttonSize
-            let actionCount: CGFloat = 2
-            let collapsedSearchOffset = -((buttonSize * actionCount) + (buttonGap * actionCount))
-            let searchOffsetX = searchExpanded ? 0 : collapsedSearchOffset
-            let daytime = isTodoRootDaytime(Date())
-            let iconColor = daytime
-                ? Color(red: 244.0 / 255.0, green: 197.0 / 255.0, blue: 66.0 / 255.0)
-                : Color(red: 168.0 / 255.0, green: 184.0 / 255.0, blue: 232.0 / 255.0)
-
-            ZStack(alignment: .trailing) {
-                HStack(spacing: 8) {
-                    Image(systemName: daytime ? "sun.max.fill" : "moon.stars.fill")
-                        .font(.system(size: 26, weight: .regular))
-                        .foregroundStyle(iconColor)
-
-                    Text(title)
-                        .font(.tdayRounded(size: 32, weight: .heavy))
-                        .foregroundStyle(colors.onSurface)
-                        .lineLimit(1)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.leading, 2)
-                .opacity(searchExpanded ? 0 : 1)
-                .allowsHitTesting(false)
-
-                HStack(spacing: buttonGap) {
-                    RootFeedHeaderIconButton(icon: "NavListPlus", action: onCreateList)
-                        .accessibilityLabel("Create list")
-                    RootFeedHeaderIconButton(icon: "NavEllipsis", action: onOpenSettings)
-                        .accessibilityLabel("More")
-                }
-                .opacity(searchExpanded ? 0 : 1)
-                .allowsHitTesting(!searchExpanded)
-
-                ZStack {
-                    Button {
-                        HapticManager.buttonTap()
-                        withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
-                            searchExpanded = true
-                        }
-                    } label: {
-                        Image("NavSearch")
-                            .renderingMode(.template)
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 22, height: 22)
-                            .foregroundStyle(colors.onSurface)
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    }
-                    .buttonStyle(
-                        TdayToolbarButtonStyle()
-                    )
-                    .opacity(searchExpanded ? 0 : 1)
-                    .allowsHitTesting(!searchExpanded)
-                    .accessibilityLabel("Search")
-
-                    HStack(spacing: 10) {
-                        Image("NavSearch")
-                            .renderingMode(.template)
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 20, height: 20)
-                            .foregroundStyle(colors.onSurface)
-                            .frame(width: 30, height: 30)
-
-                        TextField("", text: $searchQuery, prompt: Text("Search").foregroundStyle(colors.onSurfaceVariant))
-                            .focused(searchFieldFocused)
-                            .textInputAutocapitalization(.never)
-                            .autocorrectionDisabled()
-                            .font(.tdayRounded(size: 18, weight: .bold))
-                            .foregroundStyle(colors.onSurface)
-                            .tint(colors.primary)
-                            .disabled(!searchExpanded)
-
-                        Button(action: { HapticManager.sheetDismiss(); onSearchClose() }) {
-                            Image("NavClose")
-                                .renderingMode(.template)
-                                .resizable()
-                                .scaledToFit()
-                                .frame(width: 18, height: 18)
-                                .foregroundStyle(colors.onSurfaceVariant.opacity(0.78))
-                        }
-                        .buttonStyle(
-                            TdayPressButtonStyle(
-                                shadowColor: Color.black,
-                                pressedShadowOpacity: 0,
-                                normalShadowOpacity: 0
-                            )
-                        )
-                        .accessibilityLabel("Cancel search")
-                    }
-                    .padding(.horizontal, 14)
-                    .opacity(searchExpanded ? 1 : 0)
-                    .allowsHitTesting(searchExpanded)
-                }
-                .frame(width: searchWidth, height: buttonSize)
-                .background(colors.surface, in: Capsule())
-                .overlay(
-                    Capsule()
-                        .stroke(colors.onSurface.opacity(0.26), lineWidth: 1)
-                )
-                .offset(x: searchOffsetX)
-                .zIndex(2)
-                .animation(.spring(response: 0.28, dampingFraction: 0.86), value: searchExpanded)
-            }
-        }
-        .frame(height: TodoTimelineMetrics.topBarRowHeight)
-    }
-}
-
-private struct RootFeedHeaderIconButton: View {
-    /// Asset-catalog name of the lucide template glyph (shared with the scheduled task home screen/web/Android).
-    let icon: String
-    let action: () -> Void
-
-    @Environment(\.tdayColors) private var colors
-
-    var body: some View {
-        Button(action: action) {
-            Image(icon)
-                .renderingMode(.template)
-                .resizable()
-                .scaledToFit()
-                .frame(width: 22, height: 22)
-                .foregroundStyle(colors.onSurface)
-                .frame(
-                    width: TodoTimelineMetrics.topBarButtonFrame,
-                    height: TodoTimelineMetrics.topBarButtonFrame
-                )
-                .background(colors.surface)
-                .clipShape(Circle())
-                .overlay {
-                    Circle()
-                        .stroke(colors.onSurface.opacity(0.34), lineWidth: 1)
-                }
-        }
-        .buttonStyle(TdayToolbarButtonStyle())
     }
 }
 
@@ -837,6 +651,11 @@ struct TodoListScreen: View {
         refreshableModeContent
         .coordinateSpace(name: todoTimelineDragCoordinateSpace)
         .background(colors.background)
+        .overlay(alignment: .top) {
+            if usesRootFeedHeader {
+                rootFeedHeroHeader
+            }
+        }
         .onPreferenceChange(TodoDropTargetFramePreferenceKey.self) { frames in
             dropTargetFrames = frames
         }
@@ -1026,6 +845,9 @@ struct TodoListScreen: View {
             PullToRefreshContainer(
                 isRefreshing: viewModel.isLoading,
                 isEnabled: pullRefreshEnabled,
+                // Pull-to-refresh only happens at the top of the feed, where
+                // the hero header is fully expanded — clear all of it.
+                indicatorTopPadding: RootFeedHeroHeaderMetrics.expandedHeight + 10,
                 action: {
                     await viewModel.refresh(userInitiated: true)
                 }
@@ -1154,51 +976,54 @@ struct TodoListScreen: View {
         .listRowSeparator(.hidden)
     }
 
-    private var rootFeedTitleRow: some View {
-        Group {
-            if isFloaterTaskHomeScreen {
-                RootFeedSearchTitleRow(
-                    title: viewModel.title,
-                    searchExpanded: $floaterTaskHomeSearchExpanded,
-                    searchQuery: $floaterTaskHomeSearchQuery,
-                    searchFieldFocused: $floaterTaskHomeSearchFieldFocused,
-                    onSearchClose: {
-                        closeFloaterTaskHomeSearch()
-                    },
-                    onCreateList: {
-                        closeFloaterTaskHomeSearch()
-                        HapticManager.buttonTap()
-                        showingCreateList = true
-                    },
-                    onOpenSettings: {
-                        closeFloaterTaskHomeSearch()
-                        onOpenSettings()
-                    }
-                )
-            } else {
-                RootFeedTitleRow(title: viewModel.title)
-            }
-        }
+    // Reserves the pinned hero header's space at the top of the root feed.
+    // Rows scroll behind the header, which folds down into its always-visible
+    // toolbar strip as this spacer scrolls away.
+    private var rootFeedHeaderSpacerRow: some View {
+        Color.clear
+            .frame(height: RootFeedHeroHeaderMetrics.expandedHeight)
             .background {
                 TimelineScrollOffsetObserver { timelineScrollOffset = $0 }
                     .frame(width: 0, height: 0)
             }
-            .listRowInsets(
-                EdgeInsets(
-                    top: TodoTimelineMetrics.rootFeedTitleTopInset,
-                    leading: TodoTimelineMetrics.horizontalPadding,
-                    bottom: TodoTimelineMetrics.rootFeedTitleBottomInset,
-                    trailing: TodoTimelineMetrics.horizontalPadding
-                )
+            .allowsHitTesting(false)
+            .onTopPartialScrollSnap(
+                anchorDistance: RootFeedHeroHeaderMetrics.collapseDistance,
+                isDisabled: floaterTaskHomeSearchExpanded
             )
+            .listRowInsets(EdgeInsets())
             .listRowBackground(colors.background)
             .listRowSeparator(.hidden)
+    }
+
+    private var rootFeedHeroHeader: some View {
+        RootFeedHeroHeader(
+            title: viewModel.title,
+            collapseProgress: RootFeedHeroHeaderMetrics.collapseProgress(
+                forScrollOffset: timelineScrollOffset
+            ),
+            coordinateSpaceName: todoTimelineDragCoordinateSpace,
+            searchExpanded: $floaterTaskHomeSearchExpanded,
+            searchQuery: $floaterTaskHomeSearchQuery,
+            searchFieldFocused: $floaterTaskHomeSearchFieldFocused,
+            onSearchClose: {
+                closeFloaterTaskHomeSearch()
+            },
+            onCreateList: {
+                closeFloaterTaskHomeSearch()
+                showingCreateList = true
+            },
+            onOpenSettings: {
+                closeFloaterTaskHomeSearch()
+                onOpenSettings()
+            }
+        )
     }
 
     @ViewBuilder
     private var timelineHeroTitleRow: some View {
         if usesRootFeedHeader {
-            rootFeedTitleRow
+            rootFeedHeaderSpacerRow
         } else {
             timelineHeroTitleRowBase
                 .onVerticalScrollSnap(collapseDistance: TodoTimelineMetrics.titleCollapseDistance)
