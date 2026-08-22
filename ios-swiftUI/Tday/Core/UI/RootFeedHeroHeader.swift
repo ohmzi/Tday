@@ -1,20 +1,43 @@
+import Observation
 import SwiftUI
+import UIKit
+
+/// Feed geometry the pinned root-feed header reacts to.
+///
+/// This is an `@Observable` box rather than plain `@State` on the screen on
+/// purpose: the scroll offset changes every frame, and the screens that own the
+/// header have very large bodies (the whole Scheduled board, the whole Floater
+/// list). Keeping the offset here means a scroll frame invalidates only the
+/// header, not the feed behind it.
+@Observable
+final class RootFeedHeaderScrollState {
+    /// Feed scroll offset, clamped at 0. Drives the collapse morph.
+    var offset: CGFloat = 0
+    /// 0…1 visibility of the pull-to-refresh pill, which lands in the same band
+    /// as the hero title; the title fades out to hand the space over.
+    var refreshReveal: CGFloat = 0
+}
 
 /// Geometry for the root-feed hero header shared by the Scheduled and Floater
 /// home screens.
 ///
-/// The header is pinned above the feed: the toolbar strip (`barHeight`) — logo
-/// mark, title, search, create-list and settings — stays put while the feed
-/// scrolls out of sight behind it. `collapseProgress` (0 at the top of the
-/// feed, 1 once the feed has scrolled `collapseDistance`) morphs the sun from a
-/// large top-left mark down to the compact toolbar glyph while the title slides
-/// from its centred hero position up beside it.
+/// The header is pinned above the feed: the toolbar strip (`barHeight`) stays
+/// put while the feed scrolls out of sight behind it. As the feed scrolls the
+/// sun shrinks into the toolbar glyph, the title slides up from its centred
+/// hero position to sit beside it, and the search field folds down into a round
+/// button to make room for the title.
+///
+/// The three moves run on staggered curves, not one shared progress: the search
+/// field and the sun clear out first, and the title only drops into the toolbar
+/// row once it has finished travelling left. Sharing one curve makes the title
+/// cut straight through the search field mid-scroll.
 enum RootFeedHeroHeaderMetrics {
     static let horizontalPadding: CGFloat = 18
     static let topInset: CGFloat = 18
     static let barButtonSize: CGFloat = 56
     static let barButtonSpacing: CGFloat = 8
-    static let compactIconSize: CGFloat = 30
+    static let searchIconSlot: CGFloat = 30
+    static let searchLeadingPadding: CGFloat = 13
 
     /// Always-visible toolbar strip height, measured from the top safe area.
     static let barHeight: CGFloat = topInset + barButtonSize
@@ -26,24 +49,91 @@ enum RootFeedHeroHeaderMetrics {
     static let collapseDistance: CGFloat = heroTitleHeight
     /// Overscan for the toolbar backdrop so it also covers the status bar.
     static let backdropOverscan: CGFloat = 200
+    /// Where the pull-to-refresh pill sits: just clear of the toolbar strip.
+    static let refreshIndicatorTopPadding: CGFloat = barHeight + 12
 
-    static let compactSunBox: CGFloat = 30
-    static let heroSunBox: CGFloat = 72
-    static let compactSunFontSize: CGFloat = 26
-    static let heroSunFontSize: CGFloat = 62
-    static let compactTitleFontSize: CGFloat = 32
-    /// Hero title is drawn at the compact size and scaled, so its measured
-    /// width stays valid for both ends of the morph.
-    static let heroTitleScale: CGFloat = 1.25
-    static let sunLeading: CGFloat = horizontalPadding + 2
-    static let titleGap: CGFloat = 8
     static let compactRowCenterY: CGFloat = topInset + (barButtonSize / 2)
+
+    // Sun. Rendered once at the hero size and scaled *down*, so the glyph is
+    // never resampled up and the morph is a GPU transform rather than a new
+    // symbol rasterisation on every scroll frame.
+    static let heroSunBox: CGFloat = 72
+    static let compactSunBox: CGFloat = 30
+    static let heroSunFontSize: CGFloat = 62
+    static let sunLeading: CGFloat = horizontalPadding + 2
     static let heroSunCenterY: CGFloat = compactRowCenterY + 10
+
+    // Title. Same trick: laid out at the hero size, scaled down to compact.
+    static let heroTitleFontSize: CGFloat = 40
+    static let maxCompactTitleScale: CGFloat = 0.8
+    static let minTitleScale: CGFloat = 0.5
     static let heroTitleCenterY: CGFloat = barHeight + (heroTitleHeight / 2)
+    static let titleGap: CGFloat = 8
+
+    // Search field. Its trailing edge is fixed just inside the two round
+    // buttons; only the leading edge travels, so it folds down into a button
+    // in place instead of sliding across the toolbar.
+    static let searchTrailingInset: CGFloat =
+        horizontalPadding + (barButtonSize * 2) + (barButtonSpacing * 2)
+    static let heroSearchLeading: CGFloat = sunLeading + heroSunBox + barButtonSpacing
+    /// Capsule widths between which the "Search" placeholder fades in. The
+    /// upper bound is where the whole word fits without the capsule's trailing
+    /// cap clipping it.
+    static let searchLabelFadeStart: CGFloat = 100
+    static let searchLabelFadeEnd: CGFloat = 124
+
+    // Staggered curve endpoints, as a fraction of `collapseDistance`. Solved
+    // so that across every supported width and localised title the title never
+    // crosses the sun, the search field or the buttons, and the rising feed
+    // never clips it. The title's *vertical* travel is deliberately NOT
+    // staggered: the feed rises 78pt while the title only rises 67pt, so any
+    // delay there lets the first card cut into the title's descenders.
+    static let sunCollapseEnd: CGFloat = 0.30
+    static let searchCollapseEnd: CGFloat = 0.35
+    static let titleTravelEnd: CGFloat = 0.40
+
+    static let searchMorph = Animation.spring(response: 0.30, dampingFraction: 0.86)
 
     static func collapseProgress(forScrollOffset offset: CGFloat) -> CGFloat {
         guard collapseDistance > 0 else { return 1 }
-        return min(max(offset / collapseDistance, 0), 1)
+        return clamp(offset / collapseDistance)
+    }
+
+    static func clamp(_ value: CGFloat) -> CGFloat {
+        min(max(value, 0), 1)
+    }
+
+    static func lerp(_ from: CGFloat, _ to: CGFloat, _ fraction: CGFloat) -> CGFloat {
+        from + ((to - from) * fraction)
+    }
+
+    /// Fit-to-space caps for both ends of the title morph. A long localised
+    /// title ("Fluttuante", "Запланировано") would otherwise sit under the sun
+    /// while centred, and under the search button once docked beside it.
+    static func titleScales(
+        titleWidth: CGFloat,
+        availableWidth: CGFloat
+    ) -> (hero: CGFloat, compact: CGFloat) {
+        guard titleWidth > 0 else { return (1, maxCompactTitleScale) }
+
+        let heroRoom = availableWidth - (heroSearchLeading * 2)
+        let hero = max(minTitleScale, min(1, heroRoom / titleWidth))
+
+        let compactRoom = (availableWidth - searchTrailingInset - barButtonSize)
+            - (sunLeading + compactSunBox + titleGap)
+            - titleGap
+        let compact = max(minTitleScale, min(maxCompactTitleScale * hero, compactRoom / titleWidth))
+
+        return (hero, min(compact, hero))
+    }
+
+    /// Ease-in-out over `[0, end]` of the raw collapse progress. Smoothstep on
+    /// each leg is what takes the morph from linear-and-janky to continuous:
+    /// velocity is zero at both ends, so nothing snaps when a curve finishes.
+    static func stagger(_ progress: CGFloat, from start: CGFloat = 0, to end: CGFloat) -> CGFloat {
+        guard end > start else { return progress >= end ? 1 : 0 }
+        let normalized = clamp((progress - start) / (end - start))
+        return normalized * normalized * (3 - (2 * normalized))
     }
 
     static func isDaytime(_ date: Date) -> Bool {
@@ -59,14 +149,10 @@ enum RootFeedHeroHeaderMetrics {
             ? Color(.sRGB, red: 244.0 / 255.0, green: 197.0 / 255.0, blue: 66.0 / 255.0, opacity: 1)
             : Color(.sRGB, red: 168.0 / 255.0, green: 184.0 / 255.0, blue: 232.0 / 255.0, opacity: 1)
     }
-
-    static func lerp(_ from: CGFloat, _ to: CGFloat, _ fraction: CGFloat) -> CGFloat {
-        from + ((to - from) * fraction)
-    }
 }
 
-/// Frame of the search capsule, reported in the owning screen's coordinate
-/// space so it can anchor a results overlay directly beneath it.
+/// Frame of the search field, reported in the owning screen's coordinate space
+/// so it can anchor a results overlay directly beneath it.
 struct RootFeedSearchBarFrameKey: PreferenceKey {
     static var defaultValue: CGRect = .zero
 
@@ -85,9 +171,8 @@ private struct RootFeedHeroTitleWidthKey: PreferenceKey {
 
 struct RootFeedHeroHeader: View {
     let title: String
-    /// 0 = hero layout, 1 = compact toolbar.
-    let collapseProgress: CGFloat
-    /// Coordinate space the search capsule frame is reported in.
+    let scroll: RootFeedHeaderScrollState
+    /// Coordinate space the search field frame is reported in.
     let coordinateSpaceName: String
     @Binding var searchExpanded: Bool
     @Binding var searchQuery: String
@@ -101,16 +186,12 @@ struct RootFeedHeroHeader: View {
 
     private typealias Metrics = RootFeedHeroHeaderMetrics
 
-    private var progress: CGFloat {
-        min(max(collapseProgress, 0), 1)
-    }
-
-    /// 1 while the feed is at the top, 0 once the header has folded away.
-    private var expansion: CGFloat {
-        1 - progress
-    }
-
     var body: some View {
+        // Read the observable geometry here, in the header's own body, so the
+        // dependency is registered on this view and nothing above it.
+        let progress = Metrics.collapseProgress(forScrollOffset: scroll.offset)
+        let refreshReveal = Metrics.clamp(scroll.refreshReveal)
+
         GeometryReader { proxy in
             let width = proxy.size.width
 
@@ -122,9 +203,10 @@ struct RootFeedHeroHeader: View {
                     .frame(height: Metrics.barHeight + Metrics.backdropOverscan)
                     .offset(y: -Metrics.backdropOverscan)
 
-                heroSun
-                heroTitle(width: width)
-                actionRow(width: width)
+                heroSun(progress: progress)
+                heroTitle(width: width, progress: progress, refreshReveal: refreshReveal)
+                trailingActions(width: width)
+                searchField(width: width, progress: progress)
             }
             .frame(width: width, height: Metrics.expandedHeight, alignment: .topLeading)
         }
@@ -134,34 +216,43 @@ struct RootFeedHeroHeader: View {
         }
     }
 
-    private var heroSun: some View {
-        let box = Metrics.lerp(Metrics.compactSunBox, Metrics.heroSunBox, expansion)
-        let fontSize = Metrics.lerp(Metrics.compactSunFontSize, Metrics.heroSunFontSize, expansion)
-        let centerY = Metrics.lerp(Metrics.compactRowCenterY, Metrics.heroSunCenterY, expansion)
+    private func heroSun(progress: CGFloat) -> some View {
+        let collapse = Metrics.stagger(progress, to: Metrics.sunCollapseEnd)
+        let box = Metrics.lerp(Metrics.heroSunBox, Metrics.compactSunBox, collapse)
+        let centerY = Metrics.lerp(Metrics.heroSunCenterY, Metrics.compactRowCenterY, collapse)
 
         return TimelineView(.periodic(from: .now, by: 60)) { context in
             Image(systemName: RootFeedHeroHeaderMetrics.sunSymbolName(for: context.date))
-                .font(.system(size: fontSize, weight: .regular))
+                .font(.system(size: Metrics.heroSunFontSize, weight: .regular))
                 .foregroundStyle(RootFeedHeroHeaderMetrics.sunColor(for: context.date))
-                .frame(width: box, height: box)
+                .frame(width: Metrics.heroSunBox, height: Metrics.heroSunBox)
         }
-        .frame(width: box, height: box)
+        .frame(width: Metrics.heroSunBox, height: Metrics.heroSunBox)
+        .scaleEffect(box / Metrics.heroSunBox)
         .position(x: Metrics.sunLeading + (box / 2), y: centerY)
         .opacity(searchExpanded ? 0 : 1)
         .allowsHitTesting(false)
     }
 
-    private func heroTitle(width: CGFloat) -> some View {
-        let scale = Metrics.lerp(1, Metrics.heroTitleScale, expansion)
+    private func heroTitle(width: CGFloat, progress: CGFloat, refreshReveal: CGFloat) -> some View {
+        let travel = Metrics.stagger(progress, to: Metrics.titleTravelEnd)
+        let drop = Metrics.stagger(progress, to: 1)
+        let fit = Metrics.titleScales(titleWidth: titleWidth, availableWidth: width)
+        let scale = Metrics.lerp(fit.hero, fit.compact, travel)
         let compactCenterX = Metrics.sunLeading
             + Metrics.compactSunBox
             + Metrics.titleGap
-            + (titleWidth / 2)
-        let centerX = Metrics.lerp(compactCenterX, width / 2, expansion)
-        let centerY = Metrics.lerp(Metrics.compactRowCenterY, Metrics.heroTitleCenterY, expansion)
+            + ((titleWidth * fit.compact) / 2)
+        let centerX = Metrics.lerp(width / 2, compactCenterX, travel)
+        let centerY = Metrics.lerp(Metrics.heroTitleCenterY, Metrics.compactRowCenterY, drop)
+
+        // The pill only ever lands in the hero band, so the title yields in
+        // proportion to how much of that band it still occupies — once docked in
+        // the toolbar it stays put even mid-refresh.
+        let refreshFade = refreshReveal * (1 - drop)
 
         return Text(title)
-            .font(.tdayRounded(size: Metrics.compactTitleFontSize, weight: .heavy))
+            .font(.tdayRounded(size: Metrics.heroTitleFontSize, weight: .heavy))
             .foregroundStyle(colors.onSurface)
             .lineLimit(1)
             .fixedSize()
@@ -173,121 +264,167 @@ struct RootFeedHeroHeader: View {
             }
             .scaleEffect(scale)
             .position(x: centerX, y: centerY)
-            .opacity(searchExpanded ? 0 : 1)
+            .opacity(searchExpanded ? 0 : Double(1 - refreshFade))
             .allowsHitTesting(false)
     }
 
-    private func actionRow(width: CGFloat) -> some View {
-        let buttonSize = Metrics.barButtonSize
-        let gap = Metrics.barButtonSpacing
-        let rowWidth = max(buttonSize, width - (Metrics.horizontalPadding * 2))
-        let actionCount: CGFloat = 2
-        let collapsedSearchOffset = -((buttonSize * actionCount) + (gap * actionCount))
+    private func trailingActions(width: CGFloat) -> some View {
+        let rowWidth = (Metrics.barButtonSize * 2) + Metrics.barButtonSpacing
 
-        return ZStack(alignment: .trailing) {
-            HStack(spacing: gap) {
-                RootFeedHeaderCircleButton(icon: "NavListPlus") {
-                    HapticManager.buttonTap()
-                    onCreateList()
-                }
-                .accessibilityLabel("Create list")
-
-                RootFeedHeaderCircleButton(icon: "NavEllipsis") {
-                    HapticManager.gentleTap()
-                    onOpenSettings()
-                }
-                .accessibilityLabel("More")
+        return HStack(spacing: Metrics.barButtonSpacing) {
+            RootFeedHeaderCircleButton(icon: "NavListPlus") {
+                HapticManager.buttonTap()
+                onCreateList()
             }
-            .opacity(searchExpanded ? 0 : 1)
-            .allowsHitTesting(!searchExpanded)
+            .accessibilityLabel("Create list")
 
-            searchCapsule
-                .frame(width: searchExpanded ? rowWidth : buttonSize, height: buttonSize)
-                .background(colors.surface, in: Capsule())
-                .overlay(
-                    Capsule()
-                        .stroke(colors.onSurface.opacity(0.26), lineWidth: 1)
-                )
-                .offset(x: searchExpanded ? 0 : collapsedSearchOffset)
-                .background(
-                    GeometryReader { proxy in
-                        Color.clear
-                            .preference(
-                                key: RootFeedSearchBarFrameKey.self,
-                                value: proxy.frame(in: .named(coordinateSpaceName))
-                            )
-                    }
-                )
-                .zIndex(2)
-                .animation(.spring(response: 0.28, dampingFraction: 0.86), value: searchExpanded)
+            RootFeedHeaderCircleButton(icon: "NavEllipsis") {
+                HapticManager.gentleTap()
+                onOpenSettings()
+            }
+            .accessibilityLabel("More")
         }
-        .frame(width: rowWidth, height: buttonSize)
-        .position(x: width / 2, y: Metrics.compactRowCenterY)
+        .frame(width: rowWidth, height: Metrics.barButtonSize)
+        .position(
+            x: width - Metrics.horizontalPadding - (rowWidth / 2),
+            y: Metrics.compactRowCenterY
+        )
+        .opacity(searchExpanded ? 0 : 1)
+        .allowsHitTesting(!searchExpanded)
     }
 
-    private var searchCapsule: some View {
-        ZStack {
-            Button {
-                HapticManager.buttonTap()
-                withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
-                    searchExpanded = true
-                }
-            } label: {
-                Image("NavSearch")
-                    .renderingMode(.template)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 22, height: 22)
-                    .foregroundStyle(colors.onSurface)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+    private func searchField(width: CGFloat, progress: CGFloat) -> some View {
+        let collapse = Metrics.stagger(progress, to: Metrics.searchCollapseEnd)
+        let trailingX = width - Metrics.searchTrailingInset
+        let heroWidth = max(Metrics.barButtonSize, trailingX - Metrics.heroSearchLeading)
+        let restingWidth = Metrics.lerp(heroWidth, Metrics.barButtonSize, collapse)
+        let fieldWidth = searchExpanded
+            ? max(Metrics.barButtonSize, width - (Metrics.horizontalPadding * 2))
+            : restingWidth
+        let leadingX = searchExpanded ? Metrics.horizontalPadding : trailingX - restingWidth
+        let labelOpacity = Metrics.clamp(
+            (restingWidth - Metrics.searchLabelFadeStart)
+                / max(1, Metrics.searchLabelFadeEnd - Metrics.searchLabelFadeStart)
+        )
+
+        // A clear base fixes the capsule's size and both states ride on top as
+        // overlays. Putting them in a ZStack instead lets their intrinsic width
+        // (the fixed icon slot plus a fixedSize label, ~100pt) become the
+        // container's minimum, which at the 56pt collapsed width would centre
+        // the oversized content and shove the magnifier off the capsule.
+        return Color.clear
+            .frame(width: fieldWidth, height: Metrics.barButtonSize)
+            .overlay {
+                searchRestingContent(labelOpacity: labelOpacity)
+                    .opacity(searchExpanded ? 0 : 1)
+                    .allowsHitTesting(!searchExpanded)
             }
-            .buttonStyle(TdayToolbarButtonStyle())
-            .opacity(searchExpanded ? 0 : 1)
-            .allowsHitTesting(!searchExpanded)
-            .accessibilityLabel("Search")
-
-            HStack(spacing: 10) {
-                Image("NavSearch")
-                    .renderingMode(.template)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 20, height: 20)
-                    .foregroundStyle(colors.onSurface)
-                    .frame(width: Metrics.compactIconSize, height: Metrics.compactIconSize)
-
-                TextField("", text: $searchQuery, prompt: Text("Search").foregroundStyle(colors.onSurfaceVariant))
-                    .focused(searchFieldFocused)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .font(.tdayRounded(size: 18, weight: .bold))
-                    .foregroundStyle(colors.onSurface)
-                    .tint(colors.primary)
-                    .disabled(!searchExpanded)
-
-                Button {
-                    HapticManager.sheetDismiss()
-                    onSearchClose()
-                } label: {
-                    Image("NavClose")
-                        .renderingMode(.template)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 18, height: 18)
-                        .foregroundStyle(colors.onSurfaceVariant.opacity(0.78))
-                }
-                .buttonStyle(
-                    TdayPressButtonStyle(
-                        shadowColor: Color.black,
-                        pressedShadowOpacity: 0,
-                        normalShadowOpacity: 0
-                    )
-                )
-                .accessibilityLabel("Cancel search")
+            .overlay {
+                searchActiveContent
+                    .opacity(searchExpanded ? 1 : 0)
+                    .allowsHitTesting(searchExpanded)
             }
-            .padding(.horizontal, 14)
-            .opacity(searchExpanded ? 1 : 0)
-            .allowsHitTesting(searchExpanded)
+            .clipShape(Capsule())
+            .background(colors.surface, in: Capsule())
+            .overlay(
+                Capsule()
+                    .stroke(colors.onSurface.opacity(0.26), lineWidth: 1)
+            )
+            // Only published while the field is open. The capsule's frame changes
+            // on every scroll frame as it folds, and a preference that churns
+            // would drag the owning screen's body into the scroll loop — the very
+            // thing the observable scroll state exists to avoid.
+            .background(
+                GeometryReader { proxy in
+                    Color.clear
+                        .preference(
+                            key: RootFeedSearchBarFrameKey.self,
+                            value: searchExpanded ? proxy.frame(in: .named(coordinateSpaceName)) : .zero
+                        )
+                }
+            )
+            .position(x: leadingX + (fieldWidth / 2), y: Metrics.compactRowCenterY)
+            .animation(Metrics.searchMorph, value: searchExpanded)
+    }
+
+    private func searchRestingContent(labelOpacity: CGFloat) -> some View {
+        Button {
+            HapticManager.buttonTap()
+            withAnimation(Metrics.searchMorph) {
+                searchExpanded = true
+            }
+        } label: {
+            Color.clear
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                // Leading overlay, not an HStack: the glyph must stay pinned at
+                // searchLeadingPadding (which centres it once the capsule is a
+                // 56pt button) while the placeholder simply runs off the end and
+                // is clipped by the capsule.
+                .overlay(alignment: .leading) {
+                    HStack(spacing: 2) {
+                        Image("NavSearch")
+                            .renderingMode(.template)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 22, height: 22)
+                            .foregroundStyle(colors.onSurface)
+                            .frame(width: Metrics.searchIconSlot, height: Metrics.barButtonSize)
+
+                        Text("Search")
+                            .font(.tdayRounded(size: 17, weight: .bold))
+                            .foregroundStyle(colors.onSurfaceVariant)
+                            .lineLimit(1)
+                            .fixedSize()
+                            .opacity(Double(labelOpacity))
+                    }
+                    .padding(.leading, Metrics.searchLeadingPadding)
+                }
+                .contentShape(Rectangle())
         }
+        .buttonStyle(TdayToolbarButtonStyle(shadowsEnabled: false))
+        .accessibilityLabel("Search")
+    }
+
+    private var searchActiveContent: some View {
+        HStack(spacing: 10) {  // sized by the capsule it overlays, never the reverse
+            Image("NavSearch")
+                .renderingMode(.template)
+                .resizable()
+                .scaledToFit()
+                .frame(width: 20, height: 20)
+                .foregroundStyle(colors.onSurface)
+                .frame(width: Metrics.searchIconSlot, height: Metrics.searchIconSlot)
+
+            TextField("", text: $searchQuery, prompt: Text("Search").foregroundStyle(colors.onSurfaceVariant))
+                .focused(searchFieldFocused)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .font(.tdayRounded(size: 18, weight: .bold))
+                .foregroundStyle(colors.onSurface)
+                .tint(colors.primary)
+                .disabled(!searchExpanded)
+
+            Button {
+                HapticManager.sheetDismiss()
+                onSearchClose()
+            } label: {
+                Image("NavClose")
+                    .renderingMode(.template)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 18, height: 18)
+                    .foregroundStyle(colors.onSurfaceVariant.opacity(0.78))
+            }
+            .buttonStyle(
+                TdayPressButtonStyle(
+                    shadowColor: Color.black,
+                    pressedShadowOpacity: 0,
+                    normalShadowOpacity: 0
+                )
+            )
+            .accessibilityLabel("Cancel search")
+        }
+        .padding(.horizontal, 14)
     }
 }
 
@@ -318,5 +455,97 @@ private struct RootFeedHeaderCircleButton: View {
                 }
         }
         .buttonStyle(TdayToolbarButtonStyle())
+    }
+}
+
+/// Publishes the feed's scroll offset into `RootFeedHeaderScrollState`, and
+/// calls back only when the root dock's collapse threshold is crossed — the
+/// per-frame offset must not touch the owning screen's `@State`.
+struct RootFeedHeaderScrollObserver: UIViewRepresentable {
+    let state: RootFeedHeaderScrollState
+    let collapseThreshold: CGFloat
+    let onCollapsedChange: (Bool) -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(state: state, collapseThreshold: collapseThreshold, onCollapsedChange: onCollapsedChange)
+    }
+
+    func makeUIView(context: Context) -> UIView {
+        let view = UIView(frame: .zero)
+        view.isUserInteractionEnabled = false
+        return view
+    }
+
+    func updateUIView(_ uiView: UIView, context: Context) {
+        context.coordinator.collapseThreshold = collapseThreshold
+        context.coordinator.onCollapsedChange = onCollapsedChange
+        DispatchQueue.main.async {
+            context.coordinator.attach(to: uiView)
+        }
+    }
+
+    final class Coordinator {
+        let state: RootFeedHeaderScrollState
+        var collapseThreshold: CGFloat
+        var onCollapsedChange: (Bool) -> Void
+
+        private weak var observedScrollView: UIScrollView?
+        private var observation: NSKeyValueObservation?
+        private var lastCollapsed: Bool?
+
+        init(
+            state: RootFeedHeaderScrollState,
+            collapseThreshold: CGFloat,
+            onCollapsedChange: @escaping (Bool) -> Void
+        ) {
+            self.state = state
+            self.collapseThreshold = collapseThreshold
+            self.onCollapsedChange = onCollapsedChange
+        }
+
+        func attach(to view: UIView) {
+            guard let scrollView = view.rootFeedEnclosingScrollView() else {
+                return
+            }
+            guard observedScrollView !== scrollView else {
+                return
+            }
+
+            observedScrollView = scrollView
+            observation = scrollView.observe(\.contentOffset, options: [.initial, .new]) { [weak self] scrollView, _ in
+                let offset = max(scrollView.contentOffset.y + scrollView.adjustedContentInset.top, 0)
+                if Thread.isMainThread {
+                    self?.publish(offset)
+                } else {
+                    DispatchQueue.main.async {
+                        self?.publish(offset)
+                    }
+                }
+            }
+        }
+
+        private func publish(_ offset: CGFloat) {
+            if abs(state.offset - offset) > 0.01 {
+                state.offset = offset
+            }
+
+            let collapsed = offset > collapseThreshold
+            guard lastCollapsed != collapsed else { return }
+            lastCollapsed = collapsed
+            onCollapsedChange(collapsed)
+        }
+    }
+}
+
+private extension UIView {
+    func rootFeedEnclosingScrollView() -> UIScrollView? {
+        var current: UIView? = self
+        while let view = current {
+            if let scrollView = view as? UIScrollView {
+                return scrollView
+            }
+            current = view.superview
+        }
+        return nil
     }
 }

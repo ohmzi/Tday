@@ -7,6 +7,9 @@ struct PullToRefreshContainer<Content: View>: View {
     /// Distance from the top of the content to the refresh pill. Screens with a
     /// pinned header push it clear of the header's toolbar strip.
     let indicatorTopPadding: CGFloat
+    /// 0…1 visibility of the pill, for screens whose own chrome shares that
+    /// band and needs to move out of the way.
+    let onIndicatorRevealChange: ((CGFloat) -> Void)?
     let action: @Sendable () async -> Void
     private let content: Content
 
@@ -14,12 +17,14 @@ struct PullToRefreshContainer<Content: View>: View {
         isRefreshing: Bool,
         isEnabled: Bool = true,
         indicatorTopPadding: CGFloat = TdayRefreshIndicatorMetrics.defaultTopPadding,
+        onIndicatorRevealChange: ((CGFloat) -> Void)? = nil,
         action: @escaping @Sendable () async -> Void,
         @ViewBuilder content: () -> Content
     ) {
         self.isRefreshing = isRefreshing
         self.isEnabled = isEnabled
         self.indicatorTopPadding = indicatorTopPadding
+        self.onIndicatorRevealChange = onIndicatorRevealChange
         self.action = action
         self.content = content()
     }
@@ -29,6 +34,7 @@ struct PullToRefreshContainer<Content: View>: View {
             RefreshContainerBody(
                 isRefreshing: isRefreshing,
                 indicatorTopPadding: indicatorTopPadding,
+                onIndicatorRevealChange: onIndicatorRevealChange,
                 action: action
             ) {
                 content
@@ -44,12 +50,14 @@ extension View {
         isRefreshing: Bool,
         isEnabled: Bool = true,
         indicatorTopPadding: CGFloat = TdayRefreshIndicatorMetrics.defaultTopPadding,
+        onIndicatorRevealChange: ((CGFloat) -> Void)? = nil,
         action: @escaping @Sendable () async -> Void
     ) -> some View {
         PullToRefreshContainer(
             isRefreshing: isRefreshing,
             isEnabled: isEnabled,
             indicatorTopPadding: indicatorTopPadding,
+            onIndicatorRevealChange: onIndicatorRevealChange,
             action: action
         ) {
             self
@@ -60,6 +68,7 @@ extension View {
 private struct RefreshContainerBody<Content: View>: View {
     let isRefreshing: Bool
     let indicatorTopPadding: CGFloat
+    let onIndicatorRevealChange: ((CGFloat) -> Void)?
     let action: @Sendable () async -> Void
     private let content: Content
 
@@ -72,11 +81,13 @@ private struct RefreshContainerBody<Content: View>: View {
     init(
         isRefreshing: Bool,
         indicatorTopPadding: CGFloat,
+        onIndicatorRevealChange: ((CGFloat) -> Void)?,
         action: @escaping @Sendable () async -> Void,
         @ViewBuilder content: () -> Content
     ) {
         self.isRefreshing = isRefreshing
         self.indicatorTopPadding = indicatorTopPadding
+        self.onIndicatorRevealChange = onIndicatorRevealChange
         self.action = action
         self.content = content()
     }
@@ -87,6 +98,13 @@ private struct RefreshContainerBody<Content: View>: View {
 
     private var effectiveRefreshing: Bool {
         isRefreshing || localRefreshInFlight
+    }
+
+    /// Mirrors TdayPullRefreshIndicator's own reveal, so chrome that yields the
+    /// pill's band fades in lockstep with it rather than on a guess.
+    private var indicatorReveal: CGFloat {
+        guard effectiveRefreshing || pullProgress > 0.02 else { return 0 }
+        return effectiveRefreshing ? 1 : min(max(pullProgress, 0), 1)
     }
 
     var body: some View {
@@ -107,6 +125,9 @@ private struct RefreshContainerBody<Content: View>: View {
                 .padding(.top, indicatorTopPadding)
                 .allowsHitTesting(false)
             }
+            .onChange(of: indicatorReveal, initial: true) { _, reveal in
+                onIndicatorRevealChange?(reveal)
+            }
             .onChange(of: isRefreshing) { _, refreshing in
                 if refreshing {
                     observedExternalRefresh = true
@@ -120,6 +141,7 @@ private struct RefreshContainerBody<Content: View>: View {
                 localRefreshInFlight = false
                 observedExternalRefresh = false
                 pullDistance = 0
+                onIndicatorRevealChange?(0)
             }
     }
 
