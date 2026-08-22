@@ -85,6 +85,7 @@ struct ScheduledTaskHomeScreen: View {
     @State private var editingTodo: TodoItem?
     @State private var headerScroll = RootFeedHeaderScrollState()
     @State private var rootDockCollapsed = false
+    @State private var titleScrollToTopRequestID = 0
     @State private var openSwipeTaskID: String?
 
     init(
@@ -320,11 +321,21 @@ struct ScheduledTaskHomeScreen: View {
                                 scrollProxy.scrollTo(scheduledTaskHomeScrollTopID, anchor: .top)
                             }
                         }
+                        // Tapping the header mark or title restores the feed's
+                        // opened state: hero title, full-width search, big sun.
+                        .onChange(of: titleScrollToTopRequestID) { _, requestID in
+                            guard requestID > 0 else { return }
+                            closeSearch()
+                            withAnimation(.easeInOut(duration: 0.34)) {
+                                scrollProxy.scrollTo(scheduledTaskHomeScrollTopID, anchor: .top)
+                            }
+                        }
                     }
                 }
 
                 RootFeedHeroHeader(
                     title: "T'Day",
+                    mark: .timeOfDay,
                     scroll: headerScroll,
                     coordinateSpaceName: "scheduled-task-home-root",
                     searchExpanded: $searchExpanded,
@@ -340,6 +351,9 @@ struct ScheduledTaskHomeScreen: View {
                     onOpenSettings: {
                         closeSearch()
                         onNavigate(.settings)
+                    },
+                    onScrollToTop: {
+                        titleScrollToTopRequestID += 1
                     }
                 )
                 .zIndex(50)

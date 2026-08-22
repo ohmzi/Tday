@@ -415,6 +415,7 @@ struct TodoListScreen: View {
     @State private var timelineScrollOffset: CGFloat = 0
     @State private var headerScroll = RootFeedHeaderScrollState()
     @State private var rootDockCollapsed = false
+    @State private var titleScrollToTopRequestID = 0
     @State private var completionPhases: [String: TodoCompletionPhase] = [:]
     @State private var flashTodoId: String?
     @State private var highlightedScrollRequestID = 0
@@ -1014,6 +1015,7 @@ struct TodoListScreen: View {
     private var rootFeedHeroHeader: some View {
         RootFeedHeroHeader(
             title: viewModel.title,
+            mark: viewModel.mode == .floater ? .floaterLeaf : .timeOfDay,
             scroll: headerScroll,
             coordinateSpaceName: todoTimelineDragCoordinateSpace,
             searchExpanded: $floaterTaskHomeSearchExpanded,
@@ -1029,6 +1031,9 @@ struct TodoListScreen: View {
             onOpenSettings: {
                 closeFloaterTaskHomeSearch()
                 onOpenSettings()
+            },
+            onScrollToTop: {
+                titleScrollToTopRequestID += 1
             }
         )
     }
@@ -1902,6 +1907,15 @@ struct TodoListScreen: View {
             }
             .onChange(of: scrollToTopRequestID) { _, requestID in
                 guard requestID > 0, isFloaterTaskHomeScreen else { return }
+                closeFloaterTaskHomeSearch()
+                withAnimation(.easeInOut(duration: 0.34)) {
+                    scrollProxy.scrollTo(todoTimelineScrollTopID, anchor: .top)
+                }
+            }
+            // Tapping the header mark or title restores the feed's opened
+            // state: hero title, full-width search, big leaf.
+            .onChange(of: titleScrollToTopRequestID) { _, requestID in
+                guard requestID > 0 else { return }
                 closeFloaterTaskHomeSearch()
                 withAnimation(.easeInOut(duration: 0.34)) {
                     scrollProxy.scrollTo(todoTimelineScrollTopID, anchor: .top)
