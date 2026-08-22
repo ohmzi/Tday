@@ -857,6 +857,7 @@ private struct ScheduledTaskHomeTodayTaskRow: View {
         }
 
         HapticManager.taskCompleted()
+        SoundManager.taskCompleted()
         withAnimation(.easeInOut(duration: 0.18)) {
             completionPhase = .checked
         }

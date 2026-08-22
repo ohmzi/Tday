@@ -1065,7 +1065,7 @@ struct TodoListScreen: View {
                                     message: L("All done for today"),
                                     dateText: context.date.formatted(.dateTime.weekday(.wide).day().month(.wide))
                                 )
-                                .onAppear { HapticManager.taskCompleted() }
+                                .onAppear { HapticManager.taskCompleted(); SoundManager.taskCompleted() }
                             } else {
                                 EmptyTaskBackgroundMessage(
                                     message: emptyTimelineMessage(for: viewModel.mode)
@@ -2312,6 +2312,7 @@ struct TodoListScreen: View {
             openSwipeTaskID = nil
         }
         HapticManager.taskCompleted()
+        SoundManager.taskCompleted()
         withAnimation(.easeInOut(duration: 0.16)) {
             completionPhases[todo.id] = .checked
         }

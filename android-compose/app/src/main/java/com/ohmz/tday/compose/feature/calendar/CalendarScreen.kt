@@ -117,6 +117,7 @@ import com.ohmz.tday.compose.core.model.TaskRescheduleScope
 import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
 import com.ohmz.tday.compose.core.observability.TdayTelemetry
+import com.ohmz.tday.compose.core.sound.rememberTaskCompletionSound
 import com.ohmz.tday.compose.core.ui.EmptyTaskWatermark
 import com.ohmz.tday.compose.core.ui.snapTitleCollapsePx
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
@@ -2200,6 +2201,7 @@ private fun CalendarTodoRow(
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val view = LocalView.current
+    val taskCompletionSound = rememberTaskCompletionSound()
     val density = LocalDensity.current
     val coroutineScope = rememberCoroutineScope()
     val actionRevealPx = with(density) { 176.dp.toPx() }
@@ -2448,6 +2450,7 @@ private fun CalendarTodoRow(
                         enabled = !pendingCompletion,
                         onClick = {
                             ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+                            taskCompletionSound.play()
                             closeSwipeSlot()
                             localChecked = true
                             pendingCompletion = true

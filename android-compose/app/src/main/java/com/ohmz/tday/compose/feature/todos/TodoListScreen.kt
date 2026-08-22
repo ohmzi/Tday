@@ -113,6 +113,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalView
+import com.ohmz.tday.compose.core.sound.rememberTaskCompletionSound
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
@@ -3995,6 +3996,7 @@ private fun SwipeTaskRow(
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val view = LocalView.current
+    val taskCompletionSound = rememberTaskCompletionSound()
     val coroutineScope = rememberCoroutineScope()
     // Floater rows reveal a third "Schedule" action, overdue rows a "Float"
     // action, dated rows a "Defer" action (never for recurring todos — their
@@ -4389,6 +4391,7 @@ private fun SwipeTaskRow(
                                         view,
                                         HapticFeedbackConstantsCompat.CLOCK_TICK,
                                     )
+                                    taskCompletionSound.play()
                                     closeSwipeSlot()
                                     localChecked = true
                                     pendingCompletion = true
