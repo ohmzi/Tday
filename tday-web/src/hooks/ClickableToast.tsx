@@ -42,7 +42,9 @@ export default function ClickableToast({
         <button
           type="button"
           onClick={action.onClick}
-          className="shrink-0 rounded-full bg-primary px-3 py-1.5 text-[13px] font-bold text-primary-foreground focus-visible:outline-none"
+          // Matches the plain-toast action and iOS: bare text on the snackbar accent,
+          // no filled pill.
+          className="shrink-0 font-extrabold text-[hsl(var(--toast-action))] focus-visible:outline-none"
         >
           {action.label}
         </button>

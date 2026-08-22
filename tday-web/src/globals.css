@@ -291,6 +291,13 @@
   }
 
   :root {
+    /*
+     * Toast action ("Undo") colour. Mirrors the iOS snackbar accent exactly —
+     * Color(hex: 0xE06F66) in AppRootView.AppSnackbar — so the web toast reads identically to
+     * the native one. Deliberately not --accent-coral, which is a different hue (10 75% 60%).
+     * Same value in dark mode, as on iOS.
+     */
+    --toast-action: 4 66% 64%;
     --accent-red: 0 72% 55%;
     --accent-orange: 28 75% 55%;
     --accent-yellow: 45 80% 55%;
@@ -378,6 +385,7 @@
   }
 
   .dark {
+    --toast-action: 4 66% 64%;
     --lime: 169.09 30% 50%;
     --calendar-lime: 169.09 30% 43.14%;
     --calendar-red: 4 70% 56%;
