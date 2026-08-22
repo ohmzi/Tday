@@ -38,23 +38,6 @@ object ApiRoutes {
         }
     }
 
-    /**
-     * Pictures attached to a task. Metadata hangs off the owning task's route; bytes are served
-     * from a flat, id-addressed route so a client can cache an image without knowing which feed
-     * its task lives in.
-     */
-    object Attachment {
-        const val Base = "$ApiPrefix/attachment"
-
-        fun forTodo(todoId: String) = "$ApiPrefix/todo/$todoId/attachments"
-
-        fun forFloater(floaterId: String) = "$ApiPrefix/floater/$floaterId/attachments"
-
-        fun content(attachmentId: String) = "$Base/$attachmentId"
-
-        fun thumbnail(attachmentId: String) = "$Base/$attachmentId/thumbnail"
-    }
-
     object List {
         const val Base = "$ApiPrefix/list"
 

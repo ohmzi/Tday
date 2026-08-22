@@ -383,18 +383,7 @@
     "steps": "步骤",
     "add": "添加",
     "addStep": "添加步骤",
-    "stepsCreateHint": "请先保存任务再添加步骤。",
-    "attachments": "图片",
-    "attachmentsAdd": "添加图片",
-    "attachmentsEmpty": "还没有图片。",
-    "attachmentsCreateHint": "请先保存任务再添加图片。",
-    "attachmentsLocalModeHint": "图片需要服务器工作区。本地模式将所有内容保存在浏览器中，无法存放照片。",
-    "attachmentsUnsupportedType": "只能附加 JPEG 和 PNG 图片。",
-    "attachmentsTooLarge": "该图片超过 10 MB。",
-    "attachmentsUploadFailed": "无法添加该图片。",
-    "attachmentsDeleteFailed": "无法移除该图片。",
-    "attachmentsRemove": "移除图片",
-    "attachmentsClosePreview": "关闭图片"
+    "stepsCreateHint": "请先保存任务再添加步骤。"
   },
   "today": {
     "saveInstance": "保存实例",
@@ -1219,13 +1208,6 @@
         "step0": "打开一个任务，在步骤下添加你的第一个步骤。",
         "step1": "按需添加任意数量，然后拖动重新排序。",
         "step2": "勾选它们——2/5 计数器会跟踪你的进度。"
-      },
-      "task-pictures": {
-        "title": "为任务添加图片",
-        "summary": "为带日期的任务或 Anytime 任务附加照片。",
-        "keywords": "图片, 照片, 附件, 附加, 相机, jpeg, png, 上传",
-        "body": "打开已保存的任务，最多可添加六张图片。带日期的任务和 Anytime 任务的用法完全相同。支持 JPEG 和 PNG，每张最大 10 MB；图片在上传时会重新编码，因此相机的位置信息不会留在服务器上。",
-        "tip": "图片需要服务器工作区 —— 本地模式没有地方存放它们。"
       },
       "focus-filters": {
         "title": "专注过滤",

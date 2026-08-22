@@ -61,9 +61,6 @@ import com.ohmz.tday.services.SecurityAlertService
 import com.ohmz.tday.services.SecurityAlertServiceImpl
 import com.ohmz.tday.services.SecurityQuestionService
 import com.ohmz.tday.services.SecurityQuestionServiceImpl
-import com.ohmz.tday.services.AttachmentService
-import com.ohmz.tday.services.AttachmentServiceImpl
-import com.ohmz.tday.services.AttachmentStorage
 import com.ohmz.tday.services.TaskStepService
 import com.ohmz.tday.services.TaskStepServiceImpl
 import com.ohmz.tday.services.TodoNlpService
@@ -113,16 +110,14 @@ val serviceModule = module {
     single<WebhookDispatchService> { WebhookDispatchServiceImpl(get()) }
     single<WebhookService> { WebhookServiceImpl(get()) }
     single { RealtimePublisher(get(), get(), get(), get(), get()) }
-    single<TodoService> { TodoServiceImpl(get(), get(), get(), get(), get()) }
-    single<FloaterService> { FloaterServiceImpl(get(), get(), get(), get(), get()) }
+    single<TodoService> { TodoServiceImpl(get(), get(), get(), get()) }
+    single<FloaterService> { FloaterServiceImpl(get(), get(), get(), get()) }
     single<ListService> { ListServiceImpl(get(), get(), get(), get()) }
     single<FloaterListService> { FloaterListServiceImpl(get(), get(), get(), get()) }
     single<UserService> { UserServiceImpl(get()) }
     single<SecurityQuestionService> { SecurityQuestionServiceImpl(get(), get(), get(), get()) }
     single<CompletedTodoService> { CompletedTodoServiceImpl(get(), get()) }
     single<TaskStepService> { TaskStepServiceImpl(get(), get(), get()) }
-    single { AttachmentStorage(get<AppConfig>().attachmentDirectory) }
-    single<AttachmentService> { AttachmentServiceImpl(get(), get(), get(), get()) }
     single<CompletedFloaterService> { CompletedFloaterServiceImpl(get(), get()) }
     single<ExportService> { ExportServiceImpl(get(), get(), get()) }
     single<PreferencesService> { PreferencesServiceImpl() }

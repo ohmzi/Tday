@@ -107,7 +107,6 @@ fun testAppConfig(
     retentionAuthSignalDays = 180,
     retentionCronLogDays = 90,
     retentionDryRun = true,
-    attachmentDirectory = "build/tmp/test-attachments",
     cspMode = null,
     cspConnectExtra = emptyList(),
     sentryDsn = null,

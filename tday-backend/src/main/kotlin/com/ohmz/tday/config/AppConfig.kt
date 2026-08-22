@@ -78,12 +78,6 @@ data class AppConfig(
     val retentionAuthSignalDays: Int,
     val retentionCronLogDays: Int,
     val retentionDryRun: Boolean,
-    /**
-     * Where task-attachment bytes live. A directory rather than the database so images stay out of
-     * every `pg_dump`; it must be on a mounted volume or attachments vanish when the container is
-     * replaced.
-     */
-    val attachmentDirectory: String,
     val cspMode: String?,
     val cspConnectExtra: List<String>,
     val sentryDsn: String?,
@@ -202,7 +196,6 @@ data class AppConfig(
                 // Defaults on for one release: the operator reads a cycle's CronLog output before
                 // the first real DELETE runs against their only copy of the data.
                 retentionDryRun = env("RETENTION_DRY_RUN", "true").equals("true", ignoreCase = true),
-                attachmentDirectory = env("TDAY_ATTACHMENT_DIR", "/data/attachments"),
                 cspMode = env("CSP_MODE"),
                 cspConnectExtra = envCsv("CSP_CONNECT_EXTRA"),
                 sentryDsn = env("SENTRY_DSN"),

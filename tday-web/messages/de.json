@@ -383,18 +383,7 @@
     "steps": "Schritte",
     "add": "Hinzufügen",
     "addStep": "Schritt hinzufügen",
-    "stepsCreateHint": "Speichere die Aufgabe zuerst, um Schritte hinzuzufügen.",
-    "attachments": "Bilder",
-    "attachmentsAdd": "Bild hinzufügen",
-    "attachmentsEmpty": "Noch keine Bilder.",
-    "attachmentsCreateHint": "Speichere die Aufgabe zuerst, um Bilder hinzuzufügen.",
-    "attachmentsLocalModeHint": "Bilder brauchen einen Server-Arbeitsbereich. Der lokale Modus speichert alles im Browser und kann keine Fotos aufnehmen.",
-    "attachmentsUnsupportedType": "Nur JPEG- und PNG-Bilder können angehängt werden.",
-    "attachmentsTooLarge": "Dieses Bild ist größer als 10 MB.",
-    "attachmentsUploadFailed": "Bild konnte nicht hinzugefügt werden.",
-    "attachmentsDeleteFailed": "Bild konnte nicht entfernt werden.",
-    "attachmentsRemove": "Bild entfernen",
-    "attachmentsClosePreview": "Bild schließen"
+    "stepsCreateHint": "Speichere die Aufgabe zuerst, um Schritte hinzuzufügen."
   },
   "today": {
     "saveInstance": "Instanz speichern",
@@ -1219,13 +1208,6 @@
         "step0": "Öffne eine Aufgabe und füge unter Schritte deinen ersten Schritt hinzu.",
         "step1": "Füge so viele hinzu, wie du brauchst, und ziehe sie zum Umsortieren.",
         "step2": "Hake sie ab – der 2/5-Zähler verfolgt deinen Fortschritt."
-      },
-      "task-pictures": {
-        "title": "Bilder an einer Aufgabe",
-        "summary": "Hänge Fotos an eine Aufgabe — mit Datum oder Anytime.",
-        "keywords": "bild, foto, anhang, anhängen, kamera, jpeg, png, hochladen",
-        "body": "Öffne eine gespeicherte Aufgabe und füge bis zu sechs Bilder hinzu. Das funktioniert bei Aufgaben mit Datum genauso wie bei Anytime-Aufgaben. JPEG und PNG bis je 10 MB werden akzeptiert, und das Bild wird beim Hochladen neu kodiert, damit keine Standortdaten der Kamera auf dem Server landen.",
-        "tip": "Bilder brauchen einen Server-Arbeitsbereich — im lokalen Modus gibt es keinen Platz dafür."
       },
       "focus-filters": {
         "title": "Fokus-Filter",

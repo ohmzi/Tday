@@ -39,12 +39,7 @@ WORKDIR /app
 COPY --from=backend /project/tday-backend/build/libs/tday-backend-all.jar app.jar
 COPY --from=backend /project/tday-backend/src/main/resources/db/migration /app/migrations
 COPY --from=frontend /web/dist /app/static
-# Attachment bytes land here on a mounted volume. The directory must exist in the image and be
-# owned by the runtime user: Docker seeds a fresh named volume from the image path, and without
-# this it would be created root-owned and the non-root process could not write a single upload.
-RUN mkdir -p /data/attachments && chown -R tday:tday /data
 USER tday
 EXPOSE 8080
 ENV STATIC_FILES_DIR=/app/static
-ENV TDAY_ATTACHMENT_DIR=/data/attachments
 ENTRYPOINT ["java", "-jar", "app.jar"]
