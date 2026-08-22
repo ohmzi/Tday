@@ -4,9 +4,6 @@ private enum ScheduledTaskHomeMetrics {
     static let screenPadding: CGFloat = 18
     static let sectionSpacing: CGFloat = 14
     static let tileGap: CGFloat = 10
-    static let topBarButtonSize: CGFloat = 56
-    static let compactButtonSize: CGFloat = 30
-    static let titleAnchorDistance: CGFloat = screenPadding + topBarButtonSize
     static let tileCornerRadius: CGFloat = 26
     static let tileHeight: CGFloat = 94
     static let tileInnerPadding: CGFloat = 12
@@ -29,14 +26,6 @@ private func normalizedScheduledTaskHomeSearchQuery(_ value: String) -> String {
 
 private func scheduledTaskHomeSearchText(_ value: String) -> String {
     value.lowercased(with: .current)
-}
-
-private struct ScheduledTaskHomeSearchBarFrameKey: PreferenceKey {
-    static var defaultValue: CGRect = .zero
-
-    static func reduce(value: inout CGRect, nextValue: () -> CGRect) {
-        value = nextValue()
-    }
 }
 
 private struct ScheduledTaskHomeSearchResultsFrameKey: PreferenceKey {
@@ -164,10 +153,13 @@ struct ScheduledTaskHomeScreen: View {
     var body: some View {
         GeometryReader { proxy in
             let fallbackSearchBarFrame = CGRect(
-                x: ScheduledTaskHomeMetrics.screenPadding,
-                y: ScheduledTaskHomeMetrics.screenPadding,
-                width: max(ScheduledTaskHomeMetrics.topBarButtonSize, proxy.size.width - (ScheduledTaskHomeMetrics.screenPadding * 2)),
-                height: ScheduledTaskHomeMetrics.topBarButtonSize
+                x: RootFeedHeroHeaderMetrics.horizontalPadding,
+                y: RootFeedHeroHeaderMetrics.topInset,
+                width: max(
+                    RootFeedHeroHeaderMetrics.barButtonSize,
+                    proxy.size.width - (RootFeedHeroHeaderMetrics.horizontalPadding * 2)
+                ),
+                height: RootFeedHeroHeaderMetrics.barButtonSize
             )
             let activeSearchBarFrame = searchBarFrame.width > 0 && searchBarFrame.height > 0
                 ? searchBarFrame
@@ -185,6 +177,9 @@ struct ScheduledTaskHomeScreen: View {
                 PullToRefreshContainer(
                     isRefreshing: viewModel.isLoading,
                     isEnabled: pullRefreshEnabled,
+                    // Pull-to-refresh only happens at the top of the feed, where
+                    // the hero header is fully expanded — clear all of it.
+                    indicatorTopPadding: RootFeedHeroHeaderMetrics.expandedHeight + 10,
                     action: {
                         await viewModel.refresh(userInitiated: true)
                     }
@@ -192,32 +187,21 @@ struct ScheduledTaskHomeScreen: View {
                     ScrollViewReader { scrollProxy in
                         ScrollView(showsIndicators: false) {
                             LazyVStack(alignment: .leading, spacing: ScheduledTaskHomeMetrics.sectionSpacing) {
-                                TimelineScrollOffsetObserver { scheduledTaskHomeScrollOffset = $0 }
-                                    .frame(height: 0)
-                                    .allowsHitTesting(false)
+                                // Reserves the pinned hero header's space. The feed
+                                // scrolls behind the header, folding it down into its
+                                // always-visible toolbar strip.
+                                Color.clear
+                                    .frame(height: RootFeedHeroHeaderMetrics.expandedHeight)
                                     .id(scheduledTaskHomeScrollTopID)
-
-                                ScheduledTaskHomeTopBar(
-                                    totalWidth: proxy.size.width - (ScheduledTaskHomeMetrics.screenPadding * 2),
-                                    searchExpanded: $searchExpanded,
-                                    searchQuery: $searchQuery,
-                                    searchFieldFocused: $searchFieldFocused,
-                                    onSearchClose: {
-                                        closeSearch()
-                                    },
-                                    onCreateList: {
-                                        closeSearch()
-                                        showingCreateList = true
-                                    },
-                                    onOpenSettings: {
-                                        closeSearch()
-                                        onNavigate(.settings)
+                                    .background {
+                                        TimelineScrollOffsetObserver { scheduledTaskHomeScrollOffset = $0 }
+                                            .frame(width: 0, height: 0)
                                     }
-                                )
-                                .onTopPartialScrollSnap(
-                                    anchorDistance: ScheduledTaskHomeMetrics.titleAnchorDistance,
-                                    isDisabled: searchExpanded
-                                )
+                                    .allowsHitTesting(false)
+                                    .onTopPartialScrollSnap(
+                                        anchorDistance: RootFeedHeroHeaderMetrics.collapseDistance,
+                                        isDisabled: searchExpanded
+                                    )
 
                                 ScheduledTaskHomeTodayCard(
                                     count: viewModel.summary.todayCount,
@@ -291,7 +275,6 @@ struct ScheduledTaskHomeScreen: View {
 
                             }
                             .padding(.horizontal, ScheduledTaskHomeMetrics.screenPadding)
-                            .padding(.top, ScheduledTaskHomeMetrics.screenPadding)
 
                         }
                         .scrollBounceBehavior(.always, axes: .vertical)
@@ -331,6 +314,29 @@ struct ScheduledTaskHomeScreen: View {
                     }
                 }
 
+                RootFeedHeroHeader(
+                    title: "T'Day",
+                    collapseProgress: RootFeedHeroHeaderMetrics.collapseProgress(
+                        forScrollOffset: scheduledTaskHomeScrollOffset
+                    ),
+                    coordinateSpaceName: "scheduled-task-home-root",
+                    searchExpanded: $searchExpanded,
+                    searchQuery: $searchQuery,
+                    searchFieldFocused: $searchFieldFocused,
+                    onSearchClose: {
+                        closeSearch()
+                    },
+                    onCreateList: {
+                        closeSearch()
+                        showingCreateList = true
+                    },
+                    onOpenSettings: {
+                        closeSearch()
+                        onNavigate(.settings)
+                    }
+                )
+                .zIndex(50)
+
                 if showSearchResultsOverlay {
                     ScheduledTaskHomeSearchResultsOverlay(
                         todos: filteredTodos,
@@ -364,7 +370,7 @@ struct ScheduledTaskHomeScreen: View {
                     }
             )
         }
-        .onPreferenceChange(ScheduledTaskHomeSearchBarFrameKey.self) { frame in
+        .onPreferenceChange(RootFeedSearchBarFrameKey.self) { frame in
             searchBarFrame = frame
         }
         .onPreferenceChange(ScheduledTaskHomeSearchResultsFrameKey.self) { frame in
@@ -562,174 +568,6 @@ struct ScheduledTaskHomeScreen: View {
         Task {
             await viewModel.summarizeToday()
         }
-    }
-}
-
-private struct ScheduledTaskHomeTopBar: View {
-    let totalWidth: CGFloat
-    @Binding var searchExpanded: Bool
-    @Binding var searchQuery: String
-    var searchFieldFocused: FocusState<Bool>.Binding
-    let onSearchClose: () -> Void
-    let onCreateList: () -> Void
-    let onOpenSettings: () -> Void
-
-    @Environment(\.tdayColors) private var colors
-
-    var body: some View {
-        let buttonSize = ScheduledTaskHomeMetrics.topBarButtonSize
-        let buttonGap: CGFloat = 8
-        let actionCount: CGFloat = 2
-        let expandedSearchWidth = max(buttonSize, totalWidth)
-        let searchWidth = searchExpanded ? expandedSearchWidth : buttonSize
-        let collapsedSearchOffset = -((buttonSize * actionCount) + (buttonGap * actionCount))
-        let searchOffsetX = searchExpanded ? 0 : collapsedSearchOffset
-
-        ZStack(alignment: .trailing) {
-            TimelineView(.periodic(from: .now, by: 60)) { context in
-                let daytime = isScheduledTaskHomeDaytime(context.date)
-
-                HStack(spacing: 8) {
-                    Image(systemName: daytime ? "sun.max.fill" : "moon.stars.fill")
-                        .font(.system(size: 26, weight: .regular))
-                        .foregroundStyle(Color(hex: daytime ? 0xF4C542 : 0xA8B8E8))
-
-                    Text("T'Day")
-                        .font(.tdayRounded(size: 32, weight: .heavy))
-                        .foregroundStyle(colors.onSurface)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.leading, 2)
-                .opacity(searchExpanded ? 0 : 1)
-                .allowsHitTesting(false)
-            }
-
-            HStack(spacing: buttonGap) {
-                ScheduledTaskHomeIconCircleButton(icon: "NavListPlus") {
-                    HapticManager.buttonTap()
-                    onCreateList()
-                }
-
-                ScheduledTaskHomeIconCircleButton(icon: "NavEllipsis") {
-                    HapticManager.gentleTap()
-                    onOpenSettings()
-                }
-            }
-            .opacity(searchExpanded ? 0 : 1)
-            .allowsHitTesting(!searchExpanded)
-
-            ZStack {
-                Button {
-                    HapticManager.buttonTap()
-                    withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
-                        searchExpanded = true
-                    }
-                } label: {
-                    Image("NavSearch")
-                        .renderingMode(.template)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 22, height: 22)
-                        .foregroundStyle(colors.onSurface)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                }
-                .buttonStyle(ScheduledTaskHomeIconButtonStyle(compact: false))
-                .opacity(searchExpanded ? 0 : 1)
-                .allowsHitTesting(!searchExpanded)
-                .accessibilityLabel("Search")
-
-                HStack(spacing: 10) {
-                    Image("NavSearch")
-                        .renderingMode(.template)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 20, height: 20)
-                        .foregroundStyle(colors.onSurface)
-                        .frame(width: ScheduledTaskHomeMetrics.compactButtonSize, height: ScheduledTaskHomeMetrics.compactButtonSize)
-
-                    TextField("", text: $searchQuery, prompt: Text("Search").foregroundStyle(colors.onSurfaceVariant))
-                        .focused(searchFieldFocused)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                        .font(.tdayRounded(size: 18, weight: .bold))
-                        .foregroundStyle(colors.onSurface)
-                        .tint(colors.primary)
-                        .disabled(!searchExpanded)
-
-                    Button {
-                        HapticManager.sheetDismiss()
-                        onSearchClose()
-                    } label: {
-                        Image("NavClose")
-                            .renderingMode(.template)
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 18, height: 18)
-                            .foregroundStyle(colors.onSurfaceVariant.opacity(0.78))
-                    }
-                    .buttonStyle(
-                        TdayPressButtonStyle(
-                            shadowColor: Color.black,
-                            pressedShadowOpacity: 0,
-                            normalShadowOpacity: 0
-                        )
-                    )
-                    .accessibilityLabel("Cancel search")
-                }
-                .padding(.horizontal, 14)
-                .opacity(searchExpanded ? 1 : 0)
-                .allowsHitTesting(searchExpanded)
-            }
-            .frame(width: searchWidth, height: buttonSize)
-            .background(colors.surface, in: Capsule())
-            .overlay(
-                Capsule()
-                    .stroke(colors.onSurface.opacity(0.26), lineWidth: 1)
-            )
-            .offset(x: searchOffsetX)
-            .background(
-                GeometryReader { proxy in
-                    Color.clear
-                        .preference(key: ScheduledTaskHomeSearchBarFrameKey.self, value: proxy.frame(in: .named("scheduled-task-home-root")))
-                }
-            )
-            .zIndex(2)
-            .animation(.spring(response: 0.28, dampingFraction: 0.86), value: searchExpanded)
-        }
-        .frame(maxWidth: .infinity, minHeight: ScheduledTaskHomeMetrics.topBarButtonSize)
-    }
-}
-
-private struct ScheduledTaskHomeIconCircleButton: View {
-    /// Asset-catalog name of the lucide template glyph (shared with web/Android).
-    let icon: String
-    var compact = false
-    let action: () -> Void
-
-    @Environment(\.tdayColors) private var colors
-
-    var body: some View {
-        Button(action: action) {
-            Image(icon)
-                .renderingMode(.template)
-                .resizable()
-                .scaledToFit()
-                .frame(width: compact ? 20 : 22, height: compact ? 20 : 22)
-                .foregroundStyle(colors.onSurface)
-                .frame(
-                    width: compact ? ScheduledTaskHomeMetrics.compactButtonSize : ScheduledTaskHomeMetrics.topBarButtonSize,
-                    height: compact ? ScheduledTaskHomeMetrics.compactButtonSize : ScheduledTaskHomeMetrics.topBarButtonSize
-                )
-                .background(compact ? Color.clear : colors.surface)
-                .clipShape(Circle())
-                .overlay {
-                    if !compact {
-                        Circle()
-                            .stroke(colors.onSurface.opacity(0.34), lineWidth: 1)
-                    }
-                }
-        }
-        .buttonStyle(ScheduledTaskHomeIconButtonStyle(compact: compact))
     }
 }
 
@@ -1383,18 +1221,6 @@ private struct ScheduledTaskHomeListButtonStyle: ButtonStyle {
                 shadowColor: Color.black,
                 pressedShadowOpacity: 0.08,
                 normalShadowOpacity: 0.13
-            )
-    }
-}
-
-private struct ScheduledTaskHomeIconButtonStyle: ButtonStyle {
-    let compact: Bool
-
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .tdayToolbarButtonEffect(
-                isPressed: configuration.isPressed,
-                shadowsEnabled: !compact
             )
     }
 }

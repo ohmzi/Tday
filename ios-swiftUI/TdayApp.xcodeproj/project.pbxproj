@@ -92,6 +92,7 @@
 		A3F2E1D0C9B8A7F6E5D4C3B2 /* ShareSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2C3D4E5F6A7B8C9D0E1F2A3 /* ShareSheet.swift */; };
 		A7319C922AE54DC944A9ECC5 /* AuthRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6E5E1DBE3F7999D219BE2EE /* AuthRepository.swift */; };
 		A9F10102A9F10102A9F10102 /* RootFeedDock.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9F10101A9F10101A9F10101 /* RootFeedDock.swift */; };
+		B1C7E4A1B1C7E4A1B1C7E4A1 /* RootFeedHeroHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1C7E4A0B1C7E4A0B1C7E4A0 /* RootFeedHeroHeader.swift */; };
 		B10000000000000000000021 /* CarTaskModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000001 /* CarTaskModels.swift */; };
 		B10000000000000000000022 /* CarPlayCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000002 /* CarPlayCoordinator.swift */; };
 		B10000000000000000000023 /* CarPlaySceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000003 /* CarPlaySceneDelegate.swift */; };
@@ -312,6 +313,7 @@
 		A5C31F2E171A73F2774E89A1 /* LoginCredentialCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginCredentialCoordinator.swift; sourceTree = "<group>"; };
 		A64D35F145CD4F1CE4B6C558 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
 		A9F10101A9F10101A9F10101 /* RootFeedDock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootFeedDock.swift; sourceTree = "<group>"; };
+		B1C7E4A0B1C7E4A0B1C7E4A0 /* RootFeedHeroHeader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootFeedHeroHeader.swift; sourceTree = "<group>"; };
 		AB49A43AFEE66EEDB3315F86 /* OfflineSyncModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineSyncModels.swift; sourceTree = "<group>"; };
 		AC2B21F3E1A43EAEECA86EE8 /* Colors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Colors.swift; sourceTree = "<group>"; };
 		AD41A49221B1A947AF8A94D0 /* ThemeStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeStore.swift; sourceTree = "<group>"; };
@@ -988,6 +990,7 @@
 				50DF00000000000000000000 /* SoundManager.swift */,
 				15B9BC191869EBEA7E8340E6 /* NavigationBackHistoryTitle.swift */,
 				A9F10101A9F10101A9F10101 /* RootFeedDock.swift */,
+				B1C7E4A0B1C7E4A0B1C7E4A0 /* RootFeedHeroHeader.swift */,
 				B2C3D4E5F6A7B8C9D0E1F2A3 /* ShareSheet.swift */,
 				133161412A6BD2A0C04F745A /* SnackbarManager.swift */,
 				0DE4A047CF237AD9F605D02E /* TaskFloatingActionButton.swift */,
@@ -1337,6 +1340,7 @@
 				222184A155C5A7B9F178007B /* SwiftDataModels.swift in Sources */,
 				2C1549AFC2F29218C879306C /* SwipeActions.swift in Sources */,
 				A9F10102A9F10102A9F10102 /* RootFeedDock.swift in Sources */,
+				B1C7E4A1B1C7E4A1B1C7E4A1 /* RootFeedHeroHeader.swift in Sources */,
 				58EB6EF803693EB982E331E4 /* SyncAndRefreshUseCase.swift in Sources */,
 				02DCC3220DC138F342784CA4 /* SyncManager.swift in Sources */,
 				5D93F6903E05BD9902C43A51 /* SystemCredentialService.swift in Sources */,
