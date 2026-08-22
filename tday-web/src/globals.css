@@ -511,6 +511,48 @@
   animation: task-complete-out 280ms ease-out forwards;
 }
 
+/*
+ * Title strike as an animated sweep, matching the native rows: Compose animates
+ * `titleStrikeProgress` over 320ms with FastOutSlowInEasing (cubic-bezier(0.4, 0, 0.2, 1)), so the
+ * line draws across the title rather than appearing fully formed. Notes deliberately keep a plain
+ * `line-through` — they wrap to several lines, which a single swept rule cannot follow, and the
+ * native apps make the same split.
+ */
+@keyframes task-strike-sweep {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.task-strike {
+  position: relative;
+}
+
+.task-strike::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 55%;
+  height: 1.5px;
+  border-radius: 1px;
+  background-color: currentColor;
+  transform: scaleX(0);
+  transform-origin: left center;
+  animation: task-strike-sweep 320ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* A reduced-motion reader still needs to see the task is struck — just not the sweep. */
+@media (prefers-reduced-motion: reduce) {
+  .task-strike::after {
+    animation: none;
+    transform: scaleX(1);
+  }
+}
+
 /* ── View Transitions (Chrome 111+) ── */
 @view-transition {
   navigation: auto;
