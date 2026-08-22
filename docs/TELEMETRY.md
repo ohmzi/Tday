@@ -101,6 +101,7 @@ structural and content-free:
 | Update install flow | `update.check` | Release/version comparison only; no user identifiers |
 | Realtime reconnect | `realtime.connect`, `realtime.disconnect` | Connection phase/status only; message payload types are normalized |
 | Reminder scheduling | `reminder.reschedule`, `reminder.cancel_all` | Counts/source only; no task titles or reminder text |
+| Device-calendar mirror | `calendar.sync.reconcile`, `calendar.sync.disabled`, `calendar.sync.permission_denied`, `calendar.sync.calendar_unavailable`, `calendar.sync.reconcile`/`calendar.sync.delete_calendar`/`calendar.sync.save_event` captures | Event counts and failure operation only; never task titles, descriptions, task IDs, device calendar identifiers, or the user's other calendars |
 | Calendar paging and mode changes | `calendar.page`, `calendar.mode`, `calendar.today`, `calendar.load`, `calendar.refresh` | Mode/direction/counts only; no selected date, task ID, or title |
 | Task/list drag-reschedule | `calendar.drag_reschedule`, `calendar.task.reschedule`, `task.reschedule` | Recurring/scope/source only; no task ID, title, or target date |
 | Car task surfaces | `car_surface.open`, `car_surface.switch_mode`, `car_task.voice_create`, `car_task.complete` | Platform, mode, result, and counts only; no task title, voice transcript, task ID, or local cache record |

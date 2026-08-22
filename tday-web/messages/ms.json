@@ -383,7 +383,18 @@
     "steps": "Langkah",
     "add": "Tambah",
     "addStep": "Tambah langkah",
-    "stepsCreateHint": "Simpan tugasan dahulu untuk menambah langkah."
+    "stepsCreateHint": "Simpan tugasan dahulu untuk menambah langkah.",
+    "attachments": "Gambar",
+    "attachmentsAdd": "Tambah gambar",
+    "attachmentsEmpty": "Belum ada gambar.",
+    "attachmentsCreateHint": "Simpan tugas dahulu untuk menambah gambar.",
+    "attachmentsLocalModeHint": "Gambar memerlukan ruang kerja pelayan. Mod Tempatan menyimpan semuanya dalam pelayar dan tidak boleh menyimpan foto.",
+    "attachmentsUnsupportedType": "Hanya gambar JPEG dan PNG boleh dilampirkan.",
+    "attachmentsTooLarge": "Gambar itu melebihi 10 MB.",
+    "attachmentsUploadFailed": "Tidak dapat menambah gambar itu.",
+    "attachmentsDeleteFailed": "Tidak dapat membuang gambar itu.",
+    "attachmentsRemove": "Buang gambar",
+    "attachmentsClosePreview": "Tutup gambar"
   },
   "today": {
     "saveInstance": "Simpan kejadian",
@@ -1127,6 +1138,15 @@
         "step1": "Salin URL — ia dipaparkan sekali; jana semula jika hilang.",
         "step2": "Tambah sebagai kalendar langganan dalam apl kalendar anda."
       },
+      "device-calendar-sync": {
+        "title": "Tugas dalam kalendar peranti",
+        "summary": "Salin tugas bertarikh anda ke kalendar T'Day pada telefon anda.",
+        "keywords": "kalendar, kalendar peranti, segerak, google calendar, apple calendar, eventkit, kalendar telefon, salin",
+        "body": "Apabila dihidupkan, setiap tugas yang bertarikh akan disalin ke kalendar bernama T'Day pada telefon anda, bersama kalendar anda yang lain. Tugas Anytime tidak disertakan kerana ia tiada tarikh. Ia sehala sahaja: T'Day menulis ke kalendar itu, jadi suntingan yang anda buat di sana akan diganti apabila tugas anda berubah.",
+        "step0": "Dalam Tetapan, hidupkan “Tambah tugas berjadual ke kalendar saya”.",
+        "step1": "Benarkan akses kalendar apabila telefon anda meminta.",
+        "step2": "Buka aplikasi kalendar anda — tugas bertarikh anda ada dalam kalendar T'Day."
+      },
       "webhooks": {
         "title": "Webhook",
         "summary": "Dapatkan ping HTTP apabila tugasan anda berubah.",
@@ -1199,6 +1219,13 @@
         "step0": "Buka tugasan dan tambah langkah pertama anda di bawah Langkah.",
         "step1": "Tambah seberapa banyak yang diperlukan, kemudian seret untuk menyusun semula.",
         "step2": "Tandakannya — pembilang 2/5 menjejaki kemajuan anda."
+      },
+      "task-pictures": {
+        "title": "Gambar pada tugas",
+        "summary": "Lampirkan foto pada tugas — bertarikh atau Anytime.",
+        "keywords": "gambar, foto, lampiran, lampirkan, kamera, jpeg, png, muat naik",
+        "body": "Buka tugas yang telah disimpan dan tambah sehingga enam gambar. Ia berfungsi sama pada tugas bertarikh dan pada tugas Anytime. JPEG dan PNG diterima, sehingga 10 MB setiap satu, dan gambar dikodkan semula semasa dimuat naik supaya data lokasi kamera tidak pernah sampai ke pelayan.",
+        "tip": "Gambar memerlukan ruang kerja pelayan — Mod Tempatan tiada tempat untuk menyimpannya."
       },
       "focus-filters": {
         "title": "Penapis Fokus",

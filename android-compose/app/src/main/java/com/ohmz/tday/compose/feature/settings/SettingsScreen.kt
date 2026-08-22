@@ -78,6 +78,10 @@ import androidx.core.view.ViewCompat
 import com.ohmz.tday.compose.BuildConfig
 import com.ohmz.tday.compose.R
 import org.unifiedpush.android.connector.UnifiedPush
+import android.Manifest
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import com.ohmz.tday.compose.core.calendar.CalendarEntryPoint
 import com.ohmz.tday.compose.core.data.AppSecurityPreferenceStore
 import com.ohmz.tday.compose.core.data.db.hasUnmigratedPlaintextCache
 import com.ohmz.tday.compose.core.data.server.VersionCheckResult
@@ -235,6 +239,8 @@ fun SettingsScreen(
                 }
                 SettingsDivider()
                 RestingFloatersRow()
+                SettingsDivider()
+                DeviceCalendarSyncRow()
             }
 
             SettingsSectionCard {
@@ -1465,6 +1471,76 @@ private fun UnencryptedLegacyCacheWarning() {
             style = MaterialTheme.typography.bodySmall,
             color = colorScheme.onSurfaceVariant,
         )
+    }
+}
+
+/**
+ * Opt-in one-way mirror of scheduled tasks into a dedicated "T'Day" calendar on the device.
+ *
+ * Default off, and turning it on requests calendar permission first — a denied grant leaves the
+ * toggle off rather than silently enabling a mirror that cannot write. Turning it off deletes the
+ * calendar and everything T'Day put in it.
+ *
+ * Floaters are excluded by the sync itself: they have no due date, so they have nothing to place
+ * on a calendar.
+ */
+@Composable
+private fun DeviceCalendarSyncRow() {
+    val colorScheme = MaterialTheme.colorScheme
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val entryPoint = remember {
+        EntryPointAccessors.fromApplication(context.applicationContext, CalendarEntryPoint::class.java)
+    }
+    val syncManager = remember { entryPoint.calendarSyncManager() }
+    val preferenceStore = remember { entryPoint.calendarSyncPreferenceStore() }
+
+    var enabled by remember { mutableStateOf(preferenceStore.isEnabled()) }
+    var showPermissionDenied by remember { mutableStateOf(false) }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions(),
+    ) { grants ->
+        // Both are needed: the mirror reads the calendar to find its own calendar row before it
+        // can write events into it.
+        val granted = grants[Manifest.permission.READ_CALENDAR] == true &&
+            grants[Manifest.permission.WRITE_CALENDAR] == true
+        if (granted) {
+            showPermissionDenied = false
+            enabled = true
+            scope.launch { syncManager.enable() }
+        } else {
+            showPermissionDenied = true
+            enabled = false
+        }
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        SettingsToggleRow(
+            title = stringResource(R.string.settings_calendar_sync),
+            subtitle = stringResource(R.string.settings_calendar_sync_subtitle),
+            checked = enabled,
+            onCheckedChange = { requested ->
+                if (!requested) {
+                    showPermissionDenied = false
+                    enabled = false
+                    scope.launch { syncManager.disable() }
+                    return@SettingsToggleRow
+                }
+                // Optimistically flip only after the grant lands, so a denied dialog does not
+                // leave the switch on with nothing behind it.
+                permissionLauncher.launch(
+                    arrayOf(Manifest.permission.READ_CALENDAR, Manifest.permission.WRITE_CALENDAR),
+                )
+            },
+        )
+        if (showPermissionDenied) {
+            Text(
+                text = stringResource(R.string.settings_calendar_sync_permission_denied),
+                style = MaterialTheme.typography.labelSmall,
+                color = colorScheme.error,
+            )
+        }
     }
 }
 

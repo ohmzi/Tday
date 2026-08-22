@@ -1347,6 +1347,42 @@
       "searchBody": "porta con te le attivita del dispositivo quando passi alla modalita server. hai iniziato in modalita locale e poi hai configurato un server? non viene mai caricato nulla da solo. per spostare i tuoi dati: esportali prima dalle impostazioni, accedi al tuo server e importa li il file. attivita, liste e cronologia si spostano in un passaggio voluto — scegli tu il momento, e i dati sul dispositivo restano intatti fino ad allora. dopo l'importazione conserva il file esportato finche non confermi che e arrivato tutto — cosi fa anche da backup."
     },
     {
+      "id": "device-calendar-sync",
+      "section": "INTEGRATIONS",
+      "sectionOrder": 7,
+      "icon": "calendar",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.7.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Attività nel calendario del dispositivo",
+      "summary": "Copia le tue attività con data in un calendario T'Day sul telefono.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Attivandolo, ogni attività con una data viene copiata in un calendario chiamato T'Day sul tuo telefono, accanto agli altri calendari. Le attività Anytime restano fuori, perché non hanno una data su cui collocarsi. È a senso unico: T'Day scrive in quel calendario, quindi le modifiche fatte lì vengono sostituite al successivo cambiamento delle attività."
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "In Impostazioni, attiva «Aggiungi le attività pianificate al mio calendario».",
+            "Consenti l'accesso al calendario quando il telefono lo chiede.",
+            "Apri l'app calendario: le attività con data sono nel calendario T'Day."
+          ]
+        }
+      ],
+      "searchTitle": "attivita nel calendario del dispositivo",
+      "searchKeywords": "calendario, calendario del dispositivo, sincronizzazione, google calendar, apple calendar, eventkit, calendario del telefono, copia",
+      "searchBody": "copia le tue attivita con data in un calendario t'day sul telefono. attivandolo, ogni attivita con una data viene copiata in un calendario chiamato t'day sul tuo telefono, accanto agli altri calendari. le attivita anytime restano fuori, perche non hanno una data su cui collocarsi. e a senso unico: t'day scrive in quel calendario, quindi le modifiche fatte li vengono sostituite al successivo cambiamento delle attivita. in impostazioni, attiva «aggiungi le attivita pianificate al mio calendario». consenti l'accesso al calendario quando il telefono lo chiede. apri l'app calendario: le attivita con data sono nel calendario t'day."
+    },
+    {
       "id": "ai-summary",
       "section": "INTEGRATIONS",
       "sectionOrder": 7,

@@ -33,6 +33,9 @@ final class AppContainer {
     let dataExportRepository: DataExportRepository
     let realtimeClient: RealtimeClient
     let reminderScheduler: TaskReminderScheduler
+    let calendarSyncPreferenceStore: CalendarSyncPreferenceStore
+    let deviceCalendarStore: DeviceCalendarStore
+    let calendarSyncManager: CalendarSyncManager
     let securityAlertPoller: SecurityAlertPoller
     let dayAheadStore: DayAheadStore
     let dayAheadScheduler: DayAheadScheduler
@@ -113,6 +116,12 @@ final class AppContainer {
         dataExportRepository = DataExportRepository(api: apiService, cacheManager: cacheManager, syncManager: syncManager, secureStore: secureStore)
         realtimeClient = RealtimeClient(configuration: networkConfiguration)
         reminderScheduler = TaskReminderScheduler(reminderPreferenceStore: reminderPreferenceStore)
+        calendarSyncPreferenceStore = CalendarSyncPreferenceStore()
+        deviceCalendarStore = DeviceCalendarStore(preferenceStore: calendarSyncPreferenceStore)
+        calendarSyncManager = CalendarSyncManager(
+            deviceCalendarStore: deviceCalendarStore,
+            preferenceStore: calendarSyncPreferenceStore
+        )
         securityAlertPoller = SecurityAlertPoller(api: apiService, secureStore: secureStore)
         dayAheadStore = DayAheadStore()
         dayAheadScheduler = DayAheadScheduler(store: dayAheadStore)

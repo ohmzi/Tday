@@ -64,6 +64,7 @@ class TodoServiceImpl(
     private val cache: CacheService,
     private val shareService: ListShareService,
     private val publisher: RealtimePublisher,
+    private val attachmentStorage: AttachmentStorage,
 ) : TodoService {
 
     override suspend fun create(
@@ -190,11 +191,17 @@ class TodoServiceImpl(
                 .where { (Todos.id eq id) and mutableTodos(userId, editableListIds) }
                 .map { it[Todos.id] }
             if (deletableIds.isEmpty()) {
-                0
+                0 to emptyList()
             } else {
                 TodoInstances.deleteWhere { TodoInstances.todoId inList deletableIds }
-                Todos.deleteWhere { Todos.id inList deletableIds }
+                // Inside this transaction so the pictures go with the task; the files themselves
+                // are removed after it commits, since the database cannot reach the disk.
+                val keys = TaskAttachmentCleanup.purgeRowsForTodos(deletableIds)
+                Todos.deleteWhere { Todos.id inList deletableIds } to keys
             }
+        }.let { (deleted, keys) ->
+            keys.forEach(attachmentStorage::delete)
+            deleted
         }
         cache.invalidateTodoCaches(userId)
         publisher.publishToCollaborators(userId, DomainEvent.TodoChanged())

@@ -10,7 +10,7 @@ Current feature surface:
 - Server Mode with JWE cookie auth, optimistic local writes, realtime refresh, and pending mutation replay.
 - Scheduled task home and Floater task home root feeds controlled by `RootFeedDock`.
 - Pull-to-refresh is a Server Mode root-feed affordance on the scheduled task home and floater task home roots only; detail, category, calendar, and completed screens refresh through cache observation, sync, foreground reconnect, or explicit retry actions.
-- Scheduled tasks, floaters, scheduled-task lists, floater lists, completed history, calendar, search, settings, reminders, Today/Floater WidgetKit widgets, CarPlay templates, and Siri/App Shortcuts for car task creation.
+- Scheduled tasks, floaters, scheduled-task lists, floater lists, completed history, calendar, search, settings, reminders, an opt-in device-calendar mirror, Today/Floater WidgetKit widgets, CarPlay templates, and Siri/App Shortcuts for car task creation.
 - SwiftData-backed local cache mirrored with Android's Room-backed `OfflineSyncState`.
 
 ## Structure
@@ -27,6 +27,7 @@ ios-swiftUI/
 │   │   ├── Model/       # API/domain/offline sync models
 │   │   ├── Navigation/  # AppRoute
 │   │   ├── Network/     # URLSession API, cookies, realtime
+│   │   ├── Calendar/    # Opt-in device-calendar mirror (EventKit)
 │   │   ├── Notification/# Deep links and reminders
 │   │   ├── Security/    # Probe/decryption helpers
 │   │   ├── UI/          # Shared app UI helpers

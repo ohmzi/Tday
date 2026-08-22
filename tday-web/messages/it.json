@@ -383,7 +383,18 @@
     "steps": "Passaggi",
     "add": "Aggiungi",
     "addStep": "Aggiungi un passaggio",
-    "stepsCreateHint": "Salva prima l'attività per aggiungere passaggi."
+    "stepsCreateHint": "Salva prima l'attività per aggiungere passaggi.",
+    "attachments": "Immagini",
+    "attachmentsAdd": "Aggiungi un'immagine",
+    "attachmentsEmpty": "Ancora nessuna immagine.",
+    "attachmentsCreateHint": "Salva prima l'attività per aggiungere immagini.",
+    "attachmentsLocalModeHint": "Le immagini richiedono uno spazio di lavoro sul server. La modalità locale tiene tutto nel browser e non può contenere foto.",
+    "attachmentsUnsupportedType": "Si possono allegare solo immagini JPEG e PNG.",
+    "attachmentsTooLarge": "Quell'immagine supera i 10 MB.",
+    "attachmentsUploadFailed": "Impossibile aggiungere l'immagine.",
+    "attachmentsDeleteFailed": "Impossibile rimuovere l'immagine.",
+    "attachmentsRemove": "Rimuovi immagine",
+    "attachmentsClosePreview": "Chiudi immagine"
   },
   "today": {
     "saveInstance": "Salva istanza",
@@ -1127,6 +1138,15 @@
         "step1": "Copia l'URL: viene mostrato una sola volta; rigeneralo se lo perdi.",
         "step2": "Aggiungilo come calendario in abbonamento nella tua app calendario."
       },
+      "device-calendar-sync": {
+        "title": "Attività nel calendario del dispositivo",
+        "summary": "Copia le tue attività con data in un calendario T'Day sul telefono.",
+        "keywords": "calendario, calendario del dispositivo, sincronizzazione, google calendar, apple calendar, eventkit, calendario del telefono, copia",
+        "body": "Attivandolo, ogni attività con una data viene copiata in un calendario chiamato T'Day sul tuo telefono, accanto agli altri calendari. Le attività Anytime restano fuori, perché non hanno una data su cui collocarsi. È a senso unico: T'Day scrive in quel calendario, quindi le modifiche fatte lì vengono sostituite al successivo cambiamento delle attività.",
+        "step0": "In Impostazioni, attiva «Aggiungi le attività pianificate al mio calendario».",
+        "step1": "Consenti l'accesso al calendario quando il telefono lo chiede.",
+        "step2": "Apri l'app calendario: le attività con data sono nel calendario T'Day."
+      },
       "webhooks": {
         "title": "Webhook",
         "summary": "Ricevi un ping HTTP quando cambiano le tue attività.",
@@ -1199,6 +1219,13 @@
         "step0": "Apri un'attività e aggiungi il tuo primo passaggio in Passaggi.",
         "step1": "Aggiungine quanti ne servono, poi trascina per riordinare.",
         "step2": "Spuntali — il contatore 2/5 tiene traccia dei tuoi progressi."
+      },
+      "task-pictures": {
+        "title": "Immagini su un'attività",
+        "summary": "Allega foto a un'attività, con data o Anytime.",
+        "keywords": "immagine, foto, allegato, allegare, fotocamera, jpeg, png, caricare",
+        "body": "Apri un'attività salvata e aggiungi fino a sei immagini. Funziona allo stesso modo su un'attività con data e su una Anytime. Sono accettati JPEG e PNG fino a 10 MB ciascuno, e l'immagine viene ricodificata durante il caricamento così i dati di posizione della fotocamera non arrivano mai al server.",
+        "tip": "Le immagini richiedono uno spazio di lavoro sul server: la modalità locale non ha dove tenerle."
       },
       "focus-filters": {
         "title": "Filtri Full Immersion",

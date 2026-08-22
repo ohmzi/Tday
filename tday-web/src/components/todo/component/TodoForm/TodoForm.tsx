@@ -31,6 +31,7 @@ import { GuideHelpLink } from "@/features/guide/GuideHelpLink";
 import NLPTitleInput from "./NLPTitleInput";
 import NotesField from "@/components/todo/component/NotesField/NotesField";
 import RepeatSuggestionChip from "./RepeatSuggestionChip";
+import TaskAttachmentsSection from "@/features/attachments/component/TaskAttachmentsSection";
 import TaskStepsSection from "./TaskStepsSection";
 import TaskSelectorOverlays, { type TaskSelector } from "./TodoFormSelectors";
 import { priorityLabelKey, repeatLabelKey } from "./labels";
@@ -285,6 +286,20 @@ const TodoForm = ({
           <SheetCard>
             <p className="px-[18px] py-3 text-sm font-bold text-muted-foreground">
               {appDict("stepsCreateHint")}
+            </p>
+          </SheetCard>
+        </>
+      )}
+
+      {/* Pictures — like steps, they need a saved task to hang off. */}
+      {isEditing && todo?.id ? (
+        <TaskAttachmentsSection taskType="todo" taskId={todo.id} />
+      ) : (
+        <>
+          <SheetSectionTitle>{appDict("attachments")}</SheetSectionTitle>
+          <SheetCard>
+            <p className="px-[18px] py-3 text-sm font-bold text-muted-foreground">
+              {appDict("attachmentsCreateHint")}
             </p>
           </SheetCard>
         </>

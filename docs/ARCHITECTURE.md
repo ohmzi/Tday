@@ -396,9 +396,11 @@ The WidgetKit extension lives beside the app target at `ios-swiftUI/TdayWidget/`
 ### Entity Relationships
 
 ```
-User ──┬── Todo ──── TodoInstance
-       │      └──── List (scheduled-task project)
-       ├── Floater ─── FloaterList
+User ──┬── Todo ──┬── TodoInstance
+       │           ├── List (scheduled-task project)
+       │           └── TaskAttachment (picture)
+       ├── Floater ─┬── FloaterList
+       │            └── TaskAttachment (picture)
        ├── CompletedTodo
        ├── CompletedFloater
        ├── File
@@ -406,6 +408,11 @@ User ──┬── Todo ──── TodoInstance
        ├── Account (OAuth)
        └── (approved by) User
 ```
+
+A `TaskAttachment` hangs off exactly one task — a CHECK constraint enforces that `todoID` and
+`floaterID` are never both set or both null — so both task types get pictures without an untyped
+task reference. `floaterID` has no foreign key: `floaters` is Exposed-managed and absent when
+Flyway runs, so the services own that cleanup (as they already do for `floater_list_shares`).
 
 ### ORM and Migrations
 
@@ -425,6 +432,9 @@ User ──┬── Todo ──── TodoInstance
 - **RFC 5545 recurrence**: Todos support `rrule`, `due`, `exdates`, and `durationMinutes`. Instances are materialized in `TodoInstance` for per-occurrence overrides.
 - **Tenant isolation**: All data queries filter by `userID`. There are no shared/public data models.
 - **Audit fields**: All major models include `createdAt` and `updatedAt`.
+- **Binary outside the database**: task-attachment images are written to `TDAY_ATTACHMENT_DIR` on
+  disk, with only metadata in `task_attachments`. Keeping images out of Postgres keeps `pg_dump`
+  usable, at the cost of a second backup target. See `docs/DATA_MODEL.md`.
 
 ## Authentication Flow
 
