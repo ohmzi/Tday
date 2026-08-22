@@ -110,6 +110,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalView
+import com.ohmz.tday.compose.core.sound.rememberTaskCompletionSound
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
@@ -1641,6 +1642,7 @@ private fun ScheduledTaskHomeTodayTaskRow(
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val view = LocalView.current
+    val taskCompletionSound = rememberTaskCompletionSound()
     val coroutineScope = rememberCoroutineScope()
     val swipeRevealState = rememberTaskSwipeRevealState(todo.id)
     var localChecked by remember(todo.id) { mutableStateOf(false) }
@@ -1823,6 +1825,7 @@ private fun ScheduledTaskHomeTodayTaskRow(
                                 enabled = !pendingCompletion,
                             ) {
                                 if (!pendingCompletion) {
+                                    taskCompletionSound.play()
                                     closeSwipeSlot()
                                     localChecked = true
                                     ViewCompat.performHapticFeedback(

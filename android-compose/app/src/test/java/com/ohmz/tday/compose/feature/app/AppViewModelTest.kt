@@ -40,6 +40,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -338,10 +339,12 @@ class AppViewModelTest {
 
         snackbarManager.events.test {
             viewModel.reconnectAfterForeground()
-            // expireSession() does its work in its own coroutine, so a single runCurrent() only
-            // gets as far as launching it — pump again so the snackbar is actually emitted.
-            runCurrent()
-            runCurrent()
+            // expireSession() finishes in a coroutine of its own, several suspension points deep
+            // (logout, credential clear, ensureResyncLoop) before it emits. Counting runCurrent()
+            // pumps to match is guesswork and was flaky; drain instead. This cannot hang on the
+            // resync loop, because the first thing expireSession does is ensureResyncLoop(false),
+            // which cancels it.
+            advanceUntilIdle()
             val event = awaitItem()
             assertEquals(SnackbarKind.ERROR, event.kind)
             assertEquals("res-${R.string.error_auth_expired}", event.message)
