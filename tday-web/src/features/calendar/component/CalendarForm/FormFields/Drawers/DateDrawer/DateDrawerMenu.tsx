@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { SetStateAction, useState, useEffect } from "react";
 import DurationPicker from "./DurationPicker"
 import { formatDayAbbr } from "@/lib/formatDayAbbr";
+import { useLocale } from "@/lib/navigation";
 import { Calendar } from "@/components/ui/calendar";
 import LineSeparator from "@/components/ui/lineSeparator";
 import type { DateRange } from "react-day-picker";
@@ -15,6 +16,7 @@ export function DateDrawerMenu({ dateRange, setDateRange }: { dateRange: DrawerD
     const nextWeek = startOfDay(nextMonday(dateRange?.from || new Date()));
     const tomorrow = startOfDay(addDays(dateRange?.from || new Date(), 1));
     const { t: appDict } = useTranslation("app");
+    const locale = useLocale();
 
     // Local calendar state allows intermediate "from-only" selection
     const [calendarRange, setCalendarRange] = useState<DateRange | undefined>({
@@ -43,7 +45,7 @@ export function DateDrawerMenu({ dateRange, setDateRange }: { dateRange: DrawerD
                         {appDict("today")}
                     </div>
                     <p className="text-xs text-muted-foreground">
-                        {formatDayAbbr(new Date())}
+                        {formatDayAbbr(new Date(), locale)}
                     </p>
                 </div>
                 {/* --- OPTION: TOMORROW --- */}
@@ -60,7 +62,7 @@ export function DateDrawerMenu({ dateRange, setDateRange }: { dateRange: DrawerD
                         {appDict("tomorrow")}
                     </div>
                     <p className="text-xs text-muted-foreground">
-                        {formatDayAbbr(tomorrow)}
+                        {formatDayAbbr(tomorrow, locale)}
                     </p>
                 </div>
                 {/* --- OPTION: NEXT WEEK --- */}
@@ -77,7 +79,7 @@ export function DateDrawerMenu({ dateRange, setDateRange }: { dateRange: DrawerD
                         {appDict("nextWeek")}
                     </div>
                     <p className="text-xs text-muted-foreground">
-                        {formatDayAbbr(nextWeek)}
+                        {formatDayAbbr(nextWeek, locale)}
                     </p>
                 </div>
                 <NestedDrawerItem

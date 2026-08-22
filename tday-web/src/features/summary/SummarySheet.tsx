@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import AppBottomSheet from "@/components/ui/AppBottomSheet";
-import Spinner from "@/components/ui/spinner";
+import { Loader2 } from "lucide-react";
 import { useAiCapability } from "@/features/summary/useAiCapability";
 import { useSummary, type SummaryMode } from "@/features/summary/useSummary";
 
@@ -47,7 +47,7 @@ export default function SummarySheet({
       <div className="flex flex-col gap-4 pt-2">
         {isPending ? (
           <div className="flex min-h-[120px] flex-col items-center justify-center gap-3 text-muted-foreground">
-            <Spinner className="h-7 w-7" />
+            <Loader2 className="h-7 w-7 animate-spin" />
             <p className="text-sm font-extrabold">{t("loading")}</p>
           </div>
         ) : error ? (

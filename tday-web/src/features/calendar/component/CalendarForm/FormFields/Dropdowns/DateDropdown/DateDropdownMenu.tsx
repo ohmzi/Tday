@@ -20,6 +20,7 @@ import { getDisplayDate } from "@/lib/date/displayDate";
 import { isSameDay } from "date-fns";
 import { useUserTimezone } from "@/features/user/query/get-timezone";
 import { useLocale } from "@/lib/navigation";
+import { formatDayAbbr } from "@/lib/formatDayAbbr";
 import type { DateRange } from "react-day-picker";
 
 import { Clock } from "lucide-react";
@@ -52,10 +53,6 @@ const DateDropdownMenu = ({
   useEffect(() => {
     setCalendarRange({ from: dateRange.from, to: dateRange.to });
   }, [dateRange.from, dateRange.to]);
-
-  function formatDayAbbr(date: Date): string {
-    return new Intl.DateTimeFormat(locale, { weekday: "short" }).format(date);
-  }
 
   const displayedDateRange = useMemo(() => {
     if (isSameDay(dateRange.from, dateRange.to) && dateRange.from.getTime() === dateRange.to.getTime()) {
@@ -96,7 +93,7 @@ const DateDropdownMenu = ({
             {appDict("today")}
           </div>
           <p className="text-xs text-muted-foreground">
-            {formatDayAbbr(new Date())}
+            {formatDayAbbr(new Date(), locale)}
           </p>
         </DropdownMenuItem>
 
@@ -114,7 +111,7 @@ const DateDropdownMenu = ({
             {appDict("tomorrow")}
           </div>
           <p className="text-xs text-muted-foreground">
-            {formatDayAbbr(tomorrow)}
+            {formatDayAbbr(tomorrow, locale)}
           </p>
         </DropdownMenuItem>
 
@@ -132,7 +129,7 @@ const DateDropdownMenu = ({
             {appDict("nextWeek")}
           </div>
           <p className="text-xs text-muted-foreground">
-            {formatDayAbbr(nextWeek)}
+            {formatDayAbbr(nextWeek, locale)}
           </p>
         </DropdownMenuItem>
 

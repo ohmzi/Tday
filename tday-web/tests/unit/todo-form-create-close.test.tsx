@@ -107,10 +107,6 @@ vi.mock("@/features/completed/query/get-completedTodo", () => ({
   }),
 }));
 
-vi.mock("@/components/todo/component/TodoForm/TodoInlineActionBar/TodoInlineActionBar", () => ({
-  default: () => <div data-testid="todo-inline-action-bar" />,
-}));
-
 vi.mock("@/components/todo/component/TodoForm/NLPTitleInput", () => ({
   default: () => <div data-testid="todo-title-input" />,
 }));

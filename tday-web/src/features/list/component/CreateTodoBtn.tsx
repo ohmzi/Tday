@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import Plus from "@/components/ui/icon/plus";
+import { Plus } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import TaskFormSheet from "@/components/todo/component/TodoForm/TaskFormSheet";
 import { hapticButtonTap } from "@/lib/haptics";

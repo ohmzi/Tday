@@ -69,7 +69,7 @@ export default function RepeatDrawerMenu({ rruleOptions, setRruleOptions, derive
                     <span className="text-base">{appDict("everyWeek")}</span>
                 </div>
                 <span className="text-xs text-muted-foreground ml-auto">
-                    {appDict("customMenu.on")} {formatDayAbbr(new Date())}
+                    {appDict("customMenu.on")} {formatDayAbbr(new Date(), locale)}
                 </span>
             </div>
             {/* Every Month */}
