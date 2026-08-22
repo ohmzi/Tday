@@ -2,8 +2,10 @@ package com.ohmz.tday.compose.feature.app
 
 import android.content.Context
 import app.cash.turbine.test
+import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.data.ApiCallException
 import com.ohmz.tday.compose.core.data.AppDataMode
+import com.ohmz.tday.compose.core.data.ConnectionFailureKind
 import com.ohmz.tday.compose.core.data.MutationKind
 import com.ohmz.tday.compose.core.data.OfflineSyncState
 import com.ohmz.tday.compose.core.data.PendingMutationRecord
@@ -24,6 +26,7 @@ import com.ohmz.tday.compose.core.notification.DayAheadPreferenceStore
 import com.ohmz.tday.compose.core.notification.ReminderOption
 import com.ohmz.tday.compose.core.notification.ReminderPreferenceStore
 import com.ohmz.tday.compose.core.notification.TaskReminderScheduler
+import com.ohmz.tday.compose.core.ui.SnackbarKind
 import com.ohmz.tday.compose.core.ui.SnackbarManager
 import com.ohmz.tday.compose.feature.auth.MainDispatcherRule
 import com.ohmz.tday.compose.ui.theme.AppThemeMode
@@ -72,6 +75,7 @@ class AppViewModelTest {
     )
     private val realtimeEvents = MutableSharedFlow<RealtimeEvent>()
     private val offlineSyncFailures = MutableSharedFlow<Unit>()
+    private val userInitiatedSyncFailures = MutableSharedFlow<ConnectionFailureKind>()
     private val offlineSyncSuccesses = MutableSharedFlow<Unit>()
     private val syncMetadataVersion = MutableStateFlow(0L)
     private val restoredUser = SessionUser(
@@ -95,6 +99,7 @@ class AppViewModelTest {
         every { cacheManager.loadOfflineStateBlocking() } returns OfflineSyncState()
         every { cacheManager.syncMetadataVersion } returns syncMetadataVersion
         every { syncManager.offlineSyncFailures } returns offlineSyncFailures
+        every { syncManager.userInitiatedSyncFailures } returns userInitiatedSyncFailures
         every { syncManager.offlineSyncSuccesses } returns offlineSyncSuccesses
         every { syncManager.hasPendingMutations() } returns false
         every { realtimeClient.events } returns realtimeEvents
@@ -294,8 +299,71 @@ class AppViewModelTest {
         runCurrent()
     }
 
+    /**
+     * A 401 that silent session recovery could NOT heal means the session is truly gone:
+     * [AppViewModel] expires it, signs the user out and explains why. `suppressAuthenticationExpired`
+     * only silences the generic sync-error toast — it does not keep a dead session alive.
+     */
     @Test
-    fun `foreground reconnect marks app offline when session cannot be restored`() = runTest {
+    fun `foreground reconnect expires the session when it cannot be restored`() = runTest {
+        val restoredSession = AuthRepository.RestoredSession(
+            user = restoredUser,
+            usedCachedSession = false,
+        )
+        coEvery { authRepository.restoreSessionForBootstrap() } returnsMany listOf(
+            restoredSession,
+            null,
+        )
+        coEvery { authRepository.logout() } returns Unit
+        coEvery { systemCredentialService.clearCredentialState() } returns Unit
+        coEvery {
+            syncManager.syncCachedData(
+                force = true,
+                replayPendingMutations = true,
+                notifyOfflineFailure = false,
+                connectionProbeTimeoutMs = null,
+            )
+        } returns Result.success(Unit)
+        coEvery {
+            syncManager.syncCachedData(
+                force = true,
+                replayPendingMutations = true,
+                notifyOfflineFailure = false,
+                connectionProbeTimeoutMs = SyncManager.USER_REFRESH_CONNECTION_TIMEOUT_MS,
+            )
+        } returns Result.failure(ApiCallException(statusCode = 401, message = "Unauthorized"))
+
+        val viewModel = makeViewModel()
+        runCurrent()
+
+        snackbarManager.events.test {
+            viewModel.reconnectAfterForeground()
+            // expireSession() does its work in its own coroutine, so a single runCurrent() only
+            // gets as far as launching it — pump again so the snackbar is actually emitted.
+            runCurrent()
+            runCurrent()
+            val event = awaitItem()
+            assertEquals(SnackbarKind.ERROR, event.kind)
+            assertEquals("res-${R.string.error_auth_expired}", event.message)
+            cancelAndIgnoreRemainingEvents()
+        }
+
+        val state = viewModel.uiState.value
+        assertFalse(state.authenticated)
+        assertTrue(state.requiresLogin)
+        assertFalse(state.isOffline)
+        assertEquals(null, state.user)
+        coVerify { authRepository.logout() }
+        verify { reminderScheduler.cancelAll() }
+    }
+
+    /**
+     * The other half of that branch: an unrestorable session whose failure is a mere
+     * connectivity blip keeps the user signed in and only marks the app offline — silently,
+     * after the foreground grace period, with no session-expired toast.
+     */
+    @Test
+    fun `foreground reconnect marks app offline when the server is unreachable`() = runTest {
         val restoredSession = AuthRepository.RestoredSession(
             user = restoredUser,
             usedCachedSession = false,
@@ -319,13 +387,21 @@ class AppViewModelTest {
                 notifyOfflineFailure = false,
                 connectionProbeTimeoutMs = SyncManager.USER_REFRESH_CONNECTION_TIMEOUT_MS,
             )
-        } returns Result.failure(ApiCallException(statusCode = 401, message = "Unauthorized"))
+        } returns Result.failure(
+            // A 401 the app never got an answer for: the request failed to reach the server.
+            ApiCallException(statusCode = 401, message = "Failed to connect to tday.example.com"),
+        )
 
         val viewModel = makeViewModel()
         runCurrent()
 
         snackbarManager.events.test {
             viewModel.reconnectAfterForeground()
+            runCurrent()
+            // Connectivity failures defer the offline flag past the foreground grace period
+            // (3s, private to AppViewModel) so a quick reconnect never flashes offline state.
+            assertFalse(viewModel.uiState.value.isOffline)
+            advanceTimeBy(3_000)
             runCurrent()
             expectNoEvents()
             cancelAndIgnoreRemainingEvents()
