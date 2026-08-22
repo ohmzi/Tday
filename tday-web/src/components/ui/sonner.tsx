@@ -44,8 +44,13 @@ const SonnerToaster = ({ ...props }: ToasterProps) => {
           title: "group-[.toast]:font-extrabold group-[.toast]:leading-tight group-[.toast]:text-center",
           description:
             "group-[.toast]:mt-0.5 group-[.toast]:text-current/75 group-[.toast]:font-medium group-[.toast]:leading-snug group-[.toast]:text-center",
+          // Plain text, not a filled pill — iOS renders the action as a bare
+          // Button(.plain) in `.subheadline` heavy on the snackbar accent (see
+          // AppRootView.AppSnackbar). `!bg-transparent` and `!px-0` are needed because
+          // sonner injects its own [data-button] background/padding at runtime, which a
+          // plain utility ties with and loses to on source order.
           actionButton:
-            "group-[.toast]:rounded-full group-[.toast]:bg-primary group-[.toast]:px-3 group-[.toast]:font-bold group-[.toast]:text-primary-foreground",
+            "group-[.toast]:!bg-transparent group-[.toast]:!px-0 group-[.toast]:!h-auto group-[.toast]:shrink-0 group-[.toast]:font-extrabold group-[.toast]:text-[hsl(var(--toast-action))]",
           cancelButton:
             "group-[.toast]:rounded-full group-[.toast]:bg-muted group-[.toast]:px-3 group-[.toast]:font-bold group-[.toast]:text-muted-foreground",
         },
