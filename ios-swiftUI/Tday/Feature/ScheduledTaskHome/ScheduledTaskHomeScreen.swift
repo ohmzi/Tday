@@ -83,7 +83,8 @@ struct ScheduledTaskHomeScreen: View {
     @State private var showingCreateList = false
     @State private var showingSummary = false
     @State private var editingTodo: TodoItem?
-    @State private var scheduledTaskHomeScrollOffset: CGFloat = 0
+    @State private var headerScroll = RootFeedHeaderScrollState()
+    @State private var rootDockCollapsed = false
     @State private var openSwipeTaskID: String?
 
     init(
@@ -147,7 +148,7 @@ struct ScheduledTaskHomeScreen: View {
     }
 
     private var shouldCollapseRootDock: Bool {
-        max(scheduledTaskHomeScrollOffset, 0) > ScheduledTaskHomeMetrics.rootDockCollapseThreshold
+        rootDockCollapsed
     }
 
     var body: some View {
@@ -177,9 +178,10 @@ struct ScheduledTaskHomeScreen: View {
                 PullToRefreshContainer(
                     isRefreshing: viewModel.isLoading,
                     isEnabled: pullRefreshEnabled,
-                    // Pull-to-refresh only happens at the top of the feed, where
-                    // the hero header is fully expanded — clear all of it.
-                    indicatorTopPadding: RootFeedHeroHeaderMetrics.expandedHeight + 10,
+                    // The pill lands just under the pinned toolbar; the hero
+                    // title fades out to hand that band over.
+                    indicatorTopPadding: RootFeedHeroHeaderMetrics.refreshIndicatorTopPadding,
+                    onIndicatorRevealChange: { headerScroll.refreshReveal = $0 },
                     action: {
                         await viewModel.refresh(userInitiated: true)
                     }
@@ -194,8 +196,15 @@ struct ScheduledTaskHomeScreen: View {
                                     .frame(height: RootFeedHeroHeaderMetrics.expandedHeight)
                                     .id(scheduledTaskHomeScrollTopID)
                                     .background {
-                                        TimelineScrollOffsetObserver { scheduledTaskHomeScrollOffset = $0 }
-                                            .frame(width: 0, height: 0)
+                                        RootFeedHeaderScrollObserver(
+                                            state: headerScroll,
+                                            collapseThreshold: ScheduledTaskHomeMetrics.rootDockCollapseThreshold
+                                        ) { collapsed in
+                                            guard rootDockCollapsed != collapsed else { return }
+                                            rootDockCollapsed = collapsed
+                                            onRootDockCollapsedChange(collapsed)
+                                        }
+                                        .frame(width: 0, height: 0)
                                     }
                                     .allowsHitTesting(false)
                                     .onTopPartialScrollSnap(
@@ -316,9 +325,7 @@ struct ScheduledTaskHomeScreen: View {
 
                 RootFeedHeroHeader(
                     title: "T'Day",
-                    collapseProgress: RootFeedHeroHeaderMetrics.collapseProgress(
-                        forScrollOffset: scheduledTaskHomeScrollOffset
-                    ),
+                    scroll: headerScroll,
                     coordinateSpaceName: "scheduled-task-home-root",
                     searchExpanded: $searchExpanded,
                     searchQuery: $searchQuery,
@@ -389,9 +396,6 @@ struct ScheduledTaskHomeScreen: View {
                 searchFieldFocused = false
                 searchResultsFrame = .zero
             }
-        }
-        .onChange(of: scheduledTaskHomeScrollOffset, initial: true) { _, offset in
-            onRootDockCollapsedChange(max(offset, 0) > ScheduledTaskHomeMetrics.rootDockCollapseThreshold)
         }
         .onChange(of: createTaskRequestID) { _, requestID in
             handleCreateTaskRequest(requestID)

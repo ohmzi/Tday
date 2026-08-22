@@ -413,6 +413,8 @@ struct TodoListScreen: View {
     @State private var pendingRescheduleDrop: TodoRescheduleDrop?
     @State private var collapsedSectionIDs: Set<String>
     @State private var timelineScrollOffset: CGFloat = 0
+    @State private var headerScroll = RootFeedHeaderScrollState()
+    @State private var rootDockCollapsed = false
     @State private var completionPhases: [String: TodoCompletionPhase] = [:]
     @State private var flashTodoId: String?
     @State private var highlightedScrollRequestID = 0
@@ -585,7 +587,11 @@ struct TodoListScreen: View {
     }
 
     private var shouldCollapseRootDock: Bool {
-        max(timelineScrollOffset, 0) > TodoTimelineMetrics.rootDockCollapseThreshold
+        // Root feed offsets live in the header model so a scroll frame does not
+        // invalidate this screen's body; other modes still use @State.
+        usesRootFeedHeader
+            ? rootDockCollapsed
+            : max(timelineScrollOffset, 0) > TodoTimelineMetrics.rootDockCollapseThreshold
     }
 
     private var minimalTimelineBottomSpacerHeight: CGFloat {
@@ -727,6 +733,7 @@ struct TodoListScreen: View {
             }
         }
         .onChange(of: timelineScrollOffset, initial: true) { _, offset in
+            guard !usesRootFeedHeader else { return }
             onRootDockCollapsedChange(max(offset, 0) > TodoTimelineMetrics.rootDockCollapseThreshold)
         }
         .onChange(of: floaterTaskHomeSearchExpanded, initial: true) { _, expanded in
@@ -845,9 +852,10 @@ struct TodoListScreen: View {
             PullToRefreshContainer(
                 isRefreshing: viewModel.isLoading,
                 isEnabled: pullRefreshEnabled,
-                // Pull-to-refresh only happens at the top of the feed, where
-                // the hero header is fully expanded — clear all of it.
-                indicatorTopPadding: RootFeedHeroHeaderMetrics.expandedHeight + 10,
+                // The pill lands just under the pinned toolbar; the hero
+                // title fades out to hand that band over.
+                indicatorTopPadding: RootFeedHeroHeaderMetrics.refreshIndicatorTopPadding,
+                onIndicatorRevealChange: { headerScroll.refreshReveal = $0 },
                 action: {
                     await viewModel.refresh(userInitiated: true)
                 }
@@ -983,8 +991,15 @@ struct TodoListScreen: View {
         Color.clear
             .frame(height: RootFeedHeroHeaderMetrics.expandedHeight)
             .background {
-                TimelineScrollOffsetObserver { timelineScrollOffset = $0 }
-                    .frame(width: 0, height: 0)
+                RootFeedHeaderScrollObserver(
+                    state: headerScroll,
+                    collapseThreshold: TodoTimelineMetrics.rootDockCollapseThreshold
+                ) { collapsed in
+                    guard rootDockCollapsed != collapsed else { return }
+                    rootDockCollapsed = collapsed
+                    onRootDockCollapsedChange(collapsed)
+                }
+                .frame(width: 0, height: 0)
             }
             .allowsHitTesting(false)
             .onTopPartialScrollSnap(
@@ -999,9 +1014,7 @@ struct TodoListScreen: View {
     private var rootFeedHeroHeader: some View {
         RootFeedHeroHeader(
             title: viewModel.title,
-            collapseProgress: RootFeedHeroHeaderMetrics.collapseProgress(
-                forScrollOffset: timelineScrollOffset
-            ),
+            scroll: headerScroll,
             coordinateSpaceName: todoTimelineDragCoordinateSpace,
             searchExpanded: $floaterTaskHomeSearchExpanded,
             searchQuery: $floaterTaskHomeSearchQuery,
