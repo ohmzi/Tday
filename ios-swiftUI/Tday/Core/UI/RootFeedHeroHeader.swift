@@ -49,8 +49,12 @@ enum RootFeedHeroHeaderMetrics {
     static let collapseDistance: CGFloat = heroTitleHeight
     /// Overscan for the toolbar backdrop so it also covers the status bar.
     static let backdropOverscan: CGFloat = 200
-    /// Where the pull-to-refresh pill sits: just clear of the toolbar strip.
-    static let refreshIndicatorTopPadding: CGFloat = barHeight + 12
+    /// Gradient below the toolbar strip that dissolves rows as they pass under
+    /// it, instead of the strip's edge guillotining them.
+    static let contentFadeHeight: CGFloat = 24
+    /// Where the pull-to-refresh pill sits: clear of the toolbar strip *and* of
+    /// the fade below it, so a fully revealed pill is never half-veiled.
+    static let refreshIndicatorTopPadding: CGFloat = barHeight + contentFadeHeight
 
     static let compactRowCenterY: CGFloat = topInset + (barButtonSize / 2)
 
@@ -88,9 +92,9 @@ enum RootFeedHeroHeaderMetrics {
     // never clips it. The title's *vertical* travel is deliberately NOT
     // staggered: the feed rises 78pt while the title only rises 67pt, so any
     // delay there lets the first card cut into the title's descenders.
-    static let sunCollapseEnd: CGFloat = 0.30
-    static let searchCollapseEnd: CGFloat = 0.35
-    static let titleTravelEnd: CGFloat = 0.40
+    static let sunCollapseEnd: CGFloat = 0.65
+    static let searchCollapseEnd: CGFloat = 0.45
+    static let titleTravelEnd: CGFloat = 0.50
 
     static let searchMorph = Animation.spring(response: 0.30, dampingFraction: 0.86)
 
@@ -127,13 +131,17 @@ enum RootFeedHeroHeaderMetrics {
         return (hero, min(compact, hero))
     }
 
-    /// Ease-in-out over `[0, end]` of the raw collapse progress. Smoothstep on
-    /// each leg is what takes the morph from linear-and-janky to continuous:
-    /// velocity is zero at both ends, so nothing snaps when a curve finishes.
-    static func stagger(_ progress: CGFloat, from start: CGFloat = 0, to end: CGFloat) -> CGFloat {
-        guard end > start else { return progress >= end ? 1 : 0 }
-        let normalized = clamp((progress - start) / (end - start))
-        return normalized * normalized * (3 - (2 * normalized))
+    /// Quintic smootherstep over `[0, end]` of the raw collapse progress.
+    ///
+    /// Deliberately quintic rather than the usual cubic smoothstep: it zeroes
+    /// the second derivative as well as the first at both ends, so each leg
+    /// eases *into* motion and *out of* it instead of starting and stopping
+    /// with a visible kick. The velocity profile is a bell — barely moving at
+    /// either end, quick through the middle.
+    static func stagger(_ progress: CGFloat, to end: CGFloat) -> CGFloat {
+        guard end > 0 else { return progress > 0 ? 1 : 0 }
+        let t = clamp(progress / end)
+        return t * t * t * ((t * ((t * 6) - 15)) + 10)
     }
 
     static func isDaytime(_ date: Date) -> Bool {
@@ -169,8 +177,18 @@ private struct RootFeedHeroTitleWidthKey: PreferenceKey {
     }
 }
 
+/// Which glyph the header leads with.
+enum RootFeedHeroMark {
+    /// Sun by day, moon by night — the Scheduled feed.
+    case timeOfDay
+    /// The Floater feed's leaf, drawn exactly as the dock's collapsed floater
+    /// button draws it (mirrored, floater green) so the two read as one mark.
+    case floaterLeaf
+}
+
 struct RootFeedHeroHeader: View {
     let title: String
+    let mark: RootFeedHeroMark
     let scroll: RootFeedHeaderScrollState
     /// Coordinate space the search field frame is reported in.
     let coordinateSpaceName: String
@@ -180,6 +198,9 @@ struct RootFeedHeroHeader: View {
     let onSearchClose: () -> Void
     let onCreateList: () -> Void
     let onOpenSettings: () -> Void
+    /// Tapping the mark or the title returns the feed to the top, the way the
+    /// iOS status bar does.
+    let onScrollToTop: () -> Void
 
     @Environment(\.tdayColors) private var colors
     @State private var titleWidth: CGFloat = 0
@@ -203,7 +224,16 @@ struct RootFeedHeroHeader: View {
                     .frame(height: Metrics.barHeight + Metrics.backdropOverscan)
                     .offset(y: -Metrics.backdropOverscan)
 
-                heroSun(progress: progress)
+                LinearGradient(
+                    colors: [colors.background, colors.background.opacity(0)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .frame(height: Metrics.contentFadeHeight)
+                .offset(y: Metrics.barHeight)
+                .allowsHitTesting(false)
+
+                heroMark(progress: progress)
                 heroTitle(width: width, progress: progress, refreshReveal: refreshReveal)
                 trailingActions(width: width)
                 searchField(width: width, progress: progress)
@@ -216,22 +246,47 @@ struct RootFeedHeroHeader: View {
         }
     }
 
-    private func heroSun(progress: CGFloat) -> some View {
+    private func heroMark(progress: CGFloat) -> some View {
         let collapse = Metrics.stagger(progress, to: Metrics.sunCollapseEnd)
         let box = Metrics.lerp(Metrics.heroSunBox, Metrics.compactSunBox, collapse)
         let centerY = Metrics.lerp(Metrics.heroSunCenterY, Metrics.compactRowCenterY, collapse)
 
-        return TimelineView(.periodic(from: .now, by: 60)) { context in
-            Image(systemName: RootFeedHeroHeaderMetrics.sunSymbolName(for: context.date))
-                .font(.system(size: Metrics.heroSunFontSize, weight: .regular))
-                .foregroundStyle(RootFeedHeroHeaderMetrics.sunColor(for: context.date))
-                .frame(width: Metrics.heroSunBox, height: Metrics.heroSunBox)
+        // Deliberately NOT hit-testable. The header is a sibling overlay above
+        // the feed, not a descendant of it, so anything here that accepts a
+        // touch is a dead zone for the scroll and pull-to-refresh pan — the
+        // scroll view's recogniser never sees it. The title alone carries the
+        // scroll-to-top tap; the mark's 72pt box would double that dead zone
+        // over the corner people naturally drag from.
+        return markGlyph
+            .frame(width: Metrics.heroSunBox, height: Metrics.heroSunBox)
+            // Rendered once at the hero size and scaled down: a GPU transform,
+            // not a fresh symbol rasterisation on every scroll frame.
+            .scaleEffect(box / Metrics.heroSunBox)
+            .position(x: Metrics.sunLeading + (box / 2), y: centerY)
+            .opacity(searchExpanded ? 0 : 1)
+            .allowsHitTesting(false)
+    }
+
+    @ViewBuilder
+    private var markGlyph: some View {
+        switch mark {
+        case .timeOfDay:
+            TimelineView(.periodic(from: .now, by: 60)) { context in
+                Image(systemName: RootFeedHeroHeaderMetrics.sunSymbolName(for: context.date))
+                    .font(.system(size: Metrics.heroSunFontSize, weight: .regular))
+                    .foregroundStyle(RootFeedHeroHeaderMetrics.sunColor(for: context.date))
+            }
+        case .floaterLeaf:
+            Image(systemName: "leaf")
+                .font(.system(size: Metrics.heroSunFontSize, weight: .semibold))
+                .foregroundStyle(Color.tdayFloaterGreen)
+                .scaleEffect(x: -1, y: 1)
         }
-        .frame(width: Metrics.heroSunBox, height: Metrics.heroSunBox)
-        .scaleEffect(box / Metrics.heroSunBox)
-        .position(x: Metrics.sunLeading + (box / 2), y: centerY)
-        .opacity(searchExpanded ? 0 : 1)
-        .allowsHitTesting(false)
+    }
+
+    private func handleScrollToTop() {
+        HapticManager.gentleTap()
+        onScrollToTop()
     }
 
     private func heroTitle(width: CGFloat, progress: CGFloat, refreshReveal: CGFloat) -> some View {
@@ -251,21 +306,27 @@ struct RootFeedHeroHeader: View {
         // the toolbar it stays put even mid-refresh.
         let refreshFade = refreshReveal * (1 - drop)
 
-        return Text(title)
-            .font(.tdayRounded(size: Metrics.heroTitleFontSize, weight: .heavy))
-            .foregroundStyle(colors.onSurface)
-            .lineLimit(1)
-            .fixedSize()
-            .background {
-                GeometryReader { proxy in
-                    Color.clear
-                        .preference(key: RootFeedHeroTitleWidthKey.self, value: proxy.size.width)
+        return Button(action: handleScrollToTop) {
+            Text(title)
+                .font(.tdayRounded(size: Metrics.heroTitleFontSize, weight: .heavy))
+                .foregroundStyle(colors.onSurface)
+                .lineLimit(1)
+                .fixedSize()
+                .background {
+                    GeometryReader { proxy in
+                        Color.clear
+                            .preference(key: RootFeedHeroTitleWidthKey.self, value: proxy.size.width)
+                    }
                 }
-            }
-            .scaleEffect(scale)
-            .position(x: centerX, y: centerY)
-            .opacity(searchExpanded ? 0 : Double(1 - refreshFade))
-            .allowsHitTesting(false)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .scaleEffect(scale)
+        .position(x: centerX, y: centerY)
+        .opacity(searchExpanded ? 0 : Double(1 - refreshFade))
+        .allowsHitTesting(!searchExpanded)
+        .accessibilityLabel(Text(title))
+        .accessibilityAddTraits(.isButton)
     }
 
     private func trailingActions(width: CGFloat) -> some View {
