@@ -91,25 +91,6 @@ export interface TaskStepType {
   position: number;
 }
 
-/** Which task feed an attachment hangs off. Scheduled and Anytime tasks are separate entities. */
-export type AttachmentTaskType = "todo" | "floater";
-
-/**
- * A picture attached to a task. Metadata only — the bytes are fetched from
- * `/api/attachment/{id}` so a task list never carries image payloads.
- */
-export interface TaskAttachmentType {
-  id: string;
-  taskId: string;
-  taskType: AttachmentTaskType;
-  fileName: string;
-  contentType: string;
-  sizeBytes: number;
-  width?: number | null;
-  height?: number | null;
-  createdAt?: string | null;
-}
-
 export interface overridingInstance {
   id: string;
   completedAt: Date | null;

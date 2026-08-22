@@ -1,0 +1,12 @@
+-- Drops the task-attachment table added in V24. The picture-attachment feature was removed
+-- before it carried anything but test data, so the table goes with it rather than lingering
+-- unreferenced the way `file` does.
+--
+-- V24 is deliberately left in place: it is already recorded in flyway_schema_history on deployed
+-- installs, and rewriting applied history would make those databases disagree with the repo.
+-- Create-then-drop is the honest record.
+--
+-- The image bytes themselves lived outside Postgres, under TDAY_ATTACHMENT_DIR on a Docker
+-- volume. That volume is no longer mounted, so it is removed separately by the operator; nothing
+-- in the database points at it any more.
+DROP TABLE IF EXISTS task_attachments;

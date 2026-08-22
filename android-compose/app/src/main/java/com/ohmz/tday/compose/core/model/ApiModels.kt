@@ -75,10 +75,6 @@ typealias ToggleTaskStepRequest = com.ohmz.tday.shared.model.ToggleTaskStepReque
 typealias DeleteTaskStepRequest = com.ohmz.tday.shared.model.DeleteTaskStepRequest
 typealias ReorderTaskStepsRequest = com.ohmz.tday.shared.model.ReorderTaskStepsRequest
 typealias TaskStepMutationResponse = com.ohmz.tday.shared.model.TaskStepMutationResponse
-typealias AttachmentDto = com.ohmz.tday.shared.model.AttachmentDto
-typealias AttachmentsResponse = com.ohmz.tday.shared.model.AttachmentsResponse
-typealias AttachmentMutationResponse = com.ohmz.tday.shared.model.AttachmentMutationResponse
-typealias AttachmentTaskType = com.ohmz.tday.shared.model.AttachmentTaskType
 
 @Serializable
 data class CsrfResponse(

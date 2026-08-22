@@ -31,8 +31,7 @@ This document describes the durable and local data structures that define T'Day.
 | Completed floater | `CompletedFloaters` | `CompletedFloaterDto` | Completion history for floaters. |
 | Preferences | `UserPreferences` | `PreferencesDto`, `PreferencesResponse` | Per-user sorting/grouping/direction preferences. |
 | App config | `AppConfigs` | `AppSettingsResponse`, `AdminSettingsResponse` | Public/admin app settings such as Summary availability. |
-| Task attachment | `TaskAttachments` (`task_attachments`) | `AttachmentDto`, `AttachmentsResponse`, `AttachmentMutationResponse` | A picture attached to a task. Exactly one of `todoID`/`floaterID` is set (CHECK constraint), so both task types are supported without an untyped task id. Metadata only — bytes live on disk; `floaterID` carries no FK (see below). |
-| File metadata | `Files` | Internal only | Retained table for cleanup/compatibility paths; there is no active upload/download API surface. Unrelated to `TaskAttachments`, which is where task pictures live. |
+| File metadata | `Files` | Internal only | Retained table for cleanup/compatibility paths; there is no active upload/download API surface. |
 | Event/auth logs | `EventLogs`, `AuthThrottles`, `AuthSignals`, `VerificationTokens`, `CronLogs` | Internal models | Security, throttling, verification, diagnostics, and operational state. |
 
 ## Mobile Probe Contract
@@ -127,37 +126,6 @@ The current iOS snapshot schema is version `2` and includes:
 Both platforms filter the source cache to pending scheduled tasks due today, sort by due time then
 title, cap displayed rows to the widget task limit, and exclude floaters, completed tasks, and overdue
 tasks from the v1 widget surface.
-
-## Task Attachments
-
-Pictures attached to a task, for both task types.
-
-- **Bytes** live on disk under `TDAY_ATTACHMENT_DIR` (default `/data/attachments`, a Docker volume),
-  not in Postgres — images would otherwise bloat every `pg_dump`. This makes the attachment
-  directory a **second backup target** alongside the database dump.
-- **Metadata** lives in `task_attachments`. The row is the record of truth: an orphaned file on disk
-  is harmless, an orphaned row is not, so a failed insert deletes the files it would have pointed at.
-- **Ownership** is enforced through the parent task on every path, including the byte-serving
-  routes. An attachment id is not a capability — another user's valid id reads as not-found.
-- **Storage keys** are server-generated and sharded by the attachment id's first two characters. A
-  client filename is never part of a path; it is stored as metadata and encrypted at rest like other
-  user text.
-- **Sanitizing**: format comes from magic bytes, never the declared content type. Images are decoded
-  and re-encoded, which strips EXIF — including the GPS coordinates phone cameras embed by default.
-  Dimensions are read from the header before any decode so a small file cannot decode into a
-  gigabyte raster.
-- **Limits**: JPEG and PNG only (a stock JDK ImageIO has no WebP or HEIC codec), 10 MB per image,
-  `AttachmentLimits.MAX_PER_TASK` per task. Clients mirror these so a doomed upload is refused
-  before it starts.
-- **Deletion** is service-owned, not left to the database. `TodoService.delete` and
-  `FloaterService.delete` purge attachment rows inside their own transaction and then remove the
-  files. A cascade alone cannot do this — Postgres knows nothing about the attachment directory, so
-  it would drop the rows and leak their images forever. There is also no FK on `floaterID` at all:
-  `floaters` is Exposed-managed and does not exist when Flyway runs, the same reason
-  `floater_list_shares` carries no FKs.
-- **Not offline-capable**: attachments are Server Mode only, and deliberately not queued as pending
-  mutations — that queue persists intent as small JSON records, and parking multi-megabyte images in
-  it would bloat the cache every sync replay carries.
 
 ## Device Calendar Mirror
 

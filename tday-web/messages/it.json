@@ -383,18 +383,7 @@
     "steps": "Passaggi",
     "add": "Aggiungi",
     "addStep": "Aggiungi un passaggio",
-    "stepsCreateHint": "Salva prima l'attività per aggiungere passaggi.",
-    "attachments": "Immagini",
-    "attachmentsAdd": "Aggiungi un'immagine",
-    "attachmentsEmpty": "Ancora nessuna immagine.",
-    "attachmentsCreateHint": "Salva prima l'attività per aggiungere immagini.",
-    "attachmentsLocalModeHint": "Le immagini richiedono uno spazio di lavoro sul server. La modalità locale tiene tutto nel browser e non può contenere foto.",
-    "attachmentsUnsupportedType": "Si possono allegare solo immagini JPEG e PNG.",
-    "attachmentsTooLarge": "Quell'immagine supera i 10 MB.",
-    "attachmentsUploadFailed": "Impossibile aggiungere l'immagine.",
-    "attachmentsDeleteFailed": "Impossibile rimuovere l'immagine.",
-    "attachmentsRemove": "Rimuovi immagine",
-    "attachmentsClosePreview": "Chiudi immagine"
+    "stepsCreateHint": "Salva prima l'attività per aggiungere passaggi."
   },
   "today": {
     "saveInstance": "Salva istanza",
@@ -1219,13 +1208,6 @@
         "step0": "Apri un'attività e aggiungi il tuo primo passaggio in Passaggi.",
         "step1": "Aggiungine quanti ne servono, poi trascina per riordinare.",
         "step2": "Spuntali — il contatore 2/5 tiene traccia dei tuoi progressi."
-      },
-      "task-pictures": {
-        "title": "Immagini su un'attività",
-        "summary": "Allega foto a un'attività, con data o Anytime.",
-        "keywords": "immagine, foto, allegato, allegare, fotocamera, jpeg, png, caricare",
-        "body": "Apri un'attività salvata e aggiungi fino a sei immagini. Funziona allo stesso modo su un'attività con data e su una Anytime. Sono accettati JPEG e PNG fino a 10 MB ciascuno, e l'immagine viene ricodificata durante il caricamento così i dati di posizione della fotocamera non arrivano mai al server.",
-        "tip": "Le immagini richiedono uno spazio di lavoro sul server: la modalità locale non ha dove tenerle."
       },
       "focus-filters": {
         "title": "Filtri Full Immersion",

@@ -383,18 +383,7 @@
     "steps": "ステップ",
     "add": "追加",
     "addStep": "ステップを追加",
-    "stepsCreateHint": "ステップを追加するには、まずタスクを保存してください。",
-    "attachments": "画像",
-    "attachmentsAdd": "画像を追加",
-    "attachmentsEmpty": "まだ画像はありません。",
-    "attachmentsCreateHint": "画像を追加するには、先にタスクを保存してください。",
-    "attachmentsLocalModeHint": "画像にはサーバーのワークスペースが必要です。ローカルモードはすべてをブラウザーに保存するため、写真は扱えません。",
-    "attachmentsUnsupportedType": "添付できるのは JPEG と PNG の画像だけです。",
-    "attachmentsTooLarge": "この画像は 10 MB を超えています。",
-    "attachmentsUploadFailed": "画像を追加できませんでした。",
-    "attachmentsDeleteFailed": "画像を削除できませんでした。",
-    "attachmentsRemove": "画像を削除",
-    "attachmentsClosePreview": "画像を閉じる"
+    "stepsCreateHint": "ステップを追加するには、まずタスクを保存してください。"
   },
   "today": {
     "saveInstance": "インスタンスを保存",
@@ -1219,13 +1208,6 @@
         "step0": "タスクを開き、ステップの下に最初のステップを追加します。",
         "step1": "必要なだけ追加し、ドラッグして並べ替えます。",
         "step2": "チェックを入れると、2/5 のカウンターが進捗を追跡します。"
-      },
-      "task-pictures": {
-        "title": "タスクに画像を添付",
-        "summary": "日付のあるタスクにも Anytime タスクにも写真を添付できます。",
-        "keywords": "画像, 写真, 添付, カメラ, jpeg, png, アップロード",
-        "body": "保存済みのタスクを開くと、画像を最大 6 枚まで追加できます。日付のあるタスクでも Anytime タスクでも同じように使えます。JPEG と PNG を 1 枚あたり 10 MB まで受け付け、アップロード時に再エンコードするため、カメラの位置情報がサーバーに残ることはありません。",
-        "tip": "画像にはサーバーのワークスペースが必要です。ローカルモードには保存先がありません。"
       },
       "focus-filters": {
         "title": "集中モードフィルタ",

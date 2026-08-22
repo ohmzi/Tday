@@ -1,8 +1,6 @@
 package com.ohmz.tday.compose.core.network
 
 import com.ohmz.tday.compose.core.model.AddMemberRequest
-import com.ohmz.tday.compose.core.model.AttachmentMutationResponse
-import com.ohmz.tday.compose.core.model.AttachmentsResponse
 import com.ohmz.tday.compose.core.model.AddMemberResponse
 import com.ohmz.tday.compose.core.model.AppSettingsResponse
 import com.ohmz.tday.compose.core.model.ChangePasswordRequest
@@ -85,18 +83,13 @@ import com.ohmz.tday.compose.core.model.VerifySecurityAnswersRequest
 import com.ohmz.tday.compose.core.model.VerifySecurityAnswersResponse
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
-import okhttp3.MultipartBody
-import okhttp3.ResponseBody
 import retrofit2.Response
 import retrofit2.http.Body
-import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.HTTP
 import retrofit2.http.Header
-import retrofit2.http.Multipart
 import retrofit2.http.PATCH
 import retrofit2.http.POST
-import retrofit2.http.Part
 import retrofit2.http.Path
 import retrofit2.http.Query
 import retrofit2.http.Url
@@ -274,49 +267,6 @@ interface TdayApiService {
     @POST("/api/todo/steps/reorder")
     suspend fun reorderTaskSteps(
         @Body payload: ReorderTaskStepsRequest,
-    ): Response<MessageResponse>
-
-    @GET("/api/todo/{todoId}/attachments")
-    suspend fun getTodoAttachments(
-        @Path("todoId") todoId: String,
-    ): Response<AttachmentsResponse>
-
-    @GET("/api/floater/{floaterId}/attachments")
-    suspend fun getFloaterAttachments(
-        @Path("floaterId") floaterId: String,
-    ): Response<AttachmentsResponse>
-
-    @Multipart
-    @POST("/api/todo/{todoId}/attachments")
-    suspend fun uploadTodoAttachment(
-        @Path("todoId") todoId: String,
-        @Part file: MultipartBody.Part,
-    ): Response<AttachmentMutationResponse>
-
-    @Multipart
-    @POST("/api/floater/{floaterId}/attachments")
-    suspend fun uploadFloaterAttachment(
-        @Path("floaterId") floaterId: String,
-        @Part file: MultipartBody.Part,
-    ): Response<AttachmentMutationResponse>
-
-    /**
-     * Attachment bytes go through this client rather than a separate image loader so they inherit
-     * the session cookies, pinned server trust, and base URL that are already configured here.
-     */
-    @GET("/api/attachment/{attachmentId}/thumbnail")
-    suspend fun downloadAttachmentThumbnail(
-        @Path("attachmentId") attachmentId: String,
-    ): Response<ResponseBody>
-
-    @GET("/api/attachment/{attachmentId}")
-    suspend fun downloadAttachment(
-        @Path("attachmentId") attachmentId: String,
-    ): Response<ResponseBody>
-
-    @DELETE("/api/attachment/{attachmentId}")
-    suspend fun deleteAttachment(
-        @Path("attachmentId") attachmentId: String,
     ): Response<MessageResponse>
 
     @PATCH("/api/todo/complete")

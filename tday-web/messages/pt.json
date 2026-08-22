@@ -383,18 +383,7 @@
     "steps": "Etapas",
     "add": "Adicionar",
     "addStep": "Adicionar etapa",
-    "stepsCreateHint": "Salve a tarefa primeiro para adicionar etapas.",
-    "attachments": "Imagens",
-    "attachmentsAdd": "Adicionar uma imagem",
-    "attachmentsEmpty": "Ainda sem imagens.",
-    "attachmentsCreateHint": "Salve a tarefa primeiro para adicionar imagens.",
-    "attachmentsLocalModeHint": "Imagens precisam de um espaço de trabalho no servidor. O Modo Local guarda tudo no navegador e não comporta fotos.",
-    "attachmentsUnsupportedType": "Só é possível anexar imagens JPEG e PNG.",
-    "attachmentsTooLarge": "Essa imagem passa de 10 MB.",
-    "attachmentsUploadFailed": "Não foi possível adicionar essa imagem.",
-    "attachmentsDeleteFailed": "Não foi possível remover essa imagem.",
-    "attachmentsRemove": "Remover imagem",
-    "attachmentsClosePreview": "Fechar imagem"
+    "stepsCreateHint": "Salve a tarefa primeiro para adicionar etapas."
   },
   "today": {
     "saveInstance": "Guardar instância",
@@ -1219,13 +1208,6 @@
         "step0": "Abra uma tarefa e adicione a sua primeira etapa em Etapas.",
         "step1": "Adicione quantas precisar e arraste para reordenar.",
         "step2": "Marque-as — o contador 2/5 acompanha o seu progresso."
-      },
-      "task-pictures": {
-        "title": "Imagens em uma tarefa",
-        "summary": "Anexe fotos a uma tarefa, com data ou Anytime.",
-        "keywords": "imagem, foto, anexo, anexar, câmera, jpeg, png, enviar",
-        "body": "Abra uma tarefa salva e adicione até seis imagens. Funciona igual em uma tarefa com data e em uma tarefa Anytime. JPEG e PNG são aceitos, até 10 MB cada, e a imagem é recodificada no envio para que os dados de localização da câmera nunca cheguem ao servidor.",
-        "tip": "Imagens precisam de um espaço de trabalho no servidor — o Modo Local não tem onde guardá-las."
       },
       "focus-filters": {
         "title": "Filtros de foco",

@@ -383,18 +383,7 @@
     "steps": "Steps",
     "add": "Add",
     "addStep": "Add a step",
-    "stepsCreateHint": "Save the task first to add steps.",
-    "attachments": "Pictures",
-    "attachmentsAdd": "Add a picture",
-    "attachmentsEmpty": "No pictures yet.",
-    "attachmentsCreateHint": "Save the task first to add pictures.",
-    "attachmentsLocalModeHint": "Pictures need a server workspace. Local Mode keeps everything in browser storage, which can't hold photos.",
-    "attachmentsUnsupportedType": "Only JPEG and PNG pictures can be attached.",
-    "attachmentsTooLarge": "That picture is larger than 10 MB.",
-    "attachmentsUploadFailed": "Could not add that picture.",
-    "attachmentsDeleteFailed": "Could not remove that picture.",
-    "attachmentsRemove": "Remove picture",
-    "attachmentsClosePreview": "Close picture"
+    "stepsCreateHint": "Save the task first to add steps."
   },
   "today": {
     "saveInstance": "Save instance",
@@ -1219,13 +1208,6 @@
         "step0": "Open a task and add your first step under Steps.",
         "step1": "Add as many as you need, then drag to reorder.",
         "step2": "Check them off — the 2/5 counter tracks your progress."
-      },
-      "task-pictures": {
-        "title": "Pictures on a task",
-        "summary": "Attach photos to a task — dated or Anytime.",
-        "keywords": "picture, photo, image, attachment, attach, camera, jpeg, png, upload",
-        "body": "Open a saved task and add up to six pictures to it. It works the same on a dated task and on an Anytime task. JPEG and PNG are accepted, up to 10 MB each, and the picture is re-encoded on the way in so camera location data never lands on the server.",
-        "tip": "Pictures need a server workspace — Local Mode has nowhere to keep them."
       },
       "focus-filters": {
         "title": "Focus filters",

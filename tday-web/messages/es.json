@@ -383,18 +383,7 @@
     "steps": "Pasos",
     "add": "Añadir",
     "addStep": "Añadir un paso",
-    "stepsCreateHint": "Guarda la tarea primero para añadir pasos.",
-    "attachments": "Imágenes",
-    "attachmentsAdd": "Añadir una imagen",
-    "attachmentsEmpty": "Aún no hay imágenes.",
-    "attachmentsCreateHint": "Guarda la tarea primero para añadir imágenes.",
-    "attachmentsLocalModeHint": "Las imágenes necesitan un espacio de trabajo en el servidor. El modo local guarda todo en el navegador y no puede contener fotos.",
-    "attachmentsUnsupportedType": "Solo se pueden adjuntar imágenes JPEG y PNG.",
-    "attachmentsTooLarge": "Esa imagen supera los 10 MB.",
-    "attachmentsUploadFailed": "No se pudo añadir esa imagen.",
-    "attachmentsDeleteFailed": "No se pudo quitar esa imagen.",
-    "attachmentsRemove": "Quitar imagen",
-    "attachmentsClosePreview": "Cerrar imagen"
+    "stepsCreateHint": "Guarda la tarea primero para añadir pasos."
   },
   "today": {
     "saveInstance": "Guardar instancia",
@@ -1219,13 +1208,6 @@
         "step0": "Abre una tarea y añade tu primer paso en Pasos.",
         "step1": "Añade tantos como necesites y arrastra para reordenar.",
         "step2": "Márcalos: el contador 2/5 sigue tu progreso."
-      },
-      "task-pictures": {
-        "title": "Imágenes en una tarea",
-        "summary": "Adjunta fotos a una tarea, con fecha o Anytime.",
-        "keywords": "imagen, foto, adjunto, adjuntar, cámara, jpeg, png, subir",
-        "body": "Abre una tarea guardada y añade hasta seis imágenes. Funciona igual en una tarea con fecha y en una tarea Anytime. Se aceptan JPEG y PNG de hasta 10 MB cada una, y la imagen se vuelve a codificar al subirla para que los datos de ubicación de la cámara nunca lleguen al servidor.",
-        "tip": "Las imágenes necesitan un espacio de trabajo en el servidor: el modo local no tiene dónde guardarlas."
       },
       "focus-filters": {
         "title": "Filtros de concentración",

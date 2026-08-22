@@ -206,37 +206,6 @@
       "sinceVersion": "0.7.0"
     },
     {
-      "id": "task-pictures",
-      "section": "CAPTURE_AND_DATES",
-      "icon": "camera",
-      "platforms": [
-        "WEB",
-        "ANDROID"
-      ],
-      "titleKey": "guide.topics.task-pictures.title",
-      "summaryKey": "guide.topics.task-pictures.summary",
-      "keywordsKey": "guide.topics.task-pictures.keywords",
-      "body": [
-        {
-          "type": "PARAGRAPH",
-          "keys": [
-            "guide.topics.task-pictures.body"
-          ]
-        },
-        {
-          "type": "TIP",
-          "keys": [
-            "guide.topics.task-pictures.tip"
-          ]
-        }
-      ],
-      "badge": null,
-      "deepLink": null,
-      "helpAnchors": [],
-      "serverOnly": true,
-      "sinceVersion": "0.7.0"
-    },
-    {
       "id": "calendar-views",
       "section": "CAPTURE_AND_DATES",
       "icon": "calendar",

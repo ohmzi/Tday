@@ -50,7 +50,6 @@ class FloaterServiceImpl(
     private val cache: CacheService,
     private val shareService: ListShareService,
     private val publisher: RealtimePublisher,
-    private val attachmentStorage: AttachmentStorage,
 ) : FloaterService {
     override suspend fun create(
         userId: String,
@@ -140,18 +139,7 @@ class FloaterServiceImpl(
             CompletedFloaters.deleteWhere {
                 (CompletedFloaters.userID eq userId) and (CompletedFloaters.originalFloaterID eq id)
             }
-            // Inside this transaction so the pictures go with the floater. There is no database
-            // cascade to fall back on here: `floaters` is Exposed-managed, so task_attachments
-            // carries no foreign key to it (see V24).
-            val keys = TaskAttachmentCleanup.purgeRowsForFloater(id)
-            val deleted = Floaters.deleteWhere {
-                (Floaters.id eq id) and mutableFloaters(userId, editableListIds)
-            }
-            deleted to keys
-        }.let { (deleted, keys) ->
-            // After the commit: the database cannot reach the attachment directory.
-            keys.forEach(attachmentStorage::delete)
-            deleted
+            Floaters.deleteWhere { (Floaters.id eq id) and mutableFloaters(userId, editableListIds) }
         }
         cache.invalidateFloaterCaches(userId)
         publisher.publishToCollaborators(userId, DomainEvent.FloaterChanged())

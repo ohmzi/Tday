@@ -24,9 +24,6 @@ All API routes live under `/api/`. The web SPA consumes them via same-origin req
 
 - Request bodies use `application/json`.
 - Serialization is handled by Ktor's `ContentNegotiation` plugin with `kotlinx.serialization`.
-- The one exception is attachment upload, which takes `multipart/form-data` (a single `file` part)
-  and responds with JSON. Attachment *download* routes respond with image bytes, so they
-  authenticate explicitly rather than through the JSON `withAuth` helper.
 
 ### Validation
 
@@ -201,25 +198,6 @@ Shared route constants live in `shared/src/commonMain/kotlin/com/ohmz/tday/share
 | GET | `/api/todo/overdue` | List overdue todos |
 | POST | `/api/todo/nlp` | Natural language date/title parsing |
 | POST | `/api/todo/summary` | Task summary with optional AI and logic fallback |
-
-### Attachments
-
-Pictures attached to a task. Both task types are supported; metadata routes hang off the owning
-task, while byte routes are flat and id-addressed so an image can be cached on its own.
-
-| Method | Path | Purpose |
-|--------|------|---------|
-| GET | `/api/todo/{todoId}/attachments` | List a scheduled task's pictures |
-| POST | `/api/todo/{todoId}/attachments` | Upload a picture to a scheduled task (multipart) |
-| GET | `/api/floater/{floaterId}/attachments` | List an Anytime task's pictures |
-| POST | `/api/floater/{floaterId}/attachments` | Upload a picture to an Anytime task (multipart) |
-| GET | `/api/attachment/{attachmentId}` | Full-size image bytes |
-| GET | `/api/attachment/{attachmentId}/thumbnail` | Thumbnail bytes |
-| DELETE | `/api/attachment/{attachmentId}` | Remove a picture |
-
-Ownership is re-checked through the parent task on every route, including the byte routes — an
-attachment id is not a capability. Byte responses are `Cache-Control: private` because they are the
-user's own photographs and must never be served from a shared cache.
 
 ### Floaters
 

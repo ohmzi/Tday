@@ -283,44 +283,6 @@ struct TaskStepsResponse: Codable {
     let steps: [TaskStepDTO]
 }
 
-/// Which task feed an attachment hangs off. Mirrors the shared Kotlin contract's wire values.
-enum AttachmentTaskType: String, Codable {
-    case todo
-    case floater
-}
-
-/// A picture attached to a task. Metadata only — the bytes come from the content routes.
-struct AttachmentDTO: Codable, Equatable, Identifiable {
-    let id: String
-    let taskId: String
-    let taskType: String
-    let fileName: String
-    let contentType: String
-    let sizeBytes: Int64
-    let width: Int?
-    let height: Int?
-    let createdAt: String?
-}
-
-struct AttachmentsResponse: Codable {
-    let attachments: [AttachmentDTO]
-}
-
-struct AttachmentMutationResponse: Codable {
-    let message: String?
-    let attachment: AttachmentDTO?
-}
-
-/// Limits mirrored from the shared `AttachmentLimits` so an upload that cannot succeed is refused
-/// before it starts.
-enum AttachmentLimits {
-    static let maxPerTask = 6
-    static let maxBytes = 10 * 1024 * 1024
-    /// JPEG and PNG only. The server has no WebP or HEIC codec, so HEIC camera output must be
-    /// converted before upload.
-    static let allowedContentTypes = ["image/jpeg", "image/png"]
-}
-
 struct CreateTaskStepRequest: Codable {
     let todoId: String
     let title: String
