@@ -411,6 +411,84 @@ final class TdayAPIService {
         try await request(path: "/api/todo/steps/reorder", method: "POST", body: payload, responseType: MessageResponse.self)
     }
 
+    // MARK: - Attachments
+
+    func getAttachments(taskType: AttachmentTaskType, taskId: String) async throws -> AttachmentsResponse {
+        let path = taskType == .todo
+            ? "/api/todo/\(taskId)/attachments"
+            : "/api/floater/\(taskId)/attachments"
+        return try await request(path: path, method: "GET", responseType: AttachmentsResponse.self)
+    }
+
+    /// Uploads one picture as `multipart/form-data`.
+    ///
+    /// The body is assembled here rather than through the JSON `request` helpers: those encode an
+    /// `Encodable` and stamp `application/json`, and multipart needs a hand-built body whose
+    /// boundary matches the Content-Type header exactly.
+    func uploadAttachment(
+        taskType: AttachmentTaskType,
+        taskId: String,
+        fileName: String,
+        contentType: String,
+        imageData: Data
+    ) async throws -> AttachmentMutationResponse {
+        let path = taskType == .todo
+            ? "/api/todo/\(taskId)/attachments"
+            : "/api/floater/\(taskId)/attachments"
+        let boundary = "TdayBoundary-\(UUID().uuidString)"
+
+        var body = Data()
+        body.appendASCII("--\(boundary)\r\n")
+        body.appendASCII("Content-Disposition: form-data; name=\"file\"; filename=\"\(fileName)\"\r\n")
+        body.appendASCII("Content-Type: \(contentType)\r\n\r\n")
+        body.append(imageData)
+        body.appendASCII("\r\n--\(boundary)--\r\n")
+
+        let response = try await requestRaw(
+            path: path,
+            method: "POST",
+            body: body,
+            contentType: "multipart/form-data; boundary=\(boundary)"
+        )
+        return try decode(response.data, as: AttachmentMutationResponse.self)
+    }
+
+    func deleteAttachment(id: String) async throws -> MessageResponse {
+        try await request(path: "/api/attachment/\(id)", method: "DELETE", responseType: MessageResponse.self)
+    }
+
+    /// Fetches an attachment's bytes.
+    ///
+    /// Uses its own transport rather than `requestRaw`, which decodes every response as a UTF-8
+    /// string — that would corrupt image bytes. Routed through the same `configuration` so it still
+    /// inherits the session cookie, base URL, and HTTPS enforcement.
+    func downloadAttachment(id: String, thumbnail: Bool) async throws -> Data {
+        let path = thumbnail ? "/api/attachment/\(id)/thumbnail" : "/api/attachment/\(id)"
+        let url = try configuration.makeURL(path: path, allowRewrite: true)
+
+        if configuration.isSecureTransportRequired(for: url), url.scheme?.lowercased() != "https" {
+            throw APIError(message: "HTTPS is required for remote servers", statusCode: nil)
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        for (key, value) in configuration.defaultHeaders(extraHeaders: [:], allowRewrite: true) {
+            request.setValue(value, forHTTPHeaderField: key)
+        }
+
+        let (data, response) = try await configuration.session.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError(message: "Unexpected server response", statusCode: nil)
+        }
+        guard (200 ..< 300).contains(httpResponse.statusCode) else {
+            throw APIError(
+                message: HTTPURLResponse.localizedString(forStatusCode: httpResponse.statusCode),
+                statusCode: httpResponse.statusCode
+            )
+        }
+        return data
+    }
+
     func uncompleteTodoByBody(payload: TodoUncompleteRequest) async throws -> MessageResponse {
         try await request(path: "/api/todo/uncomplete", method: "PATCH", body: payload, responseType: MessageResponse.self)
     }
@@ -857,4 +935,14 @@ private extension JSONEncoder {
         encoder.dateEncodingStrategy = .iso8601
         return encoder
     }()
+}
+
+private extension Data {
+    /// Appends multipart framing text. `Data` has no `append(String)` of its own, and the framing
+    /// is pure ASCII, so a failed encode is impossible rather than silently dropped.
+    mutating func appendASCII(_ text: String) {
+        if let encoded = text.data(using: .utf8) {
+            append(encoded)
+        }
+    }
 }

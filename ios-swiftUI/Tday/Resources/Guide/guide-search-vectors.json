@@ -33,7 +33,8 @@
       "scheduled-lists",
       "morning-sweep",
       "share-into-tday",
-      "apple-watch"
+      "apple-watch",
+      "device-calendar-sync"
     ],
     "reminder": [
       "reminders",

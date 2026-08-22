@@ -46,6 +46,11 @@ object GuideCatalog {
             body = listOf(para(GuideTopicIds.TASK_STEPS), steps(GuideTopicIds.TASK_STEPS, 3)),
         ),
         topic(
+            GuideTopicIds.TASK_PICTURES, GuideSectionId.CAPTURE_AND_DATES, "camera",
+            setOf(WEB, ANDROID), serverOnly = true, sinceVersion = "0.7.0",
+            body = listOf(para(GuideTopicIds.TASK_PICTURES), tip(GuideTopicIds.TASK_PICTURES)),
+        ),
+        topic(
             GuideTopicIds.CALENDAR_VIEWS, GuideSectionId.CAPTURE_AND_DATES, "calendar",
             setOf(WEB, ANDROID, IOS), body = listOf(para(GuideTopicIds.CALENDAR_VIEWS)),
             deepLink = GuideDeepLink(web = "calendar", android = "calendar", ios = "calendar"),
@@ -274,6 +279,14 @@ object GuideCatalog {
             body = listOf(para(GuideTopicIds.CALENDAR_FEED), steps(GuideTopicIds.CALENDAR_FEED, 3)),
             deepLink = GuideDeepLink(web = "settings"),
             helpAnchors = listOf("settings-calendar-feed"),
+        ),
+        topic(
+            GuideTopicIds.DEVICE_CALENDAR_SYNC, GuideSectionId.INTEGRATIONS, "calendar",
+            setOf(ANDROID, IOS), sinceVersion = "0.7.0",
+            body = listOf(
+                para(GuideTopicIds.DEVICE_CALENDAR_SYNC),
+                steps(GuideTopicIds.DEVICE_CALENDAR_SYNC, 3),
+            ),
         ),
         topic(
             GuideTopicIds.WEBHOOKS, GuideSectionId.INTEGRATIONS, "webhook",

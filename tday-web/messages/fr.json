@@ -383,7 +383,18 @@
     "steps": "Étapes",
     "add": "Ajouter",
     "addStep": "Ajouter une étape",
-    "stepsCreateHint": "Enregistre d'abord la tâche pour ajouter des étapes."
+    "stepsCreateHint": "Enregistre d'abord la tâche pour ajouter des étapes.",
+    "attachments": "Images",
+    "attachmentsAdd": "Ajouter une image",
+    "attachmentsEmpty": "Pas encore d'images.",
+    "attachmentsCreateHint": "Enregistre d'abord la tâche pour ajouter des images.",
+    "attachmentsLocalModeHint": "Les images nécessitent un espace de travail serveur. Le mode local garde tout dans le navigateur et ne peut pas stocker de photos.",
+    "attachmentsUnsupportedType": "Seules les images JPEG et PNG peuvent être jointes.",
+    "attachmentsTooLarge": "Cette image dépasse 10 Mo.",
+    "attachmentsUploadFailed": "Impossible d'ajouter cette image.",
+    "attachmentsDeleteFailed": "Impossible de retirer cette image.",
+    "attachmentsRemove": "Retirer l'image",
+    "attachmentsClosePreview": "Fermer l'image"
   },
   "today": {
     "saveInstance": "Enregistrer l'instance",
@@ -1127,6 +1138,15 @@
         "step1": "Copie l'URL — elle n'apparaît qu'une fois ; régénère-la si tu la perds.",
         "step2": "Ajoute-la comme calendrier d'abonnement dans ton app de calendrier."
       },
+      "device-calendar-sync": {
+        "title": "Tâches dans le calendrier de l'appareil",
+        "summary": "Recopie tes tâches datées dans un calendrier T'Day sur ton téléphone.",
+        "keywords": "calendrier, calendrier de l'appareil, synchronisation, google agenda, calendrier apple, eventkit, calendrier du téléphone, copie",
+        "body": "Une fois activé, chaque tâche ayant une date est copiée dans un calendrier nommé T'Day sur ton téléphone, à côté de tes autres calendriers. Les tâches Anytime en restent absentes, faute de date. La synchronisation est à sens unique : T'Day écrit dans ce calendrier, donc les modifications que tu y fais sont remplacées dès que tes tâches changent.",
+        "step0": "Dans les Réglages, active « Ajouter les tâches planifiées à mon calendrier ».",
+        "step1": "Autorise l'accès au calendrier quand ton téléphone le demande.",
+        "step2": "Ouvre ton application calendrier : tes tâches datées sont dans le calendrier T'Day."
+      },
       "webhooks": {
         "title": "Webhooks",
         "summary": "Recevez un ping HTTP quand vos tâches changent.",
@@ -1199,6 +1219,13 @@
         "step0": "Ouvrez une tâche et ajoutez votre première étape sous Étapes.",
         "step1": "Ajoutez-en autant que nécessaire, puis glissez pour réorganiser.",
         "step2": "Cochez-les — le compteur 2/5 suit votre progression."
+      },
+      "task-pictures": {
+        "title": "Images sur une tâche",
+        "summary": "Joins des photos à une tâche, datée ou Anytime.",
+        "keywords": "image, photo, pièce jointe, joindre, appareil photo, jpeg, png, téléverser",
+        "body": "Ouvre une tâche enregistrée et ajoute jusqu'à six images. Cela fonctionne pareil sur une tâche datée et sur une tâche Anytime. JPEG et PNG sont acceptés, jusqu'à 10 Mo chacun, et l'image est réencodée à l'envoi pour que les données de localisation de l'appareil photo n'arrivent jamais sur le serveur.",
+        "tip": "Les images nécessitent un espace de travail serveur — le mode local n'a nulle part où les stocker."
       },
       "focus-filters": {
         "title": "Filtres de concentration",

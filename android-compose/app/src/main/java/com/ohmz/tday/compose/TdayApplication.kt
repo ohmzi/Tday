@@ -5,6 +5,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
+import com.ohmz.tday.compose.core.calendar.CalendarSyncManager
 import com.ohmz.tday.compose.core.notification.DayAheadPreferenceStore
 import com.ohmz.tday.compose.core.notification.DayAheadScheduling
 import androidx.work.ExistingPeriodicWorkPolicy
@@ -30,6 +31,7 @@ class TdayApplication : Application(), Configuration.Provider {
 
     @Inject lateinit var workerFactory: HiltWorkerFactory
     @Inject lateinit var dayAheadPreferenceStore: DayAheadPreferenceStore
+    @Inject lateinit var calendarSyncManager: CalendarSyncManager
     private val deferredStartupRan = AtomicBoolean(false)
 
     override val workManagerConfiguration: Configuration
@@ -71,6 +73,9 @@ class TdayApplication : Application(), Configuration.Provider {
         createNotificationChannels()
         enqueuePeriodicRescheduleWorker()
         WidgetSyncWorker.schedule(this)
+        // Opt-in and permission-gated internally, so this is a no-op until the user turns the
+        // device-calendar mirror on.
+        calendarSyncManager.start()
     }
 
     private fun createNotificationChannels() {

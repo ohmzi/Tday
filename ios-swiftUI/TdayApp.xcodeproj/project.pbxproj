@@ -7,6 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		CA1E7E020000000000000000 /* RecurrenceRuleParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA1E7E010000000000000000 /* RecurrenceRuleParserTests.swift */; };
+		CA1EBF000000000000000000 /* CalendarSyncPreferenceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA1EFE000000000000000000 /* CalendarSyncPreferenceStore.swift */; };
+		CA1EBF010000000000000000 /* RecurrenceRuleParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA1EFE010000000000000000 /* RecurrenceRuleParser.swift */; };
+		CA1EBF020000000000000000 /* DeviceCalendarStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA1EFE020000000000000000 /* DeviceCalendarStore.swift */; };
+		CA1EBF030000000000000000 /* CalendarSyncManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA1EFE030000000000000000 /* CalendarSyncManager.swift */; };
 		013BE5C9AD66548E50177C48 /* SettingsScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC47AEF5EB0B44524D8C20B1 /* SettingsScreen.swift */; };
 		01C535860D5694F91772B940 /* CookieStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D210E2E24F013C1E30BE80A /* CookieStore.swift */; };
 		02DCC3220DC138F342784CA4 /* SyncManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6D61A167DBA9FD21F8CC00A /* SyncManager.swift */; };
@@ -226,6 +231,11 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		CA1E7E010000000000000000 /* RecurrenceRuleParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecurrenceRuleParserTests.swift; sourceTree = "<group>"; };
+		CA1EFE000000000000000000 /* CalendarSyncPreferenceStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarSyncPreferenceStore.swift; sourceTree = "<group>"; };
+		CA1EFE010000000000000000 /* RecurrenceRuleParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecurrenceRuleParser.swift; sourceTree = "<group>"; };
+		CA1EFE020000000000000000 /* DeviceCalendarStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceCalendarStore.swift; sourceTree = "<group>"; };
+		CA1EFE030000000000000000 /* CalendarSyncManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarSyncManager.swift; sourceTree = "<group>"; };
 		0380EFC9ADD5303B83B5BD91 /* ProbeDecryptor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProbeDecryptor.swift; sourceTree = "<group>"; };
 		055D0F0501B287B70456AF4B /* TodoRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodoRepository.swift; sourceTree = "<group>"; };
 		0DE4A047CF237AD9F605D02E /* TaskFloatingActionButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskFloatingActionButton.swift; sourceTree = "<group>"; };
@@ -419,6 +429,17 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		CA1E6B000000000000000000 /* Calendar */ = {
+			isa = PBXGroup;
+			children = (
+				CA1EFE000000000000000000 /* CalendarSyncPreferenceStore.swift */,
+				CA1EFE010000000000000000 /* RecurrenceRuleParser.swift */,
+				CA1EFE020000000000000000 /* DeviceCalendarStore.swift */,
+				CA1EFE030000000000000000 /* CalendarSyncManager.swift */,
+			);
+			path = Calendar;
+			sourceTree = "<group>";
+		};
 		0032E16ECBA0642C6108F28D /* Auth */ = {
 			isa = PBXGroup;
 			children = (
@@ -458,6 +479,7 @@
 				4A7B9C0D1E2F3456789ABC02 /* CompletedSyncMergeTests.swift */,
 				4D2A9B7E2CE3424C9D111002 /* ConnectivityClassificationTests.swift */,
 				DA7A000000000000000000004 /* DataExportMapperTests.swift */,
+				CA1E7E010000000000000000 /* RecurrenceRuleParserTests.swift */,
 				CAFE0D1E0000000000000005 /* GuideContentContractTests.swift */,
 				4F52544D434C49454E543032 /* RealtimeClientTests.swift */,
 				5A4E00000000000000000034 /* PendingShareStoreTests.swift */,
@@ -919,6 +941,7 @@
 			isa = PBXGroup;
 			children = (
 				86E84C14E60D9CBC7F667F1C /* SentryConfiguration.swift */,
+				CA1E6B000000000000000000 /* Calendar */,
 				967A6B5FC45694B849B1972E /* Data */,
 				9F8E7D6C5B4A00000000A001 /* Localization */,
 				703B1885FA053FA502D97DBC /* Domain */,
@@ -1171,6 +1194,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CA1E7E020000000000000000 /* RecurrenceRuleParserTests.swift in Sources */,
 				B4995200636F408E4296FF0D /* ApiModelContractTests.swift in Sources */,
 				434143484D41505045525300 /* CacheMappersDateParsingTests.swift in Sources */,
 				B10000000000000000000025 /* CarTaskModelsTests.swift in Sources */,
@@ -1217,6 +1241,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CA1EBF000000000000000000 /* CalendarSyncPreferenceStore.swift in Sources */,
+				CA1EBF010000000000000000 /* RecurrenceRuleParser.swift in Sources */,
+				CA1EBF020000000000000000 /* DeviceCalendarStore.swift in Sources */,
+				CA1EBF030000000000000000 /* CalendarSyncManager.swift in Sources */,
 				B648A67EAD215BE5B74F7460 /* ApiModels.swift in Sources */,
 				DA7A000000000000000000001 /* DataExport.swift in Sources */,
 				5A4E00000000000000000031 /* PendingShareStore.swift in Sources */,

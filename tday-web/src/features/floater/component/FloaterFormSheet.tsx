@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Flag, List as ListIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import AppBottomSheet from "@/components/ui/AppBottomSheet";
+import TaskAttachmentsSection from "@/features/attachments/component/TaskAttachmentsSection";
 import FloaterListDot from "@/features/floaterList/component/FloaterListDot";
 import {
   SheetCard,
@@ -212,6 +213,20 @@ export default function FloaterFormSheet({
             onClick={() => setActiveSelector("priority")}
           />
         </SheetCard>
+
+        {/* Pictures — an attachment needs a saved task to hang off. */}
+        {isEditing && floater?.id ? (
+          <TaskAttachmentsSection taskType="floater" taskId={floater.id} />
+        ) : (
+          <>
+            <SheetSectionTitle>{appDict("attachments")}</SheetSectionTitle>
+            <SheetCard>
+              <p className="px-[18px] py-3 text-sm font-bold text-muted-foreground">
+                {appDict("attachmentsCreateHint")}
+              </p>
+            </SheetCard>
+          </>
+        )}
 
         <CenteredSelectorOverlay
           open={activeSelector === "list"}

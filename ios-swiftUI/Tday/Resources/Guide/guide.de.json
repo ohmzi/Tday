@@ -1347,6 +1347,42 @@
       "searchBody": "nimm deine aufgaben vom gerat mit, wenn du in den server-modus wechselst. im lokalen modus gestartet und spater einen server eingerichtet? es wird nie etwas von selbst hochgeladen. so ziehst du deine daten um: exportiere sie zuerst in den einstellungen, melde dich an deinem server an und importiere dort die datei. aufgaben, listen und historie ziehen in einem bewussten schritt um — du wahlst den moment, und deine geratedaten bleiben bis dahin unberuhrt. behalte die exportierte datei nach dem import, bis du gepruft hast, dass alles angekommen ist — dann dient sie zugleich als backup."
     },
     {
+      "id": "device-calendar-sync",
+      "section": "INTEGRATIONS",
+      "sectionOrder": 7,
+      "icon": "calendar",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.7.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Aufgaben im Gerätekalender",
+      "summary": "Spiegle deine terminierten Aufgaben in einen T'Day-Kalender auf deinem Handy.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Wenn du das aktivierst, wird jede Aufgabe mit Datum in einen Kalender namens T'Day auf deinem Handy kopiert – neben deinen anderen Kalendern. Anytime-Aufgaben bleiben außen vor, weil sie kein Datum haben. Die Synchronisierung läuft nur in eine Richtung: T'Day schreibt in diesen Kalender, deine dortigen Änderungen werden beim nächsten Abgleich überschrieben."
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "Aktiviere in den Einstellungen „Terminierte Aufgaben zu meinem Kalender hinzufügen“.",
+            "Erlaube den Kalenderzugriff, wenn dein Handy danach fragt.",
+            "Öffne deine Kalender-App – deine terminierten Aufgaben stehen im T'Day-Kalender."
+          ]
+        }
+      ],
+      "searchTitle": "aufgaben im geratekalender",
+      "searchKeywords": "kalender, geratekalender, synchronisieren, google kalender, apple kalender, eventkit, handykalender, spiegeln",
+      "searchBody": "spiegle deine terminierten aufgaben in einen t'day-kalender auf deinem handy. wenn du das aktivierst, wird jede aufgabe mit datum in einen kalender namens t'day auf deinem handy kopiert – neben deinen anderen kalendern. anytime-aufgaben bleiben ausen vor, weil sie kein datum haben. die synchronisierung lauft nur in eine richtung: t'day schreibt in diesen kalender, deine dortigen anderungen werden beim nachsten abgleich uberschrieben. aktiviere in den einstellungen „terminierte aufgaben zu meinem kalender hinzufugen“. erlaube den kalenderzugriff, wenn dein handy danach fragt. offne deine kalender-app – deine terminierten aufgaben stehen im t'day-kalender."
+    },
+    {
       "id": "ai-summary",
       "section": "INTEGRATIONS",
       "sectionOrder": 7,

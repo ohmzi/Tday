@@ -1111,6 +1111,9 @@ final class AppViewModel {
         let tasks = container.todoRepository.fetchTodosSnapshot(mode: .all)
         await container.reminderScheduler.reschedule(tasks: tasks, defaultReminder: selectedReminder)
         await container.dayAheadScheduler.reschedule(tasks: tasks)
+        // Same snapshot, same cadence as the reminder pass. Opt-in and permission-gated inside, so
+        // this is a no-op until the user turns the device-calendar mirror on.
+        await container.calendarSyncManager.sync(tasks: tasks)
     }
 
     func refreshVersionInfo() async {

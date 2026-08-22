@@ -1347,6 +1347,42 @@
       "searchBody": "lleva contigo tus tareas del dispositivo al cambiar al modo servidor. ¿empezaste en modo local y luego montaste un servidor? nunca se sube nada por su cuenta. para trasladar tus datos: exportalos primero desde ajustes, inicia sesion en tu servidor e importa alli el archivo. tus tareas, listas e historial se trasladan en un paso deliberado — tu eliges el momento, y tus datos del dispositivo quedan intactos hasta entonces. tras importar, conserva el archivo exportado hasta confirmar que llego todo — asi tambien sirve de respaldo."
     },
     {
+      "id": "device-calendar-sync",
+      "section": "INTEGRATIONS",
+      "sectionOrder": 7,
+      "icon": "calendar",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.7.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Tareas en el calendario del dispositivo",
+      "summary": "Copia tus tareas con fecha en un calendario T'Day de tu teléfono.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Al activarlo, cada tarea con fecha se copia en un calendario llamado T'Day en tu teléfono, junto a tus demás calendarios. Las tareas Anytime quedan fuera, porque no tienen fecha en la que situarse. Es unidireccional: T'Day escribe en ese calendario, así que los cambios que hagas allí se reemplazan la próxima vez que cambien tus tareas."
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "En Ajustes, activa «Añadir tareas programadas a mi calendario».",
+            "Permite el acceso al calendario cuando tu teléfono lo pida.",
+            "Abre tu app de calendario: tus tareas con fecha están en el calendario T'Day."
+          ]
+        }
+      ],
+      "searchTitle": "tareas en el calendario del dispositivo",
+      "searchKeywords": "calendario, calendario del dispositivo, sincronizar, google calendar, apple calendar, eventkit, calendario del telefono, copiar",
+      "searchBody": "copia tus tareas con fecha en un calendario t'day de tu telefono. al activarlo, cada tarea con fecha se copia en un calendario llamado t'day en tu telefono, junto a tus demas calendarios. las tareas anytime quedan fuera, porque no tienen fecha en la que situarse. es unidireccional: t'day escribe en ese calendario, asi que los cambios que hagas alli se reemplazan la proxima vez que cambien tus tareas. en ajustes, activa «anadir tareas programadas a mi calendario». permite el acceso al calendario cuando tu telefono lo pida. abre tu app de calendario: tus tareas con fecha estan en el calendario t'day."
+    },
+    {
       "id": "ai-summary",
       "section": "INTEGRATIONS",
       "sectionOrder": 7,

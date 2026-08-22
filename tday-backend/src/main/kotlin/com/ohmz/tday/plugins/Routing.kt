@@ -41,6 +41,7 @@ fun Application.configureRouting() {
         route("/api") {
             todoRoutes()
             taskStepRoutes()
+            attachmentRoutes()
             floaterRoutes()
             listRoutes()
             floaterListRoutes()

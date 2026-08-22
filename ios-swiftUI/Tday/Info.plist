@@ -29,6 +29,10 @@
 	<string>T'Day</string>
 	<!-- Required before LocalAuthentication may use Face ID at all; without it the optional
 	     app lock can only ever fall back to the passcode. -->
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>T'Day adds your scheduled tasks to a calendar it creates on this device, and needs access to keep that calendar up to date.</string>
+	<key>NSCalendarsUsageDescription</key>
+	<string>T'Day adds your scheduled tasks to a calendar it creates on this device, and needs access to keep that calendar up to date.</string>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Face ID unlocks T'Day when you turn on the app lock.</string>
 	<key>CFBundlePackageType</key>

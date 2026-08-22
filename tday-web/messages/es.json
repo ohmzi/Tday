@@ -383,7 +383,18 @@
     "steps": "Pasos",
     "add": "Añadir",
     "addStep": "Añadir un paso",
-    "stepsCreateHint": "Guarda la tarea primero para añadir pasos."
+    "stepsCreateHint": "Guarda la tarea primero para añadir pasos.",
+    "attachments": "Imágenes",
+    "attachmentsAdd": "Añadir una imagen",
+    "attachmentsEmpty": "Aún no hay imágenes.",
+    "attachmentsCreateHint": "Guarda la tarea primero para añadir imágenes.",
+    "attachmentsLocalModeHint": "Las imágenes necesitan un espacio de trabajo en el servidor. El modo local guarda todo en el navegador y no puede contener fotos.",
+    "attachmentsUnsupportedType": "Solo se pueden adjuntar imágenes JPEG y PNG.",
+    "attachmentsTooLarge": "Esa imagen supera los 10 MB.",
+    "attachmentsUploadFailed": "No se pudo añadir esa imagen.",
+    "attachmentsDeleteFailed": "No se pudo quitar esa imagen.",
+    "attachmentsRemove": "Quitar imagen",
+    "attachmentsClosePreview": "Cerrar imagen"
   },
   "today": {
     "saveInstance": "Guardar instancia",
@@ -1127,6 +1138,15 @@
         "step1": "Copia la URL: se muestra una sola vez; vuelve a generarla si la pierdes.",
         "step2": "Añádela como calendario de suscripción en tu app de calendario."
       },
+      "device-calendar-sync": {
+        "title": "Tareas en el calendario del dispositivo",
+        "summary": "Copia tus tareas con fecha en un calendario T'Day de tu teléfono.",
+        "keywords": "calendario, calendario del dispositivo, sincronizar, google calendar, apple calendar, eventkit, calendario del teléfono, copiar",
+        "body": "Al activarlo, cada tarea con fecha se copia en un calendario llamado T'Day en tu teléfono, junto a tus demás calendarios. Las tareas Anytime quedan fuera, porque no tienen fecha en la que situarse. Es unidireccional: T'Day escribe en ese calendario, así que los cambios que hagas allí se reemplazan la próxima vez que cambien tus tareas.",
+        "step0": "En Ajustes, activa «Añadir tareas programadas a mi calendario».",
+        "step1": "Permite el acceso al calendario cuando tu teléfono lo pida.",
+        "step2": "Abre tu app de calendario: tus tareas con fecha están en el calendario T'Day."
+      },
       "webhooks": {
         "title": "Webhooks",
         "summary": "Recibe un aviso HTTP cuando cambian tus tareas.",
@@ -1199,6 +1219,13 @@
         "step0": "Abre una tarea y añade tu primer paso en Pasos.",
         "step1": "Añade tantos como necesites y arrastra para reordenar.",
         "step2": "Márcalos: el contador 2/5 sigue tu progreso."
+      },
+      "task-pictures": {
+        "title": "Imágenes en una tarea",
+        "summary": "Adjunta fotos a una tarea, con fecha o Anytime.",
+        "keywords": "imagen, foto, adjunto, adjuntar, cámara, jpeg, png, subir",
+        "body": "Abre una tarea guardada y añade hasta seis imágenes. Funciona igual en una tarea con fecha y en una tarea Anytime. Se aceptan JPEG y PNG de hasta 10 MB cada una, y la imagen se vuelve a codificar al subirla para que los datos de ubicación de la cámara nunca lleguen al servidor.",
+        "tip": "Las imágenes necesitan un espacio de trabajo en el servidor: el modo local no tiene dónde guardarlas."
       },
       "focus-filters": {
         "title": "Filtros de concentración",

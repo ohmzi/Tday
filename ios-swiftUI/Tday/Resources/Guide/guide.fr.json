@@ -1347,6 +1347,42 @@
       "searchBody": "emportez vos taches de l'appareil quand vous passez en mode serveur. vous avez commence en mode local puis installe un serveur ? rien n'est jamais envoye tout seul. pour transferer vos donnees : exportez-les d'abord depuis les reglages, connectez-vous a votre serveur, puis importez-y le fichier. vos taches, listes et historique migrent en une etape volontaire — vous choisissez le moment, et vos donnees locales restent intactes jusque-la. apres l'import, gardez le fichier exporte jusqu'a confirmer que tout est bien arrive — il fait alors aussi office de sauvegarde."
     },
     {
+      "id": "device-calendar-sync",
+      "section": "INTEGRATIONS",
+      "sectionOrder": 7,
+      "icon": "calendar",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.7.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Tâches dans le calendrier de l'appareil",
+      "summary": "Recopie tes tâches datées dans un calendrier T'Day sur ton téléphone.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Une fois activé, chaque tâche ayant une date est copiée dans un calendrier nommé T'Day sur ton téléphone, à côté de tes autres calendriers. Les tâches Anytime en restent absentes, faute de date. La synchronisation est à sens unique : T'Day écrit dans ce calendrier, donc les modifications que tu y fais sont remplacées dès que tes tâches changent."
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "Dans les Réglages, active « Ajouter les tâches planifiées à mon calendrier ».",
+            "Autorise l'accès au calendrier quand ton téléphone le demande.",
+            "Ouvre ton application calendrier : tes tâches datées sont dans le calendrier T'Day."
+          ]
+        }
+      ],
+      "searchTitle": "taches dans le calendrier de l'appareil",
+      "searchKeywords": "calendrier, calendrier de l'appareil, synchronisation, google agenda, calendrier apple, eventkit, calendrier du telephone, copie",
+      "searchBody": "recopie tes taches datees dans un calendrier t'day sur ton telephone. une fois active, chaque tache ayant une date est copiee dans un calendrier nomme t'day sur ton telephone, a cote de tes autres calendriers. les taches anytime en restent absentes, faute de date. la synchronisation est a sens unique : t'day ecrit dans ce calendrier, donc les modifications que tu y fais sont remplacees des que tes taches changent. dans les reglages, active « ajouter les taches planifiees a mon calendrier ». autorise l'acces au calendrier quand ton telephone le demande. ouvre ton application calendrier : tes taches datees sont dans le calendrier t'day."
+    },
+    {
       "id": "ai-summary",
       "section": "INTEGRATIONS",
       "sectionOrder": 7,

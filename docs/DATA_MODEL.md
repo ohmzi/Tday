@@ -31,7 +31,8 @@ This document describes the durable and local data structures that define T'Day.
 | Completed floater | `CompletedFloaters` | `CompletedFloaterDto` | Completion history for floaters. |
 | Preferences | `UserPreferences` | `PreferencesDto`, `PreferencesResponse` | Per-user sorting/grouping/direction preferences. |
 | App config | `AppConfigs` | `AppSettingsResponse`, `AdminSettingsResponse` | Public/admin app settings such as Summary availability. |
-| File metadata | `Files` | Internal only | Retained table for cleanup/compatibility paths; there is no active upload/download API surface. |
+| Task attachment | `TaskAttachments` (`task_attachments`) | `AttachmentDto`, `AttachmentsResponse`, `AttachmentMutationResponse` | A picture attached to a task. Exactly one of `todoID`/`floaterID` is set (CHECK constraint), so both task types are supported without an untyped task id. Metadata only — bytes live on disk; `floaterID` carries no FK (see below). |
+| File metadata | `Files` | Internal only | Retained table for cleanup/compatibility paths; there is no active upload/download API surface. Unrelated to `TaskAttachments`, which is where task pictures live. |
 | Event/auth logs | `EventLogs`, `AuthThrottles`, `AuthSignals`, `VerificationTokens`, `CronLogs` | Internal models | Security, throttling, verification, diagnostics, and operational state. |
 
 ## Mobile Probe Contract
@@ -126,6 +127,66 @@ The current iOS snapshot schema is version `2` and includes:
 Both platforms filter the source cache to pending scheduled tasks due today, sort by due time then
 title, cap displayed rows to the widget task limit, and exclude floaters, completed tasks, and overdue
 tasks from the v1 widget surface.
+
+## Task Attachments
+
+Pictures attached to a task, for both task types.
+
+- **Bytes** live on disk under `TDAY_ATTACHMENT_DIR` (default `/data/attachments`, a Docker volume),
+  not in Postgres — images would otherwise bloat every `pg_dump`. This makes the attachment
+  directory a **second backup target** alongside the database dump.
+- **Metadata** lives in `task_attachments`. The row is the record of truth: an orphaned file on disk
+  is harmless, an orphaned row is not, so a failed insert deletes the files it would have pointed at.
+- **Ownership** is enforced through the parent task on every path, including the byte-serving
+  routes. An attachment id is not a capability — another user's valid id reads as not-found.
+- **Storage keys** are server-generated and sharded by the attachment id's first two characters. A
+  client filename is never part of a path; it is stored as metadata and encrypted at rest like other
+  user text.
+- **Sanitizing**: format comes from magic bytes, never the declared content type. Images are decoded
+  and re-encoded, which strips EXIF — including the GPS coordinates phone cameras embed by default.
+  Dimensions are read from the header before any decode so a small file cannot decode into a
+  gigabyte raster.
+- **Limits**: JPEG and PNG only (a stock JDK ImageIO has no WebP or HEIC codec), 10 MB per image,
+  `AttachmentLimits.MAX_PER_TASK` per task. Clients mirror these so a doomed upload is refused
+  before it starts.
+- **Deletion** is service-owned, not left to the database. `TodoService.delete` and
+  `FloaterService.delete` purge attachment rows inside their own transaction and then remove the
+  files. A cascade alone cannot do this — Postgres knows nothing about the attachment directory, so
+  it would drop the rows and leak their images forever. There is also no FK on `floaterID` at all:
+  `floaters` is Exposed-managed and does not exist when Flyway runs, the same reason
+  `floater_list_shares` carries no FKs.
+- **Not offline-capable**: attachments are Server Mode only, and deliberately not queued as pending
+  mutations — that queue persists intent as small JSON records, and parking multi-megabyte images in
+  it would bloat the cache every sync replay carries.
+
+## Device Calendar Mirror
+
+The device-calendar mirror (Android and iOS, opt-in, default off) adds no backend tables and no
+shared DTOs. It is a one-way projection of the local cache into the OS calendar store, so T'Day
+stays the source of truth and nothing is ever read back into the app.
+
+| Concept | Android | iOS |
+|---------|---------|-----|
+| Calendar | `CalendarContract` calendar with `ACCOUNT_TYPE_LOCAL`, found by account/name | `EKCalendar` on the local `EKSource`, found by stored `calendarIdentifier` |
+| Event | One event per cached `TodoItem` | One `EKEvent` per cached `TodoItem` |
+| Recurrence | Raw `rrule` written to `Events.RRULE` | `rrule` parsed into `EKRecurrenceRule` by `RecurrenceRuleParser` |
+| Opt-in flag / bookkeeping | `CalendarSyncPreferenceStore` (SharedPreferences) | `CalendarSyncPreferenceStore` (UserDefaults) |
+| Permission | `READ_CALENDAR` + `WRITE_CALENDAR` | `NSCalendarsFullAccessUsageDescription` (full access) |
+
+Rules:
+
+- Only pending scheduled tasks with a due timestamp are mirrored. Completed tasks and floaters are
+  excluded — a floater has no due date, so it has nothing to sit on in a calendar.
+- One event per cached todo row, not per occurrence. The cache holds one row per recurring template
+  (the client does not expand occurrences), so the task's `rrule` is carried on the event itself.
+- Tasks are point-in-time; the mirror gives each event a fixed 30-minute duration because native
+  calendars require an end and a zero-length event is unreadable in a day grid.
+- Reconciliation is wholesale: the pass rewrites the calendar's contents rather than diffing, and a
+  content fingerprint suppresses rewrites when nothing the mirror renders has changed. A fingerprint
+  must be stable across process launches, so it uses an explicit hash and never a
+  platform-seeded one.
+- Writes are confined to T'Day's own calendar. Turning the feature off deletes that calendar.
+- Local Mode is fully supported: the calendar is device-local and nothing is uploaded.
 
 ## Local IDs
 

@@ -1347,6 +1347,42 @@
       "searchBody": "bring your on-device tasks with you when you switch to server mode. started in local mode and later set up a server? nothing ever uploads on its own. to move your data up: export it from settings first, sign in to your server, then import the file there. your tasks, lists, and history transfer in one deliberate step — you choose the moment, and your on-device data stays untouched until you do. after importing, keep the exported file until you've confirmed everything arrived — then it doubles as a backup."
     },
     {
+      "id": "device-calendar-sync",
+      "section": "INTEGRATIONS",
+      "sectionOrder": 7,
+      "icon": "calendar",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.7.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Tasks in your device calendar",
+      "summary": "Mirror your dated tasks into a T'Day calendar on your phone.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Turn this on and every task with a date is copied into a calendar called T'Day on your phone, alongside your other calendars. Anytime tasks stay out of it, because they have no date to sit on. It's one-way: T'Day writes to that calendar, so edits you make there are replaced the next time your tasks change."
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "In Settings, turn on “Add scheduled tasks to my calendar”.",
+            "Allow calendar access when your phone asks.",
+            "Open your calendar app — your dated tasks are in the T'Day calendar."
+          ]
+        }
+      ],
+      "searchTitle": "tasks in your device calendar",
+      "searchKeywords": "calendar, device calendar, sync, google calendar, apple calendar, eventkit, phone calendar, mirror",
+      "searchBody": "mirror your dated tasks into a t'day calendar on your phone. turn this on and every task with a date is copied into a calendar called t'day on your phone, alongside your other calendars. anytime tasks stay out of it, because they have no date to sit on. it's one-way: t'day writes to that calendar, so edits you make there are replaced the next time your tasks change. in settings, turn on “add scheduled tasks to my calendar”. allow calendar access when your phone asks. open your calendar app — your dated tasks are in the t'day calendar."
+    },
+    {
       "id": "ai-summary",
       "section": "INTEGRATIONS",
       "sectionOrder": 7,

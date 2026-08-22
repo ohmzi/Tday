@@ -1347,6 +1347,42 @@
       "searchBody": "leve as tarefas do dispositivo consigo ao mudar para o modo servidor. comecou no modo local e depois configurou um servidor? nada e carregado por conta propria. para mover os seus dados: exporte-os primeiro nas definicoes, inicie sessao no seu servidor e importe ai o ficheiro. tarefas, listas e historico transferem-se num passo deliberado — escolhe o momento, e os dados no dispositivo ficam intactos ate la. depois de importar, guarde o ficheiro exportado ate confirmar que tudo chegou — assim tambem serve de copia de seguranca."
     },
     {
+      "id": "device-calendar-sync",
+      "section": "INTEGRATIONS",
+      "sectionOrder": 7,
+      "icon": "calendar",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.7.0",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Tarefas no calendário do aparelho",
+      "summary": "Copie suas tarefas com data para um calendário T'Day no seu celular.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Ao ativar, toda tarefa com data é copiada para um calendário chamado T'Day no seu celular, junto dos seus outros calendários. Tarefas Anytime ficam de fora, porque não têm data. É de mão única: o T'Day escreve nesse calendário, então edições feitas por lá são substituídas na próxima vez que suas tarefas mudarem."
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "Em Configurações, ative “Adicionar tarefas agendadas ao meu calendário”.",
+            "Permita o acesso ao calendário quando o celular pedir.",
+            "Abra seu app de calendário — suas tarefas com data estão no calendário T'Day."
+          ]
+        }
+      ],
+      "searchTitle": "tarefas no calendario do aparelho",
+      "searchKeywords": "calendario, calendario do aparelho, sincronizacao, google agenda, calendario apple, eventkit, calendario do celular, copia",
+      "searchBody": "copie suas tarefas com data para um calendario t'day no seu celular. ao ativar, toda tarefa com data e copiada para um calendario chamado t'day no seu celular, junto dos seus outros calendarios. tarefas anytime ficam de fora, porque nao tem data. e de mao unica: o t'day escreve nesse calendario, entao edicoes feitas por la sao substituidas na proxima vez que suas tarefas mudarem. em configuracoes, ative “adicionar tarefas agendadas ao meu calendario”. permita o acesso ao calendario quando o celular pedir. abra seu app de calendario — suas tarefas com data estao no calendario t'day."
+    },
+    {
       "id": "ai-summary",
       "section": "INTEGRATIONS",
       "sectionOrder": 7,

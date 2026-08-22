@@ -158,6 +158,8 @@ struct SettingsScreen: View {
             settingsListRow {
                 SettingsSectionCard {
                     SettingsRestingFloatersSection()
+                    SettingsDivider()
+                    SettingsDeviceCalendarSection()
                 }
             }
 
@@ -368,6 +370,70 @@ private struct SettingsAppLockSection: View {
                 .font(.tdayRounded(size: 12, weight: .bold))
                 .foregroundStyle(colors.onSurfaceVariant)
                 .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+}
+
+// MARK: - Device calendar
+
+/// Opt-in one-way mirror of scheduled tasks into a dedicated "T'Day" calendar on this device.
+///
+/// Default off. Turning it on asks for calendar access first, and a refused prompt leaves the
+/// toggle off rather than silently enabling a mirror that cannot write. Turning it off deletes the
+/// calendar and everything T'Day put in it.
+///
+/// Anytime tasks are excluded by the sync itself: with no due date there is nothing to place on a
+/// calendar.
+private struct SettingsDeviceCalendarSection: View {
+    @Environment(\.tdayColors) private var colors
+    private let container = AppContainer.shared
+    @State private var enabled: Bool
+    @State private var showPermissionDenied = false
+
+    init() {
+        _enabled = State(initialValue: AppContainer.shared.calendarSyncManager.isEnabled)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Toggle(isOn: $enabled) {
+                Text(L("Add scheduled tasks to my calendar"))
+                    .font(.body.weight(.heavy))
+                    .foregroundStyle(colors.onSurface)
+            }
+            .tint(colors.secondary)
+            .onChange(of: enabled) { _, value in
+                Task { await apply(enabled: value) }
+            }
+
+            Text(L("Copies tasks with a date into a T'Day calendar on this device. Anytime tasks stay out of it. Changes made in the Calendar app are overwritten."))
+                .font(.tdayRounded(size: 12, weight: .bold))
+                .foregroundStyle(colors.onSurfaceVariant)
+                .fixedSize(horizontal: false, vertical: true)
+
+            if showPermissionDenied {
+                Text(L("T'Day needs calendar access to add your tasks. You can grant it in Settings."))
+                    .font(.tdayRounded(size: 12, weight: .bold))
+                    .foregroundStyle(colors.error)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    @MainActor
+    private func apply(enabled value: Bool) async {
+        guard value else {
+            showPermissionDenied = false
+            await container.calendarSyncManager.disable()
+            return
+        }
+
+        let tasks = container.todoRepository.fetchTodosSnapshot(mode: .all)
+        let granted = await container.calendarSyncManager.enable(tasks: tasks)
+        showPermissionDenied = !granted
+        if !granted {
+            // Snap the switch back: access was refused, so nothing is being mirrored.
+            enabled = false
         }
     }
 }

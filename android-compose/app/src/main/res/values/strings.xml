@@ -651,6 +651,17 @@
     <string name="settings_quiet_hours_start">Start</string>
     <string name="settings_quiet_hours_end">End</string>
     <string name="settings_resting_floaters">Fade resting floaters</string>
+    <string name="settings_calendar_sync">Add scheduled tasks to my calendar</string>
+    <string name="settings_calendar_sync_subtitle">Copies tasks with a date into a T\'Day calendar on this device. Anytime tasks stay out of it. Changes made in your calendar app are overwritten.</string>
+    <string name="settings_calendar_sync_permission_denied">T\'Day needs calendar access to add your tasks.</string>
+    <string name="attachments">Pictures</string>
+    <string name="attachments_with_count">Pictures %1$d/%2$d</string>
+    <string name="attachments_add">Add a picture</string>
+    <string name="attachments_remove">Remove picture: %1$s</string>
+    <string name="attachments_unsupported_type">Only JPEG and PNG pictures can be attached.</string>
+    <string name="attachments_too_large">That picture is larger than 10 MB.</string>
+    <string name="attachments_upload_failed">Could not add that picture.</string>
+    <string name="attachments_delete_failed">Could not remove that picture.</string>
     <string name="settings_privacy">Privacy</string>
     <string name="settings_screenshot_protection">Hide content in screenshots</string>
     <string name="settings_screenshot_protection_subtitle">Keeps task text out of screenshots, screen recordings and the app switcher</string>
