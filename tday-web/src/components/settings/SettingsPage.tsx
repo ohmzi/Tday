@@ -1,24 +1,35 @@
 import React, { useState, useEffect, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import {
+  AtSign,
+  BellRing,
   Calendar,
   Check,
   ChevronRight,
+  CircleHelp,
   Copy,
   Eye,
   EyeOff,
   Key,
+  KeyRound,
+  Languages,
   Loader2,
   Lock,
+  LogOut,
   Monitor,
   Moon,
   Pencil,
+  RefreshCw,
   Settings,
   ShieldQuestion,
+  Sparkles,
   Sun,
   Trash2,
   User,
+  UsersRound,
+  Waves,
   Webhook,
+  type LucideIcon,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useNavigate } from "react-router-dom";
@@ -185,6 +196,100 @@ function SectionHeading({
 /** Thin divider between sub-sections within a combined card. */
 function CardDivider() {
   return <div className="h-px bg-border/60" />;
+}
+
+/** Leading row glyph — a single Lucide icon in a fixed 22px slot so every label
+ * in a card starts on the same line. Decorative: the row label carries the
+ * meaning, so it stays out of the accessibility tree. */
+function RowIcon({
+  icon: Icon,
+  destructive,
+}: {
+  icon: LucideIcon;
+  destructive?: boolean;
+}) {
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        "flex h-[22px] w-[22px] shrink-0 items-center justify-center",
+        destructive ? "text-destructive" : "text-accent",
+      )}
+    >
+      <Icon className="h-5 w-5" />
+    </span>
+  );
+}
+
+/** The same slot left empty — reserves the icon column for a glyph-less fact
+ * row so its label still lines up with the rows around it. */
+function RowIconSlot() {
+  return <span aria-hidden className="h-[22px] w-[22px] shrink-0" />;
+}
+
+/** Tappable row in the workspace/dashboard card — icon, label and an optional
+ * chevron. Renders a Link when `href` is given, a button otherwise.
+ * `destructive` colours the whole row; `destructiveIcon` colours the glyph
+ * alone, for a row whose label has always been the neutral foreground. */
+function SettingsOptionRow({
+  icon,
+  label,
+  href,
+  onClick,
+  disabled,
+  destructive,
+  destructiveIcon,
+  showChevron,
+}: {
+  icon: LucideIcon;
+  label: ReactNode;
+  href?: string;
+  onClick?: () => void;
+  disabled?: boolean;
+  destructive?: boolean;
+  destructiveIcon?: boolean;
+  showChevron?: boolean;
+}) {
+  const content = (
+    <>
+      <span className="flex min-w-0 flex-1 items-center gap-3.5">
+        <RowIcon icon={icon} destructive={destructive || destructiveIcon} />
+        <span
+          className={cn(
+            "min-w-0 flex-1 text-[1.05rem] font-black",
+            // Only the chevron rows clipped their label before the icons
+            // landed; the others wrap, which the longer translations rely on.
+            showChevron && "truncate",
+            destructive ? "text-destructive" : "text-foreground",
+          )}
+        >
+          {label}
+        </span>
+      </span>
+      {showChevron ? (
+        <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" />
+      ) : null}
+    </>
+  );
+  const rowClass = "flex w-full items-center gap-3 py-1.5 text-left transition active:opacity-60";
+
+  if (href) {
+    return (
+      <Link href={href} className={rowClass}>
+        {content}
+      </Link>
+    );
+  }
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={cn(rowClass, "disabled:opacity-50")}
+    >
+      {content}
+    </button>
+  );
 }
 
 /** Pill switch — mirrors the native toggle used across the app. */
@@ -977,11 +1082,14 @@ export default function SettingsPage() {
           {/* Name — collapsed summary with an Edit affordance, expands to an inline editor. */}
           <div className="space-y-2">
             <div className="flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <Label className="px-1 text-sm font-extrabold text-muted-foreground">{t("profile.name")}</Label>
-                <p className="px-1 text-[1.05rem] font-black text-foreground truncate">
-                  {user?.name || t("profile.namePlaceholder")}
-                </p>
+              <div className="flex min-w-0 items-center gap-3.5">
+                <RowIcon icon={User} />
+                <div className="min-w-0">
+                  <Label className="text-sm font-extrabold text-muted-foreground">{t("profile.name")}</Label>
+                  <p className="text-[1.05rem] font-black text-foreground truncate">
+                    {user?.name || t("profile.namePlaceholder")}
+                  </p>
+                </div>
               </div>
               {editing !== "name" ? (
                 <Button
@@ -1041,9 +1149,12 @@ export default function SettingsPage() {
           </div>
 
           {/* Username — read-only, cannot be changed. */}
-          <div className="space-y-1">
-            <Label className="px-1 text-sm font-extrabold text-muted-foreground">{t("profile.username")}</Label>
-            <p className="px-1 text-[1.05rem] font-black text-foreground">{user?.username ?? ""}</p>
+          <div className="flex min-w-0 items-center gap-3.5">
+            <RowIcon icon={AtSign} />
+            <div className="min-w-0 space-y-1">
+              <Label className="text-sm font-extrabold text-muted-foreground">{t("profile.username")}</Label>
+              <p className="text-[1.05rem] font-black text-foreground">{user?.username ?? ""}</p>
+            </div>
           </div>
 
           <div className="h-px bg-border/60" />
@@ -1051,9 +1162,12 @@ export default function SettingsPage() {
           {/* Password — collapsed summary with a Change affordance; expands to the change-password form. */}
           <div className="space-y-2">
             <div className="flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <Label className="px-1 text-sm font-extrabold text-muted-foreground">{t("password.title")}</Label>
-                <p className="px-1 text-[1.05rem] font-black tracking-[0.18em] text-foreground">••••••••</p>
+              <div className="flex min-w-0 items-center gap-3.5">
+                <RowIcon icon={Lock} />
+                <div className="min-w-0">
+                  <Label className="text-sm font-extrabold text-muted-foreground">{t("password.title")}</Label>
+                  <p className="text-[1.05rem] font-black tracking-[0.18em] text-foreground">••••••••</p>
+                </div>
               </div>
               {editing !== "password" ? (
                 <Button
@@ -1210,15 +1324,18 @@ export default function SettingsPage() {
           {/* Security questions — collapsed summary with a Change affordance; expands to selects + answers. */}
           <div className="space-y-2">
             <div className="flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <Label className="px-1 text-sm font-extrabold text-muted-foreground">{t("securityQuestions.title")}</Label>
-                <p className="px-1 text-[1.05rem] font-black text-foreground">
-                  {sqStatus == null
-                    ? "—"
-                    : sqConfigured
-                      ? t("securityQuestions.configured", { count: sqStatus.questionIds.length || 3 })
-                      : t("securityQuestions.notConfigured")}
-                </p>
+              <div className="flex min-w-0 items-center gap-3.5">
+                <RowIcon icon={ShieldQuestion} />
+                <div className="min-w-0">
+                  <Label className="text-sm font-extrabold text-muted-foreground">{t("securityQuestions.title")}</Label>
+                  <p className="text-[1.05rem] font-black text-foreground">
+                    {sqStatus == null
+                      ? "—"
+                      : sqConfigured
+                        ? t("securityQuestions.configured", { count: sqStatus.questionIds.length || 3 })
+                        : t("securityQuestions.notConfigured")}
+                  </p>
+                </div>
               </div>
               {editing !== "securityQuestions" ? (
                 <Button
@@ -1354,7 +1471,10 @@ export default function SettingsPage() {
           aria-haspopup="dialog"
           aria-label={`${t("language.appLanguage")}, ${currentLanguageLabel}`}
         >
-          <span className="text-[1.05rem] font-black text-foreground">{t("language.appLanguage")}</span>
+          <span className="flex items-center gap-3.5">
+            <RowIcon icon={Languages} />
+            <span className="text-[1.05rem] font-black text-foreground">{t("language.appLanguage")}</span>
+          </span>
           <span className="flex min-w-0 items-center gap-2">
             <span className="min-w-0 truncate text-sm font-black text-muted-foreground">
               {currentLanguageLabel}
@@ -1392,8 +1512,11 @@ export default function SettingsPage() {
       <SheetCard className="space-y-4 p-[18px]">
         <SectionHeading title={t("aiSummary.title")} />
         <div className="flex items-center justify-between gap-4">
-          <div className="min-w-0">
-            <p className="text-[1.05rem] font-black text-foreground">{t("aiSummary.toggle")}</p>
+          <div className="flex min-w-0 items-center gap-3.5">
+            <RowIcon icon={Sparkles} />
+            <div className="min-w-0">
+              <p className="text-[1.05rem] font-black text-foreground">{t("aiSummary.toggle")}</p>
+            </div>
           </div>
           <SettingsSwitch
             checked={preferences?.aiSummaryEnabled !== false}
@@ -1412,10 +1535,13 @@ export default function SettingsPage() {
           titleAction={<GuideHelpLink topic="resting-floaters" />}
         />
         <div className="flex items-center justify-between gap-4">
-          <div className="min-w-0">
-            <p className="text-[1.05rem] font-black text-foreground">
-              {t("restingFloaters.toggle")}
-            </p>
+          <div className="flex min-w-0 items-center gap-3.5">
+            <RowIcon icon={Waves} />
+            <div className="min-w-0">
+              <p className="text-[1.05rem] font-black text-foreground">
+                {t("restingFloaters.toggle")}
+              </p>
+            </div>
           </div>
           <SettingsSwitch
             checked={restingFloatersOn}
@@ -1436,13 +1562,16 @@ export default function SettingsPage() {
               titleAction={<GuideHelpLink topic="push-notifications" />}
             />
             <div className="flex items-center justify-between gap-4">
-              <div className="min-w-0">
-                <p className="text-[1.05rem] font-black text-foreground">{t("notifications.push")}</p>
-                {push.permission === "denied" && (
-                  <p className="mt-0.5 text-sm font-extrabold text-muted-foreground">
-                    {t("notifications.blocked")}
-                  </p>
-                )}
+              <div className="flex min-w-0 items-center gap-3.5">
+                <RowIcon icon={BellRing} />
+                <div className="min-w-0">
+                  <p className="text-[1.05rem] font-black text-foreground">{t("notifications.push")}</p>
+                  {push.permission === "denied" && (
+                    <p className="mt-0.5 text-sm font-extrabold text-muted-foreground">
+                      {t("notifications.blocked")}
+                    </p>
+                  )}
+                </div>
               </div>
               {push.isLoading ? (
                 <Loader2 className="h-5 w-5 shrink-0 animate-spin text-muted-foreground" />
@@ -1673,31 +1802,34 @@ export default function SettingsPage() {
           <>
             {/* Where this workspace lives — the web counterpart of the native
                 Workspace row (Android SettingsWorkspaceContent). */}
-            <div className="space-y-1">
-              <p className="text-[1.05rem] font-black text-foreground">
-                {t("workspace.localTitle")}
-              </p>
-              <p className="text-sm font-extrabold text-muted-foreground">
-                {t("workspace.localDetail")}
-              </p>
-              {/* How this browser stores it — the one thing the user chose at
-                  setup, and the only thing still changeable afterwards. */}
-              <p className="text-sm font-extrabold text-muted-foreground">
-                {localProtection === "passphrase"
-                  ? t("workspace.encryptedDetail")
-                  : t("workspace.unencryptedDetail")}
-              </p>
+            <div className="flex min-w-0 items-center gap-3.5">
+              {/* Nothing to tap here, so the icon column stays empty — the label
+                  still lines up with the rows below. */}
+              <RowIconSlot />
+              <div className="min-w-0 space-y-1">
+                <p className="text-[1.05rem] font-black text-foreground">
+                  {t("workspace.localTitle")}
+                </p>
+                <p className="text-sm font-extrabold text-muted-foreground">
+                  {t("workspace.localDetail")}
+                </p>
+                {/* How this browser stores it — the one thing the user chose at
+                    setup, and the only thing still changeable afterwards. */}
+                <p className="text-sm font-extrabold text-muted-foreground">
+                  {localProtection === "passphrase"
+                    ? t("workspace.encryptedDetail")
+                    : t("workspace.unencryptedDetail")}
+                </p>
+              </div>
             </div>
             {localProtection === "none" && (
               <>
                 <CardDivider />
-                <button
-                  type="button"
+                <SettingsOptionRow
+                  icon={KeyRound}
+                  label={t("workspace.encrypt")}
                   onClick={() => setEncryptOpen(true)}
-                  className="flex w-full items-center py-1.5 text-left text-[1.05rem] font-black text-foreground transition active:opacity-60"
-                >
-                  {t("workspace.encrypt")}
-                </button>
+                />
               </>
             )}
             <CardDivider />
@@ -1741,16 +1873,19 @@ export default function SettingsPage() {
                       data-no-press
                       className="-mx-1.5 flex min-w-0 flex-1 items-center gap-2 rounded-xl px-1.5 py-1 text-left transition-colors hover:bg-muted-foreground/5 active:bg-muted-foreground/10"
                     >
-                      <div className="min-w-0 flex-1 text-sm">
-                        <p className="truncate font-black text-foreground">
-                          {key.label?.trim() || t("dashboard.unnamedKey")}
-                        </p>
-                        <p className="truncate text-xs font-extrabold text-muted-foreground">
-                          {t("dashboard.activeKeyEnding", { preview: key.keyPreview })}
-                          {" · "}
-                          {key.scope === "READ" ? t("dashboard.scopeRead") : t("dashboard.scopeFull")}
-                          {key.expired ? ` · ${t("dashboard.expired")}` : ""}
-                        </p>
+                      <div className="flex min-w-0 flex-1 items-center gap-3.5">
+                        <RowIcon icon={KeyRound} />
+                        <div className="min-w-0 flex-1 text-sm">
+                          <p className="truncate font-black text-foreground">
+                            {key.label?.trim() || t("dashboard.unnamedKey")}
+                          </p>
+                          <p className="truncate text-xs font-extrabold text-muted-foreground">
+                            {t("dashboard.activeKeyEnding", { preview: key.keyPreview })}
+                            {" · "}
+                            {key.scope === "READ" ? t("dashboard.scopeRead") : t("dashboard.scopeFull")}
+                            {key.expired ? ` · ${t("dashboard.expired")}` : ""}
+                          </p>
+                        </div>
                       </div>
                       <ChevronRight
                         className={cn(
@@ -1807,30 +1942,24 @@ export default function SettingsPage() {
 
         {/* How-To & feature guide — a searchable index of everything T'Day can do,
             reachable by everyone (works offline / in every mode). */}
-        <Link
+        <SettingsOptionRow
+          icon={CircleHelp}
+          label={guideDict("title")}
           href="/app/guide"
-          className="flex w-full items-center gap-3 py-1.5 text-left transition active:opacity-60"
-        >
-          <span className="min-w-0 flex-1 truncate text-[1.05rem] font-black text-foreground">
-            {guideDict("title")}
-          </span>
-          <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" />
-        </Link>
+          showChevron
+        />
         <CardDivider />
 
         {/* Admin entry point — only for admins. Opens the same admin screen as the
             desktop sidebar's Admin link (the route is already mobile-responsive). */}
         {!isLocalMode && user?.role === "ADMIN" && (
           <>
-            <Link
+            <SettingsOptionRow
+              icon={UsersRound}
+              label={sidebarDict("admin")}
               href="/app/admin"
-              className="flex w-full items-center gap-3 py-1.5 text-left transition active:opacity-60"
-            >
-              <span className="min-w-0 flex-1 truncate text-[1.05rem] font-black text-foreground">
-                {sidebarDict("admin")}
-              </span>
-              <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" />
-            </Link>
+              showChevron
+            />
             <CardDivider />
           </>
         )}
@@ -1838,13 +1967,11 @@ export default function SettingsPage() {
         {/* Recovery for a client stuck on a half-updated build after a deploy —
             the in-app replacement for "delete the PWA and clear site data".
             Available in every mode: it only touches caches, never stored data. */}
-        <button
-          type="button"
+        <SettingsOptionRow
+          icon={RefreshCw}
+          label={t("troubleshooting.reset")}
           onClick={() => setResetCacheOpen(true)}
-          className="flex w-full items-center py-1.5 text-left text-[1.05rem] font-black text-foreground transition active:opacity-60"
-        >
-          {t("troubleshooting.reset")}
-        </button>
+        />
         <CardDivider />
 
         {/* Last rows of the last card, matching the native settings design.
@@ -1852,33 +1979,33 @@ export default function SettingsPage() {
             tasks; deleting is the only destructive action, so it stands alone. */}
         {isLocalMode ? (
           <>
-            <button
-              type="button"
+            {/* Leaving keeps the tasks in this browser, so the label stays the
+                neutral foreground colour it has always had; only the glyph
+                takes the destructive tint the other two exit rows use. */}
+            <SettingsOptionRow
+              icon={LogOut}
+              label={t("workspace.leave")}
               onClick={handleLogout}
               disabled={signingOut}
-              className="flex w-full items-center py-1.5 text-left text-[1.05rem] font-black text-foreground transition active:opacity-60 disabled:opacity-50"
-            >
-              {t("workspace.leave")}
-            </button>
+              destructiveIcon
+            />
             <CardDivider />
-            <button
-              type="button"
+            <SettingsOptionRow
+              icon={Trash2}
+              label={t("workspace.delete")}
               onClick={() => setDeleteLocalOpen(true)}
               disabled={signingOut}
-              className="flex w-full items-center py-1.5 text-left text-[1.05rem] font-black text-destructive transition active:opacity-60 disabled:opacity-50"
-            >
-              {t("workspace.delete")}
-            </button>
+              destructive
+            />
           </>
         ) : (
-          <button
-            type="button"
+          <SettingsOptionRow
+            icon={LogOut}
+            label={t("signOut")}
             onClick={handleLogout}
             disabled={signingOut}
-            className="flex w-full items-center py-1.5 text-left text-[1.05rem] font-black text-destructive transition active:opacity-60 disabled:opacity-50"
-          >
-            {t("signOut")}
-          </button>
+            destructive
+          />
         )}
       </SettingsSection>
 

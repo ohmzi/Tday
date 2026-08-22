@@ -71,3 +71,40 @@ Image("ActionEdit")
 | Notes: numbered list | `list-ordered` | `ListOrdered` | `ic_lucide_list_ordered` | `LucideListOrdered` |
 
 These tile/screen icons are also reused as the faint full-screen background watermark on each corresponding screen, and list icons are resolved per list from the shared icon registry (`lib/listIcons.ts` on web, `TdayListIcons.kt` on Android, `todoListSymbolName` on iOS) — keep those registries Lucide-based too.
+
+### Settings rows
+
+Every tappable Settings row leads with a glyph in a 22px slot (20px glyph, 14px gap), tinted with the accent blue (`text-accent` on web, `colorScheme.secondary` on Android, `colors.secondary` on iOS) — never the heavier `primary`. Destructive rows inherit the row's own error colour instead. The icons are decorative (`aria-hidden` / `contentDescription = null` / `.accessibilityHidden(true)`) because the row label carries the meaning. Non-tappable fact rows sitting inside an iconed card (Role, Server version) reserve an equal-size empty slot so their labels stay aligned. A dash means the row does not exist on that platform.
+
+| Purpose | Lucide glyph | Web | Android drawable | iOS imageset |
+|---|---|---|---|---|
+| Name | `user` | `User` | `ic_lucide_user` | `LucideUser` |
+| Username | `at-sign` | `AtSign` | `ic_lucide_at_sign` | `LucideAtSign` |
+| Password | `lock` | `Lock` | `ic_lucide_lock` | `LucideLock` |
+| Security questions | `shield-question` | `ShieldQuestion` | `ic_lucide_shield_question` | `LucideShieldQuestion` |
+| Role | — (empty slot) | — | (empty slot) | (empty slot) |
+| Default reminder | `bell` | — | `ic_lucide_bell` | `LucideBell` |
+| Day Ahead digest | `bell-ring` | — | `ic_lucide_bell_ring` | `LucideBellRing` |
+| Quiet hours | `moon` | — | `ic_lucide_moon` | `LucideMoon` |
+| UnifiedPush | `cloud` | — | `ic_lucide_cloud` | — |
+| App language | `languages` | `Languages` | `ic_lucide_languages` | `LucideLanguages` |
+| AI task summary | `sparkles` | `Sparkles` | `ic_lucide_sparkles` | `LucideSparkles` |
+| Resting floaters | `waves` | `Waves` | `ic_lucide_waves` | `LucideWaves` |
+| Push notifications | `bell-ring` | `BellRing` | — | — |
+| Device calendar sync | `calendar` | — | `ic_lucide_calendar` | `LucideCalendar` |
+| Screenshot protection | `eye-off` | — | `ic_lucide_eye_off` | — |
+| App lock / Face ID | `shield` | — | `ic_lucide_shield` | `LucideShield` |
+| Download my data | `download` | — | — | `LucideDownload` |
+| Import | `upload` | — | — | `LucideUpload` |
+| Encrypt this workspace | `key-round` | `KeyRound` | — | — |
+| API key | `key-round` | `KeyRound` | — | — |
+| App version / Release | `info` | — | `ic_lucide_info` | `LucideInfo` |
+| Server version | — (empty slot) | — | (empty slot) | (empty slot) |
+| How-To & Tips | `circle-help` | `CircleHelp` | `ic_lucide_circle_help` | `LucideCircleHelp` |
+| Admin | `users-round` | `UsersRound` | — | — |
+| Reset cached app data | `refresh-cw` | `RefreshCw` | — | — |
+| Leave local workspace | `log-out` | `LogOut` | — | — |
+| Delete local data | `trash-2` | `Trash2` | — | — |
+| Sign out | `log-out` | `LogOut` | `ic_lucide_log_out` | `LucideLogOut` |
+
+Section headings, the theme segmented control, sync-status blocks, the web Calendar-feed and Webhooks form cards, and filled buttons that already carry their own icon stay bare. The native glyphs above are listed in `tday-web/tests/fixtures/settings-icons.json`; the `settings-icons` coverage test fails if an Android drawable or iOS imageset is missing, so update the fixture when a row's glyph changes.
