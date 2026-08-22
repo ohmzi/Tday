@@ -22,11 +22,12 @@ export const useCompleteFloater = () => {
     onError: (error) => {
       toast({ description: error.message, variant: "destructive" });
     },
-    onSettled: (_data, _error, floater) => {
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["floater"] });
       queryClient.invalidateQueries({ queryKey: ["floaterListMeta"] });
       queryClient.invalidateQueries({ queryKey: ["completedFloater"] });
-      queryClient.invalidateQueries({ queryKey: ["floaterList", floater.listID] });
+      // Prefix match: rows on a floater-list screen carry no listID (see below).
+      queryClient.invalidateQueries({ queryKey: ["floaterList"] });
     },
   });
 
@@ -35,18 +36,21 @@ export const useCompleteFloater = () => {
     const remove = (old: FloaterItemType[] = []) =>
       old.filter((item) => item.id !== floater.id);
     queryClient.setQueryData<FloaterItemType[]>(["floater"], remove);
-    if (floater.listID) {
-      queryClient.setQueryData<FloaterItemType[]>(["floaterList", floater.listID], remove);
-    }
+    // Prefix match rather than ["floaterList", floater.listID]: the floater-list endpoint returns
+    // FloaterListTodoDto, which carries no listID, so that guard was never true and the ticked
+    // floater never left the list. Note the shape difference too — this cache holds an object
+    // { list, floaters }, not an array, so it needs its own updater.
+    queryClient.setQueriesData<{ list: unknown; floaters: FloaterItemType[] }>(
+      { queryKey: ["floaterList"] },
+      (old) => (old ? { ...old, floaters: remove(old.floaters) } : old),
+    );
 
     showTodoCompletedToast({
       commit: () => commitComplete(floater),
       undo: () => {
         // The server still has the floater (incomplete) — a refetch restores it.
         void queryClient.invalidateQueries({ queryKey: ["floater"] });
-        if (floater.listID) {
-          void queryClient.invalidateQueries({ queryKey: ["floaterList", floater.listID] });
-        }
+        void queryClient.invalidateQueries({ queryKey: ["floaterList"] });
       },
     });
   };
