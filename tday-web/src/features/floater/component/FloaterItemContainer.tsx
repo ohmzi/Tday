@@ -52,9 +52,11 @@ export default function FloaterItemContainer({
   const priorityFlag = getPriorityFlag(priority);
   const [displayForm, setDisplayForm] = useState(false);
   const [showHandle, setShowHandle] = useState(false);
-  // The row is pruned from the cache in the same tick as the tick-off, so this only has to
-  // survive the frames before it unmounts (and stop a second tap double-firing).
-  const [completing, setCompleting] = useState(false);
+  const [completePhase, setCompletePhase] = useState<
+    "checked" | "struck" | "removing" | null
+  >(null);
+  const completeTimers = useRef<number[]>([]);
+  const completing = completePhase !== null;
   // Matches the scheduled task home row (TodoItemCard) so the swipe distance and the
   // fully-revealed Edit + Delete pills sit in the same place — at 110 the pills
   // (~136px) outran the slide, leaving the priority flag on top of Edit.
@@ -74,13 +76,20 @@ export default function FloaterItemContainer({
       return;
     }
     if (completing) return;
-    // Tick and remove together: the rows below must close the gap immediately. Undo in the
-    // toast is what brings it back. Previously the removal waited out a ~1s strike-through
-    // animation, so the list held a gap until the toast expired.
-    setCompleting(true);
-    completeMutateFn(floater);
+    setCompletePhase("checked");
+    completeTimers.current.push(
+      window.setTimeout(() => setCompletePhase("struck"), 280),
+      window.setTimeout(() => setCompletePhase("removing"), 620),
+      window.setTimeout(() => completeMutateFn(floater), 960),
+    );
   };
 
+  useEffect(() => {
+    const timers = completeTimers.current;
+    return () => {
+      timers.forEach((id) => window.clearTimeout(id));
+    };
+  }, []);
 
   useEffect(() => {
     const onOpen = (event: Event) => {
@@ -135,7 +144,7 @@ export default function FloaterItemContainer({
       <div
         ref={setNodeRef}
         style={
-          completing
+          completePhase === "removing"
             ? { ...style, opacity: 0, transition: "opacity 300ms ease" }
             : style
         }
@@ -237,7 +246,7 @@ export default function FloaterItemContainer({
               <p
                 className={clsx(
                   "select-none text-[0.98rem] font-black leading-5 text-foreground transition-colors duration-300",
-                  completing &&
+                  (completePhase === "struck" || completePhase === "removing") &&
                     "text-muted-foreground line-through",
                 )}
               >
@@ -247,7 +256,7 @@ export default function FloaterItemContainer({
                 <pre
                   className={clsx(
                     "w-48 whitespace-pre-wrap pt-1 text-xs font-extrabold leading-4 text-muted-foreground transition-colors duration-300 sm:w-full",
-                    completing &&
+                    (completePhase === "struck" || completePhase === "removing") &&
                       "line-through",
                   )}
                 >

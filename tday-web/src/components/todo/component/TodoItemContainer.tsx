@@ -63,9 +63,11 @@ export const TodoItemCard = ({
   const [showHandle, setShowHandle] = useState(false);
   // Staged "checking off" sequence so each step is visible with a small gap:
   //   checked (green tick) → struck (title + notes line-through) → removing (fade) → remove.
-  // The row is pruned from the cache in the same tick as the tick-off, so this only has to
-  // survive the frames before it unmounts (and stop a second tap double-firing).
-  const [completing, setCompleting] = useState(false);
+  const [completePhase, setCompletePhase] = useState<
+    "checked" | "struck" | "removing" | null
+  >(null);
+  const completeTimers = useRef<number[]>([]);
+  const completing = completePhase !== null;
 
   // Mobile swipe-to-reveal (mirrors the native slide-to-edit/delete). The row
   // foreground translates left to expose Edit + Delete. A quick horizontal swipe
@@ -127,13 +129,19 @@ export const TodoItemCard = ({
       return;
     }
     if (completing) return;
-    // Tick and remove together: the rows below must close the gap immediately. Undo in
-    // the toast is what brings it back. Previously the removal waited out a ~1s
-    // strike-through animation, so the list held a gap until the toast expired.
-    setCompleting(true);
-    completeMutateFn(todoItem);
+    setCompletePhase("checked"); // 1. green tick + pop
+    completeTimers.current.push(
+      window.setTimeout(() => setCompletePhase("struck"), 280), // 2. strike the title + notes
+      window.setTimeout(() => setCompletePhase("removing"), 620), // 3. start fading
+      window.setTimeout(() => completeMutateFn(todoItem), 960), // 4. remove from cache
+    );
   };
 
+  useEffect(() => {
+    return () => {
+      completeTimers.current.forEach((id) => window.clearTimeout(id));
+    };
+  }, []);
 
   // Close this row's swipe actions when another row is swiped open.
   useEffect(() => {
@@ -165,7 +173,7 @@ export const TodoItemCard = ({
         id={getTodoFocusElementId(todoItem.id)}
         ref={setCombinedRef}
         style={
-          completing
+          completePhase === "removing"
             ? { ...style, opacity: 0, transition: "opacity 300ms ease" }
             : style
         }
@@ -274,7 +282,7 @@ export const TodoItemCard = ({
             <p
               className={clsx(
                 "select-none text-[0.98rem] font-black leading-5 text-foreground transition-colors duration-300",
-                completing &&
+                (completePhase === "struck" || completePhase === "removing") &&
                   "text-muted-foreground line-through",
               )}
             >
@@ -285,7 +293,7 @@ export const TodoItemCard = ({
             <pre
               className={clsx(
                 "w-48 whitespace-pre-wrap pb-2 text-xs font-extrabold leading-4 text-muted-foreground transition-colors duration-300 sm:w-full",
-                completing &&
+                (completePhase === "struck" || completePhase === "removing") &&
                   "line-through",
               )}
             >
