@@ -53,7 +53,6 @@ import type { TodoItemTypeWithDateChecksum } from "@/lib/todo/patch-todo";
 import ConfirmRescheduleRecurring, {
   type PendingReschedule,
 } from "./ConfirmationModals/ConfirmRescheduleRecurring";
-import Spinner from "@/components/ui/spinner";
 import { useListMetaData } from "@/components/Sidebar/List/query/get-list-meta";
 import CreateCalendarFormContainer from "./CalendarForm/CreateFormContainer";
 import NativePageTitle from "@/components/app/NativePageTitle";
@@ -68,7 +67,7 @@ import ListDot from "@/components/ListDot";
 import EditCalendarFormContainer from "./CalendarForm/EditFormContainer";
 import { useCompleteCalendarTodo } from "../query/complete-calendar-todo";
 import { useCompleteCalendarTodoInstance } from "../query/complete-calendar-todo-instance";
-import { CalendarDays, Check, ChevronLeft, ChevronRight, Flag, GripVertical, SquarePen, Trash } from "lucide-react";
+import { CalendarDays, Check, ChevronLeft, ChevronRight, Flag, GripVertical, Loader2, SquarePen, Trash } from "lucide-react";
 import { isToday } from "date-fns";
 import { getPriorityFlag } from "@/lib/priority";
 import i18n from "@/i18n";
@@ -1119,7 +1118,7 @@ export default function CalendarClient() {
           <div className="flex shrink-0 items-center gap-2.5">{todayAction}</div>
         </header>
         <div className="flex flex-1 items-center justify-center">
-          <Spinner className="h-14 w-14" />
+          <Loader2 className="h-14 w-14 animate-spin" />
         </div>
       </div>
     );
@@ -1146,7 +1145,7 @@ export default function CalendarClient() {
       <div className="relative flex w-full flex-1 flex-col gap-4 sm:gap-5">
         {calendarTodosLoading && (
           <div className="pointer-events-none absolute right-0 top-2 z-10 rounded-full border border-white/70 bg-card/90 p-2 shadow-sm dark:border-white/10">
-            <Spinner className="h-5 w-5" />
+            <Loader2 className="h-5 w-5 animate-spin" />
           </div>
         )}
         {showCreateForm && selectDateRange && (

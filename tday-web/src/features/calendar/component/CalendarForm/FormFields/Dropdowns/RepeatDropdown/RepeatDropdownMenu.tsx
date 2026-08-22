@@ -8,6 +8,7 @@ import LineSeparator from "@/components/ui/lineSeparator";
 import { useTranslation } from "react-i18next";
 import { Indicator } from "@/components/todo/component/TodoForm/TodoInlineActionBar/RepeatDropdown/RepeatDropdownMenu";
 import { useLocale } from "@/lib/navigation";
+import { formatDayAbbr } from "@/lib/formatDayAbbr";
 
 type RepeatDropdownMenuProps = {
   rruleOptions: Partial<Options> | null;
@@ -33,11 +34,6 @@ const RepeatDropdownMenu = ({
   const locale = useLocale();
   const { t: appDict } = useTranslation("app");
   const [open, setOpen] = useState(false);
-  // Helper function to format day abbreviation
-  const formatDayAbbr = (date: Date): string => {
-    return new Intl.DateTimeFormat(locale, { weekday: "short" }).format(date);
-  };
-
   // Helper function to format ordinal day (1st, 2nd, 3rd, etc.)
   // const formatOrdinalDay = (date: Date): string => {
   //   return new Intl.DateTimeFormat(locale, { day: "numeric" }).format(date);
@@ -93,7 +89,7 @@ const RepeatDropdownMenu = ({
           <p className="text-sm">
             {appDict("everyWeek")}
             <span className="text-xs ml-4 text-muted-foreground">
-              {appDict("customMenu.on")} {formatDayAbbr(new Date())}
+              {appDict("customMenu.on")} {formatDayAbbr(new Date(), locale)}
             </span>
           </p>
           <Indicator
