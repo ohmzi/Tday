@@ -31,7 +31,6 @@ android-compose/app/src/main/java/com/ohmz/tday/compose/
 │   ├── model/         # API/domain models and UI-facing data
 │   ├── navigation/    # AppRoute
 │   ├── network/       # Retrofit, cookies, realtime, connectivity
-│   ├── attachment/    # Task pictures (upload/download, Server Mode only)
 │   ├── calendar/      # Opt-in device-calendar mirror (CalendarContract)
 │   ├── notification/  # Reminders, boot receiver, workers
 │   ├── security/      # Probe/decryption helpers

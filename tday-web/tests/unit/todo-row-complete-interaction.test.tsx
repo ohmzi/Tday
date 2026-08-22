@@ -60,8 +60,6 @@ const TODO: TodoItemType = {
 
 const OTHER: TodoItemType = { ...TODO, id: "todo-2", title: "Call the bank" };
 
-const noop = () => ({ mutateFn: vi.fn() });
-
 function renderRow() {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },

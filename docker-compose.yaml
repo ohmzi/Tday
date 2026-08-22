@@ -85,12 +85,6 @@ services:
       APPLE_TEAM_ID: ${APPLE_TEAM_ID:-THT5Z8K3TF}
       IOS_BUNDLE_ID: ${IOS_BUNDLE_ID:-com.ohmz.tday.ios}
       OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:0.5b}
-      TDAY_ATTACHMENT_DIR: /data/attachments
-    volumes:
-      # Task-attachment images. Bytes live on disk rather than in Postgres to keep pg_dump a
-      # sensible size — which means this volume is a SECOND thing to back up alongside the
-      # database dump, and losing it loses every attached picture.
-      - attachment_data:/data/attachments
     # Report real readiness so restart:always and any orchestration can tell a
     # booted-but-broken backend (DB down, migration failed) from a healthy one.
     healthcheck:
@@ -110,4 +104,3 @@ services:
 volumes:
   postgres_data:
   ollama_data:
-  attachment_data:
