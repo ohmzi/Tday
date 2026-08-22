@@ -1,0 +1,40 @@
+{
+  "android": [
+    "at-sign",
+    "bell",
+    "bell-ring",
+    "calendar",
+    "circle-help",
+    "cloud",
+    "eye-off",
+    "info",
+    "languages",
+    "lock",
+    "log-out",
+    "moon",
+    "shield",
+    "shield-question",
+    "sparkles",
+    "user",
+    "waves"
+  ],
+  "ios": [
+    "at-sign",
+    "bell",
+    "bell-ring",
+    "calendar",
+    "circle-help",
+    "download",
+    "info",
+    "languages",
+    "lock",
+    "log-out",
+    "moon",
+    "shield",
+    "shield-question",
+    "sparkles",
+    "upload",
+    "user",
+    "waves"
+  ]
+}

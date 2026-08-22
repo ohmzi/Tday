@@ -184,6 +184,7 @@ struct SettingsScreen: View {
                     SettingsListRow(
                         title: "App Version",
                         value: "v\(viewModel.currentVersionName)",
+                        icon: "LucideInfo",
                         action: {
                             viewModel.navigationPath.append(.latestRelease)
                         }
@@ -193,6 +194,7 @@ struct SettingsScreen: View {
                         Text("v\(latestVersionName) available")
                             .font(.tdayRounded(size: 11, weight: .heavy))
                             .foregroundStyle(colors.secondary)
+                            .padding(.leading, 34)
                     }
 
                     SettingsDivider()
@@ -200,6 +202,7 @@ struct SettingsScreen: View {
                     SettingsListRow(
                         title: L("How-To & Tips"),
                         value: nil,
+                        icon: "LucideCircleHelp",
                         action: {
                             viewModel.navigationPath.append(.helpGuide(topic: nil))
                         }
@@ -220,6 +223,7 @@ struct SettingsScreen: View {
                             value: nil,
                             titleColor: colors.error,
                             showChevron: false,
+                            icon: "LucideLogOut",
                             action: {
                                 Task { await viewModel.logout() }
                             }
@@ -303,9 +307,15 @@ private struct SettingsProfileCard: View {
             SettingsSecurityQuestionsSection(viewModel: viewModel, expansion: $expansion)
 
             SettingsDivider()
-            Text("Role: \(viewModel.user?.role ?? "USER")")
-                .font(.tdayRounded(size: 13, weight: .bold))
-                .foregroundStyle(colors.onSurface.opacity(0.58))
+            HStack(spacing: 14) {
+                // Nothing to tap, so no glyph — but an empty slot keeps this label on the
+                // same left edge as the rows above it.
+                SettingsRowIcon(asset: nil)
+
+                Text("Role: \(viewModel.user?.role ?? "USER")")
+                    .font(.tdayRounded(size: 13, weight: .bold))
+                    .foregroundStyle(colors.onSurface.opacity(0.58))
+            }
         }
     }
 }
@@ -324,9 +334,13 @@ private struct SettingsRestingFloatersSection: View {
 
     var body: some View {
         Toggle(isOn: $enabled) {
-            Text(L("Resting floaters"))
-                .font(.body.weight(.heavy))
-                .foregroundStyle(colors.onSurface)
+            HStack(spacing: 14) {
+                SettingsRowIcon(asset: "LucideWaves")
+
+                Text(L("Resting floaters"))
+                    .font(.body.weight(.heavy))
+                    .foregroundStyle(colors.onSurface)
+            }
         }
         .tint(colors.secondary)
         .onChange(of: enabled) { _, value in store.isEnabled = value }
@@ -351,9 +365,13 @@ private struct SettingsAppLockSection: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Toggle(isOn: $enabled) {
-                Text(L("Require Face ID to open T'Day"))
-                    .font(.body.weight(.heavy))
-                    .foregroundStyle(colors.onSurface)
+                HStack(spacing: 14) {
+                    SettingsRowIcon(asset: "LucideShield")
+
+                    Text(L("Require Face ID to open T'Day"))
+                        .font(.body.weight(.heavy))
+                        .foregroundStyle(colors.onSurface)
+                }
             }
             .tint(colors.secondary)
             .onChange(of: enabled) { _, value in
@@ -370,6 +388,7 @@ private struct SettingsAppLockSection: View {
                 .font(.tdayRounded(size: 12, weight: .bold))
                 .foregroundStyle(colors.onSurfaceVariant)
                 .fixedSize(horizontal: false, vertical: true)
+                .padding(.leading, 34)
         }
     }
 }
@@ -397,9 +416,13 @@ private struct SettingsDeviceCalendarSection: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Toggle(isOn: $enabled) {
-                Text(L("Add scheduled tasks to my calendar"))
-                    .font(.body.weight(.heavy))
-                    .foregroundStyle(colors.onSurface)
+                HStack(spacing: 14) {
+                    SettingsRowIcon(asset: "LucideCalendar")
+
+                    Text(L("Add scheduled tasks to my calendar"))
+                        .font(.body.weight(.heavy))
+                        .foregroundStyle(colors.onSurface)
+                }
             }
             .tint(colors.secondary)
             .onChange(of: enabled) { _, value in
@@ -410,12 +433,14 @@ private struct SettingsDeviceCalendarSection: View {
                 .font(.tdayRounded(size: 12, weight: .bold))
                 .foregroundStyle(colors.onSurfaceVariant)
                 .fixedSize(horizontal: false, vertical: true)
+                .padding(.leading, 34)
 
             if showPermissionDenied {
                 Text(L("T'Day needs calendar access to add your tasks. You can grant it in Settings."))
                     .font(.tdayRounded(size: 12, weight: .bold))
                     .foregroundStyle(colors.error)
                     .fixedSize(horizontal: false, vertical: true)
+                    .padding(.leading, 34)
             }
         }
     }
@@ -459,9 +484,13 @@ private struct SettingsQuietHoursSection: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             Toggle(isOn: $enabled) {
-                Text(L("Quiet hours"))
-                    .font(.body.weight(.heavy))
-                    .foregroundStyle(colors.onSurface)
+                HStack(spacing: 14) {
+                    SettingsRowIcon(asset: "LucideMoon")
+
+                    Text(L("Quiet hours"))
+                        .font(.body.weight(.heavy))
+                        .foregroundStyle(colors.onSurface)
+                }
             }
             .tint(colors.secondary)
             .onChange(of: enabled) { _, value in store.isEnabled = value }
@@ -476,6 +505,7 @@ private struct SettingsQuietHoursSection: View {
                         .labelsHidden()
                         .onChange(of: startTime) { _, value in store.startMinute = Self.minute(from: value) }
                 }
+                .padding(.leading, 34)
                 HStack {
                     Text(L("End"))
                         .font(.subheadline.weight(.bold))
@@ -485,6 +515,7 @@ private struct SettingsQuietHoursSection: View {
                         .labelsHidden()
                         .onChange(of: endTime) { _, value in store.endMinute = Self.minute(from: value) }
                 }
+                .padding(.leading, 34)
             }
         }
     }
@@ -519,7 +550,9 @@ private struct SettingsNameSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .center, spacing: 12) {
+            HStack(alignment: .center, spacing: 14) {
+                SettingsRowIcon(asset: "LucideUser")
+
                 VStack(alignment: .leading, spacing: 2) {
                     SettingsFieldLabel("Name")
                     Text(viewModel.user?.name ?? L("Unknown user"))
@@ -596,11 +629,15 @@ private struct SettingsUsernameRow: View {
     @Environment(\.tdayColors) private var colors
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            SettingsFieldLabel("Username")
-            Text(username)
-                .font(.tdayRounded(size: 16, weight: .bold))
-                .foregroundStyle(colors.onSurface.opacity(0.72))
+        HStack(alignment: .center, spacing: 14) {
+            SettingsRowIcon(asset: "LucideAtSign")
+
+            VStack(alignment: .leading, spacing: 2) {
+                SettingsFieldLabel("Username")
+                Text(username)
+                    .font(.tdayRounded(size: 16, weight: .bold))
+                    .foregroundStyle(colors.onSurface.opacity(0.72))
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -626,7 +663,9 @@ private struct SettingsPasswordSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .center, spacing: 12) {
+            HStack(alignment: .center, spacing: 14) {
+                SettingsRowIcon(asset: "LucideLock")
+
                 VStack(alignment: .leading, spacing: 2) {
                     SettingsFieldLabel("Password")
                     Text(verbatim: "••••••••")
@@ -801,7 +840,9 @@ private struct SettingsSecurityQuestionsSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .center, spacing: 12) {
+            HStack(alignment: .center, spacing: 14) {
+                SettingsRowIcon(asset: "LucideShieldQuestion")
+
                 VStack(alignment: .leading, spacing: 2) {
                     SettingsFieldLabel("Security questions")
                     Text(summary)
@@ -1268,7 +1309,8 @@ private struct SettingsLanguageSelector: View {
                 title: "Language",
                 value: Self.label(for: currentLanguage),
                 valueColor: colors.secondary,
-                showChevron: true
+                showChevron: true,
+                icon: "LucideLanguages"
             )
         }
         .buttonStyle(.plain)
@@ -1326,7 +1368,8 @@ private struct SettingsReminderSelector: View {
                 title: "Default reminder",
                 value: selectedReminder.label,
                 valueColor: colors.secondary,
-                showChevron: true
+                showChevron: true,
+                icon: "LucideBell"
             )
         }
         .buttonStyle(.plain)
@@ -1398,7 +1441,8 @@ private struct SettingsDayAheadSelector: View {
                 title: "Day Ahead digest",
                 value: selected.label,
                 valueColor: colors.secondary,
-                showChevron: true
+                showChevron: true,
+                icon: "LucideBellRing"
             )
         }
         .buttonStyle(.plain)
@@ -1446,7 +1490,9 @@ private struct SettingsAiSummaryRow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack {
+            HStack(spacing: 14) {
+                SettingsRowIcon(asset: "LucideSparkles")
+
                 Text("Summary")
                     .font(.tdayRounded(size: 17, weight: .heavy))
                     .foregroundStyle(colors.onSurface)
@@ -1471,6 +1517,7 @@ private struct SettingsAiSummaryRow: View {
                 .font(.tdayRounded(size: 12, weight: .bold))
                 .foregroundStyle(colors.onSurface.opacity(0.58))
                 .fixedSize(horizontal: false, vertical: true)
+                .padding(.leading, 34)
         }
     }
 }
@@ -1480,18 +1527,23 @@ private struct SettingsListRow: View {
     let value: String?
     var titleColor: Color?
     var showChevron = true
+    var icon: String?
     let action: () -> Void
 
     @Environment(\.tdayColors) private var colors
 
     var body: some View {
         Button(action: action) {
+            // titleColor stays optional on the way down: SettingsRowLabel falls back to
+            // onSurface for the text, and only a row that asked for a colour of its own
+            // (Sign out) hands that colour to its icon instead of the usual blue.
             SettingsRowLabel(
                 title: title,
                 value: value,
-                titleColor: titleColor ?? colors.onSurface,
+                titleColor: titleColor,
                 valueColor: colors.onSurface.opacity(0.58),
-                showChevron: showChevron
+                showChevron: showChevron,
+                icon: icon
             )
         }
         .buttonStyle(.plain)
@@ -1506,9 +1558,14 @@ private struct SettingsServerVersionRow: View {
 
     var body: some View {
         HStack {
-            Text("Server")
-                .font(.tdayRounded(size: 17, weight: .heavy))
-                .foregroundStyle(colors.onSurface)
+            HStack(spacing: 14) {
+                // Static fact inside a card of icon rows — empty slot, aligned label.
+                SettingsRowIcon(asset: nil)
+
+                Text("Server")
+                    .font(.tdayRounded(size: 17, weight: .heavy))
+                    .foregroundStyle(colors.onSurface)
+            }
 
             Spacer(minLength: 12)
 
@@ -1524,12 +1581,42 @@ private struct SettingsServerVersionRow: View {
     }
 }
 
+/// Leading glyph for a settings row: a 20pt Lucide asset in the accent blue, or — with a nil
+/// asset — an equal-size empty slot that keeps a glyph-less row's label aligned with the rest of
+/// its card. Rows leave 14pt between the slot and their label, so anything that has to line up
+/// under the label rather than the icon is inset by 34pt.
+private struct SettingsRowIcon: View {
+    let asset: String?
+    var tint: Color?
+
+    @Environment(\.tdayColors) private var colors
+
+    var body: some View {
+        Group {
+            if let asset {
+                Image(asset)
+                    .renderingMode(.template)
+                    .resizable()
+                    .scaledToFit()
+                    .foregroundStyle(tint ?? colors.secondary)
+            } else {
+                Color.clear
+            }
+        }
+        .frame(width: 20, height: 20)
+        // Decorative — the row's own label carries the meaning. Without this the asset name
+        // leaks into the VoiceOver label of the button or toggle wrapping the row.
+        .accessibilityHidden(true)
+    }
+}
+
 private struct SettingsRowLabel: View {
     let title: String
     let value: String?
     var titleColor: Color?
     var valueColor: Color?
     var showChevron: Bool
+    var icon: String?
 
     @Environment(\.tdayColors) private var colors
 
@@ -1538,20 +1625,28 @@ private struct SettingsRowLabel: View {
         value: String?,
         titleColor: Color? = nil,
         valueColor: Color? = nil,
-        showChevron: Bool = true
+        showChevron: Bool = true,
+        icon: String? = nil
     ) {
         self.title = title
         self.value = value
         self.titleColor = titleColor
         self.valueColor = valueColor
         self.showChevron = showChevron
+        self.icon = icon
     }
 
     var body: some View {
         HStack {
-            Text(L(title))
-                .font(.tdayRounded(size: 17, weight: .heavy))
-                .foregroundStyle(titleColor ?? colors.onSurface)
+            HStack(spacing: 14) {
+                // A row that overrides its title colour (Sign out) tints its icon to match;
+                // every other row gets the accent blue from SettingsRowIcon.
+                SettingsRowIcon(asset: icon, tint: titleColor)
+
+                Text(L(title))
+                    .font(.tdayRounded(size: 17, weight: .heavy))
+                    .foregroundStyle(titleColor ?? colors.onSurface)
+            }
 
             Spacer(minLength: 12)
 
@@ -1564,8 +1659,11 @@ private struct SettingsRowLabel: View {
             }
 
             if showChevron {
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 13, weight: .heavy))
+                Image("LucideChevronRight")
+                    .renderingMode(.template)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 16, height: 16)
                     .foregroundStyle(colors.onSurface.opacity(0.42))
             }
         }
@@ -2145,7 +2243,7 @@ private struct DataTransferCard: View {
                 .font(.tdayRounded(size: 13, weight: .semibold))
                 .foregroundStyle(.secondary)
 
-            SettingsListRow(title: "Download my data", value: nil, showChevron: false) {
+            SettingsListRow(title: "Download my data", value: nil, showChevron: false, icon: "LucideDownload") {
                 startExport()
             }
 
@@ -2156,7 +2254,7 @@ private struct DataTransferCard: View {
                     .font(.tdayRounded(size: 12, weight: .semibold))
                     .foregroundStyle(.secondary)
             } else {
-                SettingsListRow(title: "Import", value: nil, showChevron: false) {
+                SettingsListRow(title: "Import", value: nil, showChevron: false, icon: "LucideUpload") {
                     if !busy { showImporter = true }
                 }
             }

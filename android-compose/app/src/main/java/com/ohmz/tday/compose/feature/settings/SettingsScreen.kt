@@ -1,6 +1,7 @@
 package com.ohmz.tday.compose.feature.settings
 
 import com.ohmz.tday.compose.core.ui.LocalSnackbarManager
+import androidx.annotation.DrawableRes
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.biometric.BiometricManager
 import androidx.compose.animation.AnimatedVisibility
@@ -26,6 +27,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -213,9 +215,9 @@ fun SettingsScreen(
                 SettingsSectionTitle(title = stringResource(R.string.settings_feature_toggle))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
+                    SettingsRowIcon(R.drawable.ic_lucide_sparkles)
                     Column(
                         modifier = Modifier.weight(1f),
                         verticalArrangement = Arrangement.spacedBy(2.dp),
@@ -263,6 +265,7 @@ fun SettingsScreen(
                     title = stringResource(R.string.release_title),
                     value = stringResource(R.string.label_version_name, BuildConfig.VERSION_NAME),
                     onClick = onOpenLatestRelease,
+                    icon = R.drawable.ic_lucide_info,
                 )
                 if (hasUpdate && latestVersionName != null) {
                     Text(
@@ -282,15 +285,19 @@ fun SettingsScreen(
                     title = stringResource(R.string.settings_help_guide),
                     value = null,
                     onClick = onOpenHelpGuide,
+                    icon = R.drawable.ic_lucide_circle_help,
                 )
                 if (!isLocalMode && backendVersion != null) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
+                        // Not tappable, so no glyph — but it shares the card with rows that
+                        // have one, so it keeps the slot to stay aligned with them.
+                        SettingsRowIcon(null)
                         Text(
                             text = stringResource(R.string.label_server),
+                            modifier = Modifier.weight(1f),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.ExtraBold,
                             color = colorScheme.onSurface,
@@ -329,6 +336,8 @@ fun SettingsScreen(
                         title = stringResource(R.string.action_sign_out),
                         value = null,
                         onClick = onLogout,
+                        icon = R.drawable.ic_lucide_log_out,
+                        iconTint = colorScheme.error,
                         titleColor = colorScheme.error,
                         trailingTint = colorScheme.error.copy(alpha = 0.72f),
                         showChevron = false,
@@ -392,14 +401,19 @@ private fun SettingsProfileCard(
         )
 
         SettingsDivider()
-        Text(
-            text = stringResource(
-                R.string.settings_role_label,
-                user?.role ?: stringResource(R.string.settings_role_default),
-            ),
-            style = MaterialTheme.typography.bodySmall,
-            color = colorScheme.onSurface.copy(alpha = 0.58f),
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            // Not tappable, so no glyph — but it keeps the slot so its label lines up with
+            // the iconned rows above it.
+            SettingsRowIcon(null)
+            Text(
+                text = stringResource(
+                    R.string.settings_role_label,
+                    user?.role ?: stringResource(R.string.settings_role_default),
+                ),
+                style = MaterialTheme.typography.bodySmall,
+                color = colorScheme.onSurface.copy(alpha = 0.58f),
+            )
+        }
     }
 }
 
@@ -421,9 +435,9 @@ private fun AccountNameSection(
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            SettingsRowIcon(R.drawable.ic_lucide_user)
             Column(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(2.dp),
@@ -494,13 +508,19 @@ private fun AccountNameSection(
 
 @Composable
 private fun AccountUsernameRow(username: String) {
-    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        AccountFieldLabel(stringResource(R.string.settings_account_username_label))
-        Text(
-            text = username,
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f),
-        )
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        SettingsRowIcon(R.drawable.ic_lucide_at_sign)
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            AccountFieldLabel(stringResource(R.string.settings_account_username_label))
+            Text(
+                text = username,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f),
+            )
+        }
     }
 }
 
@@ -539,9 +559,9 @@ private fun AccountPasswordSection(
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            SettingsRowIcon(R.drawable.ic_lucide_lock)
             Column(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(2.dp),
@@ -712,9 +732,9 @@ private fun AccountSecurityQuestionsSection(
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            SettingsRowIcon(R.drawable.ic_lucide_shield_question)
             Column(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(2.dp),
@@ -1130,6 +1150,8 @@ private fun SettingsListRow(
     title: String,
     value: String?,
     onClick: () -> Unit,
+    @DrawableRes icon: Int? = null,
+    iconTint: Color = MaterialTheme.colorScheme.secondary,
     titleColor: Color = MaterialTheme.colorScheme.onSurface,
     trailingTint: Color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.42f),
     showChevron: Boolean = true,
@@ -1140,11 +1162,12 @@ private fun SettingsListRow(
             .clip(RoundedCornerShape(16.dp))
             .clickable(onClick = onClick)
             .padding(vertical = 2.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        SettingsRowIcon(icon, iconTint)
         Text(
             text = title,
+            modifier = Modifier.weight(1f),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.ExtraBold,
             color = titleColor,
@@ -1182,6 +1205,28 @@ private fun SettingsDivider(
             .height(1.dp)
             .background(color),
     )
+}
+
+/**
+ * Leading glyph for a settings row. A null [icon] reserves the same width without drawing
+ * anything, so a row that carries no glyph still lines its label up with the ones that do.
+ */
+@Composable
+private fun SettingsRowIcon(
+    @DrawableRes icon: Int?,
+    tint: Color = MaterialTheme.colorScheme.secondary,
+) {
+    if (icon != null) {
+        Icon(
+            imageVector = ImageVector.vectorResource(icon),
+            contentDescription = null, // decorative: the row's label carries the meaning
+            tint = tint,
+            modifier = Modifier.size(TdayDimens.IconSm),
+        )
+    } else {
+        Spacer(modifier = Modifier.size(TdayDimens.IconSm))
+    }
+    Spacer(modifier = Modifier.width(TdayDimens.SpacingXl))
 }
 
 @Composable
@@ -1350,11 +1395,12 @@ private fun RestingFloatersRow() {
     var enabled by remember { mutableStateOf(store.isEnabled()) }
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        SettingsRowIcon(R.drawable.ic_lucide_waves)
         Text(
             text = stringResource(R.string.settings_resting_floaters),
+            modifier = Modifier.weight(1f),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.ExtraBold,
             color = colorScheme.onSurface,
@@ -1386,6 +1432,7 @@ private fun ScreenshotProtectionRow() {
     var enabled by remember { mutableStateOf(store.isScreenshotProtectionEnabled()) }
 
     SettingsToggleRow(
+        icon = R.drawable.ic_lucide_eye_off,
         title = stringResource(R.string.settings_screenshot_protection),
         subtitle = stringResource(R.string.settings_screenshot_protection_subtitle),
         checked = enabled,
@@ -1413,6 +1460,7 @@ private fun AppLockRow() {
 
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         SettingsToggleRow(
+            icon = R.drawable.ic_lucide_shield,
             title = stringResource(R.string.settings_app_lock),
             subtitle = stringResource(R.string.settings_app_lock_subtitle),
             checked = enabled,
@@ -1517,6 +1565,7 @@ private fun DeviceCalendarSyncRow() {
 
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         SettingsToggleRow(
+            icon = R.drawable.ic_lucide_calendar,
             title = stringResource(R.string.settings_calendar_sync),
             subtitle = stringResource(R.string.settings_calendar_sync_subtitle),
             checked = enabled,
@@ -1546,6 +1595,7 @@ private fun DeviceCalendarSyncRow() {
 
 @Composable
 private fun SettingsToggleRow(
+    @DrawableRes icon: Int,
     title: String,
     subtitle: String,
     checked: Boolean,
@@ -1554,9 +1604,9 @@ private fun SettingsToggleRow(
     val colorScheme = MaterialTheme.colorScheme
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        SettingsRowIcon(icon)
         Column(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(2.dp),
@@ -1608,11 +1658,12 @@ private fun QuietHoursRow() {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            SettingsRowIcon(R.drawable.ic_lucide_moon)
             Text(
                 text = stringResource(R.string.settings_quiet_hours),
+                modifier = Modifier.weight(1f),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.ExtraBold,
                 color = colorScheme.onSurface,
@@ -1653,7 +1704,14 @@ private fun QuietHoursTimeRow(label: String, value: String, onClick: () -> Unit)
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
             .clickable(onClick = onClick)
-            .padding(vertical = 4.dp),
+            // Sub-row of Quiet hours: no glyph of its own, indented under its label instead.
+            // Inside the clickable so the row keeps its full-width tap target, matching
+            // SettingsListRow.
+            .padding(
+                start = TdayDimens.IconSm + TdayDimens.SpacingXl,
+                top = 4.dp,
+                bottom = 4.dp,
+            ),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -1705,9 +1763,9 @@ private fun UnifiedPushRow() {
                 }
             }
             .padding(vertical = 2.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        SettingsRowIcon(R.drawable.ic_lucide_cloud)
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = stringResource(R.string.settings_unifiedpush_title),
@@ -1753,11 +1811,12 @@ private fun ReminderSelector(
                     expanded = true
                 }
                 .padding(vertical = 2.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            SettingsRowIcon(R.drawable.ic_lucide_bell)
             Text(
                 text = stringResource(R.string.settings_default_reminder),
+                modifier = Modifier.weight(1f),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.ExtraBold,
                 color = colorScheme.onSurface,
@@ -1822,11 +1881,12 @@ private fun DayAheadSelector(
                     expanded = true
                 }
                 .padding(vertical = 2.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            SettingsRowIcon(R.drawable.ic_lucide_bell_ring)
             Text(
                 text = stringResource(R.string.day_ahead_setting),
+                modifier = Modifier.weight(1f),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.ExtraBold,
                 color = colorScheme.onSurface,
@@ -1911,11 +1971,12 @@ private fun LanguageSelector() {
                     expanded = true
                 }
                 .padding(vertical = 2.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            SettingsRowIcon(R.drawable.ic_lucide_languages)
             Text(
                 text = stringResource(R.string.settings_language),
+                modifier = Modifier.weight(1f),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.ExtraBold,
                 color = colorScheme.onSurface,
