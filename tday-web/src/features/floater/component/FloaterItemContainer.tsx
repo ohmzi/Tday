@@ -2,6 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import clsx from "clsx";
+import {
+  TASK_COMPLETION_CHECK_TO_STRIKE_MS,
+  TASK_COMPLETION_FADE_MS,
+  TASK_COMPLETION_STRIKE_TO_FADE_MS,
+  TASK_COMPLETION_TOTAL_MS,
+} from "@/lib/taskCompletionTiming";
 import { Check, Flag, SquarePen, Trash } from "lucide-react";
 import TodoCheckbox from "@/components/ui/TodoCheckbox";
 import { TaskActionButtons } from "@/components/ui/TaskActionButtons";
@@ -78,9 +84,12 @@ export default function FloaterItemContainer({
     if (completing) return;
     setCompletePhase("checked");
     completeTimers.current.push(
-      window.setTimeout(() => setCompletePhase("struck"), 280),
-      window.setTimeout(() => setCompletePhase("removing"), 620),
-      window.setTimeout(() => completeMutateFn(floater), 960),
+      window.setTimeout(() => setCompletePhase("struck"), TASK_COMPLETION_CHECK_TO_STRIKE_MS),
+      window.setTimeout(
+        () => setCompletePhase("removing"),
+        TASK_COMPLETION_CHECK_TO_STRIKE_MS + TASK_COMPLETION_STRIKE_TO_FADE_MS,
+      ),
+      window.setTimeout(() => completeMutateFn(floater), TASK_COMPLETION_TOTAL_MS),
     );
   };
 
@@ -145,7 +154,7 @@ export default function FloaterItemContainer({
         ref={setNodeRef}
         style={
           completePhase === "removing"
-            ? { ...style, opacity: 0, transition: "opacity 300ms ease" }
+            ? { ...style, opacity: 0, transition: `opacity ${TASK_COMPLETION_FADE_MS}ms ease` }
             : style
         }
         className={clsx(
@@ -247,7 +256,7 @@ export default function FloaterItemContainer({
                 className={clsx(
                   "select-none text-[0.98rem] font-black leading-5 text-foreground transition-colors duration-300",
                   (completePhase === "struck" || completePhase === "removing") &&
-                    "text-muted-foreground line-through",
+                    "task-strike text-muted-foreground",
                 )}
               >
                 {title}

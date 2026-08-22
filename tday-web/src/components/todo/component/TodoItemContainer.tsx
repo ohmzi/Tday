@@ -1,6 +1,12 @@
 import React, { useEffect, useRef, useState } from "react";
 import TodoCheckbox from "@/components/ui/TodoCheckbox";
 import clsx from "clsx";
+import {
+  TASK_COMPLETION_CHECK_TO_STRIKE_MS,
+  TASK_COMPLETION_FADE_MS,
+  TASK_COMPLETION_STRIKE_TO_FADE_MS,
+  TASK_COMPLETION_TOTAL_MS,
+} from "@/lib/taskCompletionTiming";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { TodoItemType } from "@/types";
@@ -61,8 +67,10 @@ export const TodoItemCard = ({
   const [displayForm, setDisplayForm] = useState(false);
   const [editInstanceOnly, setEditInstanceOnly] = useState(false);
   const [showHandle, setShowHandle] = useState(false);
-  // Staged "checking off" sequence so each step is visible with a small gap:
-  //   checked (green tick) → struck (title + notes line-through) → removing (fade) → remove.
+  // Staged completion, matching the native rows exactly (Android/iOS use 160/360/260ms):
+  //   checked (green tick) → struck (title sweep + notes line-through) → fading → removed.
+  // The whole sequence is ~780ms and runs on its own timers — it is not gated on the undo
+  // toast, which lives for 5s independently.
   const [completePhase, setCompletePhase] = useState<
     "checked" | "struck" | "removing" | null
   >(null);
@@ -131,9 +139,12 @@ export const TodoItemCard = ({
     if (completing) return;
     setCompletePhase("checked"); // 1. green tick + pop
     completeTimers.current.push(
-      window.setTimeout(() => setCompletePhase("struck"), 280), // 2. strike the title + notes
-      window.setTimeout(() => setCompletePhase("removing"), 620), // 3. start fading
-      window.setTimeout(() => completeMutateFn(todoItem), 960), // 4. remove from cache
+      window.setTimeout(() => setCompletePhase("struck"), TASK_COMPLETION_CHECK_TO_STRIKE_MS),
+      window.setTimeout(
+        () => setCompletePhase("removing"),
+        TASK_COMPLETION_CHECK_TO_STRIKE_MS + TASK_COMPLETION_STRIKE_TO_FADE_MS,
+      ),
+      window.setTimeout(() => completeMutateFn(todoItem), TASK_COMPLETION_TOTAL_MS),
     );
   };
 
@@ -174,7 +185,7 @@ export const TodoItemCard = ({
         ref={setCombinedRef}
         style={
           completePhase === "removing"
-            ? { ...style, opacity: 0, transition: "opacity 300ms ease" }
+            ? { ...style, opacity: 0, transition: `opacity ${TASK_COMPLETION_FADE_MS}ms ease` }
             : style
         }
         {...containerProps}
@@ -283,7 +294,7 @@ export const TodoItemCard = ({
               className={clsx(
                 "select-none text-[0.98rem] font-black leading-5 text-foreground transition-colors duration-300",
                 (completePhase === "struck" || completePhase === "removing") &&
-                  "text-muted-foreground line-through",
+                  "task-strike text-muted-foreground",
               )}
             >
               {title}
