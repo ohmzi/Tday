@@ -255,7 +255,9 @@ struct SettingsScreen: View {
         TimelineExpandedTitleRow(
             title: L("Settings"),
             accentColor: colors.onSurface,
-            collapseProgress: titleCollapseProgress
+            collapseProgress: titleCollapseProgress,
+            mark: Image("LucideSlidersHorizontal"),
+            markAccentColor: colors.primary
         )
         .background {
             TimelineScrollOffsetObserver { settingsScrollOffset = $0 }
@@ -1811,7 +1813,9 @@ struct LatestReleaseScreen: View {
         TimelineExpandedTitleRow(
             title: L("App Version"),
             accentColor: colors.onSurface,
-            collapseProgress: titleCollapseProgress
+            collapseProgress: titleCollapseProgress,
+            mark: Image("LucideCloudDownload"),
+            markAccentColor: colors.primary
         )
         .background {
             TimelineScrollOffsetObserver { releaseScrollOffset = $0 }

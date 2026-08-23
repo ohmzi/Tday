@@ -62,7 +62,25 @@ enum TodoTimelineMetrics {
     static let sameDateTaskSpacing: CGFloat = 2
     static let sectionTopSpacing: CGFloat = 6
     static let sectionHeaderBottomPadding: CGFloat = 2
-    static let titleCollapseDistance: CGFloat = 64
+    // The expanded title now leads with the screen's glyph in a tinted circle,
+    // so the row — and therefore the distance over which it collapses — is
+    // taller than the 64pt it was when the row held only the title.
+    static let expandedTitleHeight: CGFloat = 56
+    static let heroMarkBox: CGFloat = 96
+    static let heroMarkGlyph: CGFloat = 44
+    static let heroMarkTopGap: CGFloat = 8
+    static let heroMarkBottomGap: CGFloat = 18
+    /// The mark goes first and is gone before the title reaches the bar.
+    static let heroMarkFadeEnd: CGFloat = 0.45
+    static let heroMarkWashTopAlpha: Double = 0.24
+    static let heroMarkWashBottomAlpha: Double = 0.07
+    static let heroMarkEchoAlpha: Double = 0.17
+    static let heroMarkEchoGlyph: CGFloat = 108
+    /// Band below the bar that dissolves rows as they pass under it.
+    static let contentFadeHeight: CGFloat = 30
+
+    static let titleCollapseDistance: CGFloat =
+        heroMarkTopGap + heroMarkBox + heroMarkBottomGap + expandedTitleHeight
     static let timelineBottomSpacerHeight: CGFloat = 120
     static let floaterTaskHomeBottomSpacerHeight: CGFloat = 12
     static let rootDockCollapseThreshold: CGFloat = 44
@@ -70,12 +88,15 @@ enum TodoTimelineMetrics {
     static let topBarButtonFrame: CGFloat = 56
     static let topBarButtonSpacing: CGFloat = 8
     static let topBarButtonIconSize: CGFloat = 24
-    static let expandedTitleHeight: CGFloat = 56
     static let expandedTitleLiftDistance: CGFloat = 14
-    static let expandedTitleFadeStart: CGFloat = 0.08
-    static let expandedTitleFadeEnd: CGFloat = 0.44
+    // The hero title now starts far below the bar, so it holds its ground for
+    // most of the collapse and hands over to the bar's copy at a single point:
+    // one is at zero exactly where the other starts, so there is never a moment
+    // with two titles, nor one with none.
+    static let expandedTitleFadeStart: CGFloat = 0.60
+    static let expandedTitleFadeEnd: CGFloat = 0.82
     static let collapsedTitleRevealDistance: CGFloat = 10
-    static let collapsedTitleRevealStart: CGFloat = 0.68
+    static let collapsedTitleRevealStart: CGFloat = 0.82
     static let collapsedTitleRevealEnd: CGFloat = 1
     static let searchResultSectionExpandDelay: TimeInterval = 0.08
     static let searchResultScrollDelay: TimeInterval = 0.44
@@ -997,12 +1018,24 @@ struct TodoListScreen: View {
         usesRootFeedHeader ? 0 : titleCollapseProgress
     }
 
+    /// The screen's own glyph for the hero circle. Prefers the drawn tile art
+    /// each mode already owns and falls back to the symbol — which is what
+    /// Today wants anyway, since its glyph follows the time of day.
+    private var timelineHeroMark: Image {
+        let listIconKey = viewModel.lists.first(where: { $0.id == viewModel.listId })?.iconKey
+        if let asset = emptyTimelineAssetName(for: viewModel.mode, listIconKey: listIconKey) {
+            return Image(asset)
+        }
+        return Image(systemName: emptyTimelineSystemImage(for: viewModel.mode, listIconKey: listIconKey))
+    }
+
     private var timelineHeroTitleRowBase: some View {
         TimelineExpandedTitleRow(
             title: viewModel.title,
             accentColor: modeAccentColor,
             collapseProgress: timelineHeroTitleCollapseProgress,
-            showsTimeOfDayIcon: viewModel.mode == .today
+            showsTimeOfDayIcon: viewModel.mode == .today,
+            mark: timelineHeroMark
         )
         .background {
             TimelineScrollOffsetObserver { timelineScrollOffset = $0 }
@@ -2558,6 +2591,21 @@ struct TimelineTopBar: View {
         .padding(.top, 2)
         .padding(.bottom, 4)
         .background(colors.background)
+        // Hung off the bar as an overlay that paints outside its own bounds, so
+        // rows dissolve into it instead of being guillotined by its edge. NOT
+        // inside the bar's stack: that would add layout height, push every row
+        // down and shift adjustedContentInset, which every collapse-progress
+        // calculation on these screens is derived from.
+        .overlay(alignment: .bottom) {
+            LinearGradient(
+                colors: [colors.background, colors.background.opacity(0)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .frame(height: TodoTimelineMetrics.contentFadeHeight)
+            .offset(y: TodoTimelineMetrics.contentFadeHeight)
+            .allowsHitTesting(false)
+        }
     }
 }
 
@@ -2566,17 +2614,33 @@ struct TimelineExpandedTitleRow: View {
     let accentColor: Color
     let collapseProgress: CGFloat
     let showsTimeOfDayIcon: Bool
+    /// The screen's own glyph, shown in a tinted circle above the title.
+    let mark: Image?
+    /// Tint for the circle. Separate from `accentColor` because screens whose
+    /// title is plain onSurface — Settings, App Version — still want a coloured
+    /// mark rather than a grey disc.
+    let markAccentColor: Color
 
     init(
         title: String,
         accentColor: Color,
         collapseProgress: CGFloat,
-        showsTimeOfDayIcon: Bool = false
+        showsTimeOfDayIcon: Bool = false,
+        mark: Image? = nil,
+        markAccentColor: Color? = nil
     ) {
         self.title = title
         self.accentColor = accentColor
         self.collapseProgress = collapseProgress
         self.showsTimeOfDayIcon = showsTimeOfDayIcon
+        self.mark = mark
+        self.markAccentColor = markAccentColor ?? accentColor
+    }
+
+    /// Clears out well before the title reaches the bar, so the two never
+    /// occupy the same space on the way past each other.
+    private var markFade: CGFloat {
+        1 - TodoTimelineMetrics.progress(progress, from: 0, to: TodoTimelineMetrics.heroMarkFadeEnd)
     }
 
     private var progress: CGFloat {
@@ -2600,7 +2664,19 @@ struct TimelineExpandedTitleRow: View {
     }
 
     var body: some View {
-        ZStack(alignment: .bottomLeading) {
+        VStack(alignment: .leading, spacing: 0) {
+            if let mark {
+                // Fixed spacers rather than Spacer(), so the block's height is
+                // exactly `titleCollapseDistance` and nothing can absorb slack
+                // and drift the title off the bottom edge.
+                Color.clear
+                    .frame(height: TodoTimelineMetrics.heroMarkTopGap)
+                heroMark(mark)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                Color.clear
+                    .frame(height: TodoTimelineMetrics.heroMarkBottomGap)
+            }
+
             TodoTimelineTitleLabel(
                 title: title,
                 accentColor: accentColor,
@@ -2623,6 +2699,49 @@ struct TimelineExpandedTitleRow: View {
         )
         .clipped()
         .allowsHitTesting(false)
+    }
+
+    /// A flat glyph on a flat disc reads as a utility icon. The wash is a
+    /// gradient with an oversized echo of the same glyph bleeding out of the
+    /// bottom-right — the motif the category tiles already use.
+    private func heroMark(_ image: Image) -> some View {
+        ZStack {
+            image
+                .renderingMode(.template)
+                .resizable()
+                .scaledToFit()
+                .frame(
+                    width: TodoTimelineMetrics.heroMarkEchoGlyph,
+                    height: TodoTimelineMetrics.heroMarkEchoGlyph
+                )
+                .foregroundStyle(markAccentColor.opacity(TodoTimelineMetrics.heroMarkEchoAlpha))
+                .offset(x: 22, y: 26)
+
+            image
+                .renderingMode(.template)
+                .resizable()
+                .scaledToFit()
+                .frame(
+                    width: TodoTimelineMetrics.heroMarkGlyph,
+                    height: TodoTimelineMetrics.heroMarkGlyph
+                )
+                .foregroundStyle(markAccentColor)
+        }
+        .frame(width: TodoTimelineMetrics.heroMarkBox, height: TodoTimelineMetrics.heroMarkBox)
+        .background(
+            LinearGradient(
+                colors: [
+                    markAccentColor.opacity(TodoTimelineMetrics.heroMarkWashTopAlpha),
+                    markAccentColor.opacity(TodoTimelineMetrics.heroMarkWashBottomAlpha),
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            ),
+            in: Circle()
+        )
+        .clipShape(Circle())
+        .opacity(Double(markFade))
+        .scaleEffect(0.85 + (0.15 * markFade))
     }
 }
 

@@ -149,7 +149,8 @@ struct CompletedScreen: View {
         TimelineExpandedTitleRow(
             title: L("Completed"),
             accentColor: completedAccentColor,
-            collapseProgress: titleCollapseProgress
+            collapseProgress: titleCollapseProgress,
+            mark: Image("TileComplete")
         )
         .background {
             TimelineScrollOffsetObserver { timelineScrollOffset = $0 }

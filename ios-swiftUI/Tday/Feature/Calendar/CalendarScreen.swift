@@ -77,6 +77,9 @@ private enum CalendarTitleHandoff {
     static let collapsedTitleRevealDistance: CGFloat = 10
     static let expandedTitleLiftDistance: CGFloat = 18
     static let sliderPartialSnapDistance: CGFloat = 58
+    /// The mark leads and is gone before the title reaches the bar, matching
+    /// every other titled screen.
+    static let markFadeEnd: CGFloat = 0.45
 }
 
 private enum CalendarPeriodCardMetrics {
@@ -2172,6 +2175,18 @@ private struct CalendarElasticTopBar: View {
         -CalendarTitleHandoff.expandedTitleLiftDistance * progress
     }
 
+    private var markFade: CGFloat {
+        1 - linearProgress(progress, from: 0, to: CalendarTitleHandoff.markFadeEnd)
+    }
+
+    /// Collapses over the whole scroll, unlike its opacity — otherwise the bar
+    /// would keep 96pt of empty height long after the circle had gone.
+    private var markBlockHeight: CGFloat {
+        (TodoTimelineMetrics.heroMarkTopGap
+            + TodoTimelineMetrics.heroMarkBox
+            + TodoTimelineMetrics.heroMarkBottomGap) * (1 - progress)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             ZStack {
@@ -2214,6 +2229,13 @@ private struct CalendarElasticTopBar: View {
             }
             .frame(height: TodoTimelineMetrics.topBarRowHeight)
 
+            if markBlockHeight > 0.5 {
+                heroMark
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .frame(height: markBlockHeight, alignment: .center)
+                    .clipped()
+            }
+
             Color.clear
                 .frame(height: expandedSpacerHeight)
 
@@ -2237,6 +2259,62 @@ private struct CalendarElasticTopBar: View {
         .padding(.top, 2)
         .padding(.bottom, 2)
         .background(colors.background)
+        // Painted outside the bar's bounds so the grid dissolves into it rather
+        // than being cut off at its edge. Keeping it out of the VStack keeps the
+        // bar's own height — and every collapse calculation — untouched.
+        .overlay(alignment: .bottom) {
+            LinearGradient(
+                colors: [colors.background, colors.background.opacity(0)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .frame(height: TodoTimelineMetrics.contentFadeHeight)
+            .offset(y: TodoTimelineMetrics.contentFadeHeight)
+            .allowsHitTesting(false)
+        }
+    }
+
+    /// Same treatment the timeline screens use: a flat glyph over an
+    /// oversized, washed-out echo of itself inside a gradient disc.
+    private var heroMark: some View {
+        ZStack {
+            Image("LucideCalendar")
+                .renderingMode(.template)
+                .resizable()
+                .scaledToFit()
+                .frame(
+                    width: TodoTimelineMetrics.heroMarkEchoGlyph,
+                    height: TodoTimelineMetrics.heroMarkEchoGlyph
+                )
+                .foregroundStyle(accentColor.opacity(TodoTimelineMetrics.heroMarkEchoAlpha))
+                .offset(x: 22, y: 26)
+
+            Image("LucideCalendar")
+                .renderingMode(.template)
+                .resizable()
+                .scaledToFit()
+                .frame(
+                    width: TodoTimelineMetrics.heroMarkGlyph,
+                    height: TodoTimelineMetrics.heroMarkGlyph
+                )
+                .foregroundStyle(accentColor)
+        }
+        .frame(width: TodoTimelineMetrics.heroMarkBox, height: TodoTimelineMetrics.heroMarkBox)
+        .background(
+            LinearGradient(
+                colors: [
+                    accentColor.opacity(TodoTimelineMetrics.heroMarkWashTopAlpha),
+                    accentColor.opacity(TodoTimelineMetrics.heroMarkWashBottomAlpha),
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            ),
+            in: Circle()
+        )
+        .clipShape(Circle())
+        .opacity(Double(markFade))
+        .scaleEffect(0.85 + (0.15 * markFade))
+        .allowsHitTesting(false)
     }
 
     @Environment(\.tdayColors) private var colors

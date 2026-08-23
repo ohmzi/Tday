@@ -13,6 +13,16 @@ struct MorningSweepScreen: View {
     @State private var loaded = false
     @State private var pickingDate = false
     @State private var pickedDate = Date()
+    @State private var scrollOffset: CGFloat = 0
+
+    private var titleCollapseProgress: CGFloat {
+        let distance = TodoTimelineMetrics.titleCollapseDistance
+        guard distance > 0 else { return 0 }
+        return min(max(scrollOffset / distance, 0), 1)
+    }
+
+    /// Overdue's accent — sweeping is what you do with what has slipped.
+    private let sweepAccentColor = Color(.sRGB, red: 0.855, green: 0.463, blue: 0.380)
 
     private var container: AppContainer { viewModel.container }
     private var card: TodoItem? { cards.first }
@@ -20,11 +30,17 @@ struct MorningSweepScreen: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                backButton
-
-                Text(L("Morning Sweep"))
-                    .font(.tdayRounded(size: 28, weight: .heavy))
-                    .foregroundStyle(colors.onSurface)
+                TimelineExpandedTitleRow(
+                    title: L("Morning Sweep"),
+                    accentColor: colors.onSurface,
+                    collapseProgress: titleCollapseProgress,
+                    mark: Image(systemName: "sunrise.fill"),
+                    markAccentColor: sweepAccentColor
+                )
+                .background {
+                    TimelineScrollOffsetObserver { scrollOffset = $0 }
+                        .frame(width: 0, height: 0)
+                }
 
                 if let card {
                     cardView(card)
@@ -38,9 +54,18 @@ struct MorningSweepScreen: View {
                         .padding(.vertical, 48)
                 }
             }
-            .padding(.horizontal, 18)
+            .padding(.horizontal, TodoTimelineMetrics.horizontalPadding)
         }
         .background(colors.background)
+        .safeAreaInset(edge: .top, spacing: 0) {
+            TimelineTopBar(
+                title: L("Morning Sweep"),
+                accentColor: colors.onSurface,
+                collapseProgress: titleCollapseProgress,
+                onBack: { viewModel.goBack() },
+                actions: []
+            )
+        }
         .navigationBarBackButtonHidden(true)
         .onAppear {
             guard !loaded else { return }
@@ -50,23 +75,6 @@ struct MorningSweepScreen: View {
         .sheet(isPresented: $pickingDate) {
             datePickerSheet
         }
-    }
-
-    private var backButton: some View {
-        Button(action: { viewModel.goBack() }) {
-            HStack(spacing: 6) {
-                Image("LucideArrowLeft")
-                    .renderingMode(.template)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 18, height: 18)
-                Text(L("Back"))
-                    .font(.tdayRounded(size: 16, weight: .heavy))
-            }
-            .foregroundStyle(colors.onSurfaceVariant)
-        }
-        .buttonStyle(.plain)
-        .padding(.top, 8)
     }
 
     private func cardView(_ card: TodoItem) -> some View {
