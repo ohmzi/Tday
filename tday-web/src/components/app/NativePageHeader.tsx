@@ -1,6 +1,5 @@
 import type { ElementType, ReactNode, RefObject } from "react";
 import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
-import NativeAppBrandButton from "./NativeAppBrandButton";
 import { nativeAppScrollAttribute } from "./nativeAppLayout";
 import { clamp01, smootherstep } from "./nativeHeaderEasing";
 import { cn } from "@/lib/utils";
@@ -43,6 +42,15 @@ export const nativePageHeaderMetrics = {
   /** Breathing room each side of the title once it has parked in the bar. */
   dockedTitleSideGap: 8,
   /**
+   * The bar's minimum row height. With nothing on the left any more and the
+   * title absolutely positioned, a page with no actions would leave the row with
+   * no content at all and the bar would shrink to its own padding — taking the
+   * title's parked position down with it. 56 clears the title at both type
+   * sizes and matches the row the search-bar pages get from their search
+   * button, so it parks at the same height on every page.
+   */
+  barRowHeight: 56,
+  /**
    * Over how much of the last stretch of travel the bar's side reserve comes
    * in. Only the parked title has neighbours to keep clear of; down in the
    * block it has the full width, and charging it there truncated titles that
@@ -82,8 +90,7 @@ export type NativePageBarSlots = {
   /** The one title element. It lives in the bar and is translated into place. */
   dockedTitleRef: RefObject<HTMLHeadingElement | null>;
   fadeRef: RefObject<HTMLDivElement | null>;
-  /** What sits left and right of the title in the bar, so it can keep clear. */
-  leadingRef: RefObject<HTMLDivElement | null>;
+  /** What sits beside the title in the bar, so it can keep clear of it. */
   trailingRef: RefObject<HTMLDivElement | null>;
 };
 
@@ -91,11 +98,10 @@ export function useNativePageBarSlots(): NativePageBarSlots {
   const barRef = useRef<HTMLElement | null>(null);
   const dockedTitleRef = useRef<HTMLHeadingElement | null>(null);
   const fadeRef = useRef<HTMLDivElement | null>(null);
-  const leadingRef = useRef<HTMLDivElement | null>(null);
   const trailingRef = useRef<HTMLDivElement | null>(null);
   return useMemo(
-    () => ({ barRef, dockedTitleRef, fadeRef, leadingRef, trailingRef }),
-    [barRef, dockedTitleRef, fadeRef, leadingRef, trailingRef],
+    () => ({ barRef, dockedTitleRef, fadeRef, trailingRef }),
+    [barRef, dockedTitleRef, fadeRef, trailingRef],
   );
 }
 
@@ -132,7 +138,7 @@ type Props = {
   /** The page's own glyph. Rendered at full accent inside the tinted circle. */
   icon: ElementType;
   subtitle?: string;
-  /** Trailing controls in the pinned bar, beside the brand button. */
+  /** Trailing controls in the pinned bar, to the right of the title. */
   actions?: ReactNode;
   /** Rendered under the title, inside the block that scrolls away. */
   beneathTitle?: ReactNode;
@@ -163,7 +169,7 @@ export default function NativePageHeader({
   const titleAnchorRef = useRef<HTMLDivElement | null>(null);
   const ownSlots = useNativePageBarSlots();
   const slots = barSlots ?? ownSlots;
-  const { barRef, dockedTitleRef, fadeRef, leadingRef, trailingRef } = slots;
+  const { barRef, dockedTitleRef, fadeRef, trailingRef } = slots;
 
   // The collapse is applied by writing styles straight onto the nodes inside a
   // rAF, never through React state. A scroll frame must not re-render the page
@@ -199,7 +205,6 @@ export default function NativePageHeader({
       const markRect = markBoxEl.getBoundingClientRect();
       const anchorRect = anchorEl.getBoundingClientRect();
       const titleHeight = titleEl?.offsetHeight ?? 0;
-      const leadingWidth = leadingRef.current?.offsetWidth ?? 0;
       const trailingWidth = trailingRef.current?.offsetWidth ?? 0;
       // The bar centres its own contents in its CONTENT box, and its top padding
       // carries the safe-area inset. Centring the title on the border box would
@@ -260,15 +265,12 @@ export default function NativePageHeader({
         titleEl.style.transform = `translateY(${y}px)`;
         titleEl.style.visibility = "visible";
 
-        // Kept clear of whatever the bar holds, by the wider of the two sides so
-        // the title stays centred on the bar rather than on the leftovers — and
-        // eased in only over the last stretch, because down in the block there
-        // is nothing beside it and the full width is its to use.
-        const docking = clamp01(
-          1 - (y - parkedY) / m.reserveRampDistance,
-        );
-        const reserve =
-          (Math.max(leadingWidth, trailingWidth) + m.dockedTitleSideGap) * docking;
+        // Kept clear of the bar's actions, and by the same amount on the empty
+        // side so the title stays centred on the bar rather than on the
+        // leftovers — eased in only over the last stretch, because down in the
+        // block there is nothing beside it and the full width is its to use.
+        const docking = clamp01(1 - (y - parkedY) / m.reserveRampDistance);
+        const reserve = (trailingWidth + m.dockedTitleSideGap) * docking;
         titleEl.style.paddingLeft = `${reserve}px`;
         titleEl.style.paddingRight = `${reserve}px`;
       }
@@ -295,7 +297,6 @@ export default function NativePageHeader({
       typeof ResizeObserver === "undefined" ? null : new ResizeObserver(schedule);
     observer?.observe(hero);
     if (barRef.current) observer?.observe(barRef.current);
-    if (leadingRef.current) observer?.observe(leadingRef.current);
     if (trailingRef.current) observer?.observe(trailingRef.current);
 
     apply();
@@ -312,7 +313,7 @@ export default function NativePageHeader({
     // `title`/`subtitle` are dependencies so the effect re-runs — and so
     // re-applies, and re-observes the bar — once text that resizes either box
     // has painted.
-  }, [m, barRef, dockedTitleRef, fadeRef, leadingRef, trailingRef, title, subtitle]);
+  }, [m, barRef, dockedTitleRef, fadeRef, trailingRef, title, subtitle]);
 
   return (
     <>
@@ -325,16 +326,12 @@ export default function NativePageHeader({
           className="pointer-events-none absolute inset-x-0 bottom-full h-screen bg-background lg:hidden"
         />
 
-        {/* No wordmark: this page has a name of its own, and two names at the
-            top of it read as a mistake. The glyph stays as the home link. */}
-        <div ref={leadingRef} className="flex shrink-0 items-center">
-          <NativeAppBrandButton showWordmark={false} />
-        </div>
-
-        {/* The page's title — the only one there is. It lives here, in the
-            pinned bar, and is translated down to the block's gap at rest, so
-            what travels up is this element rather than a copy of it. Absolute,
-            so nothing in the bar can shove it sideways as it arrives. */}
+        {/* Nothing on the left. The page's own name is the only thing that
+            belongs at the top of it, and getting home is what the dock at the
+            bottom is for. This holds the row's height open, since with the
+            title absolutely positioned the bar could otherwise collapse to its
+            own padding on a page with no actions. */}
+        <div className="w-0 shrink-0" style={{ height: m.barRowHeight }} aria-hidden />
 
         <div ref={trailingRef} className="ml-auto flex shrink-0 items-center">
           {actions}
