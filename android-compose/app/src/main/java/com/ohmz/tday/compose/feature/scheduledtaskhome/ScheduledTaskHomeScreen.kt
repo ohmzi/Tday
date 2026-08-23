@@ -352,7 +352,7 @@ fun ScheduledTaskHomeScreen(
     // pinned toolbar.
     var refreshIsRefreshing by remember { mutableStateOf(false) }
     var refreshPullFraction by remember { mutableFloatStateOf(0f) }
-    var refreshWaveAmplitude by remember { mutableFloatStateOf(1f) }
+    var refreshWaveFrozen by remember { mutableStateOf(false) }
     val headerBarHeightPx = with(density) { RootFeedHeroHeaderMetrics.BarHeight.toPx() }
     // Read lazily inside the header so a scroll frame recomposes the header
     // alone rather than this whole screen.
@@ -444,10 +444,10 @@ fun ScheduledTaskHomeScreen(
                     onRefresh = onRefresh,
                     enabled = pullRefreshEnabled,
                     showsIndicator = false,
-                    onIndicatorStateChange = { parked, fraction, amplitude ->
-                        refreshIsRefreshing = parked
+                    onIndicatorStateChange = { refreshing, fraction, frozen ->
+                        refreshIsRefreshing = refreshing
                         refreshPullFraction = fraction
-                        refreshWaveAmplitude = amplitude
+                        refreshWaveFrozen = frozen
                     },
                     modifier = Modifier
                         .fillMaxSize()
@@ -776,7 +776,7 @@ fun ScheduledTaskHomeScreen(
                     .zIndex(6f),
                 refreshIsRefreshing = refreshIsRefreshing,
                 refreshPullFraction = { refreshPullFraction },
-                    refreshWaveAmplitude = refreshWaveAmplitude,
+                    refreshWaveFrozen = refreshWaveFrozen,
             )
 
             if (showRootFeedDock && !searchExpanded) {

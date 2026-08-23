@@ -1,7 +1,6 @@
 package com.ohmz.tday.compose.ui.component
 
 import android.os.SystemClock
-import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
@@ -32,6 +31,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -53,12 +53,6 @@ import kotlin.math.sin
 
 private const val RefreshBarCount = 5
 private const val RefreshMinVisibleMillis = 600L
-
-/**
- * How long the bars take to fall to their resting height once a refresh ends,
- * before the pill is allowed to leave.
- */
-private const val RefreshSettleMillis = 260
 
 /**
  * How far the feed itself moves on a pull, and when it starts.
@@ -89,11 +83,10 @@ fun TdayPullToRefreshBox(
     showsIndicator: Boolean = true,
     /** Reports `(isRefreshing, distanceFraction)` for callers drawing their own pill. */
     /**
-     * Reports `(pillParked, distanceFraction, waveAmplitude)` for callers drawing
-     * their own pill. `pillParked` stays true through the settle after a refresh,
-     * so the pill holds position until the bars have fallen.
+     * Reports `(isRefreshing, distanceFraction, waveFrozen)` for callers drawing
+     * their own pill.
      */
-    onIndicatorStateChange: ((Boolean, Float, Float) -> Unit)? = null,
+    onIndicatorStateChange: ((Boolean, Float, Boolean) -> Unit)? = null,
     content: @Composable BoxScope.() -> Unit,
 ) {
     if (!enabled) {
@@ -133,30 +126,6 @@ fun TdayPullToRefreshBox(
     // displayRefreshing clears, the target jumps from 0 back to whatever the
     // still-held fraction implies — a full ContentPullTravel down and then a
     // slide back up, right as the pill is rising.
-    // The bars keep waving while they shrink, and the pill stays parked, until
-    // the settle finishes. Switching straight to the pull-driven branch the
-    // instant a refresh ends flashes every bar to full height, because the pull
-    // fraction is still sitting at 1 at that moment.
-    var barsSettling by remember { mutableStateOf(false) }
-    var sawRefresh by remember { mutableStateOf(false) }
-    LaunchedEffect(displayRefreshing) {
-        if (displayRefreshing) {
-            sawRefresh = true
-            barsSettling = false
-        } else if (sawRefresh) {
-            sawRefresh = false
-            barsSettling = true
-            delay(RefreshSettleMillis.toLong())
-            barsSettling = false
-        }
-    }
-    val waveActive = displayRefreshing || barsSettling
-    val waveAmplitude by animateFloatAsState(
-        targetValue = if (displayRefreshing) 1f else 0f,
-        animationSpec = tween(durationMillis = RefreshSettleMillis, easing = FastOutSlowInEasing),
-        label = "pullRefreshWaveAmplitude",
-    )
-
     var contentPullSuppressed by remember { mutableStateOf(false) }
     // SideEffect, not LaunchedEffect: distanceFraction changes every frame during
     // a drag, and keying a coroutine on it would relaunch one per frame.
@@ -168,10 +137,17 @@ fun TdayPullToRefreshBox(
         }
     }
 
+    // True for the window between a refresh ending and the pull fraction
+    // unwinding — the bars hold their last wave positions through it. Switching
+    // to the pull-driven branch here instead would flash every bar to full
+    // height, because the fraction is still sitting at 1 the moment a refresh
+    // ends.
+    val waveFrozen = contentPullSuppressed && !displayRefreshing
+
     if (onIndicatorStateChange != null) {
         val fraction = state.distanceFraction
-        LaunchedEffect(waveActive, fraction, waveAmplitude) {
-            onIndicatorStateChange(waveActive, fraction, waveAmplitude)
+        LaunchedEffect(displayRefreshing, fraction, waveFrozen) {
+            onIndicatorStateChange(displayRefreshing, fraction, waveFrozen)
         }
     }
 
@@ -193,9 +169,9 @@ fun TdayPullToRefreshBox(
                     modifier = Modifier
                         .align(Alignment.TopCenter)
                         .zIndex(1f),
-                    isRefreshing = waveActive,
+                    isRefreshing = displayRefreshing,
                     distanceFraction = state.distanceFraction,
-                    waveAmplitude = waveAmplitude,
+                    waveFrozen = waveFrozen,
                 )
             }
         },
@@ -241,8 +217,12 @@ fun TdayPullToRefreshIndicator(
     modifier: Modifier,
     isRefreshing: Boolean,
     distanceFraction: Float,
-    /** Scales the wave down to nothing so the bars settle before the pill leaves. */
-    waveAmplitude: Float = 1f,
+    /**
+     * Holds the bars at their last wave positions while the pill leaves, instead
+     * of dropping to the pull-driven branch — the pull fraction is still at 1 the
+     * moment a refresh ends, which would flash every bar to full height.
+     */
+    waveFrozen: Boolean = false,
     /**
      * Whether the pill positions itself from the pull distance. Callers that
      * place it themselves — a pinned header flying it in from the top — turn
@@ -252,12 +232,15 @@ fun TdayPullToRefreshIndicator(
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val refreshAccent = TdayTodayBlue
-    val visible = isRefreshing || distanceFraction > 0f
+    val visible = isRefreshing || waveFrozen || distanceFraction > 0f
     val alpha by animateFloatAsState(
         targetValue = if (visible) 1f else 0f,
         animationSpec = tween(durationMillis = 220),
         label = "pullRefreshAlpha",
     )
+    // Frozen, not wound down: when a refresh ends the bars simply stop where
+    // they are and the pill leaves from there.
+    var frozenSpin by remember { mutableFloatStateOf(0f) }
     val spin = if (isRefreshing) {
         val refreshTransition = rememberInfiniteTransition(label = "pullRefreshSpin")
         val refreshSpin by refreshTransition.animateFloat(
@@ -268,9 +251,10 @@ fun TdayPullToRefreshIndicator(
             ),
             label = "pullRefreshWavePhase",
         )
+        SideEffect { frozenSpin = refreshSpin }
         refreshSpin
     } else {
-        0f
+        frozenSpin
     }
     val pullProgress = distanceFraction.coerceIn(0f, 1f)
     val sweepTrackWidth =
@@ -347,8 +331,7 @@ fun TdayPullToRefreshIndicator(
                             index = index,
                             pullProgress = pullProgress,
                             cycle = spin,
-                            isRefreshing = isRefreshing,
-                            waveAmplitude = waveAmplitude,
+                            isRefreshing = isRefreshing || waveFrozen,
                         )
                         Box(
                             modifier = Modifier
@@ -380,12 +363,11 @@ private fun refreshBarMetrics(
     pullProgress: Float,
     cycle: Float,
     isRefreshing: Boolean,
-    waveAmplitude: Float = 1f,
 ): RefreshBarMetrics {
     return if (isRefreshing) {
         val phasedCycle = (cycle + (index * 0.11f)) % 1f
         val wave = ((sin(phasedCycle * PI.toFloat() * 2f) + 1f) / 2f)
-            .smoothstep() * waveAmplitude.coerceIn(0f, 1f)
+            .smoothstep()
         val height = TdayDimens.PullRefreshDotMinHeight +
             ((TdayDimens.PullRefreshDotMaxHeight - TdayDimens.PullRefreshDotMinHeight) * wave)
         RefreshBarMetrics(
