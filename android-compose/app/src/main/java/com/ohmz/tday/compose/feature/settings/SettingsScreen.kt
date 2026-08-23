@@ -97,6 +97,7 @@ import com.ohmz.tday.compose.core.model.SessionUser
 import com.ohmz.tday.compose.core.notification.DayAheadOption
 import com.ohmz.tday.compose.core.notification.ReminderOption
 import com.ohmz.tday.compose.core.ui.TdayHeroTitleHeader
+import com.ohmz.tday.compose.core.ui.tdayTopFade
 import com.ohmz.tday.compose.core.ui.rememberScrollCollapsingTitleScrollBehavior
 import com.ohmz.tday.compose.feature.app.MobileSyncStatus
 import com.ohmz.tday.compose.feature.app.ProfileEditResult
@@ -173,6 +174,7 @@ fun SettingsScreen(
                 .padding(padding)
                 .background(colorScheme.background)
                 .nestedScroll(titleScrollBehavior.nestedScrollConnection)
+                .tdayTopFade()
                 .verticalScroll(scrollState)
                 .padding(horizontal = 18.dp, vertical = 2.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),

@@ -65,7 +65,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
@@ -157,6 +156,8 @@ import com.ohmz.tday.compose.core.ui.animateTaskSwipeOffsetAsState
 import com.ohmz.tday.compose.core.ui.RootFeedHeroHeader
 import com.ohmz.tday.compose.core.ui.RootFeedHeroHeaderMetrics
 import com.ohmz.tday.compose.core.ui.RootFeedHeroMark
+import com.ohmz.tday.compose.core.ui.TdayHeroTitleHeader
+import com.ohmz.tday.compose.core.ui.tdayTopFade
 import com.ohmz.tday.compose.core.ui.rememberLazyListCollapsingTitleScrollBehavior
 import com.ohmz.tday.compose.core.ui.rememberTaskSwipeRevealState
 import com.ohmz.tday.compose.core.ui.shareList
@@ -843,35 +844,27 @@ fun TodoListScreen(
         topBar = {
             when {
                 usesRootFeedChrome -> Unit
-                usesTodayStyle -> {
-                    TodayTopBar(
-                        onBack = onBack,
-                        collapseProgress = todayTitleScrollBehavior.collapseProgress,
-                        title = uiState.title,
-                        titleColor = titleColor,
-                        titleIcon = if (uiState.mode == TodoListMode.TODAY) todayTimeIcon else null,
-                        titleIconTint = todayTimeIconTint,
-                        actions = topBarActions,
-                    )
-                }
-
                 else -> {
-                    TopAppBar(
-                        title = {
-                            Text(
-                                text = uiState.title,
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = titleColor,
-                            )
-                        },
-                        navigationIcon = {
-                            TodayHeaderButton(
-                                onClick = onBack,
-                                icon = ImageVector.vectorResource(R.drawable.ic_lucide_chevron_left),
-                                contentDescription = stringResource(R.string.action_back),
-                                isBackButton = true,
-                            )
+                    TdayHeroTitleHeader(
+                        title = uiState.title,
+                        icon = emptyStateIconForMode(
+                            mode = uiState.mode,
+                            listIconKey = selectedList?.iconKey,
+                            isTodayDaytime = isTodayDaytime,
+                        ),
+                        accentColor = titleColor,
+                        collapseProgress = todayTitleScrollBehavior.rawCollapseProgress,
+                        onBack = onBack,
+                        backContentDescription = stringResource(R.string.action_back),
+                        actions = {
+                            topBarActions.forEach { action ->
+                                TodayHeaderButton(
+                                    onClick = action.onClick,
+                                    icon = action.icon,
+                                    contentDescription = action.contentDescription,
+                                    iconSize = 22.dp,
+                                )
+                            }
                         },
                     )
                 }
@@ -942,6 +935,7 @@ fun TodoListScreen(
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
+                        .then(if (usesRootFeedChrome) Modifier else Modifier.tdayTopFade())
                         .then(
                             if (usesTodayStyle && !usesRootFeedChrome) {
                                 Modifier.nestedScroll(todayTitleScrollBehavior.nestedScrollConnection)
@@ -2065,107 +2059,6 @@ private fun rememberTodoRootIsDaytime(): Boolean {
     }
 
     return hour in 6 until 18
-}
-
-@Composable
-private fun TodayTopBar(
-    onBack: () -> Unit,
-    collapseProgress: Float,
-    title: String,
-    titleColor: Color,
-    titleIcon: ImageVector? = null,
-    titleIconTint: Color = titleColor,
-    actions: List<TodoTopBarAction>,
-) {
-    val progress = collapseProgress.coerceIn(0f, 1f)
-    val titleHandoffPoint = 0.9f
-    val density = LocalDensity.current
-    val expandedTitleHeight = lerp(56.dp, 0.dp, progress)
-    val expandedTitleAlpha = ((titleHandoffPoint - progress) / titleHandoffPoint).coerceIn(0f, 1f)
-    val collapsedTitleAlpha =
-        ((progress - titleHandoffPoint) / (1f - titleHandoffPoint)).coerceIn(0f, 1f)
-    val collapsedTitleShiftY = with(density) { (12.dp * (1f - collapsedTitleAlpha)).toPx() }
-    val expandedTitleShiftY = with(density) { (-10.dp * (1f - expandedTitleAlpha)).toPx() }
-    // Reserve each side for what actually sits there (back button start,
-    // action cluster end, including the 8dp gaps) instead of the larger side
-    // twice — with three actions a symmetric reserve leaves the collapsed
-    // title no room at all.
-    val collapsedTitleStartPadding = TdayDimens.FabSize + 12.dp
-    val actionCount = actions.size.coerceAtLeast(1)
-    val collapsedTitleEndPadding =
-        (actionCount * 56).dp + ((actionCount - 1).coerceAtLeast(0) * 8).dp + 12.dp
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .statusBarsPadding()
-            .padding(start = 18.dp, end = 18.dp, top = 6.dp, bottom = 2.dp),
-    ) {
-        Box(modifier = Modifier.fillMaxWidth()) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                TodayHeaderButton(
-                    onClick = onBack,
-                    icon = ImageVector.vectorResource(R.drawable.ic_lucide_chevron_left),
-                    contentDescription = stringResource(R.string.action_back),
-                    isBackButton = true,
-                )
-                if (actions.isNotEmpty()) {
-                    // Same gap as the web list header's action cluster (gap-2
-                    // between the circular buttons).
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        actions.forEach { action ->
-                            TodayHeaderButton(
-                                onClick = action.onClick,
-                                icon = action.icon,
-                                contentDescription = action.contentDescription,
-                            )
-                        }
-                    }
-                }
-            }
-            if (collapsedTitleAlpha > 0.001f) {
-                TodayTitleLabel(
-                    text = title,
-                    color = titleColor,
-                    icon = titleIcon,
-                    iconTint = titleIconTint,
-                    modifier = Modifier
-                        .align(Alignment.Center)
-                        .fillMaxWidth()
-                        .padding(start = collapsedTitleStartPadding, end = collapsedTitleEndPadding)
-                        .wrapContentSize(Alignment.Center)
-                        .graphicsLayer {
-                            alpha = collapsedTitleAlpha
-                            translationY = collapsedTitleShiftY
-                        },
-                )
-            }
-        }
-        Spacer(modifier = Modifier.height(lerp(14.dp, 0.dp, progress)))
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(expandedTitleHeight),
-            contentAlignment = Alignment.BottomStart,
-        ) {
-            if (expandedTitleAlpha > 0.001f) {
-                TodayTitleLabel(
-                    text = title,
-                    color = titleColor,
-                    icon = titleIcon,
-                    iconTint = titleIconTint,
-                    modifier = Modifier.graphicsLayer {
-                        alpha = expandedTitleAlpha
-                        translationY = expandedTitleShiftY
-                    },
-                )
-            }
-        }
-    }
 }
 
 private data class TodoTopBarAction(

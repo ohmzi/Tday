@@ -19,6 +19,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -71,8 +74,18 @@ object TdayHeroTitleMetrics {
     const val MarkFadeEnd = 0.45f
     const val TitleHandoff = 0.82f
 
-    /** Opacity of the accent wash behind the glyph. */
-    const val MarkWashAlpha = 0.14f
+    /** Opacity range of the accent wash behind the glyph. */
+    const val MarkWashTopAlpha = 0.24f
+    const val MarkWashBottomAlpha = 0.07f
+
+    /** The oversized echo of the glyph sitting behind it inside the circle. */
+    const val MarkEchoAlpha = 0.17f
+    val MarkEchoGlyph = 108.dp
+    val MarkEchoOffsetX = 22.dp
+    val MarkEchoOffsetY = 26.dp
+
+    /** Height of the band that dissolves content as it reaches the toolbar. */
+    val ContentFadeHeight = 30.dp
 
     fun lerp(from: Dp, to: Dp, fraction: Float): Dp = from + ((to - from) * fraction)
 }
@@ -155,6 +168,10 @@ fun TdayHeroTitleHeader(
                     .graphicsLayer { alpha = heroFade },
             ) {
                 Spacer(modifier = Modifier.height(m.MarkTopGap))
+                // A flat glyph on a flat disc read as a utility icon rather than
+                // as a page mark. The wash is a gradient now, with an oversized
+                // echo of the same glyph bleeding out of the bottom-right —
+                // the motif the category tiles already use for their watermarks.
                 Box(
                     modifier = Modifier
                         .align(Alignment.CenterHorizontally)
@@ -165,9 +182,25 @@ fun TdayHeroTitleHeader(
                             scaleX = scale
                             scaleY = scale
                         }
-                        .background(accentColor.copy(alpha = m.MarkWashAlpha), CircleShape),
+                        .clip(CircleShape)
+                        .background(
+                            Brush.linearGradient(
+                                listOf(
+                                    accentColor.copy(alpha = m.MarkWashTopAlpha),
+                                    accentColor.copy(alpha = m.MarkWashBottomAlpha),
+                                ),
+                            ),
+                        ),
                     contentAlignment = Alignment.Center,
                 ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = accentColor.copy(alpha = m.MarkEchoAlpha),
+                        modifier = Modifier
+                            .size(m.MarkEchoGlyph)
+                            .offset(x = m.MarkEchoOffsetX, y = m.MarkEchoOffsetY),
+                    )
                     Icon(
                         imageVector = icon,
                         contentDescription = null,
