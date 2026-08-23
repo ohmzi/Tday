@@ -26,6 +26,14 @@ private const val COLLAPSE_FLING_VELOCITY_THRESHOLD = 120f
 @Stable
 class CollapsingTitleScrollBehavior internal constructor(
     val collapseProgress: Float,
+    /**
+     * Unanimated 0..1 progress, straight off the consumed scroll.
+     *
+     * [collapseProgress] runs through a spring, which suits a title that snaps
+     * between two states but lags a header meant to track the finger. Chrome
+     * that applies its own easing reads this one instead.
+     */
+    val rawCollapseProgress: Float,
     val collapsePx: Float,
     val nestedScrollConnection: NestedScrollConnection,
     private val maxCollapsePx: Float,
@@ -166,6 +174,7 @@ private fun rememberCollapsingTitleScrollBehavior(
 
     return CollapsingTitleScrollBehavior(
         collapseProgress = collapseProgress,
+        rawCollapseProgress = collapseProgressTarget,
         collapsePx = collapsePx,
         nestedScrollConnection = nestedScrollConnection,
         maxCollapsePx = maxCollapsePx,

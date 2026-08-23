@@ -96,6 +96,7 @@ import com.ohmz.tday.compose.core.model.SecurityQuestionStatusResponse
 import com.ohmz.tday.compose.core.model.SessionUser
 import com.ohmz.tday.compose.core.notification.DayAheadOption
 import com.ohmz.tday.compose.core.notification.ReminderOption
+import com.ohmz.tday.compose.core.ui.TdayHeroTitleHeader
 import com.ohmz.tday.compose.core.ui.rememberScrollCollapsingTitleScrollBehavior
 import com.ohmz.tday.compose.feature.app.MobileSyncStatus
 import com.ohmz.tday.compose.feature.app.ProfileEditResult
@@ -154,9 +155,15 @@ fun SettingsScreen(
     Scaffold(
         containerColor = colorScheme.background,
         topBar = {
-            SettingsTopBar(
+            TdayHeroTitleHeader(
+                title = stringResource(R.string.settings_title),
+                icon = ImageVector.vectorResource(R.drawable.ic_lucide_sliders_horizontal),
+                accentColor = MaterialTheme.colorScheme.primary,
+                // Raw progress, not the spring-animated one: the easing lives in
+                // the header so it tracks the finger.
+                collapseProgress = titleScrollBehavior.rawCollapseProgress,
                 onBack = onBack,
-                collapseProgress = titleScrollBehavior.collapseProgress,
+                backContentDescription = stringResource(R.string.action_back),
             )
         },
         ) { padding ->
@@ -1229,143 +1236,6 @@ private fun SettingsRowIcon(
         Spacer(modifier = Modifier.size(TdayDimens.IconSm))
     }
     Spacer(modifier = Modifier.width(TdayDimens.SpacingXl))
-}
-
-@Composable
-private fun SettingsTopBar(
-    onBack: () -> Unit,
-    collapseProgress: Float,
-) {
-    val progress = collapseProgress.coerceIn(0f, 1f)
-    val titleHandoffPoint = 0.9f
-    val density = LocalDensity.current
-    val expandedTitleHeight = lerp(56.dp, 0.dp, progress)
-    val expandedTitleAlpha = ((titleHandoffPoint - progress) / titleHandoffPoint).coerceIn(0f, 1f)
-    val collapsedTitleAlpha =
-        ((progress - titleHandoffPoint) / (1f - titleHandoffPoint)).coerceIn(0f, 1f)
-    val collapsedTitleShiftY = with(density) { (12.dp * (1f - collapsedTitleAlpha)).toPx() }
-    val expandedTitleShiftY = with(density) { (-10.dp * (1f - expandedTitleAlpha)).toPx() }
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .statusBarsPadding()
-            .padding(start = 18.dp, end = 18.dp, top = 6.dp, bottom = 2.dp),
-    ) {
-        Box(modifier = Modifier.fillMaxWidth()) {
-            SettingsHeaderButton(
-                icon = ImageVector.vectorResource(R.drawable.ic_lucide_chevron_left),
-                contentDescription = stringResource(R.string.action_back),
-                onClick = onBack,
-                isBackButton = true,
-            )
-            if (collapsedTitleAlpha > 0.001f) {
-                Row(
-                    modifier = Modifier
-                        .align(Alignment.Center)
-                        .graphicsLayer {
-                            alpha = collapsedTitleAlpha
-                            translationY = collapsedTitleShiftY
-                        },
-                ) {
-                    Text(
-                        text = stringResource(R.string.settings_title),
-                        style = MaterialTheme.typography.headlineLarge,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = MaterialTheme.colorScheme.onBackground,
-                    )
-                }
-            }
-        }
-        Spacer(modifier = Modifier.height(lerp(14.dp, 0.dp, progress)))
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(expandedTitleHeight),
-            contentAlignment = Alignment.BottomStart,
-        ) {
-            if (expandedTitleAlpha > 0.001f) {
-                Box(
-                    modifier = Modifier.graphicsLayer {
-                        alpha = expandedTitleAlpha
-                        translationY = expandedTitleShiftY
-                    },
-                ) {
-                    Text(
-                        text = stringResource(R.string.settings_title),
-                        style = MaterialTheme.typography.headlineLarge,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = MaterialTheme.colorScheme.onBackground,
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun SettingsHeaderButton(
-    icon: ImageVector,
-    contentDescription: String,
-    onClick: () -> Unit,
-    isBackButton: Boolean = false,
-) {
-    val colorScheme = MaterialTheme.colorScheme
-    val view = LocalView.current
-    val interactionSource = remember { MutableInteractionSource() }
-    val pressed by interactionSource.collectIsPressedAsState()
-    val isDarkTheme = colorScheme.background.luminance() < 0.5f
-    val containerColor = if (isBackButton) {
-        if (isDarkTheme) colorScheme.surface.copy(alpha = 0.94f) else Color.White.copy(alpha = 0.96f)
-    } else {
-        colorScheme.background
-    }
-    val buttonBorder = if (isBackButton) null else BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.38f))
-    val buttonSize = if (isBackButton) TdayDimens.FabSize else 56.dp
-    val iconSize = if (isBackButton) 36.dp else 28.dp
-    val scale by animateFloatAsState(
-        targetValue = if (pressed) 0.93f else 1f,
-        label = "settingsHeaderButtonScale",
-    )
-    val offsetY by animateDpAsState(
-        targetValue = if (pressed) 2.dp else 0.dp,
-        label = "settingsHeaderButtonOffsetY",
-    )
-
-    Card(
-        modifier = Modifier
-            .offset(y = offsetY)
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-            },
-        onClick = {
-            ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
-            onClick()
-        },
-        interactionSource = interactionSource,
-        shape = CircleShape,
-        border = buttonBorder,
-        colors = CardDefaults.cardColors(containerColor = containerColor),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = if (isBackButton) TdayDimens.FabElevation else 0.dp,
-            pressedElevation = if (isBackButton) TdayDimens.FabPressedElevation else 0.dp,
-        ),
-    ) {
-        Box(
-            modifier = Modifier
-                .size(buttonSize)
-                .height(buttonSize),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = contentDescription,
-                tint = colorScheme.onSurface,
-                modifier = Modifier.size(iconSize),
-            )
-        }
-    }
 }
 
 private const val SETTINGS_TITLE_COLLAPSE_DISTANCE_DP = 180f
