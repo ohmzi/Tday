@@ -685,3 +685,77 @@ private extension UIView {
         return nil
     }
 }
+
+/// The app's search field, in its open state.
+///
+/// The root feeds fold theirs down into a round button and so own its width and
+/// placement themselves; everywhere else — the guide — takes it at full width,
+/// in ordinary flow. The chrome is the same either way, and the numbers come
+/// from `RootFeedHeroHeaderMetrics` so the two cannot drift apart.
+struct TdaySearchCapsule: View {
+    @Binding var text: String
+    let placeholder: String
+    /// Shown only while there is text. The root feeds' equivalent X dismisses a
+    /// field that has a folded state to return to; this one has none, so it
+    /// clears the text instead.
+    var clearAccessibilityLabel: String = "Clear"
+
+    @Environment(\.tdayColors) private var colors
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image("NavSearch")
+                .renderingMode(.template)
+                .resizable()
+                .scaledToFit()
+                .frame(width: 20, height: 20)
+                .foregroundStyle(colors.onSurface)
+                .frame(
+                    width: RootFeedHeroHeaderMetrics.searchIconSlot,
+                    height: RootFeedHeroHeaderMetrics.searchIconSlot
+                )
+
+            TextField(
+                "",
+                text: $text,
+                prompt: Text(placeholder).foregroundStyle(colors.onSurfaceVariant)
+            )
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .font(.tdayRounded(size: 18, weight: .bold))
+                .foregroundStyle(colors.onSurface)
+                .tint(colors.primary)
+
+            if !text.isEmpty {
+                Button {
+                    HapticManager.gentleTap()
+                    text = ""
+                } label: {
+                    Image("NavClose")
+                        .renderingMode(.template)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 18, height: 18)
+                        .foregroundStyle(colors.onSurfaceVariant.opacity(0.78))
+                }
+                .buttonStyle(
+                    TdayPressButtonStyle(
+                        shadowColor: Color.black,
+                        pressedShadowOpacity: 0,
+                        normalShadowOpacity: 0
+                    )
+                )
+                .accessibilityLabel(Text(clearAccessibilityLabel))
+            }
+        }
+        .padding(.horizontal, 14)
+        .frame(height: RootFeedHeroHeaderMetrics.barButtonSize)
+        .frame(maxWidth: .infinity)
+        .clipShape(Capsule())
+        .background(colors.surface, in: Capsule())
+        .overlay(
+            Capsule()
+                .stroke(colors.onSurface.opacity(0.26), lineWidth: 1)
+        )
+    }
+}

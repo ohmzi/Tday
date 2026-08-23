@@ -108,6 +108,21 @@ function titleScales(titleWidth: number, availableWidth: number) {
 
 export type RootFeedHeroMark = "timeOfDay" | "floaterLeaf";
 
+/**
+ * The app's search field, in its open state. The root feeds fold theirs down
+ * into a round button and so own the width themselves; anywhere else — the
+ * guide — takes the chrome as-is at full width, so the two read as one control.
+ */
+export const tdaySearchCapsuleClass =
+  "flex items-center gap-2 overflow-hidden rounded-full border border-white/70 bg-card/90 px-3 shadow-[0_12px_28px_-22px_hsl(var(--shadow)/0.55)] dark:border-white/10";
+
+/** Its inner parts, so a second field cannot drift from the first. */
+export const tdaySearchCapsuleIconClass = "h-5 w-5 shrink-0 text-muted-foreground";
+export const tdaySearchCapsuleInputClass =
+  "h-full min-w-0 flex-1 bg-transparent text-base font-extrabold text-foreground outline-none placeholder:text-muted-foreground/50 md:text-sm";
+export const tdaySearchCapsuleClearClass =
+  "flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent/15 hover:text-foreground";
+
 export const rootFeedHeaderButtonClass =
   "flex h-14 w-14 items-center justify-center rounded-full border border-white/70 bg-card/90 text-foreground shadow-[0_12px_28px_-22px_hsl(var(--shadow)/0.55)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-card active:translate-y-0 dark:border-white/10";
 
@@ -423,7 +438,7 @@ export default function RootFeedHeroHeader({
         >
           {searchOpen ? (
             <div className="flex h-full w-full items-center gap-2 px-3">
-              <Search className="h-5 w-5 shrink-0 text-muted-foreground" />
+              <Search className={tdaySearchCapsuleIconClass} />
               <input
                 autoFocus
                 type="search"
@@ -431,13 +446,13 @@ export default function RootFeedHeroHeader({
                 onChange={(event) => onSearchQueryChange(event.target.value)}
                 placeholder={searchPlaceholder}
                 aria-label={searchAriaLabel}
-                className="h-full min-w-0 flex-1 bg-transparent text-base font-extrabold outline-none md:text-sm"
+                className={tdaySearchCapsuleInputClass}
               />
               <button
                 type="button"
                 onClick={() => onSearchOpenChange(false)}
                 aria-label={searchAriaLabel}
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted-foreground"
+                className={tdaySearchCapsuleClearClass}
               >
                 <X className="h-5 w-5 stroke-[2.6]" />
               </button>

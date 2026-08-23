@@ -22,7 +22,8 @@ import { cn } from "@/lib/utils";
  * three in step. The timings are deliberately NOT shared: native drives them off
  * one collapse fraction because the block there gives its height back, while on
  * the web the block scrolls behind the bar and each piece is driven by its own
- * position. There is no value to copy across.
+ * position. There is no value to copy across — with the exception of the
+ * handoff's travel, which is in the same units on all three and is shared.
  */
 export const nativePageHeaderMetrics = {
   markBox: 96,
@@ -46,6 +47,19 @@ export const nativePageHeaderMetrics = {
    * the veil has taken most of it.
    */
   dockHandoffLead: 18,
+
+  /**
+   * The handoff's elastic travel, shared with native: the hero copy is pulled
+   * up as it goes ([expandedTitleLiftDistance] on iOS), and the bar's copy
+   * rises into place from just below it while scaling the last 1.5% up
+   * ([collapsedTitleRevealDistance]). Both ride the septic curve, so the title
+   * leaves and arrives faster than the finger without ever snapping — which is
+   * the whole difference between the two reading as one title moving and as two
+   * titles cross-fading.
+   */
+  heroTitleLift: 14,
+  dockedTitleRise: 10,
+  dockedTitleScaleFrom: 0.985,
 
   /** Gradient below the bar that dissolves content as it passes under it. */
   contentFadeHeight: 30,
@@ -230,10 +244,20 @@ export default function NativePageHeader({
       markEl.style.opacity = String(markFade);
       markEl.style.transform = `scale(${0.85 + 0.15 * markFade})`;
 
+      // On top of the travel the scroll already gives it, so the title leaves
+      // faster than the finger over the handoff. Zero whenever the title is
+      // still fully readable, so a page too short to hand over does not rest
+      // with it nudged off its layout position.
+      heroTitleEl.style.transform =
+        dockFade <= 0 ? "" : `translateY(${-m.heroTitleLift * dockFade}px)`;
+
       if (dockedEl) {
         dockedEl.style.opacity = String(dockFade);
         // Invisible text must not be read out, nor eat taps meant for the bar.
         dockedEl.style.visibility = dockFade < 0.01 ? "hidden" : "visible";
+        dockedEl.style.transform =
+          `translateY(${m.dockedTitleRise * (1 - dockFade)}px) ` +
+          `scale(${m.dockedTitleScaleFrom + (1 - m.dockedTitleScaleFrom) * dockFade})`;
       }
 
       if (wordmarkEl) {
@@ -309,7 +333,7 @@ export default function NativePageHeader({
         <span
           ref={dockedTitleRef}
           aria-hidden
-          className="pointer-events-none min-w-0 flex-1 truncate text-[1.4rem] font-black leading-none text-foreground lg:hidden"
+          className="pointer-events-none min-w-0 flex-1 origin-center truncate text-center text-[1.4rem] font-black leading-none text-foreground lg:hidden"
           style={{ opacity: 0, visibility: "hidden" }}
         >
           {title}
@@ -329,7 +353,7 @@ export default function NativePageHeader({
       </header>
       )}
 
-      <div ref={heroRef} className={cn("mt-4 sm:mt-5", className)}>
+      <div ref={heroRef} className={cn("mt-4 text-center sm:mt-5", className)}>
         {/* A flat glyph on a flat disc reads as a utility icon. The wash is a
             gradient with an oversized echo of the same glyph bleeding out of the
             bottom-right — the motif the category tiles already use.
@@ -342,7 +366,7 @@ export default function NativePageHeader({
         <div
           ref={markBoxRef}
           aria-hidden
-          className="mx-auto w-fit lg:mx-0"
+          className="mx-auto w-fit"
           style={{ width: m.markBox, height: m.markBox }}
         >
         <div

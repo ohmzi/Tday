@@ -2188,7 +2188,7 @@ private struct CalendarElasticTopBar: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        VStack(alignment: .center, spacing: 0) {
             ZStack {
                 HStack(spacing: 0) {
                     CalendarTopBarButton(systemName: "chevron.left", chrome: .filled, action: onBack)
@@ -2239,7 +2239,7 @@ private struct CalendarElasticTopBar: View {
             Color.clear
                 .frame(height: expandedSpacerHeight)
 
-            ZStack(alignment: .bottomLeading) {
+            ZStack(alignment: .bottom) {
                 Text(title)
                     .font(.tdayRounded(size: TodoTimelineMetrics.heroTitleSize, weight: .heavy))
                     .foregroundStyle(accentColor)
@@ -2251,7 +2251,7 @@ private struct CalendarElasticTopBar: View {
                 maxWidth: .infinity,
                 minHeight: expandedTitleHeight,
                 maxHeight: expandedTitleHeight,
-                alignment: .bottomLeading
+                alignment: .bottom
             )
             .clipped()
         }

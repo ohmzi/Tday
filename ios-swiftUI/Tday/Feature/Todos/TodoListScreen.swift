@@ -2664,7 +2664,7 @@ struct TimelineExpandedTitleRow: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        VStack(alignment: .center, spacing: 0) {
             if let mark {
                 // Fixed spacers rather than Spacer(), so the block's height is
                 // exactly `titleCollapseDistance` and nothing can absorb slack
@@ -2686,7 +2686,7 @@ struct TimelineExpandedTitleRow: View {
                     maxWidth: .infinity,
                     minHeight: TodoTimelineMetrics.expandedTitleHeight,
                     maxHeight: TodoTimelineMetrics.expandedTitleHeight,
-                    alignment: .bottomLeading
+                    alignment: .bottom
                 )
                 .opacity(titleOpacity)
                 .offset(y: titleOffsetY)
@@ -2695,7 +2695,7 @@ struct TimelineExpandedTitleRow: View {
             maxWidth: .infinity,
             minHeight: TodoTimelineMetrics.titleCollapseDistance,
             maxHeight: TodoTimelineMetrics.titleCollapseDistance,
-            alignment: .bottomLeading
+            alignment: .bottom
         )
         .clipped()
         .allowsHitTesting(false)

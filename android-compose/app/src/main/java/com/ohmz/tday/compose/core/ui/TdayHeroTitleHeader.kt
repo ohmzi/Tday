@@ -26,6 +26,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -212,6 +213,8 @@ fun TdayHeroTitleHeader(
                     )
                 }
                 Spacer(modifier = Modifier.height(m.TitleTopGap))
+                // Centred under the mark. Only the root feeds lean their title
+                // left, and they have their own header.
                 Text(
                     text = title,
                     fontSize = m.TitleSize,
@@ -219,6 +222,8 @@ fun TdayHeroTitleHeader(
                     color = resolvedTitleColor,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
         }

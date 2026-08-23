@@ -66,7 +66,9 @@ struct MorningSweepScreen: View {
                 actions: []
             )
         }
+        .navigationTitle("")
         .navigationBarBackButtonHidden(true)
+        .toolbar(.hidden, for: .navigationBar)
         .onAppear {
             guard !loaded else { return }
             loaded = true

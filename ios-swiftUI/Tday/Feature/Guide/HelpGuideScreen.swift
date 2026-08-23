@@ -61,6 +61,8 @@ struct HelpGuideScreen: View {
                     Text(subtitle)
                         .font(.tdayRounded(size: 14, weight: .regular))
                         .foregroundStyle(colors.onSurface.opacity(0.6))
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: .infinity, alignment: .center)
                         .padding(.top, 4)
                         .opacity(1 - Double(TodoTimelineMetrics.progress(
                             titleCollapseProgress,
@@ -86,6 +88,11 @@ struct HelpGuideScreen: View {
                 actions: []
             )
         }
+        // This screen draws its own bar, so the system one would only stack a
+        // second back button above it.
+        .navigationTitle("")
+        .navigationBarBackButtonHidden(true)
+        .toolbar(.hidden, for: .navigationBar)
         .onAppear {
             guard !loaded else { return }
             artifact = GuideContentStore.load()
@@ -98,37 +105,12 @@ struct HelpGuideScreen: View {
         }
     }
 
+    /// The app's search field, same as the root feeds' open capsule.
     private var searchField: some View {
-        HStack(spacing: 8) {
-            Image("LucideSearch")
-                .renderingMode(.template)
-                .resizable()
-                .scaledToFit()
-                .frame(width: 18, height: 18)
-                .foregroundStyle(colors.onSurface.opacity(0.5))
-            TextField(artifact.ui["searchPlaceholder"] ?? "Search features…", text: $query)
-                .font(.tdayRounded(size: 15, weight: .regular))
-                .foregroundStyle(colors.onSurface)
-                .autocorrectionDisabled()
-                .textInputAutocapitalization(.never)
-            if !query.isEmpty {
-                Button(action: { query = "" }) {
-                    Image("LucideX")
-                        .renderingMode(.template)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 16, height: 16)
-                        .foregroundStyle(colors.onSurface.opacity(0.5))
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 12)
-        .background(
-            RoundedRectangle(cornerRadius: 14)
-                .fill(colors.surface)
-                .overlay(RoundedRectangle(cornerRadius: 14).stroke(colors.onSurface.opacity(0.12)))
+        TdaySearchCapsule(
+            text: $query,
+            placeholder: artifact.ui["searchPlaceholder"] ?? "Search features…",
+            clearAccessibilityLabel: artifact.ui["clearSearch"] ?? "Clear"
         )
     }
 
