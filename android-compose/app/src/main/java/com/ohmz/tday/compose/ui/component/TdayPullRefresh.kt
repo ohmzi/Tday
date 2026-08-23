@@ -57,11 +57,14 @@ private const val RefreshMinVisibleMillis = 600L
  *
  * The pill and the content are deliberately on different curves. The pill leads
  * and travels its full distance early; the content ignores the first third of
- * the pull and then follows by only [ContentPullTravel] — a fraction of the 56dp
- * it used to move when both were driven by the same fraction.
+ * the pull and then follows by only [ContentPullTravel] — half the 56dp it moved
+ * when both were driven by the same fraction.
  */
-private val ContentPullTravel = 14.dp
+private val ContentPullTravel = 28.dp
 private const val ContentPullStart = 0.35f
+
+/** The pill is deliberately not fully opaque — see the background below. */
+private const val RefreshPillOpacity = 0.86f
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -244,7 +247,9 @@ fun TdayPullToRefreshIndicator(
                 this.alpha = alpha
             }
             .background(
-                color = colorScheme.surface,
+                // Slightly translucent, so what it flies over stays legible
+                // behind it rather than being punched out.
+                color = colorScheme.surface.copy(alpha = RefreshPillOpacity),
                 shape = indicatorShape,
             )
             .border(

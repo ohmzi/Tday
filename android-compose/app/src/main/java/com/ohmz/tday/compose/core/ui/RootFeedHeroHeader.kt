@@ -1,6 +1,9 @@
 package com.ohmz.tday.compose.core.ui
 
 import androidx.annotation.DrawableRes
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -369,10 +372,17 @@ private fun BoxScope.RefreshPill(
 ) {
     val metrics = RootFeedHeroHeaderMetrics
     val fraction = pullFraction().coerceIn(0f, 1f)
-    // Held down for the whole refresh, then rides distanceFraction back up when
-    // it ends — Material3 animates that fraction down, so no extra animator.
-    val reveal = if (isRefreshing) 1f else metrics.stagger(fraction, metrics.PillLeadFraction)
-    if (reveal <= 0f) return
+    val target = if (isRefreshing) 1f else metrics.stagger(fraction, metrics.PillLeadFraction)
+    // Springs rather than tracking the raw fraction. The septic curve already
+    // shapes *where* the pill is for a given pull, but the pull itself starts
+    // and stops abruptly with the finger; damping it here is what smooths both
+    // the descent and the ride back up when the refresh finishes.
+    val reveal by animateFloatAsState(
+        targetValue = target,
+        animationSpec = spring(dampingRatio = 0.9f, stiffness = Spring.StiffnessLow),
+        label = "refreshPillReveal",
+    )
+    if (reveal <= 0.001f) return
 
     val top = metrics.lerp(metrics.RefreshPillHiddenTop, metrics.RefreshPillRestingTop, reveal)
 

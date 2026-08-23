@@ -210,6 +210,8 @@ private struct RefreshContainerBody<Content: View>: View {
 
 enum TdayRefreshIndicatorMetrics {
     static let defaultTopPadding: CGFloat = 10
+    /// The pill is deliberately not fully opaque.
+    static let pillOpacity: Double = 0.86
     static let triggerDistance: CGFloat = 112
     static let nativeRefreshReleaseNanoseconds: UInt64 = 250_000_000
     static let handoffHoldNanoseconds: UInt64 = 1_500_000_000
@@ -282,7 +284,12 @@ struct TdayPullRefreshIndicator: View {
                 width: TdayRefreshIndicatorMetrics.containerWidth,
                 height: TdayRefreshIndicatorMetrics.containerHeight
             )
-            .background(colors.surface, in: RoundedRectangle(cornerRadius: TdayRefreshIndicatorMetrics.cornerRadius, style: .continuous))
+            // Slightly translucent, so what it flies over stays legible behind
+            // it rather than being punched out.
+            .background(
+                colors.surface.opacity(TdayRefreshIndicatorMetrics.pillOpacity),
+                in: RoundedRectangle(cornerRadius: TdayRefreshIndicatorMetrics.cornerRadius, style: .continuous)
+            )
             .overlay {
                 RoundedRectangle(cornerRadius: TdayRefreshIndicatorMetrics.cornerRadius, style: .continuous)
                     .stroke(colors.onSurface.opacity(0.12), lineWidth: 1)
