@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { nativeAppScrollAttribute } from "./nativeAppLayout";
+import { clamp01, stagger } from "./nativeHeaderEasing";
 
 /**
  * Geometry for the root-feed hero header shared by the Scheduled and Floater
@@ -76,22 +77,6 @@ export const rootFeedHeroHeaderMetrics = {
   searchCollapseEnd: 0.45,
   titleTravelEnd: 0.5,
 } as const;
-
-const clamp01 = (value: number) => Math.min(Math.max(value, 0), 1);
-
-/**
- * Septic (7th-order) smootherstep over `[0, end]`: `35t^4-84t^5+70t^6-20t^7`.
- *
- * Its derivative is `140t^3(1-t)^3`, so the first three derivatives are all zero
- * at both ends — one order flatter than quintic, two flatter than the usual cubic
- * smoothstep. That is what takes the sting out of the start and the stop; the
- * peak is correspondingly quicker so the middle does not turn sluggish.
- */
-function stagger(progress: number, end: number) {
-  if (end <= 0) return progress > 0 ? 1 : 0;
-  const t = clamp01(progress / end);
-  return t * t * t * t * (35 + t * (-84 + t * (70 - 20 * t)));
-}
 
 const lerp = (from: number, to: number, fraction: number) => from + (to - from) * fraction;
 

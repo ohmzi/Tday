@@ -12,12 +12,10 @@ import { useReorderListTodo } from "../query/reorder-list-todo";
 import TodoMutationProvider from "@/providers/TodoMutationProvider";
 import { useList } from "../query/get-list-todos";
 import { useListMetaData } from "@/components/Sidebar/List/query/get-list-meta";
-import NativePageTitle from "@/components/app/NativePageTitle";
+import NativePageHeader from "@/components/app/NativePageHeader";
 import ScreenWatermark from "@/components/app/ScreenWatermark";
 import { getListIcon } from "@/lib/listIcons";
 import { listColorAccentColors, nativeScreenAccentColors } from "@/components/app/nativeScreenTheme";
-import NativeAppBrandButton from "@/components/app/NativeAppBrandButton";
-import ListDot from "@/components/ListDot";
 import ListFormSheet from "@/components/Sidebar/List/ListFormSheet";
 import ManageMembersSheet from "@/features/list/component/ManageMembersSheet";
 import { useShareListAsText } from "@/hooks/use-share-list";
@@ -96,49 +94,47 @@ const ListContainer = ({ id }: { id: string }) => {
         >
             <div className="mb-20">
                 <ScreenWatermark icon={getListIcon(listMetaData[id]?.iconKey)} color={listAccent} />
-                <header className="sticky top-0 z-40 flex w-full items-center justify-between gap-2.5 bg-background pt-[calc(0.5rem+env(safe-area-inset-top))] pb-1.5 lg:static lg:bg-transparent lg:pt-2 lg:pb-2">
-                    <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-full h-screen bg-background lg:hidden" />
-                    <NativeAppBrandButton className="min-w-0 max-w-[58%] sm:max-w-none" />
-                </header>
-
-                <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                        <NativePageTitle
-                            title={listName}
-                            accentColor={listAccent}
-                            iconNode={<ListDot id={id} className="h-7 w-7 shrink-0" />}
-                        />
-                        {sharedByLabel ? (
+                {/* The list's own icon leads the header, so the edit/members
+                    control moves into the pinned bar where the other screens
+                    keep their actions. */}
+                <NativePageHeader
+                    title={listName}
+                    accentColor={listAccent}
+                    icon={getListIcon(listMetaData[id]?.iconKey)}
+                    beneathTitle={
+                        sharedByLabel ? (
                             <p className="mt-1 flex items-center gap-1.5 px-1 text-xs font-black text-muted-foreground">
                                 <Users className="h-3.5 w-3.5" />
                                 {appDict("sharedBy", { name: sharedByLabel })}
                             </p>
-                        ) : null}
-                    </div>
-                    {editableList ? (
-                        // One entry point per role: owners get the edit sheet
-                        // (which hosts the Sharing section); members go straight
-                        // to the members sheet.
-                        <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="mt-4 h-14 w-14 shrink-0 rounded-full border border-white/70 bg-card/90 text-foreground shadow-[0_12px_28px_-22px_hsl(var(--shadow)/0.55)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-card dark:border-white/10"
-                            onClick={() =>
-                                myRole === "OWNER" ? setEditListOpen(true) : setMembersOpen(true)
-                            }
-                            aria-label={
-                                myRole === "OWNER" ? `Edit ${listName || "list"}` : appDict("members")
-                            }
-                        >
-                            {myRole === "OWNER" ? (
-                                <Pencil className="h-5 w-5" />
-                            ) : (
-                                <Users className="h-5 w-5" />
-                            )}
-                        </Button>
-                    ) : null}
-                </div>
+                        ) : null
+                    }
+                    actions={
+                        editableList ? (
+                            // One entry point per role: owners get the edit sheet
+                            // (which hosts the Sharing section); members go straight
+                            // to the members sheet.
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-14 w-14 shrink-0 rounded-full border border-white/70 bg-card/90 text-foreground shadow-[0_12px_28px_-22px_hsl(var(--shadow)/0.55)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-card dark:border-white/10"
+                                onClick={() =>
+                                    myRole === "OWNER" ? setEditListOpen(true) : setMembersOpen(true)
+                                }
+                                aria-label={
+                                    myRole === "OWNER" ? `Edit ${listName || "list"}` : appDict("members")
+                                }
+                            >
+                                {myRole === "OWNER" ? (
+                                    <Pencil className="h-5 w-5" />
+                                ) : (
+                                    <Users className="h-5 w-5" />
+                                )}
+                            </Button>
+                        ) : null
+                    }
+                />
 
                 {/* Loading state */}
                 {listTodosLoading && <TodoListLoading />}

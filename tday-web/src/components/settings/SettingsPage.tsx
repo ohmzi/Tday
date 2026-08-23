@@ -45,10 +45,9 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/providers/AuthProvider";
 import { useUserPreferences } from "@/providers/UserPreferencesProvider";
 import { useToast } from "@/hooks/use-toast";
-import NativePageTitle from "@/components/app/NativePageTitle";
+import NativePageHeader from "@/components/app/NativePageHeader";
 import DataTransferCard from "./DataTransferCard";
 import { nativeScreenAccentColors } from "@/components/app/nativeScreenTheme";
-import NativeAppBrandButton from "@/components/app/NativeAppBrandButton";
 import { api } from "@/lib/api-client";
 import parseApiDateTime from "@/lib/date/parseApiDateTime";
 import { hapticTick } from "@/lib/haptics";
@@ -1064,12 +1063,7 @@ export default function SettingsPage() {
 
   return (
     <div className="w-full space-y-3 pb-10">
-      <header className="sticky top-0 z-40 flex w-full items-center justify-between gap-2.5 bg-background pt-[calc(0.5rem+env(safe-area-inset-top))] pb-1.5 lg:static lg:bg-transparent lg:pt-2 lg:pb-2">
-        <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-full h-screen bg-background lg:hidden" />
-        <NativeAppBrandButton className="min-w-0 max-w-[58%] sm:max-w-none" />
-      </header>
-
-      <NativePageTitle
+      <NativePageHeader
         title={sidebarDict("settings")}
         accentColor={nativeScreenAccentColors.settings}
         icon={Settings}

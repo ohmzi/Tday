@@ -1,11 +1,19 @@
+import type { RefObject } from "react";
 import { Moon, Sun } from "lucide-react";
 import { Link, usePathname } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
 
 export default function NativeAppBrandButton({
   className,
+  wordmarkRef,
 }: {
   className?: string;
+  /**
+   * Lets a collapsing page header fold the wordmark away while leaving the
+   * sun/moon glyph as the home affordance — the way the native bars keep their
+   * back chevron once the page title docks.
+   */
+  wordmarkRef?: RefObject<HTMLSpanElement | null>;
 }) {
   const pathname = usePathname();
   const isHome = pathname.includes("/app/tday");
@@ -30,7 +38,10 @@ export default function NativeAppBrandButton({
       ) : (
         <Moon className="h-7 w-7 shrink-0 fill-[#A8B8E8] text-[#A8B8E8]" />
       )}
-      <span className="truncate text-[2rem] font-black leading-none tracking-normal text-foreground sm:text-[2.35rem]">
+      <span
+        ref={wordmarkRef}
+        className="truncate text-[2rem] font-black leading-none tracking-normal text-foreground sm:text-[2.35rem]"
+      >
         T&apos;Day
       </span>
     </Link>

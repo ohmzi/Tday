@@ -3,10 +3,9 @@ import { useTranslation } from "react-i18next";
 import { CalendarClock, CheckCheck, Clock3, Flag, Layers, Search, Sun, X } from "lucide-react";
 import { isSameDay } from "date-fns";
 import { useCompletedTodo } from "@/features/completed/query/get-completedTodo";
-import NativePageTitle from "@/components/app/NativePageTitle";
+import NativePageHeader from "@/components/app/NativePageHeader";
 import ScreenWatermark from "@/components/app/ScreenWatermark";
 import { timelineScopeAccentColors } from "@/components/app/nativeScreenTheme";
-import NativeAppBrandButton from "@/components/app/NativeAppBrandButton";
 import SummaryButton from "@/features/summary/SummaryButton";
 import WeekInReviewCard from "@/features/summary/WeekInReviewCard";
 import TodoListLoading from "@/components/todo/component/TodoListLoading";
@@ -515,16 +514,11 @@ const AllTasksTimelineContainer = ({
     >
       <div className="mb-20">
         <ScreenWatermark icon={ScopeIcon} />
-        <header className="sticky top-0 z-40 flex w-full items-center justify-between gap-2.5 bg-background pt-[calc(0.5rem+env(safe-area-inset-top))] pb-1.5 lg:static lg:bg-transparent lg:pt-2 lg:pb-2">
-          <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-full h-screen bg-background lg:hidden" />
-          <NativeAppBrandButton className="min-w-0 max-w-[58%] sm:max-w-none" />
-          <SummaryButton mode={scope} />
-        </header>
-
-        <NativePageTitle
+        <NativePageHeader
           title={pageHeading}
           accentColor={timelineScopeAccentColors[scope]}
           icon={ScopeIcon}
+          actions={<SummaryButton mode={scope} />}
         />
 
         {scope === "today" && <WeekInReviewCard />}

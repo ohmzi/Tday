@@ -4,7 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useResetFloaterList } from "@/features/floaterList/query/reset-floater-list";
 import { useTranslation } from "react-i18next";
 import ManageMembersSheet from "@/features/list/component/ManageMembersSheet";
-import NativePageTitle from "@/components/app/NativePageTitle";
+import NativePageHeader, { useNativePageBarSlots } from "@/components/app/NativePageHeader";
 import ScreenWatermark from "@/components/app/ScreenWatermark";
 import MobileSearchHeader from "@/components/ui/MobileSearchHeader";
 import { useShareListAsText } from "@/hooks/use-share-list";
@@ -17,7 +17,6 @@ import { buildFloaterSections } from "@/lib/floater/buildFloaterSections";
 import { useFloaterList } from "@/features/floaterList/query/get-floater-list";
 import { useFloaterListMetaData } from "@/features/floaterList/query/get-floater-list-meta";
 import FloaterListFormSheet from "./FloaterListFormSheet";
-import FloaterListDot from "./FloaterListDot";
 import { flattenNotesToPlainText } from "@/lib/richNotes";
 
 export default function FloaterListContainer({ id }: { id: string }) {
@@ -68,6 +67,9 @@ export default function FloaterListContainer({ id }: { id: string }) {
     [filteredFloaters],
   );
   const isSearching = Boolean(searchQuery.trim());
+  // This page keeps its search bar as the pinned bar, so the header renders only
+  // the block that scrolls away and docks its title into that bar instead.
+  const barSlots = useNativePageBarSlots();
 
   return (
     <div className="mb-20">
@@ -78,23 +80,9 @@ export default function FloaterListContainer({ id }: { id: string }) {
         placeholder={
           listName ? `${appDict("searchIn")} ${listName}...` : appDict("searchFloatersPlaceholder")
         }
-      />
-
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <NativePageTitle
-            title={listName}
-            accentColor={listAccent}
-            iconNode={<FloaterListDot id={id} className="h-7 w-7 shrink-0" />}
-          />
-          {sharedByLabel ? (
-            <p className="mt-1 flex items-center gap-1.5 px-1 text-xs font-black text-muted-foreground">
-              <Users className="h-3.5 w-3.5" />
-              {appDict("sharedBy", { name: sharedByLabel })}
-            </p>
-          ) : null}
-        </div>
-        <div className="mt-4 flex shrink-0 items-center gap-2">
+        pageCollapse={{ ...barSlots, title: listName }}
+        trailingAction={
+          <div className="flex shrink-0 items-center gap-2">
           {listMeta?.reusable && !isViewer ? (
             <Button
               type="button"
@@ -137,8 +125,24 @@ export default function FloaterListContainer({ id }: { id: string }) {
               )}
             </Button>
           ) : null}
-        </div>
-      </div>
+          </div>
+        }
+      />
+
+      <NativePageHeader
+        title={listName}
+        accentColor={listAccent}
+        icon={ListIcon}
+        barSlots={barSlots}
+        beneathTitle={
+          sharedByLabel ? (
+            <p className="mt-1 flex items-center gap-1.5 px-1 text-xs font-black text-muted-foreground">
+              <Users className="h-3.5 w-3.5" />
+              {appDict("sharedBy", { name: sharedByLabel })}
+            </p>
+          ) : null
+        }
+      />
 
       {floaterListLoading ? (
         <div className="space-y-3 px-1 py-6">
