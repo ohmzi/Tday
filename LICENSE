@@ -1,0 +1,121 @@
+T'Day Personal-Use Source-Available License
+Version 1.0
+
+Copyright (c) 2026 ohmzi
+
+This software is source-available, not open source. The source is published so
+that anyone can read it and audit it before trusting it with their data, and so
+that anyone can run their own copy on their own hardware. The permissions below
+are narrower than an open-source licence. Anything not granted here is reserved.
+
+
+1. DEFINITIONS
+
+   "Software" means the source code, configuration, documentation, container
+   images and mobile applications published in this repository or under the
+   T'Day name by the copyright holder.
+
+   "Personal Use" means use by a natural person for their own purposes, or for
+   family members and others in their household, on infrastructure that person
+   controls, and without charge. Use by or on behalf of a company, government
+   body, school, non-profit or any other organisation is not Personal Use.
+
+   "Instance" means a running deployment of the Software.
+
+
+2. PERMISSIONS
+
+   Subject to Section 3, you are granted a worldwide, royalty-free,
+   non-exclusive, non-transferable, revocable licence to:
+
+   a) Read, study and audit the source code for any purpose, including
+      security research and the publication of your findings.
+
+   b) Run one or more Instances for Personal Use, whether by building the
+      Software from source or by running the published container images, on
+      hardware you control.
+
+   c) Modify the Software for your own Personal Use and run your modified
+      version on your own Instance.
+
+   d) Install and use the official T'Day mobile applications, as distributed
+      through their respective app stores, to connect to an Instance you are
+      authorised to use.
+
+   e) Make and keep the copies and backups you need in order to exercise
+      paragraphs (a) through (d).
+
+
+3. CONDITIONS AND LIMITATIONS
+
+   a) No organisational or commercial use. You may not run an Instance for,
+      or on behalf of, any organisation, nor for any commercial purpose,
+      without prior written permission from the copyright holder.
+
+   b) No provision to third parties. You may not host, offer, sell, rent,
+      sublicense or otherwise make the Software or any Instance available to
+      anyone outside the people covered by Personal Use, whether or not for a
+      fee.
+
+   c) No redistribution. You may not distribute the Software or any modified
+      version of it. Quoting excerpts of the source in a security report, code
+      review, article or bug report is expressly permitted.
+
+   d) No independent application builds. You may not publish or distribute to
+      others any application built from this source, and you may not use the
+      T'Day name, logo or app-store identities for anything you build.
+
+   e) Notices. You must keep this licence, the copyright notice and
+      THIRD-PARTY-NOTICES.md intact in any copy you hold.
+
+
+4. CONTRIBUTIONS
+
+   This project does not accept pull requests at this time. Pull requests
+   opened against this repository will be closed without review.
+
+   Bug reports, security reports and feature suggestions are welcome and
+   wanted, as issues. The maintainer implements the fixes.
+
+   Opening an issue assigns no copyright, but it does grant the copyright
+   holder permission to implement, in the Software, anything you describe in
+   it, without obligation or compensation.
+
+
+5. THIRD-PARTY COMPONENTS
+
+   The Software includes, depends on and in places derives from third-party
+   components distributed under their own licences. Those are listed in
+   THIRD-PARTY-NOTICES.md. Their licences govern those components, and nothing
+   in this licence reduces the rights those licences grant you.
+
+
+6. NO WARRANTY
+
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. YOU RUN IT ON YOUR
+   OWN INFRASTRUCTURE, AT YOUR OWN RISK, AND YOU ARE RESPONSIBLE FOR YOUR OWN
+   BACKUPS.
+
+
+7. LIMITATION OF LIABILITY
+
+   IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR
+   OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+   ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+   DEALINGS IN THE SOFTWARE.
+
+
+8. TERMINATION
+
+   This licence terminates automatically if you breach it, and is reinstated
+   if you cure the breach within 30 days of becoming aware of it. Sections 6
+   and 7 survive termination.
+
+
+9. GRANTS BEYOND THIS LICENCE
+
+   For anything not permitted above — organisational deployment, commercial
+   hosting, redistribution — ask. Permission is granted in writing or not at
+   all. Open an issue to start that conversation.
