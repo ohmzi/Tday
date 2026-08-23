@@ -25,6 +25,10 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import com.ohmz.tday.compose.core.ui.TdayHeroTitleHeader
+import com.ohmz.tday.compose.core.ui.rememberScrollCollapsingTitleScrollBehavior
+import com.ohmz.tday.compose.core.ui.tdayTopFade
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -106,49 +110,39 @@ fun HelpGuideScreen(
     val showNewBadges = remember { guidePrefs.lastSeenGuideVersion() != BuildConfig.VERSION_NAME }
     LaunchedEffect(Unit) { guidePrefs.setLastSeenGuideVersion(BuildConfig.VERSION_NAME) }
 
-    Scaffold(containerColor = colorScheme.background) { padding ->
+    val guideScrollState = rememberScrollState()
+    val titleScrollBehavior = rememberScrollCollapsingTitleScrollBehavior(
+        scrollState = guideScrollState,
+        maxCollapseDistance = GUIDE_TITLE_COLLAPSE_DISTANCE_DP.dp,
+    )
+
+    Scaffold(
+        containerColor = colorScheme.background,
+        topBar = {
+            TdayHeroTitleHeader(
+                title = res("guide.title"),
+                icon = ImageVector.vectorResource(R.drawable.ic_lucide_circle_help),
+                accentColor = MaterialTheme.colorScheme.primary,
+                collapseProgress = titleScrollBehavior.rawCollapseProgress,
+                onBack = onBack,
+                backContentDescription = stringResource(R.string.settings_help_guide),
+            )
+        },
+    ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .verticalScroll(rememberScrollState())
+                .nestedScroll(titleScrollBehavior.nestedScrollConnection)
+                .tdayTopFade()
+                .verticalScroll(guideScrollState)
                 .padding(horizontal = 16.dp)
                 .padding(bottom = 32.dp),
         ) {
-            // Back
-            Row(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(12.dp))
-                    .clickable(onClick = onBack)
-                    .padding(vertical = 8.dp, horizontal = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(
-                    imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_arrow_left),
-                    contentDescription = null,
-                    tint = colorScheme.onSurface.copy(alpha = 0.7f),
-                    modifier = Modifier.size(18.dp),
-                )
-                Spacer(Modifier.width(6.dp))
-                Text(
-                    text = stringResource(R.string.settings_help_guide),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = colorScheme.onSurface.copy(alpha = 0.7f),
-                )
-            }
-
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = res("guide.title"),
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Black,
-                color = colorScheme.onSurface,
-            )
             Text(
                 text = res("guide.subtitle"),
                 style = MaterialTheme.typography.bodyMedium,
                 color = colorScheme.onSurface.copy(alpha = 0.6f),
-                modifier = Modifier.padding(top = 4.dp),
             )
 
             Spacer(Modifier.height(16.dp))
@@ -479,3 +473,5 @@ private fun guideIconRes(name: String): Int = when (name) {
     "wifi-off" -> R.drawable.ic_lucide_wifi_off
     else -> R.drawable.ic_lucide_book
 }
+
+private const val GUIDE_TITLE_COLLAPSE_DISTANCE_DP = 180f

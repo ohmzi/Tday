@@ -76,6 +76,8 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.data.server.VersionCheckResult
+import com.ohmz.tday.compose.core.ui.TdayHeroTitleHeader
+import com.ohmz.tday.compose.core.ui.tdayTopFade
 import com.ohmz.tday.compose.core.ui.rememberScrollCollapsingTitleScrollBehavior
 import com.ohmz.tday.compose.ui.theme.TdayDimens
 import com.ohmz.tday.compose.ui.theme.TdayStatusSuccess
@@ -172,9 +174,13 @@ fun LatestReleaseScreen(
     Scaffold(
         containerColor = colorScheme.background,
         topBar = {
-            ReleaseTopBar(
+            TdayHeroTitleHeader(
+                title = stringResource(R.string.release_title),
+                icon = ImageVector.vectorResource(R.drawable.ic_lucide_cloud_download),
+                accentColor = MaterialTheme.colorScheme.primary,
+                collapseProgress = titleScrollBehavior.rawCollapseProgress,
                 onBack = onBack,
-                collapseProgress = titleScrollBehavior.collapseProgress,
+                backContentDescription = stringResource(R.string.action_back),
             )
         },
     ) { padding ->
@@ -184,6 +190,7 @@ fun LatestReleaseScreen(
                 .padding(padding)
                 .background(colorScheme.background)
                 .nestedScroll(titleScrollBehavior.nestedScrollConnection)
+                .tdayTopFade()
                 .verticalScroll(scrollState)
                 .padding(horizontal = 18.dp, vertical = 2.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
