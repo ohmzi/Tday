@@ -11,9 +11,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import NativePageTitle from "@/components/app/NativePageTitle";
+import NativePageHeader from "@/components/app/NativePageHeader";
 import { nativeScreenAccentColors } from "@/components/app/nativeScreenTheme";
-import NativeAppBrandButton from "@/components/app/NativeAppBrandButton";
 import { api } from "@/lib/api-client";
 import { getErrorMessage } from "@/lib/error-message";
 import { cn } from "@/lib/utils";
@@ -215,7 +214,7 @@ const ApprovedUserRow = ({
 
 /** Renders the shared admin page header. */
 const AdminPageHeader = () => (
-  <NativePageTitle
+  <NativePageHeader
     title="Admin"
     accentColor={nativeScreenAccentColors.settings}
     icon={Users}
@@ -504,11 +503,6 @@ export default function AdminUserControl() {
 
   return (
     <div className="w-full space-y-5 pb-10">
-      <header className="sticky top-0 z-40 flex w-full items-center justify-between gap-2.5 bg-background pt-[calc(0.5rem+env(safe-area-inset-top))] pb-1.5 lg:static lg:bg-transparent lg:pt-2 lg:pb-2">
-        <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-full h-screen bg-background lg:hidden" />
-        <NativeAppBrandButton className="min-w-0 max-w-[58%] sm:max-w-none" />
-      </header>
-
       <AdminPageHeader />
 
       {loading || pendingUsers.length > 0 ? (

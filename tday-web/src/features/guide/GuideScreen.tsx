@@ -3,8 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ChevronRight, CircleHelp, Search, Sparkles, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import NativeAppBrandButton from "@/components/app/NativeAppBrandButton";
-import NativePageTitle from "@/components/app/NativePageTitle";
+import NativePageHeader from "@/components/app/NativePageHeader";
 import { nativeScreenAccentColors } from "@/components/app/nativeScreenTheme";
 import { SheetCard } from "@/components/ui/sheet-chrome";
 import { GuideIcon } from "./GuideIcon";
@@ -85,19 +84,11 @@ export default function GuideScreen() {
     </div>
   );
 
-  // Same page skeleton as Settings: sticky brand bar, NativePageTitle, then a
+  // Same page skeleton as Settings: the shared collapsing page header, then a
   // stack of SheetCards — the guide is a settings sub-screen, not its own site.
   return (
     <div className="w-full space-y-3 pb-10">
-      <header className="sticky top-0 z-40 flex w-full items-center justify-between gap-2.5 bg-background pt-[calc(0.5rem+env(safe-area-inset-top))] pb-1.5 lg:static lg:bg-transparent lg:pt-2 lg:pb-2">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-x-0 bottom-full h-screen bg-background lg:hidden"
-        />
-        <NativeAppBrandButton className="min-w-0 max-w-[58%] sm:max-w-none" />
-      </header>
-
-      <NativePageTitle
+      <NativePageHeader
         title={t("guide.title")}
         subtitle={t("guide.subtitle")}
         accentColor={nativeScreenAccentColors.settings}

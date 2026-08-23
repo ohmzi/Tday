@@ -2,6 +2,12 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Search, X, Command } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import NativeAppBrandButton from "@/components/app/NativeAppBrandButton";
+import {
+  nativePageBarClassName,
+  nativePageHeaderMetrics,
+  useNativePageBarResync,
+} from "@/components/app/NativePageHeader";
+import type { NativePageBarSlots } from "@/components/app/NativePageHeader";
 import { cn } from "@/lib/utils";
 import { hapticButtonTap, hapticDismiss } from "@/lib/haptics";
 
@@ -20,6 +26,13 @@ interface MobileSearchHeaderProps {
   /** When provided, a results dropdown is shown under the input while searching. */
   results?: SearchResultItem[];
   onSelectResult?: (id: string) => void;
+  /**
+   * Lets this bar double as the dock for a collapsing page header: the page's
+   * title fades in here once its hero block has scrolled away, and the brand
+   * wordmark folds out of the way to make room. NativePageHeader owns the
+   * scroll maths and writes to these nodes; this component only places them.
+   */
+  pageCollapse?: NativePageBarSlots & { title: string };
 }
 
 const collapsedButtonClassName = cn(
@@ -36,9 +49,14 @@ export default function MobileSearchHeader({
   showBrandHome = true,
   results,
   onSelectResult,
+  pageCollapse,
 }: MobileSearchHeaderProps) {
   const [internalQuery, setInternalQuery] = useState("");
   const [isExpanded, setIsExpanded] = useState(false);
+  const ownHeaderRef = useRef<HTMLElement>(null);
+  // The collapsing header measures its progress against this bar's bottom edge,
+  // so when it is driving us it has to hold the same node.
+  const headerRef = pageCollapse?.barRef ?? ownHeaderRef;
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const collapseTimerRef = useRef<number | null>(null);
@@ -113,19 +131,27 @@ export default function MobileSearchHeader({
     }, 120);
   };
 
+  // The expanded field swaps out the brand button and the docked title, so both
+  // come back with no inline styles; nudge the header to re-apply on every
+  // toggle. Only when one is actually listening, or this would wake every
+  // scroll-driven component on the screen each time the field opens.
+  useNativePageBarResync(pageCollapse ? headerRef.current : null, isExpanded);
+
   const brandHome = showBrandHome ? (
-    <NativeAppBrandButton className="min-w-0 max-w-[58%] sm:max-w-none" />
+    <NativeAppBrandButton
+      className="min-w-0 max-w-[58%] sm:max-w-none"
+      wordmarkRef={pageCollapse?.wordmarkRef}
+    />
   ) : null;
 
   return (
     <header
+      ref={headerRef}
       className={cn(
-        // Pinned toolbar: stays at the top, fully opaque so scrolled content is
-        // hidden behind it; the safe-area inset keeps the logo below the status bar.
-        "sticky top-0 z-40",
-        "flex w-full items-center gap-2.5 bg-background",
-        "pt-[calc(0.5rem+env(safe-area-inset-top))] pb-1.5",
-        "lg:static lg:bg-transparent lg:pt-2 lg:pb-2",
+        // The shared pinned-toolbar geometry, not a restatement of it: a
+        // collapsing page header measures its handoff against this bar's bottom
+        // edge, so the two must not drift.
+        nativePageBarClassName,
         "transition-all duration-300",
         isExpanded ? "justify-stretch" : "justify-between",
       )}
@@ -137,6 +163,16 @@ export default function MobileSearchHeader({
         aria-hidden
         className="pointer-events-none absolute inset-x-0 bottom-full h-screen bg-background lg:hidden"
       />
+      {/* Out of flow, so it can live outside the branch and never remount:
+          content dissolves into the bar instead of being cut by its edge. */}
+      {pageCollapse ? (
+        <div
+          ref={pageCollapse.fadeRef}
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 top-full bg-gradient-to-b from-background to-transparent lg:hidden"
+          style={{ height: nativePageHeaderMetrics.contentFadeHeight, opacity: 0 }}
+        />
+      ) : null}
       {isExpanded ? (
         <div className="relative flex min-w-0 flex-1 items-center">
           <div
@@ -256,6 +292,20 @@ export default function MobileSearchHeader({
       ) : (
         <>
           {brandHome}
+          {/* Between the brand and the actions, never centred on the bar: it
+              takes whatever the folded wordmark and the buttons leave, and
+              ellipsizes. It does remount with the branch, which is exactly what
+              the resync above exists to correct. */}
+          {pageCollapse ? (
+            <span
+              ref={pageCollapse.dockedTitleRef}
+              aria-hidden
+              className="pointer-events-none min-w-0 flex-1 truncate text-[1.4rem] font-black leading-none text-foreground lg:hidden"
+              style={{ opacity: 0, visibility: "hidden" }}
+            >
+              {pageCollapse.title}
+            </span>
+          ) : null}
           <div className="flex shrink-0 items-center gap-2.5">
             <button
               type="button"

@@ -55,9 +55,9 @@ import ConfirmRescheduleRecurring, {
 } from "./ConfirmationModals/ConfirmRescheduleRecurring";
 import { useListMetaData } from "@/components/Sidebar/List/query/get-list-meta";
 import CreateCalendarFormContainer from "./CalendarForm/CreateFormContainer";
-import NativePageTitle from "@/components/app/NativePageTitle";
-import { nativeScreenAccentColors } from "@/components/app/nativeScreenTheme";
 import NativeAppBrandButton from "@/components/app/NativeAppBrandButton";
+import NativePageHeader, { nativePageBarClassName } from "@/components/app/NativePageHeader";
+import { nativeScreenAccentColors } from "@/components/app/nativeScreenTheme";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import { useRegisterCalendarCreateAction } from "@/features/calendar/context/CalendarCreateActionContext";
@@ -1112,7 +1112,10 @@ export default function CalendarClient() {
   if (!mounted) {
     return (
       <div className="flex h-full w-full flex-col">
-        <header className="sticky top-0 z-40 flex w-full items-center justify-between gap-2.5 bg-background pt-[calc(0.5rem+env(safe-area-inset-top))] pb-1.5 lg:static lg:bg-transparent lg:pt-2 lg:pb-2">
+        {/* Loading state: the bar without the block that scrolls away, so the
+            chrome does not move when the calendar mounts. Shares the header's
+            class so the two cannot drift. */}
+        <header className={nativePageBarClassName}>
           <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-full h-screen bg-background lg:hidden" />
           <NativeAppBrandButton className="min-w-0 max-w-[58%] sm:max-w-none" />
           <div className="flex shrink-0 items-center gap-2.5">{todayAction}</div>
@@ -1126,15 +1129,11 @@ export default function CalendarClient() {
 
   return (
     <div className="flex min-h-full flex-col">
-      <header className="sticky top-0 z-40 flex w-full items-center justify-between gap-2.5 bg-background pt-[calc(0.5rem+env(safe-area-inset-top))] pb-1.5 lg:static lg:bg-transparent lg:pt-2 lg:pb-2">
-        <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-full h-screen bg-background lg:hidden" />
-        <NativeAppBrandButton className="min-w-0 max-w-[58%] sm:max-w-none" />
-        <div className="flex shrink-0 items-center gap-2.5">{todayAction}</div>
-      </header>
-      <NativePageTitle
+      <NativePageHeader
         title={sidebarDict("calendar")}
         accentColor={nativeScreenAccentColors.calendar}
         icon={CalendarDays}
+        actions={<div className="flex shrink-0 items-center gap-2.5">{todayAction}</div>}
       />
       <DndContext
         sensors={sensors}

@@ -1,14 +1,13 @@
 import { type ReactNode } from "react";
 import { ChevronLeft, Github, Info, Loader2 } from "lucide-react";
-import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   WEB_VIEW_CARD_CLASS,
   WebViewSectionCard,
 } from "@/components/ui/WebViewPageTemplate";
-import NativeAppBrandButton from "@/components/app/NativeAppBrandButton";
-import NativePageTitle from "@/components/app/NativePageTitle";
+import NativePageHeader from "@/components/app/NativePageHeader";
+import { Link } from "@/lib/navigation";
 import { nativeScreenAccentColors } from "@/components/app/nativeScreenTheme";
 import {
   formatDisplayVersion,
@@ -23,24 +22,20 @@ const SURFACE_CLASS = "rounded-xl border border-border/70 bg-background/50";
 function VersionPageShell({ children }: { children: ReactNode }) {
   return (
     <div className="w-full space-y-5 pb-10">
-      <header className="sticky top-0 z-40 flex w-full items-center justify-between gap-2.5 bg-background pt-[calc(0.5rem+env(safe-area-inset-top))] pb-1.5 lg:static lg:bg-transparent lg:pt-2 lg:pb-2">
-        <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-full h-screen bg-background lg:hidden" />
-        <NativeAppBrandButton className="min-w-0 max-w-[58%] sm:max-w-none" />
-      </header>
-
-      <Link
-        to="/app/admin"
-        className="inline-flex items-center gap-1 text-sm font-extrabold text-muted-foreground transition-colors hover:text-foreground"
-      >
-        <ChevronLeft className="h-4 w-4" />
-        Back to admin
-      </Link>
-
-      <NativePageTitle
+      <NativePageHeader
         title="App Version"
         accentColor={nativeScreenAccentColors.settings}
         icon={Info}
         subtitle="Review the deployed build and the latest release available to admins."
+        actions={
+          <Link
+            href="/app/admin"
+            className="inline-flex shrink-0 items-center gap-1 text-sm font-extrabold text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            Back to admin
+          </Link>
+        }
       />
 
       <div className="space-y-5">{children}</div>

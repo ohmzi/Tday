@@ -5,8 +5,7 @@ import { useCompletedTodo } from "../query/get-completedTodo";
 import { useGroupedHistory } from "../hooks/useGroupedHistory";
 import GroupedCompletedTodoContainer from "./GroupedContainer";
 import { useTranslation } from "react-i18next";
-import NativePageTitle from "@/components/app/NativePageTitle";
-import NativeAppBrandButton from "@/components/app/NativeAppBrandButton";
+import NativePageHeader from "@/components/app/NativePageHeader";
 import ScreenWatermark from "@/components/app/ScreenWatermark";
 import { nativeScreenAccentColors } from "@/components/app/nativeScreenTheme";
 import { CheckCircle, Search, X } from "lucide-react";
@@ -39,14 +38,9 @@ const CompletedTodoContainer = () => {
 
   return (
     <div className="mb-20">
-      <header className="sticky top-0 z-40 flex w-full items-center justify-between gap-2.5 bg-background pt-[calc(0.5rem+env(safe-area-inset-top))] pb-1.5 lg:static lg:bg-transparent lg:pt-2 lg:pb-2">
-        <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-full h-screen bg-background lg:hidden" />
-        <NativeAppBrandButton className="min-w-0 max-w-[58%] sm:max-w-none" />
-      </header>
-
       <ScreenWatermark icon={CheckCircle} />
 
-      <NativePageTitle
+      <NativePageHeader
         title={completedDict("title")}
         accentColor={nativeScreenAccentColors.completed}
         icon={CheckCircle}
