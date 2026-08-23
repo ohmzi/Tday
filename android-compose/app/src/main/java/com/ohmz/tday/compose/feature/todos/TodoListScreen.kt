@@ -451,7 +451,7 @@ fun TodoListScreen(
     // pinned toolbar.
     var refreshIsRefreshing by remember { mutableStateOf(false) }
     var refreshPullFraction by remember { mutableFloatStateOf(0f) }
-    var refreshWaveAmplitude by remember { mutableFloatStateOf(1f) }
+    var refreshWaveFrozen by remember { mutableStateOf(false) }
     var floaterSearchResultsBounds by remember { mutableStateOf<Rect?>(null) }
     val headerBarHeightPx = with(LocalDensity.current) {
         RootFeedHeroHeaderMetrics.BarHeight.toPx()
@@ -908,10 +908,10 @@ fun TodoListScreen(
                 onRefresh = onRefresh,
                 enabled = pullRefreshEnabled,
                 showsIndicator = false,
-                onIndicatorStateChange = { parked, fraction, amplitude ->
-                    refreshIsRefreshing = parked
+                onIndicatorStateChange = { refreshing, fraction, frozen ->
+                    refreshIsRefreshing = refreshing
                     refreshPullFraction = fraction
-                    refreshWaveAmplitude = amplitude
+                    refreshWaveFrozen = frozen
                 },
                 modifier = Modifier
                     .fillMaxSize()
@@ -1426,7 +1426,7 @@ fun TodoListScreen(
                         .zIndex(6f),
                     refreshIsRefreshing = refreshIsRefreshing,
                     refreshPullFraction = { refreshPullFraction },
-                    refreshWaveAmplitude = refreshWaveAmplitude,
+                    refreshWaveFrozen = refreshWaveFrozen,
                 )
             }
 

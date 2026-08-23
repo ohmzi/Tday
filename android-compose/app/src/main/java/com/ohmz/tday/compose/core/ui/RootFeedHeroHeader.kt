@@ -250,8 +250,8 @@ fun RootFeedHeroHeader(
     refreshIsRefreshing: Boolean = false,
     /** 0..1 pull distance, read lazily for the same reason as [collapseProgress]. */
     refreshPullFraction: () -> Float = { 0f },
-    /** Damps the pill's bars to rest before it leaves at the end of a refresh. */
-    refreshWaveAmplitude: Float = 1f,
+    /** Holds the pill's bars where they were when the refresh ended. */
+    refreshWaveFrozen: Boolean = false,
 ) {
     val metrics = RootFeedHeroHeaderMetrics
     val colorScheme = MaterialTheme.colorScheme
@@ -350,7 +350,7 @@ fun RootFeedHeroHeader(
         RefreshPill(
             isRefreshing = refreshIsRefreshing,
             pullFraction = refreshPullFraction,
-            waveAmplitude = refreshWaveAmplitude,
+            waveFrozen = refreshWaveFrozen,
         )
 
         SearchField(
@@ -373,7 +373,7 @@ fun RootFeedHeroHeader(
 private fun BoxScope.RefreshPill(
     isRefreshing: Boolean,
     pullFraction: () -> Float,
-    waveAmplitude: Float,
+    waveFrozen: Boolean,
 ) {
     val metrics = RootFeedHeroHeaderMetrics
     val fraction = pullFraction().coerceIn(0f, 1f)
@@ -387,7 +387,7 @@ private fun BoxScope.RefreshPill(
         animationSpec = spring(dampingRatio = 0.9f, stiffness = Spring.StiffnessLow),
         label = "refreshPillReveal",
     )
-    if (reveal <= 0.001f) return
+    if (reveal <= 0.001f && !waveFrozen) return
 
     val top = metrics.lerp(metrics.RefreshPillHiddenTop, metrics.RefreshPillRestingTop, reveal)
 
@@ -398,7 +398,7 @@ private fun BoxScope.RefreshPill(
             .zIndex(4f),
         isRefreshing = isRefreshing,
         distanceFraction = fraction,
-        waveAmplitude = waveAmplitude,
+        waveFrozen = waveFrozen,
         applyPullTranslation = false,
     )
 }
