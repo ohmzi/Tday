@@ -29,6 +29,7 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshState
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -115,6 +116,22 @@ fun TdayPullToRefreshBox(
         }
     }
 
+    // Once a refresh starts, the content stays home until the pull fraction has
+    // fully unwound. Without this the content lurches: the instant
+    // displayRefreshing clears, the target jumps from 0 back to whatever the
+    // still-held fraction implies — a full ContentPullTravel down and then a
+    // slide back up, right as the pill is rising.
+    var contentPullSuppressed by remember { mutableStateOf(false) }
+    // SideEffect, not LaunchedEffect: distanceFraction changes every frame during
+    // a drag, and keying a coroutine on it would relaunch one per frame.
+    SideEffect {
+        if (displayRefreshing) {
+            contentPullSuppressed = true
+        } else if (state.distanceFraction <= 0.01f) {
+            contentPullSuppressed = false
+        }
+    }
+
     if (onIndicatorStateChange != null) {
         val fraction = state.distanceFraction
         LaunchedEffect(displayRefreshing, fraction) {
@@ -152,13 +169,17 @@ fun TdayPullToRefreshBox(
             // Snaps to the finger while pulling; springs when the refresh starts,
             // so the feed bounces back to where it was instead of being held down
             // for the whole request while the pill sits below it.
+            val contentHome = displayRefreshing || contentPullSuppressed
             val contentTranslation by animateFloatAsState(
-                targetValue = if (displayRefreshing) {
+                targetValue = if (contentHome) {
                     0f
                 } else {
                     with(density) { contentPull * ContentPullTravel.toPx() }
                 },
-                animationSpec = if (displayRefreshing) {
+                // Snaps to the finger while pulling; springs home when a refresh
+                // starts, and stays sprung for the whole unwind afterwards so the
+                // release never re-reads the stale fraction.
+                animationSpec = if (contentHome) {
                     spring(dampingRatio = 0.72f, stiffness = Spring.StiffnessMediumLow)
                 } else {
                     snap()
