@@ -14,6 +14,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.draggable
@@ -98,7 +101,9 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.layout.positionInRoot
@@ -446,6 +451,11 @@ fun TodoListScreen(
     // pinned toolbar.
     var refreshIsRefreshing by remember { mutableStateOf(false) }
     var refreshPullFraction by remember { mutableFloatStateOf(0f) }
+    var refreshWaveAmplitude by remember { mutableFloatStateOf(1f) }
+    var floaterSearchResultsBounds by remember { mutableStateOf<Rect?>(null) }
+    val headerBarHeightPx = with(LocalDensity.current) {
+        RootFeedHeroHeaderMetrics.BarHeight.toPx()
+    }
     // Read lazily inside the header so a scroll frame recomposes the header
     // alone rather than this whole screen — the list body is very large.
     val headerCollapseProgress: () -> Float = {
@@ -898,13 +908,36 @@ fun TodoListScreen(
                 onRefresh = onRefresh,
                 enabled = pullRefreshEnabled,
                 showsIndicator = false,
-                onIndicatorStateChange = { refreshing, fraction ->
-                    refreshIsRefreshing = refreshing
+                onIndicatorStateChange = { parked, fraction, amplitude ->
+                    refreshIsRefreshing = parked
                     refreshPullFraction = fraction
+                    refreshWaveAmplitude = amplitude
                 },
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(padding),
+                    .padding(padding)
+                    .then(
+                        // A tap on the blank space the feed gave up dismisses the
+                        // field. Guarded on the toolbar row's fixed geometry, not
+                        // a reported rect, so the tap that opened the field can
+                        // never be read as an outside tap.
+                        if (floaterTaskHomeSearchExpanded) {
+                            Modifier.pointerInput(Unit) {
+                                awaitEachGesture {
+                                    val down = awaitFirstDown(pass = PointerEventPass.Final)
+                                    val point = down.position
+                                    val onResults =
+                                        floaterSearchResultsBounds?.contains(point) == true
+                                    val up = waitForUpOrCancellation(pass = PointerEventPass.Final)
+                                    if (up != null && !onResults && point.y > headerBarHeightPx) {
+                                        closeFloaterTaskHomeSearch()
+                                    }
+                                }
+                            }
+                        } else {
+                            Modifier
+                        },
+                    ),
             ) {
                 LazyColumn(
                     modifier = Modifier
@@ -957,10 +990,19 @@ fun TodoListScreen(
                                 results = floaterTaskHomeSearchResults,
                                 listsById = floaterTaskHomeListById,
                                 onOpenTodo = ::openFloaterTaskHomeSearchResult,
-                                modifier = Modifier.padding(bottom = 10.dp),
+                                modifier = Modifier
+                                    .padding(bottom = 10.dp)
+                                    .onGloballyPositioned { coordinates ->
+                                        floaterSearchResultsBounds = coordinates.boundsInRoot()
+                                    },
                             )
                         }
                     }
+
+                    // While a query is live only the results remain; the rest
+                    // of the feed gives way to blank space, and a tap there
+                    // dismisses the field.
+                    if (!showFloaterTaskHomeSearchResults) {
 
                     if (!showSectionedTimeline && uiState.items.isEmpty() && uiState.isLoading) {
                         item {
@@ -1305,6 +1347,7 @@ fun TodoListScreen(
                     }
 
                     item { Spacer(Modifier.height(96.dp)) }
+                    }
                 }
             }
 
@@ -1383,6 +1426,7 @@ fun TodoListScreen(
                         .zIndex(6f),
                     refreshIsRefreshing = refreshIsRefreshing,
                     refreshPullFraction = { refreshPullFraction },
+                    refreshWaveAmplitude = refreshWaveAmplitude,
                 )
             }
 

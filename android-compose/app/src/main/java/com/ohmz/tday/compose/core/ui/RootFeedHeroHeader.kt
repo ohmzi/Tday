@@ -250,6 +250,8 @@ fun RootFeedHeroHeader(
     refreshIsRefreshing: Boolean = false,
     /** 0..1 pull distance, read lazily for the same reason as [collapseProgress]. */
     refreshPullFraction: () -> Float = { 0f },
+    /** Damps the pill's bars to rest before it leaves at the end of a refresh. */
+    refreshWaveAmplitude: Float = 1f,
 ) {
     val metrics = RootFeedHeroHeaderMetrics
     val colorScheme = MaterialTheme.colorScheme
@@ -310,7 +312,8 @@ fun RootFeedHeroHeader(
             title = title,
             progress = progress,
             availableWidth = width,
-            visible = !searchExpanded,
+            searchExpanded = searchExpanded,
+            searchHasQuery = searchQuery.isNotBlank(),
             onClick = onScrollToTop,
         )
 
@@ -347,6 +350,7 @@ fun RootFeedHeroHeader(
         RefreshPill(
             isRefreshing = refreshIsRefreshing,
             pullFraction = refreshPullFraction,
+            waveAmplitude = refreshWaveAmplitude,
         )
 
         SearchField(
@@ -369,6 +373,7 @@ fun RootFeedHeroHeader(
 private fun BoxScope.RefreshPill(
     isRefreshing: Boolean,
     pullFraction: () -> Float,
+    waveAmplitude: Float,
 ) {
     val metrics = RootFeedHeroHeaderMetrics
     val fraction = pullFraction().coerceIn(0f, 1f)
@@ -393,6 +398,7 @@ private fun BoxScope.RefreshPill(
             .zIndex(4f),
         isRefreshing = isRefreshing,
         distanceFraction = fraction,
+        waveAmplitude = waveAmplitude,
         applyPullTranslation = false,
     )
 }
@@ -447,7 +453,8 @@ private fun BoxScope.HeroTitle(
     title: String,
     progress: Float,
     availableWidth: Dp,
-    visible: Boolean,
+    searchExpanded: Boolean,
+    searchHasQuery: Boolean,
     onClick: () -> Unit,
 ) {
     val metrics = RootFeedHeroHeaderMetrics
@@ -469,6 +476,17 @@ private fun BoxScope.HeroTitle(
     val centerX = metrics.lerp(availableWidth / 2, compactCenterX, travel)
     val centerY = metrics.lerp(metrics.HeroTitleCenterY, metrics.CompactRowCenterY, drop)
 
+    // An open field does not by itself hide the title: down in its hero position
+    // it sits clear of the toolbar row, so there is nothing to hide it for. It
+    // fades as it docks — where it WOULD collide with the expanded field — and
+    // goes entirely once a query starts and the results take the screen over.
+    val titleAlpha = when {
+        !searchExpanded -> 1f
+        searchHasQuery -> 0f
+        else -> 1f - drop
+    }
+    val visible = titleAlpha > 0.01f
+
     Box(
         modifier = Modifier
             .align(Alignment.TopStart)
@@ -477,7 +495,7 @@ private fun BoxScope.HeroTitle(
                 y = centerY - (metrics.HeroTitleLineHeight / 2),
             )
             .graphicsLayer {
-                alpha = if (visible) 1f else 0f
+                alpha = titleAlpha
                 scaleX = scale
                 scaleY = scale
             }

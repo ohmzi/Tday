@@ -214,6 +214,12 @@ struct ScheduledTaskHomeScreen: View {
                                         isDisabled: searchExpanded
                                     )
 
+                                // While a query is live the results take the
+                                // screen over: the feed emits nothing, leaving
+                                // the results panel and blank space. A tap on
+                                // that blank space dismisses the field.
+                                if !showSearchResultsOverlay {
+
                                 ScheduledTaskHomeTodayCard(
                                     count: viewModel.summary.todayCount,
                                     action: {
@@ -284,6 +290,7 @@ struct ScheduledTaskHomeScreen: View {
                                     }
                                 }
 
+                                }
                             }
                             .padding(.horizontal, ScheduledTaskHomeMetrics.screenPadding)
 

@@ -352,6 +352,7 @@ fun ScheduledTaskHomeScreen(
     // pinned toolbar.
     var refreshIsRefreshing by remember { mutableStateOf(false) }
     var refreshPullFraction by remember { mutableFloatStateOf(0f) }
+    var refreshWaveAmplitude by remember { mutableFloatStateOf(1f) }
     val headerBarHeightPx = with(density) { RootFeedHeroHeaderMetrics.BarHeight.toPx() }
     // Read lazily inside the header so a scroll frame recomposes the header
     // alone rather than this whole screen.
@@ -443,9 +444,10 @@ fun ScheduledTaskHomeScreen(
                     onRefresh = onRefresh,
                     enabled = pullRefreshEnabled,
                     showsIndicator = false,
-                    onIndicatorStateChange = { refreshing, fraction ->
-                        refreshIsRefreshing = refreshing
+                    onIndicatorStateChange = { parked, fraction, amplitude ->
+                        refreshIsRefreshing = parked
                         refreshPullFraction = fraction
+                        refreshWaveAmplitude = amplitude
                     },
                     modifier = Modifier
                         .fillMaxSize()
@@ -511,6 +513,12 @@ fun ScheduledTaskHomeScreen(
                         // always-visible toolbar strip.
                         Spacer(modifier = Modifier.height(RootFeedHeroHeaderMetrics.ExpandedHeight))
                     }
+
+                        // While a query is live the results take the screen
+                        // over: the feed emits nothing, leaving the results
+                        // panel and blank space. A tap on that blank space
+                        // dismisses the field via the outside-tap gesture.
+                        if (!showSearchResultsOverlay) {
                         item {
                             ScheduledTaskHomeTodayCard(
                                 count = uiState.summary.todayCount,
@@ -624,6 +632,7 @@ fun ScheduledTaskHomeScreen(
                     }
 
                     item { Spacer(Modifier.height(80.dp)) }
+                        }
                     }
 
                     val searchBarRect = searchBarBounds
@@ -767,6 +776,7 @@ fun ScheduledTaskHomeScreen(
                     .zIndex(6f),
                 refreshIsRefreshing = refreshIsRefreshing,
                 refreshPullFraction = { refreshPullFraction },
+                    refreshWaveAmplitude = refreshWaveAmplitude,
             )
 
             if (showRootFeedDock && !searchExpanded) {

@@ -337,6 +337,12 @@ struct RootFeedHeroHeader: View {
         }
     }
 
+    private func titleOpacity(drop: CGFloat) -> Double {
+        guard searchExpanded else { return 1 }
+        guard searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return 0 }
+        return Double(1 - drop)
+    }
+
     private func handleScrollToTop() {
         HapticManager.gentleTap()
         onScrollToTop()
@@ -371,7 +377,11 @@ struct RootFeedHeroHeader: View {
         .buttonStyle(.plain)
         .scaleEffect(scale)
         .position(x: centerX, y: centerY)
-        .opacity(searchExpanded ? 0 : 1)
+        // An open field does not by itself hide the title: down in its hero
+        // position it sits clear of the toolbar row, so there is nothing to hide
+        // it for. It fades as it docks — where it WOULD collide with the expanded
+        // field — and goes entirely once a query starts and the results take over.
+        .opacity(titleOpacity(drop: drop))
         .allowsHitTesting(!searchExpanded)
         .accessibilityLabel(Text(title))
         .accessibilityAddTraits(.isButton)

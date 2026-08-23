@@ -177,8 +177,11 @@ export default function RootFeedHeroHeader({
   const longVisibleRef = useRef(true);
   const scrollerRef = useRef<HTMLElement | null>(null);
   const searchOpenRef = useRef(searchOpen);
+  const hasQueryRef = useRef(false);
 
+  const hasQuery = searchQuery.trim().length > 0;
   searchOpenRef.current = searchOpen;
+  hasQueryRef.current = hasQuery;
 
   const isDaytime = (() => {
     const hour = new Date().getHours();
@@ -243,6 +246,13 @@ export default function RootFeedHeroHeader({
         `translate(${centerX - (titleWidth * scale) / 2}px, ${
           centerY - (m.heroTitleLineHeight * scale) / 2
         }px) scale(${scale})`;
+      // An open field does not by itself hide the title — down in its hero
+      // position it sits clear of the toolbar row, so there is nothing to hide
+      // it for. It fades as it docks (where it WOULD collide with the expanded
+      // field), and goes entirely once a query starts and the results take over.
+      titleEl.style.opacity = String(
+        searchOpenRef.current ? (hasQueryRef.current ? 0 : 1 - drop) : 1,
+      );
 
       const searchCollapse = stagger(progress, m.searchCollapseEnd);
       const trailingX = width - m.searchTrailingInset;
@@ -330,6 +340,15 @@ export default function RootFeedHeroHeader({
 
   return (
     <>
+      {searchOpen && hasQuery ? (
+        // Blanks the feed out so only the results remain, and takes the tap that
+        // dismisses the field. Sits under the header (z-30), so the toolbar and
+        // the results panel stay above it.
+        // Purely visual: the outside-tap listener above already closes on a tap
+        // here, since this is neither the capsule nor the results panel.
+        <div className="fixed inset-0 z-20 bg-background" aria-hidden />
+      ) : null}
+
       <header
         ref={headerRef}
         // Must stay a DIRECT child of the page's full-height flex column: a
@@ -372,7 +391,7 @@ export default function RootFeedHeroHeader({
           onClick={scrollToTop}
           className={cn(
             "absolute left-0 top-0 origin-top-left whitespace-nowrap transition-opacity duration-200",
-            searchOpen ? "pointer-events-none opacity-0" : "opacity-100",
+            searchOpen ? "pointer-events-none" : "",
           )}
           style={{ height: m.heroTitleLineHeight }}
         >
