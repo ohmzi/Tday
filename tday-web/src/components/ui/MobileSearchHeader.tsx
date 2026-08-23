@@ -300,7 +300,7 @@ export default function MobileSearchHeader({
             <span
               ref={pageCollapse.dockedTitleRef}
               aria-hidden
-              className="pointer-events-none min-w-0 flex-1 truncate text-[1.4rem] font-black leading-none text-foreground lg:hidden"
+              className="pointer-events-none min-w-0 flex-1 origin-center truncate text-center text-[1.4rem] font-black leading-none text-foreground lg:hidden"
               style={{ opacity: 0, visibility: "hidden" }}
             >
               {pageCollapse.title}

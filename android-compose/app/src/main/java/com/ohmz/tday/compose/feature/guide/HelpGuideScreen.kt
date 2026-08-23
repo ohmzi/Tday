@@ -18,16 +18,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import com.ohmz.tday.compose.core.ui.TdayHeroTitleHeader
 import com.ohmz.tday.compose.core.ui.rememberScrollCollapsingTitleScrollBehavior
+import com.ohmz.tday.compose.core.ui.TdaySearchCapsule
 import com.ohmz.tday.compose.core.ui.tdayTopFade
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -48,7 +45,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -146,38 +142,13 @@ fun HelpGuideScreen(
             )
 
             Spacer(Modifier.height(16.dp))
-            OutlinedTextField(
+            // The app's search field, same as the root feeds' open capsule.
+            TdaySearchCapsule(
                 value = query,
                 onValueChange = { query = it },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                shape = RoundedCornerShape(14.dp),
-                placeholder = { Text(res("guide.searchPlaceholder")) },
-                leadingIcon = {
-                    Icon(
-                        imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_search),
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                    )
-                },
-                trailingIcon = if (query.isNotEmpty()) {
-                    {
-                        IconButton(onClick = { query = "" }) {
-                            Icon(
-                                imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_x),
-                                contentDescription = res("guide.clearSearch"),
-                                modifier = Modifier.size(18.dp),
-                            )
-                        }
-                    }
-                } else {
-                    null
-                },
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = colorScheme.primary,
-                    unfocusedBorderColor = colorScheme.onSurface.copy(alpha = 0.15f),
-                ),
+                placeholder = res("guide.searchPlaceholder"),
+                onClear = { query = "" },
+                clearContentDescription = res("guide.clearSearch"),
             )
 
             Spacer(Modifier.height(16.dp))

@@ -4,6 +4,12 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ChevronRight, CircleHelp, Search, Sparkles, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import NativePageHeader from "@/components/app/NativePageHeader";
+import {
+  tdaySearchCapsuleClass,
+  tdaySearchCapsuleClearClass,
+  tdaySearchCapsuleIconClass,
+  tdaySearchCapsuleInputClass,
+} from "@/components/app/RootFeedHeroHeader";
 import { nativeScreenAccentColors } from "@/components/app/nativeScreenTheme";
 import { SheetCard } from "@/components/ui/sheet-chrome";
 import { GuideIcon } from "./GuideIcon";
@@ -96,13 +102,14 @@ export default function GuideScreen() {
         className="mb-1"
       />
 
-      {/* Search — the app's capsule search field (see MobileSearchHeader). */}
+      {/* The app's search field, same chrome and same parts as the root feeds'
+          open capsule — see `tdaySearchCapsuleClass`. The clear button is the
+          one deliberate difference: the root feeds' X dismisses a field that
+          folds back into a button, and this one has no folded state to return
+          to, so it clears the text and only appears when there is text. */}
       <div className="space-y-1.5">
-        <div className="relative flex w-full items-center rounded-full border border-white/70 bg-card/90 shadow-[0_12px_28px_-22px_hsl(var(--shadow)/0.55)] transition-colors focus-within:border-accent/45 dark:border-white/10">
-          <Search
-            className="pointer-events-none absolute left-4 size-4 text-muted-foreground"
-            aria-hidden="true"
-          />
+        <div className={cn(tdaySearchCapsuleClass, "w-full")} style={{ height: 56 }}>
+          <Search className={tdaySearchCapsuleIconClass} aria-hidden="true" />
           {/* type=text, not search: the app's search fields use their own clear
               button and WebKit would stack a second one on top of it. */}
           <input
@@ -111,16 +118,16 @@ export default function GuideScreen() {
             onChange={(e) => setQuery(e.target.value)}
             placeholder={t("guide.searchPlaceholder")}
             aria-label={t("guide.searchAria")}
-            className="h-14 w-full rounded-full bg-transparent pl-11 pr-12 text-base font-extrabold text-foreground outline-none placeholder:text-muted-foreground/50 md:text-sm"
+            className={tdaySearchCapsuleInputClass}
           />
           {query && (
             <button
               type="button"
               onClick={() => setQuery("")}
               aria-label={t("guide.clearSearch")}
-              className="absolute right-3 grid size-8 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-accent/15 hover:text-foreground"
+              className={tdaySearchCapsuleClearClass}
             >
-              <X className="size-4" aria-hidden="true" />
+              <X className="h-5 w-5 stroke-[2.6]" aria-hidden="true" />
             </button>
           )}
         </div>
