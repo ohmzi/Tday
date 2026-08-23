@@ -17,6 +17,15 @@ struct HelpGuideScreen: View {
     // NEW badges show until the guide has been opened in this release; the
     // last-seen version persists in UserDefaults (GuideStore).
     @State private var showNewBadges = false
+    @State private var scrollOffset: CGFloat = 0
+
+    private var titleCollapseProgress: CGFloat {
+        let distance = TodoTimelineMetrics.titleCollapseDistance
+        guard distance > 0 else { return 0 }
+        return min(max(scrollOffset / distance, 0), 1)
+    }
+
+    private var guideTitle: String { artifact.ui["title"] ?? "How-To & Tips" }
 
     private var trimmed: String { query.trimmingCharacters(in: .whitespaces) }
 
@@ -35,26 +44,48 @@ struct HelpGuideScreen: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                backButton
-                Text(artifact.ui["title"] ?? "How-To & Tips")
-                    .font(.tdayRounded(size: 28, weight: .heavy))
-                    .foregroundStyle(colors.onSurface)
-                    .padding(.top, 8)
+                TimelineExpandedTitleRow(
+                    title: guideTitle,
+                    accentColor: colors.onSurface,
+                    collapseProgress: titleCollapseProgress,
+                    mark: Image("LucideCircleHelp"),
+                    markAccentColor: colors.primary
+                )
+                .background {
+                    TimelineScrollOffsetObserver { scrollOffset = $0 }
+                        .frame(width: 0, height: 0)
+                }
+                // The shared header carries a title only, so the guide's
+                // subtitle rides just below it and fades on the same curve.
                 if let subtitle = artifact.ui["subtitle"] {
                     Text(subtitle)
                         .font(.tdayRounded(size: 14, weight: .regular))
                         .foregroundStyle(colors.onSurface.opacity(0.6))
                         .padding(.top, 4)
+                        .opacity(1 - Double(TodoTimelineMetrics.progress(
+                            titleCollapseProgress,
+                            from: TodoTimelineMetrics.expandedTitleFadeStart,
+                            to: TodoTimelineMetrics.expandedTitleFadeEnd
+                        )))
                 }
                 searchField
                     .padding(.top, 16)
                 content
                     .padding(.top, 16)
             }
-            .padding(.horizontal, 16)
+            .padding(.horizontal, TodoTimelineMetrics.horizontalPadding)
             .padding(.bottom, 32)
         }
         .background(colors.background)
+        .safeAreaInset(edge: .top, spacing: 0) {
+            TimelineTopBar(
+                title: guideTitle,
+                accentColor: colors.onSurface,
+                collapseProgress: titleCollapseProgress,
+                onBack: { viewModel.goBack() },
+                actions: []
+            )
+        }
         .onAppear {
             guard !loaded else { return }
             artifact = GuideContentStore.load()
@@ -65,23 +96,6 @@ struct HelpGuideScreen: View {
             showNewBadges = store.lastSeenGuideVersion() != artifact.currentVersion
             store.setLastSeenGuideVersion(artifact.currentVersion)
         }
-    }
-
-    private var backButton: some View {
-        Button(action: { viewModel.goBack() }) {
-            HStack(spacing: 6) {
-                Image("LucideArrowLeft")
-                    .renderingMode(.template)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 18, height: 18)
-                Text(artifact.ui["title"] ?? "Guide")
-                    .font(.tdayRounded(size: 15, weight: .regular))
-            }
-            .foregroundStyle(colors.onSurface.opacity(0.7))
-            .padding(.vertical, 8)
-        }
-        .buttonStyle(.plain)
     }
 
     private var searchField: some View {
