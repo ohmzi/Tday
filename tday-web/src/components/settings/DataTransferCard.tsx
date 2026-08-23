@@ -143,7 +143,7 @@ export default function DataTransferCard() {
   const previewTotal = pending ? importedItemTotal(pending.preview) : 0;
 
   return (
-    <SheetCard className="space-y-4 p-[18px]">
+    <SheetCard className="space-y-4 p-[18px] shadow-[0_16px_34px_-24px_hsl(var(--shadow)/0.5)]">
       <div className="space-y-1">
         <div className="flex items-center justify-between gap-2">
           <h2 className="text-[1.4rem] font-black leading-tight text-foreground">{t("data.title")}</h2>
