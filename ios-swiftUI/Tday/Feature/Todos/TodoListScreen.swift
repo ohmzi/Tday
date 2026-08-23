@@ -4,6 +4,14 @@ import UniformTypeIdentifiers
 
 private let todoDragContentTypes = [UTType.plainText.identifier, UTType.text.identifier]
 private let todoTimelineDragCoordinateSpace = "todoTimelineDragCoordinateSpace"
+
+private struct FloaterSearchResultsFrameKey: PreferenceKey {
+    static var defaultValue: CGRect = .zero
+
+    static func reduce(value: inout CGRect, nextValue: () -> CGRect) {
+        value = nextValue()
+    }
+}
 private let todoTimelineScrollTopID = "todo-timeline-scroll-top"
 
 private final class TodoTaskDragSession {
@@ -420,6 +428,7 @@ struct TodoListScreen: View {
     @State private var flashTodoId: String?
     @State private var highlightedScrollRequestID = 0
     @State private var floaterTaskHomeSearchExpanded = false
+    @State private var floaterSearchResultsFrame: CGRect = .zero
     @State private var floaterTaskHomeSearchQuery = ""
     @State private var openingFloaterTaskHomeSearchResultID: String?
     @State private var openSwipeTaskID: String?
@@ -658,6 +667,24 @@ struct TodoListScreen: View {
         refreshableModeContent
         .coordinateSpace(name: todoTimelineDragCoordinateSpace)
         .background(colors.background)
+        .onPreferenceChange(FloaterSearchResultsFrameKey.self) { frame in
+            floaterSearchResultsFrame = frame
+        }
+        // A tap on the blank space the feed gave up dismisses the field. The
+        // toolbar row is tested by its fixed geometry, not a reported rect, so
+        // the tap that opened the field can never read as an outside tap.
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 0, coordinateSpace: .named(todoTimelineDragCoordinateSpace))
+                .onEnded { value in
+                    guard usesRootFeedHeader, floaterTaskHomeSearchExpanded else { return }
+                    let isTap = abs(value.translation.width) < 8 && abs(value.translation.height) < 8
+                    guard isTap else { return }
+                    let location = value.startLocation
+                    guard location.y > RootFeedHeroHeaderMetrics.barHeight else { return }
+                    guard !floaterSearchResultsFrame.contains(location) else { return }
+                    closeFloaterTaskHomeSearch()
+                }
+        )
         .overlay(alignment: .top) {
             if usesRootFeedHeader {
                 rootFeedHeroHeader
@@ -1804,6 +1831,15 @@ struct TodoListScreen: View {
                                 openFloaterTaskHomeSearchResult(todo, using: scrollProxy)
                             }
                         )
+                        .background(
+                            GeometryReader { proxy in
+                                Color.clear
+                                    .preference(
+                                        key: FloaterSearchResultsFrameKey.self,
+                                        value: proxy.frame(in: .named(todoTimelineDragCoordinateSpace))
+                                    )
+                            }
+                        )
                         .listRowInsets(
                             EdgeInsets(
                                 top: 0,
@@ -1815,6 +1851,11 @@ struct TodoListScreen: View {
                         .listRowBackground(colors.background)
                         .listRowSeparator(.hidden)
                     }
+
+                    // While a query is live only the results remain; the rest
+                    // of the feed gives way to blank space, and a tap there
+                    // dismisses the field.
+                    if !showFloaterTaskHomeSearchResults {
 
                     if let errorMessage = viewModel.errorMessage {
                         Section {
@@ -1875,6 +1916,7 @@ struct TodoListScreen: View {
                                 .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
                                 .listRowSeparator(.hidden)
                         }
+                    }
                     }
 
                     Color.clear

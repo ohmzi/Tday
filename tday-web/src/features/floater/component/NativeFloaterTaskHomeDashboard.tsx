@@ -101,6 +101,41 @@ export default function NativeFloaterTaskHomeDashboard() {
           }}
           onCreateList={() => setCreateListOpen(true)}
           onOpenSettings={() => router.push("/app/settings")}
+          results={
+            isSearching ? (
+              <div className="max-h-[60vh] overflow-y-auto rounded-[28px] border border-white/70 bg-card/95 p-2 shadow-[0_16px_36px_-30px_hsl(var(--shadow)/0.55)] dark:border-white/10">
+                {sortedFloaters.length === 0 ? (
+                  <p className="px-3 py-4 text-sm font-extrabold text-muted-foreground">
+                    {appDict("floaterEmpty")}
+                  </p>
+                ) : (
+                  sortedFloaters.map((floater) => (
+                    <button
+                      type="button"
+                      key={floater.id}
+                      className="flex w-full items-center gap-3 rounded-2xl px-3 py-2 text-left transition-colors hover:bg-muted/65"
+                      onClick={() => router.push(`/app/todo?todo=${encodeURIComponent(floater.id)}`)}
+                    >
+                      <span
+                        className="h-2.5 w-2.5 shrink-0 rounded-full"
+                        style={{ backgroundColor: floaterAccent }}
+                      />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-black text-foreground">
+                          {floater.title}
+                        </span>
+                        {floater.listID && floaterListMetaData[floater.listID]?.name ? (
+                          <span className="block truncate text-xs font-extrabold text-muted-foreground">
+                            {floaterListMetaData[floater.listID]?.name}
+                          </span>
+                        ) : null}
+                      </span>
+                    </button>
+                  ))
+                )}
+              </div>
+            ) : null
+          }
         />
 
         <section
