@@ -393,7 +393,9 @@ export default function RootFeedHeroHeader({
             "absolute left-0 top-0 origin-top-left whitespace-nowrap transition-opacity duration-200",
             searchOpen ? "pointer-events-none" : "",
           )}
-          style={{ height: m.heroTitleLineHeight }}
+          // Hidden until the first frame positions it: with no transform yet it
+          // would paint at the header's top-left corner and then jump to centre.
+          style={{ height: m.heroTitleLineHeight, opacity: 0 }}
         >
           <span
             ref={titleTextRef}

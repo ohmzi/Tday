@@ -27,6 +27,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -55,6 +56,7 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
@@ -467,7 +469,17 @@ private fun BoxScope.HeroTitle(
     // card cut into the title's descenders.
     val drop = metrics.stagger(progress, 1f)
 
-    var titleWidth by remember { mutableStateOf(0.dp) }
+    // Measured, not observed after layout. The offset below is left-edge based,
+    // so a width that starts at zero puts the title's left edge on the screen's
+    // centre for the first frames of a fresh screen — it then slides left into
+    // place, which reads as the title flying in from the right on a tab switch.
+    val textMeasurer = rememberTextMeasurer()
+    val titleStyle = LocalTextStyle.current.merge(
+        TextStyle(fontSize = metrics.HeroTitleSize, fontWeight = FontWeight.ExtraBold),
+    )
+    val titleWidth = remember(title, titleStyle, density) {
+        with(density) { textMeasurer.measure(title, titleStyle).size.width.toDp() }
+    }
     val (heroScale, compactScale) = metrics.titleScales(titleWidth, availableWidth)
     val scale = metrics.lerp(heroScale, compactScale, travel)
 
@@ -518,12 +530,6 @@ private fun BoxScope.HeroTitle(
             color = colorScheme.onBackground,
             maxLines = 1,
             overflow = TextOverflow.Clip,
-            modifier = Modifier.onGloballyPositioned { coordinates ->
-                val measured = with(density) { coordinates.size.width.toDp() }
-                if (measured > 0.dp && measured != titleWidth) {
-                    titleWidth = measured
-                }
-            },
         )
     }
 }
