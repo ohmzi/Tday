@@ -101,12 +101,15 @@ fun TdayHeroTitleHeader(
     accentColor: Color,
     collapseProgress: Float,
     modifier: Modifier = Modifier,
+    /** Screens whose title is not plain onBackground — Completed, Calendar. */
+    titleColor: Color? = null,
     onBack: (() -> Unit)? = null,
     backContentDescription: String? = null,
     actions: @Composable RowScope.() -> Unit = {},
 ) {
     val m = TdayHeroTitleMetrics
     val colorScheme = MaterialTheme.colorScheme
+    val resolvedTitleColor = titleColor ?: colorScheme.onBackground
     val progress = collapseProgress.coerceIn(0f, 1f)
 
     // Same septic curve the root feeds use, so both kinds of header ease alike.
@@ -143,7 +146,7 @@ fun TdayHeroTitleHeader(
                     text = title,
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.ExtraBold,
-                    color = colorScheme.onBackground,
+                    color = resolvedTitleColor,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier
@@ -213,7 +216,7 @@ fun TdayHeroTitleHeader(
                     text = title,
                     fontSize = m.TitleSize,
                     fontWeight = FontWeight.ExtraBold,
-                    color = colorScheme.onBackground,
+                    color = resolvedTitleColor,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
