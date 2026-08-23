@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ohmz.tday.compose.R
+import com.ohmz.tday.compose.core.coroutines.BackgroundDispatcher
 import com.ohmz.tday.compose.core.data.ApiCallException
 import com.ohmz.tday.compose.core.data.AppDataMode
 import com.ohmz.tday.compose.core.data.ConnectionFailureKind
@@ -43,7 +44,7 @@ import com.ohmz.tday.compose.feature.release.GitHubRelease
 import com.ohmz.tday.compose.ui.theme.AppThemeMode
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.async
@@ -176,6 +177,7 @@ class AppViewModel @Inject constructor(
     private val appVersionManager: AppVersionManager,
     private val systemCredentialService: SystemCredentialServicing,
     @ApplicationContext private val appContext: Context,
+    @BackgroundDispatcher private val backgroundDispatcher: CoroutineDispatcher,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AppUiState())
@@ -490,7 +492,7 @@ class AppViewModel @Inject constructor(
                 isCheckingUpdateRelease = false,
             )
         }
-        viewModelScope.launch(Dispatchers.Default) {
+        viewModelScope.launch(backgroundDispatcher) {
             runCatching { reminderScheduler.rescheduleAll() }
         }
     }
@@ -514,7 +516,7 @@ class AppViewModel @Inject constructor(
                 )
             }
             launch { runCatching { authRepository.syncTimezone() } }
-            launch(Dispatchers.Default) { runCatching { reminderScheduler.rescheduleAll() } }
+            launch(backgroundDispatcher) { runCatching { reminderScheduler.rescheduleAll() } }
             sync.await()
         }
 
@@ -914,7 +916,7 @@ class AppViewModel @Inject constructor(
                     suppressAuthenticationExpired = true,
                 )
             }
-            launch(Dispatchers.Default) { runCatching { reminderScheduler.rescheduleAll() } }
+            launch(backgroundDispatcher) { runCatching { reminderScheduler.rescheduleAll() } }
         }
     }
 
@@ -952,7 +954,7 @@ class AppViewModel @Inject constructor(
     fun setDefaultReminder(option: ReminderOption) {
         reminderPreferenceStore.setDefaultReminder(option)
         _uiState.update { it.copy(selectedReminder = option) }
-        viewModelScope.launch(Dispatchers.Default) {
+        viewModelScope.launch(backgroundDispatcher) {
             runCatching { reminderScheduler.rescheduleAll() }
         }
     }
@@ -964,7 +966,7 @@ class AppViewModel @Inject constructor(
     }
 
     fun rescheduleReminders() {
-        viewModelScope.launch(Dispatchers.Default) {
+        viewModelScope.launch(backgroundDispatcher) {
             runCatching { reminderScheduler.rescheduleAll() }
         }
     }
@@ -1080,7 +1082,7 @@ class AppViewModel @Inject constructor(
         } else if (!realtimeClient.isConnected && _uiState.value.authenticated) {
             realtimeClient.connect()
         }
-        viewModelScope.launch(Dispatchers.Default) { runCatching { reminderScheduler.rescheduleAll() } }
+        viewModelScope.launch(backgroundDispatcher) { runCatching { reminderScheduler.rescheduleAll() } }
         return result
     }
 

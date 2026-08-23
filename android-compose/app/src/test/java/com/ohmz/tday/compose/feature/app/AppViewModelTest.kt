@@ -340,10 +340,12 @@ class AppViewModelTest {
         snackbarManager.events.test {
             viewModel.reconnectAfterForeground()
             // expireSession() finishes in a coroutine of its own, several suspension points deep
-            // (logout, credential clear, ensureResyncLoop) before it emits. Counting runCurrent()
-            // pumps to match is guesswork and was flaky; drain instead. This cannot hang on the
-            // resync loop, because the first thing expireSession does is ensureResyncLoop(false),
-            // which cancels it.
+            // (logout, credential clear, ensureResyncLoop) before it emits, so drain rather than
+            // count runCurrent() pumps. Every step of that chain is on the test scheduler — see
+            // backgroundDispatcher in makeViewModel() — so the drain is a real barrier. It cannot
+            // run away into the resync loop either: that loop only wakes after RESYNC_INTERVAL_MS
+            // of virtual time, and expireSession cancels it via ensureResyncLoop(false) first,
+            // with no delay anywhere ahead of that.
             advanceUntilIdle()
             val event = awaitItem()
             assertEquals(SnackbarKind.ERROR, event.kind)
@@ -458,5 +460,10 @@ class AppViewModelTest {
             appVersionManager = appVersionManager,
             systemCredentialService = systemCredentialService,
             appContext = appContext,
+            // Background work has to share the test scheduler. On Dispatchers.Default it runs on
+            // a real thread the scheduler cannot see, so runCurrent()/advanceUntilIdle() return
+            // while bootstrap is still parked on it and the ViewModel resumes on a pool thread,
+            // racing the assertions here.
+            backgroundDispatcher = mainDispatcherRule.dispatcher,
         )
 }
