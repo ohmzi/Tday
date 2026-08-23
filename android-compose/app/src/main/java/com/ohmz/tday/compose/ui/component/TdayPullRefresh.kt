@@ -56,6 +56,13 @@ fun TdayPullToRefreshBox(
     modifier: Modifier = Modifier,
     contentAlignment: Alignment = Alignment.TopStart,
     enabled: Boolean = true,
+    /**
+     * Set false when the caller draws the pill itself — a screen with a pinned
+     * header needs it above that header, which this box cannot reach.
+     */
+    showsIndicator: Boolean = true,
+    /** Reports `(isRefreshing, distanceFraction)` for callers drawing their own pill. */
+    onIndicatorStateChange: ((Boolean, Float) -> Unit)? = null,
     content: @Composable BoxScope.() -> Unit,
 ) {
     if (!enabled) {
@@ -90,6 +97,13 @@ fun TdayPullToRefreshBox(
         }
     }
 
+    if (onIndicatorStateChange != null) {
+        val fraction = state.distanceFraction
+        LaunchedEffect(displayRefreshing, fraction) {
+            onIndicatorStateChange(displayRefreshing, fraction)
+        }
+    }
+
     PullToRefreshBox(
         isRefreshing = displayRefreshing,
         onRefresh = {
@@ -103,13 +117,15 @@ fun TdayPullToRefreshBox(
         state = state,
         contentAlignment = contentAlignment,
         indicator = {
-            TdayPullToRefreshIndicator(
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .zIndex(1f),
-                isRefreshing = displayRefreshing,
-                state = state,
-            )
+            if (showsIndicator) {
+                TdayPullToRefreshIndicator(
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .zIndex(1f),
+                    isRefreshing = displayRefreshing,
+                    distanceFraction = state.distanceFraction,
+                )
+            }
         },
         content = {
             // PullToRefreshBox only moves the indicator; translate the content too
@@ -132,14 +148,20 @@ fun TdayPullToRefreshBox(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun TdayPullToRefreshIndicator(
+fun TdayPullToRefreshIndicator(
     modifier: Modifier,
     isRefreshing: Boolean,
-    state: PullToRefreshState,
+    distanceFraction: Float,
+    /**
+     * Whether the pill positions itself from the pull distance. Callers that
+     * place it themselves — a pinned header flying it in from the top — turn
+     * this off and own the offset.
+     */
+    applyPullTranslation: Boolean = true,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val refreshAccent = TdayTodayBlue
-    val visible = isRefreshing || state.distanceFraction > 0f
+    val visible = isRefreshing || distanceFraction > 0f
     val alpha by animateFloatAsState(
         targetValue = if (visible) 1f else 0f,
         animationSpec = tween(durationMillis = 220),
@@ -159,7 +181,7 @@ private fun TdayPullToRefreshIndicator(
     } else {
         0f
     }
-    val pullProgress = state.distanceFraction.coerceIn(0f, 1f)
+    val pullProgress = distanceFraction.coerceIn(0f, 1f)
     val sweepTrackWidth =
         TdayDimens.PullRefreshContainerWidth - (TdayDimens.PullRefreshSweepInset * 2)
     val indicatorShape = RoundedCornerShape(TdayDimens.PullRefreshContainerCornerRadius)
@@ -181,10 +203,13 @@ private fun TdayPullToRefreshIndicator(
                 }
             }
             .graphicsLayer {
-                val showElevation = state.distanceFraction > 0f || isRefreshing
+                val showElevation = distanceFraction > 0f || isRefreshing
                 // Same single fraction-driven animator as the content offset.
-                translationY = state.distanceFraction *
-                        PullToRefreshDefaults.PositionalThreshold.toPx() - size.height
+                translationY = if (applyPullTranslation) {
+                    (distanceFraction * PullToRefreshDefaults.PositionalThreshold.toPx()) - size.height
+                } else {
+                    0f
+                }
                 shadowElevation = if (showElevation) TdayDimens.PullRefreshElevation.toPx() else 0f
                 shape = indicatorShape
                 clip = true
