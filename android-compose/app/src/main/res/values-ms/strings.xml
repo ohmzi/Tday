@@ -637,4 +637,6 @@
     <string name="settings_quiet_hours_start">Mula</string>
     <string name="settings_quiet_hours_end">Tamat</string>
     <string name="settings_resting_floaters">Pudarkan floater berehat</string>
+    <string name="root_feed_search_scheduled">Cari tugasan berjadual</string>
+    <string name="root_feed_search_floater">Cari tugasan terapung</string>
 </resources>

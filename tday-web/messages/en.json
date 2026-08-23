@@ -383,7 +383,9 @@
     "steps": "Steps",
     "add": "Add",
     "addStep": "Add a step",
-    "stepsCreateHint": "Save the task first to add steps."
+    "stepsCreateHint": "Save the task first to add steps.",
+    "searchFloaterTasksPlaceholder": "Search Floater Task",
+    "searchShort": "Search"
   },
   "today": {
     "saveInstance": "Save instance",
@@ -542,7 +544,8 @@
     "tileCalendar": "Calendar",
     "searchTasksPlaceholder": "Search tasks...",
     "noMatchingTasks": "No matching tasks",
-    "openList": "Open {{name}}"
+    "openList": "Open {{name}}",
+    "searchScheduledPlaceholder": "Search Scheduled Task"
   },
   "settings": {
     "themeLight": "Light",

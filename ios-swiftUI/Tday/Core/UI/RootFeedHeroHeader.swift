@@ -88,6 +88,8 @@ enum RootFeedHeroHeaderMetrics {
     /// cap clipping it.
     static let searchLabelFadeStart: CGFloat = 100
     static let searchLabelFadeEnd: CGFloat = 124
+    /// Right-hand breathing room so an ellipsis is not clipped by the capsule cap.
+    static let searchLabelTrailingPadding: CGFloat = 14
 
     // Staggered curve endpoints, as a fraction of `collapseDistance`. Solved by
     // search so that across every supported width and localised title the title
@@ -198,6 +200,9 @@ enum RootFeedHeroMark {
 
 struct RootFeedHeroHeader: View {
     let title: String
+    let searchPlaceholder: String
+    /// Shown in place of `searchPlaceholder` when the folded capsule is too narrow.
+    let searchPlaceholderShort: String
     let mark: RootFeedHeroMark
     let scroll: RootFeedHeaderScrollState
     /// Coordinate space the search field frame is reported in.
@@ -408,7 +413,14 @@ struct RootFeedHeroHeader: View {
         return Color.clear
             .frame(width: fieldWidth, height: Metrics.barButtonSize)
             .overlay {
-                searchRestingContent(labelOpacity: labelOpacity)
+                searchRestingContent(
+                labelOpacity: labelOpacity,
+                labelWidth: max(
+                    0,
+                    restingWidth - Metrics.searchLeadingPadding - Metrics.searchIconSlot
+                        - 2 - Metrics.searchLabelTrailingPadding
+                )
+            )
                     .opacity(searchExpanded ? 0 : 1)
                     .allowsHitTesting(!searchExpanded)
             }
@@ -440,7 +452,7 @@ struct RootFeedHeroHeader: View {
             .animation(Metrics.searchMorph, value: searchExpanded)
     }
 
-    private func searchRestingContent(labelOpacity: CGFloat) -> some View {
+    private func searchRestingContent(labelOpacity: CGFloat, labelWidth: CGFloat) -> some View {
         Button {
             HapticManager.buttonTap()
             withAnimation(Metrics.searchMorph) {
@@ -463,12 +475,22 @@ struct RootFeedHeroHeader: View {
                             .foregroundStyle(colors.onSurface)
                             .frame(width: Metrics.searchIconSlot, height: Metrics.barButtonSize)
 
-                        Text("Search")
-                            .font(.tdayRounded(size: 17, weight: .bold))
-                            .foregroundStyle(colors.onSurfaceVariant)
-                            .lineLimit(1)
-                            .fixedSize()
-                            .opacity(Double(labelOpacity))
+                        // The long placeholder gives way to the short word
+                        // rather than being chopped mid-word; the short one still
+                        // truncates if even it cannot fit. Explicitly sized so the
+                        // label can never set the capsule's minimum width — a
+                        // fixedSize label here is what pushed the glyph off the
+                        // collapsed button before.
+                        ViewThatFits(in: .horizontal) {
+                            Text(searchPlaceholder)
+                            Text(searchPlaceholderShort)
+                        }
+                        .font(.tdayRounded(size: 17, weight: .bold))
+                        .foregroundStyle(colors.onSurfaceVariant)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .frame(width: labelWidth, alignment: .leading)
+                        .opacity(Double(labelOpacity))
                     }
                     .padding(.leading, Metrics.searchLeadingPadding)
                 }
@@ -488,7 +510,7 @@ struct RootFeedHeroHeader: View {
                 .foregroundStyle(colors.onSurface)
                 .frame(width: Metrics.searchIconSlot, height: Metrics.searchIconSlot)
 
-            TextField("", text: $searchQuery, prompt: Text("Search").foregroundStyle(colors.onSurfaceVariant))
+            TextField("", text: $searchQuery, prompt: Text(searchPlaceholder).foregroundStyle(colors.onSurfaceVariant))
                 .focused(searchFieldFocused)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()

@@ -6,6 +6,9 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -36,6 +39,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
@@ -47,6 +51,17 @@ import kotlin.math.sin
 
 private const val RefreshBarCount = 5
 private const val RefreshMinVisibleMillis = 600L
+
+/**
+ * How far the feed itself moves on a pull, and when it starts.
+ *
+ * The pill and the content are deliberately on different curves. The pill leads
+ * and travels its full distance early; the content ignores the first third of
+ * the pull and then follows by only [ContentPullTravel] — a fraction of the 56dp
+ * it used to move when both were driven by the same fraction.
+ */
+private val ContentPullTravel = 14.dp
+private const val ContentPullStart = 0.35f
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -128,17 +143,30 @@ fun TdayPullToRefreshBox(
             }
         },
         content = {
-            // PullToRefreshBox only moves the indicator; translate the content too
-            // so the whole screen follows the pull. The state's distanceFraction is
-            // already animated to the hold position while refreshing and back to 0
-            // when done, so this single animator covers pull, hold and settle.
+            val density = LocalDensity.current
+            val contentPull = ((state.distanceFraction - ContentPullStart) /
+                    (1f - ContentPullStart)).coerceIn(0f, 1f)
+            // Snaps to the finger while pulling; springs when the refresh starts,
+            // so the feed bounces back to where it was instead of being held down
+            // for the whole request while the pill sits below it.
+            val contentTranslation by animateFloatAsState(
+                targetValue = if (displayRefreshing) {
+                    0f
+                } else {
+                    with(density) { contentPull * ContentPullTravel.toPx() }
+                },
+                animationSpec = if (displayRefreshing) {
+                    spring(dampingRatio = 0.72f, stiffness = Spring.StiffnessMediumLow)
+                } else {
+                    snap()
+                },
+                label = "pullRefreshContentTranslation",
+            )
+
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .graphicsLayer {
-                        translationY = state.distanceFraction *
-                                PullToRefreshDefaults.PositionalThreshold.toPx()
-                    },
+                    .graphicsLayer { translationY = contentTranslation },
                 contentAlignment = contentAlignment,
                 content = content,
             )

@@ -383,7 +383,9 @@
     "steps": "Schritte",
     "add": "Hinzufügen",
     "addStep": "Schritt hinzufügen",
-    "stepsCreateHint": "Speichere die Aufgabe zuerst, um Schritte hinzuzufügen."
+    "stepsCreateHint": "Speichere die Aufgabe zuerst, um Schritte hinzuzufügen.",
+    "searchFloaterTasksPlaceholder": "Floater-Aufgaben suchen",
+    "searchShort": "Suchen"
   },
   "today": {
     "saveInstance": "Instanz speichern",
@@ -542,7 +544,8 @@
     "tileCalendar": "Kalender",
     "searchTasksPlaceholder": "Aufgaben suchen...",
     "noMatchingTasks": "Keine passenden Aufgaben",
-    "openList": "{{name}} öffnen"
+    "openList": "{{name}} öffnen",
+    "searchScheduledPlaceholder": "Geplante Aufgaben suchen"
   },
   "settings": {
     "themeLight": "Hell",

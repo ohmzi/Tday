@@ -89,7 +89,8 @@ export default function NativeFloaterTaskHomeDashboard() {
           mark="floaterLeaf"
           searchOpen={searchOpen}
           searchQuery={searchQuery}
-          searchPlaceholder={appDict("searchFloatersPlaceholder")}
+          searchPlaceholder={appDict("searchFloaterTasksPlaceholder")}
+          searchPlaceholderShort={appDict("searchShort")}
           searchAriaLabel={appDict("searchFloaters")}
           createListAriaLabel={appDict("newFloaterList")}
           settingsAriaLabel="Settings"

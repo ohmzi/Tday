@@ -638,4 +638,6 @@
     <string name="settings_quiet_hours_start">Inicio</string>
     <string name="settings_quiet_hours_end">Fin</string>
     <string name="settings_resting_floaters">Atenuar flotantes en reposo</string>
+    <string name="root_feed_search_scheduled">Buscar tareas programadas</string>
+    <string name="root_feed_search_floater">Buscar tareas flotantes</string>
 </resources>

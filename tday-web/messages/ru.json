@@ -383,7 +383,9 @@
     "steps": "Шаги",
     "add": "Добавить",
     "addStep": "Добавить шаг",
-    "stepsCreateHint": "Сначала сохраните задачу, чтобы добавить шаги."
+    "stepsCreateHint": "Сначала сохраните задачу, чтобы добавить шаги.",
+    "searchFloaterTasksPlaceholder": "Поиск плавающих задач",
+    "searchShort": "Поиск"
   },
   "today": {
     "saveInstance": "Сохранить экземпляр",
@@ -542,7 +544,8 @@
     "tileCalendar": "Календарь",
     "searchTasksPlaceholder": "Поиск задач...",
     "noMatchingTasks": "Нет подходящих задач",
-    "openList": "Открыть {{name}}"
+    "openList": "Открыть {{name}}",
+    "searchScheduledPlaceholder": "Поиск запланированных задач"
   },
   "settings": {
     "themeLight": "Светлая",

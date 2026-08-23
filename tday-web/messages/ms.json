@@ -383,7 +383,9 @@
     "steps": "Langkah",
     "add": "Tambah",
     "addStep": "Tambah langkah",
-    "stepsCreateHint": "Simpan tugasan dahulu untuk menambah langkah."
+    "stepsCreateHint": "Simpan tugasan dahulu untuk menambah langkah.",
+    "searchFloaterTasksPlaceholder": "Cari tugasan terapung",
+    "searchShort": "Cari"
   },
   "today": {
     "saveInstance": "Simpan kejadian",
@@ -542,7 +544,8 @@
     "tileCalendar": "Kalendar",
     "searchTasksPlaceholder": "Cari tugasan...",
     "noMatchingTasks": "Tiada tugasan sepadan",
-    "openList": "Buka {{name}}"
+    "openList": "Buka {{name}}",
+    "searchScheduledPlaceholder": "Cari tugasan berjadual"
   },
   "settings": {
     "themeLight": "Cerah",

@@ -383,7 +383,9 @@
     "steps": "Etapas",
     "add": "Adicionar",
     "addStep": "Adicionar etapa",
-    "stepsCreateHint": "Salve a tarefa primeiro para adicionar etapas."
+    "stepsCreateHint": "Salve a tarefa primeiro para adicionar etapas.",
+    "searchFloaterTasksPlaceholder": "Pesquisar tarefas flutuantes",
+    "searchShort": "Pesquisar"
   },
   "today": {
     "saveInstance": "Guardar instância",
@@ -542,7 +544,8 @@
     "tileCalendar": "Calendário",
     "searchTasksPlaceholder": "Pesquisar tarefas...",
     "noMatchingTasks": "Nenhuma tarefa correspondente",
-    "openList": "Abrir {{name}}"
+    "openList": "Abrir {{name}}",
+    "searchScheduledPlaceholder": "Pesquisar tarefas agendadas"
   },
   "settings": {
     "themeLight": "Claro",
