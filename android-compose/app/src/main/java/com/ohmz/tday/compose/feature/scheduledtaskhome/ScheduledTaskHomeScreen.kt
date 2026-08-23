@@ -79,6 +79,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -138,6 +139,9 @@ import com.ohmz.tday.compose.core.ui.TaskSwipeActionButton
 import com.ohmz.tday.compose.core.ui.animateTaskSwipeOffsetAsState
 import com.ohmz.tday.compose.core.ui.rememberTaskSwipeRevealState
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
+import com.ohmz.tday.compose.core.ui.RootFeedHeroHeader
+import com.ohmz.tday.compose.core.ui.RootFeedHeroHeaderMetrics
+import com.ohmz.tday.compose.core.ui.RootFeedHeroMark
 import com.ohmz.tday.compose.ui.component.RootFeedDock
 import com.ohmz.tday.compose.ui.component.RootFeedTab
 import com.ohmz.tday.compose.ui.component.TdayCenteredSheetContent
@@ -342,6 +346,22 @@ fun ScheduledTaskHomeScreen(
     val hasScrollableContent =
         listState.canScrollForward || listState.canScrollBackward
     val dockCollapseThresholdPx = with(density) { RootFeedDockCollapseThreshold.roundToPx() }
+    val headerCollapsePx = with(density) { RootFeedHeroHeaderMetrics.CollapseDistance.toPx() }
+    // The header draws the refresh pill itself, so it can fly in from the top
+    // and hover in front of the title instead of being painted underneath the
+    // pinned toolbar.
+    var refreshIsRefreshing by remember { mutableStateOf(false) }
+    var refreshPullFraction by remember { mutableFloatStateOf(0f) }
+    val headerBarHeightPx = with(density) { RootFeedHeroHeaderMetrics.BarHeight.toPx() }
+    // Read lazily inside the header so a scroll frame recomposes the header
+    // alone rather than this whole screen.
+    val headerCollapseProgress: () -> Float = {
+        if (listState.firstVisibleItemIndex > 0) {
+            1f
+        } else {
+            (listState.firstVisibleItemScrollOffset / headerCollapsePx).coerceIn(0f, 1f)
+        }
+    }
     val hasScrolledPastDockCollapseThreshold =
         listState.firstVisibleItemIndex > 0 ||
                 listState.firstVisibleItemScrollOffset > dockCollapseThresholdPx
@@ -365,16 +385,21 @@ fun ScheduledTaskHomeScreen(
     }
     LaunchedEffect(listState.isScrollInProgress, searchExpanded) {
         if (searchExpanded || listState.isScrollInProgress) return@LaunchedEffect
-        // Snap only when top header row is partially visible.
-        // If fully off-screen (index > 0), do not force any anchor behavior.
+        // Settle the header morph on whichever end is nearer, so it is never
+        // left frozen half-collapsed. Only while the spacer row is still the
+        // first visible item — past that the header is fully collapsed anyway.
         if (listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset > 0) {
-            listState.animateScrollBy(
-                value = -listState.firstVisibleItemScrollOffset.toFloat(),
-                animationSpec = tween(
-                    durationMillis = 260,
-                    easing = FastOutSlowInEasing,
-                ),
-            )
+            val offset = listState.firstVisibleItemScrollOffset.toFloat()
+            if (offset < headerCollapsePx) {
+                val target = if (offset < headerCollapsePx / 2f) 0f else headerCollapsePx
+                listState.animateScrollBy(
+                    value = target - offset,
+                    animationSpec = tween(
+                        durationMillis = 260,
+                        easing = FastOutSlowInEasing,
+                    ),
+                )
+            }
         }
     }
 
@@ -417,6 +442,11 @@ fun ScheduledTaskHomeScreen(
                     isRefreshing = uiState.isLoading,
                     onRefresh = onRefresh,
                     enabled = pullRefreshEnabled,
+                    showsIndicator = false,
+                    onIndicatorStateChange = { refreshing, fraction ->
+                        refreshIsRefreshing = refreshing
+                        refreshPullFraction = fraction
+                    },
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(padding),
@@ -442,13 +472,20 @@ fun ScheduledTaskHomeScreen(
                                                 val down =
                                                     awaitFirstDown(pass = PointerEventPass.Final)
                                                 val tapInRoot = down.position + rootInRoot
-                                                val tappedSearchBar =
-                                                    searchBarBounds?.contains(tapInRoot) == true
+                                                // The whole toolbar row belongs to the
+                                                // header — the field, its cancel button and
+                                                // the tap that opened the field all land
+                                                // inside it. Fixed geometry rather than a
+                                                // reported bounds rect, so this cannot race
+                                                // a layout pass and shut the field on the
+                                                // very tap that opened it.
+                                                val tappedToolbarRow =
+                                                    tapInRoot.y <= headerBarHeightPx
                                                 val tappedSearchResults =
                                                     searchResultsBounds?.contains(tapInRoot) == true
                                                 val up =
                                                     waitForUpOrCancellation(pass = PointerEventPass.Final)
-                                                if (up != null && !tappedSearchBar && !tappedSearchResults) {
+                                                if (up != null && !tappedToolbarRow && !tappedSearchResults) {
                                                     closeSearch()
                                                 }
                                             }
@@ -461,30 +498,18 @@ fun ScheduledTaskHomeScreen(
                     LazyColumn(
                         state = listState,
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(18.dp),
+                        contentPadding = PaddingValues(
+                            start = 18.dp,
+                            end = 18.dp,
+                            bottom = 18.dp,
+                        ),
                         verticalArrangement = Arrangement.spacedBy(14.dp),
                     ) {
-                    item {
-                        TopSearchBar(
-                            searchExpanded = searchExpanded,
-                            searchQuery = searchQuery,
-                            onSearchQueryChange = { searchQuery = it },
-                            onSearchExpandedChange = { searchExpanded = it },
-                            onSearchClose = closeSearch,
-                            onSearchBarBoundsChanged = { bounds ->
-                                if (searchExpanded && searchBarBounds != bounds) {
-                                    searchBarBounds = bounds
-                                }
-                            },
-                            onCreateList = {
-                                closeSearch()
-                                showCreateList = true
-                            },
-                            onOpenSettings = {
-                                closeSearch()
-                                onOpenSettings()
-                            },
-                        )
+                    item(key = "root-feed-header-spacer") {
+                        // Reserves the pinned header's space. The feed scrolls
+                        // behind the header, folding it down into its
+                        // always-visible toolbar strip.
+                        Spacer(modifier = Modifier.height(RootFeedHeroHeaderMetrics.ExpandedHeight))
                     }
                         item {
                             ScheduledTaskHomeTodayCard(
@@ -706,6 +731,43 @@ fun ScheduledTaskHomeScreen(
                     }
                 }
             }
+            RootFeedHeroHeader(
+                title = stringResource(R.string.scheduled_task_home_title),
+                mark = RootFeedHeroMark.TimeOfDay,
+                collapseProgress = headerCollapseProgress,
+                searchExpanded = searchExpanded,
+                searchQuery = searchQuery,
+                searchPlaceholder = stringResource(R.string.scheduled_task_home_search_placeholder),
+                onSearchQueryChange = { searchQuery = it },
+                onSearchExpandedChange = { searchExpanded = it },
+                onSearchClose = closeSearch,
+                onSearchBarBoundsChanged = { bounds ->
+                    if (searchBarBounds != bounds) {
+                        searchBarBounds = bounds
+                    }
+                },
+                onCreateList = {
+                    closeSearch()
+                    showCreateList = true
+                },
+                onOpenSettings = {
+                    closeSearch()
+                    onOpenSettings()
+                },
+                onScrollToTop = {
+                    searchResultScope.launch {
+                        closeSearch()
+                        listState.animateScrollToItem(index = 0, scrollOffset = 0)
+                    }
+                },
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(padding)
+                    .zIndex(6f),
+                refreshIsRefreshing = refreshIsRefreshing,
+                refreshPullFraction = { refreshPullFraction },
+            )
+
             if (showRootFeedDock && !searchExpanded) {
                 RootFeedDock(
                     activeTab = RootFeedTab.SCHEDULED_TASK_HOME,
@@ -1229,210 +1291,6 @@ private fun CreateTaskButton(
                 tint = Color.White,
                 modifier = Modifier.size(40.dp),
             )
-        }
-    }
-}
-
-@Composable
-private fun TopSearchBar(
-    searchExpanded: Boolean,
-    searchQuery: String,
-    onSearchQueryChange: (String) -> Unit,
-    onSearchExpandedChange: (Boolean) -> Unit,
-    onSearchClose: () -> Unit,
-    onSearchBarBoundsChanged: (Rect) -> Unit,
-    onCreateList: () -> Unit,
-    onOpenSettings: () -> Unit,
-) {
-    val colorScheme = MaterialTheme.colorScheme
-    val keyboardController = LocalSoftwareKeyboardController.current
-    val focusManager = LocalFocusManager.current
-    val focusRequester = remember { FocusRequester() }
-    val isDaytime = rememberIsDaytime()
-    val scheduledTaskHomeTitleIcon =
-        if (isDaytime) ImageVector.vectorResource(R.drawable.ic_lucide_sun) else ImageVector.vectorResource(
-            R.drawable.ic_lucide_moon
-        )
-    val scheduledTaskHomeTitleIconTint = if (isDaytime) TdayTitleIconDayAccent else TdayTitleIconNightAccent
-
-    LaunchedEffect(searchExpanded) {
-        if (searchExpanded) {
-            delay(300)
-            focusRequester.requestFocus()
-            keyboardController?.show()
-        } else {
-            focusManager.clearFocus(force = true)
-            keyboardController?.hide()
-        }
-    }
-
-    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-        val buttonSize = TdayDimens.FabSize
-        val buttonGap = 8.dp
-        val actionCount = 2
-        val collapsedSearchWidth = buttonSize
-        val expandedSearchWidth = maxWidth.coerceAtLeast(buttonSize)
-        val collapsedSearchOffset = -((buttonSize * actionCount) + (buttonGap * actionCount))
-        val animatedSearchWidth by animateDpAsState(
-            targetValue = if (searchExpanded) expandedSearchWidth else collapsedSearchWidth,
-            label = "topSearchBarSearchWidth",
-        )
-        val animatedSearchOffset by animateDpAsState(
-            targetValue = if (searchExpanded) 0.dp else collapsedSearchOffset,
-            label = "topSearchBarSearchOffset",
-        )
-        val actionsAlpha by animateFloatAsState(
-            targetValue = if (searchExpanded) 0f else 1f,
-            label = "topSearchBarActionsAlpha",
-        )
-        val searchContentAlpha by animateFloatAsState(
-            targetValue = if (searchExpanded) 1f else 0f,
-            label = "topSearchBarContentAlpha",
-        )
-
-        Row(
-            modifier = Modifier
-                .align(Alignment.CenterStart)
-                .padding(start = 2.dp)
-                .graphicsLayer { alpha = actionsAlpha },
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Icon(
-                imageVector = scheduledTaskHomeTitleIcon,
-                contentDescription = null,
-                tint = scheduledTaskHomeTitleIconTint,
-                modifier = Modifier.size(26.dp),
-            )
-            Text(
-                text = stringResource(R.string.scheduled_task_home_title),
-                style = MaterialTheme.typography.headlineLarge,
-                color = colorScheme.onBackground,
-                fontWeight = FontWeight.ExtraBold,
-            )
-        }
-
-        Row(
-            modifier = Modifier
-                .align(Alignment.CenterEnd)
-                .graphicsLayer { alpha = actionsAlpha },
-            horizontalArrangement = Arrangement.spacedBy(buttonGap),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            PressableIconButton(
-                icon = R.drawable.ic_lucide_list_plus,
-                contentDescription = stringResource(R.string.action_create_list),
-                tint = colorScheme.onSurface,
-                onClick = onCreateList,
-            )
-            PressableIconButton(
-                icon = R.drawable.ic_lucide_ellipsis,
-                contentDescription = stringResource(R.string.action_more),
-                tint = colorScheme.onSurface,
-                onClick = onOpenSettings,
-            )
-        }
-
-        Card(
-            modifier = Modifier
-                .align(Alignment.CenterEnd)
-                .offset(x = animatedSearchOffset)
-                .width(animatedSearchWidth)
-                .height(buttonSize)
-                .zIndex(2f)
-                .then(
-                    if (searchExpanded) {
-                        Modifier.onGloballyPositioned { coordinates ->
-                            onSearchBarBoundsChanged(coordinates.boundsInRoot())
-                        }
-                    } else {
-                        Modifier
-                    }
-                ),
-            onClick = {
-                if (!searchExpanded) {
-                    onSearchExpandedChange(true)
-                }
-            },
-            shape = RoundedCornerShape(28.dp),
-            border = BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.26f)),
-            colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
-            elevation = CardDefaults.cardElevation(
-                defaultElevation = 0.dp,
-                pressedElevation = 0.dp
-            ),
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .graphicsLayer { alpha = 1f - searchContentAlpha },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_lucide_search),
-                        contentDescription = stringResource(R.string.action_search),
-                        tint = colorScheme.onSurface,
-                        modifier = Modifier.size(22.dp),
-                    )
-                }
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .graphicsLayer { alpha = searchContentAlpha }
-                        .padding(horizontal = 14.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_lucide_search),
-                        contentDescription = null,
-                        tint = colorScheme.onSurface,
-                        modifier = Modifier.size(24.dp),
-                    )
-                    BasicTextField(
-                        modifier = Modifier
-                            .weight(1f)
-                            .focusRequester(focusRequester),
-                        value = searchQuery,
-                        onValueChange = onSearchQueryChange,
-                        enabled = searchExpanded,
-                        singleLine = true,
-                        textStyle = MaterialTheme.typography.bodyLarge.copy(
-                            color = colorScheme.onSurface,
-                            fontWeight = FontWeight.ExtraBold,
-                        ),
-                        cursorBrush = SolidColor(colorScheme.primary),
-                        decorationBox = { innerTextField ->
-                            Box(
-                                modifier = Modifier.fillMaxSize(),
-                                contentAlignment = Alignment.CenterStart,
-                            ) {
-                                if (searchQuery.isBlank()) {
-                                    Text(
-                                        text = stringResource(R.string.scheduled_task_home_search_placeholder),
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        color = colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                                innerTextField()
-                            }
-                        },
-                    )
-
-                    PressableIconButton(
-                        icon = R.drawable.ic_lucide_x,
-                        contentDescription = stringResource(R.string.action_close_search),
-                        tint = colorScheme.onSurfaceVariant.copy(alpha = 0.82f),
-                        compact = true,
-                        onClick = onSearchClose,
-                    )
-                }
-            }
         }
     }
 }

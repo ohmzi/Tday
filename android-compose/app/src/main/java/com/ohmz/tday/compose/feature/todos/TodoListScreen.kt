@@ -70,6 +70,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -148,6 +149,9 @@ import com.ohmz.tday.compose.core.ui.EmptyTaskBackgroundMessage
 import com.ohmz.tday.compose.core.ui.EmptyTaskWatermark
 import com.ohmz.tday.compose.core.ui.TaskSwipeActionButton
 import com.ohmz.tday.compose.core.ui.animateTaskSwipeOffsetAsState
+import com.ohmz.tday.compose.core.ui.RootFeedHeroHeader
+import com.ohmz.tday.compose.core.ui.RootFeedHeroHeaderMetrics
+import com.ohmz.tday.compose.core.ui.RootFeedHeroMark
 import com.ohmz.tday.compose.core.ui.rememberLazyListCollapsingTitleScrollBehavior
 import com.ohmz.tday.compose.core.ui.rememberTaskSwipeRevealState
 import com.ohmz.tday.compose.core.ui.shareList
@@ -385,7 +389,7 @@ fun TodoListScreen(
     val todayTitleScrollBehavior = rememberLazyListCollapsingTitleScrollBehavior(
         listState = listState,
         maxCollapseDistance = TODAY_TITLE_COLLAPSE_DISTANCE_DP.dp,
-        enabled = usesTodayStyle,
+        enabled = usesTodayStyle && !usesRootFeedChrome,
         label = "todayTitleCollapseProgress",
     )
     val isCollapsibleTimelineMode =
@@ -434,6 +438,38 @@ fun TodoListScreen(
     }
     val showFloaterTaskHomeSearchResults =
         isFloaterTaskHomeScreen && floaterTaskHomeSearchExpanded && floaterTaskHomeSearchQuery.isNotBlank()
+    val headerCollapsePx = with(LocalDensity.current) {
+        RootFeedHeroHeaderMetrics.CollapseDistance.toPx()
+    }
+    // The header draws the refresh pill itself, so it can fly in from the top
+    // and hover in front of the title instead of being painted underneath the
+    // pinned toolbar.
+    var refreshIsRefreshing by remember { mutableStateOf(false) }
+    var refreshPullFraction by remember { mutableFloatStateOf(0f) }
+    // Read lazily inside the header so a scroll frame recomposes the header
+    // alone rather than this whole screen — the list body is very large.
+    val headerCollapseProgress: () -> Float = {
+        if (listState.firstVisibleItemIndex > 0) {
+            1f
+        } else {
+            (listState.firstVisibleItemScrollOffset / headerCollapsePx).coerceIn(0f, 1f)
+        }
+    }
+    // Settle the header morph on whichever end is nearer, so it is never left
+    // frozen half-collapsed. The old collapsing-title behaviour used to do this
+    // for the root feed, but it is disabled here now.
+    LaunchedEffect(listState.isScrollInProgress, floaterTaskHomeSearchExpanded, usesRootFeedChrome) {
+        if (!usesRootFeedChrome || floaterTaskHomeSearchExpanded) return@LaunchedEffect
+        if (listState.isScrollInProgress) return@LaunchedEffect
+        if (listState.firstVisibleItemIndex != 0) return@LaunchedEffect
+        val offset = listState.firstVisibleItemScrollOffset.toFloat()
+        if (offset <= 0f || offset >= headerCollapsePx) return@LaunchedEffect
+        val target = if (offset < headerCollapsePx / 2f) 0f else headerCollapsePx
+        listState.animateScrollBy(
+            value = target - offset,
+            animationSpec = tween(durationMillis = 260, easing = FastOutSlowInEasing),
+        )
+    }
     val closeFloaterTaskHomeSearch = {
         floaterTaskHomeSearchExpanded = false
         floaterTaskHomeSearchQuery = ""
@@ -861,6 +897,11 @@ fun TodoListScreen(
                 isRefreshing = uiState.isLoading,
                 onRefresh = onRefresh,
                 enabled = pullRefreshEnabled,
+                showsIndicator = false,
+                onIndicatorStateChange = { refreshing, fraction ->
+                    refreshIsRefreshing = refreshing
+                    refreshPullFraction = fraction
+                },
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding),
@@ -869,7 +910,7 @@ fun TodoListScreen(
                     modifier = Modifier
                         .fillMaxSize()
                         .then(
-                            if (usesTodayStyle) {
+                            if (usesTodayStyle && !usesRootFeedChrome) {
                                 Modifier.nestedScroll(todayTitleScrollBehavior.nestedScrollConnection)
                             } else {
                                 Modifier
@@ -880,7 +921,11 @@ fun TodoListScreen(
                     // drop target stays put under the finger (matches Calendar).
                     userScrollEnabled = activeTimelineDrag == null,
                     contentPadding = when {
-                        usesRootFeedChrome -> PaddingValues(18.dp)
+                        usesRootFeedChrome -> PaddingValues(
+                            start = 18.dp,
+                            end = 18.dp,
+                            bottom = 18.dp,
+                        )
                         usesTodayStyle -> PaddingValues(horizontal = 18.dp, vertical = 2.dp)
                         else -> PaddingValues(horizontal = 16.dp, vertical = 12.dp)
                     },
@@ -890,29 +935,16 @@ fun TodoListScreen(
                 ) {
                     if (usesRootFeedChrome) {
                         item(
-                            key = "root-feed-title",
-                            contentType = "root-feed-title",
+                            key = "root-feed-header-spacer",
+                            contentType = "root-feed-header-spacer",
                         ) {
-                            if (isFloaterTaskHomeScreen) {
-                                RootFeedSearchHeaderRow(
-                                    title = uiState.title,
-                                    searchExpanded = floaterTaskHomeSearchExpanded,
-                                    searchQuery = floaterTaskHomeSearchQuery,
-                                    onSearchQueryChange = { floaterTaskHomeSearchQuery = it },
-                                    onSearchExpandedChange = { floaterTaskHomeSearchExpanded = it },
-                                    onSearchClose = closeFloaterTaskHomeSearch,
-                                    onCreateList = {
-                                        closeFloaterTaskHomeSearch()
-                                        showCreateListSheet = true
-                                    },
-                                    onOpenSettings = {
-                                        closeFloaterTaskHomeSearch()
-                                        onOpenSettings()
-                                    },
-                                )
-                            } else {
-                                RootFeedTitleRow(title = uiState.title)
-                            }
+                            // Reserves the pinned header's space. The feed
+                            // scrolls behind the header, folding it down into
+                            // its always-visible toolbar strip.
+                            Spacer(
+                                modifier = Modifier
+                                    .height(RootFeedHeroHeaderMetrics.ExpandedHeight),
+                            )
                         }
                     }
 
@@ -1313,6 +1345,44 @@ fun TodoListScreen(
                         message = emptyStateMessageForMode(uiState.mode),
                     )
                 }
+            }
+
+            if (usesRootFeedChrome) {
+                RootFeedHeroHeader(
+                    title = uiState.title,
+                    mark = if (isFloaterTaskHomeScreen) {
+                        RootFeedHeroMark.FloaterLeaf
+                    } else {
+                        RootFeedHeroMark.TimeOfDay
+                    },
+                    collapseProgress = headerCollapseProgress,
+                    searchExpanded = floaterTaskHomeSearchExpanded,
+                    searchQuery = floaterTaskHomeSearchQuery,
+                    searchPlaceholder = stringResource(R.string.action_search),
+                    onSearchQueryChange = { floaterTaskHomeSearchQuery = it },
+                    onSearchExpandedChange = { floaterTaskHomeSearchExpanded = it },
+                    onSearchClose = closeFloaterTaskHomeSearch,
+                    onCreateList = {
+                        closeFloaterTaskHomeSearch()
+                        showCreateListSheet = true
+                    },
+                    onOpenSettings = {
+                        closeFloaterTaskHomeSearch()
+                        onOpenSettings()
+                    },
+                    onScrollToTop = {
+                        screenScope.launch {
+                            closeFloaterTaskHomeSearch()
+                            listState.animateScrollToItem(index = 0, scrollOffset = 0)
+                        }
+                    },
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(padding)
+                        .zIndex(6f),
+                    refreshIsRefreshing = refreshIsRefreshing,
+                    refreshPullFraction = { refreshPullFraction },
+                )
             }
 
             if (showRootFeedDock && rootFeedTab != null && onRootFeedTabSelected != null) {
@@ -1739,243 +1809,6 @@ private fun ListDeleteConfirmationDialog(
                                 fontWeight = FontWeight.ExtraBold,
                             )
                         }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun RootFeedTitleRow(
-    title: String,
-) {
-    val colorScheme = MaterialTheme.colorScheme
-    val isDaytime = rememberTodoRootIsDaytime()
-    val titleIcon =
-        if (isDaytime) ImageVector.vectorResource(R.drawable.ic_lucide_sun) else ImageVector.vectorResource(
-            R.drawable.ic_lucide_moon
-        )
-    val titleIconTint = if (isDaytime) TdayTitleIconDayAccent else TdayTitleIconNightAccent
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(56.dp)
-            .padding(start = 2.dp),
-        contentAlignment = Alignment.CenterStart,
-    ) {
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(
-                imageVector = titleIcon,
-                contentDescription = null,
-                tint = titleIconTint,
-                modifier = Modifier.size(26.dp),
-            )
-            Text(
-                text = title,
-                style = MaterialTheme.typography.headlineLarge,
-                fontWeight = FontWeight.ExtraBold,
-                color = colorScheme.onBackground,
-                maxLines = 1,
-            )
-        }
-    }
-}
-
-@Composable
-private fun RootFeedSearchHeaderRow(
-    title: String,
-    searchExpanded: Boolean,
-    searchQuery: String,
-    onSearchQueryChange: (String) -> Unit,
-    onSearchExpandedChange: (Boolean) -> Unit,
-    onSearchClose: () -> Unit,
-    onCreateList: () -> Unit,
-    onOpenSettings: () -> Unit,
-) {
-    val colorScheme = MaterialTheme.colorScheme
-    val keyboardController = LocalSoftwareKeyboardController.current
-    val focusManager = LocalFocusManager.current
-    val focusRequester = remember { FocusRequester() }
-    val density = LocalDensity.current
-    val isDaytime = rememberTodoRootIsDaytime()
-    val titleIcon =
-        if (isDaytime) ImageVector.vectorResource(R.drawable.ic_lucide_sun) else ImageVector.vectorResource(
-            R.drawable.ic_lucide_moon
-        )
-    val titleIconTint = if (isDaytime) TdayTitleIconDayAccent else TdayTitleIconNightAccent
-    var containerWidth by remember { mutableStateOf(0.dp) }
-
-    LaunchedEffect(searchExpanded) {
-        if (searchExpanded) {
-            delay(300)
-            focusRequester.requestFocus()
-            keyboardController?.show()
-        } else {
-            focusManager.clearFocus(force = true)
-            keyboardController?.hide()
-        }
-    }
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(56.dp)
-            .onSizeChanged { size ->
-                containerWidth = with(density) { size.width.toDp() }
-            },
-    ) {
-        val buttonSize = 56.dp
-        val buttonGap = 8.dp
-        val actionCount = 2
-        val expandedSearchWidth = containerWidth.coerceAtLeast(buttonSize)
-        val collapsedSearchOffset = -((buttonSize * actionCount) + (buttonGap * actionCount))
-        val animatedSearchWidth by animateDpAsState(
-            targetValue = if (searchExpanded) expandedSearchWidth else buttonSize,
-            label = "rootFeedSearchHeaderWidth",
-        )
-        val animatedSearchOffset by animateDpAsState(
-            targetValue = if (searchExpanded) 0.dp else collapsedSearchOffset,
-            label = "rootFeedSearchHeaderOffset",
-        )
-        val actionsAlpha by animateFloatAsState(
-            targetValue = if (searchExpanded) 0f else 1f,
-            label = "rootFeedSearchHeaderActionsAlpha",
-        )
-        val searchContentAlpha by animateFloatAsState(
-            targetValue = if (searchExpanded) 1f else 0f,
-            label = "rootFeedSearchHeaderContentAlpha",
-        )
-
-        Row(
-            modifier = Modifier
-                .align(Alignment.CenterStart)
-                .padding(start = 2.dp)
-                .graphicsLayer { alpha = actionsAlpha },
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(
-                imageVector = titleIcon,
-                contentDescription = null,
-                tint = titleIconTint,
-                modifier = Modifier.size(26.dp),
-            )
-            Text(
-                text = title,
-                style = MaterialTheme.typography.headlineLarge,
-                fontWeight = FontWeight.ExtraBold,
-                color = colorScheme.onBackground,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-
-        Row(
-            modifier = Modifier
-                .align(Alignment.CenterEnd)
-                .graphicsLayer { alpha = actionsAlpha },
-            horizontalArrangement = Arrangement.spacedBy(buttonGap),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            TodayHeaderButton(
-                onClick = onCreateList,
-                icon = ImageVector.vectorResource(R.drawable.ic_lucide_list_plus),
-                contentDescription = stringResource(R.string.action_create_list),
-                iconSize = 22.dp,
-            )
-            TodayHeaderButton(
-                onClick = onOpenSettings,
-                icon = ImageVector.vectorResource(R.drawable.ic_lucide_ellipsis),
-                contentDescription = stringResource(R.string.action_more),
-                iconSize = 22.dp,
-            )
-        }
-
-        Card(
-            modifier = Modifier
-                .align(Alignment.CenterEnd)
-                .offset(x = animatedSearchOffset)
-                .width(animatedSearchWidth)
-                .height(buttonSize)
-                .zIndex(2f),
-            shape = CircleShape,
-            border = BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.38f)),
-            colors = CardDefaults.cardColors(containerColor = colorScheme.background),
-            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = ripple(bounded = true),
-                    ) {
-                        if (!searchExpanded) onSearchExpandedChange(true)
-                    },
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_search),
-                    contentDescription = stringResource(R.string.action_search),
-                    tint = colorScheme.onSurface,
-                    modifier = Modifier
-                        .size(22.dp)
-                        .graphicsLayer { alpha = if (searchExpanded) 0f else 1f },
-                )
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 14.dp)
-                        .graphicsLayer { alpha = searchContentAlpha },
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(
-                        imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_search),
-                        contentDescription = null,
-                        tint = colorScheme.onSurface,
-                        modifier = Modifier.size(24.dp),
-                    )
-                    BasicTextField(
-                        value = searchQuery,
-                        onValueChange = onSearchQueryChange,
-                        enabled = searchExpanded,
-                        singleLine = true,
-                        textStyle = MaterialTheme.typography.titleMedium.copy(
-                            color = colorScheme.onSurface,
-                            fontWeight = FontWeight.ExtraBold,
-                        ),
-                        cursorBrush = SolidColor(colorScheme.primary),
-                        modifier = Modifier
-                            .weight(1f)
-                            .focusRequester(focusRequester),
-                        decorationBox = { innerTextField ->
-                            Box(contentAlignment = Alignment.CenterStart) {
-                                if (searchQuery.isBlank()) {
-                                    Text(
-                                        text = stringResource(R.string.scheduled_task_home_search_placeholder),
-                                        style = MaterialTheme.typography.titleMedium,
-                                        color = colorScheme.onSurfaceVariant,
-                                        fontWeight = FontWeight.Bold,
-                                        maxLines = 1,
-                                    )
-                                }
-                                innerTextField()
-                            }
-                        },
-                    )
-                    IconButton(onClick = onSearchClose) {
-                        Icon(
-                            imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_x),
-                            contentDescription = stringResource(R.string.action_close),
-                            tint = colorScheme.onSurfaceVariant.copy(alpha = 0.78f),
-                        )
                     }
                 }
             }
