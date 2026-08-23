@@ -13,9 +13,9 @@ import UIKit
 final class RootFeedHeaderScrollState {
     /// Feed scroll offset, clamped at 0. Drives the collapse morph.
     var offset: CGFloat = 0
-    /// 0…1 visibility of the pull-to-refresh pill, which lands in the same band
-    /// as the hero title; the title fades out to hand the space over.
-    var refreshReveal: CGFloat = 0
+    /// Pull-to-refresh pill state. The header draws the pill itself so it can
+    /// ride in front of the title rather than behind the pinned toolbar.
+    var refresh = TdayRefreshIndicatorState()
 }
 
 /// Geometry for the root-feed hero header shared by the Scheduled and Floater
@@ -52,9 +52,12 @@ enum RootFeedHeroHeaderMetrics {
     /// Gradient below the toolbar strip that dissolves rows as they pass under
     /// it, instead of the strip's edge guillotining them.
     static let contentFadeHeight: CGFloat = 24
-    /// Where the pull-to-refresh pill sits: clear of the toolbar strip *and* of
-    /// the fade below it, so a fully revealed pill is never half-veiled.
-    static let refreshIndicatorTopPadding: CGFloat = barHeight + contentFadeHeight
+    // Pull-to-refresh pill. It flies in from above the status bar and settles
+    // hovering over the title — in front of it, not in place of it.
+    static let refreshPillHiddenTop: CGFloat = -(TdayRefreshIndicatorMetrics.containerHeight + 28)
+    static var refreshPillRestingTop: CGFloat {
+        heroTitleCenterY - (TdayRefreshIndicatorMetrics.containerHeight / 2)
+    }
 
     static let compactRowCenterY: CGFloat = topInset + (barButtonSize / 2)
 
@@ -218,7 +221,7 @@ struct RootFeedHeroHeader: View {
         // Read the observable geometry here, in the header's own body, so the
         // dependency is registered on this view and nothing above it.
         let progress = Metrics.collapseProgress(forScrollOffset: scroll.offset)
-        let refreshReveal = Metrics.clamp(scroll.refreshReveal)
+        let refresh = scroll.refresh
 
         GeometryReader { proxy in
             let width = proxy.size.width
@@ -241,9 +244,10 @@ struct RootFeedHeroHeader: View {
                 .allowsHitTesting(false)
 
                 heroMark(progress: progress)
-                heroTitle(width: width, progress: progress, refreshReveal: refreshReveal)
+                heroTitle(width: width, progress: progress)
                 trailingActions(width: width)
                 searchField(width: width, progress: progress)
+                refreshPill(width: width, refresh: refresh)
             }
             .frame(width: width, height: Metrics.expandedHeight, alignment: .topLeading)
         }
@@ -251,6 +255,32 @@ struct RootFeedHeroHeader: View {
         .onPreferenceChange(RootFeedHeroTitleWidthKey.self) { width in
             titleWidth = width
         }
+    }
+
+    /// Drawn last so it hovers in front of the title, and positioned from the
+    /// header's own origin so it flies down from above the status bar rather
+    /// than appearing from behind the toolbar. The container's built-in
+    /// indicator is switched off on these screens for exactly this reason — it
+    /// lives inside the feed, which is painted underneath the header.
+    private func refreshPill(width: CGFloat, refresh: TdayRefreshIndicatorState) -> some View {
+        // TdayPullRefreshIndicator applies its own settle offset once the
+        // refresh starts; cancel it so the pill lands on the title either way.
+        let settle = refresh.isRefreshing ? TdayRefreshIndicatorMetrics.refreshingOffset : 0
+        let top = Metrics.lerp(
+            Metrics.refreshPillHiddenTop,
+            Metrics.refreshPillRestingTop,
+            Metrics.clamp(refresh.reveal)
+        ) - settle
+
+        return TdayPullRefreshIndicator(
+            isRefreshing: refresh.isRefreshing,
+            pullProgress: refresh.pullProgress
+        )
+        .position(
+            x: width / 2,
+            y: top + (TdayRefreshIndicatorMetrics.containerHeight / 2)
+        )
+        .allowsHitTesting(false)
     }
 
     private func heroMark(progress: CGFloat) -> some View {
@@ -296,7 +326,7 @@ struct RootFeedHeroHeader: View {
         onScrollToTop()
     }
 
-    private func heroTitle(width: CGFloat, progress: CGFloat, refreshReveal: CGFloat) -> some View {
+    private func heroTitle(width: CGFloat, progress: CGFloat) -> some View {
         let travel = Metrics.stagger(progress, to: Metrics.titleTravelEnd)
         let drop = Metrics.stagger(progress, to: 1)
         let fit = Metrics.titleScales(titleWidth: titleWidth, availableWidth: width)
@@ -307,11 +337,6 @@ struct RootFeedHeroHeader: View {
             + ((titleWidth * fit.compact) / 2)
         let centerX = Metrics.lerp(width / 2, compactCenterX, travel)
         let centerY = Metrics.lerp(Metrics.heroTitleCenterY, Metrics.compactRowCenterY, drop)
-
-        // The pill only ever lands in the hero band, so the title yields in
-        // proportion to how much of that band it still occupies — once docked in
-        // the toolbar it stays put even mid-refresh.
-        let refreshFade = refreshReveal * (1 - drop)
 
         return Button(action: handleScrollToTop) {
             Text(title)
@@ -330,7 +355,7 @@ struct RootFeedHeroHeader: View {
         .buttonStyle(.plain)
         .scaleEffect(scale)
         .position(x: centerX, y: centerY)
-        .opacity(searchExpanded ? 0 : Double(1 - refreshFade))
+        .opacity(searchExpanded ? 0 : 1)
         .allowsHitTesting(!searchExpanded)
         .accessibilityLabel(Text(title))
         .accessibilityAddTraits(.isButton)

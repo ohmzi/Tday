@@ -853,10 +853,11 @@ struct TodoListScreen: View {
             PullToRefreshContainer(
                 isRefreshing: viewModel.isLoading,
                 isEnabled: pullRefreshEnabled,
-                // The pill lands just under the pinned toolbar; the hero
-                // title fades out to hand that band over.
-                indicatorTopPadding: RootFeedHeroHeaderMetrics.refreshIndicatorTopPadding,
-                onIndicatorRevealChange: { headerScroll.refreshReveal = $0 },
+                // The header draws the pill itself, so it can fly in from the
+                // top of the screen and hover in front of the title instead of
+                // being painted underneath the pinned toolbar.
+                showsIndicator: false,
+                onIndicatorStateChange: { headerScroll.refresh = $0 },
                 action: {
                     await viewModel.refresh(userInitiated: true)
                 }

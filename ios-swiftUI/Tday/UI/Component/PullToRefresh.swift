@@ -1,15 +1,24 @@
 import SwiftUI
 import UIKit
 
+/// Everything a caller needs to draw the refresh pill itself.
+struct TdayRefreshIndicatorState: Equatable {
+    var isRefreshing = false
+    var pullProgress: CGFloat = 0
+    /// 0…1 visibility, matching what the built-in indicator would show.
+    var reveal: CGFloat = 0
+}
+
 struct PullToRefreshContainer<Content: View>: View {
     let isRefreshing: Bool
     let isEnabled: Bool
     /// Distance from the top of the content to the refresh pill. Screens with a
     /// pinned header push it clear of the header's toolbar strip.
     let indicatorTopPadding: CGFloat
-    /// 0…1 visibility of the pill, for screens whose own chrome shares that
-    /// band and needs to move out of the way.
-    let onIndicatorRevealChange: ((CGFloat) -> Void)?
+    /// Set false when the caller draws the pill itself — a screen with a pinned
+    /// header needs it above that header, which this container cannot reach.
+    let showsIndicator: Bool
+    let onIndicatorStateChange: ((TdayRefreshIndicatorState) -> Void)?
     let action: @Sendable () async -> Void
     private let content: Content
 
@@ -17,14 +26,16 @@ struct PullToRefreshContainer<Content: View>: View {
         isRefreshing: Bool,
         isEnabled: Bool = true,
         indicatorTopPadding: CGFloat = TdayRefreshIndicatorMetrics.defaultTopPadding,
-        onIndicatorRevealChange: ((CGFloat) -> Void)? = nil,
+        showsIndicator: Bool = true,
+        onIndicatorStateChange: ((TdayRefreshIndicatorState) -> Void)? = nil,
         action: @escaping @Sendable () async -> Void,
         @ViewBuilder content: () -> Content
     ) {
         self.isRefreshing = isRefreshing
         self.isEnabled = isEnabled
         self.indicatorTopPadding = indicatorTopPadding
-        self.onIndicatorRevealChange = onIndicatorRevealChange
+        self.showsIndicator = showsIndicator
+        self.onIndicatorStateChange = onIndicatorStateChange
         self.action = action
         self.content = content()
     }
@@ -34,7 +45,8 @@ struct PullToRefreshContainer<Content: View>: View {
             RefreshContainerBody(
                 isRefreshing: isRefreshing,
                 indicatorTopPadding: indicatorTopPadding,
-                onIndicatorRevealChange: onIndicatorRevealChange,
+                showsIndicator: showsIndicator,
+                onIndicatorStateChange: onIndicatorStateChange,
                 action: action
             ) {
                 content
@@ -50,14 +62,16 @@ extension View {
         isRefreshing: Bool,
         isEnabled: Bool = true,
         indicatorTopPadding: CGFloat = TdayRefreshIndicatorMetrics.defaultTopPadding,
-        onIndicatorRevealChange: ((CGFloat) -> Void)? = nil,
+        showsIndicator: Bool = true,
+        onIndicatorStateChange: ((TdayRefreshIndicatorState) -> Void)? = nil,
         action: @escaping @Sendable () async -> Void
     ) -> some View {
         PullToRefreshContainer(
             isRefreshing: isRefreshing,
             isEnabled: isEnabled,
             indicatorTopPadding: indicatorTopPadding,
-            onIndicatorRevealChange: onIndicatorRevealChange,
+            showsIndicator: showsIndicator,
+            onIndicatorStateChange: onIndicatorStateChange,
             action: action
         ) {
             self
@@ -68,7 +82,8 @@ extension View {
 private struct RefreshContainerBody<Content: View>: View {
     let isRefreshing: Bool
     let indicatorTopPadding: CGFloat
-    let onIndicatorRevealChange: ((CGFloat) -> Void)?
+    let showsIndicator: Bool
+    let onIndicatorStateChange: ((TdayRefreshIndicatorState) -> Void)?
     let action: @Sendable () async -> Void
     private let content: Content
 
@@ -81,13 +96,15 @@ private struct RefreshContainerBody<Content: View>: View {
     init(
         isRefreshing: Bool,
         indicatorTopPadding: CGFloat,
-        onIndicatorRevealChange: ((CGFloat) -> Void)?,
+        showsIndicator: Bool,
+        onIndicatorStateChange: ((TdayRefreshIndicatorState) -> Void)?,
         action: @escaping @Sendable () async -> Void,
         @ViewBuilder content: () -> Content
     ) {
         self.isRefreshing = isRefreshing
         self.indicatorTopPadding = indicatorTopPadding
-        self.onIndicatorRevealChange = onIndicatorRevealChange
+        self.showsIndicator = showsIndicator
+        self.onIndicatorStateChange = onIndicatorStateChange
         self.action = action
         self.content = content()
     }
@@ -100,11 +117,15 @@ private struct RefreshContainerBody<Content: View>: View {
         isRefreshing || localRefreshInFlight
     }
 
-    /// Mirrors TdayPullRefreshIndicator's own reveal, so chrome that yields the
-    /// pill's band fades in lockstep with it rather than on a guess.
-    private var indicatorReveal: CGFloat {
-        guard effectiveRefreshing || pullProgress > 0.02 else { return 0 }
-        return effectiveRefreshing ? 1 : min(max(pullProgress, 0), 1)
+    /// Mirrors TdayPullRefreshIndicator's own reveal, so a caller drawing the
+    /// pill itself stays in lockstep with it rather than guessing.
+    private var indicatorState: TdayRefreshIndicatorState {
+        let visible = effectiveRefreshing || pullProgress > 0.02
+        return TdayRefreshIndicatorState(
+            isRefreshing: effectiveRefreshing,
+            pullProgress: min(max(pullProgress, 0), 1),
+            reveal: visible ? (effectiveRefreshing ? 1 : min(max(pullProgress, 0), 1)) : 0
+        )
     }
 
     var body: some View {
@@ -118,15 +139,17 @@ private struct RefreshContainerBody<Content: View>: View {
                 }
             )
             .overlay(alignment: .top) {
-                TdayPullRefreshIndicator(
-                    isRefreshing: effectiveRefreshing,
-                    pullProgress: pullProgress
-                )
-                .padding(.top, indicatorTopPadding)
-                .allowsHitTesting(false)
+                if showsIndicator {
+                    TdayPullRefreshIndicator(
+                        isRefreshing: effectiveRefreshing,
+                        pullProgress: pullProgress
+                    )
+                    .padding(.top, indicatorTopPadding)
+                    .allowsHitTesting(false)
+                }
             }
-            .onChange(of: indicatorReveal, initial: true) { _, reveal in
-                onIndicatorRevealChange?(reveal)
+            .onChange(of: indicatorState, initial: true) { _, state in
+                onIndicatorStateChange?(state)
             }
             .onChange(of: isRefreshing) { _, refreshing in
                 if refreshing {
@@ -141,7 +164,7 @@ private struct RefreshContainerBody<Content: View>: View {
                 localRefreshInFlight = false
                 observedExternalRefresh = false
                 pullDistance = 0
-                onIndicatorRevealChange?(0)
+                onIndicatorStateChange?(TdayRefreshIndicatorState())
             }
     }
 
@@ -203,7 +226,7 @@ enum TdayRefreshIndicatorMetrics {
     static let refreshingOffset: CGFloat = 20
 }
 
-private struct TdayPullRefreshIndicator: View {
+struct TdayPullRefreshIndicator: View {
     let isRefreshing: Bool
     let pullProgress: CGFloat
 
