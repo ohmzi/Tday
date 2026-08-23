@@ -352,4 +352,15 @@ edited.
 
 ## License
 
-Private repository. All rights reserved.
+T'Day is **source-available, not open source**. The code is published so you can read and
+audit it before trusting it with your data, and so you can run your own copy.
+
+You may audit the source, self-host T'Day on hardware you control, modify your own copy, and
+use the official mobile apps to connect to your instance — for personal and household use,
+free of charge. Organisational and commercial deployment, redistribution and independent app
+builds need written permission. See [LICENSE](LICENSE) for the exact terms and
+[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) for the components T'Day builds on.
+
+**Pull requests are not accepted at this time.** Bug reports, security reports and feature
+ideas are genuinely wanted — please open an issue and the maintainer will implement the fix.
+See [CONTRIBUTING.md](CONTRIBUTING.md).

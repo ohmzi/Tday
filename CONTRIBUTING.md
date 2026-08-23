@@ -1,5 +1,19 @@
 # Contributing to T'Day
 
+> **Pull requests are not accepted at this time.** T'Day is source-available so it can be
+> audited and self-hosted, not to solicit code. PRs opened against this repository will be
+> closed without review — please don't spend your time on one.
+>
+> **Issues are wanted.** Bug reports, security reports and feature ideas all help, and the
+> maintainer implements the fixes himself. Start at
+> [issues](https://github.com/ohmzi/Tday/issues); for anything security-sensitive follow
+> [SECURITY.md](SECURITY.md) instead of filing publicly. Quoting source in a report is
+> expressly allowed by the [LICENSE](LICENSE).
+>
+> Everything below documents the maintainer's own development workflow. It is public because
+> it is useful context when reading the code or reproducing a build — not an invitation to
+> submit changes.
+
 This document covers everything a developer needs to know before writing code, opening a PR, or deploying changes.
 
 ## Table of Contents

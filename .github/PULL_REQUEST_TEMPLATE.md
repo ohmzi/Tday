@@ -1,3 +1,9 @@
+> [!IMPORTANT]
+> **This project does not accept pull requests at this time.** External PRs are closed
+> without review. If you were about to report a bug or suggest a feature, please
+> [open an issue](https://github.com/ohmzi/Tday/issues) instead — those are read and acted on.
+> See [CONTRIBUTING.md](../CONTRIBUTING.md).
+
 ## Summary
 
 <!-- What does this PR do? Why? Link to related issues. -->
