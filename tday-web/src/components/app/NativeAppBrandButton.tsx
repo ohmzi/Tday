@@ -4,15 +4,8 @@ import { cn } from "@/lib/utils";
 
 export default function NativeAppBrandButton({
   className,
-  showWordmark = true,
 }: {
   className?: string;
-  /**
-   * Off on pages that carry a title of their own: two names side by side at the
-   * top of a page reads as a mistake, and the glyph alone is enough of a home
-   * affordance — the way the native bars keep their back chevron.
-   */
-  showWordmark?: boolean;
 }) {
   const pathname = usePathname();
   const isHome = pathname.includes("/app/tday");
@@ -37,11 +30,9 @@ export default function NativeAppBrandButton({
       ) : (
         <Moon className="h-7 w-7 shrink-0 fill-[#A8B8E8] text-[#A8B8E8]" />
       )}
-      {showWordmark ? (
-        <span className="truncate text-[2rem] font-black leading-none tracking-normal text-foreground sm:text-[2.35rem]">
-          T&apos;Day
-        </span>
-      ) : null}
+      <span className="truncate text-[2rem] font-black leading-none tracking-normal text-foreground sm:text-[2.35rem]">
+        T&apos;Day
+      </span>
     </Link>
   );
 }

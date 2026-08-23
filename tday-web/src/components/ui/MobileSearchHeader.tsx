@@ -22,14 +22,13 @@ interface MobileSearchHeaderProps {
   onSearchChange?: (query: string) => void;
   placeholder?: string;
   trailingAction?: React.ReactNode;
-  showBrandHome?: boolean;
   /** When provided, a results dropdown is shown under the input while searching. */
   results?: SearchResultItem[];
   onSelectResult?: (id: string) => void;
   /**
    * Lets this bar double as the dock for a collapsing page header: the page's
-   * title travels up into here as the block below it scrolls away, and the
-   * brand wordmark steps aside for it. NativePageHeader owns the scroll maths
+   * title travels up into here as the block below it scrolls away, and this bar
+   * drops its own brand to make room. NativePageHeader owns the scroll maths
    * and writes to these nodes; this component only places them.
    */
   pageCollapse?: NativePageBarSlots & { title: string; accentColor: string };
@@ -46,7 +45,6 @@ export default function MobileSearchHeader({
   onSearchChange,
   placeholder = "Search tasks...",
   trailingAction,
-  showBrandHome = true,
   results,
   onSelectResult,
   pageCollapse,
@@ -131,22 +129,18 @@ export default function MobileSearchHeader({
     }, 120);
   };
 
-  // The expanded field swaps out the brand button and the docked title, so both
-  // come back with no inline styles; nudge the header to re-apply on every
-  // toggle. Only when one is actually listening, or this would wake every
-  // scroll-driven component on the screen each time the field opens.
+  // The expanded field swaps the row's contents out, so anything the header has
+  // styled comes back bare; nudge it to re-apply on every toggle. Only when one
+  // is actually listening, or this would wake every scroll-driven component on
+  // the screen each time the field opens.
   useNativePageBarResync(pageCollapse ? headerRef.current : null, isExpanded);
 
-  // No wordmark while a page title is sharing this bar: two names side by side
-  // read as a mistake, and the glyph alone is enough of a home affordance.
-  const brandHome = showBrandHome ? (
-    <div ref={pageCollapse?.leadingRef} className="shrink-0">
-      <NativeAppBrandButton
-        className={pageCollapse ? undefined : "min-w-0 max-w-[58%] sm:max-w-none"}
-        showWordmark={!pageCollapse}
-      />
-    </div>
-  ) : null;
+  // Nothing on the left while a page title is sharing this bar: the page's own
+  // name is the only thing that belongs at the top of it, and getting home is
+  // what the dock at the bottom is for.
+  const brandHome = pageCollapse ? null : (
+    <NativeAppBrandButton className="min-w-0 max-w-[58%] sm:max-w-none" />
+  );
 
   return (
     <header
