@@ -53,6 +53,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -134,11 +135,21 @@ object RootFeedHeroHeaderMetrics {
     val SearchLabelFadeStart = 100.dp
     val SearchLabelFadeEnd = 124.dp
 
+    /** Right-hand breathing room so an ellipsis is not clipped by the capsule cap. */
+    val SearchLabelTrailingPadding = 14.dp
+
     // Pull-to-refresh pill. It flies in from above the top of the content and
     // settles hovering over the title — in front of it, not in place of it.
     val RefreshPillHeight = 58.dp
     val RefreshPillHiddenTop = -(RefreshPillHeight + 28.dp)
     val RefreshPillRestingTop = HeroTitleCenterY - (RefreshPillHeight / 2)
+
+    /**
+     * Fraction of the pull over which the pill completes its travel. It leads
+     * deliberately: by the time the feed has begun to move at all the pill is
+     * most of the way down, and it eases to a stop rather than arriving hard.
+     */
+    const val PillLeadFraction = 0.45f
 
     // Staggered curve endpoints, as a fraction of [CollapseDistance]. Flatter
     // easing widens the collision-free set, which is why each leg runs this
@@ -223,6 +234,8 @@ fun RootFeedHeroHeader(
     searchExpanded: Boolean,
     searchQuery: String,
     searchPlaceholder: String,
+    /** Shown in place of [searchPlaceholder] when the folded capsule is too narrow. */
+    searchPlaceholderShort: String,
     onSearchQueryChange: (String) -> Unit,
     onSearchExpandedChange: (Boolean) -> Unit,
     onSearchClose: () -> Unit,
@@ -339,6 +352,7 @@ fun RootFeedHeroHeader(
             searchExpanded = searchExpanded,
             searchQuery = searchQuery,
             placeholder = searchPlaceholder,
+            placeholderShort = searchPlaceholderShort,
             focusRequester = focusRequester,
             onSearchQueryChange = onSearchQueryChange,
             onSearchExpandedChange = onSearchExpandedChange,
@@ -355,7 +369,9 @@ private fun BoxScope.RefreshPill(
 ) {
     val metrics = RootFeedHeroHeaderMetrics
     val fraction = pullFraction().coerceIn(0f, 1f)
-    val reveal = if (isRefreshing) 1f else fraction
+    // Held down for the whole refresh, then rides distanceFraction back up when
+    // it ends — Material3 animates that fraction down, so no extra animator.
+    val reveal = if (isRefreshing) 1f else metrics.stagger(fraction, metrics.PillLeadFraction)
     if (reveal <= 0f) return
 
     val top = metrics.lerp(metrics.RefreshPillHiddenTop, metrics.RefreshPillRestingTop, reveal)
@@ -491,14 +507,18 @@ private fun BoxScope.SearchField(
     searchExpanded: Boolean,
     searchQuery: String,
     placeholder: String,
+    placeholderShort: String,
     focusRequester: FocusRequester,
     onSearchQueryChange: (String) -> Unit,
     onSearchExpandedChange: (Boolean) -> Unit,
     onSearchClose: () -> Unit,
     onBoundsChanged: (Rect) -> Unit,
 ) {
-    val metrics = RootFeedHeroHeaderMetrics
+    val m = RootFeedHeroHeaderMetrics
+    val metrics = m
     val colorScheme = MaterialTheme.colorScheme
+    val density = LocalDensity.current
+    val textMeasurer = rememberTextMeasurer()
 
     val collapse = metrics.stagger(progress, metrics.SearchCollapseEnd)
     val trailingX = width - metrics.SearchTrailingInset
@@ -547,13 +567,29 @@ private fun BoxScope.SearchField(
                         modifier = Modifier.size(22.dp),
                     )
                 }
+                // The long placeholder gives way to the short word rather than
+                // being chopped mid-word; the short one still ellipsises if even
+                // it cannot fit.
+                val labelRoom = restingWidth - m.SearchLeadingPadding - m.SearchIconSlot -
+                    m.SearchLabelTrailingPadding
+                // Measured, not laid out: writing state from a layout block to
+                // size a sibling is the kind of thing that bites later.
+                val labelStyle = MaterialTheme.typography.bodyLarge.copy(
+                    fontWeight = FontWeight.Bold,
+                )
+                val longLabelWidth = remember(placeholder, labelStyle, density) {
+                    with(density) {
+                        textMeasurer.measure(placeholder, labelStyle).size.width.toDp()
+                    }
+                }
+                val showLong = labelRoom >= longLabelWidth
                 Text(
-                    text = placeholder,
+                    text = if (showLong) placeholder else placeholderShort,
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Bold,
                     color = colorScheme.onSurfaceVariant,
                     maxLines = 1,
-                    overflow = TextOverflow.Clip,
+                    overflow = TextOverflow.Ellipsis,
                     modifier = Modifier
                         .padding(start = 2.dp)
                         .graphicsLayer { alpha = labelAlpha },

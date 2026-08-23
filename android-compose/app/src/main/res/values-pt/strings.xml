@@ -638,4 +638,6 @@
     <string name="settings_quiet_hours_start">Início</string>
     <string name="settings_quiet_hours_end">Fim</string>
     <string name="settings_resting_floaters">Desbotar flutuantes em repouso</string>
+    <string name="root_feed_search_scheduled">Pesquisar tarefas agendadas</string>
+    <string name="root_feed_search_floater">Pesquisar tarefas flutuantes</string>
 </resources>

@@ -171,7 +171,8 @@ export default function NativeScheduledTaskHomeDashboard() {
           mark="timeOfDay"
           searchOpen={searchOpen}
           searchQuery={searchQuery}
-          searchPlaceholder={scheduledTaskHomeDict("searchTasksPlaceholder")}
+          searchPlaceholder={scheduledTaskHomeDict("searchScheduledPlaceholder")}
+          searchPlaceholderShort={appDict("searchShort")}
           searchAriaLabel={appDict("searchTasks")}
           createListAriaLabel={appDict("newList")}
           settingsAriaLabel={sidebarDict("settings")}

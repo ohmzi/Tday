@@ -638,4 +638,6 @@
     <string name="settings_quiet_hours_start">Beginn</string>
     <string name="settings_quiet_hours_end">Ende</string>
     <string name="settings_resting_floaters">Ruhende Floater ausblenden</string>
+    <string name="root_feed_search_scheduled">Geplante Aufgaben suchen</string>
+    <string name="root_feed_search_floater">Floater-Aufgaben suchen</string>
 </resources>

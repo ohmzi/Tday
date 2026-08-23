@@ -666,4 +666,6 @@
     <string name="app_lock_unlock">Unlock</string>
     <string name="app_lock_prompt_title">Unlock T\'Day</string>
     <string name="app_lock_prompt_subtitle">Confirm it\'s you to see your tasks</string>
+    <string name="root_feed_search_scheduled">Search Scheduled Task</string>
+    <string name="root_feed_search_floater">Search Floater Task</string>
 </resources>

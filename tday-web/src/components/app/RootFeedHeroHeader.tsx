@@ -64,6 +64,10 @@ export const rootFeedHeroHeaderMetrics = {
   searchLeadingPadding: 13,
   searchLabelFadeStart: 100,
   searchLabelFadeEnd: 124,
+  /** Right-hand breathing room so an ellipsis is not clipped by the capsule cap. */
+  searchLabelTrailingPadding: 14,
+  /** Dead band around the long/short swap so it cannot flicker. */
+  searchLabelSwapHysteresis: 6,
 
   // Staggered curve endpoints, as a fraction of collapseDistance. Flatter easing
   // widens the collision-free set, which is why each leg runs this long: cubic
@@ -130,6 +134,8 @@ type Props = {
   searchOpen: boolean;
   searchQuery: string;
   searchPlaceholder: string;
+  /** Shown in place of searchPlaceholder when the folded capsule is too narrow. */
+  searchPlaceholderShort: string;
   searchAriaLabel: string;
   createListAriaLabel: string;
   settingsAriaLabel: string;
@@ -147,6 +153,7 @@ export default function RootFeedHeroHeader({
   searchOpen,
   searchQuery,
   searchPlaceholder,
+  searchPlaceholderShort,
   searchAriaLabel,
   createListAriaLabel,
   settingsAriaLabel,
@@ -163,6 +170,11 @@ export default function RootFeedHeroHeader({
   const titleTextRef = useRef<HTMLSpanElement | null>(null);
   const capsuleRef = useRef<HTMLDivElement | null>(null);
   const labelRef = useRef<HTMLSpanElement | null>(null);
+  const longLabelRef = useRef<HTMLSpanElement | null>(null);
+  const shortLabelRef = useRef<HTMLSpanElement | null>(null);
+  const measureRef = useRef<HTMLSpanElement | null>(null);
+  const resultsRef = useRef<HTMLDivElement | null>(null);
+  const longVisibleRef = useRef(true);
   const scrollerRef = useRef<HTMLElement | null>(null);
   const searchOpenRef = useRef(searchOpen);
 
@@ -223,8 +235,14 @@ export default function RootFeedHeroHeader({
         m.markLeading + m.compactMarkBox + m.titleGap + (titleWidth * compact) / 2;
       const centerX = lerp(width / 2, compactCenterX, travel);
       const centerY = lerp(m.heroTitleCenterY, m.compactRowCenterY, drop);
+      // Positioned by the SCALED extent, not the raw offsetWidth: the node is
+      // origin-top-left, so scaling pulls its box toward that corner. Using the
+      // unscaled half-width lands the left edge titleWidth*(1-scale)/2 too far
+      // left, which at the compact end is straight on top of the mark.
       titleEl.style.transform =
-        `translate(${centerX - titleWidth / 2}px, ${centerY - m.heroTitleLineHeight / 2}px) scale(${scale})`;
+        `translate(${centerX - (titleWidth * scale) / 2}px, ${
+          centerY - (m.heroTitleLineHeight * scale) / 2
+        }px) scale(${scale})`;
 
       const searchCollapse = stagger(progress, m.searchCollapseEnd);
       const trailingX = width - m.searchTrailingInset;
@@ -236,13 +254,34 @@ export default function RootFeedHeroHeader({
       capsuleEl.style.width = `${fieldWidth}px`;
       capsuleEl.style.transform = `translateX(${leadingX}px)`;
 
-      if (labelRef.current) {
-        labelRef.current.style.opacity = String(
+      const labelEl = labelRef.current;
+      const longEl = longLabelRef.current;
+      const shortEl = shortLabelRef.current;
+      const measureEl = measureRef.current;
+      if (labelEl && longEl && shortEl && measureEl) {
+        labelEl.style.opacity = String(
           clamp01(
             (restingWidth - m.searchLabelFadeStart) /
               (m.searchLabelFadeEnd - m.searchLabelFadeStart),
           ),
         );
+
+        // Fall back to the short word rather than letting CSS chop the long one
+        // mid-word. Measured off a hidden non-shrinking copy so the decision
+        // does not depend on the width it is deciding.
+        const room =
+          restingWidth - m.searchLeadingPadding - m.searchIconSlot - m.searchLabelTrailingPadding;
+        const longWidth = measureEl.offsetWidth;
+        const wasLong = longVisibleRef.current;
+        // Hysteresis, so the swap does not flicker on the boundary pixel.
+        const showLong = wasLong
+          ? room >= longWidth - m.searchLabelSwapHysteresis
+          : room >= longWidth + m.searchLabelSwapHysteresis;
+        if (showLong !== wasLong) {
+          longVisibleRef.current = showLong;
+          longEl.style.display = showLong ? "" : "none";
+          shortEl.style.display = showLong ? "none" : "";
+        }
       }
     };
 
@@ -260,6 +299,23 @@ export default function RootFeedHeroHeader({
       window.removeEventListener("resize", schedule);
     };
   }, [m]);
+
+  // Tapping anywhere outside the field closes it. Guarded on the capsule and
+  // the results panel rather than a measured rect: on iOS a rect-based guard
+  // closed the field on the very tap that opened it, because the rect had not
+  // been reported for the new state yet.
+  useEffect(() => {
+    if (!searchOpen) return;
+    const onPointerDown = (event: PointerEvent) => {
+      const target = event.target as Node | null;
+      if (!target) return;
+      if (capsuleRef.current?.contains(target)) return;
+      if (resultsRef.current?.contains(target)) return;
+      onSearchOpenChange(false);
+    };
+    document.addEventListener("pointerdown", onPointerDown, true);
+    return () => document.removeEventListener("pointerdown", onPointerDown, true);
+  }, [searchOpen, onSearchOpenChange]);
 
   // Re-run the layout when the field opens or closes, and when the title text
   // changes width (locale switch).
@@ -399,20 +455,38 @@ export default function RootFeedHeroHeader({
               </span>
               <span
                 ref={labelRef}
-                className="ml-0.5 whitespace-nowrap text-base font-bold text-muted-foreground"
-                style={{ opacity: 0 }}
+                className="ml-0.5 min-w-0 flex-1 text-base font-bold text-muted-foreground"
+                style={{ opacity: 0, paddingRight: m.searchLabelTrailingPadding }}
               >
-                {searchPlaceholder}
+                <span ref={longLabelRef} className="block truncate">
+                  {searchPlaceholder}
+                </span>
+                <span ref={shortLabelRef} className="block truncate" style={{ display: "none" }}>
+                  {searchPlaceholderShort}
+                </span>
               </span>
             </button>
           )}
         </div>
 
         {searchOpen && results ? (
-          <div className="absolute inset-x-0 z-[1]" style={{ top: m.topInset + m.barButtonSize + 8 }}>
+          <div
+            ref={resultsRef}
+            className="absolute inset-x-0 z-[1]"
+            style={{ top: m.topInset + m.barButtonSize + 8 }}
+          >
             {results}
           </div>
         ) : null}
+        {/* Never shown. Gives the rAF the long label's natural width without
+            letting the capsule it is sizing influence the measurement. */}
+        <span
+          ref={measureRef}
+          aria-hidden
+          className="pointer-events-none invisible absolute left-0 top-0 whitespace-nowrap text-base font-bold"
+        >
+          {searchPlaceholder}
+        </span>
       </header>
 
       {/* Reserves the hero block's space. The feed scrolls behind the strip,

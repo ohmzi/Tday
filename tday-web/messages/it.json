@@ -383,7 +383,9 @@
     "steps": "Passaggi",
     "add": "Aggiungi",
     "addStep": "Aggiungi un passaggio",
-    "stepsCreateHint": "Salva prima l'attività per aggiungere passaggi."
+    "stepsCreateHint": "Salva prima l'attività per aggiungere passaggi.",
+    "searchFloaterTasksPlaceholder": "Cerca attività fluttuanti",
+    "searchShort": "Cerca"
   },
   "today": {
     "saveInstance": "Salva istanza",
@@ -542,7 +544,8 @@
     "tileCalendar": "Calendario",
     "searchTasksPlaceholder": "Cerca attività...",
     "noMatchingTasks": "Nessuna attività corrispondente",
-    "openList": "Apri {{name}}"
+    "openList": "Apri {{name}}",
+    "searchScheduledPlaceholder": "Cerca attività pianificate"
   },
   "settings": {
     "themeLight": "Chiaro",

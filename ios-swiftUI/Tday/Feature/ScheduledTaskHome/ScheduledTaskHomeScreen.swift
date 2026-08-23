@@ -336,6 +336,8 @@ struct ScheduledTaskHomeScreen: View {
 
                 RootFeedHeroHeader(
                     title: "T'Day",
+                    searchPlaceholder: L("Search Scheduled Task"),
+                    searchPlaceholderShort: L("Search"),
                     mark: .timeOfDay,
                     scroll: headerScroll,
                     coordinateSpaceName: "scheduled-task-home-root",

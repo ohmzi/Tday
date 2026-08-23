@@ -637,4 +637,6 @@
     <string name="settings_quiet_hours_start">開始</string>
     <string name="settings_quiet_hours_end">終了</string>
     <string name="settings_resting_floaters">休眠フローターを薄く</string>
+    <string name="root_feed_search_scheduled">予定タスクを検索</string>
+    <string name="root_feed_search_floater">フローターを検索</string>
 </resources>

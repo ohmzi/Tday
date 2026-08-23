@@ -1016,6 +1016,8 @@ struct TodoListScreen: View {
     private var rootFeedHeroHeader: some View {
         RootFeedHeroHeader(
             title: viewModel.title,
+            searchPlaceholder: L("Search Floater Task"),
+            searchPlaceholderShort: L("Search"),
             mark: viewModel.mode == .floater ? .floaterLeaf : .timeOfDay,
             scroll: headerScroll,
             coordinateSpaceName: todoTimelineDragCoordinateSpace,

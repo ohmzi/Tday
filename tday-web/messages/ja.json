@@ -383,7 +383,9 @@
     "steps": "ステップ",
     "add": "追加",
     "addStep": "ステップを追加",
-    "stepsCreateHint": "ステップを追加するには、まずタスクを保存してください。"
+    "stepsCreateHint": "ステップを追加するには、まずタスクを保存してください。",
+    "searchFloaterTasksPlaceholder": "フローターを検索",
+    "searchShort": "検索"
   },
   "today": {
     "saveInstance": "インスタンスを保存",
@@ -542,7 +544,8 @@
     "tileCalendar": "カレンダー",
     "searchTasksPlaceholder": "タスクを検索...",
     "noMatchingTasks": "一致するタスクがありません",
-    "openList": "{{name}} を開く"
+    "openList": "{{name}} を開く",
+    "searchScheduledPlaceholder": "予定タスクを検索"
   },
   "settings": {
     "themeLight": "ライト",

@@ -637,4 +637,6 @@
     <string name="settings_quiet_hours_start">开始</string>
     <string name="settings_quiet_hours_end">结束</string>
     <string name="settings_resting_floaters">淡出休眠浮动任务</string>
+    <string name="root_feed_search_scheduled">搜索计划任务</string>
+    <string name="root_feed_search_floater">搜索浮动任务</string>
 </resources>

@@ -640,4 +640,6 @@
     <string name="settings_quiet_hours_start">Начало</string>
     <string name="settings_quiet_hours_end">Конец</string>
     <string name="settings_resting_floaters">Приглушать отдыхающие плавающие</string>
+    <string name="root_feed_search_scheduled">Поиск запланированных задач</string>
+    <string name="root_feed_search_floater">Поиск плавающих задач</string>
 </resources>
