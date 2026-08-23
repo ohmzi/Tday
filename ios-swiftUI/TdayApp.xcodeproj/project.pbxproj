@@ -84,7 +84,7 @@
 		9F8E7D6C5B4A00000000B104 /* Localization.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F8E7D6C5B4A00000000F104 /* Localization.swift */; };
 		9F8E7D6C5B4A00000000B105 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 9F8E7D6C5B4A00000000F105 /* Localizable.xcstrings */; };
 		A03B553E316CEEDFAB8EBA69 /* OfflineSyncModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB49A43AFEE66EEDB3315F86 /* OfflineSyncModels.swift */; };
-		A1B2C3D4E5F600000000WA01 /* WatchSessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F600000000WA02 /* WatchSessionManager.swift */; };
+		FEEDFACE0000000000000000 /* WatchSessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEEDFACE0000000000000001 /* WatchSessionManager.swift */; };
 		A1C0FFEE000000000000B001 /* ListShareText.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE000000000000F001 /* ListShareText.swift */; };
 		A1C0FFEE000000000000B002 /* ListShareRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE000000000000F002 /* ListShareRepository.swift */; };
 		A1C0FFEE000000000000B003 /* ManageMembersSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE000000000000F003 /* ManageMembersSheet.swift */; };
@@ -140,8 +140,8 @@
 		D34840EBE7C4C90D2525F0DA /* VersionCompatibility.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE3297DCE3ECD21F5B0A4635 /* VersionCompatibility.swift */; };
 		D4A100000000000000000011 /* TdayWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = D4A100000000000000000010 /* TdayWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		D4A100000000000000000012 /* TodayTasksWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4A100000000000000000013 /* TodayTasksWidget.swift */; };
-		DA7A000000000000000000001 /* DataExport.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA7A000000000000000000002 /* DataExport.swift */; };
-		DA7A000000000000000000003 /* DataExportMapperTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA7A000000000000000000004 /* DataExportMapperTests.swift */; };
+		FEEDFACE0000000000000002 /* DataExport.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEEDFACE0000000000000003 /* DataExport.swift */; };
+		FEEDFACE0000000000000004 /* DataExportMapperTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEEDFACE0000000000000005 /* DataExportMapperTests.swift */; };
 		DAD1CE000000000000000009 /* TdayWatchComplication.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAD1CE000000000000000008 /* TdayWatchComplication.swift */; };
 		DAD1CE00000000000000000F /* TdayWatchWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = DAD1CE000000000000000007 /* TdayWatchWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		DAD1CE00000000000000001D /* TdayWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAD1CE00000000000000001C /* TdayWatchApp.swift */; };
@@ -305,7 +305,7 @@
 		9F8E7D6C5B4A00000000F103 /* Bundle+Language.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Bundle+Language.swift"; sourceTree = "<group>"; };
 		9F8E7D6C5B4A00000000F104 /* Localization.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Localization.swift; sourceTree = "<group>"; };
 		9F8E7D6C5B4A00000000F105 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
-		A1B2C3D4E5F600000000WA02 /* WatchSessionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchSessionManager.swift; sourceTree = "<group>"; };
+		FEEDFACE0000000000000001 /* WatchSessionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchSessionManager.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F6A7B8C9D0E1F2 /* HapticManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HapticManager.swift; sourceTree = "<group>"; };
 		A1C0FFEE000000000000F001 /* ListShareText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListShareText.swift; sourceTree = "<group>"; };
 		A1C0FFEE000000000000F002 /* ListShareRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListShareRepository.swift; sourceTree = "<group>"; };
@@ -373,8 +373,8 @@
 		D617DF23936179DDFF13A36D /* OnboardingWizardOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingWizardOverlay.swift; sourceTree = "<group>"; };
 		D6D61A167DBA9FD21F8CC00A /* SyncManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncManager.swift; sourceTree = "<group>"; };
 		D9D2A99D6C098B63352D4FB8 /* Nunito.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Nunito.ttf; sourceTree = "<group>"; };
-		DA7A000000000000000000002 /* DataExport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataExport.swift; sourceTree = "<group>"; };
-		DA7A000000000000000000004 /* DataExportMapperTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataExportMapperTests.swift; sourceTree = "<group>"; };
+		FEEDFACE0000000000000003 /* DataExport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataExport.swift; sourceTree = "<group>"; };
+		FEEDFACE0000000000000005 /* DataExportMapperTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataExportMapperTests.swift; sourceTree = "<group>"; };
 		DAD1CE000000000000000007 /* TdayWatchWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TdayWatchWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		DAD1CE000000000000000008 /* TdayWatchComplication.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdayWatchComplication.swift; sourceTree = "<group>"; };
 		DAD1CE00000000000000000A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -493,7 +493,7 @@
 				B10000000000000000000005 /* CarTaskModelsTests.swift */,
 				4A7B9C0D1E2F3456789ABC02 /* CompletedSyncMergeTests.swift */,
 				4D2A9B7E2CE3424C9D111002 /* ConnectivityClassificationTests.swift */,
-				DA7A000000000000000000004 /* DataExportMapperTests.swift */,
+				FEEDFACE0000000000000005 /* DataExportMapperTests.swift */,
 				CA1E7E010000000000000000 /* RecurrenceRuleParserTests.swift */,
 				CAFE0D1E0000000000000005 /* GuideContentContractTests.swift */,
 				4F52544D434C49454E543032 /* RealtimeClientTests.swift */,
@@ -573,7 +573,7 @@
 			children = (
 				CC80072C8B232C0C09CE3139 /* TodayTasksWidgetSnapshotStore.swift */,
 				7A1C0FE30B2D4A9C8E5F1A21 /* WidgetBackgroundRefresh.swift */,
-				A1B2C3D4E5F600000000WA02 /* WatchSessionManager.swift */,
+				FEEDFACE0000000000000001 /* WatchSessionManager.swift */,
 			);
 			path = Widget;
 			sourceTree = "<group>";
@@ -722,7 +722,7 @@
 			isa = PBXGroup;
 			children = (
 				6049166B683EE082F8C551DD /* ApiModels.swift */,
-				DA7A000000000000000000002 /* DataExport.swift */,
+				FEEDFACE0000000000000003 /* DataExport.swift */,
 				8A6D006E491513605369E7D5 /* DomainModels.swift */,
 				CAFE0D1E0000000000000003 /* GuideModels.swift */,
 				AB49A43AFEE66EEDB3315F86 /* OfflineSyncModels.swift */,
@@ -1218,7 +1218,7 @@
 				B10000000000000000000025 /* CarTaskModelsTests.swift in Sources */,
 				4A7B9C0D1E2F3456789ABC01 /* CompletedSyncMergeTests.swift in Sources */,
 				4D2A9B7E2CE3424C9D111001 /* ConnectivityClassificationTests.swift in Sources */,
-				DA7A000000000000000000003 /* DataExportMapperTests.swift in Sources */,
+				FEEDFACE0000000000000004 /* DataExportMapperTests.swift in Sources */,
 				CAFE0D1E0000000000000015 /* GuideContentContractTests.swift in Sources */,
 				4F52544D434C49454E543031 /* RealtimeClientTests.swift in Sources */,
 				5A4E00000000000000000035 /* PendingShareStoreTests.swift in Sources */,
@@ -1265,7 +1265,7 @@
 				CA1EBF020000000000000000 /* DeviceCalendarStore.swift in Sources */,
 				CA1EBF030000000000000000 /* CalendarSyncManager.swift in Sources */,
 				B648A67EAD215BE5B74F7460 /* ApiModels.swift in Sources */,
-				DA7A000000000000000000001 /* DataExport.swift in Sources */,
+				FEEDFACE0000000000000002 /* DataExport.swift in Sources */,
 				5A4E00000000000000000031 /* PendingShareStore.swift in Sources */,
 				07D1F4A0C9434C54853E9D29 /* AppDataMode.swift in Sources */,
 				5B82443B89507719EDD7215C /* AppContainer.swift in Sources */,
@@ -1358,7 +1358,7 @@
 				9F8E7D6C5B4A00000000B104 /* Localization.swift in Sources */,
 				72304EA28CF49303A8CCB6B0 /* TodayTasksWidgetSnapshotStore.swift in Sources */,
 				7A1C0FE30B2D4A9C8E5F1A20 /* WidgetBackgroundRefresh.swift in Sources */,
-				A1B2C3D4E5F600000000WA01 /* WatchSessionManager.swift in Sources */,
+				FEEDFACE0000000000000000 /* WatchSessionManager.swift in Sources */,
 				A1C0FFEE000000000000B001 /* ListShareText.swift in Sources */,
 				2E1D50F9EEE6B8D7D9B14AEA /* TodoListScreen.swift in Sources */,
 				51A46F8E627C26BF34E91F7B /* TodoListViewModel.swift in Sources */,
