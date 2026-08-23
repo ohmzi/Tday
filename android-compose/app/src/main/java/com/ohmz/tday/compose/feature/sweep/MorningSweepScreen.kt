@@ -17,7 +17,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -32,7 +31,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
@@ -40,6 +41,9 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.model.TodoItem
+import com.ohmz.tday.compose.core.ui.TdayHeroTitleHeader
+import com.ohmz.tday.compose.core.ui.rememberScrollCollapsingTitleScrollBehavior
+import com.ohmz.tday.compose.core.ui.tdayTopFade
 import com.ohmz.tday.compose.ui.component.ThemedDatePickerDialog
 import java.time.Instant
 import java.time.ZoneId
@@ -66,33 +70,38 @@ fun MorningSweepScreen(
 
     val colorScheme = MaterialTheme.colorScheme
     val card = uiState.cards.firstOrNull()
+    val scrollState = rememberScrollState()
+    val titleScrollBehavior = rememberScrollCollapsingTitleScrollBehavior(
+        scrollState = scrollState,
+        maxCollapseDistance = SWEEP_TITLE_COLLAPSE_DISTANCE_DP.dp,
+        label = "sweepTitleCollapseProgress",
+    )
 
-    Scaffold(containerColor = colorScheme.background) { padding ->
+    Scaffold(
+        containerColor = colorScheme.background,
+        topBar = {
+            TdayHeroTitleHeader(
+                title = stringResource(R.string.sweep_title),
+                icon = ImageVector.vectorResource(R.drawable.ic_lucide_sun),
+                accentColor = TdaySweepAccent,
+                // Raw progress, not the spring-animated one: the easing lives in
+                // the header so it tracks the finger.
+                collapseProgress = titleScrollBehavior.rawCollapseProgress,
+                onBack = onBack,
+                backContentDescription = stringResource(R.string.action_back),
+            )
+        },
+    ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp)
+                .nestedScroll(titleScrollBehavior.nestedScrollConnection)
+                .tdayTopFade()
+                .verticalScroll(scrollState)
+                .padding(horizontal = 18.dp)
                 .padding(bottom = 32.dp),
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onBack) {
-                    Icon(
-                        imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_arrow_left),
-                        contentDescription = stringResource(R.string.action_back),
-                    )
-                }
-            }
-
-            Text(
-                text = stringResource(R.string.sweep_title),
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.ExtraBold,
-                color = colorScheme.onSurface,
-            )
-            Spacer(Modifier.height(16.dp))
-
             if (card == null) {
                 Text(
                     text = stringResource(R.string.sweep_done),
@@ -227,3 +236,8 @@ private fun SweepAction(icon: Int, label: String, onClick: () -> Unit) {
         }
     }
 }
+
+private const val SWEEP_TITLE_COLLAPSE_DISTANCE_DP = 180f
+
+/** Overdue's accent — sweeping is what you do with what has slipped. */
+private val TdaySweepAccent = Color(0xFFDA7661)

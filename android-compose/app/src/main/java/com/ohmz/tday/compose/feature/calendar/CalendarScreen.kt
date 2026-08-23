@@ -37,7 +37,6 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -104,7 +103,6 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.lerp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import androidx.core.view.HapticFeedbackConstantsCompat
@@ -119,7 +117,9 @@ import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
 import com.ohmz.tday.compose.core.observability.TdayTelemetry
 import com.ohmz.tday.compose.core.sound.rememberTaskCompletionSound
 import com.ohmz.tday.compose.core.ui.EmptyTaskWatermark
+import com.ohmz.tday.compose.core.ui.TdayHeroTitleHeader
 import com.ohmz.tday.compose.core.ui.snapTitleCollapsePx
+import com.ohmz.tday.compose.core.ui.tdayTopFade
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.component.TdaySegmentedSlider
 import com.ohmz.tday.compose.ui.theme.TdayDimens
@@ -477,21 +477,34 @@ fun CalendarScreen(
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            CalendarTopBar(
+            TdayHeroTitleHeader(
+                title = stringResource(R.string.calendar_title),
+                icon = ImageVector.vectorResource(R.drawable.ic_lucide_calendar_1),
+                accentColor = CalendarAccentPurple,
+                titleColor = CalendarAccentPurple,
+                // Raw progress, not the spring-animated one: the easing lives in
+                // the header so it tracks the finger.
+                collapseProgress = collapseProgressTarget,
                 onBack = onBack,
-                collapseProgress = collapseProgress,
-                onJumpToday = {
-                    todayJumpRequestId += 1
-                    TdayTelemetry.addBreadcrumb(
-                        "calendar.today",
-                        data = mapOf("mode" to selectedViewMode.name.lowercase()),
-                    )
-                    todayJumpRequest = CalendarTodayJumpRequest(
-                        id = todayJumpRequestId,
-                        targetDate = LocalDate.now(zoneId),
-                    )
-                },
-            )
+                backContentDescription = stringResource(R.string.action_back),
+            ) {
+                CalendarTodayButton(
+                    collapseProgress = collapseProgress,
+                    label = stringResource(R.string.calendar_today),
+                    contentDescription = stringResource(R.string.calendar_jump_to_today),
+                    onClick = {
+                        todayJumpRequestId += 1
+                        TdayTelemetry.addBreadcrumb(
+                            "calendar.today",
+                            data = mapOf("mode" to selectedViewMode.name.lowercase()),
+                        )
+                        todayJumpRequest = CalendarTodayJumpRequest(
+                            id = todayJumpRequestId,
+                            targetDate = LocalDate.now(zoneId),
+                        )
+                    },
+                )
+            }
         },
         floatingActionButton = {
             CalendarCreateTaskFab(
@@ -516,7 +529,8 @@ fun CalendarScreen(
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
-                        .nestedScroll(nestedScrollConnection),
+                        .nestedScroll(nestedScrollConnection)
+                        .tdayTopFade(),
                     state = listState,
                     contentPadding = PaddingValues(horizontal = 18.dp, vertical = 2.dp),
                     verticalArrangement = Arrangement.spacedBy(14.dp),
@@ -1458,167 +1472,6 @@ private fun formatWeekRange(weekStart: LocalDate): String {
     } else {
         "${weekStart.format(monthShortFormatter)} ${weekStart.dayOfMonth} - " +
             "${weekEnd.format(monthShortFormatter)} ${weekEnd.dayOfMonth}, ${weekEnd.year}"
-    }
-}
-
-@Composable
-private fun CalendarTopBar(
-    onBack: () -> Unit,
-    collapseProgress: Float,
-    onJumpToday: () -> Unit,
-) {
-    val progress = collapseProgress.coerceIn(0f, 1f)
-    val expandedFadeStart = 0.62f
-    val expandedFadeEnd = 0.86f
-    val collapsedFadeStart = 0.72f
-    val collapsedFadeEnd = 0.96f
-    val density = LocalDensity.current
-    val expandedTitleHeight = lerp(56.dp, 0.dp, progress)
-    val expandedTitleAlpha = 1f - (
-        (progress - expandedFadeStart) / (expandedFadeEnd - expandedFadeStart)
-        ).coerceIn(0f, 1f)
-    val collapsedTitleAlpha = (
-        (progress - collapsedFadeStart) / (collapsedFadeEnd - collapsedFadeStart)
-        ).coerceIn(0f, 1f)
-    val collapsedTitleShiftY = with(density) { (10.dp * (1f - collapsedTitleAlpha)).toPx() }
-    val expandedTitleShiftY = with(density) { lerp(0.dp, (-18).dp, progress).toPx() }
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .statusBarsPadding()
-            .padding(start = 18.dp, end = 18.dp, top = 6.dp, bottom = 2.dp),
-    ) {
-        Box(modifier = Modifier.fillMaxWidth()) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                CalendarCircleButton(
-                    icon = ImageVector.vectorResource(R.drawable.ic_lucide_chevron_left),
-                    contentDescription = stringResource(R.string.action_back),
-                    onClick = onBack,
-                    isBackButton = true,
-                )
-                CalendarTodayButton(
-                    collapseProgress = collapseProgress,
-                    label = stringResource(R.string.calendar_today),
-                    contentDescription = stringResource(R.string.calendar_jump_to_today),
-                    onClick = onJumpToday,
-                )
-            }
-            if (collapsedTitleAlpha > 0.001f) {
-                Text(
-                    text = stringResource(R.string.calendar_title),
-                    style = MaterialTheme.typography.headlineLarge,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = CalendarAccentPurple,
-                    modifier = Modifier
-                        .align(Alignment.Center)
-                        .graphicsLayer {
-                            alpha = collapsedTitleAlpha
-                            translationY = collapsedTitleShiftY
-                        },
-                )
-            }
-        }
-        Spacer(modifier = Modifier.height(lerp(14.dp, 0.dp, progress)))
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(expandedTitleHeight),
-            contentAlignment = Alignment.BottomStart,
-        ) {
-            if (expandedTitleAlpha > 0.001f) {
-                Text(
-                    text = stringResource(R.string.calendar_title),
-                    style = MaterialTheme.typography.headlineLarge,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = CalendarAccentPurple,
-                    modifier = Modifier.graphicsLayer {
-                        alpha = expandedTitleAlpha
-                        translationY = expandedTitleShiftY
-                    },
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun CalendarCircleButton(
-    icon: ImageVector,
-    contentDescription: String,
-    onClick: () -> Unit,
-    isBackButton: Boolean = false,
-    isAccentButton: Boolean = false,
-) {
-    val colorScheme = MaterialTheme.colorScheme
-    val view = LocalView.current
-    val interactionSource = remember { MutableInteractionSource() }
-    val pressed by interactionSource.collectIsPressedAsState()
-    val isDarkTheme = colorScheme.background.luminance() < 0.5f
-    val containerColor = when {
-        isBackButton -> if (isDarkTheme) colorScheme.surface.copy(alpha = 0.94f) else Color.White.copy(
-            alpha = 0.96f
-        )
-
-        isAccentButton -> CalendarAccentPurple.copy(alpha = if (isDarkTheme) 0.22f else 0.12f)
-        else -> colorScheme.background
-    }
-    val buttonBorder = when {
-        isBackButton -> null
-        isAccentButton -> BorderStroke(
-            1.dp,
-            CalendarAccentPurple.copy(alpha = if (isDarkTheme) 0.62f else 0.48f)
-        )
-
-        else -> BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.34f))
-    }
-    val iconTint = if (isAccentButton) CalendarAccentPurple else colorScheme.onSurface
-    val buttonSize = if (isBackButton) TdayDimens.FabSize else 54.dp
-    val iconSize = if (isBackButton) 36.dp else 28.dp
-    val scale by animateFloatAsState(
-        targetValue = if (pressed) 0.93f else 1f,
-        label = "calendarHeaderButtonScale",
-    )
-    val offsetY by animateDpAsState(
-        targetValue = if (pressed) 2.dp else 0.dp,
-        label = "calendarHeaderButtonOffsetY",
-    )
-
-    Card(
-        modifier = Modifier
-            .offset(y = offsetY)
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-            },
-        onClick = {
-            ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
-            onClick()
-        },
-        interactionSource = interactionSource,
-        shape = CircleShape,
-        border = buttonBorder,
-        colors = CardDefaults.cardColors(containerColor = containerColor),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = if (isBackButton) TdayDimens.FabElevation else 0.dp,
-            pressedElevation = if (isBackButton) TdayDimens.FabPressedElevation else 0.dp,
-        ),
-    ) {
-        Box(
-            modifier = Modifier.size(buttonSize),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = contentDescription,
-                tint = iconTint,
-                modifier = Modifier.size(iconSize),
-            )
-        }
     }
 }
 

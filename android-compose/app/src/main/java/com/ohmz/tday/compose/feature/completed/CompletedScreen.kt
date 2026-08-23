@@ -21,10 +21,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
@@ -53,10 +51,8 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
@@ -74,9 +70,11 @@ import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.ui.EmptyTaskBackgroundMessage
 import com.ohmz.tday.compose.core.ui.EmptyTaskWatermark
 import com.ohmz.tday.compose.core.ui.TaskSwipeActionButton
+import com.ohmz.tday.compose.core.ui.TdayHeroTitleHeader
 import com.ohmz.tday.compose.core.ui.animateTaskSwipeOffsetAsState
 import com.ohmz.tday.compose.core.ui.rememberLazyListCollapsingTitleScrollBehavior
 import com.ohmz.tday.compose.core.ui.rememberTaskSwipeRevealState
+import com.ohmz.tday.compose.core.ui.tdayTopFade
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.theme.TdayCompletedTitleAccent
 import com.ohmz.tday.compose.ui.theme.TdayDimens
@@ -158,9 +156,16 @@ fun CompletedScreen(
     Scaffold(
         containerColor = colorScheme.background,
         topBar = {
-            CompletedTopBar(
+            TdayHeroTitleHeader(
+                title = stringResource(R.string.completed_title),
+                icon = ImageVector.vectorResource(R.drawable.ic_lucide_circle_check_big),
+                accentColor = COMPLETED_TITLE_COLOR,
+                titleColor = COMPLETED_TITLE_COLOR,
+                // Raw progress, not the spring-animated one: the easing lives in
+                // the header so it tracks the finger.
+                collapseProgress = titleScrollBehavior.rawCollapseProgress,
                 onBack = onBack,
-                collapseProgress = titleScrollBehavior.collapseProgress,
+                backContentDescription = stringResource(R.string.action_back),
             )
         },
     ) { padding ->
@@ -175,7 +180,8 @@ fun CompletedScreen(
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
-                        .nestedScroll(titleScrollBehavior.nestedScrollConnection),
+                        .nestedScroll(titleScrollBehavior.nestedScrollConnection)
+                        .tdayTopFade(),
                     state = listState,
                     contentPadding = PaddingValues(horizontal = 18.dp, vertical = 2.dp),
                     verticalArrangement = Arrangement.spacedBy(0.dp),
@@ -304,134 +310,6 @@ fun CompletedScreen(
                 editTargetId = null
             },
         )
-    }
-}
-
-@Composable
-private fun CompletedTopBar(
-    onBack: () -> Unit,
-    collapseProgress: Float,
-) {
-    val progress = collapseProgress.coerceIn(0f, 1f)
-    val titleHandoffPoint = 0.9f
-    val density = LocalDensity.current
-    val expandedTitleHeight = lerp(56.dp, 0.dp, progress)
-    val expandedTitleAlpha = ((titleHandoffPoint - progress) / titleHandoffPoint).coerceIn(0f, 1f)
-    val collapsedTitleAlpha =
-        ((progress - titleHandoffPoint) / (1f - titleHandoffPoint)).coerceIn(0f, 1f)
-    val collapsedTitleShiftY = with(density) { (12.dp * (1f - collapsedTitleAlpha)).toPx() }
-    val expandedTitleShiftY = with(density) { (-10.dp * (1f - expandedTitleAlpha)).toPx() }
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .statusBarsPadding()
-            .padding(start = 18.dp, end = 18.dp, top = 6.dp, bottom = 2.dp),
-    ) {
-        Box(modifier = Modifier.fillMaxWidth()) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                CompletedHeaderButton(
-                    modifier = Modifier.align(Alignment.CenterVertically),
-                    onClick = onBack,
-                    icon = ImageVector.vectorResource(R.drawable.ic_lucide_chevron_left),
-                    contentDescription = stringResource(R.string.action_back),
-                )
-            }
-            if (collapsedTitleAlpha > 0.001f) {
-                Text(
-                    text = stringResource(R.string.completed_title),
-                    style = MaterialTheme.typography.headlineLarge,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = COMPLETED_TITLE_COLOR,
-                    modifier = Modifier
-                        .align(Alignment.Center)
-                        .graphicsLayer {
-                            alpha = collapsedTitleAlpha
-                            translationY = collapsedTitleShiftY
-                        },
-                )
-            }
-        }
-        Spacer(modifier = Modifier.height(lerp(14.dp, 0.dp, progress)))
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(expandedTitleHeight),
-            contentAlignment = Alignment.BottomStart,
-        ) {
-            if (expandedTitleAlpha > 0.001f) {
-                Text(
-                    text = stringResource(R.string.completed_title),
-                    style = MaterialTheme.typography.headlineLarge,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = COMPLETED_TITLE_COLOR,
-                    modifier = Modifier.graphicsLayer {
-                        alpha = expandedTitleAlpha
-                        translationY = expandedTitleShiftY
-                    },
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun CompletedHeaderButton(
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit,
-    icon: ImageVector,
-    contentDescription: String,
-) {
-    val colorScheme = MaterialTheme.colorScheme
-    val view = LocalView.current
-    val interactionSource = remember { MutableInteractionSource() }
-    val pressed by interactionSource.collectIsPressedAsState()
-    val isDarkTheme = colorScheme.background.luminance() < 0.5f
-    val containerColor =
-        if (isDarkTheme) colorScheme.surface.copy(alpha = 0.94f) else Color.White.copy(alpha = 0.96f)
-    val scale by animateFloatAsState(
-        targetValue = if (pressed) 0.93f else 1f,
-        label = "completedHeaderButtonScale",
-    )
-    val offsetY by animateDpAsState(
-        targetValue = if (pressed) 2.dp else 0.dp,
-        label = "completedHeaderButtonOffsetY",
-    )
-
-    Card(
-        modifier = Modifier
-            .then(modifier)
-            .offset(y = offsetY)
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-            },
-        onClick = {
-            ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
-            onClick()
-        },
-        interactionSource = interactionSource,
-        shape = CircleShape,
-        colors = CardDefaults.cardColors(containerColor = containerColor),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = TdayDimens.FabElevation,
-            pressedElevation = TdayDimens.FabPressedElevation,
-        ),
-    ) {
-        Box(
-            modifier = Modifier.size(TdayDimens.FabSize),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = contentDescription,
-                tint = colorScheme.onSurface,
-                modifier = Modifier.size(36.dp),
-            )
-        }
     }
 }
 
