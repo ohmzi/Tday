@@ -80,7 +80,7 @@ export default function FloaterListContainer({ id }: { id: string }) {
         placeholder={
           listName ? `${appDict("searchIn")} ${listName}...` : appDict("searchFloatersPlaceholder")
         }
-        pageCollapse={{ ...barSlots, title: listName }}
+        pageCollapse={{ ...barSlots, title: listName, accentColor: listAccent }}
         trailingAction={
           <div className="flex shrink-0 items-center gap-2">
           {listMeta?.reusable && !isViewer ? (

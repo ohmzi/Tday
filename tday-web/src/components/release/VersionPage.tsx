@@ -28,12 +28,15 @@ function VersionPageShell({ children }: { children: ReactNode }) {
         icon={Info}
         subtitle="Review the deployed build and the latest release available to admins."
         actions={
+          // A round control like every other bar's, rather than a text link:
+          // the title is centred on the bar and keeps clear of the wider side,
+          // so a 116px label here would squeeze it for no reason.
           <Link
             href="/app/admin"
-            className="inline-flex shrink-0 items-center gap-1 text-sm font-extrabold text-muted-foreground transition-colors hover:text-foreground"
+            aria-label="Back to admin"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/70 bg-card/90 text-foreground shadow-[0_12px_28px_-22px_hsl(var(--shadow)/0.55)] transition-colors hover:bg-card dark:border-white/10"
           >
-            <ChevronLeft className="h-4 w-4" />
-            Back to admin
+            <ChevronLeft className="h-5 w-5 stroke-[2.6]" />
           </Link>
         }
       />

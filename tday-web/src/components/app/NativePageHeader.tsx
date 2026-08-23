@@ -12,18 +12,20 @@ import { cn } from "@/lib/utils";
  * bar.
  *
  * Distinct from `rootFeedHeroHeaderMetrics`, which describes the root feeds'
- * header — that one is pinned, has a search field and centres its title. This
- * one scrolls away and leads with the page's own glyph. They share the easing
- * curve deliberately, so the two kinds of header feel like one family.
+ * header — that one has a search field and morphs its title's size on the way
+ * up. This one leads with the page's own glyph and keeps the title at one size
+ * throughout: there is a single title element, living in the pinned bar and
+ * translated down to sit under the circle at rest, so what travels up IS what
+ * was down there rather than a second copy of it fading in. They share the
+ * easing curve deliberately, so the two kinds of header feel like one family.
  *
  * The geometry below — the circle, its glyph, the echo and the fade band — is
  * the native numbers (`TdayHeroTitleMetrics` in `core/ui/TdayHeroTitleHeader.kt`,
  * `TodoTimelineMetrics` in `Feature/Todos/TodoListScreen.swift`); keep those
  * three in step. The timings are deliberately NOT shared: native drives them off
  * one collapse fraction because the block there gives its height back, while on
- * the web the block scrolls behind the bar and each piece is driven by its own
- * position. There is no value to copy across — with the exception of the
- * handoff's travel, which is in the same units on all three and is shared.
+ * the web there is one title element that simply moves. There is no value to
+ * copy across.
  */
 export const nativePageHeaderMetrics = {
   markBox: 96,
@@ -38,49 +40,38 @@ export const nativePageHeaderMetrics = {
   markWashBottomAlpha: 0.07,
   markEchoAlpha: 0.17,
 
+  /** Breathing room each side of the title once it has parked in the bar. */
+  dockedTitleSideGap: 8,
   /**
-   * How far BELOW the bar the hero title stops counting as readable. It is
-   * already inside the gradient band there, so measuring the handoff from the
-   * bar's own edge would hand over too late and leave a window — reachable as a
-   * resting state on a page that scrolls just this far — with the hero title
-   * dissolved and the bar's copy not yet in. Six tenths of the band is where
-   * the veil has taken most of it.
+   * Over how much of the last stretch of travel the bar's side reserve comes
+   * in. Only the parked title has neighbours to keep clear of; down in the
+   * block it has the full width, and charging it there truncated titles that
+   * used to fit. Symmetric, so easing it in never moves the centre.
    */
-  dockHandoffLead: 18,
-
-  /**
-   * The handoff's elastic travel, shared with native: the hero copy is pulled
-   * up as it goes ([expandedTitleLiftDistance] on iOS), and the bar's copy
-   * rises into place from just below it while scaling the last 1.5% up
-   * ([collapsedTitleRevealDistance]). Both ride the septic curve, so the title
-   * leaves and arrives faster than the finger without ever snapping — which is
-   * the whole difference between the two reading as one title moving and as two
-   * titles cross-fading.
-   */
-  heroTitleLift: 14,
-  dockedTitleRise: 10,
-  dockedTitleScaleFrom: 0.985,
+  reserveRampDistance: 72,
 
   /** Gradient below the bar that dissolves content as it passes under it. */
   contentFadeHeight: 30,
 
   /**
-   * At `lg` the bar is `static`, not sticky — there is nothing to dock into, so
-   * the header simply renders expanded and the collapse never runs. Written the
-   * way Tailwind emits it so the script and the stylesheet cannot disagree.
+   * At `lg` the bar is `relative`, not sticky — it scrolls away with the page,
+   * so there is nothing to dock into and the title just rides its anchor.
+   * (`relative`, not `static`: the title is absolutely positioned inside it and
+   * needs it as a containing block.) Written the way Tailwind emits it so the
+   * script and the stylesheet cannot disagree.
    */
   desktopBreakpointQuery: "(min-width: 64rem)",
 } as const;
 
-/** The pinned bar every non-root page already had, kept class-for-class. */
+/** The pinned bar shared by every non-root page, and by MobileSearchHeader. */
 export const nativePageBarClassName = cn(
   "sticky top-0 z-40 flex w-full items-center justify-between gap-2.5 bg-background",
   "pt-[calc(0.5rem+env(safe-area-inset-top))] pb-1.5",
-  "lg:static lg:bg-transparent lg:pt-2 lg:pb-2",
+  "lg:relative lg:bg-transparent lg:pt-2 lg:pb-2",
 );
 
 /**
- * The three nodes in the pinned bar that the collapse drives. A page whose bar
+ * The nodes in the pinned bar that the collapse drives. A page whose bar
  * is not this component's own — the floater list keeps its search bar — creates
  * these with [useNativePageBarSlots] and hands the same object to both, so the
  * wiring stays plain React rather than a DOM lookup.
@@ -88,19 +79,23 @@ export const nativePageBarClassName = cn(
 export type NativePageBarSlots = {
   /** The pinned bar itself. The collapse is measured against its bottom edge. */
   barRef: RefObject<HTMLElement | null>;
-  dockedTitleRef: RefObject<HTMLSpanElement | null>;
-  wordmarkRef: RefObject<HTMLSpanElement | null>;
+  /** The one title element. It lives in the bar and is translated into place. */
+  dockedTitleRef: RefObject<HTMLHeadingElement | null>;
   fadeRef: RefObject<HTMLDivElement | null>;
+  /** What sits left and right of the title in the bar, so it can keep clear. */
+  leadingRef: RefObject<HTMLDivElement | null>;
+  trailingRef: RefObject<HTMLDivElement | null>;
 };
 
 export function useNativePageBarSlots(): NativePageBarSlots {
   const barRef = useRef<HTMLElement | null>(null);
-  const dockedTitleRef = useRef<HTMLSpanElement | null>(null);
-  const wordmarkRef = useRef<HTMLSpanElement | null>(null);
+  const dockedTitleRef = useRef<HTMLHeadingElement | null>(null);
   const fadeRef = useRef<HTMLDivElement | null>(null);
+  const leadingRef = useRef<HTMLDivElement | null>(null);
+  const trailingRef = useRef<HTMLDivElement | null>(null);
   return useMemo(
-    () => ({ barRef, dockedTitleRef, wordmarkRef, fadeRef }),
-    [barRef, dockedTitleRef, wordmarkRef, fadeRef],
+    () => ({ barRef, dockedTitleRef, fadeRef, leadingRef, trailingRef }),
+    [barRef, dockedTitleRef, fadeRef, leadingRef, trailingRef],
   );
 }
 
@@ -164,10 +159,11 @@ export default function NativePageHeader({
   const heroRef = useRef<HTMLDivElement | null>(null);
   const markBoxRef = useRef<HTMLDivElement | null>(null);
   const markRef = useRef<HTMLDivElement | null>(null);
-  const heroTitleRef = useRef<HTMLHeadingElement | null>(null);
+  /** Zero-content stand-in holding the title's place in the block below. */
+  const titleAnchorRef = useRef<HTMLDivElement | null>(null);
   const ownSlots = useNativePageBarSlots();
   const slots = barSlots ?? ownSlots;
-  const { barRef, dockedTitleRef, wordmarkRef, fadeRef } = slots;
+  const { barRef, dockedTitleRef, fadeRef, leadingRef, trailingRef } = slots;
 
   // The collapse is applied by writing styles straight onto the nodes inside a
   // rAF, never through React state. A scroll frame must not re-render the page
@@ -188,11 +184,10 @@ export default function NativePageHeader({
       const heroEl = heroRef.current;
       const markEl = markRef.current;
       const markBoxEl = markBoxRef.current;
-      const heroTitleEl = heroTitleRef.current;
-      const dockedEl = dockedTitleRef.current;
-      const wordmarkEl = wordmarkRef.current;
+      const anchorEl = titleAnchorRef.current;
+      const titleEl = dockedTitleRef.current;
       const fadeEl = fadeRef.current;
-      if (!heroEl || !markEl || !markBoxEl || !heroTitleEl) return;
+      if (!heroEl || !markEl || !markBoxEl || !anchorEl) return;
 
       // Every layout read happens before any style write, so a scroll frame
       // never forces a synchronous reflow.
@@ -202,8 +197,16 @@ export default function NativePageHeader({
       // the scale written below, so measuring it would feed its own output back
       // in and make its opacity depend on how the scroll got here.
       const markRect = markBoxEl.getBoundingClientRect();
-      const titleRect = heroTitleEl.getBoundingClientRect();
-      const wordmarkWidth = wordmarkRef.current?.scrollWidth ?? 0;
+      const anchorRect = anchorEl.getBoundingClientRect();
+      const titleHeight = titleEl?.offsetHeight ?? 0;
+      const leadingWidth = leadingRef.current?.offsetWidth ?? 0;
+      const trailingWidth = trailingRef.current?.offsetWidth ?? 0;
+      // The bar centres its own contents in its CONTENT box, and its top padding
+      // carries the safe-area inset. Centring the title on the border box would
+      // float it up into the status bar by half that inset on a notched phone.
+      const barStyle = barRect ? getComputedStyle(barRef.current as HTMLElement) : null;
+      const barPadTop = barStyle ? parseFloat(barStyle.paddingTop) : 0;
+      const barPadBottom = barStyle ? parseFloat(barStyle.paddingBottom) : 0;
       // matchMedia rather than an innerWidth comparison: Tailwind emits `lg` as
       // `min-width: 64rem`, which is 1024px only while the browser's default
       // font size is 16px. Asking the same question the stylesheet asks keeps
@@ -230,45 +233,44 @@ export default function NativePageHeader({
 
       // The mark is above the title, so it goes first without being told to.
       const markFade = 1 - smootherstep(hiddenFraction(markRect));
-      // Measured against the bottom of the dissolve band rather than the bar's
-      // own edge — see `dockHandoffLead`. The title is spoken for well before
-      // its last pixel disappears.
-      const titleGone =
-        barBottom === null || titleRect.height <= 0
-          ? 0
-          : clamp01(
-              (barBottom + m.dockHandoffLead - titleRect.top) / titleRect.height,
-            );
-      const dockFade = smootherstep(titleGone);
-
       markEl.style.opacity = String(markFade);
       markEl.style.transform = `scale(${0.85 + 0.15 * markFade})`;
 
-      // On top of the travel the scroll already gives it, so the title leaves
-      // faster than the finger over the handoff. Zero whenever the title is
-      // still fully readable, so a page too short to hand over does not rest
-      // with it nudged off its layout position.
-      heroTitleEl.style.transform =
-        dockFade <= 0 ? "" : `translateY(${-m.heroTitleLift * dockFade}px)`;
+      if (titleEl && barRect) {
+        // Everything here is in the bar's own coordinates: the title sits at
+        // `top: 0` and is translated down, so no percentage is involved and the
+        // padding that carries the safe-area inset is accounted for explicitly.
+        //
+        // Parked, it is centred in the bar's content box — the same box the
+        // glyph is centred in. At rest it is pushed back down to the gap the
+        // block keeps for it, so what rises is the same element at the same
+        // size, moving straight up, rather than one copy fading out while
+        // another fades in somewhere else.
+        //
+        // Straight subtraction, so it tracks the page one-for-one and simply
+        // stops when it arrives. There is no progress fraction to be wrong
+        // about, no threshold to snap across, and a page too short to finish
+        // just rests with the title part way — exactly where the page left it.
+        const parkedY =
+          barPadTop + (barRect.height - barPadTop - barPadBottom - titleHeight) / 2;
+        const restingY = anchorRect.top - barRect.top;
+        // At lg the bar scrolls away with the page, so there is nothing to park
+        // in and the title just rides its anchor the whole way.
+        const y = barBottom === null ? restingY : Math.max(parkedY, restingY);
+        titleEl.style.transform = `translateY(${y}px)`;
+        titleEl.style.visibility = "visible";
 
-      if (dockedEl) {
-        dockedEl.style.opacity = String(dockFade);
-        // Invisible text must not be read out, nor eat taps meant for the bar.
-        dockedEl.style.visibility = dockFade < 0.01 ? "hidden" : "visible";
-        dockedEl.style.transform =
-          `translateY(${m.dockedTitleRise * (1 - dockFade)}px) ` +
-          `scale(${m.dockedTitleScaleFrom + (1 - m.dockedTitleScaleFrom) * dockFade})`;
-      }
-
-      if (wordmarkEl) {
-        // Only the wordmark goes; the sun/moon glyph stays as the home
-        // affordance, the way the native bars keep their back chevron. Its width
-        // folds continuously rather than snapping at a threshold: the docked
-        // title is a flex sibling, so a stepped width would jog it sideways by
-        // the wordmark's whole length in a single frame.
-        wordmarkEl.style.opacity = String(1 - dockFade);
-        wordmarkEl.style.maxWidth =
-          dockFade <= 0 ? "" : `${Math.max(0, (1 - dockFade) * wordmarkWidth)}px`;
+        // Kept clear of whatever the bar holds, by the wider of the two sides so
+        // the title stays centred on the bar rather than on the leftovers — and
+        // eased in only over the last stretch, because down in the block there
+        // is nothing beside it and the full width is its to use.
+        const docking = clamp01(
+          1 - (y - parkedY) / m.reserveRampDistance,
+        );
+        const reserve =
+          (Math.max(leadingWidth, trailingWidth) + m.dockedTitleSideGap) * docking;
+        titleEl.style.paddingLeft = `${reserve}px`;
+        titleEl.style.paddingRight = `${reserve}px`;
       }
 
       // On as soon as anything is passing under the bar, over 8px so it does not
@@ -293,6 +295,8 @@ export default function NativePageHeader({
       typeof ResizeObserver === "undefined" ? null : new ResizeObserver(schedule);
     observer?.observe(hero);
     if (barRef.current) observer?.observe(barRef.current);
+    if (leadingRef.current) observer?.observe(leadingRef.current);
+    if (trailingRef.current) observer?.observe(trailingRef.current);
 
     apply();
     scroller.addEventListener("scroll", schedule, { passive: true });
@@ -308,7 +312,7 @@ export default function NativePageHeader({
     // `title`/`subtitle` are dependencies so the effect re-runs — and so
     // re-applies, and re-observes the bar — once text that resizes either box
     // has painted.
-  }, [m, barRef, dockedTitleRef, wordmarkRef, fadeRef, title, subtitle]);
+  }, [m, barRef, dockedTitleRef, fadeRef, leadingRef, trailingRef, title, subtitle]);
 
   return (
     <>
@@ -321,25 +325,20 @@ export default function NativePageHeader({
           className="pointer-events-none absolute inset-x-0 bottom-full h-screen bg-background lg:hidden"
         />
 
-        <NativeAppBrandButton
-          className="min-w-0 max-w-[58%] sm:max-w-none"
-          wordmarkRef={wordmarkRef}
-        />
+        {/* No wordmark: this page has a name of its own, and two names at the
+            top of it read as a mistake. The glyph stays as the home link. */}
+        <div ref={leadingRef} className="flex shrink-0 items-center">
+          <NativeAppBrandButton showWordmark={false} />
+        </div>
 
-        {/* Only appears once the hero title has left, so the two never read as
-            two titles at once. In flow rather than absolutely centred: it takes
-            whatever the folded wordmark and the actions leave, and ellipsizes.
-            Centring it on the bar let it paint over both on narrow phones. */}
-        <span
-          ref={dockedTitleRef}
-          aria-hidden
-          className="pointer-events-none min-w-0 flex-1 origin-center truncate text-center text-[1.4rem] font-black leading-none text-foreground lg:hidden"
-          style={{ opacity: 0, visibility: "hidden" }}
-        >
-          {title}
-        </span>
+        {/* The page's title — the only one there is. It lives here, in the
+            pinned bar, and is translated down to the block's gap at rest, so
+            what travels up is this element rather than a copy of it. Absolute,
+            so nothing in the bar can shove it sideways as it arrives. */}
 
-        {actions}
+        <div ref={trailingRef} className="ml-auto flex shrink-0 items-center">
+          {actions}
+        </div>
 
         {/* Content dissolves into the bar instead of being cut by its edge.
             Painted below the bar's own box, and hidden until the page moves so
@@ -350,6 +349,19 @@ export default function NativePageHeader({
           className="pointer-events-none absolute inset-x-0 top-full bg-gradient-to-b from-background to-transparent lg:hidden"
           style={{ height: m.contentFadeHeight, opacity: 0 }}
         />
+        {/* The page's title — the only one there is. It lives here, in the
+            pinned bar, and is translated down to the block's gap at rest, so
+            what travels up is this element rather than a copy of it. Absolute,
+            so nothing in the bar can shove it sideways as it arrives. Last, so
+            it paints over the dissolve band rather than being erased by it, and
+            hidden until the first frame has placed it. */}
+        <h1
+          ref={dockedTitleRef}
+          className="pointer-events-none absolute inset-x-0 top-0 truncate text-center text-[2.1rem] font-black leading-tight tracking-normal sm:text-[2.55rem]"
+          style={{ color: accentColor, visibility: "hidden" }}
+        >
+          {title}
+        </h1>
       </header>
       )}
 
@@ -403,13 +415,16 @@ export default function NativePageHeader({
         </div>
         </div>
 
-        <h1
-          ref={heroTitleRef}
-          className="mt-[18px] truncate text-[2.1rem] font-black leading-tight tracking-normal sm:text-[2.55rem]"
-          style={{ color: accentColor }}
+        {/* Holds the title's place. The title itself is up in the bar; this is
+            the gap it is translated down into, so the block's height — and
+            everything below it — is unchanged by where the title lives. */}
+        <div
+          ref={titleAnchorRef}
+          aria-hidden
+          className="pointer-events-none invisible mt-[18px] truncate text-[2.1rem] font-black leading-tight tracking-normal sm:text-[2.55rem]"
         >
           {title}
-        </h1>
+        </div>
         {subtitle ? (
           <p className="mt-1.5 text-sm font-extrabold text-muted-foreground">{subtitle}</p>
         ) : null}
