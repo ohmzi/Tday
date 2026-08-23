@@ -39,6 +39,8 @@ object TdayDimens {
     val FabSize: Dp = 56.dp
     val FabIconSize: Dp = 40.dp
     val FabElevation: Dp = 16.dp
+    /** Lifts settings cards off the page so their options read as a surface. */
+    val SettingsCardElevation: Dp = 3.dp
     val FabPressedElevation: Dp = 8.dp
     val RootFeedDockHeight: Dp = 64.dp
     val RootFeedDockInnerPadding: Dp = 6.dp

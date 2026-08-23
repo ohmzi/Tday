@@ -1253,6 +1253,14 @@ private struct SettingsSectionCard<Content: View>: View {
             RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .stroke(colors.onSurface.opacity(0.05), lineWidth: 1)
         }
+        // Lifts the card off the page so its options read as a surface rather
+        // than as an outlined region of the background.
+        .shadow(
+            color: Color.black.opacity(colors.isDark ? 0.42 : 0.10),
+            radius: 16,
+            x: 0,
+            y: 8
+        )
     }
 }
 

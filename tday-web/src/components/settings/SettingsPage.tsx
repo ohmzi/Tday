@@ -153,8 +153,10 @@ function SettingsSection({
   titleAction?: ReactNode;
   children: ReactNode;
 }) {
+  // The shadow lives here rather than on SheetCard: that component is shared with
+  // the bottom sheets and the guide, which sit on their own surfaces already.
   return (
-    <SheetCard className="space-y-4 p-[18px]">
+    <SheetCard className="space-y-4 p-[18px] shadow-[0_16px_34px_-24px_hsl(var(--shadow)/0.5)]">
       <div className="space-y-1">
         <div className="flex items-center justify-between gap-2">
           <h2 className="text-[1.4rem] font-black leading-tight text-foreground">{title}</h2>
@@ -1457,7 +1459,7 @@ export default function SettingsPage() {
       </SettingsSection>
       )}
 
-      <SheetCard className="space-y-4 p-[18px]">
+      <SheetCard className="space-y-4 p-[18px] shadow-[0_16px_34px_-24px_hsl(var(--shadow)/0.5)]">
         <SectionHeading title={t("appearance.title")} />
         <ThemeSegmentedControl value={theme} onChange={setTheme} labelFor={t} />
 
@@ -1509,7 +1511,7 @@ export default function SettingsPage() {
         })}
       </CenteredSelectorOverlay>
 
-      <SheetCard className="space-y-4 p-[18px]">
+      <SheetCard className="space-y-4 p-[18px] shadow-[0_16px_34px_-24px_hsl(var(--shadow)/0.5)]">
         <SectionHeading title={t("aiSummary.title")} />
         <div className="flex items-center justify-between gap-4">
           <div className="flex min-w-0 items-center gap-3.5">

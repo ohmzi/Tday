@@ -1125,7 +1125,9 @@ private fun SettingsSectionCard(
         shape = RoundedCornerShape(24.dp),
         border = BorderStroke(1.dp, borderColor),
         colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = TdayDimens.SettingsCardElevation,
+        ),
     ) {
         Column(
             modifier = Modifier.padding(horizontal = 18.dp, vertical = 18.dp),
