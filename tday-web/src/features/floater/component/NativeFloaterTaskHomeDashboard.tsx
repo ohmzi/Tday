@@ -1,14 +1,11 @@
 import { useMemo, useState } from "react";
 import {
-  Ellipsis,
   Leaf,
-  ListPlus,
   Search,
   X,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import ScreenWatermark from "@/components/app/ScreenWatermark";
-import NativeAppBrandButton from "@/components/app/NativeAppBrandButton";
 import { Link, useRouter } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
 import { sortFloatersByPriority } from "@/lib/floater/buildFloaterSections";
@@ -23,9 +20,7 @@ import FloaterGroup from "./FloaterGroup";
 import FloaterListFormSheet from "@/features/floaterList/component/FloaterListFormSheet";
 import { flattenNotesToPlainText } from "@/lib/richNotes";
 
-const topButtonClass =
-  "flex h-14 w-14 items-center justify-center rounded-full border border-white/70 bg-card/90 text-foreground shadow-[0_12px_28px_-22px_hsl(var(--shadow)/0.55)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-card active:translate-y-0 dark:border-white/10";
-
+import RootFeedHeroHeader from "@/components/app/RootFeedHeroHeader";
 function renderTileOverlay() {
   return (
     <>
@@ -89,59 +84,23 @@ export default function NativeFloaterTaskHomeDashboard() {
     <>
       <ScreenWatermark icon={Leaf} color={floaterAccent} />
       <div className="flex w-full flex-col gap-4 sm:gap-5">
-        <header className="relative flex min-h-14 items-center justify-between gap-3">
-          <NativeAppBrandButton className="min-w-0" />
-
-          <div className="flex shrink-0 items-center gap-2">
-            <button
-              type="button"
-              className={topButtonClass}
-              onClick={() => {
-                setSearchOpen((value) => !value);
-                setSearchQuery("");
-              }}
-              aria-label={appDict("searchFloaters")}
-            >
-              {searchOpen ? (
-                <X className="h-6 w-6 stroke-[2.6]" />
-              ) : (
-                <Search className="h-6 w-6 stroke-[2.6]" />
-              )}
-            </button>
-            <button
-              type="button"
-              className={topButtonClass}
-              onClick={() => setCreateListOpen(true)}
-              aria-label={appDict("newFloaterList")}
-            >
-              <ListPlus className="h-6 w-6 stroke-[2.6]" />
-            </button>
-            <button
-              type="button"
-              className={topButtonClass}
-              onClick={() => router.push("/app/settings")}
-              aria-label="Settings"
-            >
-              <Ellipsis className="h-6 w-6 stroke-[2.6]" />
-            </button>
-          </div>
-        </header>
-
-        {searchOpen ? (
-          <section className="rounded-[24px] border border-white/70 bg-card/92 p-3 shadow-[0_16px_36px_-30px_hsl(var(--shadow)/0.55)] dark:border-white/10">
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <input
-                autoFocus
-                type="search"
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
-                placeholder={appDict("searchFloatersPlaceholder")}
-                className="h-12 w-full rounded-2xl border border-border/70 bg-muted/55 pl-11 pr-4 text-base font-extrabold outline-none transition-colors focus:border-accent/50 focus:bg-card md:text-sm"
-              />
-            </div>
-          </section>
-        ) : null}
+        <RootFeedHeroHeader
+          title={appDict("floater")}
+          mark="floaterLeaf"
+          searchOpen={searchOpen}
+          searchQuery={searchQuery}
+          searchPlaceholder={appDict("searchFloatersPlaceholder")}
+          searchAriaLabel={appDict("searchFloaters")}
+          createListAriaLabel={appDict("newFloaterList")}
+          settingsAriaLabel="Settings"
+          onSearchQueryChange={setSearchQuery}
+          onSearchOpenChange={(open) => {
+            setSearchOpen(open);
+            setSearchQuery("");
+          }}
+          onCreateList={() => setCreateListOpen(true)}
+          onOpenSettings={() => router.push("/app/settings")}
+        />
 
         <section
           className="relative flex h-[70px] items-center justify-between overflow-hidden rounded-[26px] px-5 text-white shadow-[0_14px_30px_-18px_rgba(50,90,130,0.62)]"

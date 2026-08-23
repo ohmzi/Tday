@@ -3,11 +3,7 @@ import { format } from "date-fns";
 import { useTranslation } from "react-i18next";
 import { getDateFnsLocale } from "@/lib/date/dateFnsLocale";
 import {
-  Ellipsis,
-  ListPlus,
-  Search,
   Sun,
-  X,
 } from "lucide-react";
 import ScreenWatermark from "@/components/app/ScreenWatermark";
 import { useListMetaData } from "@/components/Sidebar/List/query/get-list-meta";
@@ -21,7 +17,6 @@ import {
   useNativeRouteCounts,
 } from "@/components/app/nativeRouteConfig";
 import { getDisplayDate } from "@/lib/date/displayDate";
-import NativeAppBrandButton from "@/components/app/NativeAppBrandButton";
 import { Link, useLocale, usePathname, useRouter } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
 import { getListIcon } from "@/lib/listIcons";
@@ -37,9 +32,7 @@ import { usePrioritizeTodo } from "@/features/todayTodos/query/prioritize-todo";
 import { useReorderTodo } from "@/features/todayTodos/query/reorder-todo";
 import { flattenNotesToPlainText } from "@/lib/richNotes";
 
-const topButtonClass =
-  "flex h-14 w-14 items-center justify-center rounded-full border border-white/70 bg-card/90 text-foreground shadow-[0_12px_28px_-22px_hsl(var(--shadow)/0.55)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-card active:translate-y-0 dark:border-white/10";
-
+import RootFeedHeroHeader from "@/components/app/RootFeedHeroHeader";
 const todayTileColor = "#6EA8E1";
 
 // Tile color + the i18n key (in the `scheduledTaskHome` namespace) for its label. Several of
@@ -173,58 +166,25 @@ export default function NativeScheduledTaskHomeDashboard() {
     >
       <ScreenWatermark icon={Sun} />
       <div className="flex w-full flex-col gap-4 sm:gap-5">
-        <header className="relative flex min-h-14 items-center justify-between gap-3">
-          <NativeAppBrandButton className="min-w-0" />
-
-          <div className="flex shrink-0 items-center gap-2">
-            <button
-              type="button"
-              className={topButtonClass}
-              onClick={() => {
-                setSearchOpen((value) => !value);
-                setSearchQuery("");
-              }}
-              aria-label={appDict("searchTasks")}
-            >
-              {searchOpen ? <X className="h-6 w-6 stroke-[2.6]" /> : <Search className="h-6 w-6 stroke-[2.6]" />}
-            </button>
-            <button
-              type="button"
-              className={topButtonClass}
-              onClick={() => setCreateListOpen(true)}
-              aria-label={appDict("newList")}
-            >
-              <ListPlus className="h-6 w-6 stroke-[2.6]" />
-            </button>
-            <button
-              type="button"
-              className={topButtonClass}
-              onClick={() => router.push("/app/settings")}
-              aria-label={sidebarDict("settings")}
-            >
-              <Ellipsis className="h-6 w-6 stroke-[2.6]" />
-            </button>
-          </div>
-        </header>
-
-        {searchOpen && (
-          <section className={cn(
-            "border border-white/70 bg-card/90 shadow-[0_12px_28px_-22px_hsl(var(--shadow)/0.55)] dark:border-white/10 transition-all duration-200",
-            searchQuery.trim() ? "rounded-[28px] pb-2" : "rounded-full",
-          )}>
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <input
-                autoFocus
-                type="search"
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
-                placeholder={scheduledTaskHomeDict("searchTasksPlaceholder")}
-                className="h-14 w-full rounded-full bg-transparent pl-11 pr-4 text-base font-extrabold outline-none transition-colors md:text-sm"
-              />
-            </div>
-            {searchQuery.trim() && (
-              <div className="mt-2 max-h-72 overflow-y-auto">
+        <RootFeedHeroHeader
+          title="T'Day"
+          mark="timeOfDay"
+          searchOpen={searchOpen}
+          searchQuery={searchQuery}
+          searchPlaceholder={scheduledTaskHomeDict("searchTasksPlaceholder")}
+          searchAriaLabel={appDict("searchTasks")}
+          createListAriaLabel={appDict("newList")}
+          settingsAriaLabel={sidebarDict("settings")}
+          onSearchQueryChange={setSearchQuery}
+          onSearchOpenChange={(open) => {
+            setSearchOpen(open);
+            setSearchQuery("");
+          }}
+          onCreateList={() => setCreateListOpen(true)}
+          onOpenSettings={() => router.push("/app/settings")}
+          results={
+            searchQuery.trim() ? (
+              <div className="max-h-72 overflow-y-auto rounded-[28px] border border-white/70 bg-card/95 p-2 shadow-[0_16px_36px_-30px_hsl(var(--shadow)/0.55)] dark:border-white/10">
                 {searchableTodos.length === 0 ? (
                   <p className="px-3 py-4 text-sm font-extrabold text-muted-foreground">
                     {scheduledTaskHomeDict("noMatchingTasks")}
@@ -250,9 +210,9 @@ export default function NativeScheduledTaskHomeDashboard() {
                   ))
                 )}
               </div>
-            )}
-          </section>
-        )}
+            ) : null
+          }
+        />
 
         <Link
           href="/app/today"
