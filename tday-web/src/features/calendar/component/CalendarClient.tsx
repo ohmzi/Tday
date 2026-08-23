@@ -1117,7 +1117,7 @@ export default function CalendarClient() {
             class so the two cannot drift. */}
         <header className={nativePageBarClassName}>
           <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-full h-screen bg-background lg:hidden" />
-          <NativeAppBrandButton className="min-w-0 max-w-[58%] sm:max-w-none" />
+          <NativeAppBrandButton showWordmark={false} />
           <div className="flex shrink-0 items-center gap-2.5">{todayAction}</div>
         </header>
         <div className="flex flex-1 items-center justify-center">

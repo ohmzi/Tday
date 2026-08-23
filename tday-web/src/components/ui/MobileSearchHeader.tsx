@@ -28,11 +28,11 @@ interface MobileSearchHeaderProps {
   onSelectResult?: (id: string) => void;
   /**
    * Lets this bar double as the dock for a collapsing page header: the page's
-   * title fades in here once its hero block has scrolled away, and the brand
-   * wordmark folds out of the way to make room. NativePageHeader owns the
-   * scroll maths and writes to these nodes; this component only places them.
+   * title travels up into here as the block below it scrolls away, and the
+   * brand wordmark steps aside for it. NativePageHeader owns the scroll maths
+   * and writes to these nodes; this component only places them.
    */
-  pageCollapse?: NativePageBarSlots & { title: string };
+  pageCollapse?: NativePageBarSlots & { title: string; accentColor: string };
 }
 
 const collapsedButtonClassName = cn(
@@ -137,11 +137,15 @@ export default function MobileSearchHeader({
   // scroll-driven component on the screen each time the field opens.
   useNativePageBarResync(pageCollapse ? headerRef.current : null, isExpanded);
 
+  // No wordmark while a page title is sharing this bar: two names side by side
+  // read as a mistake, and the glyph alone is enough of a home affordance.
   const brandHome = showBrandHome ? (
-    <NativeAppBrandButton
-      className="min-w-0 max-w-[58%] sm:max-w-none"
-      wordmarkRef={pageCollapse?.wordmarkRef}
-    />
+    <div ref={pageCollapse?.leadingRef} className="shrink-0">
+      <NativeAppBrandButton
+        className={pageCollapse ? undefined : "min-w-0 max-w-[58%] sm:max-w-none"}
+        showWordmark={!pageCollapse}
+      />
+    </div>
   ) : null;
 
   return (
@@ -163,15 +167,31 @@ export default function MobileSearchHeader({
         aria-hidden
         className="pointer-events-none absolute inset-x-0 bottom-full h-screen bg-background lg:hidden"
       />
-      {/* Out of flow, so it can live outside the branch and never remount:
-          content dissolves into the bar instead of being cut by its edge. */}
+      {/* Both out of flow, so they live outside the branch and never remount —
+          unmounting the title left the page with no heading at all while the
+          field was open. The title comes last so it paints over the dissolve
+          band; while the field is up, the field paints over it. */}
       {pageCollapse ? (
-        <div
-          ref={pageCollapse.fadeRef}
-          aria-hidden
-          className="pointer-events-none absolute inset-x-0 top-full bg-gradient-to-b from-background to-transparent lg:hidden"
-          style={{ height: nativePageHeaderMetrics.contentFadeHeight, opacity: 0 }}
-        />
+        <>
+          <div
+            ref={pageCollapse.fadeRef}
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 top-full bg-gradient-to-b from-background to-transparent lg:hidden"
+            style={{ height: nativePageHeaderMetrics.contentFadeHeight, opacity: 0 }}
+          />
+          {/* The page's title — the only one there is. See NativePageHeader:
+              it lives here and is translated down to the block's gap at rest. */}
+          <h1
+            ref={pageCollapse.dockedTitleRef}
+            className={cn(
+              "pointer-events-none absolute inset-x-0 top-0 truncate text-center text-[2.1rem] font-black leading-tight tracking-normal sm:text-[2.55rem]",
+              isExpanded && "opacity-0",
+            )}
+            style={{ color: pageCollapse.accentColor, visibility: "hidden" }}
+          >
+            {pageCollapse.title}
+          </h1>
+        </>
       ) : null}
       {isExpanded ? (
         <div className="relative flex min-w-0 flex-1 items-center">
@@ -292,21 +312,7 @@ export default function MobileSearchHeader({
       ) : (
         <>
           {brandHome}
-          {/* Between the brand and the actions, never centred on the bar: it
-              takes whatever the folded wordmark and the buttons leave, and
-              ellipsizes. It does remount with the branch, which is exactly what
-              the resync above exists to correct. */}
-          {pageCollapse ? (
-            <span
-              ref={pageCollapse.dockedTitleRef}
-              aria-hidden
-              className="pointer-events-none min-w-0 flex-1 origin-center truncate text-center text-[1.4rem] font-black leading-none text-foreground lg:hidden"
-              style={{ opacity: 0, visibility: "hidden" }}
-            >
-              {pageCollapse.title}
-            </span>
-          ) : null}
-          <div className="flex shrink-0 items-center gap-2.5">
+          <div ref={pageCollapse?.trailingRef} className="ml-auto flex shrink-0 items-center gap-2.5">
             <button
               type="button"
               aria-label="Search"
