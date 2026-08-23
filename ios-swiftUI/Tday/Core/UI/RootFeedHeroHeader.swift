@@ -58,6 +58,12 @@ enum RootFeedHeroHeaderMetrics {
     static var refreshPillRestingTop: CGFloat {
         heroTitleCenterY - (TdayRefreshIndicatorMetrics.containerHeight / 2)
     }
+    static let refreshPillMotion = Animation.spring(response: 0.42, dampingFraction: 0.9)
+
+    /// Fraction of the pull over which the pill completes its travel. It leads
+    /// deliberately, matching Android: by the time the feed has begun to move
+    /// the pill is most of the way down, and it eases to a stop.
+    static let pillLeadFraction: CGFloat = 0.45
 
     static let compactRowCenterY: CGFloat = topInset + (barButtonSize / 2)
 
@@ -274,7 +280,7 @@ struct RootFeedHeroHeader: View {
         let top = Metrics.lerp(
             Metrics.refreshPillHiddenTop,
             Metrics.refreshPillRestingTop,
-            Metrics.clamp(refresh.reveal)
+            Metrics.stagger(refresh.reveal, to: Metrics.pillLeadFraction)
         ) - settle
 
         return TdayPullRefreshIndicator(
@@ -285,6 +291,11 @@ struct RootFeedHeroHeader: View {
             x: width / 2,
             y: top + (TdayRefreshIndicatorMetrics.containerHeight / 2)
         )
+        // The pull itself starts and stops abruptly with the finger; damping the
+        // pill here is what smooths both its descent and its ride back up when
+        // the refresh finishes.
+        .animation(Metrics.refreshPillMotion, value: refresh.reveal)
+        .animation(Metrics.refreshPillMotion, value: refresh.isRefreshing)
         .allowsHitTesting(false)
     }
 
