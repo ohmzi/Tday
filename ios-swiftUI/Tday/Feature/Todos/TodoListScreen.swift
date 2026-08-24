@@ -78,6 +78,12 @@ enum TodoTimelineMetrics {
     static let heroMarkEchoGlyph: CGFloat = 108
     /// Band below the bar that dissolves rows as they pass under it.
     static let contentFadeHeight: CGFloat = 30
+    /// Clear space kept under the collapsing block, so that when the title has
+    /// finished docking the first row comes to rest BELOW the fade band rather
+    /// than with its top edge dissolved into it. Deliberately not part of
+    /// `titleCollapseDistance`: it moves the content down without changing when
+    /// the title arrives, and scrolling on past still fades the row as it goes.
+    static let settledContentGap: CGFloat = contentFadeHeight + 6
 
     static let titleCollapseDistance: CGFloat =
         heroMarkTopGap + heroMarkBox + heroMarkBottomGap + expandedTitleHeight
@@ -2596,6 +2602,11 @@ struct TimelineTopBar: View {
         // inside the bar's stack: that would add layout height, push every row
         // down and shift adjustedContentInset, which every collapse-progress
         // calculation on these screens is derived from.
+        //
+        // Off until the screen actually moves: painted at rest it would veil the
+        // top of whatever sits under the bar — the hero mark on a screen at the
+        // top, the first card on one that has settled — and there is nothing
+        // passing under the bar for it to dissolve.
         .overlay(alignment: .bottom) {
             LinearGradient(
                 colors: [colors.background, colors.background.opacity(0)],
@@ -2604,6 +2615,7 @@ struct TimelineTopBar: View {
             )
             .frame(height: TodoTimelineMetrics.contentFadeHeight)
             .offset(y: TodoTimelineMetrics.contentFadeHeight)
+            .opacity(Double(min(1, progress * 8)))
             .allowsHitTesting(false)
         }
     }
@@ -2698,6 +2710,7 @@ struct TimelineExpandedTitleRow: View {
             alignment: .bottom
         )
         .clipped()
+        .padding(.bottom, TodoTimelineMetrics.settledContentGap)
         .allowsHitTesting(false)
     }
 
