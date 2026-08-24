@@ -59,7 +59,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
@@ -76,9 +75,9 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.data.server.VersionCheckResult
-import com.ohmz.tday.compose.core.ui.TdayHeroTitleHeader
-import com.ohmz.tday.compose.core.ui.tdayTopFade
-import com.ohmz.tday.compose.core.ui.rememberScrollCollapsingTitleScrollBehavior
+import com.ohmz.tday.compose.core.ui.TdayHeroTitleBlock
+import com.ohmz.tday.compose.core.ui.TdayHeroToolbar
+import com.ohmz.tday.compose.core.ui.rememberScrollHeroTitleCollapse
 import com.ohmz.tday.compose.ui.theme.TdayDimens
 import com.ohmz.tday.compose.ui.theme.TdayStatusSuccess
 import kotlinx.coroutines.launch
@@ -99,11 +98,7 @@ fun LatestReleaseScreen(
     val snackbarManager = LocalSnackbarManager.current
     val view = LocalView.current
     val scrollState = rememberScrollState()
-    val titleScrollBehavior = rememberScrollCollapsingTitleScrollBehavior(
-        scrollState = scrollState,
-        maxCollapseDistance = RELEASE_TITLE_COLLAPSE_DISTANCE_DP.dp,
-        label = "releaseTitleCollapseProgress",
-    )
+    val heroCollapse = rememberScrollHeroTitleCollapse(scrollState = scrollState)
     val installScope = rememberCoroutineScope()
     val installerEvent by InAppApkUpdater.installEvent.collectAsStateWithLifecycle()
     var installUiState by remember { mutableStateOf<ApkInstallUiState>(ApkInstallUiState.Idle) }
@@ -173,28 +168,23 @@ fun LatestReleaseScreen(
 
     Scaffold(
         containerColor = colorScheme.background,
-        topBar = {
-            TdayHeroTitleHeader(
-                title = stringResource(R.string.release_title),
-                icon = ImageVector.vectorResource(R.drawable.ic_lucide_cloud_download),
-                accentColor = MaterialTheme.colorScheme.primary,
-                collapseProgress = titleScrollBehavior.rawCollapseProgress,
-                onBack = onBack,
-                backContentDescription = stringResource(R.string.action_back),
-            )
-        },
     ) { padding ->
+        Box(modifier = Modifier.fillMaxSize().padding(padding)) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
                 .background(colorScheme.background)
-                .nestedScroll(titleScrollBehavior.nestedScrollConnection)
-                .tdayTopFade()
                 .verticalScroll(scrollState)
-                .padding(horizontal = 18.dp, vertical = 2.dp),
+                .padding(horizontal = 18.dp)
+                .padding(bottom = 2.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            TdayHeroTitleBlock(
+                title = stringResource(R.string.release_title),
+                icon = ImageVector.vectorResource(R.drawable.ic_lucide_cloud_download),
+                accentColor = MaterialTheme.colorScheme.primary,
+                collapseProgress = heroCollapse.progress,
+            )
             if (uiState.isLoading && uiState.currentRelease == null && uiState.latestRelease == null) {
                 Box(
                     modifier = Modifier
@@ -260,6 +250,16 @@ fun LatestReleaseScreen(
                     },
                 )
             }
+        }
+
+        // Last, so it draws over the content passing behind it.
+        TdayHeroToolbar(
+            title = stringResource(R.string.release_title),
+            collapseProgress = heroCollapse.progress,
+            onBack = onBack,
+            backContentDescription = stringResource(R.string.action_back),
+            modifier = Modifier.align(Alignment.TopStart),
+        )
         }
     }
 }

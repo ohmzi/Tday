@@ -21,11 +21,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.ui.input.nestedscroll.nestedScroll
-import com.ohmz.tday.compose.core.ui.TdayHeroTitleHeader
-import com.ohmz.tday.compose.core.ui.rememberScrollCollapsingTitleScrollBehavior
+import com.ohmz.tday.compose.core.ui.TdayHeroTitleBlock
+import com.ohmz.tday.compose.core.ui.TdayHeroToolbar
+import com.ohmz.tday.compose.core.ui.rememberScrollHeroTitleCollapse
 import com.ohmz.tday.compose.core.ui.TdaySearchCapsule
-import com.ohmz.tday.compose.core.ui.tdayTopFade
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -107,34 +106,26 @@ fun HelpGuideScreen(
     LaunchedEffect(Unit) { guidePrefs.setLastSeenGuideVersion(BuildConfig.VERSION_NAME) }
 
     val guideScrollState = rememberScrollState()
-    val titleScrollBehavior = rememberScrollCollapsingTitleScrollBehavior(
-        scrollState = guideScrollState,
-        maxCollapseDistance = GUIDE_TITLE_COLLAPSE_DISTANCE_DP.dp,
-    )
+    val heroCollapse = rememberScrollHeroTitleCollapse(scrollState = guideScrollState)
 
     Scaffold(
         containerColor = colorScheme.background,
-        topBar = {
-            TdayHeroTitleHeader(
-                title = res("guide.title"),
-                icon = ImageVector.vectorResource(R.drawable.ic_lucide_circle_help),
-                accentColor = MaterialTheme.colorScheme.primary,
-                collapseProgress = titleScrollBehavior.rawCollapseProgress,
-                onBack = onBack,
-                backContentDescription = stringResource(R.string.settings_help_guide),
-            )
-        },
     ) { padding ->
+        Box(modifier = Modifier.fillMaxSize().padding(padding)) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
-                .nestedScroll(titleScrollBehavior.nestedScrollConnection)
-                .tdayTopFade()
                 .verticalScroll(guideScrollState)
                 .padding(horizontal = 16.dp)
                 .padding(bottom = 32.dp),
         ) {
+            TdayHeroTitleBlock(
+                title = res("guide.title"),
+                icon = ImageVector.vectorResource(R.drawable.ic_lucide_circle_help),
+                accentColor = colorScheme.primary,
+                collapseProgress = heroCollapse.progress,
+                modifier = Modifier.padding(horizontal = 2.dp),
+            )
             Text(
                 text = res("guide.subtitle"),
                 style = MaterialTheme.typography.bodyMedium,
@@ -202,6 +193,16 @@ fun HelpGuideScreen(
                     }
                 }
             }
+        }
+
+        // Last, so it draws over the content passing behind it.
+        TdayHeroToolbar(
+            title = res("guide.title"),
+            collapseProgress = heroCollapse.progress,
+            onBack = onBack,
+            backContentDescription = stringResource(R.string.action_back),
+            modifier = Modifier.align(Alignment.TopStart),
+        )
         }
     }
 }

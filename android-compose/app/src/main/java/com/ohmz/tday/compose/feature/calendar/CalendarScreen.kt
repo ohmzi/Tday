@@ -10,7 +10,6 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.LocalOverscrollConfiguration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -57,7 +56,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -84,9 +82,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
-import androidx.compose.ui.input.nestedscroll.NestedScrollSource
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
@@ -99,7 +94,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
@@ -115,9 +109,11 @@ import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
 import com.ohmz.tday.compose.core.observability.TdayTelemetry
 import com.ohmz.tday.compose.core.sound.rememberTaskCompletionSound
 import com.ohmz.tday.compose.core.ui.EmptyTaskWatermark
-import com.ohmz.tday.compose.core.ui.TdayHeroTitleHeader
+import com.ohmz.tday.compose.core.ui.TdayHeroTitleMetrics
+import com.ohmz.tday.compose.core.ui.TdayHeroToolbar
+import com.ohmz.tday.compose.core.ui.rememberLazyListHeroTitleCollapse
+import com.ohmz.tday.compose.core.ui.tdayHeroTitleItem
 import com.ohmz.tday.compose.core.ui.snapTitleCollapsePx
-import com.ohmz.tday.compose.core.ui.tdayTopFade
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.component.TdaySegmentedSlider
 import com.ohmz.tday.compose.ui.theme.TdayDimens
@@ -234,80 +230,24 @@ fun CalendarScreen(
     val minNavigableMonth = remember(zoneId) { YearMonth.now(zoneId) }
     val listState = rememberLazyListState()
     val density = LocalDensity.current
-    val maxCollapsePx = with(density) { CALENDAR_TITLE_COLLAPSE_DISTANCE_DP.dp.toPx() }
-    var headerCollapsePx by rememberSaveable { mutableFloatStateOf(0f) }
-    val collapseProgressTarget = if (maxCollapsePx > 0f) {
-        (headerCollapsePx / maxCollapsePx).coerceIn(0f, 1f)
-    } else {
-        0f
+    val heroCollapse = rememberLazyListHeroTitleCollapse(listState = listState)
+    val calendarTitle = stringResource(R.string.calendar_title)
+    val calendarIcon = ImageVector.vectorResource(R.drawable.ic_lucide_calendar_1)
+    val collapsePx = with(density) { TdayHeroTitleMetrics.HeroHeight.toPx() }
+    // Settles the header rather than leaving it stranded part-way: the block is
+    // ordinary content now, so this scrolls the list rather than a private
+    // offset, which is what makes the whole thing feel elastic.
+    LaunchedEffect(listState.isScrollInProgress, collapsePx) {
+        if (listState.isScrollInProgress) return@LaunchedEffect
+        if (listState.firstVisibleItemIndex != 0) return@LaunchedEffect
+        val offset = listState.firstVisibleItemScrollOffset.toFloat()
+        if (offset <= 0f || offset >= collapsePx) return@LaunchedEffect
+        val target = if (!listState.canScrollForward) 0f else snapTitleCollapsePx(offset, collapsePx)
+        listState.animateScrollBy(
+            value = target - offset,
+            animationSpec = tween(durationMillis = 260, easing = FastOutSlowInEasing),
+        )
     }
-    val nestedScrollConnection = remember(listState, maxCollapsePx) {
-        object : NestedScrollConnection {
-            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-                val deltaY = available.y
-                if (deltaY < 0f) {
-                    val previous = headerCollapsePx
-                    val next = (previous - deltaY).coerceIn(0f, maxCollapsePx)
-                    val consumed = next - previous
-                    if (consumed > 0f) {
-                        headerCollapsePx = next
-                        return Offset(0f, -consumed)
-                    }
-                    return Offset.Zero
-                }
-
-                if (deltaY > 0f) {
-                    val isListAtTop =
-                        listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0
-                    if (!isListAtTop) return Offset.Zero
-                    val previous = headerCollapsePx
-                    val next = (previous - deltaY).coerceIn(0f, maxCollapsePx)
-                    val consumed = previous - next
-                    if (consumed > 0f) {
-                        headerCollapsePx = next
-                        return Offset(0f, consumed)
-                    }
-                }
-
-                return Offset.Zero
-            }
-
-            override suspend fun onPreFling(available: Velocity): Velocity {
-                val isListAtTop =
-                    listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0
-                if (available.y > 0f && !isListAtTop) return Velocity.Zero
-                val snapped = snapTitleCollapsePx(
-                    currentPx = headerCollapsePx,
-                    maxPx = maxCollapsePx,
-                    velocityY = available.y,
-                )
-                if (snapped == headerCollapsePx) return Velocity.Zero
-                headerCollapsePx = snapped
-                return if (available.y == 0f) Velocity.Zero else available
-            }
-        }
-    }
-    val collapseProgress by animateFloatAsState(
-        targetValue = collapseProgressTarget,
-        label = "calendarTitleCollapseProgress",
-    )
-    LaunchedEffect(
-        listState.isScrollInProgress,
-        headerCollapsePx,
-        maxCollapsePx,
-    ) {
-        if (listState.isScrollInProgress || headerCollapsePx <= 0f || headerCollapsePx >= maxCollapsePx) {
-            return@LaunchedEffect
-        }
-        val isListAtTop =
-            listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0
-        headerCollapsePx = if (isListAtTop) {
-            snapTitleCollapsePx(headerCollapsePx, maxCollapsePx)
-        } else {
-            maxCollapsePx
-        }
-    }
-    val monthTitleSnapThresholdPx = remember(density) { with(density) { 58.dp.roundToPx() } }
     var visibleMonthIso by rememberSaveable { mutableStateOf(minNavigableMonth.toString()) }
     var selectedDateIso by rememberSaveable { mutableStateOf(today.toString()) }
     var selectedViewKey by rememberSaveable { mutableStateOf(CalendarViewMode.MONTH.name) }
@@ -457,53 +397,9 @@ fun CalendarScreen(
             calendarDropTargetBounds.clear()
         }
     }
-    LaunchedEffect(listState.isScrollInProgress, monthTitleSnapThresholdPx) {
-        if (listState.isScrollInProgress) return@LaunchedEffect
-        if (listState.firstVisibleItemIndex != 0) return@LaunchedEffect
-        val offset = listState.firstVisibleItemScrollOffset
-        if (offset in 1 until monthTitleSnapThresholdPx) {
-            listState.animateScrollBy(
-                value = -offset.toFloat(),
-                animationSpec = tween(
-                    durationMillis = 240,
-                    easing = FastOutSlowInEasing,
-                ),
-            )
-        }
-    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
-        topBar = {
-            TdayHeroTitleHeader(
-                title = stringResource(R.string.calendar_title),
-                icon = ImageVector.vectorResource(R.drawable.ic_lucide_calendar_1),
-                accentColor = CalendarAccentPurple,
-                titleColor = CalendarAccentPurple,
-                // Raw progress, not the spring-animated one: the easing lives in
-                // the header so it tracks the finger.
-                collapseProgress = collapseProgressTarget,
-                onBack = onBack,
-                backContentDescription = stringResource(R.string.action_back),
-            ) {
-                CalendarTodayButton(
-                    collapseProgress = collapseProgress,
-                    label = stringResource(R.string.calendar_today),
-                    contentDescription = stringResource(R.string.calendar_jump_to_today),
-                    onClick = {
-                        todayJumpRequestId += 1
-                        TdayTelemetry.addBreadcrumb(
-                            "calendar.today",
-                            data = mapOf("mode" to selectedViewMode.name.lowercase()),
-                        )
-                        todayJumpRequest = CalendarTodayJumpRequest(
-                            id = todayJumpRequestId,
-                            targetDate = LocalDate.now(zoneId),
-                        )
-                    },
-                )
-            }
-        },
         floatingActionButton = {
             CalendarCreateTaskFab(
                 onClick = { openCreateTaskSheetForSelectedDate() },
@@ -513,7 +409,6 @@ fun CalendarScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
                 .onGloballyPositioned { coordinates ->
                     calendarDragContainerOrigin = coordinates.positionInRoot()
                 },
@@ -523,16 +418,22 @@ fun CalendarScreen(
                 accentColor = CalendarAccentPurple,
             )
 
-            CompositionLocalProvider(LocalOverscrollConfiguration provides null) {
+            run {
                 LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .nestedScroll(nestedScrollConnection)
-                        .tdayTopFade(),
+                    modifier = Modifier.fillMaxSize(),
                     state = listState,
-                    contentPadding = PaddingValues(horizontal = 18.dp, vertical = 2.dp),
+                    // No top padding: the hero item reserves the bar's height
+                    // itself, so the scroll offset is a clean count from the top.
+                    contentPadding = PaddingValues(start = 18.dp, end = 18.dp, bottom = 2.dp),
                     verticalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
+                tdayHeroTitleItem(
+                    title = calendarTitle,
+                    icon = calendarIcon,
+                    accentColor = CalendarAccentPurple,
+                    titleColor = CalendarAccentPurple,
+                    collapseProgress = heroCollapse.progress,
+                )
                 item {
                     CalendarViewModeTabs(
                         selectedMode = selectedViewMode,
@@ -728,7 +629,32 @@ fun CalendarScreen(
                     lists = uiState.lists,
                 )
             }
-        }
+
+            // Last, so it draws over the content passing behind it.
+        TdayHeroToolbar(
+            title = stringResource(R.string.calendar_title),
+            titleColor = CalendarAccentPurple,
+            collapseProgress = heroCollapse.progress,
+            onBack = onBack,
+            backContentDescription = stringResource(R.string.action_back),
+        ) {
+            CalendarTodayButton(
+                collapseProgress = heroCollapse.progress,
+                label = stringResource(R.string.calendar_today),
+                contentDescription = stringResource(R.string.calendar_jump_to_today),
+                onClick = {
+                    todayJumpRequestId += 1
+                    TdayTelemetry.addBreadcrumb(
+                        "calendar.today",
+                        data = mapOf("mode" to selectedViewMode.name.lowercase()),
+                    )
+                    todayJumpRequest = CalendarTodayJumpRequest(
+                        id = todayJumpRequestId,
+                        targetDate = LocalDate.now(zoneId),
+                    )
+                },
+            )
+        }        }
     }
 
     if (showCreateTaskSheet) {
@@ -1480,7 +1406,9 @@ private fun formatWeekRange(weekStart: LocalDate): String {
  */
 @Composable
 private fun CalendarTodayButton(
-    collapseProgress: Float,
+    // A lambda, so a scroll frame invalidates only this button rather than the
+    // whole calendar.
+    collapseProgress: () -> Float,
     label: String,
     contentDescription: String,
     onClick: () -> Unit,
@@ -1490,7 +1418,7 @@ private fun CalendarTodayButton(
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
     val isDarkTheme = colorScheme.background.luminance() < 0.5f
-    val showLabel = collapseProgress.coerceIn(0f, 1f) < 0.5f
+    val showLabel = collapseProgress().coerceIn(0f, 1f) < 0.5f
 
     val containerColor = CalendarAccentPurple.copy(alpha = if (isDarkTheme) 0.22f else 0.12f)
     val buttonBorder = BorderStroke(
@@ -1758,7 +1686,6 @@ private fun CalendarMonthCard(
     }
 }
 
-private const val CALENDAR_TITLE_COLLAPSE_DISTANCE_DP = 180f
 
 @Composable
 private fun MiniCalendarNavButton(

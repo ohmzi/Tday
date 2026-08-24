@@ -180,18 +180,20 @@ export default function MobileSearchHeader({
             className="pointer-events-none absolute inset-x-0 top-full bg-gradient-to-b from-background to-transparent lg:hidden"
             style={{ height: nativePageHeaderMetrics.contentFadeHeight, opacity: 0 }}
           />
-          {/* The page's title — the only one there is. See NativePageHeader:
-              it lives here and is translated down to the block's gap at rest. */}
-          <h1
+          {/* The bar's copy of the page title, at the same size as the block's
+              own. See NativePageHeader for the handoff. `aria-hidden` because
+              the block's h1 is the page's real heading. */}
+          <span
             ref={pageCollapse.dockedTitleRef}
+            aria-hidden
             className={cn(
-              "pointer-events-none absolute inset-x-0 top-0 truncate text-center text-[2.1rem] font-black leading-tight tracking-normal sm:text-[2.55rem]",
+              "pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 truncate text-center text-[2.1rem] font-black leading-tight tracking-normal",
               isExpanded && "opacity-0",
             )}
-            style={{ color: pageCollapse.accentColor, visibility: "hidden" }}
+            style={{ color: pageCollapse.accentColor, opacity: 0, visibility: "hidden" }}
           >
             {pageCollapse.title}
-          </h1>
+          </span>
         </>
       ) : null}
       {leading}

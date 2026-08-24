@@ -3,6 +3,7 @@ package com.ohmz.tday.compose.feature.sweep
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -33,7 +34,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
@@ -41,9 +41,9 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.model.TodoItem
-import com.ohmz.tday.compose.core.ui.TdayHeroTitleHeader
-import com.ohmz.tday.compose.core.ui.rememberScrollCollapsingTitleScrollBehavior
-import com.ohmz.tday.compose.core.ui.tdayTopFade
+import com.ohmz.tday.compose.core.ui.TdayHeroTitleBlock
+import com.ohmz.tday.compose.core.ui.TdayHeroToolbar
+import com.ohmz.tday.compose.core.ui.rememberScrollHeroTitleCollapse
 import com.ohmz.tday.compose.ui.component.ThemedDatePickerDialog
 import java.time.Instant
 import java.time.ZoneId
@@ -71,37 +71,25 @@ fun MorningSweepScreen(
     val colorScheme = MaterialTheme.colorScheme
     val card = uiState.cards.firstOrNull()
     val scrollState = rememberScrollState()
-    val titleScrollBehavior = rememberScrollCollapsingTitleScrollBehavior(
-        scrollState = scrollState,
-        maxCollapseDistance = SWEEP_TITLE_COLLAPSE_DISTANCE_DP.dp,
-        label = "sweepTitleCollapseProgress",
-    )
+    val heroCollapse = rememberScrollHeroTitleCollapse(scrollState = scrollState)
 
     Scaffold(
         containerColor = colorScheme.background,
-        topBar = {
-            TdayHeroTitleHeader(
-                title = stringResource(R.string.sweep_title),
-                icon = ImageVector.vectorResource(R.drawable.ic_lucide_sun),
-                accentColor = TdaySweepAccent,
-                // Raw progress, not the spring-animated one: the easing lives in
-                // the header so it tracks the finger.
-                collapseProgress = titleScrollBehavior.rawCollapseProgress,
-                onBack = onBack,
-                backContentDescription = stringResource(R.string.action_back),
-            )
-        },
     ) { padding ->
+        Box(modifier = Modifier.fillMaxSize().padding(padding)) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
-                .nestedScroll(titleScrollBehavior.nestedScrollConnection)
-                .tdayTopFade()
                 .verticalScroll(scrollState)
                 .padding(horizontal = 18.dp)
                 .padding(bottom = 32.dp),
         ) {
+            TdayHeroTitleBlock(
+                title = stringResource(R.string.sweep_title),
+                icon = ImageVector.vectorResource(R.drawable.ic_lucide_sun),
+                accentColor = TdaySweepAccent,
+                collapseProgress = heroCollapse.progress,
+            )
             if (card == null) {
                 Text(
                     text = stringResource(R.string.sweep_done),
@@ -153,6 +141,16 @@ fun MorningSweepScreen(
                     }
                 }
             }
+        }
+
+        // Last, so it draws over the content passing behind it.
+        TdayHeroToolbar(
+            title = stringResource(R.string.sweep_title),
+            collapseProgress = heroCollapse.progress,
+            onBack = onBack,
+            backContentDescription = stringResource(R.string.action_back),
+            modifier = Modifier.align(Alignment.TopStart),
+        )
         }
     }
 

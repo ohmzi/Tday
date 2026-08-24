@@ -50,7 +50,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
@@ -68,11 +67,11 @@ import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.ui.EmptyTaskBackgroundMessage
 import com.ohmz.tday.compose.core.ui.EmptyTaskWatermark
 import com.ohmz.tday.compose.core.ui.TaskSwipeActionButton
-import com.ohmz.tday.compose.core.ui.TdayHeroTitleHeader
+import com.ohmz.tday.compose.core.ui.TdayHeroToolbar
+import com.ohmz.tday.compose.core.ui.rememberLazyListHeroTitleCollapse
+import com.ohmz.tday.compose.core.ui.tdayHeroTitleItem
 import com.ohmz.tday.compose.core.ui.animateTaskSwipeOffsetAsState
-import com.ohmz.tday.compose.core.ui.rememberLazyListCollapsingTitleScrollBehavior
 import com.ohmz.tday.compose.core.ui.rememberTaskSwipeRevealState
-import com.ohmz.tday.compose.core.ui.tdayTopFade
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.theme.TdayCompletedTitleAccent
 import com.ohmz.tday.compose.ui.theme.TdaySwipeDeleteBackground
@@ -130,11 +129,9 @@ fun CompletedScreen(
     val timelineSections = remember(uiState.items) {
         buildCompletedTimelineSections(uiState.items)
     }
-    val titleScrollBehavior = rememberLazyListCollapsingTitleScrollBehavior(
-        listState = listState,
-        maxCollapseDistance = COMPLETED_TITLE_COLLAPSE_DISTANCE_DP.dp,
-        label = "completedTitleCollapseProgress",
-    )
+    val heroCollapse = rememberLazyListHeroTitleCollapse(listState = listState)
+    val completedTitle = stringResource(R.string.completed_title)
+    val completedIcon = ImageVector.vectorResource(R.drawable.ic_lucide_circle_check_big)
     var collapsedSectionKeys by rememberSaveable {
         mutableStateOf(emptySet<String>())
     }
@@ -150,22 +147,7 @@ fun CompletedScreen(
         }
     }
 
-    Scaffold(
-        containerColor = colorScheme.background,
-        topBar = {
-            TdayHeroTitleHeader(
-                title = stringResource(R.string.completed_title),
-                icon = ImageVector.vectorResource(R.drawable.ic_lucide_circle_check_big),
-                accentColor = COMPLETED_TITLE_COLOR,
-                titleColor = COMPLETED_TITLE_COLOR,
-                // Raw progress, not the spring-animated one: the easing lives in
-                // the header so it tracks the finger.
-                collapseProgress = titleScrollBehavior.rawCollapseProgress,
-                onBack = onBack,
-                backContentDescription = stringResource(R.string.action_back),
-            )
-        },
-    ) { padding ->
+    Scaffold(containerColor = colorScheme.background) { padding ->
         Box(
             modifier = Modifier.fillMaxSize(),
         ) {
@@ -175,14 +157,20 @@ fun CompletedScreen(
                     .padding(padding),
             ) {
                 LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .nestedScroll(titleScrollBehavior.nestedScrollConnection)
-                        .tdayTopFade(),
+                    modifier = Modifier.fillMaxSize(),
                     state = listState,
-                    contentPadding = PaddingValues(horizontal = 18.dp, vertical = 2.dp),
+                    // No top padding: the hero item reserves the bar's height
+                    // itself, so the scroll offset is a clean count from the top.
+                    contentPadding = PaddingValues(start = 18.dp, end = 18.dp, bottom = 2.dp),
                     verticalArrangement = Arrangement.spacedBy(0.dp),
                 ) {
+                    tdayHeroTitleItem(
+                        title = completedTitle,
+                        icon = completedIcon,
+                        accentColor = COMPLETED_TITLE_COLOR,
+                        titleColor = COMPLETED_TITLE_COLOR,
+                        collapseProgress = heroCollapse.progress,
+                    )
                     timelineSections.forEachIndexed { sectionIndex, section ->
                         val isCollapsed = collapsedSectionKeys.contains(section.key)
                         item(key = "completed-header-${section.key}") {
@@ -292,6 +280,16 @@ fun CompletedScreen(
                     message = stringResource(R.string.completed_empty),
                 )
             }
+
+            // Last, so it draws over the content passing behind it.
+            TdayHeroToolbar(
+                title = completedTitle,
+                titleColor = COMPLETED_TITLE_COLOR,
+                collapseProgress = heroCollapse.progress,
+                onBack = onBack,
+                backContentDescription = stringResource(R.string.action_back),
+                modifier = Modifier.align(Alignment.TopStart).padding(padding),
+            )
         }
     }
 
@@ -845,4 +843,3 @@ private val COMPLETED_SECTION_FORMATTER: DateTimeFormatter =
     DateTimeFormatter.ofPattern("EEEE, MMM d", Locale.getDefault())
 private val COMPLETED_ROW_TIME_FORMATTER: DateTimeFormatter =
     DateTimeFormatter.ofPattern("h:mm a", Locale.getDefault())
-private const val COMPLETED_TITLE_COLLAPSE_DISTANCE_DP = 180f
