@@ -2270,6 +2270,7 @@ private struct CalendarElasticTopBar: View {
             )
             .frame(height: TodoTimelineMetrics.contentFadeHeight)
             .offset(y: TodoTimelineMetrics.contentFadeHeight)
+            .opacity(Double(min(1, progress * 8)))
             .allowsHitTesting(false)
         }
     }
