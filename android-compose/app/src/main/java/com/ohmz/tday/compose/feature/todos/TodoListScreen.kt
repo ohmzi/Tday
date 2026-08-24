@@ -41,7 +41,6 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
@@ -84,13 +83,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -99,12 +95,10 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.draw.alpha
@@ -156,9 +150,9 @@ import com.ohmz.tday.compose.core.ui.animateTaskSwipeOffsetAsState
 import com.ohmz.tday.compose.core.ui.RootFeedHeroHeader
 import com.ohmz.tday.compose.core.ui.RootFeedHeroHeaderMetrics
 import com.ohmz.tday.compose.core.ui.RootFeedHeroMark
-import com.ohmz.tday.compose.core.ui.TdayHeroTitleHeader
-import com.ohmz.tday.compose.core.ui.tdayTopFade
-import com.ohmz.tday.compose.core.ui.rememberLazyListCollapsingTitleScrollBehavior
+import com.ohmz.tday.compose.core.ui.TdayHeroToolbar
+import com.ohmz.tday.compose.core.ui.rememberLazyListHeroTitleCollapse
+import com.ohmz.tday.compose.core.ui.tdayHeroTitleItem
 import com.ohmz.tday.compose.core.ui.rememberTaskSwipeRevealState
 import com.ohmz.tday.compose.core.ui.shareList
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
@@ -392,11 +386,14 @@ fun TodoListScreen(
         onDispose { onRootControlsVisibleChange(true) }
     }
     val density = LocalDensity.current
-    val todayTitleScrollBehavior = rememberLazyListCollapsingTitleScrollBehavior(
+    val heroCollapse = rememberLazyListHeroTitleCollapse(
         listState = listState,
-        maxCollapseDistance = TODAY_TITLE_COLLAPSE_DISTANCE_DP.dp,
         enabled = usesTodayStyle && !usesRootFeedChrome,
-        label = "todayTitleCollapseProgress",
+    )
+    val heroIcon = emptyStateIconForMode(
+        mode = uiState.mode,
+        listIconKey = selectedList?.iconKey,
+        isTodayDaytime = isTodayDaytime,
     )
     val isCollapsibleTimelineMode =
         uiState.mode == TodoListMode.ALL ||
@@ -680,7 +677,9 @@ fun TodoListScreen(
     val timelineItemSpacing = TimelineDateGroupSpacing
     val timelineHeaderBodySpacing = TimelineHeaderBodySpacing
     fun highlightedTodoListTarget(todoId: String): Pair<Int, String>? {
-        var itemIndex = 0
+        // Starts at 1: the hero block holds index 0 on this path, so every row
+        // below it is one further down than the sections alone would say.
+        var itemIndex = if (usesTodayStyle && !usesRootFeedChrome) 1 else 0
         timelineSections.forEach { section ->
             itemIndex += 1
             val todoIndex = section.items.indexOfFirst { item ->
@@ -717,7 +716,6 @@ fun TodoListScreen(
         if (uiState.mode != TodoListMode.ALL || highlightedTodoId.isNullOrBlank()) return@LaunchedEffect
         val target = highlightedTodoListTarget(highlightedTodoId)
         if (target != null) {
-            todayTitleScrollBehavior.collapseFully()
             delay(SEARCH_RESULT_NAV_SETTLE_DELAY_MS)
             val viewportHeight =
                 listState.layoutInfo.viewportEndOffset - listState.layoutInfo.viewportStartOffset
@@ -841,35 +839,6 @@ fun TodoListScreen(
 
     Scaffold(
         containerColor = colorScheme.background,
-        topBar = {
-            when {
-                usesRootFeedChrome -> Unit
-                else -> {
-                    TdayHeroTitleHeader(
-                        title = uiState.title,
-                        icon = emptyStateIconForMode(
-                            mode = uiState.mode,
-                            listIconKey = selectedList?.iconKey,
-                            isTodayDaytime = isTodayDaytime,
-                        ),
-                        accentColor = titleColor,
-                        collapseProgress = todayTitleScrollBehavior.rawCollapseProgress,
-                        onBack = onBack,
-                        backContentDescription = stringResource(R.string.action_back),
-                        actions = {
-                            topBarActions.forEach { action ->
-                                TodayHeaderButton(
-                                    onClick = action.onClick,
-                                    icon = action.icon,
-                                    contentDescription = action.contentDescription,
-                                    iconSize = 22.dp,
-                                )
-                            }
-                        },
-                    )
-                }
-            }
-        },
         floatingActionButton = {
             if (showCreateTaskButton && !isViewerList) {
                 CreateTaskButton(
@@ -933,16 +902,7 @@ fun TodoListScreen(
                     ),
             ) {
                 LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .then(if (usesRootFeedChrome) Modifier else Modifier.tdayTopFade())
-                        .then(
-                            if (usesTodayStyle && !usesRootFeedChrome) {
-                                Modifier.nestedScroll(todayTitleScrollBehavior.nestedScrollConnection)
-                            } else {
-                                Modifier
-                            },
-                        ),
+                    modifier = Modifier.fillMaxSize(),
                     state = listState,
                     // Freeze list scrolling while a task is being dragged so the
                     // drop target stays put under the finger (matches Calendar).
@@ -953,13 +913,18 @@ fun TodoListScreen(
                             end = 18.dp,
                             bottom = 18.dp,
                         )
-                        usesTodayStyle -> PaddingValues(horizontal = 18.dp, vertical = 2.dp)
+                        // No top padding: the hero item reserves the bar's
+                        // height itself, so the scroll offset is a clean count
+                        // from the top.
+                        usesTodayStyle -> PaddingValues(start = 18.dp, end = 18.dp, bottom = 2.dp)
                         else -> PaddingValues(horizontal = 16.dp, vertical = 12.dp)
                     },
                     verticalArrangement = Arrangement.spacedBy(
                         if (showSectionedTimeline) 0.dp else timelineItemSpacing,
                     ),
                 ) {
+                    // One branch, so index 0 is always well defined — the
+                    // hero's progress is read off the first item's offset.
                     if (usesRootFeedChrome) {
                         item(
                             key = "root-feed-header-spacer",
@@ -973,6 +938,13 @@ fun TodoListScreen(
                                     .height(RootFeedHeroHeaderMetrics.ExpandedHeight),
                             )
                         }
+                    } else if (usesTodayStyle) {
+                        tdayHeroTitleItem(
+                            title = uiState.title,
+                            icon = heroIcon,
+                            accentColor = titleColor,
+                            collapseProgress = heroCollapse.progress,
+                        )
                     }
 
                     if (showFloaterTaskHomeSearchResults) {
@@ -1421,6 +1393,31 @@ fun TodoListScreen(
                     refreshIsRefreshing = refreshIsRefreshing,
                     refreshPullFraction = { refreshPullFraction },
                     refreshWaveFrozen = refreshWaveFrozen,
+                )
+            } else if (usesTodayStyle) {
+                // The pinned half of the header. An overlay rather than a
+                // Scaffold `topBar`, so the hero block below can scroll behind
+                // it instead of starting under it.
+                TdayHeroToolbar(
+                    title = uiState.title,
+                    titleColor = titleColor,
+                    collapseProgress = heroCollapse.progress,
+                    onBack = onBack,
+                    backContentDescription = stringResource(R.string.action_back),
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(padding)
+                        .zIndex(6f),
+                    actions = {
+                        topBarActions.forEach { action ->
+                            TodayHeaderButton(
+                                onClick = action.onClick,
+                                icon = action.icon,
+                                contentDescription = action.contentDescription,
+                                iconSize = 22.dp,
+                            )
+                        }
+                    },
                 )
             }
 
@@ -3615,7 +3612,6 @@ private fun searchResultScrollDurationMillis(distancePx: Float): Int =
             SEARCH_RESULT_SCROLL_MAX_DURATION_MS,
         )
 
-private const val TODAY_TITLE_COLLAPSE_DISTANCE_DP = 180f
 private const val SEARCH_RESULT_NAV_SETTLE_DELAY_MS = 380L
 private const val SEARCH_RESULT_SCROLL_CORRECTION_PASSES = 2
 private const val SEARCH_RESULT_SCROLL_MIN_DISTANCE_PX = 2f

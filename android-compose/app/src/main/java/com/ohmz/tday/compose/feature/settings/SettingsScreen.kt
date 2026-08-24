@@ -5,15 +5,11 @@ import androidx.annotation.DrawableRes
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.biometric.BiometricManager
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,13 +19,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -59,12 +52,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
@@ -73,7 +62,6 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.lerp
 import androidx.core.os.LocaleListCompat
 import androidx.core.view.HapticFeedbackConstantsCompat
 import androidx.core.view.ViewCompat
@@ -96,9 +84,9 @@ import com.ohmz.tday.compose.core.model.SecurityQuestionStatusResponse
 import com.ohmz.tday.compose.core.model.SessionUser
 import com.ohmz.tday.compose.core.notification.DayAheadOption
 import com.ohmz.tday.compose.core.notification.ReminderOption
-import com.ohmz.tday.compose.core.ui.TdayHeroTitleHeader
-import com.ohmz.tday.compose.core.ui.tdayTopFade
-import com.ohmz.tday.compose.core.ui.rememberScrollCollapsingTitleScrollBehavior
+import com.ohmz.tday.compose.core.ui.TdayHeroTitleBlock
+import com.ohmz.tday.compose.core.ui.TdayHeroToolbar
+import com.ohmz.tday.compose.core.ui.rememberScrollHeroTitleCollapse
 import com.ohmz.tday.compose.feature.app.MobileSyncStatus
 import com.ohmz.tday.compose.feature.app.ProfileEditResult
 import com.ohmz.tday.compose.feature.settings.data.DataTransferCard
@@ -147,38 +135,25 @@ fun SettingsScreen(
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val scrollState = rememberScrollState()
-    val titleScrollBehavior = rememberScrollCollapsingTitleScrollBehavior(
-        scrollState = scrollState,
-        maxCollapseDistance = SETTINGS_TITLE_COLLAPSE_DISTANCE_DP.dp,
-        label = "settingsTitleCollapseProgress",
-    )
+    val heroCollapse = rememberScrollHeroTitleCollapse(scrollState = scrollState)
 
-    Scaffold(
-        containerColor = colorScheme.background,
-        topBar = {
-            TdayHeroTitleHeader(
-                title = stringResource(R.string.settings_title),
-                icon = ImageVector.vectorResource(R.drawable.ic_lucide_sliders_horizontal),
-                accentColor = MaterialTheme.colorScheme.primary,
-                // Raw progress, not the spring-animated one: the easing lives in
-                // the header so it tracks the finger.
-                collapseProgress = titleScrollBehavior.rawCollapseProgress,
-                onBack = onBack,
-                backContentDescription = stringResource(R.string.action_back),
-            )
-        },
-        ) { padding ->
+    Scaffold(containerColor = colorScheme.background) { padding ->
+        Box(modifier = Modifier.fillMaxSize().padding(padding)) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
                 .background(colorScheme.background)
-                .nestedScroll(titleScrollBehavior.nestedScrollConnection)
-                .tdayTopFade()
                 .verticalScroll(scrollState)
-                .padding(horizontal = 18.dp, vertical = 2.dp),
+                .padding(horizontal = 18.dp)
+                .padding(bottom = 2.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            TdayHeroTitleBlock(
+                title = stringResource(R.string.settings_title),
+                icon = ImageVector.vectorResource(R.drawable.ic_lucide_sliders_horizontal),
+                accentColor = MaterialTheme.colorScheme.primary,
+                collapseProgress = heroCollapse.progress,
+            )
             if (!isLocalMode) {
                 SettingsProfileCard(
                     user = user,
@@ -357,6 +332,16 @@ fun SettingsScreen(
             DataTransferCard()
 
             Spacer(modifier = Modifier.height(24.dp))
+        }
+
+        // Last, so it draws over the content passing behind it.
+        TdayHeroToolbar(
+            title = stringResource(R.string.settings_title),
+            collapseProgress = heroCollapse.progress,
+            onBack = onBack,
+            backContentDescription = stringResource(R.string.action_back),
+            modifier = Modifier.align(Alignment.TopStart),
+        )
         }
     }
 }
@@ -1240,7 +1225,6 @@ private fun SettingsRowIcon(
     Spacer(modifier = Modifier.width(TdayDimens.SpacingXl))
 }
 
-private const val SETTINGS_TITLE_COLLAPSE_DISTANCE_DP = 180f
 
 @Composable
 private fun ThemeModeSelector(

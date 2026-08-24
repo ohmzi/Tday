@@ -42,8 +42,24 @@ export const nativePageHeaderMetrics = {
   markWashBottomAlpha: 0.07,
   markEchoAlpha: 0.17,
 
-  /** Breathing room each side of the title once it has parked in the bar. */
+  /** Breathing room each side of the title once it has docked in the bar. */
   dockedTitleSideGap: 8,
+
+  /**
+   * The handoff, in iOS's numbers (`expandedTitleFadeStart` … 
+   * `collapsedTitleRevealEnd` in `Feature/Todos/TodoListScreen.swift`). The
+   * block's title holds its ground for most of the collapse, fades out as it
+   * reaches the bar while lifting, and the bar's copy — the same size, so the
+   * name never changes shape — fades in from just below, rising and scaling the
+   * last 1.5% up. One is at zero exactly where the other starts, so there is
+   * never a moment with two titles nor one with none.
+   */
+  heroTitleFadeStart: 0.6,
+  heroTitleFadeEnd: 0.82,
+  heroTitleLift: 14,
+  dockedTitleRevealStart: 0.82,
+  dockedTitleRise: 10,
+  dockedTitleScaleFrom: 0.985,
   /**
    * Over how much of the last stretch of travel the bar's side reserve comes
    * in. Only the parked title has neighbours to keep clear of; down in the
@@ -82,7 +98,7 @@ export type NativePageBarSlots = {
   /** The pinned bar itself. The collapse is measured against its bottom edge. */
   barRef: RefObject<HTMLElement | null>;
   /** The one title element. It lives in the bar and is translated into place. */
-  dockedTitleRef: RefObject<HTMLHeadingElement | null>;
+  dockedTitleRef: RefObject<HTMLSpanElement | null>;
   fadeRef: RefObject<HTMLDivElement | null>;
   /** What sits either side of the title in the bar, so it can keep clear. */
   leadingRef: RefObject<HTMLDivElement | null>;
@@ -91,7 +107,7 @@ export type NativePageBarSlots = {
 
 export function useNativePageBarSlots(): NativePageBarSlots {
   const barRef = useRef<HTMLElement | null>(null);
-  const dockedTitleRef = useRef<HTMLHeadingElement | null>(null);
+  const dockedTitleRef = useRef<HTMLSpanElement | null>(null);
   const fadeRef = useRef<HTMLDivElement | null>(null);
   const leadingRef = useRef<HTMLDivElement | null>(null);
   const trailingRef = useRef<HTMLDivElement | null>(null);
@@ -204,8 +220,8 @@ export default function NativePageHeader({
   const heroRef = useRef<HTMLDivElement | null>(null);
   const markBoxRef = useRef<HTMLDivElement | null>(null);
   const markRef = useRef<HTMLDivElement | null>(null);
-  /** Zero-content stand-in holding the title's place in the block below. */
-  const titleAnchorRef = useRef<HTMLDivElement | null>(null);
+  /** The block's own copy of the title — the one that scrolls away. */
+  const heroTitleRef = useRef<HTMLHeadingElement | null>(null);
   const ownSlots = useNativePageBarSlots();
   const slots = barSlots ?? ownSlots;
   const { barRef, dockedTitleRef, fadeRef, leadingRef, trailingRef } = slots;
@@ -229,10 +245,10 @@ export default function NativePageHeader({
       const heroEl = heroRef.current;
       const markEl = markRef.current;
       const markBoxEl = markBoxRef.current;
-      const anchorEl = titleAnchorRef.current;
+      const heroTitleEl = heroTitleRef.current;
       const titleEl = dockedTitleRef.current;
       const fadeEl = fadeRef.current;
-      if (!heroEl || !markEl || !markBoxEl || !anchorEl) return;
+      if (!heroEl || !markEl || !markBoxEl) return;
 
       // Every layout read happens before any style write, so a scroll frame
       // never forces a synchronous reflow.
@@ -242,16 +258,8 @@ export default function NativePageHeader({
       // the scale written below, so measuring it would feed its own output back
       // in and make its opacity depend on how the scroll got here.
       const markRect = markBoxEl.getBoundingClientRect();
-      const anchorRect = anchorEl.getBoundingClientRect();
-      const titleHeight = titleEl?.offsetHeight ?? 0;
       const leadingWidth = leadingRef.current?.offsetWidth ?? 0;
       const trailingWidth = trailingRef.current?.offsetWidth ?? 0;
-      // The bar centres its own contents in its CONTENT box, and its top padding
-      // carries the safe-area inset. Centring the title on the border box would
-      // float it up into the status bar by half that inset on a notched phone.
-      const barStyle = barRect ? getComputedStyle(barRef.current as HTMLElement) : null;
-      const barPadTop = barStyle ? parseFloat(barStyle.paddingTop) : 0;
-      const barPadBottom = barStyle ? parseFloat(barStyle.paddingBottom) : 0;
       // matchMedia rather than an innerWidth comparison: Tailwind emits `lg` as
       // `min-width: 64rem`, which is 1024px only while the browser's default
       // font size is 16px. Asking the same question the stylesheet asks keeps
@@ -281,43 +289,51 @@ export default function NativePageHeader({
       markEl.style.opacity = String(markFade);
       markEl.style.transform = `scale(${0.85 + 0.15 * markFade})`;
 
-      if (titleEl && barRect) {
-        // Everything here is in the bar's own coordinates: the title sits at
-        // `top: 0` and is translated down, so no percentage is involved and the
-        // padding that carries the safe-area inset is accounted for explicitly.
-        //
-        // Parked, it is centred in the bar's content box — the same box the
-        // glyph is centred in. At rest it is pushed back down to the gap the
-        // block keeps for it, so what rises is the same element at the same
-        // size, moving straight up, rather than one copy fading out while
-        // another fades in somewhere else.
-        //
-        // Straight subtraction, so it tracks the page one-for-one and simply
-        // stops when it arrives. There is no progress fraction to be wrong
-        // about, no threshold to snap across, and a page too short to finish
-        // just rests with the title part way — exactly where the page left it.
-        const parkedY =
-          barPadTop + (barRect.height - barPadTop - barPadBottom - titleHeight) / 2;
-        const restingY = anchorRect.top - barRect.top;
-        // At lg the bar scrolls away with the page, so there is nothing to park
-        // in and the title just rides its anchor the whole way.
-        const y = barBottom === null ? restingY : Math.max(parkedY, restingY);
-        titleEl.style.transform = `translateY(${y}px)`;
-        titleEl.style.visibility = "visible";
+      // How far through the collapse the block is, as a fraction of its own
+      // height. The block scrolls away behind the bar rather than shrinking, so
+      // this is simply how much of it has gone — the same quantity iOS derives
+      // its whole handoff from, and the windows below are iOS's numbers.
+      const collapsed = hiddenFraction(heroRect);
+
+      // The block's own title: holds its ground, then fades out as it reaches
+      // the bar, lifting as it goes so it leaves a little faster than the
+      // finger. Both the fade and the lift ride the septic curve.
+      const heroTitleGone = smootherstep(
+        clamp01((collapsed - m.heroTitleFadeStart) / (m.heroTitleFadeEnd - m.heroTitleFadeStart)),
+      );
+      if (heroTitleEl) {
+        heroTitleEl.style.opacity = String(1 - heroTitleGone);
+        heroTitleEl.style.transform =
+          heroTitleGone <= 0 ? "" : `translateY(${-m.heroTitleLift * heroTitleGone}px)`;
+      }
+
+      // The bar's copy: the same size, so the name never changes shape across
+      // the handoff. It starts exactly where the block's copy reaches zero, so
+      // there is never a moment with two titles nor one with none.
+      const dockFade = smootherstep(
+        clamp01(
+          (collapsed - m.dockedTitleRevealStart) / (1 - m.dockedTitleRevealStart),
+        ),
+      );
+      if (titleEl) {
+        titleEl.style.opacity = String(dockFade);
+        // Invisible text must not be read out, nor eat taps meant for the bar.
+        titleEl.style.visibility = dockFade < 0.01 ? "hidden" : "visible";
+        // The -50% keeps it centred on the bar; the rest is the reveal.
+        titleEl.style.transform =
+          `translateY(calc(-50% + ${m.dockedTitleRise * (1 - dockFade)}px)) ` +
+          `scale(${m.dockedTitleScaleFrom + (1 - m.dockedTitleScaleFrom) * dockFade})`;
 
         // Kept clear of both the back button and the actions, by the wider of
         // the two so the title stays centred on the bar rather than on the
-        // leftovers — eased in only over the last stretch, because down in the
-        // block there is nothing beside it and the full width is its to use.
+        // leftovers.
         //
         // Reserving the wider side twice is deliberate, and it is what makes a
         // long title ellipsize once docked — "Completion history" does, on a
         // narrow phone. The alternative is reserving each side for what actually
         // sits there, which fits more text but stops the title being centred on
         // anything, and centred is the ask. iOS makes the same trade.
-        const docking = clamp01(1 - (y - parkedY) / m.reserveRampDistance);
-        const reserve =
-          (Math.max(leadingWidth, trailingWidth) + m.dockedTitleSideGap) * docking;
+        const reserve = Math.max(leadingWidth, trailingWidth) + m.dockedTitleSideGap;
         titleEl.style.paddingLeft = `${reserve}px`;
         titleEl.style.paddingRight = `${reserve}px`;
       }
@@ -397,13 +413,17 @@ export default function NativePageHeader({
             so nothing in the bar can shove it sideways as it arrives. Last, so
             it paints over the dissolve band rather than being erased by it, and
             hidden until the first frame has placed it. */}
-        <h1
+        {/* The bar's copy, at the same size so the name never changes shape
+            across the handoff. `aria-hidden` because the block's h1 above is
+            the page's real heading and this is its duplicate. */}
+        <span
           ref={dockedTitleRef}
-          className="pointer-events-none absolute inset-x-0 top-0 truncate text-center text-[2.1rem] font-black leading-tight tracking-normal sm:text-[2.55rem]"
-          style={{ color: accentColor, visibility: "hidden" }}
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 truncate text-center text-[2.1rem] font-black leading-tight tracking-normal"
+          style={{ color: accentColor, opacity: 0, visibility: "hidden" }}
         >
           {title}
-        </h1>
+        </span>
       </header>
       )}
 
@@ -457,16 +477,13 @@ export default function NativePageHeader({
         </div>
         </div>
 
-        {/* Holds the title's place. The title itself is up in the bar; this is
-            the gap it is translated down into, so the block's height — and
-            everything below it — is unchanged by where the title lives. */}
-        <div
-          ref={titleAnchorRef}
-          aria-hidden
-          className="pointer-events-none invisible mt-[18px] truncate text-[2.1rem] font-black leading-tight tracking-normal sm:text-[2.55rem]"
+        <h1
+          ref={heroTitleRef}
+          className="mt-[18px] truncate text-[2.1rem] font-black leading-tight tracking-normal"
+          style={{ color: accentColor }}
         >
           {title}
-        </div>
+        </h1>
         {subtitle ? (
           <p className="mt-1.5 text-sm font-extrabold text-muted-foreground">{subtitle}</p>
         ) : null}
