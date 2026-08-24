@@ -47,8 +47,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -56,8 +54,8 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
-import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
 import androidx.core.view.HapticFeedbackConstantsCompat
@@ -77,7 +75,6 @@ import com.ohmz.tday.compose.core.ui.rememberTaskSwipeRevealState
 import com.ohmz.tday.compose.core.ui.tdayTopFade
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.theme.TdayCompletedTitleAccent
-import com.ohmz.tday.compose.ui.theme.TdayDimens
 import com.ohmz.tday.compose.ui.theme.TdaySwipeDeleteBackground
 import com.ohmz.tday.compose.ui.theme.TdaySwipeEditBackground
 import com.ohmz.tday.compose.ui.theme.TdayTaskCompleteAccent
@@ -394,7 +391,6 @@ private fun CompletedSwipeRow(
     val coroutineScope = rememberCoroutineScope()
     val swipeRevealState = rememberTaskSwipeRevealState(item.id)
     var restorePhase by remember(item.id) { mutableStateOf(CompletedRestorePhase.Completed) }
-    var titleLayoutResult by remember(item.id) { mutableStateOf<TextLayoutResult?>(null) }
     val latestOpenSwipeTaskId = rememberUpdatedState(openSwipeTaskId)
     fun claimSwipeSlot() {
         if (latestOpenSwipeTaskId.value != item.id) {
@@ -450,11 +446,6 @@ private fun CompletedSwipeRow(
         },
         animationSpec = tween(durationMillis = 160),
         label = "completedRestoreTitleColor",
-    )
-    val titleStrikeProgress by animateFloatAsState(
-        targetValue = if (showStrikethrough) 1f else 0f,
-        animationSpec = tween(durationMillis = 260, easing = FastOutSlowInEasing),
-        label = "completedRestoreTitleStrikeProgress",
     )
     val completedAtText = COMPLETED_ROW_TIME_FORMATTER
         .withZone(ZoneId.systemDefault())
@@ -621,28 +612,18 @@ private fun CompletedSwipeRow(
                         ) {
                             Text(
                                 text = item.title,
-                                modifier = Modifier.drawWithContent {
-                                    drawContent()
-                                    if (titleStrikeProgress > 0f) {
-                                        val lineEnd = (
-                                                titleLayoutResult
-                                                    ?.takeIf { it.lineCount > 0 }
-                                                    ?.getLineRight(0) ?: size.width
-                                                ).coerceIn(0f, size.width)
-                                        val lineY = size.height * 0.56f
-                                        drawLine(
-                                            color = colorScheme.onSurface.copy(alpha = 0.65f),
-                                            start = Offset(0f, lineY),
-                                            end = Offset(lineEnd * titleStrikeProgress, lineY),
-                                            strokeWidth = TdayDimens.BorderWidthThick.toPx(),
-                                        )
-                                    }
-                                },
                                 color = titleColor,
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.ExtraBold,
+                                // Real per-line strikethrough crosses out every line of a
+                                // wrapped title instead of one rule down the middle, the
+                                // same as the task list's own row.
+                                textDecoration = if (showStrikethrough) {
+                                    TextDecoration.LineThrough
+                                } else {
+                                    TextDecoration.None
+                                },
                                 maxLines = 2,
-                                onTextLayout = { titleLayoutResult = it },
                             )
                             Row(
                                 horizontalArrangement = Arrangement.spacedBy(5.dp),

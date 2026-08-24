@@ -520,44 +520,40 @@
 }
 
 /*
- * Title strike as an animated sweep, matching the native rows: Compose animates
- * `titleStrikeProgress` over 320ms with FastOutSlowInEasing (cubic-bezier(0.4, 0, 0.2, 1)), so the
- * line draws across the title rather than appearing fully formed. Notes deliberately keep a plain
- * `line-through` — they wrap to several lines, which a single swept rule cannot follow, and the
- * native apps make the same split.
+ * Title strike: the font's own `line-through`, so it crosses the text on every
+ * line of a wrapped title. A single swept rule could not — it was one absolutely
+ * positioned bar at 55% of the block, which on a two-line title landed in the
+ * gap between the lines and on a three-line title crossed only the middle one.
+ *
+ * The sweep is gone rather than rebuilt, because both native apps dropped
+ * theirs for the same reason in `f07187b2`: Android's row is a plain
+ * `TextDecoration.LineThrough` and iOS's a plain `.strikethrough()`, each
+ * fading in over the same 320ms. What is left here is that fade. It also means
+ * the title and the notes directly below it are now struck by the same
+ * mechanism instead of two that never quite matched.
+ *
+ * Declared here rather than with Tailwind's `line-through` utility so the class
+ * stays the single switch the rows toggle, and so the decoration's reveal has
+ * somewhere to live.
  */
-@keyframes task-strike-sweep {
+@keyframes task-strike-fade {
   from {
-    transform: scaleX(0);
-  }
-  to {
-    transform: scaleX(1);
+    text-decoration-color: transparent;
   }
 }
 
 .task-strike {
-  position: relative;
+  text-decoration: line-through;
+  /* Follows the title into `text-muted-foreground`, so the rule dims with the
+     text over the row's own 300ms colour transition. */
+  text-decoration-color: currentColor;
+  animation: task-strike-fade 320ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
-.task-strike::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 55%;
-  height: 1.5px;
-  border-radius: 1px;
-  background-color: currentColor;
-  transform: scaleX(0);
-  transform-origin: left center;
-  animation: task-strike-sweep 320ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
-}
-
-/* A reduced-motion reader still needs to see the task is struck — just not the sweep. */
+/* A reduced-motion reader still needs to see the task is struck — just not the fade. */
 @media (prefers-reduced-motion: reduce) {
-  .task-strike::after {
+  .task-strike {
     animation: none;
-    transform: scaleX(1);
   }
 }
 
