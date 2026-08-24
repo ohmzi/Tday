@@ -1,5 +1,8 @@
 import type { ElementType, ReactNode, RefObject } from "react";
 import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
+import { ChevronLeft } from "lucide-react";
+import { useRouter } from "@/lib/navigation";
+import { rootFeedHeaderButtonClass } from "./RootFeedHeroHeader";
 import { nativeAppScrollAttribute } from "./nativeAppLayout";
 import { clamp01, smootherstep } from "./nativeHeaderEasing";
 import { cn } from "@/lib/utils";
@@ -42,15 +45,6 @@ export const nativePageHeaderMetrics = {
   /** Breathing room each side of the title once it has parked in the bar. */
   dockedTitleSideGap: 8,
   /**
-   * The bar's minimum row height. With nothing on the left any more and the
-   * title absolutely positioned, a page with no actions would leave the row with
-   * no content at all and the bar would shrink to its own padding — taking the
-   * title's parked position down with it. 56 clears the title at both type
-   * sizes and matches the row the search-bar pages get from their search
-   * button, so it parks at the same height on every page.
-   */
-  barRowHeight: 56,
-  /**
    * Over how much of the last stretch of travel the bar's side reserve comes
    * in. Only the parked title has neighbours to keep clear of; down in the
    * block it has the full width, and charging it there truncated titles that
@@ -90,7 +84,8 @@ export type NativePageBarSlots = {
   /** The one title element. It lives in the bar and is translated into place. */
   dockedTitleRef: RefObject<HTMLHeadingElement | null>;
   fadeRef: RefObject<HTMLDivElement | null>;
-  /** What sits beside the title in the bar, so it can keep clear of it. */
+  /** What sits either side of the title in the bar, so it can keep clear. */
+  leadingRef: RefObject<HTMLDivElement | null>;
   trailingRef: RefObject<HTMLDivElement | null>;
 };
 
@@ -98,10 +93,11 @@ export function useNativePageBarSlots(): NativePageBarSlots {
   const barRef = useRef<HTMLElement | null>(null);
   const dockedTitleRef = useRef<HTMLHeadingElement | null>(null);
   const fadeRef = useRef<HTMLDivElement | null>(null);
+  const leadingRef = useRef<HTMLDivElement | null>(null);
   const trailingRef = useRef<HTMLDivElement | null>(null);
   return useMemo(
-    () => ({ barRef, dockedTitleRef, fadeRef, trailingRef }),
-    [barRef, dockedTitleRef, fadeRef, trailingRef],
+    () => ({ barRef, dockedTitleRef, fadeRef, leadingRef, trailingRef }),
+    [barRef, dockedTitleRef, fadeRef, leadingRef, trailingRef],
   );
 }
 
@@ -143,6 +139,12 @@ type Props = {
   /** Rendered under the title, inside the block that scrolls away. */
   beneathTitle?: ReactNode;
   /**
+   * Where the back button goes when there is no history to pop — a deep link or
+   * a bookmark. Defaults to the root feed; a page that sits under another one
+   * should name its parent.
+   */
+  backFallbackHref?: string;
+  /**
    * Supplied when the page already owns its pinned bar. This component then
    * renders only the block that scrolls away, and drives the bar's nodes
    * through these refs instead of rendering a second bar of its own.
@@ -151,6 +153,42 @@ type Props = {
   className?: string;
 };
 
+/**
+ * The back affordance every non-root page leads with, matching the chevron the
+ * native bars carry in the same corner (`TimelineTopBarButton` on iOS,
+ * `TdayHeroBackButton` on Android).
+ *
+ * Its 56px box is also what holds the bar's row open: with the title absolutely
+ * positioned, a page with no actions would otherwise leave the row with no
+ * in-flow content and the bar would shrink to its own padding, taking the
+ * title's parked position with it.
+ */
+export function NativePageBackButton({ fallbackHref = "/app/tday" }: { fallbackHref?: string }) {
+  const router = useRouter();
+
+  const goBack = () => {
+    // React Router stamps an index on each history entry, back-filling 0 on
+    // every fresh document. At 0 this page is where the document started — a
+    // deep link, a share target, an external entry — and popping would leave
+    // the app, which the native back never does. A reload keeps its index, so
+    // that still pops normally.
+    const index = (window.history.state as { idx?: number } | null)?.idx ?? 0;
+    if (index > 0) router.back();
+    else router.push(fallbackHref);
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={goBack}
+      aria-label="Back"
+      className={rootFeedHeaderButtonClass}
+    >
+      <ChevronLeft className="h-6 w-6 stroke-[2.6]" />
+    </button>
+  );
+}
+
 export default function NativePageHeader({
   title,
   accentColor,
@@ -158,6 +196,7 @@ export default function NativePageHeader({
   subtitle,
   actions,
   beneathTitle,
+  backFallbackHref,
   barSlots,
   className,
 }: Props) {
@@ -169,7 +208,7 @@ export default function NativePageHeader({
   const titleAnchorRef = useRef<HTMLDivElement | null>(null);
   const ownSlots = useNativePageBarSlots();
   const slots = barSlots ?? ownSlots;
-  const { barRef, dockedTitleRef, fadeRef, trailingRef } = slots;
+  const { barRef, dockedTitleRef, fadeRef, leadingRef, trailingRef } = slots;
 
   // The collapse is applied by writing styles straight onto the nodes inside a
   // rAF, never through React state. A scroll frame must not re-render the page
@@ -205,6 +244,7 @@ export default function NativePageHeader({
       const markRect = markBoxEl.getBoundingClientRect();
       const anchorRect = anchorEl.getBoundingClientRect();
       const titleHeight = titleEl?.offsetHeight ?? 0;
+      const leadingWidth = leadingRef.current?.offsetWidth ?? 0;
       const trailingWidth = trailingRef.current?.offsetWidth ?? 0;
       // The bar centres its own contents in its CONTENT box, and its top padding
       // carries the safe-area inset. Centring the title on the border box would
@@ -265,12 +305,19 @@ export default function NativePageHeader({
         titleEl.style.transform = `translateY(${y}px)`;
         titleEl.style.visibility = "visible";
 
-        // Kept clear of the bar's actions, and by the same amount on the empty
-        // side so the title stays centred on the bar rather than on the
+        // Kept clear of both the back button and the actions, by the wider of
+        // the two so the title stays centred on the bar rather than on the
         // leftovers — eased in only over the last stretch, because down in the
         // block there is nothing beside it and the full width is its to use.
+        //
+        // Reserving the wider side twice is deliberate, and it is what makes a
+        // long title ellipsize once docked — "Completion history" does, on a
+        // narrow phone. The alternative is reserving each side for what actually
+        // sits there, which fits more text but stops the title being centred on
+        // anything, and centred is the ask. iOS makes the same trade.
         const docking = clamp01(1 - (y - parkedY) / m.reserveRampDistance);
-        const reserve = (trailingWidth + m.dockedTitleSideGap) * docking;
+        const reserve =
+          (Math.max(leadingWidth, trailingWidth) + m.dockedTitleSideGap) * docking;
         titleEl.style.paddingLeft = `${reserve}px`;
         titleEl.style.paddingRight = `${reserve}px`;
       }
@@ -297,6 +344,7 @@ export default function NativePageHeader({
       typeof ResizeObserver === "undefined" ? null : new ResizeObserver(schedule);
     observer?.observe(hero);
     if (barRef.current) observer?.observe(barRef.current);
+    if (leadingRef.current) observer?.observe(leadingRef.current);
     if (trailingRef.current) observer?.observe(trailingRef.current);
 
     apply();
@@ -313,7 +361,7 @@ export default function NativePageHeader({
     // `title`/`subtitle` are dependencies so the effect re-runs — and so
     // re-applies, and re-observes the bar — once text that resizes either box
     // has painted.
-  }, [m, barRef, dockedTitleRef, fadeRef, trailingRef, title, subtitle]);
+  }, [m, barRef, dockedTitleRef, fadeRef, leadingRef, trailingRef, title, subtitle]);
 
   return (
     <>
@@ -326,12 +374,9 @@ export default function NativePageHeader({
           className="pointer-events-none absolute inset-x-0 bottom-full h-screen bg-background lg:hidden"
         />
 
-        {/* Nothing on the left. The page's own name is the only thing that
-            belongs at the top of it, and getting home is what the dock at the
-            bottom is for. This holds the row's height open, since with the
-            title absolutely positioned the bar could otherwise collapse to its
-            own padding on a page with no actions. */}
-        <div className="w-0 shrink-0" style={{ height: m.barRowHeight }} aria-hidden />
+        <div ref={leadingRef} className="flex shrink-0 items-center">
+          <NativePageBackButton fallbackHref={backFallbackHref} />
+        </div>
 
         <div ref={trailingRef} className="ml-auto flex shrink-0 items-center">
           {actions}
