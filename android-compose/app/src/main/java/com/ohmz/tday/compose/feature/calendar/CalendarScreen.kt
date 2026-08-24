@@ -77,7 +77,6 @@ import androidx.compose.ui.draganddrop.DragAndDropTarget
 import androidx.compose.ui.draganddrop.mimeTypes
 import androidx.compose.ui.draganddrop.toAndroidDragEvent
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
@@ -96,7 +95,6 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
@@ -2066,7 +2064,6 @@ private fun CalendarTodoRow(
     var localStruck by remember(todo.id) { mutableStateOf(false) }
     var pendingCompletion by remember(todo.id) { mutableStateOf(false) }
     var completionFading by remember(todo.id) { mutableStateOf(false) }
-    var titleLayoutResult by remember(todo.id) { mutableStateOf<TextLayoutResult?>(null) }
     var rowOriginInRoot by remember(todo.id) { mutableStateOf(Offset.Zero) }
     var dragPointerPosition by remember(todo.id) { mutableStateOf<Offset?>(null) }
     val latestOpenSwipeTaskId = rememberUpdatedState(openSwipeTaskId)
@@ -2324,23 +2321,6 @@ private fun CalendarTodoRow(
                     ) {
                         Text(
                             text = todo.title,
-                            modifier = Modifier.drawWithContent {
-                                drawContent()
-                                if (titleStrikeProgress > 0f) {
-                                    val lineEnd = (
-                                            titleLayoutResult
-                                                ?.takeIf { it.lineCount > 0 }
-                                                ?.getLineRight(0) ?: size.width
-                                            ).coerceIn(0f, size.width)
-                                    val lineY = size.height * 0.56f
-                                    drawLine(
-                                        color = colorScheme.onSurface.copy(alpha = 0.65f),
-                                        start = Offset(0f, lineY),
-                                        end = Offset(lineEnd * titleStrikeProgress, lineY),
-                                        strokeWidth = TdayDimens.BorderWidthThick.toPx(),
-                                    )
-                                }
-                            },
                             color = if (localStruck) {
                                 colorScheme.onSurface.copy(alpha = 0.78f)
                             } else {
@@ -2348,9 +2328,15 @@ private fun CalendarTodoRow(
                             },
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.ExtraBold,
-                            textDecoration = TextDecoration.None,
+                            // Real per-line strikethrough crosses out every line of a
+                            // wrapped title instead of one rule down the middle, the same
+                            // as the task list's own row.
+                            textDecoration = if (localStruck) {
+                                TextDecoration.LineThrough
+                            } else {
+                                TextDecoration.None
+                            },
                             maxLines = 2,
-                            onTextLayout = { titleLayoutResult = it },
                         )
                         dueText?.let { text ->
                             Text(
