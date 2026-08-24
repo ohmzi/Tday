@@ -1,6 +1,9 @@
 package com.ohmz.tday.compose.core.ui
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -14,7 +17,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.shape.CircleShape
@@ -24,6 +26,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -44,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.ui.theme.TdayDimens
+import kotlin.math.roundToInt
 
 /**
  * Geometry for the screen header used by every titled page that is not a root
@@ -71,7 +76,7 @@ object TdayHeroTitleMetrics {
     val TitleTopGap = 18.dp
     val TitleSize = 32.sp
     val TitleLineHeight = 40.dp
-    val HeroBottomGap = 10.dp
+    val HeroBottomGap = 0.dp
 
     /** Height of the block that scrolls away, and so the distance it travels. */
     val HeroHeight = MarkTopGap + MarkBox + TitleTopGap + TitleLineHeight + HeroBottomGap
@@ -99,7 +104,7 @@ object TdayHeroTitleMetrics {
     const val DockedTitleScaleFrom = 0.985f
 
     /** Band below the toolbar that dissolves content as it passes under it. */
-    val ContentFadeHeight = 30.dp
+    val ContentFadeHeight = 24.dp
 
     /**
      * Clear space kept under the block, so that when the title has finished
@@ -107,7 +112,7 @@ object TdayHeroTitleMetrics {
      * its top edge dissolved into it. Deliberately not part of [HeroHeight]: it
      * moves the content down without changing when the title arrives.
      */
-    val SettledContentGap = ContentFadeHeight + 6.dp
+    val SettledContentGap = ContentFadeHeight
 
     /**
      * How quickly the fade band comes in. Off at rest, because there is nothing
@@ -139,12 +144,39 @@ class TdayHeroTitleCollapse internal constructor(
     val progress: () -> Float,
 )
 
+/** Duration of the settle. Matches the root feeds' own snap. */
+private const val SettleDurationMs = 260
+
 @Composable
 fun rememberLazyListHeroTitleCollapse(
     listState: LazyListState,
     enabled: Boolean = true,
 ): TdayHeroTitleCollapse {
     val collapsePx = with(LocalDensity.current) { TdayHeroTitleMetrics.HeroHeight.toPx() }
+
+    // Settle on release: the block goes all the way up or all the way back
+    // down, never resting half-collapsed. It is the list that moves now, so it
+    // is the list this scrolls — which is also what makes it feel elastic.
+    LaunchedEffect(listState, collapsePx, enabled) {
+        snapshotFlow {
+            Triple(
+                listState.isScrollInProgress,
+                listState.firstVisibleItemIndex,
+                listState.firstVisibleItemScrollOffset,
+            )
+        }.collect { (scrolling, index, offset) ->
+            if (!enabled || scrolling || index != 0) return@collect
+            val from = offset.toFloat()
+            if (from <= 0f || from >= collapsePx) return@collect
+            // A screen too short to finish goes back rather than stranding.
+            val target = if (!listState.canScrollForward) 0f else snapTitleCollapsePx(from, collapsePx)
+            listState.animateScrollBy(
+                value = target - from,
+                animationSpec = tween(durationMillis = SettleDurationMs, easing = FastOutSlowInEasing),
+            )
+        }
+    }
+
     return remember(listState, collapsePx, enabled) {
         TdayHeroTitleCollapse(
             progress = {
@@ -167,6 +199,22 @@ fun rememberScrollHeroTitleCollapse(
     enabled: Boolean = true,
 ): TdayHeroTitleCollapse {
     val collapsePx = with(LocalDensity.current) { TdayHeroTitleMetrics.HeroHeight.toPx() }
+
+    LaunchedEffect(scrollState, collapsePx, enabled) {
+        snapshotFlow { scrollState.isScrollInProgress to scrollState.value }
+            .collect { (scrolling, value) ->
+                if (!enabled || scrolling) return@collect
+                val from = value.toFloat()
+                if (from <= 0f || from >= collapsePx) return@collect
+                val target =
+                    if (scrollState.maxValue < collapsePx) 0f else snapTitleCollapsePx(from, collapsePx)
+                scrollState.animateScrollTo(
+                    value = target.roundToInt(),
+                    animationSpec = tween(durationMillis = SettleDurationMs, easing = FastOutSlowInEasing),
+                )
+            }
+    }
+
     return remember(scrollState, collapsePx, enabled) {
         TdayHeroTitleCollapse(
             progress = {
@@ -199,11 +247,7 @@ fun TdayHeroToolbar(
     val resolvedTitleColor = titleColor ?: colorScheme.onBackground
     val density = LocalDensity.current
 
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .statusBarsPadding(),
-    ) {
+    Column(modifier = modifier.fillMaxWidth()) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -294,10 +338,11 @@ fun TdayHeroTitleBlock(
     val density = LocalDensity.current
 
     Column(modifier = modifier.fillMaxWidth()) {
-        // The bar's own height plus the status bar, so the block begins where
-        // the bar ends. It is inside the scrolling content, which is what lets
-        // the block travel behind the bar.
-        Spacer(modifier = Modifier.statusBarsPadding().height(m.ToolbarHeight))
+        // The bar's own height, so the block begins where the bar ends. It is
+        // inside the scrolling content, which is what lets the block travel
+        // behind the bar. No status-bar inset — the caller's Scaffold padding
+        // already carries it, and counting it twice starts the block low.
+        Spacer(modifier = Modifier.height(m.ToolbarHeight))
 
         Spacer(modifier = Modifier.height(m.MarkTopGap))
         // A flat glyph on a flat disc read as a utility icon rather than as a
@@ -366,7 +411,6 @@ fun TdayHeroTitleBlock(
                     translationY = -with(density) { m.HeroTitleLift.toPx() } * gone
                 },
         )
-        Spacer(modifier = Modifier.height(m.HeroBottomGap))
         Spacer(modifier = Modifier.height(m.SettledContentGap))
     }
 }
@@ -419,7 +463,10 @@ private fun TdayHeroBackButton(
                 Color.White.copy(alpha = 0.96f)
             },
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = TdayDimens.FabElevation),
+        // Flat. Content passes behind this bar now, so a drop shadow lands on
+        // whatever happens to be sliding underneath and reads as a hard moving
+        // edge. The fill alone carries the button against the bar.
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Box(modifier = Modifier.size(TdayDimens.FabSize), contentAlignment = Alignment.Center) {
             Icon(

@@ -15,7 +15,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.draganddrop.dragAndDropTarget
 import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
@@ -109,11 +108,9 @@ import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
 import com.ohmz.tday.compose.core.observability.TdayTelemetry
 import com.ohmz.tday.compose.core.sound.rememberTaskCompletionSound
 import com.ohmz.tday.compose.core.ui.EmptyTaskWatermark
-import com.ohmz.tday.compose.core.ui.TdayHeroTitleMetrics
 import com.ohmz.tday.compose.core.ui.TdayHeroToolbar
 import com.ohmz.tday.compose.core.ui.rememberLazyListHeroTitleCollapse
 import com.ohmz.tday.compose.core.ui.tdayHeroTitleItem
-import com.ohmz.tday.compose.core.ui.snapTitleCollapsePx
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.component.TdaySegmentedSlider
 import com.ohmz.tday.compose.ui.theme.TdayDimens
@@ -233,21 +230,6 @@ fun CalendarScreen(
     val heroCollapse = rememberLazyListHeroTitleCollapse(listState = listState)
     val calendarTitle = stringResource(R.string.calendar_title)
     val calendarIcon = ImageVector.vectorResource(R.drawable.ic_lucide_calendar_1)
-    val collapsePx = with(density) { TdayHeroTitleMetrics.HeroHeight.toPx() }
-    // Settles the header rather than leaving it stranded part-way: the block is
-    // ordinary content now, so this scrolls the list rather than a private
-    // offset, which is what makes the whole thing feel elastic.
-    LaunchedEffect(listState.isScrollInProgress, collapsePx) {
-        if (listState.isScrollInProgress) return@LaunchedEffect
-        if (listState.firstVisibleItemIndex != 0) return@LaunchedEffect
-        val offset = listState.firstVisibleItemScrollOffset.toFloat()
-        if (offset <= 0f || offset >= collapsePx) return@LaunchedEffect
-        val target = if (!listState.canScrollForward) 0f else snapTitleCollapsePx(offset, collapsePx)
-        listState.animateScrollBy(
-            value = target - offset,
-            animationSpec = tween(durationMillis = 260, easing = FastOutSlowInEasing),
-        )
-    }
     var visibleMonthIso by rememberSaveable { mutableStateOf(minNavigableMonth.toString()) }
     var selectedDateIso by rememberSaveable { mutableStateOf(today.toString()) }
     var selectedViewKey by rememberSaveable { mutableStateOf(CalendarViewMode.MONTH.name) }
