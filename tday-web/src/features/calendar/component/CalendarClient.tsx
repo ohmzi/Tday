@@ -55,7 +55,10 @@ import ConfirmRescheduleRecurring, {
 } from "./ConfirmationModals/ConfirmRescheduleRecurring";
 import { useListMetaData } from "@/components/Sidebar/List/query/get-list-meta";
 import CreateCalendarFormContainer from "./CalendarForm/CreateFormContainer";
-import NativePageHeader, { nativePageBarClassName } from "@/components/app/NativePageHeader";
+import NativePageHeader, {
+  NativePageBackButton,
+  nativePageBarClassName,
+} from "@/components/app/NativePageHeader";
 import { nativeScreenAccentColors } from "@/components/app/nativeScreenTheme";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
@@ -1116,9 +1119,7 @@ export default function CalendarClient() {
             class so the two cannot drift. */}
         <header className={nativePageBarClassName}>
           <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-full h-screen bg-background lg:hidden" />
-          {/* `ml-auto`, because with the brand gone this is the row's only
-              in-flow child and space-between would put it flush left — then jump
-              it right on mount, which is the move this branch exists to avoid. */}
+          <div className="flex shrink-0 items-center"><NativePageBackButton /></div>
           <div className="ml-auto flex shrink-0 items-center gap-2.5">{todayAction}</div>
         </header>
         <div className="flex flex-1 items-center justify-center">

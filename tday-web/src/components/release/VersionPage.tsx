@@ -1,5 +1,5 @@
 import { type ReactNode } from "react";
-import { ChevronLeft, Github, Info, Loader2 } from "lucide-react";
+import { Github, Info, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -7,7 +7,6 @@ import {
   WebViewSectionCard,
 } from "@/components/ui/WebViewPageTemplate";
 import NativePageHeader from "@/components/app/NativePageHeader";
-import { Link } from "@/lib/navigation";
 import { nativeScreenAccentColors } from "@/components/app/nativeScreenTheme";
 import {
   formatDisplayVersion,
@@ -27,18 +26,9 @@ function VersionPageShell({ children }: { children: ReactNode }) {
         accentColor={nativeScreenAccentColors.settings}
         icon={Info}
         subtitle="Review the deployed build and the latest release available to admins."
-        actions={
-          // A round control like every other bar's, rather than a text link:
-          // the title is centred on the bar and keeps clear of the wider side,
-          // so a 116px label here would squeeze it for no reason.
-          <Link
-            href="/app/admin"
-            aria-label="Back to admin"
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/70 bg-card/90 text-foreground shadow-[0_12px_28px_-22px_hsl(var(--shadow)/0.55)] transition-colors hover:bg-card dark:border-white/10"
-          >
-            <ChevronLeft className="h-5 w-5 stroke-[2.6]" />
-          </Link>
-        }
+        // Opened from a bookmark there is nothing to pop, and this page lives
+        // under Admin rather than under the feed.
+        backFallbackHref="/app/admin"
       />
 
       <div className="space-y-5">{children}</div>

@@ -3,6 +3,7 @@ import { Search, X, Command } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import NativeAppBrandButton from "@/components/app/NativeAppBrandButton";
 import {
+  NativePageBackButton,
   nativePageBarClassName,
   nativePageHeaderMetrics,
   useNativePageBarResync,
@@ -135,9 +136,15 @@ export default function MobileSearchHeader({
   // the screen each time the field opens.
   useNativePageBarResync(pageCollapse ? headerRef.current : null, isExpanded);
 
-  // Nothing on the left while a page title is sharing this bar: the page's own
-  // name is the only thing that belongs at the top of it, and getting home is
-  // what the dock at the bottom is for.
+  // A page sharing this bar leads with its back chevron, the same as every
+  // other non-root page; the brand only belongs on a root feed. Rendered
+  // outside the expanded/collapsed branch below, because unmounting it with the
+  // field open left the screen with no way back and no title either.
+  const leading = pageCollapse ? (
+    <div ref={pageCollapse.leadingRef} className="flex shrink-0 items-center">
+      <NativePageBackButton />
+    </div>
+  ) : null;
   const brandHome = pageCollapse ? null : (
     <NativeAppBrandButton className="min-w-0 max-w-[58%] sm:max-w-none" />
   );
@@ -187,6 +194,7 @@ export default function MobileSearchHeader({
           </h1>
         </>
       ) : null}
+      {leading}
       {isExpanded ? (
         <div className="relative flex min-w-0 flex-1 items-center">
           <div
