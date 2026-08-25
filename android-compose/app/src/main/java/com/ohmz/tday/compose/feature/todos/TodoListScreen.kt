@@ -152,6 +152,7 @@ import com.ohmz.tday.compose.core.ui.animateTaskSwipeOffsetAsState
 import com.ohmz.tday.compose.core.ui.RootFeedHeroHeader
 import com.ohmz.tday.compose.core.ui.RootFeedHeroHeaderMetrics
 import com.ohmz.tday.compose.core.ui.RootFeedHeroMark
+import com.ohmz.tday.compose.core.ui.LazyListHeroTitleSettle
 import com.ohmz.tday.compose.core.ui.TdayHeroToolbar
 import com.ohmz.tday.compose.core.ui.TdaySearchCapsule
 import com.ohmz.tday.compose.core.ui.tdayBarButtonContainerColor
@@ -501,21 +502,16 @@ fun TodoListScreen(
             (listState.firstVisibleItemScrollOffset / headerCollapsePx).coerceIn(0f, 1f)
         }
     }
-    // Settle the header morph on whichever end is nearer, so it is never left
-    // frozen half-collapsed. The old collapsing-title behaviour used to do this
-    // for the root feed, but it is disabled here now.
-    LaunchedEffect(listState.isScrollInProgress, floaterTaskHomeSearchExpanded, usesRootFeedChrome) {
-        if (!usesRootFeedChrome || floaterTaskHomeSearchExpanded) return@LaunchedEffect
-        if (listState.isScrollInProgress) return@LaunchedEffect
-        if (listState.firstVisibleItemIndex != 0) return@LaunchedEffect
-        val offset = listState.firstVisibleItemScrollOffset.toFloat()
-        if (offset <= 0f || offset >= headerCollapsePx) return@LaunchedEffect
-        val target = if (offset < headerCollapsePx / 2f) 0f else headerCollapsePx
-        listState.animateScrollBy(
-            value = target - offset,
-            animationSpec = tween(durationMillis = 260, easing = FastOutSlowInEasing),
-        )
-    }
+    // The same settle every other screen uses, rather than the copy this feed
+    // used to keep: keyed on `isScrollInProgress`, it restarted in the gap
+    // between the drag's scroll session and the fling's, took the nearest half
+    // with no velocity so a short upward flick fell back, and eased in-out so it
+    // held still before it moved. That is what read as "not elastic" here.
+    LazyListHeroTitleSettle(
+        listState = listState,
+        collapsePx = headerCollapsePx,
+        enabled = usesRootFeedChrome && !floaterTaskHomeSearchExpanded,
+    )
     val closeFloaterTaskHomeSearch = {
         floaterTaskHomeSearchExpanded = false
         floaterTaskHomeSearchQuery = ""

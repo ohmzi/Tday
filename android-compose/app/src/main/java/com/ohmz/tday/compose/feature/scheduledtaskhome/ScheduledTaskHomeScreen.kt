@@ -21,7 +21,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.draggable
@@ -134,6 +133,7 @@ import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
 import com.ohmz.tday.compose.core.model.capitalizeFirstListLetter
+import com.ohmz.tday.compose.core.ui.LazyListHeroTitleSettle
 import com.ohmz.tday.compose.core.ui.EmptyTaskWatermark
 import com.ohmz.tday.compose.core.ui.TaskSwipeActionButton
 import com.ohmz.tday.compose.core.ui.animateTaskSwipeOffsetAsState
@@ -384,25 +384,13 @@ fun ScheduledTaskHomeScreen(
             openSwipeTaskId = null
         }
     }
-    LaunchedEffect(listState.isScrollInProgress, searchExpanded) {
-        if (searchExpanded || listState.isScrollInProgress) return@LaunchedEffect
-        // Settle the header morph on whichever end is nearer, so it is never
-        // left frozen half-collapsed. Only while the spacer row is still the
-        // first visible item — past that the header is fully collapsed anyway.
-        if (listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset > 0) {
-            val offset = listState.firstVisibleItemScrollOffset.toFloat()
-            if (offset < headerCollapsePx) {
-                val target = if (offset < headerCollapsePx / 2f) 0f else headerCollapsePx
-                listState.animateScrollBy(
-                    value = target - offset,
-                    animationSpec = tween(
-                        durationMillis = 260,
-                        easing = FastOutSlowInEasing,
-                    ),
-                )
-            }
-        }
-    }
+    // The shared settle, not this screen's own copy of it — see
+    // [LazyListHeroTitleSettle] for the three faults that copy carried.
+    LazyListHeroTitleSettle(
+        listState = listState,
+        collapsePx = headerCollapsePx,
+        enabled = !searchExpanded,
+    )
 
     LaunchedEffect(showSearchResultsOverlay) {
         if (!showSearchResultsOverlay) {
