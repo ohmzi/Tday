@@ -4,7 +4,15 @@ import { cn } from "@/lib/utils";
 export const nativeAppHorizontalPaddingClassName = "px-4 sm:px-6 lg:px-10";
 
 export const nativeAppScrollClassName = cn(
-  "h-full w-full overflow-y-auto scrollbar-none pb-[calc(7rem+env(safe-area-inset-bottom))] pt-4 sm:pt-6",
+  // `overflow-x-hidden` is not redundant beside `overflow-y-auto`, which is the
+  // trap: CSS says a `visible` overflow on one axis computes to `auto` when the
+  // other axis is not visible, so asking for a vertical scroller silently asks
+  // for a horizontal one too. Nothing here is wide enough to scroll, but a
+  // horizontally scrollable box still takes a sideways drag and rubber-bands —
+  // so every screen could be dragged off centre, which no native screen does.
+  // Also stops a sideways flick chaining out to the browser's back gesture.
+  "h-full w-full overflow-y-auto overflow-x-hidden overscroll-x-none scrollbar-none",
+  "pb-[calc(7rem+env(safe-area-inset-bottom))] pt-4 sm:pt-6",
   nativeAppHorizontalPaddingClassName,
 );
 

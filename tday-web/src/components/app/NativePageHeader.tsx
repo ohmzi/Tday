@@ -65,8 +65,13 @@ export const nativePageHeaderMetrics = {
   contentFadeHeight: 30,
 
   /**
-   * Least width worth docking a title into — a couple of characters and the
-   * ellipsis. Below this the bar keeps no title at all; see the reserve below.
+   * Least width worth docking a title into — one initial and the ellipsis, which
+   * at the docked size is nearly all ellipsis: Nunito Black at 2.1rem draws that
+   * alone 28.7px wide, against 21.4px for a "C". It is not raised past this
+   * because there is nothing to raise it into: the busiest bar in the app, the
+   * floater list's five controls, leaves the title exactly 64px at 390 and 70px
+   * is all the sibling custom list has at 360. Below this the bar keeps no title
+   * at all; see the reserve below.
    */
   dockedTitleMinWidth: 56,
 
@@ -424,19 +429,42 @@ export default function NativePageHeader({
     const observer =
       typeof ResizeObserver === "undefined" ? null : new ResizeObserver(schedule);
     observer?.observe(hero);
-    if (barRef.current) observer?.observe(barRef.current);
-    if (leadingRef.current) observer?.observe(leadingRef.current);
-    if (trailingRef.current) observer?.observe(trailingRef.current);
 
+    // The bar's own nodes are re-pointed rather than observed once. A bar that
+    // carries a search field replaces its whole trailing cluster when the field
+    // opens, and an observer holds the node it was handed, not the ref, so after
+    // one open/close it would be watching a detached div: a cluster that then
+    // gained or lost a control — the summary button comes and goes with the
+    // list's contents — would move the title's reserve on the next scroll and
+    // not before. Driven off the same resync the swap already fires, since a bar
+    // that swaps without announcing it has stale styles regardless.
+    let observed: (HTMLElement | null)[] = [];
+    const track = () => {
+      const live = [barRef.current, leadingRef.current, trailingRef.current];
+      live.forEach((node, index) => {
+        const previous = observed[index] ?? null;
+        if (previous === node) return;
+        if (previous) observer?.unobserve(previous);
+        if (node) observer?.observe(node);
+      });
+      observed = live;
+    };
+
+    const resync = () => {
+      track();
+      apply();
+    };
+
+    track();
     apply();
     scroller.addEventListener("scroll", schedule, { passive: true });
-    scroller.addEventListener(nativePageBarResyncEvent, apply);
+    scroller.addEventListener(nativePageBarResyncEvent, resync);
     window.addEventListener("resize", schedule);
     return () => {
       if (frame) cancelAnimationFrame(frame);
       observer?.disconnect();
       scroller.removeEventListener("scroll", schedule);
-      scroller.removeEventListener(nativePageBarResyncEvent, apply);
+      scroller.removeEventListener(nativePageBarResyncEvent, resync);
       window.removeEventListener("resize", schedule);
     };
     // `title`/`subtitle` are dependencies so the effect re-runs — and so
