@@ -27,12 +27,12 @@ import { clamp01, stagger } from "./nativeHeaderEasing";
  */
 export const rootFeedHeroHeaderMetrics = {
   horizontalPadding: 0,
-  topInset: 18,
+  topInset: 8,
   barButtonSize: 56,
   barButtonSpacing: 8,
 
   /** Always-visible toolbar strip. The feed scrolls out of sight behind it. */
-  barHeight: 18 + 56,
+  barHeight: 8 + 56,
   /** Extra height the hero title block claims while the feed sits at the top. */
   heroTitleHeight: 78,
   /** Scroll distance over which the hero folds into the toolbar. */
@@ -40,18 +40,18 @@ export const rootFeedHeroHeaderMetrics = {
   /** Gradient below the strip that dissolves rows as they pass under it. */
   contentFadeHeight: 24,
 
-  compactRowCenterY: 18 + 28,
+  compactRowCenterY: 8 + 28,
 
   heroMarkBox: 72,
   compactMarkBox: 30,
   markLeading: 2,
-  heroMarkCenterY: 18 + 28 + 10,
+  heroMarkCenterY: 8 + 28 + 10,
 
   heroTitleFontSize: 40,
   heroTitleLineHeight: 48,
   maxCompactTitleScale: 0.8,
   minTitleScale: 0.5,
-  heroTitleCenterY: 74 + 39,
+  heroTitleCenterY: 64 + 39,
   titleGap: 8,
 
   /**
@@ -354,7 +354,15 @@ export default function RootFeedHeroHeader({
         // Must stay a DIRECT child of the page's full-height flex column: a
         // sticky element only sticks within its containing block, so wrapping
         // it with the spacer would unpin it as soon as that wrapper scrolled by.
-        className="sticky top-4 z-30 shrink-0 sm:top-6"
+        //
+        // Pinned at the safe-area inset, so the toolbar row lands exactly where
+        // a non-root page's back button does — `topInset` + this has to equal
+        // that bar's `0.5rem + env(safe-area-inset-top)`. The margin matches the
+        // offset on purpose: pinning without it leaves the flow slot where it
+        // was and the title overlaps the first row by the inset. Nothing here
+        // read `env()` before, so the row was a fixed 50px that already sat
+        // under a Dynamic Island.
+        className="sticky top-[env(safe-area-inset-top)] z-30 mt-[env(safe-area-inset-top)] shrink-0 lg:top-0 lg:mt-0"
         style={{ height: m.barHeight }}
       >
         {/* Opaque toolbar strip, overscanning upward so the feed never shows
