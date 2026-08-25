@@ -60,13 +60,6 @@ export const nativePageHeaderMetrics = {
   dockedTitleRevealStart: 0.82,
   dockedTitleRise: 10,
   dockedTitleScaleFrom: 0.985,
-  /**
-   * Over how much of the last stretch of travel the bar's side reserve comes
-   * in. Only the parked title has neighbours to keep clear of; down in the
-   * block it has the full width, and charging it there truncated titles that
-   * used to fit. Symmetric, so easing it in never moves the centre.
-   */
-  reserveRampDistance: 72,
 
   /** Gradient below the bar that dissolves content as it passes under it. */
   contentFadeHeight: 30,
@@ -84,8 +77,15 @@ export const nativePageHeaderMetrics = {
  * repeat it exactly — see [nativePageBarTitleLayerClassName].
  */
 const nativePageBarVerticalPaddingClassName = cn(
+  // The inset is NOT dropped at `lg`. It used to be — `lg:pt-2` overrode it —
+  // which was harmless while the bar went `relative` up there and scrolled away
+  // with the page. Now that it stays pinned at every width, the one device that
+  // is both `lg` and notched is an installed iPad PWA in landscape, and there
+  // the override put the back button under the status bar. On anything else
+  // `env()` is 0, so `calc(0.5rem + 0)` is the 8px `lg:pt-2` was asking for
+  // anyway: dropping it costs nothing and fixes the iPad.
   "pt-[calc(0.5rem+env(safe-area-inset-top))] pb-1.5",
-  "lg:pt-2 lg:pb-2",
+  "lg:pb-2",
 );
 
 /** The pinned bar shared by every non-root page, and by MobileSearchHeader. */
@@ -381,7 +381,13 @@ export default function NativePageHeader({
         const trailingReserve = centred ? symmetric : trailingWidth + gap;
         const titleRoom = barWidth - leadingReserve - trailingReserve;
 
-        const shown = titleRoom >= m.dockedTitleMinWidth ? dockFade : 0;
+        // Set by a bar that has given its row to something else — the search
+        // field, on the two list pages. Read off the DOM rather than passed in
+        // because this runs in a frame callback, not in React's render: a class
+        // could never win against the opacity written here every frame, which is
+        // exactly why the `opacity-0` that used to sit on the title did nothing.
+        const suppressed = titleEl.dataset.barTitleSuppressed === "true";
+        const shown = !suppressed && titleRoom >= m.dockedTitleMinWidth ? dockFade : 0;
         titleEl.style.opacity = String(shown);
         // Invisible text must not be read out, nor eat taps meant for the bar.
         titleEl.style.visibility = shown < 0.01 ? "hidden" : "visible";

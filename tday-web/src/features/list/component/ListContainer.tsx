@@ -117,7 +117,7 @@ const ListContainer = ({ id }: { id: string }) => {
                             {/* Same gate the native list screens use: a summary is
                                 only offered where there is something to summarize. */}
                             {listTodos.length > 0 ? (
-                                <SummaryButton mode="list" listId={id} className="h-12 w-12" />
+                                <SummaryButton mode="list" listId={id} />
                             ) : null}
                             {editableList ? (
                                 // One entry point per role: owners get the edit sheet
@@ -127,7 +127,7 @@ const ListContainer = ({ id }: { id: string }) => {
                                     type="button"
                                     variant="ghost"
                                     size="icon"
-                                    className="h-12 w-12 shrink-0 rounded-full border border-white/70 bg-card/90 text-foreground shadow-[0_12px_28px_-22px_hsl(var(--shadow)/0.55)] hover:bg-card dark:border-white/10"
+                                    className="h-14 w-14 shrink-0 rounded-full border border-white/70 bg-card/90 text-foreground shadow-[0_12px_28px_-22px_hsl(var(--shadow)/0.55)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-card dark:border-white/10"
                                     onClick={() =>
                                         myRole === "OWNER" ? setEditListOpen(true) : setMembersOpen(true)
                                     }

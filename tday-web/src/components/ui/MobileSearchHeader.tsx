@@ -190,10 +190,13 @@ export default function MobileSearchHeader({
           <div aria-hidden className={nativePageBarTitleLayerClassName}>
             <span
               ref={pageCollapse.dockedTitleRef}
-              className={cn(
-                nativePageBarDockedTitleClassName,
-                isExpanded && "opacity-0",
-              )}
+              className={nativePageBarDockedTitleClassName}
+              // Not a class: the collapse writes `opacity` inline every frame,
+              // so an `opacity-0` utility here never won and the title stayed
+              // visible under the open field. This is read by the frame callback
+              // instead — see NativePageHeader. `useNativePageBarResync` above
+              // already re-runs it whenever `isExpanded` flips.
+              data-bar-title-suppressed={isExpanded ? "true" : "false"}
               style={{ color: pageCollapse.accentColor, opacity: 0, visibility: "hidden" }}
             >
               {pageCollapse.title}
