@@ -12,12 +12,14 @@ import { useReorderListTodo } from "../query/reorder-list-todo";
 import TodoMutationProvider from "@/providers/TodoMutationProvider";
 import { useList } from "../query/get-list-todos";
 import { useListMetaData } from "@/components/Sidebar/List/query/get-list-meta";
-import NativePageHeader from "@/components/app/NativePageHeader";
+import NativePageHeader, { useNativePageBarSlots } from "@/components/app/NativePageHeader";
+import MobileSearchHeader from "@/components/ui/MobileSearchHeader";
 import ScreenWatermark from "@/components/app/ScreenWatermark";
 import { getListIcon } from "@/lib/listIcons";
 import { listColorAccentColors, nativeScreenAccentColors } from "@/components/app/nativeScreenTheme";
 import ListFormSheet from "@/components/Sidebar/List/ListFormSheet";
 import ManageMembersSheet from "@/features/list/component/ManageMembersSheet";
+import SummaryButton from "@/features/summary/SummaryButton";
 import { useShareListAsText } from "@/hooks/use-share-list";
 import { useIsLocalMode } from "@/hooks/useAppMode";
 import { Button } from "@/components/ui/button";
@@ -63,6 +65,10 @@ const ListContainer = ({ id }: { id: string }) => {
     );
 
     const isSearching = Boolean(searchQuery.trim());
+    // This page keeps its search field as the pinned bar, so the header below
+    // renders only the block that scrolls away and docks its title into it —
+    // the same split the floater list uses.
+    const barSlots = useNativePageBarSlots();
 
     const listName = listMetaData[id]?.name?.trim() || "";
     const listColor = listMetaData[id]?.color;
@@ -97,41 +103,60 @@ const ListContainer = ({ id }: { id: string }) => {
                 {/* The list's own icon leads the header, so the edit/members
                     control moves into the pinned bar where the other screens
                     keep their actions. */}
+                <MobileSearchHeader
+                    searchQuery={searchQuery}
+                    onSearchChange={setSearchQuery}
+                    placeholder={
+                        listName
+                            ? `${appDict("searchIn")} ${listName}...`
+                            : `${appDict("searchTasks")}...`
+                    }
+                    pageCollapse={{ ...barSlots, title: listName, accentColor: listAccent }}
+                    trailingAction={
+                        <div className="flex shrink-0 items-center gap-2">
+                            {/* Same gate the native list screens use: a summary is
+                                only offered where there is something to summarize. */}
+                            {listTodos.length > 0 ? (
+                                <SummaryButton mode="list" listId={id} className="h-12 w-12" />
+                            ) : null}
+                            {editableList ? (
+                                // One entry point per role: owners get the edit sheet
+                                // (which hosts the Sharing section); members go straight
+                                // to the members sheet.
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-12 w-12 shrink-0 rounded-full border border-white/70 bg-card/90 text-foreground shadow-[0_12px_28px_-22px_hsl(var(--shadow)/0.55)] hover:bg-card dark:border-white/10"
+                                    onClick={() =>
+                                        myRole === "OWNER" ? setEditListOpen(true) : setMembersOpen(true)
+                                    }
+                                    aria-label={
+                                        myRole === "OWNER" ? `Edit ${listName || "list"}` : appDict("members")
+                                    }
+                                >
+                                    {myRole === "OWNER" ? (
+                                        <Pencil className="h-5 w-5" />
+                                    ) : (
+                                        <Users className="h-5 w-5" />
+                                    )}
+                                </Button>
+                            ) : null}
+                        </div>
+                    }
+                />
+
                 <NativePageHeader
                     title={listName}
                     accentColor={listAccent}
                     icon={getListIcon(listMetaData[id]?.iconKey)}
+                    barSlots={barSlots}
                     beneathTitle={
                         sharedByLabel ? (
                             <p className="mt-1 flex items-center gap-1.5 px-1 text-xs font-black text-muted-foreground">
                                 <Users className="h-3.5 w-3.5" />
                                 {appDict("sharedBy", { name: sharedByLabel })}
                             </p>
-                        ) : null
-                    }
-                    actions={
-                        editableList ? (
-                            // One entry point per role: owners get the edit sheet
-                            // (which hosts the Sharing section); members go straight
-                            // to the members sheet.
-                            <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                className="h-14 w-14 shrink-0 rounded-full border border-white/70 bg-card/90 text-foreground shadow-[0_12px_28px_-22px_hsl(var(--shadow)/0.55)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-card dark:border-white/10"
-                                onClick={() =>
-                                    myRole === "OWNER" ? setEditListOpen(true) : setMembersOpen(true)
-                                }
-                                aria-label={
-                                    myRole === "OWNER" ? `Edit ${listName || "list"}` : appDict("members")
-                                }
-                            >
-                                {myRole === "OWNER" ? (
-                                    <Pencil className="h-5 w-5" />
-                                ) : (
-                                    <Users className="h-5 w-5" />
-                                )}
-                            </Button>
                         ) : null
                     }
                 />

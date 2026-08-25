@@ -4,6 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useResetFloaterList } from "@/features/floaterList/query/reset-floater-list";
 import { useTranslation } from "react-i18next";
 import ManageMembersSheet from "@/features/list/component/ManageMembersSheet";
+import SummaryButton from "@/features/summary/SummaryButton";
 import NativePageHeader, { useNativePageBarSlots } from "@/components/app/NativePageHeader";
 import ScreenWatermark from "@/components/app/ScreenWatermark";
 import MobileSearchHeader from "@/components/ui/MobileSearchHeader";
@@ -83,6 +84,11 @@ export default function FloaterListContainer({ id }: { id: string }) {
         pageCollapse={{ ...barSlots, title: listName, accentColor: listAccent }}
         trailingAction={
           <div className="flex shrink-0 items-center gap-2">
+          {/* Same gate the native list screens use: a summary is only offered
+              where there is something to summarize. */}
+          {floaterListTodos.length > 0 ? (
+            <SummaryButton mode="floater" listId={id} className="h-12 w-12" />
+          ) : null}
           {listMeta?.reusable && !isViewer ? (
             <Button
               type="button"

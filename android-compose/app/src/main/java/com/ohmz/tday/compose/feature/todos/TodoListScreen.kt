@@ -83,6 +83,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
@@ -151,6 +153,8 @@ import com.ohmz.tday.compose.core.ui.RootFeedHeroHeader
 import com.ohmz.tday.compose.core.ui.RootFeedHeroHeaderMetrics
 import com.ohmz.tday.compose.core.ui.RootFeedHeroMark
 import com.ohmz.tday.compose.core.ui.TdayHeroToolbar
+import com.ohmz.tday.compose.core.ui.TdaySearchCapsule
+import com.ohmz.tday.compose.core.ui.tdayBarButtonContainerColor
 import com.ohmz.tday.compose.core.ui.rememberLazyListHeroTitleCollapse
 import com.ohmz.tday.compose.core.ui.tdayHeroTitleItem
 import com.ohmz.tday.compose.core.ui.rememberTaskSwipeRevealState
@@ -322,10 +326,44 @@ fun TodoListScreen(
                 uiState.items.isEmpty()
     var draggedScheduledTodoId by rememberSaveable(uiState.mode) { mutableStateOf<String?>(null) }
     val canRescheduleTasks = uiState.mode.supportsTaskReschedule()
-    val timelineSections = remember(uiState.mode, uiState.items) {
+    // Search over a single list's tasks. The root feeds carry their own field in
+    // RootFeedHeroHeader, so this one belongs to the list-detail screens — the
+    // custom lists and the floater lists — which had none.
+    var listSearchExpanded by rememberSaveable(uiState.mode, uiState.listId) {
+        mutableStateOf(false)
+    }
+    var listSearchQuery by rememberSaveable(uiState.mode, uiState.listId) { mutableStateOf("") }
+    var listSearchNeedsFocus by remember(uiState.mode, uiState.listId) { mutableStateOf(false) }
+    val normalizedListSearchQuery = remember(listSearchQuery) {
+        listSearchQuery.trim().lowercase(Locale.getDefault())
+    }
+    val showListSearchField = isListDetailScreen && listSearchExpanded
+    val listSearchActive = showListSearchField && normalizedListSearchQuery.isNotBlank()
+    val closeListSearch = {
+        listSearchExpanded = false
+        listSearchQuery = ""
+        listSearchNeedsFocus = false
+    }
+    val timelineItems = remember(uiState.items, listSearchActive, normalizedListSearchQuery) {
+        if (!listSearchActive) {
+            uiState.items
+        } else {
+            // The same two fields the web list pages match on: the title and the
+            // notes flattened out of their rich-text form.
+            uiState.items.filter { todo ->
+                todo.title.lowercase(Locale.getDefault())
+                    .contains(normalizedListSearchQuery) ||
+                        flattenNotesToPlainText(todo.description)
+                            .lowercase(Locale.getDefault())
+                            .contains(normalizedListSearchQuery)
+            }
+        }
+    }
+    val listSearchHasNoResults = listSearchActive && timelineItems.isEmpty()
+    val timelineSections = remember(uiState.mode, timelineItems) {
         buildTimelineSections(
             mode = uiState.mode,
-            items = uiState.items,
+            items = timelineItems,
         )
     }
     val floaterTaskHomeListRows = remember(uiState.mode, uiState.listId, uiState.items, uiState.lists) {
@@ -538,6 +576,10 @@ fun TodoListScreen(
     BackHandler(enabled = exitToLauncherOnBack && !showCreateTaskSheet && !floaterTaskHomeSearchExpanded) {
         onBack()
     }
+    // Registered last so back dismisses the field before it leaves the list.
+    BackHandler(enabled = showListSearchField) {
+        closeListSearch()
+    }
     LaunchedEffect(isFloaterTaskHomeScreen, floaterTaskHomeSearchExpanded) {
         if (!isFloaterTaskHomeScreen) {
             closeFloaterTaskHomeSearch()
@@ -621,6 +663,25 @@ fun TodoListScreen(
     val hasSweepableTasks = uiState.mode == TodoListMode.OVERDUE &&
         uiState.items.any { it.rrule.isNullOrBlank() && it.instanceDate == null }
     val topBarActions = listOfNotNull(
+        if (isListDetailScreen) {
+            TodoTopBarAction(
+                icon = ImageVector.vectorResource(R.drawable.ic_lucide_search),
+                contentDescription = stringResource(R.string.action_search),
+                onClick = {
+                    if (listSearchExpanded) {
+                        closeListSearch()
+                    } else {
+                        listSearchExpanded = true
+                        listSearchNeedsFocus = true
+                        // The field lives just under the hero block, so bring the
+                        // top of the list back into view along with it.
+                        screenScope.launch { listState.animateScrollToItem(0, 0) }
+                    }
+                },
+            )
+        } else {
+            null
+        },
         if (hasSweepableTasks) {
             TodoTopBarAction(
                 icon = ImageVector.vectorResource(R.drawable.ic_lucide_sun),
@@ -680,6 +741,7 @@ fun TodoListScreen(
         // Starts at 1: the hero block holds index 0 on this path, so every row
         // below it is one further down than the sections alone would say.
         var itemIndex = if (usesTodayStyle && !usesRootFeedChrome) 1 else 0
+        if (showListSearchField) itemIndex += 1
         timelineSections.forEach { section ->
             itemIndex += 1
             val todoIndex = section.items.indexOfFirst { item ->
@@ -947,6 +1009,31 @@ fun TodoListScreen(
                         )
                     }
 
+                    // In ordinary flow under the hero block, the way the guide
+                    // carries the same capsule.
+                    if (showListSearchField) {
+                        item(key = "list-search-field", contentType = "list-search-field") {
+                            val focusRequester = remember { FocusRequester() }
+                            LaunchedEffect(listSearchNeedsFocus) {
+                                if (!listSearchNeedsFocus) return@LaunchedEffect
+                                // Consumed on the way in, so scrolling the field
+                                // off screen and back does not re-open the keyboard.
+                                listSearchNeedsFocus = false
+                                focusRequester.requestFocus()
+                            }
+                            TdaySearchCapsule(
+                                value = listSearchQuery,
+                                onValueChange = { listSearchQuery = it },
+                                placeholder = stringResource(R.string.action_search),
+                                modifier = Modifier
+                                    .focusRequester(focusRequester)
+                                    .padding(bottom = 12.dp),
+                                onClear = { listSearchQuery = "" },
+                                clearContentDescription = stringResource(R.string.action_close_search),
+                            )
+                        }
+                    }
+
                     if (showFloaterTaskHomeSearchResults) {
                         item(
                             key = "root-floater-search-results",
@@ -985,7 +1072,34 @@ fun TodoListScreen(
                         }
                     }
 
-                    if (showSectionedTimeline && !suppressInitialTodayTimeline) {
+                    // A search that matched nothing replaces the timeline rather
+                    // than leaving its empty day headers standing, as on web.
+                    if (listSearchHasNoResults) {
+                        item(
+                            key = "list-search-no-results",
+                            contentType = "list-search-no-results",
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(
+                                        min = (LocalConfiguration.current.screenHeightDp * 0.32f).dp,
+                                    ),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.scheduled_task_home_search_no_results),
+                                    color = colorScheme.onSurfaceVariant.copy(alpha = 0.66f),
+                                    style = MaterialTheme.typography.headlineSmall,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    textAlign = TextAlign.Center,
+                                    modifier = Modifier.padding(horizontal = 24.dp),
+                                )
+                            }
+                        }
+                    }
+
+                    if (showSectionedTimeline && !suppressInitialTodayTimeline && !listSearchHasNoResults) {
                         timelineSections.forEachIndexed { sectionIndex, section ->
                             val sectionHasTasks = section.items.isNotEmpty()
                             val sectionModeCanCollapse = when (uiState.mode) {
@@ -997,8 +1111,11 @@ fun TodoListScreen(
                                 else -> false
                             }
                             val sectionCanCollapse = sectionModeCanCollapse && sectionHasTasks
-                            val isCollapsed =
-                                sectionCanCollapse && collapsedSectionKeys.contains(section.key)
+                            // A list opens with Earlier collapsed, so a live query
+                            // would otherwise hide the matches it just found.
+                            val isCollapsed = sectionCanCollapse &&
+                                    !listSearchActive &&
+                                    collapsedSectionKeys.contains(section.key)
                             val isActiveDropSection = activeDropSectionKey == section.key
                             val sectionDraggedTodo = if (canRescheduleTasks) {
                                 draggedScheduledTodo
@@ -2101,22 +2218,17 @@ private fun TodayHeaderButton(
     onClick: () -> Unit,
     icon: ImageVector,
     contentDescription: String,
-    isBackButton: Boolean = false,
     iconSize: Dp = 30.dp,
 ) {
-    val colorScheme = MaterialTheme.colorScheme
     val view = LocalView.current
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
-    val isDarkTheme = colorScheme.background.luminance() < 0.5f
-    val containerColor = if (isBackButton) {
-        if (isDarkTheme) colorScheme.surface.copy(alpha = 0.94f) else Color.White.copy(alpha = 0.96f)
-    } else {
-        colorScheme.background
-    }
-    val buttonBorder = if (isBackButton) null else BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.38f))
-    val buttonSize = if (isBackButton) TdayDimens.FabSize else 56.dp
-    val resolvedIconSize = if (isBackButton) 36.dp else iconSize
+    // The same fill the back button beside it carries. These were painted with
+    // `background` and a hairline instead, which on a bar whose own strip is
+    // that colour left them as outlines next to a solid white circle.
+    val containerColor = tdayBarButtonContainerColor()
+    val iconTint = MaterialTheme.colorScheme.onSurface
+    val buttonSize = TdayDimens.FabSize
     val scale by animateFloatAsState(
         targetValue = if (pressed) 0.93f else 1f,
         label = "todayHeaderButtonScale",
@@ -2139,7 +2251,6 @@ private fun TodayHeaderButton(
         },
         interactionSource = interactionSource,
         shape = CircleShape,
-        border = buttonBorder,
         colors = CardDefaults.cardColors(containerColor = containerColor),
         // Every circle in a bar carries the same lift, back button or not —
         // half of them having no shadow at all was the giveaway that these were
@@ -2156,8 +2267,8 @@ private fun TodayHeaderButton(
             Icon(
                 imageVector = icon,
                 contentDescription = contentDescription,
-                tint = colorScheme.onSurface,
-                modifier = Modifier.size(resolvedIconSize),
+                tint = iconTint,
+                modifier = Modifier.size(iconSize),
             )
         }
     }

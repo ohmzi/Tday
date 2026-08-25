@@ -691,9 +691,10 @@ private extension UIView {
 /// The app's search field, in its open state.
 ///
 /// The root feeds fold theirs down into a round button and so own its width and
-/// placement themselves; everywhere else — the guide — takes it at full width,
-/// in ordinary flow. The chrome is the same either way, and the numbers come
-/// from `RootFeedHeroHeaderMetrics` so the two cannot drift apart.
+/// placement themselves; everywhere else — the guide, a list's pinned bar —
+/// takes it at full width, in ordinary flow. The chrome is the same either way,
+/// and the numbers come from `RootFeedHeroHeaderMetrics` so the two cannot
+/// drift apart.
 struct TdaySearchCapsule: View {
     @Binding var text: String
     let placeholder: String
@@ -701,6 +702,10 @@ struct TdaySearchCapsule: View {
     /// field that has a folded state to return to; this one has none, so it
     /// clears the text instead.
     var clearAccessibilityLabel: String = "Clear"
+    /// Bound by callers that swap this field in on a tap, so the keyboard comes
+    /// up with it and can be put away again from outside. A field that is simply
+    /// always on screen — the guide's — needs none.
+    var focused: FocusState<Bool>.Binding? = nil
 
     @Environment(\.tdayColors) private var colors
 
@@ -717,16 +722,7 @@ struct TdaySearchCapsule: View {
                     height: RootFeedHeroHeaderMetrics.searchIconSlot
                 )
 
-            TextField(
-                "",
-                text: $text,
-                prompt: Text(placeholder).foregroundStyle(colors.onSurfaceVariant)
-            )
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-                .font(.tdayRounded(size: 18, weight: .bold))
-                .foregroundStyle(colors.onSurface)
-                .tint(colors.primary)
+            queryField
 
             if !text.isEmpty {
                 Button {
@@ -759,5 +755,28 @@ struct TdaySearchCapsule: View {
             Capsule()
                 .stroke(colors.onSurface.opacity(0.26), lineWidth: 1)
         )
+    }
+
+    // `.focused` has to sit on the field itself — put on the capsule it binds
+    // the container, not the text — so the two shapes of this view differ by
+    // that one modifier rather than by a second copy of the field.
+    @ViewBuilder
+    private var queryField: some View {
+        let field = TextField(
+            "",
+            text: $text,
+            prompt: Text(placeholder).foregroundStyle(colors.onSurfaceVariant)
+        )
+            .textInputAutocapitalization(.never)
+            .autocorrectionDisabled()
+            .font(.tdayRounded(size: 18, weight: .bold))
+            .foregroundStyle(colors.onSurface)
+            .tint(colors.primary)
+
+        if let focused {
+            field.focused(focused)
+        } else {
+            field
+        }
     }
 }
