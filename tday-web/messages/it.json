@@ -385,7 +385,13 @@
     "addStep": "Aggiungi un passaggio",
     "stepsCreateHint": "Salva prima l'attività per aggiungere passaggi.",
     "searchFloaterTasksPlaceholder": "Cerca attività fluttuanti",
-    "searchShort": "Cerca"
+    "searchShort": "Cerca",
+    "listEmpty": "Qui non c'è ancora niente",
+    "listEmptyBody": "Aggiungi la tua prima attività e comparirà proprio qui.",
+    "floaterEmptyBody": "I flottanti non hanno scadenza: annotane uno e aspetterà finché non sei pronto.",
+    "floaterListEmptyBody": "Aggiungi un flottante e aspetterà proprio qui.",
+    "noMatchingTasks": "Nessuna attività corrispondente",
+    "searchEmptyBody": "Prova un'altra parola o cancella la ricerca."
   },
   "today": {
     "saveInstance": "Salva istanza",
@@ -441,7 +447,9 @@
     }
   },
   "completed": {
-    "title": "Cronologia completamento"
+    "title": "Cronologia completamento",
+    "empty": "Ancora niente di completato",
+    "emptyBody": "Segna qualcosa come fatto e finirà qui."
   },
   "modal": {
     "confirm": "Conferma",

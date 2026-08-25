@@ -1,11 +1,8 @@
 import { useMemo, useState } from "react";
-import {
-  Leaf,
-  Search,
-  X,
-} from "lucide-react";
+import { Leaf, Search } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import ScreenWatermark from "@/components/app/ScreenWatermark";
+import EmptyState from "@/components/app/EmptyState";
 import { Link, useRouter } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
 import { sortFloatersByPriority } from "@/lib/floater/buildFloaterSections";
@@ -160,33 +157,30 @@ export default function NativeFloaterTaskHomeDashboard() {
         ) : null}
 
         {!floaterLoading && !hasFloaters && !isSearching ? (
-          <div className="flex min-h-[42vh] flex-col items-center justify-center text-center">
-            <p className="text-2xl font-black text-muted-foreground/70">
-              {appDict("floaterEmpty")}
-            </p>
-          </div>
+          <EmptyState
+            icon={Leaf}
+            accentColor={floaterAccent}
+            title={appDict("floaterEmpty")}
+            description={appDict("floaterEmptyBody")}
+          />
         ) : null}
 
         {!floaterLoading && isSearching && sortedFloaters.length === 0 ? (
-          <div className="mx-auto flex min-h-[45vh] max-w-md flex-col items-center justify-center text-center">
-            <div className="relative mb-6">
-              <div className="flex h-24 w-24 items-center justify-center rounded-full bg-muted/50">
-                <Search className="h-12 w-12 text-muted-foreground/50" />
-              </div>
-              <div className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full border-2 border-background bg-accent/20">
-                <X className="h-3 w-3 text-accent" />
-              </div>
-            </div>
-            <h3 className="mb-2 text-2xl font-semibold text-foreground">
-              {appDict("noMatchingFloaters")}
-            </h3>
-            <button
-              onClick={() => setSearchQuery("")}
-              className="text-sm font-black text-accent hover:underline"
-            >
-              {appDict("clearSearch")}
-            </button>
-          </div>
+          <EmptyState
+            icon={Search}
+            accentColor={floaterAccent}
+            title={appDict("noMatchingFloaters")}
+            description={appDict("searchEmptyBody")}
+            action={
+              <button
+                type="button"
+                onClick={() => setSearchQuery("")}
+                className="rounded-full border border-border/60 bg-card px-5 py-2.5 text-sm font-black text-foreground shadow-[0_12px_28px_-22px_hsl(var(--shadow)/0.55)] transition-transform hover:-translate-y-0.5"
+              >
+                {appDict("clearSearch")}
+              </button>
+            }
+          />
         ) : null}
 
         {!floaterLoading && sortedFloaters.length > 0 ? (

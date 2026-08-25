@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Pencil, RotateCcw, Search, Users, X } from "lucide-react";
+import { Pencil, RotateCcw, Search, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useResetFloaterList } from "@/features/floaterList/query/reset-floater-list";
 import { useTranslation } from "react-i18next";
@@ -7,6 +7,7 @@ import ManageMembersSheet from "@/features/list/component/ManageMembersSheet";
 import SummaryButton from "@/features/summary/SummaryButton";
 import NativePageHeader, { useNativePageBarSlots } from "@/components/app/NativePageHeader";
 import ScreenWatermark from "@/components/app/ScreenWatermark";
+import EmptyState from "@/components/app/EmptyState";
 import MobileSearchHeader from "@/components/ui/MobileSearchHeader";
 import { useShareListAsText } from "@/hooks/use-share-list";
 import { useIsLocalMode } from "@/hooks/useAppMode";
@@ -83,12 +84,17 @@ export default function FloaterListContainer({ id }: { id: string }) {
         }
         pageCollapse={{ ...barSlots, title: listName, accentColor: listAccent }}
         trailingAction={
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="flex shrink-0 items-center gap-1.5">
           {/* 48px here, against the 56px of the back button and the search
               toggle beside them. Deliberate, and the one bar in the app that
               mixes: this is the only screen carrying five controls, and at 56
               they come to 280px of circle in a 288px bar on a 320px phone. The
-              sibling custom list has four and keeps them all at 56. */}
+              sibling custom list has four and keeps them all at 56. The gaps
+              count into that sum too: 256px of circle plus the bar's own two
+              10px gaps leaves 12px for this cluster's two, hence 6px and not
+              the 8px they read as elsewhere — at 8px the last circle sat 4px
+              into the page's 16px gutter, out of line with every row beneath
+              it. */}
           {/* Same gate the native list screens use: a summary is only offered
               where there is something to summarize. */}
           {floaterListTodos.length > 0 ? (
@@ -109,7 +115,7 @@ export default function FloaterListContainer({ id }: { id: string }) {
               }}
               aria-label={appDict("resetFloaterList")}
             >
-              <RotateCcw className="h-5 w-5" />
+              <RotateCcw className="h-6 w-6 stroke-[2.6]" />
             </Button>
           ) : null}
           {editableList ? (
@@ -130,9 +136,9 @@ export default function FloaterListContainer({ id }: { id: string }) {
               }
             >
               {myRole === "OWNER" ? (
-                <Pencil className="h-5 w-5" />
+                <Pencil className="h-6 w-6 stroke-[2.6]" />
               ) : (
-                <Users className="h-5 w-5" />
+                <Users className="h-6 w-6 stroke-[2.6]" />
               )}
             </Button>
           ) : null}
@@ -164,33 +170,30 @@ export default function FloaterListContainer({ id }: { id: string }) {
       ) : null}
 
       {!floaterListLoading && !isSearching && floaterListTodos.length === 0 ? (
-        <div className="flex min-h-[42vh] flex-col items-center justify-center text-center">
-          <p className="text-2xl font-black text-muted-foreground/70">
-            {appDict("floaterListEmpty")}
-          </p>
-        </div>
+        <EmptyState
+          icon={ListIcon}
+          accentColor={listAccent}
+          title={appDict("floaterListEmpty")}
+          description={appDict("floaterListEmptyBody")}
+        />
       ) : null}
 
       {!floaterListLoading && isSearching && filteredFloaters.length === 0 ? (
-        <div className="mx-auto flex min-h-[45vh] max-w-md flex-col items-center justify-center text-center">
-          <div className="relative mb-6">
-            <div className="flex h-24 w-24 items-center justify-center rounded-full bg-muted/50">
-              <Search className="h-12 w-12 text-muted-foreground/50" />
-            </div>
-            <div className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full border-2 border-background bg-accent/20">
-              <X className="h-3 w-3 text-accent" />
-            </div>
-          </div>
-          <h3 className="mb-2 text-2xl font-semibold text-foreground">
-            {appDict("noMatchingFloaters")}
-          </h3>
-          <button
-            onClick={() => setSearchQuery("")}
-            className="text-sm font-black text-accent hover:underline"
-          >
-            {appDict("clearSearch")}
-          </button>
-        </div>
+        <EmptyState
+          icon={Search}
+          accentColor={listAccent}
+          title={appDict("noMatchingFloaters")}
+          description={appDict("searchEmptyBody")}
+          action={
+            <button
+              type="button"
+              onClick={() => setSearchQuery("")}
+              className="rounded-full border border-border/60 bg-card px-5 py-2.5 text-sm font-black text-foreground shadow-[0_12px_28px_-22px_hsl(var(--shadow)/0.55)] transition-transform hover:-translate-y-0.5"
+            >
+              {appDict("clearSearch")}
+            </button>
+          }
+        />
       ) : null}
 
       {!floaterListLoading && sections.length > 0 ? (

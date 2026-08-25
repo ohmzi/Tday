@@ -385,7 +385,13 @@
     "addStep": "Schritt hinzufügen",
     "stepsCreateHint": "Speichere die Aufgabe zuerst, um Schritte hinzuzufügen.",
     "searchFloaterTasksPlaceholder": "Floater-Aufgaben suchen",
-    "searchShort": "Suchen"
+    "searchShort": "Suchen",
+    "listEmpty": "Hier ist noch nichts",
+    "listEmptyBody": "Füge deine erste Aufgabe hinzu, dann erscheint sie genau hier.",
+    "floaterEmptyBody": "Floater haben kein Fälligkeitsdatum – notiere einen, er wartet, bis du bereit bist.",
+    "floaterListEmptyBody": "Füge einen Floater hinzu, er wartet genau hier.",
+    "noMatchingTasks": "Keine passenden Aufgaben",
+    "searchEmptyBody": "Probiere ein anderes Wort oder lösche die Suche."
   },
   "today": {
     "saveInstance": "Instanz speichern",
@@ -441,7 +447,9 @@
     }
   },
   "completed": {
-    "title": "Verlauf der Erledigungen"
+    "title": "Verlauf der Erledigungen",
+    "empty": "Noch nichts erledigt",
+    "emptyBody": "Hake etwas ab, dann landet es hier."
   },
   "modal": {
     "confirm": "Bestätigen",

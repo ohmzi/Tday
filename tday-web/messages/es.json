@@ -385,7 +385,13 @@
     "addStep": "Añadir un paso",
     "stepsCreateHint": "Guarda la tarea primero para añadir pasos.",
     "searchFloaterTasksPlaceholder": "Buscar tareas flotantes",
-    "searchShort": "Buscar"
+    "searchShort": "Buscar",
+    "listEmpty": "Aquí no hay nada todavía",
+    "listEmptyBody": "Añade tu primera tarea y aparecerá justo aquí.",
+    "floaterEmptyBody": "Los flotantes no tienen fecha límite: anota uno y esperará hasta que estés listo.",
+    "floaterListEmptyBody": "Añade un flotante y esperará justo aquí.",
+    "noMatchingTasks": "No hay tareas que coincidan",
+    "searchEmptyBody": "Prueba con otra palabra o borra la búsqueda."
   },
   "today": {
     "saveInstance": "Guardar instancia",
@@ -441,7 +447,9 @@
     }
   },
   "completed": {
-    "title": "Historial de tareas completadas"
+    "title": "Historial de tareas completadas",
+    "empty": "Aún no has completado nada",
+    "emptyBody": "Marca algo como hecho y aparecerá aquí."
   },
   "modal": {
     "confirm": "Confirmar",

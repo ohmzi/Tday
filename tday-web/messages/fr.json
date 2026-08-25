@@ -385,7 +385,13 @@
     "addStep": "Ajouter une étape",
     "stepsCreateHint": "Enregistre d'abord la tâche pour ajouter des étapes.",
     "searchFloaterTasksPlaceholder": "Rechercher des tâches flottantes",
-    "searchShort": "Rechercher"
+    "searchShort": "Rechercher",
+    "listEmpty": "Rien ici pour l'instant",
+    "listEmptyBody": "Ajoutez votre première tâche et elle apparaîtra ici.",
+    "floaterEmptyBody": "Les flottantes n'ont pas d'échéance : notez-en une, elle attendra que vous soyez prêt.",
+    "floaterListEmptyBody": "Ajoutez une flottante et elle attendra ici.",
+    "noMatchingTasks": "Aucune tâche correspondante",
+    "searchEmptyBody": "Essayez un autre mot ou effacez la recherche."
   },
   "today": {
     "saveInstance": "Enregistrer l'instance",
@@ -441,7 +447,9 @@
     }
   },
   "completed": {
-    "title": "Historique des achèvements"
+    "title": "Historique des achèvements",
+    "empty": "Rien de terminé pour l'instant",
+    "emptyBody": "Cochez une tâche et elle atterrira ici."
   },
   "modal": {
     "confirm": "Confirmer",

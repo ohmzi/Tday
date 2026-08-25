@@ -385,7 +385,13 @@
     "addStep": "ステップを追加",
     "stepsCreateHint": "ステップを追加するには、まずタスクを保存してください。",
     "searchFloaterTasksPlaceholder": "フローターを検索",
-    "searchShort": "検索"
+    "searchShort": "検索",
+    "listEmpty": "まだ何もありません",
+    "listEmptyBody": "最初のタスクを追加すると、ここに表示されます。",
+    "floaterEmptyBody": "フローターに期限はありません。書き留めておけば、準備ができるまで待ってくれます。",
+    "floaterListEmptyBody": "フローターを追加すると、ここで待機します。",
+    "noMatchingTasks": "一致するタスクはありません",
+    "searchEmptyBody": "別の言葉を試すか、検索をクリアしてください。"
   },
   "today": {
     "saveInstance": "インスタンスを保存",
@@ -441,7 +447,9 @@
     }
   },
   "completed": {
-    "title": "完了履歴"
+    "title": "完了履歴",
+    "empty": "まだ完了したタスクはありません",
+    "emptyBody": "タスクを完了すると、ここに表示されます。"
   },
   "modal": {
     "confirm": "確認",

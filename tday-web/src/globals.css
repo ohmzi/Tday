@@ -577,3 +577,32 @@
 }
 
 /* https://www.joshwcomeau.com/css/designing-shadows/ */
+
+/* ── Empty states ──
+   The whole scene breathes rather than any one piece of it moving: a stack of
+   cards where only the sparkles animated read as a loading spinner, which is
+   the one thing an empty state must not look like. */
+.tday-empty-scene {
+  animation: tday-empty-float 6s ease-in-out infinite;
+}
+
+.tday-empty-sparkle {
+  animation: tday-empty-twinkle 2.8s ease-in-out infinite;
+}
+
+@keyframes tday-empty-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-7px); }
+}
+
+@keyframes tday-empty-twinkle {
+  0%, 100% { opacity: 0.3; transform: scale(0.7); }
+  50% { opacity: 1; transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Held at the top of the twinkle rather than switched off, so the scene still
+     looks deliberate rather than half-drawn. */
+  .tday-empty-scene { animation: none; }
+  .tday-empty-sparkle { animation: none; opacity: 1; }
+}

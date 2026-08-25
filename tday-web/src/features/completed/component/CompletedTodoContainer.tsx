@@ -7,6 +7,7 @@ import GroupedCompletedTodoContainer from "./GroupedContainer";
 import { useTranslation } from "react-i18next";
 import NativePageHeader from "@/components/app/NativePageHeader";
 import ScreenWatermark from "@/components/app/ScreenWatermark";
+import EmptyState from "@/components/app/EmptyState";
 import { nativeScreenAccentColors } from "@/components/app/nativeScreenTheme";
 import { CheckCircle, Search, X } from "lucide-react";
 import { flattenNotesToPlainText } from "@/lib/richNotes";
@@ -72,11 +73,12 @@ const CompletedTodoContainer = () => {
       )}
 
       {!searchQuery.trim() && filteredTodos.length === 0 && (
-        <div className="flex min-h-[42vh] flex-col items-center justify-center text-center">
-          <p className="text-2xl font-black text-muted-foreground/70">
-            No completed tasks yet
-          </p>
-        </div>
+        <EmptyState
+          icon={CheckCircle}
+          accentColor={nativeScreenAccentColors.completed}
+          title={completedDict("empty")}
+          description={completedDict("emptyBody")}
+        />
       )}
 
       {Array.from(groupedHistory.entries())

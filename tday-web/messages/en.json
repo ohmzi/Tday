@@ -385,7 +385,13 @@
     "addStep": "Add a step",
     "stepsCreateHint": "Save the task first to add steps.",
     "searchFloaterTasksPlaceholder": "Search Floater Task",
-    "searchShort": "Search"
+    "searchShort": "Search",
+    "listEmpty": "Nothing here yet",
+    "listEmptyBody": "Add your first task and it will show up right here.",
+    "floaterEmptyBody": "Floaters have no due date — write one down and it will wait until you are ready.",
+    "floaterListEmptyBody": "Add a floater and it will wait right here.",
+    "noMatchingTasks": "No matching tasks",
+    "searchEmptyBody": "Try a different word, or clear the search."
   },
   "today": {
     "saveInstance": "Save instance",
@@ -441,7 +447,9 @@
     }
   },
   "completed": {
-    "title": "Completion history"
+    "title": "Completion history",
+    "empty": "No finished tasks yet",
+    "emptyBody": "Tick something off and it will land here."
   },
   "modal": {
     "confirm": "Confirm",
