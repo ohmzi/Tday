@@ -4,7 +4,6 @@ import androidx.annotation.DrawableRes
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -583,9 +582,14 @@ private fun BoxScope.SearchField(
             .onGloballyPositioned { coordinates -> onBoundsChanged(coordinates.boundsInRoot()) },
         onClick = { if (!searchExpanded) onSearchExpandedChange(true) },
         shape = capsuleShape,
-        border = BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.26f)),
-        colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
+        // Same fill and lift as the two circles it sits beside — it folds down
+        // into one of them, so anything else makes the fold change material
+        // half way through.
+        colors = CardDefaults.cardColors(containerColor = tdayBarButtonContainerColor()),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = TdayDimens.BarButtonElevation,
+            pressedElevation = 0.dp,
+        ),
     ) {
         Box(modifier = Modifier.fillMaxSize().clip(capsuleShape)) {
             // Resting state. The glyph stays pinned at SearchLeadingPadding,
@@ -715,9 +719,11 @@ private fun RootFeedHeaderCircleButton(
         enabled = enabled,
         shape = CircleShape,
         interactionSource = interactionSource,
-        border = if (compact) null else BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.34f)),
         colors = CardDefaults.cardColors(
-            containerColor = if (compact) Color.Transparent else colorScheme.surface,
+            // The compact one is the close button INSIDE the expanded search
+            // capsule, so it stays transparent: filling and lifting it would
+            // put a second raised surface on top of the one it sits in.
+            containerColor = if (compact) Color.Transparent else tdayBarButtonContainerColor(),
         ),
         elevation = CardDefaults.cardElevation(
             defaultElevation = if (compact) 0.dp else TdayDimens.BarButtonElevation,

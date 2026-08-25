@@ -1,7 +1,7 @@
 package com.ohmz.tday.compose.core.ui
 
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -31,6 +31,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -52,7 +53,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.ui.theme.TdayDimens
-import kotlin.math.roundToInt
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.first
+import kotlin.math.abs
 
 /**
  * Geometry for the screen header used by every titled page that is not a root
@@ -148,8 +153,105 @@ class TdayHeroTitleCollapse internal constructor(
     val progress: () -> Float,
 )
 
-/** Duration of the settle. Matches the root feeds' own snap. */
-private const val SettleDurationMs = 260
+/**
+ * The settle spec.
+ *
+ * A spring, not an ease. `FastOutSlowInEasing` starts slow, so the block stood
+ * still for a beat after the finger left and then drifted into place — the
+ * opposite of elastic. iOS snaps with a UIView spring at 0.92 damping
+ * (`VerticalScrollSnapObserver` in `UI/Component/PullToRefresh.swift`); this is
+ * the same shape. The visibility threshold is in pixels so it stops when it has
+ * visibly stopped rather than chasing hundredths of one.
+ */
+private val SettleSpring = spring<Float>(
+    dampingRatio = 0.9f,
+    stiffness = Spring.StiffnessMediumLow,
+    visibilityThreshold = 0.5f,
+)
+
+/**
+ * Frames the container must hold still before the settle is allowed to run.
+ *
+ * A fling is a SECOND scroll session: `scrollable` closes the drag's session the
+ * moment the finger lifts and only then launches the fling's, so
+ * `isScrollInProgress` dips false in between. iOS has the same gap and polls
+ * until the scroll view is neither dragging nor decelerating; this is that poll.
+ */
+private const val SettleQuietFrames = 3
+
+/** Below this the container has not moved enough to have a direction. */
+private const val SettleDirectionEpsilonPx = 0.2f
+
+/** Only the sign is read; this clears [snapTitleCollapsePx]'s own deadband. */
+private const val SettleDirectionVelocity = 2f
+
+/**
+ * Watches one scroll container and settles the collapse every time it comes to
+ * rest part-way, so the block is never left half collapsed.
+ *
+ * @param offsetPx how far the container has been scrolled, in pixels.
+ * @param canCollapseFully false when the screen is too short to finish, so the
+ *   block goes back rather than stranding.
+ * @param settleBy scrolls the container by a delta, returning when it arrives.
+ */
+private suspend fun runHeroTitleSettle(
+    isScrolling: () -> Boolean,
+    offsetPx: () -> Float,
+    collapsePx: Float,
+    canCollapseFully: () -> Boolean,
+    settleBy: suspend (delta: Float) -> Unit,
+) {
+    while (true) {
+        snapshotFlow(isScrolling).first { it }
+
+        val startedAt = offsetPx()
+        var previous = startedAt
+        var lastStep = 0f
+        var quietFrames = 0
+        while (quietFrames < SettleQuietFrames) {
+            withFrameNanos { }
+            val now = offsetPx()
+            if (now != previous) {
+                lastStep = now - previous
+                previous = now
+            }
+            quietFrames = if (isScrolling()) 0 else quietFrames + 1
+        }
+
+        val from = offsetPx()
+        if (from <= 0f || from >= collapsePx) continue
+
+        // Direction beats the midpoint, which is what carries a short flick
+        // upwards all the way into the bar instead of dropping the title back
+        // where it started. The last step the content actually took decides;
+        // the whole gesture's travel breaks the tie when it ended dead still.
+        // `snapTitleCollapsePx` reads a downward-positive velocity while the
+        // scroll offset grows as content rises, hence the flipped sign.
+        val travelled = if (abs(lastStep) > SettleDirectionEpsilonPx) lastStep else from - startedAt
+        val direction = when {
+            travelled > SettleDirectionEpsilonPx -> -SettleDirectionVelocity
+            travelled < -SettleDirectionEpsilonPx -> SettleDirectionVelocity
+            else -> 0f
+        }
+        val target = if (canCollapseFully()) {
+            snapTitleCollapsePx(from, collapsePx, velocityY = direction)
+        } else {
+            0f
+        }
+
+        try {
+            settleBy(target - from)
+        } catch (interrupted: CancellationException) {
+            // Someone outbid us for the scroll mutex — the user grabbing the
+            // list again, or the list's own fling. Compose reports that by
+            // cancelling the scope the scroll ran in, and letting that through
+            // used to unwind this loop for good: one flick and the screen never
+            // settled again. Our own cancellation still has to win, so the
+            // context is re-checked rather than the exception swallowed whole.
+            currentCoroutineContext().ensureActive()
+        }
+    }
+}
 
 @Composable
 fun rememberLazyListHeroTitleCollapse(
@@ -162,23 +264,22 @@ fun rememberLazyListHeroTitleCollapse(
     // down, never resting half-collapsed. It is the list that moves now, so it
     // is the list this scrolls — which is also what makes it feel elastic.
     LaunchedEffect(listState, collapsePx, enabled) {
-        snapshotFlow {
-            Triple(
-                listState.isScrollInProgress,
-                listState.firstVisibleItemIndex,
-                listState.firstVisibleItemScrollOffset,
-            )
-        }.collect { (scrolling, index, offset) ->
-            if (!enabled || scrolling || index != 0) return@collect
-            val from = offset.toFloat()
-            if (from <= 0f || from >= collapsePx) return@collect
-            // A screen too short to finish goes back rather than stranding.
-            val target = if (!listState.canScrollForward) 0f else snapTitleCollapsePx(from, collapsePx)
-            listState.animateScrollBy(
-                value = target - from,
-                animationSpec = tween(durationMillis = SettleDurationMs, easing = FastOutSlowInEasing),
-            )
-        }
+        if (!enabled) return@LaunchedEffect
+        runHeroTitleSettle(
+            isScrolling = { listState.isScrollInProgress },
+            // Past the hero item there is no block left to collapse, so it
+            // reads as finished rather than as the next item's own offset.
+            offsetPx = {
+                if (listState.firstVisibleItemIndex > 0) {
+                    collapsePx
+                } else {
+                    listState.firstVisibleItemScrollOffset.toFloat()
+                }
+            },
+            collapsePx = collapsePx,
+            canCollapseFully = { listState.canScrollForward },
+            settleBy = { delta -> listState.animateScrollBy(delta, SettleSpring) },
+        )
     }
 
     return remember(listState, collapsePx, enabled) {
@@ -205,18 +306,14 @@ fun rememberScrollHeroTitleCollapse(
     val collapsePx = with(LocalDensity.current) { TdayHeroTitleMetrics.HeroHeight.toPx() }
 
     LaunchedEffect(scrollState, collapsePx, enabled) {
-        snapshotFlow { scrollState.isScrollInProgress to scrollState.value }
-            .collect { (scrolling, value) ->
-                if (!enabled || scrolling) return@collect
-                val from = value.toFloat()
-                if (from <= 0f || from >= collapsePx) return@collect
-                val target =
-                    if (scrollState.maxValue < collapsePx) 0f else snapTitleCollapsePx(from, collapsePx)
-                scrollState.animateScrollTo(
-                    value = target.roundToInt(),
-                    animationSpec = tween(durationMillis = SettleDurationMs, easing = FastOutSlowInEasing),
-                )
-            }
+        if (!enabled) return@LaunchedEffect
+        runHeroTitleSettle(
+            isScrolling = { scrollState.isScrollInProgress },
+            offsetPx = { scrollState.value.toFloat() },
+            collapsePx = collapsePx,
+            canCollapseFully = { scrollState.maxValue >= collapsePx },
+            settleBy = { delta -> scrollState.animateScrollBy(delta, SettleSpring) },
+        )
     }
 
     return remember(scrollState, collapsePx, enabled) {
@@ -456,6 +553,27 @@ fun LazyListScope.tdayHeroTitleItem(
     }
 }
 
+/**
+ * The fill every circle and capsule that sits in a pinned bar shares — the back
+ * button here, and the root feeds' buttons and search capsule.
+ *
+ * Deliberately not `colorScheme.surface`. Under Material You a dynamic light
+ * scheme gives `surface` and `background` the same value, so a bar button
+ * painted with the token dissolved into the page and only its hairline border
+ * showed. Being a different value from the token also keeps Material's tonal
+ * elevation tint off a card carrying [TdayDimens.BarButtonElevation], which was
+ * washing the same buttons a shade of the primary on top of that.
+ */
+@Composable
+internal fun tdayBarButtonContainerColor(): Color {
+    val colorScheme = MaterialTheme.colorScheme
+    return if (colorScheme.background.luminance() < 0.5f) {
+        colorScheme.surface.copy(alpha = 0.94f)
+    } else {
+        Color.White.copy(alpha = 0.96f)
+    }
+}
+
 /** The back affordance these headers lead with. */
 @Composable
 private fun TdayHeroBackButton(
@@ -465,7 +583,6 @@ private fun TdayHeroBackButton(
     val colorScheme = MaterialTheme.colorScheme
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
-    val isDark = colorScheme.background.luminance() < 0.5f
 
     Card(
         modifier = Modifier
@@ -478,13 +595,7 @@ private fun TdayHeroBackButton(
         onClick = onClick,
         shape = CircleShape,
         interactionSource = interactionSource,
-        colors = CardDefaults.cardColors(
-            containerColor = if (isDark) {
-                colorScheme.surface.copy(alpha = 0.94f)
-            } else {
-                Color.White.copy(alpha = 0.96f)
-            },
-        ),
+        colors = CardDefaults.cardColors(containerColor = tdayBarButtonContainerColor()),
         // The shared bar-button lift, soft enough that it lands on the bar's
         // own opaque strip rather than smearing across the content sliding
         // behind it — which is what a floating-action-button shadow did here.
