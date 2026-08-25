@@ -22,8 +22,12 @@ import { clamp01, stagger } from "./nativeHeaderEasing";
  * the title never crosses the mark, the search field or the buttons, and the
  * rising feed never clips it. Keep the three platforms in step.
  *
- * The one deliberate difference: `horizontalPadding` is 0 here because the app
- * shell's scroll container already provides the page gutter.
+ * Two deliberate differences here. `horizontalPadding` is 0 because the app
+ * shell's scroll container already provides the page gutter. And the title is
+ * no longer scaled to fit: it holds the morph's own two sizes and is cut off
+ * with an ellipsis at whatever width is free — see [titleRooms]. The travel
+ * distances and the painted extents at both ends are the ones the search
+ * solved, so that swap keeps every clearance it bought.
  */
 export const rootFeedHeroHeaderMetrics = {
   horizontalPadding: 0,
@@ -49,8 +53,17 @@ export const rootFeedHeroHeaderMetrics = {
 
   heroTitleFontSize: 40,
   heroTitleLineHeight: 48,
-  maxCompactTitleScale: 0.8,
-  minTitleScale: 0.5,
+  /**
+   * The docked end of the title's size morph — 40px folding down to 32px, the
+   * same handoff a non-root page's title makes into its bar.
+   *
+   * A fixed step, not a fit-to-space cap. iOS and Android still carry a
+   * `maxCompactTitleScale`/`minTitleScale` pair that shrinks a title until it
+   * fits (and, below the 0.5 floor, lets it run under the search button anyway);
+   * the web clips instead — see [titleRooms]. That is the one place the three
+   * are deliberately out of step, until the native sides follow.
+   */
+  compactTitleScale: 0.8,
   heroTitleCenterY: 64 + 39,
   titleGap: 8,
 
@@ -81,29 +94,30 @@ export const rootFeedHeroHeaderMetrics = {
 const lerp = (from: number, to: number, fraction: number) => from + (to - from) * fraction;
 
 /**
- * Fit-to-space caps for both ends of the title morph. A long localised title
- * would otherwise sit under the mark while centred, and under the search button
- * once docked beside it.
+ * How much width the title may paint into at each end of the morph. A title
+ * wider than its room is cut off there with an ellipsis; it is never shrunk to
+ * fit, so the name reads at the size the morph asked for however long it is.
+ *
+ * - `hero`: symmetric about the header's centre, stopping `titleGap` short of
+ *   the hero mark. The mark is the only thing at that height — the search field
+ *   sits a whole row above the centred title — so this is purely mark clearance.
+ * - `compact`: what the toolbar row has left once the docked mark on the left
+ *   and the folded search button plus the two round buttons on the right have
+ *   taken theirs, less a `titleGap` at each end.
  */
-function titleScales(titleWidth: number, availableWidth: number) {
+function titleRooms(availableWidth: number) {
   const m = rootFeedHeroHeaderMetrics;
-  if (titleWidth <= 0) return { hero: 1, compact: m.maxCompactTitleScale };
-
-  const heroRoom = availableWidth - m.heroSearchLeading * 2;
-  const hero = Math.max(m.minTitleScale, Math.min(1, heroRoom / titleWidth));
-
-  const compactRoom =
-    availableWidth -
-    m.searchTrailingInset -
-    m.barButtonSize -
-    (m.markLeading + m.compactMarkBox + m.titleGap) -
-    m.titleGap;
-  const compact = Math.max(
-    m.minTitleScale,
-    Math.min(m.maxCompactTitleScale * hero, compactRoom / titleWidth),
-  );
-
-  return { hero, compact: Math.min(compact, hero) };
+  return {
+    hero: Math.max(0, availableWidth - m.heroSearchLeading * 2),
+    compact: Math.max(
+      0,
+      availableWidth -
+        m.searchTrailingInset -
+        m.barButtonSize -
+        (m.markLeading + m.compactMarkBox + m.titleGap) -
+        m.titleGap,
+    ),
+  };
 }
 
 export type RootFeedHeroMark = "timeOfDay" | "floaterLeaf";
@@ -168,6 +182,7 @@ export default function RootFeedHeroHeader({
   const markRef = useRef<HTMLDivElement | null>(null);
   const titleRef = useRef<HTMLButtonElement | null>(null);
   const titleTextRef = useRef<HTMLSpanElement | null>(null);
+  const titleMeasureRef = useRef<HTMLSpanElement | null>(null);
   const capsuleRef = useRef<HTMLDivElement | null>(null);
   const labelRef = useRef<HTMLSpanElement | null>(null);
   const longLabelRef = useRef<HTMLSpanElement | null>(null);
@@ -212,11 +227,19 @@ export default function RootFeedHeroHeader({
       const markEl = markRef.current;
       const titleEl = titleRef.current;
       const titleTextEl = titleTextRef.current;
+      const titleMeasureEl = titleMeasureRef.current;
       const capsuleEl = capsuleRef.current;
       if (!markEl || !titleEl || !titleTextEl || !capsuleEl) return;
 
       const width = header.clientWidth;
       if (width <= 0) return;
+      // Read before anything below writes, so the frame does not force a second
+      // layout. Taken off the hidden copy because the visible node's own width
+      // is the answer being computed here, and fractional because an integer
+      // `offsetWidth` rounds a title that fits down into one that ellipsizes.
+      const naturalTitleWidth = titleMeasureEl
+        ? titleMeasureEl.getBoundingClientRect().width
+        : 0;
       const progress = clamp01(scroller.scrollTop / m.collapseDistance);
 
       const markCollapse = stagger(progress, m.markCollapseEnd);
@@ -231,19 +254,31 @@ export default function RootFeedHeroHeader({
       // rises 78px while the title only rises 67px, so any delay there lets the
       // first card cut into the title's descenders.
       const drop = stagger(progress, 1);
-      const titleWidth = titleTextEl.offsetWidth;
-      const { hero, compact } = titleScales(titleWidth, width);
-      const scale = lerp(hero, compact, travel);
+      // The size step is the morph and is unconditional; the rooms only decide
+      // where the text is cut off.
+      const scale = lerp(1, m.compactTitleScale, travel);
+      const rooms = titleRooms(width);
+      const heroPainted = Math.min(naturalTitleWidth, rooms.hero);
+      const compactPainted = Math.min(naturalTitleWidth * m.compactTitleScale, rooms.compact);
+      // Interpolated as a painted extent rather than as a width and a scale
+      // separately: the product of two lerps is a curve, and this has to be the
+      // straight line between the two ends the collision-free set was solved on.
+      const painted = lerp(heroPainted, compactPainted, travel);
+      // Bounded only when the text genuinely has to be cut. An exact-fit width
+      // written back in px re-enters layout a hair narrow and ellipsizes a title
+      // that fits; left as `auto` the node shrink-wraps the way it always did.
+      titleTextEl.style.width =
+        painted < naturalTitleWidth * scale - 0.5 ? `${painted / scale}px` : "";
       const compactCenterX =
-        m.markLeading + m.compactMarkBox + m.titleGap + (titleWidth * compact) / 2;
+        m.markLeading + m.compactMarkBox + m.titleGap + compactPainted / 2;
       const centerX = lerp(width / 2, compactCenterX, travel);
       const centerY = lerp(m.heroTitleCenterY, m.compactRowCenterY, drop);
-      // Positioned by the SCALED extent, not the raw offsetWidth: the node is
+      // Positioned by the PAINTED extent, not the node's own width: the node is
       // origin-top-left, so scaling pulls its box toward that corner. Using the
-      // unscaled half-width lands the left edge titleWidth*(1-scale)/2 too far
-      // left, which at the compact end is straight on top of the mark.
+      // unscaled half-width lands the left edge painted*(1-scale)/2/scale too
+      // far left, which at the compact end is straight on top of the mark.
       titleEl.style.transform =
-        `translate(${centerX - (titleWidth * scale) / 2}px, ${
+        `translate(${centerX - painted / 2}px, ${
           centerY - (m.heroTitleLineHeight * scale) / 2
         }px) scale(${scale})`;
       // An open field does not by itself hide the title — down in its hero
@@ -301,6 +336,11 @@ export default function RootFeedHeroHeader({
     };
 
     apply();
+    // A webfont swapping in changes the title's natural width, and nothing else
+    // here would hear about it — a font swap fires neither scroll nor resize.
+    // Unmeasured it would leave the title mis-centred, or ellipsized when it
+    // fits, until the next scroll.
+    void document.fonts?.ready.then(schedule);
     scroller.addEventListener("scroll", schedule, { passive: true });
     window.addEventListener("resize", schedule);
     return () => {
@@ -405,9 +445,12 @@ export default function RootFeedHeroHeader({
           // would paint at the header's top-left corner and then jump to centre.
           style={{ height: m.heroTitleLineHeight, opacity: 0 }}
         >
+          {/* The clipper, and so the node the rAF sizes: `text-overflow` only
+              acts on inline content of the box that overflows, which rules out
+              putting the width on the button and letting this block spill. */}
           <span
             ref={titleTextRef}
-            className="block font-black leading-none text-foreground"
+            className="block overflow-hidden text-ellipsis whitespace-nowrap font-black leading-none text-foreground"
             style={{ fontSize: m.heroTitleFontSize, lineHeight: `${m.heroTitleLineHeight}px` }}
           >
             {title}
@@ -515,6 +558,18 @@ export default function RootFeedHeroHeader({
           className="pointer-events-none invisible absolute left-0 top-0 whitespace-nowrap text-base font-bold"
         >
           {searchPlaceholder}
+        </span>
+        {/* The same trick for the title: once the visible node is bounded to the
+            width it may paint into, its own width no longer says how wide the
+            name wants to be. Unscaled, so the number is in the coordinates the
+            transform is written in. */}
+        <span
+          ref={titleMeasureRef}
+          aria-hidden
+          className="pointer-events-none invisible absolute left-0 top-0 whitespace-nowrap font-black"
+          style={{ fontSize: m.heroTitleFontSize, lineHeight: `${m.heroTitleLineHeight}px` }}
+        >
+          {title}
         </span>
       </header>
 
