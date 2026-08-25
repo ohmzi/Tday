@@ -1118,7 +1118,7 @@ export default function CalendarClient() {
             chrome does not move when the calendar mounts. Shares the header's
             class so the two cannot drift. */}
         <header className={nativePageBarClassName}>
-          <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-full h-screen bg-background lg:hidden" />
+          <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-full h-screen bg-background" />
           <div className="flex shrink-0 items-center"><NativePageBackButton /></div>
           <div className="ml-auto flex shrink-0 items-center gap-2.5">{todayAction}</div>
         </header>

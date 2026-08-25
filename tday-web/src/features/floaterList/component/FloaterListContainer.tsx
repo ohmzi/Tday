@@ -84,6 +84,11 @@ export default function FloaterListContainer({ id }: { id: string }) {
         pageCollapse={{ ...barSlots, title: listName, accentColor: listAccent }}
         trailingAction={
           <div className="flex shrink-0 items-center gap-2">
+          {/* 48px here, against the 56px of the back button and the search
+              toggle beside them. Deliberate, and the one bar in the app that
+              mixes: this is the only screen carrying five controls, and at 56
+              they come to 280px of circle in a 288px bar on a 320px phone. The
+              sibling custom list has four and keeps them all at 56. */}
           {/* Same gate the native list screens use: a summary is only offered
               where there is something to summarize. */}
           {floaterListTodos.length > 0 ? (
