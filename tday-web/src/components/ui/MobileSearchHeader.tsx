@@ -5,6 +5,8 @@ import NativeAppBrandButton from "@/components/app/NativeAppBrandButton";
 import {
   NativePageBackButton,
   nativePageBarClassName,
+  nativePageBarDockedTitleClassName,
+  nativePageBarTitleLayerClassName,
   nativePageHeaderMetrics,
   useNativePageBarResync,
 } from "@/components/app/NativePageHeader";
@@ -166,7 +168,7 @@ export default function MobileSearchHeader({
           never be seen above or behind the toolbar while scrolling. */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 bottom-full h-screen bg-background lg:hidden"
+        className="pointer-events-none absolute inset-x-0 bottom-full h-screen bg-background"
       />
       {/* Both out of flow, so they live outside the branch and never remount —
           unmounting the title left the page with no heading at all while the
@@ -177,23 +179,26 @@ export default function MobileSearchHeader({
           <div
             ref={pageCollapse.fadeRef}
             aria-hidden
-            className="pointer-events-none absolute inset-x-0 top-full bg-gradient-to-b from-background to-transparent lg:hidden"
+            className="pointer-events-none absolute inset-x-0 top-full bg-gradient-to-b from-background to-transparent"
             style={{ height: nativePageHeaderMetrics.contentFadeHeight, opacity: 0 }}
           />
           {/* The bar's copy of the page title, at the same size as the block's
-              own. See NativePageHeader for the handoff. `aria-hidden` because
-              the block's h1 is the page's real heading. */}
-          <span
-            ref={pageCollapse.dockedTitleRef}
-            aria-hidden
-            className={cn(
-              "pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 truncate text-center text-[2.1rem] font-black leading-tight tracking-normal",
-              isExpanded && "opacity-0",
-            )}
-            style={{ color: pageCollapse.accentColor, opacity: 0, visibility: "hidden" }}
-          >
-            {pageCollapse.title}
-          </span>
+              own. See NativePageHeader for the handoff, and for why the
+              centring is the layer's job rather than a `-translate-y-1/2` on
+              the title. `aria-hidden` because the block's h1 is the page's real
+              heading. */}
+          <div aria-hidden className={nativePageBarTitleLayerClassName}>
+            <span
+              ref={pageCollapse.dockedTitleRef}
+              className={cn(
+                nativePageBarDockedTitleClassName,
+                isExpanded && "opacity-0",
+              )}
+              style={{ color: pageCollapse.accentColor, opacity: 0, visibility: "hidden" }}
+            >
+              {pageCollapse.title}
+            </span>
+          </div>
         </>
       ) : null}
       {leading}

@@ -72,20 +72,66 @@ export const nativePageHeaderMetrics = {
   contentFadeHeight: 30,
 
   /**
-   * At `lg` the bar is `relative`, not sticky — it scrolls away with the page,
-   * so there is nothing to dock into and the title just rides its anchor.
-   * (`relative`, not `static`: the title is absolutely positioned inside it and
-   * needs it as a containing block.) Written the way Tailwind emits it so the
-   * script and the stylesheet cannot disagree.
+   * Least width worth docking a title into — a couple of characters and the
+   * ellipsis. Below this the bar keeps no title at all; see the reserve below.
    */
-  desktopBreakpointQuery: "(min-width: 64rem)",
+  dockedTitleMinWidth: 56,
+
 } as const;
+
+/**
+ * The bar's own vertical padding. Named because the docked title's layer has to
+ * repeat it exactly — see [nativePageBarTitleLayerClassName].
+ */
+const nativePageBarVerticalPaddingClassName = cn(
+  "pt-[calc(0.5rem+env(safe-area-inset-top))] pb-1.5",
+  "lg:pt-2 lg:pb-2",
+);
 
 /** The pinned bar shared by every non-root page, and by MobileSearchHeader. */
 export const nativePageBarClassName = cn(
   "sticky top-0 z-40 flex w-full items-center justify-between gap-2.5 bg-background",
-  "pt-[calc(0.5rem+env(safe-area-inset-top))] pb-1.5",
-  "lg:relative lg:bg-transparent lg:pt-2 lg:pb-2",
+  nativePageBarVerticalPaddingClassName,
+);
+
+/**
+ * The layer the docked title is centred in: full-bleed over the bar, repeating
+ * the bar's own padding so its content box is the bar's content box.
+ *
+ * The title cannot simply be `top-1/2 -translate-y-1/2` on the bar. An
+ * absolutely positioned child resolves its offsets against the containing
+ * block's PADDING box, while the back button and the actions are flex children
+ * centred in the CONTENT box — and this bar's padding is deliberately lopsided,
+ * `0.5rem + env(safe-area-inset-top)` above against 6px below. On a notched
+ * phone that is a 49px difference, which parked the title (55 − 6) / 2 ≈ 24px
+ * above the buttons it is meant to sit level with.
+ *
+ * Repeating the padding here and centring with flex puts the title in the same
+ * box as its neighbours, so it lands level with them at every inset — including
+ * zero, where the 8px/6px asymmetry was still worth 1px.
+ */
+export const nativePageBarTitleLayerClassName = cn(
+  "pointer-events-none absolute inset-0 flex items-center",
+  nativePageBarVerticalPaddingClassName,
+);
+
+/**
+ * The docked title itself, inside that layer. Full-width so the symmetric
+ * reserve the collapse writes as horizontal padding still centres it on the bar
+ * rather than on what is left over, and `truncate` so a long name ellipsizes
+ * inside that reserve instead of running under the buttons.
+ *
+ * No `-translate-y-1/2` here: Tailwind v4 emits translate utilities as the
+ * independent `translate` property, which does NOT lose to the `transform` the
+ * collapse writes — it composes with it. The class and the inline
+ * `translateY(calc(-50% …))` were therefore both applying, lifting the title a
+ * full 100% of its own height instead of 50%: another ~21px of the gap. The
+ * flex layer above does the centring now, and the collapse's transform carries
+ * only its own reveal.
+ */
+export const nativePageBarDockedTitleClassName = cn(
+  "w-full min-w-0 truncate text-center",
+  "text-[2.1rem] font-black leading-tight tracking-normal",
 );
 
 /**
@@ -260,15 +306,9 @@ export default function NativePageHeader({
       const markRect = markBoxEl.getBoundingClientRect();
       const leadingWidth = leadingRef.current?.offsetWidth ?? 0;
       const trailingWidth = trailingRef.current?.offsetWidth ?? 0;
-      // matchMedia rather than an innerWidth comparison: Tailwind emits `lg` as
-      // `min-width: 64rem`, which is 1024px only while the browser's default
-      // font size is 16px. Asking the same question the stylesheet asks keeps
-      // the two from disagreeing for anyone who has enlarged it.
-      const wide = window.matchMedia(m.desktopBreakpointQuery).matches;
-
-      // At lg the bar is static, so there is nothing to dock into. Reset rather
-      // than freeze: the viewport can cross the breakpoint mid-scroll.
-      const barBottom = wide ? null : (barRect?.bottom ?? null);
+      // The bar is pinned at every width, so there is always something to dock
+      // into and nothing here is conditioned on the breakpoint.
+      const barBottom = barRect?.bottom ?? null;
 
       // How much of a box has gone behind the bar, as a fraction of itself.
       //
@@ -316,26 +356,45 @@ export default function NativePageHeader({
         ),
       );
       if (titleEl) {
-        titleEl.style.opacity = String(dockFade);
+        // Kept clear of both the back button and the actions. Reserving the
+        // WIDER of the two twice over is deliberate: it keeps the title centred
+        // on the BAR rather than on the leftovers, and it is what makes a long
+        // title ellipsize once docked — "Completion history" does, on a narrow
+        // phone.
+        //
+        // That only holds while there is still something left to read. A busy
+        // bar — the floater list carries four trailing controls — can ask for
+        // more reserve than the bar is wide, and `truncate` clips to the PADDING
+        // box, not the content box, so the title then painted straight across
+        // those controls and off the end of the screen. The reserve degrades in
+        // two steps instead: symmetric while the title still gets
+        // `dockedTitleMinWidth`, then each side reserving only what actually
+        // sits there — off-centre, but legible and clear of the buttons, which
+        // is what iOS's `TimelineTopBar` does unconditionally — and if even
+        // that leaves nothing, the bar simply carries no title. The block's own
+        // copy is the page's real heading either way.
+        const gap = m.dockedTitleSideGap;
+        const barWidth = barRect?.width ?? 0;
+        const symmetric = Math.max(leadingWidth, trailingWidth) + gap;
+        const centred = barWidth - symmetric * 2 >= m.dockedTitleMinWidth;
+        const leadingReserve = centred ? symmetric : leadingWidth + gap;
+        const trailingReserve = centred ? symmetric : trailingWidth + gap;
+        const titleRoom = barWidth - leadingReserve - trailingReserve;
+
+        const shown = titleRoom >= m.dockedTitleMinWidth ? dockFade : 0;
+        titleEl.style.opacity = String(shown);
         // Invisible text must not be read out, nor eat taps meant for the bar.
-        titleEl.style.visibility = dockFade < 0.01 ? "hidden" : "visible";
-        // The -50% keeps it centred on the bar; the rest is the reveal.
+        titleEl.style.visibility = shown < 0.01 ? "hidden" : "visible";
+        // Only the reveal. The centring belongs to the flex layer the title
+        // sits in — see [nativePageBarTitleLayerClassName] — so nothing here
+        // has to know the bar's padding, and there is no `-50%` left to
+        // collide with Tailwind's `translate` property.
         titleEl.style.transform =
-          `translateY(calc(-50% + ${m.dockedTitleRise * (1 - dockFade)}px)) ` +
+          `translateY(${m.dockedTitleRise * (1 - dockFade)}px) ` +
           `scale(${m.dockedTitleScaleFrom + (1 - m.dockedTitleScaleFrom) * dockFade})`;
 
-        // Kept clear of both the back button and the actions, by the wider of
-        // the two so the title stays centred on the bar rather than on the
-        // leftovers.
-        //
-        // Reserving the wider side twice is deliberate, and it is what makes a
-        // long title ellipsize once docked — "Completion history" does, on a
-        // narrow phone. The alternative is reserving each side for what actually
-        // sits there, which fits more text but stops the title being centred on
-        // anything, and centred is the ask. iOS makes the same trade.
-        const reserve = Math.max(leadingWidth, trailingWidth) + m.dockedTitleSideGap;
-        titleEl.style.paddingLeft = `${reserve}px`;
-        titleEl.style.paddingRight = `${reserve}px`;
+        titleEl.style.paddingLeft = `${leadingReserve}px`;
+        titleEl.style.paddingRight = `${trailingReserve}px`;
       }
 
       // On as soon as anything is passing under the bar, over 8px so it does not
@@ -387,7 +446,7 @@ export default function NativePageHeader({
             top padding and the status-bar area so nothing shows through. */}
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-x-0 bottom-full h-screen bg-background lg:hidden"
+          className="pointer-events-none absolute inset-x-0 bottom-full h-screen bg-background"
         />
 
         <div ref={leadingRef} className="flex shrink-0 items-center">
@@ -404,26 +463,27 @@ export default function NativePageHeader({
         <div
           ref={fadeRef}
           aria-hidden
-          className="pointer-events-none absolute inset-x-0 top-full bg-gradient-to-b from-background to-transparent lg:hidden"
+          className="pointer-events-none absolute inset-x-0 top-full bg-gradient-to-b from-background to-transparent"
           style={{ height: m.contentFadeHeight, opacity: 0 }}
         />
         {/* The page's title — the only one there is. It lives here, in the
             pinned bar, and is translated down to the block's gap at rest, so
-            what travels up is this element rather than a copy of it. Absolute,
-            so nothing in the bar can shove it sideways as it arrives. Last, so
-            it paints over the dissolve band rather than being erased by it, and
-            hidden until the first frame has placed it. */}
+            what travels up is this element rather than a copy of it. Out of
+            flow, so nothing in the bar can shove it sideways as it arrives.
+            Last, so it paints over the dissolve band rather than being erased
+            by it, and hidden until the first frame has placed it. */}
         {/* The bar's copy, at the same size so the name never changes shape
             across the handoff. `aria-hidden` because the block's h1 above is
             the page's real heading and this is its duplicate. */}
-        <span
-          ref={dockedTitleRef}
-          aria-hidden
-          className="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 truncate text-center text-[2.1rem] font-black leading-tight tracking-normal"
-          style={{ color: accentColor, opacity: 0, visibility: "hidden" }}
-        >
-          {title}
-        </span>
+        <div aria-hidden className={nativePageBarTitleLayerClassName}>
+          <span
+            ref={dockedTitleRef}
+            className={nativePageBarDockedTitleClassName}
+            style={{ color: accentColor, opacity: 0, visibility: "hidden" }}
+          >
+            {title}
+          </span>
+        </div>
       </header>
       )}
 
