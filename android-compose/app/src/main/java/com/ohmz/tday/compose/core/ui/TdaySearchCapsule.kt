@@ -31,10 +31,10 @@ import com.ohmz.tday.compose.ui.theme.TdayDimens
  * The app's search field, in its open state.
  *
  * The root feeds fold theirs down into a round button and so own its width and
- * placement themselves ([RootFeedHeroHeader]); everywhere else — the guide —
- * takes it at full width, in ordinary flow. The chrome is the same either way,
- * and the numbers come from [RootFeedHeroHeaderMetrics] so the two cannot drift
- * apart.
+ * placement themselves ([RootFeedHeroHeader]). Everywhere else takes it at full
+ * width: the guide in ordinary flow, a list's detail screen in its pinned
+ * toolbar row. The chrome is the same in all three, and the numbers come from
+ * [RootFeedHeroHeaderMetrics] so they cannot drift apart.
  *
  * @param onClear shown as a trailing button only while [value] is non-empty.
  *   The root feeds' equivalent X dismisses a field that has a folded state to
@@ -105,14 +105,17 @@ fun TdaySearchCapsule(
                 },
             )
             if (onClear != null && value.isNotEmpty()) {
-                // Matches the root feeds' trailing control, minus its dismiss
-                // semantics — there is no folded state here to dismiss to.
-                IconButton(onClick = onClear, modifier = Modifier.size(32.dp)) {
+                // The root feeds' trailing control down to the numbers — 30 box,
+                // 18 glyph, the same dimmed tint — minus its dismiss semantics,
+                // since there is no folded state here to dismiss to. It sat at
+                // 32/20 and full strength, which beside the other field read as
+                // a heavier X in a field that is otherwise the same chrome.
+                IconButton(onClick = onClear, modifier = Modifier.size(30.dp)) {
                     Icon(
                         painter = painterResource(R.drawable.ic_lucide_x),
                         contentDescription = clearContentDescription,
-                        tint = colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(20.dp),
+                        tint = colorScheme.onSurfaceVariant.copy(alpha = 0.82f),
+                        modifier = Modifier.size(18.dp),
                     )
                 }
             }

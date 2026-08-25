@@ -88,6 +88,11 @@ object TdayHeroTitleMetrics {
     /** Gap between the circle and the title beneath it. */
     val TitleTopGap = 18.dp
     val TitleSize = 32.sp
+    /**
+     * The title's line box, pinned rather than left to the font: [HeroHeight]
+     * counts exactly one of these and is the collapse's denominator, so a taller
+     * box would make the block outlast the travel it is measured against.
+     */
     val TitleLineHeight = 40.dp
     val HeroBottomGap = 0.dp
 
@@ -119,7 +124,13 @@ object TdayHeroTitleMetrics {
     /** Clear air between the docked title and whatever sits beside it. */
     val DockedTitleSideGap = 8.dp
 
-    /** Least width worth docking a title into: a glyph or two and the ellipsis. */
+    /**
+     * Least width worth docking a title into. Measured, not guessed: at 32sp
+     * ExtraBold the ellipsis alone is most of a narrow glyph, so below this a
+     * docked title is one character and a "…" — which reads as a bug rather
+     * than as a truncation. The web bar's twin constant carries the same
+     * number and the same reasoning.
+     */
     val DockedTitleMinWidth = 56.dp
 
     /** Band below the toolbar that dissolves content as it passes under it. */
@@ -383,6 +394,14 @@ fun TdayHeroToolbar(
     titleColor: Color? = null,
     onBack: (() -> Unit)? = null,
     backContentDescription: String? = null,
+    /**
+     * Set by a bar that has given its row to something else — a list's search
+     * field. The reserve arithmetic below would drop the title anyway once the
+     * field fills the row, but only as a side effect of measuring a full-width
+     * cluster: silent, and it would come back the moment that layout changed.
+     * iOS and the web bar both say it outright, so this one does too.
+     */
+    titleSuppressed: Boolean = false,
     actions: @Composable RowScope.() -> Unit = {},
 ) {
     val m = TdayHeroTitleMetrics
@@ -477,7 +496,7 @@ fun TdayHeroToolbar(
                         )
                         // A bar with no room left carries no title at all,
                         // rather than one painted across its own buttons.
-                        alpha = if (titleReserve.hasRoom) reveal else 0f
+                        alpha = if (titleReserve.hasRoom && !titleSuppressed) reveal else 0f
                         translationY = with(density) { m.DockedTitleRise.toPx() } * (1f - reveal)
                         val s = m.DockedTitleScaleFrom + (1f - m.DockedTitleScaleFrom) * reveal
                         scaleX = s
@@ -570,12 +589,34 @@ fun TdayHeroTitleBlock(
         }
 
         Spacer(modifier = Modifier.height(m.TitleTopGap))
+        // One line, as iOS (`lineLimit(1)`) and web (`truncate`) keep it, in a
+        // line box held to [TdayHeroTitleMetrics.TitleLineHeight] whatever the
+        // font's own metrics are. A long name used to wrap to two, which made
+        // the block taller than the HeroHeight the collapse divides by — so the
+        // progress saturated, settle included, while the block still had height
+        // left on screen.
+        //
+        // The size is sp and the line box is dp, so the box does NOT follow the
+        // system font scale: at 200% the glyphs grow and the box does not. That
+        // is the trade this constant is for — HeroHeight is the collapse's
+        // denominator and has to be a fixed number of pixels, or the whole
+        // handoff moves with an accessibility setting.
         Text(
             text = title,
             fontSize = m.TitleSize,
+            lineHeight = with(density) { m.TitleLineHeight.toSp() },
+            style = LocalTextStyle.current.merge(
+                TextStyle(
+                    lineHeightStyle = LineHeightStyle(
+                        alignment = LineHeightStyle.Alignment.Center,
+                        trim = LineHeightStyle.Trim.None,
+                    ),
+                    platformStyle = PlatformTextStyle(includeFontPadding = false),
+                ),
+            ),
             fontWeight = FontWeight.ExtraBold,
             color = resolvedTitleColor,
-            maxLines = 2,
+            maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center,
             modifier = Modifier
@@ -702,7 +743,15 @@ private fun TdayHeroBackButton(
                 imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_chevron_left),
                 contentDescription = contentDescription,
                 tint = colorScheme.onSurface,
-                modifier = Modifier.size(36.dp),
+                // The same 22 the action glyphs beside it carry (TodoListScreen's
+                // `iconSize`), and the same iOS draws every pinned-bar glyph at
+                // (`topBarButtonIconSize`). At 36 a 24-viewport lucide path drew
+                // its 2-unit stroke at 3dp against their 1.83dp — half again as
+                // thick, which read as a different weight of icon rather than as
+                // a bigger one. Web sits at 24-in-56 and is left alone: it is
+                // internally consistent and nobody has compared the two side by
+                // side at this size.
+                modifier = Modifier.size(22.dp),
             )
         }
     }

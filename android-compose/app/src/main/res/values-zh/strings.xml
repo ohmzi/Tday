@@ -7,6 +7,7 @@
     <string name="action_close">关闭</string>
     <string name="action_search">搜索</string>
     <string name="action_close_search">关闭搜索</string>
+    <string name="action_clear_search">清除搜索</string>
     <string name="action_create_task">创建任务</string>
     <string name="action_create_list">创建列表</string>
     <string name="action_edit">编辑</string>

@@ -38,6 +38,12 @@ enum RootFeedHeroHeaderMetrics {
     static let topInset: CGFloat = 2
     static let barButtonSize: CGFloat = 56
     static let barButtonSpacing: CGFloat = 8
+    /// The hairline the plain bar controls wear. One value rather than one per
+    /// control: the search capsule folds down into one of the round buttons
+    /// beside it, so anything the two do not share changes material half way
+    /// through the fold. The Calendar's Today pill keeps its own accent-tinted
+    /// ring on purpose — it is a labelled pill, not one of these circles.
+    static let barControlBorderOpacity: Double = 0.34
     static let searchIconSlot: CGFloat = 30
     static let searchLeadingPadding: CGFloat = 13
 
@@ -456,8 +462,9 @@ struct RootFeedHeroHeader: View {
             .background(colors.surface, in: Capsule())
             .overlay(
                 Capsule()
-                    .stroke(colors.onSurface.opacity(0.26), lineWidth: 1)
+                    .stroke(colors.onSurface.opacity(Metrics.barControlBorderOpacity), lineWidth: 1)
             )
+            .tdayBarControlLift()
             // Only published while the field is open. The capsule's frame changes
             // on every scroll frame as it folds, and a preference that churns
             // would drag the owning screen's body into the scroll loop — the very
@@ -566,6 +573,18 @@ struct RootFeedHeroHeader: View {
     }
 }
 
+/// The resting lift `tdayToolbarButtonEffect` gives the round bar buttons, for
+/// the search capsules that sit beside them. Spelled out rather than taken from
+/// that modifier because a capsule is not a button: the modifier carries a
+/// ripple overlay that masks a second copy of its content, and the root feed's
+/// capsule re-renders on every scroll frame while it folds.
+private extension View {
+    func tdayBarControlLift() -> some View {
+        shadow(color: Color.black.opacity(0.045), radius: 10, x: 0, y: 4)
+            .shadow(color: Color.black.opacity(0.026), radius: 3, x: 0, y: 2)
+    }
+}
+
 private struct RootFeedHeaderCircleButton: View {
     /// Asset-catalog name of the lucide template glyph (shared with web/Android).
     let icon: String
@@ -589,7 +608,10 @@ private struct RootFeedHeaderCircleButton: View {
                 .clipShape(Circle())
                 .overlay {
                     Circle()
-                        .stroke(colors.onSurface.opacity(0.34), lineWidth: 1)
+                        .stroke(
+                            colors.onSurface.opacity(RootFeedHeroHeaderMetrics.barControlBorderOpacity),
+                            lineWidth: 1
+                        )
                 }
         }
         .buttonStyle(TdayToolbarButtonStyle())
@@ -753,8 +775,9 @@ struct TdaySearchCapsule: View {
         .background(colors.surface, in: Capsule())
         .overlay(
             Capsule()
-                .stroke(colors.onSurface.opacity(0.26), lineWidth: 1)
+                .stroke(colors.onSurface.opacity(RootFeedHeroHeaderMetrics.barControlBorderOpacity), lineWidth: 1)
         )
+        .tdayBarControlLift()
     }
 
     // `.focused` has to sit on the field itself — put on the capsule it binds

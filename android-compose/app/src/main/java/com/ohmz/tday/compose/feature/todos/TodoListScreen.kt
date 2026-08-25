@@ -663,16 +663,12 @@ fun TodoListScreen(
             TodoTopBarAction(
                 icon = ImageVector.vectorResource(R.drawable.ic_lucide_search),
                 contentDescription = stringResource(R.string.action_search),
+                // Only opens: the bar hands its row over to the field, so this
+                // button is not on screen to be tapped again. The field's own
+                // close button is what comes back from there.
                 onClick = {
-                    if (listSearchExpanded) {
-                        closeListSearch()
-                    } else {
-                        listSearchExpanded = true
-                        listSearchNeedsFocus = true
-                        // The field lives just under the hero block, so bring the
-                        // top of the list back into view along with it.
-                        screenScope.launch { listState.animateScrollToItem(0, 0) }
-                    }
+                    listSearchExpanded = true
+                    listSearchNeedsFocus = true
                 },
             )
         } else {
@@ -737,7 +733,6 @@ fun TodoListScreen(
         // Starts at 1: the hero block holds index 0 on this path, so every row
         // below it is one further down than the sections alone would say.
         var itemIndex = if (usesTodayStyle && !usesRootFeedChrome) 1 else 0
-        if (showListSearchField) itemIndex += 1
         timelineSections.forEach { section ->
             itemIndex += 1
             val todoIndex = section.items.indexOfFirst { item ->
@@ -1003,31 +998,6 @@ fun TodoListScreen(
                             accentColor = titleColor,
                             collapseProgress = heroCollapse.progress,
                         )
-                    }
-
-                    // In ordinary flow under the hero block, the way the guide
-                    // carries the same capsule.
-                    if (showListSearchField) {
-                        item(key = "list-search-field", contentType = "list-search-field") {
-                            val focusRequester = remember { FocusRequester() }
-                            LaunchedEffect(listSearchNeedsFocus) {
-                                if (!listSearchNeedsFocus) return@LaunchedEffect
-                                // Consumed on the way in, so scrolling the field
-                                // off screen and back does not re-open the keyboard.
-                                listSearchNeedsFocus = false
-                                focusRequester.requestFocus()
-                            }
-                            TdaySearchCapsule(
-                                value = listSearchQuery,
-                                onValueChange = { listSearchQuery = it },
-                                placeholder = stringResource(R.string.action_search),
-                                modifier = Modifier
-                                    .focusRequester(focusRequester)
-                                    .padding(bottom = 12.dp),
-                                onClear = { listSearchQuery = "" },
-                                clearContentDescription = stringResource(R.string.action_close_search),
-                            )
-                        }
                     }
 
                     if (showFloaterTaskHomeSearchResults) {
@@ -1521,14 +1491,53 @@ fun TodoListScreen(
                         .align(Alignment.TopStart)
                         .padding(padding)
                         .zIndex(6f),
+                    titleSuppressed = showListSearchField,
                     actions = {
-                        topBarActions.forEach { action ->
+                        if (showListSearchField) {
+                            // The bar is handed over to the field, keeping the
+                            // back chevron and dropping the action cluster —
+                            // what iOS's TimelineTopBar and the web list bar
+                            // both do. In ordinary flow under the hero block
+                            // the field scrolled away from under a live query,
+                            // leaving the keyboard up with nothing to type in.
+                            Spacer(modifier = Modifier.width(TdayDimens.FabSize))
+                            val focusRequester = remember { FocusRequester() }
+                            LaunchedEffect(listSearchNeedsFocus) {
+                                if (!listSearchNeedsFocus) return@LaunchedEffect
+                                // Consumed on the way in, so returning to a
+                                // screen that still has the field open does not
+                                // re-open the keyboard with it.
+                                listSearchNeedsFocus = false
+                                focusRequester.requestFocus()
+                            }
+                            TdaySearchCapsule(
+                                value = listSearchQuery,
+                                onValueChange = { listSearchQuery = it },
+                                placeholder = stringResource(R.string.action_search),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .focusRequester(focusRequester),
+                                onClear = { listSearchQuery = "" },
+                                clearContentDescription = stringResource(R.string.action_clear_search),
+                            )
+                            // The capsule's own X clears the query; leaving the
+                            // search behind altogether is this one, as on the
+                            // root feeds.
                             TodayHeaderButton(
-                                onClick = action.onClick,
-                                icon = action.icon,
-                                contentDescription = action.contentDescription,
+                                onClick = closeListSearch,
+                                icon = ImageVector.vectorResource(R.drawable.ic_lucide_x),
+                                contentDescription = stringResource(R.string.action_close_search),
                                 iconSize = 22.dp,
                             )
+                        } else {
+                            topBarActions.forEach { action ->
+                                TodayHeaderButton(
+                                    onClick = action.onClick,
+                                    icon = action.icon,
+                                    contentDescription = action.contentDescription,
+                                    iconSize = 22.dp,
+                                )
+                            }
                         }
                     },
                 )

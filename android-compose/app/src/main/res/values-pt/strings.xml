@@ -7,6 +7,7 @@
     <string name="action_close">Fechar</string>
     <string name="action_search">Buscar</string>
     <string name="action_close_search">Fechar busca</string>
+    <string name="action_clear_search">Limpar busca</string>
     <string name="action_create_task">Criar tarefa</string>
     <string name="action_create_list">Criar lista</string>
     <string name="action_edit">Editar</string>
