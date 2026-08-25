@@ -151,6 +151,17 @@
   body {
     @apply bg-background font-sans text-foreground antialiased;
   }
+  /* No rubber-band on the document. In the installed iOS PWA the whole page
+     bounces past its end, and `position: sticky` children ride that bounce —
+     which is the pinned toolbar visibly leaving the top of the screen even
+     though it never leaves its sticky range. `contain` would only stop the
+     bounce chaining outward; `none` is what suppresses the affordance itself.
+     Nothing on the web build wants an overscroll gesture: pull-to-refresh is
+     native-only, and the bottom sheets already carry `overscroll-contain`. */
+  html,
+  body {
+    overscroll-behavior: none;
+  }
   /* Belt-and-braces: form controls don't inherit font-family by default in
      every engine, so pin them to the app font too. Keeps inputs/buttons in the
      bottom sheets from rendering in the system UI font. */
