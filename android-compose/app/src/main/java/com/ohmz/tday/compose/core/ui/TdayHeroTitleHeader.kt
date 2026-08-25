@@ -482,10 +482,10 @@ private fun TdayHeroBackButton(
                 Color.White.copy(alpha = 0.96f)
             },
         ),
-        // Flat. Content passes behind this bar now, so a drop shadow lands on
-        // whatever happens to be sliding underneath and reads as a hard moving
-        // edge. The fill alone carries the button against the bar.
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        // The shared bar-button lift, soft enough that it lands on the bar's
+        // own opaque strip rather than smearing across the content sliding
+        // behind it — which is what a floating-action-button shadow did here.
+        elevation = CardDefaults.cardElevation(defaultElevation = TdayDimens.BarButtonElevation),
     ) {
         Box(modifier = Modifier.size(TdayDimens.FabSize), contentAlignment = Alignment.Center) {
             Icon(

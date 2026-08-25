@@ -91,7 +91,12 @@ import java.util.Calendar
  */
 object RootFeedHeroHeaderMetrics {
     val HorizontalPadding = 18.dp
-    val TopInset = 18.dp
+    /**
+     * Zero, so the toolbar row starts exactly where a non-root page's back
+     * button does — both headers are placed with the same Scaffold padding, so
+     * an inset here was 18dp of pure disagreement between the two.
+     */
+    val TopInset = 0.dp
     val BarButtonSize = TdayDimens.FabSize
     val BarButtonSpacing = 8.dp
 
@@ -715,7 +720,7 @@ private fun RootFeedHeaderCircleButton(
             containerColor = if (compact) Color.Transparent else colorScheme.surface,
         ),
         elevation = CardDefaults.cardElevation(
-            defaultElevation = if (compact) 0.dp else TdayDimens.FabElevation,
+            defaultElevation = if (compact) 0.dp else TdayDimens.BarButtonElevation,
             pressedElevation = 0.dp,
         ),
     ) {

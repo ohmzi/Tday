@@ -246,17 +246,22 @@ struct TodoTimelineTaskTitle: View {
 
 struct TimelineTopBarAction {
     let systemName: String
+    /// Preferred over `systemName` when set, so a bar can use the same drawn
+    /// glyph the root feeds do rather than the SF symbol that resembles it.
+    let assetName: String?
     let tint: Color?
     let usesCircularChrome: Bool
     let action: () -> Void
 
     init(
         systemName: String,
+        assetName: String? = nil,
         tint: Color? = nil,
         usesCircularChrome: Bool = false,
         action: @escaping () -> Void
     ) {
         self.systemName = systemName
+        self.assetName = assetName
         self.tint = tint
         self.usesCircularChrome = usesCircularChrome
         self.action = action
@@ -664,6 +669,7 @@ struct TodoListScreen: View {
             // the Sharing section); members go straight to the members sheet.
             actions.append(TimelineTopBarAction(
                 systemName: "ellipsis",
+                assetName: "NavEllipsis",
                 usesCircularChrome: true,
                 action: {
                     if selectedListSummary?.isOwner == false {
@@ -2570,7 +2576,8 @@ struct TimelineTopBar: View {
                             let action = actions[index]
                             TimelineTopBarButton(
                                 systemName: action.systemName,
-                                chrome: action.usesCircularChrome ? .outlined : .plain,
+                                assetName: action.assetName,
+                                chrome: action.usesCircularChrome ? .filled : .plain,
                                 tint: action.tint,
                                 action: action.action
                             )
@@ -2790,23 +2797,46 @@ private struct TimelineTopBarButton: View {
     }
 
     let systemName: String
+    /// Preferred over `systemName` when set, so a bar can use the same drawn
+    /// glyph the root feeds do rather than the SF symbol that merely resembles it.
+    let assetName: String?
     let chrome: Chrome
     let tint: Color?
     let action: () -> Void
 
     @Environment(\.tdayColors) private var colors
 
-    init(systemName: String, chrome: Chrome, tint: Color? = nil, action: @escaping () -> Void) {
+    init(
+        systemName: String,
+        assetName: String? = nil,
+        chrome: Chrome,
+        tint: Color? = nil,
+        action: @escaping () -> Void
+    ) {
         self.systemName = systemName
+        self.assetName = assetName
         self.chrome = chrome
         self.tint = tint
         self.action = action
     }
 
-    var body: some View {
-        Button(action: action) {
+    @ViewBuilder
+    private var glyph: some View {
+        if let assetName {
+            Image(assetName)
+                .renderingMode(.template)
+                .resizable()
+                .scaledToFit()
+                .frame(width: iconSize, height: iconSize)
+        } else {
             Image(systemName: systemName)
                 .font(.system(size: iconSize, weight: .semibold))
+        }
+    }
+
+    var body: some View {
+        Button(action: action) {
+            glyph
                 .frame(width: TodoTimelineMetrics.topBarButtonFrame, height: TodoTimelineMetrics.topBarButtonFrame)
                 .background {
                     if chrome == .filled {

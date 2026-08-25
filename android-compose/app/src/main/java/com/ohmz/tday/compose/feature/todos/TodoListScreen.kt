@@ -2141,9 +2141,12 @@ private fun TodayHeaderButton(
         shape = CircleShape,
         border = buttonBorder,
         colors = CardDefaults.cardColors(containerColor = containerColor),
+        // Every circle in a bar carries the same lift, back button or not —
+        // half of them having no shadow at all was the giveaway that these were
+        // three separate implementations.
         elevation = CardDefaults.cardElevation(
-            defaultElevation = if (isBackButton) TdayDimens.FabElevation else 0.dp,
-            pressedElevation = if (isBackButton) TdayDimens.FabPressedElevation else 0.dp,
+            defaultElevation = TdayDimens.BarButtonElevation,
+            pressedElevation = 0.dp,
         ),
     ) {
         Box(

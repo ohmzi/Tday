@@ -33,7 +33,9 @@ final class RootFeedHeaderScrollState {
 /// cut straight through the search field mid-scroll.
 enum RootFeedHeroHeaderMetrics {
     static let horizontalPadding: CGFloat = 18
-    static let topInset: CGFloat = 18
+    /// Matches the 2pt the non-root bar puts above its own 56pt button row, so
+    /// the home toolbar and a back button sit at the same height.
+    static let topInset: CGFloat = 2
     static let barButtonSize: CGFloat = 56
     static let barButtonSpacing: CGFloat = 8
     static let searchIconSlot: CGFloat = 30
