@@ -93,7 +93,9 @@ enum TodoTimelineMetrics {
     static let topBarRowHeight: CGFloat = 56
     static let topBarButtonFrame: CGFloat = 56
     static let topBarButtonSpacing: CGFloat = 8
-    static let topBarButtonIconSize: CGFloat = 24
+    /// What every circle in a pinned bar draws its glyph at, the root feeds'
+    /// buttons included — see `RootFeedHeaderCircleButton`, and Android's 22.dp.
+    static let topBarButtonIconSize: CGFloat = 22
     static let expandedTitleLiftDistance: CGFloat = 14
     // The hero title now starts far below the bar, so it holds its ground for
     // most of the collapse and hands over to the bar's copy at a single point:
@@ -110,14 +112,15 @@ enum TodoTimelineMetrics {
     static let searchResultFlashDelay: TimeInterval = 0.62
     static let searchResultPreScrollItemCount = 5
 
-    static func smoothstep(_ value: CGFloat) -> CGFloat {
-        let clamped = min(max(value, 0), 1)
-        return clamped * clamped * (3 - (2 * clamped))
-    }
-
+    /// The leg's own septic smootherstep, borrowed from the root feeds' header
+    /// rather than restated: the two header families are meant to feel like one
+    /// thing, and this one was still on cubic smoothstep — two orders less flat
+    /// at both ends, so its per-page collapse started and stopped harder than
+    /// the home screen's. Android reads the same function through
+    /// `TdayHeroTitleHeader.staggerRange`; web's is `nativeHeaderEasing.ts`.
     static func progress(_ value: CGFloat, from start: CGFloat, to end: CGFloat) -> CGFloat {
         guard end > start else { return value >= end ? 1 : 0 }
-        return smoothstep((value - start) / (end - start))
+        return RootFeedHeroHeaderMetrics.stagger(value - start, to: end - start)
     }
 }
 
@@ -716,7 +719,9 @@ struct TodoListScreen: View {
         if canSummarizeCurrentMode {
             actions.append(TimelineTopBarAction(
                 systemName: "sparkles",
+                assetName: "LucideSparkles",
                 usesCircularChrome: true,
+                accessibilityLabel: L("Summary"),
                 action: presentSummary
             ))
         }
@@ -728,6 +733,7 @@ struct TodoListScreen: View {
                 systemName: "ellipsis",
                 assetName: "NavEllipsis",
                 usesCircularChrome: true,
+                accessibilityLabel: L("More"),
                 action: {
                     if selectedListSummary?.isOwner == false {
                         showingMembers = true
@@ -2525,6 +2531,14 @@ struct TodoListScreen: View {
         guard !section.items.isEmpty else {
             return false
         }
+        // A live query outranks a shut bucket: a list opens with Earlier closed,
+        // and a task the search turned up in there must not stay hidden behind
+        // its header. The buckets are therefore not the reader's to shut while
+        // the query stands — a header that still took a tap would flip the
+        // stored state behind a screen that could not show it.
+        guard !isSearchingList else {
+            return false
+        }
         if viewModel.mode == .all {
             return true
         }
@@ -2538,13 +2552,7 @@ struct TodoListScreen: View {
     }
 
     private func isTimelineSectionCollapsed(_ section: TodoTimelineSection) -> Bool {
-        // A live query outranks a shut bucket: a list opens with Earlier closed,
-        // and a task the search turned up in there must not stay hidden behind
-        // its header.
-        guard !isSearchingList else {
-            return false
-        }
-        return canCollapseTimelineSection(section) && collapsedSectionIDs.contains(section.id)
+        canCollapseTimelineSection(section) && collapsedSectionIDs.contains(section.id)
     }
 
     private func toggleTimelineSection(_ section: TodoTimelineSection) {
@@ -2756,7 +2764,13 @@ struct TimelineTopBar: View {
     var body: some View {
         ZStack {
             HStack(spacing: 0) {
-                TimelineTopBarButton(systemName: "chevron.left", chrome: .filled, action: onBack)
+                TimelineTopBarButton(
+                    systemName: "chevron.left",
+                    assetName: "LucideChevronLeft",
+                    chrome: .filled,
+                    action: onBack
+                )
+                .accessibilityLabel(Text(L("Back")))
 
                 if searchActive {
                     searchRow
@@ -3045,8 +3059,20 @@ private struct TimelineTopBarButton: View {
                 .frame(width: TodoTimelineMetrics.topBarButtonFrame, height: TodoTimelineMetrics.topBarButtonFrame)
                 .background {
                     if chrome == .filled {
+                        // Fill AND hairline, both: `RootFeedHeaderCircleButton`
+                        // wears the ring at this opacity, and a filled circle
+                        // without it read as a different control one screen along.
                         Circle()
                             .fill(colors.surface)
+                            .overlay {
+                                Circle()
+                                    .stroke(
+                                        colors.onSurface.opacity(
+                                            RootFeedHeroHeaderMetrics.barControlBorderOpacity
+                                        ),
+                                        lineWidth: 1
+                                    )
+                            }
                     } else if chrome == .outlined {
                         Circle()
                             .fill(outlinedFillColor)
@@ -3058,7 +3084,10 @@ private struct TimelineTopBarButton: View {
                 }
                 .contentShape(Circle())
         }
-        .buttonStyle(TimelineTopBarButtonStyle(isFilled: chrome == .filled))
+        // The shared bar-button lift, rather than a fourth copy of it: this one
+        // was a shade heavier than the root feeds' and landed at a different
+        // offset, which is what left the two ⋯ reading as separate controls.
+        .buttonStyle(TdayToolbarButtonStyle(shadowsEnabled: chrome == .filled))
         .foregroundStyle(foregroundColor)
     }
 
@@ -3089,48 +3118,6 @@ private struct TimelineTopBarButton: View {
             return tint.opacity(0.48)
         }
         return colors.onSurfaceVariant.opacity(0.28)
-    }
-}
-
-private struct TimelineTopBarButtonStyle: ButtonStyle {
-    let isFilled: Bool
-
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .tdayRippleEffect(isPressed: configuration.isPressed)
-            .scaleEffect(configuration.isPressed ? 0.95 : 1)
-            .offset(y: configuration.isPressed ? 1 : 0)
-            .shadow(
-                color: Color.black.opacity(shadowOpacity(isPressed: configuration.isPressed)),
-                radius: shadowRadius(isPressed: configuration.isPressed),
-                x: 0,
-                y: shadowOffsetY(isPressed: configuration.isPressed)
-            )
-            .animation(.easeOut(duration: 0.14), value: configuration.isPressed)
-    }
-
-    private func shadowOpacity(isPressed: Bool) -> Double {
-        guard isFilled else {
-            return 0
-        }
-
-        return isPressed ? 0.04 : 0.08
-    }
-
-    private func shadowRadius(isPressed: Bool) -> CGFloat {
-        guard isFilled else {
-            return 0
-        }
-
-        return isPressed ? 3 : 7
-    }
-
-    private func shadowOffsetY(isPressed: Bool) -> CGFloat {
-        guard isFilled else {
-            return 0
-        }
-
-        return isPressed ? 1 : 3
     }
 }
 

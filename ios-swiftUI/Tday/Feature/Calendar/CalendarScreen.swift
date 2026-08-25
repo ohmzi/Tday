@@ -76,7 +76,11 @@ private enum CalendarTitleHandoff {
     static let collapsedFadeEnd: CGFloat = 0.96
     static let collapsedTitleRevealDistance: CGFloat = 10
     static let expandedTitleLiftDistance: CGFloat = 18
-    static let sliderPartialSnapDistance: CGFloat = 58
+    /// Measured from the top of the tabs, which come to rest a
+    /// `settledContentGap` below the bar, so the snap back still covers the
+    /// whole control rather than only what is left of it once the gap has
+    /// scrolled away.
+    static let sliderPartialSnapDistance: CGFloat = TodoTimelineMetrics.settledContentGap + 58
     /// The mark leads and is gone before the title reaches the bar, matching
     /// every other titled screen.
     static let markFadeEnd: CGFloat = 0.45
@@ -283,9 +287,15 @@ struct CalendarScreen: View {
                     )
                     .frame(width: 0, height: 0)
                 }
+                // The bar consumes the drag before the list is allowed to move,
+                // so the docked title's resting state has the list still at its
+                // top and the tabs sitting wherever this inset leaves them. The
+                // gap is what the timeline screens hang off their collapsing
+                // block: without it the tabs settle inside the fade band and
+                // their top half dissolves into the bar.
                 .listRowInsets(
                     EdgeInsets(
-                        top: 0,
+                        top: TodoTimelineMetrics.settledContentGap,
                         leading: TodoTimelineMetrics.horizontalPadding,
                         bottom: 14,
                         trailing: TodoTimelineMetrics.horizontalPadding
