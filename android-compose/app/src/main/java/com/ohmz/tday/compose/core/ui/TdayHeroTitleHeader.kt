@@ -30,7 +30,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,6 +41,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.lerp as lerpColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.vectorResource
@@ -48,6 +51,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -111,6 +115,12 @@ object TdayHeroTitleMetrics {
     const val DockedTitleRevealStart = 0.82f
     val DockedTitleRise = 10.dp
     const val DockedTitleScaleFrom = 0.985f
+
+    /** Clear air between the docked title and whatever sits beside it. */
+    val DockedTitleSideGap = 8.dp
+
+    /** Least width worth docking a title into: a glyph or two and the ellipsis. */
+    val DockedTitleMinWidth = 56.dp
 
     /** Band below the toolbar that dissolves content as it passes under it. */
     val ContentFadeHeight = 24.dp
@@ -241,6 +251,14 @@ private suspend fun runHeroTitleSettle(
 
         try {
             settleBy(target - from)
+            // `canCollapseFully` only asks whether there is ANY scroll left, not
+            // whether there is a whole collapse's worth. A screen with less than
+            // that stops short, so the landing is checked rather than assumed:
+            // anything still part-way goes back down instead of stranding.
+            val landed = offsetPx()
+            if (landed > 0f && landed < collapsePx) {
+                settleBy(-landed)
+            }
         } catch (interrupted: CancellationException) {
             // Someone outbid us for the scroll mutex — the user grabbing the
             // list again, or the list's own fling. Compose reports that by
@@ -253,16 +271,30 @@ private suspend fun runHeroTitleSettle(
     }
 }
 
+/**
+ * Settle on release: the block goes all the way up or all the way back down,
+ * never resting half-collapsed. It is the list that moves, so it is the list
+ * this scrolls — which is also what makes it feel elastic.
+ *
+ * Public because the two root feeds hold their own header and their own
+ * collapse fraction, but must settle exactly the way every other screen does.
+ * They each used to carry a copy of this: a `LaunchedEffect` keyed on
+ * `isScrollInProgress`, a nearest-half target with no velocity, and a
+ * `tween(260, FastOutSlowInEasing)`. All three of those are the faults
+ * [runHeroTitleSettle] exists to avoid — the key made the effect restart in the
+ * gap between the drag's scroll session and the fling's, the missing velocity
+ * dropped a short upward flick back where it started, and an ease-IN-out holds
+ * still before it moves, which is the opposite of springing.
+ *
+ * @param collapsePx the scroll distance over which that screen's header folds.
+ *   The root feeds' is their own, not [TdayHeroTitleMetrics.HeroHeight].
+ */
 @Composable
-fun rememberLazyListHeroTitleCollapse(
+fun LazyListHeroTitleSettle(
     listState: LazyListState,
+    collapsePx: Float,
     enabled: Boolean = true,
-): TdayHeroTitleCollapse {
-    val collapsePx = with(LocalDensity.current) { TdayHeroTitleMetrics.HeroHeight.toPx() }
-
-    // Settle on release: the block goes all the way up or all the way back
-    // down, never resting half-collapsed. It is the list that moves now, so it
-    // is the list this scrolls — which is also what makes it feel elastic.
+) {
     LaunchedEffect(listState, collapsePx, enabled) {
         if (!enabled) return@LaunchedEffect
         runHeroTitleSettle(
@@ -281,6 +313,16 @@ fun rememberLazyListHeroTitleCollapse(
             settleBy = { delta -> listState.animateScrollBy(delta, SettleSpring) },
         )
     }
+}
+
+@Composable
+fun rememberLazyListHeroTitleCollapse(
+    listState: LazyListState,
+    enabled: Boolean = true,
+): TdayHeroTitleCollapse {
+    val collapsePx = with(LocalDensity.current) { TdayHeroTitleMetrics.HeroHeight.toPx() }
+
+    LazyListHeroTitleSettle(listState, collapsePx, enabled)
 
     return remember(listState, collapsePx, enabled) {
         TdayHeroTitleCollapse(
@@ -347,6 +389,11 @@ fun TdayHeroToolbar(
     val colorScheme = MaterialTheme.colorScheme
     val resolvedTitleColor = titleColor ?: colorScheme.onBackground
     val density = LocalDensity.current
+    // What the two clusters actually take, so the title can be kept clear of
+    // them. The back button is a known size; the actions are whatever the
+    // caller passed, so they are measured.
+    var actionsWidth by remember { mutableStateOf(0.dp) }
+    var barWidth by remember { mutableStateOf(0.dp) }
 
     Box(modifier = modifier.fillMaxWidth()) {
         // Drawn FIRST, and offset below the bar rather than stacked after it:
@@ -375,8 +422,16 @@ fun TdayHeroToolbar(
                 // than showing through.
                 .background(colorScheme.background)
                 .height(m.ToolbarHeight)
-                .padding(horizontal = m.HorizontalPadding),
+                .padding(horizontal = m.HorizontalPadding)
+                .onSizeChanged { size ->
+                    barWidth = with(density) { size.width.toDp() }
+                },
         ) {
+            val titleReserve = tdayBarTitleReserve(
+                barWidth = barWidth,
+                leading = if (onBack != null) TdayDimens.FabSize else 0.dp,
+                trailing = actionsWidth,
+            )
             if (onBack != null) {
                 Box(modifier = Modifier.align(Alignment.CenterStart)) {
                     TdayHeroBackButton(
@@ -413,13 +468,16 @@ fun TdayHeroToolbar(
                 textAlign = TextAlign.Center,
                 modifier = Modifier
                     .align(Alignment.Center)
+                    .padding(start = titleReserve.start, end = titleReserve.end)
                     .graphicsLayer {
                         val reveal = staggerRange(
                             collapseProgress().coerceIn(0f, 1f),
                             m.DockedTitleRevealStart,
                             1f,
                         )
-                        alpha = reveal
+                        // A bar with no room left carries no title at all,
+                        // rather than one painted across its own buttons.
+                        alpha = if (titleReserve.hasRoom) reveal else 0f
                         translationY = with(density) { m.DockedTitleRise.toPx() } * (1f - reveal)
                         val s = m.DockedTitleScaleFrom + (1f - m.DockedTitleScaleFrom) * reveal
                         scaleX = s
@@ -428,7 +486,11 @@ fun TdayHeroToolbar(
             )
 
             Row(
-                modifier = Modifier.align(Alignment.CenterEnd),
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .onSizeChanged { size ->
+                        actionsWidth = with(density) { size.width.toDp() }
+                    },
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 content = actions,
@@ -567,11 +629,45 @@ fun LazyListScope.tdayHeroTitleItem(
 @Composable
 internal fun tdayBarButtonContainerColor(): Color {
     val colorScheme = MaterialTheme.colorScheme
-    return if (colorScheme.background.luminance() < 0.5f) {
-        colorScheme.surface.copy(alpha = 0.94f)
+    val background = colorScheme.background
+    return if (background.luminance() < 0.5f) {
+        // NOT `surface`, for the very reason given above: under Material You it
+        // IS `background`, so painting the button with it — even at 0.94 alpha —
+        // composites back to the bar and the button disappears. Lifting the bar's
+        // own colour toward `onBackground` keeps the circle a step above whatever
+        // dark the scheme happens to be, dynamic or not.
+        lerpColor(background, colorScheme.onBackground, 0.12f)
     } else {
         Color.White.copy(alpha = 0.96f)
     }
+}
+
+/**
+ * How much of the bar the docked title has to leave for the controls beside it,
+ * and whether what is left is worth showing a title in at all.
+ *
+ * The title is `Alignment.Center` in a full-width Box, so with no reserve a long
+ * name simply ellipsized at the bar's own edges and painted straight under the
+ * back button and the actions. The rule is the web bar's, so the two agree:
+ * reserve the WIDER side twice while that still leaves [DockedTitleMinWidth] —
+ * which keeps the title centred on the BAR rather than on the leftovers — then
+ * fall back to reserving each side for what actually sits there, and give up the
+ * title entirely when even that leaves nothing. The block's own copy above is
+ * the screen's real heading in every case.
+ */
+private data class TdayBarTitleReserve(val start: Dp, val end: Dp, val hasRoom: Boolean)
+
+private fun tdayBarTitleReserve(barWidth: Dp, leading: Dp, trailing: Dp): TdayBarTitleReserve {
+    val m = TdayHeroTitleMetrics
+    // Before the first measure, reserve what is actually there: never centred,
+    // but never overlapping either, and it is replaced on the very next frame.
+    if (barWidth <= 0.dp) return TdayBarTitleReserve(leading, trailing, true)
+
+    val symmetric = maxOf(leading, trailing) + m.DockedTitleSideGap
+    val centred = barWidth - symmetric * 2 >= m.DockedTitleMinWidth
+    val start = if (centred) symmetric else leading + m.DockedTitleSideGap
+    val end = if (centred) symmetric else trailing + m.DockedTitleSideGap
+    return TdayBarTitleReserve(start, end, barWidth - start - end >= m.DockedTitleMinWidth)
 }
 
 /** The back affordance these headers lead with. */
