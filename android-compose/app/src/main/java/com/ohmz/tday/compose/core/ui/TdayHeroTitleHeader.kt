@@ -24,6 +24,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -40,7 +41,10 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.vectorResource
+import androidx.compose.ui.text.PlatformTextStyle
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -268,9 +272,24 @@ fun TdayHeroToolbar(
 
             // The bar's copy of the title. Only ever visible once the block's
             // own copy has gone, so the two never read as two titles at once.
+            //
+            // The line box is trimmed to the glyphs and centred inside it, so
+            // what gets centred against the back button is the text you can see
+            // rather than the font's ascent and descent — a 32sp face carries
+            // enough of both to sit visibly high otherwise.
             Text(
                 text = title,
                 fontSize = m.TitleSize,
+                lineHeight = m.TitleSize,
+                style = LocalTextStyle.current.merge(
+                    TextStyle(
+                        lineHeightStyle = LineHeightStyle(
+                            alignment = LineHeightStyle.Alignment.Center,
+                            trim = LineHeightStyle.Trim.Both,
+                        ),
+                        platformStyle = PlatformTextStyle(includeFontPadding = false),
+                    ),
+                ),
                 fontWeight = FontWeight.ExtraBold,
                 color = resolvedTitleColor,
                 maxLines = 1,
