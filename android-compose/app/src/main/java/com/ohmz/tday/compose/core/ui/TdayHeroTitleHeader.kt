@@ -251,7 +251,26 @@ fun TdayHeroToolbar(
     val resolvedTitleColor = titleColor ?: colorScheme.onBackground
     val density = LocalDensity.current
 
-    Column(modifier = modifier.fillMaxWidth()) {
+    Box(modifier = modifier.fillMaxWidth()) {
+        // Drawn FIRST, and offset below the bar rather than stacked after it:
+        // as a Column sibling it painted over the back button's shadow and cut
+        // it off in a straight line at the bar's edge. Dissolves content as it
+        // passes under the bar, instead of it being clipped there.
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(m.ContentFadeHeight)
+                .offset(y = m.ToolbarHeight)
+                .graphicsLayer {
+                    alpha = (collapseProgress() * m.ContentFadeGain).coerceIn(0f, 1f)
+                }
+                .background(
+                    Brush.verticalGradient(
+                        listOf(colorScheme.background, colorScheme.background.copy(alpha = 0f)),
+                    ),
+                ),
+        )
+
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -318,22 +337,6 @@ fun TdayHeroToolbar(
                 content = actions,
             )
         }
-
-        // Dissolves content as it passes under the bar, instead of it being cut
-        // off at the bar's edge.
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(m.ContentFadeHeight)
-                .graphicsLayer {
-                    alpha = (collapseProgress() * m.ContentFadeGain).coerceIn(0f, 1f)
-                }
-                .background(
-                    Brush.verticalGradient(
-                        listOf(colorScheme.background, colorScheme.background.copy(alpha = 0f)),
-                    ),
-                ),
-        )
     }
 }
 
