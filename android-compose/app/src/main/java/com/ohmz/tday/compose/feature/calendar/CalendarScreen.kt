@@ -402,7 +402,15 @@ fun CalendarScreen(
 
             run {
                 LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
+                    // The Scaffold's insets, which this screen alone was
+                    // dropping — under `enableEdgeToEdge` that put its bar, and
+                    // the back button in it, behind the status bar. Applied to
+                    // the scroller and to the toolbar overlay together, exactly
+                    // as the timeline screen does, so the hero block's own
+                    // reserve still lines the two up.
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding),
                     state = listState,
                     // No top padding: the hero item reserves the bar's height
                     // itself, so the scroll offset is a clean count from the top.
@@ -619,6 +627,7 @@ fun CalendarScreen(
             collapseProgress = heroCollapse.progress,
             onBack = onBack,
             backContentDescription = stringResource(R.string.action_back),
+            modifier = Modifier.padding(padding),
         ) {
             CalendarTodayButton(
                 collapseProgress = heroCollapse.progress,
@@ -1436,15 +1445,20 @@ private fun CalendarTodayButton(
         shape = CircleShape,
         border = buttonBorder,
         colors = CardDefaults.cardColors(containerColor = containerColor),
+        // The lift every other circle in a bar carries. This one sat flat and
+        // 2dp short of the back button beside it, which is the same
+        // some-have-shadows-some-do-not the rest of the bars were fixed for.
+        // Its purple tint and hairline stay: unlike the plain circles it is an
+        // accented pill that grows a label, and that is deliberate.
         elevation = CardDefaults.cardElevation(
-            defaultElevation = 0.dp,
+            defaultElevation = TdayDimens.BarButtonElevation,
             pressedElevation = 0.dp,
         ),
     ) {
         Row(
             modifier = Modifier
-                .height(54.dp)
-                .sizeIn(minWidth = 54.dp)
+                .height(TdayDimens.FabSize)
+                .sizeIn(minWidth = TdayDimens.FabSize)
                 .padding(horizontal = horizontalPadding),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center,
