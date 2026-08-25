@@ -1,6 +1,5 @@
 package com.ohmz.tday.compose.core.ui
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -26,6 +25,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.ohmz.tday.compose.R
+import com.ohmz.tday.compose.ui.theme.TdayDimens
 
 /**
  * The app's search field, in its open state.
@@ -58,9 +58,11 @@ fun TdaySearchCapsule(
             .fillMaxWidth()
             .height(m.BarButtonSize),
         shape = capsuleShape,
-        border = BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.26f)),
-        colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        // The same fill and lift as every other bar control — a dynamic light
+        // scheme makes `surface` and `background` the same value, which left
+        // this field showing as nothing but its own hairline.
+        colors = CardDefaults.cardColors(containerColor = tdayBarButtonContainerColor()),
+        elevation = CardDefaults.cardElevation(defaultElevation = TdayDimens.BarButtonElevation),
     ) {
         Row(
             modifier = Modifier
