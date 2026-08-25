@@ -204,7 +204,11 @@ const ListContainer = ({ id }: { id: string }) => {
                     <TimelineSections
                         sections={timelineSections}
                         timeZone={userTZ?.timeZone}
-                        earlierExpanded={earlierExpanded}
+                        // A live query outranks a shut bucket: a list opens
+                        // with Earlier closed, and a task the search turns up in
+                        // there must not stay hidden behind its header. Native
+                        // makes the same call.
+                        earlierExpanded={earlierExpanded || isSearching}
                         onToggleEarlier={() => setEarlierExpanded((value) => !value)}
                     />
                 )}
