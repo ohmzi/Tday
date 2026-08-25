@@ -11,7 +11,14 @@ export const nativeAppScrollClassName = cn(
   // horizontally scrollable box still takes a sideways drag and rubber-bands —
   // so every screen could be dragged off centre, which no native screen does.
   // Also stops a sideways flick chaining out to the browser's back gesture.
-  "h-full w-full overflow-y-auto overflow-x-hidden overscroll-x-none scrollbar-none",
+  // `overscroll-none`, not just `-x`: iOS bounces a nested scroller past its
+  // own end, and everything inside translates with it — `position: sticky`
+  // included, so the pinned toolbar rides the bounce off the top of the screen.
+  // It never leaves its sticky range, which is why it measures as pinned at
+  // every scroll offset in both engines and still looked wrong on the device.
+  // On a screen whose content only just exceeds the viewport you reach that end
+  // constantly, which is why it showed up on some screens and not others.
+  "h-full w-full overflow-y-auto overflow-x-hidden overscroll-none scrollbar-none",
   "pb-[calc(7rem+env(safe-area-inset-bottom))] pt-4 sm:pt-6",
   nativeAppHorizontalPaddingClassName,
 );
