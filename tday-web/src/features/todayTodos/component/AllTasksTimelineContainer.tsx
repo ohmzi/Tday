@@ -556,7 +556,8 @@ const AllTasksTimelineContainer = ({
             timeZone={userTZ?.timeZone}
             focusedTaskId={focusedTaskId}
             focusedDateKey={focusedDateKey}
-            earlierExpanded={earlierExpanded}
+            // A live query outranks a shut bucket — see ListContainer.
+            earlierExpanded={earlierExpanded || isSearching}
             onToggleEarlier={() => setEarlierExpanded((value) => !value)}
           />
         )}
