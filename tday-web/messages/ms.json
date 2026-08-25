@@ -385,7 +385,13 @@
     "addStep": "Tambah langkah",
     "stepsCreateHint": "Simpan tugasan dahulu untuk menambah langkah.",
     "searchFloaterTasksPlaceholder": "Cari tugasan terapung",
-    "searchShort": "Cari"
+    "searchShort": "Cari",
+    "listEmpty": "Belum ada apa-apa di sini",
+    "listEmptyBody": "Tambah tugasan pertama anda dan ia akan muncul di sini.",
+    "floaterEmptyBody": "Floater tiada tarikh akhir — catat satu dan ia akan menunggu sehingga anda bersedia.",
+    "floaterListEmptyBody": "Tambah floater dan ia akan menunggu di sini.",
+    "noMatchingTasks": "Tiada tugasan yang sepadan",
+    "searchEmptyBody": "Cuba perkataan lain, atau kosongkan carian."
   },
   "today": {
     "saveInstance": "Simpan kejadian",
@@ -441,7 +447,9 @@
     }
   },
   "completed": {
-    "title": "Sejarah penyelesaian"
+    "title": "Sejarah penyelesaian",
+    "empty": "Belum ada yang selesai",
+    "emptyBody": "Tandakan sesuatu sebagai selesai dan ia akan muncul di sini."
   },
   "modal": {
     "confirm": "Sahkan",

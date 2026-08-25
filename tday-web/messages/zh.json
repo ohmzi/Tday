@@ -385,7 +385,13 @@
     "addStep": "添加步骤",
     "stepsCreateHint": "请先保存任务再添加步骤。",
     "searchFloaterTasksPlaceholder": "搜索浮动任务",
-    "searchShort": "搜索"
+    "searchShort": "搜索",
+    "listEmpty": "这里还什么都没有",
+    "listEmptyBody": "添加第一个任务，它就会出现在这里。",
+    "floaterEmptyBody": "浮动任务没有截止日期——记下一个，它会一直等你。",
+    "floaterListEmptyBody": "添加一个浮动任务，它会在这里等你。",
+    "noMatchingTasks": "没有匹配的任务",
+    "searchEmptyBody": "换个词试试，或者清除搜索。"
   },
   "today": {
     "saveInstance": "保存实例",
@@ -441,7 +447,9 @@
     }
   },
   "completed": {
-    "title": "完成历史"
+    "title": "完成历史",
+    "empty": "还没有完成的任务",
+    "emptyBody": "完成一个任务，它就会出现在这里。"
   },
   "modal": {
     "confirm": "确认",

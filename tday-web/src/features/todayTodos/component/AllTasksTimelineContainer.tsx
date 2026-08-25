@@ -1,10 +1,11 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { CalendarClock, CheckCheck, Clock3, Flag, Layers, Search, Sun, X } from "lucide-react";
+import { CalendarClock, CheckCheck, Clock3, Flag, Layers, Sun } from "lucide-react";
 import { isSameDay } from "date-fns";
 import { useCompletedTodo } from "@/features/completed/query/get-completedTodo";
 import NativePageHeader from "@/components/app/NativePageHeader";
 import ScreenWatermark from "@/components/app/ScreenWatermark";
+import EmptyState from "@/components/app/EmptyState";
 import { timelineScopeAccentColors } from "@/components/app/nativeScreenTheme";
 import SummaryButton from "@/features/summary/SummaryButton";
 import WeekInReviewCard from "@/features/summary/WeekInReviewCard";
@@ -32,10 +33,8 @@ import { useEditTodo } from "../query/update-todo";
 import { useEditTodoInstance } from "../query/update-todo-instance";
 import { useReorderTodo } from "../query/reorder-todo";
 import { useUserTimezone } from "@/features/user/query/get-timezone";
-import { useListMetaData } from "@/components/Sidebar/List/query/get-list-meta";
 import { cn } from "@/lib/utils";
-import { useLocale, useRouter } from "@/lib/navigation";
-import { getDisplayDate } from "@/lib/date/displayDate";
+import { useLocale } from "@/lib/navigation";
 import { useSearchParams } from "react-router-dom";
 import {
   buildTimelineSections,
@@ -45,12 +44,10 @@ import {
 import {
   TODO_FOCUS_DATE_QUERY_PARAM,
   TODO_FOCUS_TASK_QUERY_PARAM,
-  buildTodoFocusPath,
   getTodoDateSectionId,
   getTodoDayKey,
   isTodoFocusDateKey,
 } from "@/lib/todoToastNavigation";
-import { flattenNotesToPlainText } from "@/lib/richNotes";
 
 const PAGE_SIZE = 10;
 const MS_IN_DAY = 1000 * 60 * 60 * 24;
@@ -190,9 +187,6 @@ const toSections = (items: TimelineItem[]) => {
   return sections;
 };
 
-const normalizeListName = (name: string | null | undefined) =>
-  (name || "").trim();
-
 const isPriorityTask = (priority: string | null | undefined) => {
   const normalized = (priority || "").trim().toLowerCase();
   return normalized === "medium" ||
@@ -217,13 +211,10 @@ const AllTasksTimelineContainer = ({
   scope?: TimelineScope;
 }) => {
   const locale = useLocale();
-  const router = useRouter();
   const [searchParams] = useSearchParams();
   const { t: appDict } = useTranslation("app");
   const userTZ = useUserTimezone();
-  const { listMetaData } = useListMetaData();
   const { todos, todoLoading } = useTodoTimeline();
-  const [searchQuery, setSearchQuery] = useState("");
 
   const timeline = isTimelineScope(scope);
 
@@ -262,77 +253,21 @@ const AllTasksTimelineContainer = ({
       .sort(compareTimelineItems);
   }, [appDict, locale, scopedTodos, userTZ?.timeZone]);
 
-  const filteredTimelineItems = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
-    if (!query) {
-      return timelineItems;
-    }
-
-    return timelineItems.filter(({ todo }) => {
-      const title = todo.title.toLowerCase();
-      const description = flattenNotesToPlainText(todo.description).toLowerCase();
-      const listId = todo.listID ?? "";
-      const listName = normalizeListName(listMetaData[listId]?.name)
-        .toLowerCase();
-
-      return (
-        title.includes(query) ||
-        description.includes(query) ||
-        listName.includes(query)
-      );
-    });
-  }, [listMetaData, searchQuery, timelineItems]);
-
-  // Global task search: matches across ALL dated tasks (not just this scope). Selecting a
-  // result navigates to All Tasks focused on it, reusing the existing focus/scroll mechanism.
-  const searchResults = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
-    if (!query) return [];
-    return timelineItems
-      .filter(({ todo }) => {
-        const title = todo.title.toLowerCase();
-        const description = flattenNotesToPlainText(todo.description).toLowerCase();
-        const listId = todo.listID ?? "";
-        const listName = normalizeListName(listMetaData[listId]?.name).toLowerCase();
-        return (
-          title.includes(query) ||
-          description.includes(query) ||
-          listName.includes(query)
-        );
-      })
-      .slice(0, 8)
-      .map(({ todo }) => ({
-        id: todo.id,
-        title: todo.title,
-        subtitle: getDisplayDate(todo.due, true, locale, userTZ?.timeZone),
-      }));
-  }, [searchQuery, timelineItems, listMetaData, locale, userTZ?.timeZone]);
-
-  const handleSelectSearchResult = useCallback(
-    (id: string) => {
-      const item = timelineItems.find(({ todo }) => todo.id === id);
-      if (!item) return;
-      setSearchQuery("");
-      router.push(buildTodoFocusPath(item.todo, userTZ?.timeZone));
-    },
-    [router, timelineItems, userTZ?.timeZone],
-  );
-
   const scopeFilteredItems = useMemo(() => {
     if (scope === "today") {
-      return filteredTimelineItems.filter((item) => item.dayDiff === 0);
+      return timelineItems.filter((item) => item.dayDiff === 0);
     }
     if (scope === "overdue") {
-      return filteredTimelineItems
+      return timelineItems
         .filter((item) => isOverdueTask(item.todo.due))
         .sort(compareOverdueTimelineItems);
     }
     if (scope === "scheduled") {
       const now = new Date();
-      return filteredTimelineItems.filter((item) => item.todo.due >= now);
+      return timelineItems.filter((item) => item.todo.due >= now);
     }
-    return filteredTimelineItems;
-  }, [filteredTimelineItems, scope]);
+    return timelineItems;
+  }, [timelineItems, scope]);
 
   // Today screen: Morning (<12) / Afternoon (12–18) / Tonight (≥18), matching native.
   const todayBuckets = useMemo(() => {
@@ -357,7 +292,7 @@ const AllTasksTimelineContainer = ({
   const timelineSections = useMemo(() => {
     if (!timeline) return [];
     const built = buildTimelineSections({
-      todos: filteredTimelineItems.map((item) => item.todo),
+      todos: timelineItems.map((item) => item.todo),
       locale,
       timeZone: userTZ?.timeZone,
       futureOnly: scope === "scheduled",
@@ -371,7 +306,7 @@ const AllTasksTimelineContainer = ({
       return built.filter((section) => section.todos.length > 0);
     }
     return built;
-  }, [appDict, filteredTimelineItems, locale, scope, timeline, userTZ?.timeZone]);
+  }, [appDict, locale, scope, timeline, timelineItems, userTZ?.timeZone]);
 
   const focusedDateIndex = useMemo(
     () =>
@@ -412,13 +347,12 @@ const AllTasksTimelineContainer = ({
   }, [scopeFilteredItems, scope]);
 
   const hasMore = !timeline && visibleCount < scopeFilteredItems.length;
-  const isSearching = Boolean(searchQuery.trim());
   // Render the date buckets only when this scope actually has tasks; an empty
   // scope shows the native-style centered empty message instead.
   const showTimeline = timeline && hasScopedTasks;
   // Every scope shows the same native-style centered empty message when there
   // are no tasks (Today also keeps its Morning/Afternoon/Tonight headers above).
-  const showEmpty = !todoLoading && !isSearching && !hasScopedTasks;
+  const showEmpty = !todoLoading && !hasScopedTasks;
   const { completedTodos } = useCompletedTodo();
   const completedTodayCount = useMemo(
     () =>
@@ -525,39 +459,13 @@ const AllTasksTimelineContainer = ({
 
         {todoLoading && <TodoListLoading heading={pageHeading} />}
 
-        {!todoLoading && isSearching && scopeFilteredItems.length === 0 && (
-          <div className="mx-auto flex min-h-[45vh] max-w-md flex-col items-center justify-center text-center">
-            <div className="relative mb-6">
-              <div className="flex h-24 w-24 items-center justify-center rounded-full bg-muted/50">
-                <Search className="h-12 w-12 text-muted-foreground/50" />
-              </div>
-              <div className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full border-2 border-background bg-accent/20">
-                <X className="h-3 w-3 text-accent" />
-              </div>
-            </div>
-            <h3 className="mb-2 text-2xl font-semibold text-foreground">
-              No matching tasks
-            </h3>
-            <p className="mb-6 text-sm text-muted-foreground">
-              Try different keywords or{" "}
-              <button
-                onClick={() => setSearchQuery("")}
-                className="text-accent hover:underline"
-              >
-                clear your search
-              </button>
-            </p>
-          </div>
-        )}
-
         {showTimeline && (
           <TimelineSections
             sections={timelineSections}
             timeZone={userTZ?.timeZone}
             focusedTaskId={focusedTaskId}
             focusedDateKey={focusedDateKey}
-            // A live query outranks a shut bucket — see ListContainer.
-            earlierExpanded={earlierExpanded || isSearching}
+            earlierExpanded={earlierExpanded}
             onToggleEarlier={() => setEarlierExpanded((value) => !value)}
           />
         )}
@@ -649,30 +557,22 @@ const AllTasksTimelineContainer = ({
             Day Done: "finished everything" earns a calm payoff state instead of
             the generic no-tasks message. */}
         {showEmpty && (
-          <div className="flex min-h-[42vh] flex-col items-center justify-center text-center">
-            {isDayDone ? (
-              <>
-                <CheckCheck
-                  className="mb-3 h-10 w-10 text-muted-foreground/70"
-                  aria-hidden="true"
-                />
-                <p className="text-2xl font-black text-muted-foreground/70">
-                  {appDict("allDoneToday")}
-                </p>
-                <p className="mt-1 text-sm font-bold text-muted-foreground/50">
-                  {new Intl.DateTimeFormat(locale, {
+          <EmptyState
+            // Day Done keeps its own glyph and its date line: it is a payoff,
+            // not an absence, and the scope's own icon would undersell it.
+            icon={isDayDone ? CheckCheck : ScopeIcon}
+            accentColor={timelineScopeAccentColors[scope]}
+            title={isDayDone ? appDict("allDoneToday") : emptyStateMessage}
+            description={
+              isDayDone
+                ? new Intl.DateTimeFormat(locale, {
                     weekday: "long",
                     day: "numeric",
                     month: "long",
-                  }).format(new Date())}
-                </p>
-              </>
-            ) : (
-              <p className="text-2xl font-black text-muted-foreground/70">
-                {emptyStateMessage}
-              </p>
-            )}
-          </div>
+                  }).format(new Date())
+                : undefined
+            }
+          />
         )}
 
         {hasMore && (
