@@ -251,6 +251,9 @@ struct TimelineTopBarAction {
     let assetName: String?
     let tint: Color?
     let usesCircularChrome: Bool
+    /// Worth setting for a drawn glyph above all: an asset button otherwise
+    /// reads out as its image name.
+    let accessibilityLabel: String?
     let action: () -> Void
 
     init(
@@ -258,12 +261,14 @@ struct TimelineTopBarAction {
         assetName: String? = nil,
         tint: Color? = nil,
         usesCircularChrome: Bool = false,
+        accessibilityLabel: String? = nil,
         action: @escaping () -> Void
     ) {
         self.systemName = systemName
         self.assetName = assetName
         self.tint = tint
         self.usesCircularChrome = usesCircularChrome
+        self.accessibilityLabel = accessibilityLabel
         self.action = action
     }
 }
@@ -435,6 +440,7 @@ struct TodoListScreen: View {
     @Environment(\.tdayColors) private var colors
     @Environment(\.dismiss) private var dismiss
     @FocusState private var floaterTaskHomeSearchFieldFocused: Bool
+    @FocusState private var listSearchFieldFocused: Bool
     @State private var showingCreateTask = false
     @State private var showingCreateList = false
     @State private var editingTodo: TodoItem?
@@ -463,6 +469,8 @@ struct TodoListScreen: View {
     @State private var floaterSearchResultsFrame: CGRect = .zero
     @State private var floaterTaskHomeSearchQuery = ""
     @State private var openingFloaterTaskHomeSearchResultID: String?
+    @State private var listSearchExpanded = false
+    @State private var listSearchQuery = ""
     @State private var openSwipeTaskID: String?
     @State private var hasOpenedCreateTaskOnAppear = false
 
@@ -508,10 +516,23 @@ struct TodoListScreen: View {
 
     private var groupedSections: [TodoTimelineSection] {
         buildSections(
-            items: viewModel.items,
+            items: timelineItems,
             mode: viewModel.mode,
             includeEmptyEarlierTarget: false
         )
+    }
+
+    /// What the timeline is built from. Only a live list search narrows it — the
+    /// query filters the tasks and the sections are rebuilt from the survivors,
+    /// exactly as web rebuilds its timeline from the filtered todos.
+    private var timelineItems: [TodoItem] {
+        guard isSearchingList else {
+            return viewModel.items
+        }
+        return viewModel.items.filter { todo in
+            todoSearchText(todo.title).contains(normalizedListSearchQuery) ||
+                todoSearchText(flattenNotesToPlainText(todo.description)).contains(normalizedListSearchQuery)
+        }
     }
 
     private var floaterTaskHomeListRows: [(list: ListSummary, count: Int)] {
@@ -536,7 +557,7 @@ struct TodoListScreen: View {
         isFloaterTaskHomeScreen && viewModel.items.isEmpty && !viewModel.isLoading
     }
 
-    private var floaterTaskHomeEmptyGapHeight: CGFloat {
+    private var inlineEmptyStateGapHeight: CGFloat {
         UIScreen.main.bounds.height * 0.42
     }
 
@@ -587,6 +608,31 @@ struct TodoListScreen: View {
 
     private var showFloaterTaskHomeSearchResults: Bool {
         isFloaterTaskHomeScreen && floaterTaskHomeSearchExpanded && !normalizedFloaterTaskHomeSearchQuery.isEmpty
+    }
+
+    /// A custom list — scheduled or floater — searches its own tasks from its
+    /// pinned bar, the way the matching web pages do. The root feeds have their
+    /// own field in the hero header and never take this one.
+    private var showsListSearch: Bool {
+        isListDetailScreen && showsTimelineNavigationTopBar
+    }
+
+    private var normalizedListSearchQuery: String {
+        normalizedTodoSearchQuery(listSearchQuery)
+    }
+
+    private var isSearchingList: Bool {
+        showsListSearch && !normalizedListSearchQuery.isEmpty
+    }
+
+    private var listSearchPlaceholder: String {
+        let name = (selectedListSummary?.name ?? viewModel.title)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return name.isEmpty ? L("Search") : L("Search in %@", name)
+    }
+
+    private var showsListSearchEmptyState: Bool {
+        isSearchingList && timelineItems.isEmpty && !viewModel.isLoading
     }
 
     private var isTodayMode: Bool {
@@ -655,6 +701,17 @@ struct TodoListScreen: View {
 
     private var heroTopBarActions: [TimelineTopBarAction] {
         var actions: [TimelineTopBarAction] = []
+
+        // Leads the cluster, as it does on the web list bar.
+        if showsListSearch {
+            actions.append(TimelineTopBarAction(
+                systemName: "magnifyingglass",
+                assetName: "NavSearch",
+                usesCircularChrome: true,
+                accessibilityLabel: L("Search"),
+                action: openListSearch
+            ))
+        }
 
         if canSummarizeCurrentMode {
             actions.append(TimelineTopBarAction(
@@ -814,6 +871,19 @@ struct TodoListScreen: View {
                 floaterTaskHomeSearchFieldFocused = false
             }
         }
+        // The field only joins the hierarchy once the bar has swapped its row
+        // over, so focusing it in the same turn is dropped on the floor.
+        .onChange(of: listSearchExpanded) { _, expanded in
+            guard expanded else {
+                listSearchFieldFocused = false
+                return
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.30) {
+                if listSearchExpanded {
+                    listSearchFieldFocused = true
+                }
+            }
+        }
         .onChange(of: createTaskRequestID) { _, requestID in
             guard requestID > 0 else { return }
             closeFloaterTaskHomeSearch()
@@ -949,7 +1019,10 @@ struct TodoListScreen: View {
                                 listIconKey: viewModel.lists.first(where: { $0.id == viewModel.listId })?.iconKey
                             )
                         )
-                        if viewModel.items.isEmpty, !viewModel.isLoading, !isFloaterTaskHomeScreen {
+                        // A live query answers for itself in the feed, so the
+                        // screen's own "nothing here" line stands down rather
+                        // than talking over the no-results state.
+                        if viewModel.items.isEmpty, !viewModel.isLoading, !isFloaterTaskHomeScreen, !isSearchingList {
                             // Day Done: "finished everything" earns its own calm
                             // state instead of the generic no-tasks watermark.
                             if viewModel.mode == .today, viewModel.completedTodayCount > 0 {
@@ -1021,7 +1094,12 @@ struct TodoListScreen: View {
                 collapseProgress: titleCollapseProgress,
                 onBack: { dismiss() },
                 actions: heroTopBarActions,
-                showsTimeOfDayIcon: viewModel.mode == .today
+                showsTimeOfDayIcon: viewModel.mode == .today,
+                searchActive: showsListSearch && listSearchExpanded,
+                searchText: $listSearchQuery,
+                searchPlaceholder: listSearchPlaceholder,
+                searchFieldFocused: $listSearchFieldFocused,
+                onSearchClose: closeListSearch
             )
         }
     }
@@ -1554,6 +1632,24 @@ struct TodoListScreen: View {
         floaterTaskHomeSearchQuery = ""
     }
 
+    private func openListSearch() {
+        HapticManager.buttonTap()
+        withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
+            listSearchExpanded = true
+        }
+    }
+
+    /// Leaving the search drops the query with it, so the list is whole again
+    /// the next time the bar is opened — the same bargain web's close makes.
+    private func closeListSearch() {
+        HapticManager.sheetDismiss()
+        listSearchFieldFocused = false
+        withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
+            listSearchExpanded = false
+        }
+        listSearchQuery = ""
+    }
+
     private func openFloaterTaskHomeSearchResult(_ todo: TodoItem, using proxy: ScrollViewProxy) {
         guard openingFloaterTaskHomeSearchResultID == nil else {
             return
@@ -1861,6 +1957,45 @@ struct TodoListScreen: View {
         }
     }
 
+    /// Shown in place of the timeline when a list search matches nothing. Same
+    /// three beats as web's panel: the glyph, the line, and a way out of the
+    /// query that does not need the keyboard back.
+    private var listSearchEmptyState: some View {
+        VStack(spacing: 14) {
+            Image("NavSearch")
+                .renderingMode(.template)
+                .resizable()
+                .scaledToFit()
+                .frame(width: 40, height: 40)
+                .foregroundStyle(colors.onSurfaceVariant.opacity(0.5))
+                .frame(width: 96, height: 96)
+                .background(colors.surfaceVariant.opacity(0.55), in: Circle())
+
+            Text(L("No matching tasks"))
+                .font(.tdayRounded(size: 22, weight: .heavy))
+                .foregroundStyle(colors.onSurface)
+
+            Button {
+                HapticManager.gentleTap()
+                listSearchQuery = ""
+                listSearchFieldFocused = true
+            } label: {
+                Text(L("Clear search"))
+                    .font(.tdayRounded(size: 15, weight: .bold))
+                    .foregroundStyle(colors.primary)
+            }
+            .buttonStyle(.plain)
+        }
+        .frame(
+            maxWidth: .infinity,
+            minHeight: inlineEmptyStateGapHeight,
+            alignment: .center
+        )
+        .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
+        .listRowBackground(colors.background)
+        .listRowSeparator(.hidden)
+    }
+
     private var minimalTimelineModeContent: some View {
         ScrollViewReader { scrollProxy in
             ZStack {
@@ -1913,13 +2048,22 @@ struct TodoListScreen: View {
                         }
                     }
 
-                    ForEach(Array(groupedSections.enumerated()), id: \.element.id) { index, section in
-                        minimalTimelineSection(
-                            section,
-                            sectionIndex: index,
-                            sections: groupedSections,
-                            isFirstSection: index == 0
-                        )
+                    // A query that matches nothing keeps its own counsel: the
+                    // section headers would otherwise stay behind with nothing
+                    // under them, a floater list's empty header included.
+                    if showsListSearchEmptyState {
+                        Section {
+                            listSearchEmptyState
+                        }
+                    } else {
+                        ForEach(Array(groupedSections.enumerated()), id: \.element.id) { index, section in
+                            minimalTimelineSection(
+                                section,
+                                sectionIndex: index,
+                                sections: groupedSections,
+                                isFirstSection: index == 0
+                            )
+                        }
                     }
 
                     if showInlineFloaterTaskHomeEmpty {
@@ -1930,7 +2074,7 @@ struct TodoListScreen: View {
                                 .multilineTextAlignment(.center)
                                 .lineLimit(2)
                                 .minimumScaleFactor(0.82)
-                                .frame(maxWidth: .infinity, minHeight: floaterTaskHomeEmptyGapHeight, alignment: .center)
+                                .frame(maxWidth: .infinity, minHeight: inlineEmptyStateGapHeight, alignment: .center)
                                 .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
                                 .listRowBackground(colors.background)
                                 .listRowSeparator(.hidden)
@@ -2281,7 +2425,7 @@ struct TodoListScreen: View {
         isFirstSection: Bool
     ) -> some View {
         let canCollapseSection = canCollapseTimelineSection(section)
-        let isCollapsed = canCollapseSection && collapsedSectionIDs.contains(section.id)
+        let isCollapsed = isTimelineSectionCollapsed(section)
         let isDropEligibleSection = draggedTodo.map { canDropTodo($0, into: section) } ?? false
         let isActiveDropSection = activeDropSectionId == section.id && isDropEligibleSection
 
@@ -2394,7 +2538,13 @@ struct TodoListScreen: View {
     }
 
     private func isTimelineSectionCollapsed(_ section: TodoTimelineSection) -> Bool {
-        canCollapseTimelineSection(section) && collapsedSectionIDs.contains(section.id)
+        // A live query outranks a shut bucket: a list opens with Earlier closed,
+        // and a task the search turned up in there must not stay hidden behind
+        // its header.
+        guard !isSearchingList else {
+            return false
+        }
+        return canCollapseTimelineSection(section) && collapsedSectionIDs.contains(section.id)
     }
 
     private func toggleTimelineSection(_ section: TodoTimelineSection) {
@@ -2505,6 +2655,14 @@ struct TimelineTopBar: View {
     let titleRevealStart: CGFloat
     let titleRevealEnd: CGFloat
     let titleRevealDistance: CGFloat
+    /// While set, the field takes the row: the back chevron stays where it is
+    /// and the title and the action cluster give way to it, the way the web
+    /// list pages hand their pinned bar over to the search input.
+    let searchActive: Bool
+    @Binding var searchText: String
+    let searchPlaceholder: String
+    let searchFieldFocused: FocusState<Bool>.Binding?
+    let onSearchClose: () -> Void
 
     @Environment(\.tdayColors) private var colors
 
@@ -2517,7 +2675,12 @@ struct TimelineTopBar: View {
         showsTimeOfDayIcon: Bool = false,
         titleRevealStart: CGFloat = TodoTimelineMetrics.collapsedTitleRevealStart,
         titleRevealEnd: CGFloat = TodoTimelineMetrics.collapsedTitleRevealEnd,
-        titleRevealDistance: CGFloat = TodoTimelineMetrics.collapsedTitleRevealDistance
+        titleRevealDistance: CGFloat = TodoTimelineMetrics.collapsedTitleRevealDistance,
+        searchActive: Bool = false,
+        searchText: Binding<String> = .constant(""),
+        searchPlaceholder: String = "",
+        searchFieldFocused: FocusState<Bool>.Binding? = nil,
+        onSearchClose: @escaping () -> Void = {}
     ) {
         self.title = title
         self.accentColor = accentColor
@@ -2528,6 +2691,11 @@ struct TimelineTopBar: View {
         self.titleRevealStart = titleRevealStart
         self.titleRevealEnd = titleRevealEnd
         self.titleRevealDistance = titleRevealDistance
+        self.searchActive = searchActive
+        _searchText = searchText
+        self.searchPlaceholder = searchPlaceholder
+        self.searchFieldFocused = searchFieldFocused
+        self.onSearchClose = onSearchClose
     }
 
     private var progress: CGFloat {
@@ -2560,44 +2728,81 @@ struct TimelineTopBar: View {
             max(0, count - 1) * TodoTimelineMetrics.topBarButtonSpacing
     }
 
+    /// The capsule is exactly as tall as the bar's button row, so swapping it in
+    /// changes what the row holds and never how tall it is — every collapse
+    /// progress on these screens is measured from that height.
+    private var searchRow: some View {
+        HStack(spacing: TodoTimelineMetrics.topBarButtonSpacing) {
+            TdaySearchCapsule(
+                text: $searchText,
+                placeholder: searchPlaceholder,
+                clearAccessibilityLabel: L("Clear search"),
+                focused: searchFieldFocused
+            )
+
+            // The capsule's own X clears the query; leaving the search behind
+            // altogether is this one, as on the root feeds.
+            TimelineTopBarButton(
+                systemName: "xmark",
+                assetName: "NavClose",
+                chrome: .filled,
+                action: onSearchClose
+            )
+            .accessibilityLabel(Text(L("Cancel search")))
+        }
+        .padding(.leading, TodoTimelineMetrics.topBarButtonSpacing)
+    }
+
     var body: some View {
         ZStack {
             HStack(spacing: 0) {
                 TimelineTopBarButton(systemName: "chevron.left", chrome: .filled, action: onBack)
-                Spacer(minLength: 0)
-                if actions.isEmpty {
-                    Color.clear
-                        .frame(width: TodoTimelineMetrics.topBarButtonFrame, height: TodoTimelineMetrics.topBarButtonFrame)
+
+                if searchActive {
+                    searchRow
                 } else {
-                    // Same gap as the web list header's action cluster (gap-2
-                    // between the circular buttons).
-                    HStack(spacing: TodoTimelineMetrics.topBarButtonSpacing) {
-                        ForEach(actions.indices, id: \.self) { index in
-                            let action = actions[index]
-                            TimelineTopBarButton(
-                                systemName: action.systemName,
-                                assetName: action.assetName,
-                                chrome: action.usesCircularChrome ? .filled : .plain,
-                                tint: action.tint,
-                                action: action.action
-                            )
+                    Spacer(minLength: 0)
+                    if actions.isEmpty {
+                        Color.clear
+                            .frame(width: TodoTimelineMetrics.topBarButtonFrame, height: TodoTimelineMetrics.topBarButtonFrame)
+                    } else {
+                        // Same gap as the web list header's action cluster (gap-2
+                        // between the circular buttons).
+                        HStack(spacing: TodoTimelineMetrics.topBarButtonSpacing) {
+                            ForEach(actions.indices, id: \.self) { index in
+                                let action = actions[index]
+                                let button = TimelineTopBarButton(
+                                    systemName: action.systemName,
+                                    assetName: action.assetName,
+                                    chrome: action.usesCircularChrome ? .filled : .plain,
+                                    tint: action.tint,
+                                    action: action.action
+                                )
+                                if let label = action.accessibilityLabel {
+                                    button.accessibilityLabel(Text(label))
+                                } else {
+                                    button
+                                }
+                            }
                         }
                     }
                 }
             }
 
-            titleContent
-                .opacity(revealProgress)
-                .offset(y: titleOffsetY)
-                .scaleEffect(0.985 + (0.015 * revealProgress))
-                // Reserve each side for what actually sits there (back button
-                // left, action cluster right) instead of the larger side twice:
-                // with three actions a symmetric reserve exceeds the screen
-                // width and stretches the whole layout edge-to-edge.
-                .padding(.leading, TodoTimelineMetrics.topBarButtonFrame + 12)
-                .padding(.trailing, trailingActionReservedWidth + 12)
-                .frame(maxWidth: .infinity)
-                .allowsHitTesting(false)
+            if !searchActive {
+                titleContent
+                    .opacity(revealProgress)
+                    .offset(y: titleOffsetY)
+                    .scaleEffect(0.985 + (0.015 * revealProgress))
+                    // Reserve each side for what actually sits there (back button
+                    // left, action cluster right) instead of the larger side twice:
+                    // with three actions a symmetric reserve exceeds the screen
+                    // width and stretches the whole layout edge-to-edge.
+                    .padding(.leading, TodoTimelineMetrics.topBarButtonFrame + 12)
+                    .padding(.trailing, trailingActionReservedWidth + 12)
+                    .frame(maxWidth: .infinity)
+                    .allowsHitTesting(false)
+            }
         }
         .frame(height: TodoTimelineMetrics.topBarRowHeight)
         .padding(.horizontal, TodoTimelineMetrics.horizontalPadding)
