@@ -115,6 +115,27 @@ export default function MobileSearchHeader({
     return () => clearCollapseTimer();
   }, [clearCollapseTimer]);
 
+  // A click anywhere off the bar puts the field away, matching the root feeds and
+  // both native clients.
+  //
+  // `click`, in the BUBBLE phase, and deliberately not `pointerdown`: closing
+  // clears the query, and on Settings the query is what filters the cards — so
+  // closing under the finger re-rendered the page before the control the user
+  // pressed had its own handler run, and the press landed on whatever moved into
+  // that spot. React's listener sits on the root container, inside `document`, so
+  // by the time this runs the pressed control has already done its work.
+  useEffect(() => {
+    if (!isExpanded) return;
+    const onDocumentClick = (event: MouseEvent) => {
+      const bar = headerRef.current;
+      if (!bar) return;
+      if (event.target instanceof Node && bar.contains(event.target)) return;
+      closeSearch();
+    };
+    document.addEventListener("click", onDocumentClick);
+    return () => document.removeEventListener("click", onDocumentClick);
+  }, [closeSearch, headerRef, isExpanded]);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Deliberately NOT Cmd/Ctrl+K. That is the command palette's, app-wide
@@ -156,8 +177,16 @@ export default function MobileSearchHeader({
   // other non-root page; the brand only belongs on a root feed. Rendered
   // outside the expanded/collapsed branch below, because unmounting it with the
   // field open left the screen with no way back and no title either.
+  // Hidden rather than unmounted while the field is up: the collapsing header
+  // writes to this node every frame, and taking it out of the tree left it with
+  // a null ref. `hidden` keeps the ref attached and takes the chevron out of the
+  // layout, which is what the field needs — a back chevron beside an open search
+  // is a second way out that leaves the page rather than the query.
   const leading = pageCollapse ? (
-    <div ref={pageCollapse.leadingRef} className="flex shrink-0 items-center">
+    <div
+      ref={pageCollapse.leadingRef}
+      className={cn("flex shrink-0 items-center", isExpanded && "hidden")}
+    >
       <NativePageBackButton />
     </div>
   ) : null;
@@ -287,16 +316,13 @@ export default function MobileSearchHeader({
                 variant="ghost"
                 size="icon"
                 className="h-7 w-7 rounded-full hover:bg-accent/15"
-                aria-label={hasQuery ? "Clear search" : "Close search"}
+                // The one control in the field, so it carries the job the root
+                // feed's X carries: it leaves the search. Closing clears the
+                // query on the way out, so there is nothing a separate clear
+                // would still be needed for.
+                aria-label="Close search"
                 onMouseDown={(e) => e.preventDefault()}
-                onClick={() => {
-                  if (hasQuery) {
-                    setSearchQuery("");
-                    searchInputRef.current?.focus();
-                    return;
-                  }
-                  closeSearch();
-                }}
+                onClick={closeSearch}
               >
                 <X className="h-4 w-4" />
               </Button>

@@ -574,12 +574,13 @@
     "systemDefault": "Predeterminado del sistema",
     "profile": {
       "title": "Perfil",
+      "unknownUser": "Usuario desconocido",
       "description": "Actualiza tu nombre visible",
       "name": "Nombre",
       "namePlaceholder": "Introduce tu nombre",
       "username": "Nombre de usuario",
       "saving": "Guardando...",
-      "save": "Guardar perfil",
+      "save": "Guardar",
       "edit": "Editar",
       "cancel": "Cancelar"
     },
@@ -591,7 +592,7 @@
     "language": {
       "title": "Idioma",
       "description": "Elige el idioma de la aplicación",
-      "appLanguage": "Idioma de la app"
+      "appLanguage": "Idioma"
     },
     "notifications": {
       "title": "Notificaciones",
@@ -601,17 +602,17 @@
       "toggle": "Alternar notificaciones push"
     },
     "password": {
-      "title": "Cambiar contraseña",
+      "title": "Contraseña",
       "description": "Actualiza la contraseña de tu cuenta",
       "current": "Contraseña actual",
       "currentPlaceholder": "Introduce tu contraseña actual",
       "new": "Nueva contraseña",
       "newPlaceholder": "Introduce tu nueva contraseña",
-      "requirement": "La contraseña debe tener al menos 8 caracteres",
+      "requirement": "La contraseña debe tener al menos 8 caracteres, con una mayúscula y un carácter especial.",
       "confirm": "Confirmar nueva contraseña",
       "confirmPlaceholder": "Confirma tu nueva contraseña",
-      "changing": "Cambiando contraseña...",
-      "change": "Cambiar contraseña",
+      "changing": "Guardando...",
+      "change": "Guardar",
       "changeAction": "Cambiar",
       "cancel": "Cancelar",
       "forgot": "¿Olvidaste tu contraseña?"
@@ -655,7 +656,7 @@
       "noChanges": "No hay cambios que guardar",
       "nameUpdated": "Nombre actualizado correctamente",
       "nameUpdateFailed": "No se pudo actualizar",
-      "passwordTooShort": "La nueva contraseña debe tener al menos 8 caracteres",
+      "passwordTooShort": "La contraseña debe tener al menos 8 caracteres",
       "passwordsDoNotMatch": "Las contraseñas no coinciden",
       "passwordChanged": "Contraseña cambiada correctamente",
       "passwordChangeFailed": "No se pudo cambiar la contraseña",
@@ -680,25 +681,25 @@
       "title": "Activar función"
     },
     "aiSummary": {
-      "title": "Resumen de tareas con IA"
+      "title": "Resumen"
     },
     "securityQuestions": {
       "title": "Security questions",
       "changeAction": "Change",
-      "configured": "{{count}} questions configured",
+      "configured": "Configuradas",
       "notConfigured": "Not configured",
       "questionLabel": "Question {{index}}",
-      "answerPlaceholder": "Your answer",
-      "save": "Save questions",
+      "answerPlaceholder": "Respuesta",
+      "save": "Guardar",
       "saving": "Saving...",
       "errorSelectAll": "Please choose three questions",
-      "errorDistinct": "Security questions must be different",
+      "errorDistinct": "Elige tres preguntas diferentes",
       "errorAnswersRequired": "Please answer all three questions",
       "errorPasswordRequired": "Enter your current password"
     },
     "data": {
       "title": "Tus datos",
-      "summary": "{{tasks}} tareas · {{lists}} listas · {{completed}} completadas, todo en este servidor.",
+      "summary": "{{tasks}} tareas · {{lists}} listas · {{completed}} completadas",
       "download": "Descargar mis datos",
       "import": "Importar",
       "exportDone": "Se descargó tu archivo de datos.",

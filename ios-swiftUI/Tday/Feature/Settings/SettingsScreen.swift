@@ -185,6 +185,12 @@ struct SettingsScreen: View {
     var body: some View {
         settingsContent
         .background(colors.background)
+        // Tapping the content puts the field away, as it does on the root feeds.
+        // Sits above the bar's own safe-area inset, so the gesture only ever
+        // sees taps below the bar and never one on it.
+        .tdayClosesSearchOnOutsideTap(isSearchOpen: searchExpanded) {
+            closeSearch()
+        }
         .navigationBackButtonBehavior()
         .navigationTitleTypography(
             largeTitleColor: colors.onSurface,
@@ -2864,7 +2870,7 @@ private struct DataTransferCard: View {
             handleImportPick(result)
         }
         .confirmationDialog(Text(L("Import data?")), isPresented: $showConfirm, titleVisibility: .visible) {
-            Button(L("Import %@ items", "\(previewCount)")) {
+            Button(L("Import")) {
                 confirmImport()
             }
             Button(L("Cancel"), role: .cancel) {

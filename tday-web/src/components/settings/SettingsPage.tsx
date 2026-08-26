@@ -1045,9 +1045,9 @@ export default function SettingsPage() {
   const showPreferencesCard = cardMatches(
     t("featureToggle.title"),
     t("aiSummary.title"),
-    // "Resting floaters" and "Notifications" stopped being headings when this
-    // card collapsed into one, but they are still the words people type, so
-    // they stay in the term list even though no row prints them verbatim.
+    // The rows print the short titles, matching iOS and Android. The longer
+    // descriptive variants below print nowhere, but "fade" and "push" are still
+    // the words people type, so they stay in the term list.
     t("restingFloaters.title"),
     t("restingFloaters.toggle"),
     ...(push.isSupported ? [t("notifications.title"), t("notifications.push")] : []),
@@ -1130,9 +1130,11 @@ export default function SettingsPage() {
       />
 
       {/* Account card — Server Mode only; a local workspace has no account,
-          password or recovery questions to manage. */}
+          password or recovery questions to manage. No heading, matching the
+          native cards: "Profile" over a Name / Password / Security questions
+          stack names nothing the rows do not already say. */}
       {showAccountCard && (
-      <SettingsSection title={t("profile.title")}>
+      <SettingsSection>
         <div className="space-y-4">
           {/* Name — collapsed summary with an Edit affordance, expands to an inline editor. */}
           <div className="space-y-2">
@@ -1142,7 +1144,7 @@ export default function SettingsPage() {
                 <div className="min-w-0">
                   <Label className="text-sm font-extrabold text-muted-foreground">{t("profile.name")}</Label>
                   <p className="text-[1.05rem] font-black text-foreground truncate">
-                    {user?.name || t("profile.namePlaceholder")}
+                    {user?.name || t("profile.unknownUser")}
                   </p>
                 </div>
               </div>
@@ -1377,7 +1379,7 @@ export default function SettingsPage() {
                     {sqStatus == null
                       ? "—"
                       : sqConfigured
-                        ? t("securityQuestions.configured", { count: sqStatus.questionIds.length || 3 })
+                        ? t("securityQuestions.configured")
                         : t("securityQuestions.notConfigured")}
                   </p>
                 </div>
@@ -1591,12 +1593,14 @@ export default function SettingsPage() {
             <RowIcon icon={Waves} />
             <div className="min-w-0">
               <p className="text-[1.05rem] font-black text-foreground">
-                {t("restingFloaters.toggle")}
+                {t("restingFloaters.title")}
               </p>
             </div>
           </div>
           <SettingsSwitch
             checked={restingFloatersOn}
+            // The visible label is the row's only text, so the switch has to say what
+            // it DOES rather than repeat the noun beside it.
             ariaLabel={t("restingFloaters.toggle")}
             onClick={() => {
               const next = !restingFloatersOn;
@@ -1613,7 +1617,7 @@ export default function SettingsPage() {
               <div className="flex min-w-0 items-center gap-3.5">
                 <RowIcon icon={BellRing} />
                 <div className="min-w-0">
-                  <p className="text-[1.05rem] font-black text-foreground">{t("notifications.push")}</p>
+                  <p className="text-[1.05rem] font-black text-foreground">{t("notifications.title")}</p>
                   {push.permission === "denied" && (
                     <p className="mt-0.5 text-sm font-extrabold text-muted-foreground">
                       {t("notifications.blocked")}

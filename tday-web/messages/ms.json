@@ -574,12 +574,13 @@
     "systemDefault": "Lalai sistem",
     "profile": {
       "title": "Profil",
+      "unknownUser": "Pengguna tidak diketahui",
       "description": "Kemas kini nama paparan anda",
       "name": "Nama",
       "namePlaceholder": "Masukkan nama anda",
       "username": "Nama pengguna",
       "saving": "Menyimpan...",
-      "save": "Simpan profil",
+      "save": "Simpan",
       "edit": "Edit",
       "cancel": "Batal"
     },
@@ -591,7 +592,7 @@
     "language": {
       "title": "Bahasa",
       "description": "Pilih bahasa aplikasi anda",
-      "appLanguage": "Bahasa aplikasi"
+      "appLanguage": "Bahasa"
     },
     "notifications": {
       "title": "Pemberitahuan",
@@ -601,17 +602,17 @@
       "toggle": "Togol pemberitahuan tolak"
     },
     "password": {
-      "title": "Tukar kata laluan",
+      "title": "Kata laluan",
       "description": "Kemas kini kata laluan akaun anda",
       "current": "Kata laluan semasa",
       "currentPlaceholder": "Masukkan kata laluan semasa anda",
       "new": "Kata laluan baharu",
       "newPlaceholder": "Masukkan kata laluan baharu anda",
-      "requirement": "Kata laluan mestilah sekurang-kurangnya 8 aksara",
+      "requirement": "Kata laluan mesti sekurang-kurangnya 8 aksara, dengan satu huruf besar dan satu aksara khas.",
       "confirm": "Sahkan kata laluan baharu",
       "confirmPlaceholder": "Sahkan kata laluan baharu anda",
-      "changing": "Menukar kata laluan...",
-      "change": "Tukar kata laluan",
+      "changing": "Menyimpan...",
+      "change": "Simpan",
       "changeAction": "Tukar",
       "cancel": "Batal",
       "forgot": "Lupa kata laluan?"
@@ -655,7 +656,7 @@
       "noChanges": "Tiada perubahan untuk disimpan",
       "nameUpdated": "Nama berjaya dikemas kini",
       "nameUpdateFailed": "Gagal mengemas kini",
-      "passwordTooShort": "Kata laluan baharu mestilah sekurang-kurangnya 8 aksara",
+      "passwordTooShort": "Kata laluan mestilah sekurang-kurangnya 8 aksara",
       "passwordsDoNotMatch": "Kata laluan tidak sepadan",
       "passwordChanged": "Kata laluan berjaya ditukar",
       "passwordChangeFailed": "Gagal menukar kata laluan",
@@ -680,25 +681,25 @@
       "title": "Togol ciri"
     },
     "aiSummary": {
-      "title": "Ringkasan tugasan AI"
+      "title": "Ringkasan"
     },
     "securityQuestions": {
       "title": "Security questions",
       "changeAction": "Change",
-      "configured": "{{count}} questions configured",
+      "configured": "Dikonfigurasi",
       "notConfigured": "Not configured",
       "questionLabel": "Question {{index}}",
-      "answerPlaceholder": "Your answer",
-      "save": "Save questions",
+      "answerPlaceholder": "Jawapan",
+      "save": "Simpan",
       "saving": "Saving...",
       "errorSelectAll": "Please choose three questions",
-      "errorDistinct": "Security questions must be different",
+      "errorDistinct": "Pilih tiga soalan berbeza",
       "errorAnswersRequired": "Please answer all three questions",
       "errorPasswordRequired": "Enter your current password"
     },
     "data": {
       "title": "Data anda",
-      "summary": "{{tasks}} tugasan · {{lists}} senarai · {{completed}} selesai, semuanya pada pelayan ini.",
+      "summary": "{{tasks}} tugasan · {{lists}} senarai · {{completed}} selesai",
       "download": "Muat turun data saya",
       "import": "Import",
       "exportDone": "Fail data anda telah dimuat turun.",

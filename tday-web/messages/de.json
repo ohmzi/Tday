@@ -574,12 +574,13 @@
     "systemDefault": "Systemstandard",
     "profile": {
       "title": "Profil",
+      "unknownUser": "Unbekannter Benutzer",
       "description": "Aktualisieren Sie Ihren Anzeigenamen",
       "name": "Name",
       "namePlaceholder": "Geben Sie Ihren Namen ein",
       "username": "Benutzername",
       "saving": "Speichern...",
-      "save": "Profil speichern",
+      "save": "Speichern",
       "edit": "Bearbeiten",
       "cancel": "Abbrechen"
     },
@@ -591,7 +592,7 @@
     "language": {
       "title": "Sprache",
       "description": "Wählen Sie Ihre App-Sprache",
-      "appLanguage": "App-Sprache"
+      "appLanguage": "Sprache"
     },
     "notifications": {
       "title": "Benachrichtigungen",
@@ -601,17 +602,17 @@
       "toggle": "Push-Benachrichtigungen umschalten"
     },
     "password": {
-      "title": "Passwort ändern",
+      "title": "Passwort",
       "description": "Aktualisieren Sie Ihr Kontopasswort",
       "current": "Aktuelles Passwort",
       "currentPlaceholder": "Geben Sie Ihr aktuelles Passwort ein",
       "new": "Neues Passwort",
       "newPlaceholder": "Geben Sie Ihr neues Passwort ein",
-      "requirement": "Das Passwort muss mindestens 8 Zeichen lang sein",
+      "requirement": "Das Passwort muss mindestens 8 Zeichen lang sein und einen Großbuchstaben sowie ein Sonderzeichen enthalten.",
       "confirm": "Neues Passwort bestätigen",
       "confirmPlaceholder": "Bestätigen Sie Ihr neues Passwort",
-      "changing": "Passwort wird geändert...",
-      "change": "Passwort ändern",
+      "changing": "Speichern...",
+      "change": "Speichern",
       "changeAction": "Ändern",
       "cancel": "Abbrechen",
       "forgot": "Passwort vergessen?"
@@ -655,7 +656,7 @@
       "noChanges": "Keine Änderungen zu speichern",
       "nameUpdated": "Name erfolgreich aktualisiert",
       "nameUpdateFailed": "Aktualisierung fehlgeschlagen",
-      "passwordTooShort": "Das neue Passwort muss mindestens 8 Zeichen lang sein",
+      "passwordTooShort": "Das Passwort muss mindestens 8 Zeichen lang sein",
       "passwordsDoNotMatch": "Passwörter stimmen nicht überein",
       "passwordChanged": "Passwort erfolgreich geändert",
       "passwordChangeFailed": "Passwort konnte nicht geändert werden",
@@ -680,25 +681,25 @@
       "title": "Funktionsschalter"
     },
     "aiSummary": {
-      "title": "KI-Aufgabenzusammenfassung"
+      "title": "Zusammenfassung"
     },
     "securityQuestions": {
       "title": "Security questions",
       "changeAction": "Change",
-      "configured": "{{count}} questions configured",
+      "configured": "Eingerichtet",
       "notConfigured": "Not configured",
       "questionLabel": "Question {{index}}",
-      "answerPlaceholder": "Your answer",
-      "save": "Save questions",
+      "answerPlaceholder": "Antwort",
+      "save": "Speichern",
       "saving": "Saving...",
       "errorSelectAll": "Please choose three questions",
-      "errorDistinct": "Security questions must be different",
+      "errorDistinct": "Wähle drei unterschiedliche Fragen",
       "errorAnswersRequired": "Please answer all three questions",
       "errorPasswordRequired": "Enter your current password"
     },
     "data": {
       "title": "Deine Daten",
-      "summary": "{{tasks}} Aufgaben · {{lists}} Listen · {{completed}} abgeschlossen, alles auf diesem Server.",
+      "summary": "{{tasks}} Aufgaben · {{lists}} Listen · {{completed}} abgeschlossen",
       "download": "Meine Daten herunterladen",
       "import": "Importieren",
       "exportDone": "Deine Datendatei wurde heruntergeladen.",

@@ -574,12 +574,13 @@
     "systemDefault": "Par défaut du système",
     "profile": {
       "title": "Profil",
+      "unknownUser": "Utilisateur inconnu",
       "description": "Mettez à jour votre nom affiché",
       "name": "Nom",
       "namePlaceholder": "Saisissez votre nom",
       "username": "Nom d'utilisateur",
       "saving": "Enregistrement...",
-      "save": "Enregistrer le profil",
+      "save": "Enregistrer",
       "edit": "Modifier",
       "cancel": "Annuler"
     },
@@ -591,7 +592,7 @@
     "language": {
       "title": "Langue",
       "description": "Choisissez la langue de l'application",
-      "appLanguage": "Langue de l'application"
+      "appLanguage": "Langue"
     },
     "notifications": {
       "title": "Notifications",
@@ -601,17 +602,17 @@
       "toggle": "Activer/désactiver les notifications push"
     },
     "password": {
-      "title": "Changer le mot de passe",
+      "title": "Mot de passe",
       "description": "Mettez à jour le mot de passe de votre compte",
       "current": "Mot de passe actuel",
       "currentPlaceholder": "Saisissez votre mot de passe actuel",
       "new": "Nouveau mot de passe",
       "newPlaceholder": "Saisissez votre nouveau mot de passe",
-      "requirement": "Le mot de passe doit comporter au moins 8 caractères",
+      "requirement": "Le mot de passe doit comporter au moins 8 caractères, avec une majuscule et un caractère spécial.",
       "confirm": "Confirmer le nouveau mot de passe",
       "confirmPlaceholder": "Confirmez votre nouveau mot de passe",
-      "changing": "Changement du mot de passe...",
-      "change": "Changer le mot de passe",
+      "changing": "Enregistrement...",
+      "change": "Enregistrer",
       "changeAction": "Modifier",
       "cancel": "Annuler",
       "forgot": "Mot de passe oublié ?"
@@ -655,7 +656,7 @@
       "noChanges": "Aucune modification à enregistrer",
       "nameUpdated": "Nom mis à jour avec succès",
       "nameUpdateFailed": "Échec de la mise à jour",
-      "passwordTooShort": "Le nouveau mot de passe doit comporter au moins 8 caractères",
+      "passwordTooShort": "Le mot de passe doit comporter au moins 8 caractères",
       "passwordsDoNotMatch": "Les mots de passe ne correspondent pas",
       "passwordChanged": "Mot de passe changé avec succès",
       "passwordChangeFailed": "Échec du changement de mot de passe",
@@ -680,25 +681,25 @@
       "title": "Activation de fonctionnalité"
     },
     "aiSummary": {
-      "title": "Résumé des tâches par IA"
+      "title": "Résumé"
     },
     "securityQuestions": {
       "title": "Security questions",
       "changeAction": "Change",
-      "configured": "{{count}} questions configured",
+      "configured": "Configurées",
       "notConfigured": "Not configured",
       "questionLabel": "Question {{index}}",
-      "answerPlaceholder": "Your answer",
-      "save": "Save questions",
+      "answerPlaceholder": "Réponse",
+      "save": "Enregistrer",
       "saving": "Saving...",
       "errorSelectAll": "Please choose three questions",
-      "errorDistinct": "Security questions must be different",
+      "errorDistinct": "Choisissez trois questions différentes",
       "errorAnswersRequired": "Please answer all three questions",
       "errorPasswordRequired": "Enter your current password"
     },
     "data": {
       "title": "Vos données",
-      "summary": "{{tasks}} tâches · {{lists}} listes · {{completed}} terminées, le tout sur ce serveur.",
+      "summary": "{{tasks}} tâches · {{lists}} listes · {{completed}} terminées",
       "download": "Télécharger mes données",
       "import": "Importer",
       "exportDone": "Votre fichier de données a été téléchargé.",

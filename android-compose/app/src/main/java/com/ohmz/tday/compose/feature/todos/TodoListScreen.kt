@@ -41,7 +41,6 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -156,6 +155,8 @@ import com.ohmz.tday.compose.core.ui.rememberTaskSwipeRevealState
 import com.ohmz.tday.compose.core.ui.shareList
 import com.ohmz.tday.compose.core.ui.tdayBarButtonContainerColor
 import com.ohmz.tday.compose.core.ui.tdayHeroTitleItem
+import com.ohmz.tday.compose.core.ui.TdayHeroTitleMetrics
+import com.ohmz.tday.compose.core.ui.tdayClosesSearchOnOutsideTap
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.component.RootFeedDock
 import com.ohmz.tday.compose.ui.component.RootFeedTab
@@ -520,6 +521,11 @@ fun TodoListScreen(
     var floaterSearchResultsBounds by remember { mutableStateOf<Rect?>(null) }
     val headerBarHeightPx = with(LocalDensity.current) {
         RootFeedHeroHeaderMetrics.BarHeight.toPx()
+    }
+    // The other bar: TdayHeroToolbar's row, on the screens that pin one instead
+    // of carrying the root feeds' hero header.
+    val pinnedToolbarHeightPx = with(LocalDensity.current) {
+        TdayHeroTitleMetrics.ToolbarHeight.toPx()
     }
     // Read lazily inside the header so a scroll frame recomposes the header
     // alone rather than this whole screen — the list body is very large.
@@ -989,6 +995,13 @@ fun TodoListScreen(
                         } else {
                             Modifier
                         },
+                    )
+                    // The pinned-toolbar screens get the same courtesy the root
+                    // feeds have had: tap the feed and the field goes away.
+                    .tdayClosesSearchOnOutsideTap(
+                        isSearchOpen = showScopedSearchField,
+                        barHeightPx = pinnedToolbarHeightPx,
+                        close = closeScopedSearch,
                     ),
             ) {
                 LazyColumn(
@@ -1576,7 +1589,11 @@ fun TodoListScreen(
                     title = uiState.title,
                     titleColor = titleColor,
                     collapseProgress = heroCollapse.progress,
-                    onBack = onBack,
+                    // Gone while the field is up: a back chevron beside an
+                    // open search is a second way out that leaves the screen
+                    // rather than the query, and it costs the field the width
+                    // that makes a placeholder readable.
+                    onBack = if (showScopedSearchField) null else onBack,
                     backContentDescription = stringResource(R.string.action_back),
                     modifier = Modifier
                         .align(Alignment.TopStart)
@@ -1585,13 +1602,13 @@ fun TodoListScreen(
                     titleSuppressed = showScopedSearchField,
                     actions = {
                         if (showScopedSearchField) {
-                            // The bar is handed over to the field, keeping the
-                            // back chevron and dropping the action cluster —
-                            // what iOS's TimelineTopBar and the web list bar
-                            // both do. In ordinary flow under the hero block
-                            // the field scrolled away from under a live query,
-                            // leaving the keyboard up with nothing to type in.
-                            Spacer(modifier = Modifier.width(TdayDimens.FabSize))
+                            // The field takes the WHOLE bar — back chevron,
+                            // title and action cluster all give way to it, as
+                            // they do on the root feeds and on iOS's
+                            // TimelineTopBar. In ordinary flow under the hero
+                            // block the field scrolled away from under a live
+                            // query, leaving the keyboard up with nothing to
+                            // type in.
                             val focusRequester = remember { FocusRequester() }
                             LaunchedEffect(scopedSearchNeedsFocus) {
                                 if (!scopedSearchNeedsFocus) return@LaunchedEffect
@@ -1615,17 +1632,11 @@ fun TodoListScreen(
                                 modifier = Modifier
                                     .weight(1f)
                                     .focusRequester(focusRequester),
-                                onClear = { scopedSearchQuery = "" },
-                                clearContentDescription = stringResource(R.string.action_clear_search),
-                            )
-                            // The capsule's own X clears the query; leaving the
-                            // search behind altogether is this one, as on the
-                            // root feeds.
-                            TodayHeaderButton(
-                                onClick = closeScopedSearch,
-                                icon = ImageVector.vectorResource(R.drawable.ic_lucide_x),
-                                contentDescription = stringResource(R.string.action_close_search),
-                                iconSize = 22.dp,
+                                // The one control in the row, so its X leaves
+                                // the search — and leaving clears the query on
+                                // the way out.
+                                onClose = closeScopedSearch,
+                                trailingContentDescription = stringResource(R.string.action_close_search),
                             )
                         } else {
                             topBarActions.forEach { action ->

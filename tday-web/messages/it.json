@@ -574,12 +574,13 @@
     "systemDefault": "Predefinito del sistema",
     "profile": {
       "title": "Profilo",
+      "unknownUser": "Utente sconosciuto",
       "description": "Aggiorna il tuo nome visualizzato",
       "name": "Nome",
       "namePlaceholder": "Inserisci il tuo nome",
       "username": "Nome utente",
       "saving": "Salvataggio...",
-      "save": "Salva profilo",
+      "save": "Salva",
       "edit": "Modifica",
       "cancel": "Annulla"
     },
@@ -591,7 +592,7 @@
     "language": {
       "title": "Lingua",
       "description": "Scegli la lingua dell'app",
-      "appLanguage": "Lingua dell'app"
+      "appLanguage": "Lingua"
     },
     "notifications": {
       "title": "Notifiche",
@@ -601,17 +602,17 @@
       "toggle": "Attiva/disattiva notifiche push"
     },
     "password": {
-      "title": "Cambia password",
+      "title": "Password",
       "description": "Aggiorna la password del tuo account",
       "current": "Password attuale",
       "currentPlaceholder": "Inserisci la password attuale",
       "new": "Nuova password",
       "newPlaceholder": "Inserisci la nuova password",
-      "requirement": "La password deve contenere almeno 8 caratteri",
+      "requirement": "La password deve contenere almeno 8 caratteri, con una lettera maiuscola e un carattere speciale.",
       "confirm": "Conferma nuova password",
       "confirmPlaceholder": "Conferma la nuova password",
-      "changing": "Modifica password...",
-      "change": "Cambia password",
+      "changing": "Salvataggio...",
+      "change": "Salva",
       "changeAction": "Modifica",
       "cancel": "Annulla",
       "forgot": "Password dimenticata?"
@@ -655,7 +656,7 @@
       "noChanges": "Nessuna modifica da salvare",
       "nameUpdated": "Nome aggiornato correttamente",
       "nameUpdateFailed": "Aggiornamento non riuscito",
-      "passwordTooShort": "La nuova password deve contenere almeno 8 caratteri",
+      "passwordTooShort": "La password deve contenere almeno 8 caratteri",
       "passwordsDoNotMatch": "Le password non corrispondono",
       "passwordChanged": "Password modificata correttamente",
       "passwordChangeFailed": "Impossibile cambiare la password",
@@ -680,25 +681,25 @@
       "title": "Attiva/disattiva funzione"
     },
     "aiSummary": {
-      "title": "Riepilogo attività con IA"
+      "title": "Riepilogo"
     },
     "securityQuestions": {
       "title": "Security questions",
       "changeAction": "Change",
-      "configured": "{{count}} questions configured",
+      "configured": "Configurate",
       "notConfigured": "Not configured",
       "questionLabel": "Question {{index}}",
-      "answerPlaceholder": "Your answer",
-      "save": "Save questions",
+      "answerPlaceholder": "Risposta",
+      "save": "Salva",
       "saving": "Saving...",
       "errorSelectAll": "Please choose three questions",
-      "errorDistinct": "Security questions must be different",
+      "errorDistinct": "Scegli tre domande diverse",
       "errorAnswersRequired": "Please answer all three questions",
       "errorPasswordRequired": "Enter your current password"
     },
     "data": {
       "title": "I tuoi dati",
-      "summary": "{{tasks}} attività · {{lists}} liste · {{completed}} completate, tutto su questo server.",
+      "summary": "{{tasks}} attività · {{lists}} liste · {{completed}} completate",
       "download": "Scarica i miei dati",
       "import": "Importa",
       "exportDone": "Il file dei tuoi dati è stato scaricato.",

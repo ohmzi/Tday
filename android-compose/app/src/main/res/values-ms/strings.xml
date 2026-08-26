@@ -167,6 +167,7 @@
     <string name="settings_account_password_label">Kata laluan</string>
     <string name="settings_account_change_password">Tukar</string>
     <string name="settings_account_current_password">Kata laluan semasa</string>
+    <string name="settings_account_confirm_new_password">Sahkan kata laluan baharu</string>
     <string name="settings_account_forgot_password">Lupa kata laluan?</string>
     <string name="settings_account_password_requirement">Kata laluan mesti sekurang-kurangnya 8 aksara, dengan satu huruf besar dan satu aksara khas.</string>
     <string name="settings_account_show_password">Tunjukkan kata laluan</string>
@@ -556,7 +557,7 @@
 
     <!-- Reminder options -->
     <string name="reminder_option_none">Tiada</string>
-    <string name="reminder_option_at_time">Pada masa tamat tempoh</string>
+    <string name="reminder_option_at_time">Pada masa tugas</string>
     <string name="reminder_option_minutes_5">5 minit sebelum</string>
     <string name="reminder_option_minutes_10">10 minit sebelum</string>
     <string name="reminder_option_minutes_15">15 minit sebelum</string>
@@ -661,7 +662,7 @@
     <string name="settings_quiet_hours">Waktu senyap</string>
     <string name="settings_quiet_hours_start">Mula</string>
     <string name="settings_quiet_hours_end">Tamat</string>
-    <string name="settings_resting_floaters">Pudarkan floater berehat</string>
+    <string name="settings_resting_floaters">Floater berehat</string>
     <string name="settings_calendar_sync">Tambah tugasan berjadual ke kalendar saya</string>
     <string name="settings_privacy">Privasi</string>
     <string name="root_feed_search_scheduled">Cari tugasan berjadual</string>

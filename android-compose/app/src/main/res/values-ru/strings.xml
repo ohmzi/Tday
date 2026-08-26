@@ -167,6 +167,7 @@
     <string name="settings_account_password_label">Пароль</string>
     <string name="settings_account_change_password">Изменить</string>
     <string name="settings_account_current_password">Текущий пароль</string>
+    <string name="settings_account_confirm_new_password">Подтвердите новый пароль</string>
     <string name="settings_account_forgot_password">Забыли пароль?</string>
     <string name="settings_account_password_requirement">Пароль должен содержать не менее 8 символов, заглавную букву и специальный символ.</string>
     <string name="settings_account_show_password">Показать пароль</string>
@@ -559,7 +560,7 @@
 
     <!-- Reminder options -->
     <string name="reminder_option_none">Нет</string>
-    <string name="reminder_option_at_time">В момент срока</string>
+    <string name="reminder_option_at_time">В момент задачи</string>
     <string name="reminder_option_minutes_5">За 5 минут</string>
     <string name="reminder_option_minutes_10">За 10 минут</string>
     <string name="reminder_option_minutes_15">За 15 минут</string>
@@ -664,7 +665,7 @@
     <string name="settings_quiet_hours">Тихие часы</string>
     <string name="settings_quiet_hours_start">Начало</string>
     <string name="settings_quiet_hours_end">Конец</string>
-    <string name="settings_resting_floaters">Приглушать отдыхающие плавающие</string>
+    <string name="settings_resting_floaters">Отдыхающие плавающие</string>
     <string name="settings_calendar_sync">Добавлять запланированные задачи в мой календарь</string>
     <string name="settings_privacy">Конфиденциальность</string>
     <string name="root_feed_search_scheduled">Поиск запланированных задач</string>

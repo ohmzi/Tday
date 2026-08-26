@@ -710,6 +710,45 @@ private extension UIView {
     }
 }
 
+/// Closes an open scoped search when the user taps the content behind it.
+///
+/// The root feeds have done this since they got their field; every screen with a
+/// pinned bar now does it too. Attach it INSIDE the bar's `safeAreaInset` — on
+/// the content the bar is inset over — and the gesture only ever sees taps below
+/// the bar, so there is no geometry to compare against and nothing to keep in
+/// step when the bar's height changes.
+///
+/// `simultaneousGesture` with a zero-distance drag, never `onTapGesture`: a row
+/// still has to take its own tap and the feed still has to scroll, and both of
+/// those would be swallowed by a gesture that claimed the touch. The translation
+/// test is what separates a tap from the start of a scroll.
+extension View {
+    @ViewBuilder
+    func tdayClosesSearchOnOutsideTap(
+        isSearchOpen: Bool,
+        close: @escaping () -> Void
+    ) -> some View {
+        // Attached only while the field is up, rather than left on with the test
+        // inside `onEnded`. Five screens carry this; a permanent zero-distance drag
+        // over each one's scroll content is a recogniser their feeds have to
+        // compete with for no reason the other 99% of the time.
+        if isSearchOpen {
+            simultaneousGesture(
+                DragGesture(minimumDistance: 0)
+                    .onEnded { value in
+                        let isTap = abs(value.translation.width) < 8 && abs(value.translation.height) < 8
+                        guard isTap else {
+                            return
+                        }
+                        close()
+                    }
+            )
+        } else {
+            self
+        }
+    }
+}
+
 /// The app's search field, in its open state.
 ///
 /// The root feeds fold theirs down into a round button and so own its width and
@@ -720,16 +759,24 @@ private extension UIView {
 struct TdaySearchCapsule: View {
     @Binding var text: String
     let placeholder: String
-    /// Shown only while there is text. The root feeds' equivalent X dismisses a
-    /// field that has a folded state to return to; this one has none, so it
-    /// clears the text instead.
+    /// Accessible name for the X — "Cancel search" everywhere it is a dismissal,
+    /// "Clear" where it only empties the field.
     var clearAccessibilityLabel: String = "Clear"
     /// Bound by callers that swap this field in on a tap, so the keyboard comes
-    /// up with it and can be put away again from outside. A field that is simply
-    /// always on screen — the guide's — needs none.
+    /// up with it and can be put away again from outside.
     var focused: FocusState<Bool>.Binding? = nil
+    /// Set by a bar the field has taken over — which is every caller today, since
+    /// the guide's field comes through `TimelineTopBar` like the rest. The X is
+    /// then always on screen and leaves the search altogether, as the root feeds'
+    /// capsule does. Kept optional for a field with nowhere to go: without it the
+    /// X appears only alongside text, and only clears it.
+    var onClose: (() -> Void)? = nil
 
     @Environment(\.tdayColors) private var colors
+
+    private var showsTrailingButton: Bool {
+        onClose != nil || !text.isEmpty
+    }
 
     var body: some View {
         HStack(spacing: 10) {
@@ -746,10 +793,15 @@ struct TdaySearchCapsule: View {
 
             queryField
 
-            if !text.isEmpty {
+            if showsTrailingButton {
                 Button {
-                    HapticManager.gentleTap()
-                    text = ""
+                    if let onClose {
+                        HapticManager.sheetDismiss()
+                        onClose()
+                    } else {
+                        HapticManager.gentleTap()
+                        text = ""
+                    }
                 } label: {
                     Image("NavClose")
                         .renderingMode(.template)
