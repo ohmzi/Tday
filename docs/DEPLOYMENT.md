@@ -6,8 +6,11 @@ How T'Day is built, deployed, and operated in production. Product direction and 
 
 | Environment | Branch | URL | Deployment |
 |-------------|--------|-----|------------|
-| Production | `master` | `tday.ohmz.cloud` | Auto via GitHub Actions → Docker image to GHCR |
-| Development | `develop` | Local only | `docker compose up` or local dev servers |
+| Production | `master` | `tday.ohmz.cloud` | GitHub Actions publishes the image to GHCR; the host runs `scripts/deploy-release.sh` to pull and recreate |
+| Development | `develop` | Local only | `docker compose -f docker-compose.yaml -f docker-compose.build.yaml up -d --build`, or local dev servers |
+
+Merging to `master` publishes a release; it does **not** reach into this host. Deploying is a separate,
+deliberate step on the deploy host — see [Deploying a release](#deploying-a-release).
 
 Mobile clients can also run in Local Mode without a deployed backend. Deployment work affects Server Mode, remote access, app compatibility checks, and server-backed sync.
 
@@ -16,11 +19,19 @@ Mobile clients can also run in Local Mode without a deployed backend. Deployment
 ### Architecture
 
 ```
-docker-compose.yaml
+docker-compose.yaml            # the stack; backend image is pulled, never built
 ├── tday_backend    (Ktor + Vite SPA, port 2525 → 8080)
 ├── tday_db         (PostgreSQL 15, internal port 5432)
 └── tday_ollama     (optional Ollama AI profile, internal port 11434)
+
+docker-compose.build.yaml      # opt-in override that builds tday_backend locally
+docker-compose.gpu.yaml        # opt-in override for NVIDIA-accelerated Ollama
 ```
+
+The `tday-backend` service in `docker-compose.yaml` has **no `build:` section**. Its image is
+`${TDAY_BACKEND_IMAGE:-ghcr.io/ohmzi/tday:latest}`, so a bare `docker compose up -d` on the deploy
+host pulls a released image and can never silently replace production with a working-tree build.
+Layer `docker-compose.build.yaml` on top when you actually want to build.
 
 ### Build
 
@@ -35,28 +46,39 @@ The production image is a **single JVM process** serving both the REST API and t
 Each frontend build also stamps a **unique build id** (`git-sha + UTC timestamp`) into the JS bundle as `__BUILD_ID__` and emits a matching `dist/version.json` (`{ "buildId", "version" }`), served at `/version.json`. This is the cache key that drives client cache invalidation — see [Web Cache Invalidation & Client Updates](#web-cache-invalidation--client-updates). For a readable SHA in the id, pass it as a build arg (the `.git` dir is not copied into the frontend stage):
 
 ```bash
-docker compose build --build-arg GIT_SHA=$(git rev-parse --short HEAD) tday-backend
+docker compose -f docker-compose.yaml -f docker-compose.build.yaml \
+  build --build-arg GIT_SHA=$(git rev-parse --short HEAD) tday-backend
 ```
 
 Without it the id falls back to a timestamp only — still unique per build, just less traceable.
+The release workflow passes **no** build args, so CI-published images carry a `dev-<timestamp>`
+build id and an empty `VITE_SENTRY_DSN`; both are cosmetic for cache invalidation (the id is still
+unique per build) but browser-side Sentry is off in the published image.
 
 ```bash
-# Local build
-docker compose up -d --build
+# Local build (development). docker-compose.build.yaml adds the build: section and
+# tags the result tday-backend:local so it cannot be confused with a released image.
+docker compose -f docker-compose.yaml -f docker-compose.build.yaml up -d --build
 
 # Optional local AI summaries
 # Set OLLAMA_URL=http://ollama:11434 in .env.docker, then run:
 docker compose --profile ai pull ollama ollama-model-setup
-docker compose --profile ai up -d --build
+docker compose -f docker-compose.yaml -f docker-compose.build.yaml --profile ai up -d --build
 ```
+
+Setting `COMPOSE_FILE=docker-compose.yaml:docker-compose.build.yaml` in your shell (or in the root
+`.env`) makes a plain `docker compose up -d --build` build locally again, if you prefer that on a
+development machine. Never set it on the deploy host.
 
 When the `ai` profile is enabled, Compose starts `tday_ollama` plus a one-shot model setup container. The setup container pulls `qwen3.5:0.8b` and attempts to remove the old `qwen2.5:0.5b` model. Pull the Ollama images during updates too; the qwen3.5 model requires a recent Ollama runtime. If the AI profile is not enabled, Summary still works through the backend logic fallback.
 
 Ollama runs on CPU by default. For NVIDIA GPU acceleration, install the NVIDIA Container Toolkit on the host and add the GPU override file to every Compose command:
 
 ```bash
-docker compose -f docker-compose.yaml -f docker-compose.gpu.yaml --profile ai up -d --build
+docker compose -f docker-compose.yaml -f docker-compose.gpu.yaml --profile ai up -d
 ```
+
+Add `-f docker-compose.build.yaml` to that as well if you are also building the backend locally.
 
 ### Docker Security
 
@@ -426,14 +448,17 @@ Existing databases with pre-Flyway schema but no migration history are baselined
 
 ### Application Rollback
 
-Pull and run the previous Docker image version:
+Redeploy the previous release tag. The backend image is a compose variable, so no file needs editing
+and the rest of the stack is left alone:
 
 ```bash
-docker pull ghcr.io/ohmzi/tday:v1.4.0
-docker compose down
-# Update docker-compose.yaml image tag or use:
-docker run -d --name tday -p 2525:8080 --env-file .env.docker ghcr.io/ohmzi/tday:v1.4.0
+./scripts/deploy-release.sh --version 1.4.0
+# equivalently, by hand:
+TDAY_BACKEND_IMAGE=ghcr.io/ohmzi/tday:v1.4.0 docker compose up -d --no-build tday-backend
 ```
+
+Never `docker compose down -v` — the `-v` deletes the `postgres_data` volume, which is the only copy
+of the data.
 
 ### Database Rollback
 
@@ -467,11 +492,48 @@ Flyway does not support automatic down-migrations. For rollbacks:
 
 ## Updating in Production
 
-### Docker Compose
+### Deploying a release
+
+Merging to `master` builds and publishes `ghcr.io/ohmzi/tday:v<version>` and `:latest`. It does not
+touch any host. On the deploy host, pull that image and recreate the backend:
 
 ```bash
-docker compose pull && docker compose up -d
+git pull                                              # so version.json names the release you want
+./scripts/deploy-release.sh --url https://tday.ohmz.cloud
 ```
+
+The script:
+
+1. reads `version` from root `version.json` (override with `--version X.Y.Z` or `--image REF`),
+2. pulls `ghcr.io/ohmzi/tday:v<version>`, falling back to `:latest` with a warning if that tag is
+   not published yet (`--no-fallback` to fail instead),
+3. compares the Flyway migrations baked into the **running** image with the target image's and
+   refuses to continue if the target adds any, unless you pass `--backup` (take one now) or
+   `--skip-backup` (you already have one) — Flyway has no down-migrations,
+4. recreates only `tday-backend` with `TDAY_BACKEND_IMAGE` pinned to that tag, waits for the
+   healthcheck, then verifies `/version.json` and `/api/mobile/probe` report the expected version,
+   on loopback and (with `--url`) through the ingress.
+
+`--dry-run` resolves the image and runs the migration check without deploying.
+
+Deploy **once** per release. Every distinct image re-hashes the SPA chunks, and each rebuild is a
+fresh cache generation for already-open PWA/iOS-Safari clients; recreating the container from the
+*same* image is harmless, but a string of separate builds is not.
+
+`version.json` sets `compatibility.mode: "exact"`, so the server and the mobile apps must report the
+same version. Publish a release and leave the server behind and every client that takes the in-app
+update is locked out until this step runs. Deploy promptly after a release.
+
+### Plain Docker Compose
+
+`docker compose up -d` on the deploy host also pulls, because the backend service has no `build:`
+section and defaults to `ghcr.io/ohmzi/tday:latest`:
+
+```bash
+docker compose pull tday-backend && docker compose up -d tday-backend
+```
+
+This skips the migration/backup guard and the version verification, so prefer the script.
 
 ### Portainer
 
@@ -483,8 +545,20 @@ docker compose pull && docker compose up -d
 - Flyway migrations run automatically on container start.
 - Existing databases without Flyway history are baselined at version `2`; empty databases replay the full schema snapshot and then incremental migrations.
 - Verify the app is healthy by checking `GET /health` returns `{ "status": "ok" }`.
+- Confirm `GET /version.json` and `GET /api/mobile/probe` both report the released version (`deploy-release.sh` does this for you).
 - Review `docker logs tday_backend` for startup errors.
 - **Web clients self-update.** Already-open browsers/PWAs detect the new build and reload into it automatically — no manual cache clearing on each release. See below.
+
+### Rolling back
+
+There is no automated rollback. Redeploy the previous tag:
+
+```bash
+./scripts/deploy-release.sh --version 0.7.1
+```
+
+That only reverses the application. Any Flyway migration the newer image applied stays applied —
+restore from a dump (`scripts/restore-database.sh`) if the schema has to go back too.
 
 ## Web Cache Invalidation & Client Updates
 

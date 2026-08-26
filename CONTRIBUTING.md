@@ -81,10 +81,17 @@ docker run -d --name tday_dev_db \
 
 ### Full Stack (Docker Compose)
 
+`docker-compose.yaml` runs the **released** backend image from GHCR, so a plain `up -d` never
+replaces a deployment with a working-tree build. For development you want the local build override:
+
 ```bash
-docker compose up -d --build
+docker compose -f docker-compose.yaml -f docker-compose.build.yaml up -d --build
 docker exec -it tday_ollama ollama pull qwen2.5:0.5b
 ```
+
+Set `COMPOSE_FILE=docker-compose.yaml:docker-compose.build.yaml` in your shell if you'd rather type
+`docker compose up -d --build`. Deploying a release is a separate flow —
+`scripts/deploy-release.sh`, documented in [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
 
 ## Product Direction
 

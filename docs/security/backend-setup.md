@@ -19,10 +19,13 @@ the code and scripts in this repo.
 - **Docker with Compose v2** (`docker compose`). The backup/restore scripts fall back to a
   standalone `docker-compose` binary if v2 is absent (`scripts/backup-database.sh:157-163`), but v2
   is the assumed path.
-- **Nothing else.** There is no Node, JDK or Gradle requirement on the host — the image is built in
-  Docker: `node:20-alpine` builds the SPA, `eclipse-temurin:21-jdk-alpine` builds the fat jar, and
-  the runtime stage is `eclipse-temurin:21-jre-alpine` running as a non-root `tday` user
-  (`Dockerfile.backend:1,19,36-42`). Postgres is pinned to `postgres:15` (`docker-compose.yaml:3`).
+- **Nothing else.** There is no Node, JDK or Gradle requirement on the host. By default compose
+  pulls the released image `ghcr.io/ohmzi/tday:latest` (`docker-compose.yaml:67`), which is
+  anonymously pullable. If you'd rather build it yourself, layer `docker-compose.build.yaml` and
+  everything still happens inside Docker: `node:20-alpine` builds the SPA,
+  `eclipse-temurin:21-jdk-alpine` builds the fat jar, and the runtime stage is
+  `eclipse-temurin:21-jre-alpine` running as a non-root `tday` user (`Dockerfile.backend:1,19,36-42`).
+  Postgres is pinned to `postgres:15` (`docker-compose.yaml:3`).
 - **A domain only if you want a public URL.** The stack is usable on a LAN or over a VPN with no
   domain at all. If you do want `https://tday.example.com`, the supported model is a Cloudflare
   Tunnel (see [Exposing it](#exposing-it)), which needs a Cloudflare account and a domain whose
@@ -39,10 +42,10 @@ purposes:
 | File | Read by | Holds |
 |---|---|---|
 | `.env` (repo root) | Docker Compose, for `${VAR}` interpolation | `TDAY_HOST_BIND`, `TDAY_HOST_PORT`, `TZ`, `POSTGRES_USER/PASSWORD/DB`, `OLLAMA_MODEL`, `VITE_SENTRY_*` |
-| `.env.docker` | injected into the backend container via `env_file` (`docker-compose.yaml:78-79`) | every backend setting: `AUTH_SECRET`, `DATABASE_URL`, `TDAY_ENV`, encryption keys, rate limits |
+| `.env.docker` | injected into the backend container via `env_file` (`docker-compose.yaml:77-78`) | every backend setting: `AUTH_SECRET`, `DATABASE_URL`, `TDAY_ENV`, encryption keys, rate limits |
 
 Variables in `.env.docker` are **not** visible to Compose itself, and variables in `.env` are **not**
-passed into the container unless compose explicitly forwards them (`docker-compose.yaml:80-87` does
+passed into the container unless compose explicitly forwards them (`docker-compose.yaml:79-86` does
 this for `TZ`, `APPLE_TEAM_ID`, `IOS_BUNDLE_ID`, `OLLAMA_MODEL`). Putting `TDAY_HOST_BIND` in
 `.env.docker` does nothing at all.
 
@@ -76,8 +79,11 @@ Minimal first setup:
 cp .env.example .env.docker
 openssl rand -base64 32            # paste into AUTH_SECRET in .env.docker
 # DATABASE_URL can stay as shipped if you do not override the POSTGRES_* values
-docker compose up -d --build
+docker compose up -d               # pulls ghcr.io/ohmzi/tday:latest
 ```
+
+To build the image from this checkout instead of pulling it, add the build override to every
+compose command: `docker compose -f docker-compose.yaml -f docker-compose.build.yaml up -d --build`.
 
 If you change `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` in the root `.env`
 (`docker-compose.yaml:16-18`), you must change `DATABASE_URL` in `.env.docker` to match — they are
@@ -105,7 +111,7 @@ run `docker inspect tday_backend` or read `/proc/<pid>/environ` on the host.
 ### First run
 
 ```bash
-docker compose up -d --build
+docker compose up -d
 docker compose logs -f tday-backend        # watch it come up
 curl -sf http://127.0.0.1:2525/health      # {"status":"ok"}  (plugins/Routing.kt:28-30)
 ```
@@ -215,7 +221,7 @@ widen the bind, the per-IP dimension becomes attacker-controlled with no code ch
 ### Exposing it
 
 The compose port mapping is `"${TDAY_HOST_BIND:-127.0.0.1}:${TDAY_HOST_PORT:-2525}:8080"`
-(`docker-compose.yaml:77`). With no root `.env` override, the backend listens on **host loopback
+(`docker-compose.yaml:76`). With no root `.env` override, the backend listens on **host loopback
 only** — nothing on the LAN or the internet can reach it directly, and Postgres and Ollama publish
 no host ports at all.
 
@@ -237,8 +243,8 @@ the deploy host rather than assuming — `docker port tday_backend 8080` should 
 `127.0.0.1:2525`.
 
 The container itself is reasonably confined: `security_opt: no-new-privileges:true`,
-`cap_drop: ALL`, `pids_limit: 512` (`docker-compose.yaml:75,96-99`). Memory limits are deliberately
-absent, with the reason in the file (`docker-compose.yaml:71-74`): a too-low `mem_limit` under
+`cap_drop: ALL`, `pids_limit: 512` (`docker-compose.yaml:74,95-98`). Memory limits are deliberately
+absent, with the reason in the file (`docker-compose.yaml:70-73`): a too-low `mem_limit` under
 `restart: always` produces an OOM crash loop, which is worse than the DoS it defends against. So
 there is no memory bound on the backend today.
 
@@ -348,9 +354,20 @@ backups mean up to 24 hours of loss (`docs/security/backups.md:462-467`).
 ### Upgrading and redeploying
 
 ```bash
+git pull                                       # so version.json names the release you want
+./scripts/deploy-release.sh --url https://your.host
+```
+
+`deploy-release.sh` pulls `ghcr.io/ohmzi/tday:v<version>` for the version in root `version.json`,
+refuses to continue when the target image adds Flyway migrations unless you pass `--backup` or
+`--skip-backup`, recreates only `tday-backend`, waits for the healthcheck, and then fails the deploy
+unless `/version.json` and `/api/mobile/probe` both report that version. `--dry-run` shows what it
+would do. By hand, the same thing without the guards:
+
+```bash
 ./scripts/backup-database.sh                   # first, always
-git pull
-docker compose up -d --build tday-backend      # rebuild only the backend
+docker compose pull tday-backend
+docker compose up -d --no-build tday-backend
 docker compose logs -f tday-backend
 curl -sf http://127.0.0.1:2525/health
 ```
@@ -360,15 +377,16 @@ Notes that matter:
 - **Take a backup before any deploy that touches migrations or encryption settings.** Migrations run
   automatically at boot and there is no down-migration path.
 - **Never `docker compose down -v`.** The `-v` deletes the `postgres_data` named volume
-  (`docker-compose.yaml:104-105`), which is the only copy of everything unless you have scheduled
+  (`docker-compose.yaml:103-104`), which is the only copy of everything unless you have scheduled
   backups.
-- The backend has a real readiness healthcheck against `/health` (`docker-compose.yaml:90-95`), so
+- The backend has a real readiness healthcheck against `/health` (`docker-compose.yaml:89-94`), so
   `docker compose ps` distinguishes a booted-but-broken backend from a healthy one. Wait for
   `healthy`, not just `running`.
-- Rebuilding the backend rebuilds the SPA too — they ship in the same image
-  (`Dockerfile.backend:39-41`). `VITE_SENTRY_DSN` is a **build arg**, not a runtime variable: it is
-  inlined by Vite during the build (`Dockerfile.backend:8-13`), so changing it in `.env` requires a
-  rebuild, not a restart.
+- The backend and the SPA ship in the same image (`Dockerfile.backend:39-41`), so a deploy replaces
+  both — and re-hashes every SPA chunk, which is why one deploy per release is the rule rather than
+  a string of rebuilds. `VITE_SENTRY_DSN` is a **build arg**, not a runtime variable: it is inlined
+  by Vite during the build (`Dockerfile.backend:8-13`), so it can only be set by building the image
+  yourself. The CI-published image passes no build args at all, so its SPA carries an empty DSN.
 - If you use the AI profile, pull its images on upgrade too:
   `docker compose --profile ai pull ollama ollama-model-setup`.
 - After deploying, re-verify the externally observable posture:
@@ -393,7 +411,7 @@ realistic causes, in order:
 - `REQUIRE_ENCRYPTION_AT_REST=true but no usable DATA_ENCRYPTION_KEY…` — you opted in and there is
   no key (`Application.kt:167-170,176`). Either set one or unset the flag.
 - Database not ready — the backend `depends_on` the database's healthcheck
-  (`docker-compose.yaml:100-102`), so this is usually Postgres itself failing; check
+  (`docker-compose.yaml:99-101`), so this is usually Postgres itself failing; check
   `docker compose logs database`.
 
 **HSTS and `Secure` cookies silently missing.** Symptom: everything works, but
