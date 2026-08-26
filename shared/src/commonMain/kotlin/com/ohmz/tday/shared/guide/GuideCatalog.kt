@@ -144,6 +144,17 @@ object GuideCatalog {
 
         // ── Recurrence & reminders ───────────────────────────────────────
         topic(
+            // First in the section because it gates the rest of it: with this switch off no
+            // reminder, snooze, quiet-hours shift or Day Ahead digest is delivered at all, so
+            // a reader who meets any of those topics before this one can follow every step and
+            // still hear nothing. Native only — web's equivalent is `push-notifications`,
+            // which is a server-sent subscription rather than an on-device switch.
+            GuideTopicIds.NOTIFICATIONS, GuideSectionId.RECURRENCE_AND_REMINDERS, "bell",
+            setOf(ANDROID, IOS), sinceVersion = "0.7.0",
+            body = listOf(para(GuideTopicIds.NOTIFICATIONS), tip(GuideTopicIds.NOTIFICATIONS)),
+            helpAnchors = listOf("settings-feature-toggle"),
+        ),
+        topic(
             GuideTopicIds.RECURRENCE_PRESETS, GuideSectionId.RECURRENCE_AND_REMINDERS, "repeat",
             setOf(WEB, ANDROID, IOS),
             body = listOf(para(GuideTopicIds.RECURRENCE_PRESETS), example(GuideTopicIds.RECURRENCE_PRESETS)),

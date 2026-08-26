@@ -8,12 +8,12 @@ import com.ohmz.tday.compose.core.coroutines.BackgroundDispatcher
 import com.ohmz.tday.compose.core.data.ApiCallException
 import com.ohmz.tday.compose.core.data.AppDataMode
 import com.ohmz.tday.compose.core.data.ConnectionFailureKind
-import com.ohmz.tday.compose.core.data.classifyConnectionFailure
 import com.ohmz.tday.compose.core.data.ServerProbeException
 import com.ohmz.tday.compose.core.data.ThemePreferenceStore
 import com.ohmz.tday.compose.core.data.auth.AuthRepository
 import com.ohmz.tday.compose.core.data.auth.SystemCredentialServicing
 import com.ohmz.tday.compose.core.data.cache.OfflineCacheManager
+import com.ohmz.tday.compose.core.data.classifyConnectionFailure
 import com.ohmz.tday.compose.core.data.isLikelyConnectivityIssue
 import com.ohmz.tday.compose.core.data.isSessionAuthenticationIssue
 import com.ohmz.tday.compose.core.data.server.AppVersionManager
@@ -229,7 +229,13 @@ class AppViewModel @Inject constructor(
             }
 
             if (!serverConfigRepository.hasServerConfigured()) {
-                authRepository.clearAllLocalUserDataForUnauthenticatedState()
+                // Not for a workspace that was *left*. Its rows are still on disk on the
+                // strength of a row that said they would be, and "no mode, no server" is the
+                // state both leaving and signing out land on — the marker is the only thing
+                // that tells the two apart.
+                if (!serverConfigRepository.hasRetainedLocalWorkspace()) {
+                    authRepository.clearAllLocalUserDataForUnauthenticatedState()
+                }
                 _uiState.update {
                     it.copy(
                         loading = false,
@@ -449,7 +455,14 @@ class AppViewModel @Inject constructor(
     fun useLocalMode() {
         viewModelScope.launch {
             TdayTelemetry.addBreadcrumb("local_mode.enter")
-            runCatching { authRepository.clearAllLocalUserDataForUnauthenticatedState() }
+            // Returning to a workspace that was left, not deleted, hands it back exactly as it
+            // was — that is what Leave promised. Every other route in here is a new workspace,
+            // and starts empty.
+            if (serverConfigRepository.hasRetainedLocalWorkspace()) {
+                serverConfigRepository.clearRetainedLocalWorkspace()
+            } else {
+                runCatching { authRepository.clearAllLocalUserDataForUnauthenticatedState() }
+            }
             runCatching { systemCredentialService.clearCredentialState() }
             runCatching { reminderScheduler.cancelAll() }
             serverConfigRepository.enableLocalMode()
@@ -702,6 +715,7 @@ class AppViewModel @Inject constructor(
                     backendVersion = probeResult.backendVersion,
                 )
             }
+            discardRetainedLocalWorkspace()
             onSuccess(probeResult.serverUrl)
         }.onFailure { error ->
             TdayTelemetry.addBreadcrumb(
@@ -782,6 +796,18 @@ class AppViewModel @Inject constructor(
                 onFailure(message)
             }
         }
+    }
+
+    /**
+     * Choosing a server abandons a local workspace that was merely left behind. From the
+     * moment a server URL is saved `bootstrap()` stops taking the branch that would have
+     * cleared it, so its rows would otherwise surface inside a server feed. Only the cache
+     * goes — the configuration just written stays.
+     */
+    private fun discardRetainedLocalWorkspace() {
+        if (!serverConfigRepository.hasRetainedLocalWorkspace()) return
+        serverConfigRepository.clearRetainedLocalWorkspace()
+        runCatching { cacheManager.clearAllLocalData() }
     }
 
     /**

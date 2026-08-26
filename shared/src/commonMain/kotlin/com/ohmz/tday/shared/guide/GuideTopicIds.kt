@@ -36,6 +36,7 @@ object GuideTopicIds {
     const val REMINDER_SNOOZE = "reminder-snooze"
     const val QUIET_HOURS = "quiet-hours"
     const val DAY_AHEAD = "day-ahead"
+    const val NOTIFICATIONS = "notifications"
     const val REMINDERS = "reminders"
     const val PUSH_NOTIFICATIONS = "push-notifications"
     const val HOME_WIDGET = "home-widget"
