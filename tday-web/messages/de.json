@@ -391,7 +391,19 @@
     "floaterEmptyBody": "Floater haben kein Fälligkeitsdatum – notiere einen, er wartet, bis du bereit bist.",
     "floaterListEmptyBody": "Füge einen Floater hinzu, er wartet genau hier.",
     "noMatchingTasks": "Keine passenden Aufgaben",
-    "searchEmptyBody": "Probiere ein anderes Wort oder lösche die Suche."
+    "searchEmptyBody": "Probiere ein anderes Wort oder lösche die Suche.",
+    "todayEmpty": "Keine Aufgaben für heute",
+    "todayEmptyBody": "Füge etwas für heute hinzu, dann erscheint es genau hier.",
+    "overdueEmpty": "Keine überfälligen Aufgaben",
+    "overdueEmptyBody": "Nichts hat sein Fälligkeitsdatum überschritten.",
+    "priorityEmpty": "Keine Prioritätsaufgaben",
+    "priorityEmptyBody": "Markiere eine Aufgabe als Priorität, dann rückt sie hierher.",
+    "scheduledEmpty": "Keine geplanten Aufgaben",
+    "scheduledEmptyBody": "Gib einer Aufgabe ein Datum, dann reiht sie sich hier ein.",
+    "allTasksEmpty": "Noch keine Aufgaben",
+    "allTasksEmptyBody": "Alles, was du hinzufügst, erscheint hier – egal an welchem Datum.",
+    "noMatchingSettings": "Keine passenden Einstellungen",
+    "noMatchingTopics": "Keine passenden Themen"
   },
   "today": {
     "saveInstance": "Instanz speichern",

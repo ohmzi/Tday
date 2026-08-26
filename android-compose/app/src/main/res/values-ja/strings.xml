@@ -8,6 +8,10 @@
     <string name="action_search">検索</string>
     <string name="action_close_search">検索を閉じる</string>
     <string name="action_clear_search">検索をクリア</string>
+    <string name="action_search_in">%1$sを検索</string>
+    <string name="search_no_results_body">別の言葉を試すか、検索をクリアしてください。</string>
+    <string name="search_no_results_settings">一致する設定はありません</string>
+    <string name="search_no_results_guide">一致するトピックはありません</string>
     <string name="action_create_task">タスクを作成</string>
     <string name="action_create_list">リストを作成</string>
     <string name="action_edit">編集</string>
@@ -256,6 +260,12 @@
     <string name="todos_empty_scheduled">予定されたタスクはありません</string>
     <string name="todos_empty_all">まだタスクはありません</string>
     <string name="todos_empty_list">このリストにタスクはありません</string>
+    <string name="todos_empty_today_body">今日のタスクを追加すると、ここに表示されます。</string>
+    <string name="todos_empty_overdue_body">期限を過ぎたタスクはありません。</string>
+    <string name="todos_empty_priority_body">タスクを優先に設定すると、ここに表示されます。</string>
+    <string name="todos_empty_scheduled_body">タスクに日付を設定すると、ここに並びます。</string>
+    <string name="todos_empty_all_body">追加したタスクは、日付に関係なくすべてここに表示されます。</string>
+    <string name="todos_empty_list_body">最初のタスクを追加すると、ここに表示されます。</string>
     <string name="car_surface_title_today">T\'Day</string>
     <string name="car_surface_title_floater">フローター</string>
     <string name="car_surface_loading">タスクを読み込み中</string>
@@ -345,6 +355,7 @@
     <!-- Completed screen -->
     <string name="completed_title">完了済み</string>
     <string name="completed_empty">まだ完了したタスクはありません</string>
+    <string name="completed_empty_body">タスクを完了すると、ここに表示されます。</string>
     <string name="completed_section_earlier">それ以前</string>
     <string name="completed_section_today">今日</string>
     <string name="completed_section_tomorrow">明日</string>
@@ -356,6 +367,7 @@
     <string name="calendar_today">今日</string>
     <string name="calendar_tasks_due">%1$s 期限のタスク</string>
     <string name="calendar_no_pending">この日に期限の未完了タスクはありません</string>
+    <string name="calendar_no_pending_body">カレンダーで別の日付を選択してください。</string>
     <string name="calendar_completed_header">完了済み:</string>
     <string name="calendar_prev_month">前の月</string>
     <string name="calendar_next_month">次の月</string>
@@ -525,6 +537,9 @@
 
     <!-- Empty state -->
     <string name="todos_empty_floater">フロータータスクはありません</string>
+    <string name="todos_empty_floater_body">フローターに期限はありません。書き留めておけば、準備ができるまで待ってくれます。</string>
+    <string name="todos_empty_floater_list">このリストにフローターはありません</string>
+    <string name="todos_empty_floater_list_body">フローターを追加すると、ここで待機します。</string>
 
     <!-- Theme mode -->
     <string name="settings_theme_system">システム</string>

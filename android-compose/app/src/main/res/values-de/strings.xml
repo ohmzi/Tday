@@ -8,6 +8,10 @@
     <string name="action_search">Suchen</string>
     <string name="action_close_search">Suche schließen</string>
     <string name="action_clear_search">Suche löschen</string>
+    <string name="action_search_in">In %1$s suchen</string>
+    <string name="search_no_results_body">Probiere ein anderes Wort oder lösche die Suche.</string>
+    <string name="search_no_results_settings">Keine passenden Einstellungen</string>
+    <string name="search_no_results_guide">Keine passenden Themen</string>
     <string name="action_create_task">Aufgabe erstellen</string>
     <string name="action_create_list">Liste erstellen</string>
     <string name="action_edit">Bearbeiten</string>
@@ -256,6 +260,12 @@
     <string name="todos_empty_scheduled">Keine geplanten Aufgaben</string>
     <string name="todos_empty_all">Noch keine Aufgaben</string>
     <string name="todos_empty_list">Keine Aufgaben in dieser Liste</string>
+    <string name="todos_empty_today_body">Füge etwas für heute hinzu, dann erscheint es genau hier.</string>
+    <string name="todos_empty_overdue_body">Nichts hat sein Fälligkeitsdatum überschritten.</string>
+    <string name="todos_empty_priority_body">Markiere eine Aufgabe als Priorität, dann rückt sie hierher.</string>
+    <string name="todos_empty_scheduled_body">Gib einer Aufgabe ein Datum, dann reiht sie sich hier ein.</string>
+    <string name="todos_empty_all_body">Alles, was du hinzufügst, erscheint hier – egal an welchem Datum.</string>
+    <string name="todos_empty_list_body">Füge deine erste Aufgabe hinzu, dann erscheint sie genau hier.</string>
     <string name="car_surface_title_today">T\'Day</string>
     <string name="car_surface_title_floater">Floater</string>
     <string name="car_surface_loading">Aufgaben werden geladen</string>
@@ -346,6 +356,7 @@
     <!-- Completed screen -->
     <string name="completed_title">Abgeschlossen</string>
     <string name="completed_empty">Noch keine abgeschlossenen Aufgaben</string>
+    <string name="completed_empty_body">Hake etwas ab, dann landet es hier.</string>
     <string name="completed_section_earlier">Früher</string>
     <string name="completed_section_today">Heute</string>
     <string name="completed_section_tomorrow">Morgen</string>
@@ -357,6 +368,7 @@
     <string name="calendar_today">Heute</string>
     <string name="calendar_tasks_due">Fällige Aufgaben %1$s</string>
     <string name="calendar_no_pending">Keine ausstehende Aufgabe für diesen Tag fällig</string>
+    <string name="calendar_no_pending_body">Wählen Sie ein anderes Datum im Kalender.</string>
     <string name="calendar_completed_header">Abgeschlossen:</string>
     <string name="calendar_prev_month">Vorheriger Monat</string>
     <string name="calendar_next_month">Nächster Monat</string>
@@ -526,6 +538,9 @@
 
     <!-- Empty state -->
     <string name="todos_empty_floater">Keine Floater-Aufgaben</string>
+    <string name="todos_empty_floater_body">Floater haben kein Fälligkeitsdatum – notiere einen, er wartet, bis du bereit bist.</string>
+    <string name="todos_empty_floater_list">Keine Floater in dieser Liste</string>
+    <string name="todos_empty_floater_list_body">Füge einen Floater hinzu, er wartet genau hier.</string>
 
     <!-- Theme mode -->
     <string name="settings_theme_system">System</string>

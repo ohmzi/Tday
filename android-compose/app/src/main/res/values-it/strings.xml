@@ -8,6 +8,10 @@
     <string name="action_search">Cerca</string>
     <string name="action_close_search">Chiudi ricerca</string>
     <string name="action_clear_search">Cancella ricerca</string>
+    <string name="action_search_in">Cerca in %1$s</string>
+    <string name="search_no_results_body">Prova un\'altra parola o cancella la ricerca.</string>
+    <string name="search_no_results_settings">Nessuna impostazione corrispondente</string>
+    <string name="search_no_results_guide">Nessun argomento corrispondente</string>
     <string name="action_create_task">Crea attività</string>
     <string name="action_create_list">Crea elenco</string>
     <string name="action_edit">Modifica</string>
@@ -256,6 +260,12 @@
     <string name="todos_empty_scheduled">Nessuna attività programmata</string>
     <string name="todos_empty_all">Ancora nessuna attività</string>
     <string name="todos_empty_list">Nessuna attività in questo elenco</string>
+    <string name="todos_empty_today_body">Aggiungi qualcosa per oggi e comparirà proprio qui.</string>
+    <string name="todos_empty_overdue_body">Niente ha superato la sua scadenza.</string>
+    <string name="todos_empty_priority_body">Segna un\'attività come prioritaria e salirà qui.</string>
+    <string name="todos_empty_scheduled_body">Dai una data a un\'attività e si metterà in fila qui.</string>
+    <string name="todos_empty_all_body">Tutto ciò che aggiungi compare qui, qualunque sia la data.</string>
+    <string name="todos_empty_list_body">Aggiungi la tua prima attività e comparirà proprio qui.</string>
     <string name="car_surface_title_today">T\'Day</string>
     <string name="car_surface_title_floater">Senza data</string>
     <string name="car_surface_loading">Caricamento attività</string>
@@ -346,6 +356,7 @@
     <!-- Completed screen -->
     <string name="completed_title">Completate</string>
     <string name="completed_empty">Ancora nessuna attività completata</string>
+    <string name="completed_empty_body">Segna qualcosa come fatto e finirà qui.</string>
     <string name="completed_section_earlier">Prima</string>
     <string name="completed_section_today">Oggi</string>
     <string name="completed_section_tomorrow">Domani</string>
@@ -357,6 +368,7 @@
     <string name="calendar_today">Oggi</string>
     <string name="calendar_tasks_due">Attività in scadenza %1$s</string>
     <string name="calendar_no_pending">Nessuna attività in sospeso per questo giorno</string>
+    <string name="calendar_no_pending_body">Seleziona un\'altra data nel calendario.</string>
     <string name="calendar_completed_header">Completate:</string>
     <string name="calendar_prev_month">Mese precedente</string>
     <string name="calendar_next_month">Mese successivo</string>
@@ -526,6 +538,9 @@
 
     <!-- Empty state -->
     <string name="todos_empty_floater">Nessuna attività flottante</string>
+    <string name="todos_empty_floater_body">I flottanti non hanno scadenza: annotane uno e aspetterà finché non sei pronto.</string>
+    <string name="todos_empty_floater_list">Nessuna attività fluttuante in questo elenco</string>
+    <string name="todos_empty_floater_list_body">Aggiungi un flottante e aspetterà proprio qui.</string>
 
     <!-- Theme mode -->
     <string name="settings_theme_system">Sistema</string>

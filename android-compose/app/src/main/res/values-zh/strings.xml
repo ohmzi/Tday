@@ -8,6 +8,10 @@
     <string name="action_search">搜索</string>
     <string name="action_close_search">关闭搜索</string>
     <string name="action_clear_search">清除搜索</string>
+    <string name="action_search_in">在%1$s中搜索</string>
+    <string name="search_no_results_body">换个词试试，或者清除搜索。</string>
+    <string name="search_no_results_settings">没有匹配的设置</string>
+    <string name="search_no_results_guide">没有匹配的主题</string>
     <string name="action_create_task">创建任务</string>
     <string name="action_create_list">创建列表</string>
     <string name="action_edit">编辑</string>
@@ -256,6 +260,12 @@
     <string name="todos_empty_scheduled">没有已安排的任务</string>
     <string name="todos_empty_all">还没有任务</string>
     <string name="todos_empty_list">此列表中没有任务</string>
+    <string name="todos_empty_today_body">添加今天要做的事，它就会出现在这里。</string>
+    <string name="todos_empty_overdue_body">没有任务超过截止日期。</string>
+    <string name="todos_empty_priority_body">把任务标记为优先，它就会移到这里。</string>
+    <string name="todos_empty_scheduled_body">给任务设置日期，它就会排在这里。</string>
+    <string name="todos_empty_all_body">你添加的所有任务都会出现在这里，无论日期。</string>
+    <string name="todos_empty_list_body">添加第一个任务，它就会出现在这里。</string>
     <string name="car_surface_title_today">T\'Day</string>
     <string name="car_surface_title_floater">浮动任务</string>
     <string name="car_surface_loading">正在加载任务</string>
@@ -345,6 +355,7 @@
     <!-- Completed screen -->
     <string name="completed_title">已完成</string>
     <string name="completed_empty">还没有已完成的任务</string>
+    <string name="completed_empty_body">完成一个任务，它就会出现在这里。</string>
     <string name="completed_section_earlier">更早</string>
     <string name="completed_section_today">今天</string>
     <string name="completed_section_tomorrow">明天</string>
@@ -356,6 +367,7 @@
     <string name="calendar_today">今天</string>
     <string name="calendar_tasks_due">%1$s 到期的任务</string>
     <string name="calendar_no_pending">这一天没有待办任务到期</string>
+    <string name="calendar_no_pending_body">在日历上选择另一个日期。</string>
     <string name="calendar_completed_header">已完成：</string>
     <string name="calendar_prev_month">上个月</string>
     <string name="calendar_next_month">下个月</string>
@@ -525,6 +537,9 @@
 
     <!-- Empty state -->
     <string name="todos_empty_floater">没有浮动任务</string>
+    <string name="todos_empty_floater_body">浮动任务没有截止日期——记下一个，它会一直等你。</string>
+    <string name="todos_empty_floater_list">此列表中没有浮动任务</string>
+    <string name="todos_empty_floater_list_body">添加一个浮动任务，它会在这里等你。</string>
 
     <!-- Theme mode -->
     <string name="settings_theme_system">跟随系统</string>

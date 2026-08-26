@@ -391,7 +391,19 @@
     "floaterEmptyBody": "フローターに期限はありません。書き留めておけば、準備ができるまで待ってくれます。",
     "floaterListEmptyBody": "フローターを追加すると、ここで待機します。",
     "noMatchingTasks": "一致するタスクはありません",
-    "searchEmptyBody": "別の言葉を試すか、検索をクリアしてください。"
+    "searchEmptyBody": "別の言葉を試すか、検索をクリアしてください。",
+    "todayEmpty": "今日のタスクはありません",
+    "todayEmptyBody": "今日のタスクを追加すると、ここに表示されます。",
+    "overdueEmpty": "期限超過のタスクはありません",
+    "overdueEmptyBody": "期限を過ぎたタスクはありません。",
+    "priorityEmpty": "優先タスクはありません",
+    "priorityEmptyBody": "タスクを優先に設定すると、ここに表示されます。",
+    "scheduledEmpty": "予定されたタスクはありません",
+    "scheduledEmptyBody": "タスクに日付を設定すると、ここに並びます。",
+    "allTasksEmpty": "まだタスクはありません",
+    "allTasksEmptyBody": "追加したタスクは、日付に関係なくすべてここに表示されます。",
+    "noMatchingSettings": "一致する設定はありません",
+    "noMatchingTopics": "一致するトピックはありません"
   },
   "today": {
     "saveInstance": "インスタンスを保存",

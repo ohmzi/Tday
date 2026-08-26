@@ -391,7 +391,19 @@
     "floaterEmptyBody": "Los flotantes no tienen fecha límite: anota uno y esperará hasta que estés listo.",
     "floaterListEmptyBody": "Añade un flotante y esperará justo aquí.",
     "noMatchingTasks": "No hay tareas que coincidan",
-    "searchEmptyBody": "Prueba con otra palabra o borra la búsqueda."
+    "searchEmptyBody": "Prueba con otra palabra o borra la búsqueda.",
+    "todayEmpty": "No hay tareas para hoy",
+    "todayEmptyBody": "Añade algo para hoy y aparecerá justo aquí.",
+    "overdueEmpty": "No hay tareas vencidas",
+    "overdueEmptyBody": "Nada ha pasado de su fecha límite.",
+    "priorityEmpty": "No hay tareas prioritarias",
+    "priorityEmptyBody": "Marca una tarea como prioridad y subirá aquí.",
+    "scheduledEmpty": "No hay tareas programadas",
+    "scheduledEmptyBody": "Dale una fecha a una tarea y se ordenará aquí.",
+    "allTasksEmpty": "Aún no hay tareas",
+    "allTasksEmptyBody": "Todo lo que añadas aparece aquí, sea cual sea su fecha.",
+    "noMatchingSettings": "No hay ajustes que coincidan",
+    "noMatchingTopics": "No hay temas que coincidan"
   },
   "today": {
     "saveInstance": "Guardar instancia",

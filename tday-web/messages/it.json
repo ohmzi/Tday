@@ -391,7 +391,19 @@
     "floaterEmptyBody": "I flottanti non hanno scadenza: annotane uno e aspetterà finché non sei pronto.",
     "floaterListEmptyBody": "Aggiungi un flottante e aspetterà proprio qui.",
     "noMatchingTasks": "Nessuna attività corrispondente",
-    "searchEmptyBody": "Prova un'altra parola o cancella la ricerca."
+    "searchEmptyBody": "Prova un'altra parola o cancella la ricerca.",
+    "todayEmpty": "Nessuna attività per oggi",
+    "todayEmptyBody": "Aggiungi qualcosa per oggi e comparirà proprio qui.",
+    "overdueEmpty": "Nessuna attività in ritardo",
+    "overdueEmptyBody": "Niente ha superato la sua scadenza.",
+    "priorityEmpty": "Nessuna attività prioritaria",
+    "priorityEmptyBody": "Segna un'attività come prioritaria e salirà qui.",
+    "scheduledEmpty": "Nessuna attività programmata",
+    "scheduledEmptyBody": "Dai una data a un'attività e si metterà in fila qui.",
+    "allTasksEmpty": "Ancora nessuna attività",
+    "allTasksEmptyBody": "Tutto ciò che aggiungi compare qui, qualunque sia la data.",
+    "noMatchingSettings": "Nessuna impostazione corrispondente",
+    "noMatchingTopics": "Nessun argomento corrispondente"
   },
   "today": {
     "saveInstance": "Salva istanza",

@@ -8,6 +8,10 @@
     <string name="action_search">Buscar</string>
     <string name="action_close_search">Cerrar búsqueda</string>
     <string name="action_clear_search">Borrar búsqueda</string>
+    <string name="action_search_in">Buscar en %1$s</string>
+    <string name="search_no_results_body">Prueba con otra palabra o borra la búsqueda.</string>
+    <string name="search_no_results_settings">No hay ajustes que coincidan</string>
+    <string name="search_no_results_guide">No hay temas que coincidan</string>
     <string name="action_create_task">Crear tarea</string>
     <string name="action_create_list">Crear lista</string>
     <string name="action_edit">Editar</string>
@@ -256,6 +260,12 @@
     <string name="todos_empty_scheduled">No hay tareas programadas</string>
     <string name="todos_empty_all">Aún no hay tareas</string>
     <string name="todos_empty_list">No hay tareas en esta lista</string>
+    <string name="todos_empty_today_body">Añade algo para hoy y aparecerá justo aquí.</string>
+    <string name="todos_empty_overdue_body">Nada ha pasado de su fecha límite.</string>
+    <string name="todos_empty_priority_body">Marca una tarea como prioridad y subirá aquí.</string>
+    <string name="todos_empty_scheduled_body">Dale una fecha a una tarea y se ordenará aquí.</string>
+    <string name="todos_empty_all_body">Todo lo que añadas aparece aquí, sea cual sea su fecha.</string>
+    <string name="todos_empty_list_body">Añade tu primera tarea y aparecerá justo aquí.</string>
     <string name="car_surface_title_today">T\'Day</string>
     <string name="car_surface_title_floater">Flotante</string>
     <string name="car_surface_loading">Cargando tareas</string>
@@ -346,6 +356,7 @@
     <!-- Completed screen -->
     <string name="completed_title">Completadas</string>
     <string name="completed_empty">Aún no hay tareas completadas</string>
+    <string name="completed_empty_body">Marca algo como hecho y aparecerá aquí.</string>
     <string name="completed_section_earlier">Antes</string>
     <string name="completed_section_today">Hoy</string>
     <string name="completed_section_tomorrow">Mañana</string>
@@ -357,6 +368,7 @@
     <string name="calendar_today">Hoy</string>
     <string name="calendar_tasks_due">Tareas que vencen %1$s</string>
     <string name="calendar_no_pending">No hay tareas pendientes para este día</string>
+    <string name="calendar_no_pending_body">Selecciona otra fecha en el calendario.</string>
     <string name="calendar_completed_header">Completadas:</string>
     <string name="calendar_prev_month">Mes anterior</string>
     <string name="calendar_next_month">Mes siguiente</string>
@@ -526,6 +538,9 @@
 
     <!-- Empty state -->
     <string name="todos_empty_floater">No hay tareas flotantes</string>
+    <string name="todos_empty_floater_body">Los flotantes no tienen fecha límite: anota uno y esperará hasta que estés listo.</string>
+    <string name="todos_empty_floater_list">No hay tareas flotantes en esta lista</string>
+    <string name="todos_empty_floater_list_body">Añade un flotante y esperará justo aquí.</string>
 
     <!-- Theme mode -->
     <string name="settings_theme_system">Sistema</string>

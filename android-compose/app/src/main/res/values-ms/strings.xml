@@ -8,6 +8,10 @@
     <string name="action_search">Cari</string>
     <string name="action_close_search">Tutup carian</string>
     <string name="action_clear_search">Kosongkan carian</string>
+    <string name="action_search_in">Cari dalam %1$s</string>
+    <string name="search_no_results_body">Cuba perkataan lain, atau kosongkan carian.</string>
+    <string name="search_no_results_settings">Tiada tetapan yang sepadan</string>
+    <string name="search_no_results_guide">Tiada topik yang sepadan</string>
     <string name="action_create_task">Cipta tugasan</string>
     <string name="action_create_list">Cipta senarai</string>
     <string name="action_edit">Edit</string>
@@ -256,6 +260,12 @@
     <string name="todos_empty_scheduled">Tiada tugasan dijadualkan</string>
     <string name="todos_empty_all">Belum ada tugasan</string>
     <string name="todos_empty_list">Tiada tugasan dalam senarai ini</string>
+    <string name="todos_empty_today_body">Tambah sesuatu untuk hari ini dan ia akan muncul di sini.</string>
+    <string name="todos_empty_overdue_body">Tiada apa-apa yang melepasi tarikh akhirnya.</string>
+    <string name="todos_empty_priority_body">Tandakan tugasan sebagai keutamaan dan ia akan naik ke sini.</string>
+    <string name="todos_empty_scheduled_body">Beri tugasan satu tarikh dan ia akan beratur di sini.</string>
+    <string name="todos_empty_all_body">Semua yang anda tambah muncul di sini, apa pun tarikhnya.</string>
+    <string name="todos_empty_list_body">Tambah tugasan pertama anda dan ia akan muncul di sini.</string>
     <string name="car_surface_title_today">T\'Day</string>
     <string name="car_surface_title_floater">Apungan</string>
     <string name="car_surface_loading">Memuatkan tugasan</string>
@@ -345,6 +355,7 @@
     <!-- Completed screen -->
     <string name="completed_title">Selesai</string>
     <string name="completed_empty">Belum ada tugasan selesai</string>
+    <string name="completed_empty_body">Tandakan sesuatu sebagai selesai dan ia akan muncul di sini.</string>
     <string name="completed_section_earlier">Lebih awal</string>
     <string name="completed_section_today">Hari ini</string>
     <string name="completed_section_tomorrow">Esok</string>
@@ -356,6 +367,7 @@
     <string name="calendar_today">Hari ini</string>
     <string name="calendar_tasks_due">Tugasan perlu disiapkan %1$s</string>
     <string name="calendar_no_pending">Tiada tugasan tertangguh untuk hari ini</string>
+    <string name="calendar_no_pending_body">Pilih tarikh lain pada kalendar.</string>
     <string name="calendar_completed_header">Selesai:</string>
     <string name="calendar_prev_month">Bulan sebelumnya</string>
     <string name="calendar_next_month">Bulan seterusnya</string>
@@ -525,6 +537,9 @@
 
     <!-- Empty state -->
     <string name="todos_empty_floater">Tiada tugasan terapung</string>
+    <string name="todos_empty_floater_body">Floater tiada tarikh akhir — catat satu dan ia akan menunggu sehingga anda bersedia.</string>
+    <string name="todos_empty_floater_list">Tiada tugas terapung dalam senarai ini</string>
+    <string name="todos_empty_floater_list_body">Tambah floater dan ia akan menunggu di sini.</string>
 
     <!-- Theme mode -->
     <string name="settings_theme_system">Sistem</string>

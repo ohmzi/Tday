@@ -391,7 +391,19 @@
     "floaterEmptyBody": "Les flottantes n'ont pas d'échéance : notez-en une, elle attendra que vous soyez prêt.",
     "floaterListEmptyBody": "Ajoutez une flottante et elle attendra ici.",
     "noMatchingTasks": "Aucune tâche correspondante",
-    "searchEmptyBody": "Essayez un autre mot ou effacez la recherche."
+    "searchEmptyBody": "Essayez un autre mot ou effacez la recherche.",
+    "todayEmpty": "Aucune tâche pour aujourd'hui",
+    "todayEmptyBody": "Ajoutez quelque chose pour aujourd'hui et cela apparaîtra ici.",
+    "overdueEmpty": "Aucune tâche en retard",
+    "overdueEmptyBody": "Rien n'a dépassé son échéance.",
+    "priorityEmpty": "Aucune tâche prioritaire",
+    "priorityEmptyBody": "Marquez une tâche comme prioritaire et elle remontera ici.",
+    "scheduledEmpty": "Aucune tâche planifiée",
+    "scheduledEmptyBody": "Donnez une date à une tâche et elle s'alignera ici.",
+    "allTasksEmpty": "Aucune tâche pour l'instant",
+    "allTasksEmptyBody": "Tout ce que vous ajoutez apparaît ici, quelle que soit sa date.",
+    "noMatchingSettings": "Aucun paramètre correspondant",
+    "noMatchingTopics": "Aucun sujet correspondant"
   },
   "today": {
     "saveInstance": "Enregistrer l'instance",
