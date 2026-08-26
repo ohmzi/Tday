@@ -66,6 +66,21 @@ Useful command-line check:
 xcodebuild test -project ios-swiftUI/TdayApp.xcodeproj -scheme Tday -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.6'
 ```
 
+## Releasing to TestFlight
+
+- `.github/workflows/ios-testflight.yml` archives the `Tday` scheme on a macOS runner and uploads
+  it to TestFlight when `release.yml` pushes a `v*` tag whose diff against the previous release
+  touched an iOS-relevant file.
+- Signing is App Store Connect API key plus Xcode automatic signing (`-allowProvisioningUpdates`);
+  there is no `match` repository and no committed certificate.
+- The lane never derives a build number — `CURRENT_PROJECT_VERSION` already equals
+  `version.json`'s `ios.buildNumber` at the tag.
+- `XcodeGen must never be run here.` `project.yml` is a mirror kept for tooling;
+  `TdayApp.xcodeproj/project.pbxproj` is the source of truth, and regenerating would discard it
+  along with the shared `Tday.xcscheme` the pipeline archives.
+- Lane and Ruby toolchain live in `ios-swiftUI/fastlane/` and `ios-swiftUI/Gemfile`. Full setup
+  checklist: `docs/DEPLOYMENT.md` § iOS TestFlight Releases.
+
 ## Persistence and Sync
 
 - SwiftData stores todos, floaters, lists, floater lists, completed records, pending mutations, and sync metadata.

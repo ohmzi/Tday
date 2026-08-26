@@ -148,6 +148,7 @@ directly.
 |----------|---------|---------|
 | `pr-gate.yml` | PR to `master` | Validates source branch (`develop` only), runs web lint + test, backend test |
 | `release.yml` | Push to `master` | Runs lint + tests, resolves the release version (auto-bumping the patch when it is already tagged), builds the signed APK and the Docker image, pushes the release commit, tags, publishes the GitHub release, and only then pushes the image |
+| `ios-testflight.yml` | Push of a `v*` tag (and `workflow_dispatch`) | Diffs the tag against the previous release; when an iOS-relevant file changed, archives the `Tday` scheme on macOS and uploads it to TestFlight |
 
 ### Test-Before-Build Policy
 
@@ -343,6 +344,170 @@ Distributable Android release builds must use the same release keystore every ti
 - `/.well-known/apple-app-site-association` is served by the backend for webcredentials/deep-link support.
 - `CFBundleShortVersionString`, `CFBundleVersion`, iOS `MARKETING_VERSION`, `CURRENT_PROJECT_VERSION`, `TdayUpdateURL`, and example `TDAY_APP_VERSION` values are synced from root `version.json` by `scripts/version.mjs sync`.
 - Set `ios.updateUrl` in `version.json` to the App Store or TestFlight URL before distributing an iOS build that should offer direct updates.
+- `Release` builds sign with `Apple Distribution` and `Debug` with `Apple Development`, set once at the project level; no target overrides either. `DEVELOPMENT_TEAM` is `THT5Z8K3TF` in the project and is overridden from CI by the `IOS_TEAM_ID` repository variable.
+
+### iOS TestFlight Releases
+
+`.github/workflows/ios-testflight.yml` archives the five iOS/watchOS bundles and uploads them to
+TestFlight. It is separate from `release.yml` on purpose: an Apple upload needs a macOS runner and
+depends on Apple-side state (App IDs, profiles, processing) that should never be able to block the
+Docker image or the Android APK.
+
+#### What ships in one archive
+
+The `Tday` scheme archives one app with four embedded bundles, so **five App IDs** and five App Store
+distribution profiles are involved:
+
+| Bundle | Identifier | Capabilities |
+|---|---|---|
+| App | `com.ohmz.tday.ios` | App Groups `group.com.ohmz.tday`, Associated Domains `webcredentials:tday.ohmz.cloud` |
+| Widget extension | `com.ohmz.tday.ios.TdayTasksWidget` | App Groups `group.com.ohmz.tday` |
+| Share extension | `com.ohmz.tday.ios.TdayShareExtension` | App Groups `group.com.ohmz.tday` |
+| Watch app | `com.ohmz.tday.ios.watchkitapp` | App Groups `group.com.ohmz.tday` |
+| Watch complication | `com.ohmz.tday.ios.watchkitapp.widget` | App Groups `group.com.ohmz.tday` |
+
+`TdayTests` is a unit-test bundle; it is not archived and needs no App ID. There is no push, no
+iCloud, no Sign in with Apple, no HealthKit, and no keychain sharing.
+
+#### Trigger and path filter
+
+The workflow fires on **`push` of a `v*` tag**. `release.yml` pushes that tag over
+`RELEASE_DEPLOY_KEY`, and deploy-key pushes trigger workflows (unlike `GITHUB_TOKEN`-produced
+events, which is why an `on: release: [published]` trigger would never fire at all). At the tag,
+`version.json` is authoritative and the pbxproj's `CURRENT_PROJECT_VERSION` already equals
+`ios.buildNumber` — **the pipeline never derives or increments a build number.**
+
+A cheap `decide` job on Linux gates the expensive macOS job. It:
+
+1. refuses any tag whose name disagrees with `version.json` at that commit (this is what stops the
+   45 legacy `v1.x` tags from ever building, so the trigger pattern can stay a simple `v*`);
+2. runs `node scripts/version.mjs check`, so a drifted mirror fails before an archive starts;
+3. resolves the previous release with `git describe --tags --abbrev=0 --match 'v*' <sha>^` — the
+   *nearest reachable* tag, not the highest-numbered one, because the legacy `v1.x` tags sort above
+   the current `0.x` line;
+4. runs `scripts/ios-release-changed.mjs` to diff the two tags.
+
+That diff cannot be a `paths:` filter — `on: push: tags:` does not accept one. It also cannot be a
+naive "did `ios-swiftUI/` change", because **every** release commit rewrites `Info.plist`,
+`project.yml`, `project.pbxproj` and all ten `guide.*.json` files with new version numbers. So the
+script compares those specific files with the version tokens normalised away: a file whose *only*
+difference is the release bump does not count, while any other edit to that same file does.
+`version.json` is excluded from the relevant set entirely, since `ios.buildNumber` increments on
+every release. A `workflow_dispatch` run with `force` bypasses the filter.
+
+#### Signing model
+
+App Store Connect API key (`.p8`) plus Xcode automatic ("cloud") signing via
+`-allowProvisioningUpdates` — **not** `fastlane match`. No certificates are committed and no
+keychain is provisioned; Xcode registers the App IDs and mints the five distribution profiles on
+demand, authenticating with the same key that authorises the upload.
+
+The `.p8` is written `0600` under `RUNNER_TEMP`, which is outside the checked-out workspace, and
+deleted in an `ensure` block. It is never written into the repository, the `.ipa`, or a workflow
+artifact — the `.ipa` is deliberately not uploaded as an artifact at all.
+
+#### Re-run safety
+
+Re-running the workflow on the same tag would re-upload an identical `(version, buildNumber)` pair,
+which App Store Connect rejects. The `beta` lane therefore asks `latest_testflight_build_number` what
+TestFlight already holds for the current marketing version and exits cleanly when this build is
+already there. The upload is also the **last** step in the lane, so anything that can fail has
+already failed before a byte is sent.
+
+#### Export compliance
+
+`Tday/Info.plist` declares `ITSAppUsesNonExemptEncryption = false`. Without it, every upload parks at
+"Missing Compliance" awaiting a manual answer — and because the lane sets
+`skip_waiting_for_build_processing: true` (App Store Connect processing takes 10-30 minutes and
+would bill macOS runner minutes for a result nothing consumes), fastlane never gets a chance to
+answer that question after the fact. The key is what makes skipping the wait safe.
+
+T'Day's cryptography is AES-256-GCM and RSA-2048 OAEP wrapping sign-in credentials
+(`CredentialEnvelope.swift`), AES-256-GCM decrypting the server compatibility probe
+(`ProbeDecryptor.swift`), SHA-256 hashing, and HTTPS/TLS — all of it Apple's OS-provided CryptoKit
+and Security framework, with no cipher implemented in the app and no third-party crypto library
+bundled. The declaration rests on the encryption being limited to authentication and to standard
+operating-system cryptography; the "short key length" exemption does **not** apply, because AES-256
+and RSA-2048 exceed the 56-bit/512-bit threshold.
+
+> **This is a legal export declaration, not a build setting.** The Apple account holder must confirm
+> it before the first upload. The reasoning is restated in a comment above the key in `Info.plist`.
+
+#### Secrets and variables
+
+| Name | Kind | Purpose |
+|---|---|---|
+| `ASC_KEY_ID` | secret | 10-character App Store Connect API Key ID |
+| `ASC_ISSUER_ID` | secret | Issuer UUID shown above the key list |
+| `ASC_KEY_P8_BASE64` | secret | base64 of the `.p8` Apple lets you download exactly once |
+| `IOS_TEAM_ID` | **variable** | Apple Team ID (`THT5Z8K3TF`). Not a secret — it is printed on every provisioning profile |
+| `IOS_XCODE_VERSION` | **variable** | Optional Xcode pin, e.g. `16.4`. Unset, the job warns and uses the runner default |
+
+The macOS job fails on the **first** step with an actionable message if any of the three secrets is
+missing, rather than 40 minutes later inside `xcodebuild`. No secret is ever echoed; only emptiness
+is tested.
+
+#### One-time setup (Apple account holder only)
+
+The App Store Connect app record already exists — bundle `com.ohmz.tday.ios`, Apple ID
+`6772349115`, name "Tday". Do not create another. Everything below is on the Apple side or in
+repository settings, and cannot be done from a pull request.
+
+1. **Register the five App IDs** at
+   [developer.apple.com → Certificates, Identifiers & Profiles → Identifiers](https://developer.apple.com/account/resources/identifiers/list).
+   Create an App ID for each identifier in the table above.
+2. **Create the App Group** `group.com.ohmz.tday` (Identifiers → App Groups), then enable the **App
+   Groups** capability on all five App IDs and assign that group to each.
+3. **Enable Associated Domains** on `com.ohmz.tday.ios` only.
+4. **Mint an App Store Connect API key**: App Store Connect → Users and Access → Integrations → App
+   Store Connect API → Team Keys → `+`. Give it the **App Manager** role — `Developer` cannot upload
+   builds, and `Admin` is more access than the pipeline needs. Download the `.p8` immediately;
+   Apple only offers it once.
+5. **Set the repository secrets and variables** (from the repo root):
+
+   ```bash
+   gh secret set ASC_KEY_ID        --body "XXXXXXXXXX"
+   gh secret set ASC_ISSUER_ID     --body "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+   gh secret set ASC_KEY_P8_BASE64 --body "$(base64 -w0 ~/Downloads/AuthKey_XXXXXXXXXX.p8)"
+   #   on macOS the flag is different:
+   #   gh secret set ASC_KEY_P8_BASE64 --body "$(base64 -i ~/Downloads/AuthKey_XXXXXXXXXX.p8)"
+
+   gh variable set IOS_TEAM_ID --body "THT5Z8K3TF"
+   ```
+
+6. **Pin Xcode** once you have seen a run log (the "Select Xcode" step prints every version
+   installed on the runner):
+
+   ```bash
+   gh variable set IOS_XCODE_VERSION --body "16.4"   # use a version the log actually lists
+   ```
+
+7. **Confirm the export-compliance declaration** described above.
+8. **Create the TestFlight group and public link**: App Store Connect → TestFlight → Groups → `+`.
+   Enable **Public Link** and, if you want testers to get builds without per-build action, turn on
+   automatic distribution for the group.
+9. **Set `ios.updateUrl`** once that public link exists. It is `""` today, so
+   `AppViewModel.bundleUpdateURL()` returns `nil` and both in-app update surfaces render an
+   explanatory sentence with no button. Edit `version.json`, then:
+
+   ```bash
+   node scripts/version.mjs sync && node scripts/version.mjs check
+   ```
+
+   Never hand-edit the mirrored values — `Info.plist`, `project.yml` and the pbxproj are generated
+   from `version.json`.
+
+#### Building it locally
+
+```bash
+cd ios-swiftUI
+bundle install
+ASC_KEY_ID=... ASC_ISSUER_ID=... ASC_KEY_P8_BASE64=... bundle exec fastlane beta
+```
+
+There is deliberately **no committed `Gemfile.lock`** — see the comment in `ios-swiftUI/Gemfile`.
+To add one, run `bundle lock --add-platform arm64-darwin --add-platform x86_64-darwin` on a machine
+with Ruby and commit the result; the workflow picks it up with no change.
 
 ## Configuration
 
