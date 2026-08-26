@@ -1,0 +1,357 @@
+# iOS TestFlight lane for T'Day.
+#
+# Signing model: App Store Connect API key (.p8) + Xcode automatic ("cloud") signing driven by
+# `-allowProvisioningUpdates`. No `match`, no committed certificates, no keychain juggling —
+# Xcode mints and renews the five App Store distribution profiles itself, authenticating with
+# the same API key that authorises the upload. The five App IDs and the `group.com.ohmz.tday`
+# App Group must already exist in the Developer portal; see docs/DEPLOYMENT.md § One-time setup.
+#
+# Versioning: root `version.json` is the only source of truth. `scripts/version.mjs sync` has
+# already mirrored it into the pbxproj as MARKETING_VERSION / CURRENT_PROJECT_VERSION by the
+# time the release tag is cut, so this lane never derives, computes or increments a build
+# number — no `increment_build_number` anywhere. It reads the manifest purely to answer one
+# question: "is this exact build already on TestFlight?"
+
+require "json"
+require "shellwords"
+require "tmpdir"
+
+min_fastlane_version("2.228.0")
+default_platform(:ios)
+
+# Privacy-first repo: no anonymous usage metrics to fastlane's servers.
+opt_out_usage
+
+SCHEME = "Tday".freeze
+CONFIGURATION = "Release".freeze
+DEFAULT_TEAM_ID = "THT5Z8K3TF".freeze
+DEFAULT_BUNDLE_ID = "com.ohmz.tday.ios".freeze
+
+# base64 (standard or URL-safe) with optional padding. Anything outside this alphabet is not a
+# key this app can decode, and `/` in particular has to be rejected before it reaches an
+# xcconfig, where a `//` sequence starts a comment and would silently truncate the value.
+PROBE_KEY_SHAPE = %r{\A[A-Za-z0-9+/=_-]+\z}
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+# fastlane's working directory depends on how it was invoked, so the repository root is located
+# explicitly rather than inferred. CI passes GITHUB_WORKSPACE through TDAY_REPO_ROOT; the
+# walk-up is the local-developer fallback.
+def repo_root
+  explicit = ENV["TDAY_REPO_ROOT"].to_s
+  return explicit unless explicit.empty?
+
+  dir = Dir.pwd
+  8.times do
+    return dir if File.exist?(File.join(dir, "version.json"))
+
+    parent = File.dirname(dir)
+    break if parent == dir
+
+    dir = parent
+  end
+
+  UI.user_error!("Could not locate the T'Day repository root (no version.json at or above #{Dir.pwd}).")
+end
+
+def tday_manifest
+  JSON.parse(File.read(File.join(repo_root, "version.json")))
+end
+
+# An environment variable set to the empty string is unset as far as this lane is concerned.
+# GitHub Actions writes `FOO: ${{ vars.MISSING }}` as "", and Ruby's `||` treats "" as present —
+# which would hand gym an empty output_directory and scatter the .ipa into the checkout.
+def env_or(name, fallback)
+  value = ENV[name].to_s.strip
+  value.empty? ? fallback : value
+end
+
+def required_env(name, hint)
+  value = ENV[name].to_s.strip
+  return value unless value.empty?
+
+  UI.user_error!("Missing required environment variable #{name}. #{hint}")
+end
+
+# Decodes the base64 secret in memory. The key itself is never logged — only its shape is
+# checked, and the failure message describes the *encoding* rather than echoing any content.
+def decode_private_key(encoded)
+  pem = encoded.unpack1("m").to_s
+  unless pem.include?("BEGIN PRIVATE KEY")
+    UI.user_error!(
+      "ASC_KEY_P8_BASE64 did not decode to a PKCS#8 private key. Re-encode the .p8 with " \
+      "`base64 -i AuthKey_XXXXXXXXXX.p8 | pbcopy` (macOS) or `base64 -w0 AuthKey_XXXXXXXXXX.p8` (Linux)."
+    )
+  end
+  pem
+end
+
+# xcodebuild's `-authenticationKeyPath` takes a path, so `-allowProvisioningUpdates` cannot work
+# from an in-memory key — the .p8 has to touch disk. It is written 0600 into RUNNER_TEMP, which
+# sits OUTSIDE the checked-out workspace, so it can never be picked up by `git add`, swept into
+# the .ipa, or collected by actions/upload-artifact. The caller deletes it in an `ensure`.
+def write_private_key(key_id, pem)
+  path = File.join(scratch_dir, "AuthKey_#{key_id}.p8")
+  File.open(path, File::WRONLY | File::CREAT | File::TRUNC, 0o600) { |file| file.write(pem) }
+  path
+end
+
+# RUNNER_TEMP on CI, the OS temp dir locally. Never the workspace.
+def scratch_dir
+  root = ENV["RUNNER_TEMP"].to_s
+  root.empty? || !File.directory?(root) ? Dir.tmpdir : root
+end
+
+# `Tday/Info.plist` publishes `TdayProbeEncryptionKey` as `$(TDAY_PROBE_ENCRYPTION_KEY)`, and an
+# undefined build setting expands to the empty string — which makes `ProbeDecryptor` return nil
+# and silently disables the whole server version-compatibility gate. The value is passed through
+# a temporary xcconfig rather than `xcargs` on purpose: gym echoes the assembled xcodebuild
+# command into the build log, and xcargs would put the secret in it.
+def write_build_settings_xcconfig(probe_setting) # skipcq: SCT-A000
+  path = File.join(scratch_dir, "tday-build-settings.xcconfig")
+  File.open(path, File::WRONLY | File::CREAT | File::TRUNC, 0o600) do |file|
+    file.write("TDAY_PROBE_ENCRYPTION_KEY = #{probe_setting}\n") # skipcq: SCT-A000
+  end
+  path
+end
+
+# Asks App Store Connect what state it is holding this exact (marketing version, build number)
+# pair in, so a skip can say *why* it is skipping. Returns nil when it cannot tell.
+#
+# Deliberately rescued: this is diagnostics. Spaceship's private API surface moves between
+# fastlane releases and a signature change here must not be able to take a release down. When it
+# cannot answer, the caller degrades to the same conservative skip it did before.
+def testflight_processing_state(key_id, issuer_id, pem, bundle_id, marketing_version, build_number)
+  require "spaceship"
+
+  Spaceship::ConnectAPI.token = Spaceship::ConnectAPI::Token.create(
+    key_id: key_id,
+    issuer_id: issuer_id,
+    key: pem
+  )
+
+  app = Spaceship::ConnectAPI::App.find(bundle_id)
+  return nil if app.nil?
+
+  builds = Spaceship::ConnectAPI::Build.all(app_id: app.id, sort: "-uploadedDate", limit: 100)
+  match = Array(builds).find do |build|
+    build.version.to_s == build_number.to_s &&
+      build_marketing_version(build).to_s == marketing_version.to_s
+  end
+  return nil if match.nil?
+
+  match.processing_state.to_s
+rescue StandardError => e
+  UI.important("Could not read the App Store Connect processing state (#{e.class}: #{e.message}).")
+  nil
+end
+
+# `Build#app_version` is the friendly accessor, but it is not present on every fastlane version;
+# the preReleaseVersion association is the underlying source. Returns nil when neither answers,
+# which the caller treats as "cannot confirm" rather than "no match".
+def build_marketing_version(build)
+  return build.app_version if build.respond_to?(:app_version) && build.app_version
+
+  pre_release = build.pre_release_version if build.respond_to?(:pre_release_version)
+  pre_release&.version
+end
+
+# ---------------------------------------------------------------------------
+# Lanes
+# ---------------------------------------------------------------------------
+
+platform :ios do
+  desc "Archive the Tday scheme and upload it to TestFlight (skips cleanly if already uploaded)"
+  lane :beta do
+    manifest = tday_manifest
+    marketing_version = manifest.fetch("version")
+    build_number = Integer(manifest.fetch("ios").fetch("buildNumber"))
+
+    team_id = env_or("IOS_TEAM_ID", DEFAULT_TEAM_ID)
+    bundle_id = env_or("IOS_APP_IDENTIFIER", DEFAULT_BUNDLE_ID)
+    skip_upload = ENV["TDAY_SKIP_UPLOAD"].to_s.strip.casecmp("true").zero?
+
+    key_id = required_env(
+      "ASC_KEY_ID",
+      "It is the 10-character Key ID of the App Store Connect API key " \
+      "(App Store Connect -> Users and Access -> Integrations -> App Store Connect API)."
+    )
+    unless key_id.match?(/\A[A-Za-z0-9]+\z/)
+      UI.user_error!("ASC_KEY_ID must be alphanumeric — got a #{key_id.length}-character value that is not.")
+    end
+
+    issuer_id = required_env(
+      "ASC_ISSUER_ID",
+      "It is the UUID shown above the key list on that same App Store Connect page."
+    )
+    encoded_key = required_env( # skipcq: SCT-A000 — read from ENV; nothing is hardcoded here.
+      "ASC_KEY_P8_BASE64",
+      "It is the base64 of the .p8 file Apple let you download exactly once when the key was created."
+    )
+
+    pem = decode_private_key(encoded_key)
+    key_path = write_private_key(key_id, pem)
+
+    # Not fatal: a local `fastlane beta` should not need the production probe key. CI enforces
+    # its presence in the `decide` job instead, so a real release cannot ship without it.
+    probe_setting = ENV["TDAY_PROBE_ENCRYPTION_KEY"].to_s.strip # skipcq: SCT-A000
+    xcconfig_path = nil
+    if probe_setting.empty?
+      UI.important(
+        "TDAY_PROBE_ENCRYPTION_KEY is not set. TdayProbeEncryptionKey will ship empty, " \
+        "ProbeDecryptor will return nil, and the server version-compatibility gate will be " \
+        "inert in this build."
+      )
+    elsif !probe_setting.match?(PROBE_KEY_SHAPE) || probe_setting.include?("//")
+      UI.user_error!(
+        "TDAY_PROBE_ENCRYPTION_KEY is not base64-shaped (or contains `//`, which starts a " \
+        "comment in an xcconfig). Re-check the secret; its value is not printed here."
+      )
+    else
+      xcconfig_path = write_build_settings_xcconfig(probe_setting)
+    end
+
+    begin
+      api_key = app_store_connect_api_key( # skipcq: SCT-A000 — every value comes from ENV above.
+        key_id: key_id,
+        issuer_id: issuer_id,
+        key_filepath: key_path,
+        # Enterprise ("in-house") distribution is a different Apple programme entirely. This is
+        # a regular Apple Developer Program account shipping through TestFlight.
+        in_house: false
+      )
+
+      UI.message("version.json says v#{marketing_version} build #{build_number} for #{bundle_id}.")
+
+      # Re-running this workflow on the same tag would otherwise re-archive and re-upload an
+      # identical (version, build number) pair, which App Store Connect rejects outright with
+      # "The bundle version must be higher than the previously uploaded version". Asking
+      # TestFlight what it already holds turns that failure into a clean, green no-op.
+      latest_uploaded = latest_testflight_build_number(
+        api_key: api_key,
+        app_identifier: bundle_id,
+        version: marketing_version,
+        platform: "ios",
+        # Without this, fastlane raises when the version has no builds yet — which is exactly
+        # the state of the very first upload.
+        initial_build_number: 0
+      ).to_i
+
+      if latest_uploaded >= build_number
+        # A build number is consumed the moment App Store Connect accepts the upload — even if
+        # processing then FAILS. So "already taken" does NOT imply "testers can install it",
+        # and re-uploading is not a recovery path: Apple rejects the duplicate either way. The
+        # only fix for a failed build is a new build number, i.e. a version.json bump. Say so.
+        state = testflight_processing_state(key_id, issuer_id, pem, bundle_id, marketing_version, build_number)
+
+        if %w[FAILED INVALID].include?(state)
+          UI.user_error!(
+            "v#{marketing_version} build #{build_number} was already uploaded and App Store " \
+            "Connect marked it #{state}. That build number is spent — re-uploading it will be " \
+            "rejected. Bump the release (`node scripts/version.mjs bump patch`) and cut a new " \
+            "tag. Check the ASC build page for the processing error before you do."
+          )
+        end
+
+        UI.important(
+          "TestFlight already holds build #{latest_uploaded} for v#{marketing_version} " \
+          "(processing state: #{state || 'unknown'}); this run would upload #{build_number}."
+        )
+        UI.important(
+          "Nothing was uploaded. If this build is NOT visible in TestFlight, it failed " \
+          "processing — the build number is spent and a version bump is required."
+        )
+        next
+      end
+
+      # `-allowProvisioningUpdates` lets Xcode mint and renew the five App Store profiles on
+      # demand against App IDs and an App Group that already exist (see docs/DEPLOYMENT.md §
+      # One-time setup — it does not create the App Group). On a runner with no signed-in Xcode
+      # account it can only reach the Developer portal if it is handed the same API key, hence
+      # the -authentication* trio.
+      auth_args = [
+        "-allowProvisioningUpdates",
+        "-authenticationKeyPath", key_path.shellescape,
+        "-authenticationKeyID", key_id.shellescape,
+        "-authenticationKeyIssuerID", issuer_id.shellescape
+      ].join(" ")
+
+      build_options = {
+        project: File.join(repo_root, "ios-swiftUI", "TdayApp.xcodeproj"),
+        scheme: SCHEME,
+        configuration: CONFIGURATION,
+        export_method: "app-store",
+        export_team_id: team_id,
+        # DEVELOPMENT_TEAM passed as a command-line build setting outranks both the project-
+        # and target-level values, so every one of the five bundles is signed by the same team
+        # and moving to a different Apple account is a repository-variable change rather than a
+        # pbxproj edit.
+        xcargs: "#{auth_args} DEVELOPMENT_TEAM=#{team_id.shellescape}",
+        # Yes, `auth_args` appears twice. gym documents `xcargs` as "the build phase" and
+        # `export_xcargs` as "the package phase", and the export is where automatic signing
+        # actually resolves the Apple Distribution identity and the App Store profiles — so it
+        # needs the auth flags whether or not gym also forwards `xcargs` there. If it does
+        # forward them, the duplication is inert: repeated value options take the last
+        # occurrence and both copies are identical. Dropping this line to remove the apparent
+        # redundancy would risk an unsigned export; keeping it costs nothing.
+        export_xcargs: auth_args,
+        export_options: {
+          signingStyle: "automatic",
+          destination: "export",
+          # Load-bearing. Left at Apple's default, the export step is allowed to rewrite
+          # CFBundleVersion, which would silently desynchronise the uploaded build from
+          # version.json — and therefore from the duplicate check above.
+          manageAppVersionAndBuildNumber: false
+        },
+        cloned_source_packages_path: env_or("IOS_SPM_CACHE_PATH", File.join(repo_root, "ios-swiftUI", ".spm-cache")),
+        output_directory: env_or("IOS_OUTPUT_DIR", File.join(repo_root, "ios-swiftUI", "build")),
+        output_name: "Tday-#{marketing_version}-#{build_number}.ipa"
+      }
+      build_options[:xcconfig] = xcconfig_path if xcconfig_path
+
+      ipa_path = build_app(build_options)
+
+      if skip_upload
+        UI.success(
+          "Dry run (TDAY_SKIP_UPLOAD=true): archived and exported v#{marketing_version} " \
+          "(#{build_number}) without uploading. Signing, profiles and export all worked."
+        )
+        next
+      end
+
+      # Deliberately the last thing the lane does. Everything that can fail — resolving SPM,
+      # compiling five targets, minting profiles, exporting the .ipa — has already either
+      # succeeded or aborted the run, so a re-run after a failure cannot leave a duplicate
+      # upload behind.
+      #
+      # skip_waiting_for_build_processing: App Store Connect processing routinely takes 10-30
+      # minutes and would bill macOS runner minutes (10x the Linux rate) for a result nothing
+      # downstream consumes; worse, a timeout while waiting would turn an upload that already
+      # succeeded into a red run, tempting exactly the re-run that hits the duplicate rejection.
+      # The cost of not waiting is that a processing failure is invisible until someone looks —
+      # which is what the FAILED/INVALID check above exists to surface on the next run.
+      #
+      # This flag is only safe because the app declares ITSAppUsesNonExemptEncryption in
+      # Tday/Info.plist. Not waiting means fastlane never gets a chance to answer the
+      # export-compliance question after the fact, so without that key every build would park
+      # at "Missing Compliance" forever. See docs/DEPLOYMENT.md § Export compliance.
+      upload_to_testflight(
+        api_key: api_key,
+        app_identifier: bundle_id,
+        ipa: ipa_path,
+        skip_waiting_for_build_processing: true
+      )
+
+      UI.success("Uploaded v#{marketing_version} (#{build_number}) to TestFlight.")
+      UI.important(
+        "Upload accepted, processing NOT waited on. Confirm the build reaches 'Ready to " \
+        "Submit' in App Store Connect — a processing failure will not show up here."
+      )
+    ensure
+      File.delete(key_path) if key_path && File.exist?(key_path)
+      File.delete(xcconfig_path) if xcconfig_path && File.exist?(xcconfig_path)
+    end
+  end
+end
