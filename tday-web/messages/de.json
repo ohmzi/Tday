@@ -1255,6 +1255,13 @@
         "step0": "Öffne die Watch-App auf dem iPhone und installiere T'Day.",
         "step1": "Füge die T'Day-Komplikation zu deinem Zifferblatt hinzu.",
         "step2": "Wirf einen Blick auf die Anzahl oder öffne die App für die vollständige Liste."
+      },
+      "notifications": {
+        "title": "Benachrichtigungen",
+        "summary": "Ein Schalter entscheidet, ob T'Day dich überhaupt unterbrechen darf.",
+        "keywords": "benachrichtigungen, berechtigung, schalter, erlauben, stumm, stummschalten, erinnerung, übersicht, systemeinstellungen",
+        "body": "In den Einstellungen gibt es einen einzigen Schalter für Benachrichtigungen, und alles, was dich erreicht, läuft darüber — Aufgabenerinnerungen und die Tagesvorschau. Ausschalten leert die Warteschlange, statt sie nur stummzuschalten: Beim Wiedereinschalten kommt also nichts verspätet an. Zusätzlich wird die Systemberechtigung gebraucht: Solange Benachrichtigungen für T'Day auf deinem Gerät blockiert sind, bleibt der Schalter aus und bietet an, die Systemeinstellungen zu öffnen.",
+        "tip": "Beide Hälften müssen an sein. Fehlt die Systemberechtigung, zeigt der Schalter Aus — egal, wie du ihn hier hinterlassen hast."
       }
     }
   },

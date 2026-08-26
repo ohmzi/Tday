@@ -639,6 +639,7 @@
     <string name="settings_account_security_questions_updated">Domande di sicurezza aggiornate</string>
     <string name="summary_source_local">Modello locale</string>
     <string name="summary_source_server">Modello del server</string>
+    <string name="settings_help_guide">Guida e consigli</string>
     <string name="settings_data_title">I tuoi dati</string>
     <string name="settings_data_summary">%1$d attività · %2$d liste · %3$d completate</string>
     <string name="settings_data_download">Scarica i miei dati</string>
@@ -662,6 +663,8 @@
     <string name="settings_quiet_hours_start">Inizio</string>
     <string name="settings_quiet_hours_end">Fine</string>
     <string name="settings_resting_floaters">Sbiadisci i floater a riposo</string>
+    <string name="settings_calendar_sync">Aggiungi le attività pianificate al mio calendario</string>
+    <string name="settings_privacy">Privacy</string>
     <string name="root_feed_search_scheduled">Cerca attività pianificate</string>
     <string name="root_feed_search_floater">Cerca attività fluttuanti</string>
 </resources>

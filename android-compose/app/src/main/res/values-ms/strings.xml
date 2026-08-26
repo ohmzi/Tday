@@ -638,6 +638,7 @@
     <string name="settings_account_security_questions_updated">Soalan keselamatan dikemas kini</string>
     <string name="summary_source_local">Model setempat</string>
     <string name="summary_source_server">Model pelayan</string>
+    <string name="settings_help_guide">Panduan &amp; Petua</string>
     <string name="settings_data_title">Data anda</string>
     <string name="settings_data_summary">%1$d tugasan · %2$d senarai · %3$d selesai</string>
     <string name="settings_data_download">Muat turun data saya</string>
@@ -661,6 +662,8 @@
     <string name="settings_quiet_hours_start">Mula</string>
     <string name="settings_quiet_hours_end">Tamat</string>
     <string name="settings_resting_floaters">Pudarkan floater berehat</string>
+    <string name="settings_calendar_sync">Tambah tugasan berjadual ke kalendar saya</string>
+    <string name="settings_privacy">Privasi</string>
     <string name="root_feed_search_scheduled">Cari tugasan berjadual</string>
     <string name="root_feed_search_floater">Cari tugasan terapung</string>
 </resources>

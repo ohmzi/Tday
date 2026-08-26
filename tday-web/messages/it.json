@@ -1255,6 +1255,13 @@
         "step0": "Apri l'app Watch su iPhone e installa T'Day.",
         "step1": "Aggiungi la complicazione T'Day al tuo quadrante.",
         "step2": "Dai un'occhiata al conteggio, o apri l'app per la lista completa."
+      },
+      "notifications": {
+        "title": "Notifiche",
+        "summary": "Un solo interruttore decide se T'Day può interromperti.",
+        "keywords": "notifiche, permesso, interruttore, consentire, silenziare, promemoria, riepilogo, impostazioni di sistema",
+        "body": "Nelle Impostazioni c'è un unico interruttore Notifiche, e tutto ciò che ti raggiunge passa da lì: i promemoria delle attività e il riepilogo del giorno dopo. Spegnerlo svuota la coda invece di silenziarla, così quando lo riaccendi non arriva nulla in ritardo. Serve anche il permesso di sistema: finché le notifiche sono bloccate per T'Day sul tuo dispositivo l'interruttore resta spento e propone di aprire le impostazioni di sistema.",
+        "tip": "Devono essere attive entrambe le metà. Se manca il permesso di sistema l'interruttore risulta spento, comunque tu l'abbia lasciato qui."
       }
     }
   },
