@@ -1,4 +1,4 @@
-import { Outlet } from "react-router-dom";
+import RouteFade from "@/components/app/RouteFade";
 import { useIsLocalMode } from "@/hooks/useAppMode";
 import { MenuProvider } from "@/providers/MenuProvider";
 import { UserPreferencesProvider } from "@/providers/UserPreferencesProvider";
@@ -23,7 +23,7 @@ export default function AppLayout() {
             <NativeAppShell>
               <div className="relative z-0 flex min-w-0 flex-1 flex-col overflow-hidden">
                 <ReleaseUpdateAnnouncer />
-                <Outlet />
+                <RouteFade />
               </div>
             </NativeAppShell>
           </CreateFloaterProvider>
