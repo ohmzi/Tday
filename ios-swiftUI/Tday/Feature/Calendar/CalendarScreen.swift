@@ -476,6 +476,11 @@ struct CalendarScreen: View {
         } message: {
             Text("Choose whether to move only this task occurrence or the entire repeating series.")
         }
+        // Same bargain as the task timeline: the only field on this screen is the
+        // search box in the top safe-area inset, which the keyboard cannot reach,
+        // so keyboard avoidance had nothing to protect and only shortened the
+        // month's region — carrying the centred empty scene up with it.
+        .ignoresSafeArea(.keyboard, edges: .bottom)
     }
 
     private var calendarTopInset: some View {

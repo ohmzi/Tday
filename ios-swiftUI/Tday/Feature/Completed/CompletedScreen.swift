@@ -173,6 +173,11 @@ struct CompletedScreen: View {
                     }
                 )
             }
+            // Same bargain as the task timeline: the only field on this screen is
+            // the search box in the top safe-area inset, which the keyboard cannot
+            // reach, so keyboard avoidance had nothing to protect and only shortened
+            // the history's region — carrying the centred empty scene up with it.
+            .ignoresSafeArea(.keyboard, edges: .bottom)
     }
 
     private var completedTimelineContent: some View {
