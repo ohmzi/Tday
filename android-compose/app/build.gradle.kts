@@ -38,9 +38,56 @@ val projectVersion: String by lazy {
     match?.groupValues?.get(1) ?: error("Could not read version from version.json")
 }
 
+// Android refuses to install an update whose versionCode is not strictly greater
+// than the installed one, so this encoding has to be strictly increasing in
+// (major, minor, patch). The previous `major * 10000 + minor * 100 + patch` was
+// not: 0.7.100 and 0.8.0 both encoded to 800. release.yml bumps the patch on
+// every merge to master, so three-digit patch numbers are reachable rather than
+// theoretical, and a collision would silently stop the in-app APK updater.
+//
+// Every component now owns its own decimal slot — <major><minor:3><patch:4> —
+// so 0.7.2 -> 70_002 and 1.44.0 -> 10_440_000. The slot widths are asserted
+// below because a component that overflows its slot collides with the next slot
+// up, which is exactly the bug this replaces.
+val versionCodePatchSlot = 10_000 // patch owns 4 decimal digits: 0..9_999
+val versionCodeMinorSlot = 1_000 // minor owns 3 decimal digits: 0..999
+val versionCodeMajorScale = versionCodePatchSlot * versionCodeMinorSlot // 10_000_000
+
+// versionCode is a signed 32-bit int and Play caps it at 2_100_000_000. With the
+// slots above that still leaves room for major versions up to 209.
+val versionCodeCeiling = 2_100_000_000
+
+// The highest versionCode this project ever produced is 14_400, from the legacy
+// v1.44.0 tag under the old formula. Anything at or below that could not install
+// over an already-shipped APK, so fail the build rather than ship a dud update.
+val highestShippedVersionCode = 14_400
+
 val projectVersionCode: Int by lazy {
-    val (major, minor, patch) = projectVersion.split(".").map { it.toInt() }
-    major * 10000 + minor * 100 + patch
+    val parts = projectVersion.split(".")
+    require(parts.size == 3) {
+        "version.json version must be major.minor.patch, got '$projectVersion'"
+    }
+    val (major, minor, patch) = parts.map { it.toInt() }
+    require(minor in 0 until versionCodeMinorSlot) {
+        "version.json minor $minor overflows its versionCode slot " +
+            "(max ${versionCodeMinorSlot - 1}); widen the slots in app/build.gradle.kts"
+    }
+    require(patch in 0 until versionCodePatchSlot) {
+        "version.json patch $patch overflows its versionCode slot " +
+            "(max ${versionCodePatchSlot - 1}); widen the slots in app/build.gradle.kts"
+    }
+
+    val code = major.toLong() * versionCodeMajorScale +
+        minor.toLong() * versionCodePatchSlot +
+        patch.toLong()
+    require(code <= versionCodeCeiling) {
+        "versionCode $code for $projectVersion exceeds Android's $versionCodeCeiling ceiling"
+    }
+    require(code > highestShippedVersionCode) {
+        "versionCode $code for $projectVersion is not above the highest already-shipped " +
+            "$highestShippedVersionCode; Android would reject the update"
+    }
+    code.toInt()
 }
 
 val releaseKeystorePath = System.getenv("RELEASE_KEYSTORE_PATH")

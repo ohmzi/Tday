@@ -269,6 +269,76 @@ describe("dependency and configuration hygiene", () => {
       }
     });
 
+    // Android refuses to install an update whose versionCode is not strictly
+    // greater than the installed one. The encoding used to be
+    // `major * 10000 + minor * 100 + patch`, which gave 0.7.100 and 0.8.0 the
+    // same code (800) — and release.yml bumps the patch on every merge to
+    // master, so three-digit patches are reachable. CI does not run the Android
+    // unit tests, so this is the gate that actually catches a regression.
+    it("Android versionCode encoding should be collision-free and monotonic", () => {
+      const content = readSource(
+        path.join(MONO, "android-compose", "app", "build.gradle.kts"),
+      );
+
+      function gradleInt(name: string): number {
+        const raw = content.match(new RegExp(`val ${name} = ([0-9_]+)`))?.[1];
+        if (!raw) {
+          throw new Error(`${name} is not declared in android-compose/app/build.gradle.kts`);
+        }
+        return Number(raw.replace(/_/g, ""));
+      }
+
+      const patchSlot = gradleInt("versionCodePatchSlot");
+      const minorSlot = gradleInt("versionCodeMinorSlot");
+      const ceiling = gradleInt("versionCodeCeiling");
+      const highestShipped = gradleInt("highestShippedVersionCode");
+      const majorScale = patchSlot * minorSlot;
+
+      function encode(version: string): number {
+        const [major, minor, patch] = version.split(".").map(Number);
+        expect(minor).toBeLessThan(minorSlot);
+        expect(patch).toBeLessThan(patchSlot);
+        return major * majorScale + minor * patchSlot + patch;
+      }
+
+      // The comment above the formula quotes the old one, so match on code only.
+      const gradleCode = content
+        .split("\n")
+        .filter((line) => !line.trim().startsWith("//"))
+        .join("\n");
+
+      // The encoding must be expressed with the slot constants validated below,
+      // not with literals that could drift away from them.
+      expect(gradleCode).toMatch(/\*\s*versionCodeMajorScale/);
+      expect(gradleCode).toMatch(/\*\s*versionCodePatchSlot/);
+      expect(gradleCode).not.toMatch(/major(?:\.toLong\(\))?\s*\*\s*10_?000\b/);
+
+      const ordered = [
+        "0.7.2",
+        `0.7.${patchSlot - 1}`,
+        "0.8.0",
+        `0.${minorSlot - 1}.${patchSlot - 1}`,
+        "1.0.0",
+        "1.44.0",
+        "2.0.0",
+      ];
+      for (let index = 1; index < ordered.length; index += 1) {
+        expect(encode(ordered[index - 1])).toBeLessThan(encode(ordered[index]));
+      }
+      expect(encode("0.7.100")).not.toBe(encode("0.8.0"));
+
+      // The version being built must clear every code this project ever shipped,
+      // otherwise the in-app APK updater cannot install over the old build.
+      expect(encode(manifestVersion())).toBeGreaterThan(highestShipped);
+
+      // The largest version the slots admit must still fit a signed 32-bit int.
+      const maxMajor = Math.floor(ceiling / majorScale) - 1;
+      expect(
+        encode(`${maxMajor}.${minorSlot - 1}.${patchSlot - 1}`),
+      ).toBeLessThanOrEqual(ceiling);
+      expect(ceiling).toBeLessThanOrEqual(2_147_483_647);
+    });
+
     it("backend build.gradle.kts should derive artifact version from version.json", () => {
       const content = readSource(path.join(MONO, "tday-backend", "build.gradle.kts"));
       expect(content).toContain("version.json");

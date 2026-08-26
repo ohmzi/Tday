@@ -242,7 +242,7 @@ Every file that contains or controls a version number, grouped by platform.
 
 | File | What | Notes |
 |------|------|-------|
-| `android-compose/app/build.gradle.kts` | `versionName` / `versionCode` | Parsed from root `version.json` at build time. `versionCode` = `major*10000 + minor*100 + patch`. |
+| `android-compose/app/build.gradle.kts` | `versionName` / `versionCode` | Parsed from root `version.json` at build time. `versionCode` = `major*10_000_000 + minor*10_000 + patch` (`0.7.2` → `70002`), one decimal slot per component so the encoding never collides. `minor` ≤ 999, `patch` ≤ 9999, ceiling 2_100_000_000 — all enforced by `require` checks that fail the build. |
 | `android-compose/.../TdayApplication.kt` | Sentry release (`tday-android@<version>`) | Uses `BuildConfig.VERSION_NAME`. `SENTRY_TRACES_SAMPLE_RATE` or `local.properties:sentryTracesSampleRate` controls trace sampling. |
 | `android-compose/.../NetworkModule.kt` | `X-Tday-App-Version` HTTP header | Uses `BuildConfig.VERSION_NAME`. |
 
