@@ -308,7 +308,16 @@ export function useBulkTodoActions({
             dateRangeChecksum: row.due.toISOString(),
             rruleChecksum: row.rrule,
           },
-          { listID, instanceDate: row.instanceDate ?? null },
+          {
+            // "No list" must go on the wire as "", never null. TodoRoutes does
+            // `body.listID?.let { fields["listID"] = it.takeIf(isNotBlank) }`,
+            // so a null listID never reaches `fields` at all and
+            // `TodoService.update` leaves the assignment untouched — the row
+            // would clear optimistically and the next refetch would put the old
+            // list straight back. Blank is what the backend maps to null (§4.5).
+            listID: listID ?? "",
+            instanceDate: row.instanceDate ?? null,
+          },
         ),
       ).then((result) => {
         reportFailures("task.bulk_move_failed", result, "bulkUpdateFailed");

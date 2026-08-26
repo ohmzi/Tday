@@ -167,9 +167,16 @@ Concretely:
 - On every re-render/re-hydration, **intersect the selection with the currently visible
   row ids**. A task that synced away, was completed elsewhere, or was filtered out by a
   search edit must drop out of the selection silently.
-- If the intersection becomes empty, **exit selection mode**.
-- Exit also on: Cancel, system back (Android `BackHandler`, placed *before* the
-  existing exit-to-launcher handler so it wins), Escape (web), navigating away, and
+- If reconciliation **emptied a selection that had rows in it**, exit selection mode.
+  Note the precondition: you always *enter* with an empty selection, so a bare
+  "selection is empty → exit" test makes the mode impossible to enter, and turns
+  **Deselect all** into a synonym for Cancel even though the copy table lists them as
+  two separate controls. Exit only when rows actually dropped out and nothing is left.
+- Exit also on: Cancel, system back (Android `BackHandler`, registered *after* the
+  existing exit-to-launcher handler so it wins — Compose dispatches to the most
+  recently added enabled callback, which is why the search handler in that file is
+  likewise "registered last so back dismisses the field before it leaves the list"),
+  Escape (web), navigating away, and
   **after any bulk action is dispatched** (see §4 — the mode always closes, whether or
   not the action skipped rows).
 
@@ -421,7 +428,12 @@ and confirmation copy must match across all three (AGENTS.md Cross-Platform UX R
 
 - Selection state in a provider (e.g. `src/providers/TaskSelectionProvider.tsx`) mounted
   beside `TodoMutationProvider` in `ListContainer.tsx`,
-  `AllTasksTimelineContainer.tsx`, and `NativeScheduledTaskHomeDashboard.tsx`.
+  `AllTasksTimelineContainer.tsx`. **Not** `NativeScheduledTaskHomeDashboard.tsx`: an
+  earlier draft of this bullet listed it, but §8 puts the home feed's Today preview out
+  of scope and §8 is the scope decision. (§8's stated reason — "its own row
+  implementation on all three platforms" — is inaccurate for web specifically, where the
+  preview renders the same `TodoItemCard` through `TodoGroup`; it is accurate for
+  Android and iOS, so adding it on web alone would break parity in the other direction.)
 - Entry: a Select button in the `trailingAction` cluster those containers already pass
   to `MobileSearchHeader`. Hidden when `readOnly` or the visible set is empty.
 - Row: extend `TodoItemCard` (`src/components/todo/component/TodoItemContainer.tsx`),
@@ -469,8 +481,9 @@ and confirmation copy must match across all three (AGENTS.md Cross-Platform UX R
   `ic_lucide_circle` / `ic_lucide_circle_check_big` pair already in that composable.
 - Selection top bar: reuse the `titleSuppressed`-style takeover on `TdayHeroToolbar`
   (count as the title, back = cancel, actions = Select all / Deselect all). Hide the FAB
-  while selecting. Add `BackHandler(enabled = selectionActive)` **before** the existing
-  exit-to-launcher handler.
+  while selecting. Add `BackHandler(enabled = selectionActive)` **after** the existing
+  exit-to-launcher handler — the back dispatcher runs the most recently added enabled
+  callback, so "registered last" is what makes selection win (§2.5).
 - ViewModel: four new methods taking `List<TodoItem>`, each making exactly **one**
   coordinator call for the whole batch, modelled on
   `MorningSweepViewModel.sweepAllToToday()`. Bind them in `TdayApp.TodoListRoute`
@@ -548,6 +561,16 @@ decision rather than an oversight:**
 - Floater **lists** on web, until the `["floaterList", id]` cache-shape inconsistency is
   fixed (§7.1). Floater **tasks** inside the floater list mode of the main screen are in
   scope on mobile.
+- The **floater root feed** (Floater/Anytime home, `mode = .floater` with no scoped
+  list) on Android and iOS. Ruled out at integration, after both mobile surfaces
+  independently landed on the same exclusion. That screen is a feed of *lists*, not of
+  tasks, and it draws `RootFeedHeroHeader` — shared with the scheduled home feed —
+  instead of the hero toolbar / `TimelineTopBar` that hosts the Select button
+  everywhere else. Giving it selection means editing a component the scheduled home
+  feed also renders, which is exactly the blast radius this section excluded the home
+  feed's Today card for. Floater tasks stay covered inside floater **list detail**.
+  In scope on mobile is therefore precisely "wherever the hero toolbar draws its action
+  cluster": the five timeline scopes, list detail, and floater-list detail.
 
 ---
 
@@ -635,3 +658,28 @@ owns its own guide update.
    web floater lists.
 3. **iOS `TodoRepository.setPriority` never updates `nextState.floaters`** (§4.4).
 4. **Batch `ids` on `DELETE /api/todo`** — only if the cap starts hurting (§1).
+5. **"No list" only clears if the client sends `""`, never `null`.** `TodoRoutes` does
+   `body.listID?.let { fields["listID"] = it.takeIf { it.isNotBlank() } }`, so a null
+   `listID` never reaches `fields` at all and `TodoService.update`'s
+   `if (fields.containsKey("listID"))` guard leaves the assignment untouched. The row
+   clears optimistically and the next refetch puts the old list straight back. Only a
+   blank string reaches `fields` (as null) and actually clears. Status per surface:
+   - **Android**: correct for free. `SyncManager`'s `UPDATE_TODO` replay ends
+     `resolvedListId ?: if (!remoteTodo?.listId.isNullOrBlank()) "" else null`, which
+     turns a null mutation `listId` into `""` whenever the remote row still has a list.
+   - **iOS**: correct by storing `listId: ""` in the pending mutation explicitly.
+   - **Web**: was **wrong** and fixed during integration — web has no replay layer, so
+     `patchTodo` put `listID: null` straight on the wire. Now `listID ?? ""`, pinned by
+     *sends "" and not null when moving to No list* in `bulk-todo-actions.test.tsx`.
+
+   Still open: iOS's single-task **edit sheet** clears a list through the same
+   `.updateTodo` nil path and has no remote-snapshot fallback, so it retains the bug.
+6. **`MutationKind.SET_PRIORITY` replay is todo-only on Android**, the exact mirror of
+   the iOS gap in item 3. `SyncManager` routes it to `patchTodoByBody` /
+   `prioritizeTodoByBody`, so a floater id sent down that path would patch the wrong
+   table; bulk floater priority therefore goes through a whole-record `UPDATE_FLOATER`
+   rebuilt from the row. §4.4's Android bullet ("using it is the lighter path") holds
+   for scheduled tasks only. Related trap, pinned by a test on the Android side: the
+   `UPDATE_FLOATER` replay clears any field the mutation leaves null, so a
+   priority-only mutation that omitted title/notes would wipe the notes — the cached
+   transform must always carry the whole row.
