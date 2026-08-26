@@ -5,6 +5,18 @@ options:
   deploymentTarget:
     iOS: "17.0"
 
+# Project-wide build settings.
+#
+# STRING_CATALOG_GENERATE_SYMBOLS: off. The catalogue keys ARE the English
+# sentences (`L("Delete local data")`), so nothing in this app references the
+# generated symbol API — and two keys that differ only by punctuation, such as
+# "Delete local data" and "Delete local data?", collapse to the same generated
+# symbol and fail the build outright. Generating symbols we never use is not
+# worth a build that breaks on a question mark.
+settings:
+  base:
+    STRING_CATALOG_GENERATE_SYMBOLS: NO
+
 packages:
   sentry-cocoa:
     url: https://github.com/getsentry/sentry-cocoa

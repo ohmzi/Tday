@@ -998,6 +998,16 @@ struct TodoListScreen: View {
         } message: {
             Text("Choose whether to move only this task occurrence or the entire repeating series.")
         }
+        // The whole screen opts out of keyboard avoidance, not just the empty
+        // scene inside it. This screen's only text field is the search box in
+        // the *top* safe-area inset, which the keyboard can never cover, so
+        // there is nothing here for SwiftUI to move out of the way. What the
+        // avoidance actually did was shorten the feed's region — and the empty
+        // scene, being centred in whatever region is left, rode up with it.
+        // `.ignoresSafeArea` on the scene alone could not undo that: it is an
+        // overlay, and an overlay cannot grow past the bounds of the view it is
+        // laid over. The shrink has to be refused where it lands, which is here.
+        .ignoresSafeArea(.keyboard, edges: .bottom)
     }
 
     @ViewBuilder
