@@ -240,6 +240,23 @@ describe("bulk todo actions", () => {
     expect(toastCalls()).toHaveLength(0);
   });
 
+  it("sends \"\" and not null when moving to No list", async () => {
+    // TodoRoutes does `body.listID?.let { fields["listID"] = ... }`, so a null
+    // listID never lands in `fields` and TodoService.update leaves the list
+    // alone. The row would clear optimistically and the next refetch would put
+    // the old list back. Blank is the value the backend maps to null.
+    const queryClient = coldQueryClient();
+    const rows = [buildTodo({ id: "todo-9:null", rrule: null })];
+    const { result } = renderActions(queryClient);
+
+    result.current.moveSelectedToList(rows, null);
+
+    await waitFor(() => expect(patchMock).toHaveBeenCalledTimes(1));
+    const body = JSON.parse(patchMock.mock.calls[0][0].body);
+    expect(body.listID).toBe("");
+    expect(body.listID).not.toBeNull();
+  });
+
   it("survives a cold cache on every action", async () => {
     // The hazard this pins: an updater annotated `(old: TodoItemType[] = [])`
     // type-checks, then throws on a cache react-query has never filled — inside
