@@ -1263,6 +1263,16 @@
         "step0": "Öffne die Watch-App auf dem iPhone und installiere T'Day.",
         "step1": "Füge die T'Day-Komplikation zu deinem Zifferblatt hinzu.",
         "step2": "Wirf einen Blick auf die Anzahl oder öffne die App für die vollständige Liste."
+      },
+      "bulk-actions": {
+        "title": "Sammelaktionen",
+        "summary": "Mehrere Aufgaben auf einmal auswählen und gemeinsam bearbeiten.",
+        "keywords": "sammelaktion, mehrfachauswahl, alle auswählen, stapel, mehrere, erledigen, löschen, priorität, verschieben, auswahl",
+        "body": "Tippe in der Kopfzeile einer Aufgabenliste auf Auswählen, um in den Auswahlmodus zu wechseln. Wähle Aufgaben einzeln oder tippe auf Alle auswählen und wende dann eine einzige Aktion auf alles an: als erledigt markieren, Priorität ändern, in eine andere Liste verschieben oder löschen.",
+        "step0": "Öffne eine Aufgabenliste und tippe in der Kopfzeile auf Auswählen.",
+        "step1": "Tippe Aufgaben an, um sie zu wählen, oder nutze Alle auswählen für alles auf dem Bildschirm.",
+        "step2": "Wähle unten in der Leiste Erledigen, Priorität, Verschieben oder Löschen.",
+        "tip": "Beim Löschen musst du zuerst die genaue Anzahl bestätigen — und danach bleibt trotzdem ein Hinweis zum Rückgängigmachen. Wiederkehrende Aufgaben lassen sich sammelweise erledigen, bleiben bei Löschen, Priorität und Verschieben aber außen vor, damit nie versehentlich eine ganze Serie geändert wird."
       }
     }
   },

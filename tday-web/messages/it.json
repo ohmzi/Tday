@@ -1263,6 +1263,16 @@
         "step0": "Apri l'app Watch su iPhone e installa T'Day.",
         "step1": "Aggiungi la complicazione T'Day al tuo quadrante.",
         "step2": "Dai un'occhiata al conteggio, o apri l'app per la lista completa."
+      },
+      "bulk-actions": {
+        "title": "Azioni in blocco",
+        "summary": "Seleziona più attività insieme e agisci su tutte in una volta.",
+        "keywords": "blocco, selezione multipla, seleziona tutto, gruppo, più attività, completare, eliminare, priorità, spostare, selezione",
+        "body": "Tocca Seleziona nell'intestazione di un elenco di attività per entrare in modalità selezione. Scegli le attività una alla volta oppure tocca Seleziona tutto, poi applica una sola azione all'intero gruppo: segnarle come fatte, cambiarne la priorità, spostarle in un altro elenco o eliminarle.",
+        "step0": "Apri un elenco di attività e tocca Seleziona nell'intestazione.",
+        "step1": "Tocca le attività per sceglierle oppure usa Seleziona tutto per quelle a schermo.",
+        "step2": "Scegli Completa, Priorità, Sposta o Elimina dalla barra in basso.",
+        "tip": "L'eliminazione ti chiede prima di confermare il numero esatto e lascia comunque un avviso per annullare. Le attività ricorrenti si possono completare in blocco, ma restano fuori da eliminazione, priorità e spostamento, così un'intera serie non cambia mai per sbaglio."
       }
     }
   },

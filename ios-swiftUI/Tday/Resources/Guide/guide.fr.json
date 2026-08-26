@@ -727,6 +727,49 @@
       "searchBody": "triez les taches en retard une carte a la fois. etre en retard ne fait plus mal : le bouton balayer de l'ecran en retard passe vos taches reportees une carte a la fois — aujourd'hui, demain, choisir une date, en faire un flottant ou laisser partir. presse ? tout balayer vers aujourd'hui deplace tout d'un coup, avec une seule annulation. les taches recurrentes restent hors du balayage ; leurs occurrences se replanifient depuis la feuille d'edition pour preserver la serie."
     },
     {
+      "id": "bulk-actions",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "circle-check-big",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "PRO_TIP",
+      "serverOnly": false,
+      "sinceVersion": "0.7.4",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Actions groupées",
+      "summary": "Sélectionnez plusieurs tâches d'un coup, puis agissez sur toutes en même temps.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Touchez Sélectionner dans l'en-tête d'une liste de tâches pour passer en mode sélection. Choisissez les tâches une par une ou appuyez sur Tout sélectionner, puis appliquez une seule action à l'ensemble : les marquer comme faites, changer leur priorité, les déplacer vers une autre liste ou les supprimer."
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "Ouvrez une liste de tâches et touchez Sélectionner dans l'en-tête.",
+            "Touchez les tâches pour les choisir, ou utilisez Tout sélectionner pour celles à l'écran.",
+            "Choisissez Terminer, Priorité, Déplacer ou Supprimer dans la barre du bas."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "La suppression vous demande de confirmer le nombre exact et laisse quand même un message d'annulation. Les tâches récurrentes peuvent être terminées en lot, mais elles restent en dehors de la suppression, de la priorité et du déplacement : une série entière n'est jamais modifiée par accident."
+          ]
+        }
+      ],
+      "searchTitle": "actions groupees",
+      "searchKeywords": "groupe, selection multiple, tout selectionner, lot, plusieurs, terminer, supprimer, priorite, deplacer, selection",
+      "searchBody": "selectionnez plusieurs taches d'un coup, puis agissez sur toutes en meme temps. touchez selectionner dans l'en-tete d'une liste de taches pour passer en mode selection. choisissez les taches une par une ou appuyez sur tout selectionner, puis appliquez une seule action a l'ensemble : les marquer comme faites, changer leur priorite, les deplacer vers une autre liste ou les supprimer. ouvrez une liste de taches et touchez selectionner dans l'en-tete. touchez les taches pour les choisir, ou utilisez tout selectionner pour celles a l'ecran. choisissez terminer, priorite, deplacer ou supprimer dans la barre du bas. la suppression vous demande de confirmer le nombre exact et laisse quand meme un message d'annulation. les taches recurrentes peuvent etre terminees en lot, mais elles restent en dehors de la suppression, de la priorite et du deplacement : une serie entiere n'est jamais modifiee par accident."
+    },
+    {
       "id": "search-tasks",
       "section": "ORGANIZING",
       "sectionOrder": 3,

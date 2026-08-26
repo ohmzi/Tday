@@ -1263,6 +1263,16 @@
         "step0": "Buka apl Watch pada iPhone dan pasang T'Day.",
         "step1": "Tambah komplikasi T'Day pada muka jam anda.",
         "step2": "Pandang jumlahnya, atau buka apl untuk senarai penuh."
+      },
+      "bulk-actions": {
+        "title": "Tindakan pukal",
+        "summary": "Pilih beberapa tugasan sekali gus, kemudian uruskan semuanya serentak.",
+        "keywords": "pukal, pilihan berbilang, pilih semua, kelompok, beberapa, selesai, padam, keutamaan, pindah, pilihan",
+        "body": "Ketik Pilih pada pengepala senarai tugasan untuk masuk ke mod pilihan. Pilih tugasan satu per satu atau ketik Pilih semua, kemudian gunakan satu tindakan pada keseluruhan set — tandakan selesai, tukar keutamaan, pindahkan ke senarai lain, atau padamkannya.",
+        "step0": "Buka senarai tugasan dan ketik Pilih pada pengepala.",
+        "step1": "Ketik tugasan untuk memilihnya, atau guna Pilih semua untuk semua yang ada di skrin.",
+        "step2": "Pilih Selesai, Keutamaan, Pindah atau Padam pada bar di bawah.",
+        "tip": "Pemadaman meminta anda mengesahkan jumlah tepat dahulu, dan masih meninggalkan pemberitahuan buat asal. Tugasan berulang boleh diselesaikan secara pukal, tetapi ia dikecualikan daripada padam, keutamaan dan pindah supaya keseluruhan siri tidak pernah berubah secara tidak sengaja."
       }
     }
   },

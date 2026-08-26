@@ -648,6 +648,46 @@
       "sinceVersion": "0.3.0"
     },
     {
+      "id": "bulk-actions",
+      "section": "ORGANIZING",
+      "icon": "circle-check-big",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "titleKey": "guide.topics.bulk-actions.title",
+      "summaryKey": "guide.topics.bulk-actions.summary",
+      "keywordsKey": "guide.topics.bulk-actions.keywords",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "keys": [
+            "guide.topics.bulk-actions.body"
+          ]
+        },
+        {
+          "type": "STEPS",
+          "keys": [
+            "guide.topics.bulk-actions.step0",
+            "guide.topics.bulk-actions.step1",
+            "guide.topics.bulk-actions.step2"
+          ]
+        },
+        {
+          "type": "TIP",
+          "keys": [
+            "guide.topics.bulk-actions.tip"
+          ]
+        }
+      ],
+      "badge": "PRO_TIP",
+      "deepLink": null,
+      "helpAnchors": [],
+      "serverOnly": false,
+      "sinceVersion": "0.7.4"
+    },
+    {
       "id": "search-tasks",
       "section": "ORGANIZING",
       "icon": "search",

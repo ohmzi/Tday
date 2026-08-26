@@ -1263,6 +1263,16 @@
         "step0": "Ouvrez l'app Watch sur l'iPhone et installez T'Day.",
         "step1": "Ajoutez la complication T'Day à votre cadran.",
         "step2": "Jetez un coup d'œil au nombre, ou ouvrez l'app pour la liste complète."
+      },
+      "bulk-actions": {
+        "title": "Actions groupées",
+        "summary": "Sélectionnez plusieurs tâches d'un coup, puis agissez sur toutes en même temps.",
+        "keywords": "groupé, sélection multiple, tout sélectionner, lot, plusieurs, terminer, supprimer, priorité, déplacer, sélection",
+        "body": "Touchez Sélectionner dans l'en-tête d'une liste de tâches pour passer en mode sélection. Choisissez les tâches une par une ou appuyez sur Tout sélectionner, puis appliquez une seule action à l'ensemble : les marquer comme faites, changer leur priorité, les déplacer vers une autre liste ou les supprimer.",
+        "step0": "Ouvrez une liste de tâches et touchez Sélectionner dans l'en-tête.",
+        "step1": "Touchez les tâches pour les choisir, ou utilisez Tout sélectionner pour celles à l'écran.",
+        "step2": "Choisissez Terminer, Priorité, Déplacer ou Supprimer dans la barre du bas.",
+        "tip": "La suppression vous demande de confirmer le nombre exact et laisse quand même un message d'annulation. Les tâches récurrentes peuvent être terminées en lot, mais elles restent en dehors de la suppression, de la priorité et du déplacement : une série entière n'est jamais modifiée par accident."
       }
     }
   },

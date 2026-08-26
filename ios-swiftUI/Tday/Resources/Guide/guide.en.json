@@ -727,6 +727,49 @@
       "searchBody": "triage carried-over tasks one card at a time. getting behind stops hurting: the sweep button on the overdue screen walks your carried-over tasks one card at a time — today, tomorrow, pick a date, make it a floater, or let it go. in a hurry? sweep all to today moves everything at once, with a single undo. recurring tasks stay out of the sweep; their occurrences reschedule from the edit sheet so the series stays intact."
     },
     {
+      "id": "bulk-actions",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "circle-check-big",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "PRO_TIP",
+      "serverOnly": false,
+      "sinceVersion": "0.7.4",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Bulk actions",
+      "summary": "Select several tasks at once, then act on all of them together.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Tap Select in the header of a task list to enter selection mode. Pick tasks one at a time or hit Select all, then apply a single action to the whole set — mark them done, change their priority, move them to another list, or delete them."
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "Open a task list and tap Select in the header.",
+            "Tap tasks to pick them, or use Select all for everything on screen.",
+            "Choose Complete, Priority, Move or Delete from the bar at the bottom."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Deleting asks you to confirm the exact number first, and still leaves an undo toast. Repeating tasks can be bulk-completed, but they sit out delete, priority and move so a whole series is never changed by accident."
+          ]
+        }
+      ],
+      "searchTitle": "bulk actions",
+      "searchKeywords": "bulk, multi-select, select all, batch, many, several, complete, delete, priority, move, selection",
+      "searchBody": "select several tasks at once, then act on all of them together. tap select in the header of a task list to enter selection mode. pick tasks one at a time or hit select all, then apply a single action to the whole set — mark them done, change their priority, move them to another list, or delete them. open a task list and tap select in the header. tap tasks to pick them, or use select all for everything on screen. choose complete, priority, move or delete from the bar at the bottom. deleting asks you to confirm the exact number first, and still leaves an undo toast. repeating tasks can be bulk-completed, but they sit out delete, priority and move so a whole series is never changed by accident."
+    },
+    {
       "id": "search-tasks",
       "section": "ORGANIZING",
       "sectionOrder": 3,
