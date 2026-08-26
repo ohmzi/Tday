@@ -25,6 +25,7 @@ import { cn } from "@/lib/utils";
 import { TodoItemType } from "@/types";
 import { TodoItemCard } from "@/components/todo/component/TodoItemContainer";
 import { useTodoMutation } from "@/providers/TodoMutationProvider";
+import { useTaskSelection } from "@/providers/TaskSelectionProvider";
 import { TodoItemTypeWithDateChecksum } from "@/features/todayTodos/query/update-todo";
 import { setTodoTimeOfDay } from "@/lib/setTodoTimeOfDay";
 import { hapticDragStart, hapticDragOver, hapticDrop } from "@/lib/haptics";
@@ -275,9 +276,13 @@ export function DraggableTodayTask({
   highlighted?: boolean;
 }) {
   const data: TodayDraggableData = { todo, currentBucket };
+  // See DraggableTodoItem: while selecting, the press is the selection tap and
+  // must not lift the row into another time bucket.
+  const { selectionMode } = useTaskSelection();
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: todo.id,
     data,
+    disabled: selectionMode,
   });
 
   return (
@@ -286,7 +291,7 @@ export function DraggableTodayTask({
       perTaskOverdue
       highlighted={highlighted}
       showOverdueTag={false}
-      containerProps={{ ...attributes, ...listeners }}
+      containerProps={selectionMode ? {} : { ...attributes, ...listeners }}
       dragging={isDragging}
       setDragNodeRef={setNodeRef}
     />
