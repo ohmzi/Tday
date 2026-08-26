@@ -20,6 +20,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ohmz.tday.compose.core.data.AppSecurityPreferenceStore
 import com.ohmz.tday.compose.core.data.applyScreenshotProtection
 import com.ohmz.tday.compose.core.notification.BootRescheduleReceiver
+import com.ohmz.tday.compose.core.notification.NotificationPreferenceStore
 import com.ohmz.tday.compose.feature.lock.AppLockOverlay
 import com.ohmz.tday.compose.feature.lock.appLockAuthenticators
 import com.ohmz.tday.compose.feature.lock.canSatisfyAppLock
@@ -36,12 +37,23 @@ import javax.inject.Inject
 class MainActivity : AppCompatActivity() {
 
     private val notificationPermissionLauncher =
-        registerForActivityResult(ActivityResultContracts.RequestPermission()) { _ -> }
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { _ ->
+            // Marked HERE, on the answer, not before the launch. Android only starts
+            // returning true from `shouldShowRequestPermissionRationale` after a real
+            // denial — a dialog dismissed without one leaves it false. Marking early
+            // meant that pair read as "asked, and no rationale allowed" — which the
+            // settings switch interprets as permanently denied, and it would send
+            // the user to Android settings for a dialog Android would still have
+            // shown them.
+            notificationPreferences.markPermissionRequested()
+        }
 
     private val _deepLinkIntent = MutableStateFlow<Intent?>(null)
     val deepLinkIntent = _deepLinkIntent.asStateFlow()
 
     private val securityPreferences by lazy { AppSecurityPreferenceStore(applicationContext) }
+
+    private val notificationPreferences by lazy { NotificationPreferenceStore(applicationContext) }
 
     @Inject lateinit var todayTasksWidgetRefresher: TodayTasksWidgetRefresher
     @Inject lateinit var floaterTasksWidgetRefresher: FloaterTasksWidgetRefresher
@@ -171,11 +183,19 @@ class MainActivity : AppCompatActivity() {
             .cancel(BootRescheduleReceiver.UPDATE_NOTIFICATION_ID)
     }
 
+    /**
+     * The one automatic ask, on the first launch. Android only shows its dialog while
+     * shouldShowRequestPermissionRationale still holds, so re-asking on every cold start
+     * would spend that on a moment the user did not ask for; after this the Settings
+     * notification switch is the way back in, and it knows to send a user Android will no
+     * longer prompt straight to the app's notification settings instead.
+     */
     private fun requestNotificationPermissionIfNeeded() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
             == PackageManager.PERMISSION_GRANTED
         ) return
+        if (notificationPreferences.hasRequestedPermission()) return
         notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
     }
 }

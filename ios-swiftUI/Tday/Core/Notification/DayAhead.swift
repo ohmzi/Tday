@@ -65,6 +65,9 @@ final class DayAheadScheduler {
     func reschedule(tasks: [TodoItem]) async {
         guard let notificationCenter else { return }
         notificationCenter.removePendingNotificationRequests(withIdentifiers: [Self.identifier])
+        // The digest is a notification like any other, so the app-level switch gates it too. The
+        // pending request is cleared above, so an off switch leaves nothing queued for tomorrow.
+        guard NotificationPreferenceStore().isEnabled else { return }
         guard let hour = store.getOption().hour else { return }
 
         let calendar = Calendar.current

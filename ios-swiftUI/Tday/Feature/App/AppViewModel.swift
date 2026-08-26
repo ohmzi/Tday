@@ -1107,6 +1107,15 @@ final class AppViewModel {
         hasCompletedInitialBootstrap = true
     }
 
+    /// The app-level notification switch moved (Settings), or the OS permission it depends on
+    /// came back while the app was away. Either way the queue has to be rebuilt right now:
+    /// nothing else revisits pending requests until the next task edit, so an off switch would
+    /// keep firing what was already scheduled and an on switch would stay silent until then.
+    func setNotificationsEnabled(_ enabled: Bool) async {
+        NotificationPreferenceStore().isEnabled = enabled
+        await rescheduleReminders()
+    }
+
     private func rescheduleReminders() async {
         let tasks = container.todoRepository.fetchTodosSnapshot(mode: .all)
         await container.reminderScheduler.reschedule(tasks: tasks, defaultReminder: selectedReminder)

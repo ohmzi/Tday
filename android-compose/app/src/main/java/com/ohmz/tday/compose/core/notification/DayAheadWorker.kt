@@ -29,6 +29,7 @@ class DayAheadWorker @AssistedInject constructor(
     @Assisted workerParams: WorkerParameters,
     private val todoRepository: TodoRepository,
     private val preferenceStore: DayAheadPreferenceStore,
+    private val notificationPreferences: NotificationPreferenceStore,
 ) : CoroutineWorker(appContext, workerParams) {
 
     override suspend fun doWork(): Result {
@@ -42,7 +43,10 @@ class DayAheadWorker @AssistedInject constructor(
             todoRepository.fetchTodosSnapshot(TodoListMode.OVERDUE).count { !it.completed }
         }.getOrDefault(0)
 
-        if (todayCount > 0 || overdueCount > 0) {
+        // Counted either way so the breadcrumb still records what the morning held; only the
+        // post is gated. The re-arm below runs too, so turning notifications back on needs
+        // nothing more than the switch.
+        if (notificationPreferences.isEnabled() && (todayCount > 0 || overdueCount > 0)) {
             postDigest(todayCount, overdueCount)
         }
         TdayTelemetry.addBreadcrumb(
