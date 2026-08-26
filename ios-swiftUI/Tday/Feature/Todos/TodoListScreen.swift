@@ -478,6 +478,14 @@ struct TodoListScreen: View {
     @State private var listSearchExpanded = false
     @State private var listSearchQuery = ""
     @State private var openSwipeTaskID: String?
+    // Multi-select. Screen-local on purpose: the view model re-hydrates `items`
+    // on every cache-version bump, and a selection held there would fight it.
+    @State private var isSelecting = false
+    @State private var selectedTodoIDs: Set<String> = []
+    @State private var activeBulkSelector: BulkSelectionSelector?
+    @State private var showingBulkDeleteConfirmation = false
+    @State private var showingBulkMoveConfirmation = false
+    @State private var pendingBulkMoveListID: String?
     @State private var hasOpenedCreateTaskOnAppear = false
 
     init(
@@ -545,6 +553,88 @@ struct TodoListScreen: View {
             todoSearchText(todo.title).contains(normalizedListSearchQuery) ||
                 todoSearchText(flattenNotesToPlainText(todo.description)).contains(normalizedListSearchQuery)
         }
+    }
+
+    // MARK: - Multi-select
+
+    /// Everything Select all can reach: every task in the screen's current result
+    /// set, in display order, after the live search — including the rows inside a
+    /// collapsed section, which are part of the list even when folded away. It
+    /// never reaches another screen, another list, or completed history.
+    private var selectableTodos: [TodoItem] {
+        var seen = Set<String>()
+        return groupedSections.flatMap(\.items).filter { seen.insert($0.id).inserted }
+    }
+
+    /// Selected rows in display order. Selection is keyed on the row id (which
+    /// already encodes a recurring occurrence), but every action is handed the
+    /// whole row: the repositories need `canonicalId` and `instanceDate`.
+    private var selectedTodos: [TodoItem] {
+        selectableTodos.filter { selectedTodoIDs.contains($0.id) }
+    }
+
+    private var isSelectionAtCap: Bool {
+        selectedTodoIDs.count >= BulkSelectionCopy.maxSelection
+    }
+
+    private var selectionAllSelected: Bool {
+        !selectableTodos.isEmpty &&
+            selectedTodoIDs.count >= min(selectableTodos.count, BulkSelectionCopy.maxSelection)
+    }
+
+    /// Gated exactly as the magnifier is: no affordance on a screen with nothing
+    /// to act on, and none at all on a list this user can only read. The root
+    /// floater feed wears the shared hero header rather than this bar, so it has
+    /// no action cluster to put the button in — see the note in the PR.
+    private var canEnterSelectionMode: Bool {
+        showsTimelineNavigationTopBar && !isViewerList && !viewModel.items.isEmpty
+    }
+
+    /// Move targets: this screen's silo only — `viewModel.lists` is already
+    /// scheduled-vs-floater correct for the mode — minus the lists this user
+    /// cannot write to. Crossing the two silos is promote/demote, not a move.
+    private var bulkMoveTargetLists: [ListSummary] {
+        viewModel.lists.filter { !$0.isViewer }
+    }
+
+    private var bulkPriorityOptions: [(label: String, value: String)] {
+        TaskPriorityDisplay.options
+    }
+
+    /// The rows an action will actually touch. A recurring occurrence may be
+    /// bulk-completed as the occurrence it represents, but is never eligible for
+    /// delete, priority or move: those three have no per-occurrence route and
+    /// would silently act on the whole series.
+    ///
+    /// Complete additionally skips a repeating row that is not an occurrence
+    /// (`rrule` set, no `instanceDate` — a series created locally and not yet
+    /// expanded by a sync). `completeTodo` on the backend writes a completed-history
+    /// row for that shape and then neither marks the parent complete nor records an
+    /// occurrence, so the task stays on screen and history gains a phantom entry.
+    /// One row doing that from a swipe is a known bug; a hundred doing it from one
+    /// tap is not something to ship.
+    private func effectiveBulkTodos(for action: BulkTaskAction) -> [TodoItem] {
+        guard action == .complete else {
+            return selectedTodos.filter { !$0.isRecurring }
+        }
+        return selectedTodos.filter { !$0.isRecurring || $0.instanceDate != nil }
+    }
+
+    /// "Applies to N of M — repeating tasks are skipped", shown only when the
+    /// recurring rule actually narrowed the selection.
+    private func bulkRecurringNote(for action: BulkTaskAction) -> String? {
+        let effective = effectiveBulkTodos(for: action).count
+        let total = selectedTodoIDs.count
+        guard effective < total else { return nil }
+        return BulkSelectionCopy.appliesTo(effective: effective, total: total)
+    }
+
+    /// Cheap change token for the reconcile pass. Empty while not selecting, so
+    /// the sections are not rebuilt a second time on every redraw of a screen
+    /// that is not in selection mode.
+    private var selectableRowIDKey: String {
+        guard isSelecting else { return "" }
+        return selectableTodos.map(\.id).joined(separator: "|")
     }
 
     private var floaterTaskHomeListRows: [(list: ListSummary, count: Int)] {
@@ -769,6 +859,19 @@ struct TodoListScreen: View {
             ))
         }
 
+        // An explicit button, never a long press: long press already starts
+        // drag-to-reschedule on five of the seven modes, and stealing it would be
+        // an untestable gesture-arbitration bug on a build nobody can run.
+        if canEnterSelectionMode {
+            actions.append(TimelineTopBarAction(
+                systemName: "checkmark.circle",
+                assetName: "LucideCircleCheckBig",
+                usesCircularChrome: true,
+                accessibilityLabel: L("Select"),
+                action: enterSelectionMode
+            ))
+        }
+
         if isListDetailScreen {
             // One entry point per role: owners get list settings (which hosts
             // the Sharing section); members go straight to the members sheet.
@@ -788,6 +891,148 @@ struct TodoListScreen: View {
         }
 
         return actions
+    }
+
+    private func enterSelectionMode() {
+        HapticManager.buttonTap()
+        // Nothing may be half-open underneath the mode.
+        openSwipeTaskID = nil
+        selectedTodoIDs = []
+        withAnimation(.spring(response: 0.26, dampingFraction: 0.9)) {
+            isSelecting = true
+        }
+    }
+
+    private func exitSelectionMode() {
+        selectedTodoIDs = []
+        activeBulkSelector = nil
+        showingBulkDeleteConfirmation = false
+        showingBulkMoveConfirmation = false
+        pendingBulkMoveListID = nil
+        withAnimation(.spring(response: 0.26, dampingFraction: 0.9)) {
+            isSelecting = false
+        }
+    }
+
+    private func toggleSelection(of todo: TodoItem) {
+        if selectedTodoIDs.contains(todo.id) {
+            selectedTodoIDs.remove(todo.id)
+            HapticManager.gentleTap()
+            return
+        }
+        // At the cap a further tap is refused in place. The bar already says the
+        // hundred is the most one action can cover, and a toast for something
+        // already on screen would only talk over it.
+        guard !isSelectionAtCap else { return }
+        selectedTodoIDs.insert(todo.id)
+        HapticManager.gentleTap()
+    }
+
+    private func toggleSelectAll() {
+        HapticManager.buttonTap()
+        if selectionAllSelected {
+            selectedTodoIDs = []
+            return
+        }
+        // Capped from the top in display order, so which hundred you get is the
+        // hundred you were looking at rather than whichever the set held.
+        selectedTodoIDs = Set(selectableTodos.prefix(BulkSelectionCopy.maxSelection).map(\.id))
+    }
+
+    /// Selection never outlives what it points at: a row that synced away, was
+    /// completed elsewhere, or fell out of a live search drops out silently, and
+    /// an emptied selection closes the mode.
+    private func reconcileSelection() {
+        guard isSelecting else { return }
+        if selectableTodos.isEmpty {
+            exitSelectionMode()
+            return
+        }
+        guard !selectedTodoIDs.isEmpty else { return }
+        let visible = Set(selectableTodos.map(\.id))
+        let remaining = selectedTodoIDs.intersection(visible)
+        guard remaining != selectedTodoIDs else { return }
+        selectedTodoIDs = remaining
+        if remaining.isEmpty {
+            exitSelectionMode()
+        }
+    }
+
+    private func performBulkComplete() {
+        let targets = effectiveBulkTodos(for: .complete)
+        guard !targets.isEmpty else { return }
+        HapticManager.taskCompleted()
+        exitSelectionMode()
+        Task { await viewModel.bulkComplete(targets) }
+    }
+
+    /// Layer one of two. Bulk delete always asks first, whatever the count — the
+    /// undo toast that follows is the second guard, not a substitute for this.
+    private func requestBulkDelete() {
+        guard !effectiveBulkTodos(for: .delete).isEmpty else { return }
+        HapticManager.buttonTap()
+        withAnimation(.spring(response: 0.24, dampingFraction: 0.9)) {
+            showingBulkDeleteConfirmation = true
+        }
+    }
+
+    private func confirmBulkDelete() {
+        let targets = effectiveBulkTodos(for: .delete)
+        showingBulkDeleteConfirmation = false
+        guard !targets.isEmpty else {
+            exitSelectionMode()
+            return
+        }
+        HapticManager.sheetConfirm()
+        exitSelectionMode()
+        Task { await viewModel.bulkDelete(targets) }
+    }
+
+    private func applyBulkPriority(_ priority: String) {
+        let targets = effectiveBulkTodos(for: .priority)
+        activeBulkSelector = nil
+        guard !targets.isEmpty else {
+            exitSelectionMode()
+            return
+        }
+        exitSelectionMode()
+        Task { await viewModel.bulkSetPriority(targets, priority: priority) }
+    }
+
+    /// A move out of one shared source list is undone by a second bulk move, so
+    /// it goes straight through. A move that gathers tasks from several lists is
+    /// the one nobody can put back — that one asks.
+    private func requestBulkMove(toListID listID: String?) {
+        let targets = effectiveBulkTodos(for: .move)
+        activeBulkSelector = nil
+        guard !targets.isEmpty else {
+            exitSelectionMode()
+            return
+        }
+        let sourceLists = Set(targets.map { $0.listId ?? "" })
+        guard sourceLists.count > 1 else {
+            exitSelectionMode()
+            Task { await viewModel.bulkMove(targets, toListId: listID) }
+            return
+        }
+        pendingBulkMoveListID = listID
+        withAnimation(.spring(response: 0.24, dampingFraction: 0.9)) {
+            showingBulkMoveConfirmation = true
+        }
+    }
+
+    private func confirmBulkMove() {
+        let targets = effectiveBulkTodos(for: .move)
+        let listID = pendingBulkMoveListID
+        showingBulkMoveConfirmation = false
+        pendingBulkMoveListID = nil
+        guard !targets.isEmpty else {
+            exitSelectionMode()
+            return
+        }
+        HapticManager.sheetConfirm()
+        exitSelectionMode()
+        Task { await viewModel.bulkMove(targets, toListId: listID) }
     }
 
     private var modeContent: AnyView {
@@ -879,6 +1124,59 @@ struct TodoListScreen: View {
             }
         }
         .animation(.spring(response: 0.24, dampingFraction: 0.9), value: showingDeleteListConfirmation)
+        // Bulk delete's first guard. It states the exact count in both the
+        // headline and the confirm button, and promises the undo that genuinely
+        // follows rather than claiming permanence.
+        .overlay {
+            if showingBulkDeleteConfirmation {
+                let count = effectiveBulkTodos(for: .delete).count
+                BulkSelectionConfirmationOverlay(
+                    title: BulkSelectionCopy.deleteTitle(count),
+                    message: BulkSelectionCopy.deleteBody,
+                    note: bulkRecurringNote(for: .delete),
+                    confirmTitle: BulkSelectionCopy.deleteConfirm(count),
+                    isDestructive: true,
+                    onCancel: {
+                        withAnimation(.spring(response: 0.24, dampingFraction: 0.9)) {
+                            showingBulkDeleteConfirmation = false
+                        }
+                    },
+                    onConfirm: confirmBulkDelete
+                )
+                .transition(.opacity.combined(with: .scale(scale: 0.96)))
+                .zIndex(30)
+            }
+        }
+        .animation(.spring(response: 0.24, dampingFraction: 0.9), value: showingBulkDeleteConfirmation)
+        .overlay {
+            if showingBulkMoveConfirmation {
+                let count = effectiveBulkTodos(for: .move).count
+                BulkSelectionConfirmationOverlay(
+                    title: BulkSelectionCopy.moveTitle(count),
+                    message: BulkSelectionCopy.moveBody,
+                    note: bulkRecurringNote(for: .move),
+                    confirmTitle: BulkSelectionCopy.moveConfirm(count),
+                    isDestructive: false,
+                    onCancel: {
+                        withAnimation(.spring(response: 0.24, dampingFraction: 0.9)) {
+                            showingBulkMoveConfirmation = false
+                            pendingBulkMoveListID = nil
+                        }
+                    },
+                    onConfirm: confirmBulkMove
+                )
+                .transition(.opacity.combined(with: .scale(scale: 0.96)))
+                .zIndex(30)
+            }
+        }
+        .animation(.spring(response: 0.24, dampingFraction: 0.9), value: showingBulkMoveConfirmation)
+        .overlay {
+            if let activeBulkSelector {
+                bulkSelectorOverlay(for: activeBulkSelector)
+                    .transition(.opacity)
+                    .zIndex(31)
+            }
+        }
         .navigationBackButtonBehavior()
         .navigationTitleTypography(
             largeTitleColor: modeAccentColor,
@@ -899,11 +1197,18 @@ struct TodoListScreen: View {
             handleItemsChanged()
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            if showsRootControls {
+            // The action bar takes the dock's slot outright, so the create FAB
+            // and the bulk verbs can never sit on top of one another.
+            if isSelecting {
+                bulkActionBar
+            } else if showsRootControls {
                 floatingActionButtonDock
             } else {
                 Color.clear.frame(height: 80)
             }
+        }
+        .onChange(of: selectableRowIDKey) {
+            reconcileSelection()
         }
         .onChange(of: timelineScrollOffset, initial: true) { _, offset in
             guard !usesRootFeedHeader else { return }
@@ -1177,7 +1482,12 @@ struct TodoListScreen: View {
                 searchText: $listSearchQuery,
                 searchPlaceholder: listSearchPlaceholder,
                 searchFieldFocused: $listSearchFieldFocused,
-                onSearchClose: closeListSearch
+                onSearchClose: closeListSearch,
+                selectionActive: isSelecting,
+                selectionTitle: BulkSelectionCopy.selectedCount(selectedTodoIDs.count, capped: isSelectionAtCap),
+                selectionAllSelected: selectionAllSelected,
+                onSelectionCancel: exitSelectionMode,
+                onSelectionToggleAll: toggleSelectAll
             )
         }
     }
@@ -1303,6 +1613,154 @@ struct TodoListScreen: View {
                 .padding(.vertical, 8)
             }
         }
+    }
+
+    /// Replaces the dock while selecting. Four verbs and nothing else; each one
+    /// stands down when the recurring rule leaves it nothing to act on.
+    ///
+    /// No "N of M" line here on purpose: the four buttons have different reaches,
+    /// so one number under all of them would be wrong for at least one. Delete
+    /// says it in its dialog and Priority and Move say it in their pickers, which
+    /// is where the count is about to matter.
+    private var bulkActionBar: some View {
+        let completeCount = effectiveBulkTodos(for: .complete).count
+        let editableCount = effectiveBulkTodos(for: .delete).count
+        return HStack(spacing: 0) {
+            bulkActionButton(
+                title: L("Complete"),
+                assetName: "LucideCircleCheckBig",
+                tint: nil,
+                isEnabled: completeCount > 0,
+                action: performBulkComplete
+            )
+            bulkActionButton(
+                title: L("Priority"),
+                assetName: "LucideFlag",
+                tint: nil,
+                isEnabled: editableCount > 0
+            ) {
+                HapticManager.buttonTap()
+                activeBulkSelector = .priority
+            }
+            bulkActionButton(
+                title: L("Move"),
+                assetName: "LucideList",
+                tint: nil,
+                isEnabled: editableCount > 0
+            ) {
+                HapticManager.buttonTap()
+                activeBulkSelector = .list
+            }
+            bulkActionButton(
+                title: L("Delete"),
+                assetName: "LucideTrash2",
+                tint: colors.error,
+                isEnabled: editableCount > 0,
+                action: requestBulkDelete
+            )
+        }
+        .padding(.top, 10)
+        .padding(.bottom, 4)
+        .background(colors.background)
+        .overlay(alignment: .top) {
+            Rectangle()
+                .fill(colors.onSurfaceVariant.opacity(0.16))
+                .frame(height: 1)
+        }
+    }
+
+    private func bulkActionButton(
+        title: String,
+        assetName: String,
+        tint: Color?,
+        isEnabled: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            VStack(spacing: 5) {
+                Image(assetName)
+                    .renderingMode(.template)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 22, height: 22)
+                Text(title)
+                    .font(.tdayRounded(size: 12, weight: .heavy))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 6)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(tint ?? colors.onSurface)
+        .opacity(isEnabled ? 1 : 0.35)
+        .disabled(!isEnabled)
+        .accessibilityLabel(Text(title))
+    }
+
+    /// The same centred picker the create/edit sheet uses for these two fields,
+    /// rather than a second way of choosing a priority or a list.
+    @ViewBuilder
+    private func bulkSelectorOverlay(for selector: BulkSelectionSelector) -> some View {
+        ZStack {
+            colors.bottomSheetScrim
+                .ignoresSafeArea()
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    activeBulkSelector = nil
+                }
+
+            TdayCenteredSelectorCard(title: selector.title) {
+                switch selector {
+                case .priority:
+                    ForEach(Array(bulkPriorityOptions.enumerated()), id: \.element.value) { index, option in
+                        if index > 0 {
+                            TdaySheetDivider(horizontalPadding: 20, opacity: 0.16)
+                        }
+                        TdayCenteredSelectorRow(
+                            title: option.label,
+                            swatchColor: priorityColor(option.value),
+                            selected: false
+                        ) {
+                            applyBulkPriority(option.value)
+                        }
+                    }
+
+                case .list:
+                    TdayCenteredSelectorRow(
+                        title: L("No list"),
+                        swatchColor: colors.onSurfaceVariant.opacity(0.35),
+                        selected: false
+                    ) {
+                        requestBulkMove(toListID: nil)
+                    }
+
+                    ForEach(bulkMoveTargetLists) { list in
+                        TdaySheetDivider(horizontalPadding: 20, opacity: 0.16)
+                        TdayCenteredSelectorRow(
+                            title: list.name,
+                            swatchColor: todoListAccentColor(for: list.color),
+                            selected: false
+                        ) {
+                            requestBulkMove(toListID: list.id)
+                        }
+                    }
+                }
+
+                if let note = bulkRecurringNote(for: selector == .priority ? .priority : .move) {
+                    TdaySheetDivider(horizontalPadding: 20, opacity: 0.16)
+                    Text(note)
+                        .font(.tdayRounded(size: 13, weight: .semibold))
+                        .foregroundStyle(colors.onSurfaceVariant)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.horizontal, 20)
+                        .padding(.top, 12)
+                }
+            }
+            .padding(.horizontal, 34)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private var createTaskSheetContent: some View {
@@ -2364,15 +2822,18 @@ struct TodoListScreen: View {
         let isFading = completionPhase == .fading
         let showCheckmark = completionPhase != nil || todo.completed
         let showStrikethrough = completionPhase == .struck || completionPhase == .fading || todo.completed
+        let isSelected = selectedTodoIDs.contains(todo.id)
 
         return VStack(spacing: 0) {
             HStack(alignment: .firstTextBaseline, spacing: 12) {
                 Button {
-                    completeTodoWithoutReflow(todo)
+                    if isSelecting {
+                        toggleSelection(of: todo)
+                    } else {
+                        completeTodoWithoutReflow(todo)
+                    }
                 } label: {
-                    Image(systemName: showCheckmark ? "checkmark.circle.fill" : "circle")
-                        .font(.system(size: TodoTimelineMetrics.minimalRowToggleSize, weight: .regular))
-                        .foregroundStyle(showCheckmark ? Color.green : colors.onSurfaceVariant.opacity(0.78))
+                    minimalRowToggleGlyph(isSelected: isSelected, showCheckmark: showCheckmark)
                         .frame(width: TodoTimelineMetrics.minimalRowToggleFrame, height: TodoTimelineMetrics.minimalRowToggleFrame)
                 }
                 .buttonStyle(
@@ -2438,6 +2899,12 @@ struct TodoListScreen: View {
             .padding(.vertical, TodoTimelineMetrics.minimalRowVerticalPadding)
             .contentShape(Rectangle())
         }
+        .background {
+            if isSelecting && isSelected {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(modeAccentColor.opacity(colors.isDark ? 0.18 : 0.10))
+            }
+        }
         .opacity((isFading ? 0 : (draggedTodo?.id == todo.id ? 0.7 : 1)) * restingRowOpacity(for: todo))
         .scaleEffect(isFading ? 0.985 : 1, anchor: .center)
         .offset(y: isFading ? -10 : 0)
@@ -2445,10 +2912,14 @@ struct TodoListScreen: View {
         .allowsHitTesting(!isCompleting)
         .transition(.opacity.combined(with: .scale(scale: 0.985)))
         .modifier(TimelineTaskFlashHighlight(active: flashHighlight))
+        // Inside the swipe modifier on purpose — see TodoSelectionTapModifier.
+        .modifier(TodoSelectionTapModifier(enabled: isSelecting) {
+            toggleSelection(of: todo)
+        })
         .todoTrailingSwipeActions(
             rowID: todo.id,
             openRowID: $openSwipeTaskID,
-            enabled: !isCompleting && !isViewerList,
+            enabled: !isCompleting && !isViewerList && !isSelecting,
             extraAction: promoteOrFloatSwipeAction(for: todo),
             onEdit: {
                 editingTodo = todo
@@ -2471,7 +2942,7 @@ struct TodoListScreen: View {
         )
         .modifier(
             TodoInAppDragModifier(
-                enabled: viewModel.mode.supportsTaskReschedule && !isViewerList,
+                enabled: viewModel.mode.supportsTaskReschedule && !isViewerList && !isSelecting,
                 todo: todo,
                 onStart: beginInAppDrag,
                 onMove: updateInAppDrag,
@@ -2479,6 +2950,24 @@ struct TodoListScreen: View {
                 onCancel: cancelInAppDrag
             )
         )
+    }
+
+    /// While selecting, the complete toggle becomes the selection checkbox: a
+    /// plain tap must never tick a task off in the middle of picking a batch.
+    @ViewBuilder
+    private func minimalRowToggleGlyph(isSelected: Bool, showCheckmark: Bool) -> some View {
+        if isSelecting {
+            Image(isSelected ? "LucideCircleCheckBig" : "LucideCircle")
+                .renderingMode(.template)
+                .resizable()
+                .scaledToFit()
+                .frame(width: TodoTimelineMetrics.minimalRowToggleSize, height: TodoTimelineMetrics.minimalRowToggleSize)
+                .foregroundStyle(isSelected ? modeAccentColor : colors.onSurfaceVariant.opacity(0.78))
+        } else {
+            Image(systemName: showCheckmark ? "checkmark.circle.fill" : "circle")
+                .font(.system(size: TodoTimelineMetrics.minimalRowToggleSize, weight: .regular))
+                .foregroundStyle(showCheckmark ? Color.green : colors.onSurfaceVariant.opacity(0.78))
+        }
     }
 
     private func completeTodoWithoutReflow(_ todo: TodoItem) {
@@ -2758,6 +3247,15 @@ struct TimelineTopBar: View {
     let searchPlaceholder: String
     let searchFieldFocused: FocusState<Bool>.Binding?
     let onSearchClose: () -> Void
+    /// The multi-select takeover, built the same way `searchActive` is: while
+    /// set, the back chevron, the title and the action cluster all give way to
+    /// Cancel · the count · Select all. Leaving the screen is not what the user
+    /// means here, so the chevron is not merely hidden but replaced.
+    let selectionActive: Bool
+    let selectionTitle: String
+    let selectionAllSelected: Bool
+    let onSelectionCancel: () -> Void
+    let onSelectionToggleAll: () -> Void
 
     @Environment(\.tdayColors) private var colors
 
@@ -2775,7 +3273,12 @@ struct TimelineTopBar: View {
         searchText: Binding<String> = .constant(""),
         searchPlaceholder: String = "",
         searchFieldFocused: FocusState<Bool>.Binding? = nil,
-        onSearchClose: @escaping () -> Void = {}
+        onSearchClose: @escaping () -> Void = {},
+        selectionActive: Bool = false,
+        selectionTitle: String = "",
+        selectionAllSelected: Bool = false,
+        onSelectionCancel: @escaping () -> Void = {},
+        onSelectionToggleAll: @escaping () -> Void = {}
     ) {
         self.title = title
         self.accentColor = accentColor
@@ -2791,6 +3294,11 @@ struct TimelineTopBar: View {
         self.searchPlaceholder = searchPlaceholder
         self.searchFieldFocused = searchFieldFocused
         self.onSearchClose = onSearchClose
+        self.selectionActive = selectionActive
+        self.selectionTitle = selectionTitle
+        self.selectionAllSelected = selectionAllSelected
+        self.onSelectionCancel = onSelectionCancel
+        self.onSelectionToggleAll = onSelectionToggleAll
     }
 
     private var progress: CGFloat {
@@ -2839,67 +3347,109 @@ struct TimelineTopBar: View {
         )
     }
 
+    /// Cancel · "N selected" · Select all. Same height as the button row it
+    /// replaces, so the collapse progress every one of these screens is measured
+    /// from never changes underfoot.
+    private var selectionRow: some View {
+        HStack(spacing: 0) {
+            TimelineTopBarButton(
+                systemName: "xmark",
+                assetName: "NavClose",
+                chrome: .filled,
+                action: onSelectionCancel
+            )
+            .accessibilityLabel(Text(L("Cancel")))
+
+            Spacer(minLength: 8)
+
+            Text(selectionTitle)
+                .font(.tdayRounded(size: 14, weight: .heavy))
+                .foregroundStyle(colors.onSurface)
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+                .minimumScaleFactor(0.7)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Spacer(minLength: 8)
+
+            Button(action: onSelectionToggleAll) {
+                Text(selectionAllSelected ? BulkSelectionCopy.deselectAll : BulkSelectionCopy.selectAll)
+                    .font(.tdayRounded(size: 15, weight: .heavy))
+                    .foregroundStyle(accentColor)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+                    .padding(.vertical, 8)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
     var body: some View {
         ZStack {
-            HStack(spacing: 0) {
-                // Not drawn at all while the field is up. A back chevron beside
-                // an open search is a second way out that does the wrong thing —
-                // it leaves the screen rather than the query — and it costs the
-                // field the width that makes a placeholder readable.
-                if !searchActive {
-                    TimelineTopBarButton(
-                        systemName: "chevron.left",
-                        assetName: "LucideChevronLeft",
-                        chrome: .filled,
-                        action: onBack
-                    )
-                    .accessibilityLabel(Text(L("Back")))
-                }
+            if selectionActive {
+                selectionRow
+            } else {
+                HStack(spacing: 0) {
+                    // Not drawn at all while the field is up. A back chevron beside
+                    // an open search is a second way out that does the wrong thing —
+                    // it leaves the screen rather than the query — and it costs the
+                    // field the width that makes a placeholder readable.
+                    if !searchActive {
+                        TimelineTopBarButton(
+                            systemName: "chevron.left",
+                            assetName: "LucideChevronLeft",
+                            chrome: .filled,
+                            action: onBack
+                        )
+                        .accessibilityLabel(Text(L("Back")))
+                    }
 
-                if searchActive {
-                    searchRow
-                } else {
-                    Spacer(minLength: 0)
-                    if actions.isEmpty {
-                        Color.clear
-                            .frame(width: TodoTimelineMetrics.topBarButtonFrame, height: TodoTimelineMetrics.topBarButtonFrame)
+                    if searchActive {
+                        searchRow
                     } else {
-                        // Same gap as the web list header's action cluster (gap-2
-                        // between the circular buttons).
-                        HStack(spacing: TodoTimelineMetrics.topBarButtonSpacing) {
-                            ForEach(actions.indices, id: \.self) { index in
-                                let action = actions[index]
-                                let button = TimelineTopBarButton(
-                                    systemName: action.systemName,
-                                    assetName: action.assetName,
-                                    chrome: action.usesCircularChrome ? .filled : .plain,
-                                    tint: action.tint,
-                                    action: action.action
-                                )
-                                if let label = action.accessibilityLabel {
-                                    button.accessibilityLabel(Text(label))
-                                } else {
-                                    button
+                        Spacer(minLength: 0)
+                        if actions.isEmpty {
+                            Color.clear
+                                .frame(width: TodoTimelineMetrics.topBarButtonFrame, height: TodoTimelineMetrics.topBarButtonFrame)
+                        } else {
+                            // Same gap as the web list header's action cluster (gap-2
+                            // between the circular buttons).
+                            HStack(spacing: TodoTimelineMetrics.topBarButtonSpacing) {
+                                ForEach(actions.indices, id: \.self) { index in
+                                    let action = actions[index]
+                                    let button = TimelineTopBarButton(
+                                        systemName: action.systemName,
+                                        assetName: action.assetName,
+                                        chrome: action.usesCircularChrome ? .filled : .plain,
+                                        tint: action.tint,
+                                        action: action.action
+                                    )
+                                    if let label = action.accessibilityLabel {
+                                        button.accessibilityLabel(Text(label))
+                                    } else {
+                                        button
+                                    }
                                 }
                             }
                         }
                     }
                 }
-            }
 
-            if !searchActive {
-                titleContent
-                    .opacity(revealProgress)
-                    .offset(y: titleOffsetY)
-                    .scaleEffect(0.985 + (0.015 * revealProgress))
-                    // Reserve each side for what actually sits there (back button
-                    // left, action cluster right) instead of the larger side twice:
-                    // with three actions a symmetric reserve exceeds the screen
-                    // width and stretches the whole layout edge-to-edge.
-                    .padding(.leading, TodoTimelineMetrics.topBarButtonFrame + 12)
-                    .padding(.trailing, trailingActionReservedWidth + 12)
-                    .frame(maxWidth: .infinity)
-                    .allowsHitTesting(false)
+                if !searchActive {
+                    titleContent
+                        .opacity(revealProgress)
+                        .offset(y: titleOffsetY)
+                        .scaleEffect(0.985 + (0.015 * revealProgress))
+                        // Reserve each side for what actually sits there (back button
+                        // left, action cluster right) instead of the larger side twice:
+                        // with three actions a symmetric reserve exceeds the screen
+                        // width and stretches the whole layout edge-to-edge.
+                        .padding(.leading, TodoTimelineMetrics.topBarButtonFrame + 12)
+                        .padding(.trailing, trailingActionReservedWidth + 12)
+                        .frame(maxWidth: .infinity)
+                        .allowsHitTesting(false)
+                }
             }
         }
         .frame(height: TodoTimelineMetrics.topBarRowHeight)
@@ -3756,6 +4306,143 @@ private let todoListSettingsIconKeys = [
     "camera",
     "palette",
 ]
+
+/// The four verbs a multi-select can apply, and nothing else.
+private enum BulkTaskAction {
+    case complete
+    case delete
+    case priority
+    case move
+}
+
+/// Which centred picker the bulk action bar has open.
+private enum BulkSelectionSelector: String, Identifiable {
+    case priority
+    case list
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .priority:
+            return L("Priority")
+        case .list:
+            return L("List")
+        }
+    }
+}
+
+/// A row-wide tap that toggles selection, attached only while selecting so the
+/// swipe-reveal hint keeps the tap the rest of the time.
+///
+/// It is applied INSIDE `todoTrailingSwipeActions`, which installs a tap of its
+/// own: SwiftUI gives a gesture defined by the view precedence over one attached
+/// further out, so the inner one — this one — is what fires while selecting.
+private struct TodoSelectionTapModifier: ViewModifier {
+    let enabled: Bool
+    let onTap: () -> Void
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if enabled {
+            content
+                .contentShape(Rectangle())
+                .onTapGesture(perform: onTap)
+        } else {
+            content
+        }
+    }
+}
+
+/// The house confirmation for something that cannot be taken back in one step,
+/// in the shape `ListDeleteConfirmationOverlay` already set: full-bleed scrim,
+/// one card, headline and body, Cancel in the primary colour beside the confirm.
+///
+/// Bulk delete always takes this — the undo toast that follows is the second
+/// guard, not a substitute for the first. Bulk move takes it only when the
+/// selection spans more than one source list, which is the one move a second
+/// bulk move cannot put back.
+private struct BulkSelectionConfirmationOverlay: View {
+    let title: String
+    let message: String
+    /// "Applies to N of M — repeating tasks are skipped", when the recurring
+    /// rule narrowed what the confirm button will actually touch.
+    let note: String?
+    let confirmTitle: String
+    let isDestructive: Bool
+    let onCancel: () -> Void
+    let onConfirm: () -> Void
+
+    @Environment(\.tdayColors) private var colors
+
+    var body: some View {
+        ZStack {
+            colors.bottomSheetScrim
+                .ignoresSafeArea()
+                .contentShape(Rectangle())
+                .onTapGesture(perform: onCancel)
+
+            TdaySheetOverlayCard {
+                VStack(alignment: .leading, spacing: 22) {
+                    VStack(alignment: .leading, spacing: 14) {
+                        Text(title)
+                            .font(.tdayRounded(.title2, weight: .black))
+                            .foregroundStyle(colors.onSurface)
+                            .lineLimit(2)
+                            .minimumScaleFactor(0.82)
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        Text(message)
+                            .font(.tdayRounded(.body, weight: .heavy))
+                            .foregroundStyle(colors.onSurfaceVariant)
+                            .lineSpacing(3)
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        if let note {
+                            Text(note)
+                                .font(.tdayRounded(size: 13, weight: .semibold))
+                                .foregroundStyle(colors.onSurfaceVariant.opacity(0.9))
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+
+                    HStack(spacing: 24) {
+                        Spacer(minLength: 0)
+
+                        Button(action: onCancel) {
+                            Text(L("Cancel"))
+                                .font(.tdayRounded(.headline, weight: .heavy))
+                                .foregroundStyle(colors.primary)
+                                .padding(.horizontal, 4)
+                                .padding(.vertical, 8)
+                        }
+                        .buttonStyle(.plain)
+
+                        Button(role: isDestructive ? ButtonRole.destructive : nil, action: onConfirm) {
+                            Text(confirmTitle)
+                                .font(.tdayRounded(.headline, weight: .heavy))
+                                .foregroundStyle(isDestructive ? colors.error : colors.primary)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.75)
+                                .padding(.horizontal, 4)
+                                .padding(.vertical, 8)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.horizontal, 24)
+                .padding(.top, 24)
+                .padding(.bottom, 20)
+                .frame(maxWidth: 330, alignment: .leading)
+            }
+            .padding(.horizontal, 34)
+            .contentShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
+            .onTapGesture {}
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .accessibilityElement(children: .contain)
+    }
+}
 
 private struct ListDeleteConfirmationOverlay: View {
     let onCancel: () -> Void
