@@ -521,9 +521,9 @@ fun SettingsScreen(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                // The cloud is what this app already draws for "the other end of the
-                // sync" — the UnifiedPush row uses it for the same thing.
-                SettingsRowIcon(R.drawable.ic_lucide_cloud)
+                // Same lucide "server" rack the web app puts on this row, so the fact
+                // reads identically across clients.
+                SettingsRowIcon(R.drawable.ic_lucide_server)
                 Text(
                     text = stringResource(R.string.label_server),
                     modifier = Modifier.weight(1f),

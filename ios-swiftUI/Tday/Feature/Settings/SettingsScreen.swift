@@ -2139,8 +2139,8 @@ private struct SettingsServerVersionRow: View {
             HStack(spacing: 14) {
                 // A fact rather than a button, but its neighbours in this card all carry a
                 // glyph and an empty slot next to them read as a missing icon, not a
-                // deliberate one. Cloud is this vocabulary's nearest thing to a server.
-                SettingsRowIcon(asset: "LucideCloud")
+                // deliberate one. Same lucide "server" rack the web app uses on this row.
+                SettingsRowIcon(asset: "LucideServer")
 
                 Text("Server")
                     .font(.tdayRounded(size: 17, weight: .heavy))
