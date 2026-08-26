@@ -139,7 +139,9 @@ function syncReleaseMetadata(manifest) {
     const release = readJson(filePath);
     release.version = manifest.version;
     release.releaseUrl = `https://github.com/ohmzi/Tday/releases/tag/v${manifest.version}`;
-    release.compareUrl = null;
+    // compareUrl is owned by scripts/generate-release-metadata.mjs, which fills
+    // it in from the previous release tag during the release run. Rewriting it
+    // here would make `check` reject its own release commit.
     writeJson(filePath, release);
   }
 }

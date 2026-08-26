@@ -8,6 +8,10 @@ permissions:
   contents: write
   packages: write
 
+concurrency:
+  group: release-master
+  cancel-in-progress: false
+
 env:
   IMAGE_NAME: ghcr.io/ohmzi/tday
 
@@ -62,39 +66,85 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Read version from version manifest
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 20
+
+      # Every merge into master ships a release, even when nobody touched
+      # version.json. If the manifest version is already tagged we bump the
+      # patch (which also increments ios.buildNumber and re-syncs every mirror);
+      # a version a PR deliberately raised is used as-is.
+      - name: Resolve release version
         id: version
         run: |
+          git fetch --tags --force
+
           VERSION=$(node -p "require('./version.json').version")
+          BUMPED=false
+
+          for _ in $(seq 1 50); do
+            git rev-parse -q --verify "refs/tags/v${VERSION}" >/dev/null || break
+            node scripts/version.mjs bump patch
+            VERSION=$(node -p "require('./version.json').version")
+            BUMPED=true
+          done
+
+          if git rev-parse -q --verify "refs/tags/v${VERSION}" >/dev/null; then
+            echo "::error::Could not find an untagged version after 50 patch bumps."
+            exit 1
+          fi
+
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           echo "tag=v${VERSION}" >> "$GITHUB_OUTPUT"
-          PREVIOUS=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
-          echo "previous=$PREVIOUS" >> "$GITHUB_OUTPUT"
+          echo "bumped=${BUMPED}" >> "$GITHUB_OUTPUT"
+          echo "Releasing v${VERSION} (auto-bumped: ${BUMPED})"
+
+      # The repo still carries legacy v1.8.x-v1.44.0 tags from an earlier
+      # versioning era, so ask GitHub for the previous release rather than
+      # letting `git describe` pick one of those up.
+      - name: Resolve previous release
+        id: previous
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PREVIOUS=$(gh release view --json tagName -q .tagName 2>/dev/null || echo "")
+          echo "tag=${PREVIOUS}" >> "$GITHUB_OUTPUT"
+          echo "Previous release: ${PREVIOUS:-<none>}"
 
       - name: Generate release metadata
         run: |
           node ./scripts/generate-release-metadata.mjs \
             --version "${{ steps.version.outputs.version }}" \
-            --previous "${{ steps.version.outputs.previous }}" \
+            --previous "${{ steps.previous.outputs.tag }}" \
             --current-output ./tday-web/public/release/current-release.json \
             --latest-output ./tday-web/public/release/latest-changes.json \
             --body-output ./body.md \
             --repository "${{ github.repository }}"
 
-      - name: Commit release metadata locally
-        id: release_metadata
+      - name: Commit release bump locally
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add tday-web/public/release/current-release.json tday-web/public/release/latest-changes.json
+
+          git add \
+            version.json \
+            tday-web/package.json \
+            tday-web/package-lock.json \
+            tday-web/public/release/current-release.json \
+            tday-web/public/release/latest-changes.json \
+            ios-swiftUI/Tday/Info.plist \
+            ios-swiftUI/project.yml \
+            ios-swiftUI/TdayApp.xcodeproj/project.pbxproj \
+            .env.example \
+            tday-backend/.env.example
 
           if git diff --cached --quiet; then
-            echo "committed=false" >> "$GITHUB_OUTPUT"
-            exit 0
+            echo "::error::Release commit is empty — expected at least regenerated release metadata."
+            exit 1
           fi
 
-          git commit -m "chore(release): update release metadata for ${{ steps.version.outputs.tag }} [skip release]"
-          echo "committed=true" >> "$GITHUB_OUTPUT"
+          git commit -m "chore(release): ${{ steps.version.outputs.tag }} [skip release]"
 
       # ────────────────────────────────────────────
       #  Docker Image
@@ -186,35 +236,58 @@ jobs:
         id: apk
         run: |
           APK=$(find android-compose/app/build/outputs/apk/release -name "*.apk" | head -1)
-          if [ -n "$APK" ]; then
-            DEST="tday-${{ steps.version.outputs.tag }}.apk"
-            cp "$APK" "$DEST"
-            echo "file=$DEST" >> "$GITHUB_OUTPUT"
-            echo "Found APK: $APK → $DEST"
-          else
-            echo "No APK found in release output"
+          if [ -z "$APK" ]; then
+            echo "::error::No APK found in android-compose/app/build/outputs/apk/release — the release must ship one."
+            exit 1
           fi
 
+          DEST="tday-${{ steps.version.outputs.tag }}.apk"
+          cp "$APK" "$DEST"
+          echo "file=$DEST" >> "$GITHUB_OUTPUT"
+          echo "Found APK: $APK → $DEST"
+
       # ────────────────────────────────────────────
-      #  Tag & Release
+      #  Publish
       # ────────────────────────────────────────────
+      - name: Publish release commit to master
+        run: |
+          for attempt in 1 2 3; do
+            if git push origin HEAD:master; then
+              echo "Pushed release commit on attempt ${attempt}."
+              exit 0
+            fi
+
+            echo "Push rejected — master moved. Rebasing and retrying."
+            git fetch origin master
+            if ! git rebase origin/master; then
+              git rebase --abort || true
+              break
+            fi
+          done
+
+          echo "::error::Could not push the release commit to master."
+          exit 1
+
       - name: Create tag
         run: |
-          git tag ${{ steps.version.outputs.tag }}
-          git push origin ${{ steps.version.outputs.tag }}
+          git tag "${{ steps.version.outputs.tag }}"
+          git push origin "${{ steps.version.outputs.tag }}"
 
       - name: Create release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          ARGS=("${{ steps.version.outputs.tag }}" --title "${{ steps.version.outputs.tag }}" --notes-file body.md)
-          if [ -f "${{ steps.apk.outputs.file }}" ]; then
-            ARGS+=("${{ steps.apk.outputs.file }}")
-          fi
-          gh release create "${ARGS[@]}"
+          gh release create "${{ steps.version.outputs.tag }}" \
+            --title "${{ steps.version.outputs.tag }}" \
+            --notes-file body.md \
+            "${{ steps.apk.outputs.file }}"
 
-      - name: Publish release metadata to master
-        if: ${{ steps.release_metadata.outputs.committed == 'true' }}
+      # develop is an ancestor of master right after a merge-commit merge, so
+      # this fast-forwards cleanly and keeps version.json from conflicting on
+      # the next PR. Non-fatal: the following merge resolves any drift.
+      - name: Fast-forward develop to master
         continue-on-error: true
         run: |
-          git push origin HEAD:master
+          if ! git push origin HEAD:develop; then
+            echo "::warning::Could not fast-forward develop to master — merge master into develop manually."
+          fi

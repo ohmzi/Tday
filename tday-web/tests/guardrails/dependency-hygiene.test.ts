@@ -163,6 +163,17 @@ describe("dependency and configuration hygiene", () => {
       const content = readSource(path.join(workflowDir, "release.yml"));
       expect(content).toContain("Dockerfile.backend");
     });
+
+    it("release workflow should bump the patch version when it is already tagged", () => {
+      const content = readSource(path.join(workflowDir, "release.yml"));
+      expect(content).toContain("scripts/version.mjs bump patch");
+    });
+
+    it("release workflow should publish a release with the APK attached", () => {
+      const content = readSource(path.join(workflowDir, "release.yml"));
+      expect(content).toContain("gh release create");
+      expect(content).toContain("steps.apk.outputs.file");
+    });
   });
 
   describe("commit and PR hygiene", () => {

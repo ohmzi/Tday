@@ -163,6 +163,7 @@ npm run observability:smoke                 # no-dependency Sentry/privacy smoke
 | All required documentation files exist | Complete project documentation |
 | Version mirrors synchronize from `version.json` to web package metadata, iOS metadata, and env examples | Single source of version truth |
 | `postversion` and `scripts/version.mjs check` cover every checked-in version mirror | Release bumps include all generated metadata |
+| Release metadata `compareUrl` is exempt from `version.mjs check` | `generate-release-metadata.mjs` owns that field during the release run |
 
 #### `i18n-parity.test.ts` — Locale Key Parity
 
