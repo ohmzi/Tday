@@ -52,7 +52,15 @@ maintenance expectations.
 cp .env.example .env.docker
 # Edit .env.docker — at minimum set AUTH_SECRET and DATABASE_URL
 
-docker compose up -d --build
+docker compose up -d
+```
+
+This pulls the released backend image (`ghcr.io/ohmzi/tday:latest`) — the same artifact CI publishes
+for every release — and starts the stack. To build the image from this checkout instead, layer the
+build override on top:
+
+```bash
+docker compose -f docker-compose.yaml -f docker-compose.build.yaml up -d --build
 ```
 
 Docker Compose starts the backend and database by default. Summary still works without Ollama by
@@ -66,7 +74,7 @@ OLLAMA_URL=http://ollama:11434
 OLLAMA_MODEL=qwen3.5:0.8b
 
 docker compose --profile ai pull ollama ollama-model-setup
-docker compose --profile ai up -d --build
+docker compose --profile ai up -d
 ```
 
 The AI profile starts Ollama and runs a one-shot model setup container that pulls `qwen3.5:0.8b` and
@@ -91,7 +99,7 @@ NVIDIA GPU acceleration, install the NVIDIA Container Toolkit on the Docker host
 override on top of every Compose command:
 
 ```bash
-docker compose -f docker-compose.yaml -f docker-compose.gpu.yaml --profile ai up -d --build
+docker compose -f docker-compose.yaml -f docker-compose.gpu.yaml --profile ai up -d
 ```
 
 ### Local Development
@@ -167,7 +175,9 @@ Tday/
 ├── docker/                    # Container runtime helper config
 ├── docs/                      # Product, architecture, data, coding, testing, deployment
 ├── Dockerfile.backend         # Multi-stage Docker build (Vite + Ktor)
-└── docker-compose.yaml        # Full stack orchestration
+├── docker-compose.yaml        # Full stack orchestration (pulls the released backend image)
+├── docker-compose.build.yaml  # Opt-in override: build the backend image from this checkout
+└── docker-compose.gpu.yaml    # Opt-in override: NVIDIA-accelerated Ollama
 ```
 
 ## Product Model

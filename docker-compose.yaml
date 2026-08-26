@@ -58,14 +58,13 @@ services:
       (if [ \"$${OLLAMA_MODEL}\" != \"qwen2.5:0.5b\" ]; then ollama rm qwen2.5:0.5b || true; fi)"
 
   tday-backend:
-    build:
-      context: .
-      dockerfile: Dockerfile.backend
-      args:
-        # Build-time only: Vite bakes these into the SPA bundle. Both are public values.
-        VITE_SENTRY_DSN: ${VITE_SENTRY_DSN:-}
-        VITE_SENTRY_TRACES_SAMPLE_RATE: ${VITE_SENTRY_TRACES_SAMPLE_RATE:-}
-    image: tday-backend:latest
+    # Production runs the image CI published for a release, never a working-tree build:
+    # a local build ships whatever is checked out (including uncommitted code) and
+    # re-hashes every SPA chunk, which strands already-open PWA clients.
+    # scripts/deploy-release.sh pins TDAY_BACKEND_IMAGE to ghcr.io/ohmzi/tday:v<version>
+    # read from root version.json; the default below tracks the newest release.
+    # To build locally instead, layer docker-compose.build.yaml on top (see docs/DEPLOYMENT.md).
+    image: ${TDAY_BACKEND_IMAGE:-ghcr.io/ohmzi/tday:latest}
     container_name: tday_backend
     restart: always
     # Caps runaway thread/process creation. Memory limits are deliberately NOT set here: the JVM

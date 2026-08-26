@@ -1,0 +1,32 @@
+# Local-build override for the `tday-backend` service.
+#
+# The base docker-compose.yaml deliberately has no `build:` section: production runs
+# the image CI published to GHCR for a release tag, so a stray `docker compose up -d`
+# can never replace a released deployment with a working-tree build.
+#
+# Layer this file on top when you *want* to build from the checkout — development,
+# testing a change before it is released, or a self-hoster who prefers building.
+# The result is tagged `tday-backend:local` so it can never be mistaken for, or
+# overwritten by, a pulled `ghcr.io/ohmzi/tday` image.
+#
+# Usage:
+#   docker compose -f docker-compose.yaml -f docker-compose.build.yaml up -d --build
+#
+# With the optional AI profile and/or GPU override:
+#   docker compose -f docker-compose.yaml -f docker-compose.build.yaml \
+#     -f docker-compose.gpu.yaml --profile ai up -d --build
+#
+# For a traceable build id in /version.json, pass the SHA (the .git dir is not copied
+# into the frontend stage):
+#   docker compose -f docker-compose.yaml -f docker-compose.build.yaml \
+#     build --build-arg GIT_SHA=$(git rev-parse --short HEAD) tday-backend
+services:
+  tday-backend:
+    image: ${TDAY_BACKEND_IMAGE:-tday-backend:local}
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+      args:
+        # Build-time only: Vite bakes these into the SPA bundle. Both are public values.
+        VITE_SENTRY_DSN: ${VITE_SENTRY_DSN:-}
+        VITE_SENTRY_TRACES_SAMPLE_RATE: ${VITE_SENTRY_TRACES_SAMPLE_RATE:-}
