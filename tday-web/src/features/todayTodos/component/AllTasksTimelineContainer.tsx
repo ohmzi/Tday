@@ -486,6 +486,11 @@ const AllTasksTimelineContainer = ({
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
           placeholder={`${appDict("searchIn")} ${pageHeading}...`}
+          // Safe to read the searched set here: the bar clears its query as it
+          // collapses, so while the magnifier is the thing on screen this is
+          // "does the scope hold anything at all". Held back until the first
+          // load settles, or the button would blink out and back on every visit.
+          searchUnavailable={!todoLoading && !hasScopedTasks}
           pageCollapse={{
             ...barSlots,
             title: pageHeading,

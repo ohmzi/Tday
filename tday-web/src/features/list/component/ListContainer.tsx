@@ -117,6 +117,11 @@ const ListContainer = ({ id }: { id: string }) => {
                             : `${appDict("searchTasks")}...`
                     }
                     pageCollapse={{ ...barSlots, title: listName, accentColor: listAccent }}
+                    // Same gate as the summary beside it, for the same reason: an
+                    // empty list has nothing for a query to narrow, and the button
+                    // would only raise a keyboard over the empty-state scene. The
+                    // unsearched set, so a word that matches nothing keeps the field.
+                    searchUnavailable={!listTodosLoading && listTodos.length === 0}
                     trailingAction={
                         <div className="flex shrink-0 items-center gap-2">
                             {/* Same gate the native list screens use: a summary is

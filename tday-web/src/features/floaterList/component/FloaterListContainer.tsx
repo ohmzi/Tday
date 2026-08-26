@@ -83,6 +83,10 @@ export default function FloaterListContainer({ id }: { id: string }) {
           listName ? `${appDict("searchIn")} ${listName}...` : appDict("searchFloatersPlaceholder")
         }
         pageCollapse={{ ...barSlots, title: listName, accentColor: listAccent }}
+        // An empty list has nothing for a query to narrow, and the button would
+        // only raise a keyboard over the empty-state scene. The unsearched set,
+        // so a word that matches nothing keeps the field.
+        searchUnavailable={!floaterListLoading && floaterListTodos.length === 0}
         trailingAction={
           <div className="flex shrink-0 items-center gap-1.5">
           {/* 48px here, against the 56px of the back button and the search

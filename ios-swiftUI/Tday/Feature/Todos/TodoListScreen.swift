@@ -630,6 +630,18 @@ struct TodoListScreen: View {
         showsTimelineNavigationTopBar && !isFloaterTaskHomeScreen
     }
 
+    /// Whether the bar offers the magnifier at all. A scope or a list with no
+    /// tasks in it has no set for a query to narrow, so the button would only
+    /// raise a keyboard over an empty screen — and over the empty-state scene,
+    /// which is the whole of what that screen has to say.
+    ///
+    /// Gates the button, not `showsListSearch`: deleting the last task while a
+    /// search is open should retire the affordance, not slam the field shut
+    /// under the user's hands.
+    private var canOpenListSearch: Bool {
+        showsListSearch && !viewModel.items.isEmpty
+    }
+
     private var normalizedListSearchQuery: String {
         normalizedTodoSearchQuery(listSearchQuery)
     }
@@ -723,7 +735,7 @@ struct TodoListScreen: View {
         var actions: [TimelineTopBarAction] = []
 
         // Leads the cluster, as it does on the web list bar.
-        if showsListSearch {
+        if canOpenListSearch {
             actions.append(TimelineTopBarAction(
                 systemName: "magnifyingglass",
                 assetName: "NavSearch",

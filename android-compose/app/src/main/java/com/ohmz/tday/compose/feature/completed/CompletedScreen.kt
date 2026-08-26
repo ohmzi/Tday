@@ -61,7 +61,6 @@ import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.lerp
 import androidx.core.view.HapticFeedbackConstantsCompat
 import androidx.core.view.ViewCompat
 import com.ohmz.tday.compose.R
@@ -75,11 +74,11 @@ import com.ohmz.tday.compose.core.ui.TaskSwipeActionButton
 import com.ohmz.tday.compose.core.ui.TdayEmptyState
 import com.ohmz.tday.compose.core.ui.TdayHeroToolbar
 import com.ohmz.tday.compose.core.ui.TdaySearchCapsule
+import com.ohmz.tday.compose.core.ui.animateTaskSwipeOffsetAsState
 import com.ohmz.tday.compose.core.ui.rememberLazyListHeroTitleCollapse
+import com.ohmz.tday.compose.core.ui.rememberTaskSwipeRevealState
 import com.ohmz.tday.compose.core.ui.tdayBarButtonContainerColor
 import com.ohmz.tday.compose.core.ui.tdayHeroTitleItem
-import com.ohmz.tday.compose.core.ui.animateTaskSwipeOffsetAsState
-import com.ohmz.tday.compose.core.ui.rememberTaskSwipeRevealState
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.theme.TdayCompletedTitleAccent
 import com.ohmz.tday.compose.ui.theme.TdayDimens
@@ -359,7 +358,9 @@ fun CompletedScreen(
                 collapseProgress = heroCollapse.progress,
                 onBack = onBack,
                 backContentDescription = stringResource(R.string.action_back),
-                modifier = Modifier.align(Alignment.TopStart).padding(padding),
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(padding),
                 titleSuppressed = searchExpanded,
             ) {
                 if (searchExpanded) {
@@ -394,7 +395,11 @@ fun CompletedScreen(
                         icon = ImageVector.vectorResource(R.drawable.ic_lucide_x),
                         contentDescription = stringResource(R.string.action_close_search),
                     )
-                } else {
+                } else if (uiState.items.isNotEmpty()) {
+                    // No magnifier over an empty history: there is no set for a
+                    // query to narrow, and the button would only raise a keyboard
+                    // over the empty-state scene, which is the whole of what the
+                    // screen has to say.
                     CompletedBarButton(
                         // Only opens: the bar hands its row over to the field,
                         // so this button is not on screen to be tapped again.
