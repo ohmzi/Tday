@@ -113,6 +113,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.semantics.semantics
@@ -172,6 +173,10 @@ import com.ohmz.tday.compose.ui.component.TdaySheetFullBleedWindow
 import com.ohmz.tday.compose.ui.component.TdaySheetHeader
 import com.ohmz.tday.compose.ui.component.TdaySheetSectionTitle
 import com.ohmz.tday.compose.ui.component.ThemedDatePickerDialog
+import com.ohmz.tday.compose.ui.priority.PRIORITY_IMPORTANT_VALUE
+import com.ohmz.tday.compose.ui.priority.PRIORITY_NORMAL_VALUE
+import com.ohmz.tday.compose.ui.priority.PRIORITY_URGENT_VALUE
+import com.ohmz.tday.compose.ui.priority.canonicalPriorityValue
 import com.ohmz.tday.compose.ui.priority.isImportantPriority
 import com.ohmz.tday.compose.ui.priority.isUrgentPriority
 import com.ohmz.tday.compose.ui.priority.priorityDisplayLabelRes
@@ -199,6 +204,8 @@ import com.ohmz.tday.compose.ui.theme.tdayListAccentColor
 import com.ohmz.tday.compose.ui.theme.tdayListIconForKey
 import com.ohmz.tday.compose.ui.theme.tdayListIconResForKey
 import com.ohmz.tday.compose.ui.theme.tdayPriorityColor
+import com.ohmz.tday.shared.bulk.BulkAction
+import com.ohmz.tday.shared.bulk.BulkSelectionPolicy
 import com.ohmz.tday.shared.floater.FloaterResting
 import com.ohmz.tday.shared.floater.FloaterRestingTier
 import com.ohmz.tday.shared.sort.TaskSortEngine
@@ -264,6 +271,12 @@ fun TodoListScreen(
     onPromoteFloater: (todo: TodoItem, dueEpochMs: Long) -> Unit = { _, _ -> },
     onDemoteTodo: (todo: TodoItem) -> Unit = {},
     onDeferTask: (todo: TodoItem, dueEpochMs: Long) -> Unit = { _, _ -> },
+    // Bulk actions. Each takes the whole selection, already reduced to the rows
+    // the action may touch — see docs/design/bulk-selection.md.
+    onBulkComplete: (todos: List<TodoItem>) -> Unit = {},
+    onBulkDelete: (todos: List<TodoItem>) -> Unit = {},
+    onBulkSetPriority: (todos: List<TodoItem>, priority: String) -> Unit = { _, _ -> },
+    onBulkMoveToList: (todos: List<TodoItem>, listId: String?) -> Unit = { _, _ -> },
     onOpenMorningSweep: () -> Unit = {},
     onUpdateListSettings: (listId: String, name: String, color: String?, iconKey: String?) -> Unit,
     onDeleteList: (listId: String) -> Unit,
@@ -495,6 +508,90 @@ fun TodoListScreen(
     var openSwipeTaskId by rememberSaveable(uiState.mode, uiState.listId) {
         mutableStateOf<String?>(null)
     }
+    // --- Bulk selection ---------------------------------------------------
+    // Screen-local, hoisted exactly the way `openSwipeTaskId` above is, and
+    // keyed on mode + scoped list so leaving the screen drops it for free. It
+    // deliberately does not live in the ViewModel: that re-hydrates `items` on
+    // every cache-version bump and a selection held there would fight it.
+    var selectionActive by rememberSaveable(uiState.mode, uiState.listId) {
+        mutableStateOf(false)
+    }
+    var selectedTodoIds by rememberSaveable(uiState.mode, uiState.listId) {
+        mutableStateOf(emptySet<String>())
+    }
+    // Offered exactly where the hero toolbar draws its action cluster — every
+    // list mode except the root floater feed, which is a feed of lists rather
+    // than a task list. VIEWER members of a shared list get no affordance at
+    // all, as they already get no swipe, complete or drag.
+    val canSelectTasks = supportsScopedSearch && !isViewerList && uiState.items.isNotEmpty()
+    // What "select all" means: every task the screen would render if you
+    // scrolled to the end and expanded every section, in display order.
+    val selectableTodos = remember(timelineSections) {
+        timelineSections.flatMap { section -> section.items }
+    }
+    val selectedTodos = remember(selectableTodos, selectedTodoIds) {
+        selectableTodos.filter { it.id in selectedTodoIds }
+    }
+    // The recurring rule, in one place: an occurrence may be bulk-completed as
+    // the occurrence it represents, but delete, priority and move have no
+    // per-occurrence route and would silently rewrite the whole series, so they
+    // never see one.
+    val bulkCompleteTargets = remember(selectedTodos) {
+        BulkSelectionPolicy.effectiveSelection(
+            action = BulkAction.COMPLETE,
+            selection = selectedTodos,
+            isRecurring = { it.isRecurring },
+        )
+    }
+    val bulkNonRecurringTargets = remember(selectedTodos) {
+        BulkSelectionPolicy.effectiveSelection(
+            action = BulkAction.DELETE,
+            selection = selectedTodos,
+            isRecurring = { it.isRecurring },
+        )
+    }
+    val bulkSkipsRecurring = bulkNonRecurringTargets.size < selectedTodos.size
+    var showBulkDeleteConfirmation by rememberSaveable { mutableStateOf(false) }
+    var showBulkPriorityPicker by rememberSaveable { mutableStateOf(false) }
+    var showBulkListPicker by rememberSaveable { mutableStateOf(false) }
+    var showBulkMoveConfirmation by rememberSaveable { mutableStateOf(false) }
+    var pendingBulkMoveListId by rememberSaveable { mutableStateOf<String?>(null) }
+    val selectionCapReached = BulkSelectionPolicy.isAtCap(selectedTodoIds.size)
+    val allSelectableSelected = selectableTodos.isNotEmpty() &&
+            selectedTodoIds.size >= minOf(selectableTodos.size, BulkSelectionPolicy.MAX_SELECTION)
+    val exitSelection = {
+        selectionActive = false
+        selectedTodoIds = emptySet()
+        showBulkDeleteConfirmation = false
+        showBulkPriorityPicker = false
+        showBulkListPicker = false
+        showBulkMoveConfirmation = false
+        pendingBulkMoveListId = null
+    }
+    val toggleTodoSelected: (TodoItem) -> Unit = { todo ->
+        selectedTodoIds = when {
+            todo.id in selectedTodoIds -> selectedTodoIds - todo.id
+            // At the cap a further tap is simply refused — no toast, no error.
+            // The bar already says why, in place of the plain count.
+            BulkSelectionPolicy.isAtCap(selectedTodoIds.size) -> selectedTodoIds
+            else -> selectedTodoIds + todo.id
+        }
+    }
+    // Reconciliation: a task that synced away, was completed on another device
+    // or fell out of a live search drops out of the selection silently, and the
+    // mode closes behind the last one instead of leaving an action bar hanging
+    // over nothing.
+    LaunchedEffect(selectionActive, selectableTodos, canSelectTasks) {
+        if (!selectionActive) return@LaunchedEffect
+        if (!canSelectTasks || selectableTodos.isEmpty()) {
+            exitSelection()
+            return@LaunchedEffect
+        }
+        val visibleIds = selectableTodos.mapTo(mutableSetOf()) { it.id }
+        val reconciled = selectedTodoIds.filterTo(mutableSetOf()) { it in visibleIds }
+        if (reconciled.size == selectedTodoIds.size) return@LaunchedEffect
+        if (reconciled.isEmpty()) exitSelection() else selectedTodoIds = reconciled
+    }
     var floaterTaskHomeSearchExpanded by rememberSaveable { mutableStateOf(false) }
     var floaterTaskHomeSearchQuery by rememberSaveable { mutableStateOf("") }
     val normalizedFloaterTaskHomeSearchQuery = remember(floaterTaskHomeSearchQuery) {
@@ -632,6 +729,12 @@ fun TodoListScreen(
     BackHandler(enabled = showScopedSearchField) {
         closeScopedSearch()
     }
+    // Later registration wins in the back dispatcher, so this sits after the
+    // exit-to-launcher handler: back cancels the selection before it can leave
+    // the screen (or the app).
+    BackHandler(enabled = selectionActive) {
+        exitSelection()
+    }
     LaunchedEffect(isFloaterTaskHomeScreen, floaterTaskHomeSearchExpanded) {
         if (!isFloaterTaskHomeScreen) {
             closeFloaterTaskHomeSearch()
@@ -744,6 +847,24 @@ fun TodoListScreen(
                 icon = ImageVector.vectorResource(R.drawable.ic_lucide_sparkles),
                 contentDescription = stringResource(R.string.todos_summarize),
                 onClick = { showSummarySheet = true },
+            )
+        } else {
+            null
+        },
+        if (canSelectTasks) {
+            // An explicit button, never long-press: long-press already starts
+            // drag-to-reschedule on five of the seven list modes, and taking it
+            // would be a gesture-arbitration bug nobody could try before it
+            // shipped.
+            TodoTopBarAction(
+                icon = ImageVector.vectorResource(R.drawable.ic_lucide_circle_check_big),
+                contentDescription = stringResource(R.string.bulk_select),
+                onClick = {
+                    closeScopedSearch()
+                    openSwipeTaskId = null
+                    selectedTodoIds = emptySet()
+                    selectionActive = true
+                },
             )
         } else {
             null
@@ -958,7 +1079,9 @@ fun TodoListScreen(
     Scaffold(
         containerColor = colorScheme.background,
         floatingActionButton = {
-            if (showCreateTaskButton && !isViewerList) {
+            // The selection action bar takes the bottom of the screen while
+            // selecting; the two must never share it.
+            if (showCreateTaskButton && !isViewerList && !selectionActive) {
                 CreateTaskButton(
                     modifier = Modifier
                         .offset(y = fabOffsetY)
@@ -1338,6 +1461,9 @@ fun TodoListScreen(
                                             showEarlierDateTimeSubtitle = showEarlierDateTimeSubtitle,
                                             showDateDivider = showTimelineDateDivider,
                                             readOnly = isViewerList,
+                                            selectionActive = selectionActive,
+                                            selected = todo.id in selectedTodoIds,
+                                            onToggleSelected = { toggleTodoSelected(todo) },
                                             onComplete = { completeAndCelebrate(todo) },
                                             onDelete = { onDelete(todo) },
                                             onInfo = {
@@ -1357,7 +1483,11 @@ fun TodoListScreen(
                                             draggedTodo = sectionDraggedTodo,
                                             openSwipeTaskId = openSwipeTaskId,
                                             onOpenSwipeTaskIdChange = { openSwipeTaskId = it },
-                                            onDragTodoStart = if (canRescheduleTasks) {
+                                            // Long-press drag-to-reschedule stands
+                                            // down while selecting: a null start
+                                            // handler is what turns `dragEnabled`
+                                            // off inside the row.
+                                            onDragTodoStart = if (canRescheduleTasks && !selectionActive) {
                                                 { position ->
                                                     activeDropSectionKey = null
                                                     timelineDropTargetBounds.clear()
@@ -1617,15 +1747,66 @@ fun TodoListScreen(
                     // open search is a second way out that leaves the screen
                     // rather than the query, and it costs the field the width
                     // that makes a placeholder readable.
-                    onBack = if (showScopedSearchField) null else onBack,
+                    onBack = if (showScopedSearchField || selectionActive) null else onBack,
                     backContentDescription = stringResource(R.string.action_back),
                     modifier = Modifier
                         .align(Alignment.TopStart)
                         .padding(padding)
                         .zIndex(6f),
-                    titleSuppressed = showScopedSearchField,
+                    titleSuppressed = showScopedSearchField || selectionActive,
                     actions = {
-                        if (showScopedSearchField) {
+                        if (selectionActive) {
+                            // The same full-row takeover the search field uses:
+                            // the bar's own title and back chevron give way, and
+                            // the count plus Select all / Deselect all take the
+                            // whole row.
+                            TodayHeaderButton(
+                                onClick = exitSelection,
+                                icon = ImageVector.vectorResource(R.drawable.ic_lucide_x),
+                                contentDescription = stringResource(R.string.action_cancel),
+                                iconSize = 22.dp,
+                            )
+                            Text(
+                                text = if (selectionCapReached) {
+                                    stringResource(
+                                        R.string.bulk_selected_capped,
+                                        selectedTodoIds.size,
+                                    )
+                                } else {
+                                    stringResource(R.string.bulk_selected, selectedTodoIds.size)
+                                },
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = colorScheme.onSurface,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .padding(horizontal = 10.dp),
+                            )
+                            TextButton(
+                                onClick = {
+                                    if (allSelectableSelected) {
+                                        selectedTodoIds = emptySet()
+                                    } else {
+                                        selectedTodoIds = selectableTodos
+                                            .take(BulkSelectionPolicy.MAX_SELECTION)
+                                            .mapTo(mutableSetOf()) { it.id }
+                                    }
+                                },
+                            ) {
+                                Text(
+                                    text = if (allSelectableSelected) {
+                                        stringResource(R.string.bulk_deselect_all)
+                                    } else {
+                                        stringResource(R.string.bulk_select_all)
+                                    },
+                                    color = colorScheme.primary,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    maxLines = 1,
+                                )
+                            }
+                        } else if (showScopedSearchField) {
                             // The field takes the WHOLE bar — back chevron,
                             // title and action cluster all give way to it, as
                             // they do on the root feeds and on iOS's
@@ -1676,7 +1857,9 @@ fun TodoListScreen(
                 )
             }
 
-            if (showRootFeedDock && rootFeedTab != null && onRootFeedTabSelected != null) {
+            if (showRootFeedDock && rootFeedTab != null && onRootFeedTabSelected != null &&
+                !selectionActive
+            ) {
                 RootFeedDock(
                     activeTab = rootFeedTab,
                     collapsed = dockCollapsed,
@@ -1690,6 +1873,27 @@ fun TodoListScreen(
                             onRootFeedTabSelected(tab)
                         }
                     },
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .zIndex(8f),
+                )
+            }
+
+            if (selectionActive) {
+                BulkSelectionActionBar(
+                    // Delete / Priority / Move go dark when the selection is
+                    // nothing but repeating occurrences, which those three
+                    // never touch.
+                    completeEnabled = bulkCompleteTargets.isNotEmpty(),
+                    editEnabled = bulkNonRecurringTargets.isNotEmpty(),
+                    onComplete = {
+                        lastCompletionAtMs = SystemClock.uptimeMillis()
+                        onBulkComplete(bulkCompleteTargets)
+                        exitSelection()
+                    },
+                    onPriority = { showBulkPriorityPicker = true },
+                    onMove = { showBulkListPicker = true },
+                    onDelete = { showBulkDeleteConfirmation = true },
                     modifier = Modifier
                         .align(Alignment.BottomStart)
                         .zIndex(8f),
@@ -2006,12 +2210,263 @@ fun TodoListScreen(
             },
         )
     }
+
+    // Bulk delete, layer one. The undo toast the ViewModel raises afterwards is
+    // layer two, and neither stands in for the other: a batch delete is the one
+    // action here that is worth being asked about twice.
+    if (showBulkDeleteConfirmation && bulkNonRecurringTargets.isNotEmpty()) {
+        val deleteCount = bulkNonRecurringTargets.size
+        TdayConfirmationDialog(
+            title = pluralStringResource(R.plurals.bulk_delete_title, deleteCount, deleteCount),
+            message = stringResource(R.string.bulk_delete_body),
+            skippedMessage = if (bulkSkipsRecurring) {
+                stringResource(R.string.bulk_applies_to, deleteCount, selectedTodos.size)
+            } else {
+                null
+            },
+            confirmLabel = pluralStringResource(
+                R.plurals.bulk_delete_confirm,
+                deleteCount,
+                deleteCount,
+            ),
+            confirmColor = colorScheme.error,
+            onDismissRequest = { showBulkDeleteConfirmation = false },
+            onConfirm = {
+                showBulkDeleteConfirmation = false
+                onBulkDelete(bulkNonRecurringTargets)
+                exitSelection()
+            },
+        )
+    }
+
+    if (showBulkPriorityPicker && bulkNonRecurringTargets.isNotEmpty()) {
+        val priorityTargets = bulkNonRecurringTargets
+        val priorityOptions = remember {
+            listOf(PRIORITY_NORMAL_VALUE, PRIORITY_IMPORTANT_VALUE, PRIORITY_URGENT_VALUE)
+        }
+        TdayCenteredSelectorDialog(
+            title = stringResource(R.string.bulk_action_priority),
+            options = priorityOptions,
+            optionLabel = { option -> context.getString(priorityDisplayLabelRes(option)) },
+            optionSwatchColor = { option -> tdayPriorityColor(option) },
+            isSelected = { option ->
+                priorityTargets.all { canonicalPriorityValue(it.priority) == option }
+            },
+            onDismiss = { showBulkPriorityPicker = false },
+            onOptionSelected = { option ->
+                showBulkPriorityPicker = false
+                onBulkSetPriority(priorityTargets, option)
+                exitSelection()
+            },
+        )
+    }
+
+    if (showBulkListPicker && bulkNonRecurringTargets.isNotEmpty()) {
+        val moveTargets = bulkNonRecurringTargets
+        // Same-silo only: scheduled tasks move between scheduled lists and
+        // floaters between floater lists, and `uiState.lists` is already the
+        // right silo for the mode. Viewer lists are not offered, exactly as the
+        // create/edit sheet excludes them.
+        val moveOptions = remember(uiState.lists) {
+            listOf<ListSummary?>(null) + uiState.lists.filter { !it.isViewer }
+        }
+        val noListLabel = stringResource(R.string.create_task_no_list)
+        TdayCenteredSelectorDialog(
+            title = stringResource(R.string.bulk_action_move),
+            options = moveOptions,
+            optionLabel = { option -> option?.name ?: noListLabel },
+            optionSwatchColor = { option ->
+                option?.let { tdayListAccentColor(it.color) }
+                    ?: colorScheme.outlineVariant.copy(alpha = 0.95f)
+            },
+            isSelected = { option -> moveTargets.all { it.listId == option?.id } },
+            onDismiss = { showBulkListPicker = false },
+            onOptionSelected = { option ->
+                showBulkListPicker = false
+                val distinctSourceLists = moveTargets.map { it.listId }.distinct().size
+                if (
+                    BulkSelectionPolicy.requiresConfirmation(
+                        action = BulkAction.MOVE_TO_LIST,
+                        distinctSourceLists = distinctSourceLists,
+                    )
+                ) {
+                    // Only when the sources differ: that is the case the user
+                    // cannot put back, because an edit has no undo and the
+                    // original assignments are gone.
+                    pendingBulkMoveListId = option?.id
+                    showBulkMoveConfirmation = true
+                } else {
+                    onBulkMoveToList(moveTargets, option?.id)
+                    exitSelection()
+                }
+            },
+        )
+    }
+
+    if (showBulkMoveConfirmation && bulkNonRecurringTargets.isNotEmpty()) {
+        val moveCount = bulkNonRecurringTargets.size
+        TdayConfirmationDialog(
+            title = pluralStringResource(R.plurals.bulk_move_title, moveCount, moveCount),
+            message = stringResource(R.string.bulk_move_body),
+            skippedMessage = if (bulkSkipsRecurring) {
+                stringResource(R.string.bulk_applies_to, moveCount, selectedTodos.size)
+            } else {
+                null
+            },
+            confirmLabel = pluralStringResource(R.plurals.bulk_move_confirm, moveCount, moveCount),
+            confirmColor = colorScheme.primary,
+            onDismissRequest = {
+                showBulkMoveConfirmation = false
+                pendingBulkMoveListId = null
+            },
+            onConfirm = {
+                val targetListId = pendingBulkMoveListId
+                val targets = bulkNonRecurringTargets
+                showBulkMoveConfirmation = false
+                pendingBulkMoveListId = null
+                onBulkMoveToList(targets, targetListId)
+                exitSelection()
+            },
+        )
+    }
+}
+
+/**
+ * The bar that replaces the create FAB while selecting: the four actions a bulk
+ * selection can apply, and nothing else.
+ */
+@Composable
+private fun BulkSelectionActionBar(
+    completeEnabled: Boolean,
+    editEnabled: Boolean,
+    onComplete: () -> Unit,
+    onPriority: () -> Unit,
+    onMove: () -> Unit,
+    onDelete: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+
+    Card(
+        modifier = modifier
+            .navigationBarsPadding()
+            .fillMaxWidth()
+            .padding(horizontal = 18.dp, vertical = 14.dp),
+        shape = RoundedCornerShape(22.dp),
+        border = BorderStroke(1.dp, TdaySheetDefaults.cardStrokeColor()),
+        colors = CardDefaults.cardColors(containerColor = TdaySheetDefaults.surfaceColor()),
+        elevation = CardDefaults.cardElevation(defaultElevation = 14.dp),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 10.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            BulkSelectionAction(
+                icon = R.drawable.ic_lucide_check_check,
+                label = stringResource(R.string.bulk_action_complete),
+                tint = TdayTaskCompleteAccent,
+                enabled = completeEnabled,
+                onClick = onComplete,
+            )
+            BulkSelectionAction(
+                icon = R.drawable.ic_lucide_flag_filled,
+                label = stringResource(R.string.bulk_action_priority),
+                tint = colorScheme.onSurface,
+                enabled = editEnabled,
+                onClick = onPriority,
+            )
+            BulkSelectionAction(
+                icon = R.drawable.ic_lucide_list,
+                label = stringResource(R.string.bulk_action_move),
+                tint = colorScheme.onSurface,
+                enabled = editEnabled,
+                onClick = onMove,
+            )
+            BulkSelectionAction(
+                icon = R.drawable.ic_lucide_trash,
+                label = stringResource(R.string.bulk_action_delete),
+                tint = colorScheme.error,
+                enabled = editEnabled,
+                onClick = onDelete,
+            )
+        }
+    }
+}
+
+@Composable
+private fun BulkSelectionAction(
+    @DrawableRes icon: Int,
+    label: String,
+    tint: Color,
+    enabled: Boolean,
+    onClick: () -> Unit,
+) {
+    val view = LocalView.current
+    val contentAlpha = if (enabled) 1f else 0.34f
+
+    Column(
+        modifier = Modifier
+            .clip(RoundedCornerShape(16.dp))
+            .clickable(enabled = enabled) {
+                ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+                onClick()
+            }
+            .padding(horizontal = 14.dp, vertical = 6.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Icon(
+            imageVector = ImageVector.vectorResource(icon),
+            contentDescription = null,
+            tint = tint.copy(alpha = contentAlpha),
+            modifier = Modifier.size(22.dp),
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.ExtraBold,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = contentAlpha),
+            maxLines = 1,
+        )
+    }
 }
 
 @Composable
 private fun ListDeleteConfirmationDialog(
     onDismissRequest: () -> Unit,
     onConfirm: () -> Unit,
+) {
+    TdayConfirmationDialog(
+        title = stringResource(R.string.todos_delete_list_title),
+        message = stringResource(R.string.todos_delete_list_message),
+        confirmLabel = stringResource(R.string.action_delete),
+        confirmColor = MaterialTheme.colorScheme.error,
+        onDismissRequest = onDismissRequest,
+        onConfirm = onConfirm,
+    )
+}
+
+/**
+ * The house confirmation card — full-bleed scrim, a headline, a body, Cancel on
+ * the left in the primary colour and the confirm on the right in [confirmColor].
+ * Shared by the list delete and by the two bulk actions that ask first, so a
+ * batch delete looks and reads like every other destructive prompt in the app.
+ *
+ * [skippedMessage] carries the "applies to N of M" line when a bulk selection
+ * held repeating occurrences the action cannot touch.
+ */
+@Composable
+private fun TdayConfirmationDialog(
+    title: String,
+    message: String,
+    confirmLabel: String,
+    confirmColor: Color,
+    onDismissRequest: () -> Unit,
+    onConfirm: () -> Unit,
+    skippedMessage: String? = null,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val view = LocalView.current
@@ -2058,18 +2513,26 @@ private fun ListDeleteConfirmationDialog(
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                         Text(
-                            text = stringResource(R.string.todos_delete_list_title),
+                            text = title,
                             style = MaterialTheme.typography.headlineSmall,
                             color = colorScheme.onSurface,
                             fontWeight = FontWeight.ExtraBold,
                         )
                         Text(
-                            text = stringResource(R.string.todos_delete_list_message),
+                            text = message,
                             style = MaterialTheme.typography.bodyLarge,
                             color = colorScheme.onSurfaceVariant,
                             fontWeight = FontWeight.Bold,
                             lineHeight = MaterialTheme.typography.bodyLarge.lineHeight * 1.16f,
                         )
+                        if (skippedMessage != null) {
+                            Text(
+                                text = skippedMessage,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = colorScheme.onSurfaceVariant.copy(alpha = 0.86f),
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
                     }
 
                     Row(
@@ -2095,9 +2558,10 @@ private fun ListDeleteConfirmationDialog(
                             },
                         ) {
                             Text(
-                                text = stringResource(R.string.action_delete),
-                                color = colorScheme.error,
+                                text = confirmLabel,
+                                color = confirmColor,
                                 fontWeight = FontWeight.ExtraBold,
+                                textAlign = TextAlign.End,
                             )
                         }
                     }
@@ -3178,6 +3642,9 @@ private fun TimelineTaskRow(
     showEarlierDateTimeSubtitle: Boolean,
     showDateDivider: Boolean,
     readOnly: Boolean = false,
+    selectionActive: Boolean = false,
+    selected: Boolean = false,
+    onToggleSelected: () -> Unit = {},
     onComplete: () -> Unit,
     onDelete: () -> Unit,
     onInfo: () -> Unit,
@@ -3200,6 +3667,9 @@ private fun TimelineTaskRow(
                 todo = todo,
                 lists = lists,
                 flashHighlight = flashHighlight,
+                selectionActive = selectionActive,
+                selected = selected,
+                onToggleSelected = onToggleSelected,
                 onComplete = onComplete,
                 onDelete = onDelete,
                 onInfo = onInfo,
@@ -3232,6 +3702,9 @@ private fun TimelineTaskRow(
                 lists = lists,
                 flashHighlight = flashHighlight,
                 readOnly = readOnly,
+                selectionActive = selectionActive,
+                selected = selected,
+                onToggleSelected = onToggleSelected,
                 onComplete = onComplete,
                 onDelete = onDelete,
                 onInfo = onInfo,
@@ -3967,6 +4440,9 @@ private fun AllTaskSwipeRow(
     todo: TodoItem,
     lists: List<ListSummary>,
     flashHighlight: Boolean,
+    selectionActive: Boolean = false,
+    selected: Boolean = false,
+    onToggleSelected: () -> Unit = {},
     onComplete: () -> Unit,
     onDelete: () -> Unit,
     onInfo: () -> Unit,
@@ -3991,6 +4467,9 @@ private fun AllTaskSwipeRow(
         mode = TodoListMode.ALL,
         lists = lists,
         flashHighlight = flashHighlight,
+        selectionActive = selectionActive,
+        selected = selected,
+        onToggleSelected = onToggleSelected,
         showDueText = true,
         showDuePrefix = showDuePrefix,
         showDueDateInSubtitle = showDueDateInSubtitle,
@@ -4014,6 +4493,9 @@ private fun TodayTaskSwipeRow(
     lists: List<ListSummary>,
     flashHighlight: Boolean = false,
     readOnly: Boolean = false,
+    selectionActive: Boolean = false,
+    selected: Boolean = false,
+    onToggleSelected: () -> Unit = {},
     onComplete: () -> Unit,
     onDelete: () -> Unit,
     onInfo: () -> Unit,
@@ -4045,6 +4527,9 @@ private fun TodayTaskSwipeRow(
         lists = lists,
         flashHighlight = flashHighlight,
         readOnly = readOnly,
+        selectionActive = selectionActive,
+        selected = selected,
+        onToggleSelected = onToggleSelected,
         showDueText = true,
         showDuePrefix = showDuePrefix,
         showDueDateInSubtitle = showDueDateInSubtitle,
@@ -4076,6 +4561,9 @@ private fun SwipeTaskRow(
     lists: List<ListSummary> = emptyList(),
     flashHighlight: Boolean = false,
     readOnly: Boolean = false,
+    selectionActive: Boolean = false,
+    selected: Boolean = false,
+    onToggleSelected: () -> Unit = {},
     showDueText: Boolean,
     showDuePrefix: Boolean,
     showDueDateInSubtitle: Boolean = false,
@@ -4217,6 +4705,11 @@ private fun SwipeTaskRow(
         if (openSwipeTaskId != null && openSwipeTaskId != todo.id && swipeRevealState.isOpenOrDragging) {
             swipeRevealState.close()
         }
+    }
+    // Entering selection mode closes whatever row was open: the swipe actions
+    // act on one task, and one task is not what the screen is about any more.
+    LaunchedEffect(selectionActive) {
+        if (selectionActive) closeSwipeSlot()
     }
     LaunchedEffect(flashHighlight) {
         if (!flashHighlight) return@LaunchedEffect
@@ -4397,8 +4890,9 @@ private fun SwipeTaskRow(
                             },
                         )
                         .then(
-                            if (readOnly) {
-                                // Viewer role: no swipe-to-reveal edit/delete.
+                            if (readOnly || selectionActive) {
+                                // Viewer role, or selection mode: no
+                                // swipe-to-reveal edit/delete.
                                 Modifier
                             } else {
                                 Modifier.draggable(
@@ -4427,6 +4921,10 @@ private fun SwipeTaskRow(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null,
                         ) {
+                            if (selectionActive) {
+                                onToggleSelected()
+                                return@clickable
+                            }
                             if (readOnly) return@clickable
                             if (swipeRevealState.isOpenOrDragging) {
                                 closeSwipeSlot()
@@ -4466,39 +4964,69 @@ private fun SwipeTaskRow(
                             // multi-line title rather than centring across all lines.
                             verticalAlignment = Alignment.Top,
                         ) {
+                            // While selecting, the same circle becomes the
+                            // selection checkbox — the row's own glyphs, so the
+                            // list does not visibly change shape — and a tap can
+                            // never complete a task by accident.
                             CircularCheckToggleIcon(
-                                imageVector = if (!visuallyChecked) {
+                                imageVector = if (selectionActive) {
+                                    if (selected) {
+                                        ImageVector.vectorResource(R.drawable.ic_lucide_circle_check_big)
+                                    } else {
+                                        ImageVector.vectorResource(R.drawable.ic_lucide_circle)
+                                    }
+                                } else if (!visuallyChecked) {
                                     ImageVector.vectorResource(R.drawable.ic_lucide_circle)
                                 } else {
                                     ImageVector.vectorResource(R.drawable.ic_lucide_circle_check_big)
                                 },
-                                contentDescription = if (visuallyChecked) {
+                                contentDescription = if (selectionActive) {
+                                    if (selected) {
+                                        stringResource(R.string.bulk_deselect_task)
+                                    } else {
+                                        stringResource(R.string.bulk_select_task)
+                                    }
+                                } else if (visuallyChecked) {
                                     stringResource(R.string.label_completed)
                                 } else {
                                     stringResource(R.string.label_mark_complete)
                                 },
-                                tint = if (!visuallyChecked) {
+                                tint = if (selectionActive) {
+                                    if (selected) {
+                                        colorScheme.primary
+                                    } else {
+                                        colorScheme.onSurfaceVariant.copy(alpha = 0.78f)
+                                    }
+                                } else if (!visuallyChecked) {
                                     colorScheme.onSurfaceVariant.copy(alpha = 0.78f)
                                 } else {
                                     TASK_CHECKMARK_GREEN
                                 },
-                                enabled = !visuallyChecked && !pendingCompletion && !readOnly,
+                                enabled = if (selectionActive) {
+                                    true
+                                } else {
+                                    !visuallyChecked && !pendingCompletion && !readOnly
+                                },
                                 onClick = {
                                     ViewCompat.performHapticFeedback(
                                         view,
                                         HapticFeedbackConstantsCompat.CLOCK_TICK,
                                     )
-                                    taskCompletionSound.play()
-                                    closeSwipeSlot()
-                                    localChecked = true
-                                    pendingCompletion = true
-                                    coroutineScope.launch {
-                                        delay(TASK_COMPLETION_CHECK_TO_STRIKE_MS)
-                                        localStruck = true
-                                        delay(TASK_COMPLETION_STRIKE_TO_FADE_MS)
-                                        completionFading = true
-                                        delay(TASK_COMPLETION_FADE_MS)
-                                        onComplete()
+                                    if (selectionActive) {
+                                        onToggleSelected()
+                                    } else {
+                                        taskCompletionSound.play()
+                                        closeSwipeSlot()
+                                        localChecked = true
+                                        pendingCompletion = true
+                                        coroutineScope.launch {
+                                            delay(TASK_COMPLETION_CHECK_TO_STRIKE_MS)
+                                            localStruck = true
+                                            delay(TASK_COMPLETION_STRIKE_TO_FADE_MS)
+                                            completionFading = true
+                                            delay(TASK_COMPLETION_FADE_MS)
+                                            onComplete()
+                                        }
                                     }
                                 },
                             )

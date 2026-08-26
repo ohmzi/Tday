@@ -152,7 +152,7 @@ All platforms use the same client-side **delayed-commit** pattern — there is n
 | Task step (in-editor)                      | ⚠️ immediate, no toast — Work item 5                                                   | no steps UI                                         | no steps UI                                                             |
 | Widgets / Watch / palette / share ext.     | no delete actions                                                                      | no delete actions                                   | no delete actions                                                       |
 | Server MCP `tday_delete_task` (2026-08-21) | ⚠️ immediate by design — API automation scope, no UI toast; no list-delete tool exists | n/a                                                 | n/a                                                                     |
-| **Bulk task delete (multi-select)**        | 🚧 planned 0.7.4                                                                       | 🚧 planned 0.7.4                                    | 🚧 planned 0.7.4                                                        |
+| **Bulk task delete (multi-select)**        | 🚧 planned 0.7.4                                                                       | ✅ `TodoListViewModel.deleteSelected()` + `BulkTaskRepository.stageDeleteTodos()`, behind the count-stating confirmation in `TodoListScreen` | 🚧 planned 0.7.4                                                        |
 
 **Bulk task delete (planned, 0.7.4).** The multi-select feature designed in
 [`docs/design/bulk-selection.md`](design/bulk-selection.md) adds the first *destructive
