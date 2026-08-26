@@ -12,12 +12,26 @@ final class TaskReminderScheduler {
         self.reminderPreferenceStore = reminderPreferenceStore
     }
 
-    func requestAuthorization() async {
+    /// The one place this app asks iOS for permission, and it is asked at bootstrap. iOS shows
+    /// its dialog only while the status is `.notDetermined`; every later call silently returns
+    /// the standing answer, which is why a denied device has to be sent to Settings instead.
+    @discardableResult
+    func requestAuthorization() async -> Bool {
         guard let notificationCenter else {
-            return
+            return false
         }
-        _ = try? await notificationCenter.requestAuthorization(options: [.alert, .sound, .badge])
+        let granted = (try? await notificationCenter.requestAuthorization(options: [.alert, .sound, .badge])) ?? false
         registerReminderCategory()
+        return granted
+    }
+
+    /// Re-read on every foreground return, never cached: the user can turn T'Day's
+    /// notifications off in iOS Settings while the app is suspended and nothing tells the app.
+    func authorizationStatus() async -> UNAuthorizationStatus {
+        guard let notificationCenter else {
+            return .notDetermined
+        }
+        return await notificationCenter.notificationSettings().authorizationStatus
     }
 
     /// Snooze / Tonight actions shown on every task-reminder notification.
@@ -45,7 +59,7 @@ final class TaskReminderScheduler {
     /// notified marker first — without that the next reschedule pass would
     /// silently suppress the task's reminders.
     func snooze(taskID: String, content: UNNotificationContent, interval: TimeInterval) async {
-        guard let notificationCenter else {
+        guard let notificationCenter, NotificationPreferenceStore().isEnabled else {
             return
         }
         reminderPreferenceStore.clearNotified(taskID: taskID)
@@ -72,6 +86,20 @@ final class TaskReminderScheduler {
         )
         let identifiers = tasks.map { notificationIdentifier(for: $0) }
         notificationCenter.removePendingNotificationRequests(withIdentifiers: identifiers)
+
+        // The app's own switch, and a real gate rather than a display of the OS bit: an off switch
+        // empties the queue instead of leaving everything scheduled behind a permission the user
+        // could grant back at any moment.
+        //
+        // The whole queue, not the per-task identifiers removed above. `snooze` files its request
+        // under "<id>.snoozed" and nothing else in this app ever removes one, so an off switch that
+        // only swept the un-suffixed ids left a snoozed reminder to fire up to an hour later while
+        // the switch read off. Day Ahead's own request goes with it, and both come back on the
+        // reschedule pass that follows the switch coming on.
+        guard NotificationPreferenceStore().isEnabled else {
+            notificationCenter.removeAllPendingNotificationRequests()
+            return
+        }
 
         guard let offsetSeconds = defaultReminder.offsetSeconds else {
             return
@@ -269,6 +297,16 @@ final class SecurityAlertPoller {
         guard !isPolling, isApprovedAdminSession() else {
             return
         }
+        // Before the fetch, and before the marker moves. This poll advances the seen
+        // marker ahead of posting on purpose — see below — which is right when the
+        // OS is the thing refusing, because there is nothing to be done about that
+        // and a banner every 30 minutes is worse than one missed. It is wrong when
+        // the app's own switch is off: that is a state the user reverses, and an
+        // alert swallowed here would never be shown again once they did. Leaving
+        // the marker where it is defers the alert instead of eating it.
+        guard NotificationPreferenceStore().isEnabled else {
+            return
+        }
         isPolling = true
         defer { isPolling = false }
 
@@ -288,8 +326,10 @@ final class SecurityAlertPoller {
             return
         }
         let unseen = SecurityAlertNotifier.unseenAlerts(in: alerts, since: seenStore.marker)
-        // Advance before posting. `add` can fail silently (notifications denied), and a duplicate
-        // security banner every 30 minutes is a far worse failure than one missed banner.
+        // Advance before posting. `add` can fail silently when the OS has denied
+        // notifications, and a duplicate security banner every 30 minutes is a far
+        // worse failure than one missed banner. The app's own switch is handled at
+        // the top of this function instead, because that one the user can undo.
         seenStore.record(newest)
         guard let body = SecurityAlertNotifier.notificationBody(for: unseen) else {
             return
@@ -318,8 +358,15 @@ final class SecurityAlertPoller {
     }
 
     private func post(body: String) async {
-        // Same guard the reminder scheduler uses: no notification centre outside a real app
-        // bundle (unit tests, previews).
+        // No notification centre outside a real app bundle (unit tests, previews).
+        //
+        // Deliberately NOT behind `NotificationPreferenceStore`. That switch is described to the
+        // user as covering task reminders and the Day Ahead digest, and this is neither: it is the
+        // only way an admin on an iPhone ever hears that something happened to their account, with
+        // no APNs path behind it (see the class comment). Gating it would also have swallowed the
+        // alert rather than deferred it — `pollForNewAlerts` advances the seen marker before it
+        // posts, so anything raised while the switch was off would never be announced again.
+        // Denying notifications in iOS Settings still silences this: `add` fails and we stay quiet.
         guard Bundle.main.bundleURL.pathExtension == "app" else {
             return
         }
@@ -339,6 +386,27 @@ final class SecurityAlertPoller {
         // user denied it, this throws and we stay quiet rather than prompting a second time.
         try? await UNUserNotificationCenter.current().add(request)
         TdayTelemetry.addBreadcrumb("security.alerts", data: ["phase": "notified"])
+    }
+}
+
+/// The app-level "send me notifications" switch, held apart from the OS permission because the
+/// two answer different questions: iOS says whether it *may* deliver, this says whether the user
+/// still *wants* it. iOS asks its own question exactly once, so without this a user who granted
+/// the launch prompt would have nowhere to go quiet short of the system Settings app.
+///
+/// Default on. The bootstrap prompt is only shown because the app intends to send reminders, so
+/// granting it must leave the Settings switch on without a second tap.
+struct NotificationPreferenceStore {
+    private let defaults: UserDefaults
+    private static let key = "notifications.enabled"
+
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+    }
+
+    var isEnabled: Bool {
+        get { defaults.object(forKey: Self.key) as? Bool ?? true }
+        nonmutating set { defaults.set(newValue, forKey: Self.key) }
     }
 }
 

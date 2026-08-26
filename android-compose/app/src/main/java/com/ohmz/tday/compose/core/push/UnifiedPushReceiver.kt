@@ -78,6 +78,10 @@ class UnifiedPushReceiver : MessagingReceiver() {
             return
         }
 
+        // Gated below the data-changed branch on purpose: that ping posts nothing and keeps
+        // the widgets fresh, so the notification switch has no business stopping it.
+        if (!entryPoint(context).notificationPreferenceStore().isEnabled()) return
+
         val title = field("title") ?: context.getString(R.string.reminder_notification_default_title)
         val body = field("body").orEmpty()
         val todoId = field("todoId")

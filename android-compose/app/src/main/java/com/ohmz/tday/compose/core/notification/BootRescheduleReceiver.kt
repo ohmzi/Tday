@@ -145,6 +145,13 @@ class BootRescheduleReceiver : BroadcastReceiver() {
     }
 
     private fun canPostNotifications(context: Context): Boolean {
+        // The in-app switch gates every T'Day notification, this one included.
+        val notifications = EntryPointAccessors.fromApplication(
+            context.applicationContext,
+            ReminderReceiverEntryPoint::class.java,
+        ).notificationPreferenceStore()
+        if (!notifications.isEnabled()) return false
+
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
             return true
         }

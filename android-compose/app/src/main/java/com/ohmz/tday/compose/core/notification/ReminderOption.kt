@@ -22,7 +22,13 @@ enum class ReminderOption(
     val isEnabled: Boolean get() = this != NONE
 
     companion object {
-        val DEFAULT = MINUTES_10
+        /**
+         * Matches iOS. A reminder that lands at the task's own time is the one people
+         * expect from a due time; an offset only they never chose reads as the app
+         * firing early. Only a fresh install sees this — [ReminderPreferenceStore]
+         * reads the stored choice first.
+         */
+        val DEFAULT = AT_TIME
 
         fun fromName(name: String): ReminderOption =
             entries.firstOrNull { it.name == name } ?: DEFAULT

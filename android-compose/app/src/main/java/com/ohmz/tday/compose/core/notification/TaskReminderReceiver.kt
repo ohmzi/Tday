@@ -27,6 +27,13 @@ class TaskReminderReceiver : BroadcastReceiver() {
         )
         val preferenceStore = entryPoint.reminderPreferenceStore()
 
+        // The in-app switch (Settings -> Feature toggle) gates delivery. This receiver only
+        // runs at the alarm's own moment, so a reminder the switch drops here is gone for
+        // good: nothing re-arms it, and rescheduleAll skips anything already in the past.
+        // Returning before the dedup marker keeps that honest — the alarm is not recorded as
+        // delivered when it never was.
+        if (!entryPoint.notificationPreferenceStore().isEnabled()) return
+
         val alarmKey = TaskReminderScheduler.alarmKeyFor(taskId, instanceDateMillis)
         if (preferenceStore.wasNotified(alarmKey)) return
 
