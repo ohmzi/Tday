@@ -82,7 +82,11 @@ are stored through encrypted local stores.
 ## Version Compatibility
 
 - `android-compose/app/build.gradle.kts` reads root `../version.json` for `versionName` and computes
-  `versionCode`.
+  `versionCode` as `major * 10_000_000 + minor * 10_000 + patch` (`0.7.2` → `70002`). Android only
+  installs an update whose `versionCode` is strictly greater than the installed one, so that encoding
+  gives every component its own decimal slot and the build fails outright if `minor` exceeds 999,
+  `patch` exceeds 9999, the code passes 2_100_000_000, or the code lands at or below the highest
+  `versionCode` this project ever shipped.
 - Server Mode sends `X-Tday-Client: android-compose` and `X-Tday-App-Version`.
 - When `compatibility.updateRequired` is true, Android and the backend use exact version matching.
   The app shows installed/server/latest version state in Settings and blocks Server Mode with
