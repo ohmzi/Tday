@@ -617,3 +617,15 @@
   .tday-empty-scene { animation: none; }
   .tday-empty-sparkle { animation: none; opacity: 1; }
 }
+
+/* ── Route change ──
+   Screens share a toolbar row, so nothing in the bar moves between routes; the
+   fade is what turns a one-frame swap into a handover. Short: this sits between
+   a tap and the screen the user asked for, and anything longer reads as lag. */
+.tday-route-fade {
+  animation: 140ms ease-out both fade-in;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tday-route-fade { animation: none; }
+}
