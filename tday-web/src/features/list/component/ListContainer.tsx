@@ -10,6 +10,8 @@ import { useEditListTodo } from "../query/update-list-todo";
 import { useEditListTodoInstance } from "../query/update-list-todo-instance";
 import { useReorderListTodo } from "../query/reorder-list-todo";
 import TodoMutationProvider from "@/providers/TodoMutationProvider";
+import TaskSelectionProvider from "@/providers/TaskSelectionProvider";
+import BulkSelectButton from "@/components/todo/bulk/BulkSelectButton";
 import { useList } from "../query/get-list-todos";
 import { useListMetaData } from "@/components/Sidebar/List/query/get-list-meta";
 import NativePageHeader, { useNativePageBarSlots } from "@/components/app/NativePageHeader";
@@ -104,144 +106,160 @@ const ListContainer = ({ id }: { id: string }) => {
             useReorderTodo={useReorderListTodo}
             readOnly={isViewer}
         >
-            <div className="mb-20">
-                <ScreenWatermark icon={getListIcon(listMetaData[id]?.iconKey)} color={listAccent} />
-                {/* The list's own icon leads the header, so the edit/members
-                    control moves into the pinned bar where the other screens
-                    keep their actions. */}
-                <MobileSearchHeader
-                    searchQuery={searchQuery}
-                    onSearchChange={setSearchQuery}
-                    placeholder={
-                        listName
-                            ? `${appDict("searchIn")} ${listName}...`
-                            : `${appDict("searchTasks")}...`
-                    }
-                    pageCollapse={{ ...barSlots, title: listName, accentColor: listAccent }}
-                    // Same gate as the summary beside it, for the same reason: an
-                    // empty list has nothing for a query to narrow, and the button
-                    // would only raise a keyboard over the empty-state scene. The
-                    // unsearched set, so a word that matches nothing keeps the field.
-                    searchUnavailable={!listTodosLoading && listTodos.length === 0}
-                    trailingAction={
-                        <div className="flex shrink-0 items-center gap-2">
-                            {/* Same gate the native list screens use: a summary is
-                                only offered where there is something to summarize. */}
-                            {listTodos.length > 0 ? (
-                                <SummaryButton mode="list" listId={id} />
-                            ) : null}
-                            {editableList ? (
-                                // One entry point per role: owners get the edit sheet
-                                // (which hosts the Sharing section); members go straight
-                                // to the members sheet.
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-14 w-14 shrink-0 rounded-full border border-white/70 bg-card/90 text-foreground shadow-[0_14px_30px_-16px_hsl(var(--shadow)/0.6)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-card dark:border-white/10"
-                                    onClick={() =>
-                                        myRole === "OWNER" ? setEditListOpen(true) : setMembersOpen(true)
-                                    }
-                                    aria-label={
-                                        myRole === "OWNER" ? `Edit ${listName || "list"}` : appDict("members")
-                                    }
-                                >
-                                    {myRole === "OWNER" ? (
-                                        <Pencil className="h-6 w-6 stroke-[2.6]" />
-                                    ) : (
-                                        <Users className="h-6 w-6 stroke-[2.6]" />
-                                    )}
-                                </Button>
-                            ) : null}
-                        </div>
-                    }
-                />
-
-                <NativePageHeader
-                    title={listName}
-                    accentColor={listAccent}
-                    icon={getListIcon(listMetaData[id]?.iconKey)}
-                    barSlots={barSlots}
-                    beneathTitle={
-                        sharedByLabel ? (
-                            <p className="mt-1 flex items-center gap-1.5 px-1 text-xs font-black text-muted-foreground">
-                                <Users className="h-3.5 w-3.5" />
-                                {appDict("sharedBy", { name: sharedByLabel })}
-                            </p>
-                        ) : null
-                    }
-                />
-
-                {/* Loading state */}
-                {listTodosLoading && <TodoListLoading />}
-
-                {/* Empty state — no tasks yet */}
-                {!listTodosLoading && !isSearching && listTodos.length === 0 && (
-                    <EmptyState
-                        icon={getListIcon(listMetaData[id]?.iconKey)}
-                        accentColor={listAccent}
-                        title={appDict("listEmpty")}
-                        description={appDict("listEmptyBody")}
-                        // Finishing a list is a payoff, not an absence: the
-                        // confetti is for the tick that emptied it, not for a
-                        // list that was already empty when it was opened.
-                        celebrate={taskJustCompleted()}
-                    />
-                )}
-
-                {/* Empty state — no search results */}
-                {!listTodosLoading && isSearching && filteredTodos.length === 0 && (
-                    <EmptyState
-                        icon={Search}
-                        accentColor={listAccent}
-                        title={appDict("noMatchingTasks")}
-                        description={appDict("searchEmptyBody")}
-                        action={
-                            <button
-                                type="button"
-                                onClick={() => setSearchQuery("")}
-                                className="rounded-full border border-border/60 bg-card px-5 py-2.5 text-sm font-black text-foreground shadow-[0_14px_30px_-16px_hsl(var(--shadow)/0.6)] transition-transform hover:-translate-y-0.5"
-                            >
-                                {appDict("clearSearch")}
-                            </button>
+            {/* `filteredTodos`, not the rendered sections: Select all covers
+                everything the current search leaves standing, including rows
+                inside a collapsed Earlier bucket. */}
+            <TaskSelectionProvider
+                rows={filteredTodos}
+                readOnly={isViewer}
+                // List rows carry no listID of their own, so a bulk move learns
+                // where they came from from the screen instead.
+                scopeListId={id}
+            >
+                <div className="mb-20">
+                    <ScreenWatermark icon={getListIcon(listMetaData[id]?.iconKey)} color={listAccent} />
+                    {/* The list's own icon leads the header, so the edit/members
+                        control moves into the pinned bar where the other screens
+                        keep their actions. */}
+                    <MobileSearchHeader
+                        searchQuery={searchQuery}
+                        onSearchChange={setSearchQuery}
+                        placeholder={
+                            listName
+                                ? `${appDict("searchIn")} ${listName}...`
+                                : `${appDict("searchTasks")}...`
+                        }
+                        pageCollapse={{ ...barSlots, title: listName, accentColor: listAccent }}
+                        // Same gate as the summary beside it, for the same reason: an
+                        // empty list has nothing for a query to narrow, and the button
+                        // would only raise a keyboard over the empty-state scene. The
+                        // unsearched set, so a word that matches nothing keeps the field.
+                        searchUnavailable={!listTodosLoading && listTodos.length === 0}
+                        trailingAction={
+                            <div className="flex shrink-0 items-center gap-2">
+                                {/* Selection mode is entered from an explicit button
+                                    in the header cluster, never a long-press — that
+                                    gesture belongs to drag-to-reschedule on the
+                                    native clients and parity means one entry point. */}
+                                <BulkSelectButton />
+                                {/* Same gate the native list screens use: a summary is
+                                    only offered where there is something to summarize. */}
+                                {listTodos.length > 0 ? (
+                                    <SummaryButton mode="list" listId={id} />
+                                ) : null}
+                                {editableList ? (
+                                    // One entry point per role: owners get the edit sheet
+                                    // (which hosts the Sharing section); members go straight
+                                    // to the members sheet.
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-14 w-14 shrink-0 rounded-full border border-white/70 bg-card/90 text-foreground shadow-[0_14px_30px_-16px_hsl(var(--shadow)/0.6)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-card dark:border-white/10"
+                                        onClick={() =>
+                                            myRole === "OWNER" ? setEditListOpen(true) : setMembersOpen(true)
+                                        }
+                                        aria-label={
+                                            myRole === "OWNER" ? `Edit ${listName || "list"}` : appDict("members")
+                                        }
+                                    >
+                                        {myRole === "OWNER" ? (
+                                            <Pencil className="h-6 w-6 stroke-[2.6]" />
+                                        ) : (
+                                            <Users className="h-6 w-6 stroke-[2.6]" />
+                                        )}
+                                    </Button>
+                                ) : null}
+                            </div>
                         }
                     />
-                )}
 
-                {/* Date-bucketed timeline with drag-and-drop */}
-                {!listTodosLoading && !(isSearching && filteredTodos.length === 0) && listTodos.length > 0 && (
-                    <TimelineSections
-                        sections={timelineSections}
-                        timeZone={userTZ?.timeZone}
-                        // A live query outranks a shut bucket: a list opens
-                        // with Earlier closed, and a task the search turns up in
-                        // there must not stay hidden behind its header. Native
-                        // makes the same call.
-                        earlierExpanded={earlierExpanded || isSearching}
-                        onToggleEarlier={() => setEarlierExpanded((value) => !value)}
-                        onDragActiveChange={setDragActive}
+                    <NativePageHeader
+                        title={listName}
+                        accentColor={listAccent}
+                        icon={getListIcon(listMetaData[id]?.iconKey)}
+                        barSlots={barSlots}
+                        beneathTitle={
+                            sharedByLabel ? (
+                                <p className="mt-1 flex items-center gap-1.5 px-1 text-xs font-black text-muted-foreground">
+                                    <Users className="h-3.5 w-3.5" />
+                                    {appDict("sharedBy", { name: sharedByLabel })}
+                                </p>
+                            ) : null
+                        }
                     />
-                )}
-            </div>
 
-            <ListFormSheet
-                open={editListOpen}
-                onOpenChange={setEditListOpen}
-                list={editableList}
-                // Collaborators need accounts; a local workspace has none, so the
-                // Members entry disappears while plain-text sharing stays.
-                onManageMembers={isLocalMode ? undefined : () => setMembersOpen(true)}
-                onShareList={() => void shareListAsText()}
-            />
-            <ManageMembersSheet
-                open={membersOpen}
-                onOpenChange={setMembersOpen}
-                listId={id}
-                listType="list"
-                listName={listName}
-                myRole={myRole}
-                onShareExternal={() => void shareListAsText()}
-            />
+                    {/* Loading state */}
+                    {listTodosLoading && <TodoListLoading />}
+
+                    {/* Empty state — no tasks yet */}
+                    {!listTodosLoading && !isSearching && listTodos.length === 0 && (
+                        <EmptyState
+                            icon={getListIcon(listMetaData[id]?.iconKey)}
+                            accentColor={listAccent}
+                            title={appDict("listEmpty")}
+                            description={appDict("listEmptyBody")}
+                            // Finishing a list is a payoff, not an absence: the
+                            // confetti is for the tick that emptied it, not for a
+                            // list that was already empty when it was opened.
+                            celebrate={taskJustCompleted()}
+                        />
+                    )}
+
+                    {/* Empty state — no search results */}
+                    {!listTodosLoading && isSearching && filteredTodos.length === 0 && (
+                        <EmptyState
+                            icon={Search}
+                            accentColor={listAccent}
+                            title={appDict("noMatchingTasks")}
+                            description={appDict("searchEmptyBody")}
+                            action={
+                                <button
+                                    type="button"
+                                    onClick={() => setSearchQuery("")}
+                                    className="rounded-full border border-border/60 bg-card px-5 py-2.5 text-sm font-black text-foreground shadow-[0_14px_30px_-16px_hsl(var(--shadow)/0.6)] transition-transform hover:-translate-y-0.5"
+                                >
+                                    {appDict("clearSearch")}
+                                </button>
+                            }
+                        />
+                    )}
+
+                    {/* Date-bucketed timeline with drag-and-drop */}
+                    {!listTodosLoading && !(isSearching && filteredTodos.length === 0) && listTodos.length > 0 && (
+                        <TimelineSections
+                            sections={timelineSections}
+                            timeZone={userTZ?.timeZone}
+                            // A live query outranks a shut bucket: a list opens
+                            // with Earlier closed, and a task the search turns up in
+                            // there must not stay hidden behind its header. Native
+                            // makes the same call.
+                            earlierExpanded={earlierExpanded || isSearching}
+                            onToggleEarlier={() => setEarlierExpanded((value) => !value)}
+                            onDragActiveChange={setDragActive}
+                        />
+                    )}
+                </div>
+
+                <ListFormSheet
+                    open={editListOpen}
+                    onOpenChange={setEditListOpen}
+                    list={editableList}
+                    // Collaborators need accounts; a local workspace has none, so the
+                    // Members entry disappears while plain-text sharing stays.
+                    onManageMembers={isLocalMode ? undefined : () => setMembersOpen(true)}
+                    onShareList={() => void shareListAsText()}
+                />
+                <ManageMembersSheet
+                    open={membersOpen}
+                    onOpenChange={setMembersOpen}
+                    listId={id}
+                    listType="list"
+                    listName={listName}
+                    myRole={myRole}
+                    onShareExternal={() => void shareListAsText()}
+                />
+            </TaskSelectionProvider>
         </TodoMutationProvider>
     );
 };

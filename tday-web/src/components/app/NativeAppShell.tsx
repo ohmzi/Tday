@@ -9,6 +9,7 @@ import ForcePasswordChangeGate from "./ForcePasswordChangeGate";
 import SetSecurityQuestionsGate from "./SetSecurityQuestionsGate";
 import { useNativeRouteCounts } from "./nativeRouteConfig";
 import { usePrefetchRoutes } from "@/hooks/usePrefetchRoutes";
+import { useBulkSelectionActive } from "@/lib/bulk/bulk-selection-signal";
 
 export default function NativeAppShell({
   children,
@@ -19,7 +20,11 @@ export default function NativeAppShell({
   const counts = useNativeRouteCounts();
   const pathname = usePathname();
   usePrefetchRoutes();
+  // A task list in selection mode puts its own action bar in this slot; the two
+  // share the same fixed bottom metrics and must never be on screen together.
+  const bulkSelecting = useBulkSelectionActive();
   const showTaskFab =
+    !bulkSelecting &&
     !pathname.includes("/app/settings") &&
     !pathname.includes("/app/guide") &&
     !pathname.includes("/app/admin");
@@ -29,7 +34,9 @@ export default function NativeAppShell({
       <div className="relative z-0 flex min-w-0 flex-1 flex-col overflow-hidden">
         {children}
       </div>
-      <RootDock onOpenMore={() => setMoreOpen(true)} moreOpen={moreOpen} />
+      {!bulkSelecting && (
+        <RootDock onOpenMore={() => setMoreOpen(true)} moreOpen={moreOpen} />
+      )}
       {showTaskFab && !moreOpen && <TaskFloatingActionButton />}
       <InstallPromptBanner />
       <ForcePasswordChangeGate />
