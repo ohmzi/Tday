@@ -2,7 +2,6 @@ package com.ohmz.tday.compose
 
 import android.content.Intent
 import android.net.Uri
-import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.FastOutLinearInEasing
@@ -10,9 +9,6 @@ import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -114,17 +110,12 @@ import com.ohmz.tday.compose.ui.theme.TdayTodayBlue
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.haze
 import io.sentry.android.navigation.SentryNavigationListener
-import kotlin.math.roundToInt
 
-private const val NAV_ENTER_DURATION_MS = 440
-private const val NAV_EXIT_DURATION_MS = 320
+// The slide durations and offsets that used to sit here went with the slide —
+// nothing is travelling any more, so there is no distance left to time.
 private const val NAV_FADE_IN_DURATION_MS = 360
 private const val NAV_FADE_OUT_DURATION_MS = 240
-private const val NAV_SLIDE_FRACTION = 0.18f
 private const val PENDING_SEARCH_HIGHLIGHT_TODO_ID = "pendingSearchHighlightTodoId"
-private const val SETTINGS_ENTER_DURATION_MS = 380
-private const val SETTINGS_EXIT_DURATION_MS = 260
-private const val SETTINGS_VERTICAL_FRACTION = 0.22f
 
 @Composable
 fun TdayApp(
@@ -304,64 +295,21 @@ fun TdayApp(
                     navController = navController,
                     startDestination = AppRoute.Splash.route,
                     modifier = Modifier.haze(hazeState),
-                    enterTransition = {
-                        fadeIn(
-                            animationSpec = tween(
-                                durationMillis = NAV_FADE_IN_DURATION_MS,
-                                easing = LinearOutSlowInEasing,
-                            ),
-                        ) + slideIntoContainer(
-                            AnimatedContentTransitionScope.SlideDirection.Start,
-                            animationSpec = tween(
-                                durationMillis = NAV_ENTER_DURATION_MS,
-                                easing = LinearOutSlowInEasing,
-                            ),
-                            initialOffset = ::navigationSlideOffset,
-                        )
-                    },
-                    exitTransition = {
-                        fadeOut(
-                            animationSpec = tween(
-                                durationMillis = NAV_FADE_OUT_DURATION_MS,
-                                easing = FastOutLinearInEasing,
-                            ),
-                        ) + slideOutHorizontally(
-                            targetOffsetX = { fullWidth -> -navigationSlideOffset(fullWidth) },
-                            animationSpec = tween(
-                                durationMillis = NAV_EXIT_DURATION_MS,
-                                easing = FastOutLinearInEasing,
-                            ),
-                        )
-                    },
-                    popEnterTransition = {
-                        fadeIn(
-                            animationSpec = tween(
-                                durationMillis = NAV_FADE_IN_DURATION_MS,
-                                easing = LinearOutSlowInEasing,
-                            ),
-                        ) + slideIntoContainer(
-                            AnimatedContentTransitionScope.SlideDirection.End,
-                            animationSpec = tween(
-                                durationMillis = NAV_ENTER_DURATION_MS,
-                                easing = LinearOutSlowInEasing,
-                            ),
-                            initialOffset = ::navigationSlideOffset,
-                        )
-                    },
-                    popExitTransition = {
-                        fadeOut(
-                            animationSpec = tween(
-                                durationMillis = NAV_FADE_OUT_DURATION_MS,
-                                easing = FastOutLinearInEasing,
-                            ),
-                        ) + slideOutHorizontally(
-                            targetOffsetX = ::navigationSlideOffset,
-                            animationSpec = tween(
-                                durationMillis = NAV_EXIT_DURATION_MS,
-                                easing = FastOutLinearInEasing,
-                            ),
-                        )
-                    },
+                    // Crossfade, with no slide in it.
+                    //
+                    // Every screen draws its own toolbar at the same place in the same
+                    // row, so a slide carried the back chevron and the action cluster
+                    // 18% of the screen's width sideways and then dropped them back
+                    // where they started — the one part of the frame that is the SAME
+                    // on both screens, moving. Fading in place hands each button over
+                    // to its counterpart instead of travelling it there and back.
+                    //
+                    // Directional transitions go with it: there is no direction left to
+                    // express once nothing moves, so push and pop share one pair.
+                    enterTransition = { navigationEnterTransition() },
+                    exitTransition = { navigationExitTransition() },
+                    popEnterTransition = { navigationEnterTransition() },
+                    popExitTransition = { navigationExitTransition() },
                 ) {
                     composable(
                         route = AppRoute.Splash.route,
@@ -1525,39 +1473,28 @@ private fun OnAppForegroundResume(
     }
 }
 
-private fun navigationSlideOffset(fullDistance: Int): Int =
-    (fullDistance * NAV_SLIDE_FRACTION).roundToInt()
-
-private fun settingsVerticalOffset(fullHeight: Int): Int =
-    (fullHeight * SETTINGS_VERTICAL_FRACTION).roundToInt()
-
-private fun settingsEnterTransition(): EnterTransition =
-    slideInVertically(
-        animationSpec = tween(
-            durationMillis = SETTINGS_ENTER_DURATION_MS,
-            easing = LinearOutSlowInEasing,
-        ),
-        initialOffsetY = ::settingsVerticalOffset,
-    ) + fadeIn(
+private fun navigationEnterTransition(): EnterTransition =
+    fadeIn(
         animationSpec = tween(
             durationMillis = NAV_FADE_IN_DURATION_MS,
             easing = LinearOutSlowInEasing,
         ),
     )
 
-private fun settingsExitTransition(): ExitTransition =
-    slideOutVertically(
-        animationSpec = tween(
-            durationMillis = SETTINGS_EXIT_DURATION_MS,
-            easing = FastOutLinearInEasing,
-        ),
-        targetOffsetY = ::settingsVerticalOffset,
-    ) + fadeOut(
+private fun navigationExitTransition(): ExitTransition =
+    fadeOut(
         animationSpec = tween(
             durationMillis = NAV_FADE_OUT_DURATION_MS,
             easing = FastOutLinearInEasing,
         ),
     )
+
+// Settings used to rise from below, which moved its toolbar down the screen and
+// back. It crossfades like everything else now; the durations it was tuned with
+// are gone with the movement they were timing.
+private fun settingsEnterTransition(): EnterTransition = navigationEnterTransition()
+
+private fun settingsExitTransition(): ExitTransition = navigationExitTransition()
 
 @Composable
 private fun SplashScreen(
