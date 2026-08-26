@@ -1032,10 +1032,10 @@
       },
       "notifications": {
         "title": "Benachrichtigungen",
-        "summary": "Ein Schalter in den Einstellungen entscheidet, ob T'Day dich überhaupt benachrichtigen darf.",
-        "keywords": "benachrichtigung, berechtigung, erlauben, hinweis, banner, push, os, system, aus, an",
-        "body": "Erinnerungen, die Tagesvorschau und Sicherheitshinweise kommen alle über einen Schalter in den Einstellungen. Er wirkt nur, wenn auch dein Gerät T'Day das Benachrichtigen erlaubt: Beim ersten Einschalten fragt die App das System um Erlaubnis. Ist der Schalter aus, wird nichts zugestellt – selbst wenn das System es weiterhin erlaubt.",
-        "tip": "Lässt sich der Schalter nicht einschalten, wurde dem System bereits abgesagt. Tippe darauf, und T'Day bringt dich zur passenden Seite in den Geräteeinstellungen."
+        "summary": "Ein Schalter entscheidet, ob T'Day dich überhaupt unterbrechen darf.",
+        "keywords": "benachrichtigungen, berechtigung, schalter, erlauben, stumm, stummschalten, erinnerung, übersicht, systemeinstellungen",
+        "body": "In den Einstellungen gibt es einen einzigen Schalter für Benachrichtigungen, und alles, was dich erreicht, läuft darüber — Aufgabenerinnerungen und die Tagesvorschau. Ausschalten leert die Warteschlange, statt sie nur stummzuschalten: Beim Wiedereinschalten kommt also nichts verspätet an. Zusätzlich wird die Systemberechtigung gebraucht: Solange Benachrichtigungen für T'Day auf deinem Gerät blockiert sind, bleibt der Schalter aus und bietet an, die Systemeinstellungen zu öffnen.",
+        "tip": "Beide Hälften müssen an sein. Fehlt die Systemberechtigung, zeigt der Schalter Aus — egal, wie du ihn hier hinterlassen hast."
       },
       "home-widget": {
         "title": "Startbildschirm-Widget",

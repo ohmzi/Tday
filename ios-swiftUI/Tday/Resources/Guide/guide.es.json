@@ -772,24 +772,24 @@
         "settings-feature-toggle"
       ],
       "title": "Notificaciones",
-      "summary": "Un interruptor en Ajustes decide si T'Day puede notificarte.",
+      "summary": "Un solo interruptor decide si T'Day puede interrumpirte.",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Los recordatorios, el resumen del día y las alertas de seguridad llegan todos a través de un interruptor en Ajustes. Solo funciona si tu dispositivo también permite que T'Day te notifique: al activarlo por primera vez, la app pide permiso al sistema. Con el interruptor apagado no se entrega nada, aunque el sistema lo siga permitiendo."
+            "Ajustes tiene un único interruptor de Notificaciones, y todo lo que te llega pasa por él: los recordatorios de tareas y el resumen del día siguiente. Apagarlo vacía la cola en lugar de silenciarla, así que al volver a encenderlo no llega nada con retraso. También hace falta el permiso del sistema: mientras las notificaciones estén bloqueadas para T'Day en tu dispositivo el interruptor sigue apagado y te ofrece abrir los ajustes del sistema."
           ]
         },
         {
           "type": "TIP",
           "texts": [
-            "Si el interruptor no se activa, ya se le dijo que no al sistema. Tócalo y T'Day te llevará a la página correcta en los ajustes de tu dispositivo."
+            "Las dos mitades tienen que estar activas. Si falta el permiso del sistema, el interruptor aparece apagado, lo hayas dejado como lo hayas dejado aquí."
           ]
         }
       ],
       "searchTitle": "notificaciones",
-      "searchKeywords": "notificacion, permiso, permitir, alerta, banner, push, so, sistema, apagado, encendido",
-      "searchBody": "un interruptor en ajustes decide si t'day puede notificarte. los recordatorios, el resumen del dia y las alertas de seguridad llegan todos a traves de un interruptor en ajustes. solo funciona si tu dispositivo tambien permite que t'day te notifique: al activarlo por primera vez, la app pide permiso al sistema. con el interruptor apagado no se entrega nada, aunque el sistema lo siga permitiendo. si el interruptor no se activa, ya se le dijo que no al sistema. tocalo y t'day te llevara a la pagina correcta en los ajustes de tu dispositivo."
+      "searchKeywords": "notificaciones, permiso, interruptor, permitir, silenciar, recordatorio, resumen, ajustes del sistema",
+      "searchBody": "un solo interruptor decide si t'day puede interrumpirte. ajustes tiene un unico interruptor de notificaciones, y todo lo que te llega pasa por el: los recordatorios de tareas y el resumen del dia siguiente. apagarlo vacia la cola en lugar de silenciarla, asi que al volver a encenderlo no llega nada con retraso. tambien hace falta el permiso del sistema: mientras las notificaciones esten bloqueadas para t'day en tu dispositivo el interruptor sigue apagado y te ofrece abrir los ajustes del sistema. las dos mitades tienen que estar activas. si falta el permiso del sistema, el interruptor aparece apagado, lo hayas dejado como lo hayas dejado aqui."
     },
     {
       "id": "recurrence-presets",

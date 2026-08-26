@@ -1032,10 +1032,10 @@
       },
       "notifications": {
         "title": "Notificações",
-        "summary": "Um botão nas Configurações decide se o T'Day pode notificar você.",
-        "keywords": "notificação, permissão, permitir, alerta, banner, push, so, sistema, desligado, ligado",
-        "body": "Lembretes, o resumo do dia e os alertas de segurança chegam todos por um botão nas Configurações. Ele só funciona quando o seu aparelho também permite que o T'Day notifique você: ao ligá-lo pela primeira vez, o app pede permissão ao sistema. Com o botão desligado nada é entregue, mesmo que o sistema continue permitindo.",
-        "tip": "Se o botão não liga, o sistema já recebeu uma recusa. Toque nele e o T'Day leva você à página certa nas configurações do aparelho."
+        "summary": "Um único interruptor decide se o T'Day pode interromper você.",
+        "keywords": "notificações, permissão, interruptor, permitir, silenciar, lembrete, resumo, configurações do sistema",
+        "body": "As Configurações têm um único interruptor de Notificações, e tudo o que chega até você passa por ele — os lembretes de tarefas e o resumo do dia seguinte. Desligá-lo esvazia a fila em vez de silenciá-la, então nada chega atrasado quando você liga de novo. A permissão do sistema também é necessária: enquanto as notificações estiverem bloqueadas para o T'Day no seu aparelho, o interruptor continua desligado e oferece abrir as configurações do sistema.",
+        "tip": "As duas metades precisam estar ligadas. Sem a permissão do sistema, o interruptor aparece desligado, não importa como você o deixou aqui."
       },
       "home-widget": {
         "title": "Widget no ecrã principal",

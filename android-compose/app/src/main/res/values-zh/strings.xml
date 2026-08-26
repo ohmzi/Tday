@@ -638,6 +638,7 @@
     <string name="settings_account_security_questions_updated">安全问题已更新</string>
     <string name="summary_source_local">本地模型</string>
     <string name="summary_source_server">服务器模型</string>
+    <string name="settings_help_guide">使用指南与技巧</string>
     <string name="settings_data_title">你的数据</string>
     <string name="settings_data_summary">%1$d 个任务 · %2$d 个清单 · %3$d 个已完成</string>
     <string name="settings_data_download">下载我的数据</string>
@@ -661,6 +662,8 @@
     <string name="settings_quiet_hours_start">开始</string>
     <string name="settings_quiet_hours_end">结束</string>
     <string name="settings_resting_floaters">淡出休眠浮动任务</string>
+    <string name="settings_calendar_sync">将预定任务添加到我的日历</string>
+    <string name="settings_privacy">隐私</string>
     <string name="root_feed_search_scheduled">搜索计划任务</string>
     <string name="root_feed_search_floater">搜索浮动任务</string>
 </resources>

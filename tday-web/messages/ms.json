@@ -1032,10 +1032,10 @@
       },
       "notifications": {
         "title": "Pemberitahuan",
-        "summary": "Satu suis dalam Tetapan menentukan sama ada T'Day boleh memberitahu anda.",
-        "keywords": "pemberitahuan, kebenaran, benarkan, amaran, sepanduk, push, os, sistem, mati, hidup",
-        "body": "Peringatan, ringkasan hari dan amaran keselamatan semuanya sampai melalui satu suis dalam Tetapan. Ia hanya berfungsi apabila peranti anda turut membenarkan T'Day memberitahu anda: apabila dihidupkan kali pertama, apl meminta kebenaran sistem. Dengan suis dimatikan, tiada apa-apa dihantar walaupun sistem masih membenarkannya.",
-        "tip": "Jika suis tidak mahu hidup, sistem telah pun ditolak. Ketik padanya dan T'Day akan membawa anda ke halaman yang betul dalam tetapan peranti."
+        "summary": "Satu suis menentukan sama ada T'Day boleh mengganggu anda.",
+        "keywords": "pemberitahuan, kebenaran, suis, benarkan, senyap, peringatan, ringkasan, tetapan sistem",
+        "body": "Tetapan mempunyai satu suis Pemberitahuan, dan segala yang sampai kepada anda melaluinya — peringatan tugasan dan ringkasan hari esok. Mematikannya mengosongkan baris gilir, bukan sekadar menyenyapkannya, jadi tiada apa yang tiba lewat apabila anda hidupkannya semula. Kebenaran sistem juga diperlukan: selagi pemberitahuan disekat untuk T'Day pada peranti anda, suis itu kekal mati dan menawarkan untuk membuka tetapan sistem.",
+        "tip": "Kedua-dua bahagian mesti hidup. Tanpa kebenaran sistem, suis dipaparkan mati walau apa pun yang anda tetapkan di sini."
       },
       "home-widget": {
         "title": "Widget skrin utama",
