@@ -456,6 +456,9 @@ struct TodoListScreen: View {
     @State private var pendingMembersAfterSettings = false
     @State private var showingDeleteListConfirmation = false
     @State private var draggedTodo: TodoItem?
+    /// Set at drag start so the scroll reader can keep that row realized; see
+    /// `beginInAppDrag`. Consumed and cleared by the reader.
+    @State private var dragAnchorTodoID: String?
     @State private var inAppDrag: TodoInAppDrag?
     @State private var activeDropSectionId: String?
     @State private var dropTargetFrames: [String: TodoDropTargetFrame] = [:]
@@ -517,11 +520,17 @@ struct TodoListScreen: View {
         _collapsedSectionIDs = State(initialValue: mode == .priority || mode == .all || mode == .list ? ["earlier"] : [])
     }
 
+    /// An empty date bucket is scaffolding, not content: at rest a list holding
+    /// three overdue tasks drew one section of rows and twelve bare headers under
+    /// it. The buckets are drag-to-reschedule drop targets, though, so the whole
+    /// scaffold comes back for the length of a drag and there is still somewhere
+    /// to drop a task into an empty day. `draggedTodo` holds still for the whole
+    /// gesture, so the target set cannot change shape under the finger.
     private var groupedSections: [TodoTimelineSection] {
         buildSections(
             items: timelineItems,
             mode: viewModel.mode,
-            includeEmptyEarlierTarget: false
+            showsEmptyDropTargets: draggedTodo != nil
         )
     }
 
@@ -1578,6 +1587,15 @@ struct TodoListScreen: View {
         TodoTaskDragSession.shared.handledDropSignature = nil
         inAppDrag = TodoInAppDrag(todo: todo, location: location)
         updateInAppDrag(todo, to: location)
+        // Keep the picked-up row realized. Setting `draggedTodo` brings back
+        // every empty bucket, and on a list whose tasks are months out that can
+        // be ten headers inserted ABOVE this row — enough to push it out of the
+        // List's realized window. A dismantled row takes its long-press
+        // recognizer with it (TodoInAppLongPressBridge's `detach()` calls
+        // `onCancel`), so the drag would end the instant it began, silently.
+        // The scroll is minimal rather than centred: if the row is still on
+        // screen this does nothing.
+        dragAnchorTodoID = todo.id
     }
 
     private func updateInAppDrag(_ todo: TodoItem, to location: CGPoint) {
@@ -2146,6 +2164,16 @@ struct TodoListScreen: View {
             }
             .onAppear {
                 scrollToHighlightedTodo(using: scrollProxy)
+            }
+            // Set by `beginInAppDrag`. Minimal scroll, no animation and no
+            // anchor: it does nothing while the row is still on screen, and only
+            // pulls it back when the buckets that appeared above it pushed it out
+            // of the realized window — which would otherwise dismantle the row
+            // and cancel the drag.
+            .onChange(of: dragAnchorTodoID) { _, anchored in
+                guard let anchored else { return }
+                scrollProxy.scrollTo(timelineTodoScrollID(anchored))
+                dragAnchorTodoID = nil
             }
             .onChange(of: highlightedTodoId) {
                 scrollToHighlightedTodo(using: scrollProxy)
@@ -4253,7 +4281,7 @@ private extension View {
 private func buildSections(
     items: [TodoItem],
     mode: TodoListMode,
-    includeEmptyEarlierTarget: Bool = false
+    showsEmptyDropTargets: Bool = false
 ) -> [TodoTimelineSection] {
     let calendar = Calendar.current
     switch mode {
@@ -4340,14 +4368,14 @@ private func buildSections(
             items: items,
             calendar: calendar,
             placesEarlierBeforeToday: true,
-            includeEmptyEarlierTarget: includeEmptyEarlierTarget
+            showsEmptyDropTargets: showsEmptyDropTargets
         )
     case .priority:
         return buildFutureTimelineSections(
             items: items,
             calendar: calendar,
             placesEarlierBeforeToday: true,
-            includeEmptyEarlierTarget: includeEmptyEarlierTarget
+            showsEmptyDropTargets: showsEmptyDropTargets
         )
     case .floater:
         return buildFloaterTimelineSections(items: items)
@@ -4356,7 +4384,7 @@ private func buildSections(
             items: items,
             calendar: calendar,
             placesEarlierBeforeToday: true,
-            includeEmptyEarlierTarget: includeEmptyEarlierTarget
+            showsEmptyDropTargets: showsEmptyDropTargets
         )
     }
 }
@@ -4395,7 +4423,7 @@ private func buildFutureTimelineSections(
     items: [TodoItem],
     calendar: Calendar,
     placesEarlierBeforeToday: Bool,
-    includeEmptyEarlierTarget: Bool
+    showsEmptyDropTargets: Bool
 ) -> [TodoTimelineSection] {
     let now = Date()
     let today = calendar.startOfDay(for: now)
@@ -4421,41 +4449,55 @@ private func buildFutureTimelineSections(
 
     var sections: [TodoTimelineSection] = []
 
+    // The one rule every bucket answers to, Earlier and "Rest of <month>"
+    // included: it earns a header by holding tasks, or by being somewhere the
+    // drag in hand can land. A `targetDate` is what makes a bucket droppable —
+    // "Rest of <month>" loses its target date when the +7 horizon rolls into the
+    // next month — and an empty bucket that takes no drop is a stray header.
+    func appendIfRendered(_ section: TodoTimelineSection) {
+        // "earlier" is excluded from the drag-time restore on purpose: its target
+        // date is yesterday, and web never rebuilds an empty Earlier at all, so
+        // letting it back would make rescheduling INTO the past a thing you can
+        // do on two platforms out of three.
+        let isDropTarget = showsEmptyDropTargets
+            && section.targetDate != nil
+            && section.id != "earlier"
+        guard !section.items.isEmpty || isDropTarget else {
+            return
+        }
+        sections.append(section)
+    }
+
     let earlierItems = groupedByDate.keys
         .filter { $0 < today }
         .sorted()
         .flatMap { groupedByDate[$0] ?? [] }
 
-    let earlierSection: TodoTimelineSection?
-    if !earlierItems.isEmpty || includeEmptyEarlierTarget {
-        earlierSection = TodoTimelineSection(
-            id: "earlier",
-            title: L("Earlier"),
-            items: earlierItems,
-            isCollapsible: !earlierItems.isEmpty,
-            targetDate: timelineRescheduleTargetDate(sectionId: "earlier", today: today, calendar: calendar)
-        )
-    } else {
-        earlierSection = nil
+    let earlierSection = TodoTimelineSection(
+        id: "earlier",
+        title: L("Earlier"),
+        items: earlierItems,
+        isCollapsible: !earlierItems.isEmpty,
+        targetDate: timelineRescheduleTargetDate(sectionId: "earlier", today: today, calendar: calendar)
+    )
+
+    if placesEarlierBeforeToday {
+        appendIfRendered(earlierSection)
     }
 
-    if placesEarlierBeforeToday, let earlierSection {
-        sections.append(earlierSection)
-    }
+    appendIfRendered(daySection(for: today, title: L("Today")))
 
-    sections.append(daySection(for: today, title: L("Today")))
-
-    if !placesEarlierBeforeToday, let earlierSection {
-        sections.append(earlierSection)
+    if !placesEarlierBeforeToday {
+        appendIfRendered(earlierSection)
     }
 
     if let tomorrow = calendar.date(byAdding: .day, value: 1, to: today) {
-        sections.append(daySection(for: tomorrow, title: L("Tomorrow")))
+        appendIfRendered(daySection(for: tomorrow, title: L("Tomorrow")))
     }
 
     for offset in 2...6 {
         guard let date = calendar.date(byAdding: .day, value: offset, to: today) else { continue }
-        sections.append(daySection(for: date, title: timelineDayTitle(for: date)))
+        appendIfRendered(daySection(for: date, title: timelineDayTitle(for: date)))
     }
 
     let restOfCurrentMonthItems = groupedByDate.keys
@@ -4464,7 +4506,7 @@ private func buildFutureTimelineSections(
         .flatMap { groupedByDate[$0] ?? [] }
 
     if let currentMonthStart = calendar.date(from: DateComponents(year: currentYear, month: currentMonth, day: 1)) {
-        sections.append(
+        appendIfRendered(
             TodoTimelineSection(
                 id: "rest-\(currentMonthIndex)",
                 title: L("Rest of %@", monthTitle(for: currentMonthStart, currentYear: currentYear, calendar: calendar)),
@@ -4500,7 +4542,7 @@ private func buildFutureTimelineSections(
             .sorted()
             .flatMap { groupedByDate[$0] ?? [] }
 
-        sections.append(
+        appendIfRendered(
             TodoTimelineSection(
                 id: "month-\(targetMonthIndex)",
                 title: monthTitle(for: monthStart, currentYear: currentYear, calendar: calendar),

@@ -227,6 +227,9 @@ const AllTasksTimelineContainer = ({
 
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [earlierExpanded, setEarlierExpanded] = useState(false);
+  // Empty date buckets are drop targets and nothing else, so they exist only for
+  // the length of a drag.
+  const [dragActive, setDragActive] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const { icon: ScopeIcon, emptyTitle, emptyBody, heading: scopeHeading } = SCOPE_CONFIG[scope];
@@ -310,22 +313,19 @@ const AllTasksTimelineContainer = ({
   // The native date-bucketed timeline (All / Priority / Scheduled).
   const timelineSections = useMemo(() => {
     if (!timeline) return [];
-    const built = buildTimelineSections({
+    // Every scope now shows only the dates that hold tasks; the empty buckets
+    // come back for the length of a drag so there is somewhere to drop.
+    return buildTimelineSections({
       todos: timelineItems.map((item) => item.todo),
       locale,
       timeZone: userTZ?.timeZone,
       futureOnly: scope === "scheduled",
       placesEarlierBeforeToday: scope !== "scheduled",
+      includeEmptyDropTargets: dragActive,
       todayLabel: appDict("today"),
       tomorrowLabel: appDict("tomorrow"),
     });
-    // Scheduled mirrors native: show only dates that actually have tasks (no
-    // empty Today/Tomorrow/day drop-target buckets). All/Priority keep theirs.
-    if (scope === "scheduled") {
-      return built.filter((section) => section.todos.length > 0);
-    }
-    return built;
-  }, [appDict, locale, scope, timeline, timelineItems, userTZ?.timeZone]);
+  }, [appDict, dragActive, locale, scope, timeline, timelineItems, userTZ?.timeZone]);
 
   const focusedDateIndex = useMemo(
     () =>
@@ -441,7 +441,15 @@ const AllTasksTimelineContainer = ({
   // Scroll a focused date into view within the timeline (the bucket may be an
   // aggregate Earlier / Rest / month section).
   useEffect(() => {
-    if (!timeline || !focusedDateKey || focusedTaskId) {
+    // `dragActive` is in the guard, not just the deps: `timelineSections` now
+    // changes identity at drag start and again at drag end, and this effect
+    // would smooth-scroll a bucket to the top of the viewport with the user's
+    // finger down. It is reachable — deleting a task pushes
+    // /app/scheduled?focusDate=…&focusMode=deleted and never clears the param,
+    // so focusDate can sit in the URL with no focusTask, which is exactly this
+    // effect's condition. Worse, the day it targets is usually empty at rest
+    // and only becomes findable when the drag conjures its bucket.
+    if (!timeline || !focusedDateKey || focusedTaskId || dragActive) {
       return;
     }
     const sectionKey = findSectionKeyForDayKey(
@@ -458,7 +466,7 @@ const AllTasksTimelineContainer = ({
     });
 
     return () => window.cancelAnimationFrame(frame);
-  }, [focusedDateKey, focusedTaskId, timeline, timelineSections, userTZ?.timeZone]);
+  }, [dragActive, focusedDateKey, focusedTaskId, timeline, timelineSections, userTZ?.timeZone]);
 
   return (
     <TodoMutationProvider
@@ -511,6 +519,7 @@ const AllTasksTimelineContainer = ({
             // stay hidden behind its header. Native makes the same call.
             earlierExpanded={earlierExpanded || isSearching}
             onToggleEarlier={() => setEarlierExpanded((value) => !value)}
+            onDragActiveChange={setDragActive}
           />
         )}
 

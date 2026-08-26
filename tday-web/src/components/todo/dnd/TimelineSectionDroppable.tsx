@@ -27,10 +27,12 @@ function TimelineDropPlaceholder({ active }: { active: boolean }) {
 }
 
 /**
- * One date bucket of the timeline, registered as a drop target. Empty buckets
- * still render (as a dashed "drop here" slot) so every date is droppable,
- * matching native. The header turns destructive and the bucket highlights while
- * a valid drop hovers it.
+ * One date bucket of the timeline, registered as a drop target. An empty bucket
+ * exists only for the length of a drag — see `buildTimelineSections`, which is
+ * what stops a list of three overdue tasks drawing a dozen bare headers down to
+ * December — so the dashed "drop here" slot below is only ever reachable with a
+ * task in hand. The header turns destructive and the bucket highlights while a
+ * valid drop hovers it.
  */
 export default function TimelineSectionDroppable({
   section,

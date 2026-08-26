@@ -12,10 +12,13 @@ import { compareTodos, priorityRank, type TaskSortKey } from "@/lib/taskSort";
  *   "Rest of [current month]" → future month sections (through at least the end
  *   of the current year, plus any later month that actually holds a task).
  *
- * Every bucket renders even when empty so it can act as a drop target. Each
- * section carries a `targetDayKey` (YYYY-MM-DD) compatible with
- * `moveTodoToDay`, or `null` when it is not a valid drop target (e.g. a past
- * day, or "Rest of month" once the +7 horizon has rolled into next month).
+ * A bucket with no tasks exists only to be a drop target, so it is built only
+ * while a drag is live (`includeEmptyDropTargets`); at rest the scaffold is just
+ * the buckets that hold tasks, otherwise a list with three overdue tasks reads
+ * as one section of rows under twelve bare headers. Each section carries a
+ * `targetDayKey` (YYYY-MM-DD) compatible with `moveTodoToDay`, or `null` when it
+ * is not a valid drop target (e.g. a past day, or "Rest of month" once the +7
+ * horizon has rolled into next month).
  *
  * All day math is calendar arithmetic on the user's timezone-local day keys, so
  * it is independent of the JS runtime timezone.
@@ -108,6 +111,11 @@ export type BuildTimelineSectionsArgs = {
   futureOnly: boolean;
   /** Render Earlier above Today (true for All/Priority/List). */
   placesEarlierBeforeToday: boolean;
+  /**
+   * True only while a drag is in flight: keeps the empty buckets so there is
+   * somewhere to drop a task onto a day that has nothing in it yet.
+   */
+  includeEmptyDropTargets: boolean;
   todayLabel: string;
   tomorrowLabel: string;
 };
@@ -118,6 +126,7 @@ export function buildTimelineSections({
   timeZone,
   futureOnly,
   placesEarlierBeforeToday,
+  includeEmptyDropTargets,
   todayLabel,
   tomorrowLabel,
 }: BuildTimelineSectionsArgs): TimelineSection[] {
@@ -156,6 +165,17 @@ export function buildTimelineSections({
 
   const sections: TimelineSection[] = [];
 
+  // The single rule every bucket answers to: it earns its place by holding
+  // tasks, and an empty one is worth a header only while a drag needs somewhere
+  // to land. Earlier is built only when it has tasks, so it never comes back on
+  // a drag; "Rest of month" loses its target once the +7 horizon rolls into next
+  // month, and an untargetable bucket is not a drop target either.
+  const pushSection = (section: TimelineSection) => {
+    if (section.todos.length > 0 || (includeEmptyDropTargets && section.targetDayKey != null)) {
+      sections.push(section);
+    }
+  };
+
   // 1. Earlier — only when not future-only and there are past tasks.
   const earlierTodos = futureOnly
     ? []
@@ -173,10 +193,10 @@ export function buildTimelineSections({
         }
       : null;
 
-  if (earlierSection && placesEarlierBeforeToday) sections.push(earlierSection);
+  if (earlierSection && placesEarlierBeforeToday) pushSection(earlierSection);
 
   // 2. Today
-  sections.push({
+  pushSection({
     key: todayKey,
     label: todayLabel,
     kind: "day",
@@ -186,12 +206,12 @@ export function buildTimelineSections({
     todos: dayBucket(todayKey),
   });
 
-  if (earlierSection && !placesEarlierBeforeToday) sections.push(earlierSection);
+  if (earlierSection && !placesEarlierBeforeToday) pushSection(earlierSection);
 
   // 3. Tomorrow + 4. next 5 days (+2..+6)
   for (let offset = 1; offset <= 6; offset += 1) {
     const key = offsetDayKey(offset);
-    sections.push({
+    pushSection({
       key,
       label: offset === 1 ? tomorrowLabel : dayLabel(key, locale),
       kind: "day",
@@ -209,18 +229,15 @@ export function buildTimelineSections({
       return key >= horizonKey && monthIndexFromDayKey(key) === currentMonthIndex;
     }),
   );
-  // Render only when it is a live drop target or actually holds tasks.
-  if (horizonInCurrentMonth || restTodos.length > 0) {
-    sections.push({
-      key: `rest-${currentMonthIndex}`,
-      label: `Rest of ${monthLabel(ty, tm, ty, locale)}`,
-      kind: "rest",
-      targetDayKey: horizonInCurrentMonth ? horizonKey : null,
-      collapsible: false,
-      dayDiff: null,
-      todos: restTodos,
-    });
-  }
+  pushSection({
+    key: `rest-${currentMonthIndex}`,
+    label: `Rest of ${monthLabel(ty, tm, ty, locale)}`,
+    kind: "rest",
+    targetDayKey: horizonInCurrentMonth ? horizonKey : null,
+    collapsible: false,
+    dayDiff: null,
+    todos: restTodos,
+  });
 
   // 6. Future months — next month through at least December of the current
   //    year, plus any later month that has a task beyond the horizon.
@@ -240,7 +257,7 @@ export function buildTimelineSections({
         return key >= horizonKey && monthIndexFromDayKey(key) === idx;
       }),
     );
-    sections.push({
+    pushSection({
       key: `month-${idx}`,
       label: monthLabel(year, month, ty, locale),
       kind: "month",
