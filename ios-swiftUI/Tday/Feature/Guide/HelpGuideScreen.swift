@@ -106,6 +106,12 @@ struct HelpGuideScreen: View {
             .padding(.bottom, 32)
         }
         .background(colors.background)
+        // Tapping the content puts the field away, as it does on the root feeds.
+        // Sits above the bar's own safe-area inset, so the gesture only ever
+        // sees taps below the bar and never one on it.
+        .tdayClosesSearchOnOutsideTap(isSearchOpen: searchExpanded) {
+            closeSearch()
+        }
         .safeAreaInset(edge: .top, spacing: 0) {
             TimelineTopBar(
                 title: guideTitle,

@@ -574,12 +574,13 @@
     "systemDefault": "System default",
     "profile": {
       "title": "Profile",
+      "unknownUser": "Unknown user",
       "description": "Update your display name",
       "name": "Name",
       "namePlaceholder": "Enter your name",
       "username": "Username",
       "saving": "Saving...",
-      "save": "Save profile",
+      "save": "Save",
       "edit": "Edit",
       "cancel": "Cancel"
     },
@@ -591,7 +592,7 @@
     "language": {
       "title": "Language",
       "description": "Choose your app language",
-      "appLanguage": "App language"
+      "appLanguage": "Language"
     },
     "notifications": {
       "title": "Notifications",
@@ -601,17 +602,17 @@
       "toggle": "Toggle push notifications"
     },
     "password": {
-      "title": "Change password",
+      "title": "Password",
       "description": "Update your account password",
       "current": "Current password",
       "currentPlaceholder": "Enter your current password",
       "new": "New password",
       "newPlaceholder": "Enter your new password",
-      "requirement": "Password must be at least 8 characters long",
+      "requirement": "Password must be at least 8 characters, with an uppercase letter and a special character.",
       "confirm": "Confirm new password",
       "confirmPlaceholder": "Confirm your new password",
-      "changing": "Changing password...",
-      "change": "Change password",
+      "changing": "Saving...",
+      "change": "Save",
       "changeAction": "Change",
       "cancel": "Cancel",
       "forgot": "Forgot password?"
@@ -655,7 +656,7 @@
       "noChanges": "No changes to save",
       "nameUpdated": "Name updated successfully",
       "nameUpdateFailed": "Failed to update",
-      "passwordTooShort": "New password must be at least 8 characters",
+      "passwordTooShort": "Password must be at least 8 characters",
       "passwordsDoNotMatch": "Passwords do not match",
       "passwordChanged": "Password changed successfully",
       "passwordChangeFailed": "Failed to change password",
@@ -680,25 +681,25 @@
       "title": "Feature toggle"
     },
     "aiSummary": {
-      "title": "AI task summary"
+      "title": "Summary"
     },
     "securityQuestions": {
       "title": "Security questions",
       "changeAction": "Change",
-      "configured": "{{count}} questions configured",
+      "configured": "Configured",
       "notConfigured": "Not configured",
       "questionLabel": "Question {{index}}",
-      "answerPlaceholder": "Your answer",
-      "save": "Save questions",
+      "answerPlaceholder": "Answer",
+      "save": "Save",
       "saving": "Saving...",
       "errorSelectAll": "Please choose three questions",
-      "errorDistinct": "Security questions must be different",
+      "errorDistinct": "Choose three different questions",
       "errorAnswersRequired": "Please answer all three questions",
       "errorPasswordRequired": "Enter your current password"
     },
     "data": {
       "title": "Your data",
-      "summary": "{{tasks}} tasks · {{lists}} lists · {{completed}} completed, all on this server.",
+      "summary": "{{tasks}} tasks · {{lists}} lists · {{completed}} completed",
       "download": "Download my data",
       "import": "Import",
       "exportDone": "Your data file was downloaded.",
@@ -769,7 +770,7 @@
     },
     "about": {
       "title": "About",
-      "appVersion": "App version",
+      "appVersion": "App Version",
       "server": "Server"
     },
     "troubleshooting": {

@@ -574,12 +574,13 @@
     "systemDefault": "システムのデフォルト",
     "profile": {
       "title": "プロフィール",
+      "unknownUser": "不明なユーザー",
       "description": "表示名を更新",
       "name": "名前",
       "namePlaceholder": "名前を入力",
       "username": "ユーザー名",
       "saving": "保存中...",
-      "save": "プロフィールを保存",
+      "save": "保存",
       "edit": "編集",
       "cancel": "キャンセル"
     },
@@ -591,7 +592,7 @@
     "language": {
       "title": "言語",
       "description": "アプリの言語を選択",
-      "appLanguage": "アプリの言語"
+      "appLanguage": "言語"
     },
     "notifications": {
       "title": "通知",
@@ -601,17 +602,17 @@
       "toggle": "プッシュ通知を切り替え"
     },
     "password": {
-      "title": "パスワードを変更",
+      "title": "パスワード",
       "description": "アカウントのパスワードを更新",
       "current": "現在のパスワード",
       "currentPlaceholder": "現在のパスワードを入力",
       "new": "新しいパスワード",
       "newPlaceholder": "新しいパスワードを入力",
-      "requirement": "パスワードは8文字以上である必要があります",
+      "requirement": "パスワードは8文字以上で、大文字と特殊文字を含める必要があります。",
       "confirm": "新しいパスワードを確認",
       "confirmPlaceholder": "新しいパスワードを確認してください",
-      "changing": "パスワードを変更中...",
-      "change": "パスワードを変更",
+      "changing": "保存中...",
+      "change": "保存",
       "changeAction": "変更",
       "cancel": "キャンセル",
       "forgot": "パスワードをお忘れですか？"
@@ -655,7 +656,7 @@
       "noChanges": "保存する変更はありません",
       "nameUpdated": "名前を正常に更新しました",
       "nameUpdateFailed": "更新に失敗しました",
-      "passwordTooShort": "新しいパスワードは8文字以上である必要があります",
+      "passwordTooShort": "パスワードは8文字以上で入力してください",
       "passwordsDoNotMatch": "パスワードが一致しません",
       "passwordChanged": "パスワードを正常に変更しました",
       "passwordChangeFailed": "パスワードの変更に失敗しました",
@@ -680,25 +681,25 @@
       "title": "機能の切り替え"
     },
     "aiSummary": {
-      "title": "AI タスク要約"
+      "title": "要約"
     },
     "securityQuestions": {
       "title": "Security questions",
       "changeAction": "Change",
-      "configured": "{{count}} questions configured",
+      "configured": "設定済み",
       "notConfigured": "Not configured",
       "questionLabel": "Question {{index}}",
-      "answerPlaceholder": "Your answer",
-      "save": "Save questions",
+      "answerPlaceholder": "回答",
+      "save": "保存",
       "saving": "Saving...",
       "errorSelectAll": "Please choose three questions",
-      "errorDistinct": "Security questions must be different",
+      "errorDistinct": "3つの異なる質問を選んでください",
       "errorAnswersRequired": "Please answer all three questions",
       "errorPasswordRequired": "Enter your current password"
     },
     "data": {
       "title": "あなたのデータ",
-      "summary": "タスク {{tasks}} · リスト {{lists}} · 完了 {{completed}}、すべてこのサーバー上にあります。",
+      "summary": "タスク {{tasks}} · リスト {{lists}} · 完了 {{completed}}",
       "download": "データをダウンロード",
       "import": "インポート",
       "exportDone": "データファイルをダウンロードしました。",

@@ -127,6 +127,12 @@ struct CompletedScreen: View {
                     }
                 }
             }
+            // Tapping the content puts the field away, as it does on the root feeds.
+            // Sits above the bar's own safe-area inset, so the gesture only ever
+            // sees taps below the bar and never one on it.
+            .tdayClosesSearchOnOutsideTap(isSearchOpen: searchExpanded) {
+                closeSearch()
+            }
             .navigationBackButtonBehavior()
             .navigationTitleTypography(
                 largeTitleColor: completedAccentColor,

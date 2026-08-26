@@ -167,6 +167,7 @@
     <string name="settings_account_password_label">Senha</string>
     <string name="settings_account_change_password">Alterar</string>
     <string name="settings_account_current_password">Senha atual</string>
+    <string name="settings_account_confirm_new_password">Confirmar nova senha</string>
     <string name="settings_account_forgot_password">Esqueceu a senha?</string>
     <string name="settings_account_password_requirement">A senha deve ter pelo menos 8 caracteres, com uma letra maiúscula e um caractere especial.</string>
     <string name="settings_account_show_password">Mostrar senha</string>
@@ -557,7 +558,7 @@
 
     <!-- Reminder options -->
     <string name="reminder_option_none">Nenhum</string>
-    <string name="reminder_option_at_time">No horário de vencimento</string>
+    <string name="reminder_option_at_time">No horário da tarefa</string>
     <string name="reminder_option_minutes_5">5 minutos antes</string>
     <string name="reminder_option_minutes_10">10 minutos antes</string>
     <string name="reminder_option_minutes_15">15 minutos antes</string>
@@ -662,7 +663,7 @@
     <string name="settings_quiet_hours">Horas de silêncio</string>
     <string name="settings_quiet_hours_start">Início</string>
     <string name="settings_quiet_hours_end">Fim</string>
-    <string name="settings_resting_floaters">Desbotar flutuantes em repouso</string>
+    <string name="settings_resting_floaters">Flutuantes em repouso</string>
     <string name="settings_calendar_sync">Adicionar tarefas agendadas ao meu calendário</string>
     <string name="settings_privacy">Privacidade</string>
     <string name="root_feed_search_scheduled">Pesquisar tarefas agendadas</string>

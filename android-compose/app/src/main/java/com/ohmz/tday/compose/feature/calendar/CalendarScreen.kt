@@ -117,6 +117,8 @@ import com.ohmz.tday.compose.core.ui.TdaySearchCapsule
 import com.ohmz.tday.compose.core.ui.rememberLazyListHeroTitleCollapse
 import com.ohmz.tday.compose.core.ui.tdayBarButtonContainerColor
 import com.ohmz.tday.compose.core.ui.tdayHeroTitleItem
+import com.ohmz.tday.compose.core.ui.TdayHeroTitleMetrics
+import com.ohmz.tday.compose.core.ui.tdayClosesSearchOnOutsideTap
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.component.TdaySegmentedSlider
 import com.ohmz.tday.compose.ui.theme.TdayDimens
@@ -263,6 +265,12 @@ fun CalendarScreen(
     // searching all time would answer with tasks months outside the grid, which
     // is a different screen's job. The visible range is the page.
     var searchExpanded by rememberSaveable { mutableStateOf(false) }
+    // TdayHeroToolbar's row height, for the outside-tap guard: the bar is an
+    // overlay on the same box as the content, so "below the bar" has to be
+    // measured rather than inferred from the hierarchy.
+    val pinnedToolbarHeightPx = with(LocalDensity.current) {
+        TdayHeroTitleMetrics.ToolbarHeight.toPx()
+    }
     var searchQuery by rememberSaveable { mutableStateOf("") }
     var searchNeedsFocus by remember { mutableStateOf(false) }
     val normalizedSearchQuery = remember(searchQuery) {
@@ -494,7 +502,16 @@ fun CalendarScreen(
                     // reserve still lines the two up.
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(padding),
+                        .padding(padding)
+                        // Tap the grid and the field goes away, as on the root
+                        // feeds. The toolbar is an overlay on this same box, so
+                        // the guard is its row height rather than a reported
+                        // rect.
+                        .tdayClosesSearchOnOutsideTap(
+                            isSearchOpen = searchExpanded,
+                            barHeightPx = pinnedToolbarHeightPx,
+                            close = closeSearch,
+                        ),
                     state = listState,
                     // No top padding: the hero item reserves the bar's height
                     // itself, so the scroll offset is a clean count from the top.
@@ -769,16 +786,19 @@ fun CalendarScreen(
             title = calendarTitle,
             titleColor = CalendarAccentPurple,
             collapseProgress = heroCollapse.progress,
-            onBack = onBack,
+            // Gone while the field is up: a back chevron beside an open search
+            // is a second way out that leaves the screen rather than the query,
+            // and it costs the field the width that makes a placeholder
+            // readable.
+            onBack = if (searchExpanded) null else onBack,
             backContentDescription = stringResource(R.string.action_back),
             modifier = Modifier.padding(padding),
             titleSuppressed = searchExpanded,
         ) {
             if (searchExpanded) {
-                // The bar is handed over to the field, keeping the back chevron
-                // and dropping the action cluster — the Today pill included,
-                // which is what the list-detail screens do with theirs.
-                Spacer(modifier = Modifier.width(TdayDimens.FabSize))
+                // The field takes the WHOLE bar — back chevron, title and action
+                // cluster, the Today pill included, all give way to it, as they
+                // do on the root feeds and on iOS's TimelineTopBar.
                 val focusRequester = remember { FocusRequester() }
                 LaunchedEffect(searchNeedsFocus) {
                     if (!searchNeedsFocus) return@LaunchedEffect
@@ -795,15 +815,10 @@ fun CalendarScreen(
                     modifier = Modifier
                         .weight(1f)
                         .focusRequester(focusRequester),
-                    onClear = { searchQuery = "" },
-                    clearContentDescription = stringResource(R.string.action_clear_search),
-                )
-                // The capsule's own X clears the query; leaving the search
-                // behind altogether is this one, as on the root feeds.
-                CalendarBarButton(
-                    onClick = closeSearch,
-                    icon = ImageVector.vectorResource(R.drawable.ic_lucide_x),
-                    contentDescription = stringResource(R.string.action_close_search),
+                    // The one control in the row, so its X leaves the search —
+                    // and leaving clears the query on the way out.
+                    onClose = closeSearch,
+                    trailingContentDescription = stringResource(R.string.action_close_search),
                 )
             } else {
                 CalendarBarButton(

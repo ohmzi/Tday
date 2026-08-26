@@ -167,6 +167,7 @@
     <string name="settings_account_password_label">Contraseña</string>
     <string name="settings_account_change_password">Cambiar</string>
     <string name="settings_account_current_password">Contraseña actual</string>
+    <string name="settings_account_confirm_new_password">Confirmar nueva contraseña</string>
     <string name="settings_account_forgot_password">¿Olvidaste tu contraseña?</string>
     <string name="settings_account_password_requirement">La contraseña debe tener al menos 8 caracteres, con una mayúscula y un carácter especial.</string>
     <string name="settings_account_show_password">Mostrar contraseña</string>
@@ -557,7 +558,7 @@
 
     <!-- Reminder options -->
     <string name="reminder_option_none">Ninguno</string>
-    <string name="reminder_option_at_time">A la hora de vencimiento</string>
+    <string name="reminder_option_at_time">A la hora de la tarea</string>
     <string name="reminder_option_minutes_5">5 minutos antes</string>
     <string name="reminder_option_minutes_10">10 minutos antes</string>
     <string name="reminder_option_minutes_15">15 minutos antes</string>
@@ -662,7 +663,7 @@
     <string name="settings_quiet_hours">Horas de silencio</string>
     <string name="settings_quiet_hours_start">Inicio</string>
     <string name="settings_quiet_hours_end">Fin</string>
-    <string name="settings_resting_floaters">Atenuar flotantes en reposo</string>
+    <string name="settings_resting_floaters">Flotantes en reposo</string>
     <string name="settings_calendar_sync">Añadir tareas programadas a mi calendario</string>
     <string name="settings_privacy">Privacidad</string>
     <string name="root_feed_search_scheduled">Buscar tareas programadas</string>

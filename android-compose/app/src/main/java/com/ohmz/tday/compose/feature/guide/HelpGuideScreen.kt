@@ -34,6 +34,8 @@ import com.ohmz.tday.compose.core.ui.TdayHeroToolbar
 import com.ohmz.tday.compose.core.ui.rememberScrollHeroTitleCollapse
 import com.ohmz.tday.compose.core.ui.TdaySearchCapsule
 import com.ohmz.tday.compose.core.ui.tdayBarButtonContainerColor
+import com.ohmz.tday.compose.core.ui.TdayHeroTitleMetrics
+import com.ohmz.tday.compose.core.ui.tdayClosesSearchOnOutsideTap
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -54,6 +56,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
@@ -110,6 +113,12 @@ fun HelpGuideScreen(
     // takes the toolbar row the way every other screen hands its bar over, so
     // there is no second field standing in the page's own flow.
     var searchExpanded by rememberSaveable { mutableStateOf(false) }
+    // TdayHeroToolbar's row height, for the outside-tap guard: the bar is an
+    // overlay on the same box as the content, so "below the bar" has to be
+    // measured rather than inferred from the hierarchy.
+    val pinnedToolbarHeightPx = with(LocalDensity.current) {
+        TdayHeroTitleMetrics.ToolbarHeight.toPx()
+    }
     var query by rememberSaveable { mutableStateOf("") }
     var searchNeedsFocus by remember { mutableStateOf(false) }
     val closeSearch = {
@@ -141,7 +150,19 @@ fun HelpGuideScreen(
     Scaffold(
         containerColor = colorScheme.background,
     ) { padding ->
-        Box(modifier = Modifier.fillMaxSize().padding(padding)) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                // Tap the guide and the field goes away, as on the root feeds.
+                // The toolbar is an overlay on this same box, so the guard is its
+                // row height rather than a reported rect.
+                .tdayClosesSearchOnOutsideTap(
+                    isSearchOpen = searchExpanded,
+                    barHeightPx = pinnedToolbarHeightPx,
+                    close = closeSearch,
+                ),
+        ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -219,16 +240,19 @@ fun HelpGuideScreen(
         TdayHeroToolbar(
             title = res("guide.title"),
             collapseProgress = heroCollapse.progress,
-            onBack = onBack,
+            // Gone while the field is up: a back chevron beside an open search
+            // is a second way out that leaves the screen rather than the query,
+            // and it costs the field the width that makes a placeholder
+            // readable.
+            onBack = if (searchExpanded) null else onBack,
             backContentDescription = stringResource(R.string.action_back),
             modifier = Modifier.align(Alignment.TopStart),
             titleSuppressed = searchExpanded,
         ) {
             if (searchExpanded) {
-                // The bar is handed over to the field, keeping the back chevron
-                // and dropping the action cluster — what the list-detail
-                // screens, iOS's TimelineTopBar and the web bar all do.
-                Spacer(modifier = Modifier.width(TdayDimens.FabSize))
+                // The field takes the WHOLE bar — back chevron, title and action
+                // cluster all give way to it, as they do on the root feeds and
+                // on iOS's TimelineTopBar.
                 val focusRequester = remember { FocusRequester() }
                 LaunchedEffect(searchNeedsFocus) {
                     if (!searchNeedsFocus) return@LaunchedEffect
@@ -248,15 +272,10 @@ fun HelpGuideScreen(
                     modifier = Modifier
                         .weight(1f)
                         .focusRequester(focusRequester),
-                    onClear = { query = "" },
-                    clearContentDescription = res("guide.clearSearch"),
-                )
-                // The capsule's own X clears the query; leaving the search
-                // behind altogether is this one, as on the root feeds.
-                GuideBarButton(
-                    onClick = closeSearch,
-                    icon = ImageVector.vectorResource(R.drawable.ic_lucide_x),
-                    contentDescription = stringResource(R.string.action_close_search),
+                    // The one control in the row, so its X leaves the search —
+                    // and leaving clears the query on the way out.
+                    onClose = closeSearch,
+                    trailingContentDescription = stringResource(R.string.action_close_search),
                 )
             } else {
                 GuideBarButton(

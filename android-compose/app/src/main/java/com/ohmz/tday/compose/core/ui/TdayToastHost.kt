@@ -58,7 +58,12 @@ private const val TOAST_DRAG_GAIN = 1.18f
 private const val TOAST_DISMISS_DURATION_MS = 160
 private const val TOAST_FADE_DISTANCE_DP = 96
 private val TOAST_CORNER_RADIUS = 24.dp
-private val TOAST_BOTTOM_PADDING = 88.dp
+// Slack around the card for the drop shadow to spill into. The enter fade holds the toast in a
+// layer at alpha < 1, and Compose clips a part-transparent layer to the composable's own bounds —
+// with the card flush against them the shadow was sliced off flat along the bottom edge until the
+// fade finished. Taken straight back out of the bottom padding so the toast sits where it did.
+private val TOAST_SHADOW_SPILL = 12.dp
+private val TOAST_BOTTOM_PADDING = 88.dp - TOAST_SHADOW_SPILL
 
 // Brand accent — the coral used by the overdue tile on the scheduled task home screen. Non-error
 // toasts share it so the toast accent matches the rest of the app; errors keep the
@@ -181,6 +186,7 @@ private fun TdayToastCard(
                 scaleX = toastScale
                 scaleY = toastScale
             }
+            .padding(vertical = TOAST_SHADOW_SPILL)
             // Drop shadow (matches the old Card elevation) + clip so the frosted
             // Haze backdrop and the translucent tint round to the toast shape.
             .shadow(elevation = if (isDark) 8.dp else 6.dp, shape = toastShape)

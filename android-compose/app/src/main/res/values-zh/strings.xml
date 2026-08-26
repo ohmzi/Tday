@@ -167,6 +167,7 @@
     <string name="settings_account_password_label">密码</string>
     <string name="settings_account_change_password">更改</string>
     <string name="settings_account_current_password">当前密码</string>
+    <string name="settings_account_confirm_new_password">确认新密码</string>
     <string name="settings_account_forgot_password">忘记密码？</string>
     <string name="settings_account_password_requirement">密码至少需要 8 个字符，并包含一个大写字母和一个特殊字符。</string>
     <string name="settings_account_show_password">显示密码</string>
@@ -556,7 +557,7 @@
 
     <!-- Reminder options -->
     <string name="reminder_option_none">无</string>
-    <string name="reminder_option_at_time">到期时</string>
+    <string name="reminder_option_at_time">任务时刻</string>
     <string name="reminder_option_minutes_5">提前5分钟</string>
     <string name="reminder_option_minutes_10">提前10分钟</string>
     <string name="reminder_option_minutes_15">提前15分钟</string>
@@ -661,7 +662,7 @@
     <string name="settings_quiet_hours">免打扰时段</string>
     <string name="settings_quiet_hours_start">开始</string>
     <string name="settings_quiet_hours_end">结束</string>
-    <string name="settings_resting_floaters">淡出休眠浮动任务</string>
+    <string name="settings_resting_floaters">休眠浮动任务</string>
     <string name="settings_calendar_sync">将预定任务添加到我的日历</string>
     <string name="settings_privacy">隐私</string>
     <string name="root_feed_search_scheduled">搜索计划任务</string>

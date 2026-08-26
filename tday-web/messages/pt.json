@@ -574,12 +574,13 @@
     "systemDefault": "Padrão do sistema",
     "profile": {
       "title": "Perfil",
+      "unknownUser": "Usuário desconhecido",
       "description": "Atualize seu nome de exibição",
       "name": "Nome",
       "namePlaceholder": "Digite seu nome",
       "username": "Nome de usuário",
       "saving": "Salvando...",
-      "save": "Salvar perfil",
+      "save": "Salvar",
       "edit": "Editar",
       "cancel": "Cancelar"
     },
@@ -591,7 +592,7 @@
     "language": {
       "title": "Idioma",
       "description": "Escolha o idioma do aplicativo",
-      "appLanguage": "Idioma do app"
+      "appLanguage": "Idioma"
     },
     "notifications": {
       "title": "Notificações",
@@ -601,17 +602,17 @@
       "toggle": "Alternar notificações push"
     },
     "password": {
-      "title": "Alterar senha",
+      "title": "Senha",
       "description": "Atualize a senha da sua conta",
       "current": "Senha atual",
       "currentPlaceholder": "Digite sua senha atual",
       "new": "Nova senha",
       "newPlaceholder": "Digite sua nova senha",
-      "requirement": "A senha deve ter pelo menos 8 caracteres",
+      "requirement": "A senha deve ter pelo menos 8 caracteres, com uma letra maiúscula e um caractere especial.",
       "confirm": "Confirmar nova senha",
       "confirmPlaceholder": "Confirme sua nova senha",
-      "changing": "Alterando senha...",
-      "change": "Alterar senha",
+      "changing": "Salvando...",
+      "change": "Salvar",
       "changeAction": "Alterar",
       "cancel": "Cancelar",
       "forgot": "Esqueceu a senha?"
@@ -655,7 +656,7 @@
       "noChanges": "Nenhuma alteração para salvar",
       "nameUpdated": "Nome atualizado com sucesso",
       "nameUpdateFailed": "Falha ao atualizar",
-      "passwordTooShort": "A nova senha deve ter pelo menos 8 caracteres",
+      "passwordTooShort": "A senha deve ter pelo menos 8 caracteres",
       "passwordsDoNotMatch": "As senhas não coincidem",
       "passwordChanged": "Senha alterada com sucesso",
       "passwordChangeFailed": "Falha ao alterar a senha",
@@ -680,25 +681,25 @@
       "title": "Alternar recurso"
     },
     "aiSummary": {
-      "title": "Resumo de tarefas com IA"
+      "title": "Resumo"
     },
     "securityQuestions": {
       "title": "Security questions",
       "changeAction": "Change",
-      "configured": "{{count}} questions configured",
+      "configured": "Configuradas",
       "notConfigured": "Not configured",
       "questionLabel": "Question {{index}}",
-      "answerPlaceholder": "Your answer",
-      "save": "Save questions",
+      "answerPlaceholder": "Resposta",
+      "save": "Salvar",
       "saving": "Saving...",
       "errorSelectAll": "Please choose three questions",
-      "errorDistinct": "Security questions must be different",
+      "errorDistinct": "Escolha três perguntas diferentes",
       "errorAnswersRequired": "Please answer all three questions",
       "errorPasswordRequired": "Enter your current password"
     },
     "data": {
       "title": "Os seus dados",
-      "summary": "{{tasks}} tarefas · {{lists}} listas · {{completed}} concluídas, tudo neste servidor.",
+      "summary": "{{tasks}} tarefas · {{lists}} listas · {{completed}} concluídas",
       "download": "Descarregar os meus dados",
       "import": "Importar",
       "exportDone": "O ficheiro dos seus dados foi descarregado.",

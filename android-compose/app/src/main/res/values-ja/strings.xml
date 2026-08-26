@@ -167,6 +167,7 @@
     <string name="settings_account_password_label">パスワード</string>
     <string name="settings_account_change_password">変更</string>
     <string name="settings_account_current_password">現在のパスワード</string>
+    <string name="settings_account_confirm_new_password">新しいパスワードの確認</string>
     <string name="settings_account_forgot_password">パスワードをお忘れですか？</string>
     <string name="settings_account_password_requirement">パスワードは8文字以上で、大文字と特殊文字を含める必要があります。</string>
     <string name="settings_account_show_password">パスワードを表示</string>
@@ -556,7 +557,7 @@
 
     <!-- Reminder options -->
     <string name="reminder_option_none">なし</string>
-    <string name="reminder_option_at_time">期限の時刻</string>
+    <string name="reminder_option_at_time">タスクの時刻</string>
     <string name="reminder_option_minutes_5">5分前</string>
     <string name="reminder_option_minutes_10">10分前</string>
     <string name="reminder_option_minutes_15">15分前</string>
@@ -661,7 +662,7 @@
     <string name="settings_quiet_hours">サイレント時間</string>
     <string name="settings_quiet_hours_start">開始</string>
     <string name="settings_quiet_hours_end">終了</string>
-    <string name="settings_resting_floaters">休眠フローターを薄く</string>
+    <string name="settings_resting_floaters">休眠フローター</string>
     <string name="settings_calendar_sync">予定タスクをカレンダーに追加</string>
     <string name="settings_privacy">プライバシー</string>
     <string name="root_feed_search_scheduled">予定タスクを検索</string>

@@ -170,6 +170,7 @@
     <string name="settings_account_password_label">Password</string>
     <string name="settings_account_change_password">Change</string>
     <string name="settings_account_current_password">Current password</string>
+    <string name="settings_account_confirm_new_password">Confirm new password</string>
     <string name="settings_account_forgot_password">Forgot password?</string>
     <string name="settings_account_password_requirement">Password must be at least 8 characters, with an uppercase letter and a special character.</string>
     <string name="settings_account_show_password">Show password</string>
@@ -632,7 +633,7 @@
 
     <!-- Reminder options -->
     <string name="reminder_option_none">None</string>
-    <string name="reminder_option_at_time">At time of due</string>
+    <string name="reminder_option_at_time">At time of task</string>
     <string name="reminder_option_minutes_5">5 minutes before</string>
     <string name="reminder_option_minutes_10">10 minutes before</string>
     <string name="reminder_option_minutes_15">15 minutes before</string>
@@ -676,7 +677,7 @@
     <string name="settings_quiet_hours">Quiet hours</string>
     <string name="settings_quiet_hours_start">Start</string>
     <string name="settings_quiet_hours_end">End</string>
-    <string name="settings_resting_floaters">Fade resting floaters</string>
+    <string name="settings_resting_floaters">Resting floaters</string>
     <string name="settings_calendar_sync">Add scheduled tasks to my calendar</string>
     <string name="settings_calendar_sync_subtitle">Copies tasks with a date into a T\'Day calendar on this device. Anytime tasks stay out of it. Changes made in your calendar app are overwritten.</string>
     <string name="settings_calendar_sync_permission_denied">T\'Day needs calendar access to add your tasks.</string>

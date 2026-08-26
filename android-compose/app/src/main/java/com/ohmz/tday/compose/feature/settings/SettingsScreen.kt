@@ -45,6 +45,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -73,6 +74,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
@@ -80,6 +82,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
@@ -88,6 +91,8 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
@@ -125,6 +130,8 @@ import com.ohmz.tday.compose.core.ui.TdayHeroToolbar
 import com.ohmz.tday.compose.core.ui.TdaySearchCapsule
 import com.ohmz.tday.compose.core.ui.rememberScrollHeroTitleCollapse
 import com.ohmz.tday.compose.core.ui.tdayBarButtonContainerColor
+import com.ohmz.tday.compose.core.ui.TdayHeroTitleMetrics
+import com.ohmz.tday.compose.core.ui.tdayClosesSearchOnOutsideTap
 import com.ohmz.tday.compose.feature.app.MobileSyncStatus
 import com.ohmz.tday.compose.feature.app.ProfileEditResult
 import com.ohmz.tday.compose.feature.auth.SecurityQuestionPicker
@@ -196,6 +203,12 @@ fun SettingsScreen(
     // list to filter, so what the field narrows is the page itself — which also
     // means the only empty state it can reach is a search that matched nothing.
     var searchExpanded by rememberSaveable { mutableStateOf(false) }
+    // TdayHeroToolbar's row height, for the outside-tap guard: the bar is an
+    // overlay on the same box as the content, so "below the bar" has to be
+    // measured rather than inferred from the hierarchy.
+    val pinnedToolbarHeightPx = with(LocalDensity.current) {
+        TdayHeroTitleMetrics.ToolbarHeight.toPx()
+    }
     var searchQuery by rememberSaveable { mutableStateOf("") }
     var searchNeedsFocus by remember { mutableStateOf(false) }
     val search = remember(searchQuery) { SettingsSearchScope(searchQuery) }
@@ -213,6 +226,44 @@ fun SettingsScreen(
     // the one row that happens to draw the heading.
     val appearanceTitle = stringResource(R.string.settings_appearance)
     val remindersTitle = stringResource(R.string.settings_reminders)
+    // Whether a notification would actually arrive — the OS permission AND the
+    // app's own switch. Owned here because the switch is in one card and the
+    // settings it silences are in another; `NotificationsRow` is what keeps it
+    // current. Seeded from the preference alone so the common case does not
+    // flash dimmed before the OS status has been read.
+    val notificationContext = LocalContext.current
+    val notificationPreferenceStore = remember(notificationContext) {
+        NotificationPreferenceStore(notificationContext.applicationContext)
+    }
+    // Read here rather than taken from `NotificationsRow`. That row lives in the
+    // Feature-toggle card and drops out of composition whenever a search filters
+    // it away, while the rows it dims live in another card — so a query like
+    // "quiet" would keep a Reminders row on screen with nothing left to tell it
+    // the switch is off. The row still reports its own flips for the immediate
+    // case; this is the answer when the row is not there to.
+    var notificationsDeliver by remember {
+        mutableStateOf(
+            notificationToggleChecked(
+                readNotificationOsState(notificationContext, notificationPreferenceStore),
+                notificationPreferenceStore.isEnabled(),
+            ),
+        )
+    }
+    val notificationsLifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(notificationsLifecycleOwner, notificationContext) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                // The OS permission is changed in Android's own Settings, with this
+                // screen suspended; a resume is the only moment it can be noticed.
+                notificationsDeliver = notificationToggleChecked(
+                    readNotificationOsState(notificationContext, notificationPreferenceStore),
+                    notificationPreferenceStore.isEnabled(),
+                )
+            }
+        }
+        notificationsLifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { notificationsLifecycleOwner.lifecycle.removeObserver(observer) }
+    }
     val languageTitle = stringResource(R.string.settings_language)
     val featureToggleTitle = stringResource(R.string.settings_feature_toggle)
     val privacyTitle = stringResource(R.string.settings_privacy)
@@ -255,10 +306,12 @@ fun SettingsScreen(
             section = remindersTitle,
             sectionHelpTopicId = GuideTopicIds.REMINDERS,
         ) {
-            ReminderSelector(
-                selectedReminder = selectedReminder,
-                onReminderSelected = onReminderSelected,
-            )
+            SettingsSilencedWhen(!notificationsDeliver) {
+                ReminderSelector(
+                    selectedReminder = selectedReminder,
+                    onReminderSelected = onReminderSelected,
+                )
+            }
         },
         SettingsEntry(
             key = "day-ahead",
@@ -266,10 +319,12 @@ fun SettingsScreen(
             section = remindersTitle,
             sectionHelpTopicId = GuideTopicIds.REMINDERS,
         ) {
-            DayAheadSelector(
-                selectedDayAhead = selectedDayAhead,
-                onDayAheadSelected = onDayAheadSelected,
-            )
+            SettingsSilencedWhen(!notificationsDeliver) {
+                DayAheadSelector(
+                    selectedDayAhead = selectedDayAhead,
+                    onDayAheadSelected = onDayAheadSelected,
+                )
+            }
         },
         SettingsEntry(
             key = "quiet-hours",
@@ -277,7 +332,9 @@ fun SettingsScreen(
             section = remindersTitle,
             sectionHelpTopicId = GuideTopicIds.REMINDERS,
         ) {
-            QuietHoursRow()
+            SettingsSilencedWhen(!notificationsDeliver) {
+                QuietHoursRow()
+            }
         },
         SettingsEntry(
             key = "unified-push",
@@ -289,7 +346,13 @@ fun SettingsScreen(
             section = remindersTitle,
             sectionHelpTopicId = GuideTopicIds.REMINDERS,
         ) {
-            UnifiedPushRow()
+            // In the silenced group too: the in-app switch gates a UnifiedPush
+            // delivery the same way it gates a local reminder (see
+            // `UnifiedPushEntryPoint`), so leaving this one live would promise a
+            // push that the switch above quietly drops.
+            SettingsSilencedWhen(!notificationsDeliver) {
+                UnifiedPushRow()
+            }
         },
         SettingsEntry(
             key = "language",
@@ -373,7 +436,7 @@ fun SettingsScreen(
             section = featureToggleTitle,
             sectionHelpTopicId = GuideTopicIds.AI_SUMMARY,
         ) {
-            NotificationsRow()
+            NotificationsRow(onDeliversChange = { notificationsDeliver = it })
         },
     ).filter { it.visible }
 
@@ -584,7 +647,15 @@ fun SettingsScreen(
     Scaffold(containerColor = colorScheme.background) { padding ->
         Box(modifier = Modifier
             .fillMaxSize()
-            .padding(padding)) {
+            .padding(padding)
+            // Tap the cards and the field goes away, as on the root feeds. The
+            // toolbar is an overlay on this same box, so the guard is its row
+            // height rather than a reported rect.
+            .tdayClosesSearchOnOutsideTap(
+                isSearchOpen = searchExpanded,
+                barHeightPx = pinnedToolbarHeightPx,
+                close = closeSearch,
+            )) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -644,16 +715,19 @@ fun SettingsScreen(
         TdayHeroToolbar(
             title = settingsTitle,
             collapseProgress = heroCollapse.progress,
-            onBack = onBack,
+            // Gone while the field is up: a back chevron beside an open search
+            // is a second way out that leaves the screen rather than the query,
+            // and it costs the field the width that makes a placeholder
+            // readable.
+            onBack = if (searchExpanded) null else onBack,
             backContentDescription = stringResource(R.string.action_back),
             modifier = Modifier.align(Alignment.TopStart),
             titleSuppressed = searchExpanded,
         ) {
             if (searchExpanded) {
-                // The bar is handed over to the field, keeping the back chevron
-                // and dropping the action cluster — what the list-detail
-                // screens, iOS's TimelineTopBar and the web bar all do.
-                Spacer(modifier = Modifier.width(TdayDimens.FabSize))
+                // The field takes the WHOLE bar — back chevron, title and action
+                // cluster all give way to it, as they do on the root feeds and
+                // on iOS's TimelineTopBar.
                 val focusRequester = remember { FocusRequester() }
                 LaunchedEffect(searchNeedsFocus) {
                     if (!searchNeedsFocus) return@LaunchedEffect
@@ -670,15 +744,10 @@ fun SettingsScreen(
                     modifier = Modifier
                         .weight(1f)
                         .focusRequester(focusRequester),
-                    onClear = { searchQuery = "" },
-                    clearContentDescription = stringResource(R.string.action_clear_search),
-                )
-                // The capsule's own X clears the query; leaving the search
-                // behind altogether is this one, as on the root feeds.
-                SettingsBarButton(
-                    onClick = closeSearch,
-                    icon = ImageVector.vectorResource(R.drawable.ic_lucide_x),
-                    contentDescription = stringResource(R.string.action_close_search),
+                    // The one control in the row, so its X leaves the search —
+                    // and leaving clears the query on the way out.
+                    onClose = closeSearch,
+                    trailingContentDescription = stringResource(R.string.action_close_search),
                 )
             } else {
                 SettingsBarButton(
@@ -1101,7 +1170,7 @@ private fun AccountPasswordSection(
                         confirm = it
                         error = null
                     },
-                    label = stringResource(R.string.onboarding_confirm_password_label),
+                    label = stringResource(R.string.settings_account_confirm_new_password),
                     imeAction = ImeAction.Done,
                 )
                 Text(
@@ -1995,13 +2064,20 @@ private fun DeviceCalendarSyncRow() {
  * once the grant lands rather than needing a second tap the user has no reason to expect.
  */
 @Composable
-private fun NotificationsRow() {
+private fun NotificationsRow(onDeliversChange: (Boolean) -> Unit = {}) {
     val colorScheme = MaterialTheme.colorScheme
     val context = LocalContext.current
     val store = remember { NotificationPreferenceStore(context.applicationContext) }
     var preferenceEnabled by remember { mutableStateOf(store.isEnabled()) }
     var osState by remember { mutableStateOf(readNotificationOsState(context, store)) }
     var hint by remember { mutableStateOf(NotificationHint.None) }
+
+    // Mirrored out to the Reminders card, which holds the settings this switch
+    // silences and has no other way to know that it is off. Both halves of the
+    // answer live in here — the OS bit is re-read on every resume — so the card
+    // reads it from here rather than assembling a second copy that could drift.
+    val delivers = notificationToggleChecked(osState, preferenceEnabled)
+    LaunchedEffect(delivers) { onDeliversChange(delivers) }
 
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
@@ -2119,6 +2195,52 @@ private fun NotificationsRow() {
                 ),
                 style = MaterialTheme.typography.labelSmall,
                 color = colorScheme.error,
+            )
+        }
+    }
+}
+
+/**
+ * Dims a settings row and stops it taking touches, for a setting the notification
+ * switch further down the screen has silenced.
+ *
+ * Every row this wraps schedules a notification, and the master switch lives in
+ * another card: without this a 7am digest and a default offset could be picked
+ * and nothing would ever arrive, with nothing on screen saying why. Dimmed and
+ * untappable says it in the one language everyone reads — the same bargain iOS
+ * makes with `.opacity(0.45).disabled(...)`.
+ *
+ * Compose has no blanket `disabled`, so the alpha and the pointer trap live here
+ * together rather than being repeated per row. The trap consumes on the INITIAL
+ * pass, before anything inside can react.
+ */
+@Composable
+private fun SettingsSilencedWhen(silenced: Boolean, content: @Composable () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .alpha(if (silenced) 0.45f else 1f),
+    ) {
+        content()
+        if (silenced) {
+            // A transparent `clickable` over the row, NOT a pointer trap that consumes on
+            // the Initial pass. Consuming there also reached the `verticalScroll` above —
+            // `awaitPointerSlopOrCancellation` bails on an already-consumed change — so a
+            // drag started anywhere on these four rows refused to scroll the page, turning
+            // the middle of Settings into a dead band. `clickable` swallows the tap and
+            // leaves the scroll alone, which is how every other row in a scrolling list
+            // manages both at once.
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClickLabel = null,
+                    ) {
+                        // Deliberately nothing: the switch two cards down is the only way
+                        // to bring these back, and it says so on its own row.
+                    },
             )
         }
     }

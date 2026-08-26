@@ -401,6 +401,12 @@ struct CalendarScreen: View {
             }
             .allowsHitTesting(false)
         }
+        // Tapping the content puts the field away, as it does on the root feeds.
+        // Sits above the bar's own safe-area inset, so the gesture only ever
+        // sees taps below the bar and never one on it.
+        .tdayClosesSearchOnOutsideTap(isSearchOpen: searchExpanded) {
+            closeSearch()
+        }
         .navigationBackButtonBehavior()
         .navigationTitleTypography(
             largeTitleColor: calendarAccentColor,
@@ -2251,11 +2257,10 @@ private struct CalendarElasticTopBar: View {
     let action: TimelineTopBarAction?
     /// Leads the trailing cluster, as the search button does on every other bar.
     let onSearchOpen: () -> Void
-    /// While set, the field takes the row: the back chevron stays where it is
-    /// and the title and the action cluster give way to it, exactly as they do
-    /// on the timeline bar. Only this one row changes — the mark and the
-    /// expanded title below it are what every collapse progress on this screen
-    /// is measured from.
+    /// While set, the field takes the WHOLE row: the back chevron, the title and
+    /// the action cluster all give way to it, exactly as they do on the timeline
+    /// bar. Only this one row changes — the mark and the expanded title below it
+    /// are what every collapse progress on this screen is measured from.
     let searchActive: Bool
     @Binding var searchText: String
     let searchPlaceholder: String
@@ -2330,32 +2335,28 @@ private struct CalendarElasticTopBar: View {
     /// The capsule is exactly as tall as the bar's button row, so swapping it in
     /// changes what the row holds and never how tall it is.
     private var searchRow: some View {
-        HStack(spacing: TodoTimelineMetrics.topBarButtonSpacing) {
-            TdaySearchCapsule(
-                text: $searchText,
-                placeholder: searchPlaceholder,
-                clearAccessibilityLabel: L("Clear search"),
-                focused: searchFieldFocused
-            )
-
-            // The capsule's own X clears the query; leaving the search behind
-            // altogether is this one, as on the timeline bar.
-            CalendarTopBarButton(
-                systemName: "xmark",
-                assetName: "NavClose",
-                chrome: .filled,
-                action: onSearchClose
-            )
-            .accessibilityLabel(Text(L("Cancel search")))
-        }
-        .padding(.leading, TodoTimelineMetrics.topBarButtonSpacing)
+        TdaySearchCapsule(
+            text: $searchText,
+            placeholder: searchPlaceholder,
+            clearAccessibilityLabel: L("Cancel search"),
+            focused: searchFieldFocused,
+            // The one control in the row, so its X leaves the search — the same
+            // bargain the timeline bar and the root feeds make.
+            onClose: onSearchClose
+        )
     }
 
     var body: some View {
         VStack(alignment: .center, spacing: 0) {
             ZStack {
                 HStack(spacing: 0) {
-                    CalendarTopBarButton(systemName: "chevron.left", chrome: .filled, action: onBack)
+                    // Not drawn at all while the field is up: a back chevron
+                    // beside an open search is a second way out that leaves the
+                    // screen rather than the query, and it costs the field the
+                    // width that makes a placeholder readable.
+                    if !searchActive {
+                        CalendarTopBarButton(systemName: "chevron.left", chrome: .filled, action: onBack)
+                    }
                     if searchActive {
                         searchRow
                     } else {

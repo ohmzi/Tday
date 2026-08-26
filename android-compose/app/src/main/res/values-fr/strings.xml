@@ -167,6 +167,7 @@
     <string name="settings_account_password_label">Mot de passe</string>
     <string name="settings_account_change_password">Modifier</string>
     <string name="settings_account_current_password">Mot de passe actuel</string>
+    <string name="settings_account_confirm_new_password">Confirmer le nouveau mot de passe</string>
     <string name="settings_account_forgot_password">Mot de passe oublié ?</string>
     <string name="settings_account_password_requirement">Le mot de passe doit comporter au moins 8 caractères, avec une majuscule et un caractère spécial.</string>
     <string name="settings_account_show_password">Afficher le mot de passe</string>
@@ -557,7 +558,7 @@
 
     <!-- Reminder options -->
     <string name="reminder_option_none">Aucun</string>
-    <string name="reminder_option_at_time">À l\'heure d\'échéance</string>
+    <string name="reminder_option_at_time">À l\'heure de la tâche</string>
     <string name="reminder_option_minutes_5">5 minutes avant</string>
     <string name="reminder_option_minutes_10">10 minutes avant</string>
     <string name="reminder_option_minutes_15">15 minutes avant</string>
@@ -662,7 +663,7 @@
     <string name="settings_quiet_hours">Heures silencieuses</string>
     <string name="settings_quiet_hours_start">Début</string>
     <string name="settings_quiet_hours_end">Fin</string>
-    <string name="settings_resting_floaters">Estomper les flottants au repos</string>
+    <string name="settings_resting_floaters">Flottants au repos</string>
     <string name="settings_calendar_sync">Ajouter les tâches planifiées à mon calendrier</string>
     <string name="settings_privacy">Confidentialité</string>
     <string name="root_feed_search_scheduled">Rechercher des tâches planifiées</string>

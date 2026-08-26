@@ -818,6 +818,12 @@ struct TodoListScreen: View {
         .onPreferenceChange(TodoDropTargetFramePreferenceKey.self) { frames in
             dropTargetFrames = frames
         }
+        // Tapping the feed puts the field away, as it already did on the root
+        // feeds. Sits here, inside the bar's own safe-area inset, so the gesture
+        // never sees a tap on the bar itself.
+        .tdayClosesSearchOnOutsideTap(isSearchOpen: showsListSearch && listSearchExpanded) {
+            closeListSearch()
+        }
         .overlay(alignment: .topLeading) {
             GeometryReader { proxy in
                 if let inAppDrag {
@@ -2726,9 +2732,10 @@ struct TimelineTopBar: View {
     let titleRevealStart: CGFloat
     let titleRevealEnd: CGFloat
     let titleRevealDistance: CGFloat
-    /// While set, the field takes the row: the back chevron stays where it is
-    /// and the title and the action cluster give way to it, the way the web
-    /// list pages hand their pinned bar over to the search input.
+    /// While set, the field takes the WHOLE row: the back chevron, the title and
+    /// the action cluster all give way to it, exactly as the root feeds' bar
+    /// does. Nothing else is on screen to compete with the keyboard, and the
+    /// capsule's own X is the way back out.
     let searchActive: Bool
     @Binding var searchText: String
     let searchPlaceholder: String
@@ -2803,37 +2810,34 @@ struct TimelineTopBar: View {
     /// changes what the row holds and never how tall it is — every collapse
     /// progress on these screens is measured from that height.
     private var searchRow: some View {
-        HStack(spacing: TodoTimelineMetrics.topBarButtonSpacing) {
-            TdaySearchCapsule(
-                text: $searchText,
-                placeholder: searchPlaceholder,
-                clearAccessibilityLabel: L("Clear search"),
-                focused: searchFieldFocused
-            )
-
-            // The capsule's own X clears the query; leaving the search behind
-            // altogether is this one, as on the root feeds.
-            TimelineTopBarButton(
-                systemName: "xmark",
-                assetName: "NavClose",
-                chrome: .filled,
-                action: onSearchClose
-            )
-            .accessibilityLabel(Text(L("Cancel search")))
-        }
-        .padding(.leading, TodoTimelineMetrics.topBarButtonSpacing)
+        TdaySearchCapsule(
+            text: $searchText,
+            placeholder: searchPlaceholder,
+            clearAccessibilityLabel: L("Cancel search"),
+            focused: searchFieldFocused,
+            // The one control in the row, so it carries both jobs the root
+            // feeds' capsule carries: the X leaves the search, and leaving
+            // clears the query on the way out.
+            onClose: onSearchClose
+        )
     }
 
     var body: some View {
         ZStack {
             HStack(spacing: 0) {
-                TimelineTopBarButton(
-                    systemName: "chevron.left",
-                    assetName: "LucideChevronLeft",
-                    chrome: .filled,
-                    action: onBack
-                )
-                .accessibilityLabel(Text(L("Back")))
+                // Not drawn at all while the field is up. A back chevron beside
+                // an open search is a second way out that does the wrong thing —
+                // it leaves the screen rather than the query — and it costs the
+                // field the width that makes a placeholder readable.
+                if !searchActive {
+                    TimelineTopBarButton(
+                        systemName: "chevron.left",
+                        assetName: "LucideChevronLeft",
+                        chrome: .filled,
+                        action: onBack
+                    )
+                    .accessibilityLabel(Text(L("Back")))
+                }
 
                 if searchActive {
                     searchRow

@@ -574,12 +574,13 @@
     "systemDefault": "系统默认",
     "profile": {
       "title": "个人资料",
+      "unknownUser": "未知用户",
       "description": "更新您的显示名称",
       "name": "名称",
       "namePlaceholder": "输入您的名称",
       "username": "用户名",
       "saving": "保存中...",
-      "save": "保存个人资料",
+      "save": "保存",
       "edit": "编辑",
       "cancel": "取消"
     },
@@ -591,7 +592,7 @@
     "language": {
       "title": "语言",
       "description": "选择应用语言",
-      "appLanguage": "应用语言"
+      "appLanguage": "语言"
     },
     "notifications": {
       "title": "通知",
@@ -601,17 +602,17 @@
       "toggle": "切换推送通知"
     },
     "password": {
-      "title": "更改密码",
+      "title": "密码",
       "description": "更新您的账户密码",
       "current": "当前密码",
       "currentPlaceholder": "输入您的当前密码",
       "new": "新密码",
       "newPlaceholder": "输入您的新密码",
-      "requirement": "密码长度至少为 8 个字符",
+      "requirement": "密码至少需要 8 个字符，并包含一个大写字母和一个特殊字符。",
       "confirm": "确认新密码",
       "confirmPlaceholder": "确认您的新密码",
-      "changing": "正在更改密码...",
-      "change": "更改密码",
+      "changing": "保存中...",
+      "change": "保存",
       "changeAction": "更改",
       "cancel": "取消",
       "forgot": "忘记密码？"
@@ -655,7 +656,7 @@
       "noChanges": "没有要保存的更改",
       "nameUpdated": "名称更新成功",
       "nameUpdateFailed": "更新失败",
-      "passwordTooShort": "新密码长度至少为 8 个字符",
+      "passwordTooShort": "密码至少需要 8 个字符",
       "passwordsDoNotMatch": "密码不匹配",
       "passwordChanged": "密码更改成功",
       "passwordChangeFailed": "更改密码失败",
@@ -680,25 +681,25 @@
       "title": "功能开关"
     },
     "aiSummary": {
-      "title": "AI 任务摘要"
+      "title": "摘要"
     },
     "securityQuestions": {
       "title": "Security questions",
       "changeAction": "Change",
-      "configured": "{{count}} questions configured",
+      "configured": "已设置",
       "notConfigured": "Not configured",
       "questionLabel": "Question {{index}}",
-      "answerPlaceholder": "Your answer",
-      "save": "Save questions",
+      "answerPlaceholder": "答案",
+      "save": "保存",
       "saving": "Saving...",
       "errorSelectAll": "Please choose three questions",
-      "errorDistinct": "Security questions must be different",
+      "errorDistinct": "选择三个不同的问题",
       "errorAnswersRequired": "Please answer all three questions",
       "errorPasswordRequired": "Enter your current password"
     },
     "data": {
       "title": "你的数据",
-      "summary": "{{tasks}} 个任务 · {{lists}} 个清单 · {{completed}} 个已完成，全部在这台服务器上。",
+      "summary": "{{tasks}} 个任务 · {{lists}} 个清单 · {{completed}} 个已完成",
       "download": "下载我的数据",
       "import": "导入",
       "exportDone": "已下载你的数据文件。",

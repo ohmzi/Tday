@@ -574,12 +574,13 @@
     "systemDefault": "Системный по умолчанию",
     "profile": {
       "title": "Профиль",
+      "unknownUser": "Неизвестный пользователь",
       "description": "Обновите отображаемое имя",
       "name": "Имя",
       "namePlaceholder": "Введите имя",
       "username": "Имя пользователя",
       "saving": "Сохранение...",
-      "save": "Сохранить профиль",
+      "save": "Сохранить",
       "edit": "Изменить",
       "cancel": "Отмена"
     },
@@ -591,7 +592,7 @@
     "language": {
       "title": "Язык",
       "description": "Выберите язык приложения",
-      "appLanguage": "Язык приложения"
+      "appLanguage": "Язык"
     },
     "notifications": {
       "title": "Уведомления",
@@ -601,17 +602,17 @@
       "toggle": "Переключить push-уведомления"
     },
     "password": {
-      "title": "Изменить пароль",
+      "title": "Пароль",
       "description": "Обновите пароль вашей учётной записи",
       "current": "Текущий пароль",
       "currentPlaceholder": "Введите текущий пароль",
       "new": "Новый пароль",
       "newPlaceholder": "Введите новый пароль",
-      "requirement": "Пароль должен содержать не менее 8 символов",
+      "requirement": "Пароль должен содержать не менее 8 символов, заглавную букву и специальный символ.",
       "confirm": "Подтвердите новый пароль",
       "confirmPlaceholder": "Подтвердите новый пароль",
-      "changing": "Изменение пароля...",
-      "change": "Изменить пароль",
+      "changing": "Сохранение...",
+      "change": "Сохранить",
       "changeAction": "Изменить",
       "cancel": "Отмена",
       "forgot": "Забыли пароль?"
@@ -655,7 +656,7 @@
       "noChanges": "Нет изменений для сохранения",
       "nameUpdated": "Имя успешно обновлено",
       "nameUpdateFailed": "Не удалось обновить",
-      "passwordTooShort": "Новый пароль должен содержать не менее 8 символов",
+      "passwordTooShort": "Пароль должен содержать не менее 8 символов",
       "passwordsDoNotMatch": "Пароли не совпадают",
       "passwordChanged": "Пароль успешно изменён",
       "passwordChangeFailed": "Не удалось изменить пароль",
@@ -680,25 +681,25 @@
       "title": "Переключатель функций"
     },
     "aiSummary": {
-      "title": "ИИ-сводка задач"
+      "title": "Сводка"
     },
     "securityQuestions": {
       "title": "Security questions",
       "changeAction": "Change",
-      "configured": "{{count}} questions configured",
+      "configured": "Настроены",
       "notConfigured": "Not configured",
       "questionLabel": "Question {{index}}",
-      "answerPlaceholder": "Your answer",
-      "save": "Save questions",
+      "answerPlaceholder": "Ответ",
+      "save": "Сохранить",
       "saving": "Saving...",
       "errorSelectAll": "Please choose three questions",
-      "errorDistinct": "Security questions must be different",
+      "errorDistinct": "Выберите три разных вопроса",
       "errorAnswersRequired": "Please answer all three questions",
       "errorPasswordRequired": "Enter your current password"
     },
     "data": {
       "title": "Ваши данные",
-      "summary": "{{tasks}} задач · {{lists}} списков · {{completed}} завершено, всё на этом сервере.",
+      "summary": "{{tasks}} задач · {{lists}} списков · {{completed}} завершено",
       "download": "Скачать мои данные",
       "import": "Импорт",
       "exportDone": "Файл с вашими данными скачан.",
