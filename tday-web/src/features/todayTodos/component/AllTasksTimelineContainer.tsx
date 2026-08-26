@@ -7,6 +7,7 @@ import NativePageHeader, { useNativePageBarSlots } from "@/components/app/Native
 import MobileSearchHeader from "@/components/ui/MobileSearchHeader";
 import ScreenWatermark from "@/components/app/ScreenWatermark";
 import EmptyState from "@/components/app/EmptyState";
+import { taskJustCompleted } from "@/lib/task-completion-signal";
 import { timelineScopeAccentColors } from "@/components/app/nativeScreenTheme";
 import SummaryButton from "@/features/summary/SummaryButton";
 import WeekInReviewCard from "@/features/summary/WeekInReviewCard";
@@ -633,6 +634,9 @@ const AllTasksTimelineContainer = ({
                   }).format(new Date())
                 : appDict(emptyBody)
             }
+            // Finishing the scope is a payoff, not an absence: the confetti is
+            // for the tick that emptied it, not for a day with nothing in it.
+            celebrate={taskJustCompleted()}
           />
         )}
 

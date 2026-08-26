@@ -3,6 +3,7 @@ import { api } from "@/lib/api-client";
 import { useToast } from "@/hooks/use-toast";
 import type { FloaterItemType } from "@/types";
 import { useTodoActionToast } from "@/hooks/use-todo-action-toast";
+import { markTaskCompleted } from "@/lib/task-completion-signal";
 
 // Delayed-commit complete (see complete-todo.ts): stage the removal from the
 // floater caches, show an undoable toast, and only PATCH /floater/complete once
@@ -32,6 +33,9 @@ export const useCompleteFloater = () => {
   });
 
   const completeMutateFn = (floater: FloaterItemType) => {
+    // The empty state that follows the last row leaving reads this to tell a
+    // list the user finished from one that was never filled.
+    markTaskCompleted();
     void queryClient.cancelQueries({ queryKey: ["floater"] });
     const remove = (old: FloaterItemType[] = []) =>
       old.filter((item) => item.id !== floater.id);

@@ -8,6 +8,7 @@ import SummaryButton from "@/features/summary/SummaryButton";
 import NativePageHeader, { useNativePageBarSlots } from "@/components/app/NativePageHeader";
 import ScreenWatermark from "@/components/app/ScreenWatermark";
 import EmptyState from "@/components/app/EmptyState";
+import { taskJustCompleted } from "@/lib/task-completion-signal";
 import MobileSearchHeader from "@/components/ui/MobileSearchHeader";
 import { useShareListAsText } from "@/hooks/use-share-list";
 import { useIsLocalMode } from "@/hooks/useAppMode";
@@ -179,6 +180,9 @@ export default function FloaterListContainer({ id }: { id: string }) {
           accentColor={listAccent}
           title={appDict("floaterListEmpty")}
           description={appDict("floaterListEmptyBody")}
+          // Finishing a list is a payoff, not an absence: the confetti is for
+          // the tick that emptied it, not for a list that was already empty.
+          celebrate={taskJustCompleted()}
         />
       ) : null}
 

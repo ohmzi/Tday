@@ -16,6 +16,7 @@ import NativePageHeader, { useNativePageBarSlots } from "@/components/app/Native
 import MobileSearchHeader from "@/components/ui/MobileSearchHeader";
 import ScreenWatermark from "@/components/app/ScreenWatermark";
 import EmptyState from "@/components/app/EmptyState";
+import { taskJustCompleted } from "@/lib/task-completion-signal";
 import { getListIcon } from "@/lib/listIcons";
 import { listColorAccentColors, nativeScreenAccentColors } from "@/components/app/nativeScreenTheme";
 import ListFormSheet from "@/components/Sidebar/List/ListFormSheet";
@@ -181,6 +182,10 @@ const ListContainer = ({ id }: { id: string }) => {
                         accentColor={listAccent}
                         title={appDict("listEmpty")}
                         description={appDict("listEmptyBody")}
+                        // Finishing a list is a payoff, not an absence: the
+                        // confetti is for the tick that emptied it, not for a
+                        // list that was already empty when it was opened.
+                        celebrate={taskJustCompleted()}
                     />
                 )}
 

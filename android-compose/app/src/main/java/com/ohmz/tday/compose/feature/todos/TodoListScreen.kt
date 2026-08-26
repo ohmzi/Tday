@@ -1,5 +1,6 @@
 package com.ohmz.tday.compose.feature.todos
 
+import android.os.SystemClock
 import androidx.activity.compose.BackHandler
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.core.Animatable
@@ -47,6 +48,7 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -71,6 +73,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -236,6 +239,13 @@ private fun timelineTaskBottomSpacing(
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+/**
+ * How long after a tick the empty state still counts as "you just finished it".
+ * Wider than the confetti's own flight, so a recomposition mid-burst cannot cut
+ * the paper off in mid-air.
+ */
+private const val CompletionCelebrationWindowMs = 4_000L
+
 @Composable
 fun TodoListScreen(
     uiState: TodoListUiState,
@@ -281,6 +291,18 @@ fun TodoListScreen(
     val view = LocalView.current
     val context = LocalContext.current
     val restingFloatersEnabled = remember { RestingFloatersPreferenceStore(context).isEnabled() }
+    // Finishing a list is a payoff, not an absence. The empty state that follows
+    // the last row leaving gets confetti — but only when the row left because it
+    // was ticked off: deleting the last task, or opening a list that was already
+    // empty, gets the plain arrival.
+    var lastCompletionAtMs by remember { mutableLongStateOf(0L) }
+    val completeAndCelebrate: (TodoItem) -> Unit = { todo ->
+        lastCompletionAtMs = SystemClock.uptimeMillis()
+        onComplete(todo)
+    }
+    val celebrateEmptyState = uiState.items.isEmpty() &&
+            lastCompletionAtMs != 0L &&
+            SystemClock.uptimeMillis() - lastCompletionAtMs < CompletionCelebrationWindowMs
     val zoneId = remember { ZoneId.systemDefault() }
     val selectedList = uiState.lists.firstOrNull { it.id == uiState.listId }
     val selectedListColorKey = selectedList?.color
@@ -1316,7 +1338,7 @@ fun TodoListScreen(
                                             showEarlierDateTimeSubtitle = showEarlierDateTimeSubtitle,
                                             showDateDivider = showTimelineDateDivider,
                                             readOnly = isViewerList,
-                                            onComplete = { onComplete(todo) },
+                                            onComplete = { completeAndCelebrate(todo) },
                                             onDelete = { onDelete(todo) },
                                             onInfo = {
                                                 editTargetTodoId = todo.id
@@ -1379,13 +1401,13 @@ fun TodoListScreen(
                             if (usesTodayStyle) {
                                 TodayTodoRow(
                                     todo = todo,
-                                    onComplete = { onComplete(todo) },
+                                    onComplete = { completeAndCelebrate(todo) },
                                     onDelete = { onDelete(todo) },
                                 )
                             } else {
                                 TodoRow(
                                     todo = todo,
-                                    onComplete = { onComplete(todo) },
+                                    onComplete = { completeAndCelebrate(todo) },
                                     onDelete = { onDelete(todo) },
                                 )
                             }
@@ -1419,6 +1441,7 @@ fun TodoListScreen(
                                         mode = uiState.mode,
                                         isFloaterList = isListDetailScreen,
                                     ),
+                                    celebrate = celebrateEmptyState,
                                 )
                             }
                         }
@@ -1539,6 +1562,7 @@ fun TodoListScreen(
                                 isFloaterList = isListDetailScreen,
                             )
                         },
+                        celebrate = celebrateEmptyState,
                     )
                 }
             }
@@ -2572,225 +2596,233 @@ private fun ListSettingsBottomSheet(
                     confirmEnabled = canSave,
                 )
 
-                TdaySheetSectionTitle(
-                    text = stringResource(R.string.scheduled_task_home_section_list),
-                )
-                TdaySheetCard {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 18.dp, vertical = 18.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(86.dp)
-                                .background(selectedAccent, CircleShape),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Icon(
-                                imageVector = selectedIcon,
-                                contentDescription = null,
-                                tint = Color.White,
-                                modifier = Modifier.size(42.dp),
-                            )
-                        }
-
-                        BasicTextField(
-                            value = listName,
-                            onValueChange = onListNameChange,
-                            singleLine = true,
-                            keyboardOptions = KeyboardOptions(
-                                imeAction = ImeAction.Done,
-                            ),
-                            keyboardActions = KeyboardActions(
-                                onDone = {
-                                    keyboardController?.hide()
-                                    focusManager.clearFocus(force = true)
-                                    if (canSave) onSave()
-                                },
-                            ),
-                            textStyle = MaterialTheme.typography.headlineSmall.copy(
-                                color = selectedAccent,
-                                fontWeight = FontWeight.ExtraBold,
-                                textAlign = TextAlign.Center,
-                            ),
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f, fill = false)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                ) {
+                    TdaySheetSectionTitle(
+                        text = stringResource(R.string.scheduled_task_home_section_list),
+                    )
+                    TdaySheetCard {
+                        Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .onPreviewKeyEvent { event ->
-                                    if (
-                                        event.type == KeyEventType.KeyUp &&
-                                        (event.key == Key.Enter || event.key == Key.NumPadEnter)
-                                    ) {
-                                        keyboardController?.hide()
-                                        focusManager.clearFocus(force = true)
-                                        if (canSave) onSave()
-                                        true
-                                    } else {
-                                        false
-                                    }
-                                },
-                            decorationBox = { innerTextField ->
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .background(
-                                            TdaySheetDefaults.controlSurfaceColor(),
-                                            RoundedCornerShape(16.dp)
-                                        )
-                                        .padding(horizontal = 14.dp, vertical = 12.dp),
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    if (listName.isBlank()) {
-                                        Text(
-                                            text = stringResource(R.string.scheduled_task_home_list_name_placeholder),
-                                            style = MaterialTheme.typography.headlineSmall,
-                                            color = colorScheme.onSurfaceVariant.copy(alpha = 0.78f),
-                                            fontWeight = FontWeight.ExtraBold,
-                                            textAlign = TextAlign.Center,
-                                        )
-                                    }
-                                    Box(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        contentAlignment = Alignment.Center,
-                                    ) {
-                                        innerTextField()
-                                    }
-                                }
-                            },
-                        )
-                    }
-                }
-
-                TdaySheetSectionTitle(
-                    text = stringResource(R.string.scheduled_task_home_section_color),
-                )
-                TdaySheetCard {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState())
-                            .padding(horizontal = 14.dp, vertical = 14.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    ) {
-                        TdayListColorOptions.forEach { option ->
-                            val colorKey = option.key
-                            val selected = listColor == colorKey
-                            val swatchColor = option.color
-                            val interactionSource = remember { MutableInteractionSource() }
+                                .padding(horizontal = 18.dp, vertical = 18.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
                             Box(
                                 modifier = Modifier
-                                    .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
-                                    .wrapContentSize(Alignment.Center)
-                                    .size(42.dp)
-                                    .clip(CircleShape)
-                                    .background(swatchColor, CircleShape)
-                                    .clickable(
-                                        interactionSource = interactionSource,
-                                        indication = ripple(
-                                            bounded = true,
-                                            radius = 21.dp,
-                                        ),
-                                    ) { onListColorChange(colorKey) }
-                                    .then(
-                                        if (selected) {
-                                            Modifier.border(
-                                                width = 3.dp,
-                                                color = colorScheme.onBackground.copy(alpha = 0.32f),
-                                                shape = CircleShape,
-                                            )
-                                        } else {
-                                            Modifier
-                                        }
-                                    ),
-                            )
-                        }
-                    }
-                }
-
-                TdaySheetSectionTitle(
-                    text = stringResource(R.string.scheduled_task_home_section_icon),
-                )
-                TdaySheetCard {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState())
-                            .padding(horizontal = 14.dp, vertical = 14.dp),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    ) {
-                        TdayListIconOptions.forEach { option ->
-                            val selected = listIconKey == option.key
-                            val interactionSource = remember { MutableInteractionSource() }
-                            Box(
-                                modifier = Modifier
-                                    .size(46.dp)
-                                    .clip(CircleShape)
-                                    .background(
-                                        color = if (selected) {
-                                            selectedAccent.copy(alpha = 0.2f)
-                                        } else {
-                                            TdaySheetDefaults.controlSurfaceColor()
-                                        },
-                                        shape = CircleShape,
-                                    )
-                                    .clickable(
-                                        interactionSource = interactionSource,
-                                        indication = ripple(
-                                            bounded = true,
-                                            radius = 23.dp,
-                                        ),
-                                    ) { onListIconChange(option.key) }
-                                    .then(
-                                        if (selected) {
-                                            Modifier.border(
-                                                width = 2.dp,
-                                                color = selectedAccent.copy(alpha = 0.55f),
-                                                shape = CircleShape,
-                                            )
-                                        } else {
-                                            Modifier
-                                        }
-                                    ),
+                                    .size(86.dp)
+                                    .background(selectedAccent, CircleShape),
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Icon(
-                                    painter = painterResource(option.iconRes),
-                                    contentDescription = stringResource(R.string.scheduled_task_home_section_icon),
-                                    tint = if (selected) selectedAccent else colorScheme.onSurfaceVariant,
+                                    imageVector = selectedIcon,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(42.dp),
+                                )
+                            }
+
+                            BasicTextField(
+                                value = listName,
+                                onValueChange = onListNameChange,
+                                singleLine = true,
+                                keyboardOptions = KeyboardOptions(
+                                    imeAction = ImeAction.Done,
+                                ),
+                                keyboardActions = KeyboardActions(
+                                    onDone = {
+                                        keyboardController?.hide()
+                                        focusManager.clearFocus(force = true)
+                                        if (canSave) onSave()
+                                    },
+                                ),
+                                textStyle = MaterialTheme.typography.headlineSmall.copy(
+                                    color = selectedAccent,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    textAlign = TextAlign.Center,
+                                ),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .onPreviewKeyEvent { event ->
+                                        if (
+                                            event.type == KeyEventType.KeyUp &&
+                                            (event.key == Key.Enter || event.key == Key.NumPadEnter)
+                                        ) {
+                                            keyboardController?.hide()
+                                            focusManager.clearFocus(force = true)
+                                            if (canSave) onSave()
+                                            true
+                                        } else {
+                                            false
+                                        }
+                                    },
+                                decorationBox = { innerTextField ->
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .background(
+                                                TdaySheetDefaults.controlSurfaceColor(),
+                                                RoundedCornerShape(16.dp)
+                                            )
+                                            .padding(horizontal = 14.dp, vertical = 12.dp),
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        if (listName.isBlank()) {
+                                            Text(
+                                                text = stringResource(R.string.scheduled_task_home_list_name_placeholder),
+                                                style = MaterialTheme.typography.headlineSmall,
+                                                color = colorScheme.onSurfaceVariant.copy(alpha = 0.78f),
+                                                fontWeight = FontWeight.ExtraBold,
+                                                textAlign = TextAlign.Center,
+                                            )
+                                        }
+                                        Box(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            contentAlignment = Alignment.Center,
+                                        ) {
+                                            innerTextField()
+                                        }
+                                    }
+                                },
+                            )
+                        }
+                    }
+
+                    TdaySheetSectionTitle(
+                        text = stringResource(R.string.scheduled_task_home_section_color),
+                    )
+                    TdaySheetCard {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState())
+                                .padding(horizontal = 14.dp, vertical = 14.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        ) {
+                            TdayListColorOptions.forEach { option ->
+                                val colorKey = option.key
+                                val selected = listColor == colorKey
+                                val swatchColor = option.color
+                                val interactionSource = remember { MutableInteractionSource() }
+                                Box(
+                                    modifier = Modifier
+                                        .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+                                        .wrapContentSize(Alignment.Center)
+                                        .size(42.dp)
+                                        .clip(CircleShape)
+                                        .background(swatchColor, CircleShape)
+                                        .clickable(
+                                            interactionSource = interactionSource,
+                                            indication = ripple(
+                                                bounded = true,
+                                                radius = 21.dp,
+                                            ),
+                                        ) { onListColorChange(colorKey) }
+                                        .then(
+                                            if (selected) {
+                                                Modifier.border(
+                                                    width = 3.dp,
+                                                    color = colorScheme.onBackground.copy(alpha = 0.32f),
+                                                    shape = CircleShape,
+                                                )
+                                            } else {
+                                                Modifier
+                                            }
+                                        ),
                                 )
                             }
                         }
                     }
-                }
 
-                if (onShare != null || onMembers != null) {
                     TdaySheetSectionTitle(
-                        text = stringResource(R.string.share_section_title),
+                        text = stringResource(R.string.scheduled_task_home_section_icon),
                     )
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        if (onMembers != null) {
-                            ListSettingsActionTile(
-                                icon = ImageVector.vectorResource(R.drawable.ic_lucide_users_round),
-                                label = stringResource(R.string.members_title),
-                                onClick = onMembers,
-                                modifier = Modifier.weight(1f),
-                            )
-                        }
-                        if (onShare != null) {
-                            ListSettingsActionTile(
-                                icon = ImageVector.vectorResource(R.drawable.ic_lucide_share_2),
-                                label = stringResource(R.string.action_share),
-                                onClick = onShare,
-                                modifier = Modifier.weight(1f),
-                            )
+                    TdaySheetCard {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState())
+                                .padding(horizontal = 14.dp, vertical = 14.dp),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        ) {
+                            TdayListIconOptions.forEach { option ->
+                                val selected = listIconKey == option.key
+                                val interactionSource = remember { MutableInteractionSource() }
+                                Box(
+                                    modifier = Modifier
+                                        .size(46.dp)
+                                        .clip(CircleShape)
+                                        .background(
+                                            color = if (selected) {
+                                                selectedAccent.copy(alpha = 0.2f)
+                                            } else {
+                                                TdaySheetDefaults.controlSurfaceColor()
+                                            },
+                                            shape = CircleShape,
+                                        )
+                                        .clickable(
+                                            interactionSource = interactionSource,
+                                            indication = ripple(
+                                                bounded = true,
+                                                radius = 23.dp,
+                                            ),
+                                        ) { onListIconChange(option.key) }
+                                        .then(
+                                            if (selected) {
+                                                Modifier.border(
+                                                    width = 2.dp,
+                                                    color = selectedAccent.copy(alpha = 0.55f),
+                                                    shape = CircleShape,
+                                                )
+                                            } else {
+                                                Modifier
+                                            }
+                                        ),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Icon(
+                                        painter = painterResource(option.iconRes),
+                                        contentDescription = stringResource(R.string.scheduled_task_home_section_icon),
+                                        tint = if (selected) selectedAccent else colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
                         }
                     }
-                }
-                Spacer(Modifier.height(2.dp))
-                if (showDelete) {
-                    ListSettingsDeleteButton(onClick = onDelete)
+
+                    if (onShare != null || onMembers != null) {
+                        TdaySheetSectionTitle(
+                            text = stringResource(R.string.share_section_title),
+                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            if (onMembers != null) {
+                                ListSettingsActionTile(
+                                    icon = ImageVector.vectorResource(R.drawable.ic_lucide_users_round),
+                                    label = stringResource(R.string.members_title),
+                                    onClick = onMembers,
+                                    modifier = Modifier.weight(1f),
+                                )
+                            }
+                            if (onShare != null) {
+                                ListSettingsActionTile(
+                                    icon = ImageVector.vectorResource(R.drawable.ic_lucide_share_2),
+                                    label = stringResource(R.string.action_share),
+                                    onClick = onShare,
+                                    modifier = Modifier.weight(1f),
+                                )
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(2.dp))
+                    if (showDelete) {
+                        ListSettingsDeleteButton(onClick = onDelete)
+                    }
                 }
             }
         }

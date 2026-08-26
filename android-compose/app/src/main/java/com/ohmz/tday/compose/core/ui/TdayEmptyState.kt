@@ -1,7 +1,8 @@
 package com.ohmz.tday.compose.core.ui
 
-import android.provider.Settings
 import androidx.annotation.DrawableRes
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.EaseInOut
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.StartOffset
@@ -31,6 +32,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -43,7 +45,6 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.font.FontWeight
@@ -51,6 +52,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.ohmz.tday.compose.ui.theme.TdayDimens
+import kotlinx.coroutines.delay
 
 /**
  * What a screen shows when it has nothing to show.
@@ -65,10 +67,18 @@ import com.ohmz.tday.compose.ui.theme.TdayDimens
  * again in Compose, its px taken as dp so the two read as the same illustration;
  * keep the platforms in step.
  *
+ * It never cuts in. The scene rises and fades up over half a second, because
+ * the frame before it is the row the user just ticked off leaving the screen,
+ * and a state that simply appears in that gap reads as the list breaking rather
+ * than as the list being finished.
+ *
  * @param icon a drawable rather than an `ImageVector`, because every caller
  *   already holds one of the shared lucide ids for [EmptyTaskWatermark].
  * @param accentColor the screen's accent. Everything in the scene but the front
  *   card is this colour at some alpha.
+ * @param celebrate the list emptied because the user finished it, rather than
+ *   because there was never anything in it: confetti flies first and the scene
+ *   comes up through it a beat later.
  */
 @Composable
 fun TdayEmptyState(
@@ -78,139 +88,179 @@ fun TdayEmptyState(
     modifier: Modifier = Modifier,
     description: String? = null,
     action: (@Composable () -> Unit)? = null,
+    celebrate: Boolean = false,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val motion = rememberEmptySceneMotion()
+    val motionEnabled = rememberTdayMotionEnabled()
 
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
+    // 0 is off-screen-ish and invisible, 1 is the finished state. Held at 1 from
+    // the start when the platform has animations off, so the scene is drawn, not
+    // faded to nothing.
+    val appear = remember { Animatable(if (motionEnabled) 0f else 1f) }
+    LaunchedEffect(Unit) {
+        if (!motionEnabled) return@LaunchedEffect
+        // The burst leads; the scene follows through it. Without the wait the
+        // illustration is already sitting there when the first piece of paper
+        // clears it, and the confetti reads as decoration on a static page.
+        if (celebrate) delay(CelebrationLeadMillis)
+        appear.animateTo(
+            targetValue = 1f,
+            animationSpec = tween(durationMillis = EnterMillis, easing = EnterEasing),
+        )
+    }
+
+    Box(
+        modifier = modifier.fillMaxWidth(),
+        contentAlignment = Alignment.Center,
     ) {
-        Box(
+        Column(
             modifier = Modifier
-                // Decoration only, and a screen reader announcing three cards
-                // and a stack of sparkles would be reading out the wallpaper.
-                .clearAndSetSemantics { }
-                .size(width = SceneWidth, height = SceneHeight)
+                .fillMaxWidth()
                 .graphicsLayer {
-                    // The whole scene breathes rather than any one piece of it
-                    // moving: a stack of cards where only the sparkles animated
-                    // reads as a loading spinner, which is the one thing an
-                    // empty state must not look like.
-                    translationY = -SceneFloatDistance.toPx() * motion.float()
-                },
+                    val entered = appear.value
+                    alpha = entered
+                    val scale = EnterStartScale + (1f - EnterStartScale) * entered
+                    scaleX = scale
+                    scaleY = scale
+                    translationY = EnterRise.toPx() * (1f - entered)
+                }
+                .padding(horizontal = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
         ) {
-            // Two cards behind, fanned out. Tinted rather than a surface token,
-            // so they read as depth instead of as two more empty rows.
             Box(
                 modifier = Modifier
-                    .offset(x = 12.dp, y = 16.dp)
-                    .size(width = 128.dp, height = 86.dp)
-                    .graphicsLayer { rotationZ = -9f }
-                    .background(accentColor.copy(alpha = 0.14f), CardShape),
-            )
-            Box(
-                modifier = Modifier
-                    .offset(x = 40.dp, y = 12.dp)
-                    .size(width = 128.dp, height = 86.dp)
-                    .graphicsLayer { rotationZ = 7f }
-                    .background(accentColor.copy(alpha = 0.22f), CardShape),
-            )
-
-            // The card in front, holding three task rows. The first is ticked.
-            Column(
-                modifier = Modifier
-                    .offset(x = 24.dp, y = 24.dp)
-                    .size(width = 130.dp, height = 88.dp)
-                    .shadow(elevation = 10.dp, shape = CardShape, clip = false)
-                    // NOT `colorScheme.surface`: under Material You that is the
-                    // same value as `background`, so the card the whole scene is
-                    // stacked around would vanish into the page and leave three
-                    // rows floating. This is the fill every raised control in
-                    // the app already uses for exactly that reason.
-                    .background(tdayBarButtonContainerColor(), CardShape)
-                    .border(
-                        width = TdayDimens.BorderWidth,
-                        color = colorScheme.onSurface.copy(alpha = 0.10f),
-                        shape = CardShape,
-                    )
-                    .padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(9.dp, Alignment.CenterVertically),
+                    // Decoration only, and a screen reader announcing three cards
+                    // and a stack of sparkles would be reading out the wallpaper.
+                    .clearAndSetSemantics { }
+                    .size(width = SceneWidth, height = SceneHeight)
+                    .graphicsLayer {
+                        // The whole scene breathes rather than any one piece of it
+                        // moving: a stack of cards where only the sparkles animated
+                        // reads as a loading spinner, which is the one thing an
+                        // empty state must not look like.
+                        translationY = -SceneFloatDistance.toPx() * motion.float()
+                    },
             ) {
-                EmptyCardRow(accentColor = accentColor, ticked = true, pillWidth = 44.dp)
-                EmptyCardRow(accentColor = accentColor, ticked = false, pillWidth = 62.dp)
-                EmptyCardRow(accentColor = accentColor, ticked = false, pillWidth = 38.dp)
-            }
-
-            // The screen's own glyph, sitting on the corner of the stack. The
-            // ring is the page's own colour, so the circle reads as lifted off
-            // the cards rather than as another card in the fan.
-            Box(
-                modifier = Modifier
-                    // The circle hangs 4dp past the stack's right edge and
-                    // stands 4dp up from its bottom; the ring is drawn around
-                    // it, so this places the ring's box, not the circle's.
-                    .offset(x = 120.dp, y = 76.dp)
-                    .size(GlyphCircle + GlyphRing * 2)
-                    .background(colorScheme.background, CircleShape)
-                    .padding(GlyphRing)
-                    .shadow(elevation = 12.dp, shape = CircleShape, clip = false)
-                    .background(accentColor, CircleShape),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    painter = painterResource(icon),
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(24.dp),
-                )
-            }
-
-            // Three sparkles on their own staggered twinkle.
-            EmptySparkles.forEachIndexed { index, spark ->
-                Canvas(
+                // Two cards behind, fanned out. Tinted rather than a surface token,
+                // so they read as depth instead of as two more empty rows.
+                Box(
                     modifier = Modifier
-                        .offset(x = spark.x, y = spark.y)
-                        .size(spark.size)
-                        .graphicsLayer {
-                            val fraction = motion.sparkle(index)
-                            alpha = SparkleMinAlpha + (1f - SparkleMinAlpha) * fraction
-                            val s = SparkleMinScale + (1f - SparkleMinScale) * fraction
-                            scaleX = s
-                            scaleY = s
-                        },
+                        .offset(x = 12.dp, y = 16.dp)
+                        .size(width = 128.dp, height = 86.dp)
+                        .graphicsLayer { rotationZ = -9f }
+                        .background(accentColor.copy(alpha = 0.14f), CardShape),
+                )
+                Box(
+                    modifier = Modifier
+                        .offset(x = 40.dp, y = 12.dp)
+                        .size(width = 128.dp, height = 86.dp)
+                        .graphicsLayer { rotationZ = 7f }
+                        .background(accentColor.copy(alpha = 0.22f), CardShape),
+                )
+
+                // The card in front, holding three task rows. The first is ticked.
+                Column(
+                    modifier = Modifier
+                        .offset(x = 24.dp, y = 24.dp)
+                        .size(width = 130.dp, height = 88.dp)
+                        .shadow(elevation = 10.dp, shape = CardShape, clip = false)
+                        // NOT `colorScheme.surface`: under Material You that is the
+                        // same value as `background`, so the card the whole scene is
+                        // stacked around would vanish into the page and leave three
+                        // rows floating. This is the fill every raised control in
+                        // the app already uses for exactly that reason.
+                        .background(tdayBarButtonContainerColor(), CardShape)
+                        .border(
+                            width = TdayDimens.BorderWidth,
+                            color = colorScheme.onSurface.copy(alpha = 0.10f),
+                            shape = CardShape,
+                        )
+                        .padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(9.dp, Alignment.CenterVertically),
                 ) {
-                    drawPath(sparklePath(size.minDimension), accentColor.copy(alpha = 0.70f))
+                    EmptyCardRow(accentColor = accentColor, ticked = true, pillWidth = 44.dp)
+                    EmptyCardRow(accentColor = accentColor, ticked = false, pillWidth = 62.dp)
+                    EmptyCardRow(accentColor = accentColor, ticked = false, pillWidth = 38.dp)
+                }
+
+                // The screen's own glyph, sitting on the corner of the stack. The
+                // ring is the page's own colour, so the circle reads as lifted off
+                // the cards rather than as another card in the fan.
+                Box(
+                    modifier = Modifier
+                        // The circle hangs 4dp past the stack's right edge and
+                        // stands 4dp up from its bottom; the ring is drawn around
+                        // it, so this places the ring's box, not the circle's.
+                        .offset(x = 120.dp, y = 76.dp)
+                        .size(GlyphCircle + GlyphRing * 2)
+                        .background(colorScheme.background, CircleShape)
+                        .padding(GlyphRing)
+                        .shadow(elevation = 12.dp, shape = CircleShape, clip = false)
+                        .background(accentColor, CircleShape),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        painter = painterResource(icon),
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(24.dp),
+                    )
+                }
+
+                // Three sparkles on their own staggered twinkle.
+                EmptySparkles.forEachIndexed { index, spark ->
+                    Canvas(
+                        modifier = Modifier
+                            .offset(x = spark.x, y = spark.y)
+                            .size(spark.size)
+                            .graphicsLayer {
+                                val fraction = motion.sparkle(index)
+                                alpha = SparkleMinAlpha + (1f - SparkleMinAlpha) * fraction
+                                val s = SparkleMinScale + (1f - SparkleMinScale) * fraction
+                                scaleX = s
+                                scaleY = s
+                            },
+                    ) {
+                        drawPath(sparklePath(size.minDimension), accentColor.copy(alpha = 0.70f))
+                    }
                 }
             }
-        }
 
-        Spacer(modifier = Modifier.height(28.dp))
-        Text(
-            text = title,
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Black,
-            color = colorScheme.onBackground,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.widthIn(max = CopyMaxWidth),
-        )
-        if (description != null) {
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(28.dp))
             Text(
-                text = description,
-                style = MaterialTheme.typography.bodyMedium,
-                color = colorScheme.onSurfaceVariant,
+                text = title,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Black,
+                color = colorScheme.onBackground,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.widthIn(max = CopyMaxWidth),
             )
+            if (description != null) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.widthIn(max = CopyMaxWidth),
+                )
+            }
+            if (action != null) {
+                Spacer(modifier = Modifier.height(24.dp))
+                action()
+            }
         }
-        if (action != null) {
-            Spacer(modifier = Modifier.height(24.dp))
-            action()
-        }
+
+        // Over the whole state rather than over the scene alone: the pieces
+        // are thrown far enough to cross the copy, and a burst that stops at
+        // the illustration's edge looks masked.
+        TdayConfetti(
+            play = celebrate,
+            accentColor = accentColor,
+            modifier = Modifier.matchParentSize(),
+        )
     }
 }
 
@@ -289,6 +339,18 @@ private val CopyMaxWidth = 320.dp
 private const val SparkleMinAlpha = 0.3f
 private const val SparkleMinScale = 0.7f
 
+/** The scene's own arrival: long enough to read as a hand-off, not as a page load. */
+private const val EnterMillis = 520
+
+/** Material's emphasised decelerate: fast off the mark, settles rather than stops. */
+private val EnterEasing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1f)
+
+private const val EnterStartScale = 0.92f
+private val EnterRise = 18.dp
+
+/** How long the confetti has the screen to itself before the scene comes up. */
+private const val CelebrationLeadMillis = 320L
+
 /** Half of the float's 6s cycle; [RepeatMode.Reverse] plays the other half. */
 private const val SceneFloatMillis = 3000
 
@@ -318,24 +380,14 @@ private class EmptySceneMotion(
 /**
  * Both animations, or neither.
  *
- * Compose has no equivalent of `prefers-reduced-motion`, so this reads what the
- * platform actually offers: the animator duration scale, which is what the
- * developer-options slider and Settings' "Remove animations" both write. When it
- * is off the scene is held at the TOP of the twinkle rather than switched off —
+ * [rememberTdayMotionEnabled] is the platform's answer to `prefers-reduced-motion`.
+ * When it says no, the scene is held at the TOP of the twinkle rather than switched off —
  * a scene drawn at the bottom of its fade looks half-rendered rather than
  * deliberate, which is the same call the web stylesheet makes.
  */
 @Composable
 private fun rememberEmptySceneMotion(): EmptySceneMotion {
-    val context = LocalContext.current
-    val animated = remember(context) {
-        Settings.Global.getFloat(
-            context.contentResolver,
-            Settings.Global.ANIMATOR_DURATION_SCALE,
-            1f,
-        ) != 0f
-    }
-    if (!animated) {
+    if (!rememberTdayMotionEnabled()) {
         return remember { EmptySceneMotion(float = { 0f }, sparkle = { 1f }) }
     }
 

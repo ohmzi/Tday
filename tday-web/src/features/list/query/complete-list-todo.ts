@@ -4,6 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { canonicalTodoId } from "@/lib/todo/todo-id";
 import { TodoItemType } from "@/types";
 import { useTodoActionToast } from "@/hooks/use-todo-action-toast";
+import { markTaskCompleted } from "@/lib/task-completion-signal";
 
 // Delayed-commit complete (see complete-todo.ts): stage the removal from the
 // list cache, show an undoable toast, and only PATCH /complete once the toast
@@ -39,6 +40,9 @@ export const useCompleteListTodo = () => {
     });
 
     const completeMutateFn = (todoItem: TodoItemType) => {
+        // The empty state that follows the last row leaving reads this to tell a
+        // list the user finished from one that was never filled.
+        markTaskCompleted();
         // Prefix match over ["list"], the same way delete-list-todo does, rather than keying on
         // ["list", todoItem.listID]. The list-detail endpoint returns ListTodoDto, which has no
         // listID field at all, so every row on a list screen carries listID === null — keying on
