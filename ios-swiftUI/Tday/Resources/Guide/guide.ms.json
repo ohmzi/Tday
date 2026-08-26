@@ -408,7 +408,9 @@
       "serverOnly": false,
       "sinceVersion": "0.6.0",
       "deepLink": null,
-      "helpAnchors": [],
+      "helpAnchors": [
+        "settings-feature-toggle"
+      ],
       "title": "Floater berehat",
       "summary": "Tugasan Anytime yang tidak disentuh pudar dan berehat, memastikan senarai tenang.",
       "body": [
@@ -1347,6 +1349,43 @@
       "searchBody": "bawa tugasan dalam peranti anda apabila beralih ke mod pelayan. bermula dalam mod tempatan dan kemudian menyediakan pelayan? tiada apa-apa dimuat naik dengan sendirinya. untuk memindahkan data anda: eksport dahulu daripada tetapan, log masuk ke pelayan anda, kemudian import fail itu di sana. tugasan, senarai dan sejarah berpindah dalam satu langkah yang disengajakan — anda pilih masanya, dan data dalam peranti kekal tidak tersentuh sehingga itu. selepas import, simpan fail yang dieksport sehingga anda sahkan semuanya tiba — ia juga berfungsi sebagai sandaran."
     },
     {
+      "id": "ai-summary",
+      "section": "INTEGRATIONS",
+      "sectionOrder": 7,
+      "icon": "sparkles",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": true,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [
+        "settings-feature-toggle"
+      ],
+      "title": "Ringkasan tugasan",
+      "summary": "Bacaan ringkas dan tenang tentang hari anda — dengan AI tempatan pilihan.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "T'Day boleh meringkaskan hari anda dalam satu atau dua ayat. Dengan model Ollama tempatan ia berbunyi semula jadi; tanpanya ia beralih kepada ringkasan hangat yang boleh diramal — apa pun, tiada yang meninggalkan pelayan anda."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Ringkasan tidak pernah bergantung pada perkhidmatan AI awan — ia tempatan atau tiada langsung."
+          ]
+        }
+      ],
+      "searchTitle": "ringkasan tugasan",
+      "searchKeywords": "ringkasan, ai, ollama, gambaran, ringkas, tempatan, peribadi",
+      "searchBody": "bacaan ringkas dan tenang tentang hari anda — dengan ai tempatan pilihan. t'day boleh meringkaskan hari anda dalam satu atau dua ayat. dengan model ollama tempatan ia berbunyi semula jadi; tanpanya ia beralih kepada ringkasan hangat yang boleh diramal — apa pun, tiada yang meninggalkan pelayan anda. ringkasan tidak pernah bergantung pada perkhidmatan ai awan — ia tempatan atau tiada langsung."
+    },
+    {
       "id": "device-calendar-sync",
       "section": "INTEGRATIONS",
       "sectionOrder": 7,
@@ -1359,7 +1398,9 @@
       "serverOnly": false,
       "sinceVersion": "0.7.0",
       "deepLink": null,
-      "helpAnchors": [],
+      "helpAnchors": [
+        "settings-feature-toggle"
+      ],
       "title": "Tugas dalam kalendar peranti",
       "summary": "Salin tugas bertarikh anda ke kalendar T'Day pada telefon anda.",
       "body": [
@@ -1381,41 +1422,6 @@
       "searchTitle": "tugas dalam kalendar peranti",
       "searchKeywords": "kalendar, kalendar peranti, segerak, google calendar, apple calendar, eventkit, kalendar telefon, salin",
       "searchBody": "salin tugas bertarikh anda ke kalendar t'day pada telefon anda. apabila dihidupkan, setiap tugas yang bertarikh akan disalin ke kalendar bernama t'day pada telefon anda, bersama kalendar anda yang lain. tugas anytime tidak disertakan kerana ia tiada tarikh. ia sehala sahaja: t'day menulis ke kalendar itu, jadi suntingan yang anda buat di sana akan diganti apabila tugas anda berubah. dalam tetapan, hidupkan “tambah tugas berjadual ke kalendar saya”. benarkan akses kalendar apabila telefon anda meminta. buka aplikasi kalendar anda — tugas bertarikh anda ada dalam kalendar t'day."
-    },
-    {
-      "id": "ai-summary",
-      "section": "INTEGRATIONS",
-      "sectionOrder": 7,
-      "icon": "sparkles",
-      "platforms": [
-        "WEB",
-        "ANDROID",
-        "IOS"
-      ],
-      "badge": null,
-      "serverOnly": true,
-      "sinceVersion": null,
-      "deepLink": null,
-      "helpAnchors": [],
-      "title": "Ringkasan tugasan",
-      "summary": "Bacaan ringkas dan tenang tentang hari anda — dengan AI tempatan pilihan.",
-      "body": [
-        {
-          "type": "PARAGRAPH",
-          "texts": [
-            "T'Day boleh meringkaskan hari anda dalam satu atau dua ayat. Dengan model Ollama tempatan ia berbunyi semula jadi; tanpanya ia beralih kepada ringkasan hangat yang boleh diramal — apa pun, tiada yang meninggalkan pelayan anda."
-          ]
-        },
-        {
-          "type": "TIP",
-          "texts": [
-            "Ringkasan tidak pernah bergantung pada perkhidmatan AI awan — ia tempatan atau tiada langsung."
-          ]
-        }
-      ],
-      "searchTitle": "ringkasan tugasan",
-      "searchKeywords": "ringkasan, ai, ollama, gambaran, ringkas, tempatan, peribadi",
-      "searchBody": "bacaan ringkas dan tenang tentang hari anda — dengan ai tempatan pilihan. t'day boleh meringkaskan hari anda dalam satu atau dua ayat. dengan model ollama tempatan ia berbunyi semula jadi; tanpanya ia beralih kepada ringkasan hangat yang boleh diramal — apa pun, tiada yang meninggalkan pelayan anda. ringkasan tidak pernah bergantung pada perkhidmatan ai awan — ia tempatan atau tiada langsung."
     }
   ]
 }

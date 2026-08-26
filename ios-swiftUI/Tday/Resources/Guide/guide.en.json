@@ -408,7 +408,9 @@
       "serverOnly": false,
       "sinceVersion": "0.6.0",
       "deepLink": null,
-      "helpAnchors": [],
+      "helpAnchors": [
+        "settings-feature-toggle"
+      ],
       "title": "Resting floaters",
       "summary": "Untouched Anytime tasks quietly fade and rest, so your list stays calm.",
       "body": [
@@ -1347,6 +1349,43 @@
       "searchBody": "bring your on-device tasks with you when you switch to server mode. started in local mode and later set up a server? nothing ever uploads on its own. to move your data up: export it from settings first, sign in to your server, then import the file there. your tasks, lists, and history transfer in one deliberate step — you choose the moment, and your on-device data stays untouched until you do. after importing, keep the exported file until you've confirmed everything arrived — then it doubles as a backup."
     },
     {
+      "id": "ai-summary",
+      "section": "INTEGRATIONS",
+      "sectionOrder": 7,
+      "icon": "sparkles",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": true,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [
+        "settings-feature-toggle"
+      ],
+      "title": "Task summaries",
+      "summary": "A short, calm read on your day — with optional local AI.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "T'Day can summarize your day in a sentence or two. With a local Ollama model it reads naturally; without one it falls back to a warm, deterministic recap — either way nothing leaves your server."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "The summary never depends on a cloud AI service — it's local or nothing."
+          ]
+        }
+      ],
+      "searchTitle": "task summaries",
+      "searchKeywords": "summary, ai, ollama, overview, digest, local, private",
+      "searchBody": "a short, calm read on your day — with optional local ai. t'day can summarize your day in a sentence or two. with a local ollama model it reads naturally; without one it falls back to a warm, deterministic recap — either way nothing leaves your server. the summary never depends on a cloud ai service — it's local or nothing."
+    },
+    {
       "id": "device-calendar-sync",
       "section": "INTEGRATIONS",
       "sectionOrder": 7,
@@ -1359,7 +1398,9 @@
       "serverOnly": false,
       "sinceVersion": "0.7.0",
       "deepLink": null,
-      "helpAnchors": [],
+      "helpAnchors": [
+        "settings-feature-toggle"
+      ],
       "title": "Tasks in your device calendar",
       "summary": "Mirror your dated tasks into a T'Day calendar on your phone.",
       "body": [
@@ -1381,41 +1422,6 @@
       "searchTitle": "tasks in your device calendar",
       "searchKeywords": "calendar, device calendar, sync, google calendar, apple calendar, eventkit, phone calendar, mirror",
       "searchBody": "mirror your dated tasks into a t'day calendar on your phone. turn this on and every task with a date is copied into a calendar called t'day on your phone, alongside your other calendars. anytime tasks stay out of it, because they have no date to sit on. it's one-way: t'day writes to that calendar, so edits you make there are replaced the next time your tasks change. in settings, turn on “add scheduled tasks to my calendar”. allow calendar access when your phone asks. open your calendar app — your dated tasks are in the t'day calendar."
-    },
-    {
-      "id": "ai-summary",
-      "section": "INTEGRATIONS",
-      "sectionOrder": 7,
-      "icon": "sparkles",
-      "platforms": [
-        "WEB",
-        "ANDROID",
-        "IOS"
-      ],
-      "badge": null,
-      "serverOnly": true,
-      "sinceVersion": null,
-      "deepLink": null,
-      "helpAnchors": [],
-      "title": "Task summaries",
-      "summary": "A short, calm read on your day — with optional local AI.",
-      "body": [
-        {
-          "type": "PARAGRAPH",
-          "texts": [
-            "T'Day can summarize your day in a sentence or two. With a local Ollama model it reads naturally; without one it falls back to a warm, deterministic recap — either way nothing leaves your server."
-          ]
-        },
-        {
-          "type": "TIP",
-          "texts": [
-            "The summary never depends on a cloud AI service — it's local or nothing."
-          ]
-        }
-      ],
-      "searchTitle": "task summaries",
-      "searchKeywords": "summary, ai, ollama, overview, digest, local, private",
-      "searchBody": "a short, calm read on your day — with optional local ai. t'day can summarize your day in a sentence or two. with a local ollama model it reads naturally; without one it falls back to a warm, deterministic recap — either way nothing leaves your server. the summary never depends on a cloud ai service — it's local or nothing."
     }
   ]
 }

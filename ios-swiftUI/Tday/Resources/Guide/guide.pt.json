@@ -408,7 +408,9 @@
       "serverOnly": false,
       "sinceVersion": "0.6.0",
       "deepLink": null,
-      "helpAnchors": [],
+      "helpAnchors": [
+        "settings-feature-toggle"
+      ],
       "title": "Flutuantes em repouso",
       "summary": "Tarefas Anytime intocadas desaparecem e descansam, mantendo a lista calma.",
       "body": [
@@ -1347,6 +1349,43 @@
       "searchBody": "leve as tarefas do dispositivo consigo ao mudar para o modo servidor. comecou no modo local e depois configurou um servidor? nada e carregado por conta propria. para mover os seus dados: exporte-os primeiro nas definicoes, inicie sessao no seu servidor e importe ai o ficheiro. tarefas, listas e historico transferem-se num passo deliberado — escolhe o momento, e os dados no dispositivo ficam intactos ate la. depois de importar, guarde o ficheiro exportado ate confirmar que tudo chegou — assim tambem serve de copia de seguranca."
     },
     {
+      "id": "ai-summary",
+      "section": "INTEGRATIONS",
+      "sectionOrder": 7,
+      "icon": "sparkles",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": true,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [
+        "settings-feature-toggle"
+      ],
+      "title": "Resumos de tarefas",
+      "summary": "Uma leitura breve e serena do seu dia — com IA local opcional.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "O T'Day pode resumir o seu dia numa frase ou duas. Com um modelo Ollama local, a leitura é natural; sem ele, recorre a um resumo caloroso e determinístico — de qualquer forma, nada sai do seu servidor."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "O resumo nunca depende de um serviço de IA na nuvem — é local ou nada."
+          ]
+        }
+      ],
+      "searchTitle": "resumos de tarefas",
+      "searchKeywords": "resumo, ia, ollama, panorama, sintese, local, privado",
+      "searchBody": "uma leitura breve e serena do seu dia — com ia local opcional. o t'day pode resumir o seu dia numa frase ou duas. com um modelo ollama local, a leitura e natural; sem ele, recorre a um resumo caloroso e deterministico — de qualquer forma, nada sai do seu servidor. o resumo nunca depende de um servico de ia na nuvem — e local ou nada."
+    },
+    {
       "id": "device-calendar-sync",
       "section": "INTEGRATIONS",
       "sectionOrder": 7,
@@ -1359,7 +1398,9 @@
       "serverOnly": false,
       "sinceVersion": "0.7.0",
       "deepLink": null,
-      "helpAnchors": [],
+      "helpAnchors": [
+        "settings-feature-toggle"
+      ],
       "title": "Tarefas no calendário do aparelho",
       "summary": "Copie suas tarefas com data para um calendário T'Day no seu celular.",
       "body": [
@@ -1381,41 +1422,6 @@
       "searchTitle": "tarefas no calendario do aparelho",
       "searchKeywords": "calendario, calendario do aparelho, sincronizacao, google agenda, calendario apple, eventkit, calendario do celular, copia",
       "searchBody": "copie suas tarefas com data para um calendario t'day no seu celular. ao ativar, toda tarefa com data e copiada para um calendario chamado t'day no seu celular, junto dos seus outros calendarios. tarefas anytime ficam de fora, porque nao tem data. e de mao unica: o t'day escreve nesse calendario, entao edicoes feitas por la sao substituidas na proxima vez que suas tarefas mudarem. em configuracoes, ative “adicionar tarefas agendadas ao meu calendario”. permita o acesso ao calendario quando o celular pedir. abra seu app de calendario — suas tarefas com data estao no calendario t'day."
-    },
-    {
-      "id": "ai-summary",
-      "section": "INTEGRATIONS",
-      "sectionOrder": 7,
-      "icon": "sparkles",
-      "platforms": [
-        "WEB",
-        "ANDROID",
-        "IOS"
-      ],
-      "badge": null,
-      "serverOnly": true,
-      "sinceVersion": null,
-      "deepLink": null,
-      "helpAnchors": [],
-      "title": "Resumos de tarefas",
-      "summary": "Uma leitura breve e serena do seu dia — com IA local opcional.",
-      "body": [
-        {
-          "type": "PARAGRAPH",
-          "texts": [
-            "O T'Day pode resumir o seu dia numa frase ou duas. Com um modelo Ollama local, a leitura é natural; sem ele, recorre a um resumo caloroso e determinístico — de qualquer forma, nada sai do seu servidor."
-          ]
-        },
-        {
-          "type": "TIP",
-          "texts": [
-            "O resumo nunca depende de um serviço de IA na nuvem — é local ou nada."
-          ]
-        }
-      ],
-      "searchTitle": "resumos de tarefas",
-      "searchKeywords": "resumo, ia, ollama, panorama, sintese, local, privado",
-      "searchBody": "uma leitura breve e serena do seu dia — com ia local opcional. o t'day pode resumir o seu dia numa frase ou duas. com um modelo ollama local, a leitura e natural; sem ele, recorre a um resumo caloroso e deterministico — de qualquer forma, nada sai do seu servidor. o resumo nunca depende de um servico de ia na nuvem — e local ou nada."
     }
   ]
 }

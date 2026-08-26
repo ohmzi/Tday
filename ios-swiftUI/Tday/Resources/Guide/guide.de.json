@@ -408,7 +408,9 @@
       "serverOnly": false,
       "sinceVersion": "0.6.0",
       "deepLink": null,
-      "helpAnchors": [],
+      "helpAnchors": [
+        "settings-feature-toggle"
+      ],
       "title": "Ruhende Floater",
       "summary": "Unberührte Anytime-Aufgaben verblassen und ruhen, damit die Liste ruhig bleibt.",
       "body": [
@@ -1347,6 +1349,43 @@
       "searchBody": "nimm deine aufgaben vom gerat mit, wenn du in den server-modus wechselst. im lokalen modus gestartet und spater einen server eingerichtet? es wird nie etwas von selbst hochgeladen. so ziehst du deine daten um: exportiere sie zuerst in den einstellungen, melde dich an deinem server an und importiere dort die datei. aufgaben, listen und historie ziehen in einem bewussten schritt um — du wahlst den moment, und deine geratedaten bleiben bis dahin unberuhrt. behalte die exportierte datei nach dem import, bis du gepruft hast, dass alles angekommen ist — dann dient sie zugleich als backup."
     },
     {
+      "id": "ai-summary",
+      "section": "INTEGRATIONS",
+      "sectionOrder": 7,
+      "icon": "sparkles",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": true,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [
+        "settings-feature-toggle"
+      ],
+      "title": "Aufgaben-Zusammenfassungen",
+      "summary": "Ein kurzer, ruhiger Blick auf deinen Tag — mit optionaler lokaler KI.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "T'Day kann deinen Tag in ein, zwei Sätzen zusammenfassen. Mit einem lokalen Ollama-Modell liest es sich natürlich; ohne eines greift es auf eine warme, deterministische Zusammenfassung zurück — so oder so verlässt nichts deinen Server."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Die Zusammenfassung hängt nie von einem Cloud-KI-Dienst ab — sie ist lokal oder gar nicht."
+          ]
+        }
+      ],
+      "searchTitle": "aufgaben-zusammenfassungen",
+      "searchKeywords": "zusammenfassung, ki, ollama, uberblick, digest, lokal, privat",
+      "searchBody": "ein kurzer, ruhiger blick auf deinen tag — mit optionaler lokaler ki. t'day kann deinen tag in ein, zwei satzen zusammenfassen. mit einem lokalen ollama-modell liest es sich naturlich; ohne eines greift es auf eine warme, deterministische zusammenfassung zuruck — so oder so verlasst nichts deinen server. die zusammenfassung hangt nie von einem cloud-ki-dienst ab — sie ist lokal oder gar nicht."
+    },
+    {
       "id": "device-calendar-sync",
       "section": "INTEGRATIONS",
       "sectionOrder": 7,
@@ -1359,7 +1398,9 @@
       "serverOnly": false,
       "sinceVersion": "0.7.0",
       "deepLink": null,
-      "helpAnchors": [],
+      "helpAnchors": [
+        "settings-feature-toggle"
+      ],
       "title": "Aufgaben im Gerätekalender",
       "summary": "Spiegle deine terminierten Aufgaben in einen T'Day-Kalender auf deinem Handy.",
       "body": [
@@ -1381,41 +1422,6 @@
       "searchTitle": "aufgaben im geratekalender",
       "searchKeywords": "kalender, geratekalender, synchronisieren, google kalender, apple kalender, eventkit, handykalender, spiegeln",
       "searchBody": "spiegle deine terminierten aufgaben in einen t'day-kalender auf deinem handy. wenn du das aktivierst, wird jede aufgabe mit datum in einen kalender namens t'day auf deinem handy kopiert – neben deinen anderen kalendern. anytime-aufgaben bleiben ausen vor, weil sie kein datum haben. die synchronisierung lauft nur in eine richtung: t'day schreibt in diesen kalender, deine dortigen anderungen werden beim nachsten abgleich uberschrieben. aktiviere in den einstellungen „terminierte aufgaben zu meinem kalender hinzufugen“. erlaube den kalenderzugriff, wenn dein handy danach fragt. offne deine kalender-app – deine terminierten aufgaben stehen im t'day-kalender."
-    },
-    {
-      "id": "ai-summary",
-      "section": "INTEGRATIONS",
-      "sectionOrder": 7,
-      "icon": "sparkles",
-      "platforms": [
-        "WEB",
-        "ANDROID",
-        "IOS"
-      ],
-      "badge": null,
-      "serverOnly": true,
-      "sinceVersion": null,
-      "deepLink": null,
-      "helpAnchors": [],
-      "title": "Aufgaben-Zusammenfassungen",
-      "summary": "Ein kurzer, ruhiger Blick auf deinen Tag — mit optionaler lokaler KI.",
-      "body": [
-        {
-          "type": "PARAGRAPH",
-          "texts": [
-            "T'Day kann deinen Tag in ein, zwei Sätzen zusammenfassen. Mit einem lokalen Ollama-Modell liest es sich natürlich; ohne eines greift es auf eine warme, deterministische Zusammenfassung zurück — so oder so verlässt nichts deinen Server."
-          ]
-        },
-        {
-          "type": "TIP",
-          "texts": [
-            "Die Zusammenfassung hängt nie von einem Cloud-KI-Dienst ab — sie ist lokal oder gar nicht."
-          ]
-        }
-      ],
-      "searchTitle": "aufgaben-zusammenfassungen",
-      "searchKeywords": "zusammenfassung, ki, ollama, uberblick, digest, lokal, privat",
-      "searchBody": "ein kurzer, ruhiger blick auf deinen tag — mit optionaler lokaler ki. t'day kann deinen tag in ein, zwei satzen zusammenfassen. mit einem lokalen ollama-modell liest es sich naturlich; ohne eines greift es auf eine warme, deterministische zusammenfassung zuruck — so oder so verlasst nichts deinen server. die zusammenfassung hangt nie von einem cloud-ki-dienst ab — sie ist lokal oder gar nicht."
     }
   ]
 }

@@ -408,7 +408,9 @@
       "serverOnly": false,
       "sinceVersion": "0.6.0",
       "deepLink": null,
-      "helpAnchors": [],
+      "helpAnchors": [
+        "settings-feature-toggle"
+      ],
       "title": "休眠浮动任务",
       "summary": "长期未动的 Anytime 任务会淡出并休眠，让列表保持平静。",
       "body": [
@@ -1347,6 +1349,43 @@
       "searchBody": "切换到服务器模式时，把设备上的任务一起带走。 先用本地模式，后来又搭了服务器？绝不会自动上传任何内容。迁移数据的方法：先在设置里导出，登录你的服务器，然后在那里导入文件。任务、清单和历史会在你主动的一步里迁移过去——时机由你决定，在此之前设备上的数据保持原样。 导入后，先留着导出的文件，等确认全部到齐再删——它同时也是一份备份。"
     },
     {
+      "id": "ai-summary",
+      "section": "INTEGRATIONS",
+      "sectionOrder": 7,
+      "icon": "sparkles",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": true,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [
+        "settings-feature-toggle"
+      ],
+      "title": "任务摘要",
+      "summary": "对你一天的简短、宁静的概览——可选配本地 AI。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "T'Day 可以用一两句话概括你的一天。配上本地的 Ollama 模型，读起来自然流畅；没有它，则会退回到一段温暖、确定的回顾——无论哪种方式，都不会有任何东西离开你的服务器。"
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "摘要从不依赖云端 AI 服务——要么本地生成，要么就没有。"
+          ]
+        }
+      ],
+      "searchTitle": "任务摘要",
+      "searchKeywords": "摘要, ai, ollama, 概览, 摘要, 本地, 私密, summary, overview, digest, local",
+      "searchBody": "对你一天的简短、宁静的概览——可选配本地 ai。 t'day 可以用一两句话概括你的一天。配上本地的 ollama 模型，读起来自然流畅；没有它，则会退回到一段温暖、确定的回顾——无论哪种方式，都不会有任何东西离开你的服务器。 摘要从不依赖云端 ai 服务——要么本地生成，要么就没有。"
+    },
+    {
       "id": "device-calendar-sync",
       "section": "INTEGRATIONS",
       "sectionOrder": 7,
@@ -1359,7 +1398,9 @@
       "serverOnly": false,
       "sinceVersion": "0.7.0",
       "deepLink": null,
-      "helpAnchors": [],
+      "helpAnchors": [
+        "settings-feature-toggle"
+      ],
       "title": "在设备日历中查看任务",
       "summary": "将带日期的任务同步到手机上的 T'Day 日历。",
       "body": [
@@ -1381,41 +1422,6 @@
       "searchTitle": "在设备日历中查看任务",
       "searchKeywords": "日历, 设备日历, 同步, google 日历, apple 日历, eventkit, 手机日历, 镜像",
       "searchBody": "将带日期的任务同步到手机上的 t'day 日历。 开启后，每个带日期的任务都会被复制到手机上一个名为 t'day 的日历中，与其他日历并列显示。anytime 任务不会包含在内，因为它们没有日期。同步是单向的：t'day 写入该日历，因此你在日历中的修改会在任务下次变更时被覆盖。 在设置中开启“将安排的任务添加到我的日历”。 当手机询问时，允许访问日历。 打开日历应用 —— 带日期的任务就在 t'day 日历里。"
-    },
-    {
-      "id": "ai-summary",
-      "section": "INTEGRATIONS",
-      "sectionOrder": 7,
-      "icon": "sparkles",
-      "platforms": [
-        "WEB",
-        "ANDROID",
-        "IOS"
-      ],
-      "badge": null,
-      "serverOnly": true,
-      "sinceVersion": null,
-      "deepLink": null,
-      "helpAnchors": [],
-      "title": "任务摘要",
-      "summary": "对你一天的简短、宁静的概览——可选配本地 AI。",
-      "body": [
-        {
-          "type": "PARAGRAPH",
-          "texts": [
-            "T'Day 可以用一两句话概括你的一天。配上本地的 Ollama 模型，读起来自然流畅；没有它，则会退回到一段温暖、确定的回顾——无论哪种方式，都不会有任何东西离开你的服务器。"
-          ]
-        },
-        {
-          "type": "TIP",
-          "texts": [
-            "摘要从不依赖云端 AI 服务——要么本地生成，要么就没有。"
-          ]
-        }
-      ],
-      "searchTitle": "任务摘要",
-      "searchKeywords": "摘要, ai, ollama, 概览, 摘要, 本地, 私密, summary, overview, digest, local",
-      "searchBody": "对你一天的简短、宁静的概览——可选配本地 ai。 t'day 可以用一两句话概括你的一天。配上本地的 ollama 模型，读起来自然流畅；没有它，则会退回到一段温暖、确定的回顾——无论哪种方式，都不会有任何东西离开你的服务器。 摘要从不依赖云端 ai 服务——要么本地生成，要么就没有。"
     }
   ]
 }
