@@ -1032,10 +1032,10 @@
       },
       "notifications": {
         "title": "Notifications",
-        "summary": "One switch in Settings decides whether T'Day may notify you at all.",
-        "keywords": "notification, permission, allow, alert, banner, push, os, system, off, on",
-        "body": "Reminders, the Day Ahead digest and security alerts all arrive through one switch in Settings. It only works when your device has also allowed T'Day to notify you: turn it on and the app asks the system for permission the first time. Turn the switch off and nothing is delivered, even while the system still allows it.",
-        "tip": "If the switch will not turn on, the system has already been told no. Tap it and T'Day sends you to the right page in your device settings."
+        "summary": "One switch decides whether T'Day may interrupt you at all.",
+        "keywords": "notifications, permission, switch, allow, mute, silence, reminder, digest, system settings",
+        "body": "Settings has a single Notifications switch, and everything that reaches you passes through it — task reminders and the Day Ahead digest. Turning it off empties the queue instead of muting it, so nothing arrives late when you turn it back on. It needs the system permission as well: while notifications are blocked for T'Day on your device the switch stays off, and offers to open the system settings.",
+        "tip": "Both halves have to be on. If the system permission is missing the switch reads off, however you left it here."
       },
       "home-widget": {
         "title": "Home-screen widget",

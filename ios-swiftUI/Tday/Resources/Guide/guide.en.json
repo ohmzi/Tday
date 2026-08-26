@@ -772,24 +772,24 @@
         "settings-feature-toggle"
       ],
       "title": "Notifications",
-      "summary": "One switch in Settings decides whether T'Day may notify you at all.",
+      "summary": "One switch decides whether T'Day may interrupt you at all.",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Reminders, the Day Ahead digest and security alerts all arrive through one switch in Settings. It only works when your device has also allowed T'Day to notify you: turn it on and the app asks the system for permission the first time. Turn the switch off and nothing is delivered, even while the system still allows it."
+            "Settings has a single Notifications switch, and everything that reaches you passes through it — task reminders and the Day Ahead digest. Turning it off empties the queue instead of muting it, so nothing arrives late when you turn it back on. It needs the system permission as well: while notifications are blocked for T'Day on your device the switch stays off, and offers to open the system settings."
           ]
         },
         {
           "type": "TIP",
           "texts": [
-            "If the switch will not turn on, the system has already been told no. Tap it and T'Day sends you to the right page in your device settings."
+            "Both halves have to be on. If the system permission is missing the switch reads off, however you left it here."
           ]
         }
       ],
       "searchTitle": "notifications",
-      "searchKeywords": "notification, permission, allow, alert, banner, push, os, system, off, on",
-      "searchBody": "one switch in settings decides whether t'day may notify you at all. reminders, the day ahead digest and security alerts all arrive through one switch in settings. it only works when your device has also allowed t'day to notify you: turn it on and the app asks the system for permission the first time. turn the switch off and nothing is delivered, even while the system still allows it. if the switch will not turn on, the system has already been told no. tap it and t'day sends you to the right page in your device settings."
+      "searchKeywords": "notifications, permission, switch, allow, mute, silence, reminder, digest, system settings",
+      "searchBody": "one switch decides whether t'day may interrupt you at all. settings has a single notifications switch, and everything that reaches you passes through it — task reminders and the day ahead digest. turning it off empties the queue instead of muting it, so nothing arrives late when you turn it back on. it needs the system permission as well: while notifications are blocked for t'day on your device the switch stays off, and offers to open the system settings. both halves have to be on. if the system permission is missing the switch reads off, however you left it here."
     },
     {
       "id": "recurrence-presets",

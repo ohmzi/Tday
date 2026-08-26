@@ -639,6 +639,7 @@
     <string name="settings_account_security_questions_updated">Questions de sécurité mises à jour</string>
     <string name="summary_source_local">Modèle local</string>
     <string name="summary_source_server">Modèle du serveur</string>
+    <string name="settings_help_guide">Guide et astuces</string>
     <string name="settings_data_title">Vos données</string>
     <string name="settings_data_summary">%1$d tâches · %2$d listes · %3$d terminées</string>
     <string name="settings_data_download">Télécharger mes données</string>
@@ -662,6 +663,8 @@
     <string name="settings_quiet_hours_start">Début</string>
     <string name="settings_quiet_hours_end">Fin</string>
     <string name="settings_resting_floaters">Estomper les flottants au repos</string>
+    <string name="settings_calendar_sync">Ajouter les tâches planifiées à mon calendrier</string>
+    <string name="settings_privacy">Confidentialité</string>
     <string name="root_feed_search_scheduled">Rechercher des tâches planifiées</string>
     <string name="root_feed_search_floater">Rechercher des tâches flottantes</string>
 </resources>

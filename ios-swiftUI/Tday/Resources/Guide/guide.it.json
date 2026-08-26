@@ -772,24 +772,24 @@
         "settings-feature-toggle"
       ],
       "title": "Notifiche",
-      "summary": "Un interruttore nelle Impostazioni decide se T'Day può notificarti.",
+      "summary": "Un solo interruttore decide se T'Day può interromperti.",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Promemoria, il riepilogo della giornata e gli avvisi di sicurezza arrivano tutti tramite un interruttore nelle Impostazioni. Funziona solo se anche il dispositivo consente a T'Day di notificarti: alla prima attivazione l'app chiede il permesso al sistema. Con l'interruttore spento non viene consegnato nulla, anche se il sistema lo consente ancora."
+            "Nelle Impostazioni c'è un unico interruttore Notifiche, e tutto ciò che ti raggiunge passa da lì: i promemoria delle attività e il riepilogo del giorno dopo. Spegnerlo svuota la coda invece di silenziarla, così quando lo riaccendi non arriva nulla in ritardo. Serve anche il permesso di sistema: finché le notifiche sono bloccate per T'Day sul tuo dispositivo l'interruttore resta spento e propone di aprire le impostazioni di sistema."
           ]
         },
         {
           "type": "TIP",
           "texts": [
-            "Se l'interruttore non si accende, al sistema è già stato detto di no. Toccalo e T'Day ti porta alla pagina giusta nelle impostazioni del dispositivo."
+            "Devono essere attive entrambe le metà. Se manca il permesso di sistema l'interruttore risulta spento, comunque tu l'abbia lasciato qui."
           ]
         }
       ],
       "searchTitle": "notifiche",
-      "searchKeywords": "notifica, autorizzazione, consenti, avviso, banner, push, os, sistema, spento, acceso",
-      "searchBody": "un interruttore nelle impostazioni decide se t'day puo notificarti. promemoria, il riepilogo della giornata e gli avvisi di sicurezza arrivano tutti tramite un interruttore nelle impostazioni. funziona solo se anche il dispositivo consente a t'day di notificarti: alla prima attivazione l'app chiede il permesso al sistema. con l'interruttore spento non viene consegnato nulla, anche se il sistema lo consente ancora. se l'interruttore non si accende, al sistema e gia stato detto di no. toccalo e t'day ti porta alla pagina giusta nelle impostazioni del dispositivo."
+      "searchKeywords": "notifiche, permesso, interruttore, consentire, silenziare, promemoria, riepilogo, impostazioni di sistema",
+      "searchBody": "un solo interruttore decide se t'day puo interromperti. nelle impostazioni c'e un unico interruttore notifiche, e tutto cio che ti raggiunge passa da li: i promemoria delle attivita e il riepilogo del giorno dopo. spegnerlo svuota la coda invece di silenziarla, cosi quando lo riaccendi non arriva nulla in ritardo. serve anche il permesso di sistema: finche le notifiche sono bloccate per t'day sul tuo dispositivo l'interruttore resta spento e propone di aprire le impostazioni di sistema. devono essere attive entrambe le meta. se manca il permesso di sistema l'interruttore risulta spento, comunque tu l'abbia lasciato qui."
     },
     {
       "id": "recurrence-presets",

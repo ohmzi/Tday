@@ -772,24 +772,24 @@
         "settings-feature-toggle"
       ],
       "title": "Pemberitahuan",
-      "summary": "Satu suis dalam Tetapan menentukan sama ada T'Day boleh memberitahu anda.",
+      "summary": "Satu suis menentukan sama ada T'Day boleh mengganggu anda.",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Peringatan, ringkasan hari dan amaran keselamatan semuanya sampai melalui satu suis dalam Tetapan. Ia hanya berfungsi apabila peranti anda turut membenarkan T'Day memberitahu anda: apabila dihidupkan kali pertama, apl meminta kebenaran sistem. Dengan suis dimatikan, tiada apa-apa dihantar walaupun sistem masih membenarkannya."
+            "Tetapan mempunyai satu suis Pemberitahuan, dan segala yang sampai kepada anda melaluinya — peringatan tugasan dan ringkasan hari esok. Mematikannya mengosongkan baris gilir, bukan sekadar menyenyapkannya, jadi tiada apa yang tiba lewat apabila anda hidupkannya semula. Kebenaran sistem juga diperlukan: selagi pemberitahuan disekat untuk T'Day pada peranti anda, suis itu kekal mati dan menawarkan untuk membuka tetapan sistem."
           ]
         },
         {
           "type": "TIP",
           "texts": [
-            "Jika suis tidak mahu hidup, sistem telah pun ditolak. Ketik padanya dan T'Day akan membawa anda ke halaman yang betul dalam tetapan peranti."
+            "Kedua-dua bahagian mesti hidup. Tanpa kebenaran sistem, suis dipaparkan mati walau apa pun yang anda tetapkan di sini."
           ]
         }
       ],
       "searchTitle": "pemberitahuan",
-      "searchKeywords": "pemberitahuan, kebenaran, benarkan, amaran, sepanduk, push, os, sistem, mati, hidup",
-      "searchBody": "satu suis dalam tetapan menentukan sama ada t'day boleh memberitahu anda. peringatan, ringkasan hari dan amaran keselamatan semuanya sampai melalui satu suis dalam tetapan. ia hanya berfungsi apabila peranti anda turut membenarkan t'day memberitahu anda: apabila dihidupkan kali pertama, apl meminta kebenaran sistem. dengan suis dimatikan, tiada apa-apa dihantar walaupun sistem masih membenarkannya. jika suis tidak mahu hidup, sistem telah pun ditolak. ketik padanya dan t'day akan membawa anda ke halaman yang betul dalam tetapan peranti."
+      "searchKeywords": "pemberitahuan, kebenaran, suis, benarkan, senyap, peringatan, ringkasan, tetapan sistem",
+      "searchBody": "satu suis menentukan sama ada t'day boleh mengganggu anda. tetapan mempunyai satu suis pemberitahuan, dan segala yang sampai kepada anda melaluinya — peringatan tugasan dan ringkasan hari esok. mematikannya mengosongkan baris gilir, bukan sekadar menyenyapkannya, jadi tiada apa yang tiba lewat apabila anda hidupkannya semula. kebenaran sistem juga diperlukan: selagi pemberitahuan disekat untuk t'day pada peranti anda, suis itu kekal mati dan menawarkan untuk membuka tetapan sistem. kedua-dua bahagian mesti hidup. tanpa kebenaran sistem, suis dipaparkan mati walau apa pun yang anda tetapkan di sini."
     },
     {
       "id": "recurrence-presets",

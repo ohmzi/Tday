@@ -638,6 +638,7 @@
     <string name="settings_account_security_questions_updated">セキュリティの質問を更新しました</string>
     <string name="summary_source_local">ローカルモデル</string>
     <string name="summary_source_server">サーバーモデル</string>
+    <string name="settings_help_guide">使い方とヒント</string>
     <string name="settings_data_title">あなたのデータ</string>
     <string name="settings_data_summary">タスク %1$d · リスト %2$d · 完了 %3$d</string>
     <string name="settings_data_download">データをダウンロード</string>
@@ -661,6 +662,8 @@
     <string name="settings_quiet_hours_start">開始</string>
     <string name="settings_quiet_hours_end">終了</string>
     <string name="settings_resting_floaters">休眠フローターを薄く</string>
+    <string name="settings_calendar_sync">予定タスクをカレンダーに追加</string>
+    <string name="settings_privacy">プライバシー</string>
     <string name="root_feed_search_scheduled">予定タスクを検索</string>
     <string name="root_feed_search_floater">フローターを検索</string>
 </resources>

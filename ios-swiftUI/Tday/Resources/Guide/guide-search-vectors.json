@@ -39,8 +39,8 @@
     "reminder": [
       "reminders",
       "reminder-snooze",
-      "quiet-hours",
-      "notifications"
+      "notifications",
+      "quiet-hours"
     ],
     "api key": [],
     "floater": [
@@ -78,8 +78,6 @@
       "home-widget"
     ],
     "keyboard": [],
-    "push": [
-      "notifications"
-    ]
+    "push": []
   }
 }
