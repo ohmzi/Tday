@@ -386,7 +386,7 @@
     <string name="offline_banner">缓存的任务仍可使用。恢复连接后更改将自动同步。</string>
     <string name="offline_banner_pending_one">1 项更改等待同步</string>
     <string name="offline_banner_pending_many">%1$d 项更改等待同步</string>
-    <string name="settings_workspace">工作区</string>
+    <string name="settings_about">关于</string>
     <string name="settings_workspace_local_title">本地工作区</string>
     <string name="settings_workspace_local_detail">仅在此设备上</string>
     <string name="settings_workspace_server_title">服务器同步</string>

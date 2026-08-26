@@ -389,7 +389,7 @@
     <string name="offline_banner">Доступны кэшированные задачи. Изменения синхронизируются при восстановлении связи.</string>
     <string name="offline_banner_pending_one">1 изменение ожидает синхронизации</string>
     <string name="offline_banner_pending_many">%1$d изменений ожидают синхронизации</string>
-    <string name="settings_workspace">Рабочее пространство</string>
+    <string name="settings_about">О приложении</string>
     <string name="settings_workspace_local_title">Локальное пространство</string>
     <string name="settings_workspace_local_detail">Только на этом устройстве</string>
     <string name="settings_workspace_server_title">Синхронизация с сервером</string>

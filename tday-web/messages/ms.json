@@ -766,6 +766,9 @@
       "deleteConfirmAction": "Padam",
       "deleteDone": "Data setempat dipadam."
     },
+    "about": {
+      "title": "Perihal"
+    },
     "troubleshooting": {
       "reset": "Set semula cache aplikasi",
       "confirmTitle": "Set semula cache aplikasi?",

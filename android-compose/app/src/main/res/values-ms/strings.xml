@@ -386,7 +386,7 @@
     <string name="offline_banner">Tugasan tercache tersedia. Perubahan akan disegerakkan apabila sambungan kembali.</string>
     <string name="offline_banner_pending_one">1 perubahan menunggu untuk disegerakkan</string>
     <string name="offline_banner_pending_many">%1$d perubahan menunggu untuk disegerakkan</string>
-    <string name="settings_workspace">Ruang kerja</string>
+    <string name="settings_about">Perihal</string>
     <string name="settings_workspace_local_title">Ruang kerja tempatan</string>
     <string name="settings_workspace_local_detail">Pada peranti ini sahaja</string>
     <string name="settings_workspace_server_title">Segerak pelayan</string>

@@ -766,6 +766,9 @@
       "deleteConfirmAction": "Удалить",
       "deleteDone": "Локальные данные удалены."
     },
+    "about": {
+      "title": "О приложении"
+    },
     "troubleshooting": {
       "reset": "Сбросить кэш приложения",
       "confirmTitle": "Сбросить кэш приложения?",

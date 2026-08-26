@@ -93,15 +93,24 @@ struct SettingsScreen: View {
         matchesSearch(["Privacy", "Require Face ID to open T'Day"])
     }
 
-    private var showsWorkspaceCard: Bool {
+    // The tail of the screen is four small cards rather than one large one, so
+    // each term list has to describe only the card it gates: a term left behind
+    // on the wrong list would surface a card whose matching row now sits two
+    // cards further down.
+
+    private var showsAboutCard: Bool {
         // The sync labels are here because they are the card's most prominent
         // visible text — "Sync now", "Last synced", "Up to date" — and "sync"
         // is close to the likeliest single word anyone types on this screen.
         // A term list that omits what the card actually says is the failure mode
-        // this whole approach has.
-        var terms = ["Workspace", "App Version", "How-To & Tips"]
-        if !viewModel.isLocalMode {
-            terms += ["Server", "Sign out", "Sync now", "Last synced", "Up to date"]
+        // this whole approach has. The mode split follows the same rule: the
+        // card says "Local workspace" on a device with no server and "Server
+        // sync" on one with, and never both.
+        var terms = ["About", "App Version"]
+        if viewModel.isLocalMode {
+            terms += ["Local workspace", "On this device only"]
+        } else {
+            terms += ["Server sync", "Server", "Sync now", "Last synced", "Up to date"]
         }
         return matchesSearch(terms)
     }
@@ -110,9 +119,19 @@ struct SettingsScreen: View {
         matchesSearch(["Your data", "Download my data", "Import"])
     }
 
+    private var showsGuideCard: Bool {
+        matchesSearch(["How-To & Tips"])
+    }
+
+    /// Local mode has no session to end, so there is nothing for this card to hold.
+    private var showsSignOutCard: Bool {
+        !viewModel.isLocalMode && matchesSearch(["Sign out"])
+    }
+
     private var hasSearchResults: Bool {
         showsProfileCard || showsAppearanceCard || showsAiSummaryCard ||
-            showsDisplayCard || showsPrivacyCard || showsWorkspaceCard || showsDataCard
+            showsDisplayCard || showsPrivacyCard || showsAboutCard ||
+            showsDataCard || showsGuideCard || showsSignOutCard
     }
 
     private var topBarActions: [TimelineTopBarAction] {
@@ -305,55 +324,72 @@ struct SettingsScreen: View {
                 }
             }
 
-            if showsWorkspaceCard {
-                settingsListRow {
-                    SettingsSectionCard {
-                        SettingsWorkspaceContent(
-                            syncStatus: viewModel.syncStatus,
-                            onSyncNow: {
-                                Task { await viewModel.manualSync() }
-                            }
-                        )
-
-                        SettingsDivider()
-
-                        SettingsListRow(
-                            title: "App Version",
-                            value: "v\(viewModel.currentVersionName)",
-                            icon: "LucideInfo",
-                            action: {
-                                viewModel.navigationPath.append(.latestRelease)
-                            }
-                        )
-
-                        if viewModel.hasUpdate, let latestVersionName = viewModel.latestVersionName {
-                            Text("v\(latestVersionName) available")
-                                .font(.tdayRounded(size: 11, weight: .heavy))
-                                .foregroundStyle(colors.secondary)
-                                .padding(.leading, 34)
-                        }
-
-                        SettingsDivider()
-
-                        SettingsListRow(
-                            title: L("How-To & Tips"),
-                            value: nil,
-                            icon: "LucideCircleHelp",
-                            action: {
-                                viewModel.navigationPath.append(.helpGuide(topic: nil))
-                            }
-                        )
-
-                        if !viewModel.isLocalMode, let backendVersion = viewModel.backendVersion {
-                            SettingsServerVersionRow(
-                                backendVersion: backendVersion,
-                                versionCheckResult: viewModel.versionCheckResult
+            // A Group, not four more rows: List's ViewBuilder tops out at ten
+            // children, and the header, the five cards above and the two
+            // trailing rows already spend eight of them.
+            Group {
+                if showsAboutCard {
+                    settingsListRow {
+                        SettingsSectionCard {
+                            SettingsAboutContent(
+                                syncStatus: viewModel.syncStatus,
+                                onSyncNow: {
+                                    Task { await viewModel.manualSync() }
+                                }
                             )
-                        }
 
-                        if !viewModel.isLocalMode {
                             SettingsDivider()
 
+                            SettingsListRow(
+                                title: "App Version",
+                                value: "v\(viewModel.currentVersionName)",
+                                icon: "LucideInfo",
+                                action: {
+                                    viewModel.navigationPath.append(.latestRelease)
+                                }
+                            )
+
+                            if viewModel.hasUpdate, let latestVersionName = viewModel.latestVersionName {
+                                Text("v\(latestVersionName) available")
+                                    .font(.tdayRounded(size: 11, weight: .heavy))
+                                    .foregroundStyle(colors.secondary)
+                                    .padding(.leading, 34)
+                            }
+
+                            if !viewModel.isLocalMode, let backendVersion = viewModel.backendVersion {
+                                SettingsServerVersionRow(
+                                    backendVersion: backendVersion,
+                                    versionCheckResult: viewModel.versionCheckResult
+                                )
+                            }
+                        }
+                    }
+                }
+
+                if showsDataCard {
+                    settingsListRow {
+                        DataTransferCard(viewModel: viewModel)
+                    }
+                }
+
+                if showsGuideCard {
+                    settingsListRow {
+                        SettingsSectionCard {
+                            SettingsListRow(
+                                title: L("How-To & Tips"),
+                                value: nil,
+                                icon: "LucideCircleHelp",
+                                action: {
+                                    viewModel.navigationPath.append(.helpGuide(topic: nil))
+                                }
+                            )
+                        }
+                    }
+                }
+
+                if showsSignOutCard {
+                    settingsListRow {
+                        SettingsSectionCard {
                             SettingsListRow(
                                 title: "Sign out",
                                 value: nil,
@@ -366,12 +402,6 @@ struct SettingsScreen: View {
                             )
                         }
                     }
-                }
-            }
-
-            if showsDataCard {
-                settingsListRow {
-                    DataTransferCard(viewModel: viewModel)
                 }
             }
 
@@ -1324,7 +1354,9 @@ private struct SettingsEditField: View {
     }
 }
 
-private struct SettingsWorkspaceContent: View {
+/// Heading and sync facts for the About card — what this install is and, in
+/// server mode, how current it is.
+private struct SettingsAboutContent: View {
     let syncStatus: MobileSyncStatus
     let onSyncNow: () -> Void
 
@@ -1332,7 +1364,7 @@ private struct SettingsWorkspaceContent: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            SettingsSectionTitle("Workspace")
+            SettingsSectionTitle("About")
 
             if syncStatus.isLocalMode {
                 VStack(alignment: .leading, spacing: 6) {

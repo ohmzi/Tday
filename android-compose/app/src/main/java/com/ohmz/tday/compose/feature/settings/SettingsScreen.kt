@@ -175,7 +175,7 @@ fun SettingsScreen(
     val languageTitle = stringResource(R.string.settings_language)
     val featureToggleTitle = stringResource(R.string.settings_feature_toggle)
     val privacyTitle = stringResource(R.string.settings_privacy)
-    val workspaceTitle = stringResource(R.string.settings_workspace)
+    val aboutTitle = stringResource(R.string.settings_about)
     val releaseTitle = stringResource(R.string.release_title)
     val helpGuideTitle = stringResource(R.string.settings_help_guide)
 
@@ -324,17 +324,27 @@ fun SettingsScreen(
         },
     ).filter { it.visible }
 
-    val workspaceRows = listOf(
+    // What this install is: the sync state and the two version rows. Everything
+    // that used to share the card with them — the data card, the guide, signing
+    // out — now carries its own, so a query that hits one of those can no longer
+    // drag this card open behind it.
+    val aboutRows = listOf(
         SettingsEntry(
             key = "workspace",
-            visible = search.matches(workspaceTitle, stringResource(R.string.settings_sync_now)),
+            visible = search.matches(
+                aboutTitle,
+                stringResource(R.string.settings_workspace_local_title),
+                stringResource(R.string.settings_workspace_server_title),
+                stringResource(R.string.settings_sync_now),
+            ),
         ) {
+            SettingsSectionTitle(title = aboutTitle)
             SettingsWorkspaceContent(
                 syncStatus = syncStatus,
                 onSyncNow = onSyncNow,
             )
         },
-        SettingsEntry("release", search.matches(releaseTitle)) {
+        SettingsEntry("release", search.matches(aboutTitle, releaseTitle)) {
             SettingsListRow(
                 title = releaseTitle,
                 value = stringResource(R.string.label_version_name, BuildConfig.VERSION_NAME),
@@ -353,18 +363,10 @@ fun SettingsScreen(
                 )
             }
         },
-        SettingsEntry("help-guide", search.matches(helpGuideTitle)) {
-            SettingsListRow(
-                title = helpGuideTitle,
-                value = null,
-                onClick = onOpenHelpGuide,
-                icon = R.drawable.ic_lucide_circle_help,
-            )
-        },
         SettingsEntry(
             key = "server",
             visible = !isLocalMode && backendVersion != null &&
-                search.matches(stringResource(R.string.label_server)),
+                search.matches(aboutTitle, stringResource(R.string.label_server)),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -411,8 +413,25 @@ fun SettingsScreen(
                 }
             }
         },
+    ).filter { it.visible }
+
+    // Alone on its card: the row already says "How-To & Tips", so a heading
+    // over it would only say it twice.
+    val helpGuideRows = listOf(
+        SettingsEntry("help-guide", search.matches(helpGuideTitle)) {
+            SettingsListRow(
+                title = helpGuideTitle,
+                value = null,
+                onClick = onOpenHelpGuide,
+                icon = R.drawable.ic_lucide_circle_help,
+            )
+        },
+    ).filter { it.visible }
+
+    val signOutRows = listOf(
         SettingsEntry(
             key = "sign-out",
+            // Local Mode has no session to end, so this card never draws there.
             visible = !isLocalMode && search.matches(stringResource(R.string.action_sign_out)),
         ) {
             SettingsListRow(
@@ -435,7 +454,8 @@ fun SettingsScreen(
     )
     val hasMatches = showAccountCard || showDataTransferCard ||
         appearanceRows.isNotEmpty() || featureRows.isNotEmpty() ||
-        privacyRows.isNotEmpty() || workspaceRows.isNotEmpty()
+        privacyRows.isNotEmpty() || aboutRows.isNotEmpty() ||
+        helpGuideRows.isNotEmpty() || signOutRows.isNotEmpty()
 
     Scaffold(containerColor = colorScheme.background) { padding ->
         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
@@ -469,11 +489,17 @@ fun SettingsScreen(
             SettingsFilteredCard(appearanceRows)
             SettingsFilteredCard(featureRows)
             SettingsFilteredCard(privacyRows)
-            SettingsFilteredCard(workspaceRows)
+            SettingsFilteredCard(aboutRows)
 
             if (showDataTransferCard) {
                 DataTransferCard()
             }
+
+            // The other platforms slot an Admin & Reset card in here. Android
+            // has neither: no admin console entry point, and no cached-data
+            // reset — so there is nothing for that card to hold.
+            SettingsFilteredCard(helpGuideRows)
+            SettingsFilteredCard(signOutRows)
 
             if (!hasMatches) {
                 TdayEmptyState(
@@ -1301,7 +1327,6 @@ private fun SettingsWorkspaceContent(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        SettingsSectionTitle(title = stringResource(R.string.settings_workspace))
         if (syncStatus.isLocalMode) {
             Text(
                 text = stringResource(R.string.settings_workspace_local_title),

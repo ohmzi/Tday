@@ -455,7 +455,7 @@
     <string name="offline_toast_pending_many">You\'re offline — %1$d changes waiting to sync.</string>
     <string name="online_toast">Back online — syncing your latest changes…</string>
     <string name="backend_down_toast">Server error — the backend or database may be down. Try again shortly.</string>
-    <string name="settings_workspace">Workspace</string>
+    <string name="settings_about">About</string>
     <string name="settings_workspace_local_title">Local workspace</string>
     <string name="settings_workspace_local_detail">On this device only</string>
     <string name="settings_workspace_server_title">Server sync</string>

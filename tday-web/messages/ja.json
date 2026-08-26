@@ -766,6 +766,9 @@
       "deleteConfirmAction": "削除",
       "deleteDone": "ローカルデータを削除しました。"
     },
+    "about": {
+      "title": "アプリについて"
+    },
     "troubleshooting": {
       "reset": "アプリのキャッシュをリセット",
       "confirmTitle": "アプリのキャッシュをリセットしますか？",

@@ -766,6 +766,9 @@
       "deleteConfirmAction": "Löschen",
       "deleteDone": "Lokale Daten gelöscht."
     },
+    "about": {
+      "title": "Info"
+    },
     "troubleshooting": {
       "reset": "App-Cache zurücksetzen",
       "confirmTitle": "App-Cache zurücksetzen?",

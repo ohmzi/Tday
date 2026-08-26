@@ -766,6 +766,9 @@
       "deleteConfirmAction": "删除",
       "deleteDone": "本地数据已删除。"
     },
+    "about": {
+      "title": "关于"
+    },
     "troubleshooting": {
       "reset": "重置应用缓存",
       "confirmTitle": "重置应用缓存？",

@@ -386,7 +386,7 @@
     <string name="offline_banner">キャッシュされたタスクを利用できます。接続が回復すると変更が同期されます。</string>
     <string name="offline_banner_pending_one">1件の変更が同期待ちです</string>
     <string name="offline_banner_pending_many">%1$d件の変更が同期待ちです</string>
-    <string name="settings_workspace">ワークスペース</string>
+    <string name="settings_about">アプリ情報</string>
     <string name="settings_workspace_local_title">ローカルワークスペース</string>
     <string name="settings_workspace_local_detail">このデバイスのみ</string>
     <string name="settings_workspace_server_title">サーバー同期</string>

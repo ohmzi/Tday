@@ -766,6 +766,9 @@
       "deleteConfirmAction": "Eliminar",
       "deleteDone": "Dados locais eliminados."
     },
+    "about": {
+      "title": "Sobre"
+    },
     "troubleshooting": {
       "reset": "Repor a cache da aplicação",
       "confirmTitle": "Repor a cache da aplicação?",
