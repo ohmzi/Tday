@@ -83,6 +83,10 @@ describe("TypeScript coding standards", () => {
         const lines = content.split("\n");
         for (let i = 0; i < lines.length; i++) {
           const line = lines[i];
+          // Prose in a comment is not a cast — "Arrives as anything CSS accepts"
+          // is not `as any`. Block comments also cannot carry the `//`
+          // justification below, so they could never be waived.
+          if (line.trimStart().startsWith("//") || line.trimStart().startsWith("*")) continue;
           if (line.includes("as any")) {
             const hasJustification =
               line.includes("//") ||
