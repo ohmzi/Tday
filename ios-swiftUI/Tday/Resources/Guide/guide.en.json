@@ -756,6 +756,42 @@
       "searchBody": "find any task by title, note, or list name. use the search field to filter your tasks instantly by title, description, or list name — no need to scroll."
     },
     {
+      "id": "notifications",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "bell",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.7.0",
+      "deepLink": null,
+      "helpAnchors": [
+        "settings-feature-toggle"
+      ],
+      "title": "Notifications",
+      "summary": "One switch in Settings decides whether T'Day may notify you at all.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Reminders, the Day Ahead digest and security alerts all arrive through one switch in Settings. It only works when your device has also allowed T'Day to notify you: turn it on and the app asks the system for permission the first time. Turn the switch off and nothing is delivered, even while the system still allows it."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "If the switch will not turn on, the system has already been told no. Tap it and T'Day sends you to the right page in your device settings."
+          ]
+        }
+      ],
+      "searchTitle": "notifications",
+      "searchKeywords": "notification, permission, allow, alert, banner, push, os, system, off, on",
+      "searchBody": "one switch in settings decides whether t'day may notify you at all. reminders, the day ahead digest and security alerts all arrive through one switch in settings. it only works when your device has also allowed t'day to notify you: turn it on and the app asks the system for permission the first time. turn the switch off and nothing is delivered, even while the system still allows it. if the switch will not turn on, the system has already been told no. tap it and t'day sends you to the right page in your device settings."
+    },
+    {
       "id": "recurrence-presets",
       "section": "RECURRENCE_AND_REMINDERS",
       "sectionOrder": 4,

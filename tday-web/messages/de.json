@@ -1030,6 +1030,13 @@
         "keywords": "push, benachrichtigung, web, browser, erinnerung, vapid, abonnieren, fällig",
         "body": "In der Web-App kannst du Push-Benachrichtigungen in den Einstellungen aktivieren. Dein selbst gehosteter Server sendet dann eine Erinnerung, wenn die Fälligkeitszeit einer Aufgabe erreicht ist — so kann die Web-App dich auch dann erreichen, wenn der Tab geschlossen ist. Du kannst die Aufgabe direkt aus der Benachrichtigung abschließen."
       },
+      "notifications": {
+        "title": "Benachrichtigungen",
+        "summary": "Ein Schalter in den Einstellungen entscheidet, ob T'Day dich überhaupt benachrichtigen darf.",
+        "keywords": "benachrichtigung, berechtigung, erlauben, hinweis, banner, push, os, system, aus, an",
+        "body": "Erinnerungen, die Tagesvorschau und Sicherheitshinweise kommen alle über einen Schalter in den Einstellungen. Er wirkt nur, wenn auch dein Gerät T'Day das Benachrichtigen erlaubt: Beim ersten Einschalten fragt die App das System um Erlaubnis. Ist der Schalter aus, wird nichts zugestellt – selbst wenn das System es weiterhin erlaubt.",
+        "tip": "Lässt sich der Schalter nicht einschalten, wurde dem System bereits abgesagt. Tippe darauf, und T'Day bringt dich zur passenden Seite in den Geräteeinstellungen."
+      },
       "home-widget": {
         "title": "Startbildschirm-Widget",
         "summary": "Sieh die heutigen Aufgaben, ohne die App zu öffnen.",

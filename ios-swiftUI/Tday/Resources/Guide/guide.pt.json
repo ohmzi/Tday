@@ -756,6 +756,42 @@
       "searchBody": "encontre qualquer tarefa por titulo, nota ou nome da lista. use o campo de pesquisa para filtrar as suas tarefas de imediato por titulo, descricao ou nome da lista — sem precisar de percorrer tudo."
     },
     {
+      "id": "notifications",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "bell",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.7.0",
+      "deepLink": null,
+      "helpAnchors": [
+        "settings-feature-toggle"
+      ],
+      "title": "Notificações",
+      "summary": "Um botão nas Configurações decide se o T'Day pode notificar você.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Lembretes, o resumo do dia e os alertas de segurança chegam todos por um botão nas Configurações. Ele só funciona quando o seu aparelho também permite que o T'Day notifique você: ao ligá-lo pela primeira vez, o app pede permissão ao sistema. Com o botão desligado nada é entregue, mesmo que o sistema continue permitindo."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Se o botão não liga, o sistema já recebeu uma recusa. Toque nele e o T'Day leva você à página certa nas configurações do aparelho."
+          ]
+        }
+      ],
+      "searchTitle": "notificacoes",
+      "searchKeywords": "notificacao, permissao, permitir, alerta, banner, push, so, sistema, desligado, ligado",
+      "searchBody": "um botao nas configuracoes decide se o t'day pode notificar voce. lembretes, o resumo do dia e os alertas de seguranca chegam todos por um botao nas configuracoes. ele so funciona quando o seu aparelho tambem permite que o t'day notifique voce: ao liga-lo pela primeira vez, o app pede permissao ao sistema. com o botao desligado nada e entregue, mesmo que o sistema continue permitindo. se o botao nao liga, o sistema ja recebeu uma recusa. toque nele e o t'day leva voce a pagina certa nas configuracoes do aparelho."
+    },
+    {
       "id": "recurrence-presets",
       "section": "RECURRENCE_AND_REMINDERS",
       "sectionOrder": 4,

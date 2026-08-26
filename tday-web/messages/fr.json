@@ -1030,6 +1030,13 @@
         "keywords": "push, notification, web, navigateur, rappel, vapid, s'abonner, échéance",
         "body": "Dans l'application web, vous pouvez activer les notifications push depuis les Réglages. Votre serveur auto-hébergé envoie alors un rappel à l'arrivée de l'heure d'échéance — ainsi l'application web peut vous joindre même quand l'onglet est fermé. Vous pouvez terminer la tâche directement depuis la notification."
       },
+      "notifications": {
+        "title": "Notifications",
+        "summary": "Un interrupteur dans les Réglages décide si T'Day peut vous notifier.",
+        "keywords": "notification, autorisation, autoriser, alerte, bannière, push, os, système, désactivé, activé",
+        "body": "Les rappels, le résumé de la journée et les alertes de sécurité passent tous par un interrupteur dans les Réglages. Il ne fonctionne que si votre appareil autorise aussi T'Day à vous notifier : à la première activation, l'app demande la permission au système. Interrupteur éteint, rien n'est distribué, même si le système l'autorise encore.",
+        "tip": "Si l'interrupteur refuse de s'activer, le système a déjà reçu un refus. Touchez-le et T'Day vous emmène à la bonne page des réglages de l'appareil."
+      },
       "home-widget": {
         "title": "Widget d'écran d'accueil",
         "summary": "Consultez les tâches du jour sans ouvrir l'application.",

@@ -1030,6 +1030,13 @@
         "keywords": "push, notification, web, browser, reminder, vapid, subscribe, due",
         "body": "In the web app you can turn on push notifications from Settings. Your self-hosted server then sends a reminder when a task's due time arrives — so the web app can reach you even when the tab is closed. You can complete the task straight from the notification."
       },
+      "notifications": {
+        "title": "Notifications",
+        "summary": "One switch in Settings decides whether T'Day may notify you at all.",
+        "keywords": "notification, permission, allow, alert, banner, push, os, system, off, on",
+        "body": "Reminders, the Day Ahead digest and security alerts all arrive through one switch in Settings. It only works when your device has also allowed T'Day to notify you: turn it on and the app asks the system for permission the first time. Turn the switch off and nothing is delivered, even while the system still allows it.",
+        "tip": "If the switch will not turn on, the system has already been told no. Tap it and T'Day sends you to the right page in your device settings."
+      },
       "home-widget": {
         "title": "Home-screen widget",
         "summary": "See today's tasks without opening the app.",

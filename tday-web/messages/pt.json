@@ -1030,6 +1030,13 @@
         "keywords": "push, notificação, web, navegador, lembrete, vapid, subscrever, vencimento",
         "body": "Na aplicação web pode ativar as notificações push nas Definições. O seu servidor autoalojado envia então um lembrete quando chega a hora de conclusão de uma tarefa — para que a aplicação web o possa alcançar mesmo com o separador fechado. Pode concluir a tarefa diretamente a partir da notificação."
       },
+      "notifications": {
+        "title": "Notificações",
+        "summary": "Um botão nas Configurações decide se o T'Day pode notificar você.",
+        "keywords": "notificação, permissão, permitir, alerta, banner, push, so, sistema, desligado, ligado",
+        "body": "Lembretes, o resumo do dia e os alertas de segurança chegam todos por um botão nas Configurações. Ele só funciona quando o seu aparelho também permite que o T'Day notifique você: ao ligá-lo pela primeira vez, o app pede permissão ao sistema. Com o botão desligado nada é entregue, mesmo que o sistema continue permitindo.",
+        "tip": "Se o botão não liga, o sistema já recebeu uma recusa. Toque nele e o T'Day leva você à página certa nas configurações do aparelho."
+      },
       "home-widget": {
         "title": "Widget no ecrã principal",
         "summary": "Veja as tarefas de hoje sem abrir a aplicação.",

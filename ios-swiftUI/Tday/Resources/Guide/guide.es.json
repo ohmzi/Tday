@@ -756,6 +756,42 @@
       "searchBody": "encuentra cualquier tarea por titulo, nota o nombre de lista. usa el campo de busqueda para filtrar tus tareas al instante por titulo, descripcion o nombre de lista, sin necesidad de desplazarte."
     },
     {
+      "id": "notifications",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "bell",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.7.0",
+      "deepLink": null,
+      "helpAnchors": [
+        "settings-feature-toggle"
+      ],
+      "title": "Notificaciones",
+      "summary": "Un interruptor en Ajustes decide si T'Day puede notificarte.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Los recordatorios, el resumen del día y las alertas de seguridad llegan todos a través de un interruptor en Ajustes. Solo funciona si tu dispositivo también permite que T'Day te notifique: al activarlo por primera vez, la app pide permiso al sistema. Con el interruptor apagado no se entrega nada, aunque el sistema lo siga permitiendo."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Si el interruptor no se activa, ya se le dijo que no al sistema. Tócalo y T'Day te llevará a la página correcta en los ajustes de tu dispositivo."
+          ]
+        }
+      ],
+      "searchTitle": "notificaciones",
+      "searchKeywords": "notificacion, permiso, permitir, alerta, banner, push, so, sistema, apagado, encendido",
+      "searchBody": "un interruptor en ajustes decide si t'day puede notificarte. los recordatorios, el resumen del dia y las alertas de seguridad llegan todos a traves de un interruptor en ajustes. solo funciona si tu dispositivo tambien permite que t'day te notifique: al activarlo por primera vez, la app pide permiso al sistema. con el interruptor apagado no se entrega nada, aunque el sistema lo siga permitiendo. si el interruptor no se activa, ya se le dijo que no al sistema. tocalo y t'day te llevara a la pagina correcta en los ajustes de tu dispositivo."
+    },
+    {
       "id": "recurrence-presets",
       "section": "RECURRENCE_AND_REMINDERS",
       "sectionOrder": 4,

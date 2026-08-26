@@ -756,6 +756,42 @@
       "searchBody": "trova qualsiasi attivita per titolo, nota o nome dell'elenco. usa il campo di ricerca per filtrare le tue attivita all'istante per titolo, descrizione o nome dell'elenco — senza dover scorrere."
     },
     {
+      "id": "notifications",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "bell",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.7.0",
+      "deepLink": null,
+      "helpAnchors": [
+        "settings-feature-toggle"
+      ],
+      "title": "Notifiche",
+      "summary": "Un interruttore nelle Impostazioni decide se T'Day può notificarti.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Promemoria, il riepilogo della giornata e gli avvisi di sicurezza arrivano tutti tramite un interruttore nelle Impostazioni. Funziona solo se anche il dispositivo consente a T'Day di notificarti: alla prima attivazione l'app chiede il permesso al sistema. Con l'interruttore spento non viene consegnato nulla, anche se il sistema lo consente ancora."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Se l'interruttore non si accende, al sistema è già stato detto di no. Toccalo e T'Day ti porta alla pagina giusta nelle impostazioni del dispositivo."
+          ]
+        }
+      ],
+      "searchTitle": "notifiche",
+      "searchKeywords": "notifica, autorizzazione, consenti, avviso, banner, push, os, sistema, spento, acceso",
+      "searchBody": "un interruttore nelle impostazioni decide se t'day puo notificarti. promemoria, il riepilogo della giornata e gli avvisi di sicurezza arrivano tutti tramite un interruttore nelle impostazioni. funziona solo se anche il dispositivo consente a t'day di notificarti: alla prima attivazione l'app chiede il permesso al sistema. con l'interruttore spento non viene consegnato nulla, anche se il sistema lo consente ancora. se l'interruttore non si accende, al sistema e gia stato detto di no. toccalo e t'day ti porta alla pagina giusta nelle impostazioni del dispositivo."
+    },
+    {
       "id": "recurrence-presets",
       "section": "RECURRENCE_AND_REMINDERS",
       "sectionOrder": 4,

@@ -1030,6 +1030,13 @@
         "keywords": "push, notificación, web, navegador, recordatorio, vapid, suscribir, vencimiento",
         "body": "En la app web puedes activar las notificaciones push desde Ajustes. Tu servidor autoalojado envía entonces un recordatorio cuando llega la hora de vencimiento de una tarea, así la app web puede avisarte aunque la pestaña esté cerrada. Puedes completar la tarea directamente desde la notificación."
       },
+      "notifications": {
+        "title": "Notificaciones",
+        "summary": "Un interruptor en Ajustes decide si T'Day puede notificarte.",
+        "keywords": "notificación, permiso, permitir, alerta, banner, push, so, sistema, apagado, encendido",
+        "body": "Los recordatorios, el resumen del día y las alertas de seguridad llegan todos a través de un interruptor en Ajustes. Solo funciona si tu dispositivo también permite que T'Day te notifique: al activarlo por primera vez, la app pide permiso al sistema. Con el interruptor apagado no se entrega nada, aunque el sistema lo siga permitiendo.",
+        "tip": "Si el interruptor no se activa, ya se le dijo que no al sistema. Tócalo y T'Day te llevará a la página correcta en los ajustes de tu dispositivo."
+      },
       "home-widget": {
         "title": "Widget de pantalla de inicio",
         "summary": "Consulta las tareas de hoy sin abrir la app.",

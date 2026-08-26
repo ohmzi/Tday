@@ -1030,6 +1030,13 @@
         "keywords": "push, pemberitahuan, web, pelayar, peringatan, vapid, langgan, tamat tempoh",
         "body": "Dalam aplikasi web anda boleh menghidupkan pemberitahuan push dari Tetapan. Pelayan hos sendiri anda kemudian menghantar peringatan apabila masa tamat tempoh tugasan tiba — supaya aplikasi web boleh menghubungi anda walaupun tab ditutup. Anda boleh menyelesaikan tugasan terus dari pemberitahuan itu."
       },
+      "notifications": {
+        "title": "Pemberitahuan",
+        "summary": "Satu suis dalam Tetapan menentukan sama ada T'Day boleh memberitahu anda.",
+        "keywords": "pemberitahuan, kebenaran, benarkan, amaran, sepanduk, push, os, sistem, mati, hidup",
+        "body": "Peringatan, ringkasan hari dan amaran keselamatan semuanya sampai melalui satu suis dalam Tetapan. Ia hanya berfungsi apabila peranti anda turut membenarkan T'Day memberitahu anda: apabila dihidupkan kali pertama, apl meminta kebenaran sistem. Dengan suis dimatikan, tiada apa-apa dihantar walaupun sistem masih membenarkannya.",
+        "tip": "Jika suis tidak mahu hidup, sistem telah pun ditolak. Ketik padanya dan T'Day akan membawa anda ke halaman yang betul dalam tetapan peranti."
+      },
       "home-widget": {
         "title": "Widget skrin utama",
         "summary": "Lihat tugasan hari ini tanpa membuka aplikasi.",

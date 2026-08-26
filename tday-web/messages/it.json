@@ -1030,6 +1030,13 @@
         "keywords": "push, notifica, web, browser, promemoria, vapid, iscriviti, scadenza",
         "body": "Nell'app web puoi attivare le notifiche push dalle Impostazioni. Il tuo server self-hosted invia poi un promemoria all'arrivo della scadenza di un'attività — così l'app web può raggiungerti anche a scheda chiusa. Puoi completare l'attività direttamente dalla notifica."
       },
+      "notifications": {
+        "title": "Notifiche",
+        "summary": "Un interruttore nelle Impostazioni decide se T'Day può notificarti.",
+        "keywords": "notifica, autorizzazione, consenti, avviso, banner, push, os, sistema, spento, acceso",
+        "body": "Promemoria, il riepilogo della giornata e gli avvisi di sicurezza arrivano tutti tramite un interruttore nelle Impostazioni. Funziona solo se anche il dispositivo consente a T'Day di notificarti: alla prima attivazione l'app chiede il permesso al sistema. Con l'interruttore spento non viene consegnato nulla, anche se il sistema lo consente ancora.",
+        "tip": "Se l'interruttore non si accende, al sistema è già stato detto di no. Toccalo e T'Day ti porta alla pagina giusta nelle impostazioni del dispositivo."
+      },
       "home-widget": {
         "title": "Widget nella schermata Home",
         "summary": "Vedi le attività di oggi senza aprire l'app.",
