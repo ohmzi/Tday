@@ -698,4 +698,52 @@
     <string name="settings_privacy">Privatsphäre</string>
     <string name="root_feed_search_scheduled">Geplante Aufgaben suchen</string>
     <string name="root_feed_search_floater">Floater-Aufgaben suchen</string>
+
+    <!-- Bulk selection: multi-select actions in a task list -->
+    <string name="bulk_select">Auswählen</string>
+    <string name="bulk_select_all">Alle auswählen</string>
+    <string name="bulk_deselect_all">Auswahl aufheben</string>
+    <string name="bulk_selected">%1$d ausgewählt</string>
+    <string name="bulk_selected_capped">%1$d ausgewählt — mehr kann eine Aktion nicht erfassen</string>
+    <string name="bulk_applies_to">Gilt für %1$d von %2$d — wiederkehrende Aufgaben werden übersprungen.</string>
+    <string name="bulk_select_task">Aufgabe auswählen</string>
+    <string name="bulk_deselect_task">Auswahl aufheben</string>
+    <string name="bulk_action_complete">Erledigen</string>
+    <string name="bulk_action_priority">Priorität</string>
+    <string name="bulk_action_move">Verschieben</string>
+    <string name="bulk_action_delete">Löschen</string>
+    <string name="bulk_delete_body">Dadurch werden sie aus jeder Liste entfernt, zusammen mit ihrem abgeschlossenen Verlauf. Du hast ein paar Sekunden, um das rückgängig zu machen.</string>
+    <string name="bulk_move_body">Diese Aufgaben stammen aus verschiedenen Listen. Das Verschieben lässt sich nicht in einem Schritt rückgängig machen — du müsstest jede einzeln zurücklegen.</string>
+    <plurals name="bulk_tasks_completed">
+        <item quantity="one">Aufgabe erledigt</item>
+        <item quantity="other">%d Aufgaben erledigt</item>
+    </plurals>
+    <plurals name="bulk_tasks_deleted">
+        <item quantity="one">Aufgabe gelöscht</item>
+        <item quantity="other">%d Aufgaben gelöscht</item>
+    </plurals>
+    <plurals name="bulk_delete_title">
+        <item quantity="one">Diese Aufgabe löschen?</item>
+        <item quantity="other">%d Aufgaben löschen?</item>
+    </plurals>
+    <plurals name="bulk_delete_confirm">
+        <item quantity="one">Aufgabe löschen</item>
+        <item quantity="other">%d Aufgaben löschen</item>
+    </plurals>
+    <plurals name="bulk_move_title">
+        <item quantity="one">Diese Aufgabe verschieben?</item>
+        <item quantity="other">%d Aufgaben verschieben?</item>
+    </plurals>
+    <plurals name="bulk_move_confirm">
+        <item quantity="one">Aufgabe verschieben</item>
+        <item quantity="other">%d Aufgaben verschieben</item>
+    </plurals>
+    <plurals name="bulk_delete_failed">
+        <item quantity="one">Eine Aufgabe konnte nicht gelöscht werden</item>
+        <item quantity="other">%d Aufgaben konnten nicht gelöscht werden</item>
+    </plurals>
+    <plurals name="bulk_update_failed">
+        <item quantity="one">Eine Aufgabe konnte nicht aktualisiert werden</item>
+        <item quantity="other">%d Aufgaben konnten nicht aktualisiert werden</item>
+    </plurals>
 </resources>

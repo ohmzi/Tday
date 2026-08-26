@@ -698,4 +698,52 @@
     <string name="settings_privacy">Privacidad</string>
     <string name="root_feed_search_scheduled">Buscar tareas programadas</string>
     <string name="root_feed_search_floater">Buscar tareas flotantes</string>
+
+    <!-- Bulk selection: multi-select actions in a task list -->
+    <string name="bulk_select">Seleccionar</string>
+    <string name="bulk_select_all">Seleccionar todo</string>
+    <string name="bulk_deselect_all">Deseleccionar todo</string>
+    <string name="bulk_selected">%1$d seleccionadas</string>
+    <string name="bulk_selected_capped">%1$d seleccionadas: el máximo que una acción puede abarcar</string>
+    <string name="bulk_applies_to">Se aplica a %1$d de %2$d: las tareas periódicas se omiten.</string>
+    <string name="bulk_select_task">Seleccionar tarea</string>
+    <string name="bulk_deselect_task">Deseleccionar tarea</string>
+    <string name="bulk_action_complete">Completar</string>
+    <string name="bulk_action_priority">Prioridad</string>
+    <string name="bulk_action_move">Mover</string>
+    <string name="bulk_action_delete">Eliminar</string>
+    <string name="bulk_delete_body">Esto las quita de todas las listas, junto con su historial de tareas completadas. Tendrás unos segundos para deshacerlo.</string>
+    <string name="bulk_move_body">Estas tareas provienen de listas distintas. Moverlas no se puede deshacer de una vez: tendrías que devolver cada una a mano.</string>
+    <plurals name="bulk_tasks_completed">
+        <item quantity="one">Tarea completada</item>
+        <item quantity="other">%d tareas completadas</item>
+    </plurals>
+    <plurals name="bulk_tasks_deleted">
+        <item quantity="one">Tarea eliminada</item>
+        <item quantity="other">%d tareas eliminadas</item>
+    </plurals>
+    <plurals name="bulk_delete_title">
+        <item quantity="one">¿Eliminar esta tarea?</item>
+        <item quantity="other">¿Eliminar %d tareas?</item>
+    </plurals>
+    <plurals name="bulk_delete_confirm">
+        <item quantity="one">Eliminar tarea</item>
+        <item quantity="other">Eliminar %d tareas</item>
+    </plurals>
+    <plurals name="bulk_move_title">
+        <item quantity="one">¿Mover esta tarea?</item>
+        <item quantity="other">¿Mover %d tareas?</item>
+    </plurals>
+    <plurals name="bulk_move_confirm">
+        <item quantity="one">Mover tarea</item>
+        <item quantity="other">Mover %d tareas</item>
+    </plurals>
+    <plurals name="bulk_delete_failed">
+        <item quantity="one">No se pudo eliminar una tarea</item>
+        <item quantity="other">No se pudieron eliminar %d tareas</item>
+    </plurals>
+    <plurals name="bulk_update_failed">
+        <item quantity="one">No se pudo actualizar una tarea</item>
+        <item quantity="other">No se pudieron actualizar %d tareas</item>
+    </plurals>
 </resources>

@@ -10,6 +10,7 @@ import com.ohmz.tday.compose.core.data.list.FloaterListRepository
 import com.ohmz.tday.compose.core.data.list.ListRepository
 import com.ohmz.tday.compose.core.data.settings.SettingsRepository
 import com.ohmz.tday.compose.core.data.sync.SyncManager
+import com.ohmz.tday.compose.core.data.todo.BulkTaskRepository
 import com.ohmz.tday.compose.core.data.todo.TodoRepository
 import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.ListSummary
@@ -70,6 +71,7 @@ private data class HydrateSnapshot(
 @HiltViewModel
 class TodoListViewModel @Inject constructor(
     private val todoRepository: TodoRepository,
+    private val bulkTaskRepository: BulkTaskRepository,
     private val listRepository: ListRepository,
     private val floaterListRepository: FloaterListRepository,
     private val settingsRepository: SettingsRepository,
@@ -660,6 +662,251 @@ class TodoListViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    // --- Bulk actions -----------------------------------------------------
+    //
+    // The four actions a multi-select can apply, one method each, every one
+    // taking the whole selection and making exactly ONE coordinator call for
+    // the batch — the shape MorningSweepViewModel.sweepAllToToday() already
+    // uses, because TdayApp shows a single toast at a time and N calls would
+    // leave the user able to undo only the last of N independent timers.
+    // The screen owns the selection and hands over resolved rows; recurring
+    // occurrences are filtered out upstream for everything but complete (see
+    // docs/design/bulk-selection.md §4.1).
+
+    /**
+     * Delayed-commit bulk complete: stage the removal in the UI now, show one
+     * undoable toast for the batch, and let the coordinator run the real
+     * completes after the window — or restore the rows on Undo, at which point
+     * nothing was ever written.
+     */
+    fun completeSelected(todos: List<TodoItem>) {
+        if (todos.isEmpty()) return
+        val previousItems = _uiState.value.items
+        val mode = _uiState.value.mode
+        val selectedIds = todos.mapTo(mutableSetOf()) { it.id }
+        TdayTelemetry.addBreadcrumb(
+            "task.bulk_complete",
+            data = taskTelemetryData(mode = mode) + mapOf("count" to todos.size),
+        )
+        _uiState.update { current ->
+            current.copy(
+                items = current.items.filterNot { it.id in selectedIds },
+                completedTodayCount = if (mode == TodoListMode.TODAY) {
+                    current.completedTodayCount + todos.size
+                } else {
+                    current.completedTodayCount
+                },
+                errorMessage = null,
+            )
+        }
+        undoableDeleteCoordinator.showUndoableComplete(
+            message = appContext.resources.getQuantityString(
+                R.plurals.bulk_tasks_completed,
+                todos.size,
+                todos.size,
+            ),
+            onCommit = {
+                runCatching {
+                    if (mode == TodoListMode.FLOATER) {
+                        bulkTaskRepository.completeFloaters(todos)
+                    } else {
+                        bulkTaskRepository.completeTodos(todos)
+                        runCatching { reminderScheduler.rescheduleAll() }
+                    }
+                }.onFailure { error -> bulkFailureToast(error, todos.size, deleting = false) }
+            },
+            onUndo = {
+                _uiState.update { it.copy(items = previousItems, errorMessage = null) }
+            },
+        )
+    }
+
+    /**
+     * Delayed-commit bulk delete. The screen has already asked for
+     * confirmation — that dialog is layer one and this undo window is layer
+     * two, and neither replaces the other. Staging prunes the whole batch from
+     * the local cache in one write and sends nothing, so Undo is lossless.
+     */
+    fun deleteSelected(todos: List<TodoItem>) {
+        if (todos.isEmpty()) return
+        val previousItems = _uiState.value.items
+        val mode = _uiState.value.mode
+        val listId = _uiState.value.listId
+        val selectedIds = todos.mapTo(mutableSetOf()) { it.id }
+        TdayTelemetry.addBreadcrumb(
+            "task.bulk_delete",
+            data = taskTelemetryData(mode = mode) + mapOf("count" to todos.size),
+        )
+        _uiState.update { current ->
+            current.copy(
+                items = current.items.filterNot { it.id in selectedIds },
+                errorMessage = null,
+            )
+        }
+        val message = appContext.resources.getQuantityString(
+            R.plurals.bulk_tasks_deleted,
+            todos.size,
+            todos.size,
+        )
+        viewModelScope.launch {
+            runCatching {
+                if (mode == TodoListMode.FLOATER) {
+                    val staged = bulkTaskRepository.stageDeleteFloaters(todos)
+                    undoableDeleteCoordinator.showUndoableDelete(
+                        message = message,
+                        onCommit = { bulkTaskRepository.deleteFloaters(todos) },
+                        onUndo = { todoRepository.undoStagedFloaterDeletion(staged) },
+                    )
+                } else {
+                    val staged = bulkTaskRepository.stageDeleteTodos(todos)
+                    undoableDeleteCoordinator.showUndoableDelete(
+                        message = message,
+                        onCommit = { bulkTaskRepository.deleteTodos(todos) },
+                        onUndo = {
+                            todoRepository.undoStagedTodoDeletion(staged)
+                            // Runs on the coordinator scope: this ViewModel may
+                            // be gone by the time Undo restores reminder-bearing
+                            // tasks.
+                            runCatching { reminderScheduler.rescheduleAll() }
+                        },
+                    )
+                }
+            }.onSuccess {
+                if (mode != TodoListMode.FLOATER) rescheduleReminders()
+                resyncItemsFromCache(mode = mode, listId = listId)
+            }.onFailure { error ->
+                _uiState.update {
+                    it.copy(
+                        items = previousItems,
+                        errorMessage = bulkFailureToast(error, todos.size, deleting = true),
+                    )
+                }
+            }
+        }
+    }
+
+    /**
+     * Bulk priority. An edit, so it succeeds silently per the unified toast
+     * policy — the rows change in place and selection mode closes, and that is
+     * the feedback.
+     */
+    fun setPriorityForSelected(todos: List<TodoItem>, priority: String) {
+        if (todos.isEmpty()) return
+        val previousState = _uiState.value
+        val mode = previousState.mode
+        val normalizedPriority = canonicalPriorityValue(priority)
+        val selectedIds = todos.mapTo(mutableSetOf()) { it.id }
+        TdayTelemetry.addBreadcrumb(
+            "task.bulk_priority",
+            data = taskTelemetryData(mode = mode) + mapOf("count" to todos.size),
+        )
+        _uiState.update { current ->
+            current.copy(
+                items = current.items.map { item ->
+                    if (item.id in selectedIds) item.copy(priority = normalizedPriority) else item
+                },
+                errorMessage = null,
+            )
+        }
+        viewModelScope.launch {
+            runCatching {
+                if (mode == TodoListMode.FLOATER) {
+                    bulkTaskRepository.setFloaterPriority(todos, normalizedPriority)
+                } else {
+                    bulkTaskRepository.setTodoPriority(todos, normalizedPriority)
+                }
+            }.onSuccess {
+                resyncItemsFromCache(mode = mode, listId = previousState.listId)
+            }.onFailure { error ->
+                _uiState.value = previousState.copy(
+                    errorMessage = bulkFailureToast(error, todos.size, deleting = false),
+                )
+            }
+        }
+    }
+
+    /**
+     * Bulk move between lists of the same kind — scheduled tasks between
+     * scheduled lists, floaters between floater lists. A null [listId] clears
+     * the list. Also an edit, so also silent on success.
+     */
+    fun moveSelectedToList(todos: List<TodoItem>, listId: String?) {
+        if (todos.isEmpty()) return
+        val previousState = _uiState.value
+        val mode = previousState.mode
+        val normalizedListId = listId?.takeIf { it.isNotBlank() }
+        val selectedIds = todos.mapTo(mutableSetOf()) { it.id }
+        TdayTelemetry.addBreadcrumb(
+            "task.bulk_move",
+            data = taskTelemetryData(mode = mode) + mapOf(
+                "count" to todos.size,
+                "has_list" to (normalizedListId != null),
+            ),
+        )
+        _uiState.update { current ->
+            // A scoped list screen drops the rows that just left it, the same
+            // way a single edit that changes a task's list already does.
+            val optimisticItems = current.items
+                .map { item ->
+                    if (item.id in selectedIds) item.copy(listId = normalizedListId) else item
+                }
+                .filterNot { item ->
+                    (current.mode == TodoListMode.LIST || current.mode == TodoListMode.FLOATER) &&
+                        !current.listId.isNullOrBlank() &&
+                        item.id in selectedIds &&
+                        item.listId != current.listId
+                }
+            current.copy(items = optimisticItems, errorMessage = null)
+        }
+        viewModelScope.launch {
+            runCatching {
+                if (mode == TodoListMode.FLOATER) {
+                    bulkTaskRepository.moveFloatersToList(todos, normalizedListId)
+                } else {
+                    bulkTaskRepository.moveTodosToList(todos, normalizedListId)
+                }
+            }.onSuccess {
+                resyncItemsFromCache(mode = mode, listId = previousState.listId)
+            }.onFailure { error ->
+                _uiState.value = previousState.copy(
+                    errorMessage = bulkFailureToast(error, todos.size, deleting = false),
+                )
+            }
+        }
+    }
+
+    /**
+     * One error toast for the whole batch, never one per row, and never a
+     * claim of partial success: `update`, `prioritize` and `completeTodo` all
+     * report success even when they matched nothing, so a count reconstructed
+     * from responses would be fiction. Returns null so callers clear the inline
+     * error, exactly like [mutationFailureMessage].
+     */
+    private fun bulkFailureToast(error: Throwable, count: Int, deleting: Boolean): String? {
+        val plural = if (deleting) R.plurals.bulk_delete_failed else R.plurals.bulk_update_failed
+        Log.w(TAG, "bulk action failed reason=${error.javaClass.simpleName}")
+        snackbarManager.showError(appContext.resources.getQuantityString(plural, count, count))
+        return null
+    }
+
+    /** Re-reads the screen's slice of the cache after a batch has landed. */
+    private suspend fun resyncItemsFromCache(mode: TodoListMode, listId: String?) {
+        runCatching {
+            val todos = todoRepository.fetchTodosCached(mode = mode, listId = listId)
+            val lists = fetchListsForMode(mode)
+            todos to lists
+        }.onSuccess { (todos, lists) ->
+            _uiState.update { current ->
+                current.copy(
+                    lists = if (current.lists == lists) current.lists else lists,
+                    items = if (current.items == todos) current.items else todos,
+                    completedTodayCount = completedTodayCountFor(mode),
+                    errorMessage = null,
+                )
+            }
+        }.onFailure { refreshInternal(forceSync = false, showLoading = false) }
     }
 
     fun updateListSettings(
