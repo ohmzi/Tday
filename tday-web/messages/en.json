@@ -766,6 +766,9 @@
       "deleteConfirmAction": "Delete",
       "deleteDone": "Local data deleted."
     },
+    "about": {
+      "title": "About"
+    },
     "troubleshooting": {
       "reset": "Reset cached app data",
       "confirmTitle": "Reset cached app data?",

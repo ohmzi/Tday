@@ -387,7 +387,7 @@
     <string name="offline_banner">Las tareas en caché están disponibles. Los cambios se sincronizarán cuando vuelva la conexión.</string>
     <string name="offline_banner_pending_one">1 cambio esperando para sincronizar</string>
     <string name="offline_banner_pending_many">%1$d cambios esperando para sincronizar</string>
-    <string name="settings_workspace">Espacio de trabajo</string>
+    <string name="settings_about">Acerca de</string>
     <string name="settings_workspace_local_title">Espacio de trabajo local</string>
     <string name="settings_workspace_local_detail">Solo en este dispositivo</string>
     <string name="settings_workspace_server_title">Sincronización con servidor</string>

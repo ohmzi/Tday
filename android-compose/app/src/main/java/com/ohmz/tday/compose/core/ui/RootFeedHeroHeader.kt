@@ -91,11 +91,18 @@ import java.util.Calendar
 object RootFeedHeroHeaderMetrics {
     val HorizontalPadding = 18.dp
     /**
-     * Zero, so the toolbar row starts exactly where a non-root page's back
-     * button does — both headers are placed with the same Scaffold padding, so
-     * an inset here was 18dp of pure disagreement between the two.
+     * Held above the button row so the bar's content does not start flush
+     * against the status bar, which is how it read at zero on every screen.
+     *
+     * It is web's number (`topInset: 8` in
+     * `tday-web/src/components/app/RootFeedHeroHeader.tsx`), not iOS's 2 — the
+     * one place the three platforms are deliberately not in step, so do not
+     * "correct" it back. What it MUST stay level with is
+     * [TdayHeroTitleMetrics.TopInset]: both headers are placed with the same
+     * Scaffold padding, so any difference between the two is a root feed's
+     * toolbar and a back button sitting at visibly different heights.
      */
-    val TopInset = 0.dp
+    val TopInset = 8.dp
     val BarButtonSize = TdayDimens.FabSize
     val BarButtonSpacing = 8.dp
 

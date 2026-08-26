@@ -387,7 +387,7 @@
     <string name="offline_banner">Les tâches en cache sont disponibles. Les modifications seront synchronisées au retour de la connexion.</string>
     <string name="offline_banner_pending_one">1 modification en attente de synchronisation</string>
     <string name="offline_banner_pending_many">%1$d modifications en attente de synchronisation</string>
-    <string name="settings_workspace">Espace de travail</string>
+    <string name="settings_about">À propos</string>
     <string name="settings_workspace_local_title">Espace de travail local</string>
     <string name="settings_workspace_local_detail">Sur cet appareil uniquement</string>
     <string name="settings_workspace_server_title">Synchronisation serveur</string>

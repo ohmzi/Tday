@@ -150,7 +150,7 @@ function SettingsSection({
   titleAction,
   children,
 }: {
-  title: string;
+  title?: string;
   description?: ReactNode;
   titleAction?: ReactNode;
   children: ReactNode;
@@ -159,15 +159,19 @@ function SettingsSection({
   // the bottom sheets and the guide, which sit on their own surfaces already.
   return (
     <SheetCard className="space-y-4 p-[18px] shadow-[0_16px_34px_-24px_hsl(var(--shadow)/0.5)]">
-      <div className="space-y-1">
-        <div className="flex items-center justify-between gap-2">
-          <h2 className="text-[1.4rem] font-black leading-tight text-foreground">{title}</h2>
-          {titleAction}
+      {/* A card that is a single action — How-To, Sign out — carries no heading:
+          the row's own label is the only one it could have, twice over. */}
+      {title ? (
+        <div className="space-y-1">
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="text-[1.4rem] font-black leading-tight text-foreground">{title}</h2>
+            {titleAction}
+          </div>
+          {description ? (
+            <p className="text-sm font-extrabold text-muted-foreground">{description}</p>
+          ) : null}
         </div>
-        {description ? (
-          <p className="text-sm font-extrabold text-muted-foreground">{description}</p>
-        ) : null}
-      </div>
+      ) : null}
       {children}
     </SheetCard>
   );
@@ -1104,19 +1108,31 @@ export default function SettingsPage() {
     !isLocalMode && cardMatches(t("calendarFeed.title"), t("calendarFeed.blurb"));
   const showWebhooksCard =
     !isLocalMode && cardMatches(t("webhooks.title"), t("webhooks.blurb"), t("webhooks.add"));
-  const showWorkspaceCard = cardMatches(
+  // Splitting the old workspace/dashboard card into four splits its term list
+  // too: each card answers only to labels it still shows, so a hit never scrolls
+  // to a card whose matching row moved out from under it.
+  const showAboutCard = cardMatches(
+    t("about.title"),
+    t("dashboard.title"),
     ...(isLocalMode
       ? [
-          t("workspace.title"),
           t("workspace.localTitle"),
+          t("workspace.localDetail"),
           t("workspace.encrypt"),
-          t("workspace.leave"),
-          t("workspace.delete"),
         ]
-      : [t("dashboard.title"), t("dashboard.generateKey"), t("signOut")]),
-    guideDict("title"),
+      : // "Dashboard access" stopped being the heading here, but these are still
+        // the rows it named, and it is the word people come looking for.
+        [t("dashboard.title"), t("dashboard.generateKey")]),
+  );
+  const showMaintenanceCard = cardMatches(
     ...(!isLocalMode && user?.role === "ADMIN" ? [sidebarDict("admin")] : []),
     t("troubleshooting.reset"),
+  );
+  const showGuideCard = cardMatches(guideDict("title"));
+  const showSignOutCard = cardMatches(
+    ...(isLocalMode
+      ? [t("workspace.leave"), t("workspace.delete")]
+      : [t("signOut")]),
   );
   const noSettingsMatch =
     settingsQuery.length > 0 &&
@@ -1126,7 +1142,10 @@ export default function SettingsPage() {
     !showDataCard &&
     !showCalendarFeedCard &&
     !showWebhooksCard &&
-    !showWorkspaceCard;
+    !showAboutCard &&
+    !showMaintenanceCard &&
+    !showGuideCard &&
+    !showSignOutCard;
 
   return (
     <div className="w-full space-y-3 pb-10">
@@ -1670,8 +1689,6 @@ export default function SettingsPage() {
       </SheetCard>
       )}
 
-      {showDataCard && <DataTransferCard />}
-
       {/* Calendar feed, webhooks and dashboard API keys are all consumed by
           something outside the browser, so they need a server to serve them. */}
       {showCalendarFeedCard && (
@@ -1874,9 +1891,17 @@ export default function SettingsPage() {
       </SettingsSection>
       )}
 
-      {showWorkspaceCard && (
+      {/* About — what this install is. In Local Mode that is where the
+          workspace lives; in Server Mode it is the keys that reach this
+          account from outside the browser, which answer the same question. */}
+      {showAboutCard && (
       <SettingsSection
-        title={isLocalMode ? t("workspace.title") : t("dashboard.title")}
+        // "About" only in local mode. In server mode this card is the API keys,
+        // and the backend sends people here BY NAME — McpRoutes, McpToolCatalog
+        // and McpToolDispatcher all say "Settings → Dashboard access", with
+        // backend tests asserting the exact string. Renaming the heading would
+        // leave those instructions pointing at something that is not on screen.
+        title={isLocalMode ? t("about.title") : t("dashboard.title")}
         titleAction={
           isLocalMode ? undefined : <GuideHelpLink topic="api-key-homarr" />
         }
@@ -1915,7 +1940,6 @@ export default function SettingsPage() {
                 />
               </>
             )}
-            <CardDivider />
           </>
         ) : (
         <>
@@ -2018,23 +2042,19 @@ export default function SettingsPage() {
             {t("dashboard.noKey")}
           </p>
         )}
-
-        <CardDivider />
         </>
         )}
+      </SettingsSection>
+      )}
 
-        {/* How-To & feature guide — a searchable index of everything T'Day can do,
-            reachable by everyone (works offline / in every mode). */}
-        <SettingsOptionRow
-          icon={CircleHelp}
-          label={guideDict("title")}
-          href="/app/guide"
-          showChevron
-        />
-        <CardDivider />
+      {showDataCard && <DataTransferCard />}
 
-        {/* Admin entry point — only for admins. Opens the same admin screen as the
-            desktop sidebar's Admin link (the route is already mobile-responsive). */}
+      {/* Admin and the cache reset are both ways out of an install gone wrong,
+          so they share a card. Admin is admin-only, which leaves everyone else
+          the reset row alone — that one renders in every mode, so the card
+          never comes up empty. */}
+      {showMaintenanceCard && (
+      <SettingsSection>
         {!isLocalMode && user?.role === "ADMIN" && (
           <>
             <SettingsOptionRow
@@ -2055,11 +2075,25 @@ export default function SettingsPage() {
           label={t("troubleshooting.reset")}
           onClick={() => setResetCacheOpen(true)}
         />
-        <CardDivider />
+      </SettingsSection>
+      )}
 
-        {/* Last rows of the last card, matching the native settings design.
-            Leaving a local workspace is a mode switch that keeps the browser's
-            tasks; deleting is the only destructive action, so it stands alone. */}
+      {showGuideCard && (
+      <SettingsSection>
+        {/* How-To & feature guide — a searchable index of everything T'Day can do,
+            reachable by everyone (works offline / in every mode). */}
+        <SettingsOptionRow
+          icon={CircleHelp}
+          label={guideDict("title")}
+          href="/app/guide"
+          showChevron
+        />
+      </SettingsSection>
+      )}
+
+      {/* Last card on the screen, matching the native settings design. */}
+      {showSignOutCard && (
+      <SettingsSection>
         {isLocalMode ? (
           <>
             {/* Leaving keeps the tasks in this browser, so the label stays the

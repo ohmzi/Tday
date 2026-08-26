@@ -79,7 +79,27 @@ import kotlin.math.abs
  */
 object TdayHeroTitleMetrics {
     val HorizontalPadding = 18.dp
-    val ToolbarHeight = 56.dp
+
+    /**
+     * Held above the bar's button row, so a back button does not sit flush
+     * against the status bar. The same 8 the root feeds' header keeps
+     * ([RootFeedHeroHeaderMetrics.TopInset]) — the two bars are placed with the
+     * same Scaffold padding, so they have to carry the same inset or a home
+     * toolbar and a back button sit at different heights.
+     */
+    val TopInset = 8.dp
+
+    /**
+     * The pinned bar, top to bottom: the inset above [TdayDimens.FabSize] of
+     * button row. Derived, because everything measured off the bar's bottom edge
+     * follows it — the fade band below it, and the block's own top spacer, which
+     * is what keeps the block starting where the bar ends.
+     *
+     * Not part of [HeroHeight]: the bar is pinned and the block is not, so the
+     * bar's height is not travel and taking it into the collapse's denominator
+     * would move the handoff.
+     */
+    val ToolbarHeight = TopInset + TdayDimens.FabSize
 
     val MarkBox = 96.dp
     val MarkGlyph = 44.dp
@@ -441,7 +461,17 @@ fun TdayHeroToolbar(
                 // than showing through.
                 .background(colorScheme.background)
                 .height(m.ToolbarHeight)
-                .padding(horizontal = m.HorizontalPadding)
+                // The inset is padding INSIDE the height, not extra height: the
+                // opaque strip has to cover the whole bar, while everything
+                // centred in here — the back button, the docked title, the
+                // actions — centres in the button row below the inset rather
+                // than in the bar as a whole. Centring in the whole bar would
+                // put back the half-inset the padding exists to remove.
+                .padding(
+                    start = m.HorizontalPadding,
+                    top = m.TopInset,
+                    end = m.HorizontalPadding,
+                )
                 .onSizeChanged { size ->
                     barWidth = with(density) { size.width.toDp() }
                 },

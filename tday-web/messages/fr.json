@@ -766,6 +766,9 @@
       "deleteConfirmAction": "Supprimer",
       "deleteDone": "Données locales supprimées."
     },
+    "about": {
+      "title": "À propos"
+    },
     "troubleshooting": {
       "reset": "Réinitialiser le cache de l'app",
       "confirmTitle": "Réinitialiser le cache de l'app ?",

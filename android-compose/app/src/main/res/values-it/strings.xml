@@ -387,7 +387,7 @@
     <string name="offline_banner">Le attività memorizzate nella cache sono disponibili. Le modifiche verranno sincronizzate al ritorno della connessione.</string>
     <string name="offline_banner_pending_one">1 modifica in attesa di sincronizzazione</string>
     <string name="offline_banner_pending_many">%1$d modifiche in attesa di sincronizzazione</string>
-    <string name="settings_workspace">Spazio di lavoro</string>
+    <string name="settings_about">Informazioni</string>
     <string name="settings_workspace_local_title">Spazio di lavoro locale</string>
     <string name="settings_workspace_local_detail">Solo su questo dispositivo</string>
     <string name="settings_workspace_server_title">Sincronizzazione server</string>

@@ -387,7 +387,7 @@
     <string name="offline_banner">Zwischengespeicherte Aufgaben sind verfügbar. Änderungen werden synchronisiert, sobald die Verbindung wiederhergestellt ist.</string>
     <string name="offline_banner_pending_one">1 Änderung wartet auf Synchronisierung</string>
     <string name="offline_banner_pending_many">%1$d Änderungen warten auf Synchronisierung</string>
-    <string name="settings_workspace">Arbeitsbereich</string>
+    <string name="settings_about">Info</string>
     <string name="settings_workspace_local_title">Lokaler Arbeitsbereich</string>
     <string name="settings_workspace_local_detail">Nur auf diesem Gerät</string>
     <string name="settings_workspace_server_title">Server-Synchronisierung</string>
