@@ -1,0 +1,26 @@
+# Ruby toolchain for the iOS release lanes (see fastlane/Fastfile).
+#
+# This lives next to the iOS app rather than at the repository root because the monorepo gives
+# every platform its own tooling directory: tday-web/package.json, android-compose/ + Gradle,
+# tday-backend/, and now ios-swiftUI/. `bundle exec fastlane beta` is run from here.
+#
+# fastlane is pinned pessimistically so a new major version cannot land unannounced.
+#
+# THERE IS DELIBERATELY NO Gemfile.lock IN THIS REPOSITORY.
+#
+# It was omitted rather than forgotten. A lockfile is only trustworthy if `bundle lock` actually
+# resolved it against RubyGems; a hand-written one pins ~100 transitive gems to versions nobody
+# verified, and `bundle install` in deployment mode fails hard on the first constraint that does
+# not really exist. The result is a workflow that cannot install its own tools.
+#
+# The cost of not having one is that CI re-resolves fastlane's dependency tree on every run
+# (roughly a minute) and could in principle pick up a new transitive gem. To remove that, run
+# this on a machine with Ruby and commit the result — the workflow picks it up automatically:
+#
+#     cd ios-swiftUI && bundle lock --add-platform arm64-darwin --add-platform x86_64-darwin
+#
+# See docs/DEPLOYMENT.md § iOS TestFlight Releases.
+
+source "https://rubygems.org"
+
+gem "fastlane", "~> 2.228"

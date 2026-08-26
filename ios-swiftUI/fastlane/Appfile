@@ -1,0 +1,13 @@
+# fastlane app metadata for the iOS TestFlight pipeline.
+#
+# Both values are overridable from the environment so an Apple account change needs no code
+# edit. CI feeds IOS_TEAM_ID from the `IOS_TEAM_ID` repository *variable* — a Team ID is an
+# account identifier printed on every provisioning profile, not a credential, so it is
+# deliberately not a secret.
+#
+# Only the main app identifier belongs here. The widget, the share extension, the watch app and
+# the watch complication all ride along inside the same `Tday` archive; their bundle IDs come
+# from the Xcode project, not from fastlane.
+
+app_identifier(ENV["IOS_APP_IDENTIFIER"] || "com.ohmz.tday.ios")
+team_id(ENV["IOS_TEAM_ID"] || "THT5Z8K3TF")
