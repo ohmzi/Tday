@@ -1,9 +1,14 @@
 package com.ohmz.tday.compose.feature.guide
 
+import androidx.activity.compose.BackHandler
 import androidx.annotation.DrawableRes
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,6 +17,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -19,12 +25,15 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import com.ohmz.tday.compose.core.ui.TdayHeroTitleBlock
 import com.ohmz.tday.compose.core.ui.TdayHeroToolbar
 import com.ohmz.tday.compose.core.ui.rememberScrollHeroTitleCollapse
 import com.ohmz.tday.compose.core.ui.TdaySearchCapsule
+import com.ohmz.tday.compose.core.ui.tdayBarButtonContainerColor
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -38,18 +47,25 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.view.HapticFeedbackConstantsCompat
+import androidx.core.view.ViewCompat
 import com.ohmz.tday.compose.BuildConfig
 import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.data.GuidePreferenceStore
+import com.ohmz.tday.compose.ui.theme.TdayDimens
 import com.ohmz.tday.shared.guide.GuideBadge
 import com.ohmz.tday.shared.guide.GuideBlockType
 import com.ohmz.tday.shared.guide.GuideCatalog
@@ -90,7 +106,17 @@ fun HelpGuideScreen(
         }
     }
 
+    // Scoped search: this screen's own topics, and nothing else. The field
+    // takes the toolbar row the way every other screen hands its bar over, so
+    // there is no second field standing in the page's own flow.
+    var searchExpanded by rememberSaveable { mutableStateOf(false) }
     var query by rememberSaveable { mutableStateOf("") }
+    var searchNeedsFocus by remember { mutableStateOf(false) }
+    val closeSearch = {
+        searchExpanded = false
+        query = ""
+        searchNeedsFocus = false
+    }
     var expandedId by remember { mutableStateOf(initialTopic) }
     val trimmed = query.trim()
     val rankedIds = remember(query, docs) {
@@ -104,6 +130,10 @@ fun HelpGuideScreen(
     val guidePrefs = remember { GuidePreferenceStore(context) }
     val showNewBadges = remember { guidePrefs.lastSeenGuideVersion() != BuildConfig.VERSION_NAME }
     LaunchedEffect(Unit) { guidePrefs.setLastSeenGuideVersion(BuildConfig.VERSION_NAME) }
+
+    BackHandler(enabled = searchExpanded) {
+        closeSearch()
+    }
 
     val guideScrollState = rememberScrollState()
     val heroCollapse = rememberScrollHeroTitleCollapse(scrollState = guideScrollState)
@@ -130,16 +160,6 @@ fun HelpGuideScreen(
                 text = res("guide.subtitle"),
                 style = MaterialTheme.typography.bodyMedium,
                 color = colorScheme.onSurface.copy(alpha = 0.6f),
-            )
-
-            Spacer(Modifier.height(16.dp))
-            // The app's search field, same as the root feeds' open capsule.
-            TdaySearchCapsule(
-                value = query,
-                onValueChange = { query = it },
-                placeholder = res("guide.searchPlaceholder"),
-                onClear = { query = "" },
-                clearContentDescription = res("guide.clearSearch"),
             )
 
             Spacer(Modifier.height(16.dp))
@@ -202,7 +222,115 @@ fun HelpGuideScreen(
             onBack = onBack,
             backContentDescription = stringResource(R.string.action_back),
             modifier = Modifier.align(Alignment.TopStart),
-        )
+            titleSuppressed = searchExpanded,
+        ) {
+            if (searchExpanded) {
+                // The bar is handed over to the field, keeping the back chevron
+                // and dropping the action cluster — what the list-detail
+                // screens, iOS's TimelineTopBar and the web bar all do.
+                Spacer(modifier = Modifier.width(TdayDimens.FabSize))
+                val focusRequester = remember { FocusRequester() }
+                LaunchedEffect(searchNeedsFocus) {
+                    if (!searchNeedsFocus) return@LaunchedEffect
+                    // Consumed on the way in, so returning to a screen that
+                    // still has the field open does not re-open the keyboard
+                    // with it.
+                    searchNeedsFocus = false
+                    focusRequester.requestFocus()
+                }
+                TdaySearchCapsule(
+                    value = query,
+                    onValueChange = { query = it },
+                    // The catalog's own placeholder, not `action_search_in`:
+                    // this screen's copy is localized by the guide's generated
+                    // strings rather than by the app's resources.
+                    placeholder = res("guide.searchPlaceholder"),
+                    modifier = Modifier
+                        .weight(1f)
+                        .focusRequester(focusRequester),
+                    onClear = { query = "" },
+                    clearContentDescription = res("guide.clearSearch"),
+                )
+                // The capsule's own X clears the query; leaving the search
+                // behind altogether is this one, as on the root feeds.
+                GuideBarButton(
+                    onClick = closeSearch,
+                    icon = ImageVector.vectorResource(R.drawable.ic_lucide_x),
+                    contentDescription = stringResource(R.string.action_close_search),
+                )
+            } else {
+                GuideBarButton(
+                    // Only opens: the bar hands its row over to the field, so
+                    // this button is not on screen to be tapped again.
+                    onClick = {
+                        searchExpanded = true
+                        searchNeedsFocus = true
+                    },
+                    icon = ImageVector.vectorResource(R.drawable.ic_lucide_search),
+                    contentDescription = stringResource(R.string.action_search),
+                )
+            }
+        }
+        }
+    }
+}
+
+/**
+ * The circle this screen's toolbar actions sit in.
+ *
+ * A local copy of the timeline screen's `TodayHeaderButton`, which is private to
+ * `TodoListScreen` and has no shared home yet — the same copy the completed and
+ * settings screens keep. The fill, the size and the lift come from the same
+ * tokens as the back button beside it, so the two match whatever the scheme
+ * does with them.
+ */
+@Composable
+private fun GuideBarButton(
+    onClick: () -> Unit,
+    icon: ImageVector,
+    contentDescription: String,
+) {
+    val view = LocalView.current
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (pressed) 0.93f else 1f,
+        label = "guideBarButtonScale",
+    )
+    val offsetY by animateDpAsState(
+        targetValue = if (pressed) 2.dp else 0.dp,
+        label = "guideBarButtonOffsetY",
+    )
+
+    Card(
+        modifier = Modifier
+            .offset(y = offsetY)
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            },
+        onClick = {
+            ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+            onClick()
+        },
+        interactionSource = interactionSource,
+        shape = CircleShape,
+        colors = CardDefaults.cardColors(containerColor = tdayBarButtonContainerColor()),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = TdayDimens.BarButtonElevation,
+            pressedElevation = 0.dp,
+        ),
+    ) {
+        Box(
+            modifier = Modifier.size(TdayDimens.FabSize),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = contentDescription,
+                tint = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.size(22.dp),
+            )
         }
     }
 }

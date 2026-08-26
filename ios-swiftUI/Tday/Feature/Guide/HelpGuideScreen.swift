@@ -18,6 +18,8 @@ struct HelpGuideScreen: View {
     // last-seen version persists in UserDefaults (GuideStore).
     @State private var showNewBadges = false
     @State private var scrollOffset: CGFloat = 0
+    @State private var searchExpanded = false
+    @FocusState private var searchFieldFocused: Bool
 
     private var titleCollapseProgress: CGFloat {
         let distance = TodoTimelineMetrics.titleCollapseDistance
@@ -29,8 +31,24 @@ struct HelpGuideScreen: View {
 
     private var trimmed: String { query.trimmingCharacters(in: .whitespaces) }
 
+    /// Results only stand while the bar is actually holding the field — the
+    /// same reading of "searching" the completed and settings screens use.
+    private var isSearching: Bool { searchExpanded && !trimmed.isEmpty }
+
     private var rankedIds: [String] {
-        trimmed.isEmpty ? [] : GuideSearch.rank(query, artifact.topics)
+        isSearching ? GuideSearch.rank(query, artifact.topics) : []
+    }
+
+    private var topBarActions: [TimelineTopBarAction] {
+        [
+            TimelineTopBarAction(
+                systemName: "magnifyingglass",
+                assetName: "NavSearch",
+                usesCircularChrome: true,
+                accessibilityLabel: L("Search"),
+                action: openSearch
+            ),
+        ]
     }
 
     private var byId: [String: GuideTopicDTO] {
@@ -55,6 +73,14 @@ struct HelpGuideScreen: View {
                     TimelineScrollOffsetObserver { scrollOffset = $0 }
                         .frame(width: 0, height: 0)
                 }
+                // The settle every other collapsing screen has and this one did
+                // not: without it the guide's title could be left parked half
+                // way up, which is the one place the header reads as broken
+                // rather than as mid-gesture. Attached beside the offset
+                // observer, as CompletedScreen and SettingsScreen both do.
+                .onVerticalScrollSnap(
+                    collapseDistance: TodoTimelineMetrics.titleCollapseDistance
+                )
                 // The shared header carries a title only, so the guide's
                 // subtitle rides just below it and fades on the same curve.
                 if let subtitle = artifact.ui["subtitle"] {
@@ -70,8 +96,9 @@ struct HelpGuideScreen: View {
                             to: TodoTimelineMetrics.expandedTitleFadeEnd
                         )))
                 }
-                searchField
-                    .padding(.top, 16)
+                // The field has moved up into the bar, so the sections take the
+                // spacing the capsule used to hold rather than leaving its slot
+                // empty under the subtitle.
                 content
                     .padding(.top, 16)
             }
@@ -85,8 +112,26 @@ struct HelpGuideScreen: View {
                 accentColor: colors.onSurface,
                 collapseProgress: titleCollapseProgress,
                 onBack: { viewModel.goBack() },
-                actions: []
+                actions: topBarActions,
+                searchActive: searchExpanded,
+                searchText: $query,
+                searchPlaceholder: artifact.ui["searchPlaceholder"] ?? "Search features…",
+                searchFieldFocused: $searchFieldFocused,
+                onSearchClose: closeSearch
             )
+        }
+        // The field only joins the hierarchy once the bar has swapped its row
+        // over, so focusing it in the same turn is dropped on the floor.
+        .onChange(of: searchExpanded) { _, expanded in
+            guard expanded else {
+                searchFieldFocused = false
+                return
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.30) {
+                if searchExpanded {
+                    searchFieldFocused = true
+                }
+            }
         }
         // This screen draws its own bar, so the system one would only stack a
         // second back button above it.
@@ -105,18 +150,27 @@ struct HelpGuideScreen: View {
         }
     }
 
-    /// The app's search field, same as the root feeds' open capsule.
-    private var searchField: some View {
-        TdaySearchCapsule(
-            text: $query,
-            placeholder: artifact.ui["searchPlaceholder"] ?? "Search features…",
-            clearAccessibilityLabel: artifact.ui["clearSearch"] ?? "Clear"
-        )
+    private func openSearch() {
+        HapticManager.buttonTap()
+        withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
+            searchExpanded = true
+        }
+    }
+
+    /// Leaving the search drops the query with it, so the guide is whole again
+    /// the next time the bar is opened — the same bargain every other screen makes.
+    private func closeSearch() {
+        HapticManager.sheetDismiss()
+        searchFieldFocused = false
+        withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
+            searchExpanded = false
+        }
+        query = ""
     }
 
     @ViewBuilder
     private var content: some View {
-        if !trimmed.isEmpty {
+        if isSearching {
             let count = rankedIds.count
             Text((artifact.ui["results"] ?? "{{count}} results").replacingOccurrences(of: "{{count}}", with: "\(count)"))
                 .font(.tdayRounded(size: 12, weight: .semibold))

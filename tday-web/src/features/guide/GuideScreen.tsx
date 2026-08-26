@@ -1,15 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ChevronRight, CircleHelp, Search, Sparkles, X } from "lucide-react";
+import { ChevronRight, CircleHelp, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
-import NativePageHeader from "@/components/app/NativePageHeader";
-import {
-  tdaySearchCapsuleClass,
-  tdaySearchCapsuleClearClass,
-  tdaySearchCapsuleIconClass,
-  tdaySearchCapsuleInputClass,
-} from "@/components/app/RootFeedHeroHeader";
+import NativePageHeader, { useNativePageBarSlots } from "@/components/app/NativePageHeader";
+import MobileSearchHeader from "@/components/ui/MobileSearchHeader";
 import { nativeScreenAccentColors } from "@/components/app/nativeScreenTheme";
 import { SheetCard } from "@/components/ui/sheet-chrome";
 import { GuideIcon } from "./GuideIcon";
@@ -76,6 +71,11 @@ export default function GuideScreen() {
 
   const whatsNew = useMemo(() => whatsNewTopics(), []);
 
+  // The search field is this page's pinned bar, so the header below renders
+  // only the block that scrolls away and docks its title into it — the same
+  // split Settings uses.
+  const barSlots = useNativePageBarSlots();
+
   const renderRow = (topic: GuideTopicDef, index: number) => (
     <div key={topic.id}>
       {index > 0 ? <CardDivider /> : null}
@@ -94,60 +94,41 @@ export default function GuideScreen() {
   // stack of SheetCards — the guide is a settings sub-screen, not its own site.
   return (
     <div className="w-full space-y-3 pb-10">
+      <MobileSearchHeader
+        searchQuery={query}
+        onSearchChange={setQuery}
+        placeholder={t("guide.searchPlaceholder")}
+        pageCollapse={{
+          ...barSlots,
+          title: t("guide.title"),
+          accentColor: nativeScreenAccentColors.settings,
+        }}
+      />
+
       <NativePageHeader
         title={t("guide.title")}
         subtitle={t("guide.subtitle")}
         accentColor={nativeScreenAccentColors.settings}
         icon={CircleHelp}
+        barSlots={barSlots}
         className="mb-1"
       />
 
-      {/* The app's search field, same chrome and same parts as the root feeds'
-          open capsule — see `tdaySearchCapsuleClass`. The clear button is the
-          one deliberate difference: the root feeds' X dismisses a field that
-          folds back into a button, and this one has no folded state to return
-          to, so it clears the text and only appears when there is text. */}
-      <div className="space-y-1.5">
-        <div className={cn(tdaySearchCapsuleClass, "w-full")} style={{ height: 56 }}>
-          <Search className={tdaySearchCapsuleIconClass} aria-hidden="true" />
-          {/* type=text, not search: the app's search fields use their own clear
-              button and WebKit would stack a second one on top of it. */}
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder={t("guide.searchPlaceholder")}
-            aria-label={t("guide.searchAria")}
-            className={tdaySearchCapsuleInputClass}
-          />
-          {query && (
-            <button
-              type="button"
-              onClick={() => setQuery("")}
-              aria-label={t("guide.clearSearch")}
-              className={tdaySearchCapsuleClearClass}
-            >
-              <X className="h-5 w-5 stroke-[2.6]" aria-hidden="true" />
-            </button>
-          )}
-        </div>
-        {trimmed && (
+      {trimmed ? (
+        <>
           <p className="px-1 text-sm font-black text-muted-foreground" aria-live="polite">
             {t("guide.results", { count: rankedIds.length })}
           </p>
-        )}
-      </div>
-
-      {trimmed ? (
-        rankedIds.length > 0 ? (
-          <GuideCard>{rankedIds.map((id, i) => renderRow(byId[id], i))}</GuideCard>
-        ) : (
-          <GuideCard>
-            <p className="py-6 text-center text-sm font-extrabold text-muted-foreground">
-              {t("guide.noResults")}
-            </p>
-          </GuideCard>
-        )
+          {rankedIds.length > 0 ? (
+            <GuideCard>{rankedIds.map((id, i) => renderRow(byId[id], i))}</GuideCard>
+          ) : (
+            <GuideCard>
+              <p className="py-6 text-center text-sm font-extrabold text-muted-foreground">
+                {t("guide.noResults")}
+              </p>
+            </GuideCard>
+          )}
+        </>
       ) : (
         <>
           {whatsNew.length > 0 && (
