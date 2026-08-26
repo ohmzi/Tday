@@ -676,10 +676,11 @@
       "webhookSecretCopyFailed": "Gagal menyalin rahsia tandatangan"
     },
     "signOut": "Log keluar",
+    "featureToggle": {
+      "title": "Togol ciri"
+    },
     "aiSummary": {
-      "title": "AI task summary",
-      "description": "Show a one-tap summary of your tasks.",
-      "toggle": "Show summary button"
+      "title": "Ringkasan tugasan AI"
     },
     "securityQuestions": {
       "title": "Security questions",
@@ -767,7 +768,9 @@
       "deleteDone": "Data setempat dipadam."
     },
     "about": {
-      "title": "Perihal"
+      "title": "Perihal",
+      "appVersion": "Versi Apl",
+      "server": "Pelayan"
     },
     "troubleshooting": {
       "reset": "Set semula cache aplikasi",

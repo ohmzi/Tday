@@ -676,10 +676,11 @@
       "webhookSecretCopyFailed": "Не удалось скопировать секрет подписи"
     },
     "signOut": "Выйти",
+    "featureToggle": {
+      "title": "Переключатель функций"
+    },
     "aiSummary": {
-      "title": "AI task summary",
-      "description": "Show a one-tap summary of your tasks.",
-      "toggle": "Show summary button"
+      "title": "ИИ-сводка задач"
     },
     "securityQuestions": {
       "title": "Security questions",
@@ -767,7 +768,9 @@
       "deleteDone": "Локальные данные удалены."
     },
     "about": {
-      "title": "О приложении"
+      "title": "О приложении",
+      "appVersion": "Версия приложения",
+      "server": "Сервер"
     },
     "troubleshooting": {
       "reset": "Сбросить кэш приложения",

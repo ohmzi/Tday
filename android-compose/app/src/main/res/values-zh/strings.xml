@@ -178,6 +178,9 @@
     <string name="settings_appearance">外观</string>
     <string name="settings_reminders">提醒</string>
     <string name="settings_feature_toggle">功能开关</string>
+    <string name="settings_notifications">通知</string>
+    <string name="settings_notifications_blocked">T\'Day 的通知已在 Android 设置中关闭。</string>
+    <string name="settings_notifications_declined">未允许通知，因此 T\'Day 无法发送提醒。</string>
     <string name="settings_ai_task_summary">摘要</string>
     <string name="settings_saving_admin">正在保存管理员设置…</string>
     <string name="settings_ai_unavailable_title">摘要不可用</string>
@@ -389,6 +392,11 @@
     <string name="settings_about">关于</string>
     <string name="settings_workspace_local_title">本地工作区</string>
     <string name="settings_workspace_local_detail">仅在此设备上</string>
+    <string name="settings_workspace_leave">退出本地工作区</string>
+    <string name="settings_workspace_delete">删除本地数据</string>
+    <string name="settings_workspace_delete_title">删除本地数据？</string>
+    <string name="settings_workspace_delete_body">这将永久删除保存在此设备上的所有任务、清单和已完成记录。服务器上没有副本 — 如果想保留，请先下载你的数据。</string>
+    <string name="settings_workspace_delete_done">本地数据已删除。</string>
     <string name="settings_workspace_server_title">服务器同步</string>
     <string name="settings_sync_status_ready">准备同步</string>
     <string name="settings_sync_status_syncing">正在同步</string>

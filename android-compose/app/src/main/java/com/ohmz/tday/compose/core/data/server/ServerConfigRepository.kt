@@ -38,6 +38,20 @@ class ServerConfigRepository @Inject constructor(
         secureConfigStore.setAppDataMode(AppDataMode.LOCAL)
     }
 
+    /**
+     * The exact inverse of [enableLocalMode], and deliberately nothing more.
+     *
+     * Leaving a local workspace is a MODE SWITCH, not a teardown — web says so in
+     * as many words (AuthProvider.tsx: "Leaving the local workspace is a mode
+     * switch, not a session teardown"). The rows stay on the device so choosing
+     * Local Mode again finds the workspace where it was left. Wiping is a
+     * separate, confirmed action; do not fold it in here.
+     */
+    fun leaveLocalMode() {
+        secureConfigStore.clearCachedSessionUser()
+        secureConfigStore.setAppDataMode(AppDataMode.UNSET)
+    }
+
     data class ProbeResult(
         val serverUrl: String,
         val versionCheck: VersionCheckResult,

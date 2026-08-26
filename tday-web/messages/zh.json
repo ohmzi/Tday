@@ -676,10 +676,11 @@
       "webhookSecretCopyFailed": "复制签名密钥失败"
     },
     "signOut": "退出登录",
+    "featureToggle": {
+      "title": "功能开关"
+    },
     "aiSummary": {
-      "title": "AI task summary",
-      "description": "Show a one-tap summary of your tasks.",
-      "toggle": "Show summary button"
+      "title": "AI 任务摘要"
     },
     "securityQuestions": {
       "title": "Security questions",
@@ -767,7 +768,9 @@
       "deleteDone": "本地数据已删除。"
     },
     "about": {
-      "title": "关于"
+      "title": "关于",
+      "appVersion": "应用版本",
+      "server": "服务器"
     },
     "troubleshooting": {
       "reset": "重置应用缓存",

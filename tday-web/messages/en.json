@@ -676,10 +676,11 @@
       "webhookSecretCopyFailed": "Failed to copy signing secret"
     },
     "signOut": "Sign out",
+    "featureToggle": {
+      "title": "Feature toggle"
+    },
     "aiSummary": {
-      "title": "AI task summary",
-      "description": "Show a one-tap summary of your tasks.",
-      "toggle": "Show summary button"
+      "title": "AI task summary"
     },
     "securityQuestions": {
       "title": "Security questions",
@@ -767,7 +768,9 @@
       "deleteDone": "Local data deleted."
     },
     "about": {
-      "title": "About"
+      "title": "About",
+      "appVersion": "App version",
+      "server": "Server"
     },
     "troubleshooting": {
       "reset": "Reset cached app data",

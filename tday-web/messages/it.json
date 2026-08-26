@@ -676,10 +676,11 @@
       "webhookSecretCopyFailed": "Impossibile copiare il segreto di firma"
     },
     "signOut": "Esci",
+    "featureToggle": {
+      "title": "Attiva/disattiva funzione"
+    },
     "aiSummary": {
-      "title": "AI task summary",
-      "description": "Show a one-tap summary of your tasks.",
-      "toggle": "Show summary button"
+      "title": "Riepilogo attività con IA"
     },
     "securityQuestions": {
       "title": "Security questions",
@@ -767,7 +768,9 @@
       "deleteDone": "Dati locali eliminati."
     },
     "about": {
-      "title": "Informazioni"
+      "title": "Informazioni",
+      "appVersion": "Versione app",
+      "server": "Server"
     },
     "troubleshooting": {
       "reset": "Reimposta la cache dell'app",

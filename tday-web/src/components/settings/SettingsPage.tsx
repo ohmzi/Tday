@@ -5,11 +5,13 @@ import {
   BellRing,
   Calendar,
   Check,
+  ChevronDown,
   ChevronRight,
   CircleHelp,
   Copy,
   Eye,
   EyeOff,
+  Info,
   Key,
   KeyRound,
   Languages,
@@ -21,6 +23,7 @@ import {
   Pencil,
   RefreshCw,
   Search,
+  Server,
   Settings,
   ShieldQuestion,
   Sparkles,
@@ -50,6 +53,13 @@ import NativePageHeader, { useNativePageBarSlots } from "@/components/app/Native
 import MobileSearchHeader from "@/components/ui/MobileSearchHeader";
 import EmptyState from "@/components/app/EmptyState";
 import DataTransferCard from "./DataTransferCard";
+import {
+  CardDivider,
+  RowIcon,
+  RowIconSlot,
+  SettingsOptionRow,
+  SettingsPill,
+} from "./SettingsControls";
 import { nativeScreenAccentColors } from "@/components/app/nativeScreenTheme";
 import { api } from "@/lib/api-client";
 import parseApiDateTime from "@/lib/date/parseApiDateTime";
@@ -66,6 +76,7 @@ import {
   validatePassphrase,
 } from "@/lib/local/passphrasePolicy";
 import { resetAppData } from "@/lib/resetAppData";
+import { CURRENT_APP_VERSION, formatDisplayVersion } from "@/features/release/lib/release";
 import { useIsLocalMode } from "@/hooks/useAppMode";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import {
@@ -146,12 +157,10 @@ type ApiKeyInfo = {
  * native SettingsSectionCard / SettingsSectionTitle. */
 function SettingsSection({
   title,
-  description,
   titleAction,
   children,
 }: {
   title?: string;
-  description?: ReactNode;
   titleAction?: ReactNode;
   children: ReactNode;
 }) {
@@ -162,14 +171,9 @@ function SettingsSection({
       {/* A card that is a single action — How-To, Sign out — carries no heading:
           the row's own label is the only one it could have, twice over. */}
       {title ? (
-        <div className="space-y-1">
-          <div className="flex items-center justify-between gap-2">
-            <h2 className="text-[1.4rem] font-black leading-tight text-foreground">{title}</h2>
-            {titleAction}
-          </div>
-          {description ? (
-            <p className="text-sm font-extrabold text-muted-foreground">{description}</p>
-          ) : null}
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-[1.4rem] font-black leading-tight text-foreground">{title}</h2>
+          {titleAction}
         </div>
       ) : null}
       {children}
@@ -181,122 +185,38 @@ function SettingsSection({
  * grouped together) — matches the SettingsSection header styling. */
 function SectionHeading({
   title,
-  description,
   titleAction,
 }: {
   title: string;
-  description?: ReactNode;
   titleAction?: ReactNode;
 }) {
   return (
-    <div className="space-y-1">
-      <div className="flex items-center justify-between gap-2">
-        <h2 className="text-[1.4rem] font-black leading-tight text-foreground">{title}</h2>
-        {titleAction}
-      </div>
-      {description ? (
-        <p className="text-sm font-extrabold text-muted-foreground">{description}</p>
-      ) : null}
+    <div className="flex items-center justify-between gap-2">
+      <h2 className="text-[1.4rem] font-black leading-tight text-foreground">{title}</h2>
+      {titleAction}
     </div>
   );
 }
 
-/** Thin divider between sub-sections within a combined card. */
-function CardDivider() {
-  return <div className="h-px bg-border/60" />;
-}
-
-/** Leading row glyph — a single Lucide icon in a fixed 22px slot so every label
- * in a card starts on the same line. Decorative: the row label carries the
- * meaning, so it stays out of the accessibility tree. */
-function RowIcon({
-  icon: Icon,
-  destructive,
-}: {
-  icon: LucideIcon;
-  destructive?: boolean;
-}) {
-  return (
-    <span
-      aria-hidden
-      className={cn(
-        "flex h-[22px] w-[22px] shrink-0 items-center justify-center",
-        destructive ? "text-destructive" : "text-accent",
-      )}
-    >
-      <Icon className="h-5 w-5" />
-    </span>
-  );
-}
-
-/** The same slot left empty — reserves the icon column for a glyph-less fact
- * row so its label still lines up with the rows around it. */
-function RowIconSlot() {
-  return <span aria-hidden className="h-[22px] w-[22px] shrink-0" />;
-}
-
-/** Tappable row in the workspace/dashboard card — icon, label and an optional
- * chevron. Renders a Link when `href` is given, a button otherwise.
- * `destructive` colours the whole row; `destructiveIcon` colours the glyph
- * alone, for a row whose label has always been the neutral foreground. */
-function SettingsOptionRow({
+/** A row that only reports a fact — a version string, nothing to tap. Keeps the
+ * icon column of the card it sits in so its label lines up with the rest. */
+function SettingsFactRow({
   icon,
   label,
-  href,
-  onClick,
-  disabled,
-  destructive,
-  destructiveIcon,
-  showChevron,
+  value,
 }: {
-  icon: LucideIcon;
-  label: ReactNode;
-  href?: string;
-  onClick?: () => void;
-  disabled?: boolean;
-  destructive?: boolean;
-  destructiveIcon?: boolean;
-  showChevron?: boolean;
+  icon?: LucideIcon;
+  label: string;
+  value: string;
 }) {
-  const content = (
-    <>
-      <span className="flex min-w-0 flex-1 items-center gap-3.5">
-        <RowIcon icon={icon} destructive={destructive || destructiveIcon} />
-        <span
-          className={cn(
-            "min-w-0 flex-1 text-[1.05rem] font-black",
-            // Only the chevron rows clipped their label before the icons
-            // landed; the others wrap, which the longer translations rely on.
-            showChevron && "truncate",
-            destructive ? "text-destructive" : "text-foreground",
-          )}
-        >
-          {label}
-        </span>
-      </span>
-      {showChevron ? (
-        <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" />
-      ) : null}
-    </>
-  );
-  const rowClass = "flex w-full items-center gap-3 py-1.5 text-left transition active:opacity-60";
-
-  if (href) {
-    return (
-      <Link href={href} className={rowClass}>
-        {content}
-      </Link>
-    );
-  }
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className={cn(rowClass, "disabled:opacity-50")}
-    >
-      {content}
-    </button>
+    <div className="flex items-center gap-3 py-1.5">
+      <span className="flex min-w-0 flex-1 items-center gap-3.5">
+        {icon ? <RowIcon icon={icon} /> : <RowIconSlot />}
+        <span className="min-w-0 flex-1 text-[1.05rem] font-black text-foreground">{label}</span>
+      </span>
+      <span className="shrink-0 text-sm font-black text-muted-foreground">{value}</span>
+    </div>
   );
 }
 
@@ -545,6 +465,11 @@ export default function SettingsPage() {
   const [encryptError, setEncryptError] = useState("");
   const [resetCacheOpen, setResetCacheOpen] = useState(false);
   const [resettingCache, setResettingCache] = useState(false);
+  // The backend's own version, for the About card's Server row. Stays null
+  // until the probe answers, and the row stays away with it — an empty or
+  // "unknown" Server line says less than no line at all.
+  const [serverVersion, setServerVersion] = useState<string | null>(null);
+  const appVersionLabel = `v${formatDisplayVersion(CURRENT_APP_VERSION) ?? CURRENT_APP_VERSION}`;
 
   useEffect(() => {
     if (isLocalMode) return;
@@ -555,6 +480,27 @@ export default function SettingsPage() {
       })
       .catch(() => {
         if (!cancelled) setSqStatus({ questionIds: [], requireSecurityQuestions: true });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isLocalMode]);
+
+  // Local Mode never asks: there is no server to ask, and the row that would
+  // show the answer is not rendered there either. `/api/mobile/probe` is the
+  // same unauthenticated endpoint the native apps read their backend version
+  // from, so this needs no session and no new route.
+  useEffect(() => {
+    if (isLocalMode) return;
+    let cancelled = false;
+    api
+      .GET({ url: "/api/mobile/probe" })
+      .then((res) => {
+        const version = res?.appVersion;
+        if (!cancelled) setServerVersion(typeof version === "string" && version ? version : null);
+      })
+      .catch(() => {
+        if (!cancelled) setServerVersion(null);
       });
     return () => {
       cancelled = true;
@@ -1097,32 +1043,38 @@ export default function SettingsPage() {
     t("language.appLanguage"),
   );
   const showPreferencesCard = cardMatches(
+    t("featureToggle.title"),
     t("aiSummary.title"),
-    t("aiSummary.toggle"),
+    // "Resting floaters" and "Notifications" stopped being headings when this
+    // card collapsed into one, but they are still the words people type, so
+    // they stay in the term list even though no row prints them verbatim.
     t("restingFloaters.title"),
     t("restingFloaters.toggle"),
     ...(push.isSupported ? [t("notifications.title"), t("notifications.push")] : []),
   );
   const showDataCard = cardMatches(t("data.title"), t("data.download"), t("data.import"));
+  // The two blurbs stopped being printed when the "?" took over explaining these
+  // cards, but they are still sentences people half-remember and type at the
+  // search box, so they stay in the term lists.
   const showCalendarFeedCard =
     !isLocalMode && cardMatches(t("calendarFeed.title"), t("calendarFeed.blurb"));
   const showWebhooksCard =
     !isLocalMode && cardMatches(t("webhooks.title"), t("webhooks.blurb"), t("webhooks.add"));
-  // Splitting the old workspace/dashboard card into four splits its term list
-  // too: each card answers only to labels it still shows, so a hit never scrolls
-  // to a card whose matching row moved out from under it.
+  const showDashboardCard =
+    !isLocalMode && cardMatches(t("dashboard.title"), t("dashboard.generateKey"));
+  // Splitting the old workspace/dashboard card splits its term list too: each
+  // card answers only to labels it still shows, so a hit never scrolls to a card
+  // whose matching row moved out from under it.
   const showAboutCard = cardMatches(
     t("about.title"),
-    t("dashboard.title"),
+    t("about.appVersion"),
     ...(isLocalMode
       ? [
           t("workspace.localTitle"),
           t("workspace.localDetail"),
           t("workspace.encrypt"),
         ]
-      : // "Dashboard access" stopped being the heading here, but these are still
-        // the rows it named, and it is the word people come looking for.
-        [t("dashboard.title"), t("dashboard.generateKey")]),
+      : [t("about.server")]),
   );
   const showMaintenanceCard = cardMatches(
     ...(!isLocalMode && user?.role === "ADMIN" ? [sidebarDict("admin")] : []),
@@ -1142,6 +1094,7 @@ export default function SettingsPage() {
     !showDataCard &&
     !showCalendarFeedCard &&
     !showWebhooksCard &&
+    !showDashboardCard &&
     !showAboutCard &&
     !showMaintenanceCard &&
     !showGuideCard &&
@@ -1189,19 +1142,14 @@ export default function SettingsPage() {
                 </div>
               </div>
               {editing !== "name" ? (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="shrink-0 rounded-xl font-black text-accent"
+                <SettingsPill
+                  icon={Pencil}
+                  label={t("profile.edit")}
                   onClick={() => {
                     setName(user?.name ?? "");
                     setEditing("name");
                   }}
-                >
-                  <Pencil className="mr-1.5 h-3.5 w-3.5" />
-                  {t("profile.edit")}
-                </Button>
+                />
               ) : null}
             </div>
             <Collapse open={editing === "name"}>
@@ -1267,16 +1215,11 @@ export default function SettingsPage() {
                 </div>
               </div>
               {editing !== "password" ? (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="shrink-0 rounded-xl font-black text-accent"
+                <SettingsPill
+                  icon={Key}
+                  label={t("password.changeAction")}
                   onClick={() => setEditing("password")}
-                >
-                  <Key className="mr-1.5 h-3.5 w-3.5" />
-                  {t("password.changeAction")}
-                </Button>
+                />
               ) : null}
             </div>
             <Collapse open={editing === "password"}>
@@ -1435,16 +1378,11 @@ export default function SettingsPage() {
                 </div>
               </div>
               {editing !== "securityQuestions" ? (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="shrink-0 rounded-xl font-black text-accent"
+                <SettingsPill
+                  icon={ShieldQuestion}
+                  label={t("securityQuestions.changeAction")}
                   onClick={openSecurityQuestions}
-                >
-                  <ShieldQuestion className="mr-1.5 h-3.5 w-3.5" />
-                  {t("securityQuestions.changeAction")}
-                </Button>
+                />
               ) : null}
             </div>
             <Collapse open={editing === "securityQuestions"}>
@@ -1569,16 +1507,17 @@ export default function SettingsPage() {
           aria-haspopup="dialog"
           aria-label={`${t("language.appLanguage")}, ${currentLanguageLabel}`}
         >
-          <span className="flex items-center gap-3.5">
+          <span className="flex min-w-0 flex-1 items-center gap-3.5">
             <RowIcon icon={Languages} />
-            <span className="text-[1.05rem] font-black text-foreground">{t("language.appLanguage")}</span>
-          </span>
-          <span className="flex min-w-0 items-center gap-2">
-            <span className="min-w-0 truncate text-sm font-black text-muted-foreground">
-              {currentLanguageLabel}
+            <span className="min-w-0 truncate text-[1.05rem] font-black text-foreground">
+              {t("language.appLanguage")}
             </span>
-            <ChevronRight className="h-[18px] w-[18px] shrink-0 text-muted-foreground/55" strokeWidth={2.6} />
           </span>
+          {/* The value is the pill's label, so the pill's glyph has to say
+              something the label does not: repeating the row's own Languages
+              icon would say nothing, and a chevron pointing right would promise
+              another screen. Down is the picker this row actually opens. */}
+          <SettingsPill icon={ChevronDown} label={currentLanguageLabel} />
         </button>
       </SheetCard>
       )}
@@ -1610,17 +1549,29 @@ export default function SettingsPage() {
 
       {showPreferencesCard && (
       <SheetCard className="space-y-4 p-[18px] shadow-[0_16px_34px_-24px_hsl(var(--shadow)/0.5)]">
-        <SectionHeading title={t("aiSummary.title")} />
+        {/* One card, one title, one "?" — Android and iOS both draw these
+            switches under a single `Feature toggle` heading, and three headings
+            with three help links each was more chrome than the three rows they
+            introduced. The link lands on `ai-summary` because the guide now
+            lists it first under Integrations and it is this card's own first
+            row, so the reader arrives at the top of a section rather than
+            mid-list. The other two switches are documented in their own
+            sections (resting-floaters under Organizing, push-notifications
+            under Reminders), which is where their topics belong. */}
+        <SectionHeading
+          title={t("featureToggle.title")}
+          titleAction={<GuideHelpLink topic="ai-summary" />}
+        />
         <div className="flex items-center justify-between gap-4">
           <div className="flex min-w-0 items-center gap-3.5">
             <RowIcon icon={Sparkles} />
             <div className="min-w-0">
-              <p className="text-[1.05rem] font-black text-foreground">{t("aiSummary.toggle")}</p>
+              <p className="text-[1.05rem] font-black text-foreground">{t("aiSummary.title")}</p>
             </div>
           </div>
           <SettingsSwitch
             checked={preferences?.aiSummaryEnabled !== false}
-            ariaLabel={t("aiSummary.toggle")}
+            ariaLabel={t("aiSummary.title")}
             onClick={() =>
               updatePreferences({
                 aiSummaryEnabled: !(preferences?.aiSummaryEnabled !== false),
@@ -1630,10 +1581,6 @@ export default function SettingsPage() {
         </div>
 
         <CardDivider />
-        <SectionHeading
-          title={t("restingFloaters.title")}
-          titleAction={<GuideHelpLink topic="resting-floaters" />}
-        />
         <div className="flex items-center justify-between gap-4">
           <div className="flex min-w-0 items-center gap-3.5">
             <RowIcon icon={Waves} />
@@ -1657,10 +1604,6 @@ export default function SettingsPage() {
         {push.isSupported && (
           <>
             <CardDivider />
-            <SectionHeading
-              title={t("notifications.title")}
-              titleAction={<GuideHelpLink topic="push-notifications" />}
-            />
             <div className="flex items-center justify-between gap-4">
               <div className="flex min-w-0 items-center gap-3.5">
                 <RowIcon icon={BellRing} />
@@ -1694,7 +1637,6 @@ export default function SettingsPage() {
       {showCalendarFeedCard && (
       <SettingsSection
         title={t("calendarFeed.title")}
-        description={t("calendarFeed.blurb")}
         titleAction={<GuideHelpLink topic="calendar-feed" />}
       >
         <div className="flex items-center justify-between gap-3">
@@ -1765,7 +1707,6 @@ export default function SettingsPage() {
       {showWebhooksCard && (
       <SettingsSection
         title={t("webhooks.title")}
-        description={t("webhooks.blurb")}
         titleAction={<GuideHelpLink topic="webhooks" />}
       >
         <div className="space-y-3">
@@ -1891,58 +1832,16 @@ export default function SettingsPage() {
       </SettingsSection>
       )}
 
-      {/* About — what this install is. In Local Mode that is where the
-          workspace lives; in Server Mode it is the keys that reach this
-          account from outside the browser, which answer the same question. */}
-      {showAboutCard && (
+      {/* Dashboard access — the keys that reach this account from outside the
+          browser, so it sits with the other two integration cards. The heading
+          is load-bearing: the backend sends people here BY NAME — McpRoutes,
+          McpToolCatalog and McpToolDispatcher all say "Settings → Dashboard
+          access", with backend tests asserting the exact string. */}
+      {showDashboardCard && (
       <SettingsSection
-        // "About" only in local mode. In server mode this card is the API keys,
-        // and the backend sends people here BY NAME — McpRoutes, McpToolCatalog
-        // and McpToolDispatcher all say "Settings → Dashboard access", with
-        // backend tests asserting the exact string. Renaming the heading would
-        // leave those instructions pointing at something that is not on screen.
-        title={isLocalMode ? t("about.title") : t("dashboard.title")}
-        titleAction={
-          isLocalMode ? undefined : <GuideHelpLink topic="api-key-homarr" />
-        }
+        title={t("dashboard.title")}
+        titleAction={<GuideHelpLink topic="api-key-homarr" />}
       >
-        {isLocalMode ? (
-          <>
-            {/* Where this workspace lives — the web counterpart of the native
-                Workspace row (Android SettingsWorkspaceContent). */}
-            <div className="flex min-w-0 items-center gap-3.5">
-              {/* Nothing to tap here, so the icon column stays empty — the label
-                  still lines up with the rows below. */}
-              <RowIconSlot />
-              <div className="min-w-0 space-y-1">
-                <p className="text-[1.05rem] font-black text-foreground">
-                  {t("workspace.localTitle")}
-                </p>
-                <p className="text-sm font-extrabold text-muted-foreground">
-                  {t("workspace.localDetail")}
-                </p>
-                {/* How this browser stores it — the one thing the user chose at
-                    setup, and the only thing still changeable afterwards. */}
-                <p className="text-sm font-extrabold text-muted-foreground">
-                  {localProtection === "passphrase"
-                    ? t("workspace.encryptedDetail")
-                    : t("workspace.unencryptedDetail")}
-                </p>
-              </div>
-            </div>
-            {localProtection === "none" && (
-              <>
-                <CardDivider />
-                <SettingsOptionRow
-                  icon={KeyRound}
-                  label={t("workspace.encrypt")}
-                  onClick={() => setEncryptOpen(true)}
-                />
-              </>
-            )}
-          </>
-        ) : (
-        <>
         {/* Name + access level now live in the generate dialog, keeping this
             list uncluttered. */}
         <Button
@@ -2042,7 +1941,71 @@ export default function SettingsPage() {
             {t("dashboard.noKey")}
           </p>
         )}
-        </>
+      </SettingsSection>
+      )}
+
+      {/* About — what this install is, mirroring the native About card: the
+          build running in this browser, and in Server Mode the backend it talks
+          to. Local Mode adds where the workspace lives, because there the
+          browser IS the install. Sync belongs to the sync surfaces, not here. */}
+      {showAboutCard && (
+      <SettingsSection
+        title={t("about.title")}
+        titleAction={
+          <GuideHelpLink topic={isLocalMode ? "local-mode" : "server-mode"} />
+        }
+      >
+        {isLocalMode && (
+          <>
+            {/* Where this workspace lives — the web counterpart of the native
+                Workspace row (Android SettingsWorkspaceContent). */}
+            <div className="flex min-w-0 items-center gap-3.5">
+              {/* Nothing to tap here, so the icon column stays empty — the label
+                  still lines up with the rows below. */}
+              <RowIconSlot />
+              <div className="min-w-0 space-y-1">
+                <p className="text-[1.05rem] font-black text-foreground">
+                  {t("workspace.localTitle")}
+                </p>
+                <p className="text-sm font-extrabold text-muted-foreground">
+                  {t("workspace.localDetail")}
+                </p>
+                {/* How this browser stores it — the one thing the user chose at
+                    setup, and the only thing still changeable afterwards. */}
+                <p className="text-sm font-extrabold text-muted-foreground">
+                  {localProtection === "passphrase"
+                    ? t("workspace.encryptedDetail")
+                    : t("workspace.unencryptedDetail")}
+                </p>
+              </div>
+            </div>
+            {localProtection === "none" && (
+              <>
+                <CardDivider />
+                <SettingsOptionRow
+                  icon={KeyRound}
+                  label={t("workspace.encrypt")}
+                  onClick={() => setEncryptOpen(true)}
+                />
+              </>
+            )}
+            <CardDivider />
+          </>
+        )}
+
+        <SettingsFactRow icon={Info} label={t("about.appVersion")} value={appVersionLabel} />
+
+        {/* Server Mode only, and only once the probe has answered: a browser-only
+            workspace has no server, and an empty or "unknown" server line is
+            worse than none. */}
+        {!isLocalMode && serverVersion !== null && (
+          <>
+            <CardDivider />
+            {/* Carries a glyph like every other row in this card. Without one it
+                fell back to the empty icon slot and read as a stray line under a
+                version row that has one. */}
+            <SettingsFactRow icon={Server} label={t("about.server")} value={`v${serverVersion}`} />
+          </>
         )}
       </SettingsSection>
       )}

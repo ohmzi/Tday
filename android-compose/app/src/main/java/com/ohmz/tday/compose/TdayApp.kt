@@ -1061,6 +1061,7 @@ fun TdayApp(
                             onToggleAiSummary = appViewModel::setAiSummaryEnabled,
                             onBack = { navController.popBackStack() },
                             onLogout = { appViewModel.logout() },
+                            onLeaveLocalWorkspace = { appViewModel.leaveLocalWorkspace() },
                             onOpenLatestRelease = { navController.navigate(AppRoute.LatestRelease.route) },
                             onOpenHelpGuide = { navController.navigate(AppRoute.HelpGuide.create()) },
                             onUpdateName = { newName ->

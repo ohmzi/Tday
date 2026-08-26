@@ -1,4 +1,6 @@
 import SwiftUI
+import UIKit
+import UserNotifications
 #if canImport(WidgetKit)
 import WidgetKit
 #endif
@@ -26,6 +28,11 @@ struct SettingsScreen: View {
     @FocusState private var searchFieldFocused: Bool
     @State private var searchExpanded = false
     @State private var searchQuery = ""
+    /// Whether a notification would actually arrive — the OS permission AND the app's own
+    /// switch. Owned here because the switch is in one card and the three settings it silences
+    /// are in another; `SettingsNotificationsSection` is what keeps it current. Seeded from the
+    /// preference alone so the common case doesn't flash dimmed before the OS status is read.
+    @State private var notificationsDeliver = NotificationPreferenceStore().isEnabled
 
     private var titleCollapseProgress: CGFloat {
         rawTitleCollapseProgress
@@ -81,13 +88,16 @@ struct SettingsScreen: View {
         )
     }
 
-    /// The three switches, in one card, as Android has them — its own card is
-    /// `settings_feature_toggle` holding ai-summary, resting-floaters and
-    /// calendar-sync. Splitting them across two cards here meant a local
-    /// workspace saw one titled card vanish entirely and the other appear
-    /// untitled.
+    /// The switches, in one card, as Android has them — its own card is
+    /// `settings_feature_toggle` holding ai-summary, resting-floaters,
+    /// calendar-sync and now the notification gate. Splitting them across two
+    /// cards here meant a local workspace saw one titled card vanish entirely
+    /// and the other appear untitled.
     private var showsFeatureTogglesCard: Bool {
-        var terms = ["Feature toggle", "Resting floaters", "Add scheduled tasks to my calendar"]
+        var terms = [
+            "Feature toggle", "Resting floaters", "Add scheduled tasks to my calendar",
+            "Notifications",
+        ]
         if !viewModel.isLocalMode {
             terms += ["AI task summary", "Summary"]
         }
@@ -128,9 +138,10 @@ struct SettingsScreen: View {
         matchesSearch(["How-To & Tips"])
     }
 
-    /// Local mode has no session to end, so there is nothing for this card to hold.
+    /// The screen's last card is the exit. Local mode has no session to end, so it holds the
+    /// only way out of a local workspace this app has instead.
     private var showsSignOutCard: Bool {
-        !viewModel.isLocalMode && matchesSearch(["Sign out"])
+        matchesSearch(viewModel.isLocalMode ? ["Delete local data"] : ["Sign out"])
     }
 
     private var hasSearchResults: Bool {
@@ -273,22 +284,38 @@ struct SettingsScreen: View {
                             onSelect: viewModel.setThemeMode
                         )
                         SettingsDivider()
-                        SettingsSectionTitle("Reminders")
-                        SettingsReminderSelector(
-                            selectedReminder: viewModel.selectedReminder,
-                            onOpen: {
-                                showingReminderSelector = true
-                            }
-                        )
-                        SettingsDivider()
-                        SettingsDayAheadSelector(
-                            selected: viewModel.dayAheadOption,
-                            onOpen: {
-                                showingDayAheadSelector = true
-                            }
-                        )
-                        SettingsDivider()
-                        SettingsQuietHoursSection()
+                        HStack {
+                            SettingsSectionTitle("Reminders")
+                            Spacer()
+                            // Outside the group below, which goes inert: `GuideHelpLink` is a
+                            // tap gesture, so `.disabled` would silence the one thing on this
+                            // card that still has something to say when reminders are off.
+                            GuideHelpLink(topicId: "reminders")
+                        }
+                        // Grouped so the whole block can go inert together. Every one of these
+                        // three schedules a notification, and the master switch lives two cards
+                        // down: without this a 7am digest and a default offset could be picked
+                        // and nothing would ever arrive, with nothing on screen saying why.
+                        // Dimmed and untappable says it in the one language everyone reads.
+                        VStack(alignment: .leading, spacing: 16) {
+                            SettingsReminderSelector(
+                                selectedReminder: viewModel.selectedReminder,
+                                onOpen: {
+                                    showingReminderSelector = true
+                                }
+                            )
+                            SettingsDivider()
+                            SettingsDayAheadSelector(
+                                selected: viewModel.dayAheadOption,
+                                onOpen: {
+                                    showingDayAheadSelector = true
+                                }
+                            )
+                            SettingsDivider()
+                            SettingsQuietHoursSection()
+                        }
+                        .opacity(notificationsDeliver ? 1 : 0.45)
+                        .disabled(!notificationsDeliver)
                         SettingsDivider()
                         SettingsSectionTitle("Language")
                         SettingsLanguageSelector(
@@ -309,7 +336,18 @@ struct SettingsScreen: View {
                         // English everywhere — not because this view skips L(),
                         // it does not, but because that string was never a key in
                         // the catalogue. This one is, in all nine locales.
-                        SettingsSectionTitle("Feature toggle")
+                        HStack {
+                            SettingsSectionTitle("Feature toggle")
+                            Spacer()
+                            // One "?" for the whole card rather than one per row, and it
+                            // has to follow the card's own first row: `ai-summary` heads
+                            // the guide's Integrations section but the row it explains is
+                            // server-only, so in a local workspace the link would open a
+                            // topic badged "Server mode" about a row that is not there.
+                            GuideHelpLink(
+                                topicId: viewModel.isLocalMode ? "resting-floaters" : "ai-summary"
+                            )
+                        }
                         // Server-only — a local workspace has no account to
                         // summarise. Its divider goes with it, or the card opens
                         // on a rule.
@@ -320,6 +358,11 @@ struct SettingsScreen: View {
                         SettingsRestingFloatersSection()
                         SettingsDivider()
                         SettingsDeviceCalendarSection()
+                        SettingsDivider()
+                        SettingsNotificationsSection(
+                            viewModel: viewModel,
+                            deliversNotifications: $notificationsDeliver
+                        )
                     }
                 }
             }
@@ -342,6 +385,10 @@ struct SettingsScreen: View {
                         SettingsSectionCard {
                             SettingsAboutContent(
                                 syncStatus: viewModel.syncStatus,
+                                // The card is about the mode this install is in, and the
+                                // guide has a topic per mode. Neither is server-only, so
+                                // both open in the workspace they describe.
+                                helpTopicId: viewModel.isLocalMode ? "local-mode" : "server-mode",
                                 onSyncNow: {
                                     Task { await viewModel.manualSync() }
                                 }
@@ -399,16 +446,20 @@ struct SettingsScreen: View {
                 if showsSignOutCard {
                     settingsListRow {
                         SettingsSectionCard {
-                            SettingsListRow(
-                                title: "Sign out",
-                                value: nil,
-                                titleColor: colors.error,
-                                showChevron: false,
-                                icon: "LucideLogOut",
-                                action: {
-                                    Task { await viewModel.logout() }
-                                }
-                            )
+                            if viewModel.isLocalMode {
+                                SettingsLocalWorkspaceExit(viewModel: viewModel)
+                            } else {
+                                SettingsListRow(
+                                    title: "Sign out",
+                                    value: nil,
+                                    titleColor: colors.error,
+                                    showChevron: false,
+                                    icon: "LucideLogOut",
+                                    action: {
+                                        Task { await viewModel.logout() }
+                                    }
+                                )
+                            }
                         }
                     }
                 }
@@ -682,6 +733,188 @@ private struct SettingsDeviceCalendarSection: View {
     }
 }
 
+// MARK: - Notifications
+
+/// `.provisional` and `.ephemeral` also let a notification through, so whether iOS will deliver
+/// is a wider question than `== .authorized`. nil means "not read yet", which is not the same
+/// answer as `.notDetermined`.
+private func notificationDeliveryAllowed(_ status: UNAuthorizationStatus?) -> Bool {
+    guard let status else {
+        return false
+    }
+    switch status {
+    case .authorized, .provisional, .ephemeral:
+        return true
+    default:
+        return false
+    }
+}
+
+/// The app's own notification switch — and, once iOS has stopped offering its prompt, the only
+/// route from inside T'Day back to the OS permission.
+///
+/// Two independent pieces of state, never one: `UNAuthorizationStatus` (what iOS allows, which
+/// the user can change in Settings while this app is suspended) and `NotificationPreferenceStore`
+/// (what the user asked T'Day for). The switch shows the AND of them — a reminder needs both —
+/// and drives whichever half is in the way. iOS shows its dialog only while the status is
+/// `.notDetermined`; on `.denied` a second `requestAuthorization` returns silently, so that case
+/// opens Settings instead of leaving the switch to snap back with no explanation.
+private struct SettingsNotificationsSection: View {
+    let viewModel: AppViewModel
+    /// Mirrored out to the Appearance card, which holds the three settings this switch
+    /// silences and has no other way to know that it is off.
+    @Binding var deliversNotifications: Bool
+
+    @Environment(\.tdayColors) private var colors
+    @Environment(\.openURL) private var openURL
+    @Environment(\.scenePhase) private var scenePhase
+
+    private let store = NotificationPreferenceStore()
+    @State private var authorizationStatus: UNAuthorizationStatus?
+    @State private var preferenceEnabled: Bool
+    @State private var showSystemSettingsHint = false
+
+    init(viewModel: AppViewModel, deliversNotifications: Binding<Bool>) {
+        self.viewModel = viewModel
+        _deliversNotifications = deliversNotifications
+        _preferenceEnabled = State(initialValue: NotificationPreferenceStore().isEnabled)
+    }
+
+    private var isOn: Bool {
+        notificationDeliveryAllowed(authorizationStatus) && preferenceEnabled
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Toggle(
+                isOn: Binding(
+                    get: { isOn },
+                    set: { value in
+                        Task { await apply(enabled: value) }
+                    }
+                )
+            ) {
+                HStack(spacing: 14) {
+                    SettingsRowIcon(asset: "LucideBell")
+
+                    Text(L("Notifications"))
+                        .font(.body.weight(.heavy))
+                        .foregroundStyle(colors.onSurface)
+                }
+            }
+            .tint(colors.secondary)
+
+            Text(L("Task reminders and the Day Ahead digest only arrive while this is on."))
+                .font(.tdayRounded(size: 12, weight: .bold))
+                .foregroundStyle(colors.onSurfaceVariant)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.leading, 34)
+
+            if showSystemSettingsHint {
+                Button {
+                    openSystemSettings()
+                } label: {
+                    Text(L("Notifications are off for T'Day in iOS Settings. Open Settings to turn them back on."))
+                        .font(.tdayRounded(size: 12, weight: .bold))
+                        .foregroundStyle(colors.error)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.leading, 34)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .task {
+            await refreshAuthorization()
+        }
+        .onChange(of: scenePhase) { _, phase in
+            // Flipping the permission in iOS Settings and coming straight back is the one way
+            // this can change under the app, and this is the only moment it gets to notice.
+            guard phase == .active else {
+                return
+            }
+            Task { await refreshAuthorization() }
+        }
+    }
+
+    @MainActor
+    private func apply(enabled value: Bool) async {
+        // Every exit below leaves the switch in a different place, and the Appearance card
+        // dims off the same answer. A `defer` beats repeating this on five return paths.
+        defer { deliversNotifications = isOn }
+
+        guard value else {
+            showSystemSettingsHint = false
+            preferenceEnabled = false
+            await viewModel.setNotificationsEnabled(false)
+            return
+        }
+
+        let status: UNAuthorizationStatus
+        if let known = authorizationStatus {
+            status = known
+        } else {
+            status = await viewModel.container.reminderScheduler.authorizationStatus()
+            authorizationStatus = status
+        }
+
+        switch status {
+        case .notDetermined:
+            // The only status where iOS actually puts its dialog on screen. The tap was the
+            // opt-in, so a grant stores the preference itself rather than making the user flip
+            // a switch that is already showing what they just asked for.
+            let granted = await viewModel.container.reminderScheduler.requestAuthorization()
+            authorizationStatus = await viewModel.container.reminderScheduler.authorizationStatus()
+            showSystemSettingsHint = !granted
+            if granted {
+                await storePreferenceOn()
+            }
+        case .denied:
+            // iOS never shows the prompt twice, so the app's own Settings page is the only way
+            // back. Nothing is stored on the way there: the switch reads off in both denied
+            // cells, so its setter can only ever be called with `true`, and writing the
+            // preference here would be a state the user has no way to leave again.
+            showSystemSettingsHint = true
+            openSystemSettings()
+        default:
+            showSystemSettingsHint = false
+            await storePreferenceOn()
+        }
+    }
+
+    @MainActor
+    private func storePreferenceOn() async {
+        preferenceEnabled = true
+        await viewModel.setNotificationsEnabled(true)
+    }
+
+    @MainActor
+    private func refreshAuthorization() async {
+        let previous = authorizationStatus
+        let status = await viewModel.container.reminderScheduler.authorizationStatus()
+        authorizationStatus = status
+        preferenceEnabled = store.isEnabled
+        // On screen the moment the section renders, not only after a tap: a switch that will
+        // not turn on has to say why. Only while the preference is on, though — with it off the
+        // switch is off because the user said so, and iOS Settings is beside the point.
+        showSystemSettingsHint = status == .denied && preferenceEnabled
+        // Granted in iOS Settings while T'Day was in the background. Every `add` was refused
+        // while the permission was missing, so the queue is empty and nothing else would refill
+        // it until the next task edit.
+        if let previous, !notificationDeliveryAllowed(previous), notificationDeliveryAllowed(status), preferenceEnabled {
+            await viewModel.setNotificationsEnabled(true)
+        }
+        deliversNotifications = isOn
+    }
+
+    private func openSystemSettings() {
+        guard let url = URL(string: UIApplication.openSettingsURLString) else {
+            return
+        }
+        openURL(url)
+    }
+}
+
 // MARK: - Quiet hours
 
 /// "Hold reminders between HH:MM and HH:MM" — entirely local; the scheduler shifts any
@@ -746,6 +979,60 @@ private struct SettingsQuietHoursSection: View {
     private static func minute(from date: Date) -> Int {
         let comps = Calendar.current.dateComponents([.hour, .minute], from: date)
         return (comps.hour ?? 0) * 60 + (comps.minute ?? 0)
+    }
+}
+
+// MARK: - Local workspace
+
+/// The only way out of a local workspace this app has, and the last card on the screen in
+/// Local Mode — where server mode keeps Sign out.
+///
+/// Web offers two rows here: "Leave local workspace", which keeps the tasks in the browser, and
+/// "Delete local data", which destroys them. iOS has one, because it has no way to do the first:
+/// clearing the data mode sends `bootstrap()` down its no-server-configured branch, and that
+/// branch wipes the offline cache before the setup screen ever appears. A row promising to leave
+/// a workspace intact that then deleted it would be worse than not offering it, so the row says
+/// what actually happens and the confirmation points at the export two cards up.
+private struct SettingsLocalWorkspaceExit: View {
+    let viewModel: AppViewModel
+
+    @Environment(\.tdayColors) private var colors
+    @State private var showConfirm = false
+
+    var body: some View {
+        SettingsListRow(
+            title: "Delete local data",
+            value: nil,
+            titleColor: colors.error,
+            showChevron: false,
+            icon: "LucideTrash2",
+            action: {
+                showConfirm = true
+            }
+        )
+        .confirmationDialog(
+            Text(L("Delete local data?")),
+            isPresented: $showConfirm,
+            titleVisibility: .visible
+        ) {
+            Button(L("Delete"), role: .destructive) {
+                Task { await deleteLocalData() }
+            }
+            Button(L("Cancel"), role: .cancel) {}
+        } message: {
+            Text(L("This permanently removes every task, list and completed entry stored on this device. There is no copy on a server — download your data first if you want to keep it."))
+        }
+    }
+
+    @MainActor
+    private func deleteLocalData() async {
+        // The reset the app already performs on logout and on entering Local Mode: cache,
+        // cookies, keychain values, theme, reminder preferences and the stored data mode.
+        // `logout()` then re-bootstraps, which lands on the setup screen because there is
+        // nothing configured left to land on.
+        viewModel.container.authRepository.clearAllLocalUserDataForUnauthenticatedState()
+        viewModel.container.snackbarManager.show(L("Local data deleted."), kind: .success)
+        await viewModel.logout()
     }
 }
 
@@ -1232,25 +1519,85 @@ private struct SettingsFieldLabel: View {
     }
 }
 
+/// The one settings affordance shape: a continuous capsule filled with the secondary accent at
+/// 12%, secondary-coloured content, a heavy 12pt glyph and a heavy 14pt label 5pt apart, 34 tall
+/// with 14 of horizontal padding. The profile card's Edit and Change wear it, and so does every
+/// row below that changes a value in place.
+///
+/// `lineLimit(1)` because the capsule's height is fixed: a label that wrapped would be clipped
+/// rather than shown, which is worse than a truncation the row can be made wide enough to avoid.
+private struct SettingsPillLabel: View {
+    let title: String
+    let systemImage: String
+
+    @Environment(\.tdayColors) private var colors
+
+    var body: some View {
+        HStack(spacing: 5) {
+            Image(systemName: systemImage)
+                .font(.system(size: 12, weight: .heavy))
+            Text(title)
+                .font(.tdayRounded(size: 14, weight: .heavy))
+                .lineLimit(1)
+        }
+        .foregroundStyle(colors.secondary)
+        .padding(.horizontal, 14)
+        .frame(height: 34)
+        .background(Capsule(style: .continuous).fill(colors.secondary.opacity(0.12)))
+    }
+}
+
 private struct SettingsInlineEditButton: View {
     let title: String
     let systemImage: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            SettingsPillLabel(title: L(title), systemImage: systemImage)
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+/// A row whose right-hand side is a value the user changes here and now, without leaving the
+/// screen: the current value *is* the button, in the same capsule the profile card uses.
+///
+/// No chevron. A chevron on this screen means "this row goes somewhere else" — How-To, App
+/// Version — and these three go nowhere; they open a picker over the settings they belong to.
+///
+/// The pill takes layout priority so the value stays whole and the label wraps instead. In
+/// Spanish "Recordatorio predeterminado" already wraps next to today's 13pt value, so this is
+/// the row's existing bargain rather than a new one, made explicit.
+private struct SettingsValueRow: View {
+    let title: String
+    /// Already localized by whoever owns it — `ReminderOption.label`, `DayAheadOption.label`,
+    /// `AppLanguage.endonym` — so it goes into the pill verbatim, never through `L()` twice.
+    let value: String
+    let icon: String
+    let pillSystemImage: String
     let action: () -> Void
 
     @Environment(\.tdayColors) private var colors
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 5) {
-                Image(systemName: systemImage)
-                    .font(.system(size: 12, weight: .heavy))
-                Text(L(title))
-                    .font(.tdayRounded(size: 14, weight: .heavy))
+            HStack {
+                HStack(spacing: 14) {
+                    SettingsRowIcon(asset: icon)
+
+                    Text(L(title))
+                        .font(.tdayRounded(size: 17, weight: .heavy))
+                        .foregroundStyle(colors.onSurface)
+                }
+
+                Spacer(minLength: 12)
+
+                SettingsPillLabel(title: value, systemImage: pillSystemImage)
+                    .layoutPriority(1)
             }
-            .foregroundStyle(colors.secondary)
-            .padding(.horizontal, 14)
-            .frame(height: 34)
-            .background(Capsule(style: .continuous).fill(colors.secondary.opacity(0.12)))
+            .frame(maxWidth: .infinity, minHeight: 34, alignment: .center)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }
@@ -1375,13 +1722,18 @@ private struct SettingsEditField: View {
 /// server mode, how current it is.
 private struct SettingsAboutContent: View {
     let syncStatus: MobileSyncStatus
+    let helpTopicId: String
     let onSyncNow: () -> Void
 
     @Environment(\.tdayColors) private var colors
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            SettingsSectionTitle("About")
+            HStack {
+                SettingsSectionTitle("About")
+                Spacer()
+                GuideHelpLink(topicId: helpTopicId)
+            }
 
             if syncStatus.isLocalMode {
                 VStack(alignment: .leading, spacing: 6) {
@@ -1530,19 +1882,14 @@ private struct SettingsLanguageSelector: View {
     let currentLanguage: String
     let onOpen: () -> Void
 
-    @Environment(\.tdayColors) private var colors
-
     var body: some View {
-        Button(action: onOpen) {
-            SettingsRowLabel(
-                title: "Language",
-                value: Self.label(for: currentLanguage),
-                valueColor: colors.secondary,
-                showChevron: true,
-                icon: "LucideLanguages"
-            )
-        }
-        .buttonStyle(.plain)
+        SettingsValueRow(
+            title: "Language",
+            value: Self.label(for: currentLanguage),
+            icon: "LucideLanguages",
+            pillSystemImage: "globe",
+            action: onOpen
+        )
     }
 
     static func label(for stored: String) -> String {
@@ -1589,19 +1936,16 @@ private struct SettingsReminderSelector: View {
     let selectedReminder: ReminderOption
     let onOpen: () -> Void
 
-    @Environment(\.tdayColors) private var colors
-
     var body: some View {
-        Button(action: onOpen) {
-            SettingsRowLabel(
-                title: "Default reminder",
-                value: selectedReminder.label,
-                valueColor: colors.secondary,
-                showChevron: true,
-                icon: "LucideBell"
-            )
-        }
-        .buttonStyle(.plain)
+        SettingsValueRow(
+            title: "Default reminder",
+            value: selectedReminder.label,
+            icon: "LucideBell",
+            // Not a second bell: the row's glyph already says "reminder", and what this
+            // picks is how far ahead of the task it lands.
+            pillSystemImage: "clock.fill",
+            action: onOpen
+        )
     }
 }
 
@@ -1646,10 +1990,16 @@ private struct SettingsReminderSelectorOverlay: View {
             return Color.tdayTodayBlue
         case .fiveMinutes:
             return Color(red: 0.44, green: 0.53, blue: 0.78)
+        case .tenMinutes:
+            return Color(red: 0.40, green: 0.62, blue: 0.74)
         case .fifteenMinutes:
             return Color(red: 0.78, green: 0.58, blue: 0.40)
+        case .thirtyMinutes:
+            return Color(red: 0.80, green: 0.68, blue: 0.38)
         case .oneHour:
             return Color(red: 0.56, green: 0.70, blue: 0.48)
+        case .twoHours:
+            return Color(red: 0.48, green: 0.72, blue: 0.62)
         case .oneDay:
             return Color(red: 0.61, green: 0.54, blue: 0.82)
         case .twoDays:
@@ -1662,19 +2012,15 @@ private struct SettingsDayAheadSelector: View {
     let selected: DayAheadOption
     let onOpen: () -> Void
 
-    @Environment(\.tdayColors) private var colors
-
     var body: some View {
-        Button(action: onOpen) {
-            SettingsRowLabel(
-                title: "Day Ahead digest",
-                value: selected.label,
-                valueColor: colors.secondary,
-                showChevron: true,
-                icon: "LucideBellRing"
-            )
-        }
-        .buttonStyle(.plain)
+        SettingsValueRow(
+            title: "Day Ahead digest",
+            value: selected.label,
+            icon: "LucideBellRing",
+            // What this picks is a morning hour, and every value it can show is one.
+            pillSystemImage: "sunrise.fill",
+            action: onOpen
+        )
     }
 }
 
@@ -1788,8 +2134,10 @@ private struct SettingsServerVersionRow: View {
     var body: some View {
         HStack {
             HStack(spacing: 14) {
-                // Static fact inside a card of icon rows — empty slot, aligned label.
-                SettingsRowIcon(asset: nil)
+                // A fact rather than a button, but its neighbours in this card all carry a
+                // glyph and an empty slot next to them read as a missing icon, not a
+                // deliberate one. Cloud is this vocabulary's nearest thing to a server.
+                SettingsRowIcon(asset: "LucideCloud")
 
                 Text("Server")
                     .font(.tdayRounded(size: 17, weight: .heavy))

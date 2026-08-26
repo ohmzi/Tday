@@ -178,6 +178,9 @@
     <string name="settings_appearance">Aspetto</string>
     <string name="settings_reminders">Promemoria</string>
     <string name="settings_feature_toggle">Attiva/disattiva funzione</string>
+    <string name="settings_notifications">Notifiche</string>
+    <string name="settings_notifications_blocked">Le notifiche sono disattivate per T\'Day nelle impostazioni di Android.</string>
+    <string name="settings_notifications_declined">Le notifiche non sono state consentite, quindi T\'Day non può inviare promemoria.</string>
     <string name="settings_ai_task_summary">Riepilogo</string>
     <string name="settings_saving_admin">Salvataggio impostazione admin…</string>
     <string name="settings_ai_unavailable_title">Riepilogo non disponibile</string>
@@ -390,6 +393,11 @@
     <string name="settings_about">Informazioni</string>
     <string name="settings_workspace_local_title">Spazio di lavoro locale</string>
     <string name="settings_workspace_local_detail">Solo su questo dispositivo</string>
+    <string name="settings_workspace_leave">Esci dallo spazio locale</string>
+    <string name="settings_workspace_delete">Elimina i dati locali</string>
+    <string name="settings_workspace_delete_title">Eliminare i dati locali?</string>
+    <string name="settings_workspace_delete_body">Questa azione rimuove definitivamente tutte le attività, le liste e le voci completate salvate su questo dispositivo. Non esiste alcuna copia su un server: scarica prima i tuoi dati se vuoi conservarli.</string>
+    <string name="settings_workspace_delete_done">Dati locali eliminati.</string>
     <string name="settings_workspace_server_title">Sincronizzazione server</string>
     <string name="settings_sync_status_ready">Pronto per la sincronizzazione</string>
     <string name="settings_sync_status_syncing">Sincronizzazione in corso</string>

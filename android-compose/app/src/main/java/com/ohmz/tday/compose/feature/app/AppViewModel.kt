@@ -784,6 +784,33 @@ class AppViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Leaves a local workspace WITHOUT destroying it.
+     *
+     * This used to be wired to [logout], which routes through
+     * `authRepository.logout()` -> `cacheManager.clearAllLocalData()` — so the
+     * one row labelled "Leave local workspace", carrying a comment that said
+     * "Leaving keeps every task on the device", silently wiped every task on the
+     * device, unconfirmed. Deleting is the OTHER row, and it asks first.
+     */
+    fun leaveLocalWorkspace() {
+        viewModelScope.launch {
+            runCatching { reminderScheduler.cancelAll() }
+            runCatching { serverConfigRepository.leaveLocalMode() }
+            ensureResyncLoop(authenticated = false)
+            _uiState.update {
+                it.copy(
+                    authenticated = false,
+                    dataMode = AppDataMode.UNSET,
+                    requiresServerSetup = true,
+                    requiresLogin = false,
+                    user = null,
+                    error = null,
+                )
+            }
+        }
+    }
+
     fun logout() {
         viewModelScope.launch {
             runCatching { authRepository.logout() }

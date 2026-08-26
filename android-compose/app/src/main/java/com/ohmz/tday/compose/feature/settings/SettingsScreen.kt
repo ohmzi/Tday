@@ -27,12 +27,15 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -48,6 +51,7 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -73,6 +77,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.os.LocaleListCompat
 import androidx.core.view.HapticFeedbackConstantsCompat
 import androidx.core.view.ViewCompat
@@ -80,21 +85,47 @@ import com.ohmz.tday.compose.BuildConfig
 import com.ohmz.tday.compose.R
 import org.unifiedpush.android.connector.UnifiedPush
 import android.Manifest
+import android.app.Activity
+import android.app.NotificationManager
+import android.content.Context
+import android.content.ContextWrapper
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
+import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.app.ActivityCompat
+import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.ohmz.tday.compose.core.calendar.CalendarEntryPoint
 import com.ohmz.tday.compose.core.data.AppSecurityPreferenceStore
+import com.ohmz.tday.compose.core.data.auth.AuthRepository
 import com.ohmz.tday.compose.core.data.db.hasUnmigratedPlaintextCache
 import com.ohmz.tday.compose.core.data.server.VersionCheckResult
 import com.ohmz.tday.compose.feature.lock.canSatisfyAppLock
 import com.ohmz.tday.compose.feature.widget.WidgetEntryPoint
+import dagger.hilt.EntryPoint
+import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
+import dagger.hilt.components.SingletonComponent
 import com.ohmz.tday.compose.core.model.SecurityAnswerInput
 import com.ohmz.tday.compose.core.model.SecurityQuestion
 import com.ohmz.tday.compose.core.model.SecurityQuestionStatusResponse
 import com.ohmz.tday.compose.core.model.SessionUser
 import com.ohmz.tday.compose.core.notification.DayAheadOption
+import com.ohmz.tday.compose.core.notification.NotificationOsState
+import com.ohmz.tday.compose.core.notification.NotificationPreferenceStore
+import com.ohmz.tday.compose.core.notification.NotificationToggleAction
 import com.ohmz.tday.compose.core.notification.ReminderOption
+import com.ohmz.tday.compose.core.notification.TaskReminderReceiver
+import com.ohmz.tday.compose.core.notification.canPromptForNotificationPermission
+import com.ohmz.tday.compose.core.notification.isNotificationOsAuthorized
+import com.ohmz.tday.compose.core.notification.notificationToggleAction
+import com.ohmz.tday.compose.core.notification.notificationToggleChecked
 import com.ohmz.tday.compose.core.ui.TdayEmptyState
 import com.ohmz.tday.compose.core.ui.TdayHeroTitleBlock
 import com.ohmz.tday.compose.core.ui.TdayHeroToolbar
@@ -103,6 +134,7 @@ import com.ohmz.tday.compose.core.ui.rememberScrollHeroTitleCollapse
 import com.ohmz.tday.compose.core.ui.tdayBarButtonContainerColor
 import com.ohmz.tday.compose.feature.app.MobileSyncStatus
 import com.ohmz.tday.compose.feature.app.ProfileEditResult
+import com.ohmz.tday.compose.feature.guide.GuideHelpLink
 import com.ohmz.tday.compose.feature.settings.data.DataTransferCard
 import com.ohmz.tday.compose.feature.auth.SecurityQuestionPicker
 import com.ohmz.tday.compose.ui.component.TdayCenteredSelectorDialog
@@ -111,7 +143,10 @@ import com.ohmz.tday.compose.ui.theme.AppThemeMode
 import com.ohmz.tday.compose.ui.theme.TdayDimens
 import com.ohmz.tday.compose.ui.theme.TdayStatusSuccess
 import com.ohmz.tday.compose.ui.theme.TdayTitleIconDayAccent
+import com.ohmz.tday.shared.guide.GuideTopicIds
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -138,6 +173,12 @@ fun SettingsScreen(
     onToggleAiSummary: (Boolean) -> Unit,
     onBack: () -> Unit,
     onLogout: () -> Unit,
+    /**
+     * Leaving a local workspace is a MODE SWITCH, not a teardown — the rows stay
+     * on the device. Separate from [onLogout] precisely because that one clears
+     * them, which is what this row used to call.
+     */
+    onLeaveLocalWorkspace: () -> Unit,
     onOpenLatestRelease: () -> Unit,
     onOpenHelpGuide: () -> Unit,
     onUpdateName: suspend (String) -> ProfileEditResult,
@@ -197,8 +238,9 @@ fun SettingsScreen(
                 appearanceTitle,
                 *AppThemeMode.entries.map { stringResource(it.labelRes) }.toTypedArray(),
             ),
+            // No guide topic covers theming — it is one control that explains itself.
+            section = appearanceTitle,
         ) {
-            SettingsSectionTitle(title = appearanceTitle)
             ThemeModeSelector(
                 selectedThemeMode = selectedThemeMode,
                 onThemeModeSelected = onThemeModeSelected,
@@ -210,8 +252,9 @@ fun SettingsScreen(
                 remindersTitle,
                 stringResource(R.string.settings_default_reminder),
             ),
+            section = remindersTitle,
+            sectionHelpTopicId = GuideTopicIds.REMINDERS,
         ) {
-            SettingsSectionTitle(title = remindersTitle)
             ReminderSelector(
                 selectedReminder = selectedReminder,
                 onReminderSelected = onReminderSelected,
@@ -220,6 +263,8 @@ fun SettingsScreen(
         SettingsEntry(
             key = "day-ahead",
             visible = search.matches(remindersTitle, stringResource(R.string.day_ahead_setting)),
+            section = remindersTitle,
+            sectionHelpTopicId = GuideTopicIds.REMINDERS,
         ) {
             DayAheadSelector(
                 selectedDayAhead = selectedDayAhead,
@@ -229,6 +274,8 @@ fun SettingsScreen(
         SettingsEntry(
             key = "quiet-hours",
             visible = search.matches(remindersTitle, stringResource(R.string.settings_quiet_hours)),
+            section = remindersTitle,
+            sectionHelpTopicId = GuideTopicIds.REMINDERS,
         ) {
             QuietHoursRow()
         },
@@ -239,11 +286,17 @@ fun SettingsScreen(
                 remindersTitle,
                 stringResource(R.string.settings_unifiedpush_title),
             ),
+            section = remindersTitle,
+            sectionHelpTopicId = GuideTopicIds.REMINDERS,
         ) {
             UnifiedPushRow()
         },
-        SettingsEntry("language", search.matches(languageTitle)) {
-            SettingsSectionTitle(title = languageTitle)
+        SettingsEntry(
+            key = "language",
+            visible = search.matches(languageTitle),
+            // Picking a language is picking a language; there is nothing to explain.
+            section = languageTitle,
+        ) {
             LanguageSelector()
         },
     ).filter { it.visible }
@@ -255,8 +308,13 @@ fun SettingsScreen(
                 featureToggleTitle,
                 stringResource(R.string.settings_ai_task_summary),
             ),
+            section = featureToggleTitle,
+            // One help link for the card, not one per row. It lands on the AI summary
+            // topic — of this card's four rows only that one and the calendar mirror have
+            // guide topics at all, and the summary is the row people arrive here asking
+            // about.
+            sectionHelpTopicId = GuideTopicIds.AI_SUMMARY,
         ) {
-            SettingsSectionTitle(title = featureToggleTitle)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -290,6 +348,8 @@ fun SettingsScreen(
                 featureToggleTitle,
                 stringResource(R.string.settings_resting_floaters),
             ),
+            section = featureToggleTitle,
+            sectionHelpTopicId = GuideTopicIds.AI_SUMMARY,
         ) {
             RestingFloatersRow()
         },
@@ -299,8 +359,21 @@ fun SettingsScreen(
                 featureToggleTitle,
                 stringResource(R.string.settings_calendar_sync),
             ),
+            section = featureToggleTitle,
+            sectionHelpTopicId = GuideTopicIds.AI_SUMMARY,
         ) {
             DeviceCalendarSyncRow()
+        },
+        SettingsEntry(
+            key = "notifications",
+            visible = search.matches(
+                featureToggleTitle,
+                stringResource(R.string.settings_notifications),
+            ),
+            section = featureToggleTitle,
+            sectionHelpTopicId = GuideTopicIds.AI_SUMMARY,
+        ) {
+            NotificationsRow()
         },
     ).filter { it.visible }
 
@@ -311,13 +384,16 @@ fun SettingsScreen(
                 privacyTitle,
                 stringResource(R.string.settings_screenshot_protection),
             ),
+            // Two device-local switches that say what they do on the row; the guide has
+            // no topic for either.
+            section = privacyTitle,
         ) {
-            SettingsSectionTitle(title = privacyTitle)
             ScreenshotProtectionRow()
         },
         SettingsEntry(
             key = "app-lock",
             visible = search.matches(privacyTitle, stringResource(R.string.settings_app_lock)),
+            section = privacyTitle,
         ) {
             AppLockRow()
             UnencryptedLegacyCacheWarning()
@@ -337,14 +413,22 @@ fun SettingsScreen(
                 stringResource(R.string.settings_workspace_server_title),
                 stringResource(R.string.settings_sync_now),
             ),
+            section = aboutTitle,
+            // What this card explains is where the data lives and how it catches up —
+            // which is the offline-sync topic, in both modes.
+            sectionHelpTopicId = GuideTopicIds.OFFLINE_SYNC,
         ) {
-            SettingsSectionTitle(title = aboutTitle)
             SettingsWorkspaceContent(
                 syncStatus = syncStatus,
                 onSyncNow = onSyncNow,
             )
         },
-        SettingsEntry("release", search.matches(aboutTitle, releaseTitle)) {
+        SettingsEntry(
+            key = "release",
+            visible = search.matches(aboutTitle, releaseTitle),
+            section = aboutTitle,
+            sectionHelpTopicId = GuideTopicIds.OFFLINE_SYNC,
+        ) {
             SettingsListRow(
                 title = releaseTitle,
                 value = stringResource(R.string.label_version_name, BuildConfig.VERSION_NAME),
@@ -367,14 +451,16 @@ fun SettingsScreen(
             key = "server",
             visible = !isLocalMode && backendVersion != null &&
                 search.matches(aboutTitle, stringResource(R.string.label_server)),
+            section = aboutTitle,
+            sectionHelpTopicId = GuideTopicIds.OFFLINE_SYNC,
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                // Not tappable, so no glyph — but it shares the card with rows that
-                // have one, so it keeps the slot to stay aligned with them.
-                SettingsRowIcon(null)
+                // The cloud is what this app already draws for "the other end of the
+                // sync" — the UnifiedPush row uses it for the same thing.
+                SettingsRowIcon(R.drawable.ic_lucide_cloud)
                 Text(
                     text = stringResource(R.string.label_server),
                     modifier = Modifier.weight(1f),
@@ -428,10 +514,13 @@ fun SettingsScreen(
         },
     ).filter { it.visible }
 
+    // The way out of whichever mode this is. Local Mode has no session to end, so it gets
+    // the two exits the web build already offers instead: leaving keeps the tasks in place,
+    // deleting is the only thing on this screen with nothing behind it to recover from.
+    var showDeleteLocalConfirm by rememberSaveable { mutableStateOf(false) }
     val signOutRows = listOf(
         SettingsEntry(
             key = "sign-out",
-            // Local Mode has no session to end, so this card never draws there.
             visible = !isLocalMode && search.matches(stringResource(R.string.action_sign_out)),
         ) {
             SettingsListRow(
@@ -442,6 +531,39 @@ fun SettingsScreen(
                 iconTint = colorScheme.error,
                 titleColor = colorScheme.error,
                 trailingTint = colorScheme.error.copy(alpha = 0.72f),
+                showChevron = false,
+            )
+        },
+        SettingsEntry(
+            key = "leave-local",
+            visible = isLocalMode &&
+                search.matches(stringResource(R.string.settings_workspace_leave)),
+        ) {
+            SettingsListRow(
+                title = stringResource(R.string.settings_workspace_leave),
+                value = null,
+                onClick = onLeaveLocalWorkspace,
+                icon = R.drawable.ic_lucide_log_out,
+                // Leaving really does keep every task on the device now — it drops
+                // this session's hold and returns to mode selection, nothing more.
+                // It was wired to `onLogout`, which clears all local data, so this
+                // comment described the intent while the code did the opposite.
+                iconTint = colorScheme.error,
+                showChevron = false,
+            )
+        },
+        SettingsEntry(
+            key = "delete-local",
+            visible = isLocalMode &&
+                search.matches(stringResource(R.string.settings_workspace_delete)),
+        ) {
+            SettingsListRow(
+                title = stringResource(R.string.settings_workspace_delete),
+                value = null,
+                onClick = { showDeleteLocalConfirm = true },
+                icon = R.drawable.ic_lucide_trash_2,
+                iconTint = colorScheme.error,
+                titleColor = colorScheme.error,
                 showChevron = false,
             )
         },
@@ -567,6 +689,20 @@ fun SettingsScreen(
                 )
             }
         }
+
+        if (showDeleteLocalConfirm) {
+            DeleteLocalDataDialog(
+                onDismiss = { showDeleteLocalConfirm = false },
+                onDeleted = {
+                    showDeleteLocalConfirm = false
+                    // Nothing is left for this screen to show, and Local Mode is over —
+                    // the same exit "Leave" takes, on top of an already-emptied
+                    // workspace. The delete itself has happened by now; this is only
+                    // the mode switch, so it must not be the clearing logout either.
+                    onLeaveLocalWorkspace()
+                },
+            )
+        }
         }
     }
 }
@@ -586,10 +722,20 @@ private class SettingsSearchScope(query: String) {
         needle.isBlank() || labels.any { it.lowercase(Locale.getDefault()).contains(needle) }
 }
 
-/** One row of a settings card, and whether the search left it standing. */
+/**
+ * One row of a settings card, the heading it sits under, and whether the search
+ * left it standing.
+ *
+ * [section] belongs to the row rather than being drawn by whichever row happens
+ * to come first: written inline, a search that filters that one row out takes the
+ * heading — and the card's only "?" — with it, leaving the surviving rows in an
+ * anonymous frame. Held here, the heading follows whichever row survives.
+ */
 private class SettingsEntry(
     val key: String,
     val visible: Boolean,
+    val section: String? = null,
+    val sectionHelpTopicId: String? = null,
     val content: @Composable ColumnScope.() -> Unit,
 )
 
@@ -605,6 +751,11 @@ private class SettingsEntry(
 private fun SettingsFilteredCard(rows: List<SettingsEntry>) {
     if (rows.isEmpty()) return
 
+    // The first surviving row of each run of same-section rows draws the heading.
+    val drawsHeading = rows.mapIndexed { index, row ->
+        row.section != null && (index == 0 || rows[index - 1].section != row.section)
+    }
+
     SettingsSectionCard {
         rows.forEachIndexed { index, row ->
             // Keyed, so a row that survives a change of query keeps the state
@@ -613,6 +764,12 @@ private fun SettingsFilteredCard(rows: List<SettingsEntry>) {
             key(row.key) {
                 if (index > 0) {
                     SettingsDivider()
+                }
+                if (drawsHeading[index]) {
+                    SettingsSectionTitle(
+                        title = row.section.orEmpty(),
+                        helpTopicId = row.sectionHelpTopicId,
+                    )
                 }
                 row.content(this)
             }
@@ -778,9 +935,9 @@ private fun AccountNameSection(
                 )
             }
             if (!isEditing) {
-                AccountInlineButton(
+                SettingsPillButton(
                     text = stringResource(R.string.action_edit),
-                    icon = ImageVector.vectorResource(R.drawable.ic_lucide_square_pen),
+                    icon = R.drawable.ic_lucide_square_pen,
                     onClick = {
                         draft = user?.name.orEmpty()
                         error = null
@@ -902,9 +1059,9 @@ private fun AccountPasswordSection(
                 )
             }
             if (!isEditing) {
-                AccountInlineButton(
+                SettingsPillButton(
                     text = stringResource(R.string.settings_account_change_password),
-                    icon = ImageVector.vectorResource(R.drawable.ic_lucide_lock),
+                    icon = R.drawable.ic_lucide_lock,
                     onClick = onBeginEdit,
                 )
             }
@@ -1079,9 +1236,9 @@ private fun AccountSecurityQuestionsSection(
                 )
             }
             if (!isEditing) {
-                AccountInlineButton(
+                SettingsPillButton(
                     text = stringResource(R.string.settings_account_change_security_questions),
-                    icon = ImageVector.vectorResource(R.drawable.ic_lucide_shield),
+                    icon = R.drawable.ic_lucide_shield,
                     onClick = onBeginEdit,
                 )
             }
@@ -1216,33 +1373,56 @@ private fun AccountPasswordField(
     )
 }
 
+/**
+ * The one button shape this screen uses for "change this without leaving the row" — the
+ * profile card's Edit and Change, and every row whose right-hand side is a value the user
+ * picks. Ported measurement-for-measurement from iOS's `SettingsInlineEditButton`, which is
+ * what the three platforms are being unified onto: a continuous capsule of the secondary
+ * accent at 12%, heavy 12sp glyph and 14sp label 5dp apart, 34 tall on 14 of side padding.
+ *
+ * A chevron is left to rows that navigate somewhere. This shape says the value changes here.
+ */
 @Composable
-private fun AccountInlineButton(
+private fun SettingsPillButton(
     text: String,
-    icon: ImageVector,
+    @DrawableRes icon: Int,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val view = LocalView.current
-    TextButton(
-        onClick = {
-            ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
-            onClick()
-        },
-        colors = androidx.compose.material3.ButtonDefaults.textButtonColors(
-            contentColor = colorScheme.secondary,
-        ),
+    Row(
+        modifier = modifier
+            // 34dp is the PILL, matching iOS. The touch target is not: a bare
+            // `clickable` gets none of the `minimumInteractiveComponentSize()` an
+            // M3 Button would apply for it, so the tappable area was the 34dp box
+            // — under Android's 48dp minimum. The extra height is claimed outside
+            // the painted shape so the pill still looks 34 tall.
+            .sizeIn(minHeight = 48.dp)
+            .wrapContentHeight()
+            .clip(CircleShape)
+            .background(colorScheme.secondary.copy(alpha = 0.12f))
+            .clickable {
+                ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+                onClick()
+            }
+            .height(34.dp)
+            .padding(horizontal = 14.dp),
+        horizontalArrangement = Arrangement.spacedBy(5.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
-            imageVector = icon,
-            contentDescription = null,
-            modifier = Modifier.size(16.dp),
+            imageVector = ImageVector.vectorResource(icon),
+            contentDescription = null, // decorative: the pill's label carries the meaning
+            tint = colorScheme.secondary,
+            modifier = Modifier.size(12.dp),
         )
-        Spacer(modifier = Modifier.size(4.dp))
         Text(
             text = text,
+            fontSize = 14.sp,
             fontWeight = FontWeight.ExtraBold,
-            style = MaterialTheme.typography.bodyMedium,
+            color = colorScheme.secondary,
+            maxLines = 1,
         )
     }
 }
@@ -1464,13 +1644,29 @@ private fun SettingsSectionCard(
 }
 
 @Composable
-private fun SettingsSectionTitle(title: String) {
-    Text(
-        text = title,
-        style = MaterialTheme.typography.titleLarge,
-        fontWeight = FontWeight.ExtraBold,
-        color = MaterialTheme.colorScheme.onSurface,
-    )
+private fun SettingsSectionTitle(title: String, helpTopicId: String? = null) {
+    if (helpTopicId == null) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.ExtraBold,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        return
+    }
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.ExtraBold,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        GuideHelpLink(helpTopicId)
+    }
 }
 
 @Composable
@@ -1783,6 +1979,209 @@ private fun DeviceCalendarSyncRow() {
     }
 }
 
+/**
+ * T'Day's own notification gate, sitting on top of Android's.
+ *
+ * Two bits of state: the OS authorization and the stored preference. The switch shows the AND
+ * of them, so a user whose OS permission was revoked in Settings sees OFF the next time they
+ * come back — both are re-read on every resume, because nothing tells an app that its
+ * notifications were turned off elsewhere. Flipping it OFF stores the preference and every
+ * posting site drops its notification, which is what makes this a gate rather than a readout.
+ *
+ * Turning it ON with no permission asks the OS; where Android will no longer show that dialog
+ * there is nothing to ask, so the tap opens the app's notification settings instead of failing
+ * silently. Either way the tap is recorded as the opt-in, so the switch comes back ON by itself
+ * once the grant lands rather than needing a second tap the user has no reason to expect.
+ */
+@Composable
+private fun NotificationsRow() {
+    val colorScheme = MaterialTheme.colorScheme
+    val context = LocalContext.current
+    val store = remember { NotificationPreferenceStore(context.applicationContext) }
+    var preferenceEnabled by remember { mutableStateOf(store.isEnabled()) }
+    var osState by remember { mutableStateOf(readNotificationOsState(context, store)) }
+    var hint by remember { mutableStateOf(NotificationHint.None) }
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                osState = readNotificationOsState(context, store)
+                // Re-read alongside the OS bit rather than seeded once: this row is not
+                // guaranteed to stay the only writer of the preference, and it survives a
+                // navigation away and back within the same back-stack entry.
+                preferenceEnabled = store.isEnabled()
+                if (osState.authorized) hint = NotificationHint.None
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { granted ->
+        store.markPermissionRequested()
+        if (granted) {
+            // The tap was the opt-in; the preference follows the grant rather than needing a
+            // second flip once the dialog is gone.
+            preferenceEnabled = true
+            store.setEnabled(true)
+            hint = NotificationHint.None
+        } else {
+            // Denied with the rationale still not on offer is the shape of a dialog Android
+            // did not show, or will not show again; a denial that leaves the rationale
+            // standing is just the first "no" and can be asked once more.
+            val activity = context.findActivity()
+            val rationaleStillOffered = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                activity != null &&
+                ActivityCompat.shouldShowRequestPermissionRationale(
+                    activity,
+                    Manifest.permission.POST_NOTIFICATIONS,
+                )
+            if (!rationaleStillOffered) store.markPermissionPromptExhausted()
+            hint = NotificationHint.Declined
+        }
+        osState = readNotificationOsState(context, store)
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            SettingsRowIcon(R.drawable.ic_lucide_bell)
+            Text(
+                text = stringResource(R.string.settings_notifications),
+                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.ExtraBold,
+                color = colorScheme.onSurface,
+            )
+            Switch(
+                checked = notificationToggleChecked(osState, preferenceEnabled),
+                onCheckedChange = { requested ->
+                    when (notificationToggleAction(requested, osState)) {
+                        NotificationToggleAction.EnablePreference -> {
+                            preferenceEnabled = true
+                            store.setEnabled(true)
+                            hint = NotificationHint.None
+                        }
+
+                        NotificationToggleAction.DisablePreference -> {
+                            preferenceEnabled = false
+                            store.setEnabled(false)
+                            hint = NotificationHint.None
+                        }
+
+                        NotificationToggleAction.RequestOsPermission -> {
+                            store.markPermissionRequested()
+                            permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        }
+
+                        NotificationToggleAction.OpenOsSettings -> {
+                            // The tap was the opt-in even though the grant has to happen in
+                            // another app, so store it now: the switch stays visually OFF
+                            // while Android says no, and flips itself ON on the resume after
+                            // they allow it — without this they would come back to the same
+                            // OFF switch and no reason why.
+                            preferenceEnabled = true
+                            store.setEnabled(true)
+                            // The hint stays up after they come back: if nothing changed over
+                            // there, the switch is still off and the reason is still true.
+                            hint = NotificationHint.Blocked
+                            openAppNotificationSettings(context)
+                        }
+                    }
+                },
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = Color.White,
+                    checkedTrackColor = colorScheme.secondary,
+                    checkedBorderColor = Color.Transparent,
+                ),
+            )
+        }
+        if (hint != NotificationHint.None && !osState.authorized) {
+            Text(
+                text = stringResource(
+                    when (hint) {
+                        // Declining a dialog is not the same as having been switched off in
+                        // Android settings, and the user was never there — saying so would
+                        // point them at a screen they cannot reach from this row.
+                        NotificationHint.Declined -> R.string.settings_notifications_declined
+                        else -> R.string.settings_notifications_blocked
+                    },
+                ),
+                style = MaterialTheme.typography.labelSmall,
+                color = colorScheme.error,
+            )
+        }
+    }
+}
+
+/** Why the notification switch is refusing to come on, in the words the row shows for it. */
+private enum class NotificationHint { None, Declined, Blocked }
+
+private fun readNotificationOsState(
+    context: Context,
+    store: NotificationPreferenceStore,
+): NotificationOsState {
+    val sdkInt = Build.VERSION.SDK_INT
+    val permissionGranted = sdkInt < Build.VERSION_CODES.TIRAMISU ||
+        ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
+        PackageManager.PERMISSION_GRANTED
+    val activity = context.findActivity()
+    return NotificationOsState(
+        authorized = isNotificationOsAuthorized(
+            sdkInt = sdkInt,
+            notificationsEnabled = NotificationManagerCompat.from(context).areNotificationsEnabled(),
+            permissionGranted = permissionGranted,
+            reminderChannelEnabled = isReminderChannelEnabled(context),
+        ),
+        canPrompt = canPromptForNotificationPermission(
+            sdkInt = sdkInt,
+            permissionGranted = permissionGranted,
+            promptExhausted = store.hasExhaustedPermissionPrompt(),
+            // Below 33 the helper discards this outright, and POST_NOTIFICATIONS is not a
+            // runtime permission there — asking anyway would be a binder round-trip per
+            // resume for a value nothing reads. No Activity means no dialog either, so the
+            // tap has to fall through to Settings.
+            shouldShowRationale = sdkInt >= Build.VERSION_CODES.TIRAMISU &&
+                activity != null &&
+                ActivityCompat.shouldShowRequestPermissionRationale(
+                    activity,
+                    Manifest.permission.POST_NOTIFICATIONS,
+                ),
+        ),
+    )
+}
+
+/**
+ * The channel every gated post uses. TdayApplication creates it at startup, so a missing one
+ * means the app has not finished booting rather than a user who switched it off — that reads
+ * as enabled, because showing the switch OFF for it would be a lie about what the user did.
+ */
+private fun isReminderChannelEnabled(context: Context): Boolean {
+    val channel = NotificationManagerCompat.from(context)
+        .getNotificationChannel(TaskReminderReceiver.CHANNEL_ID)
+        ?: return true
+    return channel.importance != NotificationManager.IMPORTANCE_NONE
+}
+
+private fun openAppNotificationSettings(context: Context) {
+    val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+        .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    // A device with that screen missing would otherwise crash the app on a settings tap.
+    runCatching { context.startActivity(intent) }
+}
+
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
+}
+
 @Composable
 private fun SettingsToggleRow(
     @DrawableRes icon: Int,
@@ -1892,11 +2291,7 @@ private fun QuietHoursTimeRow(label: String, value: String, onClick: () -> Unit)
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .clickable(onClick = onClick)
             // Sub-row of Quiet hours: no glyph of its own, indented under its label instead.
-            // Inside the clickable so the row keeps its full-width tap target, matching
-            // SettingsListRow.
             .padding(
                 start = TdayDimens.IconSm + TdayDimens.SpacingXl,
                 top = 4.dp,
@@ -1911,11 +2306,12 @@ private fun QuietHoursTimeRow(label: String, value: String, onClick: () -> Unit)
             fontWeight = FontWeight.Bold,
             color = colorScheme.onSurfaceVariant,
         )
-        Text(
+        // The whole row used to be the tap target; the pill is the tap target now, which is
+        // what the rest of this screen's changeable values look like.
+        SettingsPillButton(
             text = value,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.ExtraBold,
-            color = colorScheme.secondary,
+            icon = R.drawable.ic_lucide_clock,
+            onClick = onClick,
         )
     }
 }
@@ -1933,26 +2329,7 @@ private fun UnifiedPushRow() {
     var registered by remember { mutableStateOf(UnifiedPush.getAckDistributor(context) != null) }
 
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .clickable {
-                if (registered) {
-                    UnifiedPush.unregisterApp(context)
-                    registered = false
-                } else {
-                    val distributors = UnifiedPush.getDistributors(context)
-                    if (distributors.isEmpty()) {
-                        snackbarManager?.showInfo(
-                            context.getString(R.string.settings_unifiedpush_none),
-                        )
-                    } else {
-                        UnifiedPush.registerAppWithDialog(context)
-                        registered = true
-                    }
-                }
-            }
-            .padding(vertical = 2.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         SettingsRowIcon(R.drawable.ic_lucide_cloud)
@@ -1969,14 +2346,28 @@ private fun UnifiedPushRow() {
                 color = colorScheme.onSurfaceVariant,
             )
         }
-        Text(
+        SettingsPillButton(
             text = stringResource(
                 if (registered) R.string.settings_unifiedpush_enabled
                 else R.string.settings_unifiedpush_disabled,
             ),
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.ExtraBold,
-            color = colorScheme.secondary,
+            icon = R.drawable.ic_lucide_cloud,
+            onClick = {
+                if (registered) {
+                    UnifiedPush.unregisterApp(context)
+                    registered = false
+                } else {
+                    val distributors = UnifiedPush.getDistributors(context)
+                    if (distributors.isEmpty()) {
+                        snackbarManager?.showInfo(
+                            context.getString(R.string.settings_unifiedpush_none),
+                        )
+                    } else {
+                        UnifiedPush.registerAppWithDialog(context)
+                        registered = true
+                    }
+                }
+            },
         )
     }
 }
@@ -1993,14 +2384,7 @@ private fun ReminderSelector(
 
     Box {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(16.dp))
-                .clickable {
-                    ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
-                    expanded = true
-                }
-                .padding(vertical = 2.dp),
+            modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             SettingsRowIcon(R.drawable.ic_lucide_bell)
@@ -2011,23 +2395,11 @@ private fun ReminderSelector(
                 fontWeight = FontWeight.ExtraBold,
                 color = colorScheme.onSurface,
             )
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                Text(
-                    text = stringResource(selectedReminder.labelRes),
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = colorScheme.secondary,
-                )
-                Icon(
-                    imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_chevron_right),
-                    contentDescription = null,
-                    tint = colorScheme.onSurface.copy(alpha = 0.42f),
-                    modifier = Modifier.size(18.dp),
-                )
-            }
+            SettingsPillButton(
+                text = stringResource(selectedReminder.labelRes),
+                icon = R.drawable.ic_lucide_clock,
+                onClick = { expanded = true },
+            )
         }
 
         if (expanded) {
@@ -2063,14 +2435,7 @@ private fun DayAheadSelector(
 
     Box {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(16.dp))
-                .clickable {
-                    ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
-                    expanded = true
-                }
-                .padding(vertical = 2.dp),
+            modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             SettingsRowIcon(R.drawable.ic_lucide_bell_ring)
@@ -2081,23 +2446,11 @@ private fun DayAheadSelector(
                 fontWeight = FontWeight.ExtraBold,
                 color = colorScheme.onSurface,
             )
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                Text(
-                    text = stringResource(selectedDayAhead.labelRes),
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = colorScheme.secondary,
-                )
-                Icon(
-                    imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_chevron_right),
-                    contentDescription = null,
-                    tint = colorScheme.onSurface.copy(alpha = 0.42f),
-                    modifier = Modifier.size(18.dp),
-                )
-            }
+            SettingsPillButton(
+                text = stringResource(selectedDayAhead.labelRes),
+                icon = R.drawable.ic_lucide_clock_3,
+                onClick = { expanded = true },
+            )
         }
 
         if (expanded) {
@@ -2153,14 +2506,7 @@ private fun LanguageSelector() {
 
     Box {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(16.dp))
-                .clickable {
-                    ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
-                    expanded = true
-                }
-                .padding(vertical = 2.dp),
+            modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             SettingsRowIcon(R.drawable.ic_lucide_languages)
@@ -2171,23 +2517,11 @@ private fun LanguageSelector() {
                 fontWeight = FontWeight.ExtraBold,
                 color = colorScheme.onSurface,
             )
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                Text(
-                    text = labelFor(current),
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = colorScheme.secondary,
-                )
-                Icon(
-                    imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_chevron_right),
-                    contentDescription = null,
-                    tint = colorScheme.onSurface.copy(alpha = 0.42f),
-                    modifier = Modifier.size(18.dp),
-                )
-            }
+            SettingsPillButton(
+                text = labelFor(current),
+                icon = R.drawable.ic_lucide_globe,
+                onClick = { expanded = true },
+            )
         }
 
         if (expanded) {
@@ -2210,6 +2544,91 @@ private fun LanguageSelector() {
             )
         }
     }
+}
+
+/**
+ * Reaches the local workspace's storage from a Settings row without threading it through the
+ * app ViewModel, the way `CalendarEntryPoint` does for the calendar mirror. It lives beside
+ * its one caller rather than in `core.data`, which this change is not allowed to touch.
+ */
+@EntryPoint
+@InstallIn(SingletonComponent::class)
+interface SettingsLocalWorkspaceEntryPoint {
+    fun authRepository(): AuthRepository
+}
+
+/**
+ * Confirms emptying a local workspace. The only destructive action on this screen with nothing
+ * behind it — Local Mode has no server copy — so it spells that out and offers the export as
+ * the way to keep anything, exactly as the web build does.
+ */
+@Composable
+private fun DeleteLocalDataDialog(
+    onDismiss: () -> Unit,
+    onDeleted: () -> Unit,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val snackbarManager = LocalSnackbarManager.current
+    val deletedMessage = stringResource(R.string.settings_workspace_delete_done)
+    // Reused rather than added: this is the generic failure the rest of the app
+    // already shows, and it carries all ten locales today.
+    val deleteFailedMessage = stringResource(R.string.error_generic)
+    var busy by remember { mutableStateOf(false) }
+
+    AlertDialog(
+        onDismissRequest = { if (!busy) onDismiss() },
+        title = {
+            Text(
+                text = stringResource(R.string.settings_workspace_delete_title),
+                fontWeight = FontWeight.ExtraBold,
+            )
+        },
+        text = { Text(stringResource(R.string.settings_workspace_delete_body)) },
+        confirmButton = {
+            TextButton(
+                enabled = !busy,
+                onClick = {
+                    busy = true
+                    scope.launch {
+                        val authRepository = EntryPointAccessors.fromApplication(
+                            context.applicationContext,
+                            SettingsLocalWorkspaceEntryPoint::class.java,
+                        ).authRepository()
+                        // Opens and clears the SQLCipher database, so it does not belong on
+                        // the frame the dialog is dismissing on.
+                        val cleared = withContext(Dispatchers.IO) {
+                            runCatching {
+                                authRepository.clearAllLocalUserDataForUnauthenticatedState()
+                            }
+                        }
+                        // Only on success. Swallowing the failure and reporting
+                        // "deleted" anyway would send the user away believing their
+                        // data was gone while it is all still on the device — the
+                        // worst possible direction for this particular lie.
+                        if (cleared.isSuccess) {
+                            snackbarManager?.showSuccess(deletedMessage)
+                            onDeleted()
+                        } else {
+                            snackbarManager?.showError(deleteFailedMessage)
+                        }
+                    }
+                },
+            ) {
+                Text(
+                    text = stringResource(R.string.action_delete),
+                    fontWeight = FontWeight.ExtraBold,
+                    color = colorScheme.error,
+                )
+            }
+        },
+        dismissButton = {
+            TextButton(enabled = !busy, onClick = onDismiss) {
+                Text(stringResource(R.string.action_cancel))
+            }
+        },
+    )
 }
 
 private fun dayAheadSwatchColor(option: DayAheadOption): Color {
