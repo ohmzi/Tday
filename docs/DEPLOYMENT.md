@@ -125,7 +125,7 @@ directly.
 | Workflow | Trigger | Purpose |
 |----------|---------|---------|
 | `pr-gate.yml` | PR to `master` | Validates source branch (`develop` only), runs web lint + test, backend test |
-| `release.yml` | Push to `master` | Runs lint + tests, resolves the release version (auto-bumping the patch when it is already tagged), builds the Docker image and signed APK, tags, and publishes a GitHub release |
+| `release.yml` | Push to `master` | Runs lint + tests, resolves the release version (auto-bumping the patch when it is already tagged), builds the signed APK and the Docker image, pushes the release commit, tags, publishes the GitHub release, and only then pushes the image |
 
 ### Test-Before-Build Policy
 
@@ -139,13 +139,38 @@ PR to master:
   check-source-branch → lint-and-test → hook-check → (merge allowed)
 
 Push to master:
-  lint-and-test → build-and-release (version bump + Docker + APK + tag + GitHub release)
+  lint-and-test → build-and-release
+                    build:   version bump → APK (signed + cert verified) → Docker image
+                    publish: release commit → tag → GitHub release + APK → Docker push
 ```
 
 This ensures:
 - Broken code never produces a Docker image.
 - Security guardrails, coding standards, and architecture tests gate every release.
 - Test failures block the pipeline before any artifact is published.
+
+### Publication Order
+
+Inside `build-and-release`, everything that can fail is built before anything leaves the runner, and
+the Docker image is pushed **last** — after the tag and the GitHub release with its APK exist.
+
+That order is chosen for its failure modes, not for tidiness. The backend runs `exact` compatibility
+with `updateRequired: true`, so a deployed server rejects every client whose `X-Tday-App-Version`
+differs from its own, and the Android in-app updater can only fetch an APK from the latest GitHub
+release. So:
+
+- **Image published without a release** (the old order) is unrecoverable from the user's side: pull
+  the image and every client is locked out with no version to update to.
+- **Release published without an image** is benign: the running server stays on the previous image
+  and keeps serving, and re-running the workflow publishes the image.
+
+The release commit is pushed to `master` before the tag, the release, or the image, because it is the
+only step that an outside event (a concurrent push to `master`) can reject. Abandoning the run there
+leaves no tag, no release, and no image behind.
+
+The image is *built* before the publish steps and only *pushed* afterwards, so a broken
+`Dockerfile.backend` fails while nothing has been published yet. The push step replays the same build
+from the layer cache rather than rebuilding it.
 
 ### Release Process
 
@@ -159,13 +184,18 @@ This ensures:
      tagged, the job runs `scripts/version.mjs bump patch` — so **every merge into `master` produces a
      release, even when nobody bumped the version by hand**. A version a PR deliberately raised
      (minor/major) is used as-is.
-   - **Only if tests pass**: builds and pushes Docker image to `ghcr.io/ohmzi/tday:latest` and `:v<version>`.
-   - Builds and signs the Android release APK. A missing APK fails the run — it is a required release asset.
    - Generates structured release metadata from the commit range since the previous GitHub release.
+   - Builds and signs the Android release APK, then reports the signing certificate's SHA-256 digest.
+     A missing APK fails the run — it is a required release asset.
+   - **Only if tests pass**: builds the Docker image for `ghcr.io/ohmzi/tday:latest` and `:v<version>`
+     without pushing it yet.
    - Commits the version bump plus `tday-web/public/release/current-release.json` and
      `latest-changes.json` back to `master` as `chore(release): v<version> [skip release]`. This push
-     comes from the GitHub Actions app, which is the only bypass actor on the `master` ruleset.
+     uses the write deploy key in `RELEASE_DEPLOY_KEY`, which is the bypass actor on the `master`
+     ruleset (GitHub does not allow granting that bypass to `github-actions[bot]` on a
+     personally-owned repository).
    - Creates the Git tag and a GitHub release with the APK attached.
+   - Pushes the Docker image, last — see [Publication Order](#publication-order).
    - Fast-forwards `develop` to `master` so the bump does not conflict on the next PR. This step is
      non-fatal; if it is skipped, merge `master` into `develop` by hand.
 
@@ -276,7 +306,10 @@ the image's own version. A stale pin here is invisible until a client refuses to
 Distributable Android release builds must use the same release keystore every time, or Android will reject updates with `INSTALL_FAILED_UPDATE_INCOMPATIBLE`.
 
 - CI supplies the release signing credentials through `RELEASE_KEYSTORE_PATH`, `RELEASE_KEYSTORE_PASSWORD`, `RELEASE_KEY_ALIAS`, and `RELEASE_KEY_PASSWORD`.
-- The release workflow also accepts the repository's legacy `TWA_KEYSTORE_BASE64`, `TWA_STORE_PASSWORD`, and `TWA_KEY_PASSWORD` secrets and auto-detects the alias when `RELEASE_KEY_ALIAS` is not configured.
+- The preferred secrets are `RELEASE_KEYSTORE_BASE64`, `RELEASE_KEYSTORE_PASSWORD`, `RELEASE_KEY_PASSWORD`, and `RELEASE_KEY_ALIAS`. The release workflow still accepts the legacy `TWA_KEYSTORE_BASE64`, `TWA_STORE_PASSWORD`, and `TWA_KEY_PASSWORD` secrets, and derives the alias from the keystore when `RELEASE_KEY_ALIAS` is unset — but it now logs which secret supplied each value and warns on every run that takes either fallback, so the fallback can never be silent.
+- The three keystore secrets must all come from the same generation. Setting some of the `RELEASE_*` secrets while leaving the rest on `TWA_*` fails the run immediately, naming the missing secrets, instead of surfacing later as an opaque "keystore password was incorrect".
+- Deriving the alias depends on parsing `keytool -list` output, so it fails — loudly, listing the aliases it found — if the keystore ever holds more than one. CI never guesses which alias to sign with, because a wrong guess ships an APK that cannot update existing installs. Set `RELEASE_KEY_ALIAS` to remove that dependency.
+- Every release logs the signing certificate's SHA-256 digest from `apksigner verify --print-certs`, so a change of signing identity is visible in the run log rather than on the first user who cannot install the update. Set the `ANDROID_SIGNING_CERT_SHA256` repository *variable* (not a secret — certificate digests are public, and the same value is served in `/.well-known/assetlinks.json`) to turn that report into an enforced pin that fails the release on any mismatch.
 - Local `assembleRelease` or `bundleRelease` builds now fail fast if those variables are missing, instead of silently producing a debug-signed release APK that cannot update an existing release install.
 - For a local-only build that is not meant to update an existing release-signed install, you can opt in explicitly with `-PallowDebugSignedRelease=true`.
 - The Android app can download a release APK in-app and hand it directly to the system installer. The first sideloaded update still requires enabling "Install unknown apps" for T'Day in Android settings.

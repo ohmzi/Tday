@@ -65,6 +65,19 @@ jobs:
       - name: Verify guide content is not stale
         run: ./gradlew :shared:verifyGuideContent --no-daemon
 
+  # Step order in this job is load-bearing, not cosmetic. Everything that can
+  # fail is built first; nothing leaves the runner until the release commit is
+  # on master; and the Docker image is pushed last, after the GitHub release
+  # and its APK exist.
+  #
+  # Why that order: the backend runs `exact` compatibility with
+  # `updateRequired: true`, so a deployed server rejects every client whose
+  # X-Tday-App-Version differs from its own. An image published without a
+  # matching release is therefore unrecoverable from the user's side — the
+  # in-app updater polls the latest release for an `.apk`, and there is nothing
+  # to download. The mirror-image failure (release exists, image does not) is
+  # benign: the running server keeps serving the previous version, and the fix
+  # is a re-run rather than a device-side action.
   build-and-release:
     if: ${{ !contains(github.event.head_commit.message, '[skip release]') }}
     runs-on: ubuntu-latest
@@ -178,78 +191,146 @@ jobs:
           git commit -m "chore(release): ${{ steps.version.outputs.tag }} [skip release]"
 
       # ────────────────────────────────────────────
-      #  Docker Image
-      # ────────────────────────────────────────────
-      - name: Log in to GHCR
-        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
-
-      - name: Build and push Docker image
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
-        with:
-          context: .
-          file: ./Dockerfile.backend
-          push: true
-          tags: |
-            ${{ env.IMAGE_NAME }}:latest
-            ${{ env.IMAGE_NAME }}:${{ steps.version.outputs.tag }}
-          labels: |
-            org.opencontainers.image.source=https://github.com/ohmzi/Tday
-            org.opencontainers.image.description=Tday - Personal task planner
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      # ────────────────────────────────────────────
       #  Android APK
       # ────────────────────────────────────────────
       - name: Accept Android SDK licenses
         run: yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses 2>/dev/null || true
 
-      - name: Decode release keystore
+      # T'Day updates itself in place through the system installer, so the
+      # signing identity has to stay stable forever: an APK signed with a
+      # different key makes PackageInstaller return STATUS_FAILURE_CONFLICT and
+      # the only remedy is asking every user to uninstall and reinstall (it has
+      # happened once — see docs/DEPLOYMENT.md § Android Signing).
+      #
+      # This step keeps the historical resolution order — RELEASE_* secrets
+      # first, legacy TWA_* second, alias derived from the keystore when
+      # RELEASE_KEY_ALIAS is unset — but says out loud which source actually
+      # supplied each value, refuses a half-migrated mix, and fails with the
+      # reason instead of a bare "could not determine".
+      - name: Resolve Android signing credentials
         env:
-          KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 || secrets.TWA_KEYSTORE_BASE64 }}
+          RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+          RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          TWA_KEYSTORE_BASE64: ${{ secrets.TWA_KEYSTORE_BASE64 }}
+          TWA_STORE_PASSWORD: ${{ secrets.TWA_STORE_PASSWORD }}
+          TWA_KEY_PASSWORD: ${{ secrets.TWA_KEY_PASSWORD }}
         run: |
-          if [ -z "$KEYSTORE_BASE64" ]; then
-            echo "::error::Missing Android release keystore. Configure RELEASE_KEYSTORE_BASE64 or TWA_KEYSTORE_BASE64."
+          set -euo pipefail
+
+          # The keystore, the store password and the key password must all come
+          # from the same generation of secrets. A mix is always a half-finished
+          # migration, and it only surfaces as an opaque keytool "password was
+          # incorrect" — so reject it up front instead.
+          modern=0
+          for name in RELEASE_KEYSTORE_BASE64 RELEASE_KEYSTORE_PASSWORD RELEASE_KEY_PASSWORD; do
+            if [ -n "${!name}" ]; then
+              modern=$((modern + 1))
+            fi
+          done
+
+          if [ "$modern" -eq 3 ]; then
+            KEYSTORE_SECRET="RELEASE_KEYSTORE_BASE64"
+            STORE_PASSWORD_SECRET="RELEASE_KEYSTORE_PASSWORD"
+            KEY_PASSWORD_SECRET="RELEASE_KEY_PASSWORD"
+            KEYSTORE_BASE64="$RELEASE_KEYSTORE_BASE64"
+            STORE_PASSWORD="$RELEASE_KEYSTORE_PASSWORD"
+          elif [ "$modern" -eq 0 ]; then
+            KEYSTORE_SECRET="TWA_KEYSTORE_BASE64"
+            STORE_PASSWORD_SECRET="TWA_STORE_PASSWORD"
+            KEY_PASSWORD_SECRET="TWA_KEY_PASSWORD"
+            KEYSTORE_BASE64="$TWA_KEYSTORE_BASE64"
+            STORE_PASSWORD="$TWA_STORE_PASSWORD"
+
+            legacy=0
+            legacy_missing=""
+            for name in TWA_KEYSTORE_BASE64 TWA_STORE_PASSWORD TWA_KEY_PASSWORD; do
+              if [ -n "${!name}" ]; then
+                legacy=$((legacy + 1))
+              else
+                legacy_missing="${legacy_missing}${name} "
+              fi
+            done
+
+            if [ "$legacy" -eq 0 ]; then
+              echo "::error::No Android signing secrets are configured, so this release would be unsigned or debug-signed. Set RELEASE_KEYSTORE_BASE64, RELEASE_KEYSTORE_PASSWORD, RELEASE_KEY_PASSWORD and RELEASE_KEY_ALIAS from T'Day's existing release keystore — see docs/DEPLOYMENT.md § Android Signing."
+              exit 1
+            fi
+
+            if [ -n "$legacy_missing" ]; then
+              echo "::error::The legacy TWA_* signing secrets are incomplete: ${legacy_missing% } is missing. Restore it, or move to RELEASE_KEYSTORE_BASE64 / RELEASE_KEYSTORE_PASSWORD / RELEASE_KEY_PASSWORD / RELEASE_KEY_ALIAS — see docs/DEPLOYMENT.md § Android Signing."
+              exit 1
+            fi
+
+            echo "::warning::Android release signing fell back to the legacy TWA_* secrets because no RELEASE_* signing secrets are configured. Migrate to RELEASE_KEYSTORE_BASE64 / RELEASE_KEYSTORE_PASSWORD / RELEASE_KEY_PASSWORD / RELEASE_KEY_ALIAS (same keystore, same alias) — see docs/DEPLOYMENT.md § Android Signing."
+          else
+            partial=""
+            for name in RELEASE_KEYSTORE_BASE64 RELEASE_KEYSTORE_PASSWORD RELEASE_KEY_PASSWORD; do
+              if [ -z "${!name}" ]; then
+                partial="${partial}${name} "
+              fi
+            done
+
+            echo "::error::Android signing secrets are half-migrated: ${modern} of 3 RELEASE_* secrets are set, and these are not — ${partial% }. Set all three, or none of them to keep using the legacy TWA_* secrets. The keystore and its passwords must come from the same source."
             exit 1
           fi
 
-          echo "$KEYSTORE_BASE64" | base64 --decode > /tmp/release.keystore
+          echo "Android signing secrets: keystore from ${KEYSTORE_SECRET}, store password from ${STORE_PASSWORD_SECRET}, key password from ${KEY_PASSWORD_SECRET}"
+
+          if ! echo "$KEYSTORE_BASE64" | base64 --decode > /tmp/release.keystore 2>/tmp/keystore-decode.err; then
+            echo "::error::The ${KEYSTORE_SECRET} secret is not valid base64. base64 reported:"
+            sed 's/^/  /' /tmp/keystore-decode.err
+            exit 1
+          fi
+
+          if [ ! -s /tmp/release.keystore ]; then
+            echo "::error::The ${KEYSTORE_SECRET} secret decoded to an empty file."
+            exit 1
+          fi
+
+          echo "Decoded keystore: $(stat -c %s /tmp/release.keystore) bytes"
+
+          if [ -n "$RELEASE_KEY_ALIAS" ]; then
+            ALIAS="$RELEASE_KEY_ALIAS"
+            ALIAS_SOURCE="RELEASE_KEY_ALIAS secret"
+          else
+            echo "::warning::RELEASE_KEY_ALIAS is not configured, so the signing alias is being derived by parsing keytool -list output. That derivation breaks if a second alias is added to the keystore or keytool changes its output format — pin the alias with a secret."
+
+            # keytool reports failures on stdout, not stderr, so echo both.
+            if ! keytool -list -keystore /tmp/release.keystore -storepass "$STORE_PASSWORD" > /tmp/keytool-list.txt 2>/tmp/keytool-list.err; then
+              echo "::error::keytool could not read the ${KEYSTORE_SECRET} keystore using the ${STORE_PASSWORD_SECRET} password. keytool reported:"
+              cat /tmp/keytool-list.txt /tmp/keytool-list.err | sed 's/^/  /'
+              exit 1
+            fi
+
+            mapfile -t KEY_ALIASES < <(awk -F, '/^[^[:space:]][^,]*,[[:space:]]/{print $1}' /tmp/keytool-list.txt)
+
+            if [ "${#KEY_ALIASES[@]}" -eq 0 ]; then
+              echo "::error::The release keystore opened, but no alias could be parsed out of keytool's output — most likely its format changed. Set RELEASE_KEY_ALIAS to the alias T'Day has always signed with. keytool -list printed:"
+              sed 's/^/  /' /tmp/keytool-list.txt
+              exit 1
+            fi
+
+            if [ "${#KEY_ALIASES[@]}" -gt 1 ]; then
+              echo "::error::The release keystore holds ${#KEY_ALIASES[@]} aliases (${KEY_ALIASES[*]}) and CI will not guess which one signs T'Day — a wrong guess ships an APK that cannot update existing installs. Set RELEASE_KEY_ALIAS to the alias whose certificate matches the published APKs."
+              exit 1
+            fi
+
+            ALIAS="${KEY_ALIASES[0]}"
+            ALIAS_SOURCE="derived from the keystore (single alias)"
+          fi
+
+          echo "Android signing alias: ${ALIAS} (source: ${ALIAS_SOURCE})"
+
           echo "RELEASE_KEYSTORE_PATH=/tmp/release.keystore" >> "$GITHUB_ENV"
+          echo "RELEASE_KEY_ALIAS=${ALIAS}" >> "$GITHUB_ENV"
 
-      - name: Detect Android signing alias
-        env:
-          RELEASE_KEY_ALIAS_VALUE: ${{ secrets.RELEASE_KEY_ALIAS }}
-          RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD || secrets.TWA_STORE_PASSWORD }}
-        run: |
-          if [ -n "$RELEASE_KEY_ALIAS_VALUE" ]; then
-            echo "RELEASE_KEY_ALIAS=$RELEASE_KEY_ALIAS_VALUE" >> "$GITHUB_ENV"
-            exit 0
-          fi
-
-          if [ -z "$RELEASE_KEYSTORE_PASSWORD" ]; then
-            echo "::error::Missing Android keystore password. Configure RELEASE_KEYSTORE_PASSWORD or TWA_STORE_PASSWORD."
-            exit 1
-          fi
-
-          mapfile -t KEY_ALIASES < <(
-            keytool -list -keystore /tmp/release.keystore -storepass "$RELEASE_KEYSTORE_PASSWORD" 2>/dev/null \
-              | awk -F, '/^[^[:space:]][^,]*,[[:space:]]/{print $1}'
-          )
-
-          if [ "${#KEY_ALIASES[@]}" -ne 1 ]; then
-            echo "::error::Could not determine a unique Android key alias from the release keystore. Set RELEASE_KEY_ALIAS."
-            exit 1
-          fi
-
-          echo "RELEASE_KEY_ALIAS=${KEY_ALIASES[0]}" >> "$GITHUB_ENV"
-
+      # These fall back exactly like the keystore above. The resolve step has
+      # already guaranteed the RELEASE_* trio is all-set or all-unset, so these
+      # two expressions cannot pick a different generation than the keystore
+      # did. They stay inline rather than going through GITHUB_ENV so the
+      # passwords are only visible to this one step.
       - name: Build Android APK
         env:
           RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD || secrets.TWA_STORE_PASSWORD }}
@@ -271,9 +352,97 @@ jobs:
           echo "file=$DEST" >> "$GITHUB_OUTPUT"
           echo "Found APK: $APK → $DEST"
 
+      # Records the signing identity of every release in its own log, so a
+      # change of key is visible immediately instead of on the first user who
+      # cannot install the update. Certificate digests are public information —
+      # they are the same values served in /.well-known/assetlinks.json.
+      # Set the ANDROID_SIGNING_CERT_SHA256 repository variable to turn the
+      # report into an enforced pin.
+      - name: Verify APK signing certificate
+        env:
+          EXPECTED_CERT_SHA256: ${{ vars.ANDROID_SIGNING_CERT_SHA256 }}
+        run: |
+          set -uo pipefail
+
+          APKSIGNER=$(find "${ANDROID_HOME:-/usr/local/lib/android/sdk}/build-tools" -name apksigner -type f 2>/dev/null | sort -V | tail -1)
+
+          if [ -z "$APKSIGNER" ]; then
+            echo "::warning::apksigner was not found under ANDROID_HOME, so this release's APK signing certificate could not be reported."
+            if [ -n "$EXPECTED_CERT_SHA256" ]; then
+              echo "::error::ANDROID_SIGNING_CERT_SHA256 is pinned but the certificate could not be read — refusing to publish an unverified APK."
+              exit 1
+            fi
+            exit 0
+          fi
+
+          if ! "$APKSIGNER" verify --print-certs "${{ steps.apk.outputs.file }}" > /tmp/apk-certs.txt 2>&1; then
+            echo "::error::The release APK failed signature verification. apksigner reported:"
+            sed 's/^/  /' /tmp/apk-certs.txt
+            exit 1
+          fi
+
+          FINGERPRINT=$(awk -F': ' '/SHA-256 digest:/ {print $2; exit}' /tmp/apk-certs.txt | tr -d '[:space:]' | tr 'A-F' 'a-f')
+
+          if [ -z "$FINGERPRINT" ]; then
+            echo "::warning::Could not parse a certificate digest out of apksigner's output:"
+            sed 's/^/  /' /tmp/apk-certs.txt
+          else
+            echo "Release APK signing certificate SHA-256: ${FINGERPRINT}"
+          fi
+
+          if [ -z "$EXPECTED_CERT_SHA256" ]; then
+            echo "::warning::The ANDROID_SIGNING_CERT_SHA256 repository variable is not set, so the signing identity above is reported but not enforced. Set it to the digest of the certificate that signed the currently published APKs to make a key change fail the release."
+            exit 0
+          fi
+
+          EXPECTED=$(echo "$EXPECTED_CERT_SHA256" | tr -d '[:space:]:' | tr 'A-F' 'a-f')
+
+          if [ "$FINGERPRINT" != "$EXPECTED" ]; then
+            echo "::error::The release APK was signed with a different certificate than the pinned ANDROID_SIGNING_CERT_SHA256. Publishing it would break in-place updates for every existing install. Expected ${EXPECTED}, got ${FINGERPRINT:-<unparsed>}."
+            exit 1
+          fi
+
+          echo "Signing certificate matches the pinned ANDROID_SIGNING_CERT_SHA256."
+
+      # ────────────────────────────────────────────
+      #  Docker image (built here, pushed after the release exists)
+      # ────────────────────────────────────────────
+      # The image is built now so a broken Dockerfile fails before anything is
+      # published, and pushed at the very end so GHCR never advertises a version
+      # that has no tag, no release and no downloadable APK. The push step below
+      # replays this build from the layer cache, so it is a push, not a rebuild.
+      - name: Log in to GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+
+      - name: Build Docker image
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        with:
+          context: .
+          file: ./Dockerfile.backend
+          push: false
+          tags: |
+            ${{ env.IMAGE_NAME }}:latest
+            ${{ env.IMAGE_NAME }}:${{ steps.version.outputs.tag }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/ohmzi/Tday
+            org.opencontainers.image.description=Tday - Personal task planner
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
       # ────────────────────────────────────────────
       #  Publish
       # ────────────────────────────────────────────
+      # Nothing above this line has published anything. The release commit lands
+      # on master first, because it is the only step that can be rejected by
+      # something outside this job (a concurrent push), and abandoning the run
+      # here leaves no tag, no release and no image behind.
       - name: Publish release commit to master
         run: |
           for attempt in 1 2 3; do
@@ -306,6 +475,26 @@ jobs:
             --title "${{ steps.version.outputs.tag }}" \
             --notes-file body.md \
             "${{ steps.apk.outputs.file }}"
+
+      # Last, and deliberately so. The in-app updater can only fetch an APK from
+      # the latest release, so an image must never exist for a version that has
+      # no release — with `exact` compatibility on the backend that combination
+      # locks every client out with no way to update. The reverse gap (release
+      # published, image missing) leaves the running server on the previous
+      # version and is fixed by re-running this workflow.
+      - name: Push Docker image
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        with:
+          context: .
+          file: ./Dockerfile.backend
+          push: true
+          tags: |
+            ${{ env.IMAGE_NAME }}:latest
+            ${{ env.IMAGE_NAME }}:${{ steps.version.outputs.tag }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/ohmzi/Tday
+            org.opencontainers.image.description=Tday - Personal task planner
+          cache-from: type=gha
 
       # develop is an ancestor of master right after a merge-commit merge, so
       # this fast-forwards cleanly and keeps version.json from conflicting on
