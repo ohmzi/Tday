@@ -51,8 +51,7 @@ function isIosRelevantPath(filePath) {
   // Everything the app, its four embedded bundles, and the fastlane lane are built from.
   if (!filePath.startsWith("ios-swiftUI/")) return false;
   // Prose under ios-swiftUI/ (README and friends) never reaches the app bundle.
-  if (filePath.endsWith(".md")) return false;
-  return true;
+  return !filePath.endsWith(".md");
 }
 
 /** The only paths a release bump can rewrite on its own. Everything else counts as-is. */
@@ -92,6 +91,10 @@ function normalize(filePath, text) {
   return text;
 }
 
+/**
+ * Runs git and returns its stdout. The buffer is generous because `diff --name-only` across
+ * several releases of a monorepo can be long.
+ */
 function git(args) {
   return execFileSync("git", args, { encoding: "utf8", maxBuffer: 256 * 1024 * 1024 });
 }
@@ -120,6 +123,15 @@ function isReleaseNoiseOnly(filePath, base, head) {
   return normalize(filePath, before) === normalize(filePath, after);
 }
 
+/** Writes a line to stdout. `console` is not used: DeepSource's JS-0002 forbids it. */
+function log(line) {
+  process.stdout.write(`${line}\n`);
+}
+
+/**
+ * Diffs the two refs, reports which iOS-relevant files changed, and writes `should_build`
+ * to GITHUB_OUTPUT. Always exits 0 unless a ref is unusable.
+ */
 function main() {
   const [base, head] = process.argv.slice(2);
   if (!base || !head) {
@@ -138,17 +150,17 @@ function main() {
 
   const shouldBuild = relevant.length > 0;
 
-  console.log(`Comparing ${base}...${head}`);
-  console.log(`${changed.length} file(s) changed in total.`);
+  log(`Comparing ${base}...${head}`);
+  log(`${changed.length} file(s) changed in total.`);
   if (shouldBuild) {
-    console.log(`${relevant.length} iOS-relevant file(s):`);
-    for (const filePath of relevant.slice(0, 40)) console.log(`  ${filePath}`);
-    if (relevant.length > 40) console.log(`  ... and ${relevant.length - 40} more`);
+    log(`${relevant.length} iOS-relevant file(s):`);
+    for (const filePath of relevant.slice(0, 40)) log(`  ${filePath}`);
+    if (relevant.length > 40) log(`  ... and ${relevant.length - 40} more`);
   } else {
-    console.log("No iOS-relevant changes — only release version mirrors, if anything.");
+    log("No iOS-relevant changes — only release version mirrors, if anything.");
   }
 
-  console.log(`should_build=${shouldBuild}`);
+  log(`should_build=${shouldBuild}`);
 
   if (process.env.GITHUB_OUTPUT) {
     fs.appendFileSync(process.env.GITHUB_OUTPUT, `should_build=${shouldBuild}\n`);
