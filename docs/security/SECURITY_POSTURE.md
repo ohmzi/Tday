@@ -28,7 +28,8 @@ GET /health                       ->  {"status":"ok"}
 referrer-policy, strict CORS.
 
 **Written but NOT deployed.** Everything below is in the working tree and takes effect only after
-`docker compose up -d --build tday-backend` (backend/web) plus a store or sideload build (mobile):
+a deploy of the release that carries them — `./scripts/deploy-release.sh` (backend/web) — plus a
+store or sideload build (mobile):
 
 *Backend:* Content-Security-Policy and Permissions-Policy · the (IP, account) throttle re-keying and
 the non-punitive account ceiling · real 429s at all eight auth rejection sites (previously 500s) ·
