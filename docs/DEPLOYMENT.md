@@ -125,7 +125,7 @@ directly.
 | Workflow | Trigger | Purpose |
 |----------|---------|---------|
 | `pr-gate.yml` | PR to `master` | Validates source branch (`develop` only), runs web lint + test, backend test |
-| `release.yml` | Push to `master` | Runs lint + tests, then builds Docker image, pushes to GHCR, creates release |
+| `release.yml` | Push to `master` | Runs lint + tests, resolves the release version (auto-bumping the patch when it is already tagged), builds the Docker image and signed APK, tags, and publishes a GitHub release |
 
 ### Test-Before-Build Policy
 
@@ -136,10 +136,10 @@ directly.
 
 ```
 PR to master:
-  check-source-branch → lint-and-test → (merge allowed)
+  check-source-branch → lint-and-test → hook-check → (merge allowed)
 
 Push to master:
-  lint-and-test → build-and-release (Docker build + push + tag + GitHub release)
+  lint-and-test → build-and-release (version bump + Docker + APK + tag + GitHub release)
 ```
 
 This ensures:
@@ -155,11 +155,22 @@ This ensures:
 4. `pr-gate.yml` validates source branch, then runs lint + tests.
 5. On merge to `master`, `release.yml`:
    - Runs lint and the full test suite (including guardrails).
+   - **Resolves the release version.** If root `version.json` still carries a version that is already
+     tagged, the job runs `scripts/version.mjs bump patch` — so **every merge into `master` produces a
+     release, even when nobody bumped the version by hand**. A version a PR deliberately raised
+     (minor/major) is used as-is.
    - **Only if tests pass**: builds and pushes Docker image to `ghcr.io/ohmzi/tday:latest` and `:v<version>`.
-   - Creates a Git tag.
-   - Generates structured release metadata from the commit range since the previous tag.
-   - Writes `tday-web/public/release/current-release.json` into the shipped web build and updates `tday-web/public/release/latest-changes.json` on `master`.
-   - Creates a GitHub release.
+   - Builds and signs the Android release APK. A missing APK fails the run — it is a required release asset.
+   - Generates structured release metadata from the commit range since the previous GitHub release.
+   - Commits the version bump plus `tday-web/public/release/current-release.json` and
+     `latest-changes.json` back to `master` as `chore(release): v<version> [skip release]`. This push
+     comes from the GitHub Actions app, which is the only bypass actor on the `master` ruleset.
+   - Creates the Git tag and a GitHub release with the APK attached.
+   - Fast-forwards `develop` to `master` so the bump does not conflict on the next PR. This step is
+     non-fatal; if it is skipped, merge `master` into `develop` by hand.
+
+Because the release job bumps the patch version itself, the version climbs one patch per merge. Bump
+`minor`/`major` in a PR when a release deserves it.
 
 ### Version Bumping
 
@@ -170,10 +181,11 @@ The **single source of truth** for the app/server version is root `version.json`
 - **Backend**: `tday-backend/build.gradle.kts` parses `version.json`, embeds it as `tday-version.json`, and `AppConfig` uses it as the default `TDAY_APP_VERSION`/backend release fallback.
 - **Android**: `app/build.gradle.kts` parses root `version.json` at build time → `versionName` and computed `versionCode`.
 - **iOS**: `scripts/version.mjs sync` mirrors the version, build number, and update URL into `Info.plist`, Xcode project metadata, and `project.yml`.
-- **Backend compatibility templates**: The same sync script mirrors version/update-required values into `.env.example` and `tday-backend/.env.example`. Live deployment env files such as `.env.docker` stay operator-owned and must be updated deliberately when the server should require a new app version.
+- **Backend compatibility templates**: The same sync script mirrors version/update-required values into `.env.example` and `tday-backend/.env.example`. Live deployment env files such as `.env.docker` stay operator-owned; leave `TDAY_APP_VERSION` unset there so the container inherits the image's version, and set it only to deliberately pin the probe.
 - **Runtime**: Android sends `BuildConfig.VERSION_NAME` and iOS sends `CFBundleShortVersionString` in the `X-Tday-App-Version` HTTP header.
 
-To bump the version before merging to `master`:
+To bump the version deliberately before merging to `master` (a patch bump happens automatically on
+merge, so this is only needed for `minor`/`major`):
 
 ```bash
 node scripts/version.mjs bump patch   # 1.6.0 -> 1.6.1
@@ -242,17 +254,22 @@ Local Mode does not require this probe. Server Mode Android and iOS clients use 
 
 | File | Purpose | Notes |
 |------|---------|-------|
-| `.env.docker` | **Live value** used by the running Docker container | This is the file that actually controls what the server reports. Update here and recreate the container to take effect. |
+| `.env.docker` | **Live override** for the running Docker container | Leave `TDAY_APP_VERSION` commented out (the default) so the server reports the version baked into the image and follows every release automatically. Set it only to pin the probe to a specific version. |
 | `.env.example` | Template for new deployments (project root) | Auto-synced to the manifest version; copy the value into live env files when that version should be required. |
 | `tday-backend/.env.example` | Template for local backend development | Auto-synced to the manifest version; copy the value into live env files when that version should be required. |
-| `tday-backend/.../AppConfig.kt` (`probeAppVersion`) | Reads `TDAY_APP_VERSION` at startup | Env-driven with embedded `version.json` fallback. |
+| `tday-backend/.../AppConfig.kt` (`probeAppVersion`, `backendVersion`) | Reads `TDAY_APP_VERSION` at startup | Env-driven, falling back to the embedded `tday-version.json` — which `tday-backend/build.gradle.kts` builds from root `version.json`. |
 
-**Updating live `TDAY_APP_VERSION`:** After releasing a new app version, update the value in `.env.docker` to match the newly released version, then recreate the backend container:
+**Keeping the server on the same version as the apps:** don't. Leave `TDAY_APP_VERSION` unset in
+`.env.docker`. The backend then reports `versionDefaults.version`, which is compiled into the image
+from root `version.json`, so pulling a new image is the only step — the server, web, Android, and
+iOS all report the same version and move together on every release.
 
 ```bash
-# After editing .env.docker
-docker compose up -d tday-backend
+docker compose pull tday-backend && docker compose up -d tday-backend
 ```
+
+Only set `TDAY_APP_VERSION` when you deliberately want the probe to advertise something other than
+the image's own version. A stale pin here is invisible until a client refuses to sync.
 
 ### Android Signing
 
