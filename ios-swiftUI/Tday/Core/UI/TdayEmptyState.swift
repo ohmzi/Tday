@@ -73,6 +73,13 @@ struct TdayEmptyState: View {
         .padding(.horizontal, 24)
         .frame(maxWidth: 384)
         .frame(maxWidth: .infinity)
+        // Opted out of keyboard avoidance. SwiftUI shrinks the safe area when a
+        // keyboard or a sheet comes up, and every screen that shows this scene
+        // centres it in what is left — so opening the create-task sheet, or a
+        // search field, slid the whole illustration upward. Nothing here is
+        // typed into and nothing here can be hidden behind a keyboard, so it has
+        // no reason to move at all.
+        .ignoresSafeArea(.keyboard, edges: .bottom)
         .onAppear { animating = true }
     }
 

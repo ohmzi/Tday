@@ -1069,6 +1069,11 @@ struct TodoListScreen: View {
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .allowsHitTesting(false)
+                    // The scene inside opts out too, but it is this overlay's
+                    // frame that the keyboard actually squeezes — so without it
+                    // here the whole thing still rides up when the create sheet
+                    // or a search field opens.
+                    .ignoresSafeArea(.keyboard, edges: .bottom)
                 }
             }
     }
