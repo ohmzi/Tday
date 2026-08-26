@@ -756,6 +756,42 @@
       "searchBody": "trova qualsiasi attivita per titolo, nota o nome dell'elenco. usa il campo di ricerca per filtrare le tue attivita all'istante per titolo, descrizione o nome dell'elenco — senza dover scorrere."
     },
     {
+      "id": "notifications",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "bell",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.7.0",
+      "deepLink": null,
+      "helpAnchors": [
+        "settings-feature-toggle"
+      ],
+      "title": "Notifiche",
+      "summary": "Un solo interruttore decide se T'Day può interromperti.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Nelle Impostazioni c'è un unico interruttore Notifiche, e tutto ciò che ti raggiunge passa da lì: i promemoria delle attività e il riepilogo del giorno dopo. Spegnerlo svuota la coda invece di silenziarla, così quando lo riaccendi non arriva nulla in ritardo. Serve anche il permesso di sistema: finché le notifiche sono bloccate per T'Day sul tuo dispositivo l'interruttore resta spento e propone di aprire le impostazioni di sistema."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Devono essere attive entrambe le metà. Se manca il permesso di sistema l'interruttore risulta spento, comunque tu l'abbia lasciato qui."
+          ]
+        }
+      ],
+      "searchTitle": "notifiche",
+      "searchKeywords": "notifiche, permesso, interruttore, consentire, silenziare, promemoria, riepilogo, impostazioni di sistema",
+      "searchBody": "un solo interruttore decide se t'day puo interromperti. nelle impostazioni c'e un unico interruttore notifiche, e tutto cio che ti raggiunge passa da li: i promemoria delle attivita e il riepilogo del giorno dopo. spegnerlo svuota la coda invece di silenziarla, cosi quando lo riaccendi non arriva nulla in ritardo. serve anche il permesso di sistema: finche le notifiche sono bloccate per t'day sul tuo dispositivo l'interruttore resta spento e propone di aprire le impostazioni di sistema. devono essere attive entrambe le meta. se manca il permesso di sistema l'interruttore risulta spento, comunque tu l'abbia lasciato qui."
+    },
+    {
       "id": "recurrence-presets",
       "section": "RECURRENCE_AND_REMINDERS",
       "sectionOrder": 4,

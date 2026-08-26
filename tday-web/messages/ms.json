@@ -1255,6 +1255,13 @@
         "step0": "Buka apl Watch pada iPhone dan pasang T'Day.",
         "step1": "Tambah komplikasi T'Day pada muka jam anda.",
         "step2": "Pandang jumlahnya, atau buka apl untuk senarai penuh."
+      },
+      "notifications": {
+        "title": "Pemberitahuan",
+        "summary": "Satu suis menentukan sama ada T'Day boleh mengganggu anda.",
+        "keywords": "pemberitahuan, kebenaran, suis, benarkan, senyap, peringatan, ringkasan, tetapan sistem",
+        "body": "Tetapan mempunyai satu suis Pemberitahuan, dan segala yang sampai kepada anda melaluinya — peringatan tugasan dan ringkasan hari esok. Mematikannya mengosongkan baris gilir, bukan sekadar menyenyapkannya, jadi tiada apa yang tiba lewat apabila anda hidupkannya semula. Kebenaran sistem juga diperlukan: selagi pemberitahuan disekat untuk T'Day pada peranti anda, suis itu kekal mati dan menawarkan untuk membuka tetapan sistem.",
+        "tip": "Kedua-dua bahagian mesti hidup. Tanpa kebenaran sistem, suis dipaparkan mati walau apa pun yang anda tetapkan di sini."
       }
     }
   },
