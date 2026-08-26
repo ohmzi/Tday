@@ -406,7 +406,7 @@ struct SettingsScreen: View {
                             )
 
                             if viewModel.hasUpdate, let latestVersionName = viewModel.latestVersionName {
-                                Text("v\(latestVersionName) available")
+                                Text(L("v%@ available", latestVersionName))
                                     .font(.tdayRounded(size: 11, weight: .heavy))
                                     .foregroundStyle(colors.secondary)
                                     .padding(.leading, 34)
@@ -582,7 +582,7 @@ private struct SettingsProfileCard: View {
                 // same left edge as the rows above it.
                 SettingsRowIcon(asset: nil)
 
-                Text("Role: \(viewModel.user?.role ?? "USER")")
+                Text(L("Role: %@", viewModel.user?.role ?? "USER"))
                     .font(.tdayRounded(size: 13, weight: .bold))
                     .foregroundStyle(colors.onSurface.opacity(0.58))
             }
@@ -777,23 +777,36 @@ private struct SettingsNotificationsSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Toggle(
-                isOn: Binding(
-                    get: { isOn },
-                    set: { value in
-                        Task { await apply(enabled: value) }
-                    }
-                )
-            ) {
-                HStack(spacing: 14) {
-                    SettingsRowIcon(asset: "LucideBell")
+            // Label and switch built out rather than left as `Toggle { label }`: this row
+            // carries a "?" of its own, and the card's single one leads on `ai-summary`, which
+            // is a different section of the guide entirely. Inside a Toggle label the help
+            // link would sit in the switch's own tap target and flip it instead of opening.
+            HStack(spacing: 14) {
+                SettingsRowIcon(asset: "LucideBell")
 
-                    Text(L("Notifications"))
-                        .font(.body.weight(.heavy))
-                        .foregroundStyle(colors.onSurface)
-                }
+                Text(L("Notifications"))
+                    .font(.body.weight(.heavy))
+                    .foregroundStyle(colors.onSurface)
+
+                Spacer(minLength: 4)
+
+                GuideHelpLink(topicId: "notifications")
+
+                Toggle(
+                    "",
+                    isOn: Binding(
+                        get: { isOn },
+                        set: { value in
+                            Task {
+                                await apply(enabled: value)
+                            }
+                        }
+                    )
+                )
+                .labelsHidden()
+                .tint(colors.secondary)
+                .accessibilityLabel(Text(L("Notifications")))
             }
-            .tint(colors.secondary)
 
             Text(L("Task reminders and the Day Ahead digest only arrive while this is on."))
                 .font(.tdayRounded(size: 12, weight: .bold))
@@ -2656,6 +2669,9 @@ private struct ReleaseSectionTitle: View {
 }
 
 private struct ReleaseVersionLine: View {
+    /// An English literal from the call site, so it goes through `L()` here — `Text(label)`
+    /// on a `String` variable takes the verbatim initializer, not the localized one, and
+    /// rendered "Installed Version" in every locale.
     let label: String
     let version: String
     let tint: Color
@@ -2664,7 +2680,7 @@ private struct ReleaseVersionLine: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            Text(label)
+            Text(L(label))
                 .font(.tdayRounded(size: 13, weight: .heavy))
                 .foregroundStyle(colors.onSurface.opacity(0.58))
             ReleaseVersionBadge(text: version, tint: tint)
@@ -2697,7 +2713,7 @@ private struct ReleasePublishedDate: View {
 
     var body: some View {
         if let publishedAt {
-            Text("Published \(formatIsoDate(publishedAt))")
+            Text(L("Published %@", formatIsoDate(publishedAt)))
                 .font(.tdayRounded(size: 13, weight: .bold))
                 .foregroundStyle(colors.onSurface.opacity(0.62))
         }
@@ -2713,7 +2729,7 @@ private struct ReleaseNotesSection: View {
 
     var body: some View {
         if !changelog.isEmpty {
-            Text("What's new in \(versionLabel)")
+            Text(L("What's new in %@", versionLabel))
                 .font(.tdayRounded(size: 17, weight: .heavy))
                 .foregroundStyle(colors.onSurface)
 
@@ -2840,7 +2856,7 @@ private struct DataTransferCard: View {
                 Spacer()
                 GuideHelpLink(topicId: "export-your-data")
             }
-            Text("\(taskCount) tasks · \(listCount) lists · \(completedCount) completed")
+            Text(L("%@ tasks · %@ lists · %@ completed", "\(taskCount)", "\(listCount)", "\(completedCount)"))
                 .font(.tdayRounded(size: 13, weight: .semibold))
                 .foregroundStyle(.secondary)
 
@@ -2870,17 +2886,21 @@ private struct DataTransferCard: View {
             if case .failure(let error) = result {
                 notify(error.localizedDescription, kind: .error)
             } else {
-                notify("Your data file was saved.", kind: .success)
+                notify(L("Your data file was saved."), kind: .success)
             }
         }
         .fileImporter(isPresented: $showImporter, allowedContentTypes: [.json]) { result in
             handleImportPick(result)
         }
-        .confirmationDialog("Import data?", isPresented: $showConfirm, titleVisibility: .visible) {
-            Button("Import \(previewCount) items") { confirmImport() }
-            Button("Cancel", role: .cancel) { clearPending() }
+        .confirmationDialog(Text(L("Import data?")), isPresented: $showConfirm, titleVisibility: .visible) {
+            Button(L("Import %@ items", "\(previewCount)")) {
+                confirmImport()
+            }
+            Button(L("Cancel"), role: .cancel) {
+                clearPending()
+            }
         } message: {
-            Text("This adds \(previewCount) items to your account. Nothing you already have is changed or removed.")
+            Text(L("This adds %@ items to your account. Nothing you already have is changed or removed.", "\(previewCount)"))
         }
     }
 
@@ -2912,7 +2932,7 @@ private struct DataTransferCard: View {
             return
         }
         guard url.startAccessingSecurityScopedResource(), let data = try? Data(contentsOf: url) else {
-            notify("Could not read that file.", kind: .error)
+            notify(L("Could not read that file."), kind: .error)
             return
         }
         url.stopAccessingSecurityScopedResource()
@@ -2924,7 +2944,7 @@ private struct DataTransferCard: View {
                 previewCount = response.imported.total
                 showConfirm = true
             } catch {
-                notify("That file isn't a valid T'Day export.", kind: .error)
+                notify(L("That file isn't a valid T'Day export."), kind: .error)
                 clearPending()
             }
             busy = false
@@ -2937,10 +2957,10 @@ private struct DataTransferCard: View {
         Task {
             do {
                 let response = try await repository.commit(fileData: data)
-                notify("Import complete — added \(response.imported.total) items.", kind: .success)
+                notify(L("Import complete — added %@ items.", "\(response.imported.total)"), kind: .success)
                 loadCounts()
             } catch {
-                notify("Could not import that file.", kind: .error)
+                notify(L("Could not import that file."), kind: .error)
             }
             clearPending()
             busy = false

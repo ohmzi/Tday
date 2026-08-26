@@ -2060,6 +2060,10 @@ private fun NotificationsRow() {
                 fontWeight = FontWeight.ExtraBold,
                 color = colorScheme.onSurface,
             )
+            // The card's own "?" leads on ai-summary, which is a different section of the
+            // guide; this switch gates everything under Recurrence & reminders, so it carries
+            // the link to that section's head itself.
+            GuideHelpLink(GuideTopicIds.NOTIFICATIONS)
             Switch(
                 checked = notificationToggleChecked(osState, preferenceEnabled),
                 onCheckedChange = { requested ->
