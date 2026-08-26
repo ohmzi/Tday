@@ -7,8 +7,8 @@ import com.ohmz.tday.compose.core.data.SecureConfigStore
 import com.ohmz.tday.compose.core.data.ServerProbeException
 import com.ohmz.tday.compose.core.data.extractApiErrorMessage
 import com.ohmz.tday.compose.core.network.ServerTrustManager
-import com.ohmz.tday.compose.core.network.isPrivateNetworkHost
 import com.ohmz.tday.compose.core.network.TdayApiService
+import com.ohmz.tday.compose.core.network.isPrivateNetworkHost
 import com.ohmz.tday.compose.core.security.ProbeDecryptor
 import kotlinx.coroutines.withTimeout
 import okhttp3.HttpUrl
@@ -50,6 +50,16 @@ class ServerConfigRepository @Inject constructor(
     fun leaveLocalMode() {
         secureConfigStore.clearCachedSessionUser()
         secureConfigStore.setAppDataMode(AppDataMode.UNSET)
+        // The rows stay only because this marker survives the launch: without it the next
+        // cold start reads UNSET-with-no-server as "signed out" and wipes the cache.
+        secureConfigStore.setRetainedLocalWorkspace(true)
+    }
+
+    /** A local workspace that was left rather than deleted is still on disk. */
+    fun hasRetainedLocalWorkspace(): Boolean = secureConfigStore.hasRetainedLocalWorkspace()
+
+    fun clearRetainedLocalWorkspace() {
+        secureConfigStore.setRetainedLocalWorkspace(false)
     }
 
     data class ProbeResult(

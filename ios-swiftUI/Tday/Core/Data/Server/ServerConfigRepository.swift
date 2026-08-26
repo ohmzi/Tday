@@ -178,6 +178,28 @@ final class ServerConfigRepository {
         secureStore.setAppDataMode(.local)
     }
 
+    /// The exact inverse of [enableLocalMode], and deliberately nothing more.
+    ///
+    /// Leaving a local workspace is a MODE SWITCH, not a teardown — web says so in as many
+    /// words (`AuthProvider.tsx`: "Leaving the local workspace is a mode switch, not a session
+    /// teardown"). The rows stay on the device so choosing Local Mode again finds the
+    /// workspace where it was left. Wiping is the separate, confirmed row next to it; the
+    /// marker is what stops `bootstrap()` folding the two together on the next launch.
+    func leaveLocalMode() {
+        secureStore.clearCachedSessionUser()
+        secureStore.setAppDataMode(.unset)
+        secureStore.setRetainedLocalWorkspace(true)
+    }
+
+    /// A local workspace that was left rather than deleted is still on disk.
+    var hasRetainedLocalWorkspace: Bool {
+        secureStore.hasRetainedLocalWorkspace()
+    }
+
+    func clearRetainedLocalWorkspace() {
+        secureStore.setRetainedLocalWorkspace(false)
+    }
+
     func buildAbsoluteAppURL(_ path: String) -> URL? {
         getServerURL()?.appending(path: path.trimmingCharacters(in: CharacterSet(charactersIn: "/")))
     }

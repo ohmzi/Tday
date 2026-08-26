@@ -1,6 +1,7 @@
 import Foundation
 import Network
 import Observation
+import UserNotifications
 
 struct GitHubRelease: Codable, Equatable, Identifiable {
     let tagName: String
@@ -102,6 +103,11 @@ final class AppViewModel {
     var releaseError: String?
     var versionCheckResult: VersionCheckResult = .compatible
     var backendVersion: String?
+    /// What iOS last told us about the notification permission. Held here rather than in the
+    /// Settings screen because the permission is changed in the *system* Settings app, while
+    /// T'Day is suspended — so noticing the change has to be an app-level job, not something
+    /// that waits for the user to happen to open our own Settings screen again.
+    var notificationAuthorizationStatus: UNAuthorizationStatus?
 
     var currentVersionName: String {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.0.0"
@@ -180,7 +186,13 @@ final class AppViewModel {
         }
 
         if !container.serverConfigRepository.hasServerConfigured() {
-            container.authRepository.clearAllLocalUserDataForUnauthenticatedState()
+            // Not for a workspace that was *left*. Its rows are still on disk on the strength
+            // of a row that said they would be, and "no mode, no server" is the state both
+            // leaving and signing out land on — this marker is the only thing that tells the
+            // two apart.
+            if !container.serverConfigRepository.hasRetainedLocalWorkspace {
+                container.authRepository.clearAllLocalUserDataForUnauthenticatedState()
+            }
             authenticated = false
             requiresServerSetup = true
             requiresLogin = false
@@ -352,9 +364,63 @@ final class AppViewModel {
 
     func useLocalMode() async {
         TdayTelemetry.addBreadcrumb("local_mode.enter")
-        container.authRepository.clearAllLocalUserDataForUnauthenticatedState()
+        // Returning to a workspace that was left, not deleted, hands it back exactly as it
+        // was — that is what Leave promised. Every other route in here is a new workspace,
+        // and starts empty.
+        if container.serverConfigRepository.hasRetainedLocalWorkspace {
+            container.serverConfigRepository.clearRetainedLocalWorkspace()
+        } else {
+            container.authRepository.clearAllLocalUserDataForUnauthenticatedState()
+        }
         container.serverConfigRepository.enableLocalMode()
         await enterLocalWorkspace()
+    }
+
+    /// Choosing a server abandons a local workspace that was merely left behind. From the
+    /// moment a server URL is saved `bootstrap()` stops taking the branch that would have
+    /// cleared it, so its rows would otherwise surface inside a server feed. Only the cache
+    /// goes — the configuration just written stays.
+    private func discardRetainedLocalWorkspace() {
+        guard container.serverConfigRepository.hasRetainedLocalWorkspace else {
+            return
+        }
+        container.serverConfigRepository.clearRetainedLocalWorkspace()
+        container.cacheManager.clearAllLocalData()
+    }
+
+    /// Leaves a local workspace WITHOUT destroying it — the way out Local Mode has instead of
+    /// Sign out, matching Android and web.
+    ///
+    /// Deliberately not routed through `logout()`/`bootstrap()`: both end at
+    /// `clearAllLocalUserDataForUnauthenticatedState()`, so a row labelled Leave would wipe
+    /// every task on the device with no confirmation, while Delete — the row that is supposed
+    /// to do exactly that — asks first. This drops the session's hold and returns to mode
+    /// selection, nothing more.
+    func leaveLocalWorkspace() async {
+        TdayTelemetry.addBreadcrumb("local_mode.leave")
+        stopRealtime()
+        stopSyncLoop()
+        container.reminderScheduler.cancelAll()
+        container.serverConfigRepository.leaveLocalMode()
+        navigationPath = []
+        authenticated = false
+        requiresServerSetup = true
+        requiresLogin = false
+        serverURL = nil
+        dataMode = .unset
+        user = nil
+        error = nil
+        canResetServerTrust = false
+        pendingApprovalMessage = nil
+        isManualSyncing = false
+        isAiSummarySaving = false
+        isOffline = false
+        pendingMutationCount = 0
+        lastSuccessfulSyncEpochMs = 0
+        lastSyncAttemptEpochMs = 0
+        versionCheckResult = .compatible
+        backendVersion = nil
+        loading = false
     }
 
     private func enterLocalWorkspace() async {
@@ -406,6 +472,7 @@ final class AppViewModel {
             requiresLogin = !isBlocking
             error = nil
             canResetServerTrust = true
+            discardRetainedLocalWorkspace()
             return .success(())
         } catch {
             TdayTelemetry.addBreadcrumb(
@@ -448,6 +515,7 @@ final class AppViewModel {
             requiresLogin = true
             error = nil
             canResetServerTrust = true
+            discardRetainedLocalWorkspace()
             return .success(())
         } catch {
             let msg = serverConnectionMessage(for: error)
@@ -1114,6 +1182,34 @@ final class AppViewModel {
     func setNotificationsEnabled(_ enabled: Bool) async {
         NotificationPreferenceStore().isEnabled = enabled
         await rescheduleReminders()
+    }
+
+    /// Re-read the OS notification permission and rebuild the queue if it just came back.
+    ///
+    /// Called from `AppRootView` on every foreground return, not from the Settings screen:
+    /// the permission is granted in the *system* Settings app, and the user's next stop after
+    /// that is whatever screen they left — usually the task list. Every `add` was refused
+    /// while the permission was missing, so the queue is empty, and nothing else revisits
+    /// pending requests until the next task edit. Without this, "OS on + switch on" would
+    /// deliver nothing until the user happened to open T'Day's own Settings again.
+    ///
+    /// A cold launch needs no comparison: `bootstrap()` reschedules unconditionally on both
+    /// its branches, so `previous == nil` is already covered and only a change *under* a live
+    /// process is interesting here.
+    @discardableResult
+    func refreshNotificationAuthorization() async -> UNAuthorizationStatus {
+        let previous = notificationAuthorizationStatus
+        let status = await container.reminderScheduler.authorizationStatus()
+        notificationAuthorizationStatus = status
+        guard let previous,
+              !previous.allowsNotificationDelivery,
+              status.allowsNotificationDelivery,
+              NotificationPreferenceStore().isEnabled
+        else {
+            return status
+        }
+        await rescheduleReminders()
+        return status
     }
 
     private func rescheduleReminders() async {

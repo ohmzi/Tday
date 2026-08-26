@@ -141,7 +141,7 @@ struct SettingsScreen: View {
     /// The screen's last card is the exit. Local mode has no session to end, so it holds the
     /// only way out of a local workspace this app has instead.
     private var showsSignOutCard: Bool {
-        matchesSearch(viewModel.isLocalMode ? ["Delete local data"] : ["Sign out"])
+        matchesSearch(viewModel.isLocalMode ? ["Leave local workspace", "Delete local data"] : ["Sign out"])
     }
 
     private var hasSearchResults: Bool {
@@ -735,21 +735,6 @@ private struct SettingsDeviceCalendarSection: View {
 
 // MARK: - Notifications
 
-/// `.provisional` and `.ephemeral` also let a notification through, so whether iOS will deliver
-/// is a wider question than `== .authorized`. nil means "not read yet", which is not the same
-/// answer as `.notDetermined`.
-private func notificationDeliveryAllowed(_ status: UNAuthorizationStatus?) -> Bool {
-    guard let status else {
-        return false
-    }
-    switch status {
-    case .authorized, .provisional, .ephemeral:
-        return true
-    default:
-        return false
-    }
-}
-
 /// The app's own notification switch — and, once iOS has stopped offering its prompt, the only
 /// route from inside T'Day back to the OS permission.
 ///
@@ -767,10 +752,8 @@ private struct SettingsNotificationsSection: View {
 
     @Environment(\.tdayColors) private var colors
     @Environment(\.openURL) private var openURL
-    @Environment(\.scenePhase) private var scenePhase
 
     private let store = NotificationPreferenceStore()
-    @State private var authorizationStatus: UNAuthorizationStatus?
     @State private var preferenceEnabled: Bool
     @State private var showSystemSettingsHint = false
 
@@ -780,8 +763,16 @@ private struct SettingsNotificationsSection: View {
         _preferenceEnabled = State(initialValue: NotificationPreferenceStore().isEnabled)
     }
 
+    /// The OS half of the answer lives on the view model, not here: `AppRootView` re-reads it
+    /// on every foreground return so a permission granted in iOS Settings takes effect from
+    /// whatever screen the user came back to. This section reads the same value so the switch
+    /// and the delivery it promises can never disagree.
+    private var authorizationStatus: UNAuthorizationStatus? {
+        viewModel.notificationAuthorizationStatus
+    }
+
     private var isOn: Bool {
-        notificationDeliveryAllowed(authorizationStatus) && preferenceEnabled
+        (authorizationStatus?.allowsNotificationDelivery ?? false) && preferenceEnabled
     }
 
     var body: some View {
@@ -827,13 +818,10 @@ private struct SettingsNotificationsSection: View {
         .task {
             await refreshAuthorization()
         }
-        .onChange(of: scenePhase) { _, phase in
-            // Flipping the permission in iOS Settings and coming straight back is the one way
-            // this can change under the app, and this is the only moment it gets to notice.
-            guard phase == .active else {
-                return
-            }
-            Task { await refreshAuthorization() }
+        .onChange(of: viewModel.notificationAuthorizationStatus) { _, _ in
+            // `AppRootView` owns the foreground re-read and the reschedule that follows it;
+            // all that is left here is to redraw the switch and the hint under it.
+            syncDerivedState()
         }
     }
 
@@ -854,8 +842,7 @@ private struct SettingsNotificationsSection: View {
         if let known = authorizationStatus {
             status = known
         } else {
-            status = await viewModel.container.reminderScheduler.authorizationStatus()
-            authorizationStatus = status
+            status = await viewModel.refreshNotificationAuthorization()
         }
 
         switch status {
@@ -864,7 +851,7 @@ private struct SettingsNotificationsSection: View {
             // opt-in, so a grant stores the preference itself rather than making the user flip
             // a switch that is already showing what they just asked for.
             let granted = await viewModel.container.reminderScheduler.requestAuthorization()
-            authorizationStatus = await viewModel.container.reminderScheduler.authorizationStatus()
+            await viewModel.refreshNotificationAuthorization()
             showSystemSettingsHint = !granted
             if granted {
                 await storePreferenceOn()
@@ -888,22 +875,21 @@ private struct SettingsNotificationsSection: View {
         await viewModel.setNotificationsEnabled(true)
     }
 
+    /// First render of the section. The read (and the reschedule a newly granted permission
+    /// needs) belongs to the view model; only the local halves are computed here.
     @MainActor
     private func refreshAuthorization() async {
-        let previous = authorizationStatus
-        let status = await viewModel.container.reminderScheduler.authorizationStatus()
-        authorizationStatus = status
+        await viewModel.refreshNotificationAuthorization()
+        syncDerivedState()
+    }
+
+    @MainActor
+    private func syncDerivedState() {
         preferenceEnabled = store.isEnabled
         // On screen the moment the section renders, not only after a tap: a switch that will
         // not turn on has to say why. Only while the preference is on, though — with it off the
         // switch is off because the user said so, and iOS Settings is beside the point.
-        showSystemSettingsHint = status == .denied && preferenceEnabled
-        // Granted in iOS Settings while T'Day was in the background. Every `add` was refused
-        // while the permission was missing, so the queue is empty and nothing else would refill
-        // it until the next task edit.
-        if let previous, !notificationDeliveryAllowed(previous), notificationDeliveryAllowed(status), preferenceEnabled {
-            await viewModel.setNotificationsEnabled(true)
-        }
+        showSystemSettingsHint = authorizationStatus == .denied && preferenceEnabled
         deliversNotifications = isOn
     }
 
@@ -984,15 +970,18 @@ private struct SettingsQuietHoursSection: View {
 
 // MARK: - Local workspace
 
-/// The only way out of a local workspace this app has, and the last card on the screen in
-/// Local Mode — where server mode keeps Sign out.
+/// The way out of a local workspace, and the last card on the screen in Local Mode — where
+/// server mode keeps Sign out.
 ///
-/// Web offers two rows here: "Leave local workspace", which keeps the tasks in the browser, and
-/// "Delete local data", which destroys them. iOS has one, because it has no way to do the first:
-/// clearing the data mode sends `bootstrap()` down its no-server-configured branch, and that
-/// branch wipes the offline cache before the setup screen ever appears. A row promising to leave
-/// a workspace intact that then deleted it would be worse than not offering it, so the row says
-/// what actually happens and the confirmation points at the export two cards up.
+/// Two rows, the pair web and Android already offer. "Leave local workspace" is a mode switch:
+/// it drops this session's hold and returns to mode selection, and every task stays on the
+/// device so choosing Local Mode again finds the workspace where it was left. "Delete local
+/// data" is the other thing entirely, and the only row on this screen with nothing behind it
+/// to recover from — so it asks first, and points at the export two cards up.
+///
+/// Leaving deliberately does not go through `logout()`: that routes into
+/// `clearAllLocalUserDataForUnauthenticatedState()`, which would make the row labelled Leave
+/// wipe every task on the device without asking — the job of the row underneath it.
 private struct SettingsLocalWorkspaceExit: View {
     let viewModel: AppViewModel
 
@@ -1000,6 +989,21 @@ private struct SettingsLocalWorkspaceExit: View {
     @State private var showConfirm = false
 
     var body: some View {
+        SettingsListRow(
+            title: "Leave local workspace",
+            value: nil,
+            iconTint: colors.error,
+            showChevron: false,
+            icon: "LucideLogOut",
+            action: {
+                Task {
+                    await viewModel.leaveLocalWorkspace()
+                }
+            }
+        )
+
+        SettingsDivider()
+
         SettingsListRow(
             title: "Delete local data",
             value: nil,
@@ -2101,6 +2105,11 @@ private struct SettingsListRow: View {
     let title: String
     let value: String?
     var titleColor: Color?
+    /// A glyph colour of its own, for a row whose label is deliberately the neutral
+    /// foreground — Leave local workspace is an exit, but it destroys nothing, so only the
+    /// glyph carries the warmth. Android and web spell the same distinction
+    /// (`iconTint` / `destructiveIcon`).
+    var iconTint: Color?
     var showChevron = true
     var icon: String?
     let action: () -> Void
@@ -2117,6 +2126,7 @@ private struct SettingsListRow: View {
                 value: value,
                 titleColor: titleColor,
                 valueColor: colors.onSurface.opacity(0.58),
+                iconTint: iconTint,
                 showChevron: showChevron,
                 icon: icon
             )
@@ -2192,6 +2202,7 @@ private struct SettingsRowLabel: View {
     let value: String?
     var titleColor: Color?
     var valueColor: Color?
+    var iconTint: Color?
     var showChevron: Bool
     var icon: String?
 
@@ -2202,6 +2213,7 @@ private struct SettingsRowLabel: View {
         value: String?,
         titleColor: Color? = nil,
         valueColor: Color? = nil,
+        iconTint: Color? = nil,
         showChevron: Bool = true,
         icon: String? = nil
     ) {
@@ -2209,6 +2221,7 @@ private struct SettingsRowLabel: View {
         self.value = value
         self.titleColor = titleColor
         self.valueColor = valueColor
+        self.iconTint = iconTint
         self.showChevron = showChevron
         self.icon = icon
     }
@@ -2217,8 +2230,9 @@ private struct SettingsRowLabel: View {
         HStack {
             HStack(spacing: 14) {
                 // A row that overrides its title colour (Sign out) tints its icon to match;
+                // a row that asked for a glyph colour alone (Leave local workspace) gets that;
                 // every other row gets the accent blue from SettingsRowIcon.
-                SettingsRowIcon(asset: icon, tint: titleColor)
+                SettingsRowIcon(asset: icon, tint: iconTint ?? titleColor)
 
                 Text(L(title))
                     .font(.tdayRounded(size: 17, weight: .heavy))

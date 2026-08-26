@@ -52,6 +52,27 @@ class SecureConfigStore @Inject constructor(
         prefs.edit().remove(KEY_APP_DATA_MODE).apply()
     }
 
+    /**
+     * Whether a local workspace was *left* rather than deleted, and is therefore still on
+     * disk.
+     *
+     * The mode alone cannot tell the two apart: leaving and signing out both land on
+     * [AppDataMode.UNSET] with no server configured, and that is exactly the state
+     * `AppViewModel.bootstrap()` reads as "fresh install or signed out" and clears the cache
+     * for. Without this marker the row labelled Leave would destroy the workspace it promised
+     * to keep — on the next cold launch instead of immediately, which is only a slower way to
+     * lose the same data. Cleared as soon as a mode is chosen again.
+     */
+    fun hasRetainedLocalWorkspace(): Boolean = prefs.getBoolean(KEY_RETAINED_LOCAL_WORKSPACE, false)
+
+    fun setRetainedLocalWorkspace(retained: Boolean) {
+        if (retained) {
+            prefs.edit().putBoolean(KEY_RETAINED_LOCAL_WORKSPACE, true).apply()
+        } else {
+            prefs.edit().remove(KEY_RETAINED_LOCAL_WORKSPACE).apply()
+        }
+    }
+
     fun getServerUrl(): String? {
         val inMemory = runtimeServerUrl?.takeIf { it.isNotBlank() }
         if (inMemory != null) return inMemory
@@ -322,6 +343,7 @@ class SecureConfigStore @Inject constructor(
         const val KEY_PENDING_APPROVAL_USERNAME = "pending_approval_username_v1"
         const val KEY_PENDING_APPROVAL_PASSWORD = "pending_approval_password_v1"
         const val KEY_APP_DATA_MODE = "app_data_mode_v1"
+        const val KEY_RETAINED_LOCAL_WORKSPACE = "retained_local_workspace_v1"
         const val KEY_AI_SUMMARY_CONFIGURED = "ai_summary_configured_v1"
         const val KEY_AI_SUMMARY_HEALTHY = "ai_summary_healthy_v1"
     }

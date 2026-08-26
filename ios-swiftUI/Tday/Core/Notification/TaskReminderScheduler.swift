@@ -76,6 +76,13 @@ final class TaskReminderScheduler {
         TdayTelemetry.addBreadcrumb("reminder.snooze", data: ["intervalSeconds": Int(interval)])
     }
 
+    /// Empties the queue outright. For leaving a workspace, where the tasks those pending
+    /// requests were built from are no longer the ones this install is showing — `reschedule`
+    /// only sweeps the identifiers of the tasks it is handed, so it cannot do this job.
+    func cancelAll() {
+        notificationCenter?.removeAllPendingNotificationRequests()
+    }
+
     func reschedule(tasks: [TodoItem], defaultReminder: ReminderOption) async {
         guard let notificationCenter else {
             return
@@ -386,6 +393,21 @@ final class SecurityAlertPoller {
         // user denied it, this throws and we stay quiet rather than prompting a second time.
         try? await UNUserNotificationCenter.current().add(request)
         TdayTelemetry.addBreadcrumb("security.alerts", data: ["phase": "notified"])
+    }
+}
+
+extension UNAuthorizationStatus {
+    /// Whether iOS would actually deliver something scheduled right now.
+    ///
+    /// `.provisional` and `.ephemeral` count: both deliver, just more quietly. Everything else
+    /// — including `.notDetermined`, which is "no" until the prompt is answered — does not.
+    var allowsNotificationDelivery: Bool {
+        switch self {
+        case .authorized, .provisional, .ephemeral:
+            return true
+        default:
+            return false
+        }
     }
 }
 

@@ -27,6 +27,7 @@ final class SecureStore {
         case cachedSessionUser = "cached-session-user"
         case savedServerURLSuggestion = "saved-server-url-suggestion"
         case appDataMode = "app-data-mode-v1"
+        case retainedLocalWorkspace = "retained-local-workspace-v1"
         case pendingApprovalUsername = "pending-approval-username"
         case pendingApprovalPassword = "pending-approval-password"
     }
@@ -72,6 +73,28 @@ final class SecureStore {
 
     func clearAppDataMode() {
         deleteValue(for: .appDataMode)
+    }
+
+    // MARK: - Retained local workspace
+
+    /// Set when the user *leaves* a local workspace instead of deleting it.
+    ///
+    /// The mode alone cannot tell those two apart: both land on `.unset` with no server
+    /// configured, and that is exactly the state `bootstrap()` reads as "fresh install or
+    /// signed out" and wipes the cache for. Without this marker the row labelled Leave would
+    /// destroy the workspace it promised to keep, on the very next launch. Cleared as soon as
+    /// a mode is chosen again — re-entering local mode hands the workspace back, and choosing
+    /// a server abandons it.
+    func hasRetainedLocalWorkspace() -> Bool {
+        loadString(for: .retainedLocalWorkspace) != nil
+    }
+
+    func setRetainedLocalWorkspace(_ retained: Bool) {
+        if retained {
+            saveString("1", for: .retainedLocalWorkspace)
+        } else {
+            deleteValue(for: .retainedLocalWorkspace)
+        }
     }
 
     func loadPersistedServerURL() -> URL? {
@@ -176,6 +199,9 @@ final class SecureStore {
             clearPersistedServerURL()
             clearAppDataMode()
         }
+        // Whatever this clear was for, the cache goes with it — so there is no longer a
+        // retained workspace for the marker to protect.
+        setRetainedLocalWorkspace(false)
         clearPersistedAuthSessionCookie()
         clearCachedSessionUser()
         clearPendingApproval()
@@ -244,6 +270,7 @@ final class SecureStore {
 
         clearPersistedServerURL()
         clearAppDataMode()
+        setRetainedLocalWorkspace(false)
         clearPersistedAuthSessionCookie()
         clearCachedSessionUser()
         clearPendingApproval()

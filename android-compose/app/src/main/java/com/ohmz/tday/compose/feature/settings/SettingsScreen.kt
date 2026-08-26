@@ -1,7 +1,17 @@
 package com.ohmz.tday.compose.feature.settings
 
-import com.ohmz.tday.compose.core.ui.LocalSnackbarManager
+import android.Manifest
+import android.app.Activity
+import android.app.NotificationManager
+import android.content.Context
+import android.content.ContextWrapper
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
+import android.provider.Settings
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.DrawableRes
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.biometric.BiometricManager
@@ -28,8 +38,8 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
-import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -78,40 +88,22 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.os.LocaleListCompat
-import androidx.core.view.HapticFeedbackConstantsCompat
-import androidx.core.view.ViewCompat
-import com.ohmz.tday.compose.BuildConfig
-import com.ohmz.tday.compose.R
-import org.unifiedpush.android.connector.UnifiedPush
-import android.Manifest
-import android.app.Activity
-import android.app.NotificationManager
-import android.content.Context
-import android.content.ContextWrapper
-import android.content.Intent
-import android.content.pm.PackageManager
-import android.os.Build
-import android.provider.Settings
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import androidx.core.os.LocaleListCompat
+import androidx.core.view.HapticFeedbackConstantsCompat
+import androidx.core.view.ViewCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.ohmz.tday.compose.BuildConfig
+import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.calendar.CalendarEntryPoint
 import com.ohmz.tday.compose.core.data.AppSecurityPreferenceStore
 import com.ohmz.tday.compose.core.data.auth.AuthRepository
 import com.ohmz.tday.compose.core.data.db.hasUnmigratedPlaintextCache
 import com.ohmz.tday.compose.core.data.server.VersionCheckResult
-import com.ohmz.tday.compose.feature.lock.canSatisfyAppLock
-import com.ohmz.tday.compose.feature.widget.WidgetEntryPoint
-import dagger.hilt.EntryPoint
-import dagger.hilt.InstallIn
-import dagger.hilt.android.EntryPointAccessors
-import dagger.hilt.components.SingletonComponent
 import com.ohmz.tday.compose.core.model.SecurityAnswerInput
 import com.ohmz.tday.compose.core.model.SecurityQuestion
 import com.ohmz.tday.compose.core.model.SecurityQuestionStatusResponse
@@ -126,6 +118,7 @@ import com.ohmz.tday.compose.core.notification.canPromptForNotificationPermissio
 import com.ohmz.tday.compose.core.notification.isNotificationOsAuthorized
 import com.ohmz.tday.compose.core.notification.notificationToggleAction
 import com.ohmz.tday.compose.core.notification.notificationToggleChecked
+import com.ohmz.tday.compose.core.ui.LocalSnackbarManager
 import com.ohmz.tday.compose.core.ui.TdayEmptyState
 import com.ohmz.tday.compose.core.ui.TdayHeroTitleBlock
 import com.ohmz.tday.compose.core.ui.TdayHeroToolbar
@@ -134,9 +127,11 @@ import com.ohmz.tday.compose.core.ui.rememberScrollHeroTitleCollapse
 import com.ohmz.tday.compose.core.ui.tdayBarButtonContainerColor
 import com.ohmz.tday.compose.feature.app.MobileSyncStatus
 import com.ohmz.tday.compose.feature.app.ProfileEditResult
-import com.ohmz.tday.compose.feature.guide.GuideHelpLink
-import com.ohmz.tday.compose.feature.settings.data.DataTransferCard
 import com.ohmz.tday.compose.feature.auth.SecurityQuestionPicker
+import com.ohmz.tday.compose.feature.guide.GuideHelpLink
+import com.ohmz.tday.compose.feature.lock.canSatisfyAppLock
+import com.ohmz.tday.compose.feature.settings.data.DataTransferCard
+import com.ohmz.tday.compose.feature.widget.WidgetEntryPoint
 import com.ohmz.tday.compose.ui.component.TdayCenteredSelectorDialog
 import com.ohmz.tday.compose.ui.component.TdaySegmentedSlider
 import com.ohmz.tday.compose.ui.theme.AppThemeMode
@@ -144,9 +139,14 @@ import com.ohmz.tday.compose.ui.theme.TdayDimens
 import com.ohmz.tday.compose.ui.theme.TdayStatusSuccess
 import com.ohmz.tday.compose.ui.theme.TdayTitleIconDayAccent
 import com.ohmz.tday.shared.guide.GuideTopicIds
+import dagger.hilt.EntryPoint
+import dagger.hilt.InstallIn
+import dagger.hilt.android.EntryPointAccessors
+import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.unifiedpush.android.connector.UnifiedPush
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -580,7 +580,9 @@ fun SettingsScreen(
         helpGuideRows.isNotEmpty() || signOutRows.isNotEmpty()
 
     Scaffold(containerColor = colorScheme.background) { padding ->
-        Box(modifier = Modifier.fillMaxSize().padding(padding)) {
+        Box(modifier = Modifier
+            .fillMaxSize()
+            .padding(padding)) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -1619,7 +1621,7 @@ private fun formatSyncTimestamp(epochMs: Long): String {
 }
 
 @Composable
-private fun SettingsSectionCard(
+internal fun SettingsSectionCard(
     modifier: Modifier = Modifier,
     borderColor: Color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f),
     content: @Composable ColumnScope.() -> Unit,
@@ -1644,7 +1646,7 @@ private fun SettingsSectionCard(
 }
 
 @Composable
-private fun SettingsSectionTitle(title: String, helpTopicId: String? = null) {
+internal fun SettingsSectionTitle(title: String, helpTopicId: String? = null) {
     if (helpTopicId == null) {
         Text(
             text = title,
@@ -1670,7 +1672,7 @@ private fun SettingsSectionTitle(title: String, helpTopicId: String? = null) {
 }
 
 @Composable
-private fun SettingsListRow(
+internal fun SettingsListRow(
     title: String,
     value: String?,
     onClick: () -> Unit,
@@ -1720,7 +1722,7 @@ private fun SettingsListRow(
 }
 
 @Composable
-private fun SettingsDivider(
+internal fun SettingsDivider(
     color: Color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f),
 ) {
     Box(
@@ -2329,7 +2331,9 @@ private fun UnifiedPushRow() {
     var registered by remember { mutableStateOf(UnifiedPush.getAckDistributor(context) != null) }
 
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         SettingsRowIcon(R.drawable.ic_lucide_cloud)
@@ -2384,7 +2388,9 @@ private fun ReminderSelector(
 
     Box {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 2.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             SettingsRowIcon(R.drawable.ic_lucide_bell)
@@ -2435,7 +2441,9 @@ private fun DayAheadSelector(
 
     Box {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 2.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             SettingsRowIcon(R.drawable.ic_lucide_bell_ring)
@@ -2506,7 +2514,9 @@ private fun LanguageSelector() {
 
     Box {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 2.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             SettingsRowIcon(R.drawable.ic_lucide_languages)

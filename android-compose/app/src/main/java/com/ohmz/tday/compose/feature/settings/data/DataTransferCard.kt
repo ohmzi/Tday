@@ -1,37 +1,27 @@
 package com.ohmz.tday.compose.feature.settings.data
 
-import com.ohmz.tday.compose.ui.theme.TdayDimens
-import com.ohmz.tday.compose.core.ui.LocalSnackbarManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ohmz.tday.compose.R
-import com.ohmz.tday.compose.feature.guide.GuideHelpLink
+import com.ohmz.tday.compose.core.ui.LocalSnackbarManager
+import com.ohmz.tday.compose.feature.settings.SettingsDivider
+import com.ohmz.tday.compose.feature.settings.SettingsListRow
+import com.ohmz.tday.compose.feature.settings.SettingsSectionCard
+import com.ohmz.tday.compose.feature.settings.SettingsSectionTitle
 import com.ohmz.tday.shared.guide.GuideTopicIds
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -98,72 +88,57 @@ fun DataTransferCard(modifier: Modifier = Modifier) {
         }
     }
 
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f)),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = TdayDimens.SettingsCardElevation,
-        ),
-    ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 18.dp, vertical = 18.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = context.getString(R.string.settings_data_title),
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-                GuideHelpLink(GuideTopicIds.EXPORT_YOUR_DATA)
-            }
+    SettingsSectionCard(modifier = modifier) {
+        SettingsSectionTitle(
+            title = context.getString(R.string.settings_data_title),
+            helpTopicId = GuideTopicIds.EXPORT_YOUR_DATA,
+        )
 
+        Text(
+            text = context.getString(
+                R.string.settings_data_summary,
+                state.taskCount,
+                state.listCount,
+                state.completedCount,
+            ),
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.62f),
+        )
+
+        // Icon rows, not filled buttons — these two act in place, exactly like the rows in
+        // every other Settings card, and the other two platforms draw them the same way
+        // (iOS: showChevron false, LucideDownload / LucideUpload).
+        SettingsListRow(
+            title = context.getString(R.string.settings_data_download),
+            value = null,
+            onClick = {
+                if (!state.busy) exportLauncher.launch("tday-export-${LocalDate.now()}.json")
+            },
+            icon = R.drawable.ic_lucide_download,
+            showChevron = false,
+        )
+
+        SettingsDivider()
+
+        // A local workspace has no account to import into, so the row is replaced by the
+        // reason rather than shown greyed with no explanation.
+        if (state.isLocalMode) {
             Text(
-                text = context.getString(
-                    R.string.settings_data_summary,
-                    state.taskCount,
-                    state.listCount,
-                    state.completedCount,
-                ),
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.62f),
+                text = context.getString(R.string.settings_data_import_local_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
             )
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                Button(
-                    onClick = { exportLauncher.launch("tday-export-${LocalDate.now()}.json") },
-                    enabled = !state.busy,
-                    modifier = Modifier.weight(1f),
-                ) {
-                    Text(context.getString(R.string.settings_data_download), fontWeight = FontWeight.ExtraBold)
-                }
-                OutlinedButton(
-                    onClick = { importLauncher.launch(arrayOf("application/json")) },
-                    enabled = !state.busy && !state.isLocalMode,
-                    modifier = Modifier.weight(1f),
-                ) {
-                    Text(context.getString(R.string.settings_data_import), fontWeight = FontWeight.ExtraBold)
-                }
-            }
-
-            if (state.isLocalMode) {
-                Text(
-                    text = context.getString(R.string.settings_data_import_local_hint),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                )
-            }
+        } else {
+            SettingsListRow(
+                title = context.getString(R.string.settings_data_import),
+                value = null,
+                onClick = {
+                    if (!state.busy) importLauncher.launch(arrayOf("application/json"))
+                },
+                icon = R.drawable.ic_lucide_upload,
+                showChevron = false,
+            )
         }
     }
 

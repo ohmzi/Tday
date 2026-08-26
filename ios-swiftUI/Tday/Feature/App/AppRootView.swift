@@ -292,6 +292,10 @@ struct AppRootView: View {
             if !appViewModel.hasCompletedInitialBootstrap {
                 await appViewModel.bootstrap()
             }
+            // Seed the launch value. `.onChange(of: scenePhase)` never fires for it, and with
+            // nothing recorded the first foreground return has no "before" to compare against
+            // — which is precisely the trip out to iOS Settings we are here to catch.
+            await appViewModel.refreshNotificationAuthorization()
             routePendingNotificationDeepLink()
             drainPendingShareIfReady()
             presentPendingRootCreateTaskIfReady()
@@ -329,6 +333,13 @@ struct AppRootView: View {
                 container.reapplyDatabaseProtection()
                 Task {
                     await container.todoRepository.drainWidgetCompletions()
+                }
+                // The notification permission is granted in the *system* Settings app, so the
+                // only moment T'Day can notice is the return from it — and the screen the user
+                // lands back on is whichever one they left, not ours. Owned here rather than in
+                // SettingsScreen so "OS on + switch on" starts delivering from anywhere.
+                Task {
+                    await appViewModel.refreshNotificationAuthorization()
                 }
                 drainPendingShareIfReady()
                 guard hasLeftActiveScene else {
