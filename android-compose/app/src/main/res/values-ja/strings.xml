@@ -178,6 +178,9 @@
     <string name="settings_appearance">外観</string>
     <string name="settings_reminders">リマインダー</string>
     <string name="settings_feature_toggle">機能の切り替え</string>
+    <string name="settings_notifications">通知</string>
+    <string name="settings_notifications_blocked">Android の設定で T\'Day の通知がオフになっています。</string>
+    <string name="settings_notifications_declined">通知が許可されなかったため、T\'Day はリマインダーを配信できません。</string>
     <string name="settings_ai_task_summary">要約</string>
     <string name="settings_saving_admin">管理者設定を保存中…</string>
     <string name="settings_ai_unavailable_title">要約は利用できません</string>
@@ -389,6 +392,11 @@
     <string name="settings_about">アプリ情報</string>
     <string name="settings_workspace_local_title">ローカルワークスペース</string>
     <string name="settings_workspace_local_detail">このデバイスのみ</string>
+    <string name="settings_workspace_leave">ローカルワークスペースを終了</string>
+    <string name="settings_workspace_delete">ローカルデータを削除</string>
+    <string name="settings_workspace_delete_title">ローカルデータを削除しますか？</string>
+    <string name="settings_workspace_delete_body">この端末に保存されているすべてのタスク・リスト・完了記録を完全に削除します。サーバー上に控えはありません。残しておきたい場合は、先にデータをダウンロードしてください。</string>
+    <string name="settings_workspace_delete_done">ローカルデータを削除しました。</string>
     <string name="settings_workspace_server_title">サーバー同期</string>
     <string name="settings_sync_status_ready">同期の準備完了</string>
     <string name="settings_sync_status_syncing">同期中</string>

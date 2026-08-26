@@ -178,6 +178,9 @@
     <string name="settings_appearance">Apparence</string>
     <string name="settings_reminders">Rappels</string>
     <string name="settings_feature_toggle">Activation de fonctionnalité</string>
+    <string name="settings_notifications">Notifications</string>
+    <string name="settings_notifications_blocked">Les notifications sont désactivées pour T\'Day dans les paramètres Android.</string>
+    <string name="settings_notifications_declined">Les notifications n\'ont pas été autorisées, T\'Day ne peut donc pas envoyer de rappels.</string>
     <string name="settings_ai_task_summary">Résumé</string>
     <string name="settings_saving_admin">Enregistrement du paramètre administrateur…</string>
     <string name="settings_ai_unavailable_title">Résumé indisponible</string>
@@ -390,6 +393,11 @@
     <string name="settings_about">À propos</string>
     <string name="settings_workspace_local_title">Espace de travail local</string>
     <string name="settings_workspace_local_detail">Sur cet appareil uniquement</string>
+    <string name="settings_workspace_leave">Quitter l\'espace local</string>
+    <string name="settings_workspace_delete">Supprimer les données locales</string>
+    <string name="settings_workspace_delete_title">Supprimer les données locales ?</string>
+    <string name="settings_workspace_delete_body">Cela supprime définitivement toutes les tâches, listes et entrées terminées enregistrées sur cet appareil. Il n\'existe aucune copie sur un serveur — téléchargez vos données avant si vous voulez les conserver.</string>
+    <string name="settings_workspace_delete_done">Données locales supprimées.</string>
     <string name="settings_workspace_server_title">Synchronisation serveur</string>
     <string name="settings_sync_status_ready">Prêt à synchroniser</string>
     <string name="settings_sync_status_syncing">Synchronisation en cours</string>

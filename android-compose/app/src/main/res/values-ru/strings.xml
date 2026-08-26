@@ -178,6 +178,9 @@
     <string name="settings_appearance">Оформление</string>
     <string name="settings_reminders">Напоминания</string>
     <string name="settings_feature_toggle">Переключатель функций</string>
+    <string name="settings_notifications">Уведомления</string>
+    <string name="settings_notifications_blocked">Уведомления для T\'Day отключены в настройках Android.</string>
+    <string name="settings_notifications_declined">Уведомления не разрешены, поэтому T\'Day не может отправлять напоминания.</string>
     <string name="settings_ai_task_summary">Сводка</string>
     <string name="settings_saving_admin">Сохранение настройки администратора…</string>
     <string name="settings_ai_unavailable_title">Сводка недоступна</string>
@@ -392,6 +395,11 @@
     <string name="settings_about">О приложении</string>
     <string name="settings_workspace_local_title">Локальное пространство</string>
     <string name="settings_workspace_local_detail">Только на этом устройстве</string>
+    <string name="settings_workspace_leave">Выйти из локального пространства</string>
+    <string name="settings_workspace_delete">Удалить локальные данные</string>
+    <string name="settings_workspace_delete_title">Удалить локальные данные?</string>
+    <string name="settings_workspace_delete_body">Это навсегда удалит все задачи, списки и завершённые записи, сохранённые на этом устройстве. Копии на сервере нет — сначала скачайте свои данные, если хотите их сохранить.</string>
+    <string name="settings_workspace_delete_done">Локальные данные удалены.</string>
     <string name="settings_workspace_server_title">Синхронизация с сервером</string>
     <string name="settings_sync_status_ready">Готово к синхронизации</string>
     <string name="settings_sync_status_syncing">Синхронизация</string>

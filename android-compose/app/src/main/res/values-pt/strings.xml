@@ -178,6 +178,9 @@
     <string name="settings_appearance">Aparência</string>
     <string name="settings_reminders">Lembretes</string>
     <string name="settings_feature_toggle">Alternar recurso</string>
+    <string name="settings_notifications">Notificações</string>
+    <string name="settings_notifications_blocked">As notificações estão desativadas para o T\'Day nas configurações do Android.</string>
+    <string name="settings_notifications_declined">As notificações não foram permitidas, por isso o T\'Day não pode enviar lembretes.</string>
     <string name="settings_ai_task_summary">Resumo</string>
     <string name="settings_saving_admin">Salvando configuração de administrador…</string>
     <string name="settings_ai_unavailable_title">Resumo indisponível</string>
@@ -390,6 +393,11 @@
     <string name="settings_about">Acerca de</string>
     <string name="settings_workspace_local_title">Espaço de trabalho local</string>
     <string name="settings_workspace_local_detail">Apenas neste dispositivo</string>
+    <string name="settings_workspace_leave">Sair do espaço local</string>
+    <string name="settings_workspace_delete">Eliminar os dados locais</string>
+    <string name="settings_workspace_delete_title">Eliminar os dados locais?</string>
+    <string name="settings_workspace_delete_body">Isto remove definitivamente todas as tarefas, listas e entradas concluídas guardadas neste dispositivo. Não existe cópia num servidor — descarregue os seus dados antes se quiser mantê-los.</string>
+    <string name="settings_workspace_delete_done">Dados locais eliminados.</string>
     <string name="settings_workspace_server_title">Sincronização com servidor</string>
     <string name="settings_sync_status_ready">Pronto para sincronizar</string>
     <string name="settings_sync_status_syncing">Sincronizando agora</string>

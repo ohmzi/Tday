@@ -178,6 +178,9 @@
     <string name="settings_appearance">Penampilan</string>
     <string name="settings_reminders">Peringatan</string>
     <string name="settings_feature_toggle">Togol ciri</string>
+    <string name="settings_notifications">Pemberitahuan</string>
+    <string name="settings_notifications_blocked">Pemberitahuan dimatikan untuk T\'Day dalam tetapan Android.</string>
+    <string name="settings_notifications_declined">Pemberitahuan tidak dibenarkan, jadi T\'Day tidak boleh menghantar peringatan.</string>
     <string name="settings_ai_task_summary">Ringkasan</string>
     <string name="settings_saving_admin">Menyimpan tetapan admin…</string>
     <string name="settings_ai_unavailable_title">Ringkasan tidak tersedia</string>
@@ -389,6 +392,11 @@
     <string name="settings_about">Perihal</string>
     <string name="settings_workspace_local_title">Ruang kerja tempatan</string>
     <string name="settings_workspace_local_detail">Pada peranti ini sahaja</string>
+    <string name="settings_workspace_leave">Keluar dari ruang kerja setempat</string>
+    <string name="settings_workspace_delete">Padam data setempat</string>
+    <string name="settings_workspace_delete_title">Padam data setempat?</string>
+    <string name="settings_workspace_delete_body">Ini membuang secara kekal semua tugasan, senarai dan rekod selesai yang disimpan pada peranti ini. Tiada salinan pada mana-mana pelayan — muat turun data anda dahulu jika mahu menyimpannya.</string>
+    <string name="settings_workspace_delete_done">Data setempat dipadam.</string>
     <string name="settings_workspace_server_title">Segerak pelayan</string>
     <string name="settings_sync_status_ready">Sedia untuk segerak</string>
     <string name="settings_sync_status_syncing">Menyegerakkan sekarang</string>

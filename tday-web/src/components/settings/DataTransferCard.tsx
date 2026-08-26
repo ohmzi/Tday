@@ -14,6 +14,7 @@ import {
   ModalFooter,
 } from "@/components/ui/Modal";
 import { GuideHelpLink } from "@/features/guide/GuideHelpLink";
+import { CardDivider, SettingsOptionRow } from "./SettingsControls";
 import { useToast } from "@/hooks/use-toast";
 import { useIsLocalMode } from "@/hooks/useAppMode";
 import { api } from "@/lib/api-client";
@@ -158,35 +159,33 @@ export default function DataTransferCard() {
         </p>
       </div>
 
-      <div className="flex flex-col gap-2 sm:flex-row">
-        <Button
-          type="button"
-          variant="default"
+      {/* Icon rows, not filled buttons — these two act in place, exactly like
+          the encrypt and reset rows, and native draws them the same way
+          (iOS: showChevron false, LucideDownload / LucideUpload). */}
+      <div className="space-y-4">
+        <SettingsOptionRow
+          icon={Download}
+          label={t("data.download")}
           disabled={exporting}
           onClick={handleExport}
-          className="h-11 flex-1 rounded-2xl font-black"
-        >
-          {exporting ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <Download className="mr-2 h-4 w-4" />
-          )}
-          {t("data.download")}
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
+          trailing={
+            exporting ? (
+              <Loader2 className="h-5 w-5 shrink-0 animate-spin text-muted-foreground" />
+            ) : null
+          }
+        />
+        <CardDivider />
+        <SettingsOptionRow
+          icon={Upload}
+          label={t("data.import")}
           disabled={importing}
           onClick={() => fileInputRef.current?.click()}
-          className="h-11 flex-1 rounded-2xl font-black"
-        >
-          {importing && !pending ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <Upload className="mr-2 h-4 w-4" />
-          )}
-          {t("data.import")}
-        </Button>
+          trailing={
+            importing && !pending ? (
+              <Loader2 className="h-5 w-5 shrink-0 animate-spin text-muted-foreground" />
+            ) : null
+          }
+        />
         <input
           ref={fileInputRef}
           type="file"

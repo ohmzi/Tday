@@ -676,10 +676,11 @@
       "webhookSecretCopyFailed": "Falha ao copiar o segredo de assinatura"
     },
     "signOut": "Sair",
+    "featureToggle": {
+      "title": "Alternar recurso"
+    },
     "aiSummary": {
-      "title": "AI task summary",
-      "description": "Show a one-tap summary of your tasks.",
-      "toggle": "Show summary button"
+      "title": "Resumo de tarefas com IA"
     },
     "securityQuestions": {
       "title": "Security questions",
@@ -767,7 +768,9 @@
       "deleteDone": "Dados locais eliminados."
     },
     "about": {
-      "title": "Sobre"
+      "title": "Sobre",
+      "appVersion": "Versão do app",
+      "server": "Servidor"
     },
     "troubleshooting": {
       "reset": "Repor a cache da aplicação",

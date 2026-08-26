@@ -676,10 +676,11 @@
       "webhookSecretCopyFailed": "Signatur-Secret konnte nicht kopiert werden"
     },
     "signOut": "Abmelden",
+    "featureToggle": {
+      "title": "Funktionsschalter"
+    },
     "aiSummary": {
-      "title": "AI task summary",
-      "description": "Show a one-tap summary of your tasks.",
-      "toggle": "Show summary button"
+      "title": "KI-Aufgabenzusammenfassung"
     },
     "securityQuestions": {
       "title": "Security questions",
@@ -767,7 +768,9 @@
       "deleteDone": "Lokale Daten gelöscht."
     },
     "about": {
-      "title": "Info"
+      "title": "Info",
+      "appVersion": "App-Version",
+      "server": "Server"
     },
     "troubleshooting": {
       "reset": "App-Cache zurücksetzen",

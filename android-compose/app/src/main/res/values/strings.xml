@@ -189,6 +189,9 @@
     <string name="settings_appearance">Appearance</string>
     <string name="settings_reminders">Reminders</string>
     <string name="settings_feature_toggle">Feature toggle</string>
+    <string name="settings_notifications">Notifications</string>
+    <string name="settings_notifications_blocked">Notifications are off for T\'Day in Android settings.</string>
+    <string name="settings_notifications_declined">Notifications weren\'t allowed, so T\'Day can\'t deliver reminders.</string>
     <string name="settings_ai_task_summary">Summary</string>
     <string name="settings_saving_admin">Saving admin setting…</string>
     <string name="settings_ai_unavailable_title">Summary unavailable</string>
@@ -458,6 +461,11 @@
     <string name="settings_about">About</string>
     <string name="settings_workspace_local_title">Local workspace</string>
     <string name="settings_workspace_local_detail">On this device only</string>
+    <string name="settings_workspace_leave">Leave local workspace</string>
+    <string name="settings_workspace_delete">Delete local data</string>
+    <string name="settings_workspace_delete_title">Delete local data?</string>
+    <string name="settings_workspace_delete_body">This permanently removes every task, list and completed entry stored on this device. There is no copy on a server — download your data first if you want to keep it.</string>
+    <string name="settings_workspace_delete_done">Local data deleted.</string>
     <string name="settings_workspace_server_title">Server sync</string>
     <string name="settings_sync_status_ready">Ready to sync</string>
     <string name="settings_sync_status_syncing">Syncing now</string>

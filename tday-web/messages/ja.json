@@ -676,10 +676,11 @@
       "webhookSecretCopyFailed": "署名シークレットのコピーに失敗しました"
     },
     "signOut": "ログアウト",
+    "featureToggle": {
+      "title": "機能の切り替え"
+    },
     "aiSummary": {
-      "title": "AI task summary",
-      "description": "Show a one-tap summary of your tasks.",
-      "toggle": "Show summary button"
+      "title": "AI タスク要約"
     },
     "securityQuestions": {
       "title": "Security questions",
@@ -767,7 +768,9 @@
       "deleteDone": "ローカルデータを削除しました。"
     },
     "about": {
-      "title": "アプリについて"
+      "title": "アプリについて",
+      "appVersion": "アプリバージョン",
+      "server": "サーバー"
     },
     "troubleshooting": {
       "reset": "アプリのキャッシュをリセット",
