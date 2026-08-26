@@ -162,6 +162,7 @@ npm run observability:smoke                 # no-dependency Sentry/privacy smoke
 | `install-hooks.sh` exists | Hook installation is documented and scriptable |
 | All required documentation files exist | Complete project documentation |
 | Version mirrors synchronize from `version.json` to web package metadata, iOS metadata, and env examples | Single source of version truth |
+| Android `versionCode` encoding is collision-free, strictly increasing, above every shipped code, and under the 32-bit ceiling | Android only installs an update whose `versionCode` is strictly greater than the installed one |
 | `postversion` and `scripts/version.mjs check` cover every checked-in version mirror | Release bumps include all generated metadata |
 | Release metadata `compareUrl` is exempt from `version.mjs check` | `generate-release-metadata.mjs` owns that field during the release run |
 
