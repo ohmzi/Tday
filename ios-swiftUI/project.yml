@@ -1,3 +1,16 @@
+# NOTE: this file does NOT generate TdayApp.xcodeproj.
+#
+# `TdayApp.xcodeproj/project.pbxproj` is the source of truth and is maintained by hand (and by
+# `scripts/version.mjs sync`). XcodeGen has never been run against this repository and must not
+# be: regenerating would discard the hand-maintained pbxproj and wipe `xcshareddata/`, including
+# the shared `Tday.xcscheme` that the TestFlight pipeline archives.
+#
+# It is kept because tooling reads it — `scripts/version.mjs` mirrors the version into it, the
+# package.json postversion hook stages it, and `tday-web/tests/guardrails/dependency-hygiene`
+# derives the expected pbxproj build-configuration count from its MARKETING_VERSION entries.
+# Treat it as a mirror of the pbxproj: when they disagree, the pbxproj wins, and this file
+# should be corrected to match.
+
 name: TdayApp
 
 options:
@@ -35,10 +48,10 @@ targets:
       - package: sentry-cocoa
         product: Sentry-Dynamic
       - target: TdayWidget
-      # Embedded app extension. On-device builds need its own App ID
-      # (com.ohmz.tday.ios.ShareExtension) with the group.com.ohmz.tday App
-      # Groups capability registered — Xcode's automatic signing handles this
-      # the first time you select the team under Signing & Capabilities.
+      # Embedded app extension. Ships inside the Tday archive and needs its own
+      # App ID (com.ohmz.tday.ios.TdayShareExtension) carrying the
+      # group.com.ohmz.tday App Groups capability. CI mints the profile via
+      # `-allowProvisioningUpdates`; see docs/DEPLOYMENT.md.
       - target: TdayShareExtension
       # Embedded watchOS companion (R6-4). Fed live from the phone over
       # WatchConnectivity (see Tday/Core/Widget/WatchSessionManager.swift).
@@ -71,7 +84,7 @@ targets:
     settings:
       base:
         PRODUCT_NAME: TdayWidget
-        PRODUCT_BUNDLE_IDENTIFIER: com.ohmz.tday.ios.TodayTasksWidget
+        PRODUCT_BUNDLE_IDENTIFIER: com.ohmz.tday.ios.TdayTasksWidget
         DEVELOPMENT_TEAM: THT5Z8K3TF
         INFOPLIST_FILE: TdayWidget/Info.plist
         CODE_SIGN_ENTITLEMENTS: TdayWidget/TdayWidget.entitlements
@@ -93,7 +106,7 @@ targets:
     settings:
       base:
         PRODUCT_NAME: TdayShareExtension
-        PRODUCT_BUNDLE_IDENTIFIER: com.ohmz.tday.ios.ShareExtension
+        PRODUCT_BUNDLE_IDENTIFIER: com.ohmz.tday.ios.TdayShareExtension
         DEVELOPMENT_TEAM: THT5Z8K3TF
         INFOPLIST_FILE: TdayShareExtension/Info.plist
         CODE_SIGN_ENTITLEMENTS: TdayShareExtension/TdayShareExtension.entitlements
