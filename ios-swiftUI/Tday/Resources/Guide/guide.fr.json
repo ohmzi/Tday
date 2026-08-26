@@ -756,6 +756,42 @@
       "searchBody": "trouvez n'importe quelle tache par titre, note ou nom de liste. utilisez le champ de recherche pour filtrer vos taches instantanement par titre, description ou nom de liste — sans avoir a faire defiler."
     },
     {
+      "id": "notifications",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "bell",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.7.0",
+      "deepLink": null,
+      "helpAnchors": [
+        "settings-feature-toggle"
+      ],
+      "title": "Notifications",
+      "summary": "Un interrupteur dans les Réglages décide si T'Day peut vous notifier.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Les rappels, le résumé de la journée et les alertes de sécurité passent tous par un interrupteur dans les Réglages. Il ne fonctionne que si votre appareil autorise aussi T'Day à vous notifier : à la première activation, l'app demande la permission au système. Interrupteur éteint, rien n'est distribué, même si le système l'autorise encore."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Si l'interrupteur refuse de s'activer, le système a déjà reçu un refus. Touchez-le et T'Day vous emmène à la bonne page des réglages de l'appareil."
+          ]
+        }
+      ],
+      "searchTitle": "notifications",
+      "searchKeywords": "notification, autorisation, autoriser, alerte, banniere, push, os, systeme, desactive, active",
+      "searchBody": "un interrupteur dans les reglages decide si t'day peut vous notifier. les rappels, le resume de la journee et les alertes de securite passent tous par un interrupteur dans les reglages. il ne fonctionne que si votre appareil autorise aussi t'day a vous notifier : a la premiere activation, l'app demande la permission au systeme. interrupteur eteint, rien n'est distribue, meme si le systeme l'autorise encore. si l'interrupteur refuse de s'activer, le systeme a deja recu un refus. touchez-le et t'day vous emmene a la bonne page des reglages de l'appareil."
+    },
+    {
       "id": "recurrence-presets",
       "section": "RECURRENCE_AND_REMINDERS",
       "sectionOrder": 4,

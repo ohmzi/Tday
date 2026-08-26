@@ -756,6 +756,42 @@
       "searchBody": "finde jede aufgabe nach titel, notiz oder listenname. nutze das suchfeld, um deine aufgaben sofort nach titel, beschreibung oder listenname zu filtern — ganz ohne scrollen."
     },
     {
+      "id": "notifications",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "bell",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.7.0",
+      "deepLink": null,
+      "helpAnchors": [
+        "settings-feature-toggle"
+      ],
+      "title": "Benachrichtigungen",
+      "summary": "Ein Schalter in den Einstellungen entscheidet, ob T'Day dich überhaupt benachrichtigen darf.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Erinnerungen, die Tagesvorschau und Sicherheitshinweise kommen alle über einen Schalter in den Einstellungen. Er wirkt nur, wenn auch dein Gerät T'Day das Benachrichtigen erlaubt: Beim ersten Einschalten fragt die App das System um Erlaubnis. Ist der Schalter aus, wird nichts zugestellt – selbst wenn das System es weiterhin erlaubt."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Lässt sich der Schalter nicht einschalten, wurde dem System bereits abgesagt. Tippe darauf, und T'Day bringt dich zur passenden Seite in den Geräteeinstellungen."
+          ]
+        }
+      ],
+      "searchTitle": "benachrichtigungen",
+      "searchKeywords": "benachrichtigung, berechtigung, erlauben, hinweis, banner, push, os, system, aus, an",
+      "searchBody": "ein schalter in den einstellungen entscheidet, ob t'day dich uberhaupt benachrichtigen darf. erinnerungen, die tagesvorschau und sicherheitshinweise kommen alle uber einen schalter in den einstellungen. er wirkt nur, wenn auch dein gerat t'day das benachrichtigen erlaubt: beim ersten einschalten fragt die app das system um erlaubnis. ist der schalter aus, wird nichts zugestellt – selbst wenn das system es weiterhin erlaubt. lasst sich der schalter nicht einschalten, wurde dem system bereits abgesagt. tippe darauf, und t'day bringt dich zur passenden seite in den gerateeinstellungen."
+    },
+    {
       "id": "recurrence-presets",
       "section": "RECURRENCE_AND_REMINDERS",
       "sectionOrder": 4,

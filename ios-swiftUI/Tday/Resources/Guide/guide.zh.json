@@ -756,6 +756,42 @@
       "searchBody": "按标题、备注或列表名称找到任何任务。 使用搜索栏，按标题、描述或列表名称即时筛选你的任务——无需滚动查找。"
     },
     {
+      "id": "notifications",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "bell",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.7.0",
+      "deepLink": null,
+      "helpAnchors": [
+        "settings-feature-toggle"
+      ],
+      "title": "通知",
+      "summary": "设置中的一个开关决定 T'Day 是否可以通知你。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "提醒、每日概览和安全提示都通过设置中的同一个开关送达。只有在你的设备也允许 T'Day 通知时它才生效：首次开启时，应用会向系统申请权限。开关关闭后，即使系统仍然允许，也不会送达任何内容。"
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "如果开关打不开，说明系统那边已经被拒绝过了。点一下，T'Day 会带你到设备设置中对应的页面。"
+          ]
+        }
+      ],
+      "searchTitle": "通知",
+      "searchKeywords": "通知, 权限, 允许, 提醒, 横幅, 推送, 系统, 关闭, 开启",
+      "searchBody": "设置中的一个开关决定 t'day 是否可以通知你。 提醒、每日概览和安全提示都通过设置中的同一个开关送达。只有在你的设备也允许 t'day 通知时它才生效：首次开启时，应用会向系统申请权限。开关关闭后，即使系统仍然允许，也不会送达任何内容。 如果开关打不开，说明系统那边已经被拒绝过了。点一下，t'day 会带你到设备设置中对应的页面。"
+    },
+    {
       "id": "recurrence-presets",
       "section": "RECURRENCE_AND_REMINDERS",
       "sectionOrder": 4,

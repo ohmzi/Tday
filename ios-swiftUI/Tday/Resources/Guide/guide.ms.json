@@ -756,6 +756,42 @@
       "searchBody": "cari sebarang tugasan mengikut tajuk, nota, atau nama senarai. guna medan carian untuk menapis tugasan anda serta-merta mengikut tajuk, huraian, atau nama senarai — tanpa perlu menatal."
     },
     {
+      "id": "notifications",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "bell",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.7.0",
+      "deepLink": null,
+      "helpAnchors": [
+        "settings-feature-toggle"
+      ],
+      "title": "Pemberitahuan",
+      "summary": "Satu suis dalam Tetapan menentukan sama ada T'Day boleh memberitahu anda.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Peringatan, ringkasan hari dan amaran keselamatan semuanya sampai melalui satu suis dalam Tetapan. Ia hanya berfungsi apabila peranti anda turut membenarkan T'Day memberitahu anda: apabila dihidupkan kali pertama, apl meminta kebenaran sistem. Dengan suis dimatikan, tiada apa-apa dihantar walaupun sistem masih membenarkannya."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Jika suis tidak mahu hidup, sistem telah pun ditolak. Ketik padanya dan T'Day akan membawa anda ke halaman yang betul dalam tetapan peranti."
+          ]
+        }
+      ],
+      "searchTitle": "pemberitahuan",
+      "searchKeywords": "pemberitahuan, kebenaran, benarkan, amaran, sepanduk, push, os, sistem, mati, hidup",
+      "searchBody": "satu suis dalam tetapan menentukan sama ada t'day boleh memberitahu anda. peringatan, ringkasan hari dan amaran keselamatan semuanya sampai melalui satu suis dalam tetapan. ia hanya berfungsi apabila peranti anda turut membenarkan t'day memberitahu anda: apabila dihidupkan kali pertama, apl meminta kebenaran sistem. dengan suis dimatikan, tiada apa-apa dihantar walaupun sistem masih membenarkannya. jika suis tidak mahu hidup, sistem telah pun ditolak. ketik padanya dan t'day akan membawa anda ke halaman yang betul dalam tetapan peranti."
+    },
+    {
       "id": "recurrence-presets",
       "section": "RECURRENCE_AND_REMINDERS",
       "sectionOrder": 4,
