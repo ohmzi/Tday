@@ -1,5 +1,6 @@
 package com.ohmz.tday.compose.feature.completed
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState
@@ -21,8 +22,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
@@ -47,6 +50,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -64,16 +69,20 @@ import com.ohmz.tday.compose.core.model.CompletedItem
 import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TodoItem
-import com.ohmz.tday.compose.core.ui.EmptyTaskBackgroundMessage
+import com.ohmz.tday.compose.core.text.flattenNotesToPlainText
 import com.ohmz.tday.compose.core.ui.EmptyTaskWatermark
 import com.ohmz.tday.compose.core.ui.TaskSwipeActionButton
+import com.ohmz.tday.compose.core.ui.TdayEmptyState
 import com.ohmz.tday.compose.core.ui.TdayHeroToolbar
+import com.ohmz.tday.compose.core.ui.TdaySearchCapsule
 import com.ohmz.tday.compose.core.ui.rememberLazyListHeroTitleCollapse
+import com.ohmz.tday.compose.core.ui.tdayBarButtonContainerColor
 import com.ohmz.tday.compose.core.ui.tdayHeroTitleItem
 import com.ohmz.tday.compose.core.ui.animateTaskSwipeOffsetAsState
 import com.ohmz.tday.compose.core.ui.rememberTaskSwipeRevealState
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.theme.TdayCompletedTitleAccent
+import com.ohmz.tday.compose.ui.theme.TdayDimens
 import com.ohmz.tday.compose.ui.theme.TdaySwipeDeleteBackground
 import com.ohmz.tday.compose.ui.theme.TdaySwipeEditBackground
 import com.ohmz.tday.compose.ui.theme.TdayTaskCompleteAccent
@@ -126,9 +135,41 @@ fun CompletedScreen(
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val listState = rememberLazyListState()
-    val timelineSections = remember(uiState.items) {
-        buildCompletedTimelineSections(uiState.items)
+    // Scoped search: the history this screen is showing, and nothing else. The
+    // field takes the toolbar row the way the list-detail screens hand theirs
+    // over, so there is no second bar for it to live in.
+    var searchExpanded by rememberSaveable { mutableStateOf(false) }
+    var searchQuery by rememberSaveable { mutableStateOf("") }
+    var searchNeedsFocus by remember { mutableStateOf(false) }
+    val normalizedSearchQuery = remember(searchQuery) {
+        searchQuery.trim().lowercase(Locale.getDefault())
     }
+    val searchActive = searchExpanded && normalizedSearchQuery.isNotBlank()
+    val closeSearch = {
+        searchExpanded = false
+        searchQuery = ""
+        searchNeedsFocus = false
+    }
+    val visibleItems = remember(uiState.items, searchActive, normalizedSearchQuery) {
+        if (!searchActive) {
+            uiState.items
+        } else {
+            // The same two fields the web completed page and the list-detail
+            // screens match on: the title and the notes flattened out of their
+            // rich-text form.
+            uiState.items.filter { completed ->
+                completed.title.lowercase(Locale.getDefault())
+                    .contains(normalizedSearchQuery) ||
+                        flattenNotesToPlainText(completed.description)
+                            .lowercase(Locale.getDefault())
+                            .contains(normalizedSearchQuery)
+            }
+        }
+    }
+    val timelineSections = remember(visibleItems) {
+        buildCompletedTimelineSections(visibleItems)
+    }
+    val showEmptyState = visibleItems.isEmpty() && !uiState.isLoading
     val heroCollapse = rememberLazyListHeroTitleCollapse(listState = listState)
     val completedTitle = stringResource(R.string.completed_title)
     val completedIcon = ImageVector.vectorResource(R.drawable.ic_lucide_circle_check_big)
@@ -145,6 +186,9 @@ fun CompletedScreen(
         if (uiState.items.none { it.id == openId }) {
             openSwipeTaskId = null
         }
+    }
+    BackHandler(enabled = searchExpanded) {
+        closeSearch()
     }
 
     Scaffold(containerColor = colorScheme.background) { padding ->
@@ -172,7 +216,12 @@ fun CompletedScreen(
                         collapseProgress = heroCollapse.progress,
                     )
                     timelineSections.forEachIndexed { sectionIndex, section ->
-                        val isCollapsed = collapsedSectionKeys.contains(section.key)
+                        // A live query outranks a shut month: history opens with
+                        // older months collapsed, and a task the search turns up
+                        // inside one must not stay hidden behind its header. Both
+                        // the timeline screens and web make the same call.
+                        val isCollapsed = !searchActive &&
+                                collapsedSectionKeys.contains(section.key)
                         item(key = "completed-header-${section.key}") {
                             CompletedTimelineSectionHeader(
                                 modifier = Modifier
@@ -258,6 +307,28 @@ fun CompletedScreen(
                         }
                     }
 
+                    if (showEmptyState) {
+                        item(key = "completed-empty", contentType = "completed-empty") {
+                            if (searchActive) {
+                                TdayEmptyState(
+                                    icon = R.drawable.ic_lucide_search,
+                                    accentColor = COMPLETED_TITLE_COLOR,
+                                    title = stringResource(R.string.scheduled_task_home_search_no_results),
+                                    description = stringResource(R.string.search_no_results_body),
+                                    modifier = Modifier.padding(vertical = 24.dp),
+                                )
+                            } else {
+                                TdayEmptyState(
+                                    icon = R.drawable.ic_lucide_circle_check_big,
+                                    accentColor = COMPLETED_TITLE_COLOR,
+                                    title = stringResource(R.string.completed_empty),
+                                    description = stringResource(R.string.completed_empty_body),
+                                    modifier = Modifier.padding(vertical = 24.dp),
+                                )
+                            }
+                        }
+                    }
+
                     uiState.errorMessage?.let { message ->
                         item {
                             com.ohmz.tday.compose.core.ui.ErrorRetryCard(
@@ -271,13 +342,13 @@ fun CompletedScreen(
                 }
             }
 
-            EmptyTaskWatermark(
-                iconRes = R.drawable.ic_lucide_circle_check_big,
-                accentColor = COMPLETED_TITLE_COLOR,
-            )
-            if (uiState.items.isEmpty() && !uiState.isLoading) {
-                EmptyTaskBackgroundMessage(
-                    message = stringResource(R.string.completed_empty),
+            // Page texture, not an empty state — but the empty scene is an
+            // illustration of its own, and stacking the two put a 212dp glyph
+            // behind a picture of the same glyph.
+            if (!showEmptyState) {
+                EmptyTaskWatermark(
+                    iconRes = R.drawable.ic_lucide_circle_check_big,
+                    accentColor = COMPLETED_TITLE_COLOR,
                 )
             }
 
@@ -289,7 +360,53 @@ fun CompletedScreen(
                 onBack = onBack,
                 backContentDescription = stringResource(R.string.action_back),
                 modifier = Modifier.align(Alignment.TopStart).padding(padding),
-            )
+                titleSuppressed = searchExpanded,
+            ) {
+                if (searchExpanded) {
+                    // The bar is handed over to the field, keeping the back
+                    // chevron and dropping the action cluster — what the
+                    // list-detail screens, iOS's TimelineTopBar and the web bar
+                    // all do.
+                    Spacer(modifier = Modifier.width(TdayDimens.FabSize))
+                    val focusRequester = remember { FocusRequester() }
+                    LaunchedEffect(searchNeedsFocus) {
+                        if (!searchNeedsFocus) return@LaunchedEffect
+                        // Consumed on the way in, so returning to a screen that
+                        // still has the field open does not re-open the
+                        // keyboard with it.
+                        searchNeedsFocus = false
+                        focusRequester.requestFocus()
+                    }
+                    TdaySearchCapsule(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        placeholder = stringResource(R.string.action_search_in, completedTitle),
+                        modifier = Modifier
+                            .weight(1f)
+                            .focusRequester(focusRequester),
+                        onClear = { searchQuery = "" },
+                        clearContentDescription = stringResource(R.string.action_clear_search),
+                    )
+                    // The capsule's own X clears the query; leaving the search
+                    // behind altogether is this one, as on the root feeds.
+                    CompletedBarButton(
+                        onClick = closeSearch,
+                        icon = ImageVector.vectorResource(R.drawable.ic_lucide_x),
+                        contentDescription = stringResource(R.string.action_close_search),
+                    )
+                } else {
+                    CompletedBarButton(
+                        // Only opens: the bar hands its row over to the field,
+                        // so this button is not on screen to be tapped again.
+                        onClick = {
+                            searchExpanded = true
+                            searchNeedsFocus = true
+                        },
+                        icon = ImageVector.vectorResource(R.drawable.ic_lucide_search),
+                        contentDescription = stringResource(R.string.action_search),
+                    )
+                }
+            }
         }
     }
 
@@ -718,6 +835,65 @@ private fun CompletedCircularToggleIcon(
             tint = tint,
             modifier = Modifier.size(24.dp),
         )
+    }
+}
+
+/**
+ * The circle this screen's toolbar actions sit in.
+ *
+ * A local copy of the timeline screen's `TodayHeaderButton`, which is private to
+ * `TodoListScreen` and has no shared home yet — the fill, the size and the lift
+ * come from the same tokens as the back button beside it, so the two match
+ * whatever the scheme does with them.
+ */
+@Composable
+private fun CompletedBarButton(
+    onClick: () -> Unit,
+    icon: ImageVector,
+    contentDescription: String,
+) {
+    val view = LocalView.current
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (pressed) 0.93f else 1f,
+        label = "completedBarButtonScale",
+    )
+    val offsetY by animateDpAsState(
+        targetValue = if (pressed) 2.dp else 0.dp,
+        label = "completedBarButtonOffsetY",
+    )
+
+    Card(
+        modifier = Modifier
+            .offset(y = offsetY)
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            },
+        onClick = {
+            ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+            onClick()
+        },
+        interactionSource = interactionSource,
+        shape = CircleShape,
+        colors = CardDefaults.cardColors(containerColor = tdayBarButtonContainerColor()),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = TdayDimens.BarButtonElevation,
+            pressedElevation = 0.dp,
+        ),
+    ) {
+        Box(
+            modifier = Modifier.size(TdayDimens.FabSize),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = contentDescription,
+                tint = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.size(22.dp),
+            )
+        }
     }
 }
 

@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { CalendarClock, CheckCheck, Clock3, Flag, Layers, Sun } from "lucide-react";
+import { CalendarClock, CheckCheck, Clock3, Flag, Layers, Search, Sun } from "lucide-react";
 import { isSameDay } from "date-fns";
 import { useCompletedTodo } from "@/features/completed/query/get-completedTodo";
-import NativePageHeader from "@/components/app/NativePageHeader";
+import NativePageHeader, { useNativePageBarSlots } from "@/components/app/NativePageHeader";
+import MobileSearchHeader from "@/components/ui/MobileSearchHeader";
 import ScreenWatermark from "@/components/app/ScreenWatermark";
 import EmptyState from "@/components/app/EmptyState";
 import { timelineScopeAccentColors } from "@/components/app/nativeScreenTheme";
@@ -34,6 +35,7 @@ import { useEditTodoInstance } from "../query/update-todo-instance";
 import { useReorderTodo } from "../query/reorder-todo";
 import { useUserTimezone } from "@/features/user/query/get-timezone";
 import { cn } from "@/lib/utils";
+import { flattenNotesToPlainText } from "@/lib/richNotes";
 import { useLocale } from "@/lib/navigation";
 import { useSearchParams } from "react-router-dom";
 import {
@@ -197,12 +199,17 @@ const isPriorityTask = (priority: string | null | undefined) => {
 
 const isOverdueTask = (due: Date) => due < new Date();
 
-const SCOPE_CONFIG: Record<TimelineScope, { icon: React.ElementType; heading: string; emptyMessage: string }> = {
-  today: { icon: Sun, heading: "today", emptyMessage: "No tasks for today" },
-  overdue: { icon: Clock3, heading: "Overdue", emptyMessage: "No overdue tasks" },
-  scheduled: { icon: CalendarClock, heading: "Scheduled", emptyMessage: "No upcoming tasks" },
-  all: { icon: Layers, heading: "All Tasks", emptyMessage: "No tasks" },
-  priority: { icon: Flag, heading: "priority", emptyMessage: "No priority tasks" },
+// `emptyTitle`/`emptyBody` are `app` keys, not copy: the empty scene says the
+// same thing here as it does on Android and iOS, in whichever language.
+const SCOPE_CONFIG: Record<
+  TimelineScope,
+  { icon: React.ElementType; heading: string; emptyTitle: string; emptyBody: string }
+> = {
+  today: { icon: Sun, heading: "today", emptyTitle: "todayEmpty", emptyBody: "todayEmptyBody" },
+  overdue: { icon: Clock3, heading: "Overdue", emptyTitle: "overdueEmpty", emptyBody: "overdueEmptyBody" },
+  scheduled: { icon: CalendarClock, heading: "Scheduled", emptyTitle: "scheduledEmpty", emptyBody: "scheduledEmptyBody" },
+  all: { icon: Layers, heading: "All Tasks", emptyTitle: "allTasksEmpty", emptyBody: "allTasksEmptyBody" },
+  priority: { icon: Flag, heading: "priority", emptyTitle: "priorityEmpty", emptyBody: "priorityEmptyBody" },
 };
 
 const AllTasksTimelineContainer = ({
@@ -220,18 +227,30 @@ const AllTasksTimelineContainer = ({
 
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [earlierExpanded, setEarlierExpanded] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const sentinelRef = useRef<HTMLDivElement | null>(null);
-  const { icon: ScopeIcon, emptyMessage: emptyStateMessage, heading: scopeHeading } = SCOPE_CONFIG[scope];
+  const { icon: ScopeIcon, emptyTitle, emptyBody, heading: scopeHeading } = SCOPE_CONFIG[scope];
   const pageHeading = scope === "today" || scope === "priority" ? appDict(scopeHeading) : scopeHeading;
+  const barSlots = useNativePageBarSlots();
   const focusedTaskId = searchParams.get(TODO_FOCUS_TASK_QUERY_PARAM);
   const focusedDateKey = useMemo(() => {
     const value = searchParams.get(TODO_FOCUS_DATE_QUERY_PARAM);
     return isTodoFocusDateKey(value) ? value : null;
   }, [searchParams]);
+  // Search is scoped to this screen: it narrows the tasks this scope already
+  // shows and reaches nothing outside them, so the priority screen searches
+  // priority tasks and the overdue screen searches overdue ones.
   const scopedTodos = useMemo(() => {
-    if (scope === "priority") return todos.filter((todo) => isPriorityTask(todo.priority));
-    return todos;
-  }, [scope, todos]);
+    const inScope =
+      scope === "priority" ? todos.filter((todo) => isPriorityTask(todo.priority)) : todos;
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return inScope;
+    return inScope.filter((todo) => {
+      const title = todo.title.toLowerCase();
+      const description = flattenNotesToPlainText(todo.description).toLowerCase();
+      return title.includes(query) || description.includes(query);
+    });
+  }, [scope, searchQuery, todos]);
 
   const timelineItems = useMemo(() => {
     return scopedTodos
@@ -347,12 +366,16 @@ const AllTasksTimelineContainer = ({
   }, [scopeFilteredItems, scope]);
 
   const hasMore = !timeline && visibleCount < scopeFilteredItems.length;
+  const isSearching = Boolean(searchQuery.trim());
   // Render the date buckets only when this scope actually has tasks; an empty
   // scope shows the native-style centered empty message instead.
   const showTimeline = timeline && hasScopedTasks;
   // Every scope shows the same native-style centered empty message when there
   // are no tasks (Today also keeps its Morning/Afternoon/Tonight headers above).
-  const showEmpty = !todoLoading && !hasScopedTasks;
+  const showEmpty = !todoLoading && !hasScopedTasks && !isSearching;
+  // A search that turns nothing up is a different state from an empty scope:
+  // the scope may be full, this word just is not in it.
+  const showNoResults = !todoLoading && !hasScopedTasks && isSearching;
   const { completedTodos } = useCompletedTodo();
   const completedTodayCount = useMemo(
     () =>
@@ -448,14 +471,32 @@ const AllTasksTimelineContainer = ({
     >
       <div className="mb-20">
         <ScreenWatermark icon={ScopeIcon} />
+        {/* The search field is this page's pinned bar, so the header below
+            renders only the block that scrolls away and docks its title into
+            it — the same split the custom list uses. */}
+        <MobileSearchHeader
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          placeholder={`${appDict("searchIn")} ${pageHeading}...`}
+          pageCollapse={{
+            ...barSlots,
+            title: pageHeading,
+            accentColor: timelineScopeAccentColors[scope],
+          }}
+          trailingAction={<SummaryButton mode={scope} />}
+        />
+
         <NativePageHeader
           title={pageHeading}
           accentColor={timelineScopeAccentColors[scope]}
           icon={ScopeIcon}
-          actions={<SummaryButton mode={scope} />}
+          barSlots={barSlots}
         />
 
-        {scope === "today" && <WeekInReviewCard />}
+        {/* Stood down while a query finds nothing: a week-summary card sitting
+            above "no matching tasks" reads as a result. Same reason the three
+            time-of-day drop targets are suppressed below. */}
+        {scope === "today" && !showNoResults && <WeekInReviewCard />}
 
         {todoLoading && <TodoListLoading heading={pageHeading} />}
 
@@ -465,7 +506,10 @@ const AllTasksTimelineContainer = ({
             timeZone={userTZ?.timeZone}
             focusedTaskId={focusedTaskId}
             focusedDateKey={focusedDateKey}
-            earlierExpanded={earlierExpanded}
+            // A live query outranks a shut bucket: these screens open with
+            // Earlier closed, and a task the search turns up in there must not
+            // stay hidden behind its header. Native makes the same call.
+            earlierExpanded={earlierExpanded || isSearching}
             onToggleEarlier={() => setEarlierExpanded((value) => !value)}
           />
         )}
@@ -528,7 +572,10 @@ const AllTasksTimelineContainer = ({
             </section>
           ))}
 
-        {scope === "today" && (
+        {/* The three time buckets are drop targets, so they stand empty on a
+            quiet day — but under a search that found nothing they would read as
+            three results, so they go with the tasks. */}
+        {scope === "today" && !showNoResults && (
           <TodayBucketDndContext timeZone={userTZ?.timeZone}>
             {todayBuckets.map((bucket, index) => (
               <TodayBucketDroppable
@@ -562,7 +609,7 @@ const AllTasksTimelineContainer = ({
             // not an absence, and the scope's own icon would undersell it.
             icon={isDayDone ? CheckCheck : ScopeIcon}
             accentColor={timelineScopeAccentColors[scope]}
-            title={isDayDone ? appDict("allDoneToday") : emptyStateMessage}
+            title={isDayDone ? appDict("allDoneToday") : appDict(emptyTitle)}
             description={
               isDayDone
                 ? new Intl.DateTimeFormat(locale, {
@@ -570,7 +617,27 @@ const AllTasksTimelineContainer = ({
                     day: "numeric",
                     month: "long",
                   }).format(new Date())
-                : undefined
+                : appDict(emptyBody)
+            }
+          />
+        )}
+
+        {/* No search results — the scope's own tasks simply do not carry this
+            word. */}
+        {showNoResults && (
+          <EmptyState
+            icon={Search}
+            accentColor={timelineScopeAccentColors[scope]}
+            title={appDict("noMatchingTasks")}
+            description={appDict("searchEmptyBody")}
+            action={
+              <button
+                type="button"
+                onClick={() => setSearchQuery("")}
+                className="rounded-full border border-border/60 bg-card px-5 py-2.5 text-sm font-black text-foreground shadow-[0_12px_28px_-22px_hsl(var(--shadow)/0.55)] transition-transform hover:-translate-y-0.5"
+              >
+                {appDict("clearSearch")}
+              </button>
             }
           />
         )}

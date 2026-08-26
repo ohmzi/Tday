@@ -11,6 +11,7 @@ import {
   useNativePageBarResync,
 } from "@/components/app/NativePageHeader";
 import type { NativePageBarSlots } from "@/components/app/NativePageHeader";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { hapticButtonTap, hapticDismiss } from "@/lib/haptics";
 
@@ -53,6 +54,7 @@ export default function MobileSearchHeader({
   pageCollapse,
 }: MobileSearchHeaderProps) {
   const [internalQuery, setInternalQuery] = useState("");
+  const { t: appDict } = useTranslation("app");
   const [isExpanded, setIsExpanded] = useState(false);
   const ownHeaderRef = useRef<HTMLElement>(null);
   // The collapsing header measures its progress against this bar's bottom edge,
@@ -106,10 +108,13 @@ export default function MobileSearchHeader({
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
-        e.preventDefault();
-        openSearch();
-      }
+      // Deliberately NOT Cmd/Ctrl+K. That is the command palette's, app-wide
+      // (`useGlobalHotkeys`), and this listener is on `document` while that one
+      // is on `window` — so this ran first, called `preventDefault`, and the
+      // palette's handler bailed on `defaultPrevented`. Harmless while this bar
+      // was on two screens; it now sits on most of them, which would have taken
+      // the palette away almost everywhere. Escape stays: it is page-local and
+      // only fires when this bar has something to dismiss.
       if (e.key === "Escape" && (isExpanded || isSearchFocused || hasQuery)) {
         e.preventDefault();
         if (hasQuery) {
@@ -121,7 +126,7 @@ export default function MobileSearchHeader({
     };
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [closeSearch, hasQuery, isExpanded, isSearchFocused, openSearch, setSearchQuery]);
+  }, [closeSearch, hasQuery, isExpanded, isSearchFocused, setSearchQuery]);
 
   const handleBlur = () => {
     setIsSearchFocused(false);
@@ -315,7 +320,7 @@ export default function MobileSearchHeader({
                 </ul>
               ) : (
                 <p className="px-4 py-3 text-sm font-extrabold text-muted-foreground">
-                  No matching tasks
+                  {appDict("noMatchingTasks")}
                 </p>
               )}
             </div>

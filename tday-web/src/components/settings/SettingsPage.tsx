@@ -20,6 +20,7 @@ import {
   Moon,
   Pencil,
   RefreshCw,
+  Search,
   Settings,
   ShieldQuestion,
   Sparkles,
@@ -45,7 +46,9 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/providers/AuthProvider";
 import { useUserPreferences } from "@/providers/UserPreferencesProvider";
 import { useToast } from "@/hooks/use-toast";
-import NativePageHeader from "@/components/app/NativePageHeader";
+import NativePageHeader, { useNativePageBarSlots } from "@/components/app/NativePageHeader";
+import MobileSearchHeader from "@/components/ui/MobileSearchHeader";
+import EmptyState from "@/components/app/EmptyState";
 import DataTransferCard from "./DataTransferCard";
 import { nativeScreenAccentColors } from "@/components/app/nativeScreenTheme";
 import { api } from "@/lib/api-client";
@@ -409,6 +412,7 @@ export default function SettingsPage() {
   const { t: sidebarDict, i18n } = useTranslation("sidebar");
   const { t } = useTranslation("settings");
   const { t: guideDict } = useTranslation("guide");
+  const { t: appDict } = useTranslation("app");
   const { user, refreshSession, logout } = useAuth();
   // Local Mode has no account, no server and no collaborators, so everything
   // that talks to one is hidden — mirroring the native settings screens.
@@ -420,6 +424,8 @@ export default function SettingsPage() {
   const navigate = useNavigate();
   const pathname = usePathname();
   const [languageOpen, setLanguageOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const barSlots = useNativePageBarSlots();
   const storedLanguage = (() => {
     try {
       return localStorage.getItem(LANGUAGE_STORAGE_KEY);
@@ -1060,19 +1066,95 @@ export default function SettingsPage() {
     }
   };
 
+  // Search on this screen is scoped to this screen: it keeps the cards whose own
+  // labels carry the word and drops the rest. A card, not a row, is the unit —
+  // the rows inside one share its heading and its dividers, so hiding half of a
+  // card leaves the other half reading as a fragment of nothing.
+  const settingsQuery = searchQuery.trim().toLowerCase();
+  const cardMatches = (...labels: string[]) =>
+    settingsQuery.length === 0 ||
+    labels.some((label) => label.toLowerCase().includes(settingsQuery));
+
+  const showAccountCard =
+    !isLocalMode &&
+    cardMatches(
+      t("profile.title"),
+      t("profile.name"),
+      t("profile.username"),
+      t("password.title"),
+      t("securityQuestions.title"),
+    );
+  const showAppearanceCard = cardMatches(
+    t("appearance.title"),
+    t("themeLight"),
+    t("themeDark"),
+    t("themeSystem"),
+    t("language.title"),
+    t("language.appLanguage"),
+  );
+  const showPreferencesCard = cardMatches(
+    t("aiSummary.title"),
+    t("aiSummary.toggle"),
+    t("restingFloaters.title"),
+    t("restingFloaters.toggle"),
+    ...(push.isSupported ? [t("notifications.title"), t("notifications.push")] : []),
+  );
+  const showDataCard = cardMatches(t("data.title"), t("data.download"), t("data.import"));
+  const showCalendarFeedCard =
+    !isLocalMode && cardMatches(t("calendarFeed.title"), t("calendarFeed.blurb"));
+  const showWebhooksCard =
+    !isLocalMode && cardMatches(t("webhooks.title"), t("webhooks.blurb"), t("webhooks.add"));
+  const showWorkspaceCard = cardMatches(
+    ...(isLocalMode
+      ? [
+          t("workspace.title"),
+          t("workspace.localTitle"),
+          t("workspace.encrypt"),
+          t("workspace.leave"),
+          t("workspace.delete"),
+        ]
+      : [t("dashboard.title"), t("dashboard.generateKey"), t("signOut")]),
+    guideDict("title"),
+    ...(!isLocalMode && user?.role === "ADMIN" ? [sidebarDict("admin")] : []),
+    t("troubleshooting.reset"),
+  );
+  const noSettingsMatch =
+    settingsQuery.length > 0 &&
+    !showAccountCard &&
+    !showAppearanceCard &&
+    !showPreferencesCard &&
+    !showDataCard &&
+    !showCalendarFeedCard &&
+    !showWebhooksCard &&
+    !showWorkspaceCard;
 
   return (
     <div className="w-full space-y-3 pb-10">
+      {/* The search field is this page's pinned bar, so the header below renders
+          only the block that scrolls away and docks its title into it — the same
+          split the custom list uses. */}
+      <MobileSearchHeader
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        placeholder={`${appDict("searchIn")} ${sidebarDict("settings")}...`}
+        pageCollapse={{
+          ...barSlots,
+          title: sidebarDict("settings"),
+          accentColor: nativeScreenAccentColors.settings,
+        }}
+      />
+
       <NativePageHeader
         title={sidebarDict("settings")}
         accentColor={nativeScreenAccentColors.settings}
         icon={Settings}
+        barSlots={barSlots}
         className="mb-1"
       />
 
       {/* Account card — Server Mode only; a local workspace has no account,
           password or recovery questions to manage. */}
-      {isLocalMode ? null : (
+      {showAccountCard && (
       <SettingsSection title={t("profile.title")}>
         <div className="space-y-4">
           {/* Name — collapsed summary with an Edit affordance, expands to an inline editor. */}
@@ -1453,6 +1535,7 @@ export default function SettingsPage() {
       </SettingsSection>
       )}
 
+      {showAppearanceCard && (
       <SheetCard className="space-y-4 p-[18px] shadow-[0_16px_34px_-24px_hsl(var(--shadow)/0.5)]">
         <SectionHeading title={t("appearance.title")} />
         <ThemeSegmentedControl value={theme} onChange={setTheme} labelFor={t} />
@@ -1479,6 +1562,7 @@ export default function SettingsPage() {
           </span>
         </button>
       </SheetCard>
+      )}
 
       <CenteredSelectorOverlay open={languageOpen} onOpenChange={setLanguageOpen} title={t("language.title")}>
         {LANGUAGE_OPTIONS.map((option, index) => {
@@ -1505,6 +1589,7 @@ export default function SettingsPage() {
         })}
       </CenteredSelectorOverlay>
 
+      {showPreferencesCard && (
       <SheetCard className="space-y-4 p-[18px] shadow-[0_16px_34px_-24px_hsl(var(--shadow)/0.5)]">
         <SectionHeading title={t("aiSummary.title")} />
         <div className="flex items-center justify-between gap-4">
@@ -1583,12 +1668,13 @@ export default function SettingsPage() {
           </>
         )}
       </SheetCard>
+      )}
 
-      <DataTransferCard />
+      {showDataCard && <DataTransferCard />}
 
       {/* Calendar feed, webhooks and dashboard API keys are all consumed by
           something outside the browser, so they need a server to serve them. */}
-      {isLocalMode ? null : (
+      {showCalendarFeedCard && (
       <SettingsSection
         title={t("calendarFeed.title")}
         description={t("calendarFeed.blurb")}
@@ -1659,7 +1745,7 @@ export default function SettingsPage() {
       </SettingsSection>
       )}
 
-      {isLocalMode ? null : (
+      {showWebhooksCard && (
       <SettingsSection
         title={t("webhooks.title")}
         description={t("webhooks.blurb")}
@@ -1788,6 +1874,7 @@ export default function SettingsPage() {
       </SettingsSection>
       )}
 
+      {showWorkspaceCard && (
       <SettingsSection
         title={isLocalMode ? t("workspace.title") : t("dashboard.title")}
         titleAction={
@@ -2004,6 +2091,27 @@ export default function SettingsPage() {
           />
         )}
       </SettingsSection>
+      )}
+
+      {/* No matching settings — this screen is never genuinely empty, so its
+          empty state is the search coming back with nothing. */}
+      {noSettingsMatch && (
+        <EmptyState
+          icon={Search}
+          accentColor={nativeScreenAccentColors.settings}
+          title={appDict("noMatchingSettings")}
+          description={appDict("searchEmptyBody")}
+          action={
+            <button
+              type="button"
+              onClick={() => setSearchQuery("")}
+              className="rounded-full border border-border/60 bg-card px-5 py-2.5 text-sm font-black text-foreground shadow-[0_12px_28px_-22px_hsl(var(--shadow)/0.55)] transition-transform hover:-translate-y-0.5"
+            >
+              {appDict("clearSearch")}
+            </button>
+          }
+        />
+      )}
 
       {/* Non-destructive recovery, so the confirm action keeps the picker's
           accent Done styling rather than the destructive tint below. */}

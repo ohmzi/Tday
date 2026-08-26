@@ -17,6 +17,9 @@ struct CompletedScreen: View {
     @State private var timelineScrollOffset: CGFloat = 0
     @State private var collapsedSectionIDs: Set<String> = []
     @State private var openSwipeTaskID: String?
+    @FocusState private var searchFieldFocused: Bool
+    @State private var searchExpanded = false
+    @State private var searchQuery = ""
 
     init(container: AppContainer, pullRefreshEnabled: Bool = false) {
         self.pullRefreshEnabled = pullRefreshEnabled
@@ -24,7 +27,45 @@ struct CompletedScreen: View {
     }
 
     private var groupedItems: [TimelineSection<CompletedItem>] {
-        buildCompletedTimelineSections(items: viewModel.items)
+        buildCompletedTimelineSections(items: searchedItems)
+    }
+
+    private var normalizedSearchQuery: String {
+        searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(with: .current)
+    }
+
+    private var isSearching: Bool {
+        searchExpanded && !normalizedSearchQuery.isEmpty
+    }
+
+    /// The history and nothing else: this screen searches what it is showing,
+    /// the way each web page searches its own list.
+    private var searchedItems: [CompletedItem] {
+        guard isSearching else {
+            return viewModel.items
+        }
+        return viewModel.items.filter { item in
+            item.title.lowercased(with: .current).contains(normalizedSearchQuery) ||
+                flattenNotesToPlainText(item.description)
+                    .lowercased(with: .current)
+                    .contains(normalizedSearchQuery)
+        }
+    }
+
+    private var searchPlaceholder: String {
+        L("Search in %@", L("Completed"))
+    }
+
+    private var topBarActions: [TimelineTopBarAction] {
+        [
+            TimelineTopBarAction(
+                systemName: "magnifyingglass",
+                assetName: "NavSearch",
+                usesCircularChrome: true,
+                accessibilityLabel: L("Search"),
+                action: openSearch
+            ),
+        ]
     }
 
     private var completedAccentColor: Color {
@@ -42,7 +83,7 @@ struct CompletedScreen: View {
     }
 
     private var completedTimelineAnimationKey: String {
-        viewModel.items.map(\.id).joined(separator: "|")
+        searchedItems.map(\.id).joined(separator: "|")
     }
 
     var body: some View {
@@ -52,17 +93,32 @@ struct CompletedScreen: View {
             }
             .background(colors.background)
             .overlay {
+                // No blanket `allowsHitTesting(false)` here any more: the watermark
+                // turns its own hits off, and the search empty state has a button
+                // that has to stay tappable.
                 ZStack {
                     EmptyTaskWatermark(
                         systemName: "checkmark",
                         accentColor: completedAccentColor,
                         assetName: "TileComplete"
                     )
-                    if viewModel.items.isEmpty, !viewModel.isLoading {
-                        EmptyTaskBackgroundMessage(message: L("No completed tasks"))
+                    if searchedItems.isEmpty, !viewModel.isLoading {
+                        if isSearching {
+                            searchEmptyState
+                        } else {
+                            TdayEmptyState(
+                                assetName: "TileComplete",
+                                accentColor: completedAccentColor,
+                                title: L("No completed tasks"),
+                                description: L("Tick something off and it will land here.")
+                            )
+                            // Pull-to-refresh still has to work on an empty
+                            // history, and a Text sitting in an overlay would
+                            // swallow the drag before the list ever saw it.
+                            .allowsHitTesting(false)
+                        }
                     }
                 }
-                .allowsHitTesting(false)
             }
             .navigationBackButtonBehavior()
             .navigationTitleTypography(
@@ -79,12 +135,30 @@ struct CompletedScreen: View {
                     accentColor: completedAccentColor,
                     collapseProgress: titleCollapseProgress,
                     onBack: { dismiss() },
-                    actions: []
+                    actions: topBarActions,
+                    searchActive: searchExpanded,
+                    searchText: $searchQuery,
+                    searchPlaceholder: searchPlaceholder,
+                    searchFieldFocused: $searchFieldFocused,
+                    onSearchClose: closeSearch
                 )
             }
             .onChange(of: viewModel.items.map(\.id)) { _, ids in
                 guard let openSwipeTaskID, !ids.contains(openSwipeTaskID) else { return }
                 self.openSwipeTaskID = nil
+            }
+            // The field only joins the hierarchy once the bar has swapped its row
+            // over, so focusing it in the same turn is dropped on the floor.
+            .onChange(of: searchExpanded) { _, expanded in
+                guard expanded else {
+                    searchFieldFocused = false
+                    return
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.30) {
+                    if searchExpanded {
+                        searchFieldFocused = true
+                    }
+                }
             }
             .createTaskSheet(item: $editingItem) { item in
                 CreateTaskSheet(
@@ -162,6 +236,48 @@ struct CompletedScreen: View {
         .listRowSeparator(.hidden)
     }
 
+    /// Shown in place of the history when a search matches nothing. Same three
+    /// beats as web's panel: the scene, the line, and a way out of the query
+    /// that does not need the keyboard back.
+    private var searchEmptyState: some View {
+        TdayEmptyState(
+            assetName: "NavSearch",
+            accentColor: completedAccentColor,
+            title: L("No matching tasks"),
+            description: L("Try a different word, or clear the search."),
+            action: AnyView(
+                Button {
+                    HapticManager.gentleTap()
+                    searchQuery = ""
+                    searchFieldFocused = true
+                } label: {
+                    Text(L("Clear search"))
+                        .font(.tdayRounded(size: 15, weight: .bold))
+                        .foregroundStyle(colors.primary)
+                }
+                .buttonStyle(.plain)
+            )
+        )
+    }
+
+    private func openSearch() {
+        HapticManager.buttonTap()
+        withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
+            searchExpanded = true
+        }
+    }
+
+    /// Leaving the search drops the query with it, so the history is whole again
+    /// the next time the bar is opened — the same bargain web's close makes.
+    private func closeSearch() {
+        HapticManager.sheetDismiss()
+        searchFieldFocused = false
+        withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
+            searchExpanded = false
+        }
+        searchQuery = ""
+    }
+
     @ViewBuilder
     private func completedTimelineSection(
         _ section: TimelineSection<CompletedItem>,
@@ -169,7 +285,14 @@ struct CompletedScreen: View {
         sections: [TimelineSection<CompletedItem>],
         isFirstSection: Bool
     ) -> some View {
-        let isCollapsed = collapsedSectionIDs.contains(section.id)
+        // A live query outranks a shut month: history opens with older months
+        // collapsed, and a task the search turned up inside one must not stay
+        // hidden behind its header. The month is therefore not the reader's to
+        // shut while the query stands — a header that still took a tap would
+        // flip the stored state behind a screen that could not show it. Same
+        // call as `canCollapseTimelineSection` on the timeline screens.
+        let isCollapsible = !isSearching
+        let isCollapsed = isCollapsible && collapsedSectionIDs.contains(section.id)
 
         Section {
             if !isCollapsed {
@@ -189,9 +312,10 @@ struct CompletedScreen: View {
             TimelineSectionHeader(
                 title: section.title,
                 isActiveDropTarget: false,
-                isCollapsible: true,
+                isCollapsible: isCollapsible,
                 isCollapsed: isCollapsed,
                 onTap: {
+                    guard isCollapsible else { return }
                     toggleCompletedSection(section)
                 }
             )

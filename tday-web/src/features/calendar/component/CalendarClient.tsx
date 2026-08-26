@@ -21,7 +21,6 @@ import {
 import { TodoItemType } from "@/types";
 import { useDateRange } from "../hooks/useDateRange";
 import { useCalendarTodo } from "../query/get-calendar-todo";
-import { useTodoTimeline } from "@/features/todayTodos/query/get-todo-timeline";
 import {
   lazy,
   type PointerEvent as ReactPointerEvent,
@@ -58,7 +57,9 @@ import CreateCalendarFormContainer from "./CalendarForm/CreateFormContainer";
 import NativePageHeader, {
   NativePageBackButton,
   nativePageBarClassName,
+  useNativePageBarSlots,
 } from "@/components/app/NativePageHeader";
+import MobileSearchHeader from "@/components/ui/MobileSearchHeader";
 import { nativeScreenAccentColors } from "@/components/app/nativeScreenTheme";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
@@ -874,7 +875,6 @@ export default function CalendarClient() {
   } | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const { todos: calendarTodos, todoLoading: calendarTodosLoading } = useCalendarTodo(calendarRange);
-  const { todos: allTimelineTodos } = useTodoTimeline();
   const { listMetaData } = useListMetaData()
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [highlightedTaskId, setHighlightedTaskId] = useState<string | null>(null);
@@ -887,6 +887,7 @@ export default function CalendarClient() {
   selectedDateRef.current = selectedDate;
   viewRef.current = view;
   const minimumMonth = useMemo(() => startOfMonth(new Date()), []);
+  const barSlots = useNativePageBarSlots();
 
   const { editCalendarTodo } = useEditCalendarTodo();
   const { timeZone } = useUserTimezone();
@@ -964,15 +965,15 @@ export default function CalendarClient() {
     setCalendarRange(calendarRangeFor(dateForRange, view));
   }, [rangeAnchor, selectedDate, setCalendarRange, view]);
 
-  // Search is a broad jump-to-task affordance (not a calendar-grid filter): match any
-  // active, not-overdue task across all dates; selecting one jumps the calendar to that
-  // date and highlights it. The calendar grid keeps showing every task.
+  // Search is a jump-to-task affordance (not a calendar-grid filter): selecting
+  // a result jumps the calendar to that date and highlights it, and the grid
+  // keeps showing every task. Scoped to what this calendar is showing — the
+  // tasks in the period on screen — rather than every task there is; a wider
+  // net would land on dates the user cannot see from here.
   const searchResults = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
     if (!query) return [];
-    const now = new Date();
-    return allTimelineTodos
-      .filter((todo) => !todo.completed && todo.due >= now)
+    return calendarTodos
       .filter((todo) => {
         const title = todo.title.toLowerCase();
         const description = flattenNotesToPlainText(todo.description).toLowerCase();
@@ -987,7 +988,7 @@ export default function CalendarClient() {
         title: todo.title,
         subtitle: format(todo.due, "EEE, MMM d • h:mm a", { locale: activeDfLocale() }),
       }));
-  }, [searchQuery, allTimelineTodos, listMetaData]);
+  }, [searchQuery, calendarTodos, listMetaData]);
 
   useEffect(() => {
     return () => {
@@ -1039,7 +1040,7 @@ export default function CalendarClient() {
 
   const handleSelectSearchResult = useCallback(
     (id: string) => {
-      const todo = allTimelineTodos.find((t) => t.id === id);
+      const todo = calendarTodos.find((t) => t.id === id);
       if (!todo) return;
       setSearchQuery("");
       selectDate(todo.due);
@@ -1047,7 +1048,7 @@ export default function CalendarClient() {
       if (highlightTimer.current) window.clearTimeout(highlightTimer.current);
       highlightTimer.current = window.setTimeout(() => setHighlightedTaskId(null), 2600);
     },
-    [allTimelineTodos, selectDate],
+    [calendarTodos, selectDate],
   );
 
   const navigatePeriod = useCallback((offset: -1 | 1) => {
@@ -1131,11 +1132,28 @@ export default function CalendarClient() {
 
   return (
     <div className="flex min-h-full flex-col">
+      {/* The search field is this page's pinned bar, so the header below
+          renders only the block that scrolls away and docks its title into
+          it — the same split the custom list uses. */}
+      <MobileSearchHeader
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        placeholder={`${appDict("searchIn")} ${sidebarDict("calendar")}...`}
+        pageCollapse={{
+          ...barSlots,
+          title: sidebarDict("calendar"),
+          accentColor: nativeScreenAccentColors.calendar,
+        }}
+        results={searchResults}
+        onSelectResult={handleSelectSearchResult}
+        trailingAction={todayAction}
+      />
+
       <NativePageHeader
         title={sidebarDict("calendar")}
         accentColor={nativeScreenAccentColors.calendar}
         icon={CalendarDays}
-        actions={<div className="flex shrink-0 items-center gap-2.5">{todayAction}</div>}
+        barSlots={barSlots}
       />
       <DndContext
         sensors={sensors}

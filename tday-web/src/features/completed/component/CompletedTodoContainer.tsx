@@ -1,19 +1,20 @@
 import React, { useMemo, useState } from "react";
-import { Skeleton } from "@/components/ui/skeleton";
 import TodoListLoading from "@/components/ui/TodoListLoading";
 import { useCompletedTodo } from "../query/get-completedTodo";
 import { useGroupedHistory } from "../hooks/useGroupedHistory";
 import GroupedCompletedTodoContainer from "./GroupedContainer";
 import { useTranslation } from "react-i18next";
-import NativePageHeader from "@/components/app/NativePageHeader";
+import NativePageHeader, { useNativePageBarSlots } from "@/components/app/NativePageHeader";
+import MobileSearchHeader from "@/components/ui/MobileSearchHeader";
 import ScreenWatermark from "@/components/app/ScreenWatermark";
 import EmptyState from "@/components/app/EmptyState";
 import { nativeScreenAccentColors } from "@/components/app/nativeScreenTheme";
-import { CheckCircle, Search, X } from "lucide-react";
+import { CheckCircle, Search } from "lucide-react";
 import { flattenNotesToPlainText } from "@/lib/richNotes";
 
 const CompletedTodoContainer = () => {
   const { t: completedDict } = useTranslation("completed")
+  const { t: appDict } = useTranslation("app");
   const { completedTodos, todoLoading } = useCompletedTodo();
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -29,50 +30,38 @@ const CompletedTodoContainer = () => {
 
   const groupedHistory = useGroupedHistory(filteredTodos);
 
-  if (todoLoading)
-    return (
-      <div>
-        <Skeleton className="mt-8 h-10 w-56" />
-        <TodoListLoading className="mt-8" />
-      </div>
-    );
+  const isSearching = Boolean(searchQuery.trim());
+  // The search field is this page's pinned bar, so the header below renders
+  // only the block that scrolls away and docks its title into it — the same
+  // split the custom list uses.
+  const barSlots = useNativePageBarSlots();
 
   return (
     <div className="mb-20">
       <ScreenWatermark icon={CheckCircle} />
 
+      <MobileSearchHeader
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        placeholder={`${appDict("searchIn")} ${completedDict("title")}...`}
+        pageCollapse={{
+          ...barSlots,
+          title: completedDict("title"),
+          accentColor: nativeScreenAccentColors.completed,
+        }}
+      />
+
       <NativePageHeader
         title={completedDict("title")}
         accentColor={nativeScreenAccentColors.completed}
         icon={CheckCircle}
+        barSlots={barSlots}
       />
 
-      {searchQuery.trim() && filteredTodos.length === 0 && (
-        <div className="mx-auto flex min-h-[45vh] max-w-md flex-col items-center justify-center text-center">
-          <div className="relative mb-6">
-            <div className="flex h-24 w-24 items-center justify-center rounded-full bg-muted/50">
-              <Search className="h-12 w-12 text-muted-foreground/50" />
-            </div>
-            <div className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full border-2 border-background bg-accent/20">
-              <X className="h-3 w-3 text-accent" />
-            </div>
-          </div>
-          <h3 className="mb-2 text-2xl font-semibold text-foreground">
-            No matching tasks
-          </h3>
-          <p className="mb-6 text-sm text-muted-foreground">
-            Try different keywords or{" "}
-            <button
-              onClick={() => setSearchQuery("")}
-              className="text-accent hover:underline"
-            >
-              clear your search
-            </button>
-          </p>
-        </div>
-      )}
+      {todoLoading && <TodoListLoading className="mt-8" />}
 
-      {!searchQuery.trim() && filteredTodos.length === 0 && (
+      {/* Empty state — nothing has been ticked off yet */}
+      {!todoLoading && !isSearching && completedTodos.length === 0 && (
         <EmptyState
           icon={CheckCircle}
           accentColor={nativeScreenAccentColors.completed}
@@ -81,19 +70,39 @@ const CompletedTodoContainer = () => {
         />
       )}
 
-      {Array.from(groupedHistory.entries())
-        .sort((a, b) => {
-          const aDate = new Date(a[1][0].completedAt).getTime();
-          const bDate = new Date(b[1][0].completedAt).getTime();
-          return bDate - aDate;
-        })
-        .map(([dateTimeString, completeTodos]) => (
-          <GroupedCompletedTodoContainer
-            key={dateTimeString}
-            dateTimeString={dateTimeString}
-            completedTodos={completeTodos}
-          />
-        ))}
+      {/* Empty state — no search results */}
+      {!todoLoading && isSearching && filteredTodos.length === 0 && (
+        <EmptyState
+          icon={Search}
+          accentColor={nativeScreenAccentColors.completed}
+          title={appDict("noMatchingTasks")}
+          description={appDict("searchEmptyBody")}
+          action={
+            <button
+              type="button"
+              onClick={() => setSearchQuery("")}
+              className="rounded-full border border-border/60 bg-card px-5 py-2.5 text-sm font-black text-foreground shadow-[0_12px_28px_-22px_hsl(var(--shadow)/0.55)] transition-transform hover:-translate-y-0.5"
+            >
+              {appDict("clearSearch")}
+            </button>
+          }
+        />
+      )}
+
+      {!todoLoading &&
+        Array.from(groupedHistory.entries())
+          .sort((a, b) => {
+            const aDate = new Date(a[1][0].completedAt).getTime();
+            const bDate = new Date(b[1][0].completedAt).getTime();
+            return bDate - aDate;
+          })
+          .map(([dateTimeString, completeTodos]) => (
+            <GroupedCompletedTodoContainer
+              key={dateTimeString}
+              dateTimeString={dateTimeString}
+              completedTodos={completeTodos}
+            />
+          ))}
     </div>
   );
 };
