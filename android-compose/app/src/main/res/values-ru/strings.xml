@@ -8,6 +8,10 @@
     <string name="action_search">Поиск</string>
     <string name="action_close_search">Закрыть поиск</string>
     <string name="action_clear_search">Очистить поиск</string>
+    <string name="action_search_in">Искать в %1$s</string>
+    <string name="search_no_results_body">Попробуйте другое слово или очистите поиск.</string>
+    <string name="search_no_results_settings">Подходящих настроек нет</string>
+    <string name="search_no_results_guide">Подходящих тем нет</string>
     <string name="action_create_task">Создать задачу</string>
     <string name="action_create_list">Создать список</string>
     <string name="action_edit">Изменить</string>
@@ -256,6 +260,12 @@
     <string name="todos_empty_scheduled">Нет запланированных задач</string>
     <string name="todos_empty_all">Пока нет задач</string>
     <string name="todos_empty_list">В этом списке нет задач</string>
+    <string name="todos_empty_today_body">Добавьте что-нибудь на сегодня — оно появится здесь.</string>
+    <string name="todos_empty_overdue_body">Ничего не просрочено.</string>
+    <string name="todos_empty_priority_body">Отметьте задачу приоритетной — она поднимется сюда.</string>
+    <string name="todos_empty_scheduled_body">Задайте задаче дату — она встанет в этот список.</string>
+    <string name="todos_empty_all_body">Всё, что вы добавите, появится здесь — независимо от даты.</string>
+    <string name="todos_empty_list_body">Добавьте первую задачу — она появится здесь.</string>
     <string name="car_surface_title_today">T\'Day</string>
     <string name="car_surface_title_floater">Без срока</string>
     <string name="car_surface_loading">Загрузка задач</string>
@@ -348,6 +358,7 @@
     <!-- Completed screen -->
     <string name="completed_title">Завершённые</string>
     <string name="completed_empty">Пока нет завершённых задач</string>
+    <string name="completed_empty_body">Отметьте задачу выполненной — она появится здесь.</string>
     <string name="completed_section_earlier">Ранее</string>
     <string name="completed_section_today">Сегодня</string>
     <string name="completed_section_tomorrow">Завтра</string>
@@ -359,6 +370,7 @@
     <string name="calendar_today">Сегодня</string>
     <string name="calendar_tasks_due">Задачи на %1$s</string>
     <string name="calendar_no_pending">На этот день нет невыполненных задач</string>
+    <string name="calendar_no_pending_body">Выберите другую дату в календаре.</string>
     <string name="calendar_completed_header">Завершено:</string>
     <string name="calendar_prev_month">Предыдущий месяц</string>
     <string name="calendar_next_month">Следующий месяц</string>
@@ -528,6 +540,9 @@
 
     <!-- Empty state -->
     <string name="todos_empty_floater">Нет плавающих задач</string>
+    <string name="todos_empty_floater_body">У плавающих задач нет срока: запишите одну, и она подождёт, пока вы будете готовы.</string>
+    <string name="todos_empty_floater_list">В этом списке нет плавающих задач</string>
+    <string name="todos_empty_floater_list_body">Добавьте плавающую задачу, и она подождёт здесь.</string>
 
     <!-- Theme mode -->
     <string name="settings_theme_system">Системная</string>

@@ -151,6 +151,7 @@
 		DEA51B1F722372A094C125F9 /* ListRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = D19AB4B0B909242B323D5ABF /* ListRepository.swift */; };
 		E1BD58F3802B8806874A2E29 /* AuthViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DABE0225668571D48D55B96 /* AuthViewModel.swift */; };
 		EF64B4D7E0FB06A86DA86E0C /* TaskFloatingActionButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DE4A047CF237AD9F605D02E /* TaskFloatingActionButton.swift */; };
+		7E1A4C90B3D2F5680A1C9E33 /* TdayEmptyState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F84D07BC61E9A35D8B47021 /* TdayEmptyState.swift */; };
 		F1A2B3C4D5E6F708192A3B4D /* FloaterListRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A2B3C4D5E6F708192A3B4C /* FloaterListRepository.swift */; };
 		F2C4D6E8A1B3456790ABCDE0 /* TdaySheetChrome.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2C4D6E8A1B3456790ABCDEF /* TdaySheetChrome.swift */; };
 		F2E1D0C9B8A7F6E5D4C3B2A1 /* HapticManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6A7B8C9D0E1F2 /* HapticManager.swift */; };
@@ -244,6 +245,7 @@
 		0380EFC9ADD5303B83B5BD91 /* ProbeDecryptor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProbeDecryptor.swift; sourceTree = "<group>"; };
 		055D0F0501B287B70456AF4B /* TodoRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodoRepository.swift; sourceTree = "<group>"; };
 		0DE4A047CF237AD9F605D02E /* TaskFloatingActionButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskFloatingActionButton.swift; sourceTree = "<group>"; };
+		2F84D07BC61E9A35D8B47021 /* TdayEmptyState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdayEmptyState.swift; sourceTree = "<group>"; };
 		0E4F3B64B40942F48202C32E /* AppDataMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDataMode.swift; sourceTree = "<group>"; };
 		133161412A6BD2A0C04F745A /* SnackbarManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnackbarManager.swift; sourceTree = "<group>"; };
 		15B9BC191869EBEA7E8340E6 /* NavigationBackHistoryTitle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationBackHistoryTitle.swift; sourceTree = "<group>"; };
@@ -994,6 +996,7 @@
 				B2C3D4E5F6A7B8C9D0E1F2A3 /* ShareSheet.swift */,
 				133161412A6BD2A0C04F745A /* SnackbarManager.swift */,
 				0DE4A047CF237AD9F605D02E /* TaskFloatingActionButton.swift */,
+				2F84D07BC61E9A35D8B47021 /* TdayEmptyState.swift */,
 				8A7EC85EB5D9686D401249C6 /* UserFacingError.swift */,
 			);
 			path = UI;
@@ -1345,6 +1348,7 @@
 				02DCC3220DC138F342784CA4 /* SyncManager.swift in Sources */,
 				5D93F6903E05BD9902C43A51 /* SystemCredentialService.swift in Sources */,
 				EF64B4D7E0FB06A86DA86E0C /* TaskFloatingActionButton.swift in Sources */,
+				7E1A4C90B3D2F5680A1C9E33 /* TdayEmptyState.swift in Sources */,
 				3172D88F15D3395465E578E3 /* TaskReminderScheduler.swift in Sources */,
 				CAFE0D1E000000000000005C /* DayAhead.swift in Sources */,
 				2D4CE01CFE08086ACC160F8B /* TdayAPIService.swift in Sources */,

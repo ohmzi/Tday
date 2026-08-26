@@ -391,7 +391,19 @@
     "floaterEmptyBody": "浮动任务没有截止日期——记下一个，它会一直等你。",
     "floaterListEmptyBody": "添加一个浮动任务，它会在这里等你。",
     "noMatchingTasks": "没有匹配的任务",
-    "searchEmptyBody": "换个词试试，或者清除搜索。"
+    "searchEmptyBody": "换个词试试，或者清除搜索。",
+    "todayEmpty": "今天没有任务",
+    "todayEmptyBody": "添加今天要做的事，它就会出现在这里。",
+    "overdueEmpty": "没有逾期任务",
+    "overdueEmptyBody": "没有任务超过截止日期。",
+    "priorityEmpty": "没有优先任务",
+    "priorityEmptyBody": "把任务标记为优先，它就会移到这里。",
+    "scheduledEmpty": "没有已安排的任务",
+    "scheduledEmptyBody": "给任务设置日期，它就会排在这里。",
+    "allTasksEmpty": "还没有任务",
+    "allTasksEmptyBody": "你添加的所有任务都会出现在这里，无论日期。",
+    "noMatchingSettings": "没有匹配的设置",
+    "noMatchingTopics": "没有匹配的主题"
   },
   "today": {
     "saveInstance": "保存实例",

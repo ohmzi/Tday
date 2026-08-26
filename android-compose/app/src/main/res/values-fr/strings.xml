@@ -8,6 +8,10 @@
     <string name="action_search">Rechercher</string>
     <string name="action_close_search">Fermer la recherche</string>
     <string name="action_clear_search">Effacer la recherche</string>
+    <string name="action_search_in">Rechercher dans %1$s</string>
+    <string name="search_no_results_body">Essayez un autre mot ou effacez la recherche.</string>
+    <string name="search_no_results_settings">Aucun paramètre correspondant</string>
+    <string name="search_no_results_guide">Aucun sujet correspondant</string>
     <string name="action_create_task">Créer une tâche</string>
     <string name="action_create_list">Créer une liste</string>
     <string name="action_edit">Modifier</string>
@@ -256,6 +260,12 @@
     <string name="todos_empty_scheduled">Aucune tâche planifiée</string>
     <string name="todos_empty_all">Aucune tâche pour l\'instant</string>
     <string name="todos_empty_list">Aucune tâche dans cette liste</string>
+    <string name="todos_empty_today_body">Ajoutez quelque chose pour aujourd\'hui et cela apparaîtra ici.</string>
+    <string name="todos_empty_overdue_body">Rien n\'a dépassé son échéance.</string>
+    <string name="todos_empty_priority_body">Marquez une tâche comme prioritaire et elle remontera ici.</string>
+    <string name="todos_empty_scheduled_body">Donnez une date à une tâche et elle s\'alignera ici.</string>
+    <string name="todos_empty_all_body">Tout ce que vous ajoutez apparaît ici, quelle que soit sa date.</string>
+    <string name="todos_empty_list_body">Ajoutez votre première tâche et elle apparaîtra ici.</string>
     <string name="car_surface_title_today">T\'Day</string>
     <string name="car_surface_title_floater">Sans date</string>
     <string name="car_surface_loading">Chargement des tâches</string>
@@ -346,6 +356,7 @@
     <!-- Completed screen -->
     <string name="completed_title">Terminées</string>
     <string name="completed_empty">Aucune tâche terminée pour l\'instant</string>
+    <string name="completed_empty_body">Cochez une tâche et elle atterrira ici.</string>
     <string name="completed_section_earlier">Plus tôt</string>
     <string name="completed_section_today">Aujourd\'hui</string>
     <string name="completed_section_tomorrow">Demain</string>
@@ -357,6 +368,7 @@
     <string name="calendar_today">Aujourd\'hui</string>
     <string name="calendar_tasks_due">Tâches dues le %1$s</string>
     <string name="calendar_no_pending">Aucune tâche en attente pour ce jour</string>
+    <string name="calendar_no_pending_body">Sélectionnez une autre date dans le calendrier.</string>
     <string name="calendar_completed_header">Terminées :</string>
     <string name="calendar_prev_month">Mois précédent</string>
     <string name="calendar_next_month">Mois suivant</string>
@@ -526,6 +538,9 @@
 
     <!-- Empty state -->
     <string name="todos_empty_floater">Aucune tâche flottante</string>
+    <string name="todos_empty_floater_body">Les flottantes n\'ont pas d\'échéance : notez-en une, elle attendra que vous soyez prêt.</string>
+    <string name="todos_empty_floater_list">Aucune tâche flottante dans cette liste</string>
+    <string name="todos_empty_floater_list_body">Ajoutez une flottante et elle attendra ici.</string>
 
     <!-- Theme mode -->
     <string name="settings_theme_system">Système</string>

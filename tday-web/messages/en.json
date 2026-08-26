@@ -391,7 +391,19 @@
     "floaterEmptyBody": "Floaters have no due date — write one down and it will wait until you are ready.",
     "floaterListEmptyBody": "Add a floater and it will wait right here.",
     "noMatchingTasks": "No matching tasks",
-    "searchEmptyBody": "Try a different word, or clear the search."
+    "searchEmptyBody": "Try a different word, or clear the search.",
+    "todayEmpty": "No tasks for today",
+    "todayEmptyBody": "Add something for today and it will show up right here.",
+    "overdueEmpty": "No overdue tasks",
+    "overdueEmptyBody": "Nothing has slipped past its due date.",
+    "priorityEmpty": "No priority tasks",
+    "priorityEmptyBody": "Flag a task as priority and it will move up here.",
+    "scheduledEmpty": "No scheduled tasks",
+    "scheduledEmptyBody": "Give a task a date and it will line up here.",
+    "allTasksEmpty": "No tasks yet",
+    "allTasksEmptyBody": "Everything you add shows up here, whatever its date.",
+    "noMatchingSettings": "No matching settings",
+    "noMatchingTopics": "No matching topics"
   },
   "today": {
     "saveInstance": "Save instance",

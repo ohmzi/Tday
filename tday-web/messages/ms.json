@@ -391,7 +391,19 @@
     "floaterEmptyBody": "Floater tiada tarikh akhir — catat satu dan ia akan menunggu sehingga anda bersedia.",
     "floaterListEmptyBody": "Tambah floater dan ia akan menunggu di sini.",
     "noMatchingTasks": "Tiada tugasan yang sepadan",
-    "searchEmptyBody": "Cuba perkataan lain, atau kosongkan carian."
+    "searchEmptyBody": "Cuba perkataan lain, atau kosongkan carian.",
+    "todayEmpty": "Tiada tugasan untuk hari ini",
+    "todayEmptyBody": "Tambah sesuatu untuk hari ini dan ia akan muncul di sini.",
+    "overdueEmpty": "Tiada tugasan tertunggak",
+    "overdueEmptyBody": "Tiada apa-apa yang melepasi tarikh akhirnya.",
+    "priorityEmpty": "Tiada tugasan keutamaan",
+    "priorityEmptyBody": "Tandakan tugasan sebagai keutamaan dan ia akan naik ke sini.",
+    "scheduledEmpty": "Tiada tugasan dijadualkan",
+    "scheduledEmptyBody": "Beri tugasan satu tarikh dan ia akan beratur di sini.",
+    "allTasksEmpty": "Belum ada tugasan",
+    "allTasksEmptyBody": "Semua yang anda tambah muncul di sini, apa pun tarikhnya.",
+    "noMatchingSettings": "Tiada tetapan yang sepadan",
+    "noMatchingTopics": "Tiada topik yang sepadan"
   },
   "today": {
     "saveInstance": "Simpan kejadian",

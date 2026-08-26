@@ -391,7 +391,19 @@
     "floaterEmptyBody": "Os flutuantes não têm prazo — anote um e ele esperará até você estar pronto.",
     "floaterListEmptyBody": "Adicione um flutuante e ele esperará aqui.",
     "noMatchingTasks": "Nenhuma tarefa correspondente",
-    "searchEmptyBody": "Tente outra palavra ou limpe a busca."
+    "searchEmptyBody": "Tente outra palavra ou limpe a busca.",
+    "todayEmpty": "Nenhuma tarefa para hoje",
+    "todayEmptyBody": "Adicione algo para hoje e aparecerá aqui.",
+    "overdueEmpty": "Nenhuma tarefa atrasada",
+    "overdueEmptyBody": "Nada passou do prazo.",
+    "priorityEmpty": "Nenhuma tarefa prioritária",
+    "priorityEmptyBody": "Marque uma tarefa como prioridade e ela subirá para aqui.",
+    "scheduledEmpty": "Nenhuma tarefa agendada",
+    "scheduledEmptyBody": "Dê uma data a uma tarefa e ela entrará na fila aqui.",
+    "allTasksEmpty": "Nenhuma tarefa ainda",
+    "allTasksEmptyBody": "Tudo o que você adiciona aparece aqui, seja qual for a data.",
+    "noMatchingSettings": "Nenhuma definição correspondente",
+    "noMatchingTopics": "Nenhum tópico correspondente"
   },
   "today": {
     "saveInstance": "Guardar instância",
