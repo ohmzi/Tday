@@ -698,4 +698,52 @@
     <string name="settings_privacy">Confidentialité</string>
     <string name="root_feed_search_scheduled">Rechercher des tâches planifiées</string>
     <string name="root_feed_search_floater">Rechercher des tâches flottantes</string>
+
+    <!-- Bulk selection: multi-select actions in a task list -->
+    <string name="bulk_select">Sélectionner</string>
+    <string name="bulk_select_all">Tout sélectionner</string>
+    <string name="bulk_deselect_all">Tout désélectionner</string>
+    <string name="bulk_selected">%1$d sélectionnées</string>
+    <string name="bulk_selected_capped">%1$d sélectionnées — le maximum qu\'une action peut couvrir</string>
+    <string name="bulk_applies_to">S\'applique à %1$d sur %2$d — les tâches récurrentes sont ignorées.</string>
+    <string name="bulk_select_task">Sélectionner la tâche</string>
+    <string name="bulk_deselect_task">Désélectionner la tâche</string>
+    <string name="bulk_action_complete">Terminer</string>
+    <string name="bulk_action_priority">Priorité</string>
+    <string name="bulk_action_move">Déplacer</string>
+    <string name="bulk_action_delete">Supprimer</string>
+    <string name="bulk_delete_body">Cela les retire de toutes les listes, ainsi que leur historique de tâches terminées. Vous aurez quelques secondes pour annuler.</string>
+    <string name="bulk_move_body">Ces tâches viennent de listes différentes. Le déplacement ne peut pas être annulé en une fois — il faudrait remettre chacune à la main.</string>
+    <plurals name="bulk_tasks_completed">
+        <item quantity="one">Tâche terminée</item>
+        <item quantity="other">%d tâches terminées</item>
+    </plurals>
+    <plurals name="bulk_tasks_deleted">
+        <item quantity="one">Tâche supprimée</item>
+        <item quantity="other">%d tâches supprimées</item>
+    </plurals>
+    <plurals name="bulk_delete_title">
+        <item quantity="one">Supprimer cette tâche ?</item>
+        <item quantity="other">Supprimer %d tâches ?</item>
+    </plurals>
+    <plurals name="bulk_delete_confirm">
+        <item quantity="one">Supprimer la tâche</item>
+        <item quantity="other">Supprimer %d tâches</item>
+    </plurals>
+    <plurals name="bulk_move_title">
+        <item quantity="one">Déplacer cette tâche ?</item>
+        <item quantity="other">Déplacer %d tâches ?</item>
+    </plurals>
+    <plurals name="bulk_move_confirm">
+        <item quantity="one">Déplacer la tâche</item>
+        <item quantity="other">Déplacer %d tâches</item>
+    </plurals>
+    <plurals name="bulk_delete_failed">
+        <item quantity="one">Une tâche n\'a pas pu être supprimée</item>
+        <item quantity="other">%d tâches n\'ont pas pu être supprimées</item>
+    </plurals>
+    <plurals name="bulk_update_failed">
+        <item quantity="one">Une tâche n\'a pas pu être mise à jour</item>
+        <item quantity="other">%d tâches n\'ont pas pu être mises à jour</item>
+    </plurals>
 </resources>
