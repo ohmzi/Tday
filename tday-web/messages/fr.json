@@ -1030,6 +1030,13 @@
         "keywords": "push, notification, web, navigateur, rappel, vapid, s'abonner, échéance",
         "body": "Dans l'application web, vous pouvez activer les notifications push depuis les Réglages. Votre serveur auto-hébergé envoie alors un rappel à l'arrivée de l'heure d'échéance — ainsi l'application web peut vous joindre même quand l'onglet est fermé. Vous pouvez terminer la tâche directement depuis la notification."
       },
+      "notifications": {
+        "title": "Notifications",
+        "summary": "Un seul interrupteur décide si T'Day peut vous interrompre.",
+        "keywords": "notifications, autorisation, interrupteur, autoriser, silence, couper, rappel, récapitulatif, réglages système",
+        "body": "Les Réglages comportent un seul interrupteur Notifications, et tout ce qui vous parvient passe par lui : les rappels de tâches et le récapitulatif du lendemain. Le désactiver vide la file d'attente au lieu de la mettre en sourdine ; rien n'arrive donc en retard quand vous le réactivez. L'autorisation système est également nécessaire : tant que les notifications sont bloquées pour T'Day sur votre appareil, l'interrupteur reste désactivé et propose d'ouvrir les réglages système.",
+        "tip": "Les deux moitiés doivent être actives. Sans l'autorisation système, l'interrupteur reste désactivé, quoi que vous ayez choisi ici."
+      },
       "home-widget": {
         "title": "Widget d'écran d'accueil",
         "summary": "Consultez les tâches du jour sans ouvrir l'application.",
@@ -1255,13 +1262,6 @@
         "step0": "Ouvrez l'app Watch sur l'iPhone et installez T'Day.",
         "step1": "Ajoutez la complication T'Day à votre cadran.",
         "step2": "Jetez un coup d'œil au nombre, ou ouvrez l'app pour la liste complète."
-      },
-      "notifications": {
-        "title": "Notifications",
-        "summary": "Un seul interrupteur décide si T'Day peut vous interrompre.",
-        "keywords": "notifications, autorisation, interrupteur, autoriser, silence, couper, rappel, récapitulatif, réglages système",
-        "body": "Les Réglages comportent un seul interrupteur Notifications, et tout ce qui vous parvient passe par lui : les rappels de tâches et le récapitulatif du lendemain. Le désactiver vide la file d'attente au lieu de la mettre en sourdine ; rien n'arrive donc en retard quand vous le réactivez. L'autorisation système est également nécessaire : tant que les notifications sont bloquées pour T'Day sur votre appareil, l'interrupteur reste désactivé et propose d'ouvrir les réglages système.",
-        "tip": "Les deux moitiés doivent être actives. Sans l'autorisation système, l'interrupteur reste désactivé, quoi que vous ayez choisi ici."
       }
     }
   },

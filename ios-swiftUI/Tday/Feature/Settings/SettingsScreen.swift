@@ -130,8 +130,10 @@ struct SettingsScreen: View {
         return matchesSearch(terms)
     }
 
+    /// Server Mode only — see the web card's note: export and import move an
+    /// account's data, and a local workspace has no account to move it between.
     private var showsDataCard: Bool {
-        matchesSearch(["Your data", "Download my data", "Import"])
+        !viewModel.isLocalMode && matchesSearch(["Your data", "Download my data", "Import"])
     }
 
     private var showsGuideCard: Bool {
@@ -633,32 +635,24 @@ private struct SettingsAppLockSection: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Toggle(isOn: $enabled) {
-                HStack(spacing: 14) {
-                    SettingsRowIcon(asset: "LucideShield")
+        Toggle(isOn: $enabled) {
+            HStack(spacing: 14) {
+                SettingsRowIcon(asset: "LucideShield")
 
-                    Text(L("Require Face ID to open T'Day"))
-                        .font(.body.weight(.heavy))
-                        .foregroundStyle(colors.onSurface)
-                }
+                Text(L("Require Face ID to open T'Day"))
+                    .font(.body.weight(.heavy))
+                    .foregroundStyle(colors.onSurface)
             }
-            .tint(colors.secondary)
-            .onChange(of: enabled) { _, value in
-                store.isEnabled = value
-                // Widgets read this flag fresh on every timeline reload, but nothing else
-                // would prompt one right now — without this they'd keep showing (or hiding)
-                // task content until their next unrelated refresh.
-                #if canImport(WidgetKit)
-                WidgetCenter.shared.reloadAllTimelines()
-                #endif
-            }
-
-            Text(L("Asks for Face ID, Touch ID or your passcode when you open T'Day. Home-screen widgets and the watch complication hide your tasks while this is on."))
-                .font(.tdayRounded(size: 12, weight: .bold))
-                .foregroundStyle(colors.onSurfaceVariant)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.leading, 34)
+        }
+        .tint(colors.secondary)
+        .onChange(of: enabled) { _, value in
+            store.isEnabled = value
+            // Widgets read this flag fresh on every timeline reload, but nothing else
+            // would prompt one right now — without this they'd keep showing (or hiding)
+            // task content until their next unrelated refresh.
+            #if canImport(WidgetKit)
+            WidgetCenter.shared.reloadAllTimelines()
+            #endif
         }
     }
 }
@@ -698,12 +692,6 @@ private struct SettingsDeviceCalendarSection: View {
             .onChange(of: enabled) { _, value in
                 Task { await apply(enabled: value) }
             }
-
-            Text(L("Copies tasks with a date into a T'Day calendar on this device. Anytime tasks stay out of it. Changes made in the Calendar app are overwritten."))
-                .font(.tdayRounded(size: 12, weight: .bold))
-                .foregroundStyle(colors.onSurfaceVariant)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.leading, 34)
 
             if showPermissionDenied {
                 Text(L("T'Day needs calendar access to add your tasks. You can grant it in Settings."))
@@ -807,12 +795,6 @@ private struct SettingsNotificationsSection: View {
                 .tint(colors.secondary)
                 .accessibilityLabel(Text(L("Notifications")))
             }
-
-            Text(L("Task reminders and the Day Ahead digest only arrive while this is on."))
-                .font(.tdayRounded(size: 12, weight: .bold))
-                .foregroundStyle(colors.onSurfaceVariant)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.leading, 34)
 
             if showSystemSettingsHint {
                 Button {
@@ -2081,35 +2063,27 @@ private struct SettingsAiSummaryRow: View {
     @Environment(\.tdayColors) private var colors
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 14) {
-                SettingsRowIcon(asset: "LucideSparkles")
+        HStack(spacing: 14) {
+            SettingsRowIcon(asset: "LucideSparkles")
 
-                Text("Summary")
-                    .font(.tdayRounded(size: 17, weight: .heavy))
-                    .foregroundStyle(colors.onSurface)
+            Text("Summary")
+                .font(.tdayRounded(size: 17, weight: .heavy))
+                .foregroundStyle(colors.onSurface)
 
-                Spacer()
+            Spacer()
 
-                Toggle(
-                    "",
-                    isOn: Binding(
-                        get: { viewModel.aiSummaryEnabled },
-                        set: { newValue in
-                            Task { await viewModel.setAiSummaryEnabled(newValue) }
-                        }
-                    )
+            Toggle(
+                "",
+                isOn: Binding(
+                    get: { viewModel.aiSummaryEnabled },
+                    set: { newValue in
+                        Task { await viewModel.setAiSummaryEnabled(newValue) }
+                    }
                 )
-                .labelsHidden()
-                .disabled(viewModel.isAiSummarySaving)
-                .tint(colors.secondary)
-            }
-
-            Text("Summarize your day with one tap. Turn it off to hide the summary button.")
-                .font(.tdayRounded(size: 12, weight: .bold))
-                .foregroundStyle(colors.onSurface.opacity(0.58))
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.leading, 34)
+            )
+            .labelsHidden()
+            .disabled(viewModel.isAiSummarySaving)
+            .tint(colors.secondary)
         }
     }
 }
@@ -2866,14 +2840,11 @@ private struct DataTransferCard: View {
 
             SettingsDivider()
 
-            if viewModel.isLocalMode {
-                Text("Sign in to a server to import a file.")
-                    .font(.tdayRounded(size: 12, weight: .semibold))
-                    .foregroundStyle(.secondary)
-            } else {
-                SettingsListRow(title: "Import", value: nil, showChevron: false, icon: "LucideUpload") {
-                    if !busy { showImporter = true }
-                }
+            // Unconditional: the whole card is Server Mode only now, so the
+            // "sign in to a server to import" line this used to sit opposite could
+            // never be reached again.
+            SettingsListRow(title: "Import", value: nil, showChevron: false, icon: "LucideUpload") {
+                if !busy { showImporter = true }
             }
         }
         .task { loadCounts() }

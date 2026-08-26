@@ -1030,6 +1030,13 @@
         "keywords": "push, notification, web, browser, reminder, vapid, subscribe, due",
         "body": "In the web app you can turn on push notifications from Settings. Your self-hosted server then sends a reminder when a task's due time arrives — so the web app can reach you even when the tab is closed. You can complete the task straight from the notification."
       },
+      "notifications": {
+        "title": "Notifications",
+        "summary": "One switch decides whether T'Day may interrupt you at all.",
+        "keywords": "notifications, permission, switch, allow, mute, silence, reminder, digest, system settings",
+        "body": "Settings has a single Notifications switch, and everything that reaches you passes through it — task reminders and the Day Ahead digest. Turning it off empties the queue instead of muting it, so nothing arrives late when you turn it back on. It needs the system permission as well: while notifications are blocked for T'Day on your device the switch stays off, and offers to open the system settings.",
+        "tip": "Both halves have to be on. If the system permission is missing the switch reads off, however you left it here."
+      },
       "home-widget": {
         "title": "Home-screen widget",
         "summary": "See today's tasks without opening the app.",
@@ -1255,13 +1262,6 @@
         "step0": "Open the Watch app on iPhone and install T'Day.",
         "step1": "Add the T'Day complication to your watch face.",
         "step2": "Glance at the count, or open the app for the full list."
-      },
-      "notifications": {
-        "title": "Notifications",
-        "summary": "One switch decides whether T'Day may interrupt you at all.",
-        "keywords": "notifications, permission, switch, allow, mute, silence, reminder, digest, system settings",
-        "body": "Settings has a single Notifications switch, and everything that reaches you passes through it — task reminders and the Day Ahead digest. Turning it off empties the queue instead of muting it, so nothing arrives late when you turn it back on. It needs the system permission as well: while notifications are blocked for T'Day on your device the switch stays off, and offers to open the system settings.",
-        "tip": "Both halves have to be on. If the system permission is missing the switch reads off, however you left it here."
       }
     }
   },

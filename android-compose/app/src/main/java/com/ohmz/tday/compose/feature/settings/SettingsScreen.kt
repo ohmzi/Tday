@@ -569,7 +569,9 @@ fun SettingsScreen(
         },
     ).filter { it.visible }
 
-    val showDataTransferCard = search.matches(
+    // Server Mode only — see the web card's note: export and import move an
+    // account's data, and a local workspace has no account to move it between.
+    val showDataTransferCard = !isLocalMode && search.matches(
         stringResource(R.string.settings_data_title),
         stringResource(R.string.settings_data_download),
         stringResource(R.string.settings_data_import),
@@ -1822,7 +1824,6 @@ private fun ScreenshotProtectionRow() {
     SettingsToggleRow(
         icon = R.drawable.ic_lucide_eye_off,
         title = stringResource(R.string.settings_screenshot_protection),
-        subtitle = stringResource(R.string.settings_screenshot_protection_subtitle),
         checked = enabled,
         onCheckedChange = {
             enabled = it
@@ -1850,7 +1851,6 @@ private fun AppLockRow() {
         SettingsToggleRow(
             icon = R.drawable.ic_lucide_shield,
             title = stringResource(R.string.settings_app_lock),
-            subtitle = stringResource(R.string.settings_app_lock_subtitle),
             checked = enabled,
             onCheckedChange = { requested ->
                 if (requested && !canSatisfyAppLock(BiometricManager.from(context))) {
@@ -1955,7 +1955,6 @@ private fun DeviceCalendarSyncRow() {
         SettingsToggleRow(
             icon = R.drawable.ic_lucide_calendar,
             title = stringResource(R.string.settings_calendar_sync),
-            subtitle = stringResource(R.string.settings_calendar_sync_subtitle),
             checked = enabled,
             onCheckedChange = { requested ->
                 if (!requested) {
@@ -2192,7 +2191,6 @@ private tailrec fun Context.findActivity(): Activity? = when (this) {
 private fun SettingsToggleRow(
     @DrawableRes icon: Int,
     title: String,
-    subtitle: String,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
 ) {
@@ -2202,22 +2200,13 @@ private fun SettingsToggleRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         SettingsRowIcon(icon)
-        Column(
+        Text(
+            text = title,
             modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(2.dp),
-        ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.ExtraBold,
-                color = colorScheme.onSurface,
-            )
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = colorScheme.onSurface.copy(alpha = 0.58f),
-            )
-        }
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.ExtraBold,
+            color = colorScheme.onSurface,
+        )
         Switch(
             checked = checked,
             onCheckedChange = onCheckedChange,
@@ -2341,19 +2330,13 @@ private fun UnifiedPushRow() {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         SettingsRowIcon(R.drawable.ic_lucide_cloud)
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = stringResource(R.string.settings_unifiedpush_title),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.ExtraBold,
-                color = colorScheme.onSurface,
-            )
-            Text(
-                text = stringResource(R.string.settings_unifiedpush_subtitle),
-                style = MaterialTheme.typography.labelSmall,
-                color = colorScheme.onSurfaceVariant,
-            )
-        }
+        Text(
+            text = stringResource(R.string.settings_unifiedpush_title),
+            modifier = Modifier.weight(1f),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.ExtraBold,
+            color = colorScheme.onSurface,
+        )
         SettingsPillButton(
             text = stringResource(
                 if (registered) R.string.settings_unifiedpush_enabled

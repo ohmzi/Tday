@@ -121,25 +121,18 @@ fun DataTransferCard(modifier: Modifier = Modifier) {
 
         SettingsDivider()
 
-        // A local workspace has no account to import into, so the row is replaced by the
-        // reason rather than shown greyed with no explanation.
-        if (state.isLocalMode) {
-            Text(
-                text = context.getString(R.string.settings_data_import_local_hint),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-            )
-        } else {
-            SettingsListRow(
-                title = context.getString(R.string.settings_data_import),
-                value = null,
-                onClick = {
-                    if (!state.busy) importLauncher.launch(arrayOf("application/json"))
-                },
-                icon = R.drawable.ic_lucide_upload,
-                showChevron = false,
-            )
-        }
+        // No local-mode branch: the whole card is Server Mode only now, so the
+        // "sign in to a server to import" line it used to show in its place could
+        // never be reached.
+        SettingsListRow(
+            title = context.getString(R.string.settings_data_import),
+            value = null,
+            onClick = {
+                if (!state.busy) importLauncher.launch(arrayOf("application/json"))
+            },
+            icon = R.drawable.ic_lucide_upload,
+            showChevron = false,
+        )
     }
 
     val preview = state.preview
