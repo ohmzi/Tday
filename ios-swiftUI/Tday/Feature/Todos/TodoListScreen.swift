@@ -693,6 +693,20 @@ struct TodoListScreen: View {
         )
     }
 
+    /// Whether the empty state about to be shown is the end of a finished list
+    /// rather than a list that was never filled. Deleting the last task, or
+    /// opening an empty list, gets the plain arrival; ticking the last one off
+    /// gets the confetti.
+    ///
+    /// The window is wider than the burst's own flight, so a redraw mid-flight
+    /// cannot cut the paper off in mid-air.
+    private var celebratesEmptyState: Bool {
+        guard viewModel.items.isEmpty, let completedAt = viewModel.lastCompletionAt else { return false }
+        return Date().timeIntervalSince(completedAt) < TodoListScreen.completionCelebrationWindow
+    }
+
+    private static let completionCelebrationWindow: TimeInterval = 4
+
     private var emptyStateAssetName: String {
         emptyTimelineBadgeAssetName(
             for: viewModel.mode,
@@ -1082,7 +1096,8 @@ struct TodoListScreen: View {
                                     assetName: "LucideCheckCheck",
                                     accentColor: modeAccentColor,
                                     title: L("All done for today"),
-                                    description: context.date.formatted(.dateTime.weekday(.wide).day().month(.wide))
+                                    description: context.date.formatted(.dateTime.weekday(.wide).day().month(.wide)),
+                                    celebrate: celebratesEmptyState
                                 )
                                 .onAppear { HapticManager.taskCompleted(); SoundManager.taskCompleted() }
                             } else {
@@ -1090,7 +1105,8 @@ struct TodoListScreen: View {
                                     assetName: emptyStateAssetName,
                                     accentColor: modeAccentColor,
                                     title: emptyTimelineTitle(for: viewModel.mode, isListDetail: isListDetailScreen),
-                                    description: emptyTimelineDescription(for: viewModel.mode, isListDetail: isListDetailScreen)
+                                    description: emptyTimelineDescription(for: viewModel.mode, isListDetail: isListDetailScreen),
+                                    celebrate: celebratesEmptyState
                                 )
                             }
                         }
@@ -2137,7 +2153,8 @@ struct TodoListScreen: View {
                                 assetName: emptyStateAssetName,
                                 accentColor: modeAccentColor,
                                 title: emptyTimelineTitle(for: viewModel.mode, isListDetail: isListDetailScreen),
-                                description: emptyTimelineDescription(for: viewModel.mode, isListDetail: isListDetailScreen)
+                                description: emptyTimelineDescription(for: viewModel.mode, isListDetail: isListDetailScreen),
+                                celebrate: celebratesEmptyState
                             )
                             .frame(maxWidth: .infinity, minHeight: inlineEmptyStateGapHeight, alignment: .center)
                             .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))

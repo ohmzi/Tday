@@ -11,22 +11,33 @@ import SwiftUI
 /// The twin of the web `EmptyState` component — same geometry, same tints, so a
 /// user moving between the PWA and the app sees one drawing, not two.
 ///
+/// It never cuts in. The scene rises and fades up over half a second, because
+/// the frame before it is the row the user just ticked off leaving the screen,
+/// and a state that simply appears in that gap reads as the list breaking
+/// rather than as the list being finished.
+///
 /// - Parameters:
 ///   - assetName: a Lucide template glyph in `Assets.xcassets`, the same one the
 ///     screen shows in its own header.
 ///   - accentColor: the screen's accent. Every tint in the scene is this colour
 ///     at an alpha, which is what the web's `color-mix(… , transparent)` resolves
 ///     to — an arbitrary accent has to carry four different alphas at once.
+///   - celebrate: the list emptied because the user finished it, rather than
+///     because there was never anything in it: confetti flies first and the
+///     scene comes up through it a beat later.
 struct TdayEmptyState: View {
     let assetName: String
     let accentColor: Color
     let title: String
     var description: String? = nil
     var action: AnyView? = nil
+    var celebrate: Bool = false
 
     @Environment(\.tdayColors) private var colors
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var animating = false
+    /// The arrival, once: 0 is low and invisible, 1 is the finished state.
+    @State private var entered = false
 
     /// Reduced motion holds the scene at the top of the twinkle instead of
     /// switching it off — a half-drawn scene looks broken, not calm.
@@ -48,6 +59,17 @@ struct TdayEmptyState: View {
     var body: some View {
         VStack(spacing: 0) {
             scene
+                // Hung off the scene rather than off the whole state: the scene
+                // has a size of its own, and an overlay on the outer stack is
+                // proposed a zero width — a canvas given that draws nothing.
+                // Outside the fade below too, so the paper is at full strength
+                // while the illustration is still coming up through it.
+                .overlay {
+                    if celebrate {
+                        TdayConfetti(accentColor: accentColor)
+                            .frame(width: BurstBox.width, height: BurstBox.height)
+                    }
+                }
                 .padding(.bottom, 28)
                 .allowsHitTesting(false)
                 .accessibilityHidden(true)
@@ -80,7 +102,27 @@ struct TdayEmptyState: View {
         // typed into and nothing here can be hidden behind a keyboard, so it has
         // no reason to move at all.
         .ignoresSafeArea(.keyboard, edges: .bottom)
-        .onAppear { animating = true }
+        .opacity(entered ? 1 : 0)
+        .scaleEffect(entered ? 1 : EmptyStateEnter.startScale)
+        .offset(y: entered ? 0 : EmptyStateEnter.rise)
+        .onAppear {
+            animating = true
+            // Reduced motion still gets the finished state, just not the trip:
+            // a scene held at the start of its fade looks half-drawn.
+            guard !reduceMotion else {
+                entered = true
+                return
+            }
+            // The burst leads; the scene follows through it. Without the wait the
+            // illustration is already sitting there when the first piece of paper
+            // clears it, and the confetti reads as decoration on a static page.
+            withAnimation(
+                .easeOut(duration: EmptyStateEnter.duration)
+                    .delay(celebrate ? TdayConfettiMetrics.sceneLead : 0)
+            ) {
+                entered = true
+            }
+        }
     }
 
     private var scene: some View {
@@ -215,4 +257,19 @@ private struct TdayEmptyTickShape: Shape {
         path.addLine(to: point(9, 3.9))
         return path
     }
+}
+
+/// The scene's own arrival: long enough to read as a hand-off, not as a page load.
+private enum BurstBox {
+    /// The burst's own canvas, centred on the illustration. Fixed rather than
+    /// inherited: a `Canvas` clips to its frame, and this is the area the paper
+    /// is allowed to cross.
+    static let width: CGFloat = 340
+    static let height: CGFloat = 460
+}
+
+private enum EmptyStateEnter {
+    static let duration: Double = 0.52
+    static let startScale: Double = 0.92
+    static let rise: Double = 18
 }

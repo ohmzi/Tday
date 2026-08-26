@@ -16,6 +16,10 @@ final class TodoListViewModel {
     // Feeds the Day Done state: completed-today count from the local cache,
     // bumped optimistically on complete so the payoff shows immediately.
     var completedTodayCount = 0
+    /// When the user last ticked something off. Feeds the confetti: an empty
+    /// list that emptied under the user's own hand is a payoff, one that was
+    /// already empty when they opened it is not.
+    var lastCompletionAt: Date?
     var errorMessage: String?
     var aiSummaryEnabled = true
     var summaryText: String?
@@ -246,6 +250,7 @@ final class TodoListViewModel {
         let container = container
         let isFloater = mode == .floater
         items.removeAll { $0.id == todo.id }
+        lastCompletionAt = Date()
         if !isFloater {
             completedTodayCount += 1
         }

@@ -4,6 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { canonicalTodoId } from "@/lib/todo/todo-id";
 import { TodoItemType } from "@/types";
 import { useTodoActionToast } from "@/hooks/use-todo-action-toast";
+import { markTaskCompleted } from "@/lib/task-completion-signal";
 
 // Delayed-commit complete: `completeMutateFn` only stages the completion (prunes
 // the active-list caches and shows an undoable toast). The PATCH /complete fires
@@ -44,6 +45,9 @@ export const useCompleteTodo = () => {
   // Stage: prune the caches now, but DON'T send the PATCH yet — the undo toast
   // decides whether the request ever fires.
   const completeMutateFn = (todoItem: TodoItemType) => {
+    // The empty state that follows the last row leaving reads this to tell a
+    // list the user finished from one that was never filled.
+    markTaskCompleted();
     void queryClient.cancelQueries({ queryKey: ["todo"] });
     void queryClient.cancelQueries({ queryKey: ["todoTimeline"] });
     queryClient.setQueryData<TodoItemType[]>(["todo"], (oldTodos = []) =>
