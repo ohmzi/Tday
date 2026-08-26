@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import TodoCheckbox from "@/components/ui/TodoCheckbox";
+import { Checkbox } from "@/components/ui/checkbox";
 import clsx from "clsx";
 import {
   TASK_COMPLETION_CHECK_TO_STRIKE_MS,
@@ -24,6 +25,8 @@ import { FloatTaskButton, TaskActionButtons } from "@/components/ui/TaskActionBu
 import { useDemoteTodo } from "@/features/todayTodos/query/demote-todo";
 import { DeferTodoMenu } from "@/components/todo/component/DeferTodoMenu";
 import { SWIPE_DELETE_COLOR, SWIPE_EDIT_COLOR } from "@/lib/swipeActionColors";
+import { useTaskSelection } from "@/providers/TaskSelectionProvider";
+import { hapticTick } from "@/lib/haptics";
 
 
 type TodoItemContainerProps = {
@@ -53,6 +56,12 @@ export const TodoItemCard = ({
   setDragNodeRef,
 }: TodoItemCardProps) => {
   const { listMetaData } = useListMetaData();
+  // Inert on any screen without a TaskSelectionProvider (the home feed's Today
+  // preview, the calendar, completed history), so those rows behave exactly as
+  // they always have.
+  const selection = useTaskSelection();
+  const selecting = selection.selectionMode;
+  const selected = selecting && selection.isSelected(todoItem.id);
   const { useCompleteTodo, useDeleteTodo, readOnly = false } = useTodoMutation();
   const { completeMutateFn } = useCompleteTodo();
   const { deleteMutateFn } = useDeleteTodo();
@@ -92,7 +101,10 @@ export const TodoItemCard = ({
   const closeSwipe = () => setSwipeX(0);
 
   const handleTouchStart = (e: React.TouchEvent) => {
-    if (readOnly) return;
+    // While selecting, the row's only gesture is the tap that picks it — the
+    // swipe would otherwise reveal Edit/Delete for a single task in the middle
+    // of choosing several.
+    if (readOnly || selecting) return;
     const t = e.touches[0];
     swipeTouch.current = { x: t.clientX, y: t.clientY, startX: swipeX, axis: null };
     setSwiping(true);
@@ -154,6 +166,15 @@ export const TodoItemCard = ({
     };
   }, []);
 
+  // Entering selection mode closes any row left open by a swipe, so the mode
+  // never starts with a stray Edit/Delete pair showing.
+  useEffect(() => {
+    if (selecting) {
+      setSwipeX(0);
+      setShowHandle(false);
+    }
+  }, [selecting]);
+
   // Close this row's swipe actions when another row is swiped open.
   useEffect(() => {
     const onOpen = (e: Event) => {
@@ -201,7 +222,13 @@ export const TodoItemCard = ({
             with the swipe so they're invisible when closed (lets the row stay
             transparent, so the screen watermark shows through). */}
         <div
-          className="absolute inset-y-0 right-0 z-0 flex items-center gap-3 pr-3 sm:hidden"
+          className={clsx(
+            "absolute inset-y-0 right-0 z-0 flex items-center gap-3 pr-3 sm:hidden",
+            // Unreachable while selecting anyway (the swipe is off), but not
+            // rendering them keeps a single-task Delete out of the tree during
+            // a multi-select entirely.
+            selecting && "hidden",
+          )}
           style={{ opacity: Math.min(1, Math.abs(swipeX) / ACTIONS_WIDTH) }}
         >
           <button
@@ -254,9 +281,32 @@ export const TodoItemCard = ({
           // double-click-to-edit handler, which made it feel pressable while
           // doing nothing on a single press — drag-to-reorder is retired on web
           // (see TodoGroup), so those affordances no longer mean anything.
-          onMouseOver={() => setShowHandle(true)}
+          onMouseOver={() => {
+            if (selecting) return;
+            setShowHandle(true);
+          }}
           onMouseOut={() => setShowHandle(false)}
+          // The one place the row becomes pressable: while selecting, a tap
+          // anywhere on it picks it up or puts it down.
+          role={selecting ? "button" : undefined}
+          tabIndex={selecting ? 0 : undefined}
+          aria-pressed={selecting ? selected : undefined}
+          onKeyDown={
+            selecting
+              ? (event) => {
+                  if (event.key !== "Enter" && event.key !== " ") return;
+                  event.preventDefault();
+                  hapticTick();
+                  selection.toggle(todoItem.id);
+                }
+              : undefined
+          }
           onClick={() => {
+            if (selecting) {
+              hapticTick();
+              selection.toggle(todoItem.id);
+              return;
+            }
             if (swipeX !== 0) closeSwipe();
           }}
           onTouchStart={handleTouchStart}
@@ -274,18 +324,36 @@ export const TodoItemCard = ({
             // through. Swipe actions are hidden via opacity when the row is closed.
             "relative z-10 flex items-center justify-between gap-3 px-1 py-2.5",
             "sm:rounded-lg",
+            // The row is keyboard-reachable while selecting, so it keeps a
+            // visible focus ring rather than the bare browser outline.
+            selecting &&
+              "cursor-pointer rounded-lg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/70",
+            selected && "bg-accent/10",
             highlighted && "rounded-lg ring-2 ring-accent/25 sm:bg-accent/5 sm:ring-0",
           )}
         >
       <div className="flex min-w-0 items-start gap-3">
         <div className="shrink-0">
-          <TodoCheckbox
-            icon={Check}
-            complete={completed}
-            onChange={handleToggleComplete}
-            checked={completed || completing}
-            variant={rrule ? "repeat" : "outline-solid"}
-          />
+          {selecting ? (
+            // The square selection checkbox replaces the round complete toggle
+            // outright, so a tap can never finish a task while picking several.
+            <Checkbox
+              checked={selected}
+              // The row's own click handler owns the toggle; this is the state
+              // it reflects, not a second control that could disagree with it.
+              tabIndex={-1}
+              aria-hidden
+              className="pointer-events-none h-5 w-5 rounded-[6px]"
+            />
+          ) : (
+            <TodoCheckbox
+              icon={Check}
+              complete={completed}
+              onChange={handleToggleComplete}
+              checked={completed || completing}
+              variant={rrule ? "repeat" : "outline-solid"}
+            />
+          )}
         </div>
 
         <div className="max-w-full">
@@ -355,8 +423,10 @@ export const TodoItemCard = ({
             )}
           </div>
 
-          {/* Desktop hover edit/delete actions, overlaid at the right edge. */}
-          {!readOnly && (
+          {/* Desktop hover edit/delete actions, overlaid at the right edge.
+              Stood down while selecting for the same reason as the swipe pair:
+              single-task verbs have no place inside a multi-select. */}
+          {!readOnly && !selecting && (
             <div
               className={clsx(
                 "absolute right-0 top-1/2 hidden -translate-y-1/2 transition-opacity sm:block",
