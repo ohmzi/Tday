@@ -698,4 +698,52 @@
     <string name="settings_privacy">Privacidade</string>
     <string name="root_feed_search_scheduled">Pesquisar tarefas agendadas</string>
     <string name="root_feed_search_floater">Pesquisar tarefas flutuantes</string>
+
+    <!-- Bulk selection: multi-select actions in a task list -->
+    <string name="bulk_select">Selecionar</string>
+    <string name="bulk_select_all">Selecionar tudo</string>
+    <string name="bulk_deselect_all">Desmarcar tudo</string>
+    <string name="bulk_selected">%1$d selecionadas</string>
+    <string name="bulk_selected_capped">%1$d selecionadas — o máximo que uma ação alcança</string>
+    <string name="bulk_applies_to">Aplica-se a %1$d de %2$d — tarefas recorrentes são ignoradas.</string>
+    <string name="bulk_select_task">Selecionar tarefa</string>
+    <string name="bulk_deselect_task">Desmarcar tarefa</string>
+    <string name="bulk_action_complete">Concluir</string>
+    <string name="bulk_action_priority">Prioridade</string>
+    <string name="bulk_action_move">Mover</string>
+    <string name="bulk_action_delete">Excluir</string>
+    <string name="bulk_delete_body">Isto as remove de todas as listas, junto com o histórico de conclusão delas. Você terá alguns segundos para desfazer.</string>
+    <string name="bulk_move_body">Estas tarefas vêm de listas diferentes. Mover não pode ser desfeito de uma vez — você teria que devolver cada uma manualmente.</string>
+    <plurals name="bulk_tasks_completed">
+        <item quantity="one">Tarefa concluída</item>
+        <item quantity="other">%d tarefas concluídas</item>
+    </plurals>
+    <plurals name="bulk_tasks_deleted">
+        <item quantity="one">Tarefa excluída</item>
+        <item quantity="other">%d tarefas excluídas</item>
+    </plurals>
+    <plurals name="bulk_delete_title">
+        <item quantity="one">Excluir esta tarefa?</item>
+        <item quantity="other">Excluir %d tarefas?</item>
+    </plurals>
+    <plurals name="bulk_delete_confirm">
+        <item quantity="one">Excluir tarefa</item>
+        <item quantity="other">Excluir %d tarefas</item>
+    </plurals>
+    <plurals name="bulk_move_title">
+        <item quantity="one">Mover esta tarefa?</item>
+        <item quantity="other">Mover %d tarefas?</item>
+    </plurals>
+    <plurals name="bulk_move_confirm">
+        <item quantity="one">Mover tarefa</item>
+        <item quantity="other">Mover %d tarefas</item>
+    </plurals>
+    <plurals name="bulk_delete_failed">
+        <item quantity="one">Não foi possível excluir uma tarefa</item>
+        <item quantity="other">Não foi possível excluir %d tarefas</item>
+    </plurals>
+    <plurals name="bulk_update_failed">
+        <item quantity="one">Não foi possível atualizar uma tarefa</item>
+        <item quantity="other">Não foi possível atualizar %d tarefas</item>
+    </plurals>
 </resources>
