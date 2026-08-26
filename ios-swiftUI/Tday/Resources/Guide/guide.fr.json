@@ -756,6 +756,42 @@
       "searchBody": "trouvez n'importe quelle tache par titre, note ou nom de liste. utilisez le champ de recherche pour filtrer vos taches instantanement par titre, description ou nom de liste — sans avoir a faire defiler."
     },
     {
+      "id": "notifications",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "bell",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.7.0",
+      "deepLink": null,
+      "helpAnchors": [
+        "settings-feature-toggle"
+      ],
+      "title": "Notifications",
+      "summary": "Un seul interrupteur décide si T'Day peut vous interrompre.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Les Réglages comportent un seul interrupteur Notifications, et tout ce qui vous parvient passe par lui : les rappels de tâches et le récapitulatif du lendemain. Le désactiver vide la file d'attente au lieu de la mettre en sourdine ; rien n'arrive donc en retard quand vous le réactivez. L'autorisation système est également nécessaire : tant que les notifications sont bloquées pour T'Day sur votre appareil, l'interrupteur reste désactivé et propose d'ouvrir les réglages système."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Les deux moitiés doivent être actives. Sans l'autorisation système, l'interrupteur reste désactivé, quoi que vous ayez choisi ici."
+          ]
+        }
+      ],
+      "searchTitle": "notifications",
+      "searchKeywords": "notifications, autorisation, interrupteur, autoriser, silence, couper, rappel, recapitulatif, reglages systeme",
+      "searchBody": "un seul interrupteur decide si t'day peut vous interrompre. les reglages comportent un seul interrupteur notifications, et tout ce qui vous parvient passe par lui : les rappels de taches et le recapitulatif du lendemain. le desactiver vide la file d'attente au lieu de la mettre en sourdine ; rien n'arrive donc en retard quand vous le reactivez. l'autorisation systeme est egalement necessaire : tant que les notifications sont bloquees pour t'day sur votre appareil, l'interrupteur reste desactive et propose d'ouvrir les reglages systeme. les deux moities doivent etre actives. sans l'autorisation systeme, l'interrupteur reste desactive, quoi que vous ayez choisi ici."
+    },
+    {
       "id": "recurrence-presets",
       "section": "RECURRENCE_AND_REMINDERS",
       "sectionOrder": 4,

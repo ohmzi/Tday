@@ -756,6 +756,42 @@
       "searchBody": "cari sebarang tugasan mengikut tajuk, nota, atau nama senarai. guna medan carian untuk menapis tugasan anda serta-merta mengikut tajuk, huraian, atau nama senarai — tanpa perlu menatal."
     },
     {
+      "id": "notifications",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "bell",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.7.0",
+      "deepLink": null,
+      "helpAnchors": [
+        "settings-feature-toggle"
+      ],
+      "title": "Pemberitahuan",
+      "summary": "Satu suis menentukan sama ada T'Day boleh mengganggu anda.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Tetapan mempunyai satu suis Pemberitahuan, dan segala yang sampai kepada anda melaluinya — peringatan tugasan dan ringkasan hari esok. Mematikannya mengosongkan baris gilir, bukan sekadar menyenyapkannya, jadi tiada apa yang tiba lewat apabila anda hidupkannya semula. Kebenaran sistem juga diperlukan: selagi pemberitahuan disekat untuk T'Day pada peranti anda, suis itu kekal mati dan menawarkan untuk membuka tetapan sistem."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Kedua-dua bahagian mesti hidup. Tanpa kebenaran sistem, suis dipaparkan mati walau apa pun yang anda tetapkan di sini."
+          ]
+        }
+      ],
+      "searchTitle": "pemberitahuan",
+      "searchKeywords": "pemberitahuan, kebenaran, suis, benarkan, senyap, peringatan, ringkasan, tetapan sistem",
+      "searchBody": "satu suis menentukan sama ada t'day boleh mengganggu anda. tetapan mempunyai satu suis pemberitahuan, dan segala yang sampai kepada anda melaluinya — peringatan tugasan dan ringkasan hari esok. mematikannya mengosongkan baris gilir, bukan sekadar menyenyapkannya, jadi tiada apa yang tiba lewat apabila anda hidupkannya semula. kebenaran sistem juga diperlukan: selagi pemberitahuan disekat untuk t'day pada peranti anda, suis itu kekal mati dan menawarkan untuk membuka tetapan sistem. kedua-dua bahagian mesti hidup. tanpa kebenaran sistem, suis dipaparkan mati walau apa pun yang anda tetapkan di sini."
+    },
+    {
       "id": "recurrence-presets",
       "section": "RECURRENCE_AND_REMINDERS",
       "sectionOrder": 4,
