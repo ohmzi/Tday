@@ -14,13 +14,13 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.gestures.waitForUpOrCancellation
-import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -71,8 +71,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -83,6 +83,7 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -104,18 +105,11 @@ import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalContext
-import com.ohmz.tday.compose.core.data.RestingFloatersPreferenceStore
-import com.ohmz.tday.shared.floater.FloaterResting
-import com.ohmz.tday.shared.floater.FloaterRestingTier
-import com.ohmz.tday.shared.sort.TaskSortEngine
-import com.ohmz.tday.shared.sort.TaskSortKey
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalView
-import com.ohmz.tday.compose.core.sound.rememberTaskCompletionSound
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
@@ -128,13 +122,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.lerp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.zIndex
 import androidx.core.view.HapticFeedbackConstantsCompat
 import androidx.core.view.ViewCompat
 import com.ohmz.tday.compose.R
+import com.ohmz.tday.compose.core.data.RestingFloatersPreferenceStore
 import com.ohmz.tday.compose.core.data.list.ShareListKind
 import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.ListSummary
@@ -145,30 +139,32 @@ import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
 import com.ohmz.tday.compose.core.model.capitalizeFirstListLetter
 import com.ohmz.tday.compose.core.model.supportsTaskReschedule
 import com.ohmz.tday.compose.core.model.timelineRescheduleTargetDate
+import com.ohmz.tday.compose.core.sound.rememberTaskCompletionSound
+import com.ohmz.tday.compose.core.text.flattenNotesToPlainText
 import com.ohmz.tday.compose.core.ui.EmptyTaskWatermark
-import com.ohmz.tday.compose.core.ui.TaskSwipeActionButton
-import com.ohmz.tday.compose.core.ui.animateTaskSwipeOffsetAsState
+import com.ohmz.tday.compose.core.ui.LazyListHeroTitleSettle
 import com.ohmz.tday.compose.core.ui.RootFeedHeroHeader
 import com.ohmz.tday.compose.core.ui.RootFeedHeroHeaderMetrics
 import com.ohmz.tday.compose.core.ui.RootFeedHeroMark
-import com.ohmz.tday.compose.core.ui.LazyListHeroTitleSettle
+import com.ohmz.tday.compose.core.ui.TaskSwipeActionButton
 import com.ohmz.tday.compose.core.ui.TdayEmptyState
 import com.ohmz.tday.compose.core.ui.TdayHeroToolbar
 import com.ohmz.tday.compose.core.ui.TdaySearchCapsule
-import com.ohmz.tday.compose.core.ui.tdayBarButtonContainerColor
+import com.ohmz.tday.compose.core.ui.animateTaskSwipeOffsetAsState
 import com.ohmz.tday.compose.core.ui.rememberLazyListHeroTitleCollapse
-import com.ohmz.tday.compose.core.ui.tdayHeroTitleItem
 import com.ohmz.tday.compose.core.ui.rememberTaskSwipeRevealState
 import com.ohmz.tday.compose.core.ui.shareList
+import com.ohmz.tday.compose.core.ui.tdayBarButtonContainerColor
+import com.ohmz.tday.compose.core.ui.tdayHeroTitleItem
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.component.RootFeedDock
 import com.ohmz.tday.compose.ui.component.RootFeedTab
-import com.ohmz.tday.compose.ui.component.TdayModalBottomSheet
-import com.ohmz.tday.compose.ui.component.TdaySheetFullBleedWindow
-import com.ohmz.tday.compose.ui.component.TdayPullToRefreshBox
 import com.ohmz.tday.compose.ui.component.TdayCenteredSelectorDialog
+import com.ohmz.tday.compose.ui.component.TdayModalBottomSheet
+import com.ohmz.tday.compose.ui.component.TdayPullToRefreshBox
 import com.ohmz.tday.compose.ui.component.TdaySheetCard
 import com.ohmz.tday.compose.ui.component.TdaySheetDefaults
+import com.ohmz.tday.compose.ui.component.TdaySheetFullBleedWindow
 import com.ohmz.tday.compose.ui.component.TdaySheetHeader
 import com.ohmz.tday.compose.ui.component.TdaySheetSectionTitle
 import com.ohmz.tday.compose.ui.component.ThemedDatePickerDialog
@@ -199,6 +195,10 @@ import com.ohmz.tday.compose.ui.theme.tdayListAccentColor
 import com.ohmz.tday.compose.ui.theme.tdayListIconForKey
 import com.ohmz.tday.compose.ui.theme.tdayListIconResForKey
 import com.ohmz.tday.compose.ui.theme.tdayPriorityColor
+import com.ohmz.tday.shared.floater.FloaterResting
+import com.ohmz.tday.shared.floater.FloaterRestingTier
+import com.ohmz.tday.shared.sort.TaskSortEngine
+import com.ohmz.tday.shared.sort.TaskSortKey
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.Instant
@@ -214,7 +214,6 @@ import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.roundToInt
 import androidx.compose.ui.graphics.lerp as lerpColor
-import com.ohmz.tday.compose.core.text.flattenNotesToPlainText
 
 private val TimelineSameDateTaskSpacing = 2.dp
 private val TimelineDateGroupSpacing = 6.dp
@@ -285,11 +284,10 @@ fun TodoListScreen(
     val selectedList = uiState.lists.firstOrNull { it.id == uiState.listId }
     val selectedListColorKey = selectedList?.color
     val isTodayDaytime = rememberTodoRootIsDaytime()
-    val todayTimeIcon =
-        if (isTodayDaytime) ImageVector.vectorResource(R.drawable.ic_lucide_sun) else ImageVector.vectorResource(
-            R.drawable.ic_lucide_moon
-        )
-    val todayTimeIconTint = if (isTodayDaytime) TdayTitleIconDayAccent else TdayTitleIconNightAccent
+    if (isTodayDaytime) ImageVector.vectorResource(R.drawable.ic_lucide_sun) else ImageVector.vectorResource(
+        R.drawable.ic_lucide_moon
+    )
+    if (isTodayDaytime) TdayTitleIconDayAccent else TdayTitleIconNightAccent
     val usesTodayStyle =
         uiState.mode == TodoListMode.TODAY || uiState.mode == TodoListMode.OVERDUE || uiState.mode == TodoListMode.SCHEDULED || uiState.mode == TodoListMode.ALL || uiState.mode == TodoListMode.PRIORITY || uiState.mode == TodoListMode.FLOATER || uiState.mode == TodoListMode.LIST
     val isFloaterTaskHomeScreen =
@@ -338,6 +336,13 @@ fun TodoListScreen(
     // that draws the hero toolbar instead: the five timeline scopes as well as
     // the list-detail screens — the custom lists and the floater lists.
     val supportsScopedSearch = usesTodayStyle && !usesRootFeedChrome
+    // Whether the bar offers the magnifier at all. A scope or a list with no
+    // tasks in it has no set for a query to narrow, so the button would only
+    // raise a keyboard over an empty screen — and over the empty-state scene,
+    // which is the whole of what that screen has to say. Gates the button, not
+    // the field: deleting the last task while a search is open should retire
+    // the affordance, not slam the field shut under the user's hands.
+    val canOpenScopedSearch = supportsScopedSearch && uiState.items.isNotEmpty()
     var scopedSearchExpanded by rememberSaveable(uiState.mode, uiState.listId) {
         mutableStateOf(false)
     }
@@ -682,7 +687,7 @@ fun TodoListScreen(
     val hasSweepableTasks = uiState.mode == TodoListMode.OVERDUE &&
         uiState.items.any { it.rrule.isNullOrBlank() && it.instanceDate == null }
     val topBarActions = listOfNotNull(
-        if (supportsScopedSearch) {
+        if (canOpenScopedSearch) {
             TodoTopBarAction(
                 icon = ImageVector.vectorResource(R.drawable.ic_lucide_search),
                 contentDescription = stringResource(R.string.action_search),
@@ -1270,7 +1275,13 @@ fun TodoListScreen(
                                         }
                                         TimelineTaskRow(
                                             modifier = rowModifier
-                                                .alpha(restingAlphaFor(uiState.mode, todo, restingFloatersEnabled))
+                                                .alpha(
+                                                    restingAlphaFor(
+                                                        uiState.mode,
+                                                        todo,
+                                                        restingFloatersEnabled
+                                                    )
+                                                )
                                                 .timelineInAppDropTarget(
                                                     targetId = "row-${section.key}-${todo.id}",
                                                     section = section,

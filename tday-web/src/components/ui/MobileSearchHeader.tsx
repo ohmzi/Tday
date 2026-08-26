@@ -30,6 +30,14 @@ interface MobileSearchHeaderProps {
   results?: SearchResultItem[];
   onSelectResult?: (id: string) => void;
   /**
+   * Hides the magnifier. For a scope with nothing in it: there is no set for a
+   * query to narrow, so the button would only raise a keyboard over the
+   * empty-state scene, which is the whole of what that screen has to say.
+   * Deliberately does not close a search already open — losing the last task
+   * mid-query should retire the affordance, not slam the field shut.
+   */
+  searchUnavailable?: boolean;
+  /**
    * Lets this bar double as the dock for a collapsing page header: the page's
    * title travels up into here as the block below it scrolls away, and this bar
    * drops its own brand to make room. NativePageHeader owns the scroll maths
@@ -51,6 +59,7 @@ export default function MobileSearchHeader({
   trailingAction,
   results,
   onSelectResult,
+  searchUnavailable = false,
   pageCollapse,
 }: MobileSearchHeaderProps) {
   const [internalQuery, setInternalQuery] = useState("");
@@ -330,14 +339,16 @@ export default function MobileSearchHeader({
         <>
           {brandHome}
           <div ref={pageCollapse?.trailingRef} className="ml-auto flex shrink-0 items-center gap-2.5">
-            <button
-              type="button"
-              aria-label="Search"
-              onClick={openSearch}
-              className={collapsedButtonClassName}
-            >
-              <Search className="h-5 w-5 stroke-[2.4]" />
-            </button>
+            {searchUnavailable ? null : (
+              <button
+                type="button"
+                aria-label="Search"
+                onClick={openSearch}
+                className={collapsedButtonClassName}
+              >
+                <Search className="h-5 w-5 stroke-[2.4]" />
+              </button>
+            )}
             {trailingAction}
           </div>
         </>

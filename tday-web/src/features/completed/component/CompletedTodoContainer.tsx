@@ -44,6 +44,9 @@ const CompletedTodoContainer = () => {
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         placeholder={`${appDict("searchIn")} ${completedDict("title")}...`}
+        // No magnifier over an empty history — nothing for a query to narrow.
+        // The unsearched set, so a word that matches nothing keeps the field.
+        searchUnavailable={!todoLoading && completedTodos.length === 0}
         pageCollapse={{
           ...barSlots,
           title: completedDict("title"),

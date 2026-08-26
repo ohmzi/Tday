@@ -56,8 +56,15 @@ struct CompletedScreen: View {
         L("Search in %@", L("Completed"))
     }
 
+    /// No magnifier over an empty history: there is no set for a query to
+    /// narrow, and the button would only raise a keyboard over the empty-state
+    /// scene, which is the whole of what the screen has to say. Gates the
+    /// button, not the bar — a search already open stays open.
     private var topBarActions: [TimelineTopBarAction] {
-        [
+        guard !viewModel.items.isEmpty else {
+            return []
+        }
+        return [
             TimelineTopBarAction(
                 systemName: "magnifyingglass",
                 assetName: "NavSearch",
