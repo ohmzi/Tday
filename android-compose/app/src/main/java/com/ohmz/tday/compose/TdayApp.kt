@@ -1405,6 +1405,14 @@ private fun TodosRoute(
     val viewModel: TodoListViewModel = hiltViewModel()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
+    // Pull-to-refresh belongs to the two root feeds and nowhere else. Every
+    // other screen this composable draws — the five timeline scopes, a custom
+    // list, a floater list — is opened FROM a root feed and shows a slice of
+    // what that feed already fetched, so a second gesture to refetch it offers
+    // a wave animation and no new data. `usesRootFeedHeader` is precisely the
+    // "this is a root feed" flag, so the two cannot drift apart.
+    val rootPullRefreshEnabled = pullRefreshEnabled && usesRootFeedHeader
+
     LaunchedEffect(mode, listId, listName) {
         viewModel.load(mode = mode, listId = listId, listName = listName)
     }
@@ -1455,7 +1463,7 @@ private fun TodosRoute(
         exitToLauncherOnBack = exitToLauncherOnBack,
         exitOnCreateTaskSheetDismiss = exitOnCreateTaskSheetDismiss,
         onCreateTaskFlowFinished = onCreateTaskFlowFinished,
-        pullRefreshEnabled = pullRefreshEnabled,
+        pullRefreshEnabled = rootPullRefreshEnabled,
         summaryAvailable = summaryAvailable,
         usesRootFeedHeader = usesRootFeedHeader,
         createTaskRequestKey = createTaskRequestKey,

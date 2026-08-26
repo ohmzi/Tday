@@ -81,12 +81,17 @@ struct SettingsScreen: View {
         )
     }
 
-    private var showsAiSummaryCard: Bool {
-        !viewModel.isLocalMode && matchesSearch(["AI task summary", "Summary"])
-    }
-
-    private var showsDisplayCard: Bool {
-        matchesSearch(["Resting floaters", "Add scheduled tasks to my calendar"])
+    /// The three switches, in one card, as Android has them — its own card is
+    /// `settings_feature_toggle` holding ai-summary, resting-floaters and
+    /// calendar-sync. Splitting them across two cards here meant a local
+    /// workspace saw one titled card vanish entirely and the other appear
+    /// untitled.
+    private var showsFeatureTogglesCard: Bool {
+        var terms = ["Feature toggle", "Resting floaters", "Add scheduled tasks to my calendar"]
+        if !viewModel.isLocalMode {
+            terms += ["AI task summary", "Summary"]
+        }
+        return matchesSearch(terms)
     }
 
     private var showsPrivacyCard: Bool {
@@ -129,8 +134,8 @@ struct SettingsScreen: View {
     }
 
     private var hasSearchResults: Bool {
-        showsProfileCard || showsAppearanceCard || showsAiSummaryCard ||
-            showsDisplayCard || showsPrivacyCard || showsAboutCard ||
+        showsProfileCard || showsAppearanceCard || showsFeatureTogglesCard ||
+            showsPrivacyCard || showsAboutCard ||
             showsDataCard || showsGuideCard || showsSignOutCard
     }
 
@@ -296,18 +301,22 @@ struct SettingsScreen: View {
                 }
             }
 
-            if showsAiSummaryCard {
+            if showsFeatureTogglesCard {
                 settingsListRow {
                     SettingsSectionCard {
-                        SettingsSectionTitle("AI task summary")
-                        SettingsAiSummaryRow(viewModel: viewModel)
-                    }
-                }
-            }
-
-            if showsDisplayCard {
-                settingsListRow {
-                    SettingsSectionCard {
+                        // Android's own card title, `settings_feature_toggle`.
+                        // The literal it replaces, "AI task summary", rendered in
+                        // English everywhere — not because this view skips L(),
+                        // it does not, but because that string was never a key in
+                        // the catalogue. This one is, in all nine locales.
+                        SettingsSectionTitle("Feature toggle")
+                        // Server-only — a local workspace has no account to
+                        // summarise. Its divider goes with it, or the card opens
+                        // on a rule.
+                        if !viewModel.isLocalMode {
+                            SettingsAiSummaryRow(viewModel: viewModel)
+                            SettingsDivider()
+                        }
                         SettingsRestingFloatersSection()
                         SettingsDivider()
                         SettingsDeviceCalendarSection()
@@ -325,8 +334,8 @@ struct SettingsScreen: View {
             }
 
             // A Group, not four more rows: List's ViewBuilder tops out at ten
-            // children, and the header, the five cards above and the two
-            // trailing rows already spend eight of them.
+            // children, and the header, the four cards above and the two
+            // trailing rows already spend seven of them.
             Group {
                 if showsAboutCard {
                     settingsListRow {
@@ -411,8 +420,16 @@ struct SettingsScreen: View {
                 }
             }
 
+            // 24, as Android's settings list ends (`Spacer(24.dp)`), not the 258
+            // this used to reserve — `titleCollapseDistance` (178) plus a bar row
+            // plus 24. That much existed so the title could always finish
+            // collapsing even on a short page, and it paid for that by leaving a
+            // third of the screen blank under the last card on every page, short
+            // or not. It is not needed: `onVerticalScrollSnap` already settles a
+            // page that cannot collapse fully back to expanded, which is the
+            // bargain Android makes too.
             Color.clear
-                .frame(height: TodoTimelineMetrics.titleCollapseDistance + TodoTimelineMetrics.topBarRowHeight + 24)
+                .frame(height: 24)
                 .listRowInsets(EdgeInsets())
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
@@ -1996,8 +2013,16 @@ struct LatestReleaseScreen: View {
                 }
             }
 
+            // 24, as Android's settings list ends (`Spacer(24.dp)`), not the 258
+            // this used to reserve — `titleCollapseDistance` (178) plus a bar row
+            // plus 24. That much existed so the title could always finish
+            // collapsing even on a short page, and it paid for that by leaving a
+            // third of the screen blank under the last card on every page, short
+            // or not. It is not needed: `onVerticalScrollSnap` already settles a
+            // page that cannot collapse fully back to expanded, which is the
+            // bargain Android makes too.
             Color.clear
-                .frame(height: TodoTimelineMetrics.titleCollapseDistance + TodoTimelineMetrics.topBarRowHeight + 24)
+                .frame(height: 24)
                 .listRowInsets(EdgeInsets())
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
