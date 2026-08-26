@@ -128,7 +128,7 @@ export type RootFeedHeroMark = "timeOfDay" | "floaterLeaf";
  * guide — takes the chrome as-is at full width, so the two read as one control.
  */
 export const tdaySearchCapsuleClass =
-  "flex items-center gap-2 overflow-hidden rounded-full border border-white/70 bg-card/90 px-3 shadow-[0_12px_28px_-22px_hsl(var(--shadow)/0.55)] dark:border-white/10";
+  "flex items-center gap-2 overflow-hidden rounded-full border border-white/70 bg-card/90 px-3 shadow-[0_14px_30px_-16px_hsl(var(--shadow)/0.6)] dark:border-white/10";
 
 /** Its inner parts, so a second field cannot drift from the first. */
 export const tdaySearchCapsuleIconClass = "h-5 w-5 shrink-0 text-muted-foreground";
@@ -137,8 +137,20 @@ export const tdaySearchCapsuleInputClass =
 export const tdaySearchCapsuleClearClass =
   "flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent/15 hover:text-foreground";
 
+/**
+ * Every round control that sits in a bar: the root feeds' New list and ⋯, the
+ * back button, search, summary, a list's edit.
+ *
+ * The lift is `0 14px 30px -16px`. It used to be `-22px` against the same 28px
+ * blur, which leaves about 6px of visible shadow — technically present, and
+ * reported as absent, because next to the dock (`-24px` over a 42px blur) and
+ * the create button (`-18px` over 34px) these read as flat. The spread is what
+ * matters here, not the blur or the alpha. Kept lighter than the create button
+ * on purpose: content scrolls behind these, and a deep shadow drags a hard edge
+ * across whatever passes underneath.
+ */
 export const rootFeedHeaderButtonClass =
-  "flex h-14 w-14 items-center justify-center rounded-full border border-white/70 bg-card/90 text-foreground shadow-[0_12px_28px_-22px_hsl(var(--shadow)/0.55)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-card active:translate-y-0 dark:border-white/10";
+  "flex h-14 w-14 items-center justify-center rounded-full border border-white/70 bg-card/90 text-foreground shadow-[0_14px_30px_-16px_hsl(var(--shadow)/0.6)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-card active:translate-y-0 dark:border-white/10";
 
 const floaterAccent = "#4D8F83";
 
@@ -484,7 +496,7 @@ export default function RootFeedHeroHeader({
 
         <div
           ref={capsuleRef}
-          className="absolute left-0 z-[2] overflow-hidden rounded-full border border-white/70 bg-card/90 shadow-[0_12px_28px_-22px_hsl(var(--shadow)/0.55)] dark:border-white/10"
+          className="absolute left-0 z-[2] overflow-hidden rounded-full border border-white/70 bg-card/90 shadow-[0_14px_30px_-16px_hsl(var(--shadow)/0.6)] dark:border-white/10"
           style={{ top: m.topInset, height: m.barButtonSize }}
         >
           {searchOpen ? (

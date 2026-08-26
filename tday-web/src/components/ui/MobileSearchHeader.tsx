@@ -48,7 +48,7 @@ interface MobileSearchHeaderProps {
 
 const collapsedButtonClassName = cn(
   "flex h-14 w-14 shrink-0 items-center justify-center rounded-full",
-  "border border-white/70 bg-card/90 text-foreground shadow-[0_12px_28px_-22px_hsl(var(--shadow)/0.55)]",
+  "border border-white/70 bg-card/90 text-foreground shadow-[0_14px_30px_-16px_hsl(var(--shadow)/0.6)]",
   "transition-all duration-200 hover:-translate-y-0.5 hover:bg-card dark:border-white/10",
 );
 
@@ -255,7 +255,7 @@ export default function MobileSearchHeader({
               "relative flex w-full items-center",
               "rounded-full",
               "bg-card/90",
-              "border border-white/70 shadow-[0_12px_28px_-22px_hsl(var(--shadow)/0.55)]",
+              "border border-white/70 shadow-[0_14px_30px_-16px_hsl(var(--shadow)/0.6)]",
               "transition-colors duration-200",
               "dark:border-white/10",
               isSearchFocused && ["bg-card", "border-accent/45"],
