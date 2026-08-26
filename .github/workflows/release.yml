@@ -15,6 +15,9 @@ concurrency:
 env:
   IMAGE_NAME: ghcr.io/ohmzi/tday
 
+# The release commit is pushed with a deploy key, and unlike GITHUB_TOKEN a
+# deploy-key push DOES trigger workflows — so this guard is what stops the
+# release from re-firing itself in a loop. Both jobs must carry it.
 jobs:
   lint-and-test:
     if: ${{ !contains(github.event.head_commit.message, '[skip release]') }}
@@ -56,20 +59,36 @@ jobs:
       - name: Run backend tests
         run: ./gradlew :tday-backend:test --no-daemon
 
+      - name: Run shared module tests
+        run: ./gradlew :shared:jvmTest --no-daemon
+
+      - name: Verify guide content is not stale
+        run: ./gradlew :shared:verifyGuideContent --no-daemon
+
   build-and-release:
     if: ${{ !contains(github.event.head_commit.message, '[skip release]') }}
     runs-on: ubuntu-latest
     needs: lint-and-test
     steps:
+      # The write deploy key is the only bypass actor on the master ruleset, so
+      # it is what lets this job push the release commit. checkout wires it into
+      # git and switches the remote to SSH, so every push below uses it.
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           fetch-depth: 0
+          ssh-key: ${{ secrets.RELEASE_DEPLOY_KEY }}
 
       - name: Set up Node.js
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 20
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9 # v4.8.0
+        with:
+          distribution: temurin
+          java-version: 21
 
       # Every merge into master ships a release, even when nobody touched
       # version.json. If the manifest version is already tagged we bump the
@@ -99,6 +118,12 @@ jobs:
           echo "tag=v${VERSION}" >> "$GITHUB_OUTPUT"
           echo "bumped=${BUMPED}" >> "$GITHUB_OUTPUT"
           echo "Releasing v${VERSION} (auto-bumped: ${BUMPED})"
+
+      # The guide artifacts embed `currentVersion` from version.json, so a bump
+      # leaves them stale and the next PR's verifyGuideContent gate fails.
+      # Regenerate them here so they ride along in the release commit.
+      - name: Regenerate guide content for the new version
+        run: ./gradlew :shared:exportGuideContent --no-daemon
 
       # The repo still carries legacy v1.8.x-v1.44.0 tags from an earlier
       # versioning era, so ask GitHub for the previous release rather than
@@ -137,7 +162,13 @@ jobs:
             ios-swiftUI/project.yml \
             ios-swiftUI/TdayApp.xcodeproj/project.pbxproj \
             .env.example \
-            tday-backend/.env.example
+            tday-backend/.env.example \
+            tday-web/src/generated/guide-structure.json \
+            tday-web/tests/fixtures/guide-search-vectors.json \
+            tday-web/tests/fixtures/guide-icons.json \
+            shared/src/commonMain/kotlin/com/ohmz/tday/shared/guide/GuideStringsGenerated.kt \
+            shared/src/commonMain/kotlin/com/ohmz/tday/shared/summary/SummaryStringBundlesGenerated.kt \
+            ios-swiftUI/Tday/Resources/Guide
 
           if git diff --cached --quiet; then
             echo "::error::Release commit is empty — expected at least regenerated release metadata."
@@ -177,12 +208,6 @@ jobs:
       # ────────────────────────────────────────────
       #  Android APK
       # ────────────────────────────────────────────
-      - name: Set up JDK 21
-        uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9 # v4.8.0
-        with:
-          distribution: temurin
-          java-version: 21
-
       - name: Accept Android SDK licenses
         run: yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses 2>/dev/null || true
 

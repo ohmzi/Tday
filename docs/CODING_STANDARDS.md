@@ -42,7 +42,6 @@ Some AI-assisted editors (Cursor, Copilot, etc.) **silently inject trailers** in
 1. **`commit-msg` git hook** — Automatically strips `Made-with:` and AI `Co-authored-by:` trailers from every commit. Installed via `scripts/install-hooks.sh`. Run it once after cloning.
 2. **Guardrail tests** — `tests/guardrails/dependency-hygiene.test.ts` verifies the hook script exists and contains the correct stripping logic.
 3. **PR template checklist** — Reviewers verify no AI attribution in the final diff.
-4. **Cursor agent rule** — `.cursor/rules/no-ai-trailers.mdc` documents a trailer-safe `git commit-tree` fallback for Cursor environments that inject commit trailers. It must not use destructive cleanup commands.
 
 > **Never use `--no-verify`** to skip the hook. If the hook causes problems, fix the hook — don't bypass it.
 
