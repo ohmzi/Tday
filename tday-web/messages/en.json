@@ -1263,6 +1263,16 @@
         "step0": "Open the Watch app on iPhone and install T'Day.",
         "step1": "Add the T'Day complication to your watch face.",
         "step2": "Glance at the count, or open the app for the full list."
+      },
+      "bulk-actions": {
+        "title": "Bulk actions",
+        "summary": "Select several tasks at once, then act on all of them together.",
+        "keywords": "bulk, multi-select, select all, batch, many, several, complete, delete, priority, move, selection",
+        "body": "Tap Select in the header of a task list to enter selection mode. Pick tasks one at a time or hit Select all, then apply a single action to the whole set — mark them done, change their priority, move them to another list, or delete them.",
+        "step0": "Open a task list and tap Select in the header.",
+        "step1": "Tap tasks to pick them, or use Select all for everything on screen.",
+        "step2": "Choose Complete, Priority, Move or Delete from the bar at the bottom.",
+        "tip": "Deleting asks you to confirm the exact number first, and still leaves an undo toast. Repeating tasks can be bulk-completed, but they sit out delete, priority and move so a whole series is never changed by accident."
       }
     }
   },

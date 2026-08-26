@@ -1263,6 +1263,16 @@
         "step0": "Abre la app Watch en el iPhone e instala T'Day.",
         "step1": "Añade la complicación de T'Day a tu esfera.",
         "step2": "Echa un vistazo al número o abre la app para ver la lista completa."
+      },
+      "bulk-actions": {
+        "title": "Acciones en lote",
+        "summary": "Selecciona varias tareas a la vez y actúa sobre todas juntas.",
+        "keywords": "lote, selección múltiple, seleccionar todo, varias, muchas, completar, eliminar, prioridad, mover, selección",
+        "body": "Toca Seleccionar en la cabecera de una lista de tareas para entrar en el modo de selección. Elige tareas una a una o pulsa Seleccionar todo y aplica una sola acción a todo el conjunto: marcarlas como hechas, cambiar su prioridad, moverlas a otra lista o eliminarlas.",
+        "step0": "Abre una lista de tareas y toca Seleccionar en la cabecera.",
+        "step1": "Toca las tareas para elegirlas o usa Seleccionar todo para las que están en pantalla.",
+        "step2": "Elige Completar, Prioridad, Mover o Eliminar en la barra inferior.",
+        "tip": "Eliminar te pide confirmar el número exacto y aun así deja un aviso para deshacer. Las tareas repetidas se pueden completar en lote, pero quedan fuera de eliminar, prioridad y mover, para que nunca se cambie una serie entera sin querer."
       }
     }
   },

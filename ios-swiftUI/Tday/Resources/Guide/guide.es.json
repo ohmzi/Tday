@@ -727,6 +727,49 @@
       "searchBody": "prioriza las tareas arrastradas una tarjeta a la vez. ir atrasado deja de doler: el boton barrer en la pantalla de atrasadas recorre tus tareas arrastradas una tarjeta a la vez — hoy, manana, elegir una fecha, convertir en flotante o dejarla ir. ¿con prisa? barrer todo a hoy lo mueve todo de una vez, con un solo deshacer. las tareas recurrentes quedan fuera del barrido; sus repeticiones se reprograman desde la hoja de edicion para mantener la serie intacta."
     },
     {
+      "id": "bulk-actions",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "circle-check-big",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "PRO_TIP",
+      "serverOnly": false,
+      "sinceVersion": "0.7.4",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Acciones en lote",
+      "summary": "Selecciona varias tareas a la vez y actúa sobre todas juntas.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Toca Seleccionar en la cabecera de una lista de tareas para entrar en el modo de selección. Elige tareas una a una o pulsa Seleccionar todo y aplica una sola acción a todo el conjunto: marcarlas como hechas, cambiar su prioridad, moverlas a otra lista o eliminarlas."
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "Abre una lista de tareas y toca Seleccionar en la cabecera.",
+            "Toca las tareas para elegirlas o usa Seleccionar todo para las que están en pantalla.",
+            "Elige Completar, Prioridad, Mover o Eliminar en la barra inferior."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Eliminar te pide confirmar el número exacto y aun así deja un aviso para deshacer. Las tareas repetidas se pueden completar en lote, pero quedan fuera de eliminar, prioridad y mover, para que nunca se cambie una serie entera sin querer."
+          ]
+        }
+      ],
+      "searchTitle": "acciones en lote",
+      "searchKeywords": "lote, seleccion multiple, seleccionar todo, varias, muchas, completar, eliminar, prioridad, mover, seleccion",
+      "searchBody": "selecciona varias tareas a la vez y actua sobre todas juntas. toca seleccionar en la cabecera de una lista de tareas para entrar en el modo de seleccion. elige tareas una a una o pulsa seleccionar todo y aplica una sola accion a todo el conjunto: marcarlas como hechas, cambiar su prioridad, moverlas a otra lista o eliminarlas. abre una lista de tareas y toca seleccionar en la cabecera. toca las tareas para elegirlas o usa seleccionar todo para las que estan en pantalla. elige completar, prioridad, mover o eliminar en la barra inferior. eliminar te pide confirmar el numero exacto y aun asi deja un aviso para deshacer. las tareas repetidas se pueden completar en lote, pero quedan fuera de eliminar, prioridad y mover, para que nunca se cambie una serie entera sin querer."
+    },
+    {
       "id": "search-tasks",
       "section": "ORGANIZING",
       "sectionOrder": 3,

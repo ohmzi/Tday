@@ -727,6 +727,49 @@
       "searchBody": "uruskan tugasan tertunggak satu kad pada satu masa. ketinggalan tidak lagi menyakitkan: butang sapu pada skrin tertunggak membawa anda melalui tugasan terbawa satu kad pada satu masa — hari ini, esok, pilih tarikh, jadikan terapung atau lepaskan. tergesa-gesa? sapu semua ke hari ini memindahkan semuanya sekali gus, dengan satu buat asal. tugasan berulang tidak termasuk dalam sapuan; kejadiannya dijadualkan semula melalui helaian edit supaya sirinya kekal."
     },
     {
+      "id": "bulk-actions",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "circle-check-big",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "PRO_TIP",
+      "serverOnly": false,
+      "sinceVersion": "0.7.4",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Tindakan pukal",
+      "summary": "Pilih beberapa tugasan sekali gus, kemudian uruskan semuanya serentak.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Ketik Pilih pada pengepala senarai tugasan untuk masuk ke mod pilihan. Pilih tugasan satu per satu atau ketik Pilih semua, kemudian gunakan satu tindakan pada keseluruhan set — tandakan selesai, tukar keutamaan, pindahkan ke senarai lain, atau padamkannya."
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "Buka senarai tugasan dan ketik Pilih pada pengepala.",
+            "Ketik tugasan untuk memilihnya, atau guna Pilih semua untuk semua yang ada di skrin.",
+            "Pilih Selesai, Keutamaan, Pindah atau Padam pada bar di bawah."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Pemadaman meminta anda mengesahkan jumlah tepat dahulu, dan masih meninggalkan pemberitahuan buat asal. Tugasan berulang boleh diselesaikan secara pukal, tetapi ia dikecualikan daripada padam, keutamaan dan pindah supaya keseluruhan siri tidak pernah berubah secara tidak sengaja."
+          ]
+        }
+      ],
+      "searchTitle": "tindakan pukal",
+      "searchKeywords": "pukal, pilihan berbilang, pilih semua, kelompok, beberapa, selesai, padam, keutamaan, pindah, pilihan",
+      "searchBody": "pilih beberapa tugasan sekali gus, kemudian uruskan semuanya serentak. ketik pilih pada pengepala senarai tugasan untuk masuk ke mod pilihan. pilih tugasan satu per satu atau ketik pilih semua, kemudian gunakan satu tindakan pada keseluruhan set — tandakan selesai, tukar keutamaan, pindahkan ke senarai lain, atau padamkannya. buka senarai tugasan dan ketik pilih pada pengepala. ketik tugasan untuk memilihnya, atau guna pilih semua untuk semua yang ada di skrin. pilih selesai, keutamaan, pindah atau padam pada bar di bawah. pemadaman meminta anda mengesahkan jumlah tepat dahulu, dan masih meninggalkan pemberitahuan buat asal. tugasan berulang boleh diselesaikan secara pukal, tetapi ia dikecualikan daripada padam, keutamaan dan pindah supaya keseluruhan siri tidak pernah berubah secara tidak sengaja."
+    },
+    {
       "id": "search-tasks",
       "section": "ORGANIZING",
       "sectionOrder": 3,

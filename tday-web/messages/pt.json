@@ -1263,6 +1263,16 @@
         "step0": "Abra a app Watch no iPhone e instale o T'Day.",
         "step1": "Adicione a complicação do T'Day ao seu mostrador.",
         "step2": "Dê uma vista de olhos ao número, ou abra a app para ver a lista completa."
+      },
+      "bulk-actions": {
+        "title": "Ações em massa",
+        "summary": "Selecione várias tarefas de uma vez e trate todas juntas.",
+        "keywords": "massa, seleção múltipla, selecionar tudo, lote, várias, concluir, excluir, prioridade, mover, seleção",
+        "body": "Toque em Selecionar no cabeçalho de uma lista de tarefas para entrar no modo de seleção. Escolha tarefas uma a uma ou toque em Selecionar tudo e aplique uma única ação ao conjunto inteiro: marcá-las como concluídas, mudar a prioridade, movê-las para outra lista ou excluí-las.",
+        "step0": "Abra uma lista de tarefas e toque em Selecionar no cabeçalho.",
+        "step1": "Toque nas tarefas para escolhê-las ou use Selecionar tudo para as que estão na tela.",
+        "step2": "Escolha Concluir, Prioridade, Mover ou Excluir na barra inferior.",
+        "tip": "Excluir pede que você confirme o número exato e ainda deixa um aviso para desfazer. Tarefas repetidas podem ser concluídas em massa, mas ficam de fora de excluir, prioridade e mover, para que uma série inteira nunca mude sem querer."
       }
     }
   },
