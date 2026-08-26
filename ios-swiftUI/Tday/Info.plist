@@ -52,6 +52,49 @@
 	</array>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<!-- Export compliance (US EAR Category 5 Part 2). Declared here so a TestFlight upload is
+	     never parked at "Missing Compliance" waiting on a manual answer in App Store Connect.
+	     The release lane does not wait for build processing, so it has no opportunity to answer
+	     that question after the fact - see ios-swiftUI/fastlane/Fastfile.
+
+	     <false/> asserts that T'Day contains no NON-EXEMPT encryption. What it actually uses:
+	       - AES-256-GCM (CryptoKit) in Tday/Core/Data/Auth/CredentialEnvelope.swift, wrapping
+	         the sign-in username/password for transport to the user's own server;
+	       - RSA-2048 OAEP-SHA256 (Security) in the same file, wrapping that AES key;
+	       - AES-256-GCM (CryptoKit) in Tday/Core/Security/ProbeDecryptor.swift, decrypting the
+	         server's version-compatibility probe - note this one is confidentiality applied to
+	         ordinary application data (appVersion / updateRequired / compatibilityMode) using a
+	         key bundled in the app, NOT authentication;
+	       - SHA-256 (CryptoKit) in NetworkConfiguration/TodayTasksWidget - hashing, not
+	         encryption;
+	       - HTTPS/TLS via URLSession.
+
+	     THE BASIS FOR THE EXEMPTION, in order of how cleanly it fits:
+
+	       1. Encryption limited to that provided within the operating system. Every primitive
+	          above is Apple's own CryptoKit / Security / URLSession. T'Day implements no cipher,
+	          bundles no third-party crypto library, and ships no modified crypto. This one
+	          covers ProbeDecryptor as well as the credential envelope.
+	       2. Publicly available source code (EAR 740.13(e)). T'Day is open source at
+	          github.com/ohmzi/Tday. NOTE: this exemption carries a ONE-TIME email notification
+	          to BIS (crypt@bis.doc.gov) and the NSA (enc@nsa.gov) giving the source URL. If the
+	          account owner wants to rely on it, that email has to be sent.
+
+	     Deliberately NOT relied on:
+	       - "limited to authentication" alone. It covers CredentialEnvelope but not
+	         ProbeDecryptor, which decrypts application data rather than authenticating anything.
+	         An earlier draft of this comment claimed it did; that was wrong.
+	       - "short key length". AES-256 / RSA-2048 exceed the 56-bit symmetric / 512-bit
+	         asymmetric thresholds, so this exemption does not apply.
+
+	     THE ACCOUNT OWNER MUST CONFIRM THIS DECLARATION BEFORE THE FIRST UPLOAD - it is a legal
+	     export statement, not a build setting. If they are not comfortable with the above, the
+	     alternative is to set this key to <true/> and file the annual self-classification
+	     report with BIS; the pipeline still works, but the first build of each version then
+	     needs the compliance question answered by hand in App Store Connect.
+	     See docs/DEPLOYMENT.md - Export compliance. -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSAppTransportSecurity</key>
