@@ -756,6 +756,42 @@
       "searchBody": "encuentra cualquier tarea por titulo, nota o nombre de lista. usa el campo de busqueda para filtrar tus tareas al instante por titulo, descripcion o nombre de lista, sin necesidad de desplazarte."
     },
     {
+      "id": "notifications",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "bell",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.7.0",
+      "deepLink": null,
+      "helpAnchors": [
+        "settings-feature-toggle"
+      ],
+      "title": "Notificaciones",
+      "summary": "Un solo interruptor decide si T'Day puede interrumpirte.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Ajustes tiene un único interruptor de Notificaciones, y todo lo que te llega pasa por él: los recordatorios de tareas y el resumen del día siguiente. Apagarlo vacía la cola en lugar de silenciarla, así que al volver a encenderlo no llega nada con retraso. También hace falta el permiso del sistema: mientras las notificaciones estén bloqueadas para T'Day en tu dispositivo el interruptor sigue apagado y te ofrece abrir los ajustes del sistema."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Las dos mitades tienen que estar activas. Si falta el permiso del sistema, el interruptor aparece apagado, lo hayas dejado como lo hayas dejado aquí."
+          ]
+        }
+      ],
+      "searchTitle": "notificaciones",
+      "searchKeywords": "notificaciones, permiso, interruptor, permitir, silenciar, recordatorio, resumen, ajustes del sistema",
+      "searchBody": "un solo interruptor decide si t'day puede interrumpirte. ajustes tiene un unico interruptor de notificaciones, y todo lo que te llega pasa por el: los recordatorios de tareas y el resumen del dia siguiente. apagarlo vacia la cola en lugar de silenciarla, asi que al volver a encenderlo no llega nada con retraso. tambien hace falta el permiso del sistema: mientras las notificaciones esten bloqueadas para t'day en tu dispositivo el interruptor sigue apagado y te ofrece abrir los ajustes del sistema. las dos mitades tienen que estar activas. si falta el permiso del sistema, el interruptor aparece apagado, lo hayas dejado como lo hayas dejado aqui."
+    },
+    {
       "id": "recurrence-presets",
       "section": "RECURRENCE_AND_REMINDERS",
       "sectionOrder": 4,

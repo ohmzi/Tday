@@ -756,6 +756,42 @@
       "searchBody": "finde jede aufgabe nach titel, notiz oder listenname. nutze das suchfeld, um deine aufgaben sofort nach titel, beschreibung oder listenname zu filtern — ganz ohne scrollen."
     },
     {
+      "id": "notifications",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "bell",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.7.0",
+      "deepLink": null,
+      "helpAnchors": [
+        "settings-feature-toggle"
+      ],
+      "title": "Benachrichtigungen",
+      "summary": "Ein Schalter entscheidet, ob T'Day dich überhaupt unterbrechen darf.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "In den Einstellungen gibt es einen einzigen Schalter für Benachrichtigungen, und alles, was dich erreicht, läuft darüber — Aufgabenerinnerungen und die Tagesvorschau. Ausschalten leert die Warteschlange, statt sie nur stummzuschalten: Beim Wiedereinschalten kommt also nichts verspätet an. Zusätzlich wird die Systemberechtigung gebraucht: Solange Benachrichtigungen für T'Day auf deinem Gerät blockiert sind, bleibt der Schalter aus und bietet an, die Systemeinstellungen zu öffnen."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Beide Hälften müssen an sein. Fehlt die Systemberechtigung, zeigt der Schalter Aus — egal, wie du ihn hier hinterlassen hast."
+          ]
+        }
+      ],
+      "searchTitle": "benachrichtigungen",
+      "searchKeywords": "benachrichtigungen, berechtigung, schalter, erlauben, stumm, stummschalten, erinnerung, ubersicht, systemeinstellungen",
+      "searchBody": "ein schalter entscheidet, ob t'day dich uberhaupt unterbrechen darf. in den einstellungen gibt es einen einzigen schalter fur benachrichtigungen, und alles, was dich erreicht, lauft daruber — aufgabenerinnerungen und die tagesvorschau. ausschalten leert die warteschlange, statt sie nur stummzuschalten: beim wiedereinschalten kommt also nichts verspatet an. zusatzlich wird die systemberechtigung gebraucht: solange benachrichtigungen fur t'day auf deinem gerat blockiert sind, bleibt der schalter aus und bietet an, die systemeinstellungen zu offnen. beide halften mussen an sein. fehlt die systemberechtigung, zeigt der schalter aus — egal, wie du ihn hier hinterlassen hast."
+    },
+    {
       "id": "recurrence-presets",
       "section": "RECURRENCE_AND_REMINDERS",
       "sectionOrder": 4,

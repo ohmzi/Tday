@@ -756,6 +756,42 @@
       "searchBody": "encontre qualquer tarefa por titulo, nota ou nome da lista. use o campo de pesquisa para filtrar as suas tarefas de imediato por titulo, descricao ou nome da lista — sem precisar de percorrer tudo."
     },
     {
+      "id": "notifications",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "bell",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.7.0",
+      "deepLink": null,
+      "helpAnchors": [
+        "settings-feature-toggle"
+      ],
+      "title": "Notificações",
+      "summary": "Um único interruptor decide se o T'Day pode interromper você.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "As Configurações têm um único interruptor de Notificações, e tudo o que chega até você passa por ele — os lembretes de tarefas e o resumo do dia seguinte. Desligá-lo esvazia a fila em vez de silenciá-la, então nada chega atrasado quando você liga de novo. A permissão do sistema também é necessária: enquanto as notificações estiverem bloqueadas para o T'Day no seu aparelho, o interruptor continua desligado e oferece abrir as configurações do sistema."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "As duas metades precisam estar ligadas. Sem a permissão do sistema, o interruptor aparece desligado, não importa como você o deixou aqui."
+          ]
+        }
+      ],
+      "searchTitle": "notificacoes",
+      "searchKeywords": "notificacoes, permissao, interruptor, permitir, silenciar, lembrete, resumo, configuracoes do sistema",
+      "searchBody": "um unico interruptor decide se o t'day pode interromper voce. as configuracoes tem um unico interruptor de notificacoes, e tudo o que chega ate voce passa por ele — os lembretes de tarefas e o resumo do dia seguinte. desliga-lo esvazia a fila em vez de silencia-la, entao nada chega atrasado quando voce liga de novo. a permissao do sistema tambem e necessaria: enquanto as notificacoes estiverem bloqueadas para o t'day no seu aparelho, o interruptor continua desligado e oferece abrir as configuracoes do sistema. as duas metades precisam estar ligadas. sem a permissao do sistema, o interruptor aparece desligado, nao importa como voce o deixou aqui."
+    },
+    {
       "id": "recurrence-presets",
       "section": "RECURRENCE_AND_REMINDERS",
       "sectionOrder": 4,

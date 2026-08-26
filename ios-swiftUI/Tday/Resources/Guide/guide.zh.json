@@ -756,6 +756,42 @@
       "searchBody": "按标题、备注或列表名称找到任何任务。 使用搜索栏，按标题、描述或列表名称即时筛选你的任务——无需滚动查找。"
     },
     {
+      "id": "notifications",
+      "section": "RECURRENCE_AND_REMINDERS",
+      "sectionOrder": 4,
+      "icon": "bell",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.7.0",
+      "deepLink": null,
+      "helpAnchors": [
+        "settings-feature-toggle"
+      ],
+      "title": "通知",
+      "summary": "一个开关决定 T'Day 是否可以打扰你。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "设置里只有一个通知开关，所有送达你的内容都要经过它——任务提醒和次日摘要。关闭它会清空队列，而不是把它静音，所以重新打开时不会有内容延迟送达。还需要系统权限：只要设备上 T'Day 的通知被屏蔽，这个开关就保持关闭，并提示你打开系统设置。"
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "两半都必须打开。缺少系统权限时，无论你在这里如何设置，开关都会显示为关闭。"
+          ]
+        }
+      ],
+      "searchTitle": "通知",
+      "searchKeywords": "通知, 权限, 开关, 允许, 静音, 提醒, 摘要, 系统设置",
+      "searchBody": "一个开关决定 t'day 是否可以打扰你。 设置里只有一个通知开关，所有送达你的内容都要经过它——任务提醒和次日摘要。关闭它会清空队列，而不是把它静音，所以重新打开时不会有内容延迟送达。还需要系统权限：只要设备上 t'day 的通知被屏蔽，这个开关就保持关闭，并提示你打开系统设置。 两半都必须打开。缺少系统权限时，无论你在这里如何设置，开关都会显示为关闭。"
+    },
+    {
       "id": "recurrence-presets",
       "section": "RECURRENCE_AND_REMINDERS",
       "sectionOrder": 4,

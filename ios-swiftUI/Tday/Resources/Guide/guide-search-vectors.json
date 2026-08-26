@@ -39,6 +39,7 @@
     "reminder": [
       "reminders",
       "reminder-snooze",
+      "notifications",
       "quiet-hours"
     ],
     "api key": [],
