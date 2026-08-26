@@ -408,7 +408,9 @@
       "serverOnly": false,
       "sinceVersion": "0.6.0",
       "deepLink": null,
-      "helpAnchors": [],
+      "helpAnchors": [
+        "settings-feature-toggle"
+      ],
       "title": "休眠フローター",
       "summary": "手つかずの Anytime タスクは静かに薄れて休み、リストを穏やかに保ちます。",
       "body": [
@@ -1347,6 +1349,43 @@
       "searchBody": "サーバーモードに切り替えるとき、端末内のタスクを一緒に持っていけます。 ローカルモードで始めて、あとでサーバーを用意しましたか？勝手にアップロードされることは一切ありません。データを移すには、まず設定からエクスポートし、サーバーにサインインして、そこでファイルをインポートします。タスク・リスト・履歴が意図した 1 ステップで移動します。タイミングはあなたが選び、それまで端末のデータはそのまま残ります。 インポート後、すべて移ったことを確認するまでエクスポートしたファイルを残しておきましょう。そのままバックアップにもなります。"
     },
     {
+      "id": "ai-summary",
+      "section": "INTEGRATIONS",
+      "sectionOrder": 7,
+      "icon": "sparkles",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": true,
+      "sinceVersion": null,
+      "deepLink": null,
+      "helpAnchors": [
+        "settings-feature-toggle"
+      ],
+      "title": "タスクの要約",
+      "summary": "一日を短く静かに読み解く — 任意でローカル AI も。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "T'Day は一日を1〜2文で要約できます。ローカルの Ollama モデルがあれば自然な文章になり、なくても温かみのある決まった形の振り返りに切り替わります — どちらの場合も、何もサーバーの外には出ません。"
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "要約がクラウド AI サービスに頼ることは決してありません — ローカルで行うか、何も行わないかのどちらかです。"
+          ]
+        }
+      ],
+      "searchTitle": "タスクの要約",
+      "searchKeywords": "要約, ai, ollama, 概要, ダイジェスト, ローカル, プライベート, summary, overview, local",
+      "searchBody": "一日を短く静かに読み解く — 任意でローカル ai も。 t'day は一日を1〜2文で要約できます。ローカルの ollama モデルがあれば自然な文章になり、なくても温かみのある決まった形の振り返りに切り替わります — どちらの場合も、何もサーバーの外には出ません。 要約がクラウド ai サービスに頼ることは決してありません — ローカルで行うか、何も行わないかのどちらかです。"
+    },
+    {
       "id": "device-calendar-sync",
       "section": "INTEGRATIONS",
       "sectionOrder": 7,
@@ -1359,7 +1398,9 @@
       "serverOnly": false,
       "sinceVersion": "0.7.0",
       "deepLink": null,
-      "helpAnchors": [],
+      "helpAnchors": [
+        "settings-feature-toggle"
+      ],
       "title": "端末のカレンダーにタスクを表示",
       "summary": "日付のあるタスクを端末の T'Day カレンダーに反映します。",
       "body": [
@@ -1381,41 +1422,6 @@
       "searchTitle": "端末のカレンダーにタスクを表示",
       "searchKeywords": "カレンダー, 端末カレンダー, 同期, google カレンダー, apple カレンダー, eventkit, スマホのカレンダー, ミラー",
       "searchBody": "日付のあるタスクを端末の t'day カレンダーに反映します。 これをオンにすると、日付のあるタスクがすべて端末上の「t'day」というカレンダーにコピーされ、他のカレンダーと並んで表示されます。anytime タスクは日付がないため含まれません。同期は一方向です。t'day がそのカレンダーに書き込むため、カレンダー側での編集は次にタスクが変わった時点で上書きされます。 設定で「予定されたタスクをカレンダーに追加」をオンにします。 端末から求められたらカレンダーへのアクセスを許可します。 カレンダーアプリを開くと、日付のあるタスクが t'day カレンダーに入っています。"
-    },
-    {
-      "id": "ai-summary",
-      "section": "INTEGRATIONS",
-      "sectionOrder": 7,
-      "icon": "sparkles",
-      "platforms": [
-        "WEB",
-        "ANDROID",
-        "IOS"
-      ],
-      "badge": null,
-      "serverOnly": true,
-      "sinceVersion": null,
-      "deepLink": null,
-      "helpAnchors": [],
-      "title": "タスクの要約",
-      "summary": "一日を短く静かに読み解く — 任意でローカル AI も。",
-      "body": [
-        {
-          "type": "PARAGRAPH",
-          "texts": [
-            "T'Day は一日を1〜2文で要約できます。ローカルの Ollama モデルがあれば自然な文章になり、なくても温かみのある決まった形の振り返りに切り替わります — どちらの場合も、何もサーバーの外には出ません。"
-          ]
-        },
-        {
-          "type": "TIP",
-          "texts": [
-            "要約がクラウド AI サービスに頼ることは決してありません — ローカルで行うか、何も行わないかのどちらかです。"
-          ]
-        }
-      ],
-      "searchTitle": "タスクの要約",
-      "searchKeywords": "要約, ai, ollama, 概要, ダイジェスト, ローカル, プライベート, summary, overview, local",
-      "searchBody": "一日を短く静かに読み解く — 任意でローカル ai も。 t'day は一日を1〜2文で要約できます。ローカルの ollama モデルがあれば自然な文章になり、なくても温かみのある決まった形の振り返りに切り替わります — どちらの場合も、何もサーバーの外には出ません。 要約がクラウド ai サービスに頼ることは決してありません — ローカルで行うか、何も行わないかのどちらかです。"
     }
   ]
 }

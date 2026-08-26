@@ -85,9 +85,13 @@ object GuideCatalog {
             body = listOf(para(GuideTopicIds.FLOATERS_VS_TODOS), tip(GuideTopicIds.FLOATERS_VS_TODOS)),
         ),
         topic(
+            // The Settings "Feature toggle" card holds this too, but it stays in
+            // Organizing: the topic above it is what defines "floater", and a
+            // reader who meets resting floaters before that word has no footing.
             GuideTopicIds.RESTING_FLOATERS, GuideSectionId.ORGANIZING, "waves",
             setOf(WEB, ANDROID, IOS), badge = GuideBadge.HIDDEN_GEM, sinceVersion = "0.6.0",
             body = listOf(para(GuideTopicIds.RESTING_FLOATERS), tip(GuideTopicIds.RESTING_FLOATERS)),
+            helpAnchors = listOf("settings-feature-toggle"),
         ),
         topic(
             GuideTopicIds.PROMOTE_AND_FLOAT, GuideSectionId.ORGANIZING, "refresh-cw",
@@ -172,10 +176,14 @@ object GuideCatalog {
             body = listOf(para(GuideTopicIds.DAY_AHEAD), tip(GuideTopicIds.DAY_AHEAD)),
         ),
         topic(
+            // Web-only, and on web this switch lives in the Feature toggle card,
+            // not the Reminders card the other "settings-notifications" topics
+            // sit in — one anchor id meaning two different cards on two
+            // platforms is how a "?" ends up pointing at the wrong one.
             GuideTopicIds.PUSH_NOTIFICATIONS, GuideSectionId.RECURRENCE_AND_REMINDERS, "bell-ring",
             setOf(WEB), serverOnly = true, sinceVersion = "0.3.0",
             body = listOf(para(GuideTopicIds.PUSH_NOTIFICATIONS)),
-            helpAnchors = listOf("settings-notifications"),
+            helpAnchors = listOf("settings-feature-toggle"),
         ),
         topic(
             GuideTopicIds.UNIFIEDPUSH, GuideSectionId.RECURRENCE_AND_REMINDERS, "bell-ring",
@@ -261,12 +269,27 @@ object GuideCatalog {
         ),
 
         // ── Integrations ─────────────────────────────────────────────────
+        // The two topics the Settings "Feature toggle" card switches on lead the
+        // section, in the order that card lists them. Its single "?" lands on
+        // ai-summary, so anything else first would drop the reader into the
+        // middle of a section with the rest of the card behind them. The rest
+        // keeps its previous relative order, with the two calendar topics still
+        // adjacent — a feed you subscribe to elsewhere is the question anyone
+        // asks straight after device-calendar sync, and they are easy to confuse.
         topic(
-            GuideTopicIds.API_KEY_HOMARR, GuideSectionId.INTEGRATIONS, "key-round",
-            setOf(WEB), serverOnly = true,
-            body = listOf(para(GuideTopicIds.API_KEY_HOMARR), steps(GuideTopicIds.API_KEY_HOMARR, 3)),
-            deepLink = GuideDeepLink(web = "settings"),
-            helpAnchors = listOf("settings-api-key"),
+            GuideTopicIds.AI_SUMMARY, GuideSectionId.INTEGRATIONS, "sparkles",
+            setOf(WEB, ANDROID, IOS), serverOnly = true,
+            body = listOf(para(GuideTopicIds.AI_SUMMARY), tip(GuideTopicIds.AI_SUMMARY)),
+            helpAnchors = listOf("settings-feature-toggle"),
+        ),
+        topic(
+            GuideTopicIds.DEVICE_CALENDAR_SYNC, GuideSectionId.INTEGRATIONS, "calendar",
+            setOf(ANDROID, IOS), sinceVersion = "0.7.0",
+            body = listOf(
+                para(GuideTopicIds.DEVICE_CALENDAR_SYNC),
+                steps(GuideTopicIds.DEVICE_CALENDAR_SYNC, 3),
+            ),
+            helpAnchors = listOf("settings-feature-toggle"),
         ),
         topic(
             GuideTopicIds.CALENDAR_FEED, GuideSectionId.INTEGRATIONS, "calendar",
@@ -276,12 +299,11 @@ object GuideCatalog {
             helpAnchors = listOf("settings-calendar-feed"),
         ),
         topic(
-            GuideTopicIds.DEVICE_CALENDAR_SYNC, GuideSectionId.INTEGRATIONS, "calendar",
-            setOf(ANDROID, IOS), sinceVersion = "0.7.0",
-            body = listOf(
-                para(GuideTopicIds.DEVICE_CALENDAR_SYNC),
-                steps(GuideTopicIds.DEVICE_CALENDAR_SYNC, 3),
-            ),
+            GuideTopicIds.API_KEY_HOMARR, GuideSectionId.INTEGRATIONS, "key-round",
+            setOf(WEB), serverOnly = true,
+            body = listOf(para(GuideTopicIds.API_KEY_HOMARR), steps(GuideTopicIds.API_KEY_HOMARR, 3)),
+            deepLink = GuideDeepLink(web = "settings"),
+            helpAnchors = listOf("settings-api-key"),
         ),
         topic(
             GuideTopicIds.WEBHOOKS, GuideSectionId.INTEGRATIONS, "webhook",
@@ -289,11 +311,6 @@ object GuideCatalog {
             body = listOf(para(GuideTopicIds.WEBHOOKS), steps(GuideTopicIds.WEBHOOKS, 3)),
             deepLink = GuideDeepLink(web = "settings"),
             helpAnchors = listOf("settings-webhooks"),
-        ),
-        topic(
-            GuideTopicIds.AI_SUMMARY, GuideSectionId.INTEGRATIONS, "sparkles",
-            setOf(WEB, ANDROID, IOS), serverOnly = true,
-            body = listOf(para(GuideTopicIds.AI_SUMMARY), tip(GuideTopicIds.AI_SUMMARY)),
         ),
         topic(
             GuideTopicIds.WEEK_IN_REVIEW, GuideSectionId.INTEGRATIONS, "check-check",

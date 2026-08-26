@@ -373,7 +373,9 @@
       ],
       "badge": "HIDDEN_GEM",
       "deepLink": null,
-      "helpAnchors": [],
+      "helpAnchors": [
+        "settings-feature-toggle"
+      ],
       "serverOnly": false,
       "sinceVersion": "0.6.0"
     },
@@ -758,7 +760,7 @@
       "badge": null,
       "deepLink": null,
       "helpAnchors": [
-        "settings-notifications"
+        "settings-feature-toggle"
       ],
       "serverOnly": true,
       "sinceVersion": "0.3.0"
@@ -886,39 +888,35 @@
       "sinceVersion": "0.5.0"
     },
     {
-      "id": "api-key-homarr",
+      "id": "ai-summary",
       "section": "INTEGRATIONS",
-      "icon": "key-round",
+      "icon": "sparkles",
       "platforms": [
-        "WEB"
+        "WEB",
+        "ANDROID",
+        "IOS"
       ],
-      "titleKey": "guide.topics.api-key-homarr.title",
-      "summaryKey": "guide.topics.api-key-homarr.summary",
-      "keywordsKey": "guide.topics.api-key-homarr.keywords",
+      "titleKey": "guide.topics.ai-summary.title",
+      "summaryKey": "guide.topics.ai-summary.summary",
+      "keywordsKey": "guide.topics.ai-summary.keywords",
       "body": [
         {
           "type": "PARAGRAPH",
           "keys": [
-            "guide.topics.api-key-homarr.body"
+            "guide.topics.ai-summary.body"
           ]
         },
         {
-          "type": "STEPS",
+          "type": "TIP",
           "keys": [
-            "guide.topics.api-key-homarr.step0",
-            "guide.topics.api-key-homarr.step1",
-            "guide.topics.api-key-homarr.step2"
+            "guide.topics.ai-summary.tip"
           ]
         }
       ],
       "badge": null,
-      "deepLink": {
-        "web": "settings",
-        "android": null,
-        "ios": null
-      },
+      "deepLink": null,
       "helpAnchors": [
-        "settings-api-key"
+        "settings-feature-toggle"
       ],
       "serverOnly": true,
       "sinceVersion": null
@@ -962,6 +960,44 @@
       "sinceVersion": "0.5.0"
     },
     {
+      "id": "api-key-homarr",
+      "section": "INTEGRATIONS",
+      "icon": "key-round",
+      "platforms": [
+        "WEB"
+      ],
+      "titleKey": "guide.topics.api-key-homarr.title",
+      "summaryKey": "guide.topics.api-key-homarr.summary",
+      "keywordsKey": "guide.topics.api-key-homarr.keywords",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "keys": [
+            "guide.topics.api-key-homarr.body"
+          ]
+        },
+        {
+          "type": "STEPS",
+          "keys": [
+            "guide.topics.api-key-homarr.step0",
+            "guide.topics.api-key-homarr.step1",
+            "guide.topics.api-key-homarr.step2"
+          ]
+        }
+      ],
+      "badge": null,
+      "deepLink": {
+        "web": "settings",
+        "android": null,
+        "ios": null
+      },
+      "helpAnchors": [
+        "settings-api-key"
+      ],
+      "serverOnly": true,
+      "sinceVersion": null
+    },
+    {
       "id": "webhooks",
       "section": "INTEGRATIONS",
       "icon": "webhook",
@@ -998,38 +1034,6 @@
       ],
       "serverOnly": true,
       "sinceVersion": "0.5.0"
-    },
-    {
-      "id": "ai-summary",
-      "section": "INTEGRATIONS",
-      "icon": "sparkles",
-      "platforms": [
-        "WEB",
-        "ANDROID",
-        "IOS"
-      ],
-      "titleKey": "guide.topics.ai-summary.title",
-      "summaryKey": "guide.topics.ai-summary.summary",
-      "keywordsKey": "guide.topics.ai-summary.keywords",
-      "body": [
-        {
-          "type": "PARAGRAPH",
-          "keys": [
-            "guide.topics.ai-summary.body"
-          ]
-        },
-        {
-          "type": "TIP",
-          "keys": [
-            "guide.topics.ai-summary.tip"
-          ]
-        }
-      ],
-      "badge": null,
-      "deepLink": null,
-      "helpAnchors": [],
-      "serverOnly": true,
-      "sinceVersion": null
     },
     {
       "id": "week-in-review",

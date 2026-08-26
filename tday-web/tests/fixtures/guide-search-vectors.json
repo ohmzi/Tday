@@ -54,8 +54,8 @@
       "overdue-view",
       "scheduled-lists",
       "completed-history",
-      "api-key-homarr",
-      "calendar-feed"
+      "calendar-feed",
+      "api-key-homarr"
     ],
     "search": [
       "search-tasks"
