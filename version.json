@@ -1,11 +1,11 @@
 {
-  "version": "0.7.1",
+  "version": "0.7.2",
   "compatibility": {
     "mode": "exact",
     "updateRequired": true
   },
   "ios": {
-    "buildNumber": 13,
+    "buildNumber": 14,
     "updateUrl": ""
   }
 }
