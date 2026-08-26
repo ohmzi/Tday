@@ -1118,7 +1118,9 @@ private extension AppRoute {
 struct AppLaunchSplashView: View {
     @Binding var isHeld: Bool
     @Environment(\.colorScheme) private var colorScheme
-    @State private var tagline = splashTaglines.randomElement() ?? "Running on your server, running your life"
+    /// The English line is the catalog key; `L` resolves it against the in-app
+    /// language so the splash speaks the same language as the rest of the app.
+    @State private var taglineKey = splashTaglines.randomElement() ?? "Running on your server, running your life"
 
     var body: some View {
         ZStack {
@@ -1135,7 +1137,7 @@ struct AppLaunchSplashView: View {
                     .font(.tdayRounded(size: 32, weight: .heavy))
                     .foregroundStyle(titleColor)
 
-                Text(tagline)
+                Text(L(taglineKey))
                     .font(.tdayRounded(size: 14, weight: .bold))
                     .foregroundStyle(taglineColor)
                     .multilineTextAlignment(.center)
@@ -1235,7 +1237,37 @@ private let splashTaglines = [
     "Turning mental load into checkmarks",
     "Serving tasks like a good server should",
     "Your personal accountability server",
-    "Prioritizing so you don't have to"
+    "Prioritizing so you don't have to",
+    "Your excuses are not on the schedule",
+    "Built for the version of you that shows up",
+    "Tomorrow you is watching",
+    "Where good intentions get timestamps",
+    "No cloud, no clutter, no forgetting",
+    "Your day, minus the guesswork",
+    "Quietly running the boring part of your life",
+    "Your brain gets a break, your server gets a job",
+    "Ambition, now with due dates",
+    "Small tasks, big server energy",
+    "Every list deserves a home you own",
+    "Uptime for your intentions",
+    "The nag you actually asked for",
+    "Because \u{2018}sometime this week\u{2019} is not a time",
+    "Your plans, backed up and back on track",
+    "Reminding you from a box you can unplug",
+    "Fewer tabs, more done",
+    "Turning the mental pile into a plan",
+    "Localhost, but for your life",
+    "Your inbox of intentions, sorted",
+    "Deadlines respected, privacy included",
+    "Root access to your own routine",
+    "Making \u{2018}busy\u{2019} mean something again",
+    "Your future self filed a request",
+    "The quiet part of getting things done",
+    "No subscription, no surprises, no forgetting",
+    "Order, served fresh from your own rack",
+    "Where \u{2018}urgent\u{2019} finally meets \u{2018}planned\u{2019}",
+    "Your day compiles cleanly now",
+    "Off the cloud, on the ball"
 ]
 
 private struct SplashTdayLogoMark: View {
