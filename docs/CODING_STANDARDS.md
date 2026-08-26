@@ -163,7 +163,7 @@ The app version is defined **once** in root `version.json`. Build-time consumers
 - Never set `versionName` or `versionCode` directly in `build.gradle.kts`.
 - Do not hand-edit web package versions, iOS marketing/build versions, or example `TDAY_APP_VERSION` values for a release.
 - Keep backend, Android, and iOS exact-compatibility behavior aligned when changing `compatibility`.
-- `versionCode` is computed as `major * 10000 + minor * 100 + patch` (e.g., `1.6.0` → `10600`).
+- `versionCode` is computed as `major * 10_000_000 + minor * 10_000 + patch` — one decimal slot per component, `<major><minor:3><patch:4>` (e.g., `0.7.2` → `70002`, `1.6.0` → `10060000`). Android only installs an update whose `versionCode` is strictly greater than the installed one, so the encoding must never collide: the old `major * 10000 + minor * 100 + patch` gave `0.7.100` and `0.8.0` the same code. `minor` is capped at 999 and `patch` at 9999 by build-time `require` checks in `app/build.gradle.kts`; the build also fails if the code drops to or below `14400`, the highest code this project ever shipped (legacy `v1.44.0`).
 - `ios.updateUrl` should be the App Store/TestFlight URL before distributing an iOS build with direct update actions.
 
 ### No Hardcoded Colors or Dimensions

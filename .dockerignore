@@ -20,3 +20,7 @@ shared/.gradle
 .gradle
 build
 .kotlin
+
+# Release APKs are copied to the repo root by CI; they are never part of the
+# backend image and only bloat the build context.
+*.apk
