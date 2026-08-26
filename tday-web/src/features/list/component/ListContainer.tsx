@@ -40,6 +40,9 @@ const ListContainer = ({ id }: { id: string }) => {
     const [editListOpen, setEditListOpen] = useState(false);
     const [membersOpen, setMembersOpen] = useState(false);
     const [earlierExpanded, setEarlierExpanded] = useState(false);
+    // Empty date buckets are drop targets and nothing else, so they exist only
+    // for the length of a drag.
+    const [dragActive, setDragActive] = useState(false);
 
     const filteredTodos = useMemo(() => {
         const query = searchQuery.trim().toLowerCase();
@@ -59,10 +62,11 @@ const ListContainer = ({ id }: { id: string }) => {
                 timeZone: userTZ?.timeZone,
                 futureOnly: false,
                 placesEarlierBeforeToday: true,
+                includeEmptyDropTargets: dragActive,
                 todayLabel: appDict("today"),
                 tomorrowLabel: appDict("tomorrow"),
             }),
-        [appDict, filteredTodos, locale, userTZ?.timeZone],
+        [appDict, dragActive, filteredTodos, locale, userTZ?.timeZone],
     );
 
     const isSearching = Boolean(searchQuery.trim());
@@ -205,6 +209,7 @@ const ListContainer = ({ id }: { id: string }) => {
                         // makes the same call.
                         earlierExpanded={earlierExpanded || isSearching}
                         onToggleEarlier={() => setEarlierExpanded((value) => !value)}
+                        onDragActiveChange={setDragActive}
                     />
                 )}
             </div>

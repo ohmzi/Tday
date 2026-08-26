@@ -57,6 +57,8 @@ describe("buildTimelineSections", () => {
       todos,
       futureOnly: false,
       placesEarlierBeforeToday: true,
+      // The full scaffold — empty buckets included — is what a live drag sees.
+      includeEmptyDropTargets: true,
     });
 
     // Earlier first, collapsible, targets yesterday.
@@ -114,6 +116,7 @@ describe("buildTimelineSections", () => {
       todos,
       futureOnly: true,
       placesEarlierBeforeToday: false,
+      includeEmptyDropTargets: true,
     });
 
     expect(sections.some((s) => s.kind === "earlier")).toBe(false);
@@ -130,21 +133,120 @@ describe("buildTimelineSections", () => {
       todos: [],
       futureOnly: false,
       placesEarlierBeforeToday: true,
+      includeEmptyDropTargets: true,
     });
 
-    // No remaining June days at/after the horizon → Rest-of-month is dropped.
+    // No remaining June days at/after the horizon → Rest-of-month is dropped
+    // even mid-drag: with no target day left it is not a drop target.
     expect(sections.some((s) => s.kind === "rest")).toBe(false);
     // The +2..+6 day buckets cross into July as individual day sections.
     expect(sections.some((s) => s.key === "2026-07-01")).toBe(true);
   });
 
-  it("findSectionKeyForDayKey resolves a day inside an aggregate bucket", () => {
-    const todos = [makeTodo("restOfMonth", "2026-06-12T10:00:00.000Z")];
+  it("at rest renders only the buckets that hold tasks", () => {
+    // The reported bug: three overdue tasks drew one section of rows followed by
+    // twelve bare headers (Today, Tomorrow, five days, Rest of June, Jul–Dec).
+    const todos = [
+      makeTodo("past1", "2026-05-28T09:00:00.000Z"),
+      makeTodo("past2", "2026-05-30T09:00:00.000Z"),
+      makeTodo("past3", "2026-06-01T09:00:00.000Z"),
+    ];
+
     const sections = buildTimelineSections({
       ...baseArgs,
       todos,
       futureOnly: false,
       placesEarlierBeforeToday: true,
+      includeEmptyDropTargets: false,
+    });
+
+    expect(sections.map((s) => s.key)).toEqual(["earlier"]);
+    expect(sections[0].todos.map((t) => t.id)).toEqual(["past1", "past2", "past3"]);
+  });
+
+  it("keeps a bucket that holds tasks and drops the empty ones around it", () => {
+    const sections = buildTimelineSections({
+      ...baseArgs,
+      todos: [makeTodo("plus3", "2026-06-05T10:00:00.000Z")],
+      futureOnly: false,
+      placesEarlierBeforeToday: true,
+      includeEmptyDropTargets: false,
+    });
+
+    expect(sections.map((s) => s.key)).toEqual(["2026-06-05"]);
+    expect(sections[0].todos.map((t) => t.id)).toEqual(["plus3"]);
+  });
+
+  it("renders nothing at all when there are no tasks and no drag", () => {
+    const sections = buildTimelineSections({
+      ...baseArgs,
+      todos: [],
+      futureOnly: false,
+      placesEarlierBeforeToday: true,
+      includeEmptyDropTargets: false,
+    });
+
+    expect(sections).toEqual([]);
+  });
+
+  it("brings every empty drop target back while a drag is in flight", () => {
+    const args = {
+      ...baseArgs,
+      todos: [makeTodo("plus3", "2026-06-05T10:00:00.000Z")],
+      futureOnly: false,
+      placesEarlierBeforeToday: true,
+    };
+
+    const dragging = buildTimelineSections({ ...args, includeEmptyDropTargets: true });
+
+    // Today, Tomorrow, +2..+6, Rest of June, then July through December.
+    expect(dragging.map((s) => s.key)).toEqual([
+      "2026-06-02",
+      "2026-06-03",
+      "2026-06-04",
+      "2026-06-05",
+      "2026-06-06",
+      "2026-06-07",
+      "2026-06-08",
+      "rest-24318",
+      "month-24319",
+      "month-24320",
+      "month-24321",
+      "month-24322",
+      "month-24323",
+      "month-24324",
+    ]);
+    // Every bucket that comes back is somewhere a task can actually land.
+    expect(dragging.every((s) => s.targetDayKey != null)).toBe(true);
+    // And the bucket that has the task keeps it.
+    expect(dragging.find((s) => s.key === "2026-06-05")?.todos.map((t) => t.id)).toEqual(["plus3"]);
+  });
+
+  it("leaves Earlier out of the drag scaffold when there is nothing in the past", () => {
+    const sections = buildTimelineSections({
+      ...baseArgs,
+      todos: [makeTodo("today", "2026-06-02T15:00:00.000Z")],
+      futureOnly: false,
+      placesEarlierBeforeToday: true,
+      includeEmptyDropTargets: true,
+    });
+
+    // Earlier is a bucket for tasks that already slipped, not a place to drop
+    // one — a drag must not conjure it.
+    expect(sections.some((s) => s.kind === "earlier")).toBe(false);
+  });
+
+  it("findSectionKeyForDayKey resolves a day inside an aggregate bucket", () => {
+    const todos = [
+      makeTodo("plus3", "2026-06-05T10:00:00.000Z"),
+      makeTodo("restOfMonth", "2026-06-12T10:00:00.000Z"),
+    ];
+    const sections = buildTimelineSections({
+      ...baseArgs,
+      todos,
+      futureOnly: false,
+      placesEarlierBeforeToday: true,
+      includeEmptyDropTargets: false,
     });
 
     // A direct day bucket resolves to itself.

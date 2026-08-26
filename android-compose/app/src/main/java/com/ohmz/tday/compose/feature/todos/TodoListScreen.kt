@@ -371,10 +371,23 @@ fun TodoListScreen(
         }
     }
     val scopedSearchHasNoResults = scopedSearchActive && timelineItems.isEmpty()
-    val timelineSections = remember(uiState.mode, timelineItems) {
+    // An empty date bucket exists only to be dropped on, so it is on screen only
+    // while something is being dragged. Keyed on the same id the drop-eligibility
+    // check reads, so the buckets that appear are exactly the ones that can catch
+    // the task in hand — and a list of three overdue tasks stops drawing a dozen
+    // empty headers down to December.
+    // Guarded on the id still resolving to a real task. `draggedScheduledTodoId`
+    // is rememberSaveable, so a rotation mid-drag persists it while the gesture
+    // that would clear it is gone — and the scaffold would then be stuck on
+    // screen at rest, which is the very thing this is meant to remove.
+    val timelineDragActive = canRescheduleTasks &&
+            draggedScheduledTodoId != null &&
+            timelineItems.any { it.id == draggedScheduledTodoId }
+    val timelineSections = remember(uiState.mode, timelineItems, timelineDragActive) {
         buildTimelineSections(
             mode = uiState.mode,
             items = timelineItems,
+            isDragActive = timelineDragActive,
         )
     }
     val floaterTaskHomeListRows = remember(uiState.mode, uiState.listId, uiState.items, uiState.lists) {
@@ -834,11 +847,20 @@ fun TodoListScreen(
         }
     }
 
+    // Read through a State rather than off the captured `val`. These helpers are
+    // reached from the drag gesture's pointerInput lambda, which is keyed on
+    // (todo.id, dragEnabled) — neither changes when a drag begins, so the running
+    // gesture keeps invoking the closures built BEFORE `timelineDragActive`
+    // flipped. That was harmless while the section list never moved during a
+    // drag; now that empty buckets appear at drag start, a stale list has none of
+    // them and a drop onto one resolved to null and silently did nothing.
+    val latestTimelineSections by rememberUpdatedState(timelineSections)
+
     fun timelineSectionForKey(key: String): TodoSection? =
-        timelineSections.firstOrNull { section -> section.key == key }
+        latestTimelineSections.firstOrNull { section -> section.key == key }
 
     fun originSectionKeyFor(todo: TodoItem): String? {
-        timelineSections.firstOrNull { section ->
+        latestTimelineSections.firstOrNull { section ->
             section.items.any { item -> item.id == todo.id }
         }?.let { section ->
             return section.key
@@ -3288,10 +3310,10 @@ private enum class TodaySectionSlot {
 private fun buildTimelineSections(
     mode: TodoListMode,
     items: List<TodoItem>,
-    includeEmptyEarlierTarget: Boolean = false,
+    isDragActive: Boolean,
 ): List<TodoSection> {
     val zoneId = ZoneId.systemDefault()
-    return when (mode) {
+    val sections = when (mode) {
         TodoListMode.TODAY -> buildTodaySections(items, zoneId)
         TodoListMode.OVERDUE -> buildOverdueSections(items, zoneId)
         TodoListMode.SCHEDULED -> buildScheduledSections(
@@ -3305,7 +3327,6 @@ private fun buildTimelineSections(
             zoneId = zoneId,
             futureOnly = false,
             placesEarlierBeforeToday = true,
-            includeEmptyEarlierTarget = includeEmptyEarlierTarget,
         )
 
         TodoListMode.PRIORITY -> buildScheduledSections(
@@ -3313,7 +3334,6 @@ private fun buildTimelineSections(
             zoneId = zoneId,
             futureOnly = false,
             placesEarlierBeforeToday = true,
-            includeEmptyEarlierTarget = includeEmptyEarlierTarget,
         )
 
         TodoListMode.FLOATER -> buildFloaterSections(items)
@@ -3323,8 +3343,25 @@ private fun buildTimelineSections(
             zoneId = zoneId,
             futureOnly = false,
             placesEarlierBeforeToday = true,
-            includeEmptyEarlierTarget = includeEmptyEarlierTarget,
         )
+    }
+
+    // Morning / Afternoon / Tonight are the shape of the day itself rather than a
+    // scaffold of dates, and each one is where a quick-add lands, so Today keeps
+    // all three whether or not they hold anything.
+    if (mode == TodoListMode.TODAY) return sections
+
+    // The one rule for every other scope, Earlier and "Rest of <month>" included:
+    // a section earns its header by holding tasks, or by being somewhere the task
+    // in hand can be dropped. `targetDate` is what makes a bucket droppable, so a
+    // section without one (an overdue day, a floater group) is only ever kept by
+    // its tasks.
+    // "earlier" is excluded from the drag-time restore: its target date is
+    // yesterday, and web never builds an empty Earlier at all, so keeping it
+    // would make rescheduling INTO the past possible here and not there.
+    return sections.filter { section ->
+        section.items.isNotEmpty() ||
+                (isDragActive && section.targetDate != null && section.key != "earlier")
     }
 }
 
@@ -3466,7 +3503,6 @@ private fun buildScheduledSections(
     zoneId: ZoneId,
     futureOnly: Boolean,
     placesEarlierBeforeToday: Boolean = true,
-    includeEmptyEarlierTarget: Boolean = false,
 ): List<TodoSection> {
     val now = Instant.now()
     val dueItems = items.filter { todo ->
@@ -3514,20 +3550,18 @@ private fun buildScheduledSections(
             groupedByDate.asSequence().filter { (date, _) -> date < today }
                 .flatMap { (_, dayItems) -> dayItems.asSequence() }.toList(),
         ) { it.toTaskSortKey() }
-        if (earlierItems.isNotEmpty() || includeEmptyEarlierTarget) {
-            TodoSection(
-                key = "earlier",
-                title = "Earlier",
-                items = earlierItems,
-                quickAddDefaults = quickAddDefaultsForDate(
-                    date = today.minusDays(1),
-                    zoneId = zoneId,
-                ),
-                targetDate = timelineRescheduleTargetDate("earlier", today),
-            )
-        } else {
-            null
-        }
+        // Handed over whole, empty or not: buildTimelineSections is the single
+        // place that decides whether an empty bucket is worth a header.
+        TodoSection(
+            key = "earlier",
+            title = "Earlier",
+            items = earlierItems,
+            quickAddDefaults = quickAddDefaultsForDate(
+                date = today.minusDays(1),
+                zoneId = zoneId,
+            ),
+            targetDate = timelineRescheduleTargetDate("earlier", today),
+        )
     } else {
         null
     }
