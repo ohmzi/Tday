@@ -23,6 +23,9 @@ struct SettingsScreen: View {
     @State private var showingDayAheadSelector = false
     @State private var showingLanguageSelector = false
     @State private var profileEditor: ProfileEditorExpansion = .none
+    @FocusState private var searchFieldFocused: Bool
+    @State private var searchExpanded = false
+    @State private var searchQuery = ""
 
     private var titleCollapseProgress: CGFloat {
         rawTitleCollapseProgress
@@ -32,6 +35,114 @@ struct SettingsScreen: View {
         let distance = TodoTimelineMetrics.titleCollapseDistance
         guard distance > 0 else { return 0 }
         return min(max(settingsScrollOffset / distance, 0), 1)
+    }
+
+    private var normalizedSearchQuery: String {
+        searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(with: .current)
+    }
+
+    private var isSearching: Bool {
+        searchExpanded && !normalizedSearchQuery.isEmpty
+    }
+
+    /// True when this card holds something the query is looking for.
+    ///
+    /// The unit is the card rather than the single row: every row here is either
+    /// an editor that expands in place, a toggle with the paragraph that explains
+    /// it, or a picker under the heading that says what it picks — pull one out
+    /// on its own and it loses the thing that made it legible. A match therefore
+    /// narrows to the card holding the row, and the row stays where it is.
+    ///
+    /// Terms go through `L()` exactly as the rows' own labels do, so the search
+    /// matches whatever the screen is actually showing, in whatever language.
+    private func matchesSearch(_ terms: [String]) -> Bool {
+        guard isSearching else {
+            return true
+        }
+        return terms.contains { term in
+            L(term).lowercased(with: .current).contains(normalizedSearchQuery)
+        }
+    }
+
+    private var showsProfileCard: Bool {
+        !viewModel.isLocalMode && matchesSearch(["Name", "Username", "Password", "Security questions"])
+    }
+
+    private var showsAppearanceCard: Bool {
+        matchesSearch(
+            [
+                "Appearance",
+                "Reminders",
+                "Default reminder",
+                "Day Ahead digest",
+                "Quiet hours",
+                "Language",
+            ] + AppThemeMode.allCases.map(\.label)
+        )
+    }
+
+    private var showsAiSummaryCard: Bool {
+        !viewModel.isLocalMode && matchesSearch(["AI task summary", "Summary"])
+    }
+
+    private var showsDisplayCard: Bool {
+        matchesSearch(["Resting floaters", "Add scheduled tasks to my calendar"])
+    }
+
+    private var showsPrivacyCard: Bool {
+        matchesSearch(["Privacy", "Require Face ID to open T'Day"])
+    }
+
+    private var showsWorkspaceCard: Bool {
+        // The sync labels are here because they are the card's most prominent
+        // visible text — "Sync now", "Last synced", "Up to date" — and "sync"
+        // is close to the likeliest single word anyone types on this screen.
+        // A term list that omits what the card actually says is the failure mode
+        // this whole approach has.
+        var terms = ["Workspace", "App Version", "How-To & Tips"]
+        if !viewModel.isLocalMode {
+            terms += ["Server", "Sign out", "Sync now", "Last synced", "Up to date"]
+        }
+        return matchesSearch(terms)
+    }
+
+    private var showsDataCard: Bool {
+        matchesSearch(["Your data", "Download my data", "Import"])
+    }
+
+    private var hasSearchResults: Bool {
+        showsProfileCard || showsAppearanceCard || showsAiSummaryCard ||
+            showsDisplayCard || showsPrivacyCard || showsWorkspaceCard || showsDataCard
+    }
+
+    private var topBarActions: [TimelineTopBarAction] {
+        [
+            TimelineTopBarAction(
+                systemName: "magnifyingglass",
+                assetName: "NavSearch",
+                usesCircularChrome: true,
+                accessibilityLabel: L("Search"),
+                action: openSearch
+            ),
+        ]
+    }
+
+    private func openSearch() {
+        HapticManager.buttonTap()
+        withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
+            searchExpanded = true
+        }
+    }
+
+    /// Leaving the search drops the query with it, so the whole of settings is
+    /// back the next time the bar is opened — the same bargain web's close makes.
+    private func closeSearch() {
+        HapticManager.sheetDismiss()
+        searchFieldFocused = false
+        withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
+            searchExpanded = false
+        }
+        searchQuery = ""
     }
 
     var body: some View {
@@ -52,8 +163,26 @@ struct SettingsScreen: View {
                 accentColor: colors.onSurface,
                 collapseProgress: titleCollapseProgress,
                 onBack: { dismiss() },
-                actions: []
+                actions: topBarActions,
+                searchActive: searchExpanded,
+                searchText: $searchQuery,
+                searchPlaceholder: L("Search in %@", L("Settings")),
+                searchFieldFocused: $searchFieldFocused,
+                onSearchClose: closeSearch
             )
+        }
+        // The field only joins the hierarchy once the bar has swapped its row
+        // over, so focusing it in the same turn is dropped on the floor.
+        .onChange(of: searchExpanded) { _, expanded in
+            guard expanded else {
+                searchFieldFocused = false
+                return
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.30) {
+                if searchExpanded {
+                    searchFieldFocused = true
+                }
+            }
         }
         .overlay {
             if showingReminderSelector {
@@ -105,48 +234,50 @@ struct SettingsScreen: View {
         List {
             settingsHeroTitleRow
 
-            if !viewModel.isLocalMode {
+            if showsProfileCard {
                 settingsListRow {
                     SettingsProfileCard(viewModel: viewModel, expansion: $profileEditor)
                 }
             }
 
-            settingsListRow {
-                SettingsSectionCard {
-                    SettingsSectionTitle("Appearance")
-                    SettingsThemeSelector(
-                        selectedMode: viewModel.themeMode,
-                        onSelect: viewModel.setThemeMode
-                    )
-                    SettingsDivider()
-                    SettingsSectionTitle("Reminders")
-                    SettingsReminderSelector(
-                        selectedReminder: viewModel.selectedReminder,
-                        onOpen: {
-                            showingReminderSelector = true
-                        }
-                    )
-                    SettingsDivider()
-                    SettingsDayAheadSelector(
-                        selected: viewModel.dayAheadOption,
-                        onOpen: {
-                            showingDayAheadSelector = true
-                        }
-                    )
-                    SettingsDivider()
-                    SettingsQuietHoursSection()
-                    SettingsDivider()
-                    SettingsSectionTitle("Language")
-                    SettingsLanguageSelector(
-                        currentLanguage: viewModel.appLanguage,
-                        onOpen: {
-                            showingLanguageSelector = true
-                        }
-                    )
+            if showsAppearanceCard {
+                settingsListRow {
+                    SettingsSectionCard {
+                        SettingsSectionTitle("Appearance")
+                        SettingsThemeSelector(
+                            selectedMode: viewModel.themeMode,
+                            onSelect: viewModel.setThemeMode
+                        )
+                        SettingsDivider()
+                        SettingsSectionTitle("Reminders")
+                        SettingsReminderSelector(
+                            selectedReminder: viewModel.selectedReminder,
+                            onOpen: {
+                                showingReminderSelector = true
+                            }
+                        )
+                        SettingsDivider()
+                        SettingsDayAheadSelector(
+                            selected: viewModel.dayAheadOption,
+                            onOpen: {
+                                showingDayAheadSelector = true
+                            }
+                        )
+                        SettingsDivider()
+                        SettingsQuietHoursSection()
+                        SettingsDivider()
+                        SettingsSectionTitle("Language")
+                        SettingsLanguageSelector(
+                            currentLanguage: viewModel.appLanguage,
+                            onOpen: {
+                                showingLanguageSelector = true
+                            }
+                        )
+                    }
                 }
             }
 
-            if !viewModel.isLocalMode {
+            if showsAiSummaryCard {
                 settingsListRow {
                     SettingsSectionCard {
                         SettingsSectionTitle("AI task summary")
@@ -155,85 +286,99 @@ struct SettingsScreen: View {
                 }
             }
 
-            settingsListRow {
-                SettingsSectionCard {
-                    SettingsRestingFloatersSection()
-                    SettingsDivider()
-                    SettingsDeviceCalendarSection()
-                }
-            }
-
-            settingsListRow {
-                SettingsSectionCard {
-                    SettingsSectionTitle("Privacy")
-                    SettingsAppLockSection()
-                }
-            }
-
-            settingsListRow {
-                SettingsSectionCard {
-                    SettingsWorkspaceContent(
-                        syncStatus: viewModel.syncStatus,
-                        onSyncNow: {
-                            Task { await viewModel.manualSync() }
-                        }
-                    )
-
-                    SettingsDivider()
-
-                    SettingsListRow(
-                        title: "App Version",
-                        value: "v\(viewModel.currentVersionName)",
-                        icon: "LucideInfo",
-                        action: {
-                            viewModel.navigationPath.append(.latestRelease)
-                        }
-                    )
-
-                    if viewModel.hasUpdate, let latestVersionName = viewModel.latestVersionName {
-                        Text("v\(latestVersionName) available")
-                            .font(.tdayRounded(size: 11, weight: .heavy))
-                            .foregroundStyle(colors.secondary)
-                            .padding(.leading, 34)
+            if showsDisplayCard {
+                settingsListRow {
+                    SettingsSectionCard {
+                        SettingsRestingFloatersSection()
+                        SettingsDivider()
+                        SettingsDeviceCalendarSection()
                     }
+                }
+            }
 
-                    SettingsDivider()
+            if showsPrivacyCard {
+                settingsListRow {
+                    SettingsSectionCard {
+                        SettingsSectionTitle("Privacy")
+                        SettingsAppLockSection()
+                    }
+                }
+            }
 
-                    SettingsListRow(
-                        title: L("How-To & Tips"),
-                        value: nil,
-                        icon: "LucideCircleHelp",
-                        action: {
-                            viewModel.navigationPath.append(.helpGuide(topic: nil))
-                        }
-                    )
-
-                    if !viewModel.isLocalMode, let backendVersion = viewModel.backendVersion {
-                        SettingsServerVersionRow(
-                            backendVersion: backendVersion,
-                            versionCheckResult: viewModel.versionCheckResult
+            if showsWorkspaceCard {
+                settingsListRow {
+                    SettingsSectionCard {
+                        SettingsWorkspaceContent(
+                            syncStatus: viewModel.syncStatus,
+                            onSyncNow: {
+                                Task { await viewModel.manualSync() }
+                            }
                         )
-                    }
 
-                    if !viewModel.isLocalMode {
                         SettingsDivider()
 
                         SettingsListRow(
-                            title: "Sign out",
-                            value: nil,
-                            titleColor: colors.error,
-                            showChevron: false,
-                            icon: "LucideLogOut",
+                            title: "App Version",
+                            value: "v\(viewModel.currentVersionName)",
+                            icon: "LucideInfo",
                             action: {
-                                Task { await viewModel.logout() }
+                                viewModel.navigationPath.append(.latestRelease)
                             }
                         )
+
+                        if viewModel.hasUpdate, let latestVersionName = viewModel.latestVersionName {
+                            Text("v\(latestVersionName) available")
+                                .font(.tdayRounded(size: 11, weight: .heavy))
+                                .foregroundStyle(colors.secondary)
+                                .padding(.leading, 34)
+                        }
+
+                        SettingsDivider()
+
+                        SettingsListRow(
+                            title: L("How-To & Tips"),
+                            value: nil,
+                            icon: "LucideCircleHelp",
+                            action: {
+                                viewModel.navigationPath.append(.helpGuide(topic: nil))
+                            }
+                        )
+
+                        if !viewModel.isLocalMode, let backendVersion = viewModel.backendVersion {
+                            SettingsServerVersionRow(
+                                backendVersion: backendVersion,
+                                versionCheckResult: viewModel.versionCheckResult
+                            )
+                        }
+
+                        if !viewModel.isLocalMode {
+                            SettingsDivider()
+
+                            SettingsListRow(
+                                title: "Sign out",
+                                value: nil,
+                                titleColor: colors.error,
+                                showChevron: false,
+                                icon: "LucideLogOut",
+                                action: {
+                                    Task { await viewModel.logout() }
+                                }
+                            )
+                        }
                     }
                 }
             }
 
-            settingsListRow {
-                DataTransferCard(viewModel: viewModel)
+            if showsDataCard {
+                settingsListRow {
+                    DataTransferCard(viewModel: viewModel)
+                }
+            }
+
+            if isSearching, !hasSearchResults {
+                settingsListRow {
+                    searchEmptyState
+                }
             }
 
             Color.clear
@@ -249,6 +394,31 @@ struct SettingsScreen: View {
         .listSectionSpacing(0)
         .environment(\.defaultMinListRowHeight, 1)
         .disableVerticalScrollBounce()
+    }
+
+    /// Settings is never genuinely empty, so its only empty state is a search
+    /// that found nothing: a no-results title over the shared search line,
+    /// rather than an invitation to add a first something.
+    private var searchEmptyState: some View {
+        TdayEmptyState(
+            assetName: "NavSearch",
+            accentColor: colors.primary,
+            title: L("No matching settings"),
+            description: L("Try a different word, or clear the search."),
+            action: AnyView(
+                Button {
+                    HapticManager.gentleTap()
+                    searchQuery = ""
+                    searchFieldFocused = true
+                } label: {
+                    Text(L("Clear search"))
+                        .font(.tdayRounded(size: 15, weight: .bold))
+                        .foregroundStyle(colors.primary)
+                }
+                .buttonStyle(.plain)
+            )
+        )
+        .padding(.vertical, 24)
     }
 
     private var settingsHeroTitleRow: some View {

@@ -1,5 +1,6 @@
 package com.ohmz.tday.compose.feature.calendar
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -75,6 +76,8 @@ import androidx.compose.ui.draganddrop.mimeTypes
 import androidx.compose.ui.draganddrop.toAndroidDragEvent
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
@@ -108,8 +111,11 @@ import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
 import com.ohmz.tday.compose.core.observability.TdayTelemetry
 import com.ohmz.tday.compose.core.sound.rememberTaskCompletionSound
 import com.ohmz.tday.compose.core.ui.EmptyTaskWatermark
+import com.ohmz.tday.compose.core.ui.TdayEmptyState
 import com.ohmz.tday.compose.core.ui.TdayHeroToolbar
+import com.ohmz.tday.compose.core.ui.TdaySearchCapsule
 import com.ohmz.tday.compose.core.ui.rememberLazyListHeroTitleCollapse
+import com.ohmz.tday.compose.core.ui.tdayBarButtonContainerColor
 import com.ohmz.tday.compose.core.ui.tdayHeroTitleItem
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.component.TdaySegmentedSlider
@@ -128,6 +134,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.time.temporal.ChronoUnit
+import java.time.temporal.WeekFields
 import java.util.Locale
 import kotlin.math.roundToInt
 import com.ohmz.tday.compose.core.text.flattenNotesToPlainText
@@ -249,11 +256,80 @@ fun CalendarScreen(
             .mapValues { (_, tasks) -> tasks.sortedBy { it.due ?: java.time.Instant.MAX } }
     }
     val selectedDatePendingTasks = tasksByDate[selectedDate].orEmpty()
+    // Scoped search over what the calendar is SHOWING — the month, week or day
+    // currently on the grid — not over every dated task there is. A day list is
+    // a one-day slice of a range the screen already draws in full, so searching
+    // only the selected day would find nothing you could not already see; but
+    // searching all time would answer with tasks months outside the grid, which
+    // is a different screen's job. The visible range is the page.
+    var searchExpanded by rememberSaveable { mutableStateOf(false) }
+    var searchQuery by rememberSaveable { mutableStateOf("") }
+    var searchNeedsFocus by remember { mutableStateOf(false) }
+    val normalizedSearchQuery = remember(searchQuery) {
+        searchQuery.trim().lowercase(Locale.getDefault())
+    }
+    val searchActive = searchExpanded && normalizedSearchQuery.isNotBlank()
+    val closeSearch = {
+        searchExpanded = false
+        searchQuery = ""
+        searchNeedsFocus = false
+    }
+    // The span the grid is plotting, which is what a query is allowed to reach.
+    val searchRange = remember(selectedViewMode, visibleMonth, selectedDate) {
+        when (selectedViewMode) {
+            CalendarViewMode.DAY -> selectedDate..selectedDate
+            CalendarViewMode.WEEK -> {
+                val start = selectedDate.with(WeekFields.of(Locale.getDefault()).dayOfWeek(), 1)
+                start..start.plusDays(6)
+            }
+            CalendarViewMode.MONTH -> visibleMonth.atDay(1)..visibleMonth.atEndOfMonth()
+        }
+    }
+    val searchResults = remember(uiState.items, searchActive, normalizedSearchQuery, searchRange, zoneId) {
+        if (!searchActive) {
+            emptyList()
+        } else {
+            // The same two fields the list-detail screens match on: the title
+            // and the notes flattened out of their rich-text form.
+            uiState.items
+                .filter { todo ->
+                    val due = todo.due ?: return@filter false
+                    LocalDate.ofInstant(due, zoneId) in searchRange && (
+                        todo.title.lowercase(Locale.getDefault())
+                            .contains(normalizedSearchQuery) ||
+                            flattenNotesToPlainText(todo.description)
+                                .lowercase(Locale.getDefault())
+                                .contains(normalizedSearchQuery)
+                        )
+                }
+                .sortedBy { it.due }
+        }
+    }
+    val listedTasks = if (searchActive) searchResults else selectedDatePendingTasks
+    // The grid follows the query. Left on the unfiltered map it kept a dot on
+    // every day that has any task, so it said "matches here" for days holding
+    // none — a legend for a list it was no longer describing.
+    val plottedTasksByDate = if (searchActive) {
+        remember(searchResults, zoneId) {
+            searchResults
+                .mapNotNull { todo -> todo.due?.let { due -> due to todo } }
+                .groupBy({ (due, _) -> LocalDate.ofInstant(due, zoneId) }, { (_, todo) -> todo })
+        }
+    } else {
+        tasksByDate
+    }
+    // Whether the day list is showing the illustrated empty scene rather than
+    // rows — read by the watermark, which draws the same glyph.
+    val showsEmptyScene = listedTasks.isEmpty() && !uiState.isLoading
     fun canNavigateTo(date: LocalDate): Boolean = YearMonth.from(date) >= minNavigableMonth
     fun selectDate(date: LocalDate) {
         if (!canNavigateTo(date)) return
         visibleMonthIso = YearMonth.from(date).toString()
         selectedDateIso = date.toString()
+        // Picking a day is a request to see that day, which a live query would
+        // otherwise override — the list below would keep showing the results
+        // and the tap would look ignored.
+        if (searchActive) closeSearch()
     }
     fun clearTodayJumpRequest(requestId: Int) {
         if (todayJumpRequest?.id == requestId) {
@@ -379,6 +455,9 @@ fun CalendarScreen(
             calendarDropTargetBounds.clear()
         }
     }
+    BackHandler(enabled = searchExpanded) {
+        closeSearch()
+    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -395,10 +474,15 @@ fun CalendarScreen(
                     calendarDragContainerOrigin = coordinates.positionInRoot()
                 },
         ) {
-            EmptyTaskWatermark(
-                iconRes = R.drawable.ic_lucide_calendar_1,
-                accentColor = CalendarAccentPurple,
-            )
+            // Stood down while the empty scene is up: that scene draws the same
+            // calendar glyph, and the watermark behind it put a 212dp copy of it
+            // at alpha 0.10 directly under a 52dp solid one.
+            if (!showsEmptyScene) {
+                EmptyTaskWatermark(
+                    iconRes = R.drawable.ic_lucide_calendar_1,
+                    accentColor = CalendarAccentPurple,
+                )
+            }
 
             run {
                 LazyColumn(
@@ -459,7 +543,7 @@ fun CalendarScreen(
                                 canGoPrevMonth = visibleMonth > minNavigableMonth,
                                 selectedDate = selectedDate,
                                 today = today,
-                                tasksByDate = tasksByDate,
+                                tasksByDate = plottedTasksByDate,
                                 draggedTodo = draggedCalendarTodo,
                                 activeDropDate = activeDropDate,
                                 dropTargets = calendarDropTargetBounds,
@@ -483,7 +567,7 @@ fun CalendarScreen(
                                 selectedDate = selectedDate,
                                 minNavigableMonth = minNavigableMonth,
                                 today = today,
-                                tasksByDate = tasksByDate,
+                                tasksByDate = plottedTasksByDate,
                                 draggedTodo = draggedCalendarTodo,
                                 activeDropDate = activeDropDate,
                                 dropTargets = calendarDropTargetBounds,
@@ -503,7 +587,7 @@ fun CalendarScreen(
                                 selectedDate = selectedDate,
                                 minNavigableMonth = minNavigableMonth,
                                 today = today,
-                                tasksByDate = tasksByDate,
+                                tasksByDate = plottedTasksByDate,
                                 canGoPrevDay = canNavigateTo(selectedDate.minusDays(1)),
                                 canSelectDate = ::canNavigateTo,
                                 todayJumpRequest = todayJumpRequest,
@@ -514,28 +598,62 @@ fun CalendarScreen(
                     }
                 }
 
-                item {
-                    val tasksDueDateLabel =
-                        selectedDate.format(
-                            DateTimeFormatter.ofPattern(
-                                "EEE, MMM d",
-                                Locale.getDefault()
+                // A results list is not due on the selected day, so the day's
+                // heading steps aside rather than sitting over dates it does
+                // not describe.
+                if (!searchActive) {
+                    item {
+                        val tasksDueDateLabel =
+                            selectedDate.format(
+                                DateTimeFormatter.ofPattern(
+                                    "EEE, MMM d",
+                                    Locale.getDefault()
+                                )
                             )
+                        Text(
+                            text = stringResource(R.string.calendar_tasks_due, tasksDueDateLabel),
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.padding(horizontal = 4.dp),
                         )
-                    Text(
-                        text = stringResource(R.string.calendar_tasks_due, tasksDueDateLabel),
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.padding(horizontal = 4.dp),
-                    )
+                    }
                 }
 
                     itemsIndexed(
-                        items = selectedDatePendingTasks,
+                        items = listedTasks,
                         key = { _, todo -> "calendar-task-${todo.id}" },
                         contentType = { _, _ -> "calendar_task_row" },
                     ) { index, todo ->
+                        // Results can span the whole visible range, and the row
+                        // list's own divider between two dates is an unlabelled
+                        // hairline — fine when every row shares the heading
+                        // above, useless when they do not. Each new date in a
+                        // result list gets its own label, so a match three weeks
+                        // out cannot read as a task on the selected day.
+                        if (searchActive) {
+                            val rowDate = todo.due?.let { LocalDate.ofInstant(it, zoneId) }
+                            val previousDate = listedTasks.getOrNull(index - 1)
+                                ?.due?.let { LocalDate.ofInstant(it, zoneId) }
+                            if (rowDate != null && rowDate != previousDate) {
+                                Text(
+                                    text = rowDate.format(
+                                        DateTimeFormatter.ofPattern(
+                                            "EEE, MMM d",
+                                            Locale.getDefault(),
+                                        ),
+                                    ),
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(
+                                        start = 4.dp,
+                                        top = if (index == 0) 0.dp else 14.dp,
+                                        bottom = 6.dp,
+                                    ),
+                                )
+                            }
+                        }
                         CalendarTodoRow(
                             modifier = Modifier
                                 .animateItem(
@@ -550,7 +668,7 @@ fun CalendarScreen(
                                     ),
                                 )
                                 .padding(
-                                    bottom = if (index == selectedDatePendingTasks.lastIndex) {
+                                    bottom = if (index == listedTasks.lastIndex) {
                                         0.dp
                                     } else {
                                         CalendarTaskListSameDateSpacing
@@ -558,9 +676,13 @@ fun CalendarScreen(
                                 ),
                             todo = todo,
                             lists = uiState.lists,
-                            showDateDivider = shouldShowDateDivider(
+                            // Suppressed while searching: the date label above
+                            // each group already says where the break is, and the
+                            // hairline under the last row of a group then reads
+                            // as a second, weaker divider.
+                            showDateDivider = !searchActive && shouldShowDateDivider(
                                 afterItemIndex = index,
-                                items = selectedDatePendingTasks,
+                                items = listedTasks,
                                 zoneId = zoneId,
                             ),
                             dragEnabled = calendarTaskRescheduleEnabled,
@@ -590,6 +712,28 @@ fun CalendarScreen(
                             onDragCancel = ::cancelCalendarDrag,
                         )
                     }
+
+                if (listedTasks.isEmpty() && !uiState.isLoading) {
+                    item(key = "calendar-empty", contentType = "calendar-empty") {
+                        if (searchActive) {
+                            TdayEmptyState(
+                                icon = R.drawable.ic_lucide_search,
+                                accentColor = CalendarAccentPurple,
+                                title = stringResource(R.string.scheduled_task_home_search_no_results),
+                                description = stringResource(R.string.search_no_results_body),
+                                modifier = Modifier.padding(vertical = 12.dp),
+                            )
+                        } else {
+                            TdayEmptyState(
+                                icon = R.drawable.ic_lucide_calendar_1,
+                                accentColor = CalendarAccentPurple,
+                                title = stringResource(R.string.calendar_no_pending),
+                                description = stringResource(R.string.calendar_no_pending_body),
+                                modifier = Modifier.padding(vertical = 12.dp),
+                            )
+                        }
+                    }
+                }
 
                 uiState.errorMessage?.let { message ->
                     item {
@@ -622,29 +766,73 @@ fun CalendarScreen(
 
             // Last, so it draws over the content passing behind it.
         TdayHeroToolbar(
-            title = stringResource(R.string.calendar_title),
+            title = calendarTitle,
             titleColor = CalendarAccentPurple,
             collapseProgress = heroCollapse.progress,
             onBack = onBack,
             backContentDescription = stringResource(R.string.action_back),
             modifier = Modifier.padding(padding),
+            titleSuppressed = searchExpanded,
         ) {
-            CalendarTodayButton(
-                collapseProgress = heroCollapse.progress,
-                label = stringResource(R.string.calendar_today),
-                contentDescription = stringResource(R.string.calendar_jump_to_today),
-                onClick = {
-                    todayJumpRequestId += 1
-                    TdayTelemetry.addBreadcrumb(
-                        "calendar.today",
-                        data = mapOf("mode" to selectedViewMode.name.lowercase()),
-                    )
-                    todayJumpRequest = CalendarTodayJumpRequest(
-                        id = todayJumpRequestId,
-                        targetDate = LocalDate.now(zoneId),
-                    )
-                },
-            )
+            if (searchExpanded) {
+                // The bar is handed over to the field, keeping the back chevron
+                // and dropping the action cluster — the Today pill included,
+                // which is what the list-detail screens do with theirs.
+                Spacer(modifier = Modifier.width(TdayDimens.FabSize))
+                val focusRequester = remember { FocusRequester() }
+                LaunchedEffect(searchNeedsFocus) {
+                    if (!searchNeedsFocus) return@LaunchedEffect
+                    // Consumed on the way in, so returning to a screen that
+                    // still has the field open does not re-open the keyboard
+                    // with it.
+                    searchNeedsFocus = false
+                    focusRequester.requestFocus()
+                }
+                TdaySearchCapsule(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    placeholder = stringResource(R.string.action_search_in, calendarTitle),
+                    modifier = Modifier
+                        .weight(1f)
+                        .focusRequester(focusRequester),
+                    onClear = { searchQuery = "" },
+                    clearContentDescription = stringResource(R.string.action_clear_search),
+                )
+                // The capsule's own X clears the query; leaving the search
+                // behind altogether is this one, as on the root feeds.
+                CalendarBarButton(
+                    onClick = closeSearch,
+                    icon = ImageVector.vectorResource(R.drawable.ic_lucide_x),
+                    contentDescription = stringResource(R.string.action_close_search),
+                )
+            } else {
+                CalendarBarButton(
+                    // Only opens: the bar hands its row over to the field, so
+                    // this button is not on screen to be tapped again.
+                    onClick = {
+                        searchExpanded = true
+                        searchNeedsFocus = true
+                    },
+                    icon = ImageVector.vectorResource(R.drawable.ic_lucide_search),
+                    contentDescription = stringResource(R.string.action_search),
+                )
+                CalendarTodayButton(
+                    collapseProgress = heroCollapse.progress,
+                    label = stringResource(R.string.calendar_today),
+                    contentDescription = stringResource(R.string.calendar_jump_to_today),
+                    onClick = {
+                        todayJumpRequestId += 1
+                        TdayTelemetry.addBreadcrumb(
+                            "calendar.today",
+                            data = mapOf("mode" to selectedViewMode.name.lowercase()),
+                        )
+                        todayJumpRequest = CalendarTodayJumpRequest(
+                            id = todayJumpRequestId,
+                            targetDate = LocalDate.now(zoneId),
+                        )
+                    },
+                )
+            }
         }        }
     }
 
@@ -1387,6 +1575,65 @@ private fun formatWeekRange(weekStart: LocalDate): String {
     } else {
         "${weekStart.format(monthShortFormatter)} ${weekStart.dayOfMonth} - " +
             "${weekEnd.format(monthShortFormatter)} ${weekEnd.dayOfMonth}, ${weekEnd.year}"
+    }
+}
+
+/**
+ * The plain circle this screen's other toolbar actions sit in.
+ *
+ * A local copy of the timeline screen's `TodayHeaderButton`, which is private to
+ * `TodoListScreen` and has no shared home yet — the fill, the size and the lift
+ * come from the same tokens as the back button beside it, so the two match
+ * whatever the scheme does with them.
+ */
+@Composable
+private fun CalendarBarButton(
+    onClick: () -> Unit,
+    icon: ImageVector,
+    contentDescription: String,
+) {
+    val view = LocalView.current
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (pressed) 0.93f else 1f,
+        label = "calendarBarButtonScale",
+    )
+    val offsetY by animateDpAsState(
+        targetValue = if (pressed) 2.dp else 0.dp,
+        label = "calendarBarButtonOffsetY",
+    )
+
+    Card(
+        modifier = Modifier
+            .offset(y = offsetY)
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            },
+        onClick = {
+            ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+            onClick()
+        },
+        interactionSource = interactionSource,
+        shape = CircleShape,
+        colors = CardDefaults.cardColors(containerColor = tdayBarButtonContainerColor()),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = TdayDimens.BarButtonElevation,
+            pressedElevation = 0.dp,
+        ),
+    ) {
+        Box(
+            modifier = Modifier.size(TdayDimens.FabSize),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = contentDescription,
+                tint = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.size(22.dp),
+            )
+        }
     }
 }
 

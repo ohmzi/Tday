@@ -613,11 +613,12 @@ struct TodoListScreen: View {
         isFloaterTaskHomeScreen && floaterTaskHomeSearchExpanded && !normalizedFloaterTaskHomeSearchQuery.isEmpty
     }
 
-    /// A custom list — scheduled or floater — searches its own tasks from its
-    /// pinned bar, the way the matching web pages do. The root feeds have their
-    /// own field in the hero header and never take this one.
+    /// Every screen that pins the timeline bar searches its own tasks from it —
+    /// the five scopes as well as a custom list, the way the matching web pages
+    /// do. The root floater feed has its own field in the hero header and never
+    /// takes this one.
     private var showsListSearch: Bool {
-        isListDetailScreen && showsTimelineNavigationTopBar
+        showsTimelineNavigationTopBar && !isFloaterTaskHomeScreen
     }
 
     private var normalizedListSearchQuery: String {
@@ -668,6 +669,13 @@ struct TodoListScreen: View {
             for: viewModel.mode,
             listIconKey: viewModel.lists.first(where: { $0.id == viewModel.listId })?.iconKey,
             date: date
+        )
+    }
+
+    private var emptyStateAssetName: String {
+        emptyTimelineBadgeAssetName(
+            for: viewModel.mode,
+            listIconKey: viewModel.lists.first(where: { $0.id == viewModel.listId })?.iconKey
         )
     }
 
@@ -1029,17 +1037,23 @@ struct TodoListScreen: View {
                         // screen's own "nothing here" line stands down rather
                         // than talking over the no-results state.
                         if viewModel.items.isEmpty, !viewModel.isLoading, !isFloaterTaskHomeScreen, !isSearchingList {
-                            // Day Done: "finished everything" earns its own calm
-                            // state instead of the generic no-tasks watermark.
+                            // Day Done: "finished everything" is a payoff, not an
+                            // absence, so it keeps its own glyph and its date line
+                            // rather than the screen's — which would undersell it.
                             if viewModel.mode == .today, viewModel.completedTodayCount > 0 {
-                                DayDoneBackgroundMessage(
-                                    message: L("All done for today"),
-                                    dateText: context.date.formatted(.dateTime.weekday(.wide).day().month(.wide))
+                                TdayEmptyState(
+                                    assetName: "LucideCheckCheck",
+                                    accentColor: modeAccentColor,
+                                    title: L("All done for today"),
+                                    description: context.date.formatted(.dateTime.weekday(.wide).day().month(.wide))
                                 )
                                 .onAppear { HapticManager.taskCompleted(); SoundManager.taskCompleted() }
                             } else {
-                                EmptyTaskBackgroundMessage(
-                                    message: emptyTimelineMessage(for: viewModel.mode)
+                                TdayEmptyState(
+                                    assetName: emptyStateAssetName,
+                                    accentColor: modeAccentColor,
+                                    title: emptyTimelineTitle(for: viewModel.mode, isListDetail: isListDetailScreen),
+                                    description: emptyTimelineDescription(for: viewModel.mode, isListDetail: isListDetailScreen)
                                 )
                             }
                         }
@@ -1963,35 +1977,29 @@ struct TodoListScreen: View {
         }
     }
 
-    /// Shown in place of the timeline when a list search matches nothing. Same
-    /// three beats as web's panel: the glyph, the line, and a way out of the
-    /// query that does not need the keyboard back.
+    /// Shown in place of the timeline when a search matches nothing. The screen's
+    /// own empty scene carries it, so a screen has one no-results treatment and
+    /// not two — with the way out of the query that does not need the keyboard
+    /// back hung off the scene's action slot.
     private var listSearchEmptyState: some View {
-        VStack(spacing: 14) {
-            Image("NavSearch")
-                .renderingMode(.template)
-                .resizable()
-                .scaledToFit()
-                .frame(width: 40, height: 40)
-                .foregroundStyle(colors.onSurfaceVariant.opacity(0.5))
-                .frame(width: 96, height: 96)
-                .background(colors.surfaceVariant.opacity(0.55), in: Circle())
-
-            Text(L("No matching tasks"))
-                .font(.tdayRounded(size: 22, weight: .heavy))
-                .foregroundStyle(colors.onSurface)
-
-            Button {
-                HapticManager.gentleTap()
-                listSearchQuery = ""
-                listSearchFieldFocused = true
-            } label: {
-                Text(L("Clear search"))
-                    .font(.tdayRounded(size: 15, weight: .bold))
-                    .foregroundStyle(colors.primary)
-            }
-            .buttonStyle(.plain)
-        }
+        TdayEmptyState(
+            assetName: "NavSearch",
+            accentColor: modeAccentColor,
+            title: L("No matching tasks"),
+            description: L("Try a different word, or clear the search."),
+            action: AnyView(
+                Button {
+                    HapticManager.gentleTap()
+                    listSearchQuery = ""
+                    listSearchFieldFocused = true
+                } label: {
+                    Text(L("Clear search"))
+                        .font(.tdayRounded(size: 15, weight: .bold))
+                        .foregroundStyle(colors.primary)
+                }
+                .buttonStyle(.plain)
+            )
+        )
         .frame(
             maxWidth: .infinity,
             minHeight: inlineEmptyStateGapHeight,
@@ -2074,16 +2082,16 @@ struct TodoListScreen: View {
 
                     if showInlineFloaterTaskHomeEmpty {
                         Section {
-                            Text(emptyTimelineMessage(for: viewModel.mode))
-                                .font(.tdayRounded(size: 28, weight: .bold))
-                                .foregroundStyle(colors.onSurfaceVariant.opacity(0.66))
-                                .multilineTextAlignment(.center)
-                                .lineLimit(2)
-                                .minimumScaleFactor(0.82)
-                                .frame(maxWidth: .infinity, minHeight: inlineEmptyStateGapHeight, alignment: .center)
-                                .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
-                                .listRowBackground(colors.background)
-                                .listRowSeparator(.hidden)
+                            TdayEmptyState(
+                                assetName: emptyStateAssetName,
+                                accentColor: modeAccentColor,
+                                title: emptyTimelineTitle(for: viewModel.mode, isListDetail: isListDetailScreen),
+                                description: emptyTimelineDescription(for: viewModel.mode, isListDetail: isListDetailScreen)
+                            )
+                            .frame(maxWidth: .infinity, minHeight: inlineEmptyStateGapHeight, alignment: .center)
+                            .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
+                            .listRowBackground(colors.background)
+                            .listRowSeparator(.hidden)
                         }
                     }
 
@@ -4607,6 +4615,46 @@ private func emptyTimelineMessage(for mode: TodoListMode) -> String {
     case .list:
         return L("No tasks in this list")
     }
+}
+
+/// The empty scene's title. Floater splits on whether a list is open: the root
+/// feed speaks about floaters at large, a list about its own.
+private func emptyTimelineTitle(for mode: TodoListMode, isListDetail: Bool) -> String {
+    if mode == .floater, isListDetail {
+        return L("No floaters in this list")
+    }
+    return emptyTimelineMessage(for: mode)
+}
+
+/// The line under it — what to do about the emptiness, phrased per screen so an
+/// empty screen still says where you are.
+private func emptyTimelineDescription(for mode: TodoListMode, isListDetail: Bool) -> String {
+    switch mode {
+    case .today:
+        return L("Add something for today and it will show up right here.")
+    case .overdue:
+        return L("Nothing has slipped past its due date.")
+    case .scheduled:
+        return L("Give a task a date and it will line up here.")
+    case .all:
+        return L("Everything you add shows up here, whatever its date.")
+    case .priority:
+        return L("Flag a task as priority and it will move up here.")
+    case .floater:
+        return isListDetail
+            ? L("Add a floater and it will wait right here.")
+            : L("Floaters have no due date — write one down and it will wait until you are ready.")
+    case .list:
+        return L("Add your first task and it will show up right here.")
+    }
+}
+
+/// The glyph on the empty scene's badge. Every mode but Today already owns a
+/// template asset; Today's watermark is an SF Symbol that follows the time of
+/// day, and the badge takes an asset only — so it takes the sun web's scope
+/// config gives Today at every hour.
+private func emptyTimelineBadgeAssetName(for mode: TodoListMode, listIconKey: String?) -> String {
+    emptyTimelineAssetName(for: mode, listIconKey: listIconKey) ?? "LucideSun"
 }
 
 /// Lucide template-asset watermark for the scheduled task home category modes, mirroring web.

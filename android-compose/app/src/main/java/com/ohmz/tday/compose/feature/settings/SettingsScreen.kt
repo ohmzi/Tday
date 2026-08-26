@@ -1,15 +1,20 @@
 package com.ohmz.tday.compose.feature.settings
 
 import com.ohmz.tday.compose.core.ui.LocalSnackbarManager
+import androidx.activity.compose.BackHandler
 import androidx.annotation.DrawableRes
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.biometric.BiometricManager
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,10 +24,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -43,6 +50,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -51,7 +59,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
@@ -84,9 +95,12 @@ import com.ohmz.tday.compose.core.model.SecurityQuestionStatusResponse
 import com.ohmz.tday.compose.core.model.SessionUser
 import com.ohmz.tday.compose.core.notification.DayAheadOption
 import com.ohmz.tday.compose.core.notification.ReminderOption
+import com.ohmz.tday.compose.core.ui.TdayEmptyState
 import com.ohmz.tday.compose.core.ui.TdayHeroTitleBlock
 import com.ohmz.tday.compose.core.ui.TdayHeroToolbar
+import com.ohmz.tday.compose.core.ui.TdaySearchCapsule
 import com.ohmz.tday.compose.core.ui.rememberScrollHeroTitleCollapse
+import com.ohmz.tday.compose.core.ui.tdayBarButtonContainerColor
 import com.ohmz.tday.compose.feature.app.MobileSyncStatus
 import com.ohmz.tday.compose.feature.app.ProfileEditResult
 import com.ohmz.tday.compose.feature.settings.data.DataTransferCard
@@ -136,6 +150,292 @@ fun SettingsScreen(
     val colorScheme = MaterialTheme.colorScheme
     val scrollState = rememberScrollState()
     val heroCollapse = rememberScrollHeroTitleCollapse(scrollState = scrollState)
+    val settingsTitle = stringResource(R.string.settings_title)
+    // Scoped search: this screen's own rows, and nothing else. Settings has no
+    // list to filter, so what the field narrows is the page itself — which also
+    // means the only empty state it can reach is a search that matched nothing.
+    var searchExpanded by rememberSaveable { mutableStateOf(false) }
+    var searchQuery by rememberSaveable { mutableStateOf("") }
+    var searchNeedsFocus by remember { mutableStateOf(false) }
+    val search = remember(searchQuery) { SettingsSearchScope(searchQuery) }
+    val closeSearch = {
+        searchExpanded = false
+        searchQuery = ""
+        searchNeedsFocus = false
+    }
+    BackHandler(enabled = searchExpanded) {
+        closeSearch()
+    }
+
+    // A row is matched on the copy it actually shows, and on the heading it
+    // sits under: searching "reminders" keeps the whole group rather than only
+    // the one row that happens to draw the heading.
+    val appearanceTitle = stringResource(R.string.settings_appearance)
+    val remindersTitle = stringResource(R.string.settings_reminders)
+    val languageTitle = stringResource(R.string.settings_language)
+    val featureToggleTitle = stringResource(R.string.settings_feature_toggle)
+    val privacyTitle = stringResource(R.string.settings_privacy)
+    val workspaceTitle = stringResource(R.string.settings_workspace)
+    val releaseTitle = stringResource(R.string.release_title)
+    val helpGuideTitle = stringResource(R.string.settings_help_guide)
+
+    // The account card's rows edit one another's state — the open editor is
+    // shared between them — so it is matched and kept as a whole rather than
+    // being taken apart row by row.
+    val showAccountCard = !isLocalMode && search.matches(
+        stringResource(R.string.settings_account_name_label),
+        stringResource(R.string.settings_account_username_label),
+        stringResource(R.string.settings_account_password_label),
+        stringResource(R.string.settings_account_security_questions_label),
+    )
+    val appearanceRows = listOf(
+        SettingsEntry(
+            key = "appearance",
+            // The mode names as well as the heading: "dark" is what people type
+            // here, and "Appearance" is not a word that occurs to anybody.
+            visible = search.matches(
+                appearanceTitle,
+                *AppThemeMode.entries.map { stringResource(it.labelRes) }.toTypedArray(),
+            ),
+        ) {
+            SettingsSectionTitle(title = appearanceTitle)
+            ThemeModeSelector(
+                selectedThemeMode = selectedThemeMode,
+                onThemeModeSelected = onThemeModeSelected,
+            )
+        },
+        SettingsEntry(
+            key = "reminder",
+            visible = search.matches(
+                remindersTitle,
+                stringResource(R.string.settings_default_reminder),
+            ),
+        ) {
+            SettingsSectionTitle(title = remindersTitle)
+            ReminderSelector(
+                selectedReminder = selectedReminder,
+                onReminderSelected = onReminderSelected,
+            )
+        },
+        SettingsEntry(
+            key = "day-ahead",
+            visible = search.matches(remindersTitle, stringResource(R.string.day_ahead_setting)),
+        ) {
+            DayAheadSelector(
+                selectedDayAhead = selectedDayAhead,
+                onDayAheadSelected = onDayAheadSelected,
+            )
+        },
+        SettingsEntry(
+            key = "quiet-hours",
+            visible = search.matches(remindersTitle, stringResource(R.string.settings_quiet_hours)),
+        ) {
+            QuietHoursRow()
+        },
+        SettingsEntry(
+            key = "unified-push",
+            // Server pushes via UnifiedPush are only meaningful in Server Mode.
+            visible = !isLocalMode && search.matches(
+                remindersTitle,
+                stringResource(R.string.settings_unifiedpush_title),
+            ),
+        ) {
+            UnifiedPushRow()
+        },
+        SettingsEntry("language", search.matches(languageTitle)) {
+            SettingsSectionTitle(title = languageTitle)
+            LanguageSelector()
+        },
+    ).filter { it.visible }
+
+    val featureRows = listOf(
+        SettingsEntry(
+            key = "ai-summary",
+            visible = search.matches(
+                featureToggleTitle,
+                stringResource(R.string.settings_ai_task_summary),
+            ),
+        ) {
+            SettingsSectionTitle(title = featureToggleTitle)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                SettingsRowIcon(R.drawable.ic_lucide_sparkles)
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
+                    Text(
+                        text = stringResource(R.string.settings_ai_task_summary),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = colorScheme.onSurface,
+                        fontWeight = FontWeight.ExtraBold,
+                    )
+                }
+                Switch(
+                    checked = aiSummaryEnabled,
+                    onCheckedChange = onToggleAiSummary,
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = Color.White,
+                        checkedTrackColor = colorScheme.secondary,
+                        checkedBorderColor = Color.Transparent,
+                    ),
+                )
+            }
+        },
+        SettingsEntry(
+            key = "resting-floaters",
+            visible = search.matches(
+                featureToggleTitle,
+                stringResource(R.string.settings_resting_floaters),
+            ),
+        ) {
+            RestingFloatersRow()
+        },
+        SettingsEntry(
+            key = "calendar-sync",
+            visible = search.matches(
+                featureToggleTitle,
+                stringResource(R.string.settings_calendar_sync),
+            ),
+        ) {
+            DeviceCalendarSyncRow()
+        },
+    ).filter { it.visible }
+
+    val privacyRows = listOf(
+        SettingsEntry(
+            key = "screenshot-protection",
+            visible = search.matches(
+                privacyTitle,
+                stringResource(R.string.settings_screenshot_protection),
+            ),
+        ) {
+            SettingsSectionTitle(title = privacyTitle)
+            ScreenshotProtectionRow()
+        },
+        SettingsEntry(
+            key = "app-lock",
+            visible = search.matches(privacyTitle, stringResource(R.string.settings_app_lock)),
+        ) {
+            AppLockRow()
+            UnencryptedLegacyCacheWarning()
+        },
+    ).filter { it.visible }
+
+    val workspaceRows = listOf(
+        SettingsEntry(
+            key = "workspace",
+            visible = search.matches(workspaceTitle, stringResource(R.string.settings_sync_now)),
+        ) {
+            SettingsWorkspaceContent(
+                syncStatus = syncStatus,
+                onSyncNow = onSyncNow,
+            )
+        },
+        SettingsEntry("release", search.matches(releaseTitle)) {
+            SettingsListRow(
+                title = releaseTitle,
+                value = stringResource(R.string.label_version_name, BuildConfig.VERSION_NAME),
+                onClick = onOpenLatestRelease,
+                icon = R.drawable.ic_lucide_info,
+            )
+            if (hasUpdate && latestVersionName != null) {
+                Text(
+                    text = stringResource(
+                        R.string.settings_update_available_version,
+                        latestVersionName,
+                    ),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = colorScheme.secondary,
+                    fontWeight = FontWeight.ExtraBold,
+                )
+            }
+        },
+        SettingsEntry("help-guide", search.matches(helpGuideTitle)) {
+            SettingsListRow(
+                title = helpGuideTitle,
+                value = null,
+                onClick = onOpenHelpGuide,
+                icon = R.drawable.ic_lucide_circle_help,
+            )
+        },
+        SettingsEntry(
+            key = "server",
+            visible = !isLocalMode && backendVersion != null &&
+                search.matches(stringResource(R.string.label_server)),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                // Not tappable, so no glyph — but it shares the card with rows that
+                // have one, so it keeps the slot to stay aligned with them.
+                SettingsRowIcon(null)
+                Text(
+                    text = stringResource(R.string.label_server),
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = colorScheme.onSurface,
+                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = stringResource(
+                            R.string.label_version_name,
+                            backendVersion.orEmpty(),
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = colorScheme.onSurface.copy(alpha = 0.58f),
+                    )
+                    val isCompatible = versionCheckResult is VersionCheckResult.Compatible ||
+                        versionCheckResult == null
+                    Text(
+                        text = if (isCompatible) {
+                            stringResource(R.string.settings_server_compatible)
+                        } else {
+                            stringResource(R.string.settings_server_incompatible)
+                        },
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = if (isCompatible) {
+                            TdayStatusSuccess
+                        } else {
+                            colorScheme.error
+                        },
+                    )
+                }
+            }
+        },
+        SettingsEntry(
+            key = "sign-out",
+            visible = !isLocalMode && search.matches(stringResource(R.string.action_sign_out)),
+        ) {
+            SettingsListRow(
+                title = stringResource(R.string.action_sign_out),
+                value = null,
+                onClick = onLogout,
+                icon = R.drawable.ic_lucide_log_out,
+                iconTint = colorScheme.error,
+                titleColor = colorScheme.error,
+                trailingTint = colorScheme.error.copy(alpha = 0.72f),
+                showChevron = false,
+            )
+        },
+    ).filter { it.visible }
+
+    val showDataTransferCard = search.matches(
+        stringResource(R.string.settings_data_title),
+        stringResource(R.string.settings_data_download),
+        stringResource(R.string.settings_data_import),
+    )
+    val hasMatches = showAccountCard || showDataTransferCard ||
+        appearanceRows.isNotEmpty() || featureRows.isNotEmpty() ||
+        privacyRows.isNotEmpty() || workspaceRows.isNotEmpty()
 
     Scaffold(containerColor = colorScheme.background) { padding ->
         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
@@ -149,12 +449,12 @@ fun SettingsScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             TdayHeroTitleBlock(
-                title = stringResource(R.string.settings_title),
+                title = settingsTitle,
                 icon = ImageVector.vectorResource(R.drawable.ic_lucide_sliders_horizontal),
                 accentColor = MaterialTheme.colorScheme.primary,
                 collapseProgress = heroCollapse.progress,
             )
-            if (!isLocalMode) {
+            if (showAccountCard) {
                 SettingsProfileCard(
                     user = user,
                     onUpdateName = onUpdateName,
@@ -166,182 +466,189 @@ fun SettingsScreen(
                 )
             }
 
-            SettingsSectionCard {
-                SettingsSectionTitle(title = stringResource(R.string.settings_appearance))
-                ThemeModeSelector(
-                    selectedThemeMode = selectedThemeMode,
-                    onThemeModeSelected = onThemeModeSelected,
-                )
-                SettingsDivider()
-                SettingsSectionTitle(title = stringResource(R.string.settings_reminders))
-                ReminderSelector(
-                    selectedReminder = selectedReminder,
-                    onReminderSelected = onReminderSelected,
-                )
-                SettingsDivider()
-                DayAheadSelector(
-                    selectedDayAhead = selectedDayAhead,
-                    onDayAheadSelected = onDayAheadSelected,
-                )
-                SettingsDivider()
-                QuietHoursRow()
-                // Server pushes via UnifiedPush are only meaningful in Server Mode.
-                if (!isLocalMode) {
-                    SettingsDivider()
-                    UnifiedPushRow()
-                }
-                SettingsDivider()
-                SettingsSectionTitle(title = stringResource(R.string.settings_language))
-                LanguageSelector()
+            SettingsFilteredCard(appearanceRows)
+            SettingsFilteredCard(featureRows)
+            SettingsFilteredCard(privacyRows)
+            SettingsFilteredCard(workspaceRows)
+
+            if (showDataTransferCard) {
+                DataTransferCard()
             }
 
-            SettingsSectionCard {
-                SettingsSectionTitle(title = stringResource(R.string.settings_feature_toggle))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    SettingsRowIcon(R.drawable.ic_lucide_sparkles)
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(2.dp),
-                    ) {
-                        Text(
-                            text = stringResource(R.string.settings_ai_task_summary),
-                            style = MaterialTheme.typography.titleMedium,
-                            color = colorScheme.onSurface,
-                            fontWeight = FontWeight.ExtraBold,
-                        )
-                    }
-                    Switch(
-                        checked = aiSummaryEnabled,
-                        onCheckedChange = onToggleAiSummary,
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = Color.White,
-                            checkedTrackColor = colorScheme.secondary,
-                            checkedBorderColor = Color.Transparent,
-                        ),
-                    )
-                }
-                SettingsDivider()
-                RestingFloatersRow()
-                SettingsDivider()
-                DeviceCalendarSyncRow()
-            }
-
-            SettingsSectionCard {
-                SettingsSectionTitle(title = stringResource(R.string.settings_privacy))
-                ScreenshotProtectionRow()
-                SettingsDivider()
-                AppLockRow()
-                UnencryptedLegacyCacheWarning()
-            }
-
-            SettingsSectionCard {
-                SettingsWorkspaceContent(
-                    syncStatus = syncStatus,
-                    onSyncNow = onSyncNow,
+            if (!hasMatches) {
+                TdayEmptyState(
+                    icon = R.drawable.ic_lucide_sliders_horizontal,
+                    accentColor = colorScheme.primary,
+                    title = stringResource(R.string.search_no_results_settings),
+                    description = stringResource(R.string.search_no_results_body),
+                    modifier = Modifier.padding(vertical = 24.dp),
                 )
-
-                SettingsDivider()
-
-                SettingsListRow(
-                    title = stringResource(R.string.release_title),
-                    value = stringResource(R.string.label_version_name, BuildConfig.VERSION_NAME),
-                    onClick = onOpenLatestRelease,
-                    icon = R.drawable.ic_lucide_info,
-                )
-                if (hasUpdate && latestVersionName != null) {
-                    Text(
-                        text = stringResource(
-                            R.string.settings_update_available_version,
-                            latestVersionName,
-                        ),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = colorScheme.secondary,
-                        fontWeight = FontWeight.ExtraBold,
-                    )
-                }
-
-                SettingsDivider()
-
-                SettingsListRow(
-                    title = stringResource(R.string.settings_help_guide),
-                    value = null,
-                    onClick = onOpenHelpGuide,
-                    icon = R.drawable.ic_lucide_circle_help,
-                )
-                if (!isLocalMode && backendVersion != null) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        // Not tappable, so no glyph — but it shares the card with rows that
-                        // have one, so it keeps the slot to stay aligned with them.
-                        SettingsRowIcon(null)
-                        Text(
-                            text = stringResource(R.string.label_server),
-                            modifier = Modifier.weight(1f),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = colorScheme.onSurface,
-                        )
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Text(
-                                text = stringResource(R.string.label_version_name, backendVersion),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = colorScheme.onSurface.copy(alpha = 0.58f),
-                            )
-                            val isCompatible = versionCheckResult is VersionCheckResult.Compatible ||
-                                versionCheckResult == null
-                            Text(
-                                text = if (isCompatible) {
-                                    stringResource(R.string.settings_server_compatible)
-                                } else {
-                                    stringResource(R.string.settings_server_incompatible)
-                                },
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = if (isCompatible) {
-                                    TdayStatusSuccess
-                                } else {
-                                    colorScheme.error
-                                },
-                            )
-                        }
-                    }
-                }
-                if (!isLocalMode) {
-                    SettingsDivider()
-                    SettingsListRow(
-                        title = stringResource(R.string.action_sign_out),
-                        value = null,
-                        onClick = onLogout,
-                        icon = R.drawable.ic_lucide_log_out,
-                        iconTint = colorScheme.error,
-                        titleColor = colorScheme.error,
-                        trailingTint = colorScheme.error.copy(alpha = 0.72f),
-                        showChevron = false,
-                    )
-                }
             }
-
-            DataTransferCard()
 
             Spacer(modifier = Modifier.height(24.dp))
         }
 
         // Last, so it draws over the content passing behind it.
         TdayHeroToolbar(
-            title = stringResource(R.string.settings_title),
+            title = settingsTitle,
             collapseProgress = heroCollapse.progress,
             onBack = onBack,
             backContentDescription = stringResource(R.string.action_back),
             modifier = Modifier.align(Alignment.TopStart),
-        )
+            titleSuppressed = searchExpanded,
+        ) {
+            if (searchExpanded) {
+                // The bar is handed over to the field, keeping the back chevron
+                // and dropping the action cluster — what the list-detail
+                // screens, iOS's TimelineTopBar and the web bar all do.
+                Spacer(modifier = Modifier.width(TdayDimens.FabSize))
+                val focusRequester = remember { FocusRequester() }
+                LaunchedEffect(searchNeedsFocus) {
+                    if (!searchNeedsFocus) return@LaunchedEffect
+                    // Consumed on the way in, so returning to a screen that
+                    // still has the field open does not re-open the keyboard
+                    // with it.
+                    searchNeedsFocus = false
+                    focusRequester.requestFocus()
+                }
+                TdaySearchCapsule(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    placeholder = stringResource(R.string.action_search_in, settingsTitle),
+                    modifier = Modifier
+                        .weight(1f)
+                        .focusRequester(focusRequester),
+                    onClear = { searchQuery = "" },
+                    clearContentDescription = stringResource(R.string.action_clear_search),
+                )
+                // The capsule's own X clears the query; leaving the search
+                // behind altogether is this one, as on the root feeds.
+                SettingsBarButton(
+                    onClick = closeSearch,
+                    icon = ImageVector.vectorResource(R.drawable.ic_lucide_x),
+                    contentDescription = stringResource(R.string.action_close_search),
+                )
+            } else {
+                SettingsBarButton(
+                    // Only opens: the bar hands its row over to the field, so
+                    // this button is not on screen to be tapped again.
+                    onClick = {
+                        searchExpanded = true
+                        searchNeedsFocus = true
+                    },
+                    icon = ImageVector.vectorResource(R.drawable.ic_lucide_search),
+                    contentDescription = stringResource(R.string.action_search),
+                )
+            }
+        }
+        }
+    }
+}
+
+/**
+ * What the settings search matches a row against.
+ *
+ * The labels are the ones the row actually draws, passed in at the call site
+ * rather than kept as a hand-written keyword list beside them: a keyword list
+ * goes stale the first time a label is re-worded, and the copy on screen is the
+ * copy people type.
+ */
+private class SettingsSearchScope(query: String) {
+    private val needle = query.trim().lowercase(Locale.getDefault())
+
+    fun matches(vararg labels: String): Boolean =
+        needle.isBlank() || labels.any { it.lowercase(Locale.getDefault()).contains(needle) }
+}
+
+/** One row of a settings card, and whether the search left it standing. */
+private class SettingsEntry(
+    val key: String,
+    val visible: Boolean,
+    val content: @Composable ColumnScope.() -> Unit,
+)
+
+/**
+ * A settings card whose rows the search can take out from under it.
+ *
+ * The dividers belong to the card rather than to the caller: written by hand
+ * between the rows, a filtered-out row leaves its rule behind — a hairline
+ * above nothing, or two of them stacked. A card the search emptied does not
+ * draw at all, frame included.
+ */
+@Composable
+private fun SettingsFilteredCard(rows: List<SettingsEntry>) {
+    if (rows.isEmpty()) return
+
+    SettingsSectionCard {
+        rows.forEachIndexed { index, row ->
+            // Keyed, so a row that survives a change of query keeps the state
+            // it was holding — an open editor, a half-typed field — instead of
+            // inheriting the state of whichever row now sits at its index.
+            key(row.key) {
+                if (index > 0) {
+                    SettingsDivider()
+                }
+                row.content(this)
+            }
+        }
+    }
+}
+
+/**
+ * The circle this screen's toolbar actions sit in.
+ *
+ * A local copy of the timeline screen's `TodayHeaderButton`, which is private to
+ * `TodoListScreen` and has no shared home yet — the fill, the size and the lift
+ * come from the same tokens as the back button beside it, so the two match
+ * whatever the scheme does with them.
+ */
+@Composable
+private fun SettingsBarButton(
+    onClick: () -> Unit,
+    icon: ImageVector,
+    contentDescription: String,
+) {
+    val view = LocalView.current
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (pressed) 0.93f else 1f,
+        label = "settingsBarButtonScale",
+    )
+    val offsetY by animateDpAsState(
+        targetValue = if (pressed) 2.dp else 0.dp,
+        label = "settingsBarButtonOffsetY",
+    )
+
+    Card(
+        modifier = Modifier
+            .offset(y = offsetY)
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            },
+        onClick = {
+            ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+            onClick()
+        },
+        interactionSource = interactionSource,
+        shape = CircleShape,
+        colors = CardDefaults.cardColors(containerColor = tdayBarButtonContainerColor()),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = TdayDimens.BarButtonElevation,
+            pressedElevation = 0.dp,
+        ),
+    ) {
+        Box(
+            modifier = Modifier.size(TdayDimens.FabSize),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = contentDescription,
+                tint = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.size(22.dp),
+            )
         }
     }
 }

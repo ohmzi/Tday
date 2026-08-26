@@ -203,20 +203,50 @@ struct CalendarScreen: View {
     @State private var dropTargetRegistry = CalendarDropTargetRegistry()
     @State private var pendingRescheduleDrop: CalendarTaskRescheduleDrop?
     @State private var openSwipeTaskID: String?
+    @FocusState private var searchFieldFocused: Bool
+    @State private var searchExpanded = false
+    @State private var searchQuery = ""
 
     init(container: AppContainer, pullRefreshEnabled: Bool = false) {
         self.pullRefreshEnabled = pullRefreshEnabled
         _viewModel = State(initialValue: CalendarViewModel(container: container))
     }
 
+    private var normalizedSearchQuery: String {
+        searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(with: .current)
+    }
+
+    private var isSearching: Bool {
+        searchExpanded && !normalizedSearchQuery.isEmpty
+    }
+
+    /// The dated tasks this screen is showing, and nothing else — the calendar
+    /// searches its own contents the way every other screen does.
+    ///
+    /// Everything downstream reads from here rather than from `viewModel.items`,
+    /// so a search narrows the grid's day counts too: the dots are then exactly
+    /// the days holding a match, which is what makes searching a calendar worth
+    /// anything.
+    private var searchedItems: [TodoItem] {
+        guard isSearching else {
+            return viewModel.items
+        }
+        return viewModel.items.filter { todo in
+            todo.title.lowercased(with: .current).contains(normalizedSearchQuery) ||
+                flattenNotesToPlainText(todo.description)
+                    .lowercased(with: .current)
+                    .contains(normalizedSearchQuery)
+        }
+    }
+
     private var pendingItems: [TodoItem] {
-        viewModel.items
+        searchedItems
             .filter { todo in todo.due.map(isSelectedDay) ?? false }
             .sorted(by: { ($0.due ?? .distantFuture) < ($1.due ?? .distantFuture) })
     }
 
     private var pendingItemsByDay: [Date: [TodoItem]] {
-        Dictionary(grouping: viewModel.items.filter { $0.due != nil }) { todo in
+        Dictionary(grouping: searchedItems.filter { $0.due != nil }) { todo in
             Calendar.current.startOfDay(for: todo.due ?? selectedDate)
         }
     }
@@ -342,6 +372,19 @@ struct CalendarScreen: View {
             guard let openSwipeTaskID, !ids.contains(openSwipeTaskID) else { return }
             self.openSwipeTaskID = nil
         }
+        // The field only joins the hierarchy once the bar has swapped its row
+        // over, so focusing it in the same turn is dropped on the floor.
+        .onChange(of: searchExpanded) { _, expanded in
+            guard expanded else {
+                searchFieldFocused = false
+                return
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.30) {
+                if searchExpanded {
+                    searchFieldFocused = true
+                }
+            }
+        }
         .overlay(alignment: .topLeading) {
             GeometryReader { proxy in
                 if let inAppDrag {
@@ -448,7 +491,32 @@ struct CalendarScreen: View {
                 usesCircularChrome: true,
                 action: jumpToToday
             ),
+            onSearchOpen: openSearch,
+            searchActive: searchExpanded,
+            searchText: $searchQuery,
+            searchPlaceholder: L("Search in %@", L("Calendar")),
+            searchFieldFocused: $searchFieldFocused,
+            onSearchClose: closeSearch
         )
+    }
+
+    private func openSearch() {
+        HapticManager.buttonTap()
+        withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
+            searchExpanded = true
+        }
+    }
+
+    /// Leaving the search drops the query with it, so the calendar is whole
+    /// again the next time the bar is opened — the same bargain web's close
+    /// makes.
+    private func closeSearch() {
+        HapticManager.sheetDismiss()
+        searchFieldFocused = false
+        withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
+            searchExpanded = false
+        }
+        searchQuery = ""
     }
 
     private var calendarModeAndTaskSection: some View {
@@ -520,6 +588,43 @@ struct CalendarScreen: View {
             .animation(
                 .spring(response: 0.34, dampingFraction: 0.9),
                 value: pendingItems.map(\.id)
+            )
+        } else if !viewModel.isLoading {
+            calendarDayEmptyState
+                .padding(.vertical, 16)
+        }
+    }
+
+    /// The day's list has nothing in it. Under a search that means nothing on
+    /// *this* day matched — the grid above is still pointing at the days that
+    /// did, so the way out is another date or another word.
+    @ViewBuilder
+    private var calendarDayEmptyState: some View {
+        if isSearching {
+            TdayEmptyState(
+                assetName: "NavSearch",
+                accentColor: calendarAccentColor,
+                title: L("No matching tasks"),
+                description: L("Try a different word, or clear the search."),
+                action: AnyView(
+                    Button {
+                        HapticManager.gentleTap()
+                        searchQuery = ""
+                        searchFieldFocused = true
+                    } label: {
+                        Text(L("Clear search"))
+                            .font(.tdayRounded(size: 15, weight: .bold))
+                            .foregroundStyle(colors.primary)
+                    }
+                    .buttonStyle(.plain)
+                )
+            )
+        } else {
+            TdayEmptyState(
+                assetName: "LucideCalendar",
+                accentColor: calendarAccentColor,
+                title: L("No tasks due this day"),
+                description: L("Select another date on the calendar.")
             )
         }
     }
@@ -2139,6 +2244,18 @@ private struct CalendarElasticTopBar: View {
     let onBack: () -> Void
     var actionLabel: String?
     let action: TimelineTopBarAction?
+    /// Leads the trailing cluster, as the search button does on every other bar.
+    let onSearchOpen: () -> Void
+    /// While set, the field takes the row: the back chevron stays where it is
+    /// and the title and the action cluster give way to it, exactly as they do
+    /// on the timeline bar. Only this one row changes — the mark and the
+    /// expanded title below it are what every collapse progress on this screen
+    /// is measured from.
+    let searchActive: Bool
+    @Binding var searchText: String
+    let searchPlaceholder: String
+    let searchFieldFocused: FocusState<Bool>.Binding?
+    let onSearchClose: () -> Void
 
     private var progress: CGFloat {
         min(max(collapseProgress, 0), 1)
@@ -2189,6 +2306,14 @@ private struct CalendarElasticTopBar: View {
         1 - linearProgress(progress, from: 0, to: CalendarTitleHandoff.markFadeEnd)
     }
 
+    /// The collapsed title only surfaces past `collapsedFadeStart`, by which
+    /// point the Today button has folded down to a circle — so whenever the
+    /// title is on screen, two round buttons and the gap between them are what
+    /// sits to its right.
+    private var trailingActionReservedWidth: CGFloat {
+        (TodoTimelineMetrics.topBarButtonFrame * 2) + TodoTimelineMetrics.topBarButtonSpacing
+    }
+
     /// Collapses over the whole scroll, unlike its opacity — otherwise the bar
     /// would keep 96pt of empty height long after the circle had gone.
     private var markBlockHeight: CGFloat {
@@ -2197,45 +2322,98 @@ private struct CalendarElasticTopBar: View {
             + TodoTimelineMetrics.heroMarkBottomGap) * (1 - progress)
     }
 
+    /// The capsule is exactly as tall as the bar's button row, so swapping it in
+    /// changes what the row holds and never how tall it is.
+    private var searchRow: some View {
+        HStack(spacing: TodoTimelineMetrics.topBarButtonSpacing) {
+            TdaySearchCapsule(
+                text: $searchText,
+                placeholder: searchPlaceholder,
+                clearAccessibilityLabel: L("Clear search"),
+                focused: searchFieldFocused
+            )
+
+            // The capsule's own X clears the query; leaving the search behind
+            // altogether is this one, as on the timeline bar.
+            CalendarTopBarButton(
+                systemName: "xmark",
+                assetName: "NavClose",
+                chrome: .filled,
+                action: onSearchClose
+            )
+            .accessibilityLabel(Text(L("Cancel search")))
+        }
+        .padding(.leading, TodoTimelineMetrics.topBarButtonSpacing)
+    }
+
     var body: some View {
         VStack(alignment: .center, spacing: 0) {
             ZStack {
                 HStack(spacing: 0) {
                     CalendarTopBarButton(systemName: "chevron.left", chrome: .filled, action: onBack)
-                    Spacer(minLength: 0)
-                    if let action {
-                        if let actionLabel {
-                            CalendarTodayActionButton(
-                                systemName: action.systemName,
-                                label: actionLabel,
-                                tint: action.tint,
-                                showLabel: showActionLabel,
-                                action: action.action
-                            )
-                        } else {
-                            CalendarTopBarButton(
-                                systemName: action.systemName,
-                                chrome: action.usesCircularChrome ? .outlined : .plain,
-                                tint: action.tint,
-                                action: action.action
-                            )
-                        }
+                    if searchActive {
+                        searchRow
                     } else {
-                        Color.clear
-                            .frame(width: TodoTimelineMetrics.topBarButtonFrame, height: TodoTimelineMetrics.topBarButtonFrame)
+                        Spacer(minLength: 0)
+                        HStack(spacing: TodoTimelineMetrics.topBarButtonSpacing) {
+                            CalendarTopBarButton(
+                                systemName: "magnifyingglass",
+                                assetName: "NavSearch",
+                                chrome: .outlined,
+                                tint: accentColor,
+                                action: onSearchOpen
+                            )
+                            .accessibilityLabel(Text(L("Search")))
+
+                            if let action {
+                                if let actionLabel {
+                                    CalendarTodayActionButton(
+                                        systemName: action.systemName,
+                                        label: actionLabel,
+                                        tint: action.tint,
+                                        showLabel: showActionLabel,
+                                        action: action.action
+                                    )
+                                } else {
+                                    CalendarTopBarButton(
+                                        systemName: action.systemName,
+                                        chrome: action.usesCircularChrome ? .outlined : .plain,
+                                        tint: action.tint,
+                                        action: action.action
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
 
-                Text(title)
-                    .font(.tdayRounded(size: TodoTimelineMetrics.heroTitleSize, weight: .heavy))
-                    .foregroundStyle(accentColor)
-                    .lineLimit(1)
-                    .opacity(collapsedTitleOpacity)
-                    .offset(y: collapsedTitleOffsetY)
-                    .scaleEffect(0.985 + (0.015 * CGFloat(collapsedTitleOpacity)))
-                    .padding(.horizontal, TodoTimelineMetrics.topBarButtonFrame + 12)
-                    .frame(maxWidth: .infinity)
-                    .allowsHitTesting(false)
+                if !searchActive {
+                    Text(title)
+                        .font(.tdayRounded(size: TodoTimelineMetrics.heroTitleSize, weight: .heavy))
+                        .foregroundStyle(accentColor)
+                        .lineLimit(1)
+                        // Two trailing buttons now, so what is left for the docked
+                        // title is about 157pt — narrower than "Calendario" or
+                        // "Calendrier" at 32pt. Scale it rather than clip it.
+                        .minimumScaleFactor(0.72)
+                        .opacity(collapsedTitleOpacity)
+                        .offset(y: collapsedTitleOffsetY)
+                        .scaleEffect(0.985 + (0.015 * CGFloat(collapsedTitleOpacity)))
+                        // The WIDER side, mirrored — not each side for what
+                        // actually sits there. This title crossfades with the
+                        // expanded one below it, which is centred on the bar, so
+                        // reserving 68 left against 132 right slid the name 32pt
+                        // sideways over the handoff while both were on screen.
+                        // Mirroring keeps both halves of the crossfade on the same
+                        // centre line. It is what the web bar does, and what
+                        // `tdayBarTitleReserve` does on Android.
+                        .padding(.horizontal, max(
+                            TodoTimelineMetrics.topBarButtonFrame,
+                            trailingActionReservedWidth
+                        ) + 12)
+                        .frame(maxWidth: .infinity)
+                        .allowsHitTesting(false)
+                }
             }
             .frame(height: TodoTimelineMetrics.topBarRowHeight)
 
@@ -2344,23 +2522,52 @@ private struct CalendarTopBarButton: View {
     }
 
     let systemName: String
+    /// Preferred over `systemName` when set, so this bar can use the same drawn
+    /// glyph the rest of the app does rather than the SF symbol that resembles it.
+    let assetName: String?
     let chrome: Chrome
     let tint: Color?
     let action: () -> Void
 
     @Environment(\.tdayColors) private var colors
 
-    init(systemName: String, chrome: Chrome, tint: Color? = nil, action: @escaping () -> Void) {
+    init(
+        systemName: String,
+        assetName: String? = nil,
+        chrome: Chrome,
+        tint: Color? = nil,
+        action: @escaping () -> Void
+    ) {
         self.systemName = systemName
+        self.assetName = assetName
         self.chrome = chrome
         self.tint = tint
         self.action = action
     }
 
-    var body: some View {
-        Button(action: action) {
+    @ViewBuilder
+    private var glyph: some View {
+        if let assetName {
+            // Assets are drawn at the filled-chrome size whatever the chrome: an
+            // SF symbol at 28pt leaves margin inside its box, a resized asset
+            // fills it edge to edge and would read a size larger.
+            Image(assetName)
+                .renderingMode(.template)
+                .resizable()
+                .scaledToFit()
+                .frame(
+                    width: TodoTimelineMetrics.topBarButtonIconSize,
+                    height: TodoTimelineMetrics.topBarButtonIconSize
+                )
+        } else {
             Image(systemName: systemName)
                 .font(.system(size: iconSize, weight: .semibold))
+        }
+    }
+
+    var body: some View {
+        Button(action: action) {
+            glyph
                 .frame(width: TodoTimelineMetrics.topBarButtonFrame, height: TodoTimelineMetrics.topBarButtonFrame)
                 .background {
                     if chrome == .filled {

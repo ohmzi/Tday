@@ -61,6 +61,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -144,8 +145,6 @@ import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
 import com.ohmz.tday.compose.core.model.capitalizeFirstListLetter
 import com.ohmz.tday.compose.core.model.supportsTaskReschedule
 import com.ohmz.tday.compose.core.model.timelineRescheduleTargetDate
-import com.ohmz.tday.compose.core.ui.DayDoneBackgroundMessage
-import com.ohmz.tday.compose.core.ui.EmptyTaskBackgroundMessage
 import com.ohmz.tday.compose.core.ui.EmptyTaskWatermark
 import com.ohmz.tday.compose.core.ui.TaskSwipeActionButton
 import com.ohmz.tday.compose.core.ui.animateTaskSwipeOffsetAsState
@@ -153,6 +152,7 @@ import com.ohmz.tday.compose.core.ui.RootFeedHeroHeader
 import com.ohmz.tday.compose.core.ui.RootFeedHeroHeaderMetrics
 import com.ohmz.tday.compose.core.ui.RootFeedHeroMark
 import com.ohmz.tday.compose.core.ui.LazyListHeroTitleSettle
+import com.ohmz.tday.compose.core.ui.TdayEmptyState
 import com.ohmz.tday.compose.core.ui.TdayHeroToolbar
 import com.ohmz.tday.compose.core.ui.TdaySearchCapsule
 import com.ohmz.tday.compose.core.ui.tdayBarButtonContainerColor
@@ -197,6 +197,7 @@ import com.ohmz.tday.compose.ui.theme.isTdayListIconKeySupported
 import com.ohmz.tday.compose.ui.theme.normalizeTdayListColorKey
 import com.ohmz.tday.compose.ui.theme.tdayListAccentColor
 import com.ohmz.tday.compose.ui.theme.tdayListIconForKey
+import com.ohmz.tday.compose.ui.theme.tdayListIconResForKey
 import com.ohmz.tday.compose.ui.theme.tdayPriorityColor
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -315,6 +316,11 @@ fun TodoListScreen(
         isTodayDaytime = isTodayDaytime,
     )
     val emptyWatermarkDrawable = emptyStateDrawableForMode(uiState.mode)
+    val emptySceneIcon = emptyStateSceneIconForMode(
+        mode = uiState.mode,
+        listIconKey = selectedList?.iconKey,
+        isTodayDaytime = isTodayDaytime,
+    )
     // The floater leaf watermark is mirrored so it points the same way as the iOS "leaf" symbol
     // and the Tday widgets.
     val flipWatermark =
@@ -327,40 +333,44 @@ fun TodoListScreen(
                 uiState.items.isEmpty()
     var draggedScheduledTodoId by rememberSaveable(uiState.mode) { mutableStateOf<String?>(null) }
     val canRescheduleTasks = uiState.mode.supportsTaskReschedule()
-    // Search over a single list's tasks. The root feeds carry their own field in
-    // RootFeedHeroHeader, so this one belongs to the list-detail screens — the
-    // custom lists and the floater lists — which had none.
-    var listSearchExpanded by rememberSaveable(uiState.mode, uiState.listId) {
+    // Search over one screen's own tasks and nothing else. The root feeds carry
+    // their own field in RootFeedHeroHeader, so this one belongs to every screen
+    // that draws the hero toolbar instead: the five timeline scopes as well as
+    // the list-detail screens — the custom lists and the floater lists.
+    val supportsScopedSearch = usesTodayStyle && !usesRootFeedChrome
+    var scopedSearchExpanded by rememberSaveable(uiState.mode, uiState.listId) {
         mutableStateOf(false)
     }
-    var listSearchQuery by rememberSaveable(uiState.mode, uiState.listId) { mutableStateOf("") }
-    var listSearchNeedsFocus by remember(uiState.mode, uiState.listId) { mutableStateOf(false) }
-    val normalizedListSearchQuery = remember(listSearchQuery) {
-        listSearchQuery.trim().lowercase(Locale.getDefault())
+    var scopedSearchQuery by rememberSaveable(uiState.mode, uiState.listId) { mutableStateOf("") }
+    var scopedSearchNeedsFocus by remember(uiState.mode, uiState.listId) { mutableStateOf(false) }
+    val normalizedScopedSearchQuery = remember(scopedSearchQuery) {
+        scopedSearchQuery.trim().lowercase(Locale.getDefault())
     }
-    val showListSearchField = isListDetailScreen && listSearchExpanded
-    val listSearchActive = showListSearchField && normalizedListSearchQuery.isNotBlank()
-    val closeListSearch = {
-        listSearchExpanded = false
-        listSearchQuery = ""
-        listSearchNeedsFocus = false
+    val showScopedSearchField = supportsScopedSearch && scopedSearchExpanded
+    val scopedSearchActive = showScopedSearchField && normalizedScopedSearchQuery.isNotBlank()
+    val closeScopedSearch = {
+        scopedSearchExpanded = false
+        scopedSearchQuery = ""
+        scopedSearchNeedsFocus = false
     }
-    val timelineItems = remember(uiState.items, listSearchActive, normalizedListSearchQuery) {
-        if (!listSearchActive) {
+    val timelineItems = remember(uiState.items, scopedSearchActive, normalizedScopedSearchQuery) {
+        if (!scopedSearchActive) {
             uiState.items
         } else {
-            // The same two fields the web list pages match on: the title and the
-            // notes flattened out of their rich-text form.
+            // The same two fields the web screens match on: the title and the
+            // notes flattened out of their rich-text form. `uiState.items` is
+            // already only this scope's tasks, so the search cannot reach past
+            // the screen it was opened on.
             uiState.items.filter { todo ->
                 todo.title.lowercase(Locale.getDefault())
-                    .contains(normalizedListSearchQuery) ||
+                    .contains(normalizedScopedSearchQuery) ||
                         flattenNotesToPlainText(todo.description)
                             .lowercase(Locale.getDefault())
-                            .contains(normalizedListSearchQuery)
+                            .contains(normalizedScopedSearchQuery)
             }
         }
     }
-    val listSearchHasNoResults = listSearchActive && timelineItems.isEmpty()
+    val scopedSearchHasNoResults = scopedSearchActive && timelineItems.isEmpty()
     val timelineSections = remember(uiState.mode, timelineItems) {
         buildTimelineSections(
             mode = uiState.mode,
@@ -573,8 +583,8 @@ fun TodoListScreen(
         onBack()
     }
     // Registered last so back dismisses the field before it leaves the list.
-    BackHandler(enabled = showListSearchField) {
-        closeListSearch()
+    BackHandler(enabled = showScopedSearchField) {
+        closeScopedSearch()
     }
     LaunchedEffect(isFloaterTaskHomeScreen, floaterTaskHomeSearchExpanded) {
         if (!isFloaterTaskHomeScreen) {
@@ -659,7 +669,7 @@ fun TodoListScreen(
     val hasSweepableTasks = uiState.mode == TodoListMode.OVERDUE &&
         uiState.items.any { it.rrule.isNullOrBlank() && it.instanceDate == null }
     val topBarActions = listOfNotNull(
-        if (isListDetailScreen) {
+        if (supportsScopedSearch) {
             TodoTopBarAction(
                 icon = ImageVector.vectorResource(R.drawable.ic_lucide_search),
                 contentDescription = stringResource(R.string.action_search),
@@ -667,8 +677,8 @@ fun TodoListScreen(
                 // button is not on screen to be tapped again. The field's own
                 // close button is what comes back from there.
                 onClick = {
-                    listSearchExpanded = true
-                    listSearchNeedsFocus = true
+                    scopedSearchExpanded = true
+                    scopedSearchNeedsFocus = true
                 },
             )
         } else {
@@ -1040,10 +1050,10 @@ fun TodoListScreen(
 
                     // A search that matched nothing replaces the timeline rather
                     // than leaving its empty day headers standing, as on web.
-                    if (listSearchHasNoResults) {
+                    if (scopedSearchHasNoResults) {
                         item(
-                            key = "list-search-no-results",
-                            contentType = "list-search-no-results",
+                            key = "scoped-search-no-results",
+                            contentType = "scoped-search-no-results",
                         ) {
                             Box(
                                 modifier = Modifier
@@ -1053,19 +1063,28 @@ fun TodoListScreen(
                                     ),
                                 contentAlignment = Alignment.Center,
                             ) {
-                                Text(
-                                    text = stringResource(R.string.scheduled_task_home_search_no_results),
-                                    color = colorScheme.onSurfaceVariant.copy(alpha = 0.66f),
-                                    style = MaterialTheme.typography.headlineSmall,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    textAlign = TextAlign.Center,
-                                    modifier = Modifier.padding(horizontal = 24.dp),
+                                TdayEmptyState(
+                                    // The magnifier, not the screen's own glyph:
+                                    // this is the query coming up short, not the
+                                    // screen being empty.
+                                    icon = R.drawable.ic_lucide_search,
+                                    accentColor = titleColor,
+                                    title = stringResource(R.string.scheduled_task_home_search_no_results),
+                                    description = stringResource(R.string.search_no_results_body),
+                                    // Clears the query without leaving the
+                                    // search, so the next word can be typed
+                                    // straight into the field that is still open.
+                                    action = {
+                                        OutlinedButton(onClick = { scopedSearchQuery = "" }) {
+                                            Text(text = stringResource(R.string.action_clear_search))
+                                        }
+                                    },
                                 )
                             }
                         }
                     }
 
-                    if (showSectionedTimeline && !suppressInitialTodayTimeline && !listSearchHasNoResults) {
+                    if (showSectionedTimeline && !suppressInitialTodayTimeline && !scopedSearchHasNoResults) {
                         timelineSections.forEachIndexed { sectionIndex, section ->
                             val sectionHasTasks = section.items.isNotEmpty()
                             val sectionModeCanCollapse = when (uiState.mode) {
@@ -1080,7 +1099,7 @@ fun TodoListScreen(
                             // A list opens with Earlier collapsed, so a live query
                             // would otherwise hide the matches it just found.
                             val isCollapsed = sectionCanCollapse &&
-                                    !listSearchActive &&
+                                    !scopedSearchActive &&
                                     collapsedSectionKeys.contains(section.key)
                             val isActiveDropSection = activeDropSectionKey == section.key
                             val sectionDraggedTodo = if (canRescheduleTasks) {
@@ -1327,10 +1346,10 @@ fun TodoListScreen(
                         }
                     }
 
-                    // Root floater empty state: mirror the web layout — a
-                    // centered "No floater tasks" message sitting in a gap in
-                    // the middle of the screen, with the list names below it
-                    // (instead of a full-screen watermark overlay).
+                    // Root floater empty state: mirror the web layout — the
+                    // scene sitting in a gap in the middle of the screen, with
+                    // the list names below it (instead of a full-screen
+                    // watermark overlay).
                     if (isFloaterTaskHomeScreen && uiState.items.isEmpty() && !uiState.isLoading) {
                         item(
                             key = "floater-empty-message",
@@ -1343,14 +1362,17 @@ fun TodoListScreen(
                                     .heightIn(min = gapHeight),
                                 contentAlignment = Alignment.Center,
                             ) {
-                                Text(
-                                    text = emptyStateMessageForMode(uiState.mode),
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        .copy(alpha = 0.66f),
-                                    style = MaterialTheme.typography.displaySmall,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    textAlign = TextAlign.Center,
-                                    modifier = Modifier.padding(horizontal = 24.dp),
+                                TdayEmptyState(
+                                    icon = emptySceneIcon,
+                                    accentColor = titleColor,
+                                    title = emptyStateMessageForMode(
+                                        mode = uiState.mode,
+                                        isFloaterList = isListDetailScreen,
+                                    ),
+                                    description = emptyStateDescriptionForMode(
+                                        mode = uiState.mode,
+                                        isFloaterList = isListDetailScreen,
+                                    ),
                                 )
                             }
                         }
@@ -1415,9 +1437,16 @@ fun TodoListScreen(
             }
             // Root floater shows its empty message inline (in the list, above
             // the list names) so the overlay version would double up.
-            if (uiState.items.isEmpty() && !uiState.isLoading && !suppressInitialTodayTimeline && !isFloaterTaskHomeScreen) {
+            // `scopedSearchActive` and not `scopedSearchHasNoResults`: a scope
+            // with no tasks at all still has none once a query is typed, so both
+            // states were true at once and the screen drew two empty scenes on
+            // top of each other. While a query stands the in-list no-results
+            // scene owns it — it is the one that can say what was searched.
+            if (uiState.items.isEmpty() && !uiState.isLoading && !suppressInitialTodayTimeline &&
+                !isFloaterTaskHomeScreen && !scopedSearchActive
+            ) {
                 // Day Done: "finished everything" earns its own calm state
-                // instead of the generic no-tasks watermark message.
+                // instead of the generic no-tasks scene.
                 val isDayDone = uiState.mode == TodoListMode.TODAY && uiState.completedTodayCount > 0
                 if (isDayDone) {
                     LaunchedEffect(Unit) {
@@ -1426,15 +1455,44 @@ fun TodoListScreen(
                             HapticFeedbackConstantsCompat.CONFIRM,
                         )
                     }
-                    DayDoneBackgroundMessage(
-                        message = stringResource(R.string.todos_all_done_today),
-                        dateText = LocalDate.now().format(
-                            DateTimeFormatter.ofPattern("EEEE d MMMM", Locale.getDefault()),
-                        ),
-                    )
-                } else {
-                    EmptyTaskBackgroundMessage(
-                        message = emptyStateMessageForMode(uiState.mode),
+                }
+                Box(
+                    // The Scaffold's insets, so the scene centres in the content
+                    // area rather than in the window: without them a notch pushes
+                    // it half the inset off centre.
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    TdayEmptyState(
+                        // Day Done keeps its own glyph and its date line: it is
+                        // a payoff, not an absence, and the scope's own icon
+                        // would undersell it.
+                        icon = if (isDayDone) {
+                            R.drawable.ic_lucide_check_check
+                        } else {
+                            emptySceneIcon
+                        },
+                        accentColor = titleColor,
+                        title = if (isDayDone) {
+                            stringResource(R.string.todos_all_done_today)
+                        } else {
+                            emptyStateMessageForMode(
+                                mode = uiState.mode,
+                                isFloaterList = isListDetailScreen,
+                            )
+                        },
+                        description = if (isDayDone) {
+                            LocalDate.now().format(
+                                DateTimeFormatter.ofPattern("EEEE d MMMM", Locale.getDefault()),
+                            )
+                        } else {
+                            emptyStateDescriptionForMode(
+                                mode = uiState.mode,
+                                isFloaterList = isListDetailScreen,
+                            )
+                        },
                     )
                 }
             }
@@ -1491,9 +1549,9 @@ fun TodoListScreen(
                         .align(Alignment.TopStart)
                         .padding(padding)
                         .zIndex(6f),
-                    titleSuppressed = showListSearchField,
+                    titleSuppressed = showScopedSearchField,
                     actions = {
-                        if (showListSearchField) {
+                        if (showScopedSearchField) {
                             // The bar is handed over to the field, keeping the
                             // back chevron and dropping the action cluster —
                             // what iOS's TimelineTopBar and the web list bar
@@ -1502,29 +1560,36 @@ fun TodoListScreen(
                             // leaving the keyboard up with nothing to type in.
                             Spacer(modifier = Modifier.width(TdayDimens.FabSize))
                             val focusRequester = remember { FocusRequester() }
-                            LaunchedEffect(listSearchNeedsFocus) {
-                                if (!listSearchNeedsFocus) return@LaunchedEffect
+                            LaunchedEffect(scopedSearchNeedsFocus) {
+                                if (!scopedSearchNeedsFocus) return@LaunchedEffect
                                 // Consumed on the way in, so returning to a
                                 // screen that still has the field open does not
                                 // re-open the keyboard with it.
-                                listSearchNeedsFocus = false
+                                scopedSearchNeedsFocus = false
                                 focusRequester.requestFocus()
                             }
                             TdaySearchCapsule(
-                                value = listSearchQuery,
-                                onValueChange = { listSearchQuery = it },
-                                placeholder = stringResource(R.string.action_search),
+                                value = scopedSearchQuery,
+                                onValueChange = { scopedSearchQuery = it },
+                                // Names the screen, as the other three scoped
+                                // searches do and as web does — "Search" alone
+                                // is the one thing a scoped field must not
+                                // imply it is.
+                                placeholder = stringResource(
+                                    R.string.action_search_in,
+                                    uiState.title,
+                                ),
                                 modifier = Modifier
                                     .weight(1f)
                                     .focusRequester(focusRequester),
-                                onClear = { listSearchQuery = "" },
+                                onClear = { scopedSearchQuery = "" },
                                 clearContentDescription = stringResource(R.string.action_clear_search),
                             )
                             // The capsule's own X clears the query; leaving the
                             // search behind altogether is this one, as on the
                             // root feeds.
                             TodayHeaderButton(
-                                onClick = closeListSearch,
+                                onClick = closeScopedSearch,
                                 icon = ImageVector.vectorResource(R.drawable.ic_lucide_x),
                                 contentDescription = stringResource(R.string.action_close_search),
                                 iconSize = 22.dp,
@@ -3579,16 +3644,74 @@ private fun localizedSectionTitle(section: TodoSection): String {
     }
 }
 
+/**
+ * @param isFloaterList a floater screen opened on one list rather than the root
+ *   feed. Both are [TodoListMode.FLOATER], but "No floater tasks" reads as if
+ *   there were none anywhere when it is one list that is empty.
+ */
 @Composable
-private fun emptyStateMessageForMode(mode: TodoListMode): String {
+private fun emptyStateMessageForMode(mode: TodoListMode, isFloaterList: Boolean): String {
     return when (mode) {
         TodoListMode.TODAY -> stringResource(R.string.todos_empty_today)
         TodoListMode.OVERDUE -> stringResource(R.string.todos_empty_overdue)
         TodoListMode.PRIORITY -> stringResource(R.string.todos_empty_priority)
-        TodoListMode.FLOATER -> stringResource(R.string.todos_empty_floater)
+        TodoListMode.FLOATER -> if (isFloaterList) {
+            stringResource(R.string.todos_empty_floater_list)
+        } else {
+            stringResource(R.string.todos_empty_floater)
+        }
+
         TodoListMode.SCHEDULED -> stringResource(R.string.todos_empty_scheduled)
         TodoListMode.ALL -> stringResource(R.string.todos_empty_all)
         TodoListMode.LIST -> stringResource(R.string.todos_empty_list)
+    }
+}
+
+/** The line under [emptyStateMessageForMode]: what puts something on the screen. */
+@Composable
+private fun emptyStateDescriptionForMode(mode: TodoListMode, isFloaterList: Boolean): String {
+    return when (mode) {
+        TodoListMode.TODAY -> stringResource(R.string.todos_empty_today_body)
+        TodoListMode.OVERDUE -> stringResource(R.string.todos_empty_overdue_body)
+        TodoListMode.PRIORITY -> stringResource(R.string.todos_empty_priority_body)
+        TodoListMode.FLOATER -> if (isFloaterList) {
+            stringResource(R.string.todos_empty_floater_list_body)
+        } else {
+            stringResource(R.string.todos_empty_floater_body)
+        }
+
+        TodoListMode.SCHEDULED -> stringResource(R.string.todos_empty_scheduled_body)
+        TodoListMode.ALL -> stringResource(R.string.todos_empty_all_body)
+        TodoListMode.LIST -> stringResource(R.string.todos_empty_list_body)
+    }
+}
+
+/**
+ * The glyph in the empty scene's accent circle: the tile glyph the watermark
+ * behind it draws where there is one, and the screen's own icon otherwise.
+ */
+@DrawableRes
+private fun emptyStateSceneIconForMode(
+    mode: TodoListMode,
+    listIconKey: String?,
+    isTodayDaytime: Boolean,
+): Int {
+    return when (mode) {
+        TodoListMode.TODAY ->
+            if (isTodayDaytime) R.drawable.ic_lucide_sun else R.drawable.ic_lucide_moon
+
+        TodoListMode.OVERDUE -> R.drawable.ic_lucide_clock_3
+        TodoListMode.PRIORITY -> R.drawable.ic_lucide_flag
+        TodoListMode.SCHEDULED -> R.drawable.ic_lucide_calendar_clock
+        TodoListMode.ALL -> R.drawable.ic_lucide_layers
+        TodoListMode.FLOATER ->
+            if (listIconKey.isNullOrBlank()) {
+                R.drawable.ic_lucide_leaf
+            } else {
+                tdayListIconResForKey(listIconKey)
+            }
+
+        TodoListMode.LIST -> tdayListIconResForKey(listIconKey)
     }
 }
 
