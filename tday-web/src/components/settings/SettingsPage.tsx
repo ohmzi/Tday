@@ -1052,7 +1052,12 @@ export default function SettingsPage() {
     t("restingFloaters.toggle"),
     ...(push.isSupported ? [t("notifications.title"), t("notifications.push")] : []),
   );
-  const showDataCard = cardMatches(t("data.title"), t("data.download"), t("data.import"));
+  // Server Mode only. Export and import are an account's data moving in and out
+  // of an account; a browser-only workspace has no account to move it between,
+  // and the card's own "sign in to a server to import" line was the tell that it
+  // was half-usable there. Hidden outright rather than half-disabled.
+  const showDataCard =
+    !isLocalMode && cardMatches(t("data.title"), t("data.download"), t("data.import"));
   // The two blurbs stopped being printed when the "?" took over explaining these
   // cards, but they are still sentences people half-remember and type at the
   // search box, so they stay in the term lists.

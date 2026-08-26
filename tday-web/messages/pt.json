@@ -1030,6 +1030,13 @@
         "keywords": "push, notificação, web, navegador, lembrete, vapid, subscrever, vencimento",
         "body": "Na aplicação web pode ativar as notificações push nas Definições. O seu servidor autoalojado envia então um lembrete quando chega a hora de conclusão de uma tarefa — para que a aplicação web o possa alcançar mesmo com o separador fechado. Pode concluir a tarefa diretamente a partir da notificação."
       },
+      "notifications": {
+        "title": "Notificações",
+        "summary": "Um único interruptor decide se o T'Day pode interromper você.",
+        "keywords": "notificações, permissão, interruptor, permitir, silenciar, lembrete, resumo, configurações do sistema",
+        "body": "As Configurações têm um único interruptor de Notificações, e tudo o que chega até você passa por ele — os lembretes de tarefas e o resumo do dia seguinte. Desligá-lo esvazia a fila em vez de silenciá-la, então nada chega atrasado quando você liga de novo. A permissão do sistema também é necessária: enquanto as notificações estiverem bloqueadas para o T'Day no seu aparelho, o interruptor continua desligado e oferece abrir as configurações do sistema.",
+        "tip": "As duas metades precisam estar ligadas. Sem a permissão do sistema, o interruptor aparece desligado, não importa como você o deixou aqui."
+      },
       "home-widget": {
         "title": "Widget no ecrã principal",
         "summary": "Veja as tarefas de hoje sem abrir a aplicação.",
@@ -1255,13 +1262,6 @@
         "step0": "Abra a app Watch no iPhone e instale o T'Day.",
         "step1": "Adicione a complicação do T'Day ao seu mostrador.",
         "step2": "Dê uma vista de olhos ao número, ou abra a app para ver a lista completa."
-      },
-      "notifications": {
-        "title": "Notificações",
-        "summary": "Um único interruptor decide se o T'Day pode interromper você.",
-        "keywords": "notificações, permissão, interruptor, permitir, silenciar, lembrete, resumo, configurações do sistema",
-        "body": "As Configurações têm um único interruptor de Notificações, e tudo o que chega até você passa por ele — os lembretes de tarefas e o resumo do dia seguinte. Desligá-lo esvazia a fila em vez de silenciá-la, então nada chega atrasado quando você liga de novo. A permissão do sistema também é necessária: enquanto as notificações estiverem bloqueadas para o T'Day no seu aparelho, o interruptor continua desligado e oferece abrir as configurações do sistema.",
-        "tip": "As duas metades precisam estar ligadas. Sem a permissão do sistema, o interruptor aparece desligado, não importa como você o deixou aqui."
       }
     }
   },

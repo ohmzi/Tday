@@ -1030,6 +1030,13 @@
         "keywords": "push, notificación, web, navegador, recordatorio, vapid, suscribir, vencimiento",
         "body": "En la app web puedes activar las notificaciones push desde Ajustes. Tu servidor autoalojado envía entonces un recordatorio cuando llega la hora de vencimiento de una tarea, así la app web puede avisarte aunque la pestaña esté cerrada. Puedes completar la tarea directamente desde la notificación."
       },
+      "notifications": {
+        "title": "Notificaciones",
+        "summary": "Un solo interruptor decide si T'Day puede interrumpirte.",
+        "keywords": "notificaciones, permiso, interruptor, permitir, silenciar, recordatorio, resumen, ajustes del sistema",
+        "body": "Ajustes tiene un único interruptor de Notificaciones, y todo lo que te llega pasa por él: los recordatorios de tareas y el resumen del día siguiente. Apagarlo vacía la cola en lugar de silenciarla, así que al volver a encenderlo no llega nada con retraso. También hace falta el permiso del sistema: mientras las notificaciones estén bloqueadas para T'Day en tu dispositivo el interruptor sigue apagado y te ofrece abrir los ajustes del sistema.",
+        "tip": "Las dos mitades tienen que estar activas. Si falta el permiso del sistema, el interruptor aparece apagado, lo hayas dejado como lo hayas dejado aquí."
+      },
       "home-widget": {
         "title": "Widget de pantalla de inicio",
         "summary": "Consulta las tareas de hoy sin abrir la app.",
@@ -1255,13 +1262,6 @@
         "step0": "Abre la app Watch en el iPhone e instala T'Day.",
         "step1": "Añade la complicación de T'Day a tu esfera.",
         "step2": "Echa un vistazo al número o abre la app para ver la lista completa."
-      },
-      "notifications": {
-        "title": "Notificaciones",
-        "summary": "Un solo interruptor decide si T'Day puede interrumpirte.",
-        "keywords": "notificaciones, permiso, interruptor, permitir, silenciar, recordatorio, resumen, ajustes del sistema",
-        "body": "Ajustes tiene un único interruptor de Notificaciones, y todo lo que te llega pasa por él: los recordatorios de tareas y el resumen del día siguiente. Apagarlo vacía la cola en lugar de silenciarla, así que al volver a encenderlo no llega nada con retraso. También hace falta el permiso del sistema: mientras las notificaciones estén bloqueadas para T'Day en tu dispositivo el interruptor sigue apagado y te ofrece abrir los ajustes del sistema.",
-        "tip": "Las dos mitades tienen que estar activas. Si falta el permiso del sistema, el interruptor aparece apagado, lo hayas dejado como lo hayas dejado aquí."
       }
     }
   },
