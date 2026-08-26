@@ -8,7 +8,7 @@ import type { SummaryMode } from "@/features/summary/useSummary";
 
 // Mirrors the round top-right button used across the native-style screens.
 const defaultButtonClass =
-  "flex h-14 w-14 items-center justify-center rounded-full border border-white/70 bg-card/90 text-foreground shadow-[0_12px_28px_-22px_hsl(var(--shadow)/0.55)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-card active:translate-y-0 dark:border-white/10";
+  "flex h-14 w-14 items-center justify-center rounded-full border border-white/70 bg-card/90 text-foreground shadow-[0_14px_30px_-16px_hsl(var(--shadow)/0.6)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-card active:translate-y-0 dark:border-white/10";
 
 type SummaryButtonProps = {
   mode: SummaryMode;

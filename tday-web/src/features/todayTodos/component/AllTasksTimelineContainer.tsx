@@ -648,7 +648,7 @@ const AllTasksTimelineContainer = ({
               <button
                 type="button"
                 onClick={() => setSearchQuery("")}
-                className="rounded-full border border-border/60 bg-card px-5 py-2.5 text-sm font-black text-foreground shadow-[0_12px_28px_-22px_hsl(var(--shadow)/0.55)] transition-transform hover:-translate-y-0.5"
+                className="rounded-full border border-border/60 bg-card px-5 py-2.5 text-sm font-black text-foreground shadow-[0_14px_30px_-16px_hsl(var(--shadow)/0.6)] transition-transform hover:-translate-y-0.5"
               >
                 {appDict("clearSearch")}
               </button>

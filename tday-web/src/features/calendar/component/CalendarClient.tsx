@@ -853,9 +853,9 @@ function CalendarTodayButton({
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        "flex h-14 shrink-0 items-center justify-center rounded-full border border-white/70 bg-card/90 px-5 text-sm font-black text-accent shadow-[0_12px_28px_-22px_hsl(var(--shadow)/0.55)] transition-all duration-200 dark:border-white/10 sm:px-6",
+        "flex h-14 shrink-0 items-center justify-center rounded-full border border-white/70 bg-card/90 px-5 text-sm font-black text-accent shadow-[0_14px_30px_-16px_hsl(var(--shadow)/0.6)] transition-all duration-200 dark:border-white/10 sm:px-6",
         "hover:-translate-y-0.5 hover:bg-card hover:shadow-[0_12px_32px_-22px_hsl(var(--shadow)/0.5)]",
-        "disabled:cursor-default disabled:opacity-40 disabled:hover:translate-y-0 disabled:hover:bg-card/90 disabled:hover:shadow-[0_12px_28px_-22px_hsl(var(--shadow)/0.55)]",
+        "disabled:cursor-default disabled:opacity-40 disabled:hover:translate-y-0 disabled:hover:bg-card/90 disabled:hover:shadow-[0_14px_30px_-16px_hsl(var(--shadow)/0.6)]",
       )}
     >
       {appDict("today")}
