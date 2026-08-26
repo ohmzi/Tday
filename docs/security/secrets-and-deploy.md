@@ -61,10 +61,14 @@ the `Secure` cookie flag. In any other value those protections silently do nothi
 Then apply:
 
 ```bash
-docker compose up -d --build tday-backend
-docker compose logs -f tday-backend      # watch it actually come up
-curl -sf http://127.0.0.1:2525/health    # expect {"status":"ok"}
+docker compose up -d --no-build tday-backend   # env-only change: same image, new env
+docker compose logs -f tday-backend            # watch it actually come up
+curl -sf http://127.0.0.1:2525/health          # expect {"status":"ok"}
 ```
+
+That recreates the container from the image it is already running, which is what you want for a
+secrets change. Shipping a new *release* is a different command — `./scripts/deploy-release.sh`,
+see [`../DEPLOYMENT.md`](../DEPLOYMENT.md).
 
 There is no required ordering between setting secrets and deploying — see §4 for why.
 
