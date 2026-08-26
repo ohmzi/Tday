@@ -145,6 +145,7 @@
 		DAD1CE000000000000000009 /* TdayWatchComplication.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAD1CE000000000000000008 /* TdayWatchComplication.swift */; };
 		DAD1CE00000000000000000F /* TdayWatchWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = DAD1CE000000000000000007 /* TdayWatchWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		DAD1CE00000000000000001D /* TdayWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAD1CE00000000000000001C /* TdayWatchApp.swift */; };
+		DAD1CE00000000000000002A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = DAD1CE000000000000000029 /* Assets.xcassets */; };
 		DAD1CE00000000000000001F /* WatchTodayListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAD1CE00000000000000001E /* WatchTodayListView.swift */; };
 		DAD1CE000000000000000025 /* TdayWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = DAD1CE00000000000000001B /* TdayWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		DCD00FC940427B88E235F7F4 /* OfflineCacheManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85ADE7E6DE0AADEF0E503DE5 /* OfflineCacheManager.swift */; };
@@ -386,6 +387,7 @@
 		DAD1CE00000000000000001B /* TdayWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TdayWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		DAD1CE00000000000000001C /* TdayWatchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdayWatchApp.swift; sourceTree = "<group>"; };
 		DAD1CE00000000000000001E /* WatchTodayListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchTodayListView.swift; sourceTree = "<group>"; };
+		DAD1CE000000000000000029 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		DAD1CE000000000000000020 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		DAD1CE000000000000000021 /* TdayWatch.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TdayWatch.entitlements; sourceTree = "<group>"; };
 		DCE08ADACC8F11CE2113C13B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -948,6 +950,7 @@
 		DAD1CE000000000000000022 /* TdayWatch */ = {
 			isa = PBXGroup;
 			children = (
+				DAD1CE000000000000000029 /* Assets.xcassets */,
 				DAD1CE00000000000000001C /* TdayWatchApp.swift */,
 				DAD1CE00000000000000001E /* WatchTodayListView.swift */,
 				DAD1CE000000000000000020 /* Info.plist */,
@@ -1128,6 +1131,7 @@
 			buildPhases = (
 				DAD1CE000000000000000018 /* Sources */,
 				DAD1CE000000000000000019 /* Frameworks */,
+				DAD1CE00000000000000002B /* Resources */,
 				DAD1CE00000000000000001A /* Embed Foundation Extensions */,
 			);
 			buildRules = (
@@ -1179,6 +1183,14 @@
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		DAD1CE00000000000000002B /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				DAD1CE00000000000000002A /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		32A3CADD0462E89BFAB9B2DA /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -1413,7 +1425,6 @@
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = TdayShareExtension/TdayShareExtension.entitlements;
-				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 14;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -1442,7 +1453,6 @@
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = TdayShareExtension/TdayShareExtension.entitlements;
-				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 14;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -1498,9 +1508,10 @@
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "Apple Distribution";
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEVELOPMENT_TEAM = JUFACN2FS3;
+				DEVELOPMENT_TEAM = THT5Z8K3TF;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -1529,10 +1540,9 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Tday/Tday.entitlements;
-				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 14;
-				DEVELOPMENT_TEAM = JUFACN2FS3;
+				DEVELOPMENT_TEAM = THT5Z8K3TF;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Tday/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
@@ -1559,10 +1569,9 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Tday/Tday.entitlements;
-				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 14;
-				DEVELOPMENT_TEAM = JUFACN2FS3;
+				DEVELOPMENT_TEAM = THT5Z8K3TF;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Tday/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
@@ -1636,9 +1645,10 @@
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "Apple Development";
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
-				DEVELOPMENT_TEAM = JUFACN2FS3;
+				DEVELOPMENT_TEAM = THT5Z8K3TF;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -1674,7 +1684,6 @@
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = TdayWidget/TdayWidget.entitlements;
-				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 14;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -1702,7 +1711,6 @@
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = TdayWidget/TdayWidget.entitlements;
-				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 14;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -1782,6 +1790,7 @@
 		DAD1CE000000000000000016 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = TdayWatch/TdayWatch.entitlements;
 				CODE_SIGN_STYLE = Automatic;
@@ -1809,6 +1818,7 @@
 		DAD1CE000000000000000017 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = TdayWatch/TdayWatch.entitlements;
 				CODE_SIGN_STYLE = Automatic;

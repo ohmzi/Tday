@@ -52,6 +52,31 @@
 	</array>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<!-- Export compliance (US EAR Category 5 Part 2). Declared here so a TestFlight upload is
+	     never parked at "Missing Compliance" waiting on a manual answer in App Store Connect.
+	     The release lane does not wait for build processing, so it has no opportunity to answer
+	     that question after the fact — see ios-swiftUI/fastlane/Fastfile.
+
+	     <false/> asserts that T'Day contains no NON-EXEMPT encryption. What it actually uses:
+	       - AES-256-GCM (CryptoKit) in Tday/Core/Data/Auth/CredentialEnvelope.swift, wrapping
+	         the sign-in username/password for transport to the user's own server;
+	       - RSA-2048 OAEP-SHA256 (Security) in the same file, wrapping that AES key;
+	       - AES-256-GCM (CryptoKit) in Tday/Core/Security/ProbeDecryptor.swift, decrypting the
+	         server's version-compatibility probe;
+	       - SHA-256 (CryptoKit) in NetworkConfiguration/TodayTasksWidget — hashing, not
+	         encryption;
+	       - HTTPS/TLS via URLSession.
+	     All of it is Apple's own OS-provided cryptography. The app implements no cipher of its
+	     own and bundles no third-party or modified crypto library.
+
+	     THE ACCOUNT OWNER MUST CONFIRM THIS DECLARATION BEFORE THE FIRST UPLOAD — it is a legal
+	     export statement, not a build setting. Note that the AES-256 / RSA-2048 key lengths
+	     exceed the 56-bit symmetric / 512-bit asymmetric threshold, so the "short key length"
+	     exemption does NOT apply; the basis relied on here is that the encryption is limited to
+	     authentication and to standard cryptography provided by the operating system.
+	     See docs/DEPLOYMENT.md - Export compliance. -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSAppTransportSecurity</key>
