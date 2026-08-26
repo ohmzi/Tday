@@ -148,7 +148,7 @@ directly.
 |----------|---------|---------|
 | `pr-gate.yml` | PR to `master` | Validates source branch (`develop` only), runs web lint + test, backend test |
 | `release.yml` | Push to `master` | Runs lint + tests, resolves the release version (auto-bumping the patch when it is already tagged), builds the signed APK and the Docker image, pushes the release commit, tags, publishes the GitHub release, and only then pushes the image |
-| `ios-testflight.yml` | Push of a `v*` tag (and `workflow_dispatch`) | Diffs the tag against the previous release; when an iOS-relevant file changed, archives the `Tday` scheme on macOS and uploads it to TestFlight |
+| `ios-testflight.yml` | Push of a `v*` tag (and `workflow_dispatch`) | Diffs the tag against the last release that actually reached TestFlight; when an iOS-relevant file changed, archives the `Tday` scheme on macOS and uploads it to TestFlight |
 
 ### Test-Before-Build Policy
 
@@ -344,7 +344,8 @@ Distributable Android release builds must use the same release keystore every ti
 - `/.well-known/apple-app-site-association` is served by the backend for webcredentials/deep-link support.
 - `CFBundleShortVersionString`, `CFBundleVersion`, iOS `MARKETING_VERSION`, `CURRENT_PROJECT_VERSION`, `TdayUpdateURL`, and example `TDAY_APP_VERSION` values are synced from root `version.json` by `scripts/version.mjs sync`.
 - Set `ios.updateUrl` in `version.json` to the App Store or TestFlight URL before distributing an iOS build that should offer direct updates.
-- `Release` builds sign with `Apple Distribution` and `Debug` with `Apple Development`, set once at the project level; no target overrides either. `DEVELOPMENT_TEAM` is `THT5Z8K3TF` in the project and is overridden from CI by the `IOS_TEAM_ID` repository variable.
+- Both configurations set `CODE_SIGN_IDENTITY = Apple Development` once at the project level, with no target overrides. That is deliberate and is **not** a bug: under `CODE_SIGN_STYLE = Automatic` the archive is signed with a development identity and the App Store re-sign happens in `-exportArchive`, which the lane drives with `signingStyle: automatic` + `method: app-store`. Forcing `Apple Distribution` at archive time would require a distribution certificate to resolve ~30 minutes earlier than it is actually needed, for no benefit.
+- `DEVELOPMENT_TEAM` is `THT5Z8K3TF` in the project and is overridden from CI by the `IOS_TEAM_ID` repository variable.
 
 ### iOS TestFlight Releases
 
@@ -382,10 +383,11 @@ A cheap `decide` job on Linux gates the expensive macOS job. It:
 1. refuses any tag whose name disagrees with `version.json` at that commit (this is what stops the
    45 legacy `v1.x` tags from ever building, so the trigger pattern can stay a simple `v*`);
 2. runs `node scripts/version.mjs check`, so a drifted mirror fails before an archive starts;
-3. resolves the previous release with `git describe --tags --abbrev=0 --match 'v*' <sha>^` — the
-   *nearest reachable* tag, not the highest-numbered one, because the legacy `v1.x` tags sort above
-   the current `0.x` line;
-4. runs `scripts/ios-release-changed.mjs` to diff the two tags.
+3. resolves the comparison base — **the last tag whose iOS build actually reached TestFlight**,
+   not simply the previous tag (see below);
+4. runs `scripts/ios-release-changed.mjs` to diff the two tags;
+5. checks that the Apple secrets exist, but only once it knows a build is wanted — so a
+   web-only release stays green on a repo that has not finished the Apple setup.
 
 That diff cannot be a `paths:` filter — `on: push: tags:` does not accept one. It also cannot be a
 naive "did `ios-swiftUI/` change", because **every** release commit rewrites `Info.plist`,
@@ -395,16 +397,62 @@ difference is the release bump does not count, while any other edit to that same
 `version.json` is excluded from the relevant set entirely, since `ios.buildNumber` increments on
 every release. A `workflow_dispatch` run with `force` bypasses the filter.
 
+**Why the base is not just the previous tag.** `git describe ... HEAD^` looks right and is subtly
+wrong: it is pure git topology and knows nothing about whether that release's iOS build succeeded.
+If v0.8.0 changed a Swift file but its upload died on a transient App Store Connect error and
+nobody re-ran it, a web-only v0.8.1 would diff `v0.8.0..v0.8.1`, see only version mirrors, skip,
+and report **success** — with TestFlight still serving the pre-0.8.0 binary and two consecutive
+releases claiming green. So `decide` instead walks this workflow's own run history (via
+`gh run list` plus the run's job-level conclusions, which is why the job needs `actions: read`) and
+anchors on the newest tag whose `testflight` **job** concluded `success`. A run whose macOS job was
+*skipped* still concludes `success` at the run level, so the job conclusion is what is checked.
+A stranded change therefore stays inside the diff until it actually ships.
+
+When no such tag can be established — first ever run, a deleted tag, a `gh` failure — the answer is
+to **build**. Failing safe there costs macOS minutes; failing the other way silently drops a
+release.
+
 #### Signing model
 
 App Store Connect API key (`.p8`) plus Xcode automatic ("cloud") signing via
 `-allowProvisioningUpdates` — **not** `fastlane match`. No certificates are committed and no
-keychain is provisioned; Xcode registers the App IDs and mints the five distribution profiles on
-demand, authenticating with the same key that authorises the upload.
+keychain is provisioned.
+
+What `-allowProvisioningUpdates` does here is **mint and renew the five App Store provisioning
+profiles on demand**, against App IDs and an App Group that **already exist**. It does not create
+the App Group, and you should not rely on it to create the App IDs either. All five entitlements
+files request `com.apple.security.application-groups`, so if `group.com.ohmz.tday` is missing the
+archive fails on the first App-Group-bearing target with *"Provisioning profile … doesn't include
+the com.apple.security.application-groups entitlement"* — and missing it on only one of the five
+(the watch complication is the easy one to forget) fails only that target, deep into a 40-minute
+build. Steps 1–3 of the one-time setup below are therefore mandatory, not optional.
+
+**The API key needs the Admin role.** See step 4 — App Manager is enough to upload a build but not
+to create the distribution certificate and profiles this model depends on.
 
 The `.p8` is written `0600` under `RUNNER_TEMP`, which is outside the checked-out workspace, and
 deleted in an `ensure` block. It is never written into the repository, the `.ipa`, or a workflow
 artifact — the `.ipa` is deliberately not uploaded as an artifact at all.
+
+**Where the distribution certificate comes from — watch this on the first few runs.** Nothing in
+the pipeline installs or persists a certificate, so the only path to an Apple Distribution identity
+is Xcode obtaining one during the build. There are two possibilities and the workflow does not get
+to choose:
+
+- **Cloud-managed** (expected, and what Xcode 13+ does when it authenticates with an API key rather
+  than a signed-in Apple ID): Apple holds the private key, and every run reuses the same
+  certificate. This is the arrangement this pipeline is designed around.
+- **Local**: Xcode mints a certificate whose private key exists only in that ephemeral runner's
+  keychain and dies with the job. Apple caps Apple Distribution certificates at **2 per team**, so
+  the third release would fail at CodeSign with *"You already have a current Distribution
+  certificate"* and keep failing until someone revokes by hand in the portal.
+
+The `Report the signing identities that were used` step prints
+`security find-identity -v -p codesigning` after every build so this is observable rather than
+guesswork. After the first successful run, check the Developer portal: the distribution certificate
+should be listed as **Managed**. If a new certificate appears on each release instead, the fallback
+is to export a distribution `.p12` once, store it as a secret, and have the lane `create_keychain` +
+`import_certificate` — leaving `-allowProvisioningUpdates` responsible only for profiles.
 
 #### Re-run safety
 
@@ -414,6 +462,18 @@ TestFlight already holds for the current marketing version and exits cleanly whe
 already there. The upload is also the **last** step in the lane, so anything that can fail has
 already failed before a byte is sent.
 
+**"Already uploaded" does not mean "testers can install it."** A build number is spent the moment
+App Store Connect *accepts* the upload, even if processing then fails — and Apple will not let you
+re-use it. So the lane also reads the build's `processingState` and, when it is `FAILED` or
+`INVALID`, **fails the run** with an explicit instruction to bump `version.json` rather than
+skipping quietly. That state lookup goes through Spaceship's private API and is deliberately
+wrapped in a rescue: if it cannot answer, the lane degrades to a skip whose message says plainly
+that a build missing from TestFlight means a spent build number.
+
+For the same reason the `force` dispatch input only bypasses the **path filter**. It cannot force
+an upload, because a duplicate upload cannot succeed. There is no escape hatch for a spent build
+number other than a version bump.
+
 #### Export compliance
 
 `Tday/Info.plist` declares `ITSAppUsesNonExemptEncryption = false`. Without it, every upload parks at
@@ -422,16 +482,40 @@ already failed before a byte is sent.
 would bill macOS runner minutes for a result nothing consumes), fastlane never gets a chance to
 answer that question after the fact. The key is what makes skipping the wait safe.
 
-T'Day's cryptography is AES-256-GCM and RSA-2048 OAEP wrapping sign-in credentials
-(`CredentialEnvelope.swift`), AES-256-GCM decrypting the server compatibility probe
-(`ProbeDecryptor.swift`), SHA-256 hashing, and HTTPS/TLS — all of it Apple's OS-provided CryptoKit
-and Security framework, with no cipher implemented in the app and no third-party crypto library
-bundled. The declaration rests on the encryption being limited to authentication and to standard
-operating-system cryptography; the "short key length" exemption does **not** apply, because AES-256
-and RSA-2048 exceed the 56-bit/512-bit threshold.
+T'Day's cryptography is:
+
+| Where | What | Purpose |
+|---|---|---|
+| `CredentialEnvelope.swift` | AES-256-GCM (CryptoKit) + RSA-2048 OAEP-SHA256 (Security) | Wraps the sign-in username/password for transport to the user's own server |
+| `ProbeDecryptor.swift` | AES-256-GCM (CryptoKit) | Decrypts the server's version-compatibility probe |
+| `NetworkConfiguration`, `TodayTasksWidget` | SHA-256 (CryptoKit) | Hashing, not encryption |
+| Everywhere | HTTPS/TLS via `URLSession` | Transport |
+
+**The basis for the exemption**, in order of how cleanly it fits:
+
+1. **Encryption limited to that provided within the operating system.** Every primitive above is
+   Apple's own CryptoKit / Security / URLSession. T'Day implements no cipher, bundles no
+   third-party crypto library, and ships no modified crypto.
+2. **Publicly available source code** (EAR §740.13(e)) — T'Day is open source at
+   `github.com/ohmzi/Tday`. Note this exemption carries a **one-time email notification** to BIS
+   (`crypt@bis.doc.gov`) and the NSA (`enc@nsa.gov`) giving the source URL. Relying on it means
+   sending that email.
+
+Two bases are deliberately **not** relied on:
+
+- *"Limited to authentication"* on its own. It covers `CredentialEnvelope`, but **not**
+  `ProbeDecryptor`, which applies confidentiality to ordinary application data (`appVersion`,
+  `updateRequired`, `compatibilityMode`) using a key bundled in the app. An earlier draft of this
+  PR claimed the authentication exemption covered everything; that was wrong, and the declaration
+  now rests on basis 1 above, which does cover it.
+- *"Short key length."* AES-256 and RSA-2048 exceed the 56-bit symmetric / 512-bit asymmetric
+  thresholds.
 
 > **This is a legal export declaration, not a build setting.** The Apple account holder must confirm
 > it before the first upload. The reasoning is restated in a comment above the key in `Info.plist`.
+> If they are not comfortable with the above, the alternative is `ITSAppUsesNonExemptEncryption =
+> true` plus the annual self-classification report to BIS; the pipeline still works, but the first
+> build of each version then needs the compliance question answered by hand in App Store Connect.
 
 #### Secrets and variables
 
@@ -440,12 +524,19 @@ and RSA-2048 exceed the 56-bit/512-bit threshold.
 | `ASC_KEY_ID` | secret | 10-character App Store Connect API Key ID |
 | `ASC_ISSUER_ID` | secret | Issuer UUID shown above the key list |
 | `ASC_KEY_P8_BASE64` | secret | base64 of the `.p8` Apple lets you download exactly once |
+| `TDAY_PROBE_ENCRYPTION_KEY` | secret | Already set — the same secret `release.yml` passes to the Android build. `Tday/Info.plist` publishes `TdayProbeEncryptionKey` as `$(TDAY_PROBE_ENCRYPTION_KEY)`, and an undefined build setting expands to `""`, which makes `ProbeDecryptor` return `nil` and silently disables the whole server version-compatibility gate |
 | `IOS_TEAM_ID` | **variable** | Apple Team ID (`THT5Z8K3TF`). Not a secret — it is printed on every provisioning profile |
 | `IOS_XCODE_VERSION` | **variable** | Optional Xcode pin, e.g. `16.4`. Unset, the job warns and uses the runner default |
 
-The macOS job fails on the **first** step with an actionable message if any of the three secrets is
-missing, rather than 40 minutes later inside `xcodebuild`. No secret is ever echoed; only emptiness
-is tested.
+The **`decide` job on Linux** fails with an actionable message if any of those secrets is missing,
+rather than 40 minutes later inside `xcodebuild` — and rather than booting a macOS runner (billed at
+10x the Linux rate) to run a four-variable emptiness test. No secret is ever echoed; only emptiness
+is tested. The check is gated on the build actually being wanted, so a web-only release still
+reports green on a repo where the Apple setup is unfinished.
+
+`TDAY_PROBE_ENCRYPTION_KEY` reaches the build through a temporary `xcconfig` written `0600` under
+`RUNNER_TEMP` and deleted in the lane's `ensure` block — **not** through `xcargs`, because gym
+echoes the assembled `xcodebuild` command into the build log.
 
 #### One-time setup (Apple account holder only)
 
@@ -460,9 +551,17 @@ repository settings, and cannot be done from a pull request.
    Groups** capability on all five App IDs and assign that group to each.
 3. **Enable Associated Domains** on `com.ohmz.tday.ios` only.
 4. **Mint an App Store Connect API key**: App Store Connect → Users and Access → Integrations → App
-   Store Connect API → Team Keys → `+`. Give it the **App Manager** role — `Developer` cannot upload
-   builds, and `Admin` is more access than the pipeline needs. Download the `.p8` immediately;
-   Apple only offers it once.
+   Store Connect API → Team Keys → `+`. Give it the **Admin** role (Account Holder also works).
+   Download the `.p8` immediately; Apple only offers it once.
+
+   > **Admin, not App Manager.** App Manager covers the TestFlight half — it can upload a build.
+   > It does **not** cover the Developer-Portal half, and this signing model lives on that half:
+   > `-allowProvisioningUpdates` drives xcodebuild against Certificates, Identifiers & Profiles to
+   > create the distribution certificate and the five App Store profiles, and Apple's program-roles
+   > matrix restricts creating *distribution* certificates and *distribution* profiles to Account
+   > Holder and Admin. With an App Manager key the run gets all the way to the CodeSign step of the
+   > first signed target — roughly 40 minutes of macOS time — and then fails with a provisioning
+   > error. **If the key already in the repository secrets was minted as App Manager, re-mint it.**
 5. **Set the repository secrets and variables** (from the repo root):
 
    ```bash
@@ -497,13 +596,43 @@ repository settings, and cannot be done from a pull request.
    Never hand-edit the mirrored values — `Info.plist`, `project.yml` and the pbxproj are generated
    from `version.json`.
 
+#### The first run
+
+`workflow_dispatch` is only exposed for workflows that exist on the **default branch**, so this
+workflow cannot be exercised at all until it merges to `master` — and that same merge triggers
+`release.yml`, which bumps, commits and pushes a tag, which fires this workflow automatically.
+There is no gap in between, and the path filter cannot save you: a change to
+`.github/workflows/ios-testflight.yml` is itself iOS-relevant, so the first post-merge tag always
+resolves `should_build=true`.
+
+That means the first execution would otherwise be an unsupervised production archive of five
+bundles plus a real TestFlight upload, on a pipeline where `xcodebuild` and `fastlane` have never
+run once. Use the **`dry_run`** dispatch input instead:
+
+1. Finish steps 1–9 below **before** merging.
+2. Merge to `master`. Cancel the automatic run the release tag triggers.
+3. Run the workflow manually with `force: true` and **`dry_run: true`**. It archives, signs,
+   exports the `.ipa` and stops — proving signing, profiles, entitlements and the App Group
+   without touching TestFlight.
+4. When that is green, re-run with `dry_run: false`.
+
+`dry_run` is a permanent input, not scaffolding: it is also the right way to test any later change
+to signing or the lane.
+
 #### Building it locally
 
 ```bash
 cd ios-swiftUI
 bundle install
-ASC_KEY_ID=... ASC_ISSUER_ID=... ASC_KEY_P8_BASE64=... bundle exec fastlane beta
+ASC_KEY_ID=... ASC_ISSUER_ID=... ASC_KEY_P8_BASE64=... \
+  TDAY_SKIP_UPLOAD=true bundle exec fastlane beta
 ```
+
+`TDAY_SKIP_UPLOAD=true` is the same dry run the workflow's `dry_run` input drives — archive and
+export, no upload. Drop it to upload for real.
+
+`TDAY_PROBE_ENCRYPTION_KEY` is optional locally: the lane warns loudly and continues without it,
+producing a build whose server version-compatibility gate is inert. CI treats it as required.
 
 There is deliberately **no committed `Gemfile.lock`** — see the comment in `ios-swiftUI/Gemfile`.
 To add one, run `bundle lock --add-platform arm64-darwin --add-platform x86_64-darwin` on a machine

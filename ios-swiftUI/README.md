@@ -69,10 +69,15 @@ xcodebuild test -project ios-swiftUI/TdayApp.xcodeproj -scheme Tday -destination
 ## Releasing to TestFlight
 
 - `.github/workflows/ios-testflight.yml` archives the `Tday` scheme on a macOS runner and uploads
-  it to TestFlight when `release.yml` pushes a `v*` tag whose diff against the previous release
-  touched an iOS-relevant file.
+  it to TestFlight when `release.yml` pushes a `v*` tag whose diff against **the last release that
+  actually reached TestFlight** touched an iOS-relevant file. Anchoring on the previous *tag*
+  instead would silently strand a release whose iOS build failed.
 - Signing is App Store Connect API key plus Xcode automatic signing (`-allowProvisioningUpdates`);
-  there is no `match` repository and no committed certificate.
+  there is no `match` repository and no committed certificate. The five App IDs and the
+  `group.com.ohmz.tday` App Group must already exist — Xcode mints *profiles* on demand, not those.
+  The API key needs the **Admin** role, not App Manager.
+- `workflow_dispatch` takes a `dry_run` input that archives, signs and exports without uploading.
+  Use it to rehearse any signing change.
 - The lane never derives a build number — `CURRENT_PROJECT_VERSION` already equals
   `version.json`'s `ios.buildNumber` at the tag.
 - `XcodeGen must never be run here.` `project.yml` is a mirror kept for tooling;
