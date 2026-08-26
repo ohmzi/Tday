@@ -1,6 +1,7 @@
 import { useDraggable } from "@dnd-kit/core";
 import { TodoItemType } from "@/types";
 import { TodoItemCard } from "@/components/todo/component/TodoItemContainer";
+import { useTaskSelection } from "@/providers/TaskSelectionProvider";
 import type { TimelineDraggableData } from "./TimelineDndContext";
 
 /**
@@ -25,9 +26,13 @@ export default function DraggableTodoItem({
   overdue?: boolean;
 }) {
   const data: TimelineDraggableData = { todo, currentDayKey };
+  // A press-and-hold on a row must not lift it into another date while the user
+  // is picking tasks — the press is the selection tap.
+  const { selectionMode } = useTaskSelection();
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: todo.id,
     data,
+    disabled: selectionMode,
   });
 
   return (
@@ -36,7 +41,7 @@ export default function DraggableTodoItem({
       overdue={overdue}
       perTaskOverdue={perTaskOverdue}
       highlighted={highlighted}
-      containerProps={{ ...attributes, ...listeners }}
+      containerProps={selectionMode ? {} : { ...attributes, ...listeners }}
       dragging={isDragging}
       setDragNodeRef={setNodeRef}
     />
