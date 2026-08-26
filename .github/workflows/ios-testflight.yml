@@ -1,0 +1,375 @@
+name: iOS TestFlight
+
+# WHY A TAG PUSH, AND NOT THE OBVIOUS ALTERNATIVES
+#
+# `on: workflow_run` (after "Build & Release") is wrong: that event's head_sha is the *merge*
+# commit, not the release commit release.yml creates afterwards, and actions/checkout under
+# workflow_run defaults to the default-branch tip. Pinning head_sha would build the previous
+# release's version numbers; not pinning is a race against the next merge. Either way there is
+# a reachable path where this uploads a (version, buildNumber) pair App Store Connect rejects.
+#
+# `on: release: [published]` is wrong for a subtler reason: release.yml runs `gh release create`
+# with secrets.GITHUB_TOKEN, and GitHub deliberately suppresses workflow triggering for events
+# produced by GITHUB_TOKEN. The workflow would simply never fire.
+#
+# The tag push is the right signal. release.yml pushes it over RELEASE_DEPLOY_KEY — an SSH
+# deploy key, not GITHUB_TOKEN — and deploy-key pushes DO trigger workflows here; that is
+# precisely why release.yml carries its own `[skip release]` guard against re-firing itself.
+# At the tag, version.json is authoritative and project.pbxproj's CURRENT_PROJECT_VERSION has
+# already been synced to ios.buildNumber, so this workflow never derives a build number.
+#
+# The pattern stays a broad `v*` rather than trying to exclude the 45 legacy v1.x tags with
+# glob syntax. Those tags already exist and are never re-pushed, and they sit on a disconnected
+# history that is not an ancestor of the current release line. The real guard is the
+# tag-matches-version.json assertion in the `decide` job below, which also catches a hand-pushed
+# or re-pushed tag — and it runs on Linux, so a stray tag costs seconds, not macOS minutes.
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      force:
+        description: >-
+          Bypass the "did any iOS-relevant file change" filter. It does NOT bypass the lane's
+          duplicate-upload guard: a (version, build) App Store Connect has already accepted is
+          still skipped, because Apple rejects a re-upload of a build number that is spent.
+        type: boolean
+        default: true
+      dry_run:
+        description: >-
+          Archive, sign and export, then STOP without uploading. This is the supervised rehearsal
+          for signing and provisioning — use it for the first run, before a real release depends
+          on it.
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  # Read-only access to this workflow's own run history. The `decide` job needs it to find the
+  # last tag that actually reached TestFlight — see "Resolve the comparison base".
+  actions: read
+
+# Never cancel a run in flight: it could be mid-upload, and a half-finished upload is the one
+# state that makes the next run's duplicate check ambiguous.
+concurrency:
+  group: ios-testflight-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # Everything that can say "no" runs here, on a Linux runner, before a single macOS minute is
+  # spent. macOS runners bill at 10x the Linux rate.
+  decide:
+    runs-on: ubuntu-latest
+    outputs:
+      should_build: ${{ steps.decision.outputs.should_build }}
+      base_tag: ${{ steps.previous.outputs.tag }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          # Full history and tags: the path filter is a tag-to-tag diff and needs both refs.
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 20
+
+      # A tag whose name does not match the manifest it points at is not one of our releases —
+      # a re-pushed legacy v1.x tag, or a hand-cut tag. Refuse it here rather than archiving it.
+      - name: Verify the tag matches version.json
+        if: github.event_name == 'push'
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME}"
+          EXPECTED="v$(node -p "require('./version.json').version")"
+          if [ "$TAG" != "$EXPECTED" ]; then
+            echo "::error::Tag ${TAG} does not match version.json (${EXPECTED}). Refusing to build."
+            echo "This workflow only builds tags cut by release.yml, where the tag name and the"
+            echo "manifest at that commit agree. Legacy v1.x tags and hand-cut tags land here."
+            exit 1
+          fi
+          echo "Tag ${TAG} matches version.json."
+
+      # The whole pipeline assumes CURRENT_PROJECT_VERSION in the pbxproj already equals
+      # ios.buildNumber. If a mirror drifted, the archive would carry a different build number
+      # than the duplicate check reasons about — fail now, with the repo's own error message.
+      - name: Check version mirrors
+        run: node scripts/version.mjs check
+
+      # THE BASE IS THE LAST TAG THAT ACTUALLY SHIPPED, NOT SIMPLY THE PREVIOUS TAG.
+      #
+      # `git describe ... HEAD^` looks right and is subtly wrong: it is pure git topology and
+      # knows nothing about whether that release's iOS build succeeded. If v0.8.0 changed a
+      # Swift file but its upload failed on a transient ASC error and nobody re-ran it, then a
+      # web-only v0.8.1 would diff v0.8.0..v0.8.1, see only version mirrors, skip, and report
+      # green — with TestFlight still serving the pre-0.8.0 binary and two consecutive releases
+      # claiming success. Anchoring on the last tag whose `testflight` job actually concluded
+      # `success` closes that hole: a stranded change stays in the diff until it ships.
+      #
+      # A run whose macOS job was *skipped* still concludes `success` at the run level, so the
+      # job-level conclusion is what gets checked, not the run's.
+      #
+      # When no such tag can be established — first ever run, a deleted tag, a `gh` failure —
+      # the answer is to BUILD. Failing safe here costs macOS minutes; failing the other way
+      # silently drops a release.
+      - name: Resolve the comparison base
+        id: previous
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          BASE=""
+          RUNS=$(gh run list \
+            --workflow "ios-testflight.yml" \
+            --event push \
+            --status success \
+            --limit 30 \
+            --json databaseId,headBranch \
+            --jq '.[] | "\(.databaseId) \(.headBranch)"' 2>/dev/null || true)
+
+          while read -r RUN_ID RUN_TAG; do
+            [ -n "${RUN_ID:-}" ] || continue
+            # A re-run of this very tag is not a base for itself.
+            [ "${RUN_TAG}" != "${GITHUB_REF_NAME}" ] || continue
+
+            CONCLUSION=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}/jobs" \
+              --jq '.jobs[] | select(.name == "testflight") | .conclusion' 2>/dev/null || true)
+            [ "${CONCLUSION}" = "success" ] || continue
+
+            # The tag has to still exist locally for the diff to resolve.
+            if git rev-parse -q --verify "refs/tags/${RUN_TAG}" >/dev/null 2>&1; then
+              BASE="${RUN_TAG}"
+              break
+            fi
+          done <<< "${RUNS}"
+
+          if [ -n "${BASE}" ]; then
+            echo "tag=${BASE}" >> "$GITHUB_OUTPUT"
+            echo "Comparison base: ${BASE} (last tag whose iOS build reached TestFlight)."
+          else
+            echo "tag=" >> "$GITHUB_OUTPUT"
+            echo "No previous tag has a successful iOS build recorded — treating this as the"
+            echo "first iOS release and building unconditionally."
+          fi
+
+      - name: Decide whether an iOS build is warranted
+        id: decision
+        env:
+          PREVIOUS_TAG: ${{ steps.previous.outputs.tag }}
+          FORCED: ${{ github.event_name == 'workflow_dispatch' && inputs.force }}
+        run: |
+          set -euo pipefail
+
+          # A manual run is an explicit instruction; it bypasses the filter entirely.
+          if [ "${FORCED}" = "true" ]; then
+            echo "Manual run with force=true — skipping the path filter."
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Nothing to diff against: build, so the first iOS release is never silently skipped.
+          if [ -z "${PREVIOUS_TAG}" ]; then
+            echo "No established comparison base — building."
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          node scripts/ios-release-changed.mjs "${PREVIOUS_TAG}" "${GITHUB_SHA}"
+
+      # Fail on a missing secret HERE — on Linux, and only once we know a build is actually
+      # wanted — rather than 40 minutes into xcodebuild with a provisioning error that names
+      # none of them. macOS runners bill at 10x the Linux rate, so a three-variable emptiness
+      # test has no business booting one. Only emptiness is ever tested; no secret is printed,
+      # interpolated into a log line, or written to the workspace.
+      - name: Verify the Apple credentials are configured
+        if: steps.decision.outputs.should_build == 'true'
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8_BASE64: ${{ secrets.ASC_KEY_P8_BASE64 }}
+          TDAY_PROBE_ENCRYPTION_KEY: ${{ secrets.TDAY_PROBE_ENCRYPTION_KEY }}
+        run: |
+          set -uo pipefail
+          missing=""
+          for name in ASC_KEY_ID ASC_ISSUER_ID ASC_KEY_P8_BASE64 TDAY_PROBE_ENCRYPTION_KEY; do
+            if [ -z "${!name}" ]; then
+              missing="${missing}${name} "
+            fi
+          done
+
+          if [ -n "$missing" ]; then
+            echo "::error::Missing secret(s) for the iOS release: ${missing% }."
+            echo "The App Store Connect API key must carry the ADMIN role (or Account Holder)."
+            echo "App Manager is enough to upload a build but NOT to create the distribution"
+            echo "certificate and the five App Store profiles that -allowProvisioningUpdates"
+            echo "mints on a fresh runner. Then set:"
+            echo "  gh secret set ASC_KEY_ID        # the 10-character Key ID"
+            echo "  gh secret set ASC_ISSUER_ID     # the issuer UUID above the key list"
+            echo "  gh secret set ASC_KEY_P8_BASE64 < <(base64 -w0 AuthKey_XXXXXXXXXX.p8)"
+            echo "TDAY_PROBE_ENCRYPTION_KEY is the same secret release.yml passes to the Android"
+            echo "build; without it the shipped app cannot decrypt the server compatibility"
+            echo "probe and the 'update required' gate is inert."
+            echo "See docs/DEPLOYMENT.md - iOS TestFlight Releases for the full checklist."
+            exit 1
+          fi
+          echo "All Apple release secrets are present."
+
+      - name: Explain a skip
+        if: steps.decision.outputs.should_build != 'true'
+        env:
+          BASE_TAG: ${{ steps.previous.outputs.tag }}
+        run: |
+          {
+            echo "### No iOS build for ${GITHUB_REF_NAME}"
+            echo ""
+            echo "Compared against \`${BASE_TAG}\` — the last tag whose iOS build actually"
+            echo "reached TestFlight, not simply the previous tag. Nothing under"
+            echo "\`ios-swiftUI/\` changed between them beyond the version mirrors that every"
+            echo "release rewrites, so there is no new iOS binary to ship."
+            echo ""
+            echo "Re-run this workflow manually with \`force\` to build anyway."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  testflight:
+    # The name is load-bearing: the `decide` job above looks this job up by name when it walks
+    # back through run history to find the last tag that actually shipped. Renaming it silently
+    # turns the comparison base into "no base found", i.e. build every release.
+    name: testflight
+    needs: decide
+    if: needs.decide.outputs.should_build == 'true'
+    runs-on: macos-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      # The runner's default Xcode moves whenever GitHub rolls the macos-latest image, and a new
+      # Xcode can change the Swift compiler, the minimum deployment target it will accept, or
+      # the export/signing behaviour — turning a green pipeline red on a day nobody touched the
+      # app. Pinning makes that upgrade an explicit, revertible change.
+      #
+      # It is a repository *variable* rather than a hardcoded value so the pin can be moved
+      # forward (or rolled back) without a code change when GitHub retires an image. Left unset
+      # the job still runs, but warns — this step always prints the installed versions, so the
+      # value to pin is visible in the log of any run.
+      - name: Select Xcode
+        env:
+          XCODE_VERSION: ${{ vars.IOS_XCODE_VERSION }}
+        run: |
+          set -euo pipefail
+          echo "Xcode versions installed on this runner:"
+          ls -d /Applications/Xcode*.app | sed 's/^/  /'
+
+          if [ -z "${XCODE_VERSION}" ]; then
+            echo "::warning::The IOS_XCODE_VERSION repository variable is not set, so this build uses whatever Xcode the macos-latest image happens to default to. Pin it with 'gh variable set IOS_XCODE_VERSION --body <version>' using one of the versions listed above."
+          else
+            APP="/Applications/Xcode_${XCODE_VERSION}.app"
+            if [ ! -d "$APP" ]; then
+              echo "::error::IOS_XCODE_VERSION is pinned to ${XCODE_VERSION}, but /Applications/Xcode_${XCODE_VERSION}.app does not exist on this runner image. Pick one of the versions listed above and update the variable."
+              exit 1
+            fi
+            sudo xcode-select -s "$APP/Contents/Developer"
+          fi
+
+          echo "Building with:"
+          xcodebuild -version
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@95ef2b042f9d7a56d8268cba8559e2842e2ad01b # v1.321.0
+        with:
+          ruby-version: "3.3"
+          # No Gemfile.lock is committed (see ios-swiftUI/Gemfile for why), and this action's
+          # cache key is derived from one. Caching against a lockfile that does not exist would
+          # key every run to the same entry and serve a stale bundle.
+          bundler-cache: false
+
+      - name: Install fastlane
+        working-directory: ios-swiftUI
+        run: bundle install --jobs 4 --retry 3
+
+      # One dependency (sentry-cocoa, pinned in Package.resolved), but resolving it is a full
+      # git clone on every run. Both resolved files are in the key: the workspace copy is the
+      # one Xcode actually reads, and the top-level one is what a `swift build` would use.
+      - name: Cache Swift Package Manager checkouts
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ios-swiftUI/.spm-cache
+          key: spm-${{ runner.os }}-${{ hashFiles('ios-swiftUI/TdayApp.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved', 'ios-swiftUI/Package.resolved') }}
+          restore-keys: |
+            spm-${{ runner.os }}-
+
+      - name: Build and upload to TestFlight
+        working-directory: ios-swiftUI
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8_BASE64: ${{ secrets.ASC_KEY_P8_BASE64 }}
+          # Tday/Info.plist publishes TdayProbeEncryptionKey as $(TDAY_PROBE_ENCRYPTION_KEY).
+          # An undefined build setting expands to "", which makes ProbeDecryptor return nil and
+          # silently disables the server version-compatibility gate. release.yml already passes
+          # this same secret to the Android build; this is the iOS half of that parity.
+          TDAY_PROBE_ENCRYPTION_KEY: ${{ secrets.TDAY_PROBE_ENCRYPTION_KEY }}
+          # Not a secret: a Team ID is printed on every provisioning profile. Keeping it a
+          # variable means an Apple account change needs no code edit and no new secret.
+          IOS_TEAM_ID: ${{ vars.IOS_TEAM_ID }}
+          TDAY_REPO_ROOT: ${{ github.workspace }}
+          IOS_SPM_CACHE_PATH: ${{ github.workspace }}/ios-swiftUI/.spm-cache
+          IOS_OUTPUT_DIR: ${{ runner.temp }}/ios-build
+          # Dry run: archive, sign and export, then stop. The rehearsal path for signing.
+          TDAY_SKIP_UPLOAD: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+          # fastlane's own noise reduction; neither affects what is built.
+          FASTLANE_SKIP_UPDATE_CHECK: "1"
+          FASTLANE_HIDE_CHANGELOG: "1"
+        run: bundle exec fastlane beta
+
+      # Nothing in this pipeline installs a certificate: the only path to an Apple Distribution
+      # identity is Xcode's automatic signing obtaining one during the build. Which path it took
+      # matters, and is otherwise invisible. If the identity is CLOUD-MANAGED, Apple holds the
+      # private key and every run reuses it. If Xcode instead minted a LOCAL certificate, its
+      # private key dies with this ephemeral runner and the next run needs a new one — and Apple
+      # caps distribution certificates at 2 per team, so the third release would fail at
+      # CodeSign until someone revokes by hand in the portal.
+      #
+      # Informational on purpose (`|| true`): this must never be the thing that fails a release.
+      # Certificate common names are not secrets — they are printed on every provisioning
+      # profile, and the Team ID is already a public repository variable.
+      - name: Report the signing identities that were used
+        if: always()
+        run: |
+          echo "Code-signing identities present in the runner keychain after the build:"
+          security find-identity -v -p codesigning || true
+          echo ""
+          echo "Expectation: exactly one 'Apple Distribution' identity, cloud-managed by Apple."
+          echo "If a NEW certificate appears here on every release, check the Developer portal —"
+          echo "it should list the distribution certificate as 'Managed'. See docs/DEPLOYMENT.md."
+
+      # The .ipa is deliberately NOT uploaded as a workflow artifact. TestFlight already has it,
+      # and a signed build of a personal task app is not something to leave sitting in artifact
+      # storage. (The .p8 never enters the workspace at all — the lane writes it 0600 under
+      # RUNNER_TEMP and deletes it in an `ensure` block, along with the probe-key xcconfig.)
+      - name: Summarise
+        if: always()
+        env:
+          BASE_TAG: ${{ needs.decide.outputs.base_tag }}
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+        run: |
+          {
+            echo "### iOS TestFlight — ${GITHUB_REF_NAME}"
+            echo ""
+            echo "Compared against \`${BASE_TAG:-<no base — first iOS build>}\`."
+            echo ""
+            echo "Build numbers come from \`version.json\` via the pbxproj; this workflow never"
+            echo "increments one."
+            echo ""
+            if [ "${DRY_RUN}" = "true" ]; then
+              echo "**Dry run** — archived and exported, nothing was uploaded."
+            else
+              echo "The upload does not wait for App Store Connect processing. A green run means"
+              echo "ASC *accepted* the binary, not that it finished processing. Confirm the build"
+              echo "reaches 'Ready to Submit'; a processing failure spends the build number and"
+              echo "needs a version bump, which the next run will report as an error."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
