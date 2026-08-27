@@ -31,7 +31,7 @@ class TodoCompletionTargetTest {
     fun `a recurring todo with an occurrence completes that occurrence`() {
         assertEquals(
             CompletionTarget.Occurrence(occurrence),
-            completionTargetFor(rrule = "FREQ=DAILY", instanceDate = occurrence),
+            completionTargetFor(rrule = DAILY, instanceDate = occurrence),
         )
     }
 
@@ -41,7 +41,7 @@ class TodoCompletionTargetTest {
         // while Completed history gained an entry for a completion that never happened.
         // Completing the series is the exact inverse of what uncomplete already does for
         // a null instanceDate, so the two round-trip.
-        assertEquals(CompletionTarget.Series, completionTargetFor(rrule = "FREQ=DAILY", instanceDate = null))
+        assertEquals(CompletionTarget.Series, completionTargetFor(rrule = DAILY, instanceDate = null))
     }
 
     @Test
@@ -56,10 +56,10 @@ class TodoCompletionTargetTest {
     @Test
     fun `the history row is keyed by the target, never by the raw request`() {
         assertEquals(null, completionTargetFor(rrule = null, instanceDate = occurrence).historyInstanceDate)
-        assertEquals(null, completionTargetFor(rrule = "FREQ=DAILY", instanceDate = null).historyInstanceDate)
+        assertEquals(null, completionTargetFor(rrule = DAILY, instanceDate = null).historyInstanceDate)
         assertEquals(
             occurrence,
-            completionTargetFor(rrule = "FREQ=DAILY", instanceDate = occurrence).historyInstanceDate,
+            completionTargetFor(rrule = DAILY, instanceDate = occurrence).historyInstanceDate,
         )
     }
 
@@ -67,7 +67,7 @@ class TodoCompletionTargetTest {
     fun `every request resolves to a target that is actually marked complete`() {
         // The `CompletedTodos` insert is gated on this: history is only written for a
         // target the same transaction also marks complete, so the two cannot diverge.
-        val everyRequest = listOf(null, "FREQ=DAILY").flatMap { rrule ->
+        val everyRequest = listOf(null, DAILY).flatMap { rrule ->
             listOf(null, occurrence).map { date -> rrule to date }
         }
         val resolved = everyRequest.map { (rrule, date) -> completionTargetFor(rrule, date) }
@@ -81,5 +81,10 @@ class TodoCompletionTargetTest {
             ),
             resolved,
         )
+    }
+
+    private companion object {
+        /** Any non-null rrule; the decision reads presence, never the rule itself. */
+        const val DAILY = "FREQ=DAILY"
     }
 }
