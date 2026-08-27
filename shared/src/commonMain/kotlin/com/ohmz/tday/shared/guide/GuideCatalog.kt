@@ -137,6 +137,21 @@ object GuideCatalog {
             deepLink = GuideDeepLink(web = "overdue", android = "morning-sweep", ios = "morning-sweep"),
         ),
         topic(
+            // Directly after Morning Sweep: they are the two "act on many tasks at
+            // once" topics, and a reader who just met the sweep is exactly the reader
+            // asking whether the same thing works outside the overdue screen.
+            // No deep link on purpose — selection mode is a button on list screens the
+            // guide already reaches, and every route in the whitelist is one more thing
+            // that can rot. See docs/design/bulk-selection.md.
+            GuideTopicIds.BULK_ACTIONS, GuideSectionId.ORGANIZING, "circle-check-big",
+            setOf(WEB, ANDROID, IOS), badge = GuideBadge.PRO_TIP, sinceVersion = "0.7.4",
+            body = listOf(
+                para(GuideTopicIds.BULK_ACTIONS),
+                steps(GuideTopicIds.BULK_ACTIONS, 3),
+                tip(GuideTopicIds.BULK_ACTIONS),
+            ),
+        ),
+        topic(
             GuideTopicIds.SEARCH_TASKS, GuideSectionId.ORGANIZING, "search",
             setOf(WEB, ANDROID, IOS), badge = GuideBadge.HIDDEN_GEM,
             body = listOf(para(GuideTopicIds.SEARCH_TASKS)),

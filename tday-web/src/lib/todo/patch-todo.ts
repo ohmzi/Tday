@@ -40,8 +40,13 @@ export async function patchTodo(
   });
 
   if (!parsedObj.success) {
-    console.warn(parsedObj.error.errors[0]);
-    return;
+    // Throw, never return quietly. A silent return reads as success to every
+    // caller: `runBulkFanOut` counts a rejection and nothing else, so a bulk
+    // move over rows this schema rejects used to report `{failed: 0}` having
+    // issued zero requests, and the only trace was a console warning. A bulk
+    // action must never claim to have done something it did not send.
+    const issue = parsedObj.error.errors[0];
+    throw new Error(`todo patch rejected: ${issue.path.join(".")} ${issue.message}`);
   }
 
   const dateChanged = todo.dateRangeChecksum !== todo.due.toISOString();

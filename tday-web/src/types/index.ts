@@ -81,6 +81,17 @@ export interface TodoItemType {
   instances?: overridingInstance[] | null;
   instanceDate?: Date | null;
   listID?: string | null;
+  /**
+   * True when the endpoint this row came from does not send `rrule` at all, so
+   * `rrule: null` here means "not stated", not "does not repeat".
+   *
+   * Only a backend older than the release that added `ListTodoDto.rrule` can
+   * produce it. Bulk selection treats such a row as if it repeats, which keeps
+   * it out of delete / priority / move — the three actions that would hit a
+   * whole series. Failing closed costs a skipped row; failing open costs the
+   * series.
+   */
+  recurrenceUnknown?: boolean;
 }
 
 export interface TaskStepType {

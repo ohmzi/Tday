@@ -26,6 +26,8 @@ import {
   sectionTopGapFirst,
 } from "@/components/todo/dnd/timelineDndClasses";
 import TodoMutationProvider from "@/providers/TodoMutationProvider";
+import TaskSelectionProvider from "@/providers/TaskSelectionProvider";
+import BulkSelectButton from "@/components/todo/bulk/BulkSelectButton";
 import { TodoItemType } from "@/types";
 import { useTodoTimeline } from "../query/get-todo-timeline";
 import { useCompleteTodo } from "../query/complete-todo";
@@ -366,6 +368,25 @@ const AllTasksTimelineContainer = ({
     return scopeFilteredItems.length > 0;
   }, [scopeFilteredItems, scope]);
 
+  // What Select all reaches: the rows this screen has actually rendered, in
+  // display order. Both branches read from `visibleTimelineItems`, so the two
+  // stay in step — the bucketed scopes through the timeline's own sections
+  // (collapsed Earlier included), Today/Overdue directly.
+  //
+  // Deliberately NOT the whole unpaged set. Today/Overdue render `PAGE_SIZE` at
+  // a time behind an IntersectionObserver, so selecting the unpaged set let one
+  // tap of Select all + Delete reach tasks the user had never scrolled to — 60
+  // rows staged from 10 on screen. Android and iOS have no paging, so there
+  // "everything on screen" and "everything in the scope" are the same set; this
+  // keeps web's Select all honest against the same sentence in the guide.
+  const selectableTodos = useMemo(
+    () =>
+      timeline
+        ? timelineSections.flatMap((section) => section.todos)
+        : visibleTimelineItems.map((item) => item.todo),
+    [timeline, timelineSections, visibleTimelineItems],
+  );
+
   const hasMore = !timeline && visibleCount < scopeFilteredItems.length;
   const isSearching = Boolean(searchQuery.trim());
   // Render the date buckets only when this scope actually has tasks; an empty
@@ -478,194 +499,204 @@ const AllTasksTimelineContainer = ({
       usePrioritizeTodo={usePrioritizeTodo}
       useReorderTodo={useReorderTodo}
     >
-      <div className="mb-20">
-        <ScreenWatermark icon={ScopeIcon} />
-        {/* The search field is this page's pinned bar, so the header below
-            renders only the block that scrolls away and docks its title into
-            it — the same split the custom list uses. */}
-        <MobileSearchHeader
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          placeholder={`${appDict("searchIn")} ${pageHeading}...`}
-          // Safe to read the searched set here: the bar clears its query as it
-          // collapses, so while the magnifier is the thing on screen this is
-          // "does the scope hold anything at all". Held back until the first
-          // load settles, or the button would blink out and back on every visit.
-          searchUnavailable={!todoLoading && !hasScopedTasks}
-          pageCollapse={{
-            ...barSlots,
-            title: pageHeading,
-            accentColor: timelineScopeAccentColors[scope],
-          }}
-          trailingAction={<SummaryButton mode={scope} />}
-        />
-
-        <NativePageHeader
-          title={pageHeading}
-          accentColor={timelineScopeAccentColors[scope]}
-          icon={ScopeIcon}
-          barSlots={barSlots}
-        />
-
-        {/* Stood down while a query finds nothing: a week-summary card sitting
-            above "no matching tasks" reads as a result. Same reason the three
-            time-of-day drop targets are suppressed below. */}
-        {scope === "today" && !showNoResults && <WeekInReviewCard />}
-
-        {todoLoading && <TodoListLoading heading={pageHeading} />}
-
-        {showTimeline && (
-          <TimelineSections
-            sections={timelineSections}
-            timeZone={userTZ?.timeZone}
-            focusedTaskId={focusedTaskId}
-            focusedDateKey={focusedDateKey}
-            // A live query outranks a shut bucket: these screens open with
-            // Earlier closed, and a task the search turns up in there must not
-            // stay hidden behind its header. Native makes the same call.
-            earlierExpanded={earlierExpanded || isSearching}
-            onToggleEarlier={() => setEarlierExpanded((value) => !value)}
-            onDragActiveChange={setDragActive}
+      <TaskSelectionProvider rows={selectableTodos}>
+        <div className="mb-20">
+          <ScreenWatermark icon={ScopeIcon} />
+          {/* The search field is this page's pinned bar, so the header below
+              renders only the block that scrolls away and docks its title into
+              it — the same split the custom list uses. */}
+          <MobileSearchHeader
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            placeholder={`${appDict("searchIn")} ${pageHeading}...`}
+            // Safe to read the searched set here: the bar clears its query as it
+            // collapses, so while the magnifier is the thing on screen this is
+            // "does the scope hold anything at all". Held back until the first
+            // load settles, or the button would blink out and back on every visit.
+            searchUnavailable={!todoLoading && !hasScopedTasks}
+            pageCollapse={{
+              ...barSlots,
+              title: pageHeading,
+              accentColor: timelineScopeAccentColors[scope],
+            }}
+            trailingAction={
+              <div className="flex shrink-0 items-center gap-2">
+                {/* Explicit entry point, never a long-press: that gesture is
+                    drag-to-reschedule on the native clients, and the three
+                    surfaces enter selection the same way. */}
+                <BulkSelectButton />
+                <SummaryButton mode={scope} />
+              </div>
+            }
           />
-        )}
 
-        {scope === "overdue" &&
-          regularSections.map((section) => (
-            <section
-              id={getTodoDateSectionId(section.key)}
-              key={section.key}
-              className={cn(
-                "scroll-mt-24",
-                section.dayDiff === 0 ? sectionTopGapFirst : sectionTopGapFilled,
-              )}
-            >
-              <div className={cn(headerToBodyGap, "flex items-center gap-2")}>
-                <h3
-                  className={cn(
-                    "select-none text-2xl font-black tracking-tight",
-                    focusedDateKey === section.key ? "text-accent" : "text-muted-foreground",
-                  )}
-                >
-                  {section.label}
-                </h3>
-              </div>
-              <TodoGroup
-                todos={section.todos}
-                overdue={section.dayDiff < 0}
-                perTaskOverdue={section.dayDiff === 0}
-                highlightedTodoId={focusedTaskId}
-                showOverdueTag={false}
-                className="border-b border-border/60 pb-1"
-              />
-            </section>
-          ))}
+          <NativePageHeader
+            title={pageHeading}
+            accentColor={timelineScopeAccentColors[scope]}
+            icon={ScopeIcon}
+            barSlots={barSlots}
+          />
 
-        {scope === "overdue" &&
-          earlierSections.map((section) => (
-            <section
-              id={getTodoDateSectionId(section.key)}
-              key={section.key}
-              className={cn("scroll-mt-24", sectionTopGapFilled)}
-            >
-              <div className={cn(headerToBodyGap, "flex items-center gap-2")}>
-                <h3
-                  className={cn(
-                    "select-none text-2xl font-black tracking-tight",
-                    focusedDateKey === section.key ? "text-accent" : "text-muted-foreground",
-                  )}
-                >
-                  {section.label}
-                </h3>
-              </div>
-              <TodoGroup
-                todos={section.todos}
-                overdue={true}
-                highlightedTodoId={focusedTaskId}
-                showOverdueTag={false}
-                className="border-b border-border/60 pb-1"
-              />
-            </section>
-          ))}
+          {/* Stood down while a query finds nothing: a week-summary card sitting
+              above "no matching tasks" reads as a result. Same reason the three
+              time-of-day drop targets are suppressed below. */}
+          {scope === "today" && !showNoResults && <WeekInReviewCard />}
 
-        {/* The three time buckets are drop targets, so they stand empty on a
-            quiet day — but under a search that found nothing they would read as
-            three results, so they go with the tasks. */}
-        {scope === "today" && !showNoResults && (
-          <TodayBucketDndContext timeZone={userTZ?.timeZone}>
-            {todayBuckets.map((bucket, index) => (
-              <TodayBucketDroppable
-                key={bucket.label}
-                bucket={bucket.label}
-                targetHour={
-                  TODAY_BUCKETS.find((b) => b.label === bucket.label)?.targetHour ?? 9
-                }
-                isFirst={index === 0}
+          {todoLoading && <TodoListLoading heading={pageHeading} />}
+
+          {showTimeline && (
+            <TimelineSections
+              sections={timelineSections}
+              timeZone={userTZ?.timeZone}
+              focusedTaskId={focusedTaskId}
+              focusedDateKey={focusedDateKey}
+              // A live query outranks a shut bucket: these screens open with
+              // Earlier closed, and a task the search turns up in there must not
+              // stay hidden behind its header. Native makes the same call.
+              earlierExpanded={earlierExpanded || isSearching}
+              onToggleEarlier={() => setEarlierExpanded((value) => !value)}
+              onDragActiveChange={setDragActive}
+            />
+          )}
+
+          {scope === "overdue" &&
+            regularSections.map((section) => (
+              <section
+                id={getTodoDateSectionId(section.key)}
+                key={section.key}
+                className={cn(
+                  "scroll-mt-24",
+                  section.dayDiff === 0 ? sectionTopGapFirst : sectionTopGapFilled,
+                )}
               >
-                {bucket.todos.map((todo) => (
-                  <DraggableTodayTask
-                    key={todo.id}
-                    todo={todo}
-                    currentBucket={bucket.label}
-                    highlighted={focusedTaskId === todo.id}
-                  />
-                ))}
-              </TodayBucketDroppable>
+                <div className={cn(headerToBodyGap, "flex items-center gap-2")}>
+                  <h3
+                    className={cn(
+                      "select-none text-2xl font-black tracking-tight",
+                      focusedDateKey === section.key ? "text-accent" : "text-muted-foreground",
+                    )}
+                  >
+                    {section.label}
+                  </h3>
+                </div>
+                <TodoGroup
+                  todos={section.todos}
+                  overdue={section.dayDiff < 0}
+                  perTaskOverdue={section.dayDiff === 0}
+                  highlightedTodoId={focusedTaskId}
+                  showOverdueTag={false}
+                  className="border-b border-border/60 pb-1"
+                />
+              </section>
             ))}
-          </TodayBucketDndContext>
-        )}
 
-        {/* Native-style centered empty message — for Today it sits below the
-            Morning/Afternoon/Tonight headers; for other scopes it's the only body.
-            Day Done: "finished everything" earns a calm payoff state instead of
-            the generic no-tasks message. */}
-        {showEmpty && (
-          <EmptyState
-            // Day Done keeps its own glyph and its date line: it is a payoff,
-            // not an absence, and the scope's own icon would undersell it.
-            icon={isDayDone ? CheckCheck : ScopeIcon}
-            accentColor={timelineScopeAccentColors[scope]}
-            title={isDayDone ? appDict("allDoneToday") : appDict(emptyTitle)}
-            description={
-              isDayDone
-                ? new Intl.DateTimeFormat(locale, {
-                    weekday: "long",
-                    day: "numeric",
-                    month: "long",
-                  }).format(new Date())
-                : appDict(emptyBody)
-            }
-            // Finishing the scope is a payoff, not an absence: the confetti is
-            // for the tick that emptied it, not for a day with nothing in it.
-            celebrate={taskJustCompleted()}
-          />
-        )}
-
-        {/* No search results — the scope's own tasks simply do not carry this
-            word. */}
-        {showNoResults && (
-          <EmptyState
-            icon={Search}
-            accentColor={timelineScopeAccentColors[scope]}
-            title={appDict("noMatchingTasks")}
-            description={appDict("searchEmptyBody")}
-            action={
-              <button
-                type="button"
-                onClick={() => setSearchQuery("")}
-                className="rounded-full border border-border/60 bg-card px-5 py-2.5 text-sm font-black text-foreground shadow-[0_14px_30px_-16px_hsl(var(--shadow)/0.6)] transition-transform hover:-translate-y-0.5"
+          {scope === "overdue" &&
+            earlierSections.map((section) => (
+              <section
+                id={getTodoDateSectionId(section.key)}
+                key={section.key}
+                className={cn("scroll-mt-24", sectionTopGapFilled)}
               >
-                {appDict("clearSearch")}
-              </button>
-            }
-          />
-        )}
+                <div className={cn(headerToBodyGap, "flex items-center gap-2")}>
+                  <h3
+                    className={cn(
+                      "select-none text-2xl font-black tracking-tight",
+                      focusedDateKey === section.key ? "text-accent" : "text-muted-foreground",
+                    )}
+                  >
+                    {section.label}
+                  </h3>
+                </div>
+                <TodoGroup
+                  todos={section.todos}
+                  overdue={true}
+                  highlightedTodoId={focusedTaskId}
+                  showOverdueTag={false}
+                  className="border-b border-border/60 pb-1"
+                />
+              </section>
+            ))}
 
-        {hasMore && (
-          <div ref={sentinelRef} className="flex h-12 items-center justify-center">
-            <span className="text-xs text-muted-foreground">Loading more tasks...</span>
-          </div>
-        )}
-      </div>
+          {/* The three time buckets are drop targets, so they stand empty on a
+              quiet day — but under a search that found nothing they would read as
+              three results, so they go with the tasks. */}
+          {scope === "today" && !showNoResults && (
+            <TodayBucketDndContext timeZone={userTZ?.timeZone}>
+              {todayBuckets.map((bucket, index) => (
+                <TodayBucketDroppable
+                  key={bucket.label}
+                  bucket={bucket.label}
+                  targetHour={
+                    TODAY_BUCKETS.find((b) => b.label === bucket.label)?.targetHour ?? 9
+                  }
+                  isFirst={index === 0}
+                >
+                  {bucket.todos.map((todo) => (
+                    <DraggableTodayTask
+                      key={todo.id}
+                      todo={todo}
+                      currentBucket={bucket.label}
+                      highlighted={focusedTaskId === todo.id}
+                    />
+                  ))}
+                </TodayBucketDroppable>
+              ))}
+            </TodayBucketDndContext>
+          )}
+
+          {/* Native-style centered empty message — for Today it sits below the
+              Morning/Afternoon/Tonight headers; for other scopes it's the only body.
+              Day Done: "finished everything" earns a calm payoff state instead of
+              the generic no-tasks message. */}
+          {showEmpty && (
+            <EmptyState
+              // Day Done keeps its own glyph and its date line: it is a payoff,
+              // not an absence, and the scope's own icon would undersell it.
+              icon={isDayDone ? CheckCheck : ScopeIcon}
+              accentColor={timelineScopeAccentColors[scope]}
+              title={isDayDone ? appDict("allDoneToday") : appDict(emptyTitle)}
+              description={
+                isDayDone
+                  ? new Intl.DateTimeFormat(locale, {
+                      weekday: "long",
+                      day: "numeric",
+                      month: "long",
+                    }).format(new Date())
+                  : appDict(emptyBody)
+              }
+              // Finishing the scope is a payoff, not an absence: the confetti is
+              // for the tick that emptied it, not for a day with nothing in it.
+              celebrate={taskJustCompleted()}
+            />
+          )}
+
+          {/* No search results — the scope's own tasks simply do not carry this
+              word. */}
+          {showNoResults && (
+            <EmptyState
+              icon={Search}
+              accentColor={timelineScopeAccentColors[scope]}
+              title={appDict("noMatchingTasks")}
+              description={appDict("searchEmptyBody")}
+              action={
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  className="rounded-full border border-border/60 bg-card px-5 py-2.5 text-sm font-black text-foreground shadow-[0_14px_30px_-16px_hsl(var(--shadow)/0.6)] transition-transform hover:-translate-y-0.5"
+                >
+                  {appDict("clearSearch")}
+                </button>
+              }
+            />
+          )}
+
+          {hasMore && (
+            <div ref={sentinelRef} className="flex h-12 items-center justify-center">
+              <span className="text-xs text-muted-foreground">Loading more tasks...</span>
+            </div>
+          )}
+        </div>
+      </TaskSelectionProvider>
     </TodoMutationProvider>
   );
 };

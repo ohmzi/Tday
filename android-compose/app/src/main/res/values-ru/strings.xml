@@ -700,4 +700,68 @@
     <string name="settings_privacy">Конфиденциальность</string>
     <string name="root_feed_search_scheduled">Поиск запланированных задач</string>
     <string name="root_feed_search_floater">Поиск плавающих задач</string>
+
+    <!-- Bulk selection: multi-select actions in a task list -->
+    <string name="bulk_select">Выбрать</string>
+    <string name="bulk_select_all">Выбрать все</string>
+    <string name="bulk_deselect_all">Снять выделение</string>
+    <string name="bulk_selected">Выбрано: %1$d</string>
+    <string name="bulk_selected_capped">Выбрано: %1$d — больше одно действие не охватит</string>
+    <string name="bulk_applies_to">Применится к %1$d из %2$d — повторяющиеся задачи пропускаются.</string>
+    <string name="bulk_select_task">Выбрать задачу</string>
+    <string name="bulk_deselect_task">Снять выделение с задачи</string>
+    <string name="bulk_action_complete">Выполнить</string>
+    <string name="bulk_action_priority">Приоритет</string>
+    <string name="bulk_action_move">Переместить</string>
+    <string name="bulk_action_delete">Удалить</string>
+    <string name="bulk_delete_body">Они будут удалены из всех списков вместе с историей выполнения. У вас будет несколько секунд, чтобы отменить это.</string>
+    <string name="bulk_move_body">Эти задачи из разных списков. Перемещение нельзя отменить одним действием — каждую придётся возвращать вручную.</string>
+    <plurals name="bulk_tasks_completed">
+        <item quantity="one">Задача выполнена</item>
+        <item quantity="few">%d задачи выполнено</item>
+        <item quantity="many">%d задач выполнено</item>
+        <item quantity="other">%d задачи выполнено</item>
+    </plurals>
+    <plurals name="bulk_tasks_deleted">
+        <item quantity="one">Задача удалена</item>
+        <item quantity="few">%d задачи удалено</item>
+        <item quantity="many">%d задач удалено</item>
+        <item quantity="other">%d задачи удалено</item>
+    </plurals>
+    <plurals name="bulk_delete_title">
+        <item quantity="one">Удалить эту задачу?</item>
+        <item quantity="few">Удалить %d задачи?</item>
+        <item quantity="many">Удалить %d задач?</item>
+        <item quantity="other">Удалить %d задачи?</item>
+    </plurals>
+    <plurals name="bulk_delete_confirm">
+        <item quantity="one">Удалить задачу</item>
+        <item quantity="few">Удалить %d задачи</item>
+        <item quantity="many">Удалить %d задач</item>
+        <item quantity="other">Удалить %d задачи</item>
+    </plurals>
+    <plurals name="bulk_move_title">
+        <item quantity="one">Переместить эту задачу?</item>
+        <item quantity="few">Переместить %d задачи?</item>
+        <item quantity="many">Переместить %d задач?</item>
+        <item quantity="other">Переместить %d задачи?</item>
+    </plurals>
+    <plurals name="bulk_move_confirm">
+        <item quantity="one">Переместить задачу</item>
+        <item quantity="few">Переместить %d задачи</item>
+        <item quantity="many">Переместить %d задач</item>
+        <item quantity="other">Переместить %d задачи</item>
+    </plurals>
+    <plurals name="bulk_delete_failed">
+        <item quantity="one">Не удалось удалить задачу</item>
+        <item quantity="few">Не удалось удалить %d задачи</item>
+        <item quantity="many">Не удалось удалить %d задач</item>
+        <item quantity="other">Не удалось удалить %d задачи</item>
+    </plurals>
+    <plurals name="bulk_update_failed">
+        <item quantity="one">Не удалось обновить задачу</item>
+        <item quantity="few">Не удалось обновить %d задачи</item>
+        <item quantity="many">Не удалось обновить %d задач</item>
+        <item quantity="other">Не удалось обновить %d задачи</item>
+    </plurals>
 </resources>

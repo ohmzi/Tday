@@ -727,6 +727,49 @@
       "searchBody": "smista le attivita arretrate una scheda alla volta. essere indietro smette di pesare: il pulsante riordina nella schermata in ritardo scorre le attivita arretrate una scheda alla volta — oggi, domani, scegli una data, rendi fluttuante o lascia andare. di fretta? sposta tutto a oggi muove tutto in una volta, con un solo annulla. le attivita ricorrenti restano fuori dal riordino; le loro occorrenze si ripianificano dalla scheda di modifica cosi la serie resta intatta."
     },
     {
+      "id": "bulk-actions",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "circle-check-big",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "PRO_TIP",
+      "serverOnly": false,
+      "sinceVersion": "0.7.4",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Azioni in blocco",
+      "summary": "Seleziona più attività insieme e agisci su tutte in una volta.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Tocca Seleziona nell'intestazione di un elenco di attività per entrare in modalità selezione. Scegli le attività una alla volta oppure tocca Seleziona tutto, poi applica una sola azione all'intero gruppo: segnarle come fatte, cambiarne la priorità, spostarle in un altro elenco o eliminarle."
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "Apri un elenco di attività e tocca Seleziona nell'intestazione.",
+            "Tocca le attività per sceglierle oppure usa Seleziona tutto per quelle a schermo.",
+            "Scegli Completa, Priorità, Sposta o Elimina dalla barra in basso."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "L'eliminazione ti chiede prima di confermare il numero esatto e lascia comunque un avviso per annullare. Le attività ricorrenti restano del tutto fuori dalle azioni in blocco, così un'intera serie non cambia mai per sbaglio: aprine una singola per completarla, spostarla o eliminarla."
+          ]
+        }
+      ],
+      "searchTitle": "azioni in blocco",
+      "searchKeywords": "blocco, selezione multipla, seleziona tutto, gruppo, piu attivita, completare, eliminare, priorita, spostare, selezione",
+      "searchBody": "seleziona piu attivita insieme e agisci su tutte in una volta. tocca seleziona nell'intestazione di un elenco di attivita per entrare in modalita selezione. scegli le attivita una alla volta oppure tocca seleziona tutto, poi applica una sola azione all'intero gruppo: segnarle come fatte, cambiarne la priorita, spostarle in un altro elenco o eliminarle. apri un elenco di attivita e tocca seleziona nell'intestazione. tocca le attivita per sceglierle oppure usa seleziona tutto per quelle a schermo. scegli completa, priorita, sposta o elimina dalla barra in basso. l'eliminazione ti chiede prima di confermare il numero esatto e lascia comunque un avviso per annullare. le attivita ricorrenti restano del tutto fuori dalle azioni in blocco, cosi un'intera serie non cambia mai per sbaglio: aprine una singola per completarla, spostarla o eliminarla."
+    },
+    {
       "id": "search-tasks",
       "section": "ORGANIZING",
       "sectionOrder": 3,
