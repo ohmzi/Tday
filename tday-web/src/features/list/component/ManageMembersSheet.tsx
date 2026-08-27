@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Crown, Share2, UserPlus, X } from "lucide-react";
+import { Crown, Share2, X } from "lucide-react";
 import AppBottomSheet from "@/components/ui/AppBottomSheet";
 import { Input } from "@/components/ui/input";
 import { SheetCard, SheetSectionTitle } from "@/components/ui/sheet-chrome";
@@ -14,7 +14,8 @@ import {
   useRemoveListMember,
   useUpdateListMemberRole,
 } from "@/features/list/query/share-members";
-import { type UserSearchResultType, useSearchUsers } from "@/features/user/query/search-users";
+import MemberSearchResults from "@/features/list/component/MemberSearchResults";
+import { useSearchUsers } from "@/features/user/query/search-users";
 import type { ListMemberType, ShareRoleType } from "@/types";
 
 type ManageMembersSheetProps = {
@@ -31,12 +32,9 @@ type ManageMembersSheetProps = {
 
 const MEMBER_ROLES: ShareRoleType[] = ["EDITOR", "VIEWER"];
 
-/**
- * Avatar letter for a member or search-result row: the first character of the display name, or
- * of the username when there is no name. Both rows show the same person, so they share this.
- */
-function avatarInitial(person: { username: string; name?: string | null }) {
-  const source = person.name?.trim() || person.username;
+/** Avatar letter for a member row: first character of the display name, or of the username. */
+function memberInitial(member: ListMemberType) {
+  const source = member.name?.trim() || member.username;
   return source.slice(0, 1).toUpperCase();
 }
 
@@ -81,12 +79,10 @@ export default function ManageMembersSheet({
   const { users: searchResults, searchPending } = useSearchUsers(
     isOwner && open ? debouncedSearch : "",
   );
-  // People already on the list stay in the results as a disabled row. Filtering them out
-  // instead made the sheet answer "No users found" for an account that exists, is approved and
-  // is right there in the list above — which reads as the search being broken.
+  // Handed to MemberSearchResults, which dims these rows rather than dropping them.
   const memberIds = new Set(
     [members?.owner.userId, ...(members?.members ?? []).map((member) => member.userId)].filter(
-      Boolean,
+      (userId): userId is string => Boolean(userId),
     ),
   );
 
@@ -139,7 +135,7 @@ export default function ManageMembersSheet({
   const renderMemberRow = (member: ListMemberType, isOwnerRow: boolean) => (
     <div key={member.userId} className="flex items-center gap-3 px-1 py-2">
       <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent/15 text-sm font-black text-accent">
-        {avatarInitial(member)}
+        {memberInitial(member)}
       </span>
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-black text-foreground">
@@ -172,46 +168,6 @@ export default function ManageMembersSheet({
       )}
     </div>
   );
-
-  /**
-   * One row of the username typeahead. Someone already on the list renders dimmed with a static
-   * "already a member" badge in place of the add button, rather than being dropped from the
-   * results — see the note on `memberIds` above.
-   */
-  const renderSearchResultRow = (user: UserSearchResultType) => {
-    const alreadyMember = memberIds.has(user.id);
-    return (
-      <div
-        key={user.id}
-        className={cn("flex items-center gap-3 px-1 py-2", alreadyMember && "opacity-60")}
-      >
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted/70 text-sm font-black text-muted-foreground">
-          {avatarInitial(user)}
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-black text-foreground">
-            {user.name?.trim() || user.username}
-          </p>
-          <p className="truncate text-xs font-bold text-muted-foreground">@{user.username}</p>
-        </div>
-        {alreadyMember ? (
-          <span className="flex h-8 items-center rounded-full bg-muted/70 px-3 text-xs font-black text-muted-foreground">
-            {appDict("alreadyAMember")}
-          </span>
-        ) : (
-          <button
-            type="button"
-            disabled={addMemberPending}
-            onClick={() => void handleAdd(user.username)}
-            className="flex h-8 items-center gap-1.5 rounded-full bg-accent/15 px-3 text-xs font-black text-accent transition-colors hover:bg-accent/25 disabled:opacity-50"
-          >
-            <UserPlus className="h-3.5 w-3.5 stroke-[2.6]" />
-            {appDict("addMember")}
-          </button>
-        )}
-      </div>
-    );
-  };
 
   return (
     <AppBottomSheet
@@ -253,14 +209,13 @@ export default function ManageMembersSheet({
                 className="h-12 rounded-2xl border-transparent bg-muted/60 font-bold focus-visible:ring-0"
               />
               {debouncedSearch.trim().length >= 2 ? (
-                <div className="mt-2 divide-y divide-border/50">
-                  {searchResults.map(renderSearchResultRow)}
-                  {!searchPending && searchResults.length === 0 ? (
-                    <p className="px-1 py-2 text-sm font-bold text-muted-foreground">
-                      {appDict("noUsersFound")}
-                    </p>
-                  ) : null}
-                </div>
+                <MemberSearchResults
+                  users={searchResults}
+                  memberIds={memberIds}
+                  searchPending={searchPending}
+                  addPending={addMemberPending}
+                  onAdd={(username) => void handleAdd(username)}
+                />
               ) : null}
             </SheetCard>
           </>
