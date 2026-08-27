@@ -76,8 +76,11 @@ xcodebuild test -project ios-swiftUI/TdayApp.xcodeproj -scheme Tday -destination
   there is no `match` repository and no committed certificate. The five App IDs and the
   `group.com.ohmz.tday` App Group must already exist — Xcode mints *profiles* on demand, not those.
   The API key needs the **Admin** role, not App Manager.
-- `workflow_dispatch` takes a `dry_run` input that archives, signs and exports without uploading.
-  Use it to rehearse any signing change.
+- `workflow_dispatch` runs the same pipeline in **build-only** mode on any ref
+  (`gh workflow run ios-testflight.yml --ref develop`): it archives, signs and exports, then
+  stops. That is how a change to the pipeline — or a Swift compile error only a macOS runner
+  reproduces — gets tested without cutting a release. The mode is derived from the event and the
+  ref, so no input can make a manual run upload; only the push of a `v*` tag uploads.
 - The lane never derives a build number — `CURRENT_PROJECT_VERSION` already equals
   `version.json`'s `ios.buildNumber` at the tag.
 - `XcodeGen must never be run here.` `project.yml` is a mirror kept for tooling;

@@ -148,7 +148,7 @@ directly.
 |----------|---------|---------|
 | `pr-gate.yml` | PR to `master` | Validates source branch (`develop` only), runs web lint + test, backend test |
 | `release.yml` | Push to `master` | Runs lint + tests, resolves the release version (auto-bumping the patch when it is already tagged), builds the signed APK and the Docker image, pushes the release commit, tags, publishes the GitHub release, and only then pushes the image |
-| `ios-testflight.yml` | Push of a `v*` tag (and `workflow_dispatch`) | Diffs the tag against the last release that actually reached TestFlight; when an iOS-relevant file changed, archives the `Tday` scheme on macOS and uploads it to TestFlight |
+| `ios-testflight.yml` | Push of a `v*` tag (uploads), or `workflow_dispatch` on any ref (build-only) | Diffs the tag against the last release that actually reached TestFlight; when an iOS-relevant file changed, archives the `Tday` scheme on macOS and — on a tag push only — uploads it to TestFlight |
 
 ### Test-Before-Build Policy
 
@@ -345,7 +345,7 @@ Distributable Android release builds must use the same release keystore every ti
 - `CFBundleShortVersionString`, `CFBundleVersion`, iOS `MARKETING_VERSION`, `CURRENT_PROJECT_VERSION`, `TdayUpdateURL`, and example `TDAY_APP_VERSION` values are synced from root `version.json` by `scripts/version.mjs sync`.
 - Set `ios.updateUrl` in `version.json` to the App Store or TestFlight URL before distributing an iOS build that should offer direct updates.
 - Both configurations set `CODE_SIGN_IDENTITY = Apple Development` once at the project level, with no target overrides. That is deliberate and is **not** a bug: under `CODE_SIGN_STYLE = Automatic` the archive is signed with a development identity and the App Store re-sign happens in `-exportArchive`, which the lane drives with `signingStyle: automatic` + `method: app-store`. Forcing `Apple Distribution` at archive time would require a distribution certificate to resolve ~30 minutes earlier than it is actually needed, for no benefit.
-- `DEVELOPMENT_TEAM` is `THT5Z8K3TF` in the project and is overridden from CI by the `IOS_TEAM_ID` repository variable.
+- `DEVELOPMENT_TEAM` is `JUFACN2FS3` in the project and is overridden from CI by the `IOS_TEAM_ID` repository variable.
 
 ### iOS TestFlight Releases
 
@@ -396,6 +396,49 @@ script compares those specific files with the version tokens normalised away: a 
 difference is the release bump does not count, while any other edit to that same file does.
 `version.json` is excluded from the relevant set entirely, since `ios.buildNumber` increments on
 every release. A `workflow_dispatch` run with `force` bypasses the filter.
+
+#### Two modes: `release` and `verify`
+
+The workflow runs in one of two modes, and the mode is **derived from the event and the ref** — it
+is not an input:
+
+| Trigger | Mode | What it does |
+|---------|------|--------------|
+| Push of a `v*` tag | `release` | Archive, sign, export, **upload to TestFlight** |
+| `workflow_dispatch`, any ref, any inputs | `verify` | Archive, sign, export, **stop** |
+
+`verify` mode is how a change to this pipeline gets tested. Before it existed, the only way to
+exercise the iOS build was to cut a real release, so iterating on a Swift compile error that only
+CI can reproduce cost one version bump per error. Now:
+
+```bash
+gh workflow run ios-testflight.yml --ref develop
+```
+
+archives the whole app on a macOS runner, proves the five bundles compile and that signing,
+provisioning and the export all resolve, and uploads nothing.
+
+**There is deliberately no input that makes a manual run upload.** App Store Connect spends a
+`(version, buildNumber)` pair the moment it *accepts* an upload and will never accept that pair
+again — not even after the build fails processing. A branch dispatch reads the same `version.json`
+a release does, so an upload from `develop` would burn the build number the next real release
+needs, with no way to reclaim it short of a version bump. Two independent gates enforce this:
+
+1. the `decide` job computes the mode from `GITHUB_EVENT_NAME` / `GITHUB_REF` in one place and
+   publishes it as a job output, and the macOS job refuses to start unless the mode and
+   `TDAY_SKIP_UPLOAD` it receives are a consistent pair (an empty output — a renamed step, a typo
+   — fails the job rather than defaulting to an upload);
+2. the fastlane `beta` lane **re-derives the same predicate from GitHub's own environment** and
+   downgrades itself to build-only if the workflow ever hands it something inconsistent. It does
+   not trust the workflow, so an expression bug in the YAML cannot on its own produce an upload.
+
+Dispatching against a *tag* ref is still `verify` — the event, not just the ref, has to be a push.
+The retry path for a genuine release is GitHub's own re-run of the tag-push run, which preserves
+`event: push`.
+
+A verify run also cannot be mistaken for a release afterwards: the comparison-base walk below
+filters run history to `--event push`, so a build-only run is never eligible to become the "last
+tag that shipped".
 
 **Why the base is not just the previous tag.** `git describe ... HEAD^` looks right and is subtly
 wrong: it is pure git topology and knows nothing about whether that release's iOS build succeeded.
@@ -471,8 +514,14 @@ wrapped in a rescue: if it cannot answer, the lane degrades to a skip whose mess
 that a build missing from TestFlight means a spent build number.
 
 For the same reason the `force` dispatch input only bypasses the **path filter**. It cannot force
-an upload, because a duplicate upload cannot succeed. There is no escape hatch for a spent build
-number other than a version bump.
+an upload — a manual run is always `verify` mode — and even on the release path a duplicate upload
+cannot succeed. There is no escape hatch for a spent build number other than a version bump.
+
+In `verify` mode the lane **skips the duplicate check entirely** rather than consulting App Store
+Connect. A run that will not upload has nothing to protect, and asking anyway would break the
+verification case: once a build number is spent, the check would either skip `build_app` and
+report a green run that compiled nothing, or — for a `FAILED`/`INVALID` build — fail a run whose
+only job was to prove that the project still compiles.
 
 #### Export compliance
 
@@ -525,7 +574,7 @@ Two bases are deliberately **not** relied on:
 | `ASC_ISSUER_ID` | secret | Issuer UUID shown above the key list |
 | `ASC_KEY_P8_BASE64` | secret | base64 of the `.p8` Apple lets you download exactly once |
 | `TDAY_PROBE_ENCRYPTION_KEY` | secret | Already set — the same secret `release.yml` passes to the Android build. `Tday/Info.plist` publishes `TdayProbeEncryptionKey` as `$(TDAY_PROBE_ENCRYPTION_KEY)`, and an undefined build setting expands to `""`, which makes `ProbeDecryptor` return `nil` and silently disables the whole server version-compatibility gate |
-| `IOS_TEAM_ID` | **variable** | Apple Team ID (`THT5Z8K3TF`). Not a secret — it is printed on every provisioning profile |
+| `IOS_TEAM_ID` | **variable** | Apple Team ID (`JUFACN2FS3`). Not a secret — it is printed on every provisioning profile |
 | `IOS_XCODE_VERSION` | **variable** | Optional Xcode pin, e.g. `16.4`. Unset, the job warns and uses the runner default |
 
 The **`decide` job on Linux** fails with an actionable message if any of those secrets is missing,
@@ -571,7 +620,7 @@ repository settings, and cannot be done from a pull request.
    #   on macOS the flag is different:
    #   gh secret set ASC_KEY_P8_BASE64 --body "$(base64 -i ~/Downloads/AuthKey_XXXXXXXXXX.p8)"
 
-   gh variable set IOS_TEAM_ID --body "THT5Z8K3TF"
+   gh variable set IOS_TEAM_ID --body "JUFACN2FS3"
    ```
 
 6. **Pin Xcode** once you have seen a run log (the "Select Xcode" step prints every version
@@ -607,17 +656,18 @@ resolves `should_build=true`.
 
 That means the first execution would otherwise be an unsupervised production archive of five
 bundles plus a real TestFlight upload, on a pipeline where `xcodebuild` and `fastlane` have never
-run once. Use the **`dry_run`** dispatch input instead:
+run once. Rehearse it with a `verify` run instead:
 
 1. Finish steps 1–9 below **before** merging.
 2. Merge to `master`. Cancel the automatic run the release tag triggers.
-3. Run the workflow manually with `force: true` and **`dry_run: true`**. It archives, signs,
-   exports the `.ipa` and stops — proving signing, profiles, entitlements and the App Group
-   without touching TestFlight.
-4. When that is green, re-run with `dry_run: false`.
+3. Dispatch the workflow manually — `gh workflow run ios-testflight.yml --ref develop`, or the
+   **Run workflow** button. It archives, signs, exports the `.ipa` and stops, proving signing,
+   profiles, entitlements and the App Group without touching TestFlight.
+4. When that is green, cut the next release normally; the tag push uploads.
 
-`dry_run` is a permanent input, not scaffolding: it is also the right way to test any later change
-to signing or the lane.
+`verify` mode is permanent, not scaffolding. It is the right way to test any later change to
+signing, the lane, or the Swift sources this pipeline compiles — and it is the only way to see a
+compile error that reproduces on a macOS runner without spending a release to find it.
 
 #### Building it locally
 
@@ -628,8 +678,9 @@ ASC_KEY_ID=... ASC_ISSUER_ID=... ASC_KEY_P8_BASE64=... \
   TDAY_SKIP_UPLOAD=true bundle exec fastlane beta
 ```
 
-`TDAY_SKIP_UPLOAD=true` is the same dry run the workflow's `dry_run` input drives — archive and
-export, no upload. Drop it to upload for real.
+`TDAY_SKIP_UPLOAD=true` puts the lane in the same build-only mode `verify` runs use — archive and
+export, no upload. Drop it to upload for real. Locally that is all it takes; inside GitHub Actions
+the lane additionally refuses to upload from anything but a tag push, whatever this variable says.
 
 `TDAY_PROBE_ENCRYPTION_KEY` is optional locally: the lane warns loudly and continues without it,
 producing a build whose server version-compatibility gate is inert. CI treats it as required.

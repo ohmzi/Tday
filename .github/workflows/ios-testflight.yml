@@ -1,5 +1,14 @@
 name: iOS TestFlight
 
+# The mode is in the run's own title so the runs list tells a real release apart from a
+# verification build without anyone opening the run. It has to restate the predicate below
+# rather than read it: `run-name` is evaluated before any job starts, so it cannot see a job
+# output. It is cosmetic — the authoritative copy is the `Determine the run mode` step.
+run-name: >-
+  iOS
+  ${{ (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')) && 'release' || 'verify (build-only)' }}
+  — ${{ github.ref_name }}
+
 # WHY A TAG PUSH, AND NOT THE OBVIOUS ALTERNATIVES
 #
 # `on: workflow_run` (after "Build & Release") is wrong: that event's head_sha is the *merge*
@@ -23,6 +32,32 @@ name: iOS TestFlight
 # history that is not an ancestor of the current release line. The real guard is the
 # tag-matches-version.json assertion in the `decide` job below, which also catches a hand-pushed
 # or re-pushed tag — and it runs on Linux, so a stray tag costs seconds, not macOS minutes.
+#
+# TWO MODES: `release` AND `verify`
+#
+# The tag push is the release path and the only path that can upload. Everything else — every
+# `workflow_dispatch`, on any ref, with any inputs — runs in `verify` mode: archive, sign,
+# export, stop. That mode exists because a change to this pipeline used to be testable only by
+# cutting a real release, which made iterating on a Swift compile error cost one version bump
+# per error.
+#
+# The mode is DERIVED from the event and the ref. It is deliberately not an input, and there is
+# no checkbox that turns a manual run into an upload, because getting it wrong is permanent:
+# App Store Connect spends a (version, buildNumber) pair the moment it ACCEPTS an upload and
+# will never accept that pair again — not even after the build fails processing. A branch
+# dispatch reads exactly the same version.json a release would, so an upload from `develop`
+# would burn the build number the next real release needs, with no way to reclaim it short of
+# a version bump.
+#
+# Two independent gates enforce that:
+#   1. `decide` computes the mode from GITHUB_EVENT_NAME/GITHUB_REF and hands the macOS job a
+#      TDAY_SKIP_UPLOAD derived from it — one answer per run, read from one job output;
+#   2. the fastlane `beta` lane re-derives the same predicate from GitHub's own environment and
+#      forces build-only if it is ever handed something inconsistent. It does not trust this
+#      file, so a mistake in the expressions here cannot on its own produce an upload.
+#
+# A verify run also cannot be mistaken for a release after the fact — see the `--event push`
+# filter in "Resolve the comparison base".
 on:
   push:
     tags:
@@ -31,18 +66,11 @@ on:
     inputs:
       force:
         description: >-
-          Bypass the "did any iOS-relevant file change" filter. It does NOT bypass the lane's
-          duplicate-upload guard: a (version, build) App Store Connect has already accepted is
-          still skipped, because Apple rejects a re-upload of a build number that is spent.
+          Bypass the "did any iOS-relevant file change" filter, so the archive runs even when
+          nothing under ios-swiftUI/ changed since the last shipped release. It cannot cause an
+          upload: a manual run is always build-only. See "TWO MODES" above.
         type: boolean
         default: true
-      dry_run:
-        description: >-
-          Archive, sign and export, then STOP without uploading. This is the supervised rehearsal
-          for signing and provisioning — use it for the first run, before a real release depends
-          on it.
-        type: boolean
-        default: false
 
 permissions:
   contents: read
@@ -50,10 +78,21 @@ permissions:
   # last tag that actually reached TestFlight — see "Resolve the comparison base".
   actions: read
 
+# The resource that needs mutual exclusion here is not a ref. It is this app's (version,
+# buildNumber) space in App Store Connect, which is global. Keying the group on `github.ref`
+# gave every ref its own group, so two runs that could both upload never excluded each other —
+# no mutual exclusion at all where it actually mattered. Every run that can upload is a tag
+# push, so all of them now share one constant group and serialise.
+#
+# Manual runs cannot upload, so they need no exclusion against a release; they get a per-ref
+# group only so two dispatches on the same branch do not occupy two macOS runners at once. The
+# predicate is written the fail-safe way round — only an unambiguous `workflow_dispatch` leaves
+# the serialised group, so anything unexpected serialises rather than races.
+#
 # Never cancel a run in flight: it could be mid-upload, and a half-finished upload is the one
 # state that makes the next run's duplicate check ambiguous.
 concurrency:
-  group: ios-testflight-${{ github.ref }}
+  group: ios-testflight-${{ github.event_name == 'workflow_dispatch' && format('verify-{0}', github.ref) || 'release' }}
   cancel-in-progress: false
 
 jobs:
@@ -64,7 +103,60 @@ jobs:
     outputs:
       should_build: ${{ steps.decision.outputs.should_build }}
       base_tag: ${{ steps.previous.outputs.tag }}
+      mode: ${{ steps.mode.outputs.mode }}
+      skip_upload: ${{ steps.mode.outputs.skip_upload }}
     steps:
+      # THE ONLY PLACE THE MODE IS DECIDED.
+      #
+      # Derived from GitHub's own environment, never from an input, and published as a job
+      # output so every downstream step reads the same answer. `release` is reachable only by
+      # the push of a tag; everything else is `verify`, which pins TDAY_SKIP_UPLOAD=true for the
+      # macOS job. Runs before the checkout because it needs nothing from the repository — if
+      # this is going to be a verify run, that is worth printing before anything else happens.
+      - name: Determine the run mode
+        id: mode
+        run: |
+          set -euo pipefail
+
+          case "${GITHUB_REF}" in
+            refs/tags/*) IS_TAG=true ;;
+            *) IS_TAG=false ;;
+          esac
+
+          if [ "${GITHUB_EVENT_NAME}" = "push" ] && [ "${IS_TAG}" = "true" ]; then
+            MODE=release
+            SKIP_UPLOAD=false
+          else
+            MODE=verify
+            SKIP_UPLOAD=true
+          fi
+
+          {
+            echo "mode=${MODE}"
+            echo "skip_upload=${SKIP_UPLOAD}"
+          } >> "$GITHUB_OUTPUT"
+
+          echo "Event: ${GITHUB_EVENT_NAME}"
+          echo "Ref:   ${GITHUB_REF}"
+          echo "Mode:  ${MODE} (TDAY_SKIP_UPLOAD=${SKIP_UPLOAD})"
+
+          if [ "${MODE}" = "release" ]; then
+            {
+              echo "### iOS pipeline — RELEASE mode"
+              echo ""
+              echo "Triggered by the push of \`${GITHUB_REF_NAME}\`. If an iOS-relevant file"
+              echo "changed, this run archives **and uploads to TestFlight**."
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            {
+              echo "### iOS pipeline — VERIFY mode (build-only)"
+              echo ""
+              echo "Manual run on \`${GITHUB_REF_NAME}\`. This archives, signs and exports the"
+              echo "\`.ipa\`, then **stops**. Nothing is uploaded and no App Store Connect build"
+              echo "number is spent. Only the push of a \`v*\` tag can upload."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
@@ -78,8 +170,15 @@ jobs:
 
       # A tag whose name does not match the manifest it points at is not one of our releases —
       # a re-pushed legacy v1.x tag, or a hand-cut tag. Refuse it here rather than archiving it.
+      #
+      # This is the assertion a branch ref cannot satisfy: on `develop` there is no tag name to
+      # compare version.json against, and GITHUB_REF_NAME is the branch. It is therefore keyed
+      # to the MODE rather than to the event, so the relaxation belongs to the mode that cannot
+      # upload. The release path keeps the assertion unconditionally: `release` mode is only
+      # ever reached from a tag push, so there is no dispatch that can skip this check and then
+      # go on to upload.
       - name: Verify the tag matches version.json
-        if: github.event_name == 'push'
+        if: steps.mode.outputs.mode == 'release'
         run: |
           set -euo pipefail
           TAG="${GITHUB_REF_NAME}"
@@ -122,6 +221,12 @@ jobs:
           set -euo pipefail
 
           BASE=""
+          # `--event push` is load-bearing, not tidiness. A verify run's macOS job is also named
+          # `testflight` and also concludes `success`, so without this filter a build-only run on
+          # a branch could become the "last tag that shipped" — and then a later real release
+          # would diff against it, see only version mirrors, and skip an iOS build that never
+          # actually happened. Restricting the history to push events makes a dispatch
+          # structurally ineligible to stand in for a release.
           RUNS=$(gh run list \
             --workflow "ios-testflight.yml" \
             --event push \
@@ -243,6 +348,34 @@ jobs:
     runs-on: macos-latest
     timeout-minutes: 90
     steps:
+      # First thing in the job, before a checkout or an Xcode selection: say out loud which
+      # mode this is, and refuse to continue if `decide` handed over a pair that does not make
+      # sense. The only two valid pairs are release/false and verify/true. Anything else —
+      # including the empty strings you would get if the mode step were deleted or renamed —
+      # fails here, on the safe side, rather than reaching fastlane with TDAY_SKIP_UPLOAD unset
+      # and defaulting to an upload.
+      - name: Confirm the run mode
+        env:
+          MODE: ${{ needs.decide.outputs.mode }}
+          SKIP_UPLOAD: ${{ needs.decide.outputs.skip_upload }}
+        run: |
+          set -euo pipefail
+          echo "Mode: '${MODE}'  TDAY_SKIP_UPLOAD: '${SKIP_UPLOAD}'"
+
+          case "${MODE}:${SKIP_UPLOAD}" in
+            release:false|verify:true) ;;
+            *)
+              echo "::error::The decide job produced an inconsistent mode (mode='${MODE}', skip_upload='${SKIP_UPLOAD}'). Refusing to build rather than guess whether this run may upload."
+              exit 1
+              ;;
+          esac
+
+          if [ "${MODE}" = "release" ]; then
+            echo "RELEASE: if the archive succeeds, this run uploads to TestFlight and spends a build number."
+          else
+            echo "VERIFY: this run archives, signs and exports, then stops. Nothing is uploaded."
+          fi
+
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
@@ -293,15 +426,32 @@ jobs:
       # One dependency (sentry-cocoa, pinned in Package.resolved), but resolving it is a full
       # git clone on every run. Both resolved files are in the key: the workspace copy is the
       # one Xcode actually reads, and the top-level one is what a `swift build` would use.
-      - name: Cache Swift Package Manager checkouts
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+      #
+      # RESTORE AND SAVE ARE SPLIT ON PURPOSE. The combined `actions/cache` action saves from an
+      # implicit post step whose condition is a property of the action's own version rather than
+      # of this workflow, and the previous key could not change unless Package.resolved did.
+      # Together those two facts meant a run interrupted mid-resolve could write a
+      # half-populated .spm-cache under the single key every later run restores, and nothing
+      # short of editing Package.resolved or purging the cache by hand would ever displace it.
+      #
+      # Splitting them fixes both halves. The save condition is now written here, explicitly,
+      # where it can be read and reviewed. The key carries the run id and attempt, so each save
+      # writes a fresh entry and the `restore-keys` prefixes fall back to the most recent match
+      # — a bad entry ages out instead of being pinned forever. The save runs only on success,
+      # so a stored entry always comes from a run that got all the way to an exported .ipa. The
+      # cost is that a run which fails to compile re-resolves next time: one git clone, weighed
+      # against a failure mode that silently poisons every subsequent run.
+      - name: Restore the Swift Package Manager cache
+        id: spm-cache
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: ios-swiftUI/.spm-cache
-          key: spm-${{ runner.os }}-${{ hashFiles('ios-swiftUI/TdayApp.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved', 'ios-swiftUI/Package.resolved') }}
+          key: spm-${{ runner.os }}-${{ hashFiles('ios-swiftUI/TdayApp.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved', 'ios-swiftUI/Package.resolved') }}-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: |
+            spm-${{ runner.os }}-${{ hashFiles('ios-swiftUI/TdayApp.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved', 'ios-swiftUI/Package.resolved') }}-
             spm-${{ runner.os }}-
 
-      - name: Build and upload to TestFlight
+      - name: ${{ needs.decide.outputs.mode == 'release' && 'Archive and upload to TestFlight' || 'Archive only (verify mode — nothing is uploaded)' }}
         working-directory: ios-swiftUI
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
@@ -318,12 +468,23 @@ jobs:
           TDAY_REPO_ROOT: ${{ github.workspace }}
           IOS_SPM_CACHE_PATH: ${{ github.workspace }}/ios-swiftUI/.spm-cache
           IOS_OUTPUT_DIR: ${{ runner.temp }}/ios-build
-          # Dry run: archive, sign and export, then stop. The rehearsal path for signing.
-          TDAY_SKIP_UPLOAD: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+          # "true" in verify mode: archive, sign and export, then stop. Comes from the single
+          # mode decision in `decide` — not from an input, and not recomputed here. The lane
+          # additionally re-derives the same predicate from GITHUB_EVENT_NAME/GITHUB_REF and
+          # will force build-only if this value ever disagrees with them.
+          TDAY_SKIP_UPLOAD: ${{ needs.decide.outputs.skip_upload }}
           # fastlane's own noise reduction; neither affects what is built.
           FASTLANE_SKIP_UPDATE_CHECK: "1"
           FASTLANE_HIDE_CHANGELOG: "1"
         run: bundle exec fastlane beta
+
+      # Only after the lane has produced an .ipa — see the split-cache rationale above.
+      - name: Save the Swift Package Manager cache
+        if: success()
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ios-swiftUI/.spm-cache
+          key: ${{ steps.spm-cache.outputs.cache-primary-key }}
 
       # Nothing in this pipeline installs a certificate: the only path to an Apple Distribution
       # identity is Xcode's automatic signing obtaining one during the build. Which path it took
@@ -354,18 +515,22 @@ jobs:
         if: always()
         env:
           BASE_TAG: ${{ needs.decide.outputs.base_tag }}
-          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+          MODE: ${{ needs.decide.outputs.mode }}
         run: |
           {
-            echo "### iOS TestFlight — ${GITHUB_REF_NAME}"
+            echo "### iOS ${MODE} — ${GITHUB_REF_NAME}"
             echo ""
             echo "Compared against \`${BASE_TAG:-<no base — first iOS build>}\`."
             echo ""
             echo "Build numbers come from \`version.json\` via the pbxproj; this workflow never"
             echo "increments one."
             echo ""
-            if [ "${DRY_RUN}" = "true" ]; then
-              echo "**Dry run** — archived and exported, nothing was uploaded."
+            if [ "${MODE}" != "release" ]; then
+              echo "**Verify mode (build-only)** — the \`.ipa\` was archived, signed and exported"
+              echo "and then discarded. Nothing was uploaded, and the build number in"
+              echo "\`version.json\` is still unspent. This run proves that the project compiles,"
+              echo "that signing and provisioning resolve, and that the export succeeds — it"
+              echo "proves nothing about App Store Connect accepting the binary."
             else
               echo "The upload does not wait for App Store Connect processing. A green run means"
               echo "ASC *accepted* the binary, not that it finished processing. Confirm the build"
