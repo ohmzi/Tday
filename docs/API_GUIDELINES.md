@@ -199,6 +199,26 @@ Shared route constants live in `shared/src/commonMain/kotlin/com/ohmz/tday/share
 | POST | `/api/todo/nlp` | Natural language date/title parsing |
 | POST | `/api/todo/summary` | Task summary with optional AI and logic fallback |
 
+`PATCH /api/todo/complete` and `/api/todo/uncomplete` take `{ id, instanceDate? }`, and
+`instanceDate` is what decides the scope:
+
+| `rrule` | `instanceDate` | What is written |
+|---------|----------------|-----------------|
+| null | anything | `todos.completed`, plus a `CompletedTodo` row with a null `instanceDate`. A one-off has no occurrences, so an `instanceDate` sent anyway is ignored rather than keyed into history. |
+| set | set | A `todo_instances` row for that occurrence, plus a `CompletedTodo` row keyed by the same date. The series keeps running. |
+| set | null | The **series**: `todos.completed`, plus a `CompletedTodo` row with a null `instanceDate`. |
+
+The last row is the one to know about. The request names a todo, not an occurrence, and
+`todos.completed` is the only thing the listing queries read — they never consult
+`todo_instances` — so it is also the only outcome that takes the task off a client's
+screen. A client that means one occurrence must send its `instanceDate`; see
+`docs/design/bulk-selection.md` §4.1, which requires exactly that of bulk complete.
+Uncomplete is the mirror in every case, so any completion reverses cleanly.
+
+Older servers wrote that third row's history entry and then changed no state at all,
+leaving the task on screen with a phantom entry in Completed. Clients that already guard
+against that should keep doing so — a self-hosted server may predate the fix.
+
 ### Floaters
 
 Floaters are unscheduled Anytime tasks. They are not scheduled todos with a nullable due date.

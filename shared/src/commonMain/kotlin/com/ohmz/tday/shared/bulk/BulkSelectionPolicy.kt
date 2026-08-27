@@ -51,8 +51,8 @@ object BulkSelectionPolicy {
      *
      * "As the occurrence it represents" is the whole of it — see
      * [effectiveSelection], which additionally requires the row to *have* an
-     * occurrence. A recurring row with no `instanceDate` is not completable by any
-     * route this app has.
+     * occurrence. A recurring row with no `instanceDate` addresses the series, not
+     * an occurrence, so it is not something a multi-select may complete.
      */
     fun appliesToRecurring(action: BulkAction): Boolean = action == BulkAction.COMPLETE
 
@@ -86,14 +86,22 @@ object BulkSelectionPolicy {
      * capped in display order from the top so the outcome is deterministic rather
      * than whichever hundred the set happened to hold.
      *
-     * COMPLETE additionally drops a recurring row that carries no `instanceDate`.
-     * `TodoService.completeTodo` branches `if (rrule == null) {...} else if
-     * (instanceDate != null) {...}`, so completing a recurring row without one
-     * takes neither branch: it inserts a `CompletedTodos` history row, marks
-     * nothing complete and writes no `TodoInstances` row. The task comes straight
-     * back on the next refetch and Completed history — plus the on-time and
-     * days-to-complete stats built from it — has gained an entry that corresponds
-     * to nothing. Fanning that out over a select-all would do it once per task.
+     * COMPLETE additionally drops a recurring row that carries no `instanceDate`,
+     * and does so against every server version.
+     *
+     * On a server that predates the fix, `TodoService.completeTodo` branched
+     * `if (rrule == null) {...} else if (instanceDate != null) {...}`, so completing
+     * a recurring row without one took neither branch: it inserted a `CompletedTodos`
+     * history row, marked nothing complete and wrote no `TodoInstances` row. The task
+     * came straight back on the next refetch and Completed history — plus the on-time
+     * and days-to-complete stats built from it — gained an entry that corresponded to
+     * nothing.
+     *
+     * On a fixed server that request completes the **series** instead. That is the
+     * right answer for a single deliberate tap, and the wrong one to fan out over a
+     * select-all: it would end whole recurring series rather than clear one occurrence
+     * each. Either way the row stays out of the set — do not relax this on the grounds
+     * that the server is fixed now.
      *
      * [hasInstanceDate] defaults to "no occurrence", so a caller that has not
      * thought about it gets the safe answer rather than the phantom row.

@@ -59,6 +59,50 @@ interface TodoService {
     suspend fun getRecurrenceStates(userId: String, todoIds: List<String>): Either<AppError, Map<String, RecurrenceState>>
 }
 
+/**
+ * What a complete/uncomplete request acts on. Decided once, up front, so the state
+ * change and the `CompletedTodos` history row can never describe different things —
+ * and so history is never written for a request that marks nothing complete.
+ */
+internal sealed interface CompletionTarget {
+    /** The `todos` row itself — `todos.completed`. Its history row has a null `instanceDate`. */
+    data object Series : CompletionTarget
+
+    /** One occurrence of a recurring series — a `todo_instances` row. */
+    data class Occurrence(val instanceDate: LocalDateTime) : CompletionTarget
+
+    /** The `CompletedTodos.instanceDate` this target's history row is keyed by. */
+    val historyInstanceDate: LocalDateTime?
+        get() = (this as? Occurrence)?.instanceDate
+}
+
+/**
+ * An `instanceDate` names an occurrence, and only a recurring todo has occurrences.
+ * Everything else completes the todo row itself.
+ *
+ * The recurring-without-an-occurrence case used to fall between the two arms of
+ * `if (rrule == null) … else if (instanceDate != null) …`: a `CompletedTodos` row was
+ * written, nothing was marked complete, and the task came straight back on the next
+ * refetch. It is not a rare shape — `toTodoResponse()` never sets `instanceDate` and
+ * both listing queries emit recurring *templates*, so it is what every client sends
+ * for every recurring task. Completing the series is what the caller asked for (the
+ * request names a todo, not an occurrence), it is the exact inverse of what
+ * `uncompleteTodo` has always done for a null `instanceDate`, and it is the only
+ * outcome that actually removes the row from the listings — which all filter on
+ * `todos.completed` and never consult `todo_instances`. A client that means one
+ * occurrence must say so, which is what `docs/design/bulk-selection.md` §4.1 requires.
+ *
+ * The mirror case — an `instanceDate` on a one-off — is normalised away rather than
+ * honoured: a one-off has no occurrences, and keying its history row by a date while
+ * `todos.completed` said otherwise left an uncomplete able to undo only one of the two.
+ */
+internal fun completionTargetFor(rrule: String?, instanceDate: LocalDateTime?): CompletionTarget =
+    if (rrule != null && instanceDate != null) {
+        CompletionTarget.Occurrence(instanceDate)
+    } else {
+        CompletionTarget.Series
+    }
+
 class TodoServiceImpl(
     private val fieldEncryption: FieldEncryption,
     private val cache: CacheService,
@@ -277,11 +321,44 @@ class TodoServiceImpl(
             val list = todo[Todos.listID]?.let { listId ->
                 Lists.selectAll().where { Lists.id eq listId }.firstOrNull()
             }
+
+            // Mark it complete first, then record the history — same transaction, so a
+            // history row can only exist for a completion that was actually applied.
+            val target = completionTargetFor(todo[Todos.rrule], instanceDate)
+            when (target) {
+                is CompletionTarget.Series -> Todos.update({ Todos.id eq todoId }) {
+                    it[Todos.completed] = true
+                    it[Todos.updatedAt] = now
+                }
+
+                is CompletionTarget.Occurrence -> {
+                    val occurrence = target.instanceDate
+                    val existing = TodoInstances.selectAll().where {
+                        (TodoInstances.todoId eq todoId) and (TodoInstances.instanceDate eq occurrence)
+                    }.firstOrNull()
+
+                    if (existing != null) {
+                        TodoInstances.update({
+                            (TodoInstances.todoId eq todoId) and (TodoInstances.instanceDate eq occurrence)
+                        }) { it[TodoInstances.completedAt] = now }
+                    } else {
+                        TodoInstances.insert {
+                            it[TodoInstances.id] = CuidGenerator.newCuid()
+                            it[TodoInstances.todoId] = todoId
+                            it[TodoInstances.recurId] = occurrence.toString()
+                            it[TodoInstances.instanceDate] = occurrence
+                            it[TodoInstances.completedAt] = now
+                        }
+                    }
+                }
+            }
+
+            val historyInstanceDate = target.historyInstanceDate
             val existingCompleted = CompletedTodos.selectAll().where {
-                if (instanceDate != null) {
+                if (historyInstanceDate != null) {
                     (CompletedTodos.userID eq userId) and
                         (CompletedTodos.originalTodoID eq todoId) and
-                        (CompletedTodos.instanceDate eq instanceDate)
+                        (CompletedTodos.instanceDate eq historyInstanceDate)
                 } else {
                     (CompletedTodos.userID eq userId) and
                         (CompletedTodos.originalTodoID eq todoId) and
@@ -323,36 +400,11 @@ class TodoServiceImpl(
                     it[CompletedTodos.daysToComplete] = BigDecimal.valueOf(daysToComplete).setScale(2, RoundingMode.HALF_UP)
                     it[CompletedTodos.rrule] = todo[Todos.rrule]
                     it[CompletedTodos.userID] = userId
-                    it[CompletedTodos.instanceDate] = instanceDate
+                    it[CompletedTodos.instanceDate] = historyInstanceDate
                     it[CompletedTodos.listID] = todo[Todos.listID]
                     it[CompletedTodos.listName] = list?.get(Lists.name)
                     it[CompletedTodos.listColor] = list?.get(Lists.color)?.name
                     it[CompletedTodos.steps] = stepsJson
-                }
-            }
-
-            if (todo[Todos.rrule] == null) {
-                Todos.update({ Todos.id eq todoId }) {
-                    it[Todos.completed] = true
-                    it[Todos.updatedAt] = now
-                }
-            } else if (instanceDate != null) {
-                val existing = TodoInstances.selectAll().where {
-                    (TodoInstances.todoId eq todoId) and (TodoInstances.instanceDate eq instanceDate)
-                }.firstOrNull()
-
-                if (existing != null) {
-                    TodoInstances.update({
-                        (TodoInstances.todoId eq todoId) and (TodoInstances.instanceDate eq instanceDate)
-                    }) { it[TodoInstances.completedAt] = now }
-                } else {
-                    TodoInstances.insert {
-                        it[TodoInstances.id] = CuidGenerator.newCuid()
-                        it[TodoInstances.todoId] = todoId
-                        it[TodoInstances.recurId] = instanceDate.toString()
-                        it[TodoInstances.instanceDate] = instanceDate
-                        it[TodoInstances.completedAt] = now
-                    }
                 }
             }
         }
@@ -369,27 +421,31 @@ class TodoServiceImpl(
             // parent Todos row before touching any instance state (mirrors
             // completeTodo/patchInstance/deleteInstance). Without this, another
             // user could clear an instance's completion by todoId+instanceDate.
-            val canMutate = Todos.selectAll().where {
+            // The row is also what says whether this todo has occurrences at all.
+            val todo = Todos.selectAll().where {
                 (Todos.id eq todoId) and mutableTodos(userId, editableListIds)
-            }.limit(1).any()
-            if (!canMutate) return@newSuspendedTransaction
+            }.firstOrNull() ?: return@newSuspendedTransaction
 
-            if (instanceDate != null) {
-                TodoInstances.update({
-                    (TodoInstances.todoId eq todoId) and (TodoInstances.instanceDate eq instanceDate)
-                }) { it[TodoInstances.completedAt] = null }
-            } else {
-                Todos.update({ Todos.id eq todoId }) {
+            // Same decision as completeTodo, so an undo always addresses the row the
+            // completion touched and the history row it keyed.
+            val target = completionTargetFor(todo[Todos.rrule], instanceDate)
+            when (target) {
+                is CompletionTarget.Series -> Todos.update({ Todos.id eq todoId }) {
                     it[Todos.completed] = false
                     it[Todos.updatedAt] = LocalDateTime.now(ZoneOffset.UTC)
                 }
+
+                is CompletionTarget.Occurrence -> TodoInstances.update({
+                    (TodoInstances.todoId eq todoId) and (TodoInstances.instanceDate eq target.instanceDate)
+                }) { it[TodoInstances.completedAt] = null }
             }
 
+            val historyInstanceDate = target.historyInstanceDate
             CompletedTodos.deleteWhere {
-                if (instanceDate != null) {
+                if (historyInstanceDate != null) {
                     (CompletedTodos.userID eq userId) and
                         (CompletedTodos.originalTodoID eq todoId) and
-                        (CompletedTodos.instanceDate eq instanceDate)
+                        (CompletedTodos.instanceDate eq historyInstanceDate)
                 } else {
                     (CompletedTodos.userID eq userId) and
                         (CompletedTodos.originalTodoID eq todoId) and
