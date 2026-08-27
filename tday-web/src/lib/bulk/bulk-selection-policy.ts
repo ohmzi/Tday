@@ -72,14 +72,17 @@ export function isBulkSelectionAtCap(selectedCount: number): boolean {
  * top so the outcome is deterministic rather than whichever hundred the set
  * happened to hold.
  *
- * "complete" additionally drops a recurring row with no `instanceDate`.
- * `TodoService.completeTodo` branches `if (rrule == null) {...} else if
- * (instanceDate != null) {...}`, so completing a recurring row without one takes
- * neither branch: it writes a `CompletedTodos` history row, marks nothing
- * complete, and the task returns on the next refetch while the Completed list —
- * and the stats derived from it — keeps an entry for something that never
- * happened. `hasInstanceDate` defaults to "no occurrence" so an un-thought-about
- * caller gets the safe answer.
+ * "complete" additionally drops a recurring row with no `instanceDate`, against
+ * every server version. On a server predating the fix, `TodoService.completeTodo`
+ * branched `if (rrule == null) {...} else if (instanceDate != null) {...}`, so
+ * completing a recurring row without one took neither branch: it wrote a
+ * `CompletedTodos` history row, marked nothing complete, and the task returned on
+ * the next refetch while the Completed list — and the stats derived from it — kept
+ * an entry for something that never happened. On a fixed server that same request
+ * completes the whole **series**, which is right for one deliberate tap and wrong
+ * to fan out over a select-all. So the row stays out of the set either way; do not
+ * relax this because the server is fixed. `hasInstanceDate` defaults to "no
+ * occurrence" so an un-thought-about caller gets the safe answer.
  */
 export function effectiveBulkSelection<T>(
   action: BulkAction,
