@@ -727,6 +727,49 @@
       "searchBody": "faca a triagem das tarefas acumuladas um cartao de cada vez. ficar para tras deixa de doer: o botao varrer na tela de atrasadas percorre suas tarefas acumuladas um cartao de cada vez — hoje, amanha, escolher uma data, tornar flutuante ou deixar ir. com pressa? varrer tudo para hoje move tudo de uma vez, com um unico desfazer. tarefas recorrentes ficam fora da varredura; suas ocorrencias sao reagendadas pela folha de edicao para manter a serie intacta."
     },
     {
+      "id": "bulk-actions",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "circle-check-big",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "PRO_TIP",
+      "serverOnly": false,
+      "sinceVersion": "0.7.4",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Ações em massa",
+      "summary": "Selecione várias tarefas de uma vez e trate todas juntas.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Toque em Selecionar no cabeçalho de uma lista de tarefas para entrar no modo de seleção. Escolha tarefas uma a uma ou toque em Selecionar tudo e aplique uma única ação ao conjunto inteiro: marcá-las como concluídas, mudar a prioridade, movê-las para outra lista ou excluí-las."
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "Abra uma lista de tarefas e toque em Selecionar no cabeçalho.",
+            "Toque nas tarefas para escolhê-las ou use Selecionar tudo para as que estão na tela.",
+            "Escolha Concluir, Prioridade, Mover ou Excluir na barra inferior."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Excluir pede que você confirme o número exato e ainda deixa um aviso para desfazer. Tarefas repetidas ficam totalmente de fora das ações em massa, para que uma série inteira nunca mude sem querer — abra uma de cada vez para concluir, mover ou excluir."
+          ]
+        }
+      ],
+      "searchTitle": "acoes em massa",
+      "searchKeywords": "massa, selecao multipla, selecionar tudo, lote, varias, concluir, excluir, prioridade, mover, selecao",
+      "searchBody": "selecione varias tarefas de uma vez e trate todas juntas. toque em selecionar no cabecalho de uma lista de tarefas para entrar no modo de selecao. escolha tarefas uma a uma ou toque em selecionar tudo e aplique uma unica acao ao conjunto inteiro: marca-las como concluidas, mudar a prioridade, move-las para outra lista ou exclui-las. abra uma lista de tarefas e toque em selecionar no cabecalho. toque nas tarefas para escolhe-las ou use selecionar tudo para as que estao na tela. escolha concluir, prioridade, mover ou excluir na barra inferior. excluir pede que voce confirme o numero exato e ainda deixa um aviso para desfazer. tarefas repetidas ficam totalmente de fora das acoes em massa, para que uma serie inteira nunca mude sem querer — abra uma de cada vez para concluir, mover ou excluir."
+    },
+    {
       "id": "search-tasks",
       "section": "ORGANIZING",
       "sectionOrder": 3,

@@ -698,4 +698,52 @@
     <string name="settings_privacy">Privacy</string>
     <string name="root_feed_search_scheduled">Cerca attività pianificate</string>
     <string name="root_feed_search_floater">Cerca attività fluttuanti</string>
+
+    <!-- Bulk selection: multi-select actions in a task list -->
+    <string name="bulk_select">Seleziona</string>
+    <string name="bulk_select_all">Seleziona tutto</string>
+    <string name="bulk_deselect_all">Deseleziona tutto</string>
+    <string name="bulk_selected">%1$d selezionate</string>
+    <string name="bulk_selected_capped">%1$d selezionate — il massimo che una sola azione può coprire</string>
+    <string name="bulk_applies_to">Si applica a %1$d di %2$d — le attività ricorrenti vengono saltate.</string>
+    <string name="bulk_select_task">Seleziona attività</string>
+    <string name="bulk_deselect_task">Deseleziona attività</string>
+    <string name="bulk_action_complete">Completa</string>
+    <string name="bulk_action_priority">Priorità</string>
+    <string name="bulk_action_move">Sposta</string>
+    <string name="bulk_action_delete">Elimina</string>
+    <string name="bulk_delete_body">Questa azione le rimuove da ogni elenco, insieme alla loro cronologia completata. Avrai qualche secondo per annullare.</string>
+    <string name="bulk_move_body">Queste attività provengono da elenchi diversi. Lo spostamento non si può annullare in un solo passaggio — dovresti rimettere ognuna a mano.</string>
+    <plurals name="bulk_tasks_completed">
+        <item quantity="one">Attività completata</item>
+        <item quantity="other">%d attività completate</item>
+    </plurals>
+    <plurals name="bulk_tasks_deleted">
+        <item quantity="one">Attività eliminata</item>
+        <item quantity="other">%d attività eliminate</item>
+    </plurals>
+    <plurals name="bulk_delete_title">
+        <item quantity="one">Eliminare questa attività?</item>
+        <item quantity="other">Eliminare %d attività?</item>
+    </plurals>
+    <plurals name="bulk_delete_confirm">
+        <item quantity="one">Elimina attività</item>
+        <item quantity="other">Elimina %d attività</item>
+    </plurals>
+    <plurals name="bulk_move_title">
+        <item quantity="one">Spostare questa attività?</item>
+        <item quantity="other">Spostare %d attività?</item>
+    </plurals>
+    <plurals name="bulk_move_confirm">
+        <item quantity="one">Sposta attività</item>
+        <item quantity="other">Sposta %d attività</item>
+    </plurals>
+    <plurals name="bulk_delete_failed">
+        <item quantity="one">Non è stato possibile eliminare un\'attività</item>
+        <item quantity="other">Non è stato possibile eliminare %d attività</item>
+    </plurals>
+    <plurals name="bulk_update_failed">
+        <item quantity="one">Non è stato possibile aggiornare un\'attività</item>
+        <item quantity="other">Non è stato possibile aggiornare %d attività</item>
+    </plurals>
 </resources>

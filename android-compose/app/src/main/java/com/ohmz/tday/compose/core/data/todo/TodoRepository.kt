@@ -663,38 +663,14 @@ class TodoRepository @Inject constructor(
 
         var staged = StagedTodoDeletion()
         cacheManager.updateOfflineState { state ->
-            fun matchesTodo(record: CachedTodoRecord): Boolean {
-                if (record.canonicalId != canonicalId) return false
-                return !isRecurringInstanceDelete || record.instanceDateEpochMs == instanceDateEpochMs
-            }
-
-            fun matchesCompleted(record: com.ohmz.tday.compose.core.data.CachedCompletedRecord): Boolean {
-                if (record.originalTodoId != canonicalId) return false
-                return !isRecurringInstanceDelete || record.instanceDateEpochMs == instanceDateEpochMs
-            }
-
-            // Mirrors the mutation pruning of [OfflineSyncState.withDeletedTodoCached]
-            // minus enqueueing the DELETE record (that happens at commit time).
-            fun matchesMutation(mutation: PendingMutationRecord): Boolean {
-                return if (isLocalOnly) {
-                    !isRecurringInstanceDelete && mutation.targetId == canonicalId
-                } else {
-                    mutation.kind == MutationKind.DELETE_TODO &&
-                        mutation.targetId == canonicalId &&
-                        mutation.instanceDateEpochMs == instanceDateEpochMs
-                }
-            }
-
-            staged = StagedTodoDeletion(
-                removedTodos = state.todos.filter(::matchesTodo),
-                removedCompletedItems = state.completedItems.filter(::matchesCompleted),
-                removedPendingMutations = state.pendingMutations.filter(::matchesMutation),
+            val (pruned, removed) = state.withStagedTodoDeletion(
+                canonicalId = canonicalId,
+                instanceDateEpochMs = instanceDateEpochMs,
+                isRecurringInstanceDelete = isRecurringInstanceDelete,
+                isLocalOnly = isLocalOnly,
             )
-            state.copy(
-                todos = state.todos.filterNot(::matchesTodo),
-                completedItems = state.completedItems.filterNot(::matchesCompleted),
-                pendingMutations = state.pendingMutations.filterNot(::matchesMutation),
-            )
+            staged = removed
+            pruned
         }
         refreshTodayWidgetNow()
         return staged
@@ -725,26 +701,12 @@ class TodoRepository @Inject constructor(
 
         var staged = StagedFloaterDeletion()
         cacheManager.updateOfflineState { state ->
-            fun matchesMutation(mutation: PendingMutationRecord): Boolean {
-                return if (isLocalOnly) {
-                    mutation.targetId == canonicalId
-                } else {
-                    mutation.kind == MutationKind.DELETE_FLOATER && mutation.targetId == canonicalId
-                }
-            }
-
-            staged = StagedFloaterDeletion(
-                removedFloaters = state.floaters.filter { it.canonicalId == canonicalId },
-                removedCompletedFloaters = state.completedFloaters
-                    .filter { it.originalFloaterId == canonicalId },
-                removedPendingMutations = state.pendingMutations.filter(::matchesMutation),
+            val (pruned, removed) = state.withStagedFloaterDeletion(
+                canonicalId = canonicalId,
+                isLocalOnly = isLocalOnly,
             )
-            state.copy(
-                floaters = state.floaters.filterNot { it.canonicalId == canonicalId },
-                completedFloaters = state.completedFloaters
-                    .filterNot { it.originalFloaterId == canonicalId },
-                pendingMutations = state.pendingMutations.filterNot(::matchesMutation),
-            )
+            staged = removed
+            pruned
         }
         refreshFloaterWidgetNow()
         return staged
@@ -826,31 +788,12 @@ class TodoRepository @Inject constructor(
         val mutationId = UUID.randomUUID().toString()
 
         cacheManager.updateOfflineState { state ->
-            val isLocalOnly = canonicalId.startsWith(LOCAL_FLOATER_PREFIX)
-            val prunedFloaters = state.floaters.filterNot { it.canonicalId == canonicalId }
-            val prunedCompleted =
-                state.completedFloaters.filterNot { it.originalFloaterId == canonicalId }
-
-            if (isLocalOnly) {
-                state.copy(
-                    floaters = prunedFloaters,
-                    completedFloaters = prunedCompleted,
-                    pendingMutations = state.pendingMutations.filterNot { it.targetId == canonicalId },
-                )
-            } else {
-                state.copy(
-                    floaters = prunedFloaters,
-                    completedFloaters = prunedCompleted,
-                    pendingMutations = state.pendingMutations
-                        .filterNot { it.kind == MutationKind.DELETE_FLOATER && it.targetId == canonicalId } +
-                            PendingMutationRecord(
-                                mutationId = mutationId,
-                                kind = MutationKind.DELETE_FLOATER,
-                                targetId = canonicalId,
-                                timestampEpochMs = timestampMs,
-                            ),
-                )
-            }
+            state.withDeletedFloaterCached(
+                canonicalId = canonicalId,
+                isLocalOnly = canonicalId.startsWith(LOCAL_FLOATER_PREFIX),
+                mutationId = mutationId,
+                timestampEpochMs = timestampMs,
+            )
         }
         refreshFloaterWidgetNow()
 
@@ -874,54 +817,11 @@ class TodoRepository @Inject constructor(
         val timestampMs = System.currentTimeMillis()
         val mutationId = UUID.randomUUID().toString()
         cacheManager.updateOfflineState { state ->
-            val updatedTodos = state.todos.map {
-                if (it.canonicalId == todo.canonicalId) {
-                    if (todo.isRecurring && todo.instanceDate != null) {
-                        if (it.instanceDateEpochMs == todo.instanceDate.toEpochMilli()) {
-                            it.copy(completed = true, updatedAtEpochMs = timestampMs)
-                        } else {
-                            it
-                        }
-                    } else {
-                        it.copy(completed = true, updatedAtEpochMs = timestampMs)
-                    }
-                } else {
-                    it
-                }
-            }
-            val completedId = "${com.ohmz.tday.compose.core.data.cache.LOCAL_COMPLETED_PREFIX}${UUID.randomUUID()}"
-            val listMeta = todo.listId?.let { listId -> state.lists.firstOrNull { it.id == listId } }
-            val completedItem = com.ohmz.tday.compose.core.data.CachedCompletedRecord(
-                id = completedId,
-                originalTodoId = todo.canonicalId,
-                title = todo.title,
-                description = todo.description,
-                priority = todo.priority,
-                dueEpochMs = todo.due?.toEpochMilli(),
-                completedAtEpochMs = timestampMs,
-                rrule = todo.rrule,
-                instanceDateEpochMs = todo.instanceDateEpochMillis,
-                listId = todo.listId,
-                listName = listMeta?.name,
-                listColor = listMeta?.color,
-            )
-
-            val mutationKind = if (todo.isRecurring && todo.instanceDate != null) {
-                MutationKind.COMPLETE_TODO_INSTANCE
-            } else {
-                MutationKind.COMPLETE_TODO
-            }
-
-            state.copy(
-                todos = updatedTodos,
-                completedItems = state.completedItems + completedItem,
-                pendingMutations = state.pendingMutations + PendingMutationRecord(
-                    mutationId = mutationId,
-                    kind = mutationKind,
-                    targetId = todo.canonicalId,
-                    timestampEpochMs = timestampMs,
-                    instanceDateEpochMs = todo.instanceDateEpochMillis,
-                ),
+            state.withCompletedTodoCached(
+                todo = todo,
+                timestampEpochMs = timestampMs,
+                mutationId = mutationId,
+                completedRecordId = "${com.ohmz.tday.compose.core.data.cache.LOCAL_COMPLETED_PREFIX}${UUID.randomUUID()}",
             )
         }
         refreshTodayWidgetNow()
@@ -969,37 +869,11 @@ class TodoRepository @Inject constructor(
         val timestampMs = System.currentTimeMillis()
         val mutationId = UUID.randomUUID().toString()
         cacheManager.updateOfflineState { state ->
-            val updatedFloaters = state.floaters.map {
-                if (it.canonicalId == floater.canonicalId) {
-                    it.copy(completed = true, updatedAtEpochMs = timestampMs)
-                } else {
-                    it
-                }
-            }
-            val completedId = "$LOCAL_COMPLETED_FLOATER_PREFIX${UUID.randomUUID()}"
-            val listMeta =
-                floater.listId?.let { listId -> state.floaterLists.firstOrNull { it.id == listId } }
-            val completedItem = com.ohmz.tday.compose.core.data.CachedCompletedFloaterRecord(
-                id = completedId,
-                originalFloaterId = floater.canonicalId,
-                title = floater.title,
-                description = floater.description,
-                priority = floater.priority,
-                completedAtEpochMs = timestampMs,
-                listId = floater.listId,
-                listName = listMeta?.name,
-                listColor = listMeta?.color,
-            )
-
-            state.copy(
-                floaters = updatedFloaters,
-                completedFloaters = state.completedFloaters + completedItem,
-                pendingMutations = state.pendingMutations + PendingMutationRecord(
-                    mutationId = mutationId,
-                    kind = MutationKind.COMPLETE_FLOATER,
-                    targetId = floater.canonicalId,
-                    timestampEpochMs = timestampMs,
-                ),
+            state.withCompletedFloaterCached(
+                floater = floater,
+                timestampEpochMs = timestampMs,
+                mutationId = mutationId,
+                completedRecordId = "$LOCAL_COMPLETED_FLOATER_PREFIX${UUID.randomUUID()}",
             )
         }
         refreshFloaterWidgetNow()
