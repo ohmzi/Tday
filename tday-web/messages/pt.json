@@ -434,8 +434,14 @@
     "bulkMoveTitle": "Mover {{count}} tarefas?",
     "bulkMoveBody": "Estas tarefas vêm de listas diferentes. Mover não dá para desfazer de uma vez — você teria que devolver cada uma à mão.",
     "bulkMoveConfirm": "Mover {{count}} tarefas",
-    "bulkDeleteFailed": "Não foi possível excluir {{count}} tarefas",
-    "bulkUpdateFailed": "Não foi possível atualizar {{count}} tarefas"
+    "bulkDeleteFailed_one": "Não foi possível excluir uma tarefa",
+    "bulkDeleteFailed_few": "Não foi possível excluir {{count}} tarefas",
+    "bulkDeleteFailed_many": "Não foi possível excluir {{count}} tarefas",
+    "bulkDeleteFailed_other": "Não foi possível excluir {{count}} tarefas",
+    "bulkUpdateFailed_one": "Não foi possível atualizar uma tarefa",
+    "bulkUpdateFailed_few": "Não foi possível atualizar {{count}} tarefas",
+    "bulkUpdateFailed_many": "Não foi possível atualizar {{count}} tarefas",
+    "bulkUpdateFailed_other": "Não foi possível atualizar {{count}} tarefas"
   },
   "today": {
     "saveInstance": "Guardar instância",
@@ -1304,7 +1310,7 @@
         "step0": "Abra uma lista de tarefas e toque em Selecionar no cabeçalho.",
         "step1": "Toque nas tarefas para escolhê-las ou use Selecionar tudo para as que estão na tela.",
         "step2": "Escolha Concluir, Prioridade, Mover ou Excluir na barra inferior.",
-        "tip": "Excluir pede que você confirme o número exato e ainda deixa um aviso para desfazer. Tarefas repetidas podem ser concluídas em massa, mas ficam de fora de excluir, prioridade e mover, para que uma série inteira nunca mude sem querer."
+        "tip": "Excluir pede que você confirme o número exato e ainda deixa um aviso para desfazer. Tarefas repetidas ficam totalmente de fora das ações em massa, para que uma série inteira nunca mude sem querer — abra uma de cada vez para concluir, mover ou excluir."
       }
     }
   },

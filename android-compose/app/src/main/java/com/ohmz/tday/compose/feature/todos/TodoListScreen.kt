@@ -535,11 +535,14 @@ fun TodoListScreen(
     // The recurring rule, in one place: an occurrence may be bulk-completed as
     // the occurrence it represents, but delete, priority and move have no
     // per-occurrence route and would silently rewrite the whole series, so they
-    // never see one.
+    // never see one. Complete also needs the occurrence to exist — a recurring
+    // row with no instanceDate queues COMPLETE_TODO, which the backend turns
+    // into a phantom completed-history row that marks nothing complete.
     val bulkCompleteTargets = remember(selectedTodos) {
         BulkSelectionPolicy.effectiveSelection(
             action = BulkAction.COMPLETE,
             selection = selectedTodos,
+            hasInstanceDate = { it.instanceDate != null },
             isRecurring = { it.isRecurring },
         )
     }

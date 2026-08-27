@@ -761,13 +761,13 @@
         {
           "type": "TIP",
           "texts": [
-            "Beim Löschen musst du zuerst die genaue Anzahl bestätigen — und danach bleibt trotzdem ein Hinweis zum Rückgängigmachen. Wiederkehrende Aufgaben lassen sich sammelweise erledigen, bleiben bei Löschen, Priorität und Verschieben aber außen vor, damit nie versehentlich eine ganze Serie geändert wird."
+            "Beim Löschen musst du zuerst die genaue Anzahl bestätigen — und danach bleibt trotzdem ein Hinweis zum Rückgängigmachen. Wiederkehrende Aufgaben bleiben bei Sammelaktionen komplett außen vor, damit nie versehentlich eine ganze Serie geändert wird — öffne sie einzeln, um sie zu erledigen, zu verschieben oder zu löschen."
           ]
         }
       ],
       "searchTitle": "sammelaktionen",
       "searchKeywords": "sammelaktion, mehrfachauswahl, alle auswahlen, stapel, mehrere, erledigen, loschen, prioritat, verschieben, auswahl",
-      "searchBody": "mehrere aufgaben auf einmal auswahlen und gemeinsam bearbeiten. tippe in der kopfzeile einer aufgabenliste auf auswahlen, um in den auswahlmodus zu wechseln. wahle aufgaben einzeln oder tippe auf alle auswahlen und wende dann eine einzige aktion auf alles an: als erledigt markieren, prioritat andern, in eine andere liste verschieben oder loschen. offne eine aufgabenliste und tippe in der kopfzeile auf auswahlen. tippe aufgaben an, um sie zu wahlen, oder nutze alle auswahlen fur alles auf dem bildschirm. wahle unten in der leiste erledigen, prioritat, verschieben oder loschen. beim loschen musst du zuerst die genaue anzahl bestatigen — und danach bleibt trotzdem ein hinweis zum ruckgangigmachen. wiederkehrende aufgaben lassen sich sammelweise erledigen, bleiben bei loschen, prioritat und verschieben aber ausen vor, damit nie versehentlich eine ganze serie geandert wird."
+      "searchBody": "mehrere aufgaben auf einmal auswahlen und gemeinsam bearbeiten. tippe in der kopfzeile einer aufgabenliste auf auswahlen, um in den auswahlmodus zu wechseln. wahle aufgaben einzeln oder tippe auf alle auswahlen und wende dann eine einzige aktion auf alles an: als erledigt markieren, prioritat andern, in eine andere liste verschieben oder loschen. offne eine aufgabenliste und tippe in der kopfzeile auf auswahlen. tippe aufgaben an, um sie zu wahlen, oder nutze alle auswahlen fur alles auf dem bildschirm. wahle unten in der leiste erledigen, prioritat, verschieben oder loschen. beim loschen musst du zuerst die genaue anzahl bestatigen — und danach bleibt trotzdem ein hinweis zum ruckgangigmachen. wiederkehrende aufgaben bleiben bei sammelaktionen komplett ausen vor, damit nie versehentlich eine ganze serie geandert wird — offne sie einzeln, um sie zu erledigen, zu verschieben oder zu loschen."
     },
     {
       "id": "search-tasks",

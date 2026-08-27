@@ -434,8 +434,14 @@
     "bulkMoveTitle": "移动 {{count}} 个任务？",
     "bulkMoveBody": "这些任务来自不同的列表。移动之后无法一步撤销——你得手动把每一个放回去。",
     "bulkMoveConfirm": "移动 {{count}} 个任务",
-    "bulkDeleteFailed": "有 {{count}} 个任务未能删除",
-    "bulkUpdateFailed": "有 {{count}} 个任务未能更新"
+    "bulkDeleteFailed_one": "有一个任务未能删除",
+    "bulkDeleteFailed_few": "有 {{count}} 个任务未能删除",
+    "bulkDeleteFailed_many": "有 {{count}} 个任务未能删除",
+    "bulkDeleteFailed_other": "有 {{count}} 个任务未能删除",
+    "bulkUpdateFailed_one": "有一个任务未能更新",
+    "bulkUpdateFailed_few": "有 {{count}} 个任务未能更新",
+    "bulkUpdateFailed_many": "有 {{count}} 个任务未能更新",
+    "bulkUpdateFailed_other": "有 {{count}} 个任务未能更新"
   },
   "today": {
     "saveInstance": "保存实例",
@@ -1304,7 +1310,7 @@
         "step0": "打开任务列表，在标题栏点按「选择」。",
         "step1": "点按任务将其选中，或用「全选」选中屏幕上的全部任务。",
         "step2": "在底部操作栏中选择「完成」「优先级」「移动」或「删除」。",
-        "tip": "删除会先让你确认具体数量，之后仍会留下可撤销的提示。重复任务可以批量完成，但不参与删除、优先级和移动，以免整个系列被误改。"
+        "tip": "删除会先让你确认具体数量，之后仍会留下可撤销的提示。重复任务完全不参与批量操作，以免整个系列被误改——请单独打开来完成、移动或删除。"
       }
     }
   },

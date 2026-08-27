@@ -5,7 +5,11 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-private data class Row(val id: String, val recurring: Boolean = false)
+private data class Row(
+    val id: String,
+    val recurring: Boolean = false,
+    val hasInstanceDate: Boolean = false,
+)
 
 class BulkSelectionPolicyTest {
 
@@ -26,13 +30,9 @@ class BulkSelectionPolicyTest {
     }
 
     @Test
-    fun recurringRowsAreDroppedFromEverythingButComplete() {
+    fun recurringRowsAreDroppedFromDeletePriorityAndMove() {
         val selection = listOf(Row("a"), Row("b", recurring = true), Row("c"))
 
-        assertEquals(
-            listOf("a", "b", "c"),
-            BulkSelectionPolicy.effectiveSelection(BulkAction.COMPLETE, selection) { it.recurring }.map { it.id },
-        )
         for (action in listOf(BulkAction.DELETE, BulkAction.SET_PRIORITY, BulkAction.MOVE_TO_LIST)) {
             assertEquals(
                 listOf("a", "c"),
@@ -40,6 +40,40 @@ class BulkSelectionPolicyTest {
                 "$action must skip recurring occurrences",
             )
         }
+    }
+
+    @Test
+    fun completeOnlyTakesARecurringRowThatIsARealOccurrence() {
+        val selection = listOf(
+            Row("a"),
+            Row("occurrence", recurring = true, hasInstanceDate = true),
+            Row("template", recurring = true),
+            Row("c"),
+        )
+
+        // `template` has no instanceDate. TodoService.completeTodo would insert a
+        // CompletedTodos row for it and take neither completion branch: nothing
+        // marked complete, a phantom history entry, task still on screen.
+        assertEquals(
+            listOf("a", "occurrence", "c"),
+            BulkSelectionPolicy.effectiveSelection(
+                action = BulkAction.COMPLETE,
+                selection = selection,
+                hasInstanceDate = { it.hasInstanceDate },
+                isRecurring = { it.recurring },
+            ).map { it.id },
+        )
+    }
+
+    @Test
+    fun completeDefaultsToTreatingRecurringRowsAsNonOccurrences() {
+        // A caller that has not supplied hasInstanceDate must get the safe answer.
+        val selection = listOf(Row("a"), Row("b", recurring = true))
+
+        assertEquals(
+            listOf("a"),
+            BulkSelectionPolicy.effectiveSelection(BulkAction.COMPLETE, selection) { it.recurring }.map { it.id },
+        )
     }
 
     @Test

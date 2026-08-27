@@ -192,7 +192,7 @@ describe("bulk selection mode", () => {
     expect(screen.getByTestId("count").textContent).toBe("1");
   });
 
-  it("never offers delete for a selection of recurring occurrences", () => {
+  it("never offers any action for repeating rows that are not occurrences", () => {
     const rows = [
       buildTodo({ id: "r1:1", rrule: "FREQ=DAILY" }),
       buildTodo({ id: "r2:2", rrule: "FREQ=WEEKLY" }),
@@ -205,8 +205,29 @@ describe("bulk selection mode", () => {
     expect(barButton("bulkDelete")).toHaveProperty("disabled", true);
     expect(barButton("bulkPriority")).toHaveProperty("disabled", true);
     expect(barButton("bulkMove")).toHaveProperty("disabled", true);
-    // Complete addresses the occurrence it was shown as, so it stays live.
+    // Complete addresses the occurrence a row was shown as — and neither of
+    // these rows is one. `buildTodo` leaves instanceDate null, which is what
+    // every endpoint actually returns for a recurring template, so completing
+    // them would write a phantom history row and complete nothing.
+    expect(barButton("bulkComplete")).toHaveProperty("disabled", true);
+  });
+
+  it("offers complete for a repeating row that is a materialised occurrence", () => {
+    const rows = [
+      buildTodo({
+        id: "r1:1",
+        rrule: "FREQ=DAILY",
+        instanceDate: new Date("2026-08-20T09:00:00.000Z"),
+      }),
+    ];
+    render(<Harness initialRows={rows} />);
+    enterAndSelectAll();
+
     expect(barButton("bulkComplete")).toHaveProperty("disabled", false);
+    // Still never the other three: those hit the series, occurrence or not.
+    expect(barButton("bulkDelete")).toHaveProperty("disabled", true);
+    expect(barButton("bulkPriority")).toHaveProperty("disabled", true);
+    expect(barButton("bulkMove")).toHaveProperty("disabled", true);
   });
 
   it("says how many rows an action will really touch when some are skipped", () => {

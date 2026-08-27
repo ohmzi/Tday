@@ -43,11 +43,16 @@ object BulkSelectionPolicy {
     const val MAX_CONCURRENCY: Int = 4
 
     /**
-     * A recurring occurrence may be selected and bulk-completed as the occurrence
-     * it represents, but is never eligible for bulk delete, priority or move:
+     * A recurring occurrence may be selected and bulk-completed *as the occurrence
+     * it represents*, but is never eligible for bulk delete, priority or move:
      * those three have no per-occurrence route and would silently act on the whole
      * series. Morning Sweep already excludes recurring tasks from its batch for the
      * same reason.
+     *
+     * "As the occurrence it represents" is the whole of it — see
+     * [effectiveSelection], which additionally requires the row to *have* an
+     * occurrence. A recurring row with no `instanceDate` is not completable by any
+     * route this app has.
      */
     fun appliesToRecurring(action: BulkAction): Boolean = action == BulkAction.COMPLETE
 
@@ -77,15 +82,38 @@ object BulkSelectionPolicy {
 
     /**
      * The rows [action] will actually touch, given the whole selection. [isRecurring]
-     * is `rrule != null`. Select-all is capped in display order from the top so the
-     * outcome is deterministic rather than whichever hundred the set happened to hold.
+     * is `rrule != null`; [hasInstanceDate] is `instanceDate != null`. Select-all is
+     * capped in display order from the top so the outcome is deterministic rather
+     * than whichever hundred the set happened to hold.
+     *
+     * COMPLETE additionally drops a recurring row that carries no `instanceDate`.
+     * `TodoService.completeTodo` branches `if (rrule == null) {...} else if
+     * (instanceDate != null) {...}`, so completing a recurring row without one
+     * takes neither branch: it inserts a `CompletedTodos` history row, marks
+     * nothing complete and writes no `TodoInstances` row. The task comes straight
+     * back on the next refetch and Completed history — plus the on-time and
+     * days-to-complete stats built from it — has gained an entry that corresponds
+     * to nothing. Fanning that out over a select-all would do it once per task.
+     *
+     * [hasInstanceDate] defaults to "no occurrence", so a caller that has not
+     * thought about it gets the safe answer rather than the phantom row.
+     *
+     * [isRecurring] stays the LAST parameter so the trailing-lambda call style every
+     * existing caller uses still binds to it. Putting the new predicate last instead
+     * would silently rebind `effectiveSelection(action, rows) { it.recurring }` to
+     * [hasInstanceDate] and quietly invert the rule.
      */
     fun <T> effectiveSelection(
         action: BulkAction,
         selection: List<T>,
+        hasInstanceDate: (T) -> Boolean = { false },
         isRecurring: (T) -> Boolean,
     ): List<T> {
-        val eligible = if (appliesToRecurring(action)) selection else selection.filterNot(isRecurring)
+        val eligible = if (appliesToRecurring(action)) {
+            selection.filter { !isRecurring(it) || hasInstanceDate(it) }
+        } else {
+            selection.filterNot(isRecurring)
+        }
         return eligible.take(MAX_SELECTION)
     }
 

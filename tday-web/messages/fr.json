@@ -434,8 +434,14 @@
     "bulkMoveTitle": "Déplacer {{count}} tâches ?",
     "bulkMoveBody": "Ces tâches viennent de listes différentes. Ce déplacement ne s'annule pas d'un coup : il faudrait remettre chacune à la main.",
     "bulkMoveConfirm": "Déplacer {{count}} tâches",
-    "bulkDeleteFailed": "{{count}} tâches n'ont pas pu être supprimées",
-    "bulkUpdateFailed": "{{count}} tâches n'ont pas pu être mises à jour"
+    "bulkDeleteFailed_one": "Une tâche n'a pas pu être supprimée",
+    "bulkDeleteFailed_few": "{{count}} tâches n'ont pas pu être supprimées",
+    "bulkDeleteFailed_many": "{{count}} tâches n'ont pas pu être supprimées",
+    "bulkDeleteFailed_other": "{{count}} tâches n'ont pas pu être supprimées",
+    "bulkUpdateFailed_one": "Une tâche n'a pas pu être mise à jour",
+    "bulkUpdateFailed_few": "{{count}} tâches n'ont pas pu être mises à jour",
+    "bulkUpdateFailed_many": "{{count}} tâches n'ont pas pu être mises à jour",
+    "bulkUpdateFailed_other": "{{count}} tâches n'ont pas pu être mises à jour"
   },
   "today": {
     "saveInstance": "Enregistrer l'instance",
@@ -1304,7 +1310,7 @@
         "step0": "Ouvrez une liste de tâches et touchez Sélectionner dans l'en-tête.",
         "step1": "Touchez les tâches pour les choisir, ou utilisez Tout sélectionner pour celles à l'écran.",
         "step2": "Choisissez Terminer, Priorité, Déplacer ou Supprimer dans la barre du bas.",
-        "tip": "La suppression vous demande de confirmer le nombre exact et laisse quand même un message d'annulation. Les tâches récurrentes peuvent être terminées en lot, mais elles restent en dehors de la suppression, de la priorité et du déplacement : une série entière n'est jamais modifiée par accident."
+        "tip": "La suppression vous demande de confirmer le nombre exact et laisse quand même un message d'annulation. Les tâches récurrentes restent entièrement en dehors des actions en lot : une série entière n'est jamais modifiée par accident — ouvrez-en une seule pour la terminer, la déplacer ou la supprimer."
       }
     }
   },

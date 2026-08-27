@@ -368,16 +368,23 @@ const AllTasksTimelineContainer = ({
     return scopeFilteredItems.length > 0;
   }, [scopeFilteredItems, scope]);
 
-  // What Select all reaches: everything this scope's search leaves standing, in
-  // display order — the timeline's own sections (collapsed Earlier included) for
-  // the bucketed scopes, and the whole unpaged set for Today/Overdue, which
-  // render only `PAGE_SIZE` at a time.
+  // What Select all reaches: the rows this screen has actually rendered, in
+  // display order. Both branches read from `visibleTimelineItems`, so the two
+  // stay in step — the bucketed scopes through the timeline's own sections
+  // (collapsed Earlier included), Today/Overdue directly.
+  //
+  // Deliberately NOT the whole unpaged set. Today/Overdue render `PAGE_SIZE` at
+  // a time behind an IntersectionObserver, so selecting the unpaged set let one
+  // tap of Select all + Delete reach tasks the user had never scrolled to — 60
+  // rows staged from 10 on screen. Android and iOS have no paging, so there
+  // "everything on screen" and "everything in the scope" are the same set; this
+  // keeps web's Select all honest against the same sentence in the guide.
   const selectableTodos = useMemo(
     () =>
       timeline
         ? timelineSections.flatMap((section) => section.todos)
-        : scopeFilteredItems.map((item) => item.todo),
-    [scopeFilteredItems, timeline, timelineSections],
+        : visibleTimelineItems.map((item) => item.todo),
+    [timeline, timelineSections, visibleTimelineItems],
   );
 
   const hasMore = !timeline && visibleCount < scopeFilteredItems.length;

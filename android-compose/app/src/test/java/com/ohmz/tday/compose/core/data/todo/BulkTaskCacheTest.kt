@@ -293,6 +293,7 @@ class BulkTaskCacheTest {
         val completeTargets = BulkSelectionPolicy.effectiveSelection(
             action = BulkAction.COMPLETE,
             selection = selection,
+            hasInstanceDate = { it.instanceDate != null },
             isRecurring = { it.isRecurring },
         )
         val deleteTargets = BulkSelectionPolicy.effectiveSelection(
@@ -303,6 +304,49 @@ class BulkTaskCacheTest {
 
         assertEquals(listOf("todo-1", "todo-2:1000"), completeTargets.map { it.id })
         assertEquals(listOf("todo-1"), deleteTargets.map { it.id })
+    }
+
+    @Test
+    fun `bulk complete skips a repeating row that has no occurrence to complete`() {
+        // What the cache actually holds for a repeating task: the server sends one
+        // row per recurring template and never an instanceDate, and an offline
+        // create stores instanceDateEpochMs = null. Queuing COMPLETE_TODO for it
+        // replays as a complete with no instanceDate, which the backend turns into
+        // a CompletedTodos row that marks nothing complete — history gains an entry
+        // for something that never happened and the task stays on screen.
+        val selection = listOf(
+            todoItem(id = "todo-1", canonicalId = "todo-1"),
+            todoItem(id = "todo-2", canonicalId = "todo-2", rrule = "FREQ=DAILY"),
+        )
+
+        val completeTargets = BulkSelectionPolicy.effectiveSelection(
+            action = BulkAction.COMPLETE,
+            selection = selection,
+            hasInstanceDate = { it.instanceDate != null },
+            isRecurring = { it.isRecurring },
+        )
+
+        assertEquals(listOf("todo-1"), completeTargets.map { it.id })
+    }
+
+    @Test
+    fun `a repeating row with no occurrence would queue a plain complete if it slipped through`() {
+        // Pins why the filter above matters, at the layer underneath it.
+        val state = OfflineSyncState(
+            todos = listOf(
+                cachedTodo(id = "todo-2", canonicalId = "todo-2", rrule = "FREQ=DAILY"),
+            ),
+        )
+
+        val next = state.withCompletedTodoCached(
+            todo = todoItem(id = "todo-2", canonicalId = "todo-2", rrule = "FREQ=DAILY"),
+            timestampEpochMs = 5_000L,
+            mutationId = "complete-1",
+            completedRecordId = "completed-1",
+        )
+
+        assertEquals(MutationKind.COMPLETE_TODO, next.pendingMutations.single().kind)
+        assertNull(next.pendingMutations.single().instanceDateEpochMs)
     }
 
     private fun stageBatch(

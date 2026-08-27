@@ -34,6 +34,9 @@ export const BULK_MAX_CONCURRENCY = 4;
  * (`DELETE /api/todo` removes every future occurrence; priority and move go
  * through the full-record `PATCH /api/todo`). Morning Sweep already excludes
  * recurring tasks from its batch for the same reason.
+ *
+ * "As the occurrence it represents" is load-bearing — see
+ * `effectiveBulkSelection`, which also requires the row to *have* an occurrence.
  */
 export function bulkActionAppliesToRecurring(action: BulkAction): boolean {
   return action === "complete";
@@ -64,17 +67,28 @@ export function isBulkSelectionAtCap(selectedCount: number): boolean {
 
 /**
  * The rows `action` will actually touch, given the whole selection.
- * `isRecurring` is `Boolean(todo.rrule)`. Select-all is capped in display order
- * from the top so the outcome is deterministic rather than whichever hundred the
- * set happened to hold.
+ * `isRecurring` is `Boolean(todo.rrule)`; `hasInstanceDate` is
+ * `Boolean(todo.instanceDate)`. Select-all is capped in display order from the
+ * top so the outcome is deterministic rather than whichever hundred the set
+ * happened to hold.
+ *
+ * "complete" additionally drops a recurring row with no `instanceDate`.
+ * `TodoService.completeTodo` branches `if (rrule == null) {...} else if
+ * (instanceDate != null) {...}`, so completing a recurring row without one takes
+ * neither branch: it writes a `CompletedTodos` history row, marks nothing
+ * complete, and the task returns on the next refetch while the Completed list —
+ * and the stats derived from it — keeps an entry for something that never
+ * happened. `hasInstanceDate` defaults to "no occurrence" so an un-thought-about
+ * caller gets the safe answer.
  */
 export function effectiveBulkSelection<T>(
   action: BulkAction,
   selection: readonly T[],
   isRecurring: (row: T) => boolean,
+  hasInstanceDate: (row: T) => boolean = () => false,
 ): T[] {
   const eligible = bulkActionAppliesToRecurring(action)
-    ? [...selection]
+    ? selection.filter((row) => !isRecurring(row) || hasInstanceDate(row))
     : selection.filter((row) => !isRecurring(row));
   return eligible.slice(0, BULK_MAX_SELECTION);
 }

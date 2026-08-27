@@ -82,6 +82,12 @@ describe("bulk selection copy", () => {
     expect(t("bulkDeleteConfirm", { count: 3 })).toBe("Delete 3 tasks");
     expect(t("tasksCompleted", { count: 1 })).toBe("Task completed");
     expect(t("tasksDeleted", { count: 1 })).toBe("Task deleted");
+    // The failure toasts used to be flat keys, so one failed row read
+    // "1 tasks couldn't be deleted" while Android's <plurals> said it properly.
+    expect(t("bulkDeleteFailed", { count: 1 })).toBe("A task couldn't be deleted");
+    expect(t("bulkDeleteFailed", { count: 3 })).toBe("3 tasks couldn't be deleted");
+    expect(t("bulkUpdateFailed", { count: 1 })).toBe("A task couldn't be updated");
+    expect(t("bulkUpdateFailed", { count: 3 })).toBe("3 tasks couldn't be updated");
   });
 
   it("states both halves of the recurring-skipped line", () => {
