@@ -17,21 +17,61 @@ import com.ohmz.tday.shared.model.ListMembersResponse
 import com.ohmz.tday.shared.model.ShareRole
 import com.ohmz.tday.shared.model.UserSearchResultDto
 import kotlinx.coroutines.Dispatchers
+import org.jetbrains.exposed.sql.Coalesce
 import org.jetbrains.exposed.sql.JoinType
+import org.jetbrains.exposed.sql.Op
 import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.like
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.lowerCase
 import org.jetbrains.exposed.sql.or
 import org.jetbrains.exposed.sql.selectAll
+import org.jetbrains.exposed.sql.stringLiteral
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import org.jetbrains.exposed.sql.update
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 
 enum class ListType { SCHEDULED, FLOATER }
+
+/** Shortest member-search query worth running, and the cap on how many members come back. */
+private const val MIN_SEARCH_LENGTH = 2
+private const val SEARCH_RESULT_LIMIT = 10
+
+/**
+ * The characters removed from a member-search query: `%` and `_` are LIKE wildcards, and `\` is
+ * the escape character Postgres applies by default — a pattern ending in one is an error.
+ */
+private const val LIKE_METACHARACTERS = "%_\\"
+
+/**
+ * The LIKE pattern for a member search, or null when the query is too short to run.
+ *
+ * Everything except [LIKE_METACHARACTERS] is matched literally, `@` included: usernames here are
+ * email-shaped, and the allow-list this replaced dropped `@` along with the wildcards, so
+ * searching `z@a.com` looked for `zz.com` and found nobody. The pattern is bound as a statement
+ * parameter, so removing those three characters bounds what the query can match — it is not an
+ * injection defence.
+ */
+internal fun userSearchPattern(query: String): String? {
+    val sanitized = query.trim().filter { it !in LIKE_METACHARACTERS }
+    if (sanitized.length < MIN_SEARCH_LENGTH) return null
+    return "%${sanitized.lowercase()}%"
+}
+
+/**
+ * Matches [pattern] against the username and the display name, as one OR group so that the
+ * approval and requester filters still apply to both: `(username LIKE ? OR name LIKE ?) AND ...`.
+ *
+ * `name` is nullable and coalesced to an empty string, so a member who never set a display name
+ * stays findable by username.
+ */
+private fun matchesUserSearch(pattern: String): Op<Boolean> =
+    (Users.username.lowerCase() like pattern) or
+        (Coalesce(Users.name, stringLiteral("")).lowerCase() like pattern)
 
 /**
  * Single source of truth for list-sharing access decisions. The owner of a
@@ -289,14 +329,11 @@ class ListShareServiceImpl(
     }
 
     override suspend fun searchUsers(requesterId: String, query: String): Either<AppError, List<UserSearchResultDto>> {
-        // Usernames only allow alphanumerics plus "-._"; strip anything else so
-        // the LIKE pattern can't carry wildcards.
-        val sanitized = query.trim().filter { it.isLetterOrDigit() || it in "-._" }
-        if (sanitized.length < MIN_SEARCH_LENGTH) return emptyList<UserSearchResultDto>().right()
+        val pattern = userSearchPattern(query) ?: return emptyList<UserSearchResultDto>().right()
 
         val users = newSuspendedTransaction(Dispatchers.IO) {
             Users.selectAll().where {
-                (Users.username.lowerCase() like "%${sanitized.lowercase()}%") and
+                matchesUserSearch(pattern) and
                     (Users.approvalStatus eq ApprovalStatus.APPROVED) and
                     (Users.id neq requesterId)
             }.orderBy(Users.username, SortOrder.ASC)
@@ -404,7 +441,5 @@ class ListShareServiceImpl(
     private companion object {
         const val COLLABORATORS_ENDPOINT = "shareCollaborators"
         const val COLLABORATORS_TTL_MS = 60_000L
-        const val MIN_SEARCH_LENGTH = 2
-        const val SEARCH_RESULT_LIMIT = 10
     }
 }

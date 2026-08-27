@@ -63,6 +63,7 @@ dependencies {
 
     implementation("nl.martijndwars:web-push:5.1.1")
 
+    testImplementation("com.h2database:h2:2.3.232")
     testImplementation("io.ktor:ktor-client-websockets-jvm")
     testImplementation("io.ktor:ktor-server-test-host-jvm")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
