@@ -358,11 +358,24 @@ final class ConnectivityClassificationTests: XCTestCase {
         )
     }
 
-    func testVersionComparisonAndEmptyUpdateURLFallback() {
+    func testVersionComparisonAndBundleUpdateURLMatchesInfoPlist() {
         XCTAssertEqual(AppViewModel.compareVersions("1.44.0", "1.43.9"), 1)
         XCTAssertEqual(AppViewModel.compareVersions("1.44.0", "1.44.0"), 0)
         XCTAssertEqual(AppViewModel.compareVersions("1.43.9", "1.44.0"), -1)
-        XCTAssertNil(AppViewModel.bundleUpdateURL())
+
+        // `TdayUpdateURL` is mirrored into Info.plist from `ios.updateUrl` in the root
+        // version.json, so pinning one release's value here would turn every later
+        // distribution change into a red test. Assert the reader's contract instead:
+        // an unset or unsubstituted entry falls back to nil, and a configured one is
+        // surfaced verbatim as an https link the update buttons can open.
+        let configured = (Bundle.main.object(forInfoDictionaryKey: "TdayUpdateURL") as? String ?? "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        if configured.isEmpty || configured.hasPrefix("$(") {
+            XCTAssertNil(AppViewModel.bundleUpdateURL())
+        } else {
+            XCTAssertEqual(AppViewModel.bundleUpdateURL(), URL(string: configured))
+            XCTAssertEqual(AppViewModel.bundleUpdateURL()?.scheme, "https")
+        }
     }
 
     func testMobileSyncStatusFormatsLocalWorkspace() {
