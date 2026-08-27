@@ -280,7 +280,7 @@ Floater lists group floaters.
 | Method | Path | Purpose |
 |--------|------|---------|
 | GET | `/api/user` | Get current user profile |
-| GET | `/api/user/search?q=` | Username typeahead for the share-member picker (min 2 chars, APPROVED users, excludes self, max 10) |
+| GET | `/api/user/search?q=` | Typeahead for the share-member picker: substring match on username **or** display name (min 2 chars, APPROVED users, excludes self, max 10). The query is matched literally — `%` and `_` are escaped, not treated as wildcards |
 | PATCH | `/api/user` | Update user (encryption settings) |
 | PATCH | `/api/user/profile` | Update profile |
 | POST | `/api/user/change-password` | Change password |
@@ -295,7 +295,7 @@ Floater lists group floaters.
 | PATCH | `/api/admin/settings` | Update app configuration |
 | GET | `/api/admin/users` | List all users |
 | PATCH | `/api/admin/users/{id}` | Update user (approve, change role) |
-| DELETE | `/api/admin/users/{id}` | Delete user and related data |
+| DELETE | `/api/admin/users/{id}` | Delete user and related data. `409` when a row still references the account (the constraint is named in the server log) |
 
 ### Preferences
 
