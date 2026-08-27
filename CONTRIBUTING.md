@@ -171,7 +171,7 @@ docs: add architecture decision record for offline sync
 9. Address all review comments.
 10. Squash-merge when approved.
 
-**CI enforcement:** PRs to `master` run lint and the full test suite automatically. The Docker image will **not** be built or released unless all tests pass. See [Deployment > Test-Before-Build Policy](docs/DEPLOYMENT.md#test-before-build-policy).
+**CI enforcement:** PRs to `master` run lint and the full test suite automatically. PRs to `develop` run the Android unit tests when they touch Android-relevant files (`android.yml`). The Docker image will **not** be built or released unless all tests pass. See [Deployment > Test-Before-Build Policy](docs/DEPLOYMENT.md#test-before-build-policy).
 
 ### PR Size Guidelines
 

