@@ -212,10 +212,27 @@ export function deleteTodo(body: Record<string, unknown>) {
   return { message: removed ? "todo deleted" : "todo already deleted" };
 }
 
+/**
+ * What a complete/uncomplete request acts on — the occurrence it names, or the todo
+ * row itself. Twin of `CompletionTarget`/`completionTargetFor` in `TodoService.kt`.
+ *
+ * Only a recurring todo has occurrences, so an `instanceDate` on a one-off is
+ * normalised away rather than keyed into history. A recurring todo with no
+ * `instanceDate` addresses the series: it is what every feed sends for a repeating
+ * task (the feeds emit templates, which carry no `instanceDate`), and `completed` on
+ * the row is the only thing the listings read.
+ */
+function completionInstanceDate(
+  rrule: string | null,
+  instanceDate: string | null,
+): string | null {
+  return rrule != null ? instanceDate : null;
+}
+
 export function completeTodo(body: Record<string, unknown>) {
   const id = normalizeId(body.id);
   if (!id) throw localBadRequest("todo id is required", "id");
-  const instanceDate = parseInstanceDate(body.instanceDate);
+  const requestedInstanceDate = parseInstanceDate(body.instanceDate);
 
   updateWorkspace((workspace) => {
     const todo = findTodo(workspace, id);
@@ -226,6 +243,34 @@ export function completeTodo(body: Record<string, unknown>) {
     const list = todo.listID
       ? workspace.lists.find((entry) => entry.id === todo.listID)
       : undefined;
+    const instanceDate = completionInstanceDate(todo.rrule, requestedInstanceDate);
+
+    // Mark it complete first, then record the history, so a history entry only ever
+    // exists for a completion that was actually applied.
+    if (instanceDate) {
+      const existing = workspace.todoInstances.find(
+        (instance) =>
+          instance.todoId === id && sameInstant(instance.instanceDate, instanceDate),
+      );
+      if (existing) {
+        existing.completedAt = now;
+      } else {
+        workspace.todoInstances.push({
+          id: newLocalId(),
+          todoId: id,
+          recurId: instanceDate,
+          instanceDate,
+          overriddenTitle: null,
+          overriddenDescription: null,
+          overriddenPriority: null,
+          overriddenDue: null,
+          completedAt: now,
+        });
+      }
+    } else {
+      todo.completed = true;
+      todo.updatedAt = now;
+    }
 
     const alreadyCleared = workspace.completedTodos.some(
       (entry) =>
@@ -258,31 +303,6 @@ export function completeTodo(body: Record<string, unknown>) {
         steps: steps.length > 0 ? steps.map((step) => ({ ...step })) : null,
       });
     }
-
-    if (todo.rrule == null) {
-      todo.completed = true;
-      todo.updatedAt = now;
-    } else if (instanceDate) {
-      const existing = workspace.todoInstances.find(
-        (instance) =>
-          instance.todoId === id && sameInstant(instance.instanceDate, instanceDate),
-      );
-      if (existing) {
-        existing.completedAt = now;
-      } else {
-        workspace.todoInstances.push({
-          id: newLocalId(),
-          todoId: id,
-          recurId: instanceDate,
-          instanceDate,
-          overriddenTitle: null,
-          overriddenDescription: null,
-          overriddenPriority: null,
-          overriddenDue: null,
-          completedAt: now,
-        });
-      }
-    }
   });
 
   return { message: "todo completed" };
@@ -291,11 +311,15 @@ export function completeTodo(body: Record<string, unknown>) {
 export function uncompleteTodo(body: Record<string, unknown>) {
   const id = normalizeId(body.id);
   if (!id) throw localBadRequest("todo id is required", "id");
-  const instanceDate = parseInstanceDate(body.instanceDate);
+  const requestedInstanceDate = parseInstanceDate(body.instanceDate);
 
   updateWorkspace((workspace) => {
     const todo = findTodo(workspace, id);
     if (!todo) return;
+
+    // Same normalisation as completeTodo, so an undo always addresses the row the
+    // completion touched and the history entry it keyed.
+    const instanceDate = completionInstanceDate(todo.rrule, requestedInstanceDate);
 
     if (instanceDate) {
       const instance = workspace.todoInstances.find(

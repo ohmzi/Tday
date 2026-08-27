@@ -93,14 +93,25 @@ reserve; do not take it now.
 
 ### Known backend trap this feature must route around (not fix)
 
-`TodoServiceImpl.completeTodo` branches
+`TodoServiceImpl.completeTodo` branched
 `if (rrule == null) { mark Todos.completed } else if (instanceDate != null) { write TodoInstances }`.
-With `rrule != null` **and** `instanceDate == null` it inserts a `CompletedTodos`
-history row and neither marks the parent complete nor records an occurrence — the task
-stays visible and history gains a phantom entry. Bulk complete must therefore **always**
+With `rrule != null` **and** `instanceDate == null` it inserted a `CompletedTodos`
+history row and neither marked the parent complete nor recorded an occurrence — the task
+stayed visible and history gained a phantom entry. Bulk complete must therefore **always**
 send the occurrence's `instanceDate` for a recurring row (§4.1). Fixing the server guard
-is a separate, deploy-coupled change and is deliberately out of scope: a client must not
-rely on a fix that self-hosters have not deployed.
+is a separate, deploy-coupled change and was deliberately out of scope here: a client must
+not rely on a fix that self-hosters have not deployed.
+
+**Update — the server guard has since been fixed, and §4.1 still stands.** A recurring
+todo completed with no `instanceDate` now completes the **series** (`todos.completed`),
+which is the only outcome that takes the row off a client's screen and the exact inverse
+of what `uncompleteTodo` already did for a null `instanceDate`; the `CompletedTodos`
+insert now happens after the state change, in the same transaction, so history is never
+written for a request that marks nothing complete. That makes the filter in §4.1 **more**
+load-bearing, not less: a bulk complete that let a recurring row through without its
+occurrence would now silently end whole series instead of doing nothing. Keep sending
+`instanceDate`, keep the client-side filter, and keep both regardless of server version —
+a self-hoster may be on either side of the fix.
 
 Also note: `update`, `prioritize` and `completeTodo` return `Unit.right()` even when the
 tenant/share filter matched **zero** rows; only `delete` returns a count. A fan-out
@@ -280,7 +291,8 @@ phantom history row.
 
 Bulk complete **must** send `instanceDate` for every recurring row (§1, backend trap) —
 which, given the rule above, means a recurring row without one is never in the set to
-begin with.
+begin with. That holds on a fixed server too: there, the same request completes the whole
+series, which is a worse outcome from a multi-select than the phantom row it replaced.
 
 **A payload that cannot express recurrence must not be trusted to say "not recurring".**
 `/api/list/:id` returns `ListTodoDto`, which had no `rrule` field at all, so on a custom
