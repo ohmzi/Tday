@@ -30,6 +30,38 @@ internal fun isResetRequestExpired(
     now: LocalDateTime = LocalDateTime.now(ZoneOffset.UTC),
 ): Boolean = requestedAt != null && requestedAt.isBefore(now.minusDays(ADMIN_RESET_REQUEST_TTL_DAYS))
 
+/**
+ * Every column that points at `"User".id`, in the order a purge has to clear them.
+ *
+ * These references are ON DELETE RESTRICT, so one leftover child row rolls the entire delete
+ * back and the admin panel reports a 500: a missing `push_subscriptions` entry in this list is
+ * exactly what made every user who had ever enabled notifications undeletable. Keeping the set
+ * declared here (rather than spelled out inside the purge) is what lets a test assert that no
+ * reference has been left out.
+ *
+ * Order matters: `completedtodo`/`todos` reference `project`, and `completedfloaters`/`floaters`
+ * reference `floaterproject`, so those rows go before the lists that own them.
+ *
+ * `Users.approvedById` is the one reference deliberately absent — it is a nullable
+ * self-reference, cleared rather than deleted, so the approving admin can still be removed.
+ */
+internal val USER_OWNED_CHILD_COLUMNS: List<Column<String>> = listOf(
+    CompletedTodos.userID,
+    CompletedFloaters.userID,
+    Files.userID,
+    Todos.userID,
+    Floaters.userID,
+    Lists.userID,
+    FloaterLists.userID,
+    UserPreferences.userID,
+    UserSecurityQuestions.userID,
+    Accounts.userId,
+    PushSubscriptions.userID,
+    UserApiKeys.userID,
+    CalendarFeedTokens.userID,
+    WebhookSubscriptions.userID,
+)
+
 interface AdminService {
     suspend fun listUsers(admin: AuthenticatedUser): Either<AppError, List<AdminUserResponse>>
     suspend fun approveUser(targetId: String, admin: AuthenticatedUser): Either<AppError, String>
@@ -144,8 +176,9 @@ class AdminServiceImpl(
      * Deletes a user and every record they own.
      *
      * Child rows are removed before their parents wherever the schema uses ON DELETE RESTRICT —
-     * `todo_instances`, `account` and the `approvedById` self-reference all block the delete
-     * otherwise, which used to roll the whole purge back and return a 500.
+     * everything in [USER_OWNED_CHILD_COLUMNS], plus `todo_instances` and the `approvedById`
+     * self-reference, blocks the delete otherwise, which used to roll the whole purge back and
+     * return a 500.
      */
     private suspend fun purgeUser(targetId: String) {
         newSuspendedTransaction(Dispatchers.IO) {
@@ -169,10 +202,6 @@ class AdminServiceImpl(
             }
             FloaterListShares.deleteWhere { FloaterListShares.userID eq targetId }
 
-            CompletedTodos.deleteWhere { CompletedTodos.userID eq targetId }
-            CompletedFloaters.deleteWhere { CompletedFloaters.userID eq targetId }
-            Files.deleteWhere { Files.userID eq targetId }
-
             // todo_instances -> todos is ON DELETE RESTRICT, so per-occurrence overrides must go
             // first or the whole purge rolls back with a 500. Same child-first order as
             // ListService.deleteLists.
@@ -183,16 +212,11 @@ class AdminServiceImpl(
             if (ownedTodoIds.isNotEmpty()) {
                 TodoInstances.deleteWhere { TodoInstances.todoId inList ownedTodoIds }
             }
-            Todos.deleteWhere { Todos.userID eq targetId }
 
-            Floaters.deleteWhere { Floaters.userID eq targetId }
-            Lists.deleteWhere { Lists.userID eq targetId }
-            FloaterLists.deleteWhere { FloaterLists.userID eq targetId }
-            UserPreferences.deleteWhere { UserPreferences.userID eq targetId }
-            UserSecurityQuestions.deleteWhere { UserSecurityQuestions.userID eq targetId }
+            USER_OWNED_CHILD_COLUMNS.forEach { column ->
+                column.table.deleteWhere { column eq targetId }
+            }
 
-            // account -> "User" is also RESTRICT; OAuth rows would otherwise block the delete.
-            Accounts.deleteWhere { Accounts.userId eq targetId }
             // "User".approvedById is a RESTRICT self-reference, so an admin who approved anyone
             // cannot be deleted while those rows still point at them. The column is nullable.
             Users.update({ Users.approvedById eq targetId }) {
