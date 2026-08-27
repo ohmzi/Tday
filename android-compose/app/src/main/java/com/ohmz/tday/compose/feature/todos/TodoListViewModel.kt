@@ -688,7 +688,7 @@ class TodoListViewModel @Inject constructor(
         val selectedIds = todos.mapTo(mutableSetOf()) { it.id }
         TdayTelemetry.addBreadcrumb(
             "task.bulk_complete",
-            data = taskTelemetryData(mode = mode) + mapOf("count" to todos.size),
+            data = taskTelemetryData(mode = mode) + mapOf(TELEMETRY_KEY_COUNT to todos.size),
         )
         _uiState.update { current ->
             current.copy(
@@ -737,7 +737,7 @@ class TodoListViewModel @Inject constructor(
         val selectedIds = todos.mapTo(mutableSetOf()) { it.id }
         TdayTelemetry.addBreadcrumb(
             "task.bulk_delete",
-            data = taskTelemetryData(mode = mode) + mapOf("count" to todos.size),
+            data = taskTelemetryData(mode = mode) + mapOf(TELEMETRY_KEY_COUNT to todos.size),
         )
         _uiState.update { current ->
             current.copy(
@@ -800,7 +800,7 @@ class TodoListViewModel @Inject constructor(
         val selectedIds = todos.mapTo(mutableSetOf()) { it.id }
         TdayTelemetry.addBreadcrumb(
             "task.bulk_priority",
-            data = taskTelemetryData(mode = mode) + mapOf("count" to todos.size),
+            data = taskTelemetryData(mode = mode) + mapOf(TELEMETRY_KEY_COUNT to todos.size),
         )
         _uiState.update { current ->
             current.copy(
@@ -841,7 +841,7 @@ class TodoListViewModel @Inject constructor(
         TdayTelemetry.addBreadcrumb(
             "task.bulk_move",
             data = taskTelemetryData(mode = mode) + mapOf(
-                "count" to todos.size,
+                TELEMETRY_KEY_COUNT to todos.size,
                 "has_list" to (normalizedListId != null),
             ),
         )
@@ -1206,5 +1206,8 @@ class TodoListViewModel @Inject constructor(
 
     private companion object {
         const val TAG = "TodoListViewModel"
+
+        /** Breadcrumb payload key for a batch size. Stable across every bulk action. */
+        const val TELEMETRY_KEY_COUNT = "count"
     }
 }
