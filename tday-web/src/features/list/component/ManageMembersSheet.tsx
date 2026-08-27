@@ -14,7 +14,7 @@ import {
   useRemoveListMember,
   useUpdateListMemberRole,
 } from "@/features/list/query/share-members";
-import { useSearchUsers } from "@/features/user/query/search-users";
+import { type UserSearchResultType, useSearchUsers } from "@/features/user/query/search-users";
 import type { ListMemberType, ShareRoleType } from "@/types";
 
 type ManageMembersSheetProps = {
@@ -31,11 +31,19 @@ type ManageMembersSheetProps = {
 
 const MEMBER_ROLES: ShareRoleType[] = ["EDITOR", "VIEWER"];
 
-function memberInitial(member: ListMemberType) {
-  const source = member.name?.trim() || member.username;
+/**
+ * Avatar letter for a member or search-result row: the first character of the display name, or
+ * of the username when there is no name. Both rows show the same person, so they share this.
+ */
+function avatarInitial(person: { username: string; name?: string | null }) {
+  const source = person.name?.trim() || person.username;
   return source.slice(0, 1).toUpperCase();
 }
 
+/**
+ * The sheet behind a shared list's "Members" action: the current roster, plus — for the owner —
+ * a username typeahead for adding people, and for everyone else the leave-list flow.
+ */
 export default function ManageMembersSheet({
   open,
   onOpenChange,
@@ -131,7 +139,7 @@ export default function ManageMembersSheet({
   const renderMemberRow = (member: ListMemberType, isOwnerRow: boolean) => (
     <div key={member.userId} className="flex items-center gap-3 px-1 py-2">
       <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent/15 text-sm font-black text-accent">
-        {memberInitial(member)}
+        {avatarInitial(member)}
       </span>
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-black text-foreground">
@@ -164,6 +172,46 @@ export default function ManageMembersSheet({
       )}
     </div>
   );
+
+  /**
+   * One row of the username typeahead. Someone already on the list renders dimmed with a static
+   * "already a member" badge in place of the add button, rather than being dropped from the
+   * results — see the note on `memberIds` above.
+   */
+  const renderSearchResultRow = (user: UserSearchResultType) => {
+    const alreadyMember = memberIds.has(user.id);
+    return (
+      <div
+        key={user.id}
+        className={cn("flex items-center gap-3 px-1 py-2", alreadyMember && "opacity-60")}
+      >
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted/70 text-sm font-black text-muted-foreground">
+          {avatarInitial(user)}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-black text-foreground">
+            {user.name?.trim() || user.username}
+          </p>
+          <p className="truncate text-xs font-bold text-muted-foreground">@{user.username}</p>
+        </div>
+        {alreadyMember ? (
+          <span className="flex h-8 items-center rounded-full bg-muted/70 px-3 text-xs font-black text-muted-foreground">
+            {appDict("alreadyAMember")}
+          </span>
+        ) : (
+          <button
+            type="button"
+            disabled={addMemberPending}
+            onClick={() => void handleAdd(user.username)}
+            className="flex h-8 items-center gap-1.5 rounded-full bg-accent/15 px-3 text-xs font-black text-accent transition-colors hover:bg-accent/25 disabled:opacity-50"
+          >
+            <UserPlus className="h-3.5 w-3.5 stroke-[2.6]" />
+            {appDict("addMember")}
+          </button>
+        )}
+      </div>
+    );
+  };
 
   return (
     <AppBottomSheet
@@ -206,45 +254,7 @@ export default function ManageMembersSheet({
               />
               {debouncedSearch.trim().length >= 2 ? (
                 <div className="mt-2 divide-y divide-border/50">
-                  {searchResults.map((user) => {
-                    const alreadyMember = memberIds.has(user.id);
-                    return (
-                      <div
-                        key={user.id}
-                        className={cn(
-                          "flex items-center gap-3 px-1 py-2",
-                          alreadyMember && "opacity-60",
-                        )}
-                      >
-                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted/70 text-sm font-black text-muted-foreground">
-                          {(user.name?.trim() || user.username).slice(0, 1).toUpperCase()}
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-black text-foreground">
-                            {user.name?.trim() || user.username}
-                          </p>
-                          <p className="truncate text-xs font-bold text-muted-foreground">
-                            @{user.username}
-                          </p>
-                        </div>
-                        {alreadyMember ? (
-                          <span className="flex h-8 items-center rounded-full bg-muted/70 px-3 text-xs font-black text-muted-foreground">
-                            {appDict("alreadyAMember")}
-                          </span>
-                        ) : (
-                          <button
-                            type="button"
-                            disabled={addMemberPending}
-                            onClick={() => void handleAdd(user.username)}
-                            className="flex h-8 items-center gap-1.5 rounded-full bg-accent/15 px-3 text-xs font-black text-accent transition-colors hover:bg-accent/25 disabled:opacity-50"
-                          >
-                            <UserPlus className="h-3.5 w-3.5 stroke-[2.6]" />
-                            {appDict("addMember")}
-                          </button>
-                        )}
-                      </div>
-                    );
-                  })}
+                  {searchResults.map(renderSearchResultRow)}
                   {!searchPending && searchResults.length === 0 ? (
                     <p className="px-1 py-2 text-sm font-bold text-muted-foreground">
                       {appDict("noUsersFound")}

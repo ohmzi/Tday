@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import type { ReactNode } from "react";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
@@ -44,6 +44,7 @@ vi.mock("@/features/user/query/search-users", () => ({
 
 import ManageMembersSheet from "@/features/list/component/ManageMembersSheet";
 
+/** Mounts the sheet already open, owned by the current user, so the search field is present. */
 function renderSheet() {
   return render(
     <ManageMembersSheet
@@ -57,11 +58,10 @@ function renderSheet() {
   );
 }
 
-/** The sheet debounces the query by 250ms before it renders any result rows. */
-async function typeSearch(container: HTMLElement, value: string) {
+/** The sheet debounces the query by 250ms, so every assertion below waits for the rows. */
+function typeSearch(container: HTMLElement, value: string) {
   const input = container.querySelector("input");
   if (!input) throw new Error("search input not rendered");
-  const { fireEvent } = await import("@testing-library/react");
   fireEvent.change(input, { target: { value } });
 }
 
@@ -77,7 +77,7 @@ describe("ManageMembersSheet search results", () => {
     searchResults = [{ id: MEMBER.userId, username: MEMBER.username, name: MEMBER.name }];
     const { container } = renderSheet();
 
-    await typeSearch(container, "mu@tday.test");
+    typeSearch(container, "mu@tday.test");
 
     await waitFor(() => {
       expect(screen.getByText("alreadyAMember")).toBeTruthy();
@@ -89,7 +89,7 @@ describe("ManageMembersSheet search results", () => {
     searchResults = [STRANGER];
     const { container } = renderSheet();
 
-    await typeSearch(container, "new@tday.test");
+    typeSearch(container, "new@tday.test");
 
     // "addMember" is also the section heading, so this looks for the button specifically.
     await waitFor(() => {
@@ -105,7 +105,7 @@ describe("ManageMembersSheet search results", () => {
     searchResults = [];
     const { container } = renderSheet();
 
-    await typeSearch(container, "nobody@tday.test");
+    typeSearch(container, "nobody@tday.test");
 
     await waitFor(() => {
       expect(screen.getByText("noUsersFound")).toBeTruthy();
