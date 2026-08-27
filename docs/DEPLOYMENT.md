@@ -634,9 +634,12 @@ repository settings, and cannot be done from a pull request.
 8. **Create the TestFlight group and public link**: App Store Connect → TestFlight → Groups → `+`.
    Enable **Public Link** and, if you want testers to get builds without per-build action, turn on
    automatic distribution for the group.
-9. **Set `ios.updateUrl`** once that public link exists. It is `""` today, so
-   `AppViewModel.bundleUpdateURL()` returns `nil` and both in-app update surfaces render an
-   explanatory sentence with no button. Edit `version.json`, then:
+9. **Set `ios.updateUrl`** once that public link exists. Done — `version.json` now carries the
+   group's public TestFlight link, and it is the only place that value lives. While it was `""`,
+   `AppViewModel.bundleUpdateURL()` returned `nil` and both in-app update surfaces (the blocking
+   `UpdateRequiredView` and the Settings "Update Available" card) rendered an explanatory sentence
+   with no button. To repoint it — at the App Store listing, once the app leaves TestFlight — edit
+   `version.json`, then:
 
    ```bash
    node scripts/version.mjs sync && node scripts/version.mjs check
