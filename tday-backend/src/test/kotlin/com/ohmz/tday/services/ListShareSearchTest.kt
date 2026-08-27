@@ -13,6 +13,15 @@ import kotlin.test.assertTrue
 /**
  * The share-member typeahead. Usernames in this app are email-shaped, and members are as likely
  * to be looked up by the name they display under as by the address they signed up with.
+ *
+ * The `skipcq: KT-W1042` marker below is deliberate. `"ann_lee"` is a per-test fixture identity,
+ * not a shared value: the underscore test creates that account and then types it in full, so
+ * `assertEquals(listOf("ann_lee"), search("ann_lee"))` reads as an input/output pair and naming
+ * it would hide the very thing the test asserts — that what you type comes back. The fourth
+ * occurrence is in the pure `userSearchPattern` test, which touches no database at all and only
+ * happens to reuse the string as a convenient input with an underscore in it; binding it to the
+ * fixture's constant would imply a coupling that does not exist. Same call as the
+ * `// skipcq: KT-W1042` markers in the Android `BulkTaskCacheTest`.
  */
 class ListShareSearchTest {
     // JUnit builds a new instance per test method, so this is one empty database per test.
@@ -67,7 +76,7 @@ class ListShareSearchTest {
 
     @Test
     fun `an underscore in a username is matched as itself`() = runBlocking {
-        TestDatabase.insertUser("user_score", username = "ann_lee", name = "Ann Lee")
+        TestDatabase.insertUser("user_score", username = "ann_lee", name = "Ann Lee")  // skipcq: KT-W1042
         TestDatabase.insertUser("user_decoy", username = "annXlee", name = "Decoy")
 
         // Stripping "_" looked for "annlee" and found neither; leaving it unescaped would have
