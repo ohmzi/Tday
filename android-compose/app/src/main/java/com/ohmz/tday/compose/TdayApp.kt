@@ -1386,6 +1386,10 @@ private fun TodosRoute(
         onPromoteFloater = viewModel::promoteFloater,
         onDemoteTodo = viewModel::demoteTodo,
         onDeferTask = viewModel::deferTask,
+        onBulkComplete = viewModel::completeSelected,
+        onBulkDelete = viewModel::deleteSelected,
+        onBulkSetPriority = viewModel::setPriorityForSelected,
+        onBulkMoveToList = viewModel::moveSelectedToList,
         onOpenMorningSweep = onOpenMorningSweep,
         onUpdateListSettings = { targetListId, name, color, iconKey ->
             viewModel.updateListSettings(

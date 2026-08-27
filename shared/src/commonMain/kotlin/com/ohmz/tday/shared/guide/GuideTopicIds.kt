@@ -29,6 +29,7 @@ object GuideTopicIds {
     const val COMPLETED_HISTORY = "completed-history"
     const val OVERDUE_VIEW = "overdue-view"
     const val MORNING_SWEEP = "morning-sweep"
+    const val BULK_ACTIONS = "bulk-actions"
     const val SEARCH_TASKS = "search-tasks"
     const val RECURRENCE_PRESETS = "recurrence-presets"
     const val REPEAT_SUGGESTIONS = "repeat-suggestions"

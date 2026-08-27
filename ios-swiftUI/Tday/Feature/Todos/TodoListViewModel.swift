@@ -327,6 +327,133 @@ final class TodoListViewModel {
         }
     }
 
+    // MARK: - Bulk (multi-select) actions
+
+    /// Delayed-commit bulk complete — the batch shape of `complete(_:)`. The rows
+    /// leave the list in memory only, ONE undoable toast covers the whole
+    /// selection, and nothing touches the cache or the server until the undo
+    /// window closes. N toasts would mean N commit timers with only the last one
+    /// visible, so the user could undo exactly one of them.
+    ///
+    /// Recurring occurrences stay in the batch: complete is the one action with a
+    /// per-occurrence route, and the repository carries each row's `instanceDate`.
+    func bulkComplete(_ todos: [TodoItem]) async {
+        guard !todos.isEmpty else { return }
+        TdayTelemetry.addBreadcrumb("task.bulk_complete", data: bulkTelemetryData(count: todos.count))
+        let container = container
+        let isFloater = mode == .floater
+        let count = todos.count
+        let completedIDs = Set(todos.map(\.id))
+        items.removeAll { completedIDs.contains($0.id) }
+        lastCompletionAt = Date()
+        if !isFloater {
+            completedTodayCount += count
+        }
+        container.undoableDeleteScheduler.schedule(
+            message: BulkSelectionCopy.completedToast(count),
+            restore: { [weak self] in
+                // The cache was never changed, so re-reading it restores the rows.
+                self?.hydrateFromCache()
+            },
+            commit: { [weak self] in
+                do {
+                    if isFloater {
+                        try await container.todoRepository.completeFloaters(todos)
+                    } else {
+                        try await container.todoRepository.completeTodos(todos)
+                    }
+                } catch {
+                    container.snackbarManager.show(BulkSelectionCopy.updateFailed(count), kind: .error)
+                }
+                self?.hydrateFromCache()
+            }
+        )
+    }
+
+    /// Delayed-commit bulk delete — the batch shape of `delete(_:)`. The screen
+    /// has already taken an explicit confirmation before this runs; this is the
+    /// second guard, not the only one. The whole selection is staged out of the
+    /// local cache in one write, one undoable toast covers the batch, and the
+    /// server is not told anything until the window closes. The closures capture
+    /// `container` rather than `self` so a pending commit survives this view
+    /// model being deallocated.
+    func bulkDelete(_ todos: [TodoItem]) async {
+        guard !todos.isEmpty else { return }
+        TdayTelemetry.addBreadcrumb("task.bulk_delete", data: bulkTelemetryData(count: todos.count))
+        let container = container
+        let count = todos.count
+        if mode == .floater {
+            let staged = container.todoRepository.stageDeleteFloaters(todos)
+            hydrateFromCache()
+            container.undoableDeleteScheduler.schedule(
+                message: BulkSelectionCopy.deletedToast(count),
+                restore: {
+                    container.todoRepository.undoStagedFloater(staged)
+                },
+                commit: {
+                    do {
+                        try await container.todoRepository.deleteFloaters(todos)
+                    } catch {
+                        container.snackbarManager.show(BulkSelectionCopy.deleteFailed(count), kind: .error)
+                    }
+                }
+            )
+        } else {
+            let staged = container.todoRepository.stageDeleteTodos(todos)
+            hydrateFromCache()
+            container.undoableDeleteScheduler.schedule(
+                message: BulkSelectionCopy.deletedToast(count),
+                restore: {
+                    container.todoRepository.undoStagedTodo(staged)
+                },
+                commit: {
+                    do {
+                        try await container.todoRepository.deleteTodos(todos)
+                    } catch {
+                        container.snackbarManager.show(BulkSelectionCopy.deleteFailed(count), kind: .error)
+                    }
+                }
+            )
+        }
+    }
+
+    /// Silent on success, by design: a priority change is an edit, and the
+    /// unified toast policy gives edits no toast. The rows visibly change and
+    /// selection mode closes — that is the feedback.
+    func bulkSetPriority(_ todos: [TodoItem], priority: String) async {
+        guard !todos.isEmpty else { return }
+        TdayTelemetry.addBreadcrumb("task.bulk_priority", data: bulkTelemetryData(count: todos.count))
+        do {
+            if mode == .floater {
+                try await container.todoRepository.setPriorityForFloaters(todos, priority: priority)
+            } else {
+                try await container.todoRepository.setPriorityForTodos(todos, priority: priority)
+            }
+        } catch {
+            container.snackbarManager.show(BulkSelectionCopy.updateFailed(todos.count), kind: .error)
+        }
+        hydrateFromCache()
+    }
+
+    /// `listId == nil` means "No list". Silent on success for the same reason as
+    /// `bulkSetPriority`. Scheduled tasks only ever move between scheduled lists
+    /// and floaters between floater lists — `lists` is already the right silo for
+    /// the current mode, so there is no cross-silo target to offer.
+    func bulkMove(_ todos: [TodoItem], toListId listId: String?) async {
+        guard !todos.isEmpty else { return }
+        TdayTelemetry.addBreadcrumb("task.bulk_move", data: bulkTelemetryData(count: todos.count))
+        do {
+            if mode == .floater {
+                try await container.todoRepository.moveFloatersToList(todos, listId: listId)
+            } else {
+                try await container.todoRepository.moveTodosToList(todos, listId: listId)
+            }
+        } catch {
+            container.snackbarManager.show(BulkSelectionCopy.updateFailed(todos.count), kind: .error)
+        }
+        hydrateFromCache()
+    }
+
     func updateListSettings(name: String, color: String?, iconKey: String?) async {
         guard let listId else { return }
         TdayTelemetry.addBreadcrumb("list.update", data: listTelemetryData(color: color, iconKey: iconKey))
@@ -481,6 +608,14 @@ final class TodoListViewModel {
         return data
     }
 
+    /// Structural only: how many rows the action covered and which screen it ran
+    /// on. Never titles, list names or raw ids.
+    private func bulkTelemetryData(count: Int) -> [String: Any] {
+        var data = modeTelemetryData()
+        data["count"] = count
+        return data
+    }
+
     private func listTelemetryData(color: String?, iconKey: String?) -> [String: Any] {
         [
             "kind": mode == .floater ? "floater" : "scheduled",
@@ -488,5 +623,84 @@ final class TodoListViewModel {
             "has_color": !(color ?? "").isEmpty,
             "has_icon": !(iconKey ?? "").isEmpty
         ]
+    }
+}
+
+/// Copy and limits for the multi-select flow, in one place so `TodoListScreen`
+/// (labels, dialogs, the selection bar) and `TodoListViewModel` (toasts) cannot
+/// drift apart.
+///
+/// The canonical English lives in `docs/design/bulk-selection.md` §9 and is the
+/// same sentence on Android and web — translate it, do not reword it. iOS uses
+/// the English string as its own key, per the `L(...)` convention, so a missing
+/// translation silently falls back to English.
+enum BulkSelectionCopy {
+    /// Mirrors `BulkSelectionPolicy.MAX_SELECTION` in
+    /// `shared/src/commonMain/kotlin/com/ohmz/tday/shared/bulk/BulkSelectionPolicy.kt`.
+    ///
+    /// Every bulk action is a fan-out of N single-item requests, and the
+    /// `api_global` policy allows `API_RATE_LIMIT_MAX` (default 180) per minute
+    /// per user — plus one realtime event, one webhook delivery and one push
+    /// poke per mutation, none of it coalesced. The cap is what keeps a large
+    /// selection from becoming a *partially applied* destructive action.
+    static let maxSelection = 100
+
+    static func selectedCount(_ count: Int, capped: Bool) -> String {
+        capped
+            ? L("%d selected — the most one action can cover", count)
+            : L("%d selected", count)
+    }
+
+    static var selectAll: String { L("Select all") }
+    static var deselectAll: String { L("Deselect all") }
+
+    /// Shown when the recurring rule (§4.1) narrowed the selection: a repeating
+    /// occurrence can be bulk-completed, but never bulk-deleted, re-prioritized
+    /// or moved, because those three would silently act on the whole series.
+    static func appliesTo(effective: Int, total: Int) -> String {
+        L("Applies to %1$d of %2$d — repeating tasks are skipped.", effective, total)
+    }
+
+    static func completedToast(_ count: Int) -> String {
+        count == 1 ? L("Task completed") : L("%d tasks completed", count)
+    }
+
+    static func deletedToast(_ count: Int) -> String {
+        count == 1 ? L("Task deleted") : L("%d tasks deleted", count)
+    }
+
+    static func deleteTitle(_ count: Int) -> String {
+        count == 1 ? L("Delete this task?") : L("Delete %d tasks?", count)
+    }
+
+    static var deleteBody: String {
+        L("This removes them from every list, along with their completed history. You'll have a few seconds to undo.")
+    }
+
+    static func deleteConfirm(_ count: Int) -> String {
+        count == 1 ? L("Delete task") : L("Delete %d tasks", count)
+    }
+
+    static func moveTitle(_ count: Int) -> String {
+        L("Move %d tasks?", count)
+    }
+
+    static var moveBody: String {
+        L("These tasks come from different lists. Moving them can't be undone in one step — you'd have to put each one back by hand.")
+    }
+
+    static func moveConfirm(_ count: Int) -> String {
+        L("Move %d tasks", count)
+    }
+
+    // Singular branch like every sibling above, so one failed row does not read
+    // "1 tasks couldn't be deleted". Android already says this correctly through
+    // <plurals>; web now does too.
+    static func deleteFailed(_ count: Int) -> String {
+        count == 1 ? L("A task couldn't be deleted") : L("%d tasks couldn't be deleted", count)
+    }
+
+    static func updateFailed(_ count: Int) -> String {
+        count == 1 ? L("A task couldn't be updated") : L("%d tasks couldn't be updated", count)
     }
 }

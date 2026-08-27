@@ -727,6 +727,49 @@
       "searchBody": "sortiere liegengebliebene aufgaben karte fur karte. ruckstand tut nicht mehr weh: der aufraumen-knopf auf dem uberfallig-bildschirm geht deine liegengebliebenen aufgaben karte fur karte durch — heute, morgen, datum wahlen, zum floater machen oder loslassen. in eile? „alles auf heute schieben“ verschiebt alles auf einmal, mit einem einzigen ruckgangig. wiederholende aufgaben bleiben ausen vor; ihre termine planst du im bearbeiten-blatt um, damit die serie intakt bleibt."
     },
     {
+      "id": "bulk-actions",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "circle-check-big",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "PRO_TIP",
+      "serverOnly": false,
+      "sinceVersion": "0.7.4",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Sammelaktionen",
+      "summary": "Mehrere Aufgaben auf einmal auswählen und gemeinsam bearbeiten.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Tippe in der Kopfzeile einer Aufgabenliste auf Auswählen, um in den Auswahlmodus zu wechseln. Wähle Aufgaben einzeln oder tippe auf Alle auswählen und wende dann eine einzige Aktion auf alles an: als erledigt markieren, Priorität ändern, in eine andere Liste verschieben oder löschen."
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "Öffne eine Aufgabenliste und tippe in der Kopfzeile auf Auswählen.",
+            "Tippe Aufgaben an, um sie zu wählen, oder nutze Alle auswählen für alles auf dem Bildschirm.",
+            "Wähle unten in der Leiste Erledigen, Priorität, Verschieben oder Löschen."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Beim Löschen musst du zuerst die genaue Anzahl bestätigen — und danach bleibt trotzdem ein Hinweis zum Rückgängigmachen. Wiederkehrende Aufgaben bleiben bei Sammelaktionen komplett außen vor, damit nie versehentlich eine ganze Serie geändert wird — öffne sie einzeln, um sie zu erledigen, zu verschieben oder zu löschen."
+          ]
+        }
+      ],
+      "searchTitle": "sammelaktionen",
+      "searchKeywords": "sammelaktion, mehrfachauswahl, alle auswahlen, stapel, mehrere, erledigen, loschen, prioritat, verschieben, auswahl",
+      "searchBody": "mehrere aufgaben auf einmal auswahlen und gemeinsam bearbeiten. tippe in der kopfzeile einer aufgabenliste auf auswahlen, um in den auswahlmodus zu wechseln. wahle aufgaben einzeln oder tippe auf alle auswahlen und wende dann eine einzige aktion auf alles an: als erledigt markieren, prioritat andern, in eine andere liste verschieben oder loschen. offne eine aufgabenliste und tippe in der kopfzeile auf auswahlen. tippe aufgaben an, um sie zu wahlen, oder nutze alle auswahlen fur alles auf dem bildschirm. wahle unten in der leiste erledigen, prioritat, verschieben oder loschen. beim loschen musst du zuerst die genaue anzahl bestatigen — und danach bleibt trotzdem ein hinweis zum ruckgangigmachen. wiederkehrende aufgaben bleiben bei sammelaktionen komplett ausen vor, damit nie versehentlich eine ganze serie geandert wird — offne sie einzeln, um sie zu erledigen, zu verschieben oder zu loschen."
+    },
+    {
       "id": "search-tasks",
       "section": "ORGANIZING",
       "sectionOrder": 3,

@@ -4,7 +4,8 @@
       "recurrence-presets",
       "repeat-suggestions",
       "reusable-lists",
-      "nlp-date-syntax"
+      "nlp-date-syntax",
+      "bulk-actions"
     ],
     "swipe": [
       "calendar-views"
@@ -62,6 +63,7 @@
     ],
     "priority": [
       "priorities",
+      "bulk-actions",
       "nlp-date-syntax",
       "promote-and-float"
     ],

@@ -697,4 +697,44 @@
     <string name="settings_privacy">プライバシー</string>
     <string name="root_feed_search_scheduled">予定タスクを検索</string>
     <string name="root_feed_search_floater">フローターを検索</string>
+
+    <!-- Bulk selection: multi-select actions in a task list -->
+    <string name="bulk_select">選択</string>
+    <string name="bulk_select_all">すべて選択</string>
+    <string name="bulk_deselect_all">選択を解除</string>
+    <string name="bulk_selected">%1$d件選択中</string>
+    <string name="bulk_selected_capped">%1$d件選択中 — 1回の操作で扱える上限です</string>
+    <string name="bulk_applies_to">%2$d件のうち%1$d件に適用されます — 繰り返しタスクはスキップされます。</string>
+    <string name="bulk_select_task">タスクを選択</string>
+    <string name="bulk_deselect_task">タスクの選択を解除</string>
+    <string name="bulk_action_complete">完了</string>
+    <string name="bulk_action_priority">優先度</string>
+    <string name="bulk_action_move">移動</string>
+    <string name="bulk_action_delete">削除</string>
+    <string name="bulk_delete_body">すべてのリストから削除され、完了履歴も消えます。数秒間は元に戻せます。</string>
+    <string name="bulk_move_body">これらのタスクは別々のリストにあります。移動は一度に元へ戻せません — 1件ずつ手作業で戻す必要があります。</string>
+    <plurals name="bulk_tasks_completed">
+        <item quantity="other">%d件のタスクを完了しました</item>
+    </plurals>
+    <plurals name="bulk_tasks_deleted">
+        <item quantity="other">%d件のタスクを削除しました</item>
+    </plurals>
+    <plurals name="bulk_delete_title">
+        <item quantity="other">%d件のタスクを削除しますか?</item>
+    </plurals>
+    <plurals name="bulk_delete_confirm">
+        <item quantity="other">%d件を削除</item>
+    </plurals>
+    <plurals name="bulk_move_title">
+        <item quantity="other">%d件のタスクを移動しますか?</item>
+    </plurals>
+    <plurals name="bulk_move_confirm">
+        <item quantity="other">%d件を移動</item>
+    </plurals>
+    <plurals name="bulk_delete_failed">
+        <item quantity="other">%d件のタスクを削除できませんでした</item>
+    </plurals>
+    <plurals name="bulk_update_failed">
+        <item quantity="other">%d件のタスクを更新できませんでした</item>
+    </plurals>
 </resources>

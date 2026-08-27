@@ -725,4 +725,52 @@
     <string name="app_lock_prompt_subtitle">Confirm it\'s you to see your tasks</string>
     <string name="root_feed_search_scheduled">Search Scheduled Task</string>
     <string name="root_feed_search_floater">Search Floater Task</string>
+
+    <!-- Bulk selection: multi-select actions in a task list -->
+    <string name="bulk_select">Select</string>
+    <string name="bulk_select_all">Select all</string>
+    <string name="bulk_deselect_all">Deselect all</string>
+    <string name="bulk_selected">%1$d selected</string>
+    <string name="bulk_selected_capped">%1$d selected — the most one action can cover</string>
+    <string name="bulk_applies_to">Applies to %1$d of %2$d — repeating tasks are skipped.</string>
+    <string name="bulk_select_task">Select task</string>
+    <string name="bulk_deselect_task">Deselect task</string>
+    <string name="bulk_action_complete">Complete</string>
+    <string name="bulk_action_priority">Priority</string>
+    <string name="bulk_action_move">Move</string>
+    <string name="bulk_action_delete">Delete</string>
+    <string name="bulk_delete_body">This removes them from every list, along with their completed history. You\'ll have a few seconds to undo.</string>
+    <string name="bulk_move_body">These tasks come from different lists. Moving them can\'t be undone in one step — you\'d have to put each one back by hand.</string>
+    <plurals name="bulk_tasks_completed">
+        <item quantity="one">Task completed</item>
+        <item quantity="other">%d tasks completed</item>
+    </plurals>
+    <plurals name="bulk_tasks_deleted">
+        <item quantity="one">Task deleted</item>
+        <item quantity="other">%d tasks deleted</item>
+    </plurals>
+    <plurals name="bulk_delete_title">
+        <item quantity="one">Delete this task?</item>
+        <item quantity="other">Delete %d tasks?</item>
+    </plurals>
+    <plurals name="bulk_delete_confirm">
+        <item quantity="one">Delete task</item>
+        <item quantity="other">Delete %d tasks</item>
+    </plurals>
+    <plurals name="bulk_move_title">
+        <item quantity="one">Move this task?</item>
+        <item quantity="other">Move %d tasks?</item>
+    </plurals>
+    <plurals name="bulk_move_confirm">
+        <item quantity="one">Move task</item>
+        <item quantity="other">Move %d tasks</item>
+    </plurals>
+    <plurals name="bulk_delete_failed">
+        <item quantity="one">A task couldn\'t be deleted</item>
+        <item quantity="other">%d tasks couldn\'t be deleted</item>
+    </plurals>
+    <plurals name="bulk_update_failed">
+        <item quantity="one">A task couldn\'t be updated</item>
+        <item quantity="other">%d tasks couldn\'t be updated</item>
+    </plurals>
 </resources>

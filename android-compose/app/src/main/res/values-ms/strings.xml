@@ -697,4 +697,44 @@
     <string name="settings_privacy">Privasi</string>
     <string name="root_feed_search_scheduled">Cari tugasan berjadual</string>
     <string name="root_feed_search_floater">Cari tugasan terapung</string>
+
+    <!-- Bulk selection: multi-select actions in a task list -->
+    <string name="bulk_select">Pilih</string>
+    <string name="bulk_select_all">Pilih semua</string>
+    <string name="bulk_deselect_all">Nyahpilih semua</string>
+    <string name="bulk_selected">%1$d dipilih</string>
+    <string name="bulk_selected_capped">%1$d dipilih — paling banyak yang boleh dilakukan satu tindakan</string>
+    <string name="bulk_applies_to">Terpakai pada %1$d daripada %2$d — tugasan berulang dilangkau.</string>
+    <string name="bulk_select_task">Pilih tugasan</string>
+    <string name="bulk_deselect_task">Nyahpilih tugasan</string>
+    <string name="bulk_action_complete">Selesai</string>
+    <string name="bulk_action_priority">Keutamaan</string>
+    <string name="bulk_action_move">Alih</string>
+    <string name="bulk_action_delete">Padam</string>
+    <string name="bulk_delete_body">Ini mengeluarkannya daripada setiap senarai, berserta sejarah selesainya. Anda ada beberapa saat untuk membatalkan.</string>
+    <string name="bulk_move_body">Tugasan ini datang daripada senarai yang berbeza. Pengalihan tidak boleh dibatalkan dalam satu langkah — anda perlu mengembalikan setiap satu secara manual.</string>
+    <plurals name="bulk_tasks_completed">
+        <item quantity="other">%d tugasan selesai</item>
+    </plurals>
+    <plurals name="bulk_tasks_deleted">
+        <item quantity="other">%d tugasan dipadam</item>
+    </plurals>
+    <plurals name="bulk_delete_title">
+        <item quantity="other">Padam %d tugasan?</item>
+    </plurals>
+    <plurals name="bulk_delete_confirm">
+        <item quantity="other">Padam %d tugasan</item>
+    </plurals>
+    <plurals name="bulk_move_title">
+        <item quantity="other">Alih %d tugasan?</item>
+    </plurals>
+    <plurals name="bulk_move_confirm">
+        <item quantity="other">Alih %d tugasan</item>
+    </plurals>
+    <plurals name="bulk_delete_failed">
+        <item quantity="other">%d tugasan tidak dapat dipadam</item>
+    </plurals>
+    <plurals name="bulk_update_failed">
+        <item quantity="other">%d tugasan tidak dapat dikemas kini</item>
+    </plurals>
 </resources>
