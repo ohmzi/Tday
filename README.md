@@ -124,16 +124,25 @@ startup.
 
 ### Android
 
-Open `android-compose/` in Android Studio (SDK 35 required) and run on a device or emulator. The app
-can start in Local Mode or connect to a self-hosted server. See [
+Every [GitHub release](https://github.com/ohmzi/Tday/releases/latest) ships a signed APK. Sideload
+it once — Android asks you to allow installs from T'Day — and the app can fetch and install
+later releases itself.
+
+To build it yourself, open `android-compose/` in Android Studio (SDK 35 required) and run on a
+device or emulator. The app can start in Local Mode or connect to a self-hosted server. See [
 `android-compose/README.md`](android-compose/README.md) for structure, first-launch behavior,
 persistence, sync, car-surface constraints, and release notes.
 
 ### iOS
 
-Open `ios-swiftUI/TdayApp.xcodeproj` in Xcode on macOS and run the `Tday` scheme. The app supports
-Local Mode, server workspaces, SwiftData cache, reminders, Today and Floater WidgetKit widgets,
-CarPlay templates, and the shared mobile feature surface. See [
+The iOS app is in open beta on [TestFlight](https://testflight.apple.com/join/paKSyGAG) — anyone
+with the link can join. It needs Apple's free TestFlight app, and each beta build expires 90 days
+after it is uploaded, so update from TestFlight to keep the app working. There is no App Store
+release yet.
+
+To build it yourself, open `ios-swiftUI/TdayApp.xcodeproj` in Xcode on macOS and run the `Tday`
+scheme. The app supports Local Mode, server workspaces, SwiftData cache, reminders, Today and
+Floater WidgetKit widgets, CarPlay templates, and the shared mobile feature surface. See [
 `ios-swiftUI/README.md`](ios-swiftUI/README.md) for structure and environment notes.
 
 ## Project Structure
