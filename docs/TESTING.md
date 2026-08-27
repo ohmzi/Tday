@@ -252,6 +252,7 @@ describe("fieldEncryption", () => {
 | JUnit 5 | Test framework |
 | Ktor `testApplication` | In-process server testing without a real port |
 | kotlinx.serialization | JSON assertion helpers |
+| H2 (in-memory, test-only) | Stands in for PostgreSQL where the database decides the behaviour |
 
 ### Running Tests
 
@@ -267,6 +268,7 @@ Tests live in `tday-backend/src/test/kotlin/com/ohmz/tday/` and are grouped by p
 - `routes/`: todo, floater, list, mobile probe, security enforcement, Apple app association, and auth route flows.
 - `plugins/`: rate limiting.
 - `services/`: NLP parsing and service-level behavior.
+- `db/`: the in-memory database harness shared by the service tests that need one.
 
 ### What Should Be Tested (Backend)
 
@@ -288,6 +290,12 @@ Tests live in `tday-backend/src/test/kotlin/com/ohmz/tday/` and are grouped by p
 - Use Ktor's `testApplication` for route tests with an in-memory configuration.
 - Mock external services (Ollama) at the service boundary.
 - Use actual implementations for pure functions (encryption, validation, date logic).
+- Prefer hand-written doubles over a database. Reach for `db/TestDatabase.kt` — a disposable
+  in-memory H2 built from the production Exposed tables — only when the database is what decides
+  the behaviour, such as which child rows an account purge has to clear before its ON DELETE
+  RESTRICT foreign keys allow the user row to go, or which columns a query matches. Keep those
+  assertions on portable behaviour (referential integrity, `LIKE`, `COALESCE`); Postgres-specific
+  SQL still belongs in a manual check against a real instance.
 
 ## Android Testing
 

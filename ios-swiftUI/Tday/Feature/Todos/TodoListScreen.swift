@@ -1048,6 +1048,92 @@ struct TodoListScreen: View {
     }
 
     var body: some View {
+        screenWithListSheets
+        // The whole screen opts out of keyboard avoidance, not just the empty
+        // scene inside it. This screen's only text field is the search box in
+        // the *top* safe-area inset, which the keyboard can never cover, so
+        // there is nothing here for SwiftUI to move out of the way. What the
+        // avoidance actually did was shorten the feed's region — and the empty
+        // scene, being centred in whatever region is left, rode up with it.
+        // `.ignoresSafeArea` on the scene alone could not undo that: it is an
+        // overlay, and an overlay cannot grow past the bounds of the view it is
+        // laid over. The shrink has to be refused where it lands, which is here.
+        .ignoresSafeArea(.keyboard, edges: .bottom)
+    }
+
+    // MARK: - Screen composition
+    //
+    // The screen is assembled in stages rather than as one modifier chain. The
+    // chain outgrew what the Swift type checker will solve for a single
+    // expression, and it failed the build with "unable to type-check this
+    // expression in reasonable time". Each stage applies the next run of
+    // modifiers in exactly the order they were applied before, so the composed
+    // view tree is identical. Keep new modifiers in the stage that matches what
+    // they do, and split a stage rather than letting one grow without limit.
+    //
+    // The presentation bindings, dialog buttons and the two title/visibility
+    // arguments below are spelled out with their types for the same reason: as
+    // inline arguments they were inference the solver had to do inside the
+    // chain, and that is exactly the cost that blew the budget.
+
+    private var navigationBarTitleText: String {
+        (usesRootFeedHeader || usesHeroTimelineMode) ? "" : viewModel.title
+    }
+
+    private var navigationBarVisibility: Visibility {
+        (usesRootFeedHeader || usesHeroTimelineMode) ? .hidden : .visible
+    }
+
+    /// Quick Defer's dialog is presented for as long as a task is staged in
+    /// `deferringTodo`, and dismissing it clears the stage.
+    private var quickDeferDialogPresented: Binding<Bool> {
+        Binding(
+            get: { deferringTodo != nil },
+            set: { isPresented in
+                if !isPresented {
+                    deferringTodo = nil
+                }
+            }
+        )
+    }
+
+    @ViewBuilder
+    private var quickDeferDialogActions: some View {
+        if let todo = deferringTodo {
+            ForEach(Array(quickDeferOptions().enumerated()), id: \.offset) { entry in
+                Button(entry.element.choice.label) {
+                    deferringTodo = nil
+                    Task { await viewModel.deferTask(todo, due: entry.element.due) }
+                }
+            }
+        }
+    }
+
+    private var pendingReschedulePromptPresented: Binding<Bool> {
+        Binding(
+            get: { pendingRescheduleDrop != nil },
+            set: { isPresented in
+                if !isPresented {
+                    pendingRescheduleDrop = nil
+                }
+            }
+        )
+    }
+
+    @ViewBuilder
+    private var pendingRescheduleDialogActions: some View {
+        Button("This occurrence") {
+            commitPendingReschedule(scope: .occurrence)
+        }
+        Button("Entire series") {
+            commitPendingReschedule(scope: .series)
+        }
+        Button("Cancel", role: .cancel) {
+            pendingRescheduleDrop = nil
+        }
+    }
+
+    private var screenBaseContent: some View {
         refreshableModeContent
         .coordinateSpace(name: todoTimelineDragCoordinateSpace)
         .background(colors.background)
@@ -1099,6 +1185,10 @@ struct TodoListScreen: View {
             }
             .allowsHitTesting(false)
         }
+    }
+
+    private var screenWithOverlays: some View {
+        screenBaseContent
         .overlay {
             if showingDeleteListConfirmation {
                 ListDeleteConfirmationOverlay(
@@ -1177,22 +1267,30 @@ struct TodoListScreen: View {
                     .zIndex(31)
             }
         }
+    }
+
+    private var screenWithNavigationChrome: some View {
+        screenWithOverlays
         .navigationBackButtonBehavior()
         .navigationTitleTypography(
             largeTitleColor: modeAccentColor,
             inlineTitleColor: colors.onSurface,
             backgroundColor: colors.background
         )
-        .navigationTitle((usesRootFeedHeader || usesHeroTimelineMode) ? "" : viewModel.title)
+        .navigationTitle(navigationBarTitleText)
         .navigationBarBackButtonHidden(usesRootFeedHeader)
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar((usesRootFeedHeader || usesHeroTimelineMode) ? .hidden : .visible, for: .navigationBar)
+        .toolbar(navigationBarVisibility, for: .navigationBar)
         .toolbar {
             navigationToolbarContent
         }
         .safeAreaInset(edge: .top, spacing: 0) {
             timelineTopInset
         }
+    }
+
+    private var screenWithLifecycleHandlers: some View {
+        screenWithNavigationChrome
         .onChange(of: viewModel.items) {
             handleItemsChanged()
         }
@@ -1261,6 +1359,10 @@ struct TodoListScreen: View {
         .onDisappear {
             onRootControlsVisibleChange(true)
         }
+    }
+
+    private var screenWithTaskSheets: some View {
+        screenWithLifecycleHandlers
         .createTaskSheet(isPresented: $showingCreateTask) {
             createTaskSheetContent
         }
@@ -1280,21 +1382,15 @@ struct TodoListScreen: View {
         // Quick Defer: one tap moves the task to a locally computed instant.
         .confirmationDialog(
             L("Defer"),
-            isPresented: Binding(
-                get: { deferringTodo != nil },
-                set: { if !$0 { deferringTodo = nil } }
-            ),
+            isPresented: quickDeferDialogPresented,
             titleVisibility: .visible
         ) {
-            if let todo = deferringTodo {
-                ForEach(Array(quickDeferOptions().enumerated()), id: \.offset) { entry in
-                    Button(entry.element.choice.label) {
-                        deferringTodo = nil
-                        Task { await viewModel.deferTask(todo, due: entry.element.due) }
-                    }
-                }
-            }
+            quickDeferDialogActions
         }
+    }
+
+    private var screenWithListSheets: some View {
+        screenWithTaskSheets
         .sheet(isPresented: $showingSummary) {
             summarySheetContent
         }
@@ -1313,38 +1409,13 @@ struct TodoListScreen: View {
         }
         .confirmationDialog(
             "Move repeating task?",
-            isPresented: Binding(
-                get: { pendingRescheduleDrop != nil },
-                set: { isPresented in
-                    if !isPresented {
-                        pendingRescheduleDrop = nil
-                    }
-                }
-            ),
+            isPresented: pendingReschedulePromptPresented,
             titleVisibility: .visible
         ) {
-            Button("This occurrence") {
-                commitPendingReschedule(scope: .occurrence)
-            }
-            Button("Entire series") {
-                commitPendingReschedule(scope: .series)
-            }
-            Button("Cancel", role: .cancel) {
-                pendingRescheduleDrop = nil
-            }
+            pendingRescheduleDialogActions
         } message: {
             Text("Choose whether to move only this task occurrence or the entire repeating series.")
         }
-        // The whole screen opts out of keyboard avoidance, not just the empty
-        // scene inside it. This screen's only text field is the search box in
-        // the *top* safe-area inset, which the keyboard can never cover, so
-        // there is nothing here for SwiftUI to move out of the way. What the
-        // avoidance actually did was shorten the feed's region — and the empty
-        // scene, being centred in whatever region is left, rode up with it.
-        // `.ignoresSafeArea` on the scene alone could not undo that: it is an
-        // overlay, and an overlay cannot grow past the bounds of the view it is
-        // laid over. The shrink has to be refused where it lands, which is here.
-        .ignoresSafeArea(.keyboard, edges: .bottom)
     }
 
     @ViewBuilder
