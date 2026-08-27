@@ -317,6 +317,10 @@ platform :ios do
       # One-time setup — it does not create the App Group). On a runner with no signed-in Xcode
       # account it can only reach the Developer portal if it is handed the same API key, hence
       # the -authentication* trio.
+      #
+      # This string is passed to gym ONCE, as `xcargs`, and gym puts it on both xcodebuild
+      # invocations for us — see the comment on `xcargs:` below. Adding `export_xcargs:` as
+      # well is what produced "option '-authenticationKeyPath' may only be provided once".
       auth_args = [
         "-allowProvisioningUpdates",
         "-authenticationKeyPath", key_path.shellescape,
@@ -334,15 +338,34 @@ platform :ios do
         # and target-level values, so every one of the five bundles is signed by the same team
         # and moving to a different Apple account is a repository-variable change rather than a
         # pbxproj edit.
+        #
+        # THIS IS THE ONLY PLACE THE AUTH FLAGS ARE PASSED, AND THERE IS DELIBERATELY NO
+        # `export_xcargs:` NEXT TO IT.
+        #
+        # gym's documentation splits the two ("the build phase" / "the package phase"), which
+        # reads as though the export gets `export_xcargs` and nothing else. It does not. The
+        # export command generator appends BOTH, `export_xcargs` first and `xcargs` second:
+        #
+        #     options << config[:export_xcargs] if config[:export_xcargs]
+        #     options << config[:xcargs] if config[:xcargs]
+        #     -- gym/lib/gym/generators/package_command_generator_xcode7.rb, .options
+        #
+        # while the archive command generator appends `xcargs` alone
+        # (gym/lib/gym/generators/build_command_generator.rb, .options). Both files read the
+        # same way at 2.228.0 and at 2.238.0, i.e. across the whole `~> 2.228` range the
+        # Gemfile allows.
+        #
+        # So setting both put the -authentication* trio on `-exportArchive` twice, and
+        # xcodebuild refused the command outright: "option '-authenticationKeyPath' may only
+        # be provided once" (run 33050382351, after ** ARCHIVE SUCCEEDED **). Repeated value
+        # options are a usage error there, not a last-one-wins override.
+        #
+        # The export still needs the trio — it is where automatic signing resolves the Apple
+        # Distribution identity and downloads the App Store profiles — and it still gets it,
+        # exactly once, because gym forwards this line to both commands. Leaving
+        # `export_xcargs` out therefore cannot starve the export of authentication; putting it
+        # back is what re-creates the duplicate.
         xcargs: "#{auth_args} DEVELOPMENT_TEAM=#{team_id.shellescape}",
-        # Yes, `auth_args` appears twice. gym documents `xcargs` as "the build phase" and
-        # `export_xcargs` as "the package phase", and the export is where automatic signing
-        # actually resolves the Apple Distribution identity and the App Store profiles — so it
-        # needs the auth flags whether or not gym also forwards `xcargs` there. If it does
-        # forward them, the duplication is inert: repeated value options take the last
-        # occurrence and both copies are identical. Dropping this line to remove the apparent
-        # redundancy would risk an unsigned export; keeping it costs nothing.
-        export_xcargs: auth_args,
         export_options: {
           signingStyle: "automatic",
           destination: "export",
