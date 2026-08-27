@@ -220,18 +220,50 @@ The single sanctioned exception is list sharing: queries guarded by `ListShareSe
 
 - Roles: OWNER (the list's `userID`), EDITOR (full task CRUD in the list), VIEWER (read-only). Share rows store only EDITOR/VIEWER.
 - Members are added directly by username (closed, admin-approved server); members can leave at any time.
+- The picker's typeahead matches username or display name, and people already on the list stay in the results as a disabled "Already a member" row — hiding them made an existing member look like a missing account. Web, Android and iOS all render it that way.
 - Shared tasks ride the normal feed queries (`/api/todo?timeline=true`, `/api/floater`), so they appear in members' Today/timeline feeds and mobile offline snapshots.
 - Completion history stays per-user in v1: completing a shared task writes a `CompletedTodos`/`CompletedFloaters` row under the completer's `userID`; other members just see the task disappear.
 - Membership management is online-only on mobile (no pending mutations); task edits in shared lists stay offline-capable. A member demoted/removed while offline gets 403/no-op on replay, which the sync managers drop.
 - Deleting a list removes every member's todos and completion history for that list (the list-scoped cascades are deliberately not user-filtered). Share rows are cleaned up explicitly by `ListService`/`FloaterListService.deleteMany` and `AdminService.purgeUser` — there is no DB-level `ON DELETE CASCADE` on the share tables.
 - Realtime: every successful mutation emits a `DomainEvent` over `/ws` to the actor plus all share-connected collaborators (`RealtimePublisher`); events are lightweight "refetch" signals (`todo.changed`, `floater.changed`, `list.changed`, `floaterList.changed`, `list.members`, `completed.changed`).
 
+## Foreign Keys: Flyway Writes Them, Exposed Owns Them
+
+`DatabaseConfig.init()` runs Flyway and *then* `SchemaUtils.createMissingTablesAndColumns`. For
+every table in that call's argument list, Exposed compares each live foreign key against the rule
+the Kotlin column declares and **drops and recreates any that differ** — so for those tables the
+`.references(...)` declaration, not the migration, is what the constraint ends up saying.
+
+`.references(Users.id)` with no `onDelete` is not "unspecified": Exposed reads it as its
+PostgreSQL default, `RESTRICT`. That is how `push_subscriptions` ended up `ON DELETE RESTRICT`
+despite `V7` creating it `ON DELETE CASCADE`, which made every account that had ever enabled
+notifications undeletable — the purge rolled back and the admin panel returned a 500.
+
+Rules for anything under `db/tables/`:
+
+- State `onDelete` explicitly whenever the intended rule is not `RESTRICT`, even when a migration
+  already says so. The comment or the migration is not what runs.
+- A migration that changes a delete rule on a reconciled table must also change the declaration,
+  or the next boot reverts it. Write the constraint the way Exposed writes it — same name
+  (`fk_<table>_<column>__<targetcolumn>`, lower-cased) and an explicit `ON UPDATE RESTRICT` —
+  or Exposed re-issues the DDL on every start. `V26__push_subscriptions_cascade_delete.sql` is
+  the worked example.
+- `AdminServiceImpl.purgeUser` deletes from every table that references `"User"` regardless of
+  the declared rule, and `AdminPurgeTest` fails if a new one is added without being listed in
+  `USER_OWNED_CHILD_COLUMNS`. Do not rely on a live `CASCADE` to cover an account delete.
+
+Tables absent from the `createMissingTablesAndColumns` list (`user_api_keys`,
+`calendar_feed_tokens`, `webhook_subscriptions`, `user_security_questions`, `task_steps`) keep
+whatever their migration created. Their declarations now state `CASCADE` to match, so adding one
+of them to that list cannot silently downgrade it.
+
 ## Data Change Checklist
 
 When changing data shape:
 
 - Update shared DTOs and validators first when the contract crosses platforms.
-- Update Exposed tables and add a Flyway migration for backend persistence changes.
+- Update Exposed tables and add a Flyway migration for backend persistence changes. If the change
+  touches a foreign key, read "Foreign Keys: Flyway Writes Them, Exposed Owns Them" first.
 - Update Android Room entities, DAOs, mappers, cache records, and migration/version handling.
 - Update iOS SwiftData entities, mappers, cache records, and widget snapshot logic if affected.
 - Update REST docs in `docs/API_GUIDELINES.md`.
