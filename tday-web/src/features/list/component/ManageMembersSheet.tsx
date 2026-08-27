@@ -73,12 +73,14 @@ export default function ManageMembersSheet({
   const { users: searchResults, searchPending } = useSearchUsers(
     isOwner && open ? debouncedSearch : "",
   );
+  // People already on the list stay in the results as a disabled row. Filtering them out
+  // instead made the sheet answer "No users found" for an account that exists, is approved and
+  // is right there in the list above — which reads as the search being broken.
   const memberIds = new Set(
     [members?.owner.userId, ...(members?.members ?? []).map((member) => member.userId)].filter(
       Boolean,
     ),
   );
-  const addableUsers = searchResults.filter((user) => !memberIds.has(user.id));
 
   const handleAdd = async (username: string) => {
     hapticTick();
@@ -204,31 +206,46 @@ export default function ManageMembersSheet({
               />
               {debouncedSearch.trim().length >= 2 ? (
                 <div className="mt-2 divide-y divide-border/50">
-                  {addableUsers.map((user) => (
-                    <div key={user.id} className="flex items-center gap-3 px-1 py-2">
-                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted/70 text-sm font-black text-muted-foreground">
-                        {(user.name?.trim() || user.username).slice(0, 1).toUpperCase()}
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-black text-foreground">
-                          {user.name?.trim() || user.username}
-                        </p>
-                        <p className="truncate text-xs font-bold text-muted-foreground">
-                          @{user.username}
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        disabled={addMemberPending}
-                        onClick={() => void handleAdd(user.username)}
-                        className="flex h-8 items-center gap-1.5 rounded-full bg-accent/15 px-3 text-xs font-black text-accent transition-colors hover:bg-accent/25 disabled:opacity-50"
+                  {searchResults.map((user) => {
+                    const alreadyMember = memberIds.has(user.id);
+                    return (
+                      <div
+                        key={user.id}
+                        className={cn(
+                          "flex items-center gap-3 px-1 py-2",
+                          alreadyMember && "opacity-60",
+                        )}
                       >
-                        <UserPlus className="h-3.5 w-3.5 stroke-[2.6]" />
-                        {appDict("addMember")}
-                      </button>
-                    </div>
-                  ))}
-                  {!searchPending && addableUsers.length === 0 ? (
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted/70 text-sm font-black text-muted-foreground">
+                          {(user.name?.trim() || user.username).slice(0, 1).toUpperCase()}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-black text-foreground">
+                            {user.name?.trim() || user.username}
+                          </p>
+                          <p className="truncate text-xs font-bold text-muted-foreground">
+                            @{user.username}
+                          </p>
+                        </div>
+                        {alreadyMember ? (
+                          <span className="flex h-8 items-center rounded-full bg-muted/70 px-3 text-xs font-black text-muted-foreground">
+                            {appDict("alreadyAMember")}
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            disabled={addMemberPending}
+                            onClick={() => void handleAdd(user.username)}
+                            className="flex h-8 items-center gap-1.5 rounded-full bg-accent/15 px-3 text-xs font-black text-accent transition-colors hover:bg-accent/25 disabled:opacity-50"
+                          >
+                            <UserPlus className="h-3.5 w-3.5 stroke-[2.6]" />
+                            {appDict("addMember")}
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                  {!searchPending && searchResults.length === 0 ? (
                     <p className="px-1 py-2 text-sm font-bold text-muted-foreground">
                       {appDict("noUsersFound")}
                     </p>

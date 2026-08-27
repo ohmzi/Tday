@@ -333,8 +333,9 @@
     <string name="members_title">メンバー</string>
     <string name="members_add_section">メンバーを追加</string>
     <string name="members_add_action">追加</string>
-    <string name="members_search_placeholder">ユーザー名で検索</string>
+    <string name="members_search_placeholder">名前またはユーザー名で検索</string>
     <string name="members_no_results">ユーザーが見つかりません</string>
+    <string name="members_already_member">すでにメンバーです</string>
     <string name="members_remove">メンバーを削除</string>
     <string name="members_leave_list">リストから退出</string>
     <string name="members_shared_by">%1$s が共有</string>
