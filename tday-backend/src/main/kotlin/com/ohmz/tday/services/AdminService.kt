@@ -185,10 +185,11 @@ class AdminServiceImpl(
     /**
      * Deletes a user and every record they own.
      *
-     * Child rows are removed before their parents wherever the schema uses ON DELETE RESTRICT —
-     * everything in [USER_OWNED_CHILD_COLUMNS], plus `todo_instances` and the `approvedById`
-     * self-reference, blocks the delete otherwise, which used to roll the whole purge back and
-     * return a 500.
+     * Child rows are removed before their parents regardless of the rule the live constraint
+     * carries — everything in [USER_OWNED_CHILD_COLUMNS], plus `todo_instances` and the
+     * `approvedById` self-reference. A RESTRICT reference left behind rolls the whole purge back
+     * and returns a 500, and which references are RESTRICT is not something this should have to
+     * know (see "Foreign Keys: Flyway Writes Them, Exposed Owns Them" in docs/DATA_MODEL.md).
      *
      * A reference this does not know about still rolls the transaction back. It now comes out as
      * a 409 naming the constraint in the server log rather than as the status-page fallback's
@@ -230,9 +231,10 @@ class AdminServiceImpl(
             }
             FloaterListShares.deleteWhere { FloaterListShares.userID eq targetId }
 
-            // todo_instances -> todos is ON DELETE RESTRICT, so per-occurrence overrides must go
-            // first or the whole purge rolls back with a 500. Same child-first order as
-            // ListService.deleteLists.
+            // Per-occurrence overrides go before the todos that own them. V26 makes
+            // todo_instances -> todos ON DELETE CASCADE, so this is now belt-and-braces rather
+            // than load-bearing, but it is the ordering that keeps working if the rule ever
+            // drifts back. Same child-first order as ListService.deleteLists.
             val ownedTodoIds = Todos
                 .select(Todos.id)
                 .where { Todos.userID eq targetId }

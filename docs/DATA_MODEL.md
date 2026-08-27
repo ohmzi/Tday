@@ -246,11 +246,20 @@ Rules for anything under `db/tables/`:
 - A migration that changes a delete rule on a reconciled table must also change the declaration,
   or the next boot reverts it. Write the constraint the way Exposed writes it — same name
   (`fk_<table>_<column>__<targetcolumn>`, lower-cased) and an explicit `ON UPDATE RESTRICT` —
-  or Exposed re-issues the DDL on every start. `V26__push_subscriptions_cascade_delete.sql` is
-  the worked example.
+  or Exposed re-issues the DDL on every start. `V26__align_cascade_delete_constraints.sql` is
+  the worked example; it pairs `push_subscriptions."userID"` and `todo_instances."todoId"` with
+  the `ReferenceOption.CASCADE` their columns now declare.
+- Changing only one side is worse than changing neither. A Flyway-only change is reverted on the
+  next boot; a Kotlin-only change lets Exposed run that `ALTER TABLE` against a live database
+  outside Flyway, which is how the `push_subscriptions` divergence happened in the first place.
+  `CascadeDeleteTest` guards the declaration side: `TestDatabase` builds H2 from the Exposed
+  tables, so dropping an `onDelete` fails there rather than in production months later.
 - `AdminServiceImpl.purgeUser` deletes from every table that references `"User"` regardless of
   the declared rule, and `AdminPurgeTest` fails if a new one is added without being listed in
-  `USER_OWNED_CHILD_COLUMNS`. Do not rely on a live `CASCADE` to cover an account delete.
+  `USER_OWNED_CHILD_COLUMNS`. Do not rely on a live `CASCADE` to cover an account delete. The
+  same goes for the ordered child deletes in `ListService.deleteLists` and `TodoService` — a
+  cascade makes them redundant, not wrong, and they are what survives the next reconciliation
+  pass.
 
 Tables absent from the `createMissingTablesAndColumns` list (`user_api_keys`,
 `calendar_feed_tokens`, `webhook_subscriptions`, `user_security_questions`, `task_steps`) keep
