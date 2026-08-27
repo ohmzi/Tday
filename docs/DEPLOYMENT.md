@@ -345,7 +345,7 @@ Distributable Android release builds must use the same release keystore every ti
 - `CFBundleShortVersionString`, `CFBundleVersion`, iOS `MARKETING_VERSION`, `CURRENT_PROJECT_VERSION`, `TdayUpdateURL`, and example `TDAY_APP_VERSION` values are synced from root `version.json` by `scripts/version.mjs sync`.
 - Set `ios.updateUrl` in `version.json` to the App Store or TestFlight URL before distributing an iOS build that should offer direct updates.
 - Both configurations set `CODE_SIGN_IDENTITY = Apple Development` once at the project level, with no target overrides. That is deliberate and is **not** a bug: under `CODE_SIGN_STYLE = Automatic` the archive is signed with a development identity and the App Store re-sign happens in `-exportArchive`, which the lane drives with `signingStyle: automatic` + `method: app-store`. Forcing `Apple Distribution` at archive time would require a distribution certificate to resolve ~30 minutes earlier than it is actually needed, for no benefit.
-- `DEVELOPMENT_TEAM` is `THT5Z8K3TF` in the project and is overridden from CI by the `IOS_TEAM_ID` repository variable.
+- `DEVELOPMENT_TEAM` is `JUFACN2FS3` in the project and is overridden from CI by the `IOS_TEAM_ID` repository variable.
 
 ### iOS TestFlight Releases
 
@@ -525,7 +525,7 @@ Two bases are deliberately **not** relied on:
 | `ASC_ISSUER_ID` | secret | Issuer UUID shown above the key list |
 | `ASC_KEY_P8_BASE64` | secret | base64 of the `.p8` Apple lets you download exactly once |
 | `TDAY_PROBE_ENCRYPTION_KEY` | secret | Already set — the same secret `release.yml` passes to the Android build. `Tday/Info.plist` publishes `TdayProbeEncryptionKey` as `$(TDAY_PROBE_ENCRYPTION_KEY)`, and an undefined build setting expands to `""`, which makes `ProbeDecryptor` return `nil` and silently disables the whole server version-compatibility gate |
-| `IOS_TEAM_ID` | **variable** | Apple Team ID (`THT5Z8K3TF`). Not a secret — it is printed on every provisioning profile |
+| `IOS_TEAM_ID` | **variable** | Apple Team ID (`JUFACN2FS3`). Not a secret — it is printed on every provisioning profile |
 | `IOS_XCODE_VERSION` | **variable** | Optional Xcode pin, e.g. `16.4`. Unset, the job warns and uses the runner default |
 
 The **`decide` job on Linux** fails with an actionable message if any of those secrets is missing,
@@ -571,7 +571,7 @@ repository settings, and cannot be done from a pull request.
    #   on macOS the flag is different:
    #   gh secret set ASC_KEY_P8_BASE64 --body "$(base64 -i ~/Downloads/AuthKey_XXXXXXXXXX.p8)"
 
-   gh variable set IOS_TEAM_ID --body "THT5Z8K3TF"
+   gh variable set IOS_TEAM_ID --body "JUFACN2FS3"
    ```
 
 6. **Pin Xcode** once you have seen a run log (the "Select Xcode" step prints every version

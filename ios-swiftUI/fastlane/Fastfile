@@ -24,7 +24,7 @@ opt_out_usage
 
 SCHEME = "Tday".freeze
 CONFIGURATION = "Release".freeze
-DEFAULT_TEAM_ID = "THT5Z8K3TF".freeze
+DEFAULT_TEAM_ID = "JUFACN2FS3".freeze
 DEFAULT_BUNDLE_ID = "com.ohmz.tday.ios".freeze
 
 # base64 (standard or URL-safe) with optional padding. Anything outside this alphabet is not a
