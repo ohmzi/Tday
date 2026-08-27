@@ -9,5 +9,20 @@
 # the watch complication all ride along inside the same `Tday` archive; their bundle IDs come
 # from the Xcode project, not from fastlane.
 
-app_identifier(ENV["IOS_APP_IDENTIFIER"] || "com.ohmz.tday.ios")
-team_id(ENV["IOS_TEAM_ID"] || "JUFACN2FS3")
+# Same rule as the lane's `env_or`: an environment variable set to the empty string is unset.
+# GitHub Actions writes `IOS_TEAM_ID: ${{ vars.IOS_TEAM_ID }}` as "" when the variable is not
+# defined, and Ruby's `||` treats "" as present — so a plain `ENV[...] || default` here would
+# hand fastlane an empty value and silently drop the fallback below (AppfileConfig#setter
+# discards blanks, so the key would end up simply absent while the Fastfile's `env_or` still
+# resolved the default — the two would disagree about the team).
+#
+# A lambda rather than a `def`: this file is `eval`'d inside CredentialsManager::AppfileConfig,
+# and it is re-evaluated on every `try_fetch_value`, so a top-level `def` would repeatedly
+# define a method on that class. A local is scoped to this file and cannot leak.
+tday_env_or = lambda do |name, fallback|
+  value = ENV[name].to_s.strip
+  value.empty? ? fallback : value
+end
+
+app_identifier(tday_env_or.call("IOS_APP_IDENTIFIER", "com.ohmz.tday.ios"))
+team_id(tday_env_or.call("IOS_TEAM_ID", "JUFACN2FS3"))
