@@ -1,7 +1,9 @@
 package com.ohmz.tday.services
 
 import arrow.core.Either
+import arrow.core.left
 import arrow.core.raise.either
+import arrow.core.right
 import com.ohmz.tday.db.enums.ApprovalStatus
 import com.ohmz.tday.db.enums.UserRole
 import com.ohmz.tday.db.tables.*
@@ -12,10 +14,13 @@ import com.ohmz.tday.models.response.AdminUserResponse
 import com.ohmz.tday.security.PasswordService
 import com.ohmz.tday.security.SessionControl
 import kotlinx.coroutines.Dispatchers
+import org.jetbrains.exposed.exceptions.ExposedSQLException
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.inList
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
+import org.postgresql.util.PSQLException
+import org.slf4j.LoggerFactory
 import java.security.SecureRandom
 import java.time.LocalDateTime
 import java.time.ZoneOffset
@@ -33,11 +38,16 @@ internal fun isResetRequestExpired(
 /**
  * Every column that points at `"User".id`, in the order a purge has to clear them.
  *
- * These references are ON DELETE RESTRICT, so one leftover child row rolls the entire delete
- * back and the admin panel reports a 500: a missing `push_subscriptions` entry in this list is
- * exactly what made every user who had ever enabled notifications undeletable. Keeping the set
- * declared here (rather than spelled out inside the purge) is what lets a test assert that no
- * reference has been left out.
+ * Most of these references are ON DELETE RESTRICT, so one leftover child row rolls the entire
+ * delete back and the admin panel reports a 500: a missing `push_subscriptions` entry in this
+ * list is exactly what made every user who had ever enabled notifications undeletable. Keeping
+ * the set declared here (rather than spelled out inside the purge) is what lets a test assert
+ * that no reference has been left out.
+ *
+ * The handful that are CASCADE today are cleared explicitly anyway. Which rule a constraint
+ * actually carries depends on whether Exposed reconciles that table (see "Foreign Keys: Flyway
+ * Writes Them, Exposed Owns Them" in docs/DATA_MODEL.md), and this list is not the place to
+ * depend on that answer.
  *
  * Order matters: `completedtodo`/`todos` reference `project`, and `completedfloaters`/`floaters`
  * reference `floaterproject`, so those rows go before the lists that own them.
@@ -150,7 +160,7 @@ class AdminServiceImpl(
             if (otherAdmins == 0L) raise(AppError.Forbidden("you cannot delete the last admin account"))
         }
 
-        purgeUser(targetId)
+        purgeUser(targetId).bind()
         "user deleted"
     }
 
@@ -168,19 +178,38 @@ class AdminServiceImpl(
             raise(AppError.BadRequest("only pending registrations can be rejected"))
         }
 
-        purgeUser(targetId)
+        purgeUser(targetId).bind()
         "registration rejected"
     }
 
     /**
      * Deletes a user and every record they own.
      *
-     * Child rows are removed before their parents wherever the schema uses ON DELETE RESTRICT —
-     * everything in [USER_OWNED_CHILD_COLUMNS], plus `todo_instances` and the `approvedById`
-     * self-reference, blocks the delete otherwise, which used to roll the whole purge back and
-     * return a 500.
+     * Child rows are removed before their parents regardless of the rule the live constraint
+     * carries — everything in [USER_OWNED_CHILD_COLUMNS], plus `todo_instances` and the
+     * `approvedById` self-reference. A RESTRICT reference left behind rolls the whole purge back
+     * and returns a 500, and which references are RESTRICT is not something this should have to
+     * know (see "Foreign Keys: Flyway Writes Them, Exposed Owns Them" in docs/DATA_MODEL.md).
+     *
+     * A reference this does not know about still rolls the transaction back. It now comes out as
+     * a 409 naming the constraint in the server log rather than as the status-page fallback's
+     * "An unexpected error occurred", which said nothing about what to clear.
      */
-    private suspend fun purgeUser(targetId: String) {
+    private suspend fun purgeUser(targetId: String): Either<AppError, Unit> = try {
+        purgeUserInTransaction(targetId)
+        Unit.right()
+    } catch (error: ExposedSQLException) {
+        // Only the constraint name is logged. The driver puts the offending key in the message,
+        // and that is user data under the telemetry rules in AGENTS.md.
+        val constraint = (error.cause as? PSQLException)?.serverErrorMessage?.constraint
+        logger.error("Purging a user was rolled back by constraint {}", constraint ?: "<unknown>")
+        AppError.Conflict(
+            "this account still has data referencing it and was not deleted; " +
+                "the server log names the constraint that blocked it",
+        ).left()
+    }
+
+    private suspend fun purgeUserInTransaction(targetId: String) {
         newSuspendedTransaction(Dispatchers.IO) {
             // Share rows have no DB-level cascade (see ListShares), so clean up
             // memberships the user holds AND memberships on lists they own —
@@ -202,9 +231,10 @@ class AdminServiceImpl(
             }
             FloaterListShares.deleteWhere { FloaterListShares.userID eq targetId }
 
-            // todo_instances -> todos is ON DELETE RESTRICT, so per-occurrence overrides must go
-            // first or the whole purge rolls back with a 500. Same child-first order as
-            // ListService.deleteLists.
+            // Per-occurrence overrides go before the todos that own them. V26 makes
+            // todo_instances -> todos ON DELETE CASCADE, so this is now belt-and-braces rather
+            // than load-bearing, but it is the ordering that keeps working if the rule ever
+            // drifts back. Same child-first order as ListService.deleteLists.
             val ownedTodoIds = Todos
                 .select(Todos.id)
                 .where { Todos.userID eq targetId }
@@ -326,5 +356,6 @@ class AdminServiceImpl(
 
     companion object {
         private val secureRandom = SecureRandom()
+        private val logger = LoggerFactory.getLogger(AdminServiceImpl::class.java)
     }
 }

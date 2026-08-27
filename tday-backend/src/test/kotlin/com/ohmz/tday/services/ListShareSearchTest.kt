@@ -3,6 +3,7 @@ package com.ohmz.tday.services
 import com.ohmz.tday.db.TestDatabase
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.exposed.sql.Database
+import org.jetbrains.exposed.sql.LikePattern
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -12,6 +13,15 @@ import kotlin.test.assertTrue
 /**
  * The share-member typeahead. Usernames in this app are email-shaped, and members are as likely
  * to be looked up by the name they display under as by the address they signed up with.
+ *
+ * The `skipcq: KT-W1042` marker below is deliberate. `"ann_lee"` is a per-test fixture identity,
+ * not a shared value: the underscore test creates that account and then types it in full, so
+ * `assertEquals(listOf("ann_lee"), search("ann_lee"))` reads as an input/output pair and naming
+ * it would hide the very thing the test asserts — that what you type comes back. The fourth
+ * occurrence is in the pure `userSearchPattern` test, which touches no database at all and only
+ * happens to reuse the string as a convenient input with an underscore in it; binding it to the
+ * fixture's constant would imply a coupling that does not exist. Same call as the
+ * `// skipcq: KT-W1042` markers in the Android `BulkTaskCacheTest`.
  */
 class ListShareSearchTest {
     // JUnit builds a new instance per test method, so this is one empty database per test.
@@ -65,11 +75,23 @@ class ListShareSearchTest {
     }
 
     @Test
+    fun `an underscore in a username is matched as itself`() = runBlocking {
+        TestDatabase.insertUser("user_score", username = "ann_lee", name = "Ann Lee")  // skipcq: KT-W1042
+        TestDatabase.insertUser("user_decoy", username = "annXlee", name = "Decoy")
+
+        // Stripping "_" looked for "annlee" and found neither; leaving it unescaped would have
+        // matched the decoy too, because "_" is LIKE's single-character wildcard.
+        assertEquals(listOf("ann_lee"), search("ann_lee"))
+    }
+
+    @Test
     fun `wildcards typed into the query cannot widen the match`() = runBlocking {
         // Read literally these match nobody; treated as LIKE wildcards both would find
         // kb1972@mail.test.
         assertTrue(search("k%1972").isEmpty())
         assertTrue(search("k_1972").isEmpty())
+        assertTrue(search("%").isEmpty(), "a lone wildcard is below the minimum length")
+        assertTrue(search("%%").isEmpty(), "a wildcard-only query matches those characters literally")
     }
 
     @Test
@@ -79,12 +101,13 @@ class ListShareSearchTest {
     }
 
     @Test
-    fun `the search pattern keeps every character that is not a LIKE metacharacter`() {
-        assertEquals("%z@a.com%", userSearchPattern("  Z@A.com "))
-        assertEquals("%karen blake%", userSearchPattern("Karen Blake"))
-        assertEquals("%ab%", userSearchPattern("a%b"))
-        assertEquals("%ab%", userSearchPattern("""a\b"""))
-        assertEquals(null, userSearchPattern("_"))
+    fun `the search pattern escapes LIKE syntax instead of dropping it`() {
+        assertEquals(LikePattern("""%z@a.com%""", '\\'), userSearchPattern("  Z@A.com "))
+        assertEquals(LikePattern("""%karen blake%""", '\\'), userSearchPattern("Karen Blake"))
+        assertEquals(LikePattern("""%a\%b%""", '\\'), userSearchPattern("a%b"))
+        assertEquals(LikePattern("""%ann\_lee%""", '\\'), userSearchPattern("ann_lee"))
+        assertEquals(LikePattern("""%a\\b%""", '\\'), userSearchPattern("""a\b"""))
+        assertEquals(null, userSearchPattern("_"), "one character is still too short to search")
     }
 
     private companion object {

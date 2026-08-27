@@ -333,8 +333,9 @@
     <string name="members_title">Mitglieder</string>
     <string name="members_add_section">Mitglied hinzufügen</string>
     <string name="members_add_action">Hinzufügen</string>
-    <string name="members_search_placeholder">Nach Benutzername suchen</string>
+    <string name="members_search_placeholder">Nach Name oder Benutzername suchen</string>
     <string name="members_no_results">Keine Benutzer gefunden</string>
+    <string name="members_already_member">Bereits Mitglied</string>
     <string name="members_remove">Mitglied entfernen</string>
     <string name="members_leave_list">Liste verlassen</string>
     <string name="members_shared_by">Geteilt von %1$s</string>

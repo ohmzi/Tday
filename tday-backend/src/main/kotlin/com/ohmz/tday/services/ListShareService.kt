@@ -19,6 +19,7 @@ import com.ohmz.tday.shared.model.UserSearchResultDto
 import kotlinx.coroutines.Dispatchers
 import org.jetbrains.exposed.sql.Coalesce
 import org.jetbrains.exposed.sql.JoinType
+import org.jetbrains.exposed.sql.LikePattern
 import org.jetbrains.exposed.sql.Op
 import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
@@ -42,34 +43,56 @@ private const val MIN_SEARCH_LENGTH = 2
 private const val SEARCH_RESULT_LIMIT = 10
 
 /**
- * The characters removed from a member-search query: `%` and `_` are LIKE wildcards, and `\` is
- * the escape character Postgres applies by default — a pattern ending in one is an error.
+ * The escape character bound into every member-search `LIKE`, and the characters it has to
+ * protect. `%` and `_` are the wildcards PostgreSQL recognises in a pattern; the escape
+ * character stands for itself once escaped.
  */
-private const val LIKE_METACHARACTERS = "%_\\"
+private const val LIKE_ESCAPE_CHAR = '\\'
+private const val LIKE_WILDCARDS = "%_"
+
+/**
+ * [text] as a pattern fragment that matches itself, with every LIKE metacharacter prefixed by
+ * [LIKE_ESCAPE_CHAR].
+ *
+ * Nothing is dropped. Two rounds of this search have now been broken by a filter that decided
+ * which characters a query was allowed to keep: the original allow-list stripped `@`, so the
+ * email-shaped usernames this app issued before V11 could not be found even by typing them in
+ * full, and removing the wildcards instead did the same to `_`, which the registration username
+ * pattern permits and which display names use freely. Escaping is what makes a query mean itself
+ * without narrowing which accounts can be looked up.
+ *
+ * This mirrors what `LikePattern.ofLiteral` does for PostgreSQL, spelled out here because that
+ * helper reads `currentDialect` and so only works inside a transaction.
+ */
+internal fun escapeLikeLiteral(text: String): String = buildString {
+    text.forEach { char ->
+        if (char == LIKE_ESCAPE_CHAR || char in LIKE_WILDCARDS) append(LIKE_ESCAPE_CHAR)
+        append(char)
+    }
+}
 
 /**
  * The LIKE pattern for a member search, or null when the query is too short to run.
  *
- * Everything except [LIKE_METACHARACTERS] is matched literally, `@` included: usernames here are
- * email-shaped, and the allow-list this replaced dropped `@` along with the wildcards, so
- * searching `z@a.com` looked for `zz.com` and found nobody. The pattern is bound as a statement
- * parameter, so removing those three characters bounds what the query can match — it is not an
- * injection defence.
+ * The pattern carries its own `ESCAPE` clause, so a typed `%` or `_` matches that character
+ * rather than acting as a wildcard. It is bound as a statement parameter either way — this is
+ * about what the query means, not an injection defence.
  */
-internal fun userSearchPattern(query: String): String? {
-    val sanitized = query.trim().filter { it !in LIKE_METACHARACTERS }
-    if (sanitized.length < MIN_SEARCH_LENGTH) return null
-    return "%${sanitized.lowercase()}%"
+internal fun userSearchPattern(query: String): LikePattern? {
+    val trimmed = query.trim()
+    if (trimmed.length < MIN_SEARCH_LENGTH) return null
+    return LikePattern("%${escapeLikeLiteral(trimmed.lowercase())}%", LIKE_ESCAPE_CHAR)
 }
 
 /**
  * Matches [pattern] against the username and the display name, as one OR group so that the
- * approval and requester filters still apply to both: `(username LIKE ? OR name LIKE ?) AND ...`.
+ * approval and requester filters still apply to both:
+ * `(username LIKE ? ESCAPE ? OR name LIKE ? ESCAPE ?) AND ...`.
  *
  * `name` is nullable and coalesced to an empty string, so a member who never set a display name
  * stays findable by username.
  */
-private fun matchesUserSearch(pattern: String): Op<Boolean> =
+private fun matchesUserSearch(pattern: LikePattern): Op<Boolean> =
     (Users.username.lowerCase() like pattern) or
         (Coalesce(Users.name, stringLiteral("")).lowerCase() like pattern)
 
