@@ -198,6 +198,32 @@ describe("local mode todos", () => {
     expect(timeline.todos).toHaveLength(1);
   });
 
+  it("completes the series when a recurring todo arrives without an occurrence", async () => {
+    // Not an edge case: the feeds emit recurring *templates*, which carry no
+    // `instanceDate`, so this is the shape every screen sends for a repeating task.
+    // It used to write history and change nothing, leaving the task on screen with a
+    // phantom Completed entry. Mirrors `TodoServiceImpl.completeTodo`.
+    const todo = await createTodo({ rrule: "RRULE:FREQ=DAILY;INTERVAL=1" });
+
+    await api.PATCH({ url: "/api/todo/complete", ...json({ id: todo.id }) });
+
+    const timeline = await api.GET({ url: "/api/todo?timeline=true" });
+    expect(timeline.todos).toHaveLength(0);
+
+    const history = await api.GET({ url: "/api/completedTodo" });
+    expect(history.completedTodos).toHaveLength(1);
+    expect(history.completedTodos[0].instanceDate).toBeNull();
+  });
+
+  it("uncompletes a series completed without an occurrence", async () => {
+    const todo = await createTodo({ rrule: "RRULE:FREQ=DAILY;INTERVAL=1" });
+    await api.PATCH({ url: "/api/todo/complete", ...json({ id: todo.id }) });
+    await api.PATCH({ url: "/api/todo/uncomplete", ...json({ id: todo.id }) });
+
+    expect((await api.GET({ url: "/api/completedTodo" })).completedTodos).toHaveLength(0);
+    expect((await api.GET({ url: "/api/todo?timeline=true" })).todos).toHaveLength(1);
+  });
+
   it("uncompletes a recurring occurrence back out of history", async () => {
     const todo = await createTodo({ rrule: "RRULE:FREQ=DAILY;INTERVAL=1" });
     const occurrence = Date.UTC(2026, 7, 4, 9, 30);
