@@ -73,6 +73,24 @@ data class ListTodoDto(
     val due: String? = null,
     val completed: Boolean,
     val order: Int,
+    /**
+     * The recurrence rule, or null for a one-off.
+     *
+     * Load-bearing for bulk selection, not cosmetic: a client decides whether a
+     * row is a repeating series by `rrule != null`, and delete / priority / move
+     * have no per-occurrence route, so they must never touch one
+     * (`BulkSelectionPolicy.appliesToRecurring`). While this field was missing
+     * from the payload, every row on a list screen looked one-off, the guard
+     * evaluated to "nothing here repeats", and a bulk delete took out whole
+     * series. A guard that silently sees no recurrence is worse than no guard.
+     */
+    val rrule: String? = null,
+    /**
+     * The list this todo is assigned to. Always this endpoint's own list id, but
+     * sent so a row carries its own source instead of the screen having to
+     * remember it for them.
+     */
+    val listID: String? = null,
 )
 
 @Serializable

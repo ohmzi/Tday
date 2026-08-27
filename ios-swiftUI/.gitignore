@@ -4,3 +4,13 @@
 DerivedData/
 xcuserdata/
 *.xcuserstate
+
+# fastlane / TestFlight lane local output (see fastlane/Fastfile)
+.spm-cache/
+build/
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/
+fastlane/test_output/
+*.ipa
+*.dSYM.zip

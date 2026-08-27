@@ -152,6 +152,30 @@ All platforms use the same client-side **delayed-commit** pattern — there is n
 | Task step (in-editor)                      | ⚠️ immediate, no toast — Work item 5                                                   | no steps UI                                         | no steps UI                                                             |
 | Widgets / Watch / palette / share ext.     | no delete actions                                                                      | no delete actions                                   | no delete actions                                                       |
 | Server MCP `tday_delete_task` (2026-08-21) | ⚠️ immediate by design — API automation scope, no UI toast; no list-delete tool exists | n/a                                                 | n/a                                                                     |
+| **Bulk task delete (multi-select)**        | ✅ `useBulkTodoActions.deleteSelected()` → `useUndoableDelete`, behind the count-stating confirmation in `BulkSelectionBar` | ✅ `TodoListViewModel.deleteSelected()` + `BulkTaskRepository.stageDeleteTodos()`, behind the count-stating confirmation in `TodoListScreen` | ✅ *(unverified — iOS cannot be compiled here)* `TodoListViewModel.bulkDelete()` + `TodoRepository.stageDeleteTodos()`, behind `BulkSelectionConfirmationOverlay` |
+
+**Bulk task delete (implemented, 0.7.4).** The multi-select feature designed in
+[`docs/design/bulk-selection.md`](design/bulk-selection.md) adds the first *destructive
+batch* action on tasks. Its contract, recorded here because this doc is the audit of
+record for delete surfaces:
+
+- **Two layers, both mandatory.** A house-style destructive confirmation stating the
+  exact count, **and then** the existing delayed-commit undo — not one or the other.
+  Bulk delete is never one tap.
+- **One toast for the whole batch**, via the existing frameworks
+  (`useUndoableDelete` / `UndoableDeleteCoordinator.showUndoableDelete` /
+  `UndoableDeleteScheduler.schedule`). N calls would mean N commit timers and only the
+  last toast visible, so the user could undo just one of them. No new framework, and the
+  5s / 8.5s windows do not change.
+- **Recurring occurrences are excluded from bulk delete entirely** (they can be
+  bulk-*completed*). `DELETE /api/todo` removes the whole series, and destroying a
+  series from a multi-select is the worst failure mode the feature could ship.
+- **No backend change**: bulk delete fans out the existing single-item `DELETE`, so the
+  undo window still means nothing was ever sent. The "no server soft-delete needed"
+  decision above stands unchanged.
+- The staged-window resurrection hazard noted throughout this doc is N× wider with N
+  tasks staged. Not a new bug, but it is one of the reasons the design caps a single
+  bulk action at 100 tasks.
 
 Key infrastructure per platform:
 

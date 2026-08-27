@@ -697,4 +697,44 @@
     <string name="settings_privacy">隐私</string>
     <string name="root_feed_search_scheduled">搜索计划任务</string>
     <string name="root_feed_search_floater">搜索浮动任务</string>
+
+    <!-- Bulk selection: multi-select actions in a task list -->
+    <string name="bulk_select">选择</string>
+    <string name="bulk_select_all">全选</string>
+    <string name="bulk_deselect_all">取消全选</string>
+    <string name="bulk_selected">已选择 %1$d 个</string>
+    <string name="bulk_selected_capped">已选择 %1$d 个 — 单次操作最多只能处理这么多</string>
+    <string name="bulk_applies_to">将应用于 %2$d 个中的 %1$d 个 — 重复任务会被跳过。</string>
+    <string name="bulk_select_task">选择任务</string>
+    <string name="bulk_deselect_task">取消选择任务</string>
+    <string name="bulk_action_complete">完成</string>
+    <string name="bulk_action_priority">优先级</string>
+    <string name="bulk_action_move">移动</string>
+    <string name="bulk_action_delete">删除</string>
+    <string name="bulk_delete_body">这会将它们从所有列表中移除，连同它们的完成历史记录。你有几秒钟可以撤销。</string>
+    <string name="bulk_move_body">这些任务来自不同的列表。移动无法一步撤销 — 你得逐个手动放回去。</string>
+    <plurals name="bulk_tasks_completed">
+        <item quantity="other">已完成 %d 个任务</item>
+    </plurals>
+    <plurals name="bulk_tasks_deleted">
+        <item quantity="other">已删除 %d 个任务</item>
+    </plurals>
+    <plurals name="bulk_delete_title">
+        <item quantity="other">删除 %d 个任务？</item>
+    </plurals>
+    <plurals name="bulk_delete_confirm">
+        <item quantity="other">删除 %d 个</item>
+    </plurals>
+    <plurals name="bulk_move_title">
+        <item quantity="other">移动 %d 个任务？</item>
+    </plurals>
+    <plurals name="bulk_move_confirm">
+        <item quantity="other">移动 %d 个</item>
+    </plurals>
+    <plurals name="bulk_delete_failed">
+        <item quantity="other">有 %d 个任务无法删除</item>
+    </plurals>
+    <plurals name="bulk_update_failed">
+        <item quantity="other">有 %d 个任务无法更新</item>
+    </plurals>
 </resources>

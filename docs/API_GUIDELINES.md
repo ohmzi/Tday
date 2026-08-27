@@ -231,6 +231,13 @@ Lists group scheduled tasks.
 | DELETE | `/api/list/{id}/members` | Remove a member (owner only) |
 | POST | `/api/list/{id}/leave` | Leave a shared list (non-owner members) |
 
+`GET /api/list/{id}` returns `ListTodoDto` rows, a narrower shape than the timeline's
+`TodoResponse`. It carries `rrule` and `listID` (added alongside bulk selection) so a
+client can tell a repeating task from a one-off on a list screen; it still has no
+`instanceDate`, because these rows are recurring *templates*, not occurrences. A client
+that must decide whether a row repeats has to treat a missing `rrule` as unknown rather
+than as "does not repeat" — see `docs/design/bulk-selection.md` §4.1.
+
 ### Floater Lists
 
 Floater lists group floaters.
