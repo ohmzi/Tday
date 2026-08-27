@@ -81,7 +81,7 @@ services:
       # local zone (e.g. America/New_York) so log timestamps and any
       # server-local time logic line up with the host. IANA names only.
       TZ: ${TZ:-UTC}
-      APPLE_TEAM_ID: ${APPLE_TEAM_ID:-THT5Z8K3TF}
+      APPLE_TEAM_ID: ${APPLE_TEAM_ID:-JUFACN2FS3}
       IOS_BUNDLE_ID: ${IOS_BUNDLE_ID:-com.ohmz.tday.ios}
       OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:0.5b}
     # Report real readiness so restart:always and any orchestration can tell a

@@ -61,7 +61,7 @@ targets:
       base:
         PRODUCT_NAME: Tday
         PRODUCT_BUNDLE_IDENTIFIER: com.ohmz.tday.ios
-        DEVELOPMENT_TEAM: THT5Z8K3TF
+        DEVELOPMENT_TEAM: JUFACN2FS3
         INFOPLIST_FILE: Tday/Info.plist
         CODE_SIGN_ENTITLEMENTS: Tday/Tday.entitlements
         GENERATE_INFOPLIST_FILE: NO
@@ -85,7 +85,7 @@ targets:
       base:
         PRODUCT_NAME: TdayWidget
         PRODUCT_BUNDLE_IDENTIFIER: com.ohmz.tday.ios.TdayTasksWidget
-        DEVELOPMENT_TEAM: THT5Z8K3TF
+        DEVELOPMENT_TEAM: JUFACN2FS3
         INFOPLIST_FILE: TdayWidget/Info.plist
         CODE_SIGN_ENTITLEMENTS: TdayWidget/TdayWidget.entitlements
         GENERATE_INFOPLIST_FILE: NO
@@ -107,7 +107,7 @@ targets:
       base:
         PRODUCT_NAME: TdayShareExtension
         PRODUCT_BUNDLE_IDENTIFIER: com.ohmz.tday.ios.TdayShareExtension
-        DEVELOPMENT_TEAM: THT5Z8K3TF
+        DEVELOPMENT_TEAM: JUFACN2FS3
         INFOPLIST_FILE: TdayShareExtension/Info.plist
         CODE_SIGN_ENTITLEMENTS: TdayShareExtension/TdayShareExtension.entitlements
         GENERATE_INFOPLIST_FILE: NO
@@ -135,7 +135,7 @@ targets:
       base:
         PRODUCT_NAME: TdayWatch
         PRODUCT_BUNDLE_IDENTIFIER: com.ohmz.tday.ios.watchkitapp
-        DEVELOPMENT_TEAM: THT5Z8K3TF
+        DEVELOPMENT_TEAM: JUFACN2FS3
         INFOPLIST_FILE: TdayWatch/Info.plist
         CODE_SIGN_ENTITLEMENTS: TdayWatch/TdayWatch.entitlements
         GENERATE_INFOPLIST_FILE: NO
@@ -158,7 +158,7 @@ targets:
       base:
         PRODUCT_NAME: TdayWatchWidget
         PRODUCT_BUNDLE_IDENTIFIER: com.ohmz.tday.ios.watchkitapp.widget
-        DEVELOPMENT_TEAM: THT5Z8K3TF
+        DEVELOPMENT_TEAM: JUFACN2FS3
         INFOPLIST_FILE: TdayWatchWidget/Info.plist
         CODE_SIGN_ENTITLEMENTS: TdayWatchWidget/TdayWatchWidget.entitlements
         GENERATE_INFOPLIST_FILE: NO
