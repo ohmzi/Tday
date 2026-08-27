@@ -333,8 +333,9 @@
     <string name="members_title">Ahli</string>
     <string name="members_add_section">Tambah ahli</string>
     <string name="members_add_action">Tambah</string>
-    <string name="members_search_placeholder">Cari mengikut nama pengguna</string>
+    <string name="members_search_placeholder">Cari mengikut nama atau nama pengguna</string>
     <string name="members_no_results">Tiada pengguna ditemui</string>
+    <string name="members_already_member">Sudah menjadi ahli</string>
     <string name="members_remove">Buang ahli</string>
     <string name="members_leave_list">Tinggalkan senarai</string>
     <string name="members_shared_by">Dikongsi oleh %1$s</string>
