@@ -175,6 +175,45 @@ jobs:
         working-directory: android-compose
         run: ./gradlew :app:testDebugUnitTest :app:compileDebugAndroidTestKotlin --no-daemon
 
+      # Gradle prints nothing on a green test task, so without this there is no way to tell a
+      # run that executed 240 tests from one that executed none — a source-set path that
+      # quietly stopped matching would look exactly like success.
+      - name: Summarise the test results
+        if: always()
+        working-directory: android-compose
+        run: |
+          set -uo pipefail
+          DIR=app/build/test-results/testDebugUnitTest
+
+          if [ ! -d "$DIR" ] || [ -z "$(ls -A "$DIR"/*.xml 2>/dev/null)" ]; then
+            echo "::error::No JUnit XML was produced under ${DIR} — the unit tests did not run."
+            exit 1
+          fi
+
+          sum() {
+            grep -ho "$1=\"[0-9]*\"" "$DIR"/*.xml \
+              | sed 's/.*="//; s/"//' \
+              | awk '{ s += $1 } END { print s + 0 }'
+          }
+
+          CLASSES=$(ls -1 "$DIR"/*.xml | wc -l | tr -d ' ')
+          TESTS=$(sum tests); FAILURES=$(sum failures); ERRORS=$(sum errors); SKIPPED=$(sum skipped)
+
+          echo "classes=${CLASSES} tests=${TESTS} failures=${FAILURES} errors=${ERRORS} skipped=${SKIPPED}"
+
+          if [ "$TESTS" -eq 0 ]; then
+            echo "::error::${CLASSES} test class(es) reported 0 tests — treating that as a broken suite, not a pass."
+            exit 1
+          fi
+
+          {
+            echo "### Android unit tests"
+            echo ""
+            echo "| classes | tests | failures | errors | skipped |"
+            echo "|--------:|------:|---------:|-------:|--------:|"
+            echo "| ${CLASSES} | ${TESTS} | ${FAILURES} | ${ERRORS} | ${SKIPPED} |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
       # A failed Gradle test task prints the failing test names but not the assertion detail.
       - name: Upload test report
         if: failure()
