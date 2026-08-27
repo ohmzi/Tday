@@ -39,7 +39,22 @@ import type { TodoItemType } from "@/types";
 
 const PRIORITIES: Priority[] = ["Low", "Medium", "High"];
 
-const isRecurringRow = (row: TodoItemType) => Boolean(row.rrule);
+/**
+ * `recurrenceUnknown` is set by `useList` when the payload has no `rrule` key at
+ * all (a backend older than the release that added `ListTodoDto.rrule`). Such a
+ * row is treated as repeating so it stays out of delete / priority / move: the
+ * cost of being wrong that way is one skipped task, the cost of the other way is
+ * a destroyed series.
+ */
+const isRecurringRow = (row: TodoItemType) =>
+  Boolean(row.rrule) || row.recurrenceUnknown === true;
+
+/**
+ * Only a materialised occurrence can be completed. See
+ * `effectiveBulkSelection` — a recurring row without one writes a phantom
+ * history entry and completes nothing.
+ */
+const hasInstanceDate = (row: TodoItemType) => Boolean(row.instanceDate);
 
 /**
  * The selection action bar, plus the two pickers and the two confirmations the
@@ -71,7 +86,12 @@ export default function BulkSelectionBar({
   // Complete addresses the occurrence it was shown as; the other three have no
   // per-occurrence route and would hit the whole series, so a recurring row is
   // never eligible for them (§4.1).
-  const completeSet = effectiveBulkSelection("complete", selected, isRecurringRow);
+  const completeSet = effectiveBulkSelection(
+    "complete",
+    selected,
+    isRecurringRow,
+    hasInstanceDate,
+  );
   const deleteSet = effectiveBulkSelection("delete", selected, isRecurringRow);
   const prioritySet = effectiveBulkSelection("priority", selected, isRecurringRow);
   const moveSet = effectiveBulkSelection("move", selected, isRecurringRow);

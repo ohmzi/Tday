@@ -434,8 +434,14 @@
     "bulkMoveTitle": "{{count}} Aufgaben verschieben?",
     "bulkMoveBody": "Diese Aufgaben kommen aus verschiedenen Listen. Das Verschieben lässt sich nicht in einem Schritt rückgängig machen – du müsstest jede einzeln zurücklegen.",
     "bulkMoveConfirm": "{{count}} Aufgaben verschieben",
-    "bulkDeleteFailed": "{{count}} Aufgaben konnten nicht gelöscht werden",
-    "bulkUpdateFailed": "{{count}} Aufgaben konnten nicht aktualisiert werden"
+    "bulkDeleteFailed_one": "Eine Aufgabe konnte nicht gelöscht werden",
+    "bulkDeleteFailed_few": "{{count}} Aufgaben konnten nicht gelöscht werden",
+    "bulkDeleteFailed_many": "{{count}} Aufgaben konnten nicht gelöscht werden",
+    "bulkDeleteFailed_other": "{{count}} Aufgaben konnten nicht gelöscht werden",
+    "bulkUpdateFailed_one": "Eine Aufgabe konnte nicht aktualisiert werden",
+    "bulkUpdateFailed_few": "{{count}} Aufgaben konnten nicht aktualisiert werden",
+    "bulkUpdateFailed_many": "{{count}} Aufgaben konnten nicht aktualisiert werden",
+    "bulkUpdateFailed_other": "{{count}} Aufgaben konnten nicht aktualisiert werden"
   },
   "today": {
     "saveInstance": "Instanz speichern",
@@ -1304,7 +1310,7 @@
         "step0": "Öffne eine Aufgabenliste und tippe in der Kopfzeile auf Auswählen.",
         "step1": "Tippe Aufgaben an, um sie zu wählen, oder nutze Alle auswählen für alles auf dem Bildschirm.",
         "step2": "Wähle unten in der Leiste Erledigen, Priorität, Verschieben oder Löschen.",
-        "tip": "Beim Löschen musst du zuerst die genaue Anzahl bestätigen — und danach bleibt trotzdem ein Hinweis zum Rückgängigmachen. Wiederkehrende Aufgaben lassen sich sammelweise erledigen, bleiben bei Löschen, Priorität und Verschieben aber außen vor, damit nie versehentlich eine ganze Serie geändert wird."
+        "tip": "Beim Löschen musst du zuerst die genaue Anzahl bestätigen — und danach bleibt trotzdem ein Hinweis zum Rückgängigmachen. Wiederkehrende Aufgaben bleiben bei Sammelaktionen komplett außen vor, damit nie versehentlich eine ganze Serie geändert wird — öffne sie einzeln, um sie zu erledigen, zu verschieben oder zu löschen."
       }
     }
   },

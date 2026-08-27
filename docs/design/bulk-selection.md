@@ -237,7 +237,17 @@ use.
 ### 4.1 The recurring rule (read this once, apply it everywhere)
 
 > **A recurring occurrence may be selected and bulk-completed as the occurrence it
-> represents. It is never eligible for bulk Delete, bulk Priority, or bulk Move.**
+> represents — and only if it actually *is* an occurrence, i.e. it carries an
+> `instanceDate`. It is never eligible for bulk Delete, bulk Priority, or bulk Move.**
+
+The `instanceDate` half is not a formality. No screen this feature runs on shows a
+recurring *occurrence* today: `TodoService.getTimeline` deliberately emits "one row per
+recurring template, not one per persisted instance", `toTodoResponse()` never sets
+`instanceDate`, `/api/list/:id` does not either, and web's `generateTodosFromRRule` is
+not wired to any screen. So in practice every recurring row a bulk selection can reach
+has `instanceDate == null` and is skipped by all four actions. If a future change starts
+rendering real occurrences, they become bulk-completable automatically and nothing else
+has to move.
 
 Rationale: complete has a per-occurrence route on every platform and the clients
 already send `instanceDate` for a single complete. The other three do not:
@@ -251,8 +261,16 @@ Sweep already set the precedent of excluding recurring tasks from a batch operat
 Implementation consequence — define once per screen:
 
 ```
-effectiveSet(action) = action == COMPLETE ? selection : selection.filter { !isRecurring }
+effectiveSet(action) = action == COMPLETE
+    ? selection.filter { !isRecurring || hasInstanceDate }
+    : selection.filter { !isRecurring }
 ```
+
+This lives in `BulkSelectionPolicy.effectiveSelection` (Kotlin, consumed directly by
+Android) and its web mirror `effectiveBulkSelection`; iOS restates it in
+`effectiveBulkTodos(for:)`. `hasInstanceDate` defaults to "no occurrence" in both
+implementations, so a caller that forgets to pass it gets the safe answer rather than a
+phantom history row.
 
 - If `effectiveSet` is empty, the button is **disabled** (Delete / Priority / Move).
 - If `effectiveSet` is smaller than the selection, the confirmation dialog or picker
@@ -260,7 +278,19 @@ effectiveSet(action) = action == COMPLETE ? selection : selection.filter { !isRe
   "Applies to {{count}} of {{total}} — repeating tasks are skipped." No separate toast.
 - `isRecurring` is `rrule != null` (web: `Boolean(todo.rrule)`).
 
-Bulk complete **must** send `instanceDate` for every recurring row (§1, backend trap).
+Bulk complete **must** send `instanceDate` for every recurring row (§1, backend trap) —
+which, given the rule above, means a recurring row without one is never in the set to
+begin with.
+
+**A payload that cannot express recurrence must not be trusted to say "not recurring".**
+`/api/list/:id` returns `ListTodoDto`, which had no `rrule` field at all, so on a custom
+list every row deserialised to `rrule === undefined`, `Boolean(row.rrule)` was `false`
+for a repeating task, and the guard above silently passed everything through — bulk
+delete would have taken out whole series on that one screen while the same tasks were
+correctly excluded on the All screen. `rrule` and `listID` are now part of `ListTodoDto`,
+and web's `useList` marks a row `recurrenceUnknown` when the key is missing entirely (an
+older server), which the bar treats as recurring. Fail closed: a skipped row costs a tap,
+a wrong "not recurring" costs the series.
 
 ### 4.2 Complete
 

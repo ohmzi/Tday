@@ -1627,8 +1627,12 @@ struct TodoListScreen: View {
         let editableCount = effectiveBulkTodos(for: .delete).count
         return HStack(spacing: 0) {
             bulkActionButton(
+                // check-check, matching Android's ic_lucide_check_check and web's
+                // CheckCheck. circle-check-big is the Select entry point's glyph
+                // on all three surfaces, so reusing it here made one icon mean
+                // both "enter selection" and "complete the selection".
                 title: L("Complete"),
-                assetName: "LucideCircleCheckBig",
+                assetName: "LucideCheckCheck",
                 tint: nil,
                 isEnabled: completeCount > 0,
                 action: performBulkComplete

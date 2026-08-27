@@ -13,15 +13,27 @@ import { runBulkFanOut } from "@/lib/bulk/run-bulk-fan-out";
 
 const ACTIONS: BulkAction[] = ["complete", "delete", "priority", "move"];
 
-type Row = { id: string; rrule: string | null; listID: string | null };
+type Row = {
+  id: string;
+  rrule: string | null;
+  listID: string | null;
+  instanceDate?: Date | null;
+};
 
-const row = (id: string, rrule: string | null = null, listID: string | null = null): Row => ({
+const row = (
+  id: string,
+  rrule: string | null = null,
+  listID: string | null = null,
+  instanceDate: Date | null = null,
+): Row => ({
   id,
   rrule,
   listID,
+  instanceDate,
 });
 
 const isRecurring = (candidate: Row) => Boolean(candidate.rrule);
+const hasInstanceDate = (candidate: Row) => Boolean(candidate.instanceDate);
 
 describe("bulk selection policy", () => {
   it("mirrors the shared Kotlin literals", () => {
@@ -60,16 +72,39 @@ describe("bulk selection policy", () => {
     expect(bulkActionAppliesToRecurring("move")).toBe(false);
   });
 
-  it("drops recurring rows from every action but complete", () => {
+  it("drops recurring rows from delete, priority and move", () => {
     const selection = [row("a"), row("b", "FREQ=DAILY"), row("c")];
-    expect(
-      effectiveBulkSelection("complete", selection, isRecurring).map((r) => r.id),
-    ).toEqual(["a", "b", "c"]);
     for (const action of ["delete", "priority", "move"] as BulkAction[]) {
       expect(
         effectiveBulkSelection(action, selection, isRecurring).map((r) => r.id),
       ).toEqual(["a", "c"]);
     }
+  });
+
+  it("completes a recurring row only when it is a real occurrence", () => {
+    const occurrence = row("b", "FREQ=DAILY", null, new Date("2026-08-20T09:00:00Z"));
+    const template = row("t", "FREQ=DAILY");
+    const selection = [row("a"), occurrence, template, row("c")];
+
+    // The template has no instanceDate, so `completeTodo` would insert a
+    // CompletedTodos row, mark nothing complete and leave the task on screen.
+    expect(
+      effectiveBulkSelection(
+        "complete",
+        selection,
+        isRecurring,
+        hasInstanceDate,
+      ).map((r) => r.id),
+    ).toEqual(["a", "b", "c"]);
+  });
+
+  it("treats a recurring row as uncompletable when no occurrence test is given", () => {
+    // The default has to be the safe answer: a caller that has not thought
+    // about instanceDate must not get the phantom-history-row behaviour.
+    const selection = [row("a"), row("b", "FREQ=DAILY")];
+    expect(
+      effectiveBulkSelection("complete", selection, isRecurring).map((r) => r.id),
+    ).toEqual(["a"]);
   });
 
   it("caps in display order from the top, deterministically", () => {

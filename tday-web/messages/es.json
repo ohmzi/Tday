@@ -434,8 +434,14 @@
     "bulkMoveTitle": "¿Mover {{count}} tareas?",
     "bulkMoveBody": "Estas tareas vienen de listas distintas. Moverlas no se puede deshacer de una vez: tendrías que devolver cada una a mano.",
     "bulkMoveConfirm": "Mover {{count}} tareas",
-    "bulkDeleteFailed": "No se pudieron eliminar {{count}} tareas",
-    "bulkUpdateFailed": "No se pudieron actualizar {{count}} tareas"
+    "bulkDeleteFailed_one": "No se pudo eliminar una tarea",
+    "bulkDeleteFailed_few": "No se pudieron eliminar {{count}} tareas",
+    "bulkDeleteFailed_many": "No se pudieron eliminar {{count}} tareas",
+    "bulkDeleteFailed_other": "No se pudieron eliminar {{count}} tareas",
+    "bulkUpdateFailed_one": "No se pudo actualizar una tarea",
+    "bulkUpdateFailed_few": "No se pudieron actualizar {{count}} tareas",
+    "bulkUpdateFailed_many": "No se pudieron actualizar {{count}} tareas",
+    "bulkUpdateFailed_other": "No se pudieron actualizar {{count}} tareas"
   },
   "today": {
     "saveInstance": "Guardar instancia",
@@ -1304,7 +1310,7 @@
         "step0": "Abre una lista de tareas y toca Seleccionar en la cabecera.",
         "step1": "Toca las tareas para elegirlas o usa Seleccionar todo para las que están en pantalla.",
         "step2": "Elige Completar, Prioridad, Mover o Eliminar en la barra inferior.",
-        "tip": "Eliminar te pide confirmar el número exacto y aun así deja un aviso para deshacer. Las tareas repetidas se pueden completar en lote, pero quedan fuera de eliminar, prioridad y mover, para que nunca se cambie una serie entera sin querer."
+        "tip": "Eliminar te pide confirmar el número exacto y aun así deja un aviso para deshacer. Las tareas repetidas quedan fuera de las acciones en lote por completo, para que nunca se cambie una serie entera sin querer: ábrelas de una en una para completarlas, moverlas o eliminarlas."
       }
     }
   },

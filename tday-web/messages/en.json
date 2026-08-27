@@ -434,8 +434,14 @@
     "bulkMoveTitle": "Move {{count}} tasks?",
     "bulkMoveBody": "These tasks come from different lists. Moving them can't be undone in one step — you'd have to put each one back by hand.",
     "bulkMoveConfirm": "Move {{count}} tasks",
-    "bulkDeleteFailed": "{{count}} tasks couldn't be deleted",
-    "bulkUpdateFailed": "{{count}} tasks couldn't be updated"
+    "bulkDeleteFailed_one": "A task couldn't be deleted",
+    "bulkDeleteFailed_few": "{{count}} tasks couldn't be deleted",
+    "bulkDeleteFailed_many": "{{count}} tasks couldn't be deleted",
+    "bulkDeleteFailed_other": "{{count}} tasks couldn't be deleted",
+    "bulkUpdateFailed_one": "A task couldn't be updated",
+    "bulkUpdateFailed_few": "{{count}} tasks couldn't be updated",
+    "bulkUpdateFailed_many": "{{count}} tasks couldn't be updated",
+    "bulkUpdateFailed_other": "{{count}} tasks couldn't be updated"
   },
   "today": {
     "saveInstance": "Save instance",
@@ -1304,7 +1310,7 @@
         "step0": "Open a task list and tap Select in the header.",
         "step1": "Tap tasks to pick them, or use Select all for everything on screen.",
         "step2": "Choose Complete, Priority, Move or Delete from the bar at the bottom.",
-        "tip": "Deleting asks you to confirm the exact number first, and still leaves an undo toast. Repeating tasks can be bulk-completed, but they sit out delete, priority and move so a whole series is never changed by accident."
+        "tip": "Deleting asks you to confirm the exact number first, and still leaves an undo toast. Repeating tasks sit out bulk actions altogether, so a whole series is never changed by accident — open one on its own to complete, reschedule or delete it."
       }
     }
   },

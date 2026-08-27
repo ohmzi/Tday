@@ -434,8 +434,14 @@
     "bulkMoveTitle": "Alih {{count}} tugasan?",
     "bulkMoveBody": "Tugasan ini datang dari senarai yang berbeza. Pemindahan ini tidak boleh dibuat asal sekali gus — anda perlu mengembalikan setiap satu secara manual.",
     "bulkMoveConfirm": "Alih {{count}} tugasan",
-    "bulkDeleteFailed": "{{count}} tugasan tidak dapat dipadam",
-    "bulkUpdateFailed": "{{count}} tugasan tidak dapat dikemas kini"
+    "bulkDeleteFailed_one": "Satu tugasan tidak dapat dipadam",
+    "bulkDeleteFailed_few": "{{count}} tugasan tidak dapat dipadam",
+    "bulkDeleteFailed_many": "{{count}} tugasan tidak dapat dipadam",
+    "bulkDeleteFailed_other": "{{count}} tugasan tidak dapat dipadam",
+    "bulkUpdateFailed_one": "Satu tugasan tidak dapat dikemas kini",
+    "bulkUpdateFailed_few": "{{count}} tugasan tidak dapat dikemas kini",
+    "bulkUpdateFailed_many": "{{count}} tugasan tidak dapat dikemas kini",
+    "bulkUpdateFailed_other": "{{count}} tugasan tidak dapat dikemas kini"
   },
   "today": {
     "saveInstance": "Simpan kejadian",
@@ -1304,7 +1310,7 @@
         "step0": "Buka senarai tugasan dan ketik Pilih pada pengepala.",
         "step1": "Ketik tugasan untuk memilihnya, atau guna Pilih semua untuk semua yang ada di skrin.",
         "step2": "Pilih Selesai, Keutamaan, Pindah atau Padam pada bar di bawah.",
-        "tip": "Pemadaman meminta anda mengesahkan jumlah tepat dahulu, dan masih meninggalkan pemberitahuan buat asal. Tugasan berulang boleh diselesaikan secara pukal, tetapi ia dikecualikan daripada padam, keutamaan dan pindah supaya keseluruhan siri tidak pernah berubah secara tidak sengaja."
+        "tip": "Pemadaman meminta anda mengesahkan jumlah tepat dahulu, dan masih meninggalkan pemberitahuan buat asal. Tugasan berulang dikecualikan sepenuhnya daripada tindakan pukal supaya keseluruhan siri tidak pernah berubah secara tidak sengaja — buka satu persatu untuk menyelesaikan, memindah atau memadamnya."
       }
     }
   },

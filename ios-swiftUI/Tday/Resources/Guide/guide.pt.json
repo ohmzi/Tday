@@ -761,13 +761,13 @@
         {
           "type": "TIP",
           "texts": [
-            "Excluir pede que você confirme o número exato e ainda deixa um aviso para desfazer. Tarefas repetidas podem ser concluídas em massa, mas ficam de fora de excluir, prioridade e mover, para que uma série inteira nunca mude sem querer."
+            "Excluir pede que você confirme o número exato e ainda deixa um aviso para desfazer. Tarefas repetidas ficam totalmente de fora das ações em massa, para que uma série inteira nunca mude sem querer — abra uma de cada vez para concluir, mover ou excluir."
           ]
         }
       ],
       "searchTitle": "acoes em massa",
       "searchKeywords": "massa, selecao multipla, selecionar tudo, lote, varias, concluir, excluir, prioridade, mover, selecao",
-      "searchBody": "selecione varias tarefas de uma vez e trate todas juntas. toque em selecionar no cabecalho de uma lista de tarefas para entrar no modo de selecao. escolha tarefas uma a uma ou toque em selecionar tudo e aplique uma unica acao ao conjunto inteiro: marca-las como concluidas, mudar a prioridade, move-las para outra lista ou exclui-las. abra uma lista de tarefas e toque em selecionar no cabecalho. toque nas tarefas para escolhe-las ou use selecionar tudo para as que estao na tela. escolha concluir, prioridade, mover ou excluir na barra inferior. excluir pede que voce confirme o numero exato e ainda deixa um aviso para desfazer. tarefas repetidas podem ser concluidas em massa, mas ficam de fora de excluir, prioridade e mover, para que uma serie inteira nunca mude sem querer."
+      "searchBody": "selecione varias tarefas de uma vez e trate todas juntas. toque em selecionar no cabecalho de uma lista de tarefas para entrar no modo de selecao. escolha tarefas uma a uma ou toque em selecionar tudo e aplique uma unica acao ao conjunto inteiro: marca-las como concluidas, mudar a prioridade, move-las para outra lista ou exclui-las. abra uma lista de tarefas e toque em selecionar no cabecalho. toque nas tarefas para escolhe-las ou use selecionar tudo para as que estao na tela. escolha concluir, prioridade, mover ou excluir na barra inferior. excluir pede que voce confirme o numero exato e ainda deixa um aviso para desfazer. tarefas repetidas ficam totalmente de fora das acoes em massa, para que uma serie inteira nunca mude sem querer — abra uma de cada vez para concluir, mover ou excluir."
     },
     {
       "id": "search-tasks",

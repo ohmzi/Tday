@@ -434,8 +434,14 @@
     "bulkMoveTitle": "Spostare {{count}} attività?",
     "bulkMoveBody": "Queste attività vengono da liste diverse. Lo spostamento non si annulla in un colpo solo: dovresti rimetterle a posto una per una.",
     "bulkMoveConfirm": "Sposta {{count}} attività",
-    "bulkDeleteFailed": "Non è stato possibile eliminare {{count}} attività",
-    "bulkUpdateFailed": "Non è stato possibile aggiornare {{count}} attività"
+    "bulkDeleteFailed_one": "Non è stato possibile eliminare un'attività",
+    "bulkDeleteFailed_few": "Non è stato possibile eliminare {{count}} attività",
+    "bulkDeleteFailed_many": "Non è stato possibile eliminare {{count}} attività",
+    "bulkDeleteFailed_other": "Non è stato possibile eliminare {{count}} attività",
+    "bulkUpdateFailed_one": "Non è stato possibile aggiornare un'attività",
+    "bulkUpdateFailed_few": "Non è stato possibile aggiornare {{count}} attività",
+    "bulkUpdateFailed_many": "Non è stato possibile aggiornare {{count}} attività",
+    "bulkUpdateFailed_other": "Non è stato possibile aggiornare {{count}} attività"
   },
   "today": {
     "saveInstance": "Salva istanza",
@@ -1304,7 +1310,7 @@
         "step0": "Apri un elenco di attività e tocca Seleziona nell'intestazione.",
         "step1": "Tocca le attività per sceglierle oppure usa Seleziona tutto per quelle a schermo.",
         "step2": "Scegli Completa, Priorità, Sposta o Elimina dalla barra in basso.",
-        "tip": "L'eliminazione ti chiede prima di confermare il numero esatto e lascia comunque un avviso per annullare. Le attività ricorrenti si possono completare in blocco, ma restano fuori da eliminazione, priorità e spostamento, così un'intera serie non cambia mai per sbaglio."
+        "tip": "L'eliminazione ti chiede prima di confermare il numero esatto e lascia comunque un avviso per annullare. Le attività ricorrenti restano del tutto fuori dalle azioni in blocco, così un'intera serie non cambia mai per sbaglio: aprine una singola per completarla, spostarla o eliminarla."
       }
     }
   },

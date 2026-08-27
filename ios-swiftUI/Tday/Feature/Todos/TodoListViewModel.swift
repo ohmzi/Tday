@@ -693,11 +693,14 @@ enum BulkSelectionCopy {
         L("Move %d tasks", count)
     }
 
+    // Singular branch like every sibling above, so one failed row does not read
+    // "1 tasks couldn't be deleted". Android already says this correctly through
+    // <plurals>; web now does too.
     static func deleteFailed(_ count: Int) -> String {
-        L("%d tasks couldn't be deleted", count)
+        count == 1 ? L("A task couldn't be deleted") : L("%d tasks couldn't be deleted", count)
     }
 
     static func updateFailed(_ count: Int) -> String {
-        L("%d tasks couldn't be updated", count)
+        count == 1 ? L("A task couldn't be updated") : L("%d tasks couldn't be updated", count)
     }
 }

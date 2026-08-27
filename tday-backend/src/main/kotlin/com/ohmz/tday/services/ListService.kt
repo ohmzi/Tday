@@ -133,6 +133,11 @@ class ListServiceImpl(
                     due = row[Todos.due]?.toString(),
                     completed = row[Todos.completed],
                     order = row[Todos.order],
+                    // Without these two a list-screen row cannot say whether it
+                    // repeats, so every client-side recurring guard on that
+                    // screen silently passes. See ListTodoDto.rrule.
+                    rrule = row[Todos.rrule],
+                    listID = row[Todos.listID],
                 )
             }
         }

@@ -761,13 +761,13 @@
         {
           "type": "TIP",
           "texts": [
-            "Pemadaman meminta anda mengesahkan jumlah tepat dahulu, dan masih meninggalkan pemberitahuan buat asal. Tugasan berulang boleh diselesaikan secara pukal, tetapi ia dikecualikan daripada padam, keutamaan dan pindah supaya keseluruhan siri tidak pernah berubah secara tidak sengaja."
+            "Pemadaman meminta anda mengesahkan jumlah tepat dahulu, dan masih meninggalkan pemberitahuan buat asal. Tugasan berulang dikecualikan sepenuhnya daripada tindakan pukal supaya keseluruhan siri tidak pernah berubah secara tidak sengaja — buka satu persatu untuk menyelesaikan, memindah atau memadamnya."
           ]
         }
       ],
       "searchTitle": "tindakan pukal",
       "searchKeywords": "pukal, pilihan berbilang, pilih semua, kelompok, beberapa, selesai, padam, keutamaan, pindah, pilihan",
-      "searchBody": "pilih beberapa tugasan sekali gus, kemudian uruskan semuanya serentak. ketik pilih pada pengepala senarai tugasan untuk masuk ke mod pilihan. pilih tugasan satu per satu atau ketik pilih semua, kemudian gunakan satu tindakan pada keseluruhan set — tandakan selesai, tukar keutamaan, pindahkan ke senarai lain, atau padamkannya. buka senarai tugasan dan ketik pilih pada pengepala. ketik tugasan untuk memilihnya, atau guna pilih semua untuk semua yang ada di skrin. pilih selesai, keutamaan, pindah atau padam pada bar di bawah. pemadaman meminta anda mengesahkan jumlah tepat dahulu, dan masih meninggalkan pemberitahuan buat asal. tugasan berulang boleh diselesaikan secara pukal, tetapi ia dikecualikan daripada padam, keutamaan dan pindah supaya keseluruhan siri tidak pernah berubah secara tidak sengaja."
+      "searchBody": "pilih beberapa tugasan sekali gus, kemudian uruskan semuanya serentak. ketik pilih pada pengepala senarai tugasan untuk masuk ke mod pilihan. pilih tugasan satu per satu atau ketik pilih semua, kemudian gunakan satu tindakan pada keseluruhan set — tandakan selesai, tukar keutamaan, pindahkan ke senarai lain, atau padamkannya. buka senarai tugasan dan ketik pilih pada pengepala. ketik tugasan untuk memilihnya, atau guna pilih semua untuk semua yang ada di skrin. pilih selesai, keutamaan, pindah atau padam pada bar di bawah. pemadaman meminta anda mengesahkan jumlah tepat dahulu, dan masih meninggalkan pemberitahuan buat asal. tugasan berulang dikecualikan sepenuhnya daripada tindakan pukal supaya keseluruhan siri tidak pernah berubah secara tidak sengaja — buka satu persatu untuk menyelesaikan, memindah atau memadamnya."
     },
     {
       "id": "search-tasks",

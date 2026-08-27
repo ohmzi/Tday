@@ -761,13 +761,13 @@
         {
           "type": "TIP",
           "texts": [
-            "Deleting asks you to confirm the exact number first, and still leaves an undo toast. Repeating tasks can be bulk-completed, but they sit out delete, priority and move so a whole series is never changed by accident."
+            "Deleting asks you to confirm the exact number first, and still leaves an undo toast. Repeating tasks sit out bulk actions altogether, so a whole series is never changed by accident — open one on its own to complete, reschedule or delete it."
           ]
         }
       ],
       "searchTitle": "bulk actions",
       "searchKeywords": "bulk, multi-select, select all, batch, many, several, complete, delete, priority, move, selection",
-      "searchBody": "select several tasks at once, then act on all of them together. tap select in the header of a task list to enter selection mode. pick tasks one at a time or hit select all, then apply a single action to the whole set — mark them done, change their priority, move them to another list, or delete them. open a task list and tap select in the header. tap tasks to pick them, or use select all for everything on screen. choose complete, priority, move or delete from the bar at the bottom. deleting asks you to confirm the exact number first, and still leaves an undo toast. repeating tasks can be bulk-completed, but they sit out delete, priority and move so a whole series is never changed by accident."
+      "searchBody": "select several tasks at once, then act on all of them together. tap select in the header of a task list to enter selection mode. pick tasks one at a time or hit select all, then apply a single action to the whole set — mark them done, change their priority, move them to another list, or delete them. open a task list and tap select in the header. tap tasks to pick them, or use select all for everything on screen. choose complete, priority, move or delete from the bar at the bottom. deleting asks you to confirm the exact number first, and still leaves an undo toast. repeating tasks sit out bulk actions altogether, so a whole series is never changed by accident — open one on its own to complete, reschedule or delete it."
     },
     {
       "id": "search-tasks",
