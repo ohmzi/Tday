@@ -20,6 +20,15 @@ import java.time.Instant
  * [BulkTaskRepository] folds it: one transform per selected row, all inside a
  * single cache write. Everything a bulk action can get wrong that does not need
  * Room, Hilt or a dispatcher to prove is pinned here.
+ *
+ * The `skipcq: KT-W1042` markers below are deliberate. Every literal they cover
+ * is a per-test fixture identity, not a shared value: `"todo-1"` in the staging
+ * test and `"todo-1"` in the delete test are unrelated rows that only happen to
+ * share a name, so a shared constant would imply a coupling that does not exist.
+ * The assertions are read as input/output pairs — `assertEquals(listOf("todo-3"),
+ * pruned.todos.map { it.id })` shows at a glance which fixture survived — and the
+ * title/description cases assert that a mutation echoes the row's own fields, so
+ * seeing the same literal on the arrange and the assert side is the point.
  */
 class BulkTaskCacheTest {
 
@@ -27,12 +36,12 @@ class BulkTaskCacheTest {
     fun `staging a batch prunes every row and merges into one restorable snapshot`() {
         val state = OfflineSyncState(
             todos = listOf(
-                cachedTodo(id = "todo-1", canonicalId = "todo-1"),
-                cachedTodo(id = "todo-2", canonicalId = "todo-2"),
-                cachedTodo(id = "todo-3", canonicalId = "todo-3"),
+                cachedTodo(id = "todo-1", canonicalId = "todo-1"),  // skipcq: KT-W1042
+                cachedTodo(id = "todo-2", canonicalId = "todo-2"),  // skipcq: KT-W1042
+                cachedTodo(id = "todo-3", canonicalId = "todo-3"),  // skipcq: KT-W1042
             ),
             completedItems = listOf(
-                cachedCompleted(id = "completed-1", originalTodoId = "todo-1"),
+                cachedCompleted(id = "completed-1", originalTodoId = "todo-1"),  // skipcq: KT-W1042
                 cachedCompleted(id = "completed-3", originalTodoId = "todo-3"),
             ),
         )
@@ -53,8 +62,8 @@ class BulkTaskCacheTest {
     fun `staging a batch leaves the pending create of a task that was not selected`() {
         val state = OfflineSyncState(
             todos = listOf(
-                cachedTodo(id = "local-todo-1", canonicalId = "local-todo-1"),
-                cachedTodo(id = "local-todo-2", canonicalId = "local-todo-2"),
+                cachedTodo(id = "local-todo-1", canonicalId = "local-todo-1"),  // skipcq: KT-W1042
+                cachedTodo(id = "local-todo-2", canonicalId = "local-todo-2"),  // skipcq: KT-W1042
             ),
             pendingMutations = listOf(
                 pendingCreate("local-todo-1"),
@@ -109,7 +118,7 @@ class BulkTaskCacheTest {
                 cachedTodo(
                     id = "todo-1:1000",
                     canonicalId = "todo-1",
-                    rrule = "FREQ=WEEKLY",
+                    rrule = "FREQ=WEEKLY",  // skipcq: KT-W1042
                     instanceDateEpochMs = 1_000L,
                 ),
                 cachedTodo(
@@ -129,7 +138,7 @@ class BulkTaskCacheTest {
                 instanceDate = Instant.ofEpochMilli(1_000L),
             ),
             timestampEpochMs = 5_000L,
-            mutationId = "complete-1",
+            mutationId = "complete-1",  // skipcq: KT-W1042
             completedRecordId = "local-completed-1",
         )
 
@@ -191,7 +200,7 @@ class BulkTaskCacheTest {
     @Test
     fun `bulk move rewrites the list and replays the row's own fields, not blanks`() {
         val state = OfflineSyncState(
-            todos = listOf(cachedTodo(id = "todo-1", canonicalId = "todo-1", listId = "list-a")),
+            todos = listOf(cachedTodo(id = "todo-1", canonicalId = "todo-1", listId = "list-a")),  // skipcq: KT-W1042
         )
 
         val next = state.withTodoListCached(
@@ -204,7 +213,7 @@ class BulkTaskCacheTest {
                 due = Instant.ofEpochMilli(9_000L),
                 listId = "list-a",
             ),
-            listId = "list-b",
+            listId = "list-b",  // skipcq: KT-W1042
             mutationId = "move-1",
             timestampEpochMs = 3_000L,
         )
@@ -242,12 +251,12 @@ class BulkTaskCacheTest {
         val state = OfflineSyncState(
             floaters = listOf(
                 CachedFloaterRecord(
-                    id = "floater-1",
+                    id = "floater-1",  // skipcq: KT-W1042
                     canonicalId = "floater-1",
-                    title = "Water the plants",
-                    description = "the big one too",
+                    title = "Water the plants",  // skipcq: KT-W1042
+                    description = "the big one too",  // skipcq: KT-W1042
                     priority = "Low",
-                    listId = "floater-list-a",
+                    listId = "floater-list-a",  // skipcq: KT-W1042
                 ),
             ),
         )
@@ -285,7 +294,7 @@ class BulkTaskCacheTest {
             todoItem(
                 id = "todo-2:1000",
                 canonicalId = "todo-2",
-                rrule = "FREQ=DAILY",
+                rrule = "FREQ=DAILY",  // skipcq: KT-W1042
                 instanceDate = Instant.ofEpochMilli(1_000L),
             ),
         )
