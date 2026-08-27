@@ -145,7 +145,7 @@
 	<key>TdayProbeEncryptionKey</key>
 	<string>$(TDAY_PROBE_ENCRYPTION_KEY)</string>
 	<key>TdayUpdateURL</key>
-	<string></string>
+	<string>https://testflight.apple.com/join/paKSyGAG</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIAppFonts</key>
