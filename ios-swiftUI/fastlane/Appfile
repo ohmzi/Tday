@@ -10,4 +10,4 @@
 # from the Xcode project, not from fastlane.
 
 app_identifier(ENV["IOS_APP_IDENTIFIER"] || "com.ohmz.tday.ios")
-team_id(ENV["IOS_TEAM_ID"] || "THT5Z8K3TF")
+team_id(ENV["IOS_TEAM_ID"] || "JUFACN2FS3")
