@@ -333,8 +333,9 @@
     <string name="members_title">Участники</string>
     <string name="members_add_section">Добавить участника</string>
     <string name="members_add_action">Добавить</string>
-    <string name="members_search_placeholder">Поиск по имени пользователя</string>
+    <string name="members_search_placeholder">Поиск по имени или имени пользователя</string>
     <string name="members_no_results">Пользователи не найдены</string>
+    <string name="members_already_member">Уже участник</string>
     <string name="members_remove">Удалить участника</string>
     <string name="members_leave_list">Покинуть список</string>
     <string name="members_shared_by">Поделился(-ась) %1$s</string>
