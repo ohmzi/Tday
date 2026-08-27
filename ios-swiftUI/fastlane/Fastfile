@@ -173,6 +173,36 @@ platform :ios do
     bundle_id = env_or("IOS_APP_IDENTIFIER", DEFAULT_BUNDLE_ID)
     skip_upload = ENV["TDAY_SKIP_UPLOAD"].to_s.strip.casecmp("true").zero?
 
+    # SECOND, INDEPENDENT UPLOAD GATE.
+    #
+    # `.github/workflows/ios-testflight.yml` decides the mode and passes TDAY_SKIP_UPLOAD in.
+    # This re-derives the same predicate from GitHub's own environment instead of trusting that
+    # value, so a mistake in the workflow's expressions — a deleted step, a renamed output, a
+    # mis-parenthesised `&&`/`||` — cannot on its own turn a manual run on a branch into a real
+    # upload. Only the push of a tag may upload from CI; anything else is downgraded here.
+    #
+    # This matters more than the usual belt-and-braces because App Store Connect spends a
+    # (version, buildNumber) pair the instant it accepts an upload and never accepts that pair
+    # again. A branch reads the same version.json a release does, so an accidental upload from
+    # `develop` burns the number the next real release needs, permanently.
+    #
+    # Outside GitHub Actions nothing changes: a local `fastlane beta` still uploads unless the
+    # developer sets TDAY_SKIP_UPLOAD.
+    if ENV["GITHUB_ACTIONS"].to_s == "true" && !skip_upload
+      event_name = ENV["GITHUB_EVENT_NAME"].to_s
+      github_ref = ENV["GITHUB_REF"].to_s
+
+      unless event_name == "push" && github_ref.start_with?("refs/tags/")
+        UI.important(
+          "Forcing a build-only run: this is a CI run on #{github_ref.empty? ? '<unknown ref>' : github_ref} " \
+          "from a '#{event_name}' event, and only the push of a tag may upload. " \
+          "TDAY_SKIP_UPLOAD said otherwise, which means the workflow and this lane disagree — " \
+          "the lane wins, because a wrong upload cannot be undone."
+        )
+        skip_upload = true
+      end
+    end
+
     key_id = required_env(
       "ASC_KEY_ID",
       "It is the 10-character Key ID of the App Store Connect API key " \
@@ -225,45 +255,61 @@ platform :ios do
 
       UI.message("version.json says v#{marketing_version} build #{build_number} for #{bundle_id}.")
 
-      # Re-running this workflow on the same tag would otherwise re-archive and re-upload an
-      # identical (version, build number) pair, which App Store Connect rejects outright with
-      # "The bundle version must be higher than the previously uploaded version". Asking
-      # TestFlight what it already holds turns that failure into a clean, green no-op.
-      latest_uploaded = latest_testflight_build_number(
-        api_key: api_key,
-        app_identifier: bundle_id,
-        version: marketing_version,
-        platform: "ios",
-        # Without this, fastlane raises when the version has no builds yet — which is exactly
-        # the state of the very first upload.
-        initial_build_number: 0
-      ).to_i
+      if skip_upload
+        # BUILD-ONLY RUN: App Store Connect is not consulted at all.
+        #
+        # The duplicate check below exists to keep a re-run from attempting an upload Apple
+        # would reject. A run that is never going to upload has nothing to protect, and asking
+        # anyway would actively break the verification case: once a build number IS spent, the
+        # check would either skip `build_app` entirely — reporting a green run that compiled
+        # nothing — or, for a FAILED/INVALID build, fail a run whose only job was to prove the
+        # project still compiles. Neither is an answer to "does this branch build?".
+        UI.important(
+          "Build-only run (TDAY_SKIP_UPLOAD=true): skipping the TestFlight duplicate check. " \
+          "Nothing will be uploaded, so whether v#{marketing_version} build #{build_number} " \
+          "is already spent is irrelevant to this run."
+        )
+      else
+        # Re-running this workflow on the same tag would otherwise re-archive and re-upload an
+        # identical (version, build number) pair, which App Store Connect rejects outright with
+        # "The bundle version must be higher than the previously uploaded version". Asking
+        # TestFlight what it already holds turns that failure into a clean, green no-op.
+        latest_uploaded = latest_testflight_build_number(
+          api_key: api_key,
+          app_identifier: bundle_id,
+          version: marketing_version,
+          platform: "ios",
+          # Without this, fastlane raises when the version has no builds yet — which is exactly
+          # the state of the very first upload.
+          initial_build_number: 0
+        ).to_i
 
-      if latest_uploaded >= build_number
-        # A build number is consumed the moment App Store Connect accepts the upload — even if
-        # processing then FAILS. So "already taken" does NOT imply "testers can install it",
-        # and re-uploading is not a recovery path: Apple rejects the duplicate either way. The
-        # only fix for a failed build is a new build number, i.e. a version.json bump. Say so.
-        state = testflight_processing_state(key_id, issuer_id, pem, bundle_id, marketing_version, build_number)
+        if latest_uploaded >= build_number
+          # A build number is consumed the moment App Store Connect accepts the upload — even if
+          # processing then FAILS. So "already taken" does NOT imply "testers can install it",
+          # and re-uploading is not a recovery path: Apple rejects the duplicate either way. The
+          # only fix for a failed build is a new build number, i.e. a version.json bump. Say so.
+          state = testflight_processing_state(key_id, issuer_id, pem, bundle_id, marketing_version, build_number)
 
-        if %w[FAILED INVALID].include?(state)
-          UI.user_error!(
-            "v#{marketing_version} build #{build_number} was already uploaded and App Store " \
-            "Connect marked it #{state}. That build number is spent — re-uploading it will be " \
-            "rejected. Bump the release (`node scripts/version.mjs bump patch`) and cut a new " \
-            "tag. Check the ASC build page for the processing error before you do."
+          if %w[FAILED INVALID].include?(state)
+            UI.user_error!(
+              "v#{marketing_version} build #{build_number} was already uploaded and App Store " \
+              "Connect marked it #{state}. That build number is spent — re-uploading it will be " \
+              "rejected. Bump the release (`node scripts/version.mjs bump patch`) and cut a new " \
+              "tag. Check the ASC build page for the processing error before you do."
+            )
+          end
+
+          UI.important(
+            "TestFlight already holds build #{latest_uploaded} for v#{marketing_version} " \
+            "(processing state: #{state || 'unknown'}); this run would upload #{build_number}."
           )
+          UI.important(
+            "Nothing was uploaded. If this build is NOT visible in TestFlight, it failed " \
+            "processing — the build number is spent and a version bump is required."
+          )
+          next
         end
-
-        UI.important(
-          "TestFlight already holds build #{latest_uploaded} for v#{marketing_version} " \
-          "(processing state: #{state || 'unknown'}); this run would upload #{build_number}."
-        )
-        UI.important(
-          "Nothing was uploaded. If this build is NOT visible in TestFlight, it failed " \
-          "processing — the build number is spent and a version bump is required."
-        )
-        next
       end
 
       # `-allowProvisioningUpdates` lets Xcode mint and renew the five App Store profiles on
@@ -315,8 +361,10 @@ platform :ios do
 
       if skip_upload
         UI.success(
-          "Dry run (TDAY_SKIP_UPLOAD=true): archived and exported v#{marketing_version} " \
-          "(#{build_number}) without uploading. Signing, profiles and export all worked."
+          "Build-only run (TDAY_SKIP_UPLOAD=true): archived and exported v#{marketing_version} " \
+          "(#{build_number}) without uploading. Compilation, signing, provisioning profiles " \
+          "and the export all worked; the build number is untouched and still available to a " \
+          "real release."
         )
         next
       end
