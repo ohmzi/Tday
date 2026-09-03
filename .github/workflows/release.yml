@@ -65,6 +65,22 @@ jobs:
       - name: Verify guide content is not stale
         run: ./gradlew :shared:verifyGuideContent --no-daemon
 
+      # `build-and-release` hangs off this job, so an Android regression caught here stops the
+      # APK from being published rather than shipping inside it. PRs are gated earlier and
+      # separately by `android.yml`; this is the last line, for whatever a merge commit
+      # introduces that neither side of it carried.
+      #
+      # Addressed through the root Gradle build rather than `cd android-compose`, unlike
+      # `android.yml`. Two reasons, both specific to this file: the APK below is built from the
+      # root build (`:android-compose:app:assembleRelease`), so this tests the same build that
+      # ships; and the root build is already configured in this job for the two Gradle steps
+      # above, so this reuses it instead of standing up a second Gradle root. Both roots run
+      # the same 240 tests.
+      #
+      # The SDK comes from the runner's ANDROID_HOME — no `local.properties` exists in CI.
+      - name: Run Android unit tests
+        run: ./gradlew :android-compose:app:testDebugUnitTest --no-daemon
+
   # Step order in this job is load-bearing, not cosmetic. Everything that can
   # fail is built first; nothing leaves the runner until the release commit is
   # on master; and the Docker image is pushed last, after the GitHub release
