@@ -8,6 +8,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideOutVertically
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -18,7 +19,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -41,6 +45,7 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -82,6 +87,12 @@ data class TdayToastData(
     val onTap: (() -> Unit)? = null,
     val actionLabel: String? = null,
     val onAction: (() -> Unit)? = null,
+    // Set only for the Undo action (see UndoableDeleteCoordinator): renders the
+    // action as an icon button instead of a text button. actionLabel is still
+    // required in that case — it becomes the icon's contentDescription. A
+    // @DrawableRes id (not an ImageVector) so non-Composable callers building a
+    // SnackbarEvent can set it without calling vectorResource().
+    @DrawableRes val actionIconRes: Int? = null,
 )
 
 @Composable
@@ -292,18 +303,38 @@ private fun TdayToastCard(
             }
             val actionLabel = toast.actionLabel
             val onAction = toast.onAction
+            val actionIconRes = toast.actionIconRes
             if (actionLabel != null && onAction != null) {
-                TextButton(
-                    onClick = {
-                        onAction()
-                        onDismiss()
-                    },
-                ) {
-                    Text(
-                        text = actionLabel,
-                        color = accentColor,
-                        style = MaterialTheme.typography.titleMedium,
-                    )
+                if (actionIconRes != null) {
+                    // Undo: an icon button, not a text label (deliberate, signed-off
+                    // reversal of this toast's "icons removed app-wide" rule for the
+                    // Undo action specifically — see AppSnackbar's iOS counterpart).
+                    IconButton(
+                        onClick = {
+                            onAction()
+                            onDismiss()
+                        },
+                    ) {
+                        Icon(
+                            painter = painterResource(actionIconRes),
+                            contentDescription = actionLabel,
+                            tint = accentColor,
+                            modifier = Modifier.size(22.dp),
+                        )
+                    }
+                } else {
+                    TextButton(
+                        onClick = {
+                            onAction()
+                            onDismiss()
+                        },
+                    ) {
+                        Text(
+                            text = actionLabel,
+                            color = accentColor,
+                            style = MaterialTheme.typography.titleMedium,
+                        )
+                    }
                 }
             }
         }

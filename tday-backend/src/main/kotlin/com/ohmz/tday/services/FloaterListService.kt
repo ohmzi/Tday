@@ -256,29 +256,26 @@ class FloaterListServiceImpl(
 
             if (existingIds.isEmpty()) return@newSuspendedTransaction emptyList()
 
-            // List-scoped cascades are intentionally NOT filtered by userID:
-            // shared lists hold floaters and completion history from every
-            // member, and deleting the list removes all of it.
+            // Floaters (pending and completed alike) are NOT filtered by
+            // userID: a shared list holds every member's floaters, and
+            // deleting the list removes all of it.
+            //
+            // CompletedFloaters rows are deliberately left alone here.
+            // completedfloaters."projectID" carries ON DELETE SET NULL (see
+            // db/migration/V27), so the FloaterLists delete below detaches
+            // each row's list reference instead of taking the row with it --
+            // completion history survives, and originalListID (untouched by
+            // the SET NULL) is what lets FloaterService.uncompleteFloater()
+            // recreate the list later and land the item back in it.
             val floaterIds = Floaters
                 .select(Floaters.id)
                 .where { Floaters.listID inList existingIds }
                 .map { it[Floaters.id] }
 
             if (floaterIds.isNotEmpty()) {
-                CompletedFloaters.deleteWhere {
-                    SqlExpressionBuilder.run {
-                        (CompletedFloaters.listID inList existingIds) or (CompletedFloaters.originalFloaterID inList floaterIds)
-                    }
-                }
                 Floaters.deleteWhere {
                     SqlExpressionBuilder.run {
                         Floaters.id inList floaterIds
-                    }
-                }
-            } else {
-                CompletedFloaters.deleteWhere {
-                    SqlExpressionBuilder.run {
-                        CompletedFloaters.listID inList existingIds
                     }
                 }
             }

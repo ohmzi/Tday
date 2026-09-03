@@ -406,7 +406,8 @@ func mapCompletedDTO(_ dto: CompletedTodoDTO) -> CompletedItem {
         instanceDate: parseOptionalDate(dto.instanceDate),
         listId: dto.listID,
         listName: dto.listName,
-        listColor: dto.listColor
+        listColor: dto.listColor,
+        isFloater: false
     )
 }
 
@@ -423,7 +424,8 @@ func mapCompletedFloaterDTO(_ dto: CompletedFloaterDTO) -> CompletedItem {
         instanceDate: nil,
         listId: dto.listID,
         listName: dto.listName,
-        listColor: dto.listColor
+        listColor: dto.listColor,
+        isFloater: true
     )
 }
 
@@ -457,7 +459,8 @@ func completedFromCache(_ record: CachedCompletedRecord) -> CompletedItem {
         instanceDate: record.instanceDateEpochMs.map { Date(timeIntervalSince1970: TimeInterval($0) / 1000.0) },
         listId: record.listId,
         listName: record.listName,
-        listColor: record.listColor
+        listColor: record.listColor,
+        isFloater: false
     )
 }
 
@@ -488,7 +491,8 @@ func completedFloaterFromCache(_ record: CachedCompletedFloaterRecord) -> Comple
         instanceDate: nil,
         listId: record.listId,
         listName: record.listName,
-        listColor: record.listColor
+        listColor: record.listColor,
+        isFloater: true
     )
 }
 

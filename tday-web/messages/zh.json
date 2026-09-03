@@ -442,7 +442,8 @@
     "bulkUpdateFailed_one": "有一个任务未能更新",
     "bulkUpdateFailed_few": "有 {{count}} 个任务未能更新",
     "bulkUpdateFailed_many": "有 {{count}} 个任务未能更新",
-    "bulkUpdateFailed_other": "有 {{count}} 个任务未能更新"
+    "bulkUpdateFailed_other": "有 {{count}} 个任务未能更新",
+    "floaterCompletedTile": "已完成"
   },
   "today": {
     "saveInstance": "保存实例",
@@ -500,7 +501,12 @@
   "completed": {
     "title": "完成历史",
     "empty": "还没有完成的任务",
-    "emptyBody": "完成一个任务，它就会出现在这里。"
+    "emptyBody": "完成一个任务，它就会出现在这里。",
+    "tabTasks": "任务",
+    "floaterEmpty": "还没有已完成的随手事项",
+    "floaterEmptyBody": "在随手事项中勾选一项，它就会显示在这里。",
+    "listDeletedSuffix": "列表已删除",
+    "floaterRestoredIntoRecreatedList": "已恢复 — “{{listName}}”已重新创建"
   },
   "modal": {
     "confirm": "确认",

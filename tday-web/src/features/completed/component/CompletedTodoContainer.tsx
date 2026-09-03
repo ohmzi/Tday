@@ -12,7 +12,16 @@ import { nativeScreenAccentColors } from "@/components/app/nativeScreenTheme";
 import { CheckCircle, Search } from "lucide-react";
 import { flattenNotesToPlainText } from "@/lib/richNotes";
 
-const CompletedTodoContainer = () => {
+const CompletedTodoContainer = ({
+  tabSwitcher,
+}: {
+  /**
+   * The Tasks/Floater segmented control CompletedContainer owns — handed down
+   * so it renders under the title (NativePageHeader's beneathTitle slot) on
+   * whichever of the two sibling screens is currently mounted.
+   */
+  tabSwitcher?: React.ReactNode;
+}) => {
   const { t: completedDict } = useTranslation("completed")
   const { t: appDict } = useTranslation("app");
   const { completedTodos, todoLoading } = useCompletedTodo();
@@ -59,6 +68,7 @@ const CompletedTodoContainer = () => {
         accentColor={nativeScreenAccentColors.completed}
         icon={CheckCircle}
         barSlots={barSlots}
+        beneathTitle={tabSwitcher}
       />
 
       {todoLoading && <TodoListLoading className="mt-8" />}

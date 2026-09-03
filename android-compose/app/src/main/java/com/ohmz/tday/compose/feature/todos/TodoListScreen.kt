@@ -144,6 +144,7 @@ import com.ohmz.tday.compose.core.model.supportsTaskReschedule
 import com.ohmz.tday.compose.core.model.timelineRescheduleTargetDate
 import com.ohmz.tday.compose.core.sound.rememberTaskCompletionSound
 import com.ohmz.tday.compose.core.text.flattenNotesToPlainText
+import com.ohmz.tday.compose.core.ui.CategoryCard
 import com.ohmz.tday.compose.core.ui.EmptyTaskWatermark
 import com.ohmz.tday.compose.core.ui.LazyListHeroTitleSettle
 import com.ohmz.tday.compose.core.ui.RootFeedHeroHeader
@@ -182,6 +183,7 @@ import com.ohmz.tday.compose.ui.priority.isUrgentPriority
 import com.ohmz.tday.compose.ui.priority.priorityDisplayLabelRes
 import com.ohmz.tday.compose.ui.theme.TDAY_DEFAULT_LIST_COLOR_KEY
 import com.ohmz.tday.compose.ui.theme.TDAY_DEFAULT_LIST_ICON_KEY
+import com.ohmz.tday.compose.ui.theme.TdayCompletedTileAccent
 import com.ohmz.tday.compose.ui.theme.TdayDimens
 import com.ohmz.tday.compose.ui.theme.TdayFloaterAccent
 import com.ohmz.tday.compose.ui.theme.TdayListColorOptions
@@ -281,6 +283,7 @@ fun TodoListScreen(
     onUpdateListSettings: (listId: String, name: String, color: String?, iconKey: String?) -> Unit,
     onDeleteList: (listId: String) -> Unit,
     onOpenFloaterList: (listId: String, listName: String) -> Unit = { _, _ -> },
+    onOpenCompleted: () -> Unit = {},
     onOpenSettings: () -> Unit = {},
     onCreateList: (name: String, color: String?, iconKey: String?) -> Unit = { _, _, _ -> },
     rootFeedTab: RootFeedTab? = null,
@@ -1577,6 +1580,31 @@ fun TodoListScreen(
                                     celebrate = celebrateEmptyState,
                                 )
                             }
+                        }
+                    }
+
+                    // Floater tab's nav entry to the browsable Completed screen — the
+                    // todo side's own root feed reaches it through an identical
+                    // CategoryCard tile (ScheduledTaskHomeScreen's CategoryGrid); this
+                    // is the same shared component and the same destination (one
+                    // Completed screen renders both item types, distinguished there
+                    // by CompletedItem.isFloater), just placed to fit this screen's
+                    // single-column layout instead of a 2-up grid.
+                    if (isFloaterTaskHomeScreen) {
+                        item(
+                            key = "floater-completed-entry",
+                            contentType = "floater-completed-entry",
+                        ) {
+                            CategoryCard(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(bottom = 10.dp),
+                                color = TdayCompletedTileAccent,
+                                iconRes = R.drawable.ic_lucide_circle_check_big,
+                                watermarkRes = R.drawable.ic_lucide_circle_check_big,
+                                title = stringResource(R.string.scheduled_task_home_category_completed),
+                                onClick = onOpenCompleted,
+                            )
                         }
                     }
 

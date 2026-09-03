@@ -88,6 +88,9 @@ struct AppRootView: View {
                                     onOpenSettings: {
                                         handleRoute(.settings)
                                     },
+                                    onOpenCompleted: {
+                                        handleRoute(.completed)
+                                    },
                                     summaryAvailable: !appViewModel.isLocalMode && !appViewModel.isOffline
                                 )
                             }
@@ -733,10 +736,15 @@ private struct AppSnackbar: View {
     @Environment(\.tdayColors) private var colors
     @State private var dragOffset: CGFloat = 0
 
-    // Icons are removed app-wide; the variant cue now lives in the card surface
-    // itself. Issue/error toasts get a red translucent shade layered over the
-    // material; info/success keep the plain neutral material. The action label
-    // still uses the accent colour.
+    // Icons are removed app-wide, with one deliberate exception: the action
+    // slot below. It is used only for Undo (see `UndoableDeleteScheduler` —
+    // the sole call site that ever sets `actionLabel`/`action`), and that one
+    // word started following complete/delete toasts for both todos and
+    // floaters, on every screen; a rotate-back glyph reads faster there than
+    // re-parsing "Undo" each time, and needs no localized width to make room
+    // for. The variant cue for error/success/info still lives in the card
+    // surface itself, unchanged. The action label still uses the accent
+    // colour, now via `.accessibilityLabel` rather than visible text.
     private var accent: Color {
         switch content.kind {
         case .error: return colors.error
@@ -760,11 +768,17 @@ private struct AppSnackbar: View {
                     action()
                     onDismiss()
                 } label: {
-                    Text(label)
-                        .font(.tdayRounded(.subheadline, weight: .heavy))
+                    Image("ActionUndo")
+                        .renderingMode(.template)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 20, height: 20)
                         .foregroundStyle(accent)
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(label)
             }
         }
         .padding(.horizontal, 16)

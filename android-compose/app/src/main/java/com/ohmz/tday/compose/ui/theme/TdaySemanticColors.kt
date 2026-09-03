@@ -22,6 +22,11 @@ val TdayTodoModeScheduledAccent = Color(0xFFF29F38)
 val TdayTodoModeAllAccent = Color(0xFF5E6878)
 val TdayTodoModePriorityAccent = Color(0xFFE65E52)
 val TdayCompletedTitleAccent = TdayTodoModeAllAccent
+// The scheduled-task home's "Completed" tile fill — a distinct token from
+// TdayCompletedTitleAccent (the Completed screen's own title/hero accent) so
+// the two can diverge later; reused as-is for the Floater tab's matching entry
+// point (see TodoListScreen's floater-completed-entry).
+val TdayCompletedTileAccent = Color(0xFF719F84)
 val TdayTitleIconDayAccent = Color(0xFFF4C542)
 val TdayTitleIconNightAccent = Color(0xFFA8B8E8)
 val TdayTaskCompleteAccent = Color(0xFF6FBF86)

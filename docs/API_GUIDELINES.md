@@ -230,7 +230,7 @@ Floaters are unscheduled Anytime tasks. They are not scheduled todos with a null
 | PATCH | `/api/floater` | Update a floater |
 | DELETE | `/api/floater` | Delete a floater |
 | PATCH | `/api/floater/complete` | Complete a floater |
-| PATCH | `/api/floater/uncomplete` | Restore a completed floater to active |
+| PATCH | `/api/floater/uncomplete` | Restore a completed floater to active — recreates its list first if the list was deleted since completion (see `docs/design/completed-floaters-durability.md`) |
 | PATCH | `/api/floater/prioritize` | Change floater priority |
 | PATCH | `/api/floater/reorder` | Reorder floaters |
 
