@@ -174,7 +174,15 @@ object GuideContentExporter {
     }
 
     // ── Android (generated Kotlin strings for all locales) ───────────────
+    /**
+     * Emits key-major: each translation key literal is written exactly once, with
+     * its per-locale values stored positionally (index = LOCALES.indexOf(locale))
+     * instead of once per locale block. The previous locale-major shape repeated
+     * every key literal 10x (once per locale), which is what tripped DeepSource's
+     * duplicate-string-literal check (KT-W1042) on every topic in this file.
+     */
     private fun buildAndroidStrings(strings: Map<String, Map<String, String>>): String {
+        val keys = strings.values.flatMap { it.keys }.toSortedSet()
         val sb = StringBuilder()
         sb.appendLine("package com.ohmz.tday.shared.guide")
         sb.appendLine()
@@ -183,22 +191,25 @@ object GuideContentExporter {
         sb.appendLine("// Regenerate with: ./gradlew :shared:exportGuideContent")
         sb.appendLine()
         sb.appendLine("object GuideStringsGenerated {")
-        sb.appendLine("    val stringsByLocale: Map<String, Map<String, String>> = mapOf(")
-        for (locale in LOCALES) {
-            sb.appendLine("        \"$locale\" to mapOf(")
-            val loc = strings.getValue(locale)
-            for ((key, value) in loc.entries.sortedBy { it.key }) {
-                sb.appendLine("            ${kquote(key)} to ${kquote(value)},")
-            }
-            sb.appendLine("        ),")
+        sb.appendLine("    // Locale order for the positional values in stringsByKey below.")
+        sb.appendLine("    private val LOCALES = listOf(${LOCALES.joinToString(", ") { kquote(it) }})")
+        sb.appendLine("    private val EN_INDEX = LOCALES.indexOf(\"en\")")
+        sb.appendLine()
+        sb.appendLine("    // key -> one value per LOCALES position (null where that locale has no translation).")
+        sb.appendLine("    private val stringsByKey: Map<String, List<String?>> = mapOf(")
+        for (key in keys) {
+            val values = LOCALES.joinToString(", ") { locale -> strings.getValue(locale)[key]?.let(::kquote) ?: "null" }
+            sb.appendLine("        ${kquote(key)} to listOf($values),")
         }
         sb.appendLine("    )")
         sb.appendLine()
         sb.appendLine("    /** Resolve [key] for [locale] (language prefix ok), falling back to English. */")
         sb.appendLine("    fun resolve(locale: String, key: String): String {")
         sb.appendLine("        val lang = locale.substringBefore('-').lowercase()")
-        sb.appendLine("        return stringsByLocale[lang]?.get(key)")
-        sb.appendLine("            ?: stringsByLocale.getValue(\"en\")[key]")
+        sb.appendLine("        val values = stringsByKey[key] ?: return key")
+        sb.appendLine("        val idx = LOCALES.indexOf(lang)")
+        sb.appendLine("        return (if (idx >= 0) values[idx] else null)")
+        sb.appendLine("            ?: values[EN_INDEX]")
         sb.appendLine("            ?: key")
         sb.appendLine("    }")
         sb.appendLine("}")
