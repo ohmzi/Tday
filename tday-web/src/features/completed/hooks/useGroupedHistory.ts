@@ -1,10 +1,17 @@
-import { CompletedTodoItemType } from "@/types";
 import { isToday, isYesterday, isTomorrow, isThisWeek } from "date-fns";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocale } from "@/lib/navigation";
 
-export const useGroupedHistory = (completedTodos: CompletedTodoItemType[]) => {
+/**
+ * Buckets any completed-item shape (todo or floater — anything with a
+ * `completedAt`) into "Today" / "Yesterday" / weekday / date sections, newest
+ * first within the source order. Generic over the item type so both
+ * completion histories share one grouping implementation.
+ */
+export const useGroupedHistory = <T extends { completedAt: Date }>(
+  completedItems: T[],
+) => {
   const locale = useLocale();
   const { t: appDict } = useTranslation("app");
 
@@ -30,19 +37,16 @@ export const useGroupedHistory = (completedTodos: CompletedTodoItemType[]) => {
 
   return useMemo(
     () =>
-      completedTodos.reduce<Map<string, CompletedTodoItemType[]>>(
-        (acc, curr) => {
-          const label = humanizeDate(new Date(curr.completedAt));
-          const relatedGroupArray = acc.get(label);
-          if (relatedGroupArray) {
-            acc.set(label, [...relatedGroupArray, curr]);
-          } else {
-            acc.set(label, [curr]);
-          }
-          return acc;
-        },
-        new Map(),
-      ),
-    [completedTodos, humanizeDate],
+      completedItems.reduce<Map<string, T[]>>((acc, curr) => {
+        const label = humanizeDate(new Date(curr.completedAt));
+        const relatedGroupArray = acc.get(label);
+        if (relatedGroupArray) {
+          acc.set(label, [...relatedGroupArray, curr]);
+        } else {
+          acc.set(label, [curr]);
+        }
+        return acc;
+      }, new Map()),
+    [completedItems, humanizeDate],
   );
 };

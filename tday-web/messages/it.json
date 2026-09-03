@@ -442,7 +442,8 @@
     "bulkUpdateFailed_one": "Non è stato possibile aggiornare un'attività",
     "bulkUpdateFailed_few": "Non è stato possibile aggiornare {{count}} attività",
     "bulkUpdateFailed_many": "Non è stato possibile aggiornare {{count}} attività",
-    "bulkUpdateFailed_other": "Non è stato possibile aggiornare {{count}} attività"
+    "bulkUpdateFailed_other": "Non è stato possibile aggiornare {{count}} attività",
+    "floaterCompletedTile": "Completati"
   },
   "today": {
     "saveInstance": "Salva istanza",
@@ -500,7 +501,12 @@
   "completed": {
     "title": "Cronologia completamento",
     "empty": "Ancora niente di completato",
-    "emptyBody": "Segna qualcosa come fatto e finirà qui."
+    "emptyBody": "Segna qualcosa come fatto e finirà qui.",
+    "tabTasks": "Attività",
+    "floaterEmpty": "Nessun elemento flottante completato",
+    "floaterEmptyBody": "Spunta qualcosa in Flottante e apparirà qui.",
+    "listDeletedSuffix": "lista eliminata",
+    "floaterRestoredIntoRecreatedList": "Ripristinato — “{{listName}}” è stata ricreata"
   },
   "modal": {
     "confirm": "Conferma",

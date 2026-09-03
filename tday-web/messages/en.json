@@ -442,7 +442,8 @@
     "bulkUpdateFailed_one": "A task couldn't be updated",
     "bulkUpdateFailed_few": "{{count}} tasks couldn't be updated",
     "bulkUpdateFailed_many": "{{count}} tasks couldn't be updated",
-    "bulkUpdateFailed_other": "{{count}} tasks couldn't be updated"
+    "bulkUpdateFailed_other": "{{count}} tasks couldn't be updated",
+    "floaterCompletedTile": "Completed"
   },
   "today": {
     "saveInstance": "Save instance",
@@ -500,7 +501,12 @@
   "completed": {
     "title": "Completion history",
     "empty": "No finished tasks yet",
-    "emptyBody": "Tick something off and it will land here."
+    "emptyBody": "Tick something off and it will land here.",
+    "tabTasks": "Tasks",
+    "floaterEmpty": "No finished floaters yet",
+    "floaterEmptyBody": "Tick something off in Floater and it will land here.",
+    "listDeletedSuffix": "list deleted",
+    "floaterRestoredIntoRecreatedList": "Restored — {{listName}} was recreated"
   },
   "modal": {
     "confirm": "Confirm",

@@ -442,7 +442,8 @@
     "bulkUpdateFailed_one": "1件のタスクを更新できませんでした",
     "bulkUpdateFailed_few": "{{count}}件のタスクを更新できませんでした",
     "bulkUpdateFailed_many": "{{count}}件のタスクを更新できませんでした",
-    "bulkUpdateFailed_other": "{{count}}件のタスクを更新できませんでした"
+    "bulkUpdateFailed_other": "{{count}}件のタスクを更新できませんでした",
+    "floaterCompletedTile": "完了"
   },
   "today": {
     "saveInstance": "インスタンスを保存",
@@ -500,7 +501,12 @@
   "completed": {
     "title": "完了履歴",
     "empty": "まだ完了したタスクはありません",
-    "emptyBody": "タスクを完了すると、ここに表示されます。"
+    "emptyBody": "タスクを完了すると、ここに表示されます。",
+    "tabTasks": "タスク",
+    "floaterEmpty": "完了したフローターはまだありません",
+    "floaterEmptyBody": "フローターで何かにチェックを入れると、ここに表示されます。",
+    "listDeletedSuffix": "リストは削除されました",
+    "floaterRestoredIntoRecreatedList": "復元しました — 「{{listName}}」を再作成しました"
   },
   "modal": {
     "confirm": "確認",

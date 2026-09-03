@@ -442,7 +442,8 @@
     "bulkUpdateFailed_one": "Satu tugasan tidak dapat dikemas kini",
     "bulkUpdateFailed_few": "{{count}} tugasan tidak dapat dikemas kini",
     "bulkUpdateFailed_many": "{{count}} tugasan tidak dapat dikemas kini",
-    "bulkUpdateFailed_other": "{{count}} tugasan tidak dapat dikemas kini"
+    "bulkUpdateFailed_other": "{{count}} tugasan tidak dapat dikemas kini",
+    "floaterCompletedTile": "Selesai"
   },
   "today": {
     "saveInstance": "Simpan kejadian",
@@ -500,7 +501,12 @@
   "completed": {
     "title": "Sejarah penyelesaian",
     "empty": "Belum ada yang selesai",
-    "emptyBody": "Tandakan sesuatu sebagai selesai dan ia akan muncul di sini."
+    "emptyBody": "Tandakan sesuatu sebagai selesai dan ia akan muncul di sini.",
+    "tabTasks": "Tugasan",
+    "floaterEmpty": "Belum ada floater yang selesai",
+    "floaterEmptyBody": "Tandakan sesuatu selesai dalam Floater dan ia akan muncul di sini.",
+    "listDeletedSuffix": "senarai dipadam",
+    "floaterRestoredIntoRecreatedList": "Dipulihkan — “{{listName}}” telah dicipta semula"
   },
   "modal": {
     "confirm": "Sahkan",

@@ -1,8 +1,8 @@
 import React, { useMemo, useState } from "react";
 import TodoListLoading from "@/components/ui/TodoListLoading";
-import { useCompletedTodo } from "../query/get-completedTodo";
+import { useCompletedFloater } from "../query/get-completedFloater";
 import { useGroupedHistory } from "../hooks/useGroupedHistory";
-import GroupedCompletedTodoContainer from "./GroupedContainer";
+import GroupedCompletedFloaterContainer from "./GroupedFloaterContainer";
 import { useTranslation } from "react-i18next";
 import NativePageHeader, { useNativePageBarSlots } from "@/components/app/NativePageHeader";
 import MobileSearchHeader from "@/components/ui/MobileSearchHeader";
@@ -11,8 +11,17 @@ import EmptyState from "@/components/app/EmptyState";
 import { nativeScreenAccentColors } from "@/components/app/nativeScreenTheme";
 import { CheckCircle, Search } from "lucide-react";
 import { flattenNotesToPlainText } from "@/lib/richNotes";
+import type { CompletedFloaterItemType } from "@/types";
 
-const CompletedTodoContainer = ({
+const floaterAccent = nativeScreenAccentColors.floater;
+
+// The floater twin of CompletedTodoContainer.tsx — same shell (header, search,
+// date-grouped rows), reading the durable completed-floater history instead of
+// completed todos. Kept as its own self-contained container (rather than a
+// prop-driven variant of the todo one) so the two can be switched between as
+// whole screens from CompletedContainer without either depending on the
+// other's internals.
+const CompletedFloaterContainer = ({
   tabSwitcher,
 }: {
   /**
@@ -22,72 +31,70 @@ const CompletedTodoContainer = ({
    */
   tabSwitcher?: React.ReactNode;
 }) => {
-  const { t: completedDict } = useTranslation("completed")
+  const { t: completedDict } = useTranslation("completed");
   const { t: appDict } = useTranslation("app");
-  const { completedTodos, todoLoading } = useCompletedTodo();
+  const { completedFloaters, floaterLoading } = useCompletedFloater();
   const [searchQuery, setSearchQuery] = useState("");
 
-  const filteredTodos = useMemo(() => {
+  const filteredFloaters = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
-    if (!query) return completedTodos;
-    return completedTodos.filter((todo) => {
-      const title = todo.title.toLowerCase();
-      const description = flattenNotesToPlainText(todo.description).toLowerCase();
-      return title.includes(query) || description.includes(query);
+    if (!query) return completedFloaters;
+    return completedFloaters.filter((floater) => {
+      const title = floater.title.toLowerCase();
+      const description = flattenNotesToPlainText(floater.description).toLowerCase();
+      const listName = (floater.listName ?? "").toLowerCase();
+      return (
+        title.includes(query) ||
+        description.includes(query) ||
+        listName.includes(query)
+      );
     });
-  }, [completedTodos, searchQuery]);
+  }, [completedFloaters, searchQuery]);
 
-  const groupedHistory = useGroupedHistory(filteredTodos);
+  const groupedHistory = useGroupedHistory<CompletedFloaterItemType>(filteredFloaters);
 
   const isSearching = Boolean(searchQuery.trim());
-  // The search field is this page's pinned bar, so the header below renders
-  // only the block that scrolls away and docks its title into it — the same
-  // split the custom list uses.
   const barSlots = useNativePageBarSlots();
 
   return (
     <div className="mb-20">
-      <ScreenWatermark icon={CheckCircle} />
+      <ScreenWatermark icon={CheckCircle} color={floaterAccent} />
 
       <MobileSearchHeader
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         placeholder={`${appDict("searchIn")} ${completedDict("title")}...`}
-        // No magnifier over an empty history — nothing for a query to narrow.
-        // The unsearched set, so a word that matches nothing keeps the field.
-        searchUnavailable={!todoLoading && completedTodos.length === 0}
+        searchUnavailable={!floaterLoading && completedFloaters.length === 0}
         pageCollapse={{
           ...barSlots,
           title: completedDict("title"),
-          accentColor: nativeScreenAccentColors.completed,
+          accentColor: floaterAccent,
         }}
       />
 
       <NativePageHeader
         title={completedDict("title")}
-        accentColor={nativeScreenAccentColors.completed}
+        accentColor={floaterAccent}
         icon={CheckCircle}
         barSlots={barSlots}
         beneathTitle={tabSwitcher}
       />
 
-      {todoLoading && <TodoListLoading className="mt-8" />}
+      {floaterLoading && <TodoListLoading className="mt-8" />}
 
-      {/* Empty state — nothing has been ticked off yet */}
-      {!todoLoading && !isSearching && completedTodos.length === 0 && (
+      {!floaterLoading && !isSearching && completedFloaters.length === 0 && (
         <EmptyState
           icon={CheckCircle}
-          accentColor={nativeScreenAccentColors.completed}
-          title={completedDict("empty")}
-          description={completedDict("emptyBody")}
+          accentColor={floaterAccent}
+          title={completedDict("floaterEmpty")}
+          description={completedDict("floaterEmptyBody")}
         />
       )}
 
-      {/* Empty state — no search results */}
-      {!todoLoading && isSearching && filteredTodos.length === 0 && (
+      {!floaterLoading && isSearching && filteredFloaters.length === 0 && (
         <EmptyState
           icon={Search}
-          accentColor={nativeScreenAccentColors.completed}
+          accentColor={floaterAccent}
           title={appDict("noMatchingTasks")}
           description={appDict("searchEmptyBody")}
           action={
@@ -102,22 +109,22 @@ const CompletedTodoContainer = ({
         />
       )}
 
-      {!todoLoading &&
+      {!floaterLoading &&
         Array.from(groupedHistory.entries())
           .sort((a, b) => {
             const aDate = new Date(a[1][0].completedAt).getTime();
             const bDate = new Date(b[1][0].completedAt).getTime();
             return bDate - aDate;
           })
-          .map(([dateTimeString, completeTodos]) => (
-            <GroupedCompletedTodoContainer
+          .map(([dateTimeString, completedFloaters]) => (
+            <GroupedCompletedFloaterContainer
               key={dateTimeString}
               dateTimeString={dateTimeString}
-              completedTodos={completeTodos}
+              completedFloaters={completedFloaters}
             />
           ))}
     </div>
   );
 };
 
-export default CompletedTodoContainer;
+export default CompletedFloaterContainer;
