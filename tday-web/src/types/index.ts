@@ -138,3 +138,24 @@ export interface CompletedTodoItemType {
   listName?: string;
   listColor?: string;
 }
+
+export interface CompletedFloaterItemType {
+  id: string;
+  originalFloaterID: string | null;
+  title: string;
+  description?: string | null;
+  completedAt: Date;
+  priority: "Low" | "Medium" | "High";
+  daysToComplete: number | null;
+  userID?: string | null;
+  listID?: string | null;
+  listName?: string | null;
+  listColor?: ListColor | null;
+  /**
+   * True only when this item had a list at completion time (listName/listColor
+   * populated) and that list has since been deleted — distinct from a floater
+   * that never had a list. Undo still works either way (the backend recreates
+   * the list), but this lets the UI say so up front.
+   */
+  listDeleted: boolean;
+}

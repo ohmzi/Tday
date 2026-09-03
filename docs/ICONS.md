@@ -60,11 +60,10 @@ Image("ActionEdit")
 | New list | `list-plus` | `ListPlus` | `ic_lucide_list_plus` | `NavListPlus` |
 | Settings / more | `ellipsis` | `Ellipsis` | `ic_lucide_ellipsis` | `NavEllipsis` |
 | Close / clear | `x` | `X` | `ic_lucide_x` | `NavClose` |
-| Undo (toast action) | `undo-2` | — | — | `ActionUndo` |
+| Undo (toast action) | `undo-2` | `Undo2` | `ic_lucide_undo_2` | `ActionUndo` |
 | Scheduled (root dock) | `house` | `Home` | `ic_lucide_house` | `NavHouse` |
 | Task edit | `square-pen` | `SquarePen` | `ic_lucide_square_pen` | `ActionEdit` |
 | Task delete | `trash` | `Trash` | `ic_lucide_trash` | `ActionDelete` |
-| Undo toast action | `undo-2` | — | `ic_lucide_undo_2` | — |
 | Notes: bold | `bold` | `Bold` | `ic_lucide_bold` | `LucideBold` |
 | Notes: italic | `italic` | `Italic` | `ic_lucide_italic` | `LucideItalic` |
 | Notes: underline | `underline` | `Underline` | `ic_lucide_underline` | `LucideUnderline` |

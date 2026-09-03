@@ -19,7 +19,9 @@ import { useUndoableDelete } from "@/hooks/use-undoable-delete";
 
 type CapturedToast = {
   description: string;
-  action: { label: string; onClick: () => void };
+  // label is icon-based now (a ReactElement carrying its accessible name via
+  // aria-label on the wrapper) — see use-undoable-delete.tsx.
+  action: { label: { props: { "aria-label"?: string } }; onClick: () => void };
   onAutoClose: () => void;
   onDismiss: () => void;
 };
@@ -42,7 +44,9 @@ describe("useUndoableDelete", () => {
 
     const toast = toastAt(0);
     expect(toast.description).toBe("Task deleted");
-    expect(toast.action.label).toBe("undo");
+    // Icon-based action now — the accessible name still reads "undo" (the
+    // mocked t() returns the key), carried on the wrapper's aria-label.
+    expect(toast.action.label.props["aria-label"]).toBe("undo");
 
     // Sonner can fire both onAutoClose and onDismiss for one toast.
     toast.onAutoClose();
