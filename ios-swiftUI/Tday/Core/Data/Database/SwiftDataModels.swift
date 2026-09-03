@@ -218,11 +218,20 @@ final class SyncMetadataEntity {
     var lastSuccessfulSyncEpochMs: Int64
     var lastSyncAttemptEpochMs: Int64
     var aiSummaryEnabled: Bool
+    // "scheduled" or "floater". Default literal (not just an init parameter) so SwiftData's
+    // lightweight migration can backfill existing rows on an already-installed app.
+    var defaultHomeScreen: String = "scheduled"
 
-    init(lastSuccessfulSyncEpochMs: Int64, lastSyncAttemptEpochMs: Int64, aiSummaryEnabled: Bool) {
+    init(
+        lastSuccessfulSyncEpochMs: Int64,
+        lastSyncAttemptEpochMs: Int64,
+        aiSummaryEnabled: Bool,
+        defaultHomeScreen: String = "scheduled"
+    ) {
         id = 1
         self.lastSuccessfulSyncEpochMs = lastSuccessfulSyncEpochMs
         self.lastSyncAttemptEpochMs = lastSyncAttemptEpochMs
         self.aiSummaryEnabled = aiSummaryEnabled
+        self.defaultHomeScreen = defaultHomeScreen
     }
 }

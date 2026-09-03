@@ -207,6 +207,8 @@
     <string name="error_update_name_failed">No se pudo actualizar tu nombre. Inténtalo de nuevo.</string>
     <string name="error_change_password_failed">No se pudo cambiar tu contraseña. Inténtalo de nuevo.</string>
     <string name="settings_appearance">Apariencia</string>
+    <string name="settings_behavior">Comportamiento</string>
+    <string name="settings_default_home_screen">Pantalla de inicio predeterminada</string>
     <string name="settings_reminders">Recordatorios</string>
     <string name="settings_feature_toggle">Activar función</string>
     <string name="settings_notifications">Notificaciones</string>

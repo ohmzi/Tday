@@ -16,7 +16,8 @@ export default function LandingPage() {
   }
 
   if (authState === "authenticated") {
-    return <Navigate to={`/${loc}/app/tday`} replace />;
+    // See AuthLayout: the Scheduled-vs-Floater default is resolved by the /app index route.
+    return <Navigate to={`/${loc}/app`} replace />;
   }
 
   if (isReturningBrowser) {

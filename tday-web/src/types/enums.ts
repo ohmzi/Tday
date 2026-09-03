@@ -15,6 +15,12 @@ export enum Direction {
   Descending = "Descending",
 }
 
+/** Which root feed opens on a fresh cold launch. */
+export enum DefaultHomeScreen {
+  scheduled = "scheduled",
+  floater = "floater",
+}
+
 export enum UserRole {
   USER = "USER",
   ADMIN = "ADMIN",

@@ -141,4 +141,5 @@ data class SyncMetadataEntity(
     val lastSuccessfulSyncEpochMs: Long = 0L,
     val lastSyncAttemptEpochMs: Long = 0L,
     val aiSummaryEnabled: Boolean = true,
+    val defaultHomeScreen: String = "scheduled",
 )

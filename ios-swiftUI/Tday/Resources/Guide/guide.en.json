@@ -102,6 +102,35 @@
       "searchBody": "two calm main feeds you switch between from the dock. t'day has two sibling feeds. scheduled holds your dated tasks for today and beyond. anytime holds floaters — tasks with no date. switch between them from the dock at the bottom, and create a task from either one."
     },
     {
+      "id": "default-home-screen",
+      "section": "GETTING_STARTED",
+      "sectionOrder": 0,
+      "icon": "house",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.7.7",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Default home screen",
+      "summary": "Choose whether T'Day opens on Scheduled or Floaters.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Settings has a Behavior section where you can choose which feed opens first — Scheduled or Floaters. It only sets what greets you at launch; the dock still switches between both anytime."
+          ]
+        }
+      ],
+      "searchTitle": "default home screen",
+      "searchKeywords": "default, home screen, launch, startup, scheduled, floater, behavior, settings",
+      "searchBody": "choose whether t'day opens on scheduled or floaters. settings has a behavior section where you can choose which feed opens first — scheduled or floaters. it only sets what greets you at launch; the dock still switches between both anytime."
+    },
+    {
       "id": "create-task",
       "section": "GETTING_STARTED",
       "sectionOrder": 0,

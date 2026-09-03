@@ -14,6 +14,9 @@ data class OfflineSyncState(
     val floaterLists: List<CachedFloaterListRecord> = emptyList(),
     val pendingMutations: List<PendingMutationRecord> = emptyList(),
     val aiSummaryEnabled: Boolean = true,
+    // "scheduled" or "floater" — mirrors the shared DefaultHomeScreen API values verbatim, since
+    // this layer stays free of the Compose-only RootFeedTab enum.
+    val defaultHomeScreen: String = "scheduled",
 )
 
 @Serializable

@@ -628,6 +628,10 @@
       "description": "Elige claro, oscuro o sigue la configuración de tu sistema.",
       "descriptionSystem": "Sigue tu dispositivo, claro u oscuro. Actualmente usando {{theme}}."
     },
+    "behavior": {
+      "title": "Comportamiento",
+      "defaultHomeScreen": "Pantalla de inicio predeterminada"
+    },
     "language": {
       "title": "Idioma",
       "description": "Elige el idioma de la aplicación",
@@ -920,6 +924,12 @@
         "summary": "Dos vistas principales y serenas entre las que cambias desde el dock.",
         "keywords": "programado, en cualquier momento, vista, dock, raíz, navegar, pestañas",
         "body": "T'Day tiene dos vistas hermanas. Programado guarda tus tareas con fecha para hoy y más adelante. En cualquier momento guarda los Flotantes: tareas sin fecha. Cambia entre ellas desde el dock inferior y crea una tarea desde cualquiera de las dos."
+      },
+      "default-home-screen": {
+        "title": "Pantalla de inicio predeterminada",
+        "summary": "Elige si T'Day se abre en Programado o En cualquier momento.",
+        "keywords": "predeterminada, pantalla de inicio, inicio, arranque, programado, en cualquier momento, comportamiento, ajustes",
+        "body": "Ajustes tiene una sección Comportamiento donde eliges qué vista se abre primero: Programado o En cualquier momento. Solo determina lo que ves al iniciar la app; el dock sigue permitiéndote cambiar entre ambas en cualquier momento."
       },
       "create-task": {
         "title": "Crear una tarea",

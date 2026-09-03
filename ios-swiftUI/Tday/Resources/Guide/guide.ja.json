@@ -102,6 +102,35 @@
       "searchBody": "ドックから切り替えられる、2つの静かなメインフィード。 t'day には対になった2つのフィードがあります。「予定」には今日以降の日付付きタスクが並びます。エニタイムにはフローター（日付のないタスク）が並びます。下部のドックから2つを切り替え、どちらからでもタスクを作成できます。"
     },
     {
+      "id": "default-home-screen",
+      "section": "GETTING_STARTED",
+      "sectionOrder": 0,
+      "icon": "house",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.7.7",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "デフォルトのホーム画面",
+      "summary": "T'Dayが「予定」と「エニタイム」のどちらで開くかを選べます。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "設定の「動作」セクションで、最初に開くフィードを「予定」か「エニタイム」から選べます。起動時に表示される画面だけを決めるもので、ドックからはいつでも両方を切り替えられます。"
+          ]
+        }
+      ],
+      "searchTitle": "デフォルトのホーム画面",
+      "searchKeywords": "デフォルト, ホーム画面, 起動, 予定, エニタイム, 動作, 設定",
+      "searchBody": "t'dayが「予定」と「エニタイム」のどちらで開くかを選べます。 設定の「動作」セクションで、最初に開くフィードを「予定」か「エニタイム」から選べます。起動時に表示される画面だけを決めるもので、ドックからはいつでも両方を切り替えられます。"
+    },
+    {
       "id": "create-task",
       "section": "GETTING_STARTED",
       "sectionOrder": 0,

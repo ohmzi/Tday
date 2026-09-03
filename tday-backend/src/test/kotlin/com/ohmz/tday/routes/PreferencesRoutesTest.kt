@@ -50,6 +50,43 @@ class PreferencesRoutesTest {
         assertEquals(null, preferencesService.lastGroupBy)
     }
 
+    @Test
+    fun `patch preferences rejects invalid default home screen`() = testApplication {
+        val preferencesService = RecordingPreferencesService()
+
+        application {
+            configurePreferencesRoutesTestApp(preferencesService)
+        }
+
+        val response = client.patch("/api/preferences") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"defaultHomeScreen":"missing"}""")
+        }
+
+        assertEquals(HttpStatusCode.BadRequest, response.status)
+        val payload = json.parseToJsonElement(response.bodyAsText()).jsonObject
+        assertEquals("defaultHomeScreen is invalid", payload.getValue("message").jsonPrimitive.content)
+        assertEquals("defaultHomeScreen", payload.getValue("field").jsonPrimitive.content)
+        assertEquals(null, preferencesService.lastDefaultHomeScreen)
+    }
+
+    @Test
+    fun `patch preferences accepts valid default home screen`() = testApplication {
+        val preferencesService = RecordingPreferencesService()
+
+        application {
+            configurePreferencesRoutesTestApp(preferencesService)
+        }
+
+        val response = client.patch("/api/preferences") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"defaultHomeScreen":"floater"}""")
+        }
+
+        assertEquals(HttpStatusCode.OK, response.status)
+        assertEquals("floater", preferencesService.lastDefaultHomeScreen)
+    }
+
     private fun Application.configurePreferencesRoutesTestApp(
         preferencesService: PreferencesService,
     ) {
@@ -91,6 +128,7 @@ class PreferencesRoutesTest {
             PreferencesResponse().right()
 
         var lastAiSummaryEnabled: Boolean? = null
+        var lastDefaultHomeScreen: String? = null
 
         override suspend fun update(
             userId: String,
@@ -98,9 +136,11 @@ class PreferencesRoutesTest {
             groupBy: String?,
             direction: String?,
             aiSummaryEnabled: Boolean?,
+            defaultHomeScreen: String?,
         ): Either<AppError, Unit> {
             lastGroupBy = groupBy
             lastAiSummaryEnabled = aiSummaryEnabled
+            lastDefaultHomeScreen = defaultHomeScreen
             return Unit.right()
         }
     }

@@ -102,6 +102,35 @@
       "searchBody": "dos vistas principales y serenas entre las que cambias desde el dock. t'day tiene dos vistas hermanas. programado guarda tus tareas con fecha para hoy y mas adelante. en cualquier momento guarda los flotantes: tareas sin fecha. cambia entre ellas desde el dock inferior y crea una tarea desde cualquiera de las dos."
     },
     {
+      "id": "default-home-screen",
+      "section": "GETTING_STARTED",
+      "sectionOrder": 0,
+      "icon": "house",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.7.7",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Pantalla de inicio predeterminada",
+      "summary": "Elige si T'Day se abre en Programado o En cualquier momento.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Ajustes tiene una sección Comportamiento donde eliges qué vista se abre primero: Programado o En cualquier momento. Solo determina lo que ves al iniciar la app; el dock sigue permitiéndote cambiar entre ambas en cualquier momento."
+          ]
+        }
+      ],
+      "searchTitle": "pantalla de inicio predeterminada",
+      "searchKeywords": "predeterminada, pantalla de inicio, inicio, arranque, programado, en cualquier momento, comportamiento, ajustes",
+      "searchBody": "elige si t'day se abre en programado o en cualquier momento. ajustes tiene una seccion comportamiento donde eliges que vista se abre primero: programado o en cualquier momento. solo determina lo que ves al iniciar la app; el dock sigue permitiendote cambiar entre ambas en cualquier momento."
+    },
+    {
       "id": "create-task",
       "section": "GETTING_STARTED",
       "sectionOrder": 0,

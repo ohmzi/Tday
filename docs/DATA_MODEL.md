@@ -29,7 +29,7 @@ This document describes the durable and local data structures that define T'Day.
 | Floater list | `FloaterLists` / `FloaterProject` | `FloaterListDto`, `FloaterListDetailResponse` | Project/group for floaters. Keep separate from scheduled-task lists. Carries the same sharing metadata as `ListDto`. |
 | Floater list share | `FloaterListShares` (`floater_list_shares`) | Same share DTOs as scheduled lists | EDITOR/VIEWER membership on a floater list. |
 | Completed floater | `CompletedFloaters` | `CompletedFloaterDto` | Completion history for floaters. |
-| Preferences | `UserPreferences` | `PreferencesDto`, `PreferencesResponse` | Per-user sorting/grouping/direction preferences. |
+| Preferences | `UserPreferences` | `PreferencesDto`, `PreferencesResponse` | Per-user sorting/grouping/direction preferences, plus `aiSummaryEnabled` and `defaultHomeScreen` (`"scheduled"` \| `"floater"` — which root feed opens on a fresh cold launch; defaults to `"scheduled"`). |
 | App config | `AppConfigs` | `AppSettingsResponse`, `AdminSettingsResponse` | Public/admin app settings such as Summary availability. |
 | File metadata | `Files` | Internal only | Retained table for cleanup/compatibility paths; there is no active upload/download API surface. |
 | Event/auth logs | `EventLogs`, `AuthThrottles`, `AuthSignals`, `VerificationTokens`, `CronLogs` | Internal models | Security, throttling, verification, diagnostics, and operational state. |
@@ -81,7 +81,8 @@ OfflineSyncState
 ├── pendingMutations
 ├── lastSuccessfulSyncEpochMs
 ├── lastSyncAttemptEpochMs
-└── aiSummaryEnabled
+├── aiSummaryEnabled
+└── defaultHomeScreen
 ```
 
 Android stores this state in Room tables:

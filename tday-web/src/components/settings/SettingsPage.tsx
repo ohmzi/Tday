@@ -11,10 +11,12 @@ import {
   Copy,
   Eye,
   EyeOff,
+  Home,
   Info,
   Key,
   KeyRound,
   Languages,
+  Leaf,
   Loader2,
   Lock,
   LogOut,
@@ -86,6 +88,7 @@ import {
 import { Link, usePathname } from "@/lib/navigation";
 import { GuideHelpLink } from "@/features/guide/GuideHelpLink";
 import { LANGUAGE_STORAGE_KEY, resolveInitialLocale } from "@/i18n";
+import { DefaultHomeScreen } from "@/types/enums";
 import {
   fetchAllSecurityQuestions,
   fetchSecurityQuestionStatus,
@@ -98,6 +101,13 @@ const themeOptions = [
   { value: "light", labelKey: "themeLight", icon: Sun },
   { value: "dark", labelKey: "themeDark", icon: Moon },
   { value: "system", labelKey: "themeSystem", icon: Monitor },
+] as const;
+
+// Labels reuse the "app" namespace's own root-feed strings (the ones RootDock renders)
+// rather than new settings-scoped copies, so the wording always matches the in-app dock.
+const defaultHomeScreenOptions = [
+  { value: DefaultHomeScreen.scheduled, labelKey: "scheduledTaskHome", icon: Home },
+  { value: DefaultHomeScreen.floater, labelKey: "root_feed_tab_floater", icon: Leaf },
 ] as const;
 
 // Endonyms (each language shown in its own script) + a "System default" option
@@ -278,6 +288,55 @@ function ThemeSegmentedControl({
         style={{ transform: `translateX(${index * 100}%)` }}
       />
       {themeOptions.map((option) => {
+        const Icon = option.icon;
+        const selected = option.value === value;
+        return (
+          <button
+            key={option.value}
+            type="button"
+            onClick={() => onChange(option.value)}
+            aria-pressed={selected}
+            className={cn(
+              "relative z-10 flex flex-1 items-center justify-center gap-1.5 rounded-[16px] text-[0.9rem] font-black transition-colors",
+              selected ? "text-accent" : "text-muted-foreground",
+            )}
+          >
+            <Icon className="h-4 w-4" strokeWidth={2.6} />
+            {labelFor(option.labelKey)}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/**
+ * Sliding 2-way segmented control for "Default home screen" — same shape as
+ * ThemeSegmentedControl (a named, mutually-exclusive choice, not a toggle), kept as its own
+ * component rather than generalizing that one so the theme control's already-shipped
+ * behavior stays untouched.
+ */
+function DefaultHomeScreenSegmentedControl({
+  value,
+  onChange,
+  labelFor,
+}: {
+  value: DefaultHomeScreen;
+  onChange: (value: DefaultHomeScreen) => void;
+  labelFor: (key: string) => string;
+}) {
+  const index = Math.max(
+    0,
+    defaultHomeScreenOptions.findIndex((option) => option.value === value),
+  );
+  return (
+    <div className="relative flex h-14 rounded-[22px] bg-muted/60 p-1.5">
+      <span
+        aria-hidden
+        className="absolute bottom-1.5 left-1.5 top-1.5 w-[calc((100%-0.75rem)/2)] rounded-[16px] bg-card shadow-sm transition-transform duration-200 ease-out"
+        style={{ transform: `translateX(${index * 100}%)` }}
+      />
+      {defaultHomeScreenOptions.map((option) => {
         const Icon = option.icon;
         const selected = option.value === value;
         return (
@@ -1039,6 +1098,10 @@ export default function SettingsPage() {
     t("themeLight"),
     t("themeDark"),
     t("themeSystem"),
+    t("behavior.title"),
+    t("behavior.defaultHomeScreen"),
+    appDict("scheduledTaskHome"),
+    appDict("root_feed_tab_floater"),
     t("language.title"),
     t("language.appLanguage"),
   );
@@ -1503,6 +1566,18 @@ export default function SettingsPage() {
       <SheetCard className="space-y-4 p-[18px] shadow-[0_16px_34px_-24px_hsl(var(--shadow)/0.5)]">
         <SectionHeading title={t("appearance.title")} />
         <ThemeSegmentedControl value={theme} onChange={setTheme} labelFor={t} />
+
+        <CardDivider />
+
+        <SectionHeading title={t("behavior.title")} />
+        <p className="text-[0.95rem] font-bold text-muted-foreground">
+          {t("behavior.defaultHomeScreen")}
+        </p>
+        <DefaultHomeScreenSegmentedControl
+          value={preferences?.defaultHomeScreen ?? DefaultHomeScreen.scheduled}
+          onChange={(value) => updatePreferences({ defaultHomeScreen: value })}
+          labelFor={appDict}
+        />
 
         <CardDivider />
 

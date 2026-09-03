@@ -21,6 +21,22 @@ enum RootFeedTab: Hashable {
             return "leaf"
         }
     }
+
+    /// The API/cache-persisted value for the "Default home screen" preference.
+    var defaultHomeScreenApiValue: String {
+        switch self {
+        case .scheduledTaskHome:
+            return "scheduled"
+        case .floaterTaskHome:
+            return "floater"
+        }
+    }
+}
+
+/// Inverse of `RootFeedTab.defaultHomeScreenApiValue`; unrecognized/absent values fall back to
+/// Scheduled.
+func rootFeedTabFromDefaultHomeScreenApiValue(_ value: String?) -> RootFeedTab {
+    value == "floater" ? .floaterTaskHome : .scheduledTaskHome
 }
 
 struct RootFeedDock: View {

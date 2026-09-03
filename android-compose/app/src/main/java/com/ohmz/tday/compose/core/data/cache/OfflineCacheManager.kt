@@ -127,6 +127,7 @@ class OfflineCacheManager @Inject constructor(
             floaterLists = floaterLists,
             pendingMutations = mutations,
             aiSummaryEnabled = metadata?.aiSummaryEnabled ?: true,
+            defaultHomeScreen = metadata?.defaultHomeScreen ?: "scheduled",
         )
         lastPersistedState = state
         return state
@@ -291,6 +292,7 @@ class OfflineCacheManager @Inject constructor(
                     lastSuccessfulSyncEpochMs = state.lastSuccessfulSyncEpochMs,
                     lastSyncAttemptEpochMs = state.lastSyncAttemptEpochMs,
                     aiSummaryEnabled = state.aiSummaryEnabled,
+                    defaultHomeScreen = state.defaultHomeScreen,
                 ),
             )
         }

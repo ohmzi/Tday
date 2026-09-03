@@ -159,7 +159,8 @@ final class OfflineCacheManager {
                     iconKey: $0.iconKey
                 )
             },
-            aiSummaryEnabled: metadata?.aiSummaryEnabled ?? true
+            aiSummaryEnabled: metadata?.aiSummaryEnabled ?? true,
+            defaultHomeScreen: metadata?.defaultHomeScreen ?? "scheduled"
         )
     }
 
@@ -199,7 +200,8 @@ final class OfflineCacheManager {
             SyncMetadataEntity(
                 lastSuccessfulSyncEpochMs: normalizedState.lastSuccessfulSyncEpochMs,
                 lastSyncAttemptEpochMs: normalizedState.lastSyncAttemptEpochMs,
-                aiSummaryEnabled: normalizedState.aiSummaryEnabled
+                aiSummaryEnabled: normalizedState.aiSummaryEnabled,
+                defaultHomeScreen: normalizedState.defaultHomeScreen
             )
         )
 
