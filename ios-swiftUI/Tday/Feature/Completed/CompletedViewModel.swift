@@ -9,6 +9,9 @@ final class CompletedViewModel {
     var isLoading = false
     var items: [CompletedItem] = []
     var lists: [ListSummary] = []
+    /// For the edit sheet's list picker when the item being edited is a
+    /// completed Floater — `lists` above is scheduled (Todo) lists only.
+    var floaterLists: [ListSummary] = []
     var errorMessage: String?
 
     @ObservationIgnored nonisolated(unsafe) private var observationTask: Task<Void, Never>?
@@ -40,18 +43,39 @@ final class CompletedViewModel {
 
     func delete(_ item: CompletedItem) async {
         do {
-            try await container.completedRepository.deleteCompletedTodo(item)
+            if item.isFloater {
+                try await container.completedRepository.deleteCompletedFloater(item)
+            } else {
+                try await container.completedRepository.deleteCompletedTodo(item)
+            }
             hydrateFromCache()
         } catch {
             errorMessage = userFacingMessage(for: error, fallback: "Could not delete task.")
         }
     }
 
+    /// Floaters and Todos both restore through here, but as two genuinely
+    /// different round trips: a Floater's uncomplete can land it in a
+    /// recreated list (its original one having been deleted since), which the
+    /// Todo path has no equivalent of. `listRecreated` is announced with its
+    /// own toast rather than folded into `errorMessage` — it's not a failure,
+    /// just a "read this" for what "restored" actually means this time.
     func uncomplete(_ item: CompletedItem) async {
         do {
-            try await container.completedRepository.uncomplete(item)
-            hydrateFromCache()
-            await rescheduleReminders()
+            if item.isFloater {
+                let response = try await container.completedRepository.uncompleteFloater(item)
+                hydrateFromCache()
+                if response.listRecreated == true, let listName = response.listName {
+                    container.snackbarManager.show(
+                        L("Restored — \"%@\" was recreated.", listName),
+                        kind: .info
+                    )
+                }
+            } else {
+                try await container.completedRepository.uncomplete(item)
+                hydrateFromCache()
+                await rescheduleReminders()
+            }
         } catch {
             errorMessage = userFacingMessage(for: error, fallback: "Could not restore task.")
         }
@@ -59,7 +83,11 @@ final class CompletedViewModel {
 
     func update(_ item: CompletedItem, payload: CreateTaskPayload) async {
         do {
-            try await container.completedRepository.updateCompletedTodo(item, payload: payload)
+            if item.isFloater {
+                try await container.completedRepository.updateCompletedFloater(item, payload: payload)
+            } else {
+                try await container.completedRepository.updateCompletedTodo(item, payload: payload)
+            }
             hydrateFromCache()
         } catch {
             errorMessage = userFacingMessage(for: error, fallback: "Could not update task.")
@@ -67,8 +95,11 @@ final class CompletedViewModel {
     }
 
     private func hydrateFromCache() {
-        items = container.completedRepository.fetchCompletedItemsSnapshot()
+        let todoItems = container.completedRepository.fetchCompletedItemsSnapshot()
+        let floaterItems = container.completedRepository.fetchCompletedFloatersSnapshot()
+        items = todoItems + floaterItems
         lists = container.listRepository.fetchListsSnapshot()
+        floaterLists = container.floaterListRepository.fetchListsSnapshot()
         errorMessage = nil
     }
 

@@ -1,6 +1,9 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Restored — \"%@\" was recreated." : {
+
+    },
     "A private server with opinions about your priorities" : {
       "localizations" : {
         "de" : {

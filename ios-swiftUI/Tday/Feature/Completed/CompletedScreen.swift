@@ -175,7 +175,7 @@ struct CompletedScreen: View {
             }
             .createTaskSheet(item: $editingItem) { item in
                 CreateTaskSheet(
-                    lists: viewModel.lists,
+                    lists: item.isFloater ? viewModel.floaterLists : viewModel.lists,
                     titleText: L("Edit task"),
                     submitText: L("Save"),
                     initialPayload: CreateTaskPayload(title: item.title, description: item.description, priority: item.priority, due: item.due, rrule: item.rrule, listId: nil),

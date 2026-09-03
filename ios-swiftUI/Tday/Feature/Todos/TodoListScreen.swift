@@ -439,6 +439,10 @@ struct TodoListScreen: View {
     let summaryAvailable: Bool
     let onOpenFloaterList: (String, String) -> Void
     let onOpenSettings: () -> Void
+    /// Floater root feed only — see `RootFeedHeroHeader.onOpenCompleted`. Every
+    /// other `TodoListScreen` mode never renders the root-feed header at all
+    /// (`usesRootFeedHeader` gates it), so the default no-op is never reached.
+    let onOpenCompleted: () -> Void
     @State private var viewModel: TodoListViewModel
     @Environment(\.tdayColors) private var colors
     @Environment(\.dismiss) private var dismiss
@@ -506,6 +510,7 @@ struct TodoListScreen: View {
         onRootControlsVisibleChange: @escaping (Bool) -> Void = { _ in },
         onOpenFloaterList: @escaping (String, String) -> Void = { _, _ in },
         onOpenSettings: @escaping () -> Void = {},
+        onOpenCompleted: @escaping () -> Void = {},
         summaryAvailable: Bool = true,
         onListDeleted: @escaping () -> Void = {}
     ) {
@@ -523,6 +528,7 @@ struct TodoListScreen: View {
         self.onRootControlsVisibleChange = onRootControlsVisibleChange
         self.onOpenFloaterList = onOpenFloaterList
         self.onOpenSettings = onOpenSettings
+        self.onOpenCompleted = onOpenCompleted
         self.summaryAvailable = summaryAvailable
         _viewModel = State(initialValue: TodoListViewModel(container: container, mode: mode, listId: listId, listName: listName))
         _collapsedSectionIDs = State(initialValue: mode == .priority || mode == .all || mode == .list ? ["earlier"] : [])
@@ -1643,6 +1649,10 @@ struct TodoListScreen: View {
             onOpenSettings: {
                 closeFloaterTaskHomeSearch()
                 onOpenSettings()
+            },
+            onOpenCompleted: {
+                closeFloaterTaskHomeSearch()
+                onOpenCompleted()
             },
             onScrollToTop: {
                 titleScrollToTopRequestID += 1
