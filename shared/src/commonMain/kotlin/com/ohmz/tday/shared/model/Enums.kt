@@ -49,6 +49,21 @@ enum class Direction {
     Descending,
 }
 
+/** Which root feed (Scheduled or Floaters) opens on a fresh cold launch. */
+@Serializable
+enum class DefaultHomeScreen {
+    scheduled,
+    floater;
+
+    companion object {
+        // Unknown/future values fall back to `scheduled` rather than throwing
+        // IllegalArgumentException (valueOf) — a persisted or client-sent string we
+        // don't recognize should degrade gracefully, not crash preference loading.
+        fun fromApiOrDefault(value: String?, default: DefaultHomeScreen = scheduled): DefaultHomeScreen =
+            entries.firstOrNull { it.name == value } ?: default
+    }
+}
+
 @Serializable
 enum class Priority {
     Low,

@@ -36,4 +36,5 @@ data class PreferencesPatchRequest(
     val groupBy: String? = null,
     val direction: String? = null,
     val aiSummaryEnabled: Boolean? = null,
+    val defaultHomeScreen: String? = null,
 )

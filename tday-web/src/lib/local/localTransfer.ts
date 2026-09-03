@@ -335,12 +335,15 @@ export function importWorkspace(body: Record<string, unknown>) {
     current.completedTodos.push(...completedTodos);
     current.completedFloaters.push(...completedFloaters);
     if (preferences) {
-      const { sortBy, groupBy, direction, aiSummaryEnabled } = preferences;
+      const { sortBy, groupBy, direction, aiSummaryEnabled, defaultHomeScreen } = preferences;
       if (typeof sortBy === "string") current.preferences.sortBy = sortBy;
       if (typeof groupBy === "string") current.preferences.groupBy = groupBy;
       if (typeof direction === "string") current.preferences.direction = direction;
       if (typeof aiSummaryEnabled === "boolean") {
         current.preferences.aiSummaryEnabled = aiSummaryEnabled;
+      }
+      if (typeof defaultHomeScreen === "string") {
+        current.preferences.defaultHomeScreen = defaultHomeScreen;
       }
     }
   });

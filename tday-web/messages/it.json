@@ -628,6 +628,10 @@
       "description": "Scegli chiaro, scuro o segui le impostazioni di sistema.",
       "descriptionSystem": "Segui il tuo dispositivo, chiaro o scuro. Attualmente {{theme}}."
     },
+    "behavior": {
+      "title": "Comportamento",
+      "defaultHomeScreen": "Schermata iniziale predefinita"
+    },
     "language": {
       "title": "Lingua",
       "description": "Scegli la lingua dell'app",
@@ -920,6 +924,12 @@
         "summary": "Due feed principali e tranquilli tra cui passare dalla dock.",
         "keywords": "pianificato, in qualsiasi momento, feed, dock, principale, naviga, schede",
         "body": "T'Day ha due feed affiancati. Il feed Pianificato raccoglie le tue attività con data per oggi e oltre. In qualsiasi momento raccoglie i Floater — attività senza data. Passa dall'uno all'altro dalla dock in basso e crea un'attività da entrambi."
+      },
+      "default-home-screen": {
+        "title": "Schermata iniziale predefinita",
+        "summary": "Scegli se T'Day si apre su Pianificato o In qualsiasi momento.",
+        "keywords": "predefinita, schermata iniziale, avvio, lancio, pianificato, in qualsiasi momento, comportamento, impostazioni",
+        "body": "Le impostazioni hanno una sezione Comportamento in cui scegli quale feed si apre per primo: Pianificato o In qualsiasi momento. Determina solo cosa vedi all'avvio; la dock continua a permetterti di passare da uno all'altro in qualsiasi momento."
       },
       "create-task": {
         "title": "Crea un'attività",

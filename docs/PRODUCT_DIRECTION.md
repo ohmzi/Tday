@@ -40,6 +40,7 @@ Mobile is now the center of the product experience. Any user-facing Android or i
 
 - Build Android and iOS as siblings, not clones. Copy behavior and intent; use native APIs and local conventions.
 - Treat the scheduled task home screen and the floater task home screen (Floater/Anytime) as root feeds. `RootFeedDock` switches between them and collapses into a compact icon state while preserving quick creation.
+- Which root feed opens on a fresh cold launch is itself a per-user, backend-synced preference (`UserPreferences.defaultHomeScreen`, Settings → Appearance → Behavior), defaulting to Scheduled. It only seeds the initial tab/route on a genuinely new session — it never fights an in-session dock tap or overrides saved navigation state.
 - Keep pull-to-refresh disabled in Local Mode. In Server Mode, treat it as a root-feed affordance for the scheduled task home and floater task home screens rather than a default on detail, category, calendar, or completed screens.
 - Use local cache as the screen source of truth. Network sync updates the cache; screens observe cache changes.
 - Keep offline notices calm and rate-limited. Do not interrupt normal use when cached data can satisfy the screen.

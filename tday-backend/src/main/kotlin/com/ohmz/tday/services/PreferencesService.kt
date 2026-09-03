@@ -2,6 +2,7 @@ package com.ohmz.tday.services
 
 import arrow.core.Either
 import arrow.core.right
+import com.ohmz.tday.db.enums.DefaultHomeScreen
 import com.ohmz.tday.db.enums.Direction
 import com.ohmz.tday.db.enums.GroupBy
 import com.ohmz.tday.db.enums.SortBy
@@ -24,6 +25,7 @@ interface PreferencesService {
         groupBy: String?,
         direction: String?,
         aiSummaryEnabled: Boolean?,
+        defaultHomeScreen: String?,
     ): Either<AppError, Unit>
 }
 
@@ -37,6 +39,8 @@ class PreferencesServiceImpl : PreferencesService {
                 direction = row?.get(UserPreferences.direction)?.name,
                 // NULL (no row / never set) means the feature is on by default.
                 aiSummaryEnabled = row?.get(UserPreferences.aiSummaryEnabled) ?: true,
+                // NULL (no row / never set) means the app opens on Scheduled by default.
+                defaultHomeScreen = row?.get(UserPreferences.defaultHomeScreen)?.name ?: "scheduled",
             )
         }
         return prefs.right()
@@ -48,6 +52,7 @@ class PreferencesServiceImpl : PreferencesService {
         groupBy: String?,
         direction: String?,
         aiSummaryEnabled: Boolean?,
+        defaultHomeScreen: String?,
     ): Either<AppError, Unit> {
         newSuspendedTransaction(Dispatchers.IO) {
             val existing = UserPreferences.selectAll().where { UserPreferences.userID eq userId }.firstOrNull()
@@ -57,6 +62,7 @@ class PreferencesServiceImpl : PreferencesService {
                     groupBy?.let { g -> it[UserPreferences.groupBy] = GroupBy.fromApi(g) }
                     direction?.let { d -> it[UserPreferences.direction] = Direction.valueOf(d) }
                     aiSummaryEnabled?.let { v -> it[UserPreferences.aiSummaryEnabled] = v }
+                    defaultHomeScreen?.let { h -> it[UserPreferences.defaultHomeScreen] = DefaultHomeScreen.valueOf(h) }
                 }
             } else {
                 UserPreferences.insert {
@@ -66,6 +72,7 @@ class PreferencesServiceImpl : PreferencesService {
                     groupBy?.let { g -> it[UserPreferences.groupBy] = GroupBy.fromApi(g) }
                     direction?.let { d -> it[UserPreferences.direction] = Direction.valueOf(d) }
                     aiSummaryEnabled?.let { v -> it[UserPreferences.aiSummaryEnabled] = v }
+                    defaultHomeScreen?.let { h -> it[UserPreferences.defaultHomeScreen] = DefaultHomeScreen.valueOf(h) }
                 }
             }
         }

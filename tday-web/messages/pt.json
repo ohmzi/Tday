@@ -628,6 +628,10 @@
       "description": "Escolha claro, escuro ou siga a configuração do sistema.",
       "descriptionSystem": "Siga seu dispositivo, claro ou escuro. Atualmente usando {{theme}}."
     },
+    "behavior": {
+      "title": "Comportamento",
+      "defaultHomeScreen": "Tela inicial padrão"
+    },
     "language": {
       "title": "Idioma",
       "description": "Escolha o idioma do aplicativo",
@@ -920,6 +924,12 @@
         "summary": "Dois feeds principais e serenos entre os quais alterna a partir da barra.",
         "keywords": "agendado, qualquer altura, feed, barra, raiz, navegar, separadores",
         "body": "O T'Day tem dois feeds irmãos. O Agendado contém as suas tarefas com data para hoje e para os dias seguintes. O Qualquer altura contém os Flutuantes — tarefas sem data. Alterne entre eles pela barra ao fundo e crie uma tarefa a partir de qualquer um."
+      },
+      "default-home-screen": {
+        "title": "Tela inicial padrão",
+        "summary": "Escolha se o T'Day abre em Agendado ou Qualquer altura.",
+        "keywords": "padrão, tela inicial, ecrã inicial, lançamento, agendado, qualquer altura, comportamento, configurações",
+        "body": "As Configurações têm uma secção Comportamento onde escolhe qual feed abre primeiro — Agendado ou Qualquer altura. Isto define apenas o que vê ao abrir a aplicação; a barra continua a permitir alternar entre os dois a qualquer momento."
       },
       "create-task": {
         "title": "Criar uma tarefa",

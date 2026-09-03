@@ -628,6 +628,10 @@
       "description": "Pilih cerah, gelap, atau ikut tetapan sistem anda.",
       "descriptionSystem": "Ikut peranti anda, cerah, atau gelap. Sedang menggunakan {{theme}}."
     },
+    "behavior": {
+      "title": "Tingkah laku",
+      "defaultHomeScreen": "Skrin utama lalai"
+    },
     "language": {
       "title": "Bahasa",
       "description": "Pilih bahasa aplikasi anda",
@@ -920,6 +924,12 @@
         "summary": "Dua suapan utama yang tenang, boleh ditukar dari dok.",
         "keywords": "dijadualkan, bila-bila, suapan, dok, akar, navigasi, tab",
         "body": "T'Day mempunyai dua suapan seiring. Tugasan bertarikh anda untuk hari ini dan seterusnya tersimpan dalam suapan Dijadualkan. Bila-bila menyimpan Floater — tugasan tanpa tarikh. Tukar antara keduanya dari dok di bahagian bawah, dan cipta tugasan dari mana-mana satu."
+      },
+      "default-home-screen": {
+        "title": "Skrin utama lalai",
+        "summary": "Pilih sama ada T'Day dibuka pada Dijadualkan atau Bila-bila.",
+        "keywords": "lalai, skrin utama, pelancaran, permulaan, dijadualkan, bila-bila, tingkah laku, tetapan",
+        "body": "Tetapan mempunyai bahagian Tingkah laku di mana anda memilih suapan mana yang dibuka dahulu — Dijadualkan atau Bila-bila. Ia hanya menetapkan apa yang anda lihat semasa pelancaran; dok masih membenarkan anda menukar antara kedua-duanya pada bila-bila masa."
       },
       "create-task": {
         "title": "Cipta tugasan",

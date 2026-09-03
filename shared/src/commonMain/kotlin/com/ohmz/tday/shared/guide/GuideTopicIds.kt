@@ -8,6 +8,7 @@ package com.ohmz.tday.shared.guide
  */
 object GuideTopicIds {
     const val ROOT_FEEDS = "root-feeds"
+    const val DEFAULT_HOME_SCREEN = "default-home-screen"
     const val CREATE_TASK = "create-task"
     const val NLP_DATE_SYNTAX = "nlp-date-syntax"
     const val BRAIN_DUMP = "brain-dump"

@@ -30,6 +30,59 @@ class SettingsRepository @Inject constructor(
     fun aiSummaryHealthySnapshot(): Boolean = secureConfigStore.getAiSummaryHealthy()
 
     /**
+     * The "scheduled" or "floater" root feed a fresh cold launch should open on. Unlike
+     * [isAiSummaryEnabledSnapshot], this preference IS user-configurable in Local Mode too —
+     * there is no server fallback to hardcode, so the cache (which Local Mode also writes
+     * through) is read directly in both modes.
+     */
+    fun defaultHomeScreenSnapshot(): String =
+        cacheManager.loadOfflineStateBlocking().defaultHomeScreen
+
+    /**
+     * Updates the default-home-screen preference via `/api/preferences` (server mode) or the
+     * offline cache directly (Local Mode), mirroring [setAiSummaryEnabled]'s split.
+     */
+    suspend fun setDefaultHomeScreen(value: String) {
+        if (secureConfigStore.isLocalMode()) {
+            cacheManager.updateOfflineState { state ->
+                if (state.defaultHomeScreen == value) state else state.copy(defaultHomeScreen = value)
+            }
+            return
+        }
+
+        val response = requireApiBody(
+            api.patchPreferences(PreferencesDto(defaultHomeScreen = value)),
+            "Could not update preferences",
+        )
+        cacheManager.updateOfflineState { state ->
+            if (state.defaultHomeScreen == response.defaultHomeScreen) state
+            else state.copy(defaultHomeScreen = response.defaultHomeScreen)
+        }
+    }
+
+    /**
+     * Fetches `/api/preferences` and mirrors the default-home-screen preference into the
+     * offline cache. On failure (or in Local Mode, where there is nothing to fetch), the
+     * cached value is returned untouched.
+     */
+    suspend fun refreshDefaultHomeScreen(): String {
+        if (secureConfigStore.isLocalMode()) return cacheManager.loadOfflineState().defaultHomeScreen
+
+        return runCatching {
+            val value = requireApiBody(
+                api.getPreferences(),
+                "Could not load preferences",
+            ).defaultHomeScreen
+            cacheManager.updateOfflineState { state ->
+                if (state.defaultHomeScreen == value) state else state.copy(defaultHomeScreen = value)
+            }
+            value
+        }.getOrElse {
+            cacheManager.loadOfflineState().defaultHomeScreen
+        }
+    }
+
+    /**
      * Fetches `/app-settings` and persists the AI capability (configured/healthy) into
      * [SecureConfigStore]. On failure the previously-stored values are left untouched.
      */
