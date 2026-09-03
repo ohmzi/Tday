@@ -1,6 +1,7 @@
 package com.ohmz.tday.compose.feature.widget
 
 import android.appwidget.AppWidgetManager
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.compose.setContent
@@ -36,7 +37,6 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewModelScope
 import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.data.CachedFloaterListRecord
@@ -51,6 +51,7 @@ import com.ohmz.tday.compose.ui.theme.tdayListAccentColorOrNull
 import com.ohmz.tday.compose.ui.theme.tdayListIconForKey
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -75,15 +76,9 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class WidgetListConfigurationActivity : AppCompatActivity() {
 
-    @Inject
-    lateinit var offlineCacheManager: OfflineCacheManager
-
-    @Inject
-    lateinit var widgetSnapshotWriter: WidgetSnapshotWriter
-
-    @Inject
-    lateinit var listTasksWidgetRefresher: ListTasksWidgetRefresher
-
+    // No @Inject lateinit var fields: every dependency this screen needs (the cache, the
+    // snapshot writer, the refresher) is constructor-injected into WidgetListConfigurationViewModel
+    // instead, and reached through it — see that class below.
     private var appWidgetId = AppWidgetManager.INVALID_APPWIDGET_ID
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -118,7 +113,12 @@ class WidgetListConfigurationActivity : AppCompatActivity() {
                 WidgetListPickerScreen(
                     uiState = pickerUiState,
                     currentListId = currentSelection?.listId,
-                    onPick = { listId, listType, listName -> finishWithSelection(listId, listType, listName) },
+                    onPick = { listId, listType, listName ->
+                        pickerViewModel.selectList(appWidgetId, listId, listType, listName) {
+                            setResult(RESULT_OK, Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId))
+                            finish()
+                        }
+                    },
                     onCancel = { finish() },
                 )
             }
@@ -131,31 +131,14 @@ class WidgetListConfigurationActivity : AppCompatActivity() {
         super.onStart()
         applyScreenshotProtection()
     }
-
-    private fun finishWithSelection(listId: String, listType: WidgetListType, listName: String) {
-        val id = appWidgetId
-        WidgetListSelectionStore(applicationContext).setSelection(
-            id,
-            WidgetListSelection(listId, listType, listName),
-        )
-        lifecycleScope.launch {
-            // Best-effort: the selection above is already durable either way. A failure here
-            // just means this instance falls back to the same LOADING -> WidgetHydrateWorker path
-            // every other cold snapshot-less widget already has.
-            runCatching {
-                val state = offlineCacheManager.loadOfflineState()
-                widgetSnapshotWriter.write(state)
-                listTasksWidgetRefresher.refreshNow()
-            }
-            setResult(RESULT_OK, Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id))
-            finish()
-        }
-    }
 }
 
 @HiltViewModel
 internal class WidgetListConfigurationViewModel @Inject constructor(
+    @ApplicationContext private val appContext: Context,
     private val offlineCacheManager: OfflineCacheManager,
+    private val widgetSnapshotWriter: WidgetSnapshotWriter,
+    private val listTasksWidgetRefresher: ListTasksWidgetRefresher,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(WidgetListPickerUiState())
     val uiState: StateFlow<WidgetListPickerUiState> = _uiState.asStateFlow()
@@ -168,6 +151,29 @@ internal class WidgetListConfigurationViewModel @Inject constructor(
                 todoLists = state.lists,
                 floaterLists = state.floaterLists,
             )
+        }
+    }
+
+    /**
+     * Persists [appWidgetId]'s choice, then seeds and paints its snapshot before calling
+     * [onDone] — the Activity finishes (with `RESULT_OK`) only after that, so a freshly placed
+     * widget never has to wait on an unrelated cache write to leave `LOADING`. The seed/paint
+     * step is best-effort: the selection write below is durable either way, and a failure here
+     * just falls back to the same `LOADING` -> `WidgetHydrateWorker` path any other cold
+     * snapshot-less widget already has.
+     */
+    fun selectList(appWidgetId: Int, listId: String, listType: WidgetListType, listName: String, onDone: () -> Unit) {
+        WidgetListSelectionStore(appContext).setSelection(
+            appWidgetId,
+            WidgetListSelection(listId, listType, listName),
+        )
+        viewModelScope.launch {
+            runCatching {
+                val state = offlineCacheManager.loadOfflineState()
+                widgetSnapshotWriter.write(state)
+                listTasksWidgetRefresher.refreshNow()
+            }
+            onDone()
         }
     }
 }

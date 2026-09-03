@@ -7,6 +7,12 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
+/**
+ * The `skipcq: KT-W1042` markers below are deliberate, the same rationale already recorded in
+ * `BulkTaskCacheTest`'s class doc: `"list-1"` and `"in-list"` are per-test fixture identities, not
+ * a shared value — each test builds its own small list of records and a shared constant would
+ * imply a coupling between unrelated test cases that does not exist.
+ */
 class ListWidgetSnapshotBuilderTest {
     private val now = 10_000_000L
 
@@ -15,7 +21,7 @@ class ListWidgetSnapshotBuilderTest {
         val snapshot = buildListWidgetSnapshot(
             state = OfflineSyncState(
                 todos = listOf(
-                    todo(id = "in-list", title = "In list", listId = "list-1"),
+                    todo(id = "in-list", title = "In list", listId = "list-1"),  // skipcq: KT-W1042
                     todo(id = "other-list", title = "Other list", listId = "list-2"),
                     todo(id = "no-list", title = "No list", listId = null),
                     todo(id = "completed", title = "Completed", listId = "list-1", completed = true),
@@ -38,7 +44,7 @@ class ListWidgetSnapshotBuilderTest {
             state = OfflineSyncState(
                 todos = listOf(
                     todo(id = "far-future", title = "Far future", listId = "list-1", dueEpochMs = now + 30L * 86_400_000L),
-                    todo(id = "undated", title = "Undated", listId = "list-1", dueEpochMs = null),
+                    todo(id = "undated", title = "Undated", listId = "list-1", dueEpochMs = null),  // skipcq: KT-W1042
                 ),
             ),
             listId = "list-1",
