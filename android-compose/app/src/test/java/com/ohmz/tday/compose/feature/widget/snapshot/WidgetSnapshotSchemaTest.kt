@@ -22,6 +22,7 @@ class WidgetSnapshotSchemaTest {
                     priorityRing = WidgetPriorityRing.HIGH,
                     dueEpochMs = 600L,
                     description = "notes",
+                    overdue = true,
                 ),
                 WidgetSnapshotRow(
                     id = "b",
@@ -51,5 +52,18 @@ class WidgetSnapshotSchemaTest {
         assertEquals(null, decoded.dayStartEpochMs)
         assertEquals(null, decoded.dayEndEpochMs)
         assertTrue(decoded.rows.isEmpty())
+    }
+
+    @Test
+    fun `a row missing overdue decodes to false`() {
+        val minimal = """
+            {"generatedAtEpochMs":1000,"status":"TASKS","taskCount":1,"rows":[
+                {"id":"a","key":1,"title":"Alpha","priorityRing":"LOW"}
+            ]}
+        """.trimIndent()
+
+        val decoded = WidgetSnapshotJson.decodeFromString(WidgetSnapshot.serializer(), minimal)
+
+        assertEquals(false, decoded.rows.single().overdue)
     }
 }

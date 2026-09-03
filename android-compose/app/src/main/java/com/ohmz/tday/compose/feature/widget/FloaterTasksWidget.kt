@@ -25,7 +25,8 @@ import com.ohmz.tday.compose.feature.widget.snapshot.WidgetSnapshotSignal
 import com.ohmz.tday.compose.feature.widget.snapshot.WidgetSnapshotStore
 import java.util.Locale
 
-private val FloaterWidgetVisuals = TaskWidgetVisuals(
+/** Reused by `ListTasksWidget` for a floater-list instance — same undated shape as Floater. */
+internal val FloaterWidgetVisuals = TaskWidgetVisuals(
     addButtonBackground = R.drawable.widget_floater_add_button_background,
     addIcon = R.drawable.widget_add_icon_floater,
     emptyWatermark = R.drawable.widget_empty_watermark_floater,

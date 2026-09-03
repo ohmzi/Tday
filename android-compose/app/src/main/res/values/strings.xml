@@ -597,6 +597,19 @@
     <string name="widget_locked_title">T\'Day is locked</string>
     <string name="widget_locked_message">Tasks are hidden while app lock is on</string>
     <string name="widget_loading">Loading tasks…</string>
+    <string name="widget_list_tasks_description">Shows one list of your choice at a glance</string>
+    <string name="widget_list_tasks_title">List</string>
+    <string name="widget_list_tasks_title_small">List — Small</string>
+    <string name="widget_list_tasks_title_medium">List — Medium</string>
+    <string name="widget_list_tasks_title_large">List — Large</string>
+    <string name="widget_list_tasks_setup_title">Choose a list</string>
+    <string name="widget_list_tasks_setup_message">Tap to finish setting up this widget</string>
+    <string name="widget_list_picker_title">Choose a list</string>
+    <string name="widget_list_picker_empty">Create a list in T\'Day first, then add this widget again</string>
+    <string name="widget_list_picker_section_todo">Scheduled lists</string>
+    <string name="widget_list_picker_section_floater">Floater lists</string>
+    <string name="widget_list_picker_shared_label">Shared</string>
+    <string name="widget_list_picker_selected">Currently selected</string>
 
     <!-- Settings: updates -->
     <string name="settings_check_updates">Check for updates</string>
