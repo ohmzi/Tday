@@ -431,16 +431,17 @@ struct RootFeedHeroHeader: View {
     @ViewBuilder
     private var ellipsisControl: some View {
         if let onOpenCompleted {
+            // Text only, no `Label(_:systemImage:)` — this app's icons are
+            // one shared Lucide source across platforms (see `docs/ICONS.md`)
+            // and neither "Completed" nor "Settings" has a glyph in it yet;
+            // reaching for an SF Symbol here would be exactly the per-platform
+            // icon drift that rule exists to prevent.
             RootFeedHeaderCircleMenu(icon: "NavEllipsis") {
-                Button {
+                Button(L("Completed")) {
                     onOpenCompleted()
-                } label: {
-                    Label(L("Completed"), systemImage: "checkmark.circle")
                 }
-                Button {
+                Button(L("Settings")) {
                     onOpenSettings()
-                } label: {
-                    Label(L("Settings"), systemImage: "gearshape")
                 }
             }
         } else {
