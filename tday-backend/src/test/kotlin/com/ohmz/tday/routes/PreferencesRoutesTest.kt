@@ -27,6 +27,8 @@ import org.koin.dsl.module
 import org.koin.ktor.plugin.Koin
 import kotlin.test.assertEquals
 
+private const val PREFERENCES_PATH = "/api/preferences"
+
 class PreferencesRoutesTest {
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -38,7 +40,7 @@ class PreferencesRoutesTest {
             configurePreferencesRoutesTestApp(preferencesService)
         }
 
-        val response = client.patch("/api/preferences") {
+        val response = client.patch(PREFERENCES_PATH) {
             contentType(ContentType.Application.Json)
             setBody("""{"groupBy":"missing"}""")
         }
@@ -58,7 +60,7 @@ class PreferencesRoutesTest {
             configurePreferencesRoutesTestApp(preferencesService)
         }
 
-        val response = client.patch("/api/preferences") {
+        val response = client.patch(PREFERENCES_PATH) {
             contentType(ContentType.Application.Json)
             setBody("""{"defaultHomeScreen":"missing"}""")
         }
@@ -78,7 +80,7 @@ class PreferencesRoutesTest {
             configurePreferencesRoutesTestApp(preferencesService)
         }
 
-        val response = client.patch("/api/preferences") {
+        val response = client.patch(PREFERENCES_PATH) {
             contentType(ContentType.Application.Json)
             setBody("""{"defaultHomeScreen":"floater"}""")
         }
