@@ -322,6 +322,43 @@ a wrong "not recurring" costs the series.
 No confirmation: complete is reversible from the undo toast and, after that, from the
 Completed history screen.
 
+#### Amendment — step 2 is wrong on mobile, and iOS no longer follows it
+
+"In-memory only" was written for web, where the query cache **is** the store and a
+refetch is the only thing that can contradict it. On mobile it means the completion
+exists nowhere but a ViewModel field for the whole 8.5 s window, and that lost real
+user work in production:
+
+- **Any** cache write in the window re-hydrates the list from a cache that still says
+  "not completed", so the rows come straight back. A single sync posts three such
+  writes. No crash is required.
+- A process death in the window drops the batch with **no trace**: no cache row, no
+  history row, no queued mutation, nothing for `applyPendingMutations` to replay and
+  nothing for `buildLocalWinsMutations` to regenerate. The user is told N tasks were
+  completed and none of them were.
+
+Bulk **delete** never had this problem, because it stages through the cache
+(`stageDeleteTodos` → `undoStagedTodo`) and only the *server* call waits for the window.
+
+**iOS now does the same for complete**: `TodoRepository.stageCompleteTodos(_:)` writes
+the completed row, the local history row and the per-item complete mutation in one cache
+write at the moment of the tap; `commitStagedCompletion()` only pushes the queue;
+`undoStagedCompletion(_:)` restores the exact previous records. Undo stays lossless in
+the normal case — the queued mutation is simply removed before anything is sent. In the
+one case where an unrelated sync replayed it inside the window, undo queues the matching
+`UNCOMPLETE_TODO` rather than silently diverging from the server.
+
+The invariant that replaces step 2 on mobile is: **a completion the user has been told
+about must be recoverable from what is on disk.** Where "in-memory only" and that
+invariant disagree, the invariant wins.
+
+**Android and web still follow the old step 2** (`TodoListViewModel.completeSelected` +
+`UndoableDeleteCoordinator`; `showTodoCompletedToast`). Android has the identical hole —
+`completeSelected` filters `_uiState.items` and defers everything to the coordinator, and
+`TodoListViewModel` re-hydrates on every cache-version bump. Web's exposure is narrower
+(no crash-loss case, since there is no offline queue to lose, but a refetch inside the
+5 s window still resurrects the rows). Bringing them across is a separate change.
+
 ### 4.3 Delete — the guarded one
 
 Two layers, in this order, both mandatory:
@@ -419,6 +456,11 @@ exists.
 
 - **Never abort the batch on the first failure.** Web: `Promise.allSettled`. Mobile:
   `runCatching` per item inside the loop, collecting outcomes.
+- **A 429 is the one exception.** It is not a verdict on one item; the remaining
+  requests would draw the same answer and only push the window further out. iOS's
+  replay (`SyncManager.applyPendingMutations`) now stops at the first one and leaves
+  the rest queued for the next sync, the same treatment offline already gets. This was
+  observed in production twice (2026-08-26 and 2026-08-27) on the sync refetch GETs.
 - **Bounded concurrency ≤ 4** on web. Mobile may run sequentially — the pending-mutation
   queue is serial anyway.
 - **One local cache write, not N, where the platform makes that cheap.** On Android

@@ -631,6 +631,16 @@ final class SyncManager {
                     remaining.append(contentsOf: orderedMutations[index...])
                     break
                 }
+                // Same treatment as offline: the rest of the queue would draw the
+                // same 429, and hammering it keeps the window from ever draining.
+                if isRateLimitedError(error) {
+                    TdayTelemetry.addBreadcrumb(
+                        "sync.replay_rate_limited",
+                        data: ["remainingMutationCount": orderedMutations.count - index]
+                    )
+                    remaining.append(contentsOf: orderedMutations[index...])
+                    break
+                }
                 if !isLikelyUnrecoverableMutationError(error) {
                     remaining.append(mutation)
                 }

@@ -783,9 +783,14 @@ final class AppViewModel {
         navigate(to: route)
     }
 
+    // `[weak self]` is load-bearing: `self` owns the task, so a strong capture is a
+    // retain cycle that keeps this observer — and its full cache re-read on every
+    // cache write — alive for the life of the process. See
+    // `TodoListViewModel.observeCacheChanges()`.
     private func observeCacheChanges() {
-        cacheObservationTask = Task {
+        cacheObservationTask = Task { [weak self] in
             for await _ in NotificationCenter.default.notifications(named: .offlineCacheDidChange) {
+                guard let self else { return }
                 await MainActor.run {
                     self.refreshSyncStatusFromCache()
                 }

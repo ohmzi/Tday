@@ -11,6 +11,10 @@ struct TodoListCacheSnapshot {
     let lists: [ListSummary]
     let items: [TodoItem]
     let aiSummaryEnabled: Bool
+    /// Carried on the snapshot so hydrating a list costs ONE `loadOfflineState()`.
+    /// It used to be a second, separate full-cache read per hydrate, and every
+    /// cache write wakes every live list view model.
+    let completedTodayCount: Int
 }
 
 /// Snapshot of everything `stageDeleteTodo(_:)` pruned from the local cache,
@@ -25,6 +29,336 @@ struct StagedTodoDeletion {
 struct StagedFloaterDeletion {
     let floaters: [CachedFloaterRecord]
     let pendingMutations: [PendingMutationRecord]
+}
+
+/// Snapshot of everything `stageCompleteTodos(_:)` wrote to the local cache, so
+/// `undoStagedCompletion(_:)` can put the pre-completion state back.
+///
+/// Completing used to be staged in the view model's `items` array and nowhere
+/// else — no cache row, no queued mutation, nothing on disk — for the whole 8.5 s
+/// undo window. Any cache write inside that window (a sync posts three) made the
+/// list re-hydrate from a cache that still said "not completed" and the rows came
+/// straight back; a process death inside it lost the batch with no trace at all.
+/// Staging through the cache the way delete already does closes both.
+struct StagedTodoCompletion {
+    /// The todo rows exactly as they were before completion.
+    let previousTodos: [CachedTodoRecord]
+    /// Ids of the local completed-history rows the staging inserted.
+    let completedRecordIds: [String]
+    /// The complete mutations the staging queued.
+    let mutations: [PendingMutationRecord]
+
+    static let empty = StagedTodoCompletion(previousTodos: [], completedRecordIds: [], mutations: [])
+
+    var isEmpty: Bool {
+        previousTodos.isEmpty && completedRecordIds.isEmpty && mutations.isEmpty
+    }
+}
+
+/// Floater sibling of `StagedTodoCompletion`.
+struct StagedFloaterCompletion {
+    let previousFloaters: [CachedFloaterRecord]
+    let completedRecordIds: [String]
+    let mutations: [PendingMutationRecord]
+
+    static let empty = StagedFloaterCompletion(previousFloaters: [], completedRecordIds: [], mutations: [])
+
+    var isEmpty: Bool {
+        previousFloaters.isEmpty && completedRecordIds.isEmpty && mutations.isEmpty
+    }
+}
+
+// MARK: - Completion transforms
+//
+// Pure `state -> state` halves of completing and of staging a completion, at file
+// scope so the single-task path, the bulk path and the tests all run the identical
+// state change, and so the durability contract they encode can be tested without
+// an app container.
+
+func applyingCompletion(of todo: TodoItem, to state: OfflineSyncState, now: Int64) -> OfflineSyncState {
+    let instanceDateEpochMs = todo.instanceDateEpochMilliseconds
+    let mutationKind: MutationKind = todo.isRecurring && instanceDateEpochMs != nil ? .completeTodoInstance : .completeTodo
+    var nextState = state
+    nextState.todos = state.todos.map { current in
+        guard current.canonicalId == todo.canonicalId else {
+            return current
+        }
+        if todo.isRecurring && instanceDateEpochMs != nil && current.instanceDateEpochMs != instanceDateEpochMs {
+            return current
+        }
+        return withCompletion(current, completed: true, updatedAtEpochMs: now)
+    }
+    nextState.completedItems.insert(
+        CachedCompletedRecord(
+            id: LOCAL_COMPLETED_PREFIX + UUID().uuidString.lowercased(),
+            originalTodoId: todo.canonicalId,
+            title: todo.title,
+            description: todo.description,
+            priority: todo.priority,
+            dueEpochMs: todo.due?.epochMilliseconds,
+            completedAtEpochMs: now,
+            rrule: todo.rrule,
+            instanceDateEpochMs: todo.instanceDateEpochMilliseconds,
+            listId: todo.listId,
+            listName: state.lists.first(where: { $0.id == todo.listId })?.name,
+            listColor: state.lists.first(where: { $0.id == todo.listId })?.color
+        ),
+        at: 0
+    )
+    nextState.pendingMutations.append(
+        PendingMutationRecord(
+            mutationId: UUID().uuidString,
+            kind: mutationKind,
+            targetId: todo.canonicalId,
+            timestampEpochMs: now,
+            title: nil,
+            description: nil,
+            priority: nil,
+            dueEpochMs: nil,
+            rrule: nil,
+            listId: nil,
+            pinned: nil,
+            completed: true,
+            instanceDateEpochMs: instanceDateEpochMs,
+            name: nil,
+            color: nil,
+            iconKey: nil
+        )
+    )
+    return nextState
+}
+
+func applyingFloaterCompletion(of floater: TodoItem, to state: OfflineSyncState, now: Int64) -> OfflineSyncState {
+    var nextState = state
+    nextState.floaters = state.floaters.map { current in
+        guard current.canonicalId == floater.canonicalId else {
+            return current
+        }
+        return CachedFloaterRecord(
+            id: current.id,
+            canonicalId: current.canonicalId,
+            title: current.title,
+            description: current.description,
+            priority: current.priority,
+            pinned: current.pinned,
+            completed: true,
+            listId: current.listId,
+            updatedAtEpochMs: now
+        )
+    }
+    nextState.completedFloaters.insert(
+        CachedCompletedFloaterRecord(
+            id: LOCAL_COMPLETED_FLOATER_PREFIX + UUID().uuidString.lowercased(),
+            originalFloaterId: floater.canonicalId,
+            title: floater.title,
+            description: floater.description,
+            priority: floater.priority,
+            completedAtEpochMs: now,
+            listId: floater.listId,
+            listName: state.floaterLists.first(where: { $0.id == floater.listId })?.name,
+            listColor: state.floaterLists.first(where: { $0.id == floater.listId })?.color
+        ),
+        at: 0
+    )
+    nextState.pendingMutations.append(
+        PendingMutationRecord(
+            mutationId: UUID().uuidString,
+            kind: .completeFloater,
+            targetId: floater.canonicalId,
+            timestampEpochMs: now,
+            title: nil,
+            description: nil,
+            priority: nil,
+            dueEpochMs: nil,
+            rrule: nil,
+            listId: nil,
+            pinned: nil,
+            completed: true,
+            instanceDateEpochMs: nil,
+            name: nil,
+            color: nil,
+            iconKey: nil
+        )
+    )
+    return nextState
+}
+
+func withCompletion(_ record: CachedTodoRecord, completed: Bool, updatedAtEpochMs: Int64) -> CachedTodoRecord {
+    CachedTodoRecord(
+        id: record.id,
+        canonicalId: record.canonicalId,
+        title: record.title,
+        description: record.description,
+        priority: record.priority,
+        dueEpochMs: record.dueEpochMs,
+        rrule: record.rrule,
+        instanceDateEpochMs: record.instanceDateEpochMs,
+        pinned: record.pinned,
+        completed: completed,
+        listId: record.listId,
+        updatedAtEpochMs: updatedAtEpochMs
+    )
+}
+
+/// Diffs the cache write `stageCompleteTodos(_:)` just made, so undo can reverse
+/// exactly that write and nothing else. Diffing keeps the staging path on the
+/// same `applyingCompletion` transform the single-task and replay paths use —
+/// a second, staging-only copy of it is precisely how the two would drift.
+func stagedTodoCompletionSnapshot(before: OfflineSyncState, after: OfflineSyncState) -> StagedTodoCompletion {
+    var previousById: [String: CachedTodoRecord] = [:]
+    for record in before.todos {
+        previousById[record.id] = record
+    }
+    let previousTodos = after.todos.compactMap { updated -> CachedTodoRecord? in
+        guard let previous = previousById[updated.id], previous.completed != updated.completed else {
+            return nil
+        }
+        return previous
+    }
+    let knownCompletedIds = Set(before.completedItems.map(\.id))
+    let knownMutationIds = Set(before.pendingMutations.map(\.mutationId))
+    return StagedTodoCompletion(
+        previousTodos: previousTodos,
+        completedRecordIds: after.completedItems.map(\.id).filter { !knownCompletedIds.contains($0) },
+        mutations: after.pendingMutations.filter { !knownMutationIds.contains($0.mutationId) }
+    )
+}
+
+/// Floater sibling of `stagedTodoCompletionSnapshot(before:after:)`.
+func stagedFloaterCompletionSnapshot(before: OfflineSyncState, after: OfflineSyncState) -> StagedFloaterCompletion {
+    var previousById: [String: CachedFloaterRecord] = [:]
+    for record in before.floaters {
+        previousById[record.id] = record
+    }
+    let previousFloaters = after.floaters.compactMap { updated -> CachedFloaterRecord? in
+        guard let previous = previousById[updated.id], previous.completed != updated.completed else {
+            return nil
+        }
+        return previous
+    }
+    let knownCompletedIds = Set(before.completedFloaters.map(\.id))
+    let knownMutationIds = Set(before.pendingMutations.map(\.mutationId))
+    return StagedFloaterCompletion(
+        previousFloaters: previousFloaters,
+        completedRecordIds: after.completedFloaters.map(\.id).filter { !knownCompletedIds.contains($0) },
+        mutations: after.pendingMutations.filter { !knownMutationIds.contains($0.mutationId) }
+    )
+}
+
+/// Reverses a staged completion: the todo rows go back exactly as they were, the
+/// local history rows the staging inserted are dropped, and its queued mutations
+/// are pulled out of the queue.
+///
+/// Idempotent about rows a sync removed while they were completed — those are
+/// re-appended rather than lost.
+///
+/// The one case that cannot simply be un-queued is a staged mutation that has
+/// already left the queue: an unrelated sync landing inside the undo window
+/// replayed it, so the server really did complete that task and undo has to send
+/// the reversal. `.uncompleteTodo` is the queue's existing kind for that, and
+/// having it queued also keeps the row local-wins-protected in the next merge, so
+/// the task does not blink back to completed before the reversal is delivered.
+func restoringStagedTodoCompletion(
+    _ staged: StagedTodoCompletion,
+    in state: OfflineSyncState,
+    now: Int64
+) -> OfflineSyncState {
+    guard !staged.isEmpty else { return state }
+    var nextState = state
+    var previousById: [String: CachedTodoRecord] = [:]
+    for record in staged.previousTodos {
+        previousById[record.id] = record
+    }
+    nextState.todos = state.todos.map { previousById[$0.id] ?? $0 }
+    let presentIds = Set(nextState.todos.map(\.id))
+    for record in staged.previousTodos where !presentIds.contains(record.id) {
+        nextState.todos.append(record)
+    }
+
+    let stagedCompletedIds = Set(staged.completedRecordIds)
+    nextState.completedItems.removeAll { stagedCompletedIds.contains($0.id) }
+
+    let stagedMutationIds = Set(staged.mutations.map(\.mutationId))
+    let stillQueued = Set(state.pendingMutations.map(\.mutationId)).intersection(stagedMutationIds)
+    nextState.pendingMutations.removeAll { stagedMutationIds.contains($0.mutationId) }
+    for mutation in staged.mutations where !stillQueued.contains(mutation.mutationId) {
+        guard let targetId = mutation.targetId, !targetId.hasPrefix(LOCAL_TODO_PREFIX) else {
+            continue
+        }
+        nextState.pendingMutations.append(
+            PendingMutationRecord(
+                mutationId: UUID().uuidString,
+                kind: .uncompleteTodo,
+                targetId: targetId,
+                timestampEpochMs: now,
+                title: nil,
+                description: nil,
+                priority: nil,
+                dueEpochMs: nil,
+                rrule: nil,
+                listId: nil,
+                pinned: nil,
+                completed: false,
+                instanceDateEpochMs: mutation.instanceDateEpochMs,
+                name: nil,
+                color: nil,
+                iconKey: nil
+            )
+        )
+    }
+    return nextState
+}
+
+/// Floater sibling of `restoringStagedTodoCompletion(_:in:now:)`.
+func restoringStagedFloaterCompletion(
+    _ staged: StagedFloaterCompletion,
+    in state: OfflineSyncState,
+    now: Int64
+) -> OfflineSyncState {
+    guard !staged.isEmpty else { return state }
+    var nextState = state
+    var previousById: [String: CachedFloaterRecord] = [:]
+    for record in staged.previousFloaters {
+        previousById[record.id] = record
+    }
+    nextState.floaters = state.floaters.map { previousById[$0.id] ?? $0 }
+    let presentIds = Set(nextState.floaters.map(\.id))
+    for record in staged.previousFloaters where !presentIds.contains(record.id) {
+        nextState.floaters.append(record)
+    }
+
+    let stagedCompletedIds = Set(staged.completedRecordIds)
+    nextState.completedFloaters.removeAll { stagedCompletedIds.contains($0.id) }
+
+    let stagedMutationIds = Set(staged.mutations.map(\.mutationId))
+    let stillQueued = Set(state.pendingMutations.map(\.mutationId)).intersection(stagedMutationIds)
+    nextState.pendingMutations.removeAll { stagedMutationIds.contains($0.mutationId) }
+    for mutation in staged.mutations where !stillQueued.contains(mutation.mutationId) {
+        guard let targetId = mutation.targetId, !targetId.hasPrefix(LOCAL_FLOATER_PREFIX) else {
+            continue
+        }
+        nextState.pendingMutations.append(
+            PendingMutationRecord(
+                mutationId: UUID().uuidString,
+                kind: .uncompleteFloater,
+                targetId: targetId,
+                timestampEpochMs: now,
+                title: nil,
+                description: nil,
+                priority: nil,
+                dueEpochMs: nil,
+                rrule: nil,
+                listId: nil,
+                pinned: nil,
+                completed: false,
+                instanceDateEpochMs: nil,
+                name: nil,
+                color: nil,
+                iconKey: nil
+            )
+        )
+    }
+    return nextState
 }
 
 @MainActor
@@ -75,7 +409,8 @@ final class TodoRepository {
         TodoListCacheSnapshot(
             lists: buildListSummaries(from: state, mode: mode),
             items: buildTodos(from: state, mode: mode, listId: listId),
-            aiSummaryEnabled: syncManager.isLocalMode ? false : state.aiSummaryEnabled
+            aiSummaryEnabled: syncManager.isLocalMode ? false : state.aiSummaryEnabled,
+            completedTodayCount: completedTodayCount(from: state)
         )
     }
 
@@ -335,9 +670,14 @@ final class TodoRepository {
     }
 
     /// Completed-today count from the local cache, for the Day Done state.
-    func completedTodayCount() -> Int {
+    ///
+    /// Takes the state rather than loading it: `makeTodoListCacheSnapshot` already
+    /// holds one, and hydrating a list used to read the whole cache a second time
+    /// just to reach this filter — on every cache write, in every live list view
+    /// model.
+    func completedTodayCount(from state: OfflineSyncState) -> Int {
         let calendar = Calendar.current
-        return cacheManager.loadOfflineState().completedItems.filter { record in
+        return state.completedItems.filter { record in
             calendar.isDateInToday(Date(epochMilliseconds: record.completedAtEpochMs))
         }.count
     }
@@ -584,19 +924,100 @@ final class TodoRepository {
         try await syncAfterMutation()
     }
 
-    func completeTodo(_ todo: TodoItem) async throws {
-        let now = Date().epochMilliseconds
-        _ = try await cacheManager.updateOfflineState { state in
-            self.applyingCompletion(of: todo, to: state, now: now)
+    /// First half of a delayed-commit complete, the mirror of
+    /// `stageDeleteTodo(_:)`: the completion is written to the local cache and
+    /// queued as a pending mutation *now*, in one write, and only the push to the
+    /// server waits for the undo window. Restore with `undoStagedCompletion(_:)`
+    /// or push with `commitStagedCompletion()`.
+    ///
+    /// Staging durably is the whole point. The previous shape held the completion
+    /// in the view model's `items` array for 8.5 s and wrote nothing, so any cache
+    /// change in that window re-hydrated the rows back onto the screen and any
+    /// process death dropped the batch entirely, with nothing left to replay.
+    func stageCompleteTodo(_ todo: TodoItem) -> StagedTodoCompletion {
+        stageCompleteTodos([todo])
+    }
+
+    /// Bulk sibling of `stageCompleteTodo(_:)`: the whole selection folds into ONE
+    /// cache write and one combined snapshot, so a batch gets one undo toast
+    /// rather than N toasts racing N commit timers.
+    func stageCompleteTodos(_ todos: [TodoItem]) -> StagedTodoCompletion {
+        guard !todos.isEmpty else {
+            return .empty
         }
+        let now = Date().epochMilliseconds
+        var staged = StagedTodoCompletion.empty
+        cacheManager.updateOfflineState { state in
+            var nextState = state
+            for todo in todos {
+                nextState = applyingCompletion(of: todo, to: nextState, now: now)
+            }
+            staged = stagedTodoCompletionSnapshot(before: state, after: nextState)
+            return nextState
+        }
+        return staged
+    }
+
+    /// Restores the local state captured by `stageCompleteTodos(_:)`.
+    ///
+    /// A staged mutation that is no longer in the queue was already replayed to
+    /// the server by an unrelated sync landing inside the undo window, so undo
+    /// queues the matching uncomplete rather than pretending nothing was sent.
+    func undoStagedCompletion(_ staged: StagedTodoCompletion) {
+        guard !staged.isEmpty else { return }
+        let now = Date().epochMilliseconds
+        cacheManager.updateOfflineState { state in
+            restoringStagedTodoCompletion(staged, in: state, now: now)
+        }
+    }
+
+    /// Floater sibling of `stageCompleteTodo(_:)`.
+    func stageCompleteFloater(_ floater: TodoItem) -> StagedFloaterCompletion {
+        stageCompleteFloaters([floater])
+    }
+
+    /// Floater sibling of `stageCompleteTodos(_:)`.
+    func stageCompleteFloaters(_ floaters: [TodoItem]) -> StagedFloaterCompletion {
+        guard !floaters.isEmpty else {
+            return .empty
+        }
+        let now = Date().epochMilliseconds
+        var staged = StagedFloaterCompletion.empty
+        cacheManager.updateOfflineState { state in
+            var nextState = state
+            for floater in floaters {
+                nextState = applyingFloaterCompletion(of: floater, to: nextState, now: now)
+            }
+            staged = stagedFloaterCompletionSnapshot(before: state, after: nextState)
+            return nextState
+        }
+        return staged
+    }
+
+    /// Floater sibling of `undoStagedCompletion(_:)`.
+    func undoStagedFloaterCompletion(_ staged: StagedFloaterCompletion) {
+        guard !staged.isEmpty else { return }
+        let now = Date().epochMilliseconds
+        cacheManager.updateOfflineState { state in
+            restoringStagedFloaterCompletion(staged, in: state, now: now)
+        }
+    }
+
+    /// Commit half of a staged complete. The cache row, the history row and the
+    /// pending mutation were all written at stage time, so all that is left is to
+    /// push the queue. If this never runs — the app was killed during the undo
+    /// window — the next sync of any kind drains the same queue.
+    func commitStagedCompletion() async throws {
+        try await syncAfterMutation()
+    }
+
+    func completeTodo(_ todo: TodoItem) async throws {
+        _ = stageCompleteTodo(todo)
         try await syncAfterMutation()
     }
 
     func completeFloater(_ floater: TodoItem) async throws {
-        let now = Date().epochMilliseconds
-        _ = try await cacheManager.updateOfflineState { state in
-            self.applyingFloaterCompletion(of: floater, to: state, now: now)
-        }
+        _ = stageCompleteFloater(floater)
         try await syncAfterMutation()
     }
 
@@ -816,27 +1237,13 @@ final class TodoRepository {
 
     func completeTodos(_ todos: [TodoItem]) async throws {
         guard !todos.isEmpty else { return }
-        let now = Date().epochMilliseconds
-        _ = try await cacheManager.updateOfflineState { state in
-            var nextState = state
-            for todo in todos {
-                nextState = self.applyingCompletion(of: todo, to: nextState, now: now)
-            }
-            return nextState
-        }
+        _ = stageCompleteTodos(todos)
         try await syncAfterMutation()
     }
 
     func completeFloaters(_ floaters: [TodoItem]) async throws {
         guard !floaters.isEmpty else { return }
-        let now = Date().epochMilliseconds
-        _ = try await cacheManager.updateOfflineState { state in
-            var nextState = state
-            for floater in floaters {
-                nextState = self.applyingFloaterCompletion(of: floater, to: nextState, now: now)
-            }
-            return nextState
-        }
+        _ = stageCompleteFloaters(floaters)
         try await syncAfterMutation()
     }
 
@@ -943,114 +1350,6 @@ final class TodoRepository {
         if case let .failure(error) = result, isLikelyUnrecoverableMutationError(error) {
             throw error
         }
-    }
-
-    private func applyingCompletion(of todo: TodoItem, to state: OfflineSyncState, now: Int64) -> OfflineSyncState {
-        let instanceDateEpochMs = todo.instanceDateEpochMilliseconds
-        let mutationKind: MutationKind = todo.isRecurring && instanceDateEpochMs != nil ? .completeTodoInstance : .completeTodo
-        var nextState = state
-        nextState.todos = state.todos.map { current in
-            guard current.canonicalId == todo.canonicalId else {
-                return current
-            }
-            if todo.isRecurring && instanceDateEpochMs != nil && current.instanceDateEpochMs != instanceDateEpochMs {
-                return current
-            }
-            return self.withCompletion(current, completed: true, updatedAtEpochMs: now)
-        }
-        nextState.completedItems.insert(
-            CachedCompletedRecord(
-                id: LOCAL_COMPLETED_PREFIX + UUID().uuidString.lowercased(),
-                originalTodoId: todo.canonicalId,
-                title: todo.title,
-                description: todo.description,
-                priority: todo.priority,
-                dueEpochMs: todo.due?.epochMilliseconds,
-                completedAtEpochMs: now,
-                rrule: todo.rrule,
-                instanceDateEpochMs: todo.instanceDateEpochMilliseconds,
-                listId: todo.listId,
-                listName: state.lists.first(where: { $0.id == todo.listId })?.name,
-                listColor: state.lists.first(where: { $0.id == todo.listId })?.color
-            ),
-            at: 0
-        )
-        nextState.pendingMutations.append(
-            PendingMutationRecord(
-                mutationId: UUID().uuidString,
-                kind: mutationKind,
-                targetId: todo.canonicalId,
-                timestampEpochMs: now,
-                title: nil,
-                description: nil,
-                priority: nil,
-                dueEpochMs: nil,
-                rrule: nil,
-                listId: nil,
-                pinned: nil,
-                completed: true,
-                instanceDateEpochMs: instanceDateEpochMs,
-                name: nil,
-                color: nil,
-                iconKey: nil
-            )
-        )
-        return nextState
-    }
-
-    private func applyingFloaterCompletion(of floater: TodoItem, to state: OfflineSyncState, now: Int64) -> OfflineSyncState {
-        var nextState = state
-        nextState.floaters = state.floaters.map { current in
-            guard current.canonicalId == floater.canonicalId else {
-                return current
-            }
-            return CachedFloaterRecord(
-                id: current.id,
-                canonicalId: current.canonicalId,
-                title: current.title,
-                description: current.description,
-                priority: current.priority,
-                pinned: current.pinned,
-                completed: true,
-                listId: current.listId,
-                updatedAtEpochMs: now
-            )
-        }
-        nextState.completedFloaters.insert(
-            CachedCompletedFloaterRecord(
-                id: LOCAL_COMPLETED_FLOATER_PREFIX + UUID().uuidString.lowercased(),
-                originalFloaterId: floater.canonicalId,
-                title: floater.title,
-                description: floater.description,
-                priority: floater.priority,
-                completedAtEpochMs: now,
-                listId: floater.listId,
-                listName: state.floaterLists.first(where: { $0.id == floater.listId })?.name,
-                listColor: state.floaterLists.first(where: { $0.id == floater.listId })?.color
-            ),
-            at: 0
-        )
-        nextState.pendingMutations.append(
-            PendingMutationRecord(
-                mutationId: UUID().uuidString,
-                kind: .completeFloater,
-                targetId: floater.canonicalId,
-                timestampEpochMs: now,
-                title: nil,
-                description: nil,
-                priority: nil,
-                dueEpochMs: nil,
-                rrule: nil,
-                listId: nil,
-                pinned: nil,
-                completed: true,
-                instanceDateEpochMs: nil,
-                name: nil,
-                color: nil,
-                iconKey: nil
-            )
-        )
-        return nextState
     }
 
     private func applyingDeletion(of todo: TodoItem, to state: OfflineSyncState, now: Int64) -> OfflineSyncState {
@@ -1309,23 +1608,6 @@ final class TodoRepository {
             )
         )
         return nextState
-    }
-
-    private func withCompletion(_ record: CachedTodoRecord, completed: Bool, updatedAtEpochMs: Int64) -> CachedTodoRecord {
-        CachedTodoRecord(
-            id: record.id,
-            canonicalId: record.canonicalId,
-            title: record.title,
-            description: record.description,
-            priority: record.priority,
-            dueEpochMs: record.dueEpochMs,
-            rrule: record.rrule,
-            instanceDateEpochMs: record.instanceDateEpochMs,
-            pinned: record.pinned,
-            completed: completed,
-            listId: record.listId,
-            updatedAtEpochMs: updatedAtEpochMs
-        )
     }
 
     private func updateSimpleTodoMutation(_ todo: TodoItem, kind: MutationKind, pinned: Bool?, priority: String?) async throws {

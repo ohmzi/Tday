@@ -5,16 +5,46 @@ extension Notification.Name {
     static let offlineCacheDidChange = Notification.Name("tday.offline-cache.did-change")
 }
 
+/// Serialises sync so two callers can never interleave a load / transform / save.
+///
+/// This used to be `while locked { await Task.yield() }`. A yield loop does not
+/// suspend: the waiter stays runnable and keeps a cooperative-pool thread hot for
+/// as long as the lock is held — and during a bulk commit it is held across the
+/// whole sequential replay of up to 100 mutations, i.e. tens of seconds. With the
+/// pool sized to the core count and `fetchRemoteSnapshot`'s seven concurrent
+/// requests already in flight, spinners were competing with the very work they
+/// were waiting on. Waiters now park on a continuation and cost nothing while
+/// queued; the lock is handed straight to the next one in FIFO order.
+///
+/// Deliberately not cancellable, which matches the spin it replaces: a cancelled
+/// waiter still takes its turn rather than abandoning a half-written cache.
 actor AsyncLock {
     private var locked = false
+    private var waiters: [CheckedContinuation<Void, Never>] = []
 
     func withLock<T>(_ operation: () async throws -> T) async rethrows -> T {
-        while locked {
-            await Task.yield()
-        }
-        locked = true
-        defer { locked = false }
+        await acquire()
+        defer { release() }
         return try await operation()
+    }
+
+    private func acquire() async {
+        guard locked else {
+            locked = true
+            return
+        }
+        await withCheckedContinuation { continuation in
+            waiters.append(continuation)
+        }
+    }
+
+    private func release() {
+        if waiters.isEmpty {
+            locked = false
+        } else {
+            // Ownership passes directly to the next waiter, so `locked` stays true.
+            waiters.removeFirst().resume()
+        }
     }
 }
 

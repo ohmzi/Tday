@@ -51,23 +51,26 @@ final class CalendarViewModel {
         }
     }
 
-    /// Delayed-commit complete (see TodoListViewModel.complete): hide the row
-    /// now, show an undoable toast, and only commit the real completion once the
-    /// undo window expires. Undo re-reads the untouched cache to restore it.
+    /// Delayed-commit complete (see TodoListViewModel.complete): stage the
+    /// completion into the local cache and the pending-mutation queue now, show an
+    /// undoable toast, and only push it to the server once the undo window
+    /// expires. Undo restores the staged records.
     func complete(_ todo: TodoItem) async {
         TdayTelemetry.addBreadcrumb("calendar.task.complete", data: calendarTelemetryData())
         let container = container
-        items.removeAll { $0.id == todo.id }
+        let staged = container.todoRepository.stageCompleteTodo(todo)
+        hydrateFromCache()
         container.undoableDeleteScheduler.schedule(
             message: L("Task completed"),
-            restore: { [weak self] in self?.hydrateFromCache() },
-            commit: { [weak self] in
+            restore: {
+                container.todoRepository.undoStagedCompletion(staged)
+            },
+            commit: {
                 do {
-                    try await container.completeTodo(todo)
+                    try await container.todoRepository.commitStagedCompletion()
                 } catch {
                     container.snackbarManager.show(userFacingMessage(for: error, fallback: "Could not complete task."), kind: .error)
                 }
-                self?.hydrateFromCache()
             }
         )
     }
@@ -150,9 +153,14 @@ final class CalendarViewModel {
         errorMessage = nil
     }
 
+    // `[weak self]` is load-bearing: `self` owns the task, so a strong capture is a
+    // retain cycle that keeps this observer — and its full cache re-read on every
+    // cache write — alive for the life of the process. See
+    // `TodoListViewModel.observeCacheChanges()`.
     private func observeCacheChanges() {
-        observationTask = Task {
+        observationTask = Task { [weak self] in
             for await _ in NotificationCenter.default.notifications(named: .offlineCacheDidChange) {
+                guard let self else { return }
                 await MainActor.run {
                     self.hydrateFromCache()
                 }

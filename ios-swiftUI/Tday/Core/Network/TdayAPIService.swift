@@ -107,6 +107,17 @@ func isBackendUnavailableError(_ error: Error) -> Bool {
     return (500 ... 599).contains(statusCode)
 }
 
+/// A 429 is not a verdict on one item — it is the server telling the whole
+/// fan-out to back off. The bulk-selection cap (100) sits under the default
+/// `API_RATE_LIMIT_MAX` of 180/60s, but a batch shares that budget with the sync
+/// snapshot fetches and anything else the account is doing, so the limit can and
+/// does trip mid-replay. Firing the remaining requests anyway can only push the
+/// window further out, so the replay stops at the first one and leaves the rest
+/// queued for the next sync.
+func isRateLimitedError(_ error: Error) -> Bool {
+    (error as? APIError)?.statusCode == 429
+}
+
 func isLikelyUnrecoverableMutationError(_ error: Error) -> Bool {
     guard let apiError = error as? APIError, let statusCode = apiError.statusCode else {
         return false
