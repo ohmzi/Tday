@@ -442,7 +442,8 @@
     "bulkUpdateFailed_one": "Не удалось обновить одну задачу",
     "bulkUpdateFailed_few": "Не удалось обновить {{count}} задачи",
     "bulkUpdateFailed_many": "Не удалось обновить {{count}} задач",
-    "bulkUpdateFailed_other": "Не удалось обновить {{count}} задачи"
+    "bulkUpdateFailed_other": "Не удалось обновить {{count}} задачи",
+    "floaterCompletedTile": "Выполнено"
   },
   "today": {
     "saveInstance": "Сохранить экземпляр",
@@ -500,7 +501,12 @@
   "completed": {
     "title": "История завершений",
     "empty": "Пока ничего не завершено",
-    "emptyBody": "Отметьте задачу выполненной — она появится здесь."
+    "emptyBody": "Отметьте задачу выполненной — она появится здесь.",
+    "tabTasks": "Задачи",
+    "floaterEmpty": "Пока нет завершённых плавающих задач",
+    "floaterEmptyBody": "Отметьте что-нибудь как выполненное во «Плавающих», и оно появится здесь.",
+    "listDeletedSuffix": "список удалён",
+    "floaterRestoredIntoRecreatedList": "Восстановлено — список «{{listName}}» воссоздан"
   },
   "modal": {
     "confirm": "Подтвердить",

@@ -442,7 +442,8 @@
     "bulkUpdateFailed_one": "Eine Aufgabe konnte nicht aktualisiert werden",
     "bulkUpdateFailed_few": "{{count}} Aufgaben konnten nicht aktualisiert werden",
     "bulkUpdateFailed_many": "{{count}} Aufgaben konnten nicht aktualisiert werden",
-    "bulkUpdateFailed_other": "{{count}} Aufgaben konnten nicht aktualisiert werden"
+    "bulkUpdateFailed_other": "{{count}} Aufgaben konnten nicht aktualisiert werden",
+    "floaterCompletedTile": "Erledigt"
   },
   "today": {
     "saveInstance": "Instanz speichern",
@@ -500,7 +501,12 @@
   "completed": {
     "title": "Verlauf der Erledigungen",
     "empty": "Noch nichts erledigt",
-    "emptyBody": "Hake etwas ab, dann landet es hier."
+    "emptyBody": "Hake etwas ab, dann landet es hier.",
+    "tabTasks": "Aufgaben",
+    "floaterEmpty": "Noch keine erledigten Floater",
+    "floaterEmptyBody": "Hake etwas in Floater ab und es landet hier.",
+    "listDeletedSuffix": "Liste gelöscht",
+    "floaterRestoredIntoRecreatedList": "Wiederhergestellt — „{{listName}}“ wurde neu angelegt"
   },
   "modal": {
     "confirm": "Bestätigen",

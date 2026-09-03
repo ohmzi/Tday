@@ -1,5 +1,9 @@
+import type { ReactNode } from "react";
+
 type ClickableToastAction = {
-  label: string;
+  /** Icon-based now — see use-undoable-delete.ts. Carries its own accessible
+   * name (an aria-labelled wrapper), so this button needs no separate label. */
+  label: ReactNode;
   onClick: () => void;
 };
 
@@ -42,8 +46,8 @@ export default function ClickableToast({
         <button
           type="button"
           onClick={action.onClick}
-          // Matches the plain-toast action and iOS: bare text on the snackbar accent,
-          // no filled pill.
+          // Matches the plain-toast action and iOS: bare (icon or text) on the
+          // snackbar accent, no filled pill.
           className="shrink-0 font-extrabold text-[hsl(var(--toast-action))] focus-visible:outline-none"
         >
           {action.label}
