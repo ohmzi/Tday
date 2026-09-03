@@ -144,7 +144,11 @@ enum TdayWidgetListKind: String, Codable {
     case todo
     case floater
 
-    var mode: TaskWidgetMode {
+    // fileprivate, not internal: TaskWidgetMode (below) is `private`, i.e. file-scoped, and a
+    // property can be no more visible than the types in its own signature. Every call site
+    // (TodayTasksProvider, FloaterTasksProvider, PerListWidgetContentLoader) lives in this same
+    // file, so fileprivate costs nothing here.
+    fileprivate var mode: TaskWidgetMode {
         switch self {
         case .todo: return .today
         case .floater: return .floater
