@@ -1,4 +1,5 @@
 import { useCallback } from "react";
+import { Undo2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
 
@@ -43,7 +44,19 @@ export function useUndoableDelete() {
         duration: 5000,
         onClick,
         action: {
-          label: t("undo"),
+          // Icon-based, not text — reverses AppSnackbar's app-wide "icons
+          // removed" decision for this one action, deliberately (see
+          // AGENTS.md / the toast component's own comment). `aria-label`
+          // lives on the wrapping span rather than the action prop itself:
+          // this same node is rendered by two different toast paths
+          // (ClickableToast's own <button>, and Sonner's built-in action
+          // button) and neither hands this code the outer element to label
+          // directly.
+          label: (
+            <span aria-label={t("undo")} className="inline-flex items-center">
+              <Undo2 aria-hidden="true" strokeWidth={2.4} className="h-4 w-4" />
+            </span>
+          ),
           onClick: () => {
             if (committed || undone) return;
             undone = true;

@@ -79,6 +79,27 @@ data class FloaterUncompleteRequest(
     val id: String,
 )
 
+/**
+ * Response of `PATCH /api/floater/uncomplete`.
+ *
+ * [listRecreated] tells a client whether [floater] landed back in the list it
+ * was originally completed from ([listRecreated] = false, [listID] unchanged
+ * from before) or in a fresh list Recreated because the original was deleted
+ * in the meantime ([listRecreated] = true, [listID] is a NEW id -- clients
+ * that cached the old list id should treat this as a different list, not the
+ * same one reappearing). [listID]/[listName]/[listColor] are null when the
+ * floater had no list either way.
+ */
+@Serializable
+data class FloaterUncompleteResponse(
+    val message: String? = null,
+    val floater: FloaterDto? = null,
+    val listRecreated: Boolean = false,
+    val listID: String? = null,
+    val listName: String? = null,
+    val listColor: String? = null,
+)
+
 @Serializable
 data class FloaterPrioritizeRequest(
     val id: String,
@@ -109,6 +130,15 @@ data class CompletedFloaterDto(
     val listID: String? = null,
     val listName: String? = null,
     val listColor: String? = null,
+    /**
+     * True when this item had a list at completion time (listName/listColor
+     * are populated) but that list has since been deleted (listID is null
+     * because of it, not because the floater was list-less to begin with).
+     * A client can use this to warn before undo ("this will recreate
+     * <listName>") instead of discovering it only from the uncomplete
+     * response's listRecreated flag after the fact.
+     */
+    val listDeleted: Boolean = false,
 )
 
 @Serializable

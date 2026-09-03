@@ -442,7 +442,8 @@
     "bulkUpdateFailed_one": "Satu tugasan tidak dapat dikemas kini",
     "bulkUpdateFailed_few": "{{count}} tugasan tidak dapat dikemas kini",
     "bulkUpdateFailed_many": "{{count}} tugasan tidak dapat dikemas kini",
-    "bulkUpdateFailed_other": "{{count}} tugasan tidak dapat dikemas kini"
+    "bulkUpdateFailed_other": "{{count}} tugasan tidak dapat dikemas kini",
+    "floaterCompletedTile": "Selesai"
   },
   "today": {
     "saveInstance": "Simpan kejadian",
@@ -500,7 +501,12 @@
   "completed": {
     "title": "Sejarah penyelesaian",
     "empty": "Belum ada yang selesai",
-    "emptyBody": "Tandakan sesuatu sebagai selesai dan ia akan muncul di sini."
+    "emptyBody": "Tandakan sesuatu sebagai selesai dan ia akan muncul di sini.",
+    "tabTasks": "Tugasan",
+    "floaterEmpty": "Belum ada floater yang selesai",
+    "floaterEmptyBody": "Tandakan sesuatu selesai dalam Floater dan ia akan muncul di sini.",
+    "listDeletedSuffix": "senarai dipadam",
+    "floaterRestoredIntoRecreatedList": "Dipulihkan — “{{listName}}” telah dicipta semula"
   },
   "modal": {
     "confirm": "Sahkan",
@@ -1099,6 +1105,13 @@
         "keywords": "widget, senarai, konfigurasi, edit widget, mengikut senarai, skrin utama, ios",
         "body": "Tekan lama widget T'Day dan pilih Edit Widget untuk menetapkan senarai yang dipaparkan — mana-mana senarai berjadual atau senarai floater anda. Senarai berjadual memaparkan waktu tarikh akhir dan menandakan tugasan tertunggak; senarai floater memaparkan senarai terbuka tanpa waktu tarikh akhir. Jika tidak ditetapkan, widget terus memaparkan suapan penuh Hari Ini atau Floater.",
         "tip": "Tambah beberapa widget, masing-masing menunjuk ke senarai berbeza, untuk melihat semuanya sekali gus pada skrin utama anda."
+      },
+      "list-widgets": {
+        "title": "Widget senarai",
+        "summary": "Letakkan mana-mana senarai pada skrin utama anda, bukan sekadar Hari Ini.",
+        "keywords": "widget, skrin utama, senarai, konfigurasi, pemilih, terapung, berjadual",
+        "body": "Tambah widget T'Day dan pemilih membolehkan anda memilih senarai yang dipaparkan — mana-mana senarai berjadual atau senarai terapung, bukan sekadar Hari Ini atau Terapung. Tambah widget itu semula untuk memaparkan senarai lain; setiap satu mengingati pilihannya sendiri.",
+        "tip": "Tekan lama widget yang telah diletakkan dan pilih Edit (atau tetapan widget pelancar anda) untuk menukarnya ke senarai lain kemudian."
       },
       "widget-quick-add": {
         "title": "Tambah pantas dari widget",

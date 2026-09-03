@@ -73,26 +73,48 @@ internal class WidgetSnapshotStore(
     private val directory: File
         get() = File(appContext.filesDir, "widget").apply { mkdirs() }
 
-    fun readToday(): WidgetSnapshot? = read(WidgetSnapshotKind.TODAY)
+    fun readToday(): WidgetSnapshot? = read(WidgetSnapshotKind.TODAY.fileName)
 
-    fun readFloater(): WidgetSnapshot? = read(WidgetSnapshotKind.FLOATER)
+    fun readFloater(): WidgetSnapshot? = read(WidgetSnapshotKind.FLOATER.fileName)
 
-    fun exists(kind: WidgetSnapshotKind): Boolean = fileFor(kind).exists()
+    fun exists(kind: WidgetSnapshotKind): Boolean = fileFor(kind.fileName).exists()
 
     /** Returns true when the encrypted file was actually written. */
-    fun write(kind: WidgetSnapshotKind, snapshot: WidgetSnapshot): Boolean {
+    fun write(kind: WidgetSnapshotKind, snapshot: WidgetSnapshot): Boolean = write(kind.fileName, snapshot)
+
+    /**
+     * Per-widget-instance variants for the list-scoped widget (widgets v3): unlike
+     * [WidgetSnapshotKind], one file per `appWidgetId` rather than one shared by every instance
+     * of a kind, since each placed instance can point at a different list. See
+     * [com.ohmz.tday.compose.feature.widget.WidgetListSelectionStore] for what picks the
+     * `appWidgetId` -> list mapping this reads and writes against.
+     */
+    fun readList(appWidgetId: Int): WidgetSnapshot? = read(listFileName(appWidgetId))
+
+    fun writeList(appWidgetId: Int, snapshot: WidgetSnapshot): Boolean = write(listFileName(appWidgetId), snapshot)
+
+    fun existsList(appWidgetId: Int): Boolean = fileFor(listFileName(appWidgetId)).exists()
+
+    /** Called from the widget's `onDeleted`: an instance removed from the host never comes back. */
+    fun deleteList(appWidgetId: Int) {
+        fileFor(listFileName(appWidgetId)).delete()
+    }
+
+    private fun listFileName(appWidgetId: Int) = "widget-list-snapshot-$appWidgetId.json"
+
+    private fun write(fileName: String, snapshot: WidgetSnapshot): Boolean {
         return runCatching {
             val bytes = json.encodeToString(WidgetSnapshot.serializer(), snapshot)
                 .toByteArray(Charsets.UTF_8)
-            val target = fileFor(kind)
+            val target = fileFor(fileName)
             target.delete()
             target.writeBytes(encrypt(bytes))
             true
         }.getOrElse { false }
     }
 
-    private fun read(kind: WidgetSnapshotKind): WidgetSnapshot? {
-        val target = fileFor(kind)
+    private fun read(fileName: String): WidgetSnapshot? {
+        val target = fileFor(fileName)
         if (!target.exists()) return null
         val bytes = runCatching { decrypt(target.readBytes()) }.getOrNull()
         if (bytes == null) {
@@ -109,7 +131,7 @@ internal class WidgetSnapshotStore(
         return snapshot
     }
 
-    private fun fileFor(kind: WidgetSnapshotKind) = File(directory, kind.fileName)
+    private fun fileFor(fileName: String) = File(directory, fileName)
 
     private fun encrypt(bytes: ByteArray): ByteArray {
         val cipher = Cipher.getInstance(TRANSFORMATION)

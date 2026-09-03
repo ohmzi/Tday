@@ -1,6 +1,7 @@
 package com.ohmz.tday.compose.core.ui
 
 import android.content.Context
+import androidx.annotation.DrawableRes
 import androidx.compose.runtime.staticCompositionLocalOf
 import com.ohmz.tday.compose.R
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -26,6 +27,11 @@ data class SnackbarEvent(
     val kind: SnackbarKind = SnackbarKind.ERROR,
     val actionLabel: String? = null,
     val onAction: (() -> Unit)? = null,
+    // Set only for the Undo action (see UndoableDeleteCoordinator): renders the
+    // toast's action as an icon button instead of a text button. A plain
+    // @DrawableRes id rather than an ImageVector because this event is built
+    // from non-Composable classes, which cannot call vectorResource().
+    @DrawableRes val actionIconRes: Int? = null,
 )
 
 @Singleton

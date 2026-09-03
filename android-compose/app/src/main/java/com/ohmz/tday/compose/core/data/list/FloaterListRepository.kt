@@ -286,13 +286,16 @@ class FloaterListRepository @Inject constructor(
     }
 
     /**
-     * Stage step of the delayed-commit floater-list delete: prunes the list, its
-     * floaters and its completed floaters from the local cache exactly like the
-     * prune-half of [deleteList], but records nothing for the server (no
-     * DELETE_FLOATER_LIST pending mutation), so nothing can sync out during the
-     * undo window. The removed records are captured so [undoStagedListDeletion]
-     * can restore them exactly; the commit step is the existing [deleteList],
-     * whose prune-half re-runs as a no-op on the already-pruned state.
+     * Stage step of the delayed-commit floater-list delete: prunes the list and
+     * its floaters from the local cache exactly like the prune-half of
+     * [deleteList], but records nothing for the server (no DELETE_FLOATER_LIST
+     * pending mutation), so nothing can sync out during the undo window.
+     * Completed floaters are deliberately left untouched — see [deleteList] for
+     * why — so [StagedFloaterListDeletion.removedCompletedFloaters] is always
+     * empty; the field stays so [undoStagedListDeletion] has nothing extra to
+     * special-case if that ever changes. The commit step is the existing
+     * [deleteList], whose prune-half re-runs as a no-op on the already-pruned
+     * state.
      */
     suspend fun stageDeleteList(listId: String): StagedFloaterListDeletion {
         val normalizedListId = listId.trim()
@@ -310,20 +313,14 @@ class FloaterListRepository @Inject constructor(
                     mutation.listId == normalizedListId ||
                     deletedFloaterIds.contains(mutation.targetId)
 
-            fun matchesCompleted(completed: CachedCompletedFloaterRecord): Boolean =
-                completed.listId == normalizedListId ||
-                    completed.originalFloaterId?.let(deletedFloaterIds::contains) == true
-
             staged = StagedFloaterListDeletion(
                 removedFloaterLists = state.floaterLists.filter { it.id == normalizedListId },
                 removedFloaters = state.floaters.filter { it.listId == normalizedListId },
-                removedCompletedFloaters = state.completedFloaters.filter(::matchesCompleted),
                 removedPendingMutations = state.pendingMutations.filter(::matchesMutation),
             )
             state.copy(
                 floaterLists = state.floaterLists.filterNot { it.id == normalizedListId },
                 floaters = state.floaters.filterNot { it.listId == normalizedListId },
-                completedFloaters = state.completedFloaters.filterNot(::matchesCompleted),
                 pendingMutations = state.pendingMutations.filterNot(::matchesMutation),
             )
         }
@@ -378,13 +375,17 @@ class FloaterListRepository @Inject constructor(
                         deletedFloaterIds.contains(mutation.targetId)
             }
 
+            // Completed floaters survive list deletion (see
+            // docs/design/completed-floaters-durability.md): only the live/pending
+            // Floaters rows for this list are pruned here, matching the backend's
+            // FloaterListService.deleteMany(), which now detaches CompletedFloaters
+            // rows (nulling their listID) instead of deleting them. The stale
+            // listId/listName left on the local record until the next sync is
+            // harmless — the Completed screen already renders from the
+            // denormalized listName/listColor snapshot, not a live list lookup.
             state.copy(
                 floaterLists = state.floaterLists.filterNot { it.id == normalizedListId },
                 floaters = state.floaters.filterNot { it.listId == normalizedListId },
-                completedFloaters = state.completedFloaters.filterNot { completed ->
-                    completed.listId == normalizedListId ||
-                            completed.originalFloaterId?.let(deletedFloaterIds::contains) == true
-                },
                 pendingMutations = if (isLocalOnly) prunedMutations else prunedMutations + pendingMutation,
             )
         }
@@ -468,8 +469,10 @@ class FloaterListRepository @Inject constructor(
 /**
  * Local cache records removed by [FloaterListRepository.stageDeleteList], retained
  * so an Undo within the delete-toast window can restore the exact pre-delete state
- * (the list plus its cascaded floaters/completed floaters). Nothing here has been
- * sent to the server.
+ * (the list plus its cascaded floaters). Nothing here has been sent to the server.
+ * [removedCompletedFloaters] is always empty — completed floaters are no longer
+ * pruned on list delete (they outlive the list; see [deleteList]) — but the field
+ * stays so [FloaterListRepository.undoStagedListDeletion] needs no special-casing.
  */
 data class StagedFloaterListDeletion(
     val removedFloaterLists: List<CachedFloaterListRecord> = emptyList(),

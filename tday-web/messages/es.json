@@ -442,7 +442,8 @@
     "bulkUpdateFailed_one": "No se pudo actualizar una tarea",
     "bulkUpdateFailed_few": "No se pudieron actualizar {{count}} tareas",
     "bulkUpdateFailed_many": "No se pudieron actualizar {{count}} tareas",
-    "bulkUpdateFailed_other": "No se pudieron actualizar {{count}} tareas"
+    "bulkUpdateFailed_other": "No se pudieron actualizar {{count}} tareas",
+    "floaterCompletedTile": "Completado"
   },
   "today": {
     "saveInstance": "Guardar instancia",
@@ -500,7 +501,12 @@
   "completed": {
     "title": "Historial de tareas completadas",
     "empty": "Aún no has completado nada",
-    "emptyBody": "Marca algo como hecho y aparecerá aquí."
+    "emptyBody": "Marca algo como hecho y aparecerá aquí.",
+    "tabTasks": "Tareas",
+    "floaterEmpty": "Aún no hay flotantes terminados",
+    "floaterEmptyBody": "Marca algo como hecho en Flotante y aparecerá aquí.",
+    "listDeletedSuffix": "lista eliminada",
+    "floaterRestoredIntoRecreatedList": "Restaurado: se recreó “{{listName}}”"
   },
   "modal": {
     "confirm": "Confirmar",
@@ -1099,6 +1105,13 @@
         "keywords": "widget, lista, configurar, editar widget, por lista, pantalla de inicio, ios",
         "body": "Mantén pulsado un widget de T'Day y elige Editar widget para decidir exactamente qué lista muestra: cualquiera de tus listas programadas o de flotantes. Una lista programada muestra horas de vencimiento y marca lo atrasado; una lista de flotantes muestra una lista abierta sin horas de vencimiento. Si la dejas sin elegir, el widget sigue mostrando el feed completo de Hoy o de Flotantes.",
         "tip": "Añade varios widgets, cada uno apuntando a una lista distinta, para verlos todos a la vez en tu pantalla de inicio."
+      },
+      "list-widgets": {
+        "title": "Widgets de listas",
+        "summary": "Pon cualquier lista en tu pantalla de inicio, no solo Hoy.",
+        "keywords": "widget, pantalla de inicio, lista, configurar, selector, cualquier momento, programado",
+        "body": "Añade un widget de T'Day y un selector te deja elegir qué lista muestra — cualquier lista programada o de cualquier momento, no solo Hoy o Cualquier momento. Añade el widget de nuevo para mostrar otra lista; cada uno recuerda su propia elección.",
+        "tip": "Mantén pulsado un widget colocado y elige Editar (o los ajustes de widgets de tu launcher) para cambiarlo a otra lista más adelante."
       },
       "widget-quick-add": {
         "title": "Añadir rápido desde el widget",

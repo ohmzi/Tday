@@ -487,6 +487,9 @@ fun TdayApp(
                                                             )
                                                         )
                                                     },
+                                                    onOpenCompleted = {
+                                                        navController.navigate(AppRoute.Completed.route)
+                                                    },
                                                     onOpenSettings = {
                                                         navController.navigate(AppRoute.Settings.route)
                                                     },
@@ -1147,6 +1150,7 @@ private fun CollectAppSnackbars(
                     },
                     actionLabel = event.actionLabel,
                     onAction = event.onAction,
+                    actionIconRes = event.actionIconRes,
                 ),
             )
         }
@@ -1336,6 +1340,7 @@ private fun TodosRoute(
     onBack: () -> Unit,
     onListDeleted: () -> Unit = {},
     onOpenFloaterList: (String, String) -> Unit = { _, _ -> },
+    onOpenCompleted: () -> Unit = {},
     onOpenSettings: () -> Unit = {},
     onOpenMorningSweep: () -> Unit = {},
     highlightTodoId: String? = null,
@@ -1413,6 +1418,7 @@ private fun TodosRoute(
             )
         },
         onOpenFloaterList = onOpenFloaterList,
+        onOpenCompleted = onOpenCompleted,
         onOpenSettings = onOpenSettings,
         onCreateList = viewModel::createList,
         rootFeedTab = rootFeedTab,

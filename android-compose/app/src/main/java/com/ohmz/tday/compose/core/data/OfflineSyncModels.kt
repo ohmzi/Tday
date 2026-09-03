@@ -105,6 +105,13 @@ data class CachedCompletedFloaterRecord(
     val listId: String? = null,
     val listName: String? = null,
     val listColor: String? = null,
+    // True only when this item had a list at completion time (listName/listColor
+    // populated) and that list has since been deleted — server-computed, see
+    // CompletedFloaterDto.listDeleted. Not recomputed locally: the local cache no
+    // longer prunes completedFloaters on a list delete (see FloaterListRepository),
+    // so a stale-but-harmless listId/listDeleted pair between the delete and the
+    // next sync is expected, not a bug.
+    val listDeleted: Boolean = false,
 )
 
 @Serializable
