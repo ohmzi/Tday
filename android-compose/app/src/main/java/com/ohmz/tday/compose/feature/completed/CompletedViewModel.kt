@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.data.cache.OfflineCacheManager
 import com.ohmz.tday.compose.core.data.completed.CompletedRepository
+import com.ohmz.tday.compose.core.data.list.FloaterListRepository
 import com.ohmz.tday.compose.core.data.list.ListRepository
 import com.ohmz.tday.compose.core.data.sync.SyncManager
 import com.ohmz.tday.compose.core.model.CompletedItem
@@ -26,8 +27,14 @@ import javax.inject.Inject
 
 data class CompletedUiState(
     val isLoading: Boolean = false,
+    // Todos and floaters merged into one browsable timeline; CompletedItem.isFloater
+    // tells CompletedScreen which of the two it is rendering/acting on.
     val items: List<CompletedItem> = emptyList(),
     val lists: List<ListSummary> = emptyList(),
+    // Floater lists are a separate namespace from `lists` (scheduled-task lists) —
+    // needed to resolve a completed floater's list icon and to offer the right
+    // list choices when editing one.
+    val floaterLists: List<ListSummary> = emptyList(),
     val errorMessage: String? = null,
 )
 
@@ -35,6 +42,7 @@ data class CompletedUiState(
 class CompletedViewModel @Inject constructor(
     private val completedRepository: CompletedRepository,
     private val listRepository: ListRepository,
+    private val floaterListRepository: FloaterListRepository,
     private val syncManager: SyncManager,
     private val cacheManager: OfflineCacheManager,
     private val reminderScheduler: TaskReminderScheduler,
@@ -46,8 +54,12 @@ class CompletedViewModel @Inject constructor(
         runCatching {
             CompletedUiState(
                 isLoading = false,
-                items = completedRepository.fetchCompletedItemsSnapshot(),
+                items = mergedCompletedItems(
+                    completedRepository.fetchCompletedItemsSnapshot(),
+                    completedRepository.fetchCompletedFloaterItemsSnapshot(),
+                ),
                 lists = listRepository.fetchListsSnapshot(),
+                floaterLists = floaterListRepository.fetchListsSnapshot(),
                 errorMessage = null,
             )
         }.getOrElse { CompletedUiState() },
@@ -81,13 +93,21 @@ class CompletedViewModel @Inject constructor(
 
     private fun hydrateFromCache() {
         runCatching {
-            completedRepository.fetchCompletedItemsSnapshot() to listRepository.fetchListsSnapshot()
-        }.onSuccess { (items, lists) ->
+            CompletedHydration(
+                items = mergedCompletedItems(
+                    completedRepository.fetchCompletedItemsSnapshot(),
+                    completedRepository.fetchCompletedFloaterItemsSnapshot(),
+                ),
+                lists = listRepository.fetchListsSnapshot(),
+                floaterLists = floaterListRepository.fetchListsSnapshot(),
+            )
+        }.onSuccess { (items, lists, floaterLists) ->
             _uiState.update { current ->
                 current.copy(
                     isLoading = false,
                     items = if (current.items == items) current.items else items,
                     lists = if (current.lists == lists) current.lists else lists,
+                    floaterLists = if (current.floaterLists == floaterLists) current.floaterLists else floaterLists,
                     errorMessage = null,
                 )
             }
@@ -116,16 +136,21 @@ class CompletedViewModel @Inject constructor(
                     )
                         .onFailure { /* fall back to local cache */ }
                 }
-                Pair(
-                    completedRepository.fetchCompletedItems(),
-                    listRepository.fetchLists(),
+                CompletedHydration(
+                    items = mergedCompletedItems(
+                        completedRepository.fetchCompletedItems(),
+                        completedRepository.fetchCompletedFloaterItems(),
+                    ),
+                    lists = listRepository.fetchLists(),
+                    floaterLists = floaterListRepository.fetchLists(),
                 )
-            }.onSuccess { (items, lists) ->
+            }.onSuccess { (items, lists, floaterLists) ->
                 _uiState.update { current ->
                     current.copy(
                         isLoading = false,
                         items = if (current.items == items) current.items else items,
                         lists = if (current.lists == lists) current.lists else lists,
+                        floaterLists = if (current.floaterLists == floaterLists) current.floaterLists else floaterLists,
                         errorMessage = null,
                     )
                 }
@@ -142,7 +167,13 @@ class CompletedViewModel @Inject constructor(
 
     fun delete(item: CompletedItem) {
         viewModelScope.launch {
-            runCatching { completedRepository.deleteCompletedTodo(item) }
+            runCatching {
+                if (item.isFloater) {
+                    completedRepository.deleteCompletedFloater(item)
+                } else {
+                    completedRepository.deleteCompletedTodo(item)
+                }
+            }
                 .onSuccess {
                     // Completed-history deletes stay immediate (no staged undo
                     // window); the toast is shown here so the screen does not
@@ -162,22 +193,53 @@ class CompletedViewModel @Inject constructor(
 
     fun uncomplete(item: CompletedItem) {
         viewModelScope.launch {
-            runCatching { completedRepository.uncomplete(item) }
-                .onSuccess {
-                    rescheduleReminders()
-                    loadInternal(forceSync = false, showLoading = false)
-                }
-                .onFailure { error ->
-                    _uiState.update {
-                        it.copy(errorMessage = error.userFacingMessage(appContext, R.string.error_restore_task_failed))
+            if (item.isFloater) {
+                runCatching { completedRepository.uncompleteFloater(item) }
+                    .onSuccess { outcome ->
+                        // Only the "landed in a recreated list" case gets a toast —
+                        // an ordinary restore is silent, same as a todo (see the
+                        // unified toast policy: restore/edit success is not
+                        // announced). Recreating a whole list the user thought
+                        // they'd deleted is the one outcome here worth surfacing.
+                        if (outcome.listRecreated && !outcome.listName.isNullOrBlank()) {
+                            snackbarManager.showInfo(
+                                appContext.getString(
+                                    R.string.completed_floater_list_recreated_toast,
+                                    outcome.listName,
+                                ),
+                            )
+                        }
+                        loadInternal(forceSync = false, showLoading = false)
                     }
-                }
+                    .onFailure { error ->
+                        _uiState.update {
+                            it.copy(errorMessage = error.userFacingMessage(appContext, R.string.error_restore_task_failed))
+                        }
+                    }
+            } else {
+                runCatching { completedRepository.uncomplete(item) }
+                    .onSuccess {
+                        rescheduleReminders()
+                        loadInternal(forceSync = false, showLoading = false)
+                    }
+                    .onFailure { error ->
+                        _uiState.update {
+                            it.copy(errorMessage = error.userFacingMessage(appContext, R.string.error_restore_task_failed))
+                        }
+                    }
+            }
         }
     }
 
     fun update(item: CompletedItem, payload: CreateTaskPayload) {
         viewModelScope.launch {
-            runCatching { completedRepository.updateCompletedTodo(item, payload) }
+            runCatching {
+                if (item.isFloater) {
+                    completedRepository.updateCompletedFloater(item, payload)
+                } else {
+                    completedRepository.updateCompletedTodo(item, payload)
+                }
+            }
                 .onSuccess { loadInternal(forceSync = false, showLoading = false) }
                 .onFailure { error ->
                     _uiState.update {
@@ -191,5 +253,28 @@ class CompletedViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.Default) {
             runCatching { reminderScheduler.rescheduleAll() }
         }
+    }
+}
+
+/** One fetch/hydrate round's worth of [CompletedUiState] source data. */
+private data class CompletedHydration(
+    val items: List<CompletedItem>,
+    val lists: List<ListSummary>,
+    val floaterLists: List<ListSummary>,
+)
+
+/**
+ * Todos and floaters share one browsable timeline (CompletedScreen groups by
+ * completed date regardless of type), sorted newest-first so a stable merge
+ * order here does not depend on that downstream re-sort.
+ */
+private fun mergedCompletedItems(
+    todoItems: List<CompletedItem>,
+    floaterItems: List<CompletedItem>,
+): List<CompletedItem> {
+    if (floaterItems.isEmpty()) return todoItems
+    if (todoItems.isEmpty()) return floaterItems
+    return (todoItems + floaterItems).sortedByDescending {
+        it.completedAt ?: it.due ?: java.time.Instant.EPOCH
     }
 }

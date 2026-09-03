@@ -134,6 +134,7 @@ import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
 import com.ohmz.tday.compose.core.model.capitalizeFirstListLetter
 import com.ohmz.tday.compose.core.ui.LazyListHeroTitleSettle
+import com.ohmz.tday.compose.core.ui.CategoryCard
 import com.ohmz.tday.compose.core.ui.EmptyTaskWatermark
 import com.ohmz.tday.compose.core.ui.TaskSwipeActionButton
 import com.ohmz.tday.compose.core.ui.animateTaskSwipeOffsetAsState
@@ -154,6 +155,7 @@ import com.ohmz.tday.compose.ui.component.TdaySheetHeader
 import com.ohmz.tday.compose.ui.component.TdaySheetSectionTitle
 import com.ohmz.tday.compose.ui.theme.TDAY_DEFAULT_LIST_COLOR_KEY
 import com.ohmz.tday.compose.ui.theme.TDAY_DEFAULT_LIST_ICON_KEY
+import com.ohmz.tday.compose.ui.theme.TdayCompletedTileAccent
 import com.ohmz.tday.compose.ui.theme.TdayDimens
 import com.ohmz.tday.compose.ui.theme.TdayFontFamily
 import com.ohmz.tday.compose.ui.theme.TdayListColorOptions
@@ -1897,148 +1899,11 @@ private fun CategoryGrid(
 }
 
 private fun completedTileColor(colorScheme: ColorScheme): Color {
-    return Color(0xFF719F84)
+    return TdayCompletedTileAccent
 }
 
 private fun calendarTileColor(colorScheme: ColorScheme): Color {
     return Color(0xFF9A89D2)
-}
-
-@Composable
-private fun CategoryCard(
-    modifier: Modifier,
-    color: Color,
-    @DrawableRes iconRes: Int,
-    @DrawableRes watermarkRes: Int? = null,
-    title: String,
-    count: Int? = null,
-    onClick: () -> Unit,
-) {
-    val view = LocalView.current
-    val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
-    val animatedScale by animateFloatAsState(
-        targetValue = if (isPressed) 0.97f else 1f,
-        label = "categoryCardScale",
-    )
-    val animatedOffsetY by animateDpAsState(
-        targetValue = if (isPressed) 2.dp else 0.dp,
-        label = "categoryCardOffsetY",
-    )
-    val animatedElevation by animateDpAsState(
-        targetValue = if (isPressed) 2.dp else 9.dp,
-        label = "categoryCardElevation",
-    )
-
-    Card(
-        modifier = modifier
-            .semantics(mergeDescendants = true) {}
-            .offset(y = animatedOffsetY)
-            .graphicsLayer {
-                scaleX = animatedScale
-                scaleY = animatedScale
-            },
-        onClick = {
-            performGentleHaptic(view)
-            onClick()
-        },
-        interactionSource = interactionSource,
-        colors = CardDefaults.cardColors(containerColor = color),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = animatedElevation,
-            pressedElevation = animatedElevation,
-        ),
-        shape = RoundedCornerShape(26.dp),
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .drawWithCache {
-                    val iconSideGlow = Brush.radialGradient(
-                        colors = listOf(
-                            Color.White.copy(alpha = 0.22f),
-                            Color.White.copy(alpha = 0.08f),
-                            Color.Transparent,
-                        ),
-                        center = Offset(
-                            x = size.width * 0.22f,
-                            y = size.height * 0.2f,
-                        ),
-                        radius = size.maxDimension * 0.9f,
-                    )
-                    val pearlWash = Brush.linearGradient(
-                        colors = listOf(
-                            Color.White.copy(alpha = 0.12f),
-                            Color(0xFFE7F3FF).copy(alpha = 0.1f),
-                            Color(0xFFFFF2FA).copy(alpha = 0.08f),
-                            Color.Transparent,
-                        ),
-                        start = Offset(
-                            x = size.width * 0.05f,
-                            y = size.height * 0.04f,
-                        ),
-                        end = Offset(
-                            x = size.width * 0.9f,
-                            y = size.height * 0.75f,
-                        ),
-                    )
-                    onDrawWithContent {
-                        drawRect(iconSideGlow)
-                        drawRect(pearlWash)
-                        drawContent()
-                    }
-                }
-        ) {
-            if (watermarkRes != null) {
-                Box(modifier = Modifier.matchParentSize()) {
-                    Icon(
-                        modifier = Modifier
-                            .align(Alignment.CenterEnd)
-                            .offset(x = 22.dp, y = 12.dp)
-                            .size(124.dp),
-                        painter = painterResource(watermarkRes),
-                        contentDescription = null,
-                        tint = lerp(color, Color.White, 0.28f).copy(alpha = 0.4f),
-                    )
-                }
-            }
-
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(12.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(
-                        painter = painterResource(iconRes),
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(26.dp),
-                    )
-                    if (count != null) {
-                        Text(
-                            text = count.toString(),
-                            style = MaterialTheme.typography.headlineMedium,
-                            color = Color.White,
-                            fontWeight = FontWeight.Black,
-                        )
-                    }
-                }
-
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleLarge,
-                    color = Color.White,
-                    fontWeight = FontWeight.ExtraBold,
-                )
-            }
-        }
-    }
 }
 
 @Composable

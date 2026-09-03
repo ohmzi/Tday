@@ -85,6 +85,7 @@ class UndoableDeleteCoordinator @Inject constructor(
                 message = message,
                 kind = SnackbarKind.SUCCESS,
                 actionLabel = context.getString(R.string.action_undo),
+                actionIconRes = R.drawable.ic_lucide_undo_2,
                 onAction = {
                     if (resolved.compareAndSet(false, true)) {
                         commitJob.cancel()

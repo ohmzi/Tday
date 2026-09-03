@@ -110,6 +110,7 @@ data class CachedCompletedFloaterEntity(
     val listId: String?,
     val listName: String?,
     val listColor: String?,
+    @ColumnInfo(defaultValue = "0") val listDeleted: Boolean = false,
 )
 
 @Entity(
