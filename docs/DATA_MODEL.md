@@ -50,7 +50,7 @@ Scheduled tasks and floaters are intentionally different:
 - A task should not be made "unscheduled" by nulling `Todo.due`; use a floater instead.
 - Scheduled-task `listID` values must belong to the authenticated user. Stale or cross-user list IDs are rejected before database writes.
 - Completing a todo creates completed-todo history; completing a floater creates completed-floater history.
-- List deletion must preserve completed history metadata (`listName`, `listColor`) where the backend/mobile model supports it.
+- List deletion must preserve completed history metadata (`listName`, `listColor`) where the backend/mobile model supports it. For floaters specifically, deleting a list no longer deletes its `CompletedFloaters` rows (backend: `ON DELETE SET NULL`, plus an unconstrained `originalListID` snapshot; Android: `FloaterListRepository` stops pruning `completedFloaters` on list delete) — undoing such an item recreates the list under its original name/color, converging duplicate undos from the same deleted list onto one recreated list. `CompletedFloaterDto.listDeleted` / `CachedCompletedFloaterRecord.listDeleted` flag this case. See `docs/design/completed-floaters-durability.md`. The identical bug for scheduled `Todo`/`CompletedTodos` is a deliberate, separate product decision and is untouched.
 
 ## Recurrence
 
