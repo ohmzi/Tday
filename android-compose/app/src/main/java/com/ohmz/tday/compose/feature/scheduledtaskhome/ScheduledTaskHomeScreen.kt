@@ -1898,9 +1898,7 @@ private fun CategoryGrid(
     }
 }
 
-private fun completedTileColor(colorScheme: ColorScheme): Color {
-    return TdayCompletedTileAccent
-}
+private fun completedTileColor(colorScheme: ColorScheme): Color = TdayCompletedTileAccent
 
 private fun calendarTileColor(colorScheme: ColorScheme): Color {
     return Color(0xFF9A89D2)

@@ -60,13 +60,11 @@ class CompletedRepository @Inject constructor(
         return cacheManager.loadOfflineStateBlocking().completedItems.map(::completedFromCache)
     }
 
-    suspend fun fetchCompletedFloaterItems(): List<CompletedItem> {
-        return cacheManager.loadOfflineState().completedFloaters.map(::completedFloaterFromCache)
-    }
+    suspend fun fetchCompletedFloaterItems(): List<CompletedItem> =
+        cacheManager.loadOfflineState().completedFloaters.map(::completedFloaterFromCache)
 
-    fun fetchCompletedFloaterItemsSnapshot(): List<CompletedItem> {
-        return cacheManager.loadOfflineStateBlocking().completedFloaters.map(::completedFloaterFromCache)
-    }
+    fun fetchCompletedFloaterItemsSnapshot(): List<CompletedItem> =
+        cacheManager.loadOfflineStateBlocking().completedFloaters.map(::completedFloaterFromCache)
 
     suspend fun uncomplete(item: CompletedItem) {
         val originalTodoId = item.originalTodoId
