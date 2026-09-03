@@ -207,20 +207,41 @@ final class SyncManager {
             return false
         }
 
+        // Recorded before any network work, so a crash/kill mid-sync still leaves an accurate
+        // "last attempt" on disk (see `OfflineCacheManager.saveOfflineState`'s no-op path: since
+        // nothing but this timestamp differs from what's already persisted, this is a
+        // single-row metadata write, not a full rewrite). `notify: false` because this alone
+        // isn't a user-visible change worth waking every observer for — see the coalesced
+        // notify below.
         state.lastSyncAttemptEpochMs = now
-        try await cacheManager.saveOfflineState(state)
+        var cacheContentChanged = try await cacheManager.saveOfflineState(state, notify: false)
 
         let initialRemote = try await fetchRemoteSnapshot()
         if shouldReplay {
             state = try await applyPendingMutations(initialState: state, remoteSnapshot: initialRemote)
-            try await cacheManager.saveOfflineState(state)
+            let replayChangedContent = try await cacheManager.saveOfflineState(state, notify: false)
+            cacheContentChanged = cacheContentChanged || replayChangedContent
         }
 
         let latestRemote = try await fetchRemoteSnapshot()
         var merged = mergeRemoteWithLocal(localState: state, remote: latestRemote)
         merged.lastSyncAttemptEpochMs = now
         merged.lastSuccessfulSyncEpochMs = now
-        try await cacheManager.saveOfflineState(merged)
+        let mergeChangedContent = try await cacheManager.saveOfflineState(merged, notify: false)
+        cacheContentChanged = cacheContentChanged || mergeChangedContent
+
+        // Fan out to observers (TodoListViewModel, ScheduledTaskHomeViewModel, AppViewModel,
+        // CompletedViewModel, CalendarViewModel) at most once per sync cycle, not once per
+        // internal `saveOfflineState` call above — each observer does a full cache reload on
+        // receipt, so posting per-call here previously meant up to 3x the reload work per sync.
+        // Tracking `cacheContentChanged` across all three calls (rather than trusting only the
+        // last one) matters because the replay save can be the one that actually changed
+        // something (e.g. remapping a local- to a server-issued id) while the final merge save
+        // turns out to be a no-op against that already-updated state — the merge call's own
+        // returned value alone would miss it.
+        if cacheContentChanged {
+            try await cacheManager.notifyCacheChanged()
+        }
         return true
     }
 
