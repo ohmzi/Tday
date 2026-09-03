@@ -227,6 +227,12 @@ struct RootFeedHeroHeader: View {
     let onSearchClose: () -> Void
     let onCreateList: () -> Void
     let onOpenSettings: () -> Void
+    /// When set, the ellipsis button becomes a menu offering Completed
+    /// alongside Settings instead of jumping to Settings directly. Only the
+    /// Floater root feed passes this today — Scheduled already has its own
+    /// "Completed" tile on its board, so its header keeps the plain button
+    /// (`nil`) and this stays visually and behaviorally unchanged there.
+    var onOpenCompleted: (() -> Void)? = nil
     /// Tapping the mark or the title returns the feed to the top, the way the
     /// iOS status bar does.
     let onScrollToTop: () -> Void
@@ -405,11 +411,8 @@ struct RootFeedHeroHeader: View {
             }
             .accessibilityLabel("Create list")
 
-            RootFeedHeaderCircleButton(icon: "NavEllipsis") {
-                HapticManager.gentleTap()
-                onOpenSettings()
-            }
-            .accessibilityLabel("More")
+            ellipsisControl
+                .accessibilityLabel("More")
         }
         .frame(width: rowWidth, height: Metrics.barButtonSize)
         .position(
@@ -418,6 +421,35 @@ struct RootFeedHeroHeader: View {
         )
         .opacity(searchExpanded ? 0 : 1)
         .allowsHitTesting(!searchExpanded)
+    }
+
+    /// A plain button to Settings when `onOpenCompleted` is nil (Scheduled,
+    /// unchanged); a menu offering Completed and Settings when it's set
+    /// (Floater). Same icon, same 56pt circle either way, so this never
+    /// touches `Metrics.searchTrailingInset` or the two-button `rowWidth`
+    /// above — both were solved for exactly two buttons of this size.
+    @ViewBuilder
+    private var ellipsisControl: some View {
+        if let onOpenCompleted {
+            // Text only, no `Label(_:systemImage:)` — this app's icons are
+            // one shared Lucide source across platforms (see `docs/ICONS.md`)
+            // and neither "Completed" nor "Settings" has a glyph in it yet;
+            // reaching for an SF Symbol here would be exactly the per-platform
+            // icon drift that rule exists to prevent.
+            RootFeedHeaderCircleMenu(icon: "NavEllipsis") {
+                Button(L("Completed")) {
+                    onOpenCompleted()
+                }
+                Button(L("Settings")) {
+                    onOpenSettings()
+                }
+            }
+        } else {
+            RootFeedHeaderCircleButton(icon: "NavEllipsis") {
+                HapticManager.gentleTap()
+                onOpenSettings()
+            }
+        }
     }
 
     private func searchField(width: CGFloat, progress: CGFloat) -> some View {
@@ -585,36 +617,69 @@ private extension View {
     }
 }
 
-private struct RootFeedHeaderCircleButton: View {
+/// The 56pt circle chrome shared by every round header button — factored out
+/// so a `Menu` trigger (`RootFeedHeaderCircleMenu`) can wear the exact same
+/// face as a plain `Button` (`RootFeedHeaderCircleButton`) without a second
+/// copy of this drawing.
+private struct RootFeedHeaderCircleGlyph: View {
     /// Asset-catalog name of the lucide template glyph (shared with web/Android).
     let icon: String
-    let action: () -> Void
 
     @Environment(\.tdayColors) private var colors
 
     var body: some View {
+        Image(icon)
+            .renderingMode(.template)
+            .resizable()
+            .scaledToFit()
+            .frame(width: 22, height: 22)
+            .foregroundStyle(colors.onSurface)
+            .frame(
+                width: RootFeedHeroHeaderMetrics.barButtonSize,
+                height: RootFeedHeroHeaderMetrics.barButtonSize
+            )
+            .background(colors.surface)
+            .clipShape(Circle())
+            .overlay {
+                Circle()
+                    .stroke(
+                        colors.onSurface.opacity(RootFeedHeroHeaderMetrics.barControlBorderOpacity),
+                        lineWidth: 1
+                    )
+            }
+    }
+}
+
+private struct RootFeedHeaderCircleButton: View {
+    let icon: String
+    let action: () -> Void
+
+    var body: some View {
         Button(action: action) {
-            Image(icon)
-                .renderingMode(.template)
-                .resizable()
-                .scaledToFit()
-                .frame(width: 22, height: 22)
-                .foregroundStyle(colors.onSurface)
-                .frame(
-                    width: RootFeedHeroHeaderMetrics.barButtonSize,
-                    height: RootFeedHeroHeaderMetrics.barButtonSize
-                )
-                .background(colors.surface)
-                .clipShape(Circle())
-                .overlay {
-                    Circle()
-                        .stroke(
-                            colors.onSurface.opacity(RootFeedHeroHeaderMetrics.barControlBorderOpacity),
-                            lineWidth: 1
-                        )
-                }
+            RootFeedHeaderCircleGlyph(icon: icon)
         }
         .buttonStyle(TdayToolbarButtonStyle())
+    }
+}
+
+/// Same 56pt circle face as `RootFeedHeaderCircleButton`, wearing a `Menu`
+/// instead of a `Button` so the ellipsis can offer more than one destination
+/// (the Floater root feed's Completed + Settings) without a second control
+/// competing for the header's fixed two-button width.
+private struct RootFeedHeaderCircleMenu<MenuItems: View>: View {
+    let icon: String
+    @ViewBuilder let items: () -> MenuItems
+
+    var body: some View {
+        // No extra tap gesture for the haptic `RootFeedHeaderCircleButton`
+        // gives its own Button: layering one on a `Menu` risks eating the
+        // press before `Menu` ever sees it, and the system already gives its
+        // own presentation feedback when the menu opens.
+        Menu {
+            items()
+        } label: {
+            RootFeedHeaderCircleGlyph(icon: icon)
+        }
     }
 }
 
