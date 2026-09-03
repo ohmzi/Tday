@@ -243,59 +243,11 @@ class ListShareServiceImpl(
                 return@newSuspendedTransaction AppError.BadRequest("you already own this list", "username").left()
             }
 
-            listName = when (type) {
-                ListType.SCHEDULED -> Lists.selectAll().where { Lists.id eq listId }.firstOrNull()?.get(Lists.name)
-                ListType.FLOATER -> FloaterLists.selectAll().where { FloaterLists.id eq listId }.firstOrNull()?.get(FloaterLists.name)
-            }.orEmpty()
-            Users.selectAll().where { Users.id eq requesterId }.firstOrNull()?.let { row ->
-                sharerLabel = row[Users.name] ?: row[Users.username]
-            }
+            listName = listNameInTx(listId, type)
+            sharerLabelInTx(requesterId)?.let { sharerLabel = it }
 
             val now = LocalDateTime.now(ZoneOffset.UTC)
-            when (type) {
-                ListType.SCHEDULED -> {
-                    val existing = ListShares.selectAll().where {
-                        (ListShares.listID eq listId) and (ListShares.userID eq targetId)
-                    }.firstOrNull()
-                    isNewMember = existing == null
-                    if (existing != null) {
-                        ListShares.update({ (ListShares.listID eq listId) and (ListShares.userID eq targetId) }) {
-                            it[ListShares.role] = parsedRole.name
-                            it[ListShares.updatedAt] = now
-                        }
-                    } else {
-                        ListShares.insert {
-                            it[ListShares.id] = CuidGenerator.newCuid()
-                            it[ListShares.listID] = listId
-                            it[ListShares.userID] = targetId
-                            it[ListShares.role] = parsedRole.name
-                            it[ListShares.createdAt] = now
-                            it[ListShares.updatedAt] = now
-                        }
-                    }
-                }
-                ListType.FLOATER -> {
-                    val existing = FloaterListShares.selectAll().where {
-                        (FloaterListShares.listID eq listId) and (FloaterListShares.userID eq targetId)
-                    }.firstOrNull()
-                    isNewMember = existing == null
-                    if (existing != null) {
-                        FloaterListShares.update({ (FloaterListShares.listID eq listId) and (FloaterListShares.userID eq targetId) }) {
-                            it[FloaterListShares.role] = parsedRole.name
-                            it[FloaterListShares.updatedAt] = now
-                        }
-                    } else {
-                        FloaterListShares.insert {
-                            it[FloaterListShares.id] = CuidGenerator.newCuid()
-                            it[FloaterListShares.listID] = listId
-                            it[FloaterListShares.userID] = targetId
-                            it[FloaterListShares.role] = parsedRole.name
-                            it[FloaterListShares.createdAt] = now
-                            it[FloaterListShares.updatedAt] = now
-                        }
-                    }
-                }
-            }
+            isNewMember = upsertShareRoleInTx(listId, type, targetId, parsedRole.name, now)
             ListMemberDto(
                 userId = targetId,
                 username = targetRow[Users.username],
@@ -485,6 +437,63 @@ class ListShareServiceImpl(
     private fun ownerOfInTx(listId: String, type: ListType): String? = when (type) {
         ListType.SCHEDULED -> Lists.selectAll().where { Lists.id eq listId }.firstOrNull()?.get(Lists.userID)
         ListType.FLOATER -> FloaterLists.selectAll().where { FloaterLists.id eq listId }.firstOrNull()?.get(FloaterLists.userID)
+    }
+
+    private fun listNameInTx(listId: String, type: ListType): String = when (type) {
+        ListType.SCHEDULED -> Lists.selectAll().where { Lists.id eq listId }.firstOrNull()?.get(Lists.name)
+        ListType.FLOATER -> FloaterLists.selectAll().where { FloaterLists.id eq listId }.firstOrNull()?.get(FloaterLists.name)
+    }.orEmpty()
+
+    private fun sharerLabelInTx(userId: String): String? =
+        Users.selectAll().where { Users.id eq userId }.firstOrNull()?.let { it[Users.name] ?: it[Users.username] }
+
+    /**
+     * Inserts a new share row, or updates the role on an existing one. Returns whether this was
+     * a brand-new share (an insert) rather than a role change on an existing member — that
+     * distinction is what decides whether [addMember] pushes the target a notification.
+     */
+    private fun upsertShareRoleInTx(listId: String, type: ListType, targetId: String, role: String, now: LocalDateTime): Boolean {
+        val isNew = when (type) {
+            ListType.SCHEDULED -> ListShares.selectAll().where {
+                (ListShares.listID eq listId) and (ListShares.userID eq targetId)
+            }.firstOrNull() == null
+            ListType.FLOATER -> FloaterListShares.selectAll().where {
+                (FloaterListShares.listID eq listId) and (FloaterListShares.userID eq targetId)
+            }.firstOrNull() == null
+        }
+        when (type) {
+            ListType.SCHEDULED -> if (isNew) {
+                ListShares.insert {
+                    it[ListShares.id] = CuidGenerator.newCuid()
+                    it[ListShares.listID] = listId
+                    it[ListShares.userID] = targetId
+                    it[ListShares.role] = role
+                    it[ListShares.createdAt] = now
+                    it[ListShares.updatedAt] = now
+                }
+            } else {
+                ListShares.update({ (ListShares.listID eq listId) and (ListShares.userID eq targetId) }) {
+                    it[ListShares.role] = role
+                    it[ListShares.updatedAt] = now
+                }
+            }
+            ListType.FLOATER -> if (isNew) {
+                FloaterListShares.insert {
+                    it[FloaterListShares.id] = CuidGenerator.newCuid()
+                    it[FloaterListShares.listID] = listId
+                    it[FloaterListShares.userID] = targetId
+                    it[FloaterListShares.role] = role
+                    it[FloaterListShares.createdAt] = now
+                    it[FloaterListShares.updatedAt] = now
+                }
+            } else {
+                FloaterListShares.update({ (FloaterListShares.listID eq listId) and (FloaterListShares.userID eq targetId) }) {
+                    it[FloaterListShares.role] = role
+                    it[FloaterListShares.updatedAt] = now
+                }
+            }
+        }
+        return isNew
     }
 
     private fun memberRowsInTx(listId: String, type: ListType): List<ListMemberDto> = when (type) {

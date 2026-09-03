@@ -30,10 +30,10 @@ class ListShareNotificationTest {
 
     @BeforeEach
     fun setUp() {
-        TestDatabase.insertUser(OWNER_ID, username = "owner@tday.test", name = "Olive Owner")
-        TestDatabase.insertUser(MEMBER_ID, username = "frieda", name = "Frieda Member")
-        runBlocking { insertList(SCHEDULED_LIST_ID, "Groceries", OWNER_ID) }
-        runBlocking { insertFloaterList(FLOATER_LIST_ID, "Someday", OWNER_ID) }
+        TestDatabase.insertUser(OWNER_ID, username = "owner@tday.test", name = OWNER_NAME)
+        TestDatabase.insertUser(MEMBER_ID, username = MEMBER_USERNAME, name = "Frieda Member")
+        runBlocking { insertList(SCHEDULED_LIST_ID, SCHEDULED_LIST_NAME, OWNER_ID) }
+        runBlocking { insertFloaterList(FLOATER_LIST_ID, FLOATER_LIST_NAME, OWNER_ID) }
     }
 
     @AfterEach
@@ -43,7 +43,7 @@ class ListShareNotificationTest {
 
     @Test
     fun `sharing a scheduled list for the first time pushes the new member`() = runBlocking {
-        val result = service.addMember(OWNER_ID, SCHEDULED_LIST_ID, ListType.SCHEDULED, "frieda", "VIEWER")
+        val result = service.addMember(OWNER_ID, SCHEDULED_LIST_ID, ListType.SCHEDULED, MEMBER_USERNAME, "VIEWER")
 
         assertTrue(result.isRight())
         assertEquals(1, push.sent.size)
@@ -51,15 +51,15 @@ class ListShareNotificationTest {
         assertEquals(MEMBER_ID, sent.userId)
         assertEquals(SCHEDULED_LIST_ID, sent.listId)
         assertEquals("list", sent.listType)
-        assertEquals("Groceries", sent.listName)
-        assertTrue(sent.body.contains("Groceries"), "body should name the list: ${sent.body}")
-        assertTrue(sent.body.contains("Olive Owner"), "body should name the sharer: ${sent.body}")
+        assertEquals(SCHEDULED_LIST_NAME, sent.listName)
+        assertTrue(sent.body.contains(SCHEDULED_LIST_NAME), "body should name the list: ${sent.body}")
+        assertTrue(sent.body.contains(OWNER_NAME), "body should name the sharer: ${sent.body}")
         assertEquals(null, sent.todoId)
     }
 
     @Test
     fun `sharing a floater list pushes with the floaterList wire type`() = runBlocking {
-        service.addMember(OWNER_ID, FLOATER_LIST_ID, ListType.FLOATER, "frieda", "EDITOR")
+        service.addMember(OWNER_ID, FLOATER_LIST_ID, ListType.FLOATER, MEMBER_USERNAME, "EDITOR")
 
         assertEquals(1, push.sent.size)
         assertEquals("floaterList", push.sent.single().listType)
@@ -68,10 +68,10 @@ class ListShareNotificationTest {
 
     @Test
     fun `re-adding an existing member to change their role does not push again`() = runBlocking {
-        service.addMember(OWNER_ID, SCHEDULED_LIST_ID, ListType.SCHEDULED, "frieda", "VIEWER")
+        service.addMember(OWNER_ID, SCHEDULED_LIST_ID, ListType.SCHEDULED, MEMBER_USERNAME, "VIEWER")
         push.sent.clear()
 
-        val result = service.addMember(OWNER_ID, SCHEDULED_LIST_ID, ListType.SCHEDULED, "frieda", "EDITOR")
+        val result = service.addMember(OWNER_ID, SCHEDULED_LIST_ID, ListType.SCHEDULED, MEMBER_USERNAME, "EDITOR")
 
         assertTrue(result.isRight())
         assertTrue(push.sent.isEmpty(), "a role change on an existing member should not re-notify")
@@ -80,7 +80,7 @@ class ListShareNotificationTest {
     @Test
     fun `a rejected share never reaches the push service`() = runBlocking {
         // Not the owner: requester has no access to manage members on OWNER_ID's list.
-        val result = service.addMember(MEMBER_ID, SCHEDULED_LIST_ID, ListType.SCHEDULED, "frieda", "VIEWER")
+        val result = service.addMember(MEMBER_ID, SCHEDULED_LIST_ID, ListType.SCHEDULED, MEMBER_USERNAME, "VIEWER")
 
         assertTrue(result.isLeft())
         assertTrue(push.sent.isEmpty())
@@ -93,7 +93,7 @@ class ListShareNotificationTest {
         )
         val serviceWithFailingPush = ListShareServiceImpl(CacheServiceImpl(), RealtimeServiceImpl(), failingPush)
 
-        val result = serviceWithFailingPush.addMember(OWNER_ID, SCHEDULED_LIST_ID, ListType.SCHEDULED, "frieda", "VIEWER")
+        val result = serviceWithFailingPush.addMember(OWNER_ID, SCHEDULED_LIST_ID, ListType.SCHEDULED, MEMBER_USERNAME, "VIEWER")
 
         assertTrue(result.isRight(), "the share must succeed even though push delivery failed")
         assertEquals(1, failingPush.sent.size)
@@ -127,8 +127,12 @@ class ListShareNotificationTest {
 
     private companion object {
         const val OWNER_ID = "user_owner"
+        const val OWNER_NAME = "Olive Owner"
         const val MEMBER_ID = "user_member"
+        const val MEMBER_USERNAME = "frieda"
         const val SCHEDULED_LIST_ID = "list_groceries"
+        const val SCHEDULED_LIST_NAME = "Groceries"
         const val FLOATER_LIST_ID = "flist_someday"
+        const val FLOATER_LIST_NAME = "Someday"
     }
 }
