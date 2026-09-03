@@ -241,41 +241,59 @@ final class TodoListViewModel {
         }
     }
 
-    /// Delayed-commit complete: the row is hidden immediately (in-memory only,
-    /// the cache is untouched), an undoable toast is shown, and the real
-    /// completion only commits once the undo window expires. Tapping Undo cancels
-    /// the pending commit and re-reads the cache to restore the row.
+    /// Delayed-commit complete: the completion is written to the local cache
+    /// (and its mutation queued) immediately, an undoable toast is shown, and
+    /// only the network replay is deferred until the undo window expires.
+    /// Tapping Undo cancels the pending commit and reverses the staged write.
+    ///
+    /// This writes durably up front rather than staying in-memory-only until
+    /// commit: a completion the user already saw must survive the app dying
+    /// inside the undo window, not silently revert with no trace on relaunch.
+    /// See `TodoRepository.stageCompleteTodo(_:)` for the full rationale.
     func complete(_ todo: TodoItem) async {
         TdayTelemetry.addBreadcrumb("task.complete", data: taskTelemetryData(mode: mode))
         let container = container
         let isFloater = mode == .floater
-        items.removeAll { $0.id == todo.id }
         lastCompletionAt = Date()
-        if !isFloater {
-            completedTodayCount += 1
-        }
-        container.undoableDeleteScheduler.schedule(
-            message: L("Task completed"),
-            restore: { [weak self] in
-                // The cache was never changed, so re-reading it restores the row.
-                self?.hydrateFromCache()
-            },
-            commit: { [weak self] in
-                do {
-                    if isFloater {
-                        try await container.todoRepository.completeFloater(todo)
-                    } else {
-                        try await container.completeTodo(todo)
+        if isFloater {
+            let staged = container.todoRepository.stageCompleteFloater(todo)
+            hydrateFromCache()
+            container.undoableDeleteScheduler.schedule(
+                message: L("Task completed"),
+                restore: {
+                    container.todoRepository.undoStagedFloaterCompletion(staged)
+                },
+                commit: {
+                    do {
+                        try await container.todoRepository.syncPendingMutations()
+                    } catch {
+                        container.snackbarManager.show(
+                            userFacingMessage(for: error, fallback: "Could not complete task."),
+                            kind: .error
+                        )
                     }
-                } catch {
-                    container.snackbarManager.show(
-                        userFacingMessage(for: error, fallback: "Could not complete task."),
-                        kind: .error
-                    )
                 }
-                self?.hydrateFromCache()
-            }
-        )
+            )
+        } else {
+            let staged = container.todoRepository.stageCompleteTodo(todo)
+            hydrateFromCache()
+            container.undoableDeleteScheduler.schedule(
+                message: L("Task completed"),
+                restore: {
+                    container.todoRepository.undoStagedCompletion(staged)
+                },
+                commit: {
+                    do {
+                        try await container.todoRepository.syncPendingMutations()
+                    } catch {
+                        container.snackbarManager.show(
+                            userFacingMessage(for: error, fallback: "Could not complete task."),
+                            kind: .error
+                        )
+                    }
+                }
+            )
+        }
     }
 
     /// Delayed-commit delete: the task is staged out of the local cache
@@ -329,11 +347,18 @@ final class TodoListViewModel {
 
     // MARK: - Bulk (multi-select) actions
 
-    /// Delayed-commit bulk complete — the batch shape of `complete(_:)`. The rows
-    /// leave the list in memory only, ONE undoable toast covers the whole
-    /// selection, and nothing touches the cache or the server until the undo
-    /// window closes. N toasts would mean N commit timers with only the last one
-    /// visible, so the user could undo exactly one of them.
+    /// Delayed-commit bulk complete — the batch shape of `complete(_:)`. The
+    /// whole selection is staged into the local cache (and its mutations
+    /// queued) in ONE cache write, ONE undoable toast covers the batch, and
+    /// only the network replay is deferred until the undo window closes. N
+    /// toasts would mean N commit timers with only the last one visible, so the
+    /// user could undo exactly one of them.
+    ///
+    /// Staging durably up front (rather than in-memory-only until commit)
+    /// means a crash or kill during the up-to-100-request replay that commit
+    /// triggers loses nothing: every completion in the batch already survived
+    /// to disk before the network round-trips even began. See
+    /// `TodoRepository.stageCompleteTodos(_:)`.
     ///
     /// Recurring occurrences stay in the batch: complete is the one action with a
     /// per-occurrence route, and the repository carries each row's `instanceDate`.
@@ -343,31 +368,40 @@ final class TodoListViewModel {
         let container = container
         let isFloater = mode == .floater
         let count = todos.count
-        let completedIDs = Set(todos.map(\.id))
-        items.removeAll { completedIDs.contains($0.id) }
         lastCompletionAt = Date()
-        if !isFloater {
-            completedTodayCount += count
-        }
-        container.undoableDeleteScheduler.schedule(
-            message: BulkSelectionCopy.completedToast(count),
-            restore: { [weak self] in
-                // The cache was never changed, so re-reading it restores the rows.
-                self?.hydrateFromCache()
-            },
-            commit: { [weak self] in
-                do {
-                    if isFloater {
-                        try await container.todoRepository.completeFloaters(todos)
-                    } else {
-                        try await container.todoRepository.completeTodos(todos)
+        if isFloater {
+            let staged = container.todoRepository.stageCompleteFloaters(todos)
+            hydrateFromCache()
+            container.undoableDeleteScheduler.schedule(
+                message: BulkSelectionCopy.completedToast(count),
+                restore: {
+                    container.todoRepository.undoStagedFloaterCompletion(staged)
+                },
+                commit: {
+                    do {
+                        try await container.todoRepository.syncPendingMutations()
+                    } catch {
+                        container.snackbarManager.show(BulkSelectionCopy.updateFailed(count), kind: .error)
                     }
-                } catch {
-                    container.snackbarManager.show(BulkSelectionCopy.updateFailed(count), kind: .error)
                 }
-                self?.hydrateFromCache()
-            }
-        )
+            )
+        } else {
+            let staged = container.todoRepository.stageCompleteTodos(todos)
+            hydrateFromCache()
+            container.undoableDeleteScheduler.schedule(
+                message: BulkSelectionCopy.completedToast(count),
+                restore: {
+                    container.todoRepository.undoStagedCompletion(staged)
+                },
+                commit: {
+                    do {
+                        try await container.todoRepository.syncPendingMutations()
+                    } catch {
+                        container.snackbarManager.show(BulkSelectionCopy.updateFailed(count), kind: .error)
+                    }
+                }
+            )
+        }
     }
 
     /// Delayed-commit bulk delete — the batch shape of `delete(_:)`. The screen
@@ -573,9 +607,22 @@ final class TodoListViewModel {
         return Date().epochMilliseconds - state.lastSuccessfulSyncEpochMs < Self.recentSuccessfulSyncSkipWindowMs
     }
 
+    // `[weak self]` here is load-bearing, not style: SwiftUI's
+    // `State(initialValue:)` (see `TodoListScreen.init`) re-runs this view
+    // model's initializer on every parent body pass and discards the surplus
+    // instance. Capturing `self` strongly would keep this Task (and the
+    // NotificationCenter async sequence it iterates) alive forever, which
+    // keeps `self` alive forever too — `deinit` could never run to cancel it.
+    // Every discarded instance would go on reacting to every future cache
+    // write for the life of the process, and a bulk completion posts four of
+    // those writes, each a full cache reload on the main actor. That
+    // unbounded, immortal observer set — not request concurrency, which this
+    // path never has unbounded — is the confirmed mechanism behind the crash
+    // under a large completion.
     private func observeCacheChanges() {
-        observationTask = Task {
+        observationTask = Task { [weak self] in
             for await _ in NotificationCenter.default.notifications(named: .offlineCacheDidChange) {
+                guard let self else { return }
                 await MainActor.run {
                     self.hydrateFromCache()
                 }
