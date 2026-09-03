@@ -1093,6 +1093,13 @@
         "keywords": "widget, schermata home, colpo d'occhio, oggi, schermata di blocco",
         "body": "Aggiungi il widget T'Day alla schermata Home per dare un'occhiata alle attività di oggi. Toccando il widget si apre l'app nel punto giusto."
       },
+      "widget-list-selection": {
+        "title": "Scegli una lista per il tuo widget",
+        "summary": "Fai puntare un widget su una lista specifica invece che sull'intero flusso.",
+        "keywords": "widget, lista, configura, modifica widget, per lista, schermata home, ios",
+        "body": "Tieni premuto un widget T'Day e scegli Modifica widget per decidere esattamente quale lista mostra — una qualsiasi delle tue liste programmate o liste flottanti. Una lista programmata mostra gli orari di scadenza e segnala ciò che è in ritardo; una lista flottante mostra un elenco aperto senza orari di scadenza. Se non scegli nulla, il widget continua a mostrare l'intero flusso Oggi o Flottanti.",
+        "tip": "Aggiungi più widget, ognuno puntato su una lista diversa, per vederli tutti insieme sulla tua schermata Home."
+      },
       "widget-quick-add": {
         "title": "Aggiunta rapida dal widget",
         "summary": "Avvia una nuova attività direttamente dal widget.",

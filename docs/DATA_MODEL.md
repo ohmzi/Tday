@@ -115,18 +115,40 @@ The Today Tasks widgets do not add backend or shared DTOs. Android builds its wi
 from the Room-backed `OfflineSyncState`; iOS writes a versioned JSON snapshot into App Group defaults
 for the WidgetKit extension.
 
-The current iOS snapshot schema is version `2` and includes:
+The current iOS snapshot schema is version `2` (Today) / `1` (Floater) and includes:
 
 - `schemaVersion`
 - `generatedAtEpochMs`
 - `title`
 - `status` (`setup`, `empty`, or `tasks`)
 - `taskCount`
-- `tasks`, with each row carrying `id`, `title`, `dueEpochMs`, and `priority`
+- `tasks`, with each row carrying `id`, `title`, `dueEpochMs` (todo only), and `priority`
+- `perList` (iOS only, R7): a `[listId: PerListSnapshot]` map alongside `tasks`, one entry per
+  todo/floater list that currently has open items. Each entry carries its own `totalCount` (true
+  count) and a capped `tasks` array, mirroring the top-level `taskCount`/`tasks` split — see
+  "Per-list configurable widgets (iOS)" below.
 
 Both platforms filter the source cache to pending scheduled tasks due today, sort by due time then
-title, cap displayed rows to the widget task limit, and exclude floaters, completed tasks, and overdue
-tasks from the v1 widget surface.
+title, cap displayed rows to the widget task limit, and exclude floaters and completed tasks from the
+global feed. The global Today aggregate still excludes overdue tasks (due strictly today only); a
+per-list widget instance (see below) does not — it includes overdue.
+
+### Per-list configurable widgets (iOS)
+
+iOS widgets (R7) are `AppIntentConfiguration`s: on placement (or via "Edit Widget") the user picks
+one specific todo list or floater list, or leaves it unset to keep the original global feed. The
+widget extension cannot reach `AppContainer`/SwiftData directly (by design — see the file header on
+`WidgetSnapshotFileStore`), so the app additionally writes a lightweight, content-free list catalog,
+`widget-lists-snapshot.json` (`[{id, name, kind}]`, `kind` = `"todo"` or `"floater"`), which backs the
+configuration picker's `EntityQuery`.
+
+The picked list's TYPE decides the widget's rendered shape, not which of the two widget kinds
+(`TodayTasksWidget` / `FloaterTasksWidget`) it was dragged out of: a todo list always renders
+due-date-shaped (due times, overdue in red), a floater list always renders undated-shaped. Either
+gallery slot can render either shape once configured. Content comes from the SAME two snapshot files
+via `perList[listId]` — there is no third, per-instance file; two widget instances configured to the
+same list read the same `perList` entry, and WidgetKit itself (not the app) tracks which instance
+has which configuration.
 
 ## Device Calendar Mirror
 

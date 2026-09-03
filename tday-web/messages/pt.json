@@ -1093,6 +1093,13 @@
         "keywords": "widget, ecrã principal, relance, hoje, ecrã de bloqueio",
         "body": "Adicione o widget do T'Day ao seu ecrã principal para dar uma olhada às tarefas de hoje. Tocar no widget abre a aplicação no sítio certo."
       },
+      "widget-list-selection": {
+        "title": "Escolha uma lista para o seu widget",
+        "summary": "Faça um widget apontar para uma lista específica em vez de todo o feed.",
+        "keywords": "widget, lista, configurar, editar widget, por lista, ecrã principal, ios",
+        "body": "Mantenha premido um widget do T'Day e escolha Editar Widget para definir exatamente que lista ele mostra — qualquer uma das suas listas agendadas ou listas de flutuantes. Uma lista agendada mostra horas de vencimento e assinala o que está atrasado; uma lista de flutuantes mostra uma lista aberta sem horas de vencimento. Se não escolher nada, o widget continua a mostrar o feed completo de Hoje ou de Flutuantes.",
+        "tip": "Adicione vários widgets, cada um apontando para uma lista diferente, para os ver todos ao mesmo tempo no seu ecrã principal."
+      },
       "widget-quick-add": {
         "title": "Adição rápida pelo widget",
         "summary": "Comece uma nova tarefa diretamente a partir do widget.",

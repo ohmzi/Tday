@@ -1093,6 +1093,13 @@
         "keywords": "widget, pantalla de inicio, vistazo, hoy, pantalla de bloqueo",
         "body": "Añade el widget de T'Day a tu pantalla de inicio para echar un vistazo a las tareas de hoy. Al tocar el widget, la app se abre en el lugar adecuado."
       },
+      "widget-list-selection": {
+        "title": "Elige una lista para tu widget",
+        "summary": "Haz que un widget muestre una lista concreta en vez de todo el feed.",
+        "keywords": "widget, lista, configurar, editar widget, por lista, pantalla de inicio, ios",
+        "body": "Mantén pulsado un widget de T'Day y elige Editar widget para decidir exactamente qué lista muestra: cualquiera de tus listas programadas o de flotantes. Una lista programada muestra horas de vencimiento y marca lo atrasado; una lista de flotantes muestra una lista abierta sin horas de vencimiento. Si la dejas sin elegir, el widget sigue mostrando el feed completo de Hoy o de Flotantes.",
+        "tip": "Añade varios widgets, cada uno apuntando a una lista distinta, para verlos todos a la vez en tu pantalla de inicio."
+      },
       "widget-quick-add": {
         "title": "Añadir rápido desde el widget",
         "summary": "Empieza una tarea nueva directamente desde el widget.",

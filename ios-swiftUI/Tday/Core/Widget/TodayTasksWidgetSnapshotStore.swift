@@ -11,6 +11,15 @@ struct TodayTasksWidgetSnapshot: Codable, Equatable {
     let status: TodayTasksWidgetSnapshotStatus
     let taskCount: Int
     let tasks: [TodayTasksWidgetTaskSnapshot]
+    /// Per-todo-list breakdown (R7 configurable widgets): the SAME due-today-or-overdue todos
+    /// as `tasks`, but scoped to one list and keyed by that list's id, so a widget instance
+    /// configured to a specific todo list can read just its slice without a second file.
+    /// Wider window than `tasks` (which is strictly "due today") because a per-list widget is
+    /// the user's whole view of that list, not a slice of a global aggregate — see
+    /// `TodayTasksWidgetSnapshotStore.makeSnapshot`, which computes it as due-today-or-overdue.
+    /// Defaulted so snapshots persisted before this field existed still decode (as empty —
+    /// those widgets simply show "no tasks" until the next save, at most one state change away).
+    let perList: [String: TodayTasksWidgetPerListSnapshot]
 
     init(
         schemaVersion: Int = TodayTasksWidgetSnapshotStore.snapshotSchemaVersion,
@@ -18,7 +27,8 @@ struct TodayTasksWidgetSnapshot: Codable, Equatable {
         title: String,
         status: TodayTasksWidgetSnapshotStatus,
         taskCount: Int,
-        tasks: [TodayTasksWidgetTaskSnapshot]
+        tasks: [TodayTasksWidgetTaskSnapshot],
+        perList: [String: TodayTasksWidgetPerListSnapshot] = [:]
     ) {
         self.schemaVersion = schemaVersion
         self.generatedAtEpochMs = generatedAtEpochMs
@@ -26,6 +36,7 @@ struct TodayTasksWidgetSnapshot: Codable, Equatable {
         self.status = status
         self.taskCount = taskCount
         self.tasks = tasks
+        self.perList = perList
     }
 
     init(from decoder: Decoder) throws {
@@ -37,6 +48,7 @@ struct TodayTasksWidgetSnapshot: Codable, Equatable {
         status = (try? container.decodeIfPresent(TodayTasksWidgetSnapshotStatus.self, forKey: .status)) ?? (decodedTasks.isEmpty ? .empty : .tasks)
         taskCount = try container.decodeIfPresent(Int.self, forKey: .taskCount) ?? decodedTasks.count
         tasks = decodedTasks
+        perList = try container.decodeIfPresent([String: TodayTasksWidgetPerListSnapshot].self, forKey: .perList) ?? [:]
     }
 
     /// True when the DISPLAYED content matches, ignoring `generatedAtEpochMs` (which changes
@@ -47,8 +59,19 @@ struct TodayTasksWidgetSnapshot: Codable, Equatable {
             title == other.title &&
             status == other.status &&
             taskCount == other.taskCount &&
-            tasks == other.tasks
+            tasks == other.tasks &&
+            perList == other.perList
     }
+}
+
+/// One todo list's slice of `TodayTasksWidgetSnapshot.perList`: the display-capped task rows
+/// (`tasks`, capped at `TodayTasksWidgetSnapshotStore.perListTaskLimit`) plus the list's TRUE
+/// due-today-or-overdue count (`totalCount`), mirroring how the top-level snapshot separates
+/// `tasks` (capped) from `taskCount` (true) so the widget's count pill stays accurate even when
+/// a list has more open items than the display cap.
+struct TodayTasksWidgetPerListSnapshot: Codable, Equatable {
+    let totalCount: Int
+    let tasks: [TodayTasksWidgetTaskSnapshot]
 }
 
 struct TodayTasksWidgetTaskSnapshot: Codable, Equatable, Identifiable {
@@ -130,6 +153,12 @@ enum WidgetSnapshotFileStore {
     static let appGroupSuiteName = "group.com.ohmz.tday"
     static let todayFileName = "widget-today-snapshot.json"
     static let floaterFileName = "widget-floater-snapshot.json"
+    /// Lightweight catalog (id/name/kind, no task content) of every todo list and floater
+    /// list, written alongside the two snapshots above so the widget CONFIGURATION picker
+    /// (per-list widgets, R7) can list choices without the extension touching AppContainer /
+    /// SwiftData. See `WidgetConfigurableListsStore` below for the writer and
+    /// `TdayWidgetListEntityQuery` in TdayWidget/TodayTasksWidget.swift for the reader.
+    static let listsFileName = "widget-lists-snapshot.json"
 
     static func read(_ fileName: String) -> Data? {
         guard let fileURL = fileURL(fileName) else {
@@ -164,6 +193,34 @@ enum WidgetSnapshotFileStore {
     }
 }
 
+/// One row of the widget's list-picker catalog: no task content, just enough to populate and
+/// label the "Edit Widget" list chooser. `kind` is the raw string form of `WidgetListKind`
+/// (defined on the widget-extension side, TdayWidget/TodayTasksWidget.swift) — kept as a plain
+/// String here so the App target never needs to depend on that extension-only type; the two
+/// must stay in lockstep ("todo" / "floater").
+struct WidgetConfigurableListEntry: Codable, Equatable {
+    let id: String
+    let name: String
+    let kind: String
+}
+
+/// Writer for `WidgetSnapshotFileStore.listsFileName` (R7 configurable widgets): every todo
+/// list and floater list the user has, with no task content, so the widget CONFIGURATION
+/// picker (`TdayWidgetListEntityQuery` in the widget extension) can list and label choices
+/// without the extension touching `AppContainer`/SwiftData — the same file-handoff shape the
+/// task snapshots already use, per `WidgetSnapshotFileStore`'s doc comment.
+enum WidgetConfigurableListsStore {
+    static func save(from state: OfflineSyncState) {
+        let entries =
+            state.lists.map { WidgetConfigurableListEntry(id: $0.id, name: $0.name, kind: "todo") } +
+            state.floaterLists.map { WidgetConfigurableListEntry(id: $0.id, name: $0.name, kind: "floater") }
+        guard let data = try? JSONEncoder().encode(entries) else {
+            return
+        }
+        WidgetSnapshotFileStore.write(data, to: WidgetSnapshotFileStore.listsFileName)
+    }
+}
+
 enum TodayTasksWidgetSnapshotStore {
     static let snapshotSchemaVersion = 2
     static let widgetKind = "TodayTasksWidget"
@@ -174,6 +231,11 @@ enum TodayTasksWidgetSnapshotStore {
     static let legacySnapshotKey = "tday.widget.todayTasksSnapshot"
     static let defaultTitle = "Today's Tasks"
     static let taskLimit = 50
+    /// Display cap for ONE list's slice of `perList`. Smaller than the global `taskLimit`
+    /// because a single list rarely has dozens of due/overdue items, and this map holds one
+    /// such array per todo list — keeping it small bounds both the on-disk file and the
+    /// WatchConnectivity application-context payload `WatchSessionManager` mirrors it into.
+    static let perListTaskLimit = 20
 
     static func makeSnapshot(
         from state: OfflineSyncState,
@@ -214,29 +276,60 @@ enum TodayTasksWidgetSnapshotStore {
             key: taskSortKey
         )
 
+        func makeTaskSnapshot(_ record: CachedTodoRecord) -> TodayTasksWidgetTaskSnapshot {
+            TodayTasksWidgetTaskSnapshot(
+                id: record.id,
+                title: record.title,
+                dueEpochMs: record.dueEpochMs ?? dayStartEpochMs,
+                priority: record.priority,
+                description: record.description.map(flattenNotesToPlainText),
+                pinned: record.pinned,
+                updatedAtEpochMs: record.updatedAtEpochMs > 0 ? record.updatedAtEpochMs : nil,
+                canonicalId: record.canonicalId,
+                instanceDateEpochMs: record.instanceDateEpochMs
+            )
+        }
+
+        // Per-list breakdown (R7 configurable widgets): every todo list's own due-today-OR-
+        // OVERDUE pending todos, independent of the Focus filter above (a widget explicitly
+        // configured to one list shows that list, full stop — Focus is a Today-feed concept).
+        // Overdue is included (dueEpochMs < dayEnd, no lower bound) because a per-list widget
+        // is the user's whole window into that list, unlike the global Today aggregate which
+        // is deliberately "due today" only.
+        var perList: [String: TodayTasksWidgetPerListSnapshot] = [:]
+        for list in state.lists {
+            let listTodos = TaskSortEngine.sortedTodos(
+                state.todos.filter { record in
+                    guard record.listId == list.id, !record.completed, let dueEpochMs = record.dueEpochMs else {
+                        return false
+                    }
+                    return dueEpochMs < dayEndEpochMs
+                },
+                key: taskSortKey
+            )
+            guard !listTodos.isEmpty else { continue }
+            perList[list.id] = TodayTasksWidgetPerListSnapshot(
+                totalCount: listTodos.count,
+                tasks: listTodos.prefix(perListTaskLimit).map(makeTaskSnapshot)
+            )
+        }
+
         return TodayTasksWidgetSnapshot(
             generatedAtEpochMs: Int64(now.timeIntervalSince1970 * 1_000),
             title: defaultTitle,
             status: todayTasks.isEmpty ? .empty : .tasks,
             taskCount: todayTasks.count,
-            tasks: todayTasks.prefix(taskLimit).map {
-                TodayTasksWidgetTaskSnapshot(
-                    id: $0.id,
-                    title: $0.title,
-                    dueEpochMs: $0.dueEpochMs ?? dayStartEpochMs,
-                    priority: $0.priority,
-                    description: $0.description.map(flattenNotesToPlainText),
-                    pinned: $0.pinned,
-                    updatedAtEpochMs: $0.updatedAtEpochMs > 0 ? $0.updatedAtEpochMs : nil,
-                    canonicalId: $0.canonicalId,
-                    instanceDateEpochMs: $0.instanceDateEpochMs
-                )
-            }
+            tasks: todayTasks.prefix(taskLimit).map(makeTaskSnapshot),
+            perList: perList
         )
     }
 
     static func saveTodayTasks(from state: OfflineSyncState) {
         let snapshot = makeSnapshot(from: state)
+        // The lists catalog (id/name/kind, no task content) backs the widget CONFIGURATION
+        // picker and has no bearing on `hasSameContent`, so it is written unconditionally —
+        // cheap, and keeps a renamed/added/removed list visible to "Edit Widget" promptly.
+        WidgetConfigurableListsStore.save(from: state)
         // Conditional reload: if the DISPLAYED content is unchanged (ignoring the volatile
         // generatedAt timestamp), skip the write + WidgetKit reload. This is what lets a
         // background sync that only touched non-today data leave the widget untouched while
@@ -251,7 +344,11 @@ enum TodayTasksWidgetSnapshotStore {
         WidgetSnapshotFileStore.write(data, to: snapshotFileName)
 
         #if canImport(WidgetKit)
-        WidgetCenter.shared.reloadTimelines(ofKind: widgetKind)
+        // Per-list widgets (R7) let EITHER widget kind render EITHER shape (a todo list picked
+        // from the "Floater Tasks" gallery slot still renders due-date-shaped, and vice versa),
+        // so a change here can affect a "FloaterTasksWidget" instance too — reload both kinds
+        // rather than just `widgetKind`.
+        WidgetCenter.shared.reloadAllTimelines()
         #endif
 
         // Mirror the same Today snapshot to a paired Apple Watch (R6-4).
@@ -312,6 +409,10 @@ struct FloaterTasksWidgetSnapshot: Codable, Equatable {
     let status: FloaterTasksWidgetSnapshotStatus
     let taskCount: Int
     let tasks: [FloaterTasksWidgetTaskSnapshot]
+    /// Per-floater-list breakdown (R7 configurable widgets): the same pending floaters as
+    /// `tasks`, scoped to one floater list and keyed by its id. See the twin field on
+    /// `TodayTasksWidgetSnapshot` for why this exists.
+    let perList: [String: FloaterTasksWidgetPerListSnapshot]
 
     init(
         schemaVersion: Int = FloaterTasksWidgetSnapshotStore.snapshotSchemaVersion,
@@ -319,7 +420,8 @@ struct FloaterTasksWidgetSnapshot: Codable, Equatable {
         title: String,
         status: FloaterTasksWidgetSnapshotStatus,
         taskCount: Int,
-        tasks: [FloaterTasksWidgetTaskSnapshot]
+        tasks: [FloaterTasksWidgetTaskSnapshot],
+        perList: [String: FloaterTasksWidgetPerListSnapshot] = [:]
     ) {
         self.schemaVersion = schemaVersion
         self.generatedAtEpochMs = generatedAtEpochMs
@@ -327,6 +429,7 @@ struct FloaterTasksWidgetSnapshot: Codable, Equatable {
         self.status = status
         self.taskCount = taskCount
         self.tasks = tasks
+        self.perList = perList
     }
 
     init(from decoder: Decoder) throws {
@@ -338,6 +441,7 @@ struct FloaterTasksWidgetSnapshot: Codable, Equatable {
         status = (try? container.decodeIfPresent(FloaterTasksWidgetSnapshotStatus.self, forKey: .status)) ?? (decodedTasks.isEmpty ? .empty : .tasks)
         taskCount = try container.decodeIfPresent(Int.self, forKey: .taskCount) ?? decodedTasks.count
         tasks = decodedTasks
+        perList = try container.decodeIfPresent([String: FloaterTasksWidgetPerListSnapshot].self, forKey: .perList) ?? [:]
     }
 
     /// True when the DISPLAYED content matches, ignoring `generatedAtEpochMs`. Lets a
@@ -347,8 +451,17 @@ struct FloaterTasksWidgetSnapshot: Codable, Equatable {
             title == other.title &&
             status == other.status &&
             taskCount == other.taskCount &&
-            tasks == other.tasks
+            tasks == other.tasks &&
+            perList == other.perList
     }
+}
+
+/// One floater list's slice of `FloaterTasksWidgetSnapshot.perList` — see the todo twin,
+/// `TodayTasksWidgetPerListSnapshot`, for why `totalCount` is tracked separately from the
+/// display-capped `tasks` array.
+struct FloaterTasksWidgetPerListSnapshot: Codable, Equatable {
+    let totalCount: Int
+    let tasks: [FloaterTasksWidgetTaskSnapshot]
 }
 
 struct FloaterTasksWidgetTaskSnapshot: Codable, Equatable, Identifiable {
@@ -409,6 +522,9 @@ enum FloaterTasksWidgetSnapshotStore {
     static let legacySnapshotKey = "tday.widget.floaterTasksSnapshot"
     static let defaultTitle = "Floater Tasks"
     static let taskLimit = 50
+    /// Display cap for ONE list's slice of `perList` — see the todo twin for why it's smaller
+    /// than `taskLimit`.
+    static let perListTaskLimit = 20
 
     static func makeSnapshot(
         from state: OfflineSyncState,
@@ -432,26 +548,47 @@ enum FloaterTasksWidgetSnapshotStore {
             key: taskSortKey
         )
 
+        func makeTaskSnapshot(_ record: CachedFloaterRecord) -> FloaterTasksWidgetTaskSnapshot {
+            FloaterTasksWidgetTaskSnapshot(
+                id: record.id,
+                title: record.title,
+                priority: record.priority,
+                pinned: record.pinned,
+                updatedAtEpochMs: record.updatedAtEpochMs > 0 ? record.updatedAtEpochMs : nil,
+                canonicalId: record.canonicalId
+            )
+        }
+
+        // Per-list breakdown (R7 configurable widgets) — see the todo twin in
+        // TodayTasksWidgetSnapshotStore.makeSnapshot for the rationale.
+        var perList: [String: FloaterTasksWidgetPerListSnapshot] = [:]
+        for list in state.floaterLists {
+            let listFloaters = TaskSortEngine.sortedFloaters(
+                state.floaters.filter { $0.listId == list.id && !$0.completed },
+                key: taskSortKey
+            )
+            guard !listFloaters.isEmpty else { continue }
+            perList[list.id] = FloaterTasksWidgetPerListSnapshot(
+                totalCount: listFloaters.count,
+                tasks: listFloaters.prefix(perListTaskLimit).map(makeTaskSnapshot)
+            )
+        }
+
         return FloaterTasksWidgetSnapshot(
             generatedAtEpochMs: Int64(now.timeIntervalSince1970 * 1_000),
             title: defaultTitle,
             status: floaterTasks.isEmpty ? .empty : .tasks,
             taskCount: floaterTasks.count,
-            tasks: floaterTasks.prefix(taskLimit).map {
-                FloaterTasksWidgetTaskSnapshot(
-                    id: $0.id,
-                    title: $0.title,
-                    priority: $0.priority,
-                    pinned: $0.pinned,
-                    updatedAtEpochMs: $0.updatedAtEpochMs > 0 ? $0.updatedAtEpochMs : nil,
-                    canonicalId: $0.canonicalId
-                )
-            }
+            tasks: floaterTasks.prefix(taskLimit).map(makeTaskSnapshot),
+            perList: perList
         )
     }
 
     static func saveFloaterTasks(from state: OfflineSyncState) {
         let snapshot = makeSnapshot(from: state)
+        // See saveTodayTasks: written unconditionally, cheap, keeps the widget configuration
+        // picker's list names/choices fresh independent of task-content change detection.
+        WidgetConfigurableListsStore.save(from: state)
         // Conditional reload: skip the write + WidgetKit reload when the displayed floater
         // content is unchanged (see saveTodayTasks). A background sync that didn't touch the
         // floater list leaves the widget untouched while the app still holds the latest state.
@@ -465,7 +602,9 @@ enum FloaterTasksWidgetSnapshotStore {
         WidgetSnapshotFileStore.write(data, to: snapshotFileName)
 
         #if canImport(WidgetKit)
-        WidgetCenter.shared.reloadTimelines(ofKind: widgetKind)
+        // See saveTodayTasks: a per-list widget can render either shape from either gallery
+        // kind now, so both kinds need reloading, not just `widgetKind`.
+        WidgetCenter.shared.reloadAllTimelines()
         #endif
     }
 
