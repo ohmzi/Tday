@@ -305,6 +305,7 @@ class CompletedRepository @Inject constructor(
             return
         }
         val mapped = floaterToCache(mapFloaterDto(restoredFloater))
+        val listId = mapped.listId
         val timestampMs = System.currentTimeMillis()
         cacheManager.updateOfflineState { state ->
             val floaterListIds = state.floaterLists.map { it.id }.toSet()
@@ -312,13 +313,13 @@ class CompletedRepository @Inject constructor(
             // already inserted into this cache (§5.2) — only insert one here when
             // this device has genuinely never seen that list id before.
             val needsNewList = response.listRecreated &&
-                mapped.listId != null &&
-                mapped.listId !in floaterListIds
+                listId != null &&
+                listId !in floaterListIds
             state.copy(
                 floaters = state.floaters.filterNot { it.canonicalId == mapped.canonicalId } + mapped,
                 floaterLists = if (needsNewList) {
                     state.floaterLists + CachedFloaterListRecord(
-                        id = mapped.listId!!,
+                        id = listId,
                         name = response.listName.orEmpty(),
                         color = response.listColor,
                         iconKey = null,
