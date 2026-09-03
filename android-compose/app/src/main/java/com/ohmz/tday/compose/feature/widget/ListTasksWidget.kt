@@ -77,36 +77,50 @@ class ListTasksWidget : GlanceAppWidget() {
         }
 
         provideContent {
-            // provideGlance runs ONCE per Glance session — see the class KDoc. Every value that
-            // can change after cold start is collected as composable state here, exactly like
-            // TodayTasksWidget/FloaterTasksWidget.
-            val isAppLocked by securityPreferenceStore.appLockEnabled.collectAsState()
-            val snapshotVersion by WidgetSnapshotSignal.version.collectAsState()
-            // The configured list itself can change too (the user reconfigures via the launcher's
-            // widget-edit affordance, which relaunches WidgetListConfigurationActivity for this
-            // SAME appWidgetId) — re-read on every signal bump, not just once at cold start.
-            val selection = remember(snapshotVersion) { selectionStore.selectionFor(appWidgetId) }
-            // `remember`, not `produceState` — see TodayTasksWidget for the on-device race this
-            // avoids: an async follow-up recomposition can lose Glance's RemoteViews publish race.
-            val currentSnapshot = remember(snapshotVersion, isAppLocked, selection) {
-                if (isAppLocked || selection == null) null else snapshotStore.readList(appWidgetId)
-            }
-            Log.i(
-                WIDGET_LOG_TAG,
-                "list[$appWidgetId]: composing, version=$snapshotVersion locked=$isAppLocked " +
-                    "listType=${selection?.listType?.name ?: "none"} snapshotNull=${currentSnapshot == null}",
-            )
-
-            GlanceTheme {
-                ListTasksWidgetBody(
-                    appContext = appContext,
-                    appWidgetId = appWidgetId,
-                    selection = selection,
-                    isAppLocked = isAppLocked,
-                    currentSnapshot = currentSnapshot,
-                )
-            }
+            ListTasksWidgetContent(appContext, appWidgetId, securityPreferenceStore, snapshotStore, selectionStore)
         }
+    }
+}
+
+/**
+ * Everything `provideGlance` runs ONCE per Glance session for (see the class KDoc): every value
+ * that can change after cold start is collected as composable state HERE, not above
+ * `provideContent`, exactly like TodayTasksWidget/FloaterTasksWidget. Pulled out to its own
+ * composable so `provideGlance`'s own body stays a flat, linear setup sequence.
+ */
+@Composable
+private fun ListTasksWidgetContent(
+    appContext: Context,
+    appWidgetId: Int,
+    securityPreferenceStore: AppSecurityPreferenceStore,
+    snapshotStore: WidgetSnapshotStore,
+    selectionStore: WidgetListSelectionStore,
+) {
+    val isAppLocked by securityPreferenceStore.appLockEnabled.collectAsState()
+    val snapshotVersion by WidgetSnapshotSignal.version.collectAsState()
+    // The configured list itself can change too (the user reconfigures via the launcher's
+    // widget-edit affordance, which relaunches WidgetListConfigurationActivity for this SAME
+    // appWidgetId) — re-read on every signal bump, not just once at cold start.
+    val selection = remember(snapshotVersion) { selectionStore.selectionFor(appWidgetId) }
+    // `remember`, not `produceState` — see TodayTasksWidget for the on-device race this avoids:
+    // an async follow-up recomposition can lose Glance's RemoteViews publish race.
+    val currentSnapshot = remember(snapshotVersion, isAppLocked, selection) {
+        if (isAppLocked || selection == null) null else snapshotStore.readList(appWidgetId)
+    }
+    Log.i(
+        WIDGET_LOG_TAG,
+        "list[$appWidgetId]: composing, version=$snapshotVersion locked=$isAppLocked " +
+            "listType=${selection?.listType?.name ?: "none"} snapshotNull=${currentSnapshot == null}",
+    )
+
+    GlanceTheme {
+        ListTasksWidgetBody(
+            appContext = appContext,
+            appWidgetId = appWidgetId,
+            selection = selection,
+            isAppLocked = isAppLocked,
+            currentSnapshot = currentSnapshot,
+        )
     }
 }
 
