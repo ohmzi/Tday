@@ -231,6 +231,14 @@ object GuideCatalog {
             setOf(ANDROID, IOS), body = listOf(para(GuideTopicIds.HOME_WIDGET)),
         ),
         topic(
+            // Android only for now — this is the per-instance list picker described in the
+            // per-list-widgets rollout; iOS gets the equivalent Focus-filter-based flow in a
+            // separate PR.
+            GuideTopicIds.LIST_WIDGETS, GuideSectionId.WIDGETS_AND_SURFACES, "layout-grid",
+            setOf(ANDROID), sinceVersion = "0.7.8",
+            body = listOf(para(GuideTopicIds.LIST_WIDGETS), tip(GuideTopicIds.LIST_WIDGETS)),
+        ),
+        topic(
             GuideTopicIds.WIDGET_QUICK_ADD, GuideSectionId.WIDGETS_AND_SURFACES, "square-plus",
             setOf(ANDROID, IOS), badge = GuideBadge.PRO_TIP,
             body = listOf(para(GuideTopicIds.WIDGET_QUICK_ADD)),

@@ -1093,6 +1093,13 @@
         "keywords": "widget, ecrã principal, relance, hoje, ecrã de bloqueio",
         "body": "Adicione o widget do T'Day ao seu ecrã principal para dar uma olhada às tarefas de hoje. Tocar no widget abre a aplicação no sítio certo."
       },
+      "list-widgets": {
+        "title": "Widgets de listas",
+        "summary": "Coloque qualquer lista na sua tela inicial, não só Hoje.",
+        "keywords": "widget, tela inicial, lista, configurar, seletor, flutuante, agendada",
+        "body": "Adicione um widget do T'Day e um seletor permite escolher qual lista ele mostra — qualquer lista agendada ou de tarefas flutuantes, não só Hoje ou Flutuantes. Adicione o widget novamente para mostrar outra lista; cada um memoriza sua própria escolha.",
+        "tip": "Toque e segure um widget já colocado e escolha Editar (ou as configurações de widgets do seu launcher) para trocá-lo de lista mais tarde."
+      },
       "widget-quick-add": {
         "title": "Adição rápida pelo widget",
         "summary": "Comece uma nova tarefa diretamente a partir do widget.",

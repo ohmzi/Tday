@@ -112,6 +112,9 @@ internal data class TaskWidgetRow(
     val description: String? = null,
     /** Tapping the leading dot completes the task inline (widgets v2). */
     val completeAction: Action? = null,
+    /** List widget only (widgets v3): tints [trailingText] as overdue. Today/Floater never set
+     *  this, so their trailing time keeps its normal secondary color unchanged. */
+    val overdueTrailing: Boolean = false,
 )
 
 private enum class TaskWidgetTextColor(@ColorRes val resourceId: Int) {
@@ -623,6 +626,7 @@ private fun TaskWidgetRow(
                     modifier = GlanceModifier.fillMaxWidth(),
                     title = row.title,
                     trailingText = trailing,
+                    trailingOverdue = row.overdueTrailing,
                     titleFontSize = metrics.rowFontSize,
                 )
             }
@@ -651,6 +655,7 @@ private fun TaskTitleAndTime(
     trailingText: String?,
     titleFontSize: TextUnit,
     modifier: GlanceModifier = GlanceModifier,
+    trailingOverdue: Boolean = false,
 ) {
     require(titleFontSize.isSp) { "Widget font sizes must be expressed in sp." }
     val context = LocalContext.current
@@ -660,10 +665,17 @@ private fun TaskTitleAndTime(
         setTextColor(R.id.widget_row_title, ContextCompat.getColor(context, TaskWidgetTextColor.PRIMARY.resourceId))
         setInt(R.id.widget_row_title, "setMaxLines", 2)
         if (trailingText != null) {
+            // Reuses the existing high-priority ring color as the overdue tint rather than adding
+            // a new color resource — same red, already themed for day/night.
+            val trailingColorRes = if (trailingOverdue) {
+                R.color.tday_widget_priority_high
+            } else {
+                TaskWidgetTextColor.SECONDARY.resourceId
+            }
             setViewVisibility(R.id.widget_row_time, View.VISIBLE)
             setTextViewText(R.id.widget_row_time, trailingText)
             setTextViewTextSize(R.id.widget_row_time, TypedValue.COMPLEX_UNIT_SP, 11f)
-            setTextColor(R.id.widget_row_time, ContextCompat.getColor(context, TaskWidgetTextColor.SECONDARY.resourceId))
+            setTextColor(R.id.widget_row_time, ContextCompat.getColor(context, trailingColorRes))
         } else {
             setViewVisibility(R.id.widget_row_time, View.GONE)
         }

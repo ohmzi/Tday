@@ -51,12 +51,17 @@ class WidgetCreateTaskActivity : AppCompatActivity() {
         )
         enableEdgeToEdge()
         val createTarget = WidgetCreateTarget.from(intent)
+        // Set only by ListTasksWidget's add button, so the sheet's list picker preselects the
+        // instance's own list instead of whatever the user picked last. Today/Floater's add
+        // button never sends this, so their behavior is unchanged.
+        val defaultListId = intent.data?.getQueryParameter("listId")
         setContent {
             WidgetCreateTaskSurface(
                 createTarget = createTarget,
                 widgetCreateTaskSubmitter = widgetCreateTaskSubmitter,
                 onExit = ::exitToLauncher,
                 onOpenMainApp = ::openMainApp,
+                defaultListId = defaultListId,
             )
         }
     }
@@ -109,6 +114,7 @@ internal fun WidgetCreateTaskSurface(
     onOpenMainApp: () -> Unit,
     initialTitle: String? = null,
     initialNotes: String? = null,
+    defaultListId: String? = null,
 ) {
     val appViewModel: AppViewModel = hiltViewModel()
     val appUiState by appViewModel.uiState.collectAsStateWithLifecycle()
@@ -139,6 +145,7 @@ internal fun WidgetCreateTaskSurface(
         Box(modifier = Modifier.fillMaxSize()) {
             CreateTaskBottomSheet(
                 lists = todoUiState.lists,
+                defaultListId = defaultListId,
                 defaultScheduled = createTarget.showScheduleControls,
                 showScheduleControls = createTarget.showScheduleControls,
                 initialTitle = initialTitle,

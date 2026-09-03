@@ -1093,6 +1093,13 @@
         "keywords": "widget, startbildschirm, blick, heute, sperrbildschirm",
         "body": "Füge das T'Day-Widget zu deinem Startbildschirm hinzu, um einen Blick auf die heutigen Aufgaben zu werfen. Ein Tipp auf das Widget öffnet die App an der richtigen Stelle."
       },
+      "list-widgets": {
+        "title": "Listen-Widgets",
+        "summary": "Zeige jede Liste auf deinem Startbildschirm, nicht nur Heute.",
+        "keywords": "widget, startbildschirm, liste, konfigurieren, auswahl, jederzeit, geplant",
+        "body": "Füge ein T'Day-Widget hinzu, und eine Auswahl lässt dich entscheiden, welche Liste es zeigt — jede geplante Liste oder Jederzeit-Liste, nicht nur Heute oder Jederzeit. Füge das Widget erneut hinzu, um eine andere Liste zu zeigen; jedes merkt sich seine eigene Wahl.",
+        "tip": "Halte ein platziertes Widget gedrückt und wähle Bearbeiten (oder die Widget-Einstellungen deines Launchers), um es später auf eine andere Liste umzustellen."
+      },
       "widget-quick-add": {
         "title": "Schnell hinzufügen aus dem Widget",
         "summary": "Starte eine neue Aufgabe direkt aus dem Widget.",
