@@ -112,7 +112,7 @@ class CompletedFloaterConcurrencyTest {
         TransactionManager.defaultDatabase = db
         transaction(db) {
             // Same enum bootstrap DatabaseConfig.init() runs in production --
-            // trimmed to the types the four tables below actually reference.
+            // trimmed to the types the tables below actually reference.
             listOf(
                 "\"UserRole\"" to listOf("ADMIN", "USER"),
                 "\"ApprovalStatus\"" to listOf("APPROVED", "PENDING"),
