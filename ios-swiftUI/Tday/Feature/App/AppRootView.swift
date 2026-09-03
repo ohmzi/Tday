@@ -9,7 +9,10 @@ struct AppRootView: View {
     @State private var notificationDeepLinkRouter = NotificationDeepLinkRouter.shared
     @State private var hasLeftActiveScene = false
     @State private var isLaunchSplashHeld = false
-    @State private var rootFeedTab: RootFeedTab = .scheduledTaskHome
+    // Seeded once, from the user's "Default home screen" setting, at this view's own `init` —
+    // a config change or SwiftUI re-rendering the same identity keeps whatever `rootFeedTab`
+    // already holds instead of re-applying the default underneath an in-session dock tap.
+    @State private var rootFeedTab: RootFeedTab
     @State private var rootCreateTaskRequestID = 0
     @State private var pendingRootCreateTask: PendingRootCreateTask?
     // Prefill from a share-extension capture, applied to the next create sheet.
@@ -28,6 +31,9 @@ struct AppRootView: View {
         _authViewModel = State(initialValue: AuthViewModel(
             authRepository: container.authRepository,
             systemCredentialService: container.systemCredentialService
+        ))
+        _rootFeedTab = State(initialValue: rootFeedTabFromDefaultHomeScreenApiValue(
+            container.settingsRepository.defaultHomeScreenSnapshot()
         ))
     }
 

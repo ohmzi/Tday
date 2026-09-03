@@ -102,6 +102,35 @@
       "searchBody": "dua suapan utama yang tenang, boleh ditukar dari dok. t'day mempunyai dua suapan seiring. tugasan bertarikh anda untuk hari ini dan seterusnya tersimpan dalam suapan dijadualkan. bila-bila menyimpan floater — tugasan tanpa tarikh. tukar antara keduanya dari dok di bahagian bawah, dan cipta tugasan dari mana-mana satu."
     },
     {
+      "id": "default-home-screen",
+      "section": "GETTING_STARTED",
+      "sectionOrder": 0,
+      "icon": "house",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.7.7",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Skrin utama lalai",
+      "summary": "Pilih sama ada T'Day dibuka pada Dijadualkan atau Bila-bila.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Tetapan mempunyai bahagian Tingkah laku di mana anda memilih suapan mana yang dibuka dahulu — Dijadualkan atau Bila-bila. Ia hanya menetapkan apa yang anda lihat semasa pelancaran; dok masih membenarkan anda menukar antara kedua-duanya pada bila-bila masa."
+          ]
+        }
+      ],
+      "searchTitle": "skrin utama lalai",
+      "searchKeywords": "lalai, skrin utama, pelancaran, permulaan, dijadualkan, bila-bila, tingkah laku, tetapan",
+      "searchBody": "pilih sama ada t'day dibuka pada dijadualkan atau bila-bila. tetapan mempunyai bahagian tingkah laku di mana anda memilih suapan mana yang dibuka dahulu — dijadualkan atau bila-bila. ia hanya menetapkan apa yang anda lihat semasa pelancaran; dok masih membenarkan anda menukar antara kedua-duanya pada bila-bila masa."
+    },
+    {
       "id": "create-task",
       "section": "GETTING_STARTED",
       "sectionOrder": 0,

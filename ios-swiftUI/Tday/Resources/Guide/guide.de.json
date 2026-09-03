@@ -102,6 +102,35 @@
       "searchBody": "zwei ruhige hauptfeeds, zwischen denen du uber das dock wechselst. t'day hat zwei verwandte feeds. geplant enthalt deine terminierten aufgaben fur heute und daruber hinaus. jederzeit enthalt floater — aufgaben ohne datum. wechsle uber das dock unten zwischen ihnen und lege aus jedem von beiden eine aufgabe an."
     },
     {
+      "id": "default-home-screen",
+      "section": "GETTING_STARTED",
+      "sectionOrder": 0,
+      "icon": "house",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.7.7",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Standard-Startbildschirm",
+      "summary": "Wähle, ob T'Day mit Geplant oder Jederzeit startet.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "In den Einstellungen gibt es einen Bereich „Verhalten“, in dem du festlegst, welcher Feed zuerst geöffnet wird — Geplant oder Jederzeit. Das legt nur fest, was dich beim Start begrüßt; über das Dock wechselst du weiterhin jederzeit zwischen beiden."
+          ]
+        }
+      ],
+      "searchTitle": "standard-startbildschirm",
+      "searchKeywords": "standard, startbildschirm, start, launch, geplant, jederzeit, verhalten, einstellungen",
+      "searchBody": "wahle, ob t'day mit geplant oder jederzeit startet. in den einstellungen gibt es einen bereich „verhalten“, in dem du festlegst, welcher feed zuerst geoffnet wird — geplant oder jederzeit. das legt nur fest, was dich beim start begrust; uber das dock wechselst du weiterhin jederzeit zwischen beiden."
+    },
+    {
       "id": "create-task",
       "section": "GETTING_STARTED",
       "sectionOrder": 0,

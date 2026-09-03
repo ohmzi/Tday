@@ -12,6 +12,7 @@ typealias Direction = com.ohmz.tday.shared.model.Direction
 typealias Priority = com.ohmz.tday.shared.model.Priority
 typealias RepeatInterval = com.ohmz.tday.shared.model.RepeatInterval
 typealias ListColor = com.ohmz.tday.shared.model.ListColor
+typealias DefaultHomeScreen = com.ohmz.tday.shared.model.DefaultHomeScreen
 
 class PGEnum<T : Enum<T>>(enumTypeName: String, enumValue: T?) : PGobject() {
     init {

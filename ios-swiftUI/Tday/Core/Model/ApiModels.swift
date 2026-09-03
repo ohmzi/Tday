@@ -763,6 +763,8 @@ struct PreferencesResponse: Codable {
     let groupBy: String?
     let direction: String?
     let aiSummaryEnabled: Bool?
+    // "scheduled" or "floater" — which root feed opens on a fresh cold launch.
+    let defaultHomeScreen: String?
 }
 
 struct PreferencesDTO: Codable, Equatable {
@@ -771,6 +773,7 @@ struct PreferencesDTO: Codable, Equatable {
     let groupBy: String?
     let rrule: String?
     var aiSummaryEnabled: Bool? = nil
+    var defaultHomeScreen: String? = nil
 }
 
 struct UserResponse: Codable, Equatable {

@@ -628,6 +628,10 @@
       "description": "选择浅色、深色，或跟随系统设置。",
       "descriptionSystem": "跟随设备、浅色或深色。当前使用{{theme}}。"
     },
+    "behavior": {
+      "title": "行为",
+      "defaultHomeScreen": "默认主屏幕"
+    },
     "language": {
       "title": "语言",
       "description": "选择应用语言",
@@ -920,6 +924,12 @@
         "summary": "两个宁静的主信息流，可从底栏切换。",
         "keywords": "已安排, 随时, 信息流, 底栏, 根, 导航, 标签页, scheduled, anytime, feed, tabs",
         "body": "T'Day 有两个并列的信息流。“已安排”存放你今天及以后有日期的任务。“随时”存放浮动任务——没有日期的任务。从底部的底栏在两者之间切换，也可以从任意一个创建任务。"
+      },
+      "default-home-screen": {
+        "title": "默认主屏幕",
+        "summary": "选择 T'Day 启动后打开“已安排”还是“随时”。",
+        "keywords": "默认, 主屏幕, 启动, 已安排, 随时, 行为, 设置",
+        "body": "设置中有一个“行为”部分，可以选择启动时先打开哪个信息流——“已安排”或“随时”。这只决定启动时看到的画面；底栏仍然可以随时在两者间切换。"
       },
       "create-task": {
         "title": "创建任务",

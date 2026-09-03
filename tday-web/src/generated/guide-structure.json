@@ -76,6 +76,32 @@
       "sinceVersion": null
     },
     {
+      "id": "default-home-screen",
+      "section": "GETTING_STARTED",
+      "icon": "house",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "titleKey": "guide.topics.default-home-screen.title",
+      "summaryKey": "guide.topics.default-home-screen.summary",
+      "keywordsKey": "guide.topics.default-home-screen.keywords",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "keys": [
+            "guide.topics.default-home-screen.body"
+          ]
+        }
+      ],
+      "badge": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "serverOnly": false,
+      "sinceVersion": "0.7.7"
+    },
+    {
       "id": "create-task",
       "section": "GETTING_STARTED",
       "icon": "plus",

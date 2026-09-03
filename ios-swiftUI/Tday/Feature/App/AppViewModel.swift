@@ -85,6 +85,11 @@ final class AppViewModel {
     /// old global admin toggle is gone.
     var aiSummaryEnabled = true
     var isAiSummarySaving = false
+    /// Which root feed (Scheduled or Floaters) opens on a fresh cold launch. `AppRootView`
+    /// seeds its own `rootFeedTab` from `SettingsRepository.defaultHomeScreenSnapshot()`
+    /// directly at `init`, ahead of this property loading — this one only drives the Settings
+    /// row and stays in sync with it afterwards.
+    var defaultHomeScreen: RootFeedTab = .scheduledTaskHome
     var selectedReminder: ReminderOption
     var dayAheadOption: DayAheadOption
     var isOffline = false
@@ -590,6 +595,39 @@ final class AppViewModel {
             )
         }
         isAiSummarySaving = false
+    }
+
+    /// Loads the default-home-screen preference (cache first, then server). Unlike
+    /// `refreshAiSummarySetting`, this is NOT skipped in Local Mode: the preference is
+    /// user-configurable there too, and `SettingsRepository.refreshDefaultHomeScreen()`
+    /// already resolves to a cache-only read in that mode.
+    func refreshDefaultHomeScreen() async {
+        defaultHomeScreen = rootFeedTabFromDefaultHomeScreenApiValue(
+            container.settingsRepository.defaultHomeScreenSnapshot()
+        )
+        defaultHomeScreen = rootFeedTabFromDefaultHomeScreenApiValue(
+            await container.settingsRepository.refreshDefaultHomeScreen()
+        )
+    }
+
+    /// Sets the default-home-screen preference (optimistic, reverts on failure) — mirrors
+    /// `setAiSummaryEnabled`.
+    func setDefaultHomeScreen(_ tab: RootFeedTab) async {
+        let previous = defaultHomeScreen
+        guard previous != tab else { return }
+        defaultHomeScreen = tab
+        do {
+            let saved = try await container.settingsRepository.setDefaultHomeScreen(
+                tab.defaultHomeScreenApiValue
+            )
+            defaultHomeScreen = rootFeedTabFromDefaultHomeScreenApiValue(saved)
+        } catch {
+            defaultHomeScreen = previous
+            container.snackbarManager.show(
+                userFacingMessage(for: error, fallback: "Could not update your settings."),
+                kind: .error
+            )
+        }
     }
 
     // MARK: - Account (profile name + password)

@@ -34,6 +34,15 @@ final class OfflineCacheManager {
         lastState = loadOfflineState()
     }
 
+    /// Cheap, already-in-memory read of just the default-home-screen preference, for callers
+    /// (e.g. `AppRootView.init`) that need this one field synchronously without repeating
+    /// `loadOfflineState()`'s full fetch across every cached SwiftData entity type. `lastState`
+    /// is populated once in `init` and kept current by every `saveOfflineState` write below, so
+    /// it always mirrors what a fresh `loadOfflineState()` would return for this field.
+    var defaultHomeScreenSnapshot: String {
+        lastState.defaultHomeScreen
+    }
+
     func loadOfflineState() -> OfflineSyncState {
         let todos = (try? modelContext.fetch(FetchDescriptor<CachedTodoEntity>())) ?? []
         let floaters = (try? modelContext.fetch(FetchDescriptor<CachedFloaterEntity>())) ?? []
@@ -159,7 +168,8 @@ final class OfflineCacheManager {
                     iconKey: $0.iconKey
                 )
             },
-            aiSummaryEnabled: metadata?.aiSummaryEnabled ?? true
+            aiSummaryEnabled: metadata?.aiSummaryEnabled ?? true,
+            defaultHomeScreen: metadata?.defaultHomeScreen ?? "scheduled"
         )
     }
 
@@ -199,7 +209,8 @@ final class OfflineCacheManager {
             SyncMetadataEntity(
                 lastSuccessfulSyncEpochMs: normalizedState.lastSuccessfulSyncEpochMs,
                 lastSyncAttemptEpochMs: normalizedState.lastSyncAttemptEpochMs,
-                aiSummaryEnabled: normalizedState.aiSummaryEnabled
+                aiSummaryEnabled: normalizedState.aiSummaryEnabled,
+                defaultHomeScreen: normalizedState.defaultHomeScreen
             )
         )
 

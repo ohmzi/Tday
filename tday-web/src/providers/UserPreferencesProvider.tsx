@@ -1,6 +1,6 @@
 import React, { createContext, useContext } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { SortBy, GroupBy, Direction } from "@/types/enums";
+import { SortBy, GroupBy, Direction, DefaultHomeScreen } from "@/types/enums";
 import { api } from "@/lib/api-client";
 
 type UserPreferences = {
@@ -8,6 +8,7 @@ type UserPreferences = {
   groupBy: GroupBy | null;
   direction: Direction | null;
   aiSummaryEnabled: boolean;
+  defaultHomeScreen: DefaultHomeScreen;
 };
 
 type UserPreferencesContextType = {
@@ -29,6 +30,10 @@ function readPreferences(data: Record<string, unknown> | null): UserPreferences 
     direction: (data?.direction as Direction | null) ?? null,
     // Default ON when absent — the AI summary feature is opt-out.
     aiSummaryEnabled: (data?.aiSummaryEnabled as boolean | undefined) ?? true,
+    // Default Scheduled when absent — matches the hardcoded launch behavior every
+    // platform had before this preference existed.
+    defaultHomeScreen:
+      (data?.defaultHomeScreen as DefaultHomeScreen | undefined) ?? DefaultHomeScreen.scheduled,
   };
 }
 

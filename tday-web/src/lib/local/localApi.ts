@@ -126,6 +126,9 @@ function patchPreferences(body: Record<string, unknown>) {
     if (typeof body.aiSummaryEnabled === "boolean") {
       workspace.preferences.aiSummaryEnabled = body.aiSummaryEnabled;
     }
+    if (typeof body.defaultHomeScreen === "string") {
+      workspace.preferences.defaultHomeScreen = body.defaultHomeScreen;
+    }
   });
   return { message: "preferences updated" };
 }

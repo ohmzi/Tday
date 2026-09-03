@@ -628,6 +628,10 @@
       "description": "Choose light, dark, or follow your system setting.",
       "descriptionSystem": "Follow your device, light, or dark. Currently using {{theme}}."
     },
+    "behavior": {
+      "title": "Behavior",
+      "defaultHomeScreen": "Default home screen"
+    },
     "language": {
       "title": "Language",
       "description": "Choose your app language",
@@ -920,6 +924,12 @@
         "summary": "Two calm main feeds you switch between from the dock.",
         "keywords": "scheduled, anytime, feed, dock, root, navigate, tabs",
         "body": "T'Day has two sibling feeds. Scheduled holds your dated tasks for today and beyond. Anytime holds Floaters — tasks with no date. Switch between them from the dock at the bottom, and create a task from either one."
+      },
+      "default-home-screen": {
+        "title": "Default home screen",
+        "summary": "Choose whether T'Day opens on Scheduled or Floaters.",
+        "keywords": "default, home screen, launch, startup, scheduled, floater, behavior, settings",
+        "body": "Settings has a Behavior section where you can choose which feed opens first — Scheduled or Floaters. It only sets what greets you at launch; the dock still switches between both anytime."
       },
       "create-task": {
         "title": "Create a task",

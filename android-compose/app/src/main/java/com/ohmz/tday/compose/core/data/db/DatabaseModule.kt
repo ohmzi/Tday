@@ -27,6 +27,13 @@ private class Migration7To8 : Migration(7, 8) {
     }
 }
 
+// v9: default home screen preference (Scheduled vs Floaters), settable in Settings.
+private class Migration8To9 : Migration(8, 9) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE sync_metadata ADD COLUMN defaultHomeScreen TEXT NOT NULL DEFAULT 'scheduled'")
+    }
+}
+
 @Module
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
@@ -67,7 +74,7 @@ object DatabaseModule {
             // The DB holds unsynced pending mutations, not just re-fetchable
             // cache, so schema bumps must ship a real Migration. Pre-v7 schemas
             // (no exported history) still fall back destructively.
-            .addMigrations(Migration7To8())
+            .addMigrations(Migration7To8(), Migration8To9())
             .fallbackToDestructiveMigrationFrom(1, 2, 3, 4, 5, 6)
             // Safety net: callers should run DAO access off the main thread (see
             // OfflineCacheManager / repositories using Dispatchers.IO). Kept so a missed
