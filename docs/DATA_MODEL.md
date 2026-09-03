@@ -28,7 +28,7 @@ This document describes the durable and local data structures that define T'Day.
 | Floater | `Floaters` | `FloaterDto`, `CreateFloaterRequest`, `UpdateFloaterRequest` | Unscheduled task for Anytime/Floater planning. No `due`. |
 | Floater list | `FloaterLists` / `FloaterProject` | `FloaterListDto`, `FloaterListDetailResponse` | Project/group for floaters. Keep separate from scheduled-task lists. Carries the same sharing metadata as `ListDto`. |
 | Floater list share | `FloaterListShares` (`floater_list_shares`) | Same share DTOs as scheduled lists | EDITOR/VIEWER membership on a floater list. |
-| Completed floater | `CompletedFloaters` | `CompletedFloaterDto` | Completion history for floaters. |
+| Completed floater | `CompletedFloaters` | `CompletedFloaterDto` | Completion history for floaters; survives the source list being deleted (`listDeleted`), and undo recreates it under its original name/color — see `docs/design/completed-floaters-durability.md`. |
 | Preferences | `UserPreferences` | `PreferencesDto`, `PreferencesResponse` | Per-user sorting/grouping/direction preferences, plus `aiSummaryEnabled` and `defaultHomeScreen` (`"scheduled"` \| `"floater"` — which root feed opens on a fresh cold launch; defaults to `"scheduled"`). |
 | App config | `AppConfigs` | `AppSettingsResponse`, `AdminSettingsResponse` | Public/admin app settings such as Summary availability. |
 | File metadata | `Files` | Internal only | Retained table for cleanup/compatibility paths; there is no active upload/download API surface. |
@@ -50,7 +50,7 @@ Scheduled tasks and floaters are intentionally different:
 - A task should not be made "unscheduled" by nulling `Todo.due`; use a floater instead.
 - Scheduled-task `listID` values must belong to the authenticated user. Stale or cross-user list IDs are rejected before database writes.
 - Completing a todo creates completed-todo history; completing a floater creates completed-floater history.
-- List deletion must preserve completed history metadata (`listName`, `listColor`) where the backend/mobile model supports it.
+- List deletion must preserve completed history metadata (`listName`, `listColor`) where the backend/mobile model supports it. For floaters specifically, deleting a list no longer deletes its `CompletedFloaters` rows (backend: `ON DELETE SET NULL`, plus an unconstrained `originalListID` snapshot; Android: `FloaterListRepository` stops pruning `completedFloaters` on list delete) — undoing such an item recreates the list under its original name/color, converging duplicate undos from the same deleted list onto one recreated list. `CompletedFloaterDto.listDeleted` / `CachedCompletedFloaterRecord.listDeleted` flag this case. See `docs/design/completed-floaters-durability.md`. The identical bug for scheduled `Todo`/`CompletedTodos` is a deliberate, separate product decision and is untouched.
 
 ## Recurrence
 
@@ -232,6 +232,13 @@ Differences from the server contract, all deliberate:
 - Clearing the browser's cookies/site data deletes the workspace. Export/import
   (`/api/export`, `/api/import`, same `TdayExport` bundle) is the only way to carry it off
   the device; import stays additive with the same id-remap rule as `ExportRemap`.
+- `LocalCompletedFloaterRow`/`LocalFloaterListRow` mirror the backend's floater-completion
+  durability fix (see `docs/design/completed-floaters-durability.md`): deleting a floater
+  list detaches its `CompletedFloaters` rows (`listID` cleared) instead of deleting them,
+  and `originalListID`/`recreatedFromListID` are the same unconstrained correlation pair
+  the backend uses so `uncompleteFloater` can find-or-create the list under its original
+  name/color. **Floaters only** — the identical bug in `CompletedTodos`/scheduled lists is
+  left as-is, matching the backend's scope.
 
 ## Tenant Isolation
 

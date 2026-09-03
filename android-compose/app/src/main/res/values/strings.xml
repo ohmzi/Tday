@@ -597,6 +597,19 @@
     <string name="widget_locked_title">T\'Day is locked</string>
     <string name="widget_locked_message">Tasks are hidden while app lock is on</string>
     <string name="widget_loading">Loading tasks…</string>
+    <string name="widget_list_tasks_description">Shows one list of your choice at a glance</string>
+    <string name="widget_list_tasks_title">List</string>
+    <string name="widget_list_tasks_title_small">List — Small</string>
+    <string name="widget_list_tasks_title_medium">List — Medium</string>
+    <string name="widget_list_tasks_title_large">List — Large</string>
+    <string name="widget_list_tasks_setup_title">Choose a list</string>
+    <string name="widget_list_tasks_setup_message">Tap to finish setting up this widget</string>
+    <string name="widget_list_picker_title">Choose a list</string>
+    <string name="widget_list_picker_empty">Create a list in T\'Day first, then add this widget again</string>
+    <string name="widget_list_picker_section_todo">Scheduled lists</string>
+    <string name="widget_list_picker_section_floater">Floater lists</string>
+    <string name="widget_list_picker_shared_label">Shared</string>
+    <string name="widget_list_picker_selected">Currently selected</string>
 
     <!-- Settings: updates -->
     <string name="settings_check_updates">Check for updates</string>
@@ -644,6 +657,7 @@
     <string name="task_deleted_toast">Task deleted</string>
     <string name="task_completed_toast">Task completed</string>
     <string name="list_deleted_toast">List deleted</string>
+    <string name="completed_floater_list_recreated_toast">Restored — recreated “%1$s”</string>
     <string name="password_changed_toast">Password changed successfully</string>
     <string name="profile_name_updated_toast">Name updated successfully</string>
     <string name="release_view_on_github">View on GitHub</string>

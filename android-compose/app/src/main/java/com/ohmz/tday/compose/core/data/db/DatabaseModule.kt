@@ -34,6 +34,15 @@ private class Migration8To9 : Migration(8, 9) {
     }
 }
 
+// v10: durable, browsable completed floaters (see docs/design/completed-floaters-durability.md).
+// listDeleted mirrors the server-computed CompletedFloaterDto.listDeleted flag, populated on
+// the next sync; a fresh migration still needs the column to exist with a safe default.
+private class Migration9To10 : Migration(9, 10) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE cached_completed_floaters ADD COLUMN listDeleted INTEGER NOT NULL DEFAULT 0")
+    }
+}
+
 @Module
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
@@ -74,7 +83,7 @@ object DatabaseModule {
             // The DB holds unsynced pending mutations, not just re-fetchable
             // cache, so schema bumps must ship a real Migration. Pre-v7 schemas
             // (no exported history) still fall back destructively.
-            .addMigrations(Migration7To8(), Migration8To9())
+            .addMigrations(Migration7To8(), Migration8To9(), Migration9To10())
             .fallbackToDestructiveMigrationFrom(1, 2, 3, 4, 5, 6)
             // Safety net: callers should run DAO access off the main thread (see
             // OfflineCacheManager / repositories using Dispatchers.IO). Kept so a missed

@@ -53,6 +53,21 @@ object TodayTasksWidgetPreviewPublisher {
             receiver = FloaterTasksWidgetLargeReceiver::class.java,
             layout = R.layout.widget_floater_tasks_preview_large,
         ),
+        // The list widget's picker card reuses the Today preview art: its content is chosen
+        // per instance at configure time, so there is no one fixed list to design bespoke
+        // preview art around, and the due-date shape is the richer of the two possible shapes.
+        WidgetPreviewDefinition(
+            receiver = ListTasksWidgetSmallReceiver::class.java,
+            layout = R.layout.widget_today_tasks_preview_small,
+        ),
+        WidgetPreviewDefinition(
+            receiver = ListTasksWidgetReceiver::class.java,
+            layout = R.layout.widget_today_tasks_preview,
+        ),
+        WidgetPreviewDefinition(
+            receiver = ListTasksWidgetLargeReceiver::class.java,
+            layout = R.layout.widget_today_tasks_preview_large,
+        ),
     )
 
     private data class WidgetPreviewDefinition(

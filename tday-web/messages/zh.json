@@ -442,7 +442,8 @@
     "bulkUpdateFailed_one": "有一个任务未能更新",
     "bulkUpdateFailed_few": "有 {{count}} 个任务未能更新",
     "bulkUpdateFailed_many": "有 {{count}} 个任务未能更新",
-    "bulkUpdateFailed_other": "有 {{count}} 个任务未能更新"
+    "bulkUpdateFailed_other": "有 {{count}} 个任务未能更新",
+    "floaterCompletedTile": "已完成"
   },
   "today": {
     "saveInstance": "保存实例",
@@ -500,7 +501,12 @@
   "completed": {
     "title": "完成历史",
     "empty": "还没有完成的任务",
-    "emptyBody": "完成一个任务，它就会出现在这里。"
+    "emptyBody": "完成一个任务，它就会出现在这里。",
+    "tabTasks": "任务",
+    "floaterEmpty": "还没有已完成的随手事项",
+    "floaterEmptyBody": "在随手事项中勾选一项，它就会显示在这里。",
+    "listDeletedSuffix": "列表已删除",
+    "floaterRestoredIntoRecreatedList": "已恢复 — “{{listName}}”已重新创建"
   },
   "modal": {
     "confirm": "确认",
@@ -1099,6 +1105,13 @@
         "keywords": "小组件, 列表, 配置, 编辑小组件, 按列表, 主屏幕, ios, widget, list",
         "body": "长按 T'Day 小组件并选择「编辑小组件」，即可精确指定它显示哪个列表——可以是你的任意计划列表或浮动任务列表。计划列表会显示截止时间并标出逾期任务；浮动任务列表则显示一个没有截止时间的开放列表。若不设置，小组件会继续显示完整的「今天」或「浮动任务」动态。",
         "tip": "添加多个小组件，每个指向不同的列表，就能在主屏幕上同时看到它们。"
+      },
+      "list-widgets": {
+        "title": "列表小组件",
+        "summary": "把任意列表放到主屏幕，不只是「今天」。",
+        "keywords": "小组件, 主屏幕, 列表, 配置, 选择器, 浮动任务, 计划任务",
+        "body": "添加一个 T'Day 小组件后，选择器会让你挑选它显示哪个列表——任意计划列表或浮动任务列表，不只是「今天」或「浮动任务」。再次添加小组件即可显示另一个列表；每个小组件都会记住自己的选择。",
+        "tip": "长按已放置的小组件并选择「编辑」（或启动器的小组件设置），之后即可切换到另一个列表。"
       },
       "widget-quick-add": {
         "title": "从小组件快速添加",

@@ -442,7 +442,8 @@
     "bulkUpdateFailed_one": "Eine Aufgabe konnte nicht aktualisiert werden",
     "bulkUpdateFailed_few": "{{count}} Aufgaben konnten nicht aktualisiert werden",
     "bulkUpdateFailed_many": "{{count}} Aufgaben konnten nicht aktualisiert werden",
-    "bulkUpdateFailed_other": "{{count}} Aufgaben konnten nicht aktualisiert werden"
+    "bulkUpdateFailed_other": "{{count}} Aufgaben konnten nicht aktualisiert werden",
+    "floaterCompletedTile": "Erledigt"
   },
   "today": {
     "saveInstance": "Instanz speichern",
@@ -500,7 +501,12 @@
   "completed": {
     "title": "Verlauf der Erledigungen",
     "empty": "Noch nichts erledigt",
-    "emptyBody": "Hake etwas ab, dann landet es hier."
+    "emptyBody": "Hake etwas ab, dann landet es hier.",
+    "tabTasks": "Aufgaben",
+    "floaterEmpty": "Noch keine erledigten Floater",
+    "floaterEmptyBody": "Hake etwas in Floater ab und es landet hier.",
+    "listDeletedSuffix": "Liste gelöscht",
+    "floaterRestoredIntoRecreatedList": "Wiederhergestellt — „{{listName}}“ wurde neu angelegt"
   },
   "modal": {
     "confirm": "Bestätigen",
@@ -1099,6 +1105,13 @@
         "keywords": "widget, liste, konfigurieren, widget bearbeiten, pro liste, startbildschirm, ios",
         "body": "Widget lange gedrückt halten und „Widget bearbeiten\" wählen, um genau festzulegen, welche Liste es zeigt – jede deiner geplanten Listen oder Floater-Listen. Eine geplante Liste zeigt Fälligkeitszeiten und markiert Überfälliges; eine Floater-Liste zeigt eine offene Liste ohne Fälligkeitszeiten. Bleibt die Auswahl leer, zeigt das Widget weiterhin den vollständigen Today- oder Floater-Feed.",
         "tip": "Füge mehrere Widgets hinzu, jedes auf eine andere Liste ausgerichtet, um sie alle gleichzeitig auf deinem Startbildschirm zu sehen."
+      },
+      "list-widgets": {
+        "title": "Listen-Widgets",
+        "summary": "Zeige jede Liste auf deinem Startbildschirm, nicht nur Heute.",
+        "keywords": "widget, startbildschirm, liste, konfigurieren, auswahl, jederzeit, geplant",
+        "body": "Füge ein T'Day-Widget hinzu, und eine Auswahl lässt dich entscheiden, welche Liste es zeigt — jede geplante Liste oder Jederzeit-Liste, nicht nur Heute oder Jederzeit. Füge das Widget erneut hinzu, um eine andere Liste zu zeigen; jedes merkt sich seine eigene Wahl.",
+        "tip": "Halte ein platziertes Widget gedrückt und wähle Bearbeiten (oder die Widget-Einstellungen deines Launchers), um es später auf eine andere Liste umzustellen."
       },
       "widget-quick-add": {
         "title": "Schnell hinzufügen aus dem Widget",

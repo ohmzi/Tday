@@ -23,6 +23,7 @@ typealias UpdateFloaterRequest = com.ohmz.tday.shared.model.UpdateFloaterRequest
 typealias DeleteFloaterRequest = com.ohmz.tday.shared.model.DeleteFloaterRequest
 typealias FloaterCompleteRequest = com.ohmz.tday.shared.model.FloaterCompleteRequest
 typealias FloaterUncompleteRequest = com.ohmz.tday.shared.model.FloaterUncompleteRequest
+typealias FloaterUncompleteResponse = com.ohmz.tday.shared.model.FloaterUncompleteResponse
 typealias FloaterPrioritizeRequest = com.ohmz.tday.shared.model.FloaterPrioritizeRequest
 typealias FloaterReorderRequest = com.ohmz.tday.shared.model.FloaterReorderRequest
 typealias PromoteFloaterRequest = com.ohmz.tday.shared.model.PromoteFloaterRequest

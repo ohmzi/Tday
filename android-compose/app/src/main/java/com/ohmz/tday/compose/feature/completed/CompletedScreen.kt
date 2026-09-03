@@ -84,6 +84,7 @@ import com.ohmz.tday.compose.core.ui.tdayClosesSearchOnOutsideTap
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.theme.TdayCompletedTitleAccent
 import com.ohmz.tday.compose.ui.theme.TdayDimens
+import com.ohmz.tday.compose.ui.theme.TdayFloaterAccent
 import com.ohmz.tday.compose.ui.theme.TdaySwipeDeleteBackground
 import com.ohmz.tday.compose.ui.theme.TdaySwipeEditBackground
 import com.ohmz.tday.compose.ui.theme.TdayTaskCompleteAccent
@@ -301,7 +302,11 @@ fun CompletedScreen(
                                                 ),
                                             ),
                                         item = completed,
-                                        lists = uiState.lists,
+                                        // Floater lists are a separate namespace from
+                                        // scheduled-task lists (uiState.lists) — resolve
+                                        // each row's icon/color against the set it
+                                        // actually belongs to.
+                                        lists = if (completed.isFloater) uiState.floaterLists else uiState.lists,
                                         showDateDivider = showCompletedDateDivider,
                                         onInfo = { editTargetId = completed.id },
                                         onDelete = { onDelete(completed) },
@@ -429,10 +434,15 @@ fun CompletedScreen(
     }
 
     editTarget?.let { completed ->
+        val editableLists = if (completed.isFloater) uiState.floaterLists else uiState.lists
         CreateTaskBottomSheet(
-            lists = uiState.lists,
-            editingTask = completed.toEditableTodo(uiState.lists),
-            defaultListId = completed.resolveListId(uiState.lists),
+            lists = editableLists,
+            editingTask = completed.toEditableTodo(editableLists),
+            defaultListId = completed.resolveListId(editableLists),
+            // Floaters have no due date — hide the schedule controls the same
+            // way the live Floater tab's own edit sheet does.
+            defaultScheduled = !completed.isFloater,
+            showScheduleControls = !completed.isFloater,
             onDismiss = { editTargetId = null },
             onCreateTask = { _ -> },
             onUpdateTask = { _, payload ->
@@ -762,6 +772,18 @@ private fun CompletedSwipeRow(
                                 horizontalArrangement = Arrangement.spacedBy(5.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
+                                if (item.isFloater) {
+                                    // The app's one existing floater marker (leaf + teal),
+                                    // reused here so a floater reads as one at a glance
+                                    // even interleaved with todos in the same timeline —
+                                    // same glyph/color as the Floater root-feed tab.
+                                    Icon(
+                                        imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_leaf),
+                                        contentDescription = stringResource(R.string.root_feed_tab_floater),
+                                        tint = TdayFloaterAccent,
+                                        modifier = Modifier.size(13.dp),
+                                    )
+                                }
                                 Icon(
                                     imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_clock),
                                     contentDescription = null,

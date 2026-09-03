@@ -442,7 +442,8 @@
     "bulkUpdateFailed_one": "A task couldn't be updated",
     "bulkUpdateFailed_few": "{{count}} tasks couldn't be updated",
     "bulkUpdateFailed_many": "{{count}} tasks couldn't be updated",
-    "bulkUpdateFailed_other": "{{count}} tasks couldn't be updated"
+    "bulkUpdateFailed_other": "{{count}} tasks couldn't be updated",
+    "floaterCompletedTile": "Completed"
   },
   "today": {
     "saveInstance": "Save instance",
@@ -500,7 +501,12 @@
   "completed": {
     "title": "Completion history",
     "empty": "No finished tasks yet",
-    "emptyBody": "Tick something off and it will land here."
+    "emptyBody": "Tick something off and it will land here.",
+    "tabTasks": "Tasks",
+    "floaterEmpty": "No finished floaters yet",
+    "floaterEmptyBody": "Tick something off in Floater and it will land here.",
+    "listDeletedSuffix": "list deleted",
+    "floaterRestoredIntoRecreatedList": "Restored — {{listName}} was recreated"
   },
   "modal": {
     "confirm": "Confirm",
@@ -1099,6 +1105,13 @@
         "keywords": "widget, list, configure, edit widget, per-list, home screen, ios",
         "body": "Long-press a T'Day widget and choose Edit Widget to pick exactly which list it shows — any of your scheduled lists or floater lists. A scheduled list shows due times and flags anything overdue; a floater list shows an open list with no due times. Leave it unset and the widget keeps showing the full Today or Floater feed.",
         "tip": "Add several widgets, each pointed at a different list, to see them all on your home screen at once."
+      },
+      "list-widgets": {
+        "title": "List widgets",
+        "summary": "Put any list on your home screen, not just Today.",
+        "keywords": "widget, home screen, list, configure, picker, floater, todo",
+        "body": "Add a T'Day widget and a picker lets you choose which list it shows — any scheduled list or floater list, not just Today or Floater. Add the widget again to show a different list; each one remembers its own choice.",
+        "tip": "Long-press a placed widget and choose Edit (or your launcher's widget settings) to switch it to a different list later."
       },
       "widget-quick-add": {
         "title": "Quick-add from the widget",

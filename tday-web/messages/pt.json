@@ -442,7 +442,8 @@
     "bulkUpdateFailed_one": "Não foi possível atualizar uma tarefa",
     "bulkUpdateFailed_few": "Não foi possível atualizar {{count}} tarefas",
     "bulkUpdateFailed_many": "Não foi possível atualizar {{count}} tarefas",
-    "bulkUpdateFailed_other": "Não foi possível atualizar {{count}} tarefas"
+    "bulkUpdateFailed_other": "Não foi possível atualizar {{count}} tarefas",
+    "floaterCompletedTile": "Concluídos"
   },
   "today": {
     "saveInstance": "Guardar instância",
@@ -500,7 +501,12 @@
   "completed": {
     "title": "Histórico de conclusão",
     "empty": "Nada concluído ainda",
-    "emptyBody": "Marque algo como feito e aparecerá aqui."
+    "emptyBody": "Marque algo como feito e aparecerá aqui.",
+    "tabTasks": "Tarefas",
+    "floaterEmpty": "Ainda não há itens avulsos concluídos",
+    "floaterEmptyBody": "Marque algo como concluído em Avulso e ele aparecerá aqui.",
+    "listDeletedSuffix": "lista excluída",
+    "floaterRestoredIntoRecreatedList": "Restaurado — “{{listName}}” foi recriada"
   },
   "modal": {
     "confirm": "Confirmar",
@@ -1099,6 +1105,13 @@
         "keywords": "widget, lista, configurar, editar widget, por lista, ecrã principal, ios",
         "body": "Mantenha premido um widget do T'Day e escolha Editar Widget para definir exatamente que lista ele mostra — qualquer uma das suas listas agendadas ou listas de flutuantes. Uma lista agendada mostra horas de vencimento e assinala o que está atrasado; uma lista de flutuantes mostra uma lista aberta sem horas de vencimento. Se não escolher nada, o widget continua a mostrar o feed completo de Hoje ou de Flutuantes.",
         "tip": "Adicione vários widgets, cada um apontando para uma lista diferente, para os ver todos ao mesmo tempo no seu ecrã principal."
+      },
+      "list-widgets": {
+        "title": "Widgets de listas",
+        "summary": "Coloque qualquer lista na sua tela inicial, não só Hoje.",
+        "keywords": "widget, tela inicial, lista, configurar, seletor, flutuante, agendada",
+        "body": "Adicione um widget do T'Day e um seletor permite escolher qual lista ele mostra — qualquer lista agendada ou de tarefas flutuantes, não só Hoje ou Flutuantes. Adicione o widget novamente para mostrar outra lista; cada um memoriza sua própria escolha.",
+        "tip": "Toque e segure um widget já colocado e escolha Editar (ou as configurações de widgets do seu launcher) para trocá-lo de lista mais tarde."
       },
       "widget-quick-add": {
         "title": "Adição rápida pelo widget",

@@ -38,6 +38,7 @@ import com.ohmz.tday.compose.core.model.FloaterListsResponse
 import com.ohmz.tday.compose.core.model.FloaterPrioritizeRequest
 import com.ohmz.tday.compose.core.model.FloaterReorderRequest
 import com.ohmz.tday.compose.core.model.FloaterUncompleteRequest
+import com.ohmz.tday.compose.core.model.FloaterUncompleteResponse
 import com.ohmz.tday.compose.core.model.FloatersResponse
 import com.ohmz.tday.compose.core.model.ListDetailResponse
 import com.ohmz.tday.compose.core.model.ListMembersResponse
@@ -222,7 +223,7 @@ interface TdayApiService {
     @PATCH("/api/floater/uncomplete")
     suspend fun uncompleteFloaterByBody(
         @Body payload: FloaterUncompleteRequest,
-    ): Response<MessageResponse>
+    ): Response<FloaterUncompleteResponse>
 
     @PATCH("/api/floater/prioritize")
     suspend fun prioritizeFloaterByBody(

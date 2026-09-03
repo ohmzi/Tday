@@ -146,6 +146,29 @@ tap targets, keep the persistent watermark calm behind both rows and empty text,
 Today/Floater accent treatment for the plus add button, and prefer system widget bounds, dynamic
 color, and Material/Glance idioms over custom chrome.
 
+### List widget (per-instance configuration)
+
+A third widget kind, `ListTasksWidget`, lets a placed instance show any single list instead of the
+fixed Today/Floater scope — the app's first `android:configure` widget. Placing (or long-press
+editing) one of its three size receivers launches `WidgetListConfigurationActivity`
+(`ACTION_APPWIDGET_CONFIGURE`), which lists every scheduled and floater list from the offline cache
+and lets the user pick one.
+
+- **Content shape follows the chosen list's type**, not a third layout: a scheduled list renders
+  due-date-shaped (due times, an overdue-time tint) like Today; a floater list renders undated like
+  Floater. Both reuse the same `TaskWidgetContent` visual layer as Today/Floater.
+- **Configuration is per `appWidgetId`**, not per kind — unlike Today/Floater's one shared snapshot
+  file, `WidgetListSelectionStore` (SharedPreferences, keyed by widget id) and a
+  `widget-list-snapshot-<appWidgetId>.json` file exist per placed instance, so two List widgets can
+  show two different lists at once. `WidgetSnapshotWriter` rebuilds every configured instance's
+  snapshot on each cache write; the widget's own `onDeleted` clears both stores for a removed
+  instance.
+- The configuration activity writes the first snapshot synchronously (it has Hilt/Room access,
+  unlike a widget's own render path) so a freshly placed instance skips the `LOADING` state.
+- List widgets skip the `WidgetFastPaint` post-reboot optimisation Today/Floater use — that path is
+  keyed by a shared per-kind file, not per instance — so a cold List widget repaints on the normal
+  Glance timeline instead of the ~2.4-3s-faster one.
+
 ## Car Surface
 
 Android keeps the car task UI as an app-internal adaptive surface at `tday://car`. It does not
