@@ -72,7 +72,7 @@ final class SettingsRepository {
     /// nothing to fetch, so the cached value is returned untouched.
     func refreshDefaultHomeScreen() async -> String {
         if secureStore.isLocalMode() {
-            return cacheManager.loadOfflineState().defaultHomeScreen
+            return (try? await cacheManager.loadOfflineState().defaultHomeScreen) ?? "scheduled"
         }
 
         do {
@@ -84,7 +84,7 @@ final class SettingsRepository {
             }
             return value
         } catch {
-            return cacheManager.loadOfflineState().defaultHomeScreen
+            return (try? await cacheManager.loadOfflineState().defaultHomeScreen) ?? "scheduled"
         }
     }
 
