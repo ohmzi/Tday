@@ -17,6 +17,7 @@ object GuideTopicIds {
     const val PRIORITIES = "priorities"
     const val PIN_TASK = "pin-task"
     const val SWIPE_ACTIONS = "swipe-actions"
+    const val COPY_TASK_TEXT = "copy-task-text"
     const val LONG_PRESS_ACTIONS = "long-press-actions"
     const val DRAG_REORDER = "drag-reorder"
     const val FLOATERS_VS_TODOS = "floaters-vs-todos"

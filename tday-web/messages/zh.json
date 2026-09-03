@@ -340,7 +340,10 @@
     "sharing": "共享",
     "share": "分享",
     "shareListCopied": "列表已复制到剪贴板",
+    "taskCopied": "任务已复制到剪贴板",
+    "taskCopyFailed": "无法将任务复制到剪贴板",
     "shareDueLabel": "截止：{{date}}",
+    "sharePriorityLabel": "优先级：{{priority}}",
     "shareTaskCount_one": "{{count}}个任务",
     "shareTaskCount_few": "{{count}}个任务",
     "shareTaskCount_many": "{{count}}个任务",
@@ -454,6 +457,7 @@
       "pinToTop": "置顶",
       "edit": "编辑",
       "editAsInstance": "编辑此实例",
+      "copy": "复制",
       "delete": "删除",
       "Move to": "移动到..."
     },
@@ -975,6 +979,13 @@
         "keywords": "滑动, 手势, 滑, 完成, 删除, 快捷, 行, swipe, gesture, complete, delete",
         "body": "在任务行上滑动即可显示快捷操作——完成它，或移除它——完全不用打开任务。",
         "tip": "已完成的任务会显示几秒钟的撤销提示，所以误滑绝不会成为定局。"
+      },
+      "copy-task-text": {
+        "title": "复制任务详情",
+        "summary": "将任务的标题、备注、截止日期和优先级复制为文本。",
+        "keywords": "复制, 剪贴板, 分享, 文本, 滑动",
+        "body": "滑动任务并点击复制——或在桌面端使用复制按钮——即可将其标题、备注、截止日期和优先级复制为纯文本，随时粘贴到任何地方。",
+        "tip": "方便将任务粘贴到消息、邮件或其他应用中，无需重新输入。"
       },
       "long-press-actions": {
         "title": "长按任务",

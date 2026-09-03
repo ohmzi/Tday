@@ -413,6 +413,9 @@ struct CompletedScreen: View {
             onEdit: {
                 editingItem = item
             },
+            onCopy: {
+                viewModel.copyToClipboard(item)
+            },
             openSwipeTaskID: $openSwipeTaskID
         )
     }
@@ -424,6 +427,7 @@ private struct CompletedTimelineRow: View {
     let onUncomplete: () async -> Void
     let onDelete: () async -> Void
     let onEdit: () -> Void
+    let onCopy: () -> Void
     @Binding var openSwipeTaskID: String?
 
     @Environment(\.tdayColors) private var colors
@@ -531,6 +535,7 @@ private struct CompletedTimelineRow: View {
             openRowID: $openSwipeTaskID,
             enabled: !isRestoring,
             onEdit: onEdit,
+            onCopy: onCopy,
             onDelete: {
                 Task { await onDelete() }
             }

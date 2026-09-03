@@ -340,7 +340,10 @@
     "sharing": "Partage",
     "share": "Partager",
     "shareListCopied": "Liste copiée dans le presse-papiers",
+    "taskCopied": "Tâche copiée dans le presse-papiers",
+    "taskCopyFailed": "Impossible de copier la tâche dans le presse-papiers",
     "shareDueLabel": "Échéance : {{date}}",
+    "sharePriorityLabel": "Priorité : {{priority}}",
     "shareTaskCount_one": "{{count}} tâche",
     "shareTaskCount_few": "{{count}} tâches",
     "shareTaskCount_many": "{{count}} tâches",
@@ -454,6 +457,7 @@
       "pinToTop": "Épingler en haut",
       "edit": "Modifier",
       "editAsInstance": "Modifier comme instance",
+      "copy": "Copier",
       "delete": "Supprimer",
       "Move to": "Déplacer vers..."
     },
@@ -975,6 +979,13 @@
         "keywords": "balayer, geste, glisser, terminer, supprimer, rapide, ligne",
         "body": "Balayez une ligne de tâche pour révéler des actions rapides — la terminer ou la supprimer — sans ouvrir la tâche du tout.",
         "tip": "Une tâche terminée affiche un toast d'annulation pendant quelques secondes, pour qu'un balayage malencontreux ne soit jamais définitif."
+      },
+      "copy-task-text": {
+        "title": "Copier les détails de la tâche",
+        "summary": "Copiez le titre, les notes, l'échéance et la priorité d'une tâche sous forme de texte.",
+        "keywords": "copier, presse-papiers, partager, texte, balayer",
+        "body": "Balayez une tâche et appuyez sur Copier — ou utilisez le bouton Copier sur ordinateur — pour copier son titre, ses notes, son échéance et sa priorité en texte brut, prêt à coller n'importe où.",
+        "tip": "Pratique pour coller une tâche dans un message, un e-mail ou une autre application sans avoir à la retaper."
       },
       "long-press-actions": {
         "title": "Appui long sur une tâche",

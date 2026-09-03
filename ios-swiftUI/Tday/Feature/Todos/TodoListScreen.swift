@@ -2842,6 +2842,9 @@ struct TodoListScreen: View {
             onEdit: {
                 editingTodo = todo
             },
+            onCopy: {
+                viewModel.copyToClipboard(todo)
+            },
             onDelete: {
                 Task { await viewModel.delete(todo) }
             }
@@ -3008,6 +3011,9 @@ struct TodoListScreen: View {
             extraAction: promoteOrFloatSwipeAction(for: todo),
             onEdit: {
                 editingTodo = todo
+            },
+            onCopy: {
+                viewModel.copyToClipboard(todo)
             },
             onDelete: {
                 Task { await viewModel.delete(todo) }

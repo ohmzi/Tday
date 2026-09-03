@@ -19,6 +19,8 @@
     <string name="action_create_list">Create list</string>
     <string name="action_edit">Edit</string>
     <string name="action_edit_task">Edit task</string>
+    <string name="action_copy">Copy</string>
+    <string name="action_copy_task">Copy task</string>
     <string name="action_delete_task">Delete task</string>
     <string name="action_delete_list">Delete list</string>
     <string name="action_delete">Delete</string>
@@ -656,6 +658,8 @@
     <string name="release_launch_update_toast">Update %1$s is available.</string>
     <string name="task_deleted_toast">Task deleted</string>
     <string name="task_completed_toast">Task completed</string>
+    <string name="task_copied_toast">Copied to clipboard</string>
+    <string name="task_copy_failed_toast">Could not copy to clipboard</string>
     <string name="list_deleted_toast">List deleted</string>
     <string name="completed_floater_list_recreated_toast">Restored — recreated “%1$s”</string>
     <string name="password_changed_toast">Password changed successfully</string>

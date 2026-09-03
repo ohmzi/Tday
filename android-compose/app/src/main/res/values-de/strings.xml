@@ -16,6 +16,8 @@
     <string name="action_create_list">Liste erstellen</string>
     <string name="action_edit">Bearbeiten</string>
     <string name="action_edit_task">Aufgabe bearbeiten</string>
+    <string name="action_copy">Kopieren</string>
+    <string name="action_copy_task">Aufgabe kopieren</string>
     <string name="action_delete_task">Aufgabe löschen</string>
     <string name="action_delete_list">Liste löschen</string>
     <string name="action_delete">Löschen</string>
@@ -570,6 +572,8 @@
     <string name="release_no_apk">Diesem Release ist keine APK beigefügt.</string>
     <string name="release_launch_update_toast">Update %1$s ist verfügbar.</string>
     <string name="task_deleted_toast">Aufgabe gelöscht</string>
+    <string name="task_copied_toast">In die Zwischenablage kopiert</string>
+    <string name="task_copy_failed_toast">Kopieren in die Zwischenablage fehlgeschlagen</string>
     <string name="list_deleted_toast">Liste gelöscht</string>
     <string name="release_view_on_github">Auf GitHub ansehen</string>
 

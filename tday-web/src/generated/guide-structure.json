@@ -314,6 +314,38 @@
       "sinceVersion": null
     },
     {
+      "id": "copy-task-text",
+      "section": "GESTURES",
+      "icon": "copy",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "titleKey": "guide.topics.copy-task-text.title",
+      "summaryKey": "guide.topics.copy-task-text.summary",
+      "keywordsKey": "guide.topics.copy-task-text.keywords",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "keys": [
+            "guide.topics.copy-task-text.body"
+          ]
+        },
+        {
+          "type": "TIP",
+          "keys": [
+            "guide.topics.copy-task-text.tip"
+          ]
+        }
+      ],
+      "badge": "HIDDEN_GEM",
+      "deepLink": null,
+      "helpAnchors": [],
+      "serverOnly": false,
+      "sinceVersion": "0.7.8"
+    },
+    {
       "id": "drag-reorder",
       "section": "GESTURES",
       "icon": "grip-vertical",

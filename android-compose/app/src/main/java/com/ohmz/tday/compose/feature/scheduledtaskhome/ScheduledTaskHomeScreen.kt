@@ -105,7 +105,9 @@ import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -115,6 +117,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -136,9 +139,11 @@ import com.ohmz.tday.compose.core.model.capitalizeFirstListLetter
 import com.ohmz.tday.compose.core.ui.LazyListHeroTitleSettle
 import com.ohmz.tday.compose.core.ui.CategoryCard
 import com.ohmz.tday.compose.core.ui.EmptyTaskWatermark
+import com.ohmz.tday.compose.core.ui.LocalSnackbarManager
 import com.ohmz.tday.compose.core.ui.TaskSwipeActionButton
 import com.ohmz.tday.compose.core.ui.animateTaskSwipeOffsetAsState
 import com.ohmz.tday.compose.core.ui.rememberTaskSwipeRevealState
+import com.ohmz.tday.compose.core.ui.taskCopyText
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.core.ui.RootFeedHeroHeader
 import com.ohmz.tday.compose.core.ui.RootFeedHeroHeaderMetrics
@@ -160,6 +165,7 @@ import com.ohmz.tday.compose.ui.theme.TdayDimens
 import com.ohmz.tday.compose.ui.theme.TdayFontFamily
 import com.ohmz.tday.compose.ui.theme.TdayListColorOptions
 import com.ohmz.tday.compose.ui.theme.TdayListIconOptions
+import com.ohmz.tday.compose.ui.theme.TdaySwipeCopyBackground
 import com.ohmz.tday.compose.ui.theme.TdaySwipeDeleteBackground
 import com.ohmz.tday.compose.ui.theme.TdaySwipeEditBackground
 import com.ohmz.tday.compose.ui.theme.TdayTaskCompleteAccent
@@ -1503,7 +1509,14 @@ private fun ScheduledTaskHomeTodayTaskRow(
     val view = LocalView.current
     val taskCompletionSound = rememberTaskCompletionSound()
     val coroutineScope = rememberCoroutineScope()
-    val swipeRevealState = rememberTaskSwipeRevealState(todo.id)
+    // Edit + Copy + Delete: matches the 3-pill width used elsewhere (see
+    // SwipeTaskRow.revealWidth).
+    val swipeRevealState = rememberTaskSwipeRevealState(todo.id, revealWidth = 256.dp)
+    val clipboardManager = LocalClipboardManager.current
+    val snackbarManager = LocalSnackbarManager.current
+    val copyContext = LocalContext.current
+    val copiedMessage = stringResource(R.string.task_copied_toast)
+    val copyFailedMessage = stringResource(R.string.task_copy_failed_toast)
     var localChecked by remember(todo.id) { mutableStateOf(false) }
     var localStruck by remember(todo.id) { mutableStateOf(false) }
     var pendingCompletion by remember(todo.id) { mutableStateOf(false) }
@@ -1601,6 +1614,29 @@ private fun ScheduledTaskHomeTodayTaskRow(
                         )
                         closeSwipeSlot()
                         onEdit()
+                    },
+                )
+                TaskSwipeActionButton(
+                    icon = R.drawable.ic_lucide_copy,
+                    contentDescription = stringResource(R.string.action_copy_task),
+                    label = stringResource(R.string.action_copy),
+                    tint = Color.White,
+                    background = TdaySwipeCopyBackground,
+                    revealProgress = actionRevealProgress,
+                    revealDelay = 0.40f,
+                    onClick = {
+                        ViewCompat.performHapticFeedback(
+                            view,
+                            HapticFeedbackConstantsCompat.SEGMENT_FREQUENT_TICK
+                        )
+                        closeSwipeSlot()
+                        runCatching {
+                            clipboardManager.setText(AnnotatedString(taskCopyText(copyContext, todo)))
+                        }.onSuccess {
+                            snackbarManager?.showSuccess(copiedMessage)
+                        }.onFailure {
+                            snackbarManager?.showError(copyFailedMessage)
+                        }
                     },
                 )
                 TaskSwipeActionButton(

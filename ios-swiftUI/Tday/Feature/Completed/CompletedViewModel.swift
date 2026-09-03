@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import UIKit
 
 @MainActor
 @Observable
@@ -39,6 +40,13 @@ final class CompletedViewModel {
         }
         hydrateFromCache()
         isLoading = false
+    }
+
+    /// Swipe-to-copy: writes the task's title/notes/due/priority as plain text
+    /// to the system pasteboard. See TodoListViewModel.copyToClipboard.
+    func copyToClipboard(_ item: CompletedItem) {
+        UIPasteboard.general.string = ShareSheet.taskShareText(item)
+        container.snackbarManager.show(L("Copied to clipboard"), kind: .success)
     }
 
     func delete(_ item: CompletedItem) async {

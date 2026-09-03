@@ -340,7 +340,10 @@
     "sharing": "Condivisione",
     "share": "Condividi",
     "shareListCopied": "Elenco copiato negli appunti",
+    "taskCopied": "Attività copiata negli appunti",
+    "taskCopyFailed": "Impossibile copiare l'attività negli appunti",
     "shareDueLabel": "Scadenza: {{date}}",
+    "sharePriorityLabel": "Priorità: {{priority}}",
     "shareTaskCount_one": "{{count}} attività",
     "shareTaskCount_few": "{{count}} attività",
     "shareTaskCount_many": "{{count}} attività",
@@ -454,6 +457,7 @@
       "pinToTop": "Fissa in alto",
       "edit": "Modifica",
       "editAsInstance": "Modifica come istanza",
+      "copy": "Copia",
       "delete": "Elimina",
       "Move to": "Sposta in..."
     },
@@ -975,6 +979,13 @@
         "keywords": "scorri, gesto, trascina, completa, elimina, rapido, riga",
         "body": "Scorri la riga di un'attività per rivelare azioni rapide — completala o rimuovila — senza aprire affatto l'attività.",
         "tip": "Un'attività completata mostra un avviso di annullamento per qualche secondo, così uno scorrimento sbagliato non è mai definitivo."
+      },
+      "copy-task-text": {
+        "title": "Copia i dettagli dell'attività",
+        "summary": "Copia il titolo, le note, la scadenza e la priorità di un'attività come testo.",
+        "keywords": "copia, appunti, condividi, testo, scorri",
+        "body": "Scorri un'attività e tocca Copia — oppure usa il pulsante Copia su desktop — per copiarne titolo, note, scadenza e priorità come testo semplice, pronto da incollare ovunque.",
+        "tip": "Utile per incollare un'attività in un messaggio, un'email o un'altra app senza doverla riscrivere."
       },
       "long-press-actions": {
         "title": "Tocco prolungato su un'attività",
