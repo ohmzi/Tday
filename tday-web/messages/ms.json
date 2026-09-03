@@ -1093,6 +1093,13 @@
         "keywords": "widget, skrin utama, imbas, hari ini, skrin kunci",
         "body": "Tambah widget T'Day ke skrin utama anda untuk mengimbas tugasan hari ini. Mengetik widget membuka aplikasi di tempat yang betul."
       },
+      "list-widgets": {
+        "title": "Widget senarai",
+        "summary": "Letakkan mana-mana senarai pada skrin utama anda, bukan sekadar Hari Ini.",
+        "keywords": "widget, skrin utama, senarai, konfigurasi, pemilih, terapung, berjadual",
+        "body": "Tambah widget T'Day dan pemilih membolehkan anda memilih senarai yang dipaparkan — mana-mana senarai berjadual atau senarai terapung, bukan sekadar Hari Ini atau Terapung. Tambah widget itu semula untuk memaparkan senarai lain; setiap satu mengingati pilihannya sendiri.",
+        "tip": "Tekan lama widget yang telah diletakkan dan pilih Edit (atau tetapan widget pelancar anda) untuk menukarnya ke senarai lain kemudian."
+      },
       "widget-quick-add": {
         "title": "Tambah pantas dari widget",
         "summary": "Mula tugasan baharu terus dari widget.",
