@@ -2,6 +2,7 @@ import {
   loadWorkspace,
   newLocalId,
   updateWorkspace,
+  type LocalFloaterListRow,
   type LocalFloaterRow,
   LOCAL_USER_ID,
 } from "@/lib/local/localDb";
@@ -159,6 +160,10 @@ export function completeFloater(body: Record<string, unknown>) {
         listID: floater.listID,
         listName: list?.name ?? null,
         listColor: list?.color ?? null,
+        // The correlation key that survives the list being deleted (its
+        // listID above gets cleared then; this does not) — see
+        // uncompleteFloater below and docs/design/completed-floaters-durability.md.
+        originalListID: floater.listID,
       });
     }
 
@@ -169,22 +174,106 @@ export function completeFloater(body: Record<string, unknown>) {
   return { message: "floater completed" };
 }
 
+/**
+ * The local twin of `FloaterService.uncompleteFloater()` — see
+ * docs/design/completed-floaters-durability.md §6. Two cases:
+ *
+ * (a) the Floaters row still exists (its list was never deleted): flip
+ *     `completed` back, consume the history row, done — the old behavior.
+ * (b) the Floaters row is gone (only reachable via a list deletion, since
+ *     `deleteFloaterLists` below removes both pending and completed rows for
+ *     the deleted list): find-or-create the list from the history row's
+ *     `originalListID`, insert a fresh Floaters row from the snapshot, point
+ *     it at the (re)created list.
+ */
 export function uncompleteFloater(body: Record<string, unknown>) {
   const id = normalizeId(body.id);
   if (!id) throw localBadRequest("floater id is required", "id");
 
-  updateWorkspace((workspace) => {
+  return updateWorkspace((workspace) => {
     const floater = workspace.floaters.find((entry) => entry.id === id);
     if (floater) {
       floater.completed = false;
       floater.updatedAt = nowApiDateTime();
+      workspace.completedFloaters = workspace.completedFloaters.filter(
+        (entry) => entry.originalFloaterID !== id,
+      );
+      const list = floater.listID
+        ? workspace.floaterLists.find((entry) => entry.id === floater.listID)
+        : undefined;
+      return {
+        message: "floater uncompleted",
+        floater: toFloaterDto(floater),
+        listRecreated: false,
+        listID: floater.listID ?? null,
+        listName: list?.name ?? null,
+        listColor: list?.color ?? null,
+      };
     }
-    workspace.completedFloaters = workspace.completedFloaters.filter(
-      (entry) => entry.originalFloaterID !== id,
-    );
-  });
 
-  return { message: "floater uncompleted" };
+    const historyEntry = workspace.completedFloaters.find(
+      (entry) => entry.originalFloaterID === id,
+    );
+    if (!historyEntry) throw localNotFound("floater not found");
+
+    let landedList: LocalFloaterListRow | undefined;
+    let listRecreated = false;
+    const originalListID = historyEntry.originalListID;
+    if (originalListID) {
+      // Defensive, mirrors the backend: a live list at the original id would
+      // mean this floater was reachable directly above, so this is
+      // unreachable in practice — kept for parity with the documented
+      // find-or-create order.
+      landedList = workspace.floaterLists.find((entry) => entry.id === originalListID);
+      if (!landedList) {
+        landedList = workspace.floaterLists.find(
+          (entry) => entry.recreatedFromListID === originalListID,
+        );
+      }
+      if (!landedList) {
+        const now = nowApiDateTime();
+        landedList = {
+          id: newLocalId(),
+          name: historyEntry.listName ?? "List",
+          color: historyEntry.listColor,
+          iconKey: null,
+          reusable: false,
+          recreatedFromListID: originalListID,
+          createdAt: now,
+          updatedAt: now,
+        };
+        workspace.floaterLists.push(landedList);
+      }
+      listRecreated = true;
+    }
+
+    const now = nowApiDateTime();
+    const restored: LocalFloaterRow = {
+      id: newLocalId(),
+      title: historyEntry.title,
+      description: historyEntry.description,
+      pinned: false,
+      priority: historyEntry.priority,
+      completed: false,
+      order: 0,
+      listID: landedList?.id ?? null,
+      createdAt: now,
+      updatedAt: now,
+    };
+    workspace.floaters.push(restored);
+    workspace.completedFloaters = workspace.completedFloaters.filter(
+      (entry) => entry.id !== historyEntry.id,
+    );
+
+    return {
+      message: "floater uncompleted",
+      floater: toFloaterDto(restored),
+      listRecreated,
+      listID: landedList?.id ?? null,
+      listName: landedList?.name ?? null,
+      listColor: landedList?.color ?? null,
+    };
+  });
 }
 
 export function prioritizeFloater(body: Record<string, unknown>) {

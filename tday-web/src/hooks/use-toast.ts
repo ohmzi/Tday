@@ -5,7 +5,14 @@ import ClickableToast from "@/hooks/ClickableToast";
 type ToastVariant = "default" | "destructive";
 
 interface ToastAction {
-  label: string;
+  /**
+   * Icon-based now (see use-undoable-delete.ts) rather than plain text — a
+   * ReactNode so the same shape carries an accessible name via an
+   * aria-labelled wrapper, since this is rendered by two different toast
+   * paths (ClickableToast's own button, and Sonner's built-in action button,
+   * whose element this code never gets a direct handle on).
+   */
+  label: React.ReactNode;
   onClick: () => void;
 }
 

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Leaf, Search } from "lucide-react";
+import { CheckCircle, Leaf, Search } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import ScreenWatermark from "@/components/app/ScreenWatermark";
 import EmptyState from "@/components/app/EmptyState";
@@ -14,6 +14,7 @@ import {
 } from "@/components/app/nativeScreenTheme";
 import { useFloater } from "@/features/floater/query/get-floater";
 import { useFloaterListMetaData } from "@/features/floaterList/query/get-floater-list-meta";
+import { useCompletedFloater } from "@/features/completed/query/get-completedFloater";
 import FloaterGroup from "./FloaterGroup";
 import FloaterListFormSheet from "@/features/floaterList/component/FloaterListFormSheet";
 import { flattenNotesToPlainText } from "@/lib/richNotes";
@@ -33,6 +34,7 @@ export default function NativeFloaterTaskHomeDashboard() {
   const { t: appDict } = useTranslation("app");
   const { floaters, floaterLoading } = useFloater();
   const { floaterListMetaData } = useFloaterListMetaData();
+  const { completedFloaters } = useCompletedFloater();
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [createListOpen, setCreateListOpen] = useState(false);
@@ -148,6 +150,29 @@ export default function NativeFloaterTaskHomeDashboard() {
             {floaters.filter((floater) => !floater.completed).length}
           </span>
         </section>
+
+        {/* The only nav path from the Floater tab into its own durable
+            completion history — the Todo side reaches the same screen via the
+            sidebar/More sheet, neither of which surfaces here. Opens straight
+            into the Floater tab of that screen. */}
+        <Link
+          href="/app/completed?scope=floater"
+          className={cn(
+            "relative flex h-[70px] items-center gap-3 overflow-hidden rounded-[26px] px-5 text-white",
+            "shadow-[0_14px_30px_-20px_rgba(60,70,90,0.55)] transition-transform duration-200",
+            "hover:-translate-y-0.5 active:translate-y-0.5",
+          )}
+          style={{ backgroundColor: nativeScreenAccentColors.completed }}
+        >
+          {renderTileOverlay()}
+          <CheckCircle className="relative h-6 w-6 shrink-0 stroke-[2.5]" />
+          <span className="relative min-w-0 flex-1 truncate text-[1.1rem] font-black">
+            {appDict("floaterCompletedTile")}
+          </span>
+          <span className="relative text-2xl font-black leading-none">
+            {completedFloaters.length}
+          </span>
+        </Link>
 
         {floaterLoading ? (
           <div className="space-y-3 px-1 py-6">

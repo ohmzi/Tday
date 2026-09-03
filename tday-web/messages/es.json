@@ -442,7 +442,8 @@
     "bulkUpdateFailed_one": "No se pudo actualizar una tarea",
     "bulkUpdateFailed_few": "No se pudieron actualizar {{count}} tareas",
     "bulkUpdateFailed_many": "No se pudieron actualizar {{count}} tareas",
-    "bulkUpdateFailed_other": "No se pudieron actualizar {{count}} tareas"
+    "bulkUpdateFailed_other": "No se pudieron actualizar {{count}} tareas",
+    "floaterCompletedTile": "Completado"
   },
   "today": {
     "saveInstance": "Guardar instancia",
@@ -500,7 +501,12 @@
   "completed": {
     "title": "Historial de tareas completadas",
     "empty": "Aún no has completado nada",
-    "emptyBody": "Marca algo como hecho y aparecerá aquí."
+    "emptyBody": "Marca algo como hecho y aparecerá aquí.",
+    "tabTasks": "Tareas",
+    "floaterEmpty": "Aún no hay flotantes terminados",
+    "floaterEmptyBody": "Marca algo como hecho en Flotante y aparecerá aquí.",
+    "listDeletedSuffix": "lista eliminada",
+    "floaterRestoredIntoRecreatedList": "Restaurado: se recreó “{{listName}}”"
   },
   "modal": {
     "confirm": "Confirmar",
