@@ -12,8 +12,8 @@ object GuideStringsGenerated {
     // Text that coincidentally repeats across unrelated keys/locales (e.g. two
     // different English keys both translate to the same Spanish word) and can't
     // be collapsed to the English fallback, hoisted once to satisfy KT-W1042.
-    private val DUP_0 = "Modo servidor"
-    private val DUP_1 = "Webhook"
+    private const val DUP_0 = "Modo servidor"
+    private const val DUP_1 = "Webhook"
 
     // key -> one value per LOCALES position (null where that locale has no translation).
     private val stringsByKey: Map<String, List<String?>> = mapOf(

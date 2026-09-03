@@ -250,7 +250,7 @@ object GuideContentExporter {
             sb.appendLine("    // different English keys both translate to the same Spanish word) and can't")
             sb.appendLine("    // be collapsed to the English fallback, hoisted once to satisfy KT-W1042.")
             for (value in pooled.keys.sorted()) {
-                sb.appendLine("    private val ${constantNames.getValue(value)} = ${kquote(value)}")
+                sb.appendLine("    private const val ${constantNames.getValue(value)} = ${kquote(value)}")
             }
         }
         sb.appendLine()
