@@ -205,6 +205,11 @@ final class TodayTasksWidgetSnapshotStoreTests: XCTestCase {
         XCTAssertEqual(TodayTasksWidgetSnapshotStore.snapshotFileName, "widget-today-snapshot.json")
         XCTAssertEqual(TodayTasksWidgetSnapshotStore.legacySnapshotKey, "tday.widget.todayTasksSnapshot")
         XCTAssertEqual(TodayTasksWidgetSnapshotStore.snapshotSchemaVersion, 2)
+        // R7 configuration picker catalog (WidgetConfigurableListsStore's writer /
+        // TdayWidgetListEntityQuery's reader): the extension hand-duplicates this same file
+        // name with no shared source of truth, so pin it here too or a rename on one side
+        // would silently empty the "Edit Widget" list catalog on the other.
+        XCTAssertEqual(WidgetSnapshotFileStore.listsFileName, "widget-lists-snapshot.json")
     }
 
     func testFloaterSnapshotIncludesOnlyPendingFloaters() {
