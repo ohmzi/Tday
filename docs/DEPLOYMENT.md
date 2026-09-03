@@ -533,6 +533,45 @@ verification case: once a build number is spent, the check would either skip `bu
 report a green run that compiled nothing, or — for a `FAILED`/`INVALID` build — fail a run whose
 only job was to prove that the project still compiles.
 
+#### Processing confirmation (`confirm-processing`)
+
+`upload_to_testflight` runs with `skip_waiting_for_build_processing: true` (see Export compliance
+below for why) — so `testflight` going green proves App Store Connect **accepted** the binary, not
+that it finished processing. A build that fails processing still permanently spends its
+`(version, buildNumber)` pair, and until this job existed nobody found that out until the *next*
+release's duplicate guard tripped on it.
+
+A separate `confirm-processing` job runs after `testflight` in the same workflow run and polls for
+the answer:
+
+- **`ubuntu-latest`, not macOS.** It is an HTTP poll against App Store Connect — nothing here
+  touches Xcode, `xcodebuild`, or the `.ipa` — so there is no reason to pay the 10x macOS rate.
+- **It reuses the lookup, not a second client.** The polling lives in a dedicated fastlane lane,
+  `await_processing`, which calls the same `testflight_processing_state` helper the `beta` lane's
+  duplicate guard already calls, in the same `Fastfile`. Both call sites also share one constant,
+  `PROCESSING_FAILURE_STATES = %w[FAILED INVALID]`, so there is exactly one place that says which
+  states are terminal failures.
+- **Gated to the release path.** It runs only when `needs.decide.outputs.mode == 'release'` (only
+  reachable from a tag push — see Two modes above) **and** `needs.testflight.result == 'success'`
+  (a skipped or failed `testflight` job leaves nothing new to confirm). Unlike the upload gate,
+  this does not need a second, independently-derived check: it never writes to App Store Connect,
+  so a wrong `mode` here wastes a few Linux minutes at worst, not a build number.
+- **Bounded wait.** `await_processing` polls in a loop with its own timeout —
+  `TDAY_PROCESSING_POLL_MAX_ATTEMPTS` (default `20`) × `TDAY_PROCESSING_POLL_INTERVAL_SECONDS`
+  (default `60`), about 20 minutes — and always returns. Processing routinely takes 10-30 minutes,
+  so the window closing before ASC answers is expected, not exceptional: the lane prints a
+  `::warning::` annotation and exits **successfully**. A later `FAILED`/`INVALID` result is still
+  caught by the `beta` lane's own duplicate guard the next time a release runs, same as before this
+  job existed.
+- **Fails loudly on `FAILED`/`INVALID`.** `UI.user_error!` names the exact spent
+  `(version, buildNumber)` pair and the build number the next release must use
+  (`ios.buildNumber + 1` — every `node scripts/version.mjs bump …` increments it by exactly one),
+  and points at `node scripts/version.mjs bump patch` (or `minor`/`major`) as the fix.
+- **Same three secrets, no new ones.** `ASC_KEY_ID` / `ASC_ISSUER_ID` / `ASC_KEY_P8_BASE64` are
+  read again here; the `.p8` this job writes to `RUNNER_TEMP` is independent of the one `testflight`
+  already wrote and deleted (jobs run in separate VMs) and is deleted in the lane's own `ensure`
+  block.
+
 #### Export compliance
 
 `Tday/Info.plist` declares `ITSAppUsesNonExemptEncryption = false`. Without it, every upload parks at

@@ -533,8 +533,88 @@ jobs:
               echo "proves nothing about App Store Connect accepting the binary."
             else
               echo "The upload does not wait for App Store Connect processing. A green run means"
-              echo "ASC *accepted* the binary, not that it finished processing. Confirm the build"
-              echo "reaches 'Ready to Submit'; a processing failure spends the build number and"
-              echo "needs a version bump, which the next run will report as an error."
+              echo "ASC *accepted* the binary, not that it finished processing. The"
+              echo "\`confirm-processing\` job below polls for the result; if this run's summary"
+              echo "does not show that job, check its own conclusion directly, and see the note"
+              echo "in that job's summary about what an unresolved timeout does and does not mean."
             fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # ASC accepts an upload without waiting for it to finish processing — see the `beta` lane's
+  # final UI.important above. A green `testflight` job therefore proves the binary was ACCEPTED,
+  # not that it will reach "Ready to Submit". A build that fails processing permanently spends
+  # its (version, buildNumber) pair, and until now nobody found that out until the *next*
+  # release's duplicate guard tripped on it. This job closes that gap: it polls the very same
+  # processingState lookup the duplicate guard already calls (`testflight_processing_state` in
+  # the Fastfile), through a small dedicated lane (`await_processing`) rather than a second App
+  # Store Connect client, right after the upload that spent the pair.
+  #
+  # ubuntu-latest, not macOS: this is an HTTP poll against App Store Connect. Nothing here
+  # touches Xcode, xcodebuild, or the .ipa, and macOS runners bill at 10x the Linux rate for work
+  # that gains nothing from being on one.
+  #
+  # GATE: `mode == 'release'` can only be true on a tag push (see "Determine the run mode" in
+  # `decide`), and `needs.testflight.result == 'success'` means a build actually ran and
+  # completed this run — a skipped `testflight` job (should_build=false: nothing iOS-relevant
+  # changed) or a failed one both leave nothing new to confirm. Unlike the upload itself, this
+  # job does not need a second, independently-derived gate: it never writes to App Store Connect,
+  # so getting `mode` wrong here can waste a few Linux minutes and print a confusing message, not
+  # spend a build number the way an accidental upload would.
+  confirm-processing:
+    name: confirm-processing
+    needs: [decide, testflight]
+    if: needs.decide.outputs.mode == 'release' && needs.testflight.result == 'success'
+    runs-on: ubuntu-latest
+    # The Fastfile lane bounds its own polling window (~20 minutes by default, see
+    # TDAY_PROCESSING_POLL_MAX_ATTEMPTS / _INTERVAL_SECONDS in await_processing) and always exits
+    # — a timeout there is a `::warning::`, not a hang. This job timeout is only the outer safety
+    # net for setup steps (checkout, bundle install) never getting stuck.
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@95ef2b042f9d7a56d8268cba8559e2842e2ad01b # v1.321.0
+        with:
+          ruby-version: "3.3"
+          # Same reasoning as the testflight job: no committed Gemfile.lock (see
+          # ios-swiftUI/Gemfile), so a lockfile-keyed cache would key every run to one entry.
+          bundler-cache: false
+
+      - name: Install fastlane
+        working-directory: ios-swiftUI
+        run: bundle install --jobs 4 --retry 3
+
+      # Reuses testflight_processing_state from ios-swiftUI/fastlane/Fastfile — the exact helper
+      # the `beta` lane's duplicate guard calls — via the dedicated `await_processing` lane, which
+      # polls it on a bounded schedule instead of this workflow (or a second client) re-deriving
+      # how to talk to App Store Connect. Fails the job (fastlane exits non-zero via
+      # UI.user_error!) on a FAILED/INVALID processingState, naming the exact (version,
+      # buildNumber) pair that is now spent and the build number the next release must use. Times
+      # out to a `::warning::` annotation, not a failure — processing time varies and this job
+      # deciding "too slow" must never turn a genuinely successful release red.
+      - name: Poll App Store Connect for the processing result
+        working-directory: ios-swiftUI
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8_BASE64: ${{ secrets.ASC_KEY_P8_BASE64 }}
+          TDAY_REPO_ROOT: ${{ github.workspace }}
+          FASTLANE_SKIP_UPDATE_CHECK: "1"
+          FASTLANE_HIDE_CHANGELOG: "1"
+        run: bundle exec fastlane ios await_processing
+
+      - name: Summarise
+        if: always()
+        run: |
+          {
+            echo "### iOS processing confirmation — ${GITHUB_REF_NAME}"
+            echo ""
+            echo "Polls the same App Store Connect processingState lookup the \`beta\` lane's"
+            echo "duplicate guard uses (see ios-swiftUI/fastlane/Fastfile), on a bounded ~20"
+            echo "minute window, so a FAILED/INVALID build is caught within this workflow run"
+            echo "rather than at the next release. A timeout here is a warning, not a failure —"
+            echo "check the step log above for the last known processingState, or look directly"
+            echo "in App Store Connect."
           } >> "$GITHUB_STEP_SUMMARY"
