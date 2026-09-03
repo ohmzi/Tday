@@ -94,13 +94,33 @@ final class SettingsRepositoryDefaultHomeScreenLocalModeTests: XCTestCase {
         XCTAssertEqual(settingsRepository.defaultHomeScreenSnapshot(), "scheduled")
     }
 
+    /// `SecureStore.setAppDataMode`/`isLocalMode` are Keychain-backed with no non-Keychain
+    /// fallback (`SecureStore.swift`'s `saveString`/`loadString` go straight through
+    /// `SecItemUpdate`/`SecItemCopyMatching`). The code-signing-disabled simulator run this
+    /// bundle executes under has no keychain-access-group entitlement, so those writes fail
+    /// silently — the same pre-existing gap `ServerURLPersistenceTests` already carries for
+    /// every Keychain-touching assertion it makes. Skip rather than let `isLocalMode()` read
+    /// back `false` and silently exercise (and fail against) the server-mode branch instead of
+    /// the one under test; this starts asserting for real the moment that entitlement gap closes.
+    private func skipIfLocalModeDidNotPersist() throws {
+        try XCTSkipUnless(
+            secureStore.isLocalMode(),
+            "SecureStore.setAppDataMode(.local) did not persist — Keychain writes are not " +
+                "entitled in this test runner (see ServerURLPersistenceTests' own Keychain gaps)."
+        )
+    }
+
     func testSetDefaultHomeScreenPersistsToTheCacheWithoutTouchingTheNetwork() async throws {
+        try skipIfLocalModeDidNotPersist()
+
         _ = try await settingsRepository.setDefaultHomeScreen("floater")
 
         XCTAssertEqual(settingsRepository.defaultHomeScreenSnapshot(), "floater")
     }
 
     func testRefreshDefaultHomeScreenReturnsTheCachedValueUntouchedInLocalMode() async throws {
+        try skipIfLocalModeDidNotPersist()
+
         _ = try await settingsRepository.setDefaultHomeScreen("floater")
 
         let refreshed = await settingsRepository.refreshDefaultHomeScreen()
