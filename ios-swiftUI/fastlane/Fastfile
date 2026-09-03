@@ -27,6 +27,14 @@ CONFIGURATION = "Release".freeze
 DEFAULT_TEAM_ID = "JUFACN2FS3".freeze
 DEFAULT_BUNDLE_ID = "com.ohmz.tday.ios".freeze
 
+# App Store Connect's terminal states for a build's `processingState`. FAILED/INVALID mean the
+# (version, buildNumber) pair is permanently spent; VALID means processing finished cleanly
+# (this is what "Ready to Submit" reflects). PROCESSING, and "no matching build yet" (nil), are
+# the only non-terminal answers — both the `beta` lane's duplicate guard and the `await_processing`
+# poll lane below share this one list rather than each hardcoding it.
+PROCESSING_FAILURE_STATES = %w[FAILED INVALID].freeze
+PROCESSING_SUCCESS_STATE = "VALID".freeze
+
 # base64 (standard or URL-safe) with optional padding. Anything outside this alphabet is not a
 # key this app can decode, and `/` in particular has to be rejected before it reaches an
 # xcconfig, where a `//` sequence starts a comment and would silently truncate the value.
@@ -291,7 +299,7 @@ platform :ios do
           # only fix for a failed build is a new build number, i.e. a version.json bump. Say so.
           state = testflight_processing_state(key_id, issuer_id, pem, bundle_id, marketing_version, build_number)
 
-          if %w[FAILED INVALID].include?(state)
+          if PROCESSING_FAILURE_STATES.include?(state)
             UI.user_error!(
               "v#{marketing_version} build #{build_number} was already uploaded and App Store " \
               "Connect marked it #{state}. That build number is spent — re-uploading it will be " \
@@ -423,6 +431,104 @@ platform :ios do
     ensure
       File.delete(key_path) if key_path && File.exist?(key_path)
       File.delete(xcconfig_path) if xcconfig_path && File.exist?(xcconfig_path)
+    end
+  end
+
+  desc "Poll App Store Connect for the processing result of the (version, buildNumber) pair " \
+       "version.json currently names. Read-only — never uploads, never touches xcodebuild — so " \
+       "it needs no Xcode. Meant to run as a follow-up job on a Linux runner right after `beta` " \
+       "has uploaded; see the `confirm-processing` job in .github/workflows/ios-testflight.yml."
+  lane :await_processing do
+    manifest = tday_manifest
+    marketing_version = manifest.fetch("version")
+    build_number = Integer(manifest.fetch("ios").fetch("buildNumber"))
+    bundle_id = env_or("IOS_APP_IDENTIFIER", DEFAULT_BUNDLE_ID)
+
+    key_id = required_env(
+      "ASC_KEY_ID",
+      "It is the 10-character Key ID of the App Store Connect API key " \
+      "(App Store Connect -> Users and Access -> Integrations -> App Store Connect API)."
+    )
+    issuer_id = required_env(
+      "ASC_ISSUER_ID",
+      "It is the UUID shown above the key list on that same App Store Connect page."
+    )
+    encoded_key = required_env( # skipcq: SCT-A000 — read from ENV; nothing is hardcoded here.
+      "ASC_KEY_P8_BASE64",
+      "It is the base64 of the .p8 file Apple let you download exactly once when the key was created."
+    )
+    pem = decode_private_key(encoded_key)
+    key_path = write_private_key(key_id, pem)
+
+    # A bounded window, not an unbounded wait. App Store Connect processing routinely takes
+    # 10-30 minutes and this job's only purpose is to surface a FAILED/INVALID result sooner
+    # than "whoever notices at the next release" — it does not need to block on every build
+    # actually finishing. Defaults land on ~20 minutes of polling; both knobs are overridable
+    # (repository variables, or workflow env) without a code change if that proves too short.
+    max_attempts = Integer(env_or("TDAY_PROCESSING_POLL_MAX_ATTEMPTS", "20"))
+    interval_seconds = Integer(env_or("TDAY_PROCESSING_POLL_INTERVAL_SECONDS", "60"))
+
+    begin
+      state = nil
+      attempt = 0
+
+      loop do
+        attempt += 1
+        # SAME HELPER THE `beta` LANE'S DUPLICATE GUARD CALLS — see testflight_processing_state
+        # above. This lane exists to call it repeatedly from a cheap Linux runner, not to teach
+        # a second client how to talk to App Store Connect.
+        state = testflight_processing_state(key_id, issuer_id, pem, bundle_id, marketing_version, build_number)
+        UI.message(
+          "[#{attempt}/#{max_attempts}] v#{marketing_version} build #{build_number}: " \
+          "#{state || 'not visible on App Store Connect yet'}"
+        )
+
+        break if PROCESSING_FAILURE_STATES.include?(state)
+        break if state == PROCESSING_SUCCESS_STATE
+        break if attempt >= max_attempts
+
+        sleep(interval_seconds)
+      end
+
+      if PROCESSING_FAILURE_STATES.include?(state)
+        # A plain `puts` (not UI.important/UI.error, which wrap the line in colour codes) so the
+        # `::error::` workflow command lands at the very start of the line — GitHub Actions reads
+        # this from any process's stdout, not only from `run:` steps written in bash. The
+        # UI.user_error! right after is what actually fails the job.
+        puts "::error::v#{marketing_version} build #{build_number} failed App Store Connect " \
+             "processing (#{state}). That (version, buildNumber) pair is now permanently spent " \
+             "— the next release must ship as build #{build_number + 1}."
+        UI.user_error!(
+          "v#{marketing_version} build #{build_number} was uploaded to App Store Connect and " \
+          "failed processing (state: #{state}). That exact (version, buildNumber) pair is now " \
+          "permanently spent — App Store Connect will never accept it again, even though this " \
+          "job never attempted a re-upload. The next release must ship as build " \
+          "#{build_number + 1}: bump the release (`node scripts/version.mjs bump patch`, or " \
+          "minor/major) and cut a new tag. Check the App Store Connect build page for the " \
+          "processing error before you do."
+        )
+      elsif state == PROCESSING_SUCCESS_STATE
+        UI.success(
+          "v#{marketing_version} build #{build_number} finished processing: VALID. It is " \
+          "'Ready to Submit' and already visible to TestFlight testers."
+        )
+      else
+        # Timing out is explicitly NOT a failure — processing time varies, and this poll job
+        # deciding "too slow" must never make a genuinely successful release look red. A
+        # FAILED/INVALID result that only appears after this window closes is still caught by
+        # the `beta` lane's own duplicate guard the next time a release runs.
+        puts "::warning::v#{marketing_version} build #{build_number} was still " \
+             "'#{state || 'not visible on App Store Connect yet'}' after #{max_attempts} " \
+             "checks (~#{max_attempts * interval_seconds / 60} min). Processing time varies " \
+             "— this is not a failure. Check App Store Connect directly if you want to confirm " \
+             "sooner."
+        UI.important(
+          "Timed out waiting for a terminal processing state — not treating this as a failure. " \
+          "See docs/DEPLOYMENT.md - iOS TestFlight Releases."
+        )
+      end
+    ensure
+      File.delete(key_path) if key_path && File.exist?(key_path)
     end
   end
 end
