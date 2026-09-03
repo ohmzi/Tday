@@ -118,6 +118,14 @@ class CompletedFloaterDurabilityTest {
         assertEquals("TEAL", recreatedList[FloaterLists.color]?.name)
     }
 
+    // Sequential, not concurrent: the two uncompleteFloater() calls below are
+    // awaited one after another, so this only exercises the find-or-create
+    // SELECT-then-INSERT logic in FloaterServiceImpl.recreateFromCompletedRow,
+    // never the partial unique index on FloaterLists.recreatedFromListID that
+    // guards it against two *racing* undos. H2 (this test's database, via
+    // TestDatabase) cannot even create that index -- see the comment on
+    // FloaterLists.recreatedFromListID. CompletedFloaterConcurrencyTest is
+    // what actually exercises the race, against a real Postgres container.
     @Test
     fun `a second undo from the same deleted list converges onto the list the first undo recreated`() = runBlocking {
         val list = createList("Groceries", "ORANGE")
@@ -209,8 +217,12 @@ class CompletedFloaterDurabilityTest {
     }
 }
 
-/** No encryption key configured -- every call is a pass-through, same as an unconfigured server. */
-private object PassthroughFieldEncryption : FieldEncryption {
+/**
+ * No encryption key configured -- every call is a pass-through, same as an unconfigured server.
+ * Internal (not private) so [CompletedFloaterConcurrencyTest] can reuse it instead of redeclaring
+ * an identical double.
+ */
+internal object PassthroughFieldEncryption : FieldEncryption {
     override fun isConfigured(): Boolean = false
     override fun encrypt(plaintext: String): String = plaintext
     override fun decrypt(raw: String): String = raw
@@ -220,7 +232,10 @@ private object PassthroughFieldEncryption : FieldEncryption {
     override fun decryptIfEncrypted(value: String?): String? = value
 }
 
-/** Nothing is registered to dispatch in these tests; skip the real HTTP-backed implementation. */
-private object NoOpWebhookDispatchService : WebhookDispatchService {
+/**
+ * Nothing is registered to dispatch in these tests; skip the real HTTP-backed implementation.
+ * Internal (not private) so [CompletedFloaterConcurrencyTest] can reuse it too.
+ */
+internal object NoOpWebhookDispatchService : WebhookDispatchService {
     override fun dispatch(recipientUserIds: Collection<String>, event: com.ohmz.tday.domain.DomainEvent) = Unit
 }

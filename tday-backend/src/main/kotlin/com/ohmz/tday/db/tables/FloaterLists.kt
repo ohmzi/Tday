@@ -19,7 +19,17 @@ object FloaterLists : Table("FloaterProject") {
     // id. Not a foreign key: the row it names no longer exists by the time
     // this is ever set. The partial unique index below is the find-or-create
     // guard: it is what actually stops two undos racing on the same deleted
-    // list from producing two recreated lists.
+    // list from producing two recreated lists -- catching the loser with a
+    // unique-constraint violation, which Exposed's default transaction retry
+    // (3 attempts; see Transaction.maxAttempts, not overridden anywhere in
+    // this backend) re-runs from the top, where it then finds the winner's
+    // row and converges instead of erroring.
+    //
+    // H2 -- what every other backend test runs against, TestDatabase included
+    // -- cannot express a filtered/partial index and silently skips creating
+    // this one at boot, so no H2-backed test can exercise that guard actually
+    // firing. CompletedFloaterConcurrencyTest covers it directly, against a
+    // disposable real Postgres container.
     val recreatedFromListID = varchar("recreatedFromListID", 30).nullable()
 
     override val primaryKey = PrimaryKey(id)

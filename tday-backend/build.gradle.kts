@@ -67,6 +67,10 @@ dependencies {
     testImplementation("io.ktor:ktor-client-websockets-jvm")
     testImplementation("io.ktor:ktor-server-test-host-jvm")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
+    // Real Postgres for the one property H2 cannot stand in for: partial
+    // (filtered) unique indexes. See CompletedFloaterConcurrencyTest.
+    testImplementation("org.testcontainers:postgresql:1.21.3")
+    testImplementation("org.testcontainers:junit-jupiter:1.21.3")
 }
 
 tasks.withType<Test> {
