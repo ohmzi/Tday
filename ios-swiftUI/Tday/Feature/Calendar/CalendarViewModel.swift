@@ -115,11 +115,6 @@ final class CalendarViewModel {
         }
     }
 
-    /// Delayed-commit delete: the task is staged out of the local cache
-    /// immediately, an undoable toast is shown, and the real (server) delete
-    /// only commits once the undo window expires. The closures capture
-    /// `container` rather than `self` so a pending commit survives this
-    /// view model being deallocated.
     /// Swipe-to-copy: writes the task's title/notes/due/priority as plain text
     /// to the system pasteboard. See TodoListViewModel.copyToClipboard.
     func copyToClipboard(_ todo: TodoItem) {
@@ -127,6 +122,11 @@ final class CalendarViewModel {
         container.snackbarManager.show(L("Copied to clipboard"), kind: .success)
     }
 
+    /// Delayed-commit delete: the task is staged out of the local cache
+    /// immediately, an undoable toast is shown, and the real (server) delete
+    /// only commits once the undo window expires. The closures capture
+    /// `container` rather than `self` so a pending commit survives this
+    /// view model being deallocated.
     func delete(_ todo: TodoItem) async {
         TdayTelemetry.addBreadcrumb("calendar.task.delete", data: calendarTelemetryData())
         let container = container
