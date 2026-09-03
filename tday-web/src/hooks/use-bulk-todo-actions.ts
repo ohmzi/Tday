@@ -6,7 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useUndoableDelete } from "@/hooks/use-undoable-delete";
 import { canonicalTodoId } from "@/lib/todo/todo-id";
 import { patchTodo } from "@/lib/todo/patch-todo";
-import { markTaskCompleted } from "@/lib/task-completion-signal";
+import { markTaskCompleted, markTaskDeletedLocally } from "@/lib/task-completion-signal";
 import { addDiagnosticBreadcrumb } from "@/lib/observability/sentry";
 import {
   runBulkFanOut,
@@ -183,6 +183,9 @@ export function useBulkTodoActions({
         count: rows.length,
         scoped_list: Boolean(scopeListId),
       });
+      // The empty state that follows the last rows leaving reads this to tell
+      // a list a batch was deleted out of from one that was just finished.
+      markTaskDeletedLocally();
       cancelActiveTodoQueries();
       pruneStagedRows(new Set(rows.map((row) => row.id)));
 
@@ -284,6 +287,10 @@ export function useBulkTodoActions({
           .filter((row) => (row.listID ?? scopeListId ?? null) !== listID)
           .map((row) => row.id),
       );
+      // A move can empty the source list screen exactly like a delete does —
+      // same marker, so `useCelebrateEmptyTransition` doesn't read a batch
+      // moved out of the last-viewed list as a payoff.
+      if (leavingIds.size > 0) markTaskDeletedLocally();
       cancelActiveTodoQueries();
 
       const applyList = (old?: TodoItemType[]) =>

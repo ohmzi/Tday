@@ -19,6 +19,7 @@ import MobileSearchHeader from "@/components/ui/MobileSearchHeader";
 import ScreenWatermark from "@/components/app/ScreenWatermark";
 import EmptyState from "@/components/app/EmptyState";
 import { taskJustCompleted } from "@/lib/task-completion-signal";
+import { useCelebrateEmptyTransition } from "@/hooks/use-celebrate-empty-transition";
 import { getListIcon } from "@/lib/listIcons";
 import { listColorAccentColors, nativeScreenAccentColors } from "@/components/app/nativeScreenTheme";
 import ListFormSheet from "@/components/Sidebar/List/ListFormSheet";
@@ -46,6 +47,9 @@ const ListContainer = ({ id }: { id: string }) => {
     // Empty date buckets are drop targets and nothing else, so they exist only
     // for the length of a drag.
     const [dragActive, setDragActive] = useState(false);
+    // Remote sibling of `taskJustCompleted()` below — fires for a completion
+    // on another device or by a collaborator, not just this tab's own tap.
+    const remoteEmptied = useCelebrateEmptyTransition(listTodos.length === 0);
 
     const filteredTodos = useMemo(() => {
         const query = searchQuery.trim().toLowerCase();
@@ -202,7 +206,9 @@ const ListContainer = ({ id }: { id: string }) => {
                             // Finishing a list is a payoff, not an absence: the
                             // confetti is for the tick that emptied it, not for a
                             // list that was already empty when it was opened.
-                            celebrate={taskJustCompleted()}
+                            // Whether that tick happened here, on another device,
+                            // or from a collaborator on this shared list.
+                            celebrate={taskJustCompleted() || remoteEmptied}
                         />
                     )}
 
