@@ -1,0 +1,253 @@
+name: iOS Tests
+
+run-name: >-
+  iOS tests —
+  ${{ github.event_name == 'pull_request' && format('PR #{0}', github.event.number) || github.ref_name }}
+
+# WHY THIS WORKFLOW EXISTS AT ALL
+#
+# Nothing in this repository compiled `ios-swiftUI/Tests/` until it did.
+#
+# `ios-testflight.yml` runs `xcodebuild archive` through fastlane's `build_app`. An archive builds
+# the app target and its *dependencies*; a unit-test bundle is neither. The shared `Tday` scheme
+# says so out loud — the `TdayTests` build entry carries `buildForTesting = YES` and
+# `buildForArchiving = NO`. So the release path has never touched the test bundle, and
+# `pr-gate.yml` compiles no Swift at all (its one macOS job shell-tests the commit-msg hook).
+#
+# The consequence is that a Swift test which does not compile stays broken silently until someone
+# opens Xcode, and a test whose assertion has been invalidated by a change elsewhere in the repo
+# stays green-by-absence for as long as nobody runs it.
+#
+# COMPILE-ONLY WAS CONSIDERED AND REJECTED.
+#
+# `build-for-testing` alone is cheaper — no simulator boot, no test execution — and it does catch
+# the "someone edited a Swift file on a Linux box" case. It does not catch the case that actually
+# motivated this workflow.
+#
+# `ConnectivityClassificationTests` asserts against `TdayUpdateURL`, which `scripts/version.mjs
+# sync` mirrors into `Tday/Info.plist` from `ios.updateUrl` in the root `version.json`. The test
+# bundle is app-hosted (`TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Tday.app/Tday"`), so `Bundle.main`
+# inside the test IS `Tday.app` and the test reads the real shipped value. When `ios.updateUrl`
+# went from `""` to a TestFlight URL, the old `XCTAssertNil(AppViewModel.bundleUpdateURL())`
+# became false — while still compiling perfectly. A compile-only gate would have reported green
+# on it.
+#
+# That is the shape of the whole risk here: the iOS tests are mostly pure-logic assertions about
+# values that live in Info.plist, version.json and the guide JSON — data a compiler cannot check.
+# So this runs them.
+#
+# The extra cost is smaller than it looks. Both approaches pay the same dominant cost, which is
+# compiling the app and its four embedded bundles for the simulator. Running adds a simulator
+# boot (started early, below, so it overlaps the compile) and the execution of a suite of
+# non-UI unit tests. The marginal spend buys the only failure mode the compiler cannot see.
+on:
+  pull_request:
+    branches: [develop, master]
+    # `paths:` is deliberately the native GitHub filter and NOT `scripts/ios-release-changed.mjs`.
+    # That script exists for one reason: `on: push: tags:` accepts no `paths:` key, so the release
+    # workflow has to do its filtering in a job. `pull_request` has no such limitation, and the
+    # native filter is strictly better here — it decides before a runner is allocated, so an
+    # unrelated PR costs zero macOS minutes rather than a Linux job that then skips.
+    #
+    # The script's other job — normalising away the version mirrors every release commit
+    # rewrites — has no analogue here. A PR that only bumps versions does not exist; release
+    # commits are made by `release.yml` on `master`, not by pull requests.
+    paths:
+      - "ios-swiftUI/**"
+      - "!ios-swiftUI/**/*.md"
+      - ".github/workflows/ios-tests.yml"
+  # So the gate itself can be exercised without opening a pull request.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Unlike the release workflow, cancelling a run here costs nothing: this job uploads nothing,
+# spends no build number, and touches no Apple-side state. A force-push should abandon the
+# obsolete run rather than pay for it.
+concurrency:
+  group: ios-tests-${{ github.event_name == 'pull_request' && github.event.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  xctest:
+    name: xctest
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      # Same pin, same repository variable, same rationale as ios-testflight.yml — and that
+      # sameness is the point. A test run that compiled under a different Swift version than the
+      # release archive would be testing a different program.
+      - name: Select Xcode
+        env:
+          XCODE_VERSION: ${{ vars.IOS_XCODE_VERSION }}
+        run: |
+          set -euo pipefail
+          echo "Xcode versions installed on this runner:"
+          ls -d /Applications/Xcode*.app | sed 's/^/  /'
+
+          if [ -z "${XCODE_VERSION}" ]; then
+            echo "::warning::The IOS_XCODE_VERSION repository variable is not set, so these tests compile with whatever Xcode the macos-latest image happens to default to — which may not be the version ios-testflight.yml archives with. Pin it with 'gh variable set IOS_XCODE_VERSION --body <version>' using one of the versions listed above."
+          else
+            APP="/Applications/Xcode_${XCODE_VERSION}.app"
+            if [ ! -d "$APP" ]; then
+              echo "::error::IOS_XCODE_VERSION is pinned to ${XCODE_VERSION}, but /Applications/Xcode_${XCODE_VERSION}.app does not exist on this runner image. Pick one of the versions listed above and update the variable."
+              exit 1
+            fi
+            sudo xcode-select -s "$APP/Contents/Developer"
+          fi
+
+          echo "Testing with:"
+          xcodebuild -version
+
+      # Chosen before the compile, and booted immediately, so the ~1 minute of first-boot happens
+      # while xcodebuild is busy rather than in front of the test step. Both xcodebuild
+      # invocations below use this exact UDID: `build-for-testing` writes an .xctestrun keyed to
+      # the platform it built for, and `test-without-building` has to be handed a concrete device
+      # rather than a `generic/` destination.
+      #
+      # The device is resolved from what the image actually has rather than pinned by name.
+      # Simulator names churn every Xcode release ("iPhone 16" today, something else next spring),
+      # and a name that no longer exists fails with xcodebuild's famously unhelpful
+      # "Unable to find a destination matching the provided destination specifier".
+      - name: Choose and pre-boot a simulator
+        id: simulator
+        run: |
+          set -euo pipefail
+
+          UDID=$(xcrun simctl list devices available --json \
+            | jq -r '[ .devices
+                       | to_entries[]
+                       | select(.key | test("SimRuntime\\.iOS-"))
+                       | .value[]
+                       | select(.name | startswith("iPhone"))
+                       | .udid ] | first // empty')
+
+          if [ -z "${UDID}" ]; then
+            echo "::error::No available iPhone simulator on this runner image. The devices it does have are listed below; if Apple has renamed the iPhone family, widen the jq filter in this step."
+            xcrun simctl list devices available
+            exit 1
+          fi
+
+          NAME=$(xcrun simctl list devices available --json \
+            | jq -r --arg udid "${UDID}" '[ .devices | to_entries[] | .value[] | select(.udid == $udid) | .name ] | first')
+
+          echo "udid=${UDID}" >> "$GITHUB_OUTPUT"
+          echo "name=${NAME}" >> "$GITHUB_OUTPUT"
+          echo "Testing on ${NAME} (${UDID})."
+
+          # Already-booted is a success, not a fault, and a boot failure here is not worth failing
+          # the job over — xcodebuild boots the device itself if this did not take.
+          xcrun simctl boot "${UDID}" || true
+
+      # Same split-restore/save shape as ios-testflight.yml, for the same reason: a combined
+      # actions/cache saves from an implicit post step that also runs after a failure, so a run
+      # interrupted mid-resolve can write a half-populated .spm-cache that every later run then
+      # restores. The key carries the run id so each save writes a fresh entry and the
+      # restore-keys prefixes age a bad one out.
+      #
+      # The cache is namespaced `spm-tests-` rather than sharing `spm-` with the release
+      # workflow: this job resolves for the simulator and in Debug, that one for the device and
+      # in Release, and one polluting the other's entry is not a debugging session anyone wants.
+      - name: Restore the Swift Package Manager cache
+        id: spm-cache
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ios-swiftUI/.spm-cache
+          key: spm-tests-${{ runner.os }}-${{ hashFiles('ios-swiftUI/TdayApp.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved', 'ios-swiftUI/Package.resolved') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            spm-tests-${{ runner.os }}-${{ hashFiles('ios-swiftUI/TdayApp.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved', 'ios-swiftUI/Package.resolved') }}-
+            spm-tests-${{ runner.os }}-
+
+      # NO APP STORE CONNECT CREDENTIALS ANYWHERE IN THIS JOB, AND NONE ARE NEEDED.
+      #
+      # The release lane needs the .p8 because `-allowProvisioningUpdates` has to authenticate to
+      # the Developer portal to mint the five App Store distribution profiles. A simulator build
+      # resolves none of that: the iphonesimulator SDK requires no provisioning profile and no
+      # distribution identity, so `CODE_SIGNING_ALLOWED=NO` lets the whole signing machinery sit
+      # this one out. Nothing here can reach Apple, mint a certificate, or spend a build number.
+      #
+      # This is compiled Debug, not Release. The scheme's TestAction is `buildConfiguration =
+      # "Debug"`, so Debug is what a developer's `cmd-U` compiles and what these assertions were
+      # written against. The Release configuration is exercised by ios-testflight.yml's archive.
+      - name: Compile the app and the test bundle
+        id: compile
+        env:
+          NSUnbufferedIO: "YES"
+        run: |
+          set -euo pipefail
+          xcodebuild build-for-testing \
+            -project ios-swiftUI/TdayApp.xcodeproj \
+            -scheme Tday \
+            -configuration Debug \
+            -destination "platform=iOS Simulator,id=${{ steps.simulator.outputs.udid }}" \
+            -clonedSourcePackagesDirPath ios-swiftUI/.spm-cache \
+            -derivedDataPath "${RUNNER_TEMP}/DerivedData" \
+            -resultBundlePath "${RUNNER_TEMP}/compile.xcresult" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY=""
+
+      # After the compile rather than after the tests: the packages that were resolved are valid
+      # whatever the assertions go on to say, and a red test suite should not also cost the next
+      # run a fresh sentry-cocoa clone.
+      - name: Save the Swift Package Manager cache
+        if: steps.compile.outcome == 'success'
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ios-swiftUI/.spm-cache
+          key: ${{ steps.spm-cache.outputs.cache-primary-key }}
+
+      # Split from the compile on purpose. Two steps means the run page answers "did it compile?"
+      # and "did it pass?" separately, without anyone reading an xcodebuild log to find out which
+      # kind of failure this was — and those two failures have completely different fixes.
+      - name: Run the tests
+        id: tests
+        env:
+          NSUnbufferedIO: "YES"
+        run: |
+          set -euo pipefail
+          xcodebuild test-without-building \
+            -project ios-swiftUI/TdayApp.xcodeproj \
+            -scheme Tday \
+            -configuration Debug \
+            -destination "platform=iOS Simulator,id=${{ steps.simulator.outputs.udid }}" \
+            -derivedDataPath "${RUNNER_TEMP}/DerivedData" \
+            -resultBundlePath "${RUNNER_TEMP}/tests.xcresult"
+
+      - name: Summarise
+        if: always()
+        env:
+          SIMULATOR: ${{ steps.simulator.outputs.name }}
+          COMPILE: ${{ steps.compile.outcome }}
+          TESTS: ${{ steps.tests.outcome }}
+        run: |
+          {
+            echo "### iOS tests — ${GITHUB_REF_NAME}"
+            echo ""
+            echo "| Stage | Result |"
+            echo "|---|---|"
+            echo "| Compile (\`build-for-testing\`, Debug, simulator) | \`${COMPILE:-skipped}\` |"
+            echo "| Run (\`test-without-building\` on ${SIMULATOR:-?}) | \`${TESTS:-skipped}\` |"
+            echo ""
+            if [ "${COMPILE}" != "success" ]; then
+              echo "The \`TdayTests\` bundle did not compile. Note that \`ios-testflight.yml\`"
+              echo "would **not** have caught this: \`xcodebuild archive\` builds the app target"
+              echo "and its dependencies, and the shared \`Tday\` scheme marks \`TdayTests\` as"
+              echo "\`buildForArchiving = NO\`."
+            elif [ "${TESTS}" != "success" ]; then
+              echo "Everything compiled; an assertion failed. Several of these tests read values"
+              echo "that \`scripts/version.mjs sync\` mirrors into \`Tday/Info.plist\` from the"
+              echo "root \`version.json\` — the test bundle is app-hosted, so \`Bundle.main\` is"
+              echo "\`Tday.app\` and those assertions see the real shipped values. A change to"
+              echo "\`version.json\` can legitimately invalidate one."
+            else
+              echo "The \`TdayTests\` bundle compiled and every test passed."
+            fi
+            echo ""
+            echo "No App Store Connect credentials were used and nothing was signed for"
+            echo "distribution — a simulator build needs neither."
+          } >> "$GITHUB_STEP_SUMMARY"

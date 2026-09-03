@@ -1,0 +1,226 @@
+name: Android
+
+# WHY THIS IS ITS OWN WORKFLOW, AND NOT A JOB IN pr-gate.yml
+#
+# `pr-gate.yml` fires on `pull_request: branches: [master]` only, so it never sees the PRs that
+# actually carry the work — every feature branch lands on `develop`. Putting the Android tests
+# there would have gated them on the one merge a week that goes develop -> master, which is
+# exactly the "too late to stop it landing" failure this closes.
+#
+# Widening pr-gate's own trigger to `develop` is the other half of that problem and is
+# deliberately NOT done here: its `hook-check` job runs on `macos-latest`, which bills at 10x
+# the Linux rate, and its `check-source-branch` job asserts `head_ref == 'develop'` — an
+# assertion that is correct for a PR into master and false for every PR into develop. Both need
+# a decision that is not this workflow's to make.
+#
+# So Android gets the trigger it needs on its own: every PR into `develop` or `master`.
+# The release path is covered separately, inside `release.yml`'s `lint-and-test` job, because
+# that job is what `build-and-release` hangs off — a failing Android test there stops the APK
+# from being published rather than merely reporting after the fact.
+on:
+  pull_request:
+    branches: [master, develop]
+  # Present so the pipeline can be exercised without opening a PR. Note that GitHub only
+  # registers a `workflow_dispatch` trigger once the workflow file exists on the default branch
+  # (`master`), so this is inert until this lands there.
+  workflow_dispatch:
+    inputs:
+      force:
+        description: >-
+          Run the tests even when the change filter says no Android-relevant file changed.
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+# A superseded PR revision has nothing to say, and this is a several-minute Gradle build.
+concurrency:
+  group: android-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Everything that can say "no" happens here, before a Gradle build is spun up — the same
+  # shape as `ios-testflight.yml`'s `decide` job. This job always runs, so the workflow always
+  # reports a conclusion and stays usable as a required status check; only the expensive job
+  # below is skipped.
+  changes:
+    name: Android files changed?
+    runs-on: ubuntu-latest
+    outputs:
+      android: ${{ steps.filter.outputs.android }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          # The filter is a base..head diff and needs both endpoints present.
+          fetch-depth: 0
+
+      # WHAT COUNTS AS AN ANDROID CHANGE
+      #
+      #   android-compose/**  the app, its Gradle root, its wrapper and its resources
+      #   shared/**           `:app` depends on `project(":shared")`
+      #   version.json        app/build.gradle.kts derives versionName/versionCode from it, and
+      #                       BuildVersionCodeTest asserts on the BuildConfig values that come
+      #                       out — a manifest edit really can turn those tests red
+      #   this workflow       a change to the gate is a change worth running the gate on
+      #
+      # Markdown under those trees is excluded: prose does not reach the APK.
+      #
+      # Unlike `scripts/ios-release-changed.mjs`, this needs no version-mirror normalisation.
+      # That script compares release tag to release tag, where every diff contains the version
+      # bump; this compares a PR against its own base, where a release bump is simply not part
+      # of the diff.
+      - name: Decide whether to run the Android tests
+        id: filter
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          FORCE: ${{ inputs.force }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -uo pipefail
+
+          run_tests() {
+            echo "android=true" >> "$GITHUB_OUTPUT"
+            echo "$1"
+            echo "Android unit tests: **running** — $1" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          }
+
+          if [ "$EVENT_NAME" != "pull_request" ]; then
+            if [ "$FORCE" = "true" ]; then
+              run_tests "manual run with force enabled."
+            fi
+            run_tests "manual run outside a pull request — no base to diff against."
+          fi
+
+          # Failing toward running the tests is the cheap direction. Failing the other way
+          # silently drops the only Android gate there is.
+          if ! CHANGED=$(git diff --name-only "${BASE_SHA}...${HEAD_SHA}" 2>&1); then
+            echo "Could not diff ${BASE_SHA}...${HEAD_SHA}:"
+            printf '%s\n' "$CHANGED" | sed 's/^/  /'
+            run_tests "the change filter could not resolve the diff."
+          fi
+
+          RELEVANT=$(printf '%s\n' "$CHANGED" | grep -E \
+            '^(android-compose/|shared/|version\.json$|\.github/workflows/android\.yml$)' \
+            | grep -vE '\.md$' || true)
+
+          if [ -n "$RELEVANT" ]; then
+            echo "Android-relevant files changed:"
+            printf '%s\n' "$RELEVANT" | sed 's/^/  /'
+            run_tests "$(printf '%s\n' "$RELEVANT" | wc -l | tr -d ' ') Android-relevant file(s) changed."
+          fi
+
+          echo "android=false" >> "$GITHUB_OUTPUT"
+          echo "No Android-relevant file changed — skipping the Android unit tests."
+          {
+            echo "Android unit tests: **skipped** — no file under \`android-compose/\`,"
+            echo "\`shared/\` or \`version.json\` changed in this pull request."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  unit-tests:
+    name: Unit tests
+    needs: changes
+    if: needs.changes.outputs.android == 'true'
+    # Android *unit* tests are plain JVM tests running against the android.jar stubs. They need
+    # no emulator, no KVM and no macOS runner — only a JDK and an SDK platform to compile
+    # against, both of which ubuntu-latest already ships.
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      # No `local.properties` is committed (it is gitignored, and it holds a machine-specific
+      # `sdk.dir` plus optional local secrets). AGP resolves the SDK from `sdk.dir` first and
+      # falls back to `ANDROID_HOME`, then `ANDROID_SDK_ROOT` — and the runner image sets both
+      # to /usr/local/lib/android/sdk with licences already accepted. That fallback is what
+      # `release.yml` has always relied on to build the release APK, so no `setup-android` step
+      # and no generated `local.properties` are needed here either.
+      #
+      # `cache: gradle` here rather than `gradle/actions/setup-gradle`: this action is already
+      # SHA-pinned in this repo, so the dependency cache costs no new supply-chain surface.
+      - name: Set up JDK 21
+        uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9 # v4.8.0
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+          cache-dependency-path: |
+            android-compose/**/*.gradle*
+            android-compose/gradle/wrapper/gradle-wrapper.properties
+            shared/**/*.gradle*
+
+      # WHY THESE TWO TASKS
+      #
+      # `:app:testDebugUnitTest` is the whole point — 240 JVM tests that nothing in CI has ever
+      # run, including PR #85's versionCode guards and PR #89's bulk-selection tests. It already
+      # depends on `:app:compileDebugKotlin`, so naming that separately would be redundant.
+      #
+      # `:app:compileDebugAndroidTestKotlin` costs ~15s and is the only thing in the pipeline
+      # that ever compiles `app/src/androidTest/`. Those tests need an emulator to run and so
+      # will never execute here, but without this they rot invisibly — `assembleRelease` in
+      # `release.yml` does not touch that source set either.
+      #
+      # `:app:lintDebug` is deliberately NOT here. On a clean `develop` it currently reports
+      # 47 errors and 410 warnings, so adding it would paint every PR red for pre-existing
+      # findings that have nothing to do with the change. Lint wants its own PR: a baseline
+      # file (or the fixes), and then the task.
+      #
+      # Run from `android-compose/`, not the repo root. It is its own Gradle root with its own
+      # `settings.gradle.kts`, and it is the invocation CONTRIBUTING.md tells a developer to
+      # run — so a green run here means the documented local command is green.
+      - name: Run Android unit tests
+        working-directory: android-compose
+        run: ./gradlew :app:testDebugUnitTest :app:compileDebugAndroidTestKotlin --no-daemon
+
+      # Gradle prints nothing on a green test task, so without this there is no way to tell a
+      # run that executed 240 tests from one that executed none — a source-set path that
+      # quietly stopped matching would look exactly like success.
+      - name: Summarise the test results
+        if: always()
+        working-directory: android-compose
+        run: |
+          set -uo pipefail
+          DIR=app/build/test-results/testDebugUnitTest
+
+          if [ ! -d "$DIR" ] || [ -z "$(ls -A "$DIR"/*.xml 2>/dev/null)" ]; then
+            echo "::error::No JUnit XML was produced under ${DIR} — the unit tests did not run."
+            exit 1
+          fi
+
+          sum() {
+            grep -ho "$1=\"[0-9]*\"" "$DIR"/*.xml \
+              | sed 's/.*="//; s/"//' \
+              | awk '{ s += $1 } END { print s + 0 }'
+          }
+
+          CLASSES=$(ls -1 "$DIR"/*.xml | wc -l | tr -d ' ')
+          TESTS=$(sum tests); FAILURES=$(sum failures); ERRORS=$(sum errors); SKIPPED=$(sum skipped)
+
+          echo "classes=${CLASSES} tests=${TESTS} failures=${FAILURES} errors=${ERRORS} skipped=${SKIPPED}"
+
+          if [ "$TESTS" -eq 0 ]; then
+            echo "::error::${CLASSES} test class(es) reported 0 tests — treating that as a broken suite, not a pass."
+            exit 1
+          fi
+
+          {
+            echo "### Android unit tests"
+            echo ""
+            echo "| classes | tests | failures | errors | skipped |"
+            echo "|--------:|------:|---------:|-------:|--------:|"
+            echo "| ${CLASSES} | ${TESTS} | ${FAILURES} | ${ERRORS} | ${SKIPPED} |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # A failed Gradle test task prints the failing test names but not the assertion detail.
+      - name: Upload test report
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: android-unit-test-report
+          path: |
+            android-compose/app/build/reports/tests/testDebugUnitTest/
+            android-compose/app/build/test-results/testDebugUnitTest/
+          retention-days: 7

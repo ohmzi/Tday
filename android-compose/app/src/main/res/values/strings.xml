@@ -396,8 +396,9 @@
     <string name="members_title">Members</string>
     <string name="members_add_section">Add member</string>
     <string name="members_add_action">Add</string>
-    <string name="members_search_placeholder">Search by username</string>
+    <string name="members_search_placeholder">Search by name or username</string>
     <string name="members_no_results">No users found</string>
+    <string name="members_already_member">Already a member</string>
     <string name="members_remove">Remove member</string>
     <string name="members_leave_list">Leave list</string>
     <string name="members_shared_by">Shared by %1$s</string>

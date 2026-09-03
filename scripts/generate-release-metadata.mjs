@@ -145,7 +145,22 @@ function writeJson(filePath, value) {
   writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`, "utf8");
 }
 
-/** Writes the GitHub release body that accompanies the generated metadata files. */
+// The public TestFlight group link for the iOS beta. It belongs in the release
+// body rather than in `notes`, because `notes` is the per-release highlight list
+// the clients render as the changelog — a fixed line would eat one of its three
+// slots on every release and say nothing new.
+const IOS_TESTFLIGHT_URL = "https://testflight.apple.com/join/paKSyGAG";
+
+/**
+ * Writes the GitHub release body that accompanies the generated metadata files.
+ *
+ * Only the `## What's Changed` bullets may be list items. The Android and iOS
+ * apps build their in-app changelog by keeping every `- `/`* ` line of this body
+ * (see `parseChangelog` on both platforms) and, unlike the web, they do not cap
+ * it at three — so a bullet anywhere below would show up as a permanent, silent
+ * extra "change" in the apps on every release. Everything after the changelog is
+ * therefore written as prose, code blocks, or numbered steps.
+ */
 function writeReleaseBody(filePath, metadata) {
   const compareLine = metadata.compareUrl
     ? `**Full Changelog**: ${metadata.compareUrl}`
@@ -165,6 +180,13 @@ function writeReleaseBody(filePath, metadata) {
     "### Android",
     "",
     "Download the APK from the assets below and install on your device.",
+    "",
+    "### iOS",
+    "",
+    `Join the open TestFlight beta: ${IOS_TESTFLIGHT_URL}`,
+    "",
+    "Needs Apple's free TestFlight app. Beta builds expire 90 days after upload — update from",
+    "TestFlight to keep the app working.",
     "",
     "### Docker Compose",
     "",

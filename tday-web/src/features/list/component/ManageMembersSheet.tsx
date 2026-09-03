@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Crown, Share2, UserPlus, X } from "lucide-react";
+import { Crown, Share2, X } from "lucide-react";
 import AppBottomSheet from "@/components/ui/AppBottomSheet";
 import { Input } from "@/components/ui/input";
 import { SheetCard, SheetSectionTitle } from "@/components/ui/sheet-chrome";
@@ -14,6 +14,7 @@ import {
   useRemoveListMember,
   useUpdateListMemberRole,
 } from "@/features/list/query/share-members";
+import MemberSearchResults from "@/features/list/component/MemberSearchResults";
 import { useSearchUsers } from "@/features/user/query/search-users";
 import type { ListMemberType, ShareRoleType } from "@/types";
 
@@ -31,11 +32,16 @@ type ManageMembersSheetProps = {
 
 const MEMBER_ROLES: ShareRoleType[] = ["EDITOR", "VIEWER"];
 
+/** Avatar letter for a member row: first character of the display name, or of the username. */
 function memberInitial(member: ListMemberType) {
   const source = member.name?.trim() || member.username;
   return source.slice(0, 1).toUpperCase();
 }
 
+/**
+ * The sheet behind a shared list's "Members" action: the current roster, plus — for the owner —
+ * a username typeahead for adding people, and for everyone else the leave-list flow.
+ */
 export default function ManageMembersSheet({
   open,
   onOpenChange,
@@ -73,12 +79,12 @@ export default function ManageMembersSheet({
   const { users: searchResults, searchPending } = useSearchUsers(
     isOwner && open ? debouncedSearch : "",
   );
+  // Handed to MemberSearchResults, which dims these rows rather than dropping them.
   const memberIds = new Set(
     [members?.owner.userId, ...(members?.members ?? []).map((member) => member.userId)].filter(
-      Boolean,
+      (userId): userId is string => Boolean(userId),
     ),
   );
-  const addableUsers = searchResults.filter((user) => !memberIds.has(user.id));
 
   const handleAdd = async (username: string) => {
     hapticTick();
@@ -203,37 +209,13 @@ export default function ManageMembersSheet({
                 className="h-12 rounded-2xl border-transparent bg-muted/60 font-bold focus-visible:ring-0"
               />
               {debouncedSearch.trim().length >= 2 ? (
-                <div className="mt-2 divide-y divide-border/50">
-                  {addableUsers.map((user) => (
-                    <div key={user.id} className="flex items-center gap-3 px-1 py-2">
-                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted/70 text-sm font-black text-muted-foreground">
-                        {(user.name?.trim() || user.username).slice(0, 1).toUpperCase()}
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-black text-foreground">
-                          {user.name?.trim() || user.username}
-                        </p>
-                        <p className="truncate text-xs font-bold text-muted-foreground">
-                          @{user.username}
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        disabled={addMemberPending}
-                        onClick={() => void handleAdd(user.username)}
-                        className="flex h-8 items-center gap-1.5 rounded-full bg-accent/15 px-3 text-xs font-black text-accent transition-colors hover:bg-accent/25 disabled:opacity-50"
-                      >
-                        <UserPlus className="h-3.5 w-3.5 stroke-[2.6]" />
-                        {appDict("addMember")}
-                      </button>
-                    </div>
-                  ))}
-                  {!searchPending && addableUsers.length === 0 ? (
-                    <p className="px-1 py-2 text-sm font-bold text-muted-foreground">
-                      {appDict("noUsersFound")}
-                    </p>
-                  ) : null}
-                </div>
+                <MemberSearchResults
+                  users={searchResults}
+                  memberIds={memberIds}
+                  searchPending={searchPending}
+                  addPending={addMemberPending}
+                  onAdd={(username) => void handleAdd(username)}
+                />
               ) : null}
             </SheetCard>
           </>

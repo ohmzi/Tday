@@ -36,6 +36,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -126,13 +127,11 @@ class ManageMembersViewModel @Inject constructor(
             delay(SEARCH_DEBOUNCE_MS)
             runCatching { shareRepository.searchUsers(query) }
                 .onSuccess { users ->
-                    val memberIds = buildSet {
-                        _uiState.value.owner?.let { add(it.userId) }
-                        _uiState.value.members.forEach { add(it.userId) }
-                    }
-                    _uiState.update { state ->
-                        state.copy(searchResults = users.filterNot { it.id in memberIds })
-                    }
+                    // Everyone the search matched is kept. Filtering the current members out
+                    // here made the sheet answer "No users found" for an account that is
+                    // already on the list, which reads as the account not existing; the row
+                    // says "Already a member" instead.
+                    _uiState.update { state -> state.copy(searchResults = users) }
                 }
         }
     }
@@ -332,10 +331,15 @@ fun ManageMembersSheet(
                                     modifier = Modifier.padding(horizontal = 4.dp),
                                 )
                             } else {
+                                val memberIds = buildSet {
+                                    uiState.owner?.let { add(it.userId) }
+                                    uiState.members.forEach { add(it.userId) }
+                                }
                                 uiState.searchResults.forEach { user ->
                                     SearchResultRow(
                                         user = user,
                                         enabled = !uiState.isWorking,
+                                        alreadyMember = user.id in memberIds,
                                         onAdd = { viewModel.addMember(user.username) },
                                     )
                                 }
@@ -501,6 +505,7 @@ private fun RolePill(
 private fun SearchResultRow(
     user: UserSearchResultDto,
     enabled: Boolean,
+    alreadyMember: Boolean,
     onAdd: () -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
@@ -508,6 +513,7 @@ private fun SearchResultRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .alpha(if (alreadyMember) 0.6f else 1f)
             .padding(vertical = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -526,35 +532,45 @@ private fun SearchResultRow(
                 fontWeight = FontWeight.Bold,
             )
         }
-        Card(
-            onClick = {
-                ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
-                onAdd()
-            },
-            enabled = enabled,
-            shape = RoundedCornerShape(50),
-            colors = CardDefaults.cardColors(
-                containerColor = colorScheme.primary.copy(alpha = 0.15f),
-            ),
-            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        ) {
-            Row(
+        if (alreadyMember) {
+            Text(
+                text = stringResource(R.string.members_already_member),
+                style = MaterialTheme.typography.labelLarge,
+                color = colorScheme.onSurfaceVariant,
+                fontWeight = FontWeight.ExtraBold,
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalAlignment = Alignment.CenterVertically,
+            )
+        } else {
+            Card(
+                onClick = {
+                    ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+                    onAdd()
+                },
+                enabled = enabled,
+                shape = RoundedCornerShape(50),
+                colors = CardDefaults.cardColors(
+                    containerColor = colorScheme.primary.copy(alpha = 0.15f),
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
             ) {
-                Icon(
-                    imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_plus),
-                    contentDescription = null,
-                    tint = colorScheme.primary,
-                    modifier = Modifier.size(16.dp),
-                )
-                Text(
-                    text = stringResource(R.string.members_add_action),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = colorScheme.primary,
-                    fontWeight = FontWeight.ExtraBold,
-                )
+                Row(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_plus),
+                        contentDescription = null,
+                        tint = colorScheme.primary,
+                        modifier = Modifier.size(16.dp),
+                    )
+                    Text(
+                        text = stringResource(R.string.members_add_action),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = colorScheme.primary,
+                        fontWeight = FontWeight.ExtraBold,
+                    )
+                }
             }
         }
     }
