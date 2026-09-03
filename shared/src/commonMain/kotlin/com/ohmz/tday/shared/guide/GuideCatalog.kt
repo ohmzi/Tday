@@ -227,8 +227,19 @@ object GuideCatalog {
 
         // ── Widgets & surfaces ───────────────────────────────────────────
         topic(
-            GuideTopicIds.HOME_WIDGET, GuideSectionId.WIDGETS_AND_SURFACES, "layout-grid",
+            // "layout-grid" here, on FOCUS_FILTERS below, and on the new LIST_WIDGETS topic are
+            // three independently-chosen icons for unrelated topics that happen to share a
+            // glyph; a shared constant would assert a coupling that doesn't exist between them.
+            GuideTopicIds.HOME_WIDGET, GuideSectionId.WIDGETS_AND_SURFACES, "layout-grid",  // skipcq: KT-W1042
             setOf(ANDROID, IOS), body = listOf(para(GuideTopicIds.HOME_WIDGET)),
+        ),
+        topic(
+            // Android only for now — this is the per-instance list picker described in the
+            // per-list-widgets rollout; iOS gets the equivalent Focus-filter-based flow in a
+            // separate PR.
+            GuideTopicIds.LIST_WIDGETS, GuideSectionId.WIDGETS_AND_SURFACES, "layout-grid",
+            setOf(ANDROID), sinceVersion = "0.7.8",
+            body = listOf(para(GuideTopicIds.LIST_WIDGETS), tip(GuideTopicIds.LIST_WIDGETS)),
         ),
         topic(
             GuideTopicIds.WIDGET_QUICK_ADD, GuideSectionId.WIDGETS_AND_SURFACES, "square-plus",

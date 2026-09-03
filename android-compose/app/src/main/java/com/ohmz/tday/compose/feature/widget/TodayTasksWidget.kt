@@ -29,7 +29,8 @@ import java.time.LocalTime
 import java.util.Date
 import java.util.Locale
 
-private fun todayWidgetVisuals(isDaytime: Boolean): TaskWidgetVisuals {
+/** Reused by `ListTasksWidget` for a todo-list instance — same due-date shape as Today. */
+internal fun todayWidgetVisuals(isDaytime: Boolean): TaskWidgetVisuals {
     val watermark = if (isDaytime) {
         R.drawable.widget_empty_watermark_today
     } else {

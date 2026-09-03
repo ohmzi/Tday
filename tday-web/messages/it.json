@@ -1099,6 +1099,13 @@
         "keywords": "widget, schermata home, colpo d'occhio, oggi, schermata di blocco",
         "body": "Aggiungi il widget T'Day alla schermata Home per dare un'occhiata alle attività di oggi. Toccando il widget si apre l'app nel punto giusto."
       },
+      "list-widgets": {
+        "title": "Widget di liste",
+        "summary": "Mostra qualsiasi lista sulla schermata Home, non solo Oggi.",
+        "keywords": "widget, schermata home, lista, configura, selettore, libera, pianificata",
+        "body": "Aggiungi un widget T'Day e un selettore ti permette di scegliere quale lista mostra — qualsiasi lista pianificata o di attività libere, non solo Oggi o Libere. Aggiungi di nuovo il widget per mostrare un'altra lista; ognuno ricorda la propria scelta.",
+        "tip": "Tieni premuto un widget posizionato e scegli Modifica (o le impostazioni widget del tuo launcher) per cambiargli lista in seguito."
+      },
       "widget-quick-add": {
         "title": "Aggiunta rapida dal widget",
         "summary": "Avvia una nuova attività direttamente dal widget.",

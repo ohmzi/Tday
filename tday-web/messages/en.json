@@ -1099,6 +1099,13 @@
         "keywords": "widget, home screen, glance, today, lock screen",
         "body": "Add the T'Day widget to your home screen to glance at today's tasks. Tapping the widget opens the app at the right place."
       },
+      "list-widgets": {
+        "title": "List widgets",
+        "summary": "Put any list on your home screen, not just Today.",
+        "keywords": "widget, home screen, list, configure, picker, floater, todo",
+        "body": "Add a T'Day widget and a picker lets you choose which list it shows — any scheduled list or floater list, not just Today or Floater. Add the widget again to show a different list; each one remembers its own choice.",
+        "tip": "Long-press a placed widget and choose Edit (or your launcher's widget settings) to switch it to a different list later."
+      },
       "widget-quick-add": {
         "title": "Quick-add from the widget",
         "summary": "Start a new task straight from the widget.",

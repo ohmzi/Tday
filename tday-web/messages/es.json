@@ -1099,6 +1099,13 @@
         "keywords": "widget, pantalla de inicio, vistazo, hoy, pantalla de bloqueo",
         "body": "Añade el widget de T'Day a tu pantalla de inicio para echar un vistazo a las tareas de hoy. Al tocar el widget, la app se abre en el lugar adecuado."
       },
+      "list-widgets": {
+        "title": "Widgets de listas",
+        "summary": "Pon cualquier lista en tu pantalla de inicio, no solo Hoy.",
+        "keywords": "widget, pantalla de inicio, lista, configurar, selector, cualquier momento, programado",
+        "body": "Añade un widget de T'Day y un selector te deja elegir qué lista muestra — cualquier lista programada o de cualquier momento, no solo Hoy o Cualquier momento. Añade el widget de nuevo para mostrar otra lista; cada uno recuerda su propia elección.",
+        "tip": "Mantén pulsado un widget colocado y elige Editar (o los ajustes de widgets de tu launcher) para cambiarlo a otra lista más adelante."
+      },
       "widget-quick-add": {
         "title": "Añadir rápido desde el widget",
         "summary": "Empieza una tarea nueva directamente desde el widget.",
