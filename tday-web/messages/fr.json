@@ -442,7 +442,8 @@
     "bulkUpdateFailed_one": "Une tâche n'a pas pu être mise à jour",
     "bulkUpdateFailed_few": "{{count}} tâches n'ont pas pu être mises à jour",
     "bulkUpdateFailed_many": "{{count}} tâches n'ont pas pu être mises à jour",
-    "bulkUpdateFailed_other": "{{count}} tâches n'ont pas pu être mises à jour"
+    "bulkUpdateFailed_other": "{{count}} tâches n'ont pas pu être mises à jour",
+    "floaterCompletedTile": "Terminé"
   },
   "today": {
     "saveInstance": "Enregistrer l'instance",
@@ -500,7 +501,12 @@
   "completed": {
     "title": "Historique des achèvements",
     "empty": "Rien de terminé pour l'instant",
-    "emptyBody": "Cochez une tâche et elle atterrira ici."
+    "emptyBody": "Cochez une tâche et elle atterrira ici.",
+    "tabTasks": "Tâches",
+    "floaterEmpty": "Aucun élément flottant terminé",
+    "floaterEmptyBody": "Cochez un élément dans Flottant et il apparaîtra ici.",
+    "listDeletedSuffix": "liste supprimée",
+    "floaterRestoredIntoRecreatedList": "Restauré — « {{listName}} » a été recréée"
   },
   "modal": {
     "confirm": "Confirmer",

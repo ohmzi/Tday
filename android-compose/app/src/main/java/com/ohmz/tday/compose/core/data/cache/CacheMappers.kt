@@ -248,6 +248,7 @@ internal fun completedFloaterToCache(item: CompletedItem): CachedCompletedFloate
         listId = item.listId,
         listName = item.listName,
         listColor = item.listColor,
+        listDeleted = item.listDeleted,
     )
 }
 
@@ -269,6 +270,8 @@ internal fun completedFloaterFromCache(cache: CachedCompletedFloaterRecord): Com
         listId = cache.listId,
         listName = cache.listName,
         listColor = cache.listColor,
+        isFloater = true,
+        listDeleted = cache.listDeleted,
     )
 }
 
@@ -343,6 +346,8 @@ internal fun mapCompletedFloaterDto(dto: CompletedFloaterDto): CompletedItem {
         listId = dto.listID,
         listName = dto.listName,
         listColor = dto.listColor,
+        isFloater = true,
+        listDeleted = dto.listDeleted,
     )
 }
 

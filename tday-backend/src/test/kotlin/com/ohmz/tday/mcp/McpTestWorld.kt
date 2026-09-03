@@ -7,6 +7,7 @@ import com.ohmz.tday.domain.AppError
 import com.ohmz.tday.models.response.FloaterListResponse
 import com.ohmz.tday.models.response.FloaterListTodoResponse
 import com.ohmz.tday.models.response.FloaterResponse
+import com.ohmz.tday.models.response.FloaterUncompleteResponse
 import com.ohmz.tday.models.response.ListResponse
 import com.ohmz.tday.models.response.ListTodoResponse
 import com.ohmz.tday.models.response.TodoResponse
@@ -228,10 +229,16 @@ class McpTestWorld(
             return Unit.right()
         }
 
-        override suspend fun uncompleteFloater(userId: String, floaterId: String): Either<AppError, Unit> {
+        override suspend fun uncompleteFloater(userId: String, floaterId: String): Either<AppError, FloaterUncompleteResponse> {
             val existing = floaters[floaterId] ?: return AppError.NotFound("floater not found").left()
-            floaters[floaterId] = existing.copy(completed = false)
-            return Unit.right()
+            val restored = existing.copy(completed = false)
+            floaters[floaterId] = restored
+            return FloaterUncompleteResponse(
+                message = "floater uncompleted",
+                floater = restored,
+                listRecreated = false,
+                listID = restored.listID,
+            ).right()
         }
 
         override suspend fun prioritize(userId: String, floaterId: String, priority: String) = Unit.right()

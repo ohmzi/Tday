@@ -93,7 +93,6 @@ fun Route.floaterRoutes() {
                 call.withAuth { user ->
                     val body = call.receive<FloaterUncompleteRequest>()
                     floaterService.uncompleteFloater(user.id, body.id)
-                        .map { mapOf("message" to "floater uncompleted") }
                 }
             }
         }

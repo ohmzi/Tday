@@ -280,11 +280,18 @@ export function deleteFloaterLists(body: Record<string, unknown>) {
     workspace.floaters = workspace.floaters.filter(
       (floater) => !floaterIds.includes(floater.id),
     );
-    workspace.completedFloaters = workspace.completedFloaters.filter(
-      (entry) =>
-        !(entry.listID != null && existing.includes(entry.listID)) &&
-        !(entry.originalFloaterID != null && floaterIds.includes(entry.originalFloaterID)),
-    );
+    // Floaters-only fix: durable completion history survives a deleted list
+    // (the identical bug for scheduled Todos/CompletedTodos is intentionally
+    // left as-is — see docs/design/completed-floaters-durability.md). Detach
+    // rather than delete: drop the live listID (the backend's ON DELETE SET
+    // NULL), keep originalListID so uncompleteFloater can still recreate the
+    // list. listName/listColor stay as the denormalized snapshot they always
+    // were.
+    for (const entry of workspace.completedFloaters) {
+      if (entry.listID != null && existing.includes(entry.listID)) {
+        entry.listID = null;
+      }
+    }
     workspace.floaterLists = workspace.floaterLists.filter(
       (list) => !existing.includes(list.id),
     );
