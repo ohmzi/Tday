@@ -314,18 +314,10 @@ fun SettingsScreen(
             // in-app dock; no guide topic needed.
             section = behaviorTitle,
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingSm)) {
-                Text(
-                    text = stringResource(R.string.settings_default_home_screen),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = colorScheme.onSurface,
-                    fontWeight = FontWeight.ExtraBold,
-                )
-                RootFeedTabSelector(
-                    selectedTab = defaultHomeScreen,
-                    onTabSelected = onDefaultHomeScreenSelected,
-                )
-            }
+            DefaultHomeScreenRow(
+                defaultHomeScreen = defaultHomeScreen,
+                onDefaultHomeScreenSelected = onDefaultHomeScreenSelected,
+            )
         },
         SettingsEntry(
             key = "reminder",
@@ -1869,6 +1861,27 @@ private fun ThemeModeSelector(
         onOptionSelected = onThemeModeSelected,
         label = { mode -> context.getString(mode.labelRes) },
     )
+}
+
+/** The "Behavior" card row: label plus [RootFeedTabSelector]. Its own composable, out of
+ * [SettingsScreen]'s body, purely to keep that already-large function from growing further. */
+@Composable
+private fun DefaultHomeScreenRow(
+    defaultHomeScreen: RootFeedTab,
+    onDefaultHomeScreenSelected: (RootFeedTab) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingSm)) {
+        Text(
+            text = stringResource(R.string.settings_default_home_screen),
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+            fontWeight = FontWeight.ExtraBold,
+        )
+        RootFeedTabSelector(
+            selectedTab = defaultHomeScreen,
+            onTabSelected = onDefaultHomeScreenSelected,
+        )
+    }
 }
 
 /**

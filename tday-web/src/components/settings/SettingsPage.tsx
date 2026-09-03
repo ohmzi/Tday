@@ -359,6 +359,37 @@ function DefaultHomeScreenSegmentedControl({
   );
 }
 
+/**
+ * The "Behavior" card section: heading, row label, and the segmented control. Its own
+ * component, out of `SettingsPage`'s body, purely to keep that already-large component from
+ * growing further.
+ */
+function DefaultHomeScreenSection({
+  value,
+  onChange,
+  t,
+  appDict,
+}: {
+  value: DefaultHomeScreen | undefined;
+  onChange: (value: DefaultHomeScreen) => void;
+  t: (key: string) => string;
+  appDict: (key: string) => string;
+}) {
+  return (
+    <>
+      <SectionHeading title={t("behavior.title")} />
+      <p className="text-[0.95rem] font-bold text-muted-foreground">
+        {t("behavior.defaultHomeScreen")}
+      </p>
+      <DefaultHomeScreenSegmentedControl
+        value={value ?? DefaultHomeScreen.scheduled}
+        onChange={onChange}
+        labelFor={appDict}
+      />
+    </>
+  );
+}
+
 const fieldClass =
   "h-12 rounded-2xl border-border/70 bg-background/50 font-bold focus-visible:ring-accent/30";
 
@@ -1569,14 +1600,11 @@ export default function SettingsPage() {
 
         <CardDivider />
 
-        <SectionHeading title={t("behavior.title")} />
-        <p className="text-[0.95rem] font-bold text-muted-foreground">
-          {t("behavior.defaultHomeScreen")}
-        </p>
-        <DefaultHomeScreenSegmentedControl
-          value={preferences?.defaultHomeScreen ?? DefaultHomeScreen.scheduled}
+        <DefaultHomeScreenSection
+          value={preferences?.defaultHomeScreen}
           onChange={(value) => updatePreferences({ defaultHomeScreen: value })}
-          labelFor={appDict}
+          t={t}
+          appDict={appDict}
         />
 
         <CardDivider />
