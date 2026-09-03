@@ -83,6 +83,11 @@ xcodebuild test -project ios-swiftUI/TdayApp.xcodeproj -scheme Tday -destination
   ref, so no input can make a manual run upload; only the push of a `v*` tag uploads.
 - The lane never derives a build number — `CURRENT_PROJECT_VERSION` already equals
   `version.json`'s `ios.buildNumber` at the tag.
+- The upload does not wait for App Store Connect processing (`skip_waiting_for_build_processing`),
+  so a green archive/upload only means ASC *accepted* the binary. A follow-up `confirm-processing`
+  job — Linux, not macOS, since it is only an HTTP poll — checks the result on a bounded window and
+  fails loudly if it comes back `FAILED`/`INVALID`, naming the spent build number and the one the
+  next release needs.
 - `XcodeGen must never be run here.` `project.yml` is a mirror kept for tooling;
   `TdayApp.xcodeproj/project.pbxproj` is the source of truth, and regenerating would discard it
   along with the shared `Tday.xcscheme` the pipeline archives.
