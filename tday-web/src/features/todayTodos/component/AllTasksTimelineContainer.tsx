@@ -8,6 +8,7 @@ import MobileSearchHeader from "@/components/ui/MobileSearchHeader";
 import ScreenWatermark from "@/components/app/ScreenWatermark";
 import EmptyState from "@/components/app/EmptyState";
 import { taskJustCompleted } from "@/lib/task-completion-signal";
+import { useCelebrateEmptyTransition } from "@/hooks/use-celebrate-empty-transition";
 import { timelineScopeAccentColors } from "@/components/app/nativeScreenTheme";
 import SummaryButton from "@/features/summary/SummaryButton";
 import WeekInReviewCard from "@/features/summary/WeekInReviewCard";
@@ -395,6 +396,9 @@ const AllTasksTimelineContainer = ({
   // Every scope shows the same native-style centered empty message when there
   // are no tasks (Today also keeps its Morning/Afternoon/Tonight headers above).
   const showEmpty = !todoLoading && !hasScopedTasks && !isSearching;
+  // Remote sibling of `taskJustCompleted()` below — fires for a completion on
+  // another device or by a collaborator, not just this tab's own tap.
+  const remoteEmptied = useCelebrateEmptyTransition(!hasScopedTasks);
   // A search that turns nothing up is a different state from an empty scope:
   // the scope may be full, this word just is not in it.
   const showNoResults = !todoLoading && !hasScopedTasks && isSearching;
@@ -666,7 +670,9 @@ const AllTasksTimelineContainer = ({
               }
               // Finishing the scope is a payoff, not an absence: the confetti is
               // for the tick that emptied it, not for a day with nothing in it.
-              celebrate={taskJustCompleted()}
+              // Whether that tick happened here, on another device, or from a
+              // collaborator on a shared list.
+              celebrate={taskJustCompleted() || remoteEmptied}
             />
           )}
 

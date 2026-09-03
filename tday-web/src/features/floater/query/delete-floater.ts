@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "@/lib/api-client";
 import { useToast } from "@/hooks/use-toast";
 import { useUndoableDelete } from "@/hooks/use-undoable-delete";
+import { markTaskDeletedLocally } from "@/lib/task-completion-signal";
 import type { FloaterItemType } from "@/types";
 
 // Delayed-commit delete: `deleteMutateFn` only stages the delete (prunes the
@@ -43,6 +44,9 @@ export const useDeleteFloater = () => {
   // Stage: prune the caches now, but DON'T send the DELETE yet — the undo
   // toast decides whether the request ever fires.
   const deleteMutateFn = (floater: FloaterItemType) => {
+    // The empty state that follows the last row leaving reads this to tell a
+    // list a task was deleted out of from one that was just finished.
+    markTaskDeletedLocally();
     void queryClient.cancelQueries({ queryKey: ["floater"] });
     void queryClient.cancelQueries({ queryKey: ["floaterList"] });
     const remove = (old: FloaterItemType[] = []) =>
