@@ -33,10 +33,14 @@ class SettingsRepository @Inject constructor(
      * The "scheduled" or "floater" root feed a fresh cold launch should open on. Unlike
      * [isAiSummaryEnabledSnapshot], this preference IS user-configurable in Local Mode too —
      * there is no server fallback to hardcode, so the cache (which Local Mode also writes
-     * through) is read directly in both modes.
+     * through) is read directly in both modes. Uses the single-row `sync_metadata` read
+     * instead of the full [OfflineCacheManager.loadOfflineStateBlocking] cache aggregate:
+     * this snapshot runs synchronously from a Compose initializer on cold launch (see
+     * `TdayApp.kt`), so it must stay cheap rather than pulling every todo/floater/list/
+     * completed/mutation row through the encrypted DB on the main thread.
      */
     fun defaultHomeScreenSnapshot(): String =
-        cacheManager.loadOfflineStateBlocking().defaultHomeScreen
+        cacheManager.defaultHomeScreenSnapshotBlocking()
 
     /**
      * Updates the default-home-screen preference via `/api/preferences` (server mode) or the
