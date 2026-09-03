@@ -49,11 +49,18 @@ enum class Direction {
     Descending,
 }
 
-/** Which root feed (Scheduled or Floaters) opens on a fresh cold launch. */
+/**
+ * Which root feed (Scheduled or Floaters) opens on a fresh cold launch.
+ *
+ * Lowercase entries are deliberate, matching [SortBy]/[GroupBy]/`ListColor`-adjacent precedent:
+ * `.name` is the wire value the API and every client read/write directly (see [fromApiOrDefault]
+ * and the backend's `DefaultHomeScreen.valueOf(...)`), so this stays a literal mirror of the
+ * lowercase `"scheduled"`/`"floater"` strings rather than the usual `SCREAMING_SNAKE_CASE`.
+ */
 @Serializable
 enum class DefaultHomeScreen {
-    scheduled,
-    floater;
+    scheduled, // skipcq: KT-C1001 — deliberate, see class doc
+    floater; // skipcq: KT-C1001 — deliberate, see class doc
 
     companion object {
         // Unknown/future values fall back to `scheduled` rather than throwing
