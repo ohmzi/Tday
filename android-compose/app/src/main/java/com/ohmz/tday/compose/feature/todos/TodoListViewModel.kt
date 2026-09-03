@@ -1,6 +1,7 @@
 package com.ohmz.tday.compose.feature.todos
 
 import android.content.Context
+import android.os.SystemClock
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -50,6 +51,10 @@ data class TodoListUiState(
     // Feeds the Day Done state: completed-today count from the local cache,
     // bumped optimistically on complete so the payoff shows immediately.
     val completedTodayCount: Int = 0,
+    // Remote sibling of the screen's own tap-time completion signal: when a
+    // cache-version bump this ViewModel did not itself cause last emptied the
+    // viewed list. See `hydrateFromExternalCacheChange` for how it is set.
+    val remoteEmptiedAtMs: Long = 0L,
     val errorMessage: String? = null,
     val aiSummaryEnabled: Boolean = true,
     val aiSummaryConfigured: Boolean = false,
@@ -98,11 +103,37 @@ class TodoListViewModel @Inject constructor(
             cacheManager.cacheDataVersion
                 .collect {
                     if (!hasLoadedMode) return@collect
-                    hydrateFromCache(
+                    hydrateFromExternalCacheChange(
                         mode = _uiState.value.mode,
                         listId = _uiState.value.listId,
                     )
                 }
+        }
+    }
+
+    /**
+     * Reacts to a cache-version bump this ViewModel did not itself just cause
+     * — most often a remote sync (another device, or a collaborator on a
+     * shared list) landing through [OfflineCacheManager], but sometimes just
+     * this device's own write echoing back through the same version counter
+     * a local mutation already re-hydrated from directly.
+     *
+     * [OfflineCacheManager.cacheDataVersion] carries no reason a write
+     * happened — a version bump, not "task N was completed" — so unlike the
+     * screen's own tap-time `lastCompletionAtMs` (set only when its own
+     * complete action runs), this collector cannot tell a remote completion
+     * from a remote delete of the last task; it treats any observed
+     * non-empty-to-empty transition on this path as a payoff. That
+     * imprecision is scoped to exactly this collector — every local
+     * mutation's own direct `hydrateFromCache` call (delete included) never
+     * touches [TodoListUiState.remoteEmptiedAtMs], so a local delete of the
+     * last task still gets the plain arrival, exactly as today.
+     */
+    private fun hydrateFromExternalCacheChange(mode: TodoListMode, listId: String?) {
+        val wasNonEmpty = _uiState.value.items.isNotEmpty()
+        hydrateFromCache(mode = mode, listId = listId)
+        if (wasNonEmpty && _uiState.value.items.isEmpty()) {
+            _uiState.update { it.copy(remoteEmptiedAtMs = SystemClock.uptimeMillis()) }
         }
     }
 

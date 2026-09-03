@@ -310,15 +310,27 @@ fun TodoListScreen(
     // Finishing a list is a payoff, not an absence. The empty state that follows
     // the last row leaving gets confetti — but only when the row left because it
     // was ticked off: deleting the last task, or opening a list that was already
-    // empty, gets the plain arrival.
+    // empty, gets the plain arrival. Whether that tick happened here, on another
+    // device, or from a collaborator on a shared list.
     var lastCompletionAtMs by remember { mutableLongStateOf(0L) }
     val completeAndCelebrate: (TodoItem) -> Unit = { todo ->
         lastCompletionAtMs = SystemClock.uptimeMillis()
         onComplete(todo)
     }
+    // `uiState.remoteEmptiedAtMs` is the remote sibling of the tap-time set
+    // above — see `TodoListViewModel.hydrateFromExternalCacheChange` for how
+    // it is set and why it can't be as precise (it can't tell a remote
+    // completion from a remote delete of the last task the way this composable
+    // tells complete from delete for its own taps). `remember`-ing nothing
+    // extra here is what keeps a transition that happened off-screen from
+    // surfacing a stale burst: leaving this route disposes the ViewModel's
+    // collector along with it, so returning to an already-empty list later
+    // finds `remoteEmptiedAtMs` outside the window rather than mid-transition.
     val celebrateEmptyState = uiState.items.isEmpty() &&
-            lastCompletionAtMs != 0L &&
-            SystemClock.uptimeMillis() - lastCompletionAtMs < CompletionCelebrationWindowMs
+            ((lastCompletionAtMs != 0L &&
+                    SystemClock.uptimeMillis() - lastCompletionAtMs < CompletionCelebrationWindowMs) ||
+                    (uiState.remoteEmptiedAtMs != 0L &&
+                            SystemClock.uptimeMillis() - uiState.remoteEmptiedAtMs < CompletionCelebrationWindowMs))
     val zoneId = remember { ZoneId.systemDefault() }
     val selectedList = uiState.lists.firstOrNull { it.id == uiState.listId }
     val selectedListColorKey = selectedList?.color
