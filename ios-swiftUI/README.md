@@ -141,6 +141,28 @@ tinted/accented rendering support while carrying T'Day identity through rounded 
 add icons, persistent calm watermarks, and Today/Floater accent treatment reserved for the plus add
 button.
 
+### Per-list configuration (R7)
+
+Both widget kinds are `AppIntentConfiguration`s: long-press ▸ Edit Widget (or the placement flow) lets
+the user pick any one todo list or floater list via `TdayWidgetListEntity`/`TdayWidgetListEntityQuery`
+(`TdayWidget/TodayTasksWidget.swift`), backed by a lightweight catalog file
+(`widget-lists-snapshot.json`, written by `WidgetConfigurableListsStore`) so the extension never needs
+`AppContainer`/SwiftData. Leaving the picker unset keeps the ORIGINAL global feed — this is also what
+every widget placed before R7 falls back to.
+
+The picked list's TYPE, not the gallery slot it came from, decides the rendered shape: a todo list
+always renders due-date-shaped (due times, overdue tinted red); a floater list always renders
+undated-shaped. So a floater list picked from the "Today's Tasks" gallery entry renders
+floater-shaped, and vice versa — there is no third shape. Content for a configured instance comes
+from the same two snapshot files' new `perList[listId]` map (see `docs/DATA_MODEL.md`); a per-list
+instance's todo window is due-today-OR-overdue (wider than the global "due today" feed), since the
+user explicitly chose that one list rather than the aggregate.
+
+This is a sibling to, not a replacement for, iOS Focus Filters (`Feature/CarPlay/CarTaskIntents.swift`
+— `TdayFocusFilterStore`/`TdayListAppEntity`), which narrows the Today feed to a set of lists while a
+Focus is active. Both mechanisms can be in play at once; a per-list widget's content ignores the
+active Focus filter (it already narrowed to one list on purpose).
+
 ## CarPlay
 
 The app includes a CarPlay template scene in `Feature/CarPlay/` for the same Today/Floater task

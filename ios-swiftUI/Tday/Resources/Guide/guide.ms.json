@@ -1102,6 +1102,39 @@
       "searchBody": "lihat tugasan hari ini tanpa membuka aplikasi. tambah widget t'day ke skrin utama anda untuk mengimbas tugasan hari ini. mengetik widget membuka aplikasi di tempat yang betul."
     },
     {
+      "id": "widget-list-selection",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "list-todo",
+      "platforms": [
+        "IOS"
+      ],
+      "badge": "PRO_TIP",
+      "serverOnly": false,
+      "sinceVersion": "0.7.7",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Pilih senarai untuk widget anda",
+      "summary": "Jadikan mana-mana widget menunjuk pada satu senarai tertentu, bukan seluruh suapan.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Tekan lama widget T'Day dan pilih Edit Widget untuk menetapkan senarai yang dipaparkan — mana-mana senarai berjadual atau senarai floater anda. Senarai berjadual memaparkan waktu tarikh akhir dan menandakan tugasan tertunggak; senarai floater memaparkan senarai terbuka tanpa waktu tarikh akhir. Jika tidak ditetapkan, widget terus memaparkan suapan penuh Hari Ini atau Floater."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Tambah beberapa widget, masing-masing menunjuk ke senarai berbeza, untuk melihat semuanya sekali gus pada skrin utama anda."
+          ]
+        }
+      ],
+      "searchTitle": "pilih senarai untuk widget anda",
+      "searchKeywords": "widget, senarai, konfigurasi, edit widget, mengikut senarai, skrin utama, ios",
+      "searchBody": "jadikan mana-mana widget menunjuk pada satu senarai tertentu, bukan seluruh suapan. tekan lama widget t'day dan pilih edit widget untuk menetapkan senarai yang dipaparkan — mana-mana senarai berjadual atau senarai floater anda. senarai berjadual memaparkan waktu tarikh akhir dan menandakan tugasan tertunggak; senarai floater memaparkan senarai terbuka tanpa waktu tarikh akhir. jika tidak ditetapkan, widget terus memaparkan suapan penuh hari ini atau floater. tambah beberapa widget, masing-masing menunjuk ke senarai berbeza, untuk melihat semuanya sekali gus pada skrin utama anda."
+    },
+    {
       "id": "widget-quick-add",
       "section": "WIDGETS_AND_SURFACES",
       "sectionOrder": 5,

@@ -42,6 +42,7 @@ object GuideTopicIds {
     const val REMINDERS = "reminders"
     const val PUSH_NOTIFICATIONS = "push-notifications"
     const val HOME_WIDGET = "home-widget"
+    const val WIDGET_LIST_SELECTION = "widget-list-selection"
     const val WIDGET_QUICK_ADD = "widget-quick-add"
     const val INTERACTIVE_WIDGETS = "interactive-widgets"
     const val SHARE_INTO_TDAY = "share-into-tday"

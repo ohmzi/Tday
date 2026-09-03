@@ -1093,6 +1093,13 @@
         "keywords": "widget, écran d'accueil, coup d'œil, aujourd'hui, écran verrouillé",
         "body": "Ajoutez le widget T'Day à votre écran d'accueil pour jeter un œil aux tâches du jour. Toucher le widget ouvre l'application au bon endroit."
       },
+      "widget-list-selection": {
+        "title": "Choisissez une liste pour votre widget",
+        "summary": "Faites pointer un widget vers une liste précise plutôt que tout le flux.",
+        "keywords": "widget, liste, configurer, modifier le widget, par liste, écran d'accueil, ios",
+        "body": "Appuyez longuement sur un widget T'Day et choisissez Modifier le widget pour définir exactement la liste qu'il affiche — n'importe laquelle de vos listes planifiées ou de vos listes flottantes. Une liste planifiée affiche les heures d'échéance et signale les tâches en retard ; une liste flottante affiche une liste ouverte sans heure d'échéance. Sans choix, le widget continue d'afficher le flux complet Aujourd'hui ou Flottant.",
+        "tip": "Ajoutez plusieurs widgets, chacun pointant vers une liste différente, pour tous les voir en même temps sur votre écran d'accueil."
+      },
       "widget-quick-add": {
         "title": "Ajout rapide depuis le widget",
         "summary": "Démarrez une nouvelle tâche directement depuis le widget.",

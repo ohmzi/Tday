@@ -1102,6 +1102,39 @@
       "searchBody": "see today's tasks without opening the app. add the t'day widget to your home screen to glance at today's tasks. tapping the widget opens the app at the right place."
     },
     {
+      "id": "widget-list-selection",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "list-todo",
+      "platforms": [
+        "IOS"
+      ],
+      "badge": "PRO_TIP",
+      "serverOnly": false,
+      "sinceVersion": "0.7.7",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Pick a list for your widget",
+      "summary": "Point any widget at one specific list instead of the whole feed.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Long-press a T'Day widget and choose Edit Widget to pick exactly which list it shows — any of your scheduled lists or floater lists. A scheduled list shows due times and flags anything overdue; a floater list shows an open list with no due times. Leave it unset and the widget keeps showing the full Today or Floater feed."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Add several widgets, each pointed at a different list, to see them all on your home screen at once."
+          ]
+        }
+      ],
+      "searchTitle": "pick a list for your widget",
+      "searchKeywords": "widget, list, configure, edit widget, per-list, home screen, ios",
+      "searchBody": "point any widget at one specific list instead of the whole feed. long-press a t'day widget and choose edit widget to pick exactly which list it shows — any of your scheduled lists or floater lists. a scheduled list shows due times and flags anything overdue; a floater list shows an open list with no due times. leave it unset and the widget keeps showing the full today or floater feed. add several widgets, each pointed at a different list, to see them all on your home screen at once."
+    },
+    {
       "id": "widget-quick-add",
       "section": "WIDGETS_AND_SURFACES",
       "sectionOrder": 5,

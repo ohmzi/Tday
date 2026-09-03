@@ -517,7 +517,8 @@ final class TodayTasksWidgetSnapshotStoreTests: XCTestCase {
         title: String,
         dueEpochMs: Int64,
         completed: Bool = false,
-        description: String? = nil
+        description: String? = nil,
+        listId: String? = nil
     ) -> CachedTodoRecord {
         CachedTodoRecord(
             id: id,
@@ -530,7 +531,7 @@ final class TodayTasksWidgetSnapshotStoreTests: XCTestCase {
             instanceDateEpochMs: nil,
             pinned: false,
             completed: completed,
-            listId: nil,
+            listId: listId,
             updatedAtEpochMs: dueEpochMs
         )
     }
@@ -555,6 +556,192 @@ final class TodayTasksWidgetSnapshotStoreTests: XCTestCase {
             listId: listId,
             updatedAtEpochMs: updatedAtEpochMs
         )
+    }
+
+    private func list(id: String, name: String) -> CachedListRecord {
+        CachedListRecord(id: id, name: name, color: nil, iconKey: nil, todoCount: 0, updatedAtEpochMs: 0, createdAtEpochMs: 0)
+    }
+
+    private func floaterList(id: String, name: String) -> CachedFloaterListRecord {
+        CachedFloaterListRecord(id: id, name: name, color: nil, iconKey: nil, todoCount: 0, updatedAtEpochMs: 0, createdAtEpochMs: 0)
+    }
+
+    // MARK: - Per-list breakdown (R7 configurable widgets)
+    //
+    // `perList` scopes a widget instance to ONE list, independent of the global "due today"
+    // aggregate above — these pin its due-today-OR-OVERDUE window, the empty-list omission, the
+    // display cap vs. true count split, and that it ignores the Focus filter (which is a
+    // Today-feed concept, not a per-list-widget one).
+
+    func testPerListIncludesTodayAndOverdueTasksForThatList() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let now = Date(timeIntervalSince1970: 1_764_072_600)
+        let startOfDay = calendar.startOfDay(for: now)
+        let yesterday = startOfDay.addingTimeInterval(-3_600).epochMs
+        let dueSoon = startOfDay.addingTimeInterval(9 * 3_600).epochMs
+        let tomorrow = startOfDay.addingTimeInterval(24 * 3_600).epochMs
+
+        let state = OfflineSyncState(
+            todos: [
+                todo(id: "overdue", title: "Overdue", dueEpochMs: yesterday, listId: "list-1"),
+                todo(id: "today", title: "Today", dueEpochMs: dueSoon, listId: "list-1"),
+                todo(id: "future", title: "Future", dueEpochMs: tomorrow, listId: "list-1"),
+                todo(id: "completed", title: "Completed", dueEpochMs: yesterday, completed: true, listId: "list-1")
+            ],
+            lists: [list(id: "list-1", name: "Work")]
+        )
+
+        let snapshot = TodayTasksWidgetSnapshotStore.makeSnapshot(from: state, now: now, calendar: calendar)
+
+        // Overdue + today, but NOT tomorrow or the completed row.
+        let list1 = try! XCTUnwrap(snapshot.perList["list-1"])
+        XCTAssertEqual(list1.totalCount, 2)
+        XCTAssertEqual(Set(list1.tasks.map(\.id)), ["overdue", "today"])
+        // The GLOBAL aggregate is unaffected: still strictly due-today, so the per-list overdue
+        // inclusion never leaks into the widget instances that have no list configured.
+        XCTAssertEqual(snapshot.tasks.map(\.id), ["today"])
+    }
+
+    func testPerListDoesNotLeakOtherListsTasks() {
+        let nowEpochMs: Int64 = 1_764_072_600_000
+        let state = OfflineSyncState(
+            todos: [
+                todo(id: "in-list-1", title: "In list 1", dueEpochMs: nowEpochMs, listId: "list-1"),
+                todo(id: "in-list-2", title: "In list 2", dueEpochMs: nowEpochMs, listId: "list-2")
+            ],
+            lists: [list(id: "list-1", name: "Work"), list(id: "list-2", name: "Home")]
+        )
+
+        let snapshot = TodayTasksWidgetSnapshotStore.makeSnapshot(
+            from: state,
+            now: Date(timeIntervalSince1970: 1_764_072_600)
+        )
+
+        XCTAssertEqual(snapshot.perList["list-1"]?.tasks.map(\.id), ["in-list-1"])
+        XCTAssertEqual(snapshot.perList["list-2"]?.tasks.map(\.id), ["in-list-2"])
+    }
+
+    func testPerListOmittedForListsWithNoOpenTasks() {
+        let state = OfflineSyncState(
+            todos: [],
+            lists: [list(id: "empty-list", name: "Empty")]
+        )
+        let snapshot = TodayTasksWidgetSnapshotStore.makeSnapshot(from: state, now: Date(timeIntervalSince1970: 1_764_072_600))
+        XCTAssertNil(snapshot.perList["empty-list"], "an empty list should have no perList entry, not an empty one")
+    }
+
+    func testPerListTracksTrueCountBeyondDisplayCap() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let now = Date(timeIntervalSince1970: 1_764_072_600)
+        let startOfDay = calendar.startOfDay(for: now)
+        let todos = (0..<25).map { index in
+            todo(
+                id: "task-\(index)",
+                title: "Task \(index)",
+                dueEpochMs: startOfDay.addingTimeInterval(TimeInterval(index * 60)).epochMs,
+                listId: "busy-list"
+            )
+        }
+        let state = OfflineSyncState(todos: todos, lists: [list(id: "busy-list", name: "Busy")])
+
+        let snapshot = TodayTasksWidgetSnapshotStore.makeSnapshot(from: state, now: now, calendar: calendar)
+
+        let busy = try! XCTUnwrap(snapshot.perList["busy-list"])
+        XCTAssertEqual(busy.totalCount, 25)
+        XCTAssertEqual(busy.tasks.count, TodayTasksWidgetSnapshotStore.perListTaskLimit)
+    }
+
+    func testPerListIgnoresActiveFocusFilter() {
+        addTeardownBlock { TdayFocusFilterStore.setActiveListIDs([]) }
+        // Focus narrows the GLOBAL Today feed only — a widget explicitly configured to a list
+        // shows that list regardless of which Focus is active.
+        TdayFocusFilterStore.setActiveListIDs(["list-2"])
+
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let now = Date(timeIntervalSince1970: 1_764_072_600)
+        let startOfDay = calendar.startOfDay(for: now)
+        let dueSoon = startOfDay.addingTimeInterval(9 * 3_600).epochMs
+
+        let state = OfflineSyncState(
+            todos: [todo(id: "focused-out", title: "Focused out", dueEpochMs: dueSoon, listId: "list-1")],
+            lists: [list(id: "list-1", name: "Work")]
+        )
+
+        let snapshot = TodayTasksWidgetSnapshotStore.makeSnapshot(from: state, now: now, calendar: calendar)
+
+        // Excluded from the global feed by the active Focus (list-1 is not list-2)...
+        XCTAssertTrue(snapshot.tasks.isEmpty)
+        // ...but still present in its own per-list slice.
+        XCTAssertEqual(snapshot.perList["list-1"]?.tasks.map(\.id), ["focused-out"])
+    }
+
+    func testFloaterPerListIncludesOnlyThatListsOpenFloaters() {
+        let state = OfflineSyncState(
+            floaters: [
+                floater(id: "in-list", title: "In list", listId: "floater-list-1"),
+                floater(id: "completed-in-list", title: "Completed", completed: true, listId: "floater-list-1"),
+                floater(id: "other-list", title: "Other list", listId: "floater-list-2")
+            ],
+            floaterLists: [floaterList(id: "floater-list-1", name: "Someday")]
+        )
+
+        let snapshot = FloaterTasksWidgetSnapshotStore.makeSnapshot(from: state)
+
+        XCTAssertEqual(snapshot.perList["floater-list-1"]?.tasks.map(\.id), ["in-list"])
+        XCTAssertNil(snapshot.perList["floater-list-2"], "no CachedFloaterListRecord was provided for floater-list-2")
+    }
+
+    func testFloaterPerListOmittedForListsWithNoOpenFloaters() {
+        let state = OfflineSyncState(floaters: [], floaterLists: [floaterList(id: "empty", name: "Empty")])
+        let snapshot = FloaterTasksWidgetSnapshotStore.makeSnapshot(from: state)
+        XCTAssertNil(snapshot.perList["empty"])
+    }
+
+    func testPerListChangeIsDetectedByHasSameContent() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let now = Date(timeIntervalSince1970: 1_764_072_600)
+        let startOfDay = calendar.startOfDay(for: now)
+        let yesterday = startOfDay.addingTimeInterval(-3_600).epochMs
+
+        let baseState = OfflineSyncState(lists: [list(id: "list-1", name: "Work")])
+        let first = TodayTasksWidgetSnapshotStore.makeSnapshot(from: baseState, now: now, calendar: calendar)
+
+        // Adds an OVERDUE todo only — invisible to the global "due today" feed (which requires
+        // dueEpochMs >= dayStart), so this isolates a perList-ONLY content change: taskCount/tasks
+        // stay identical between first and second, and only perList should differ.
+        var changedState = baseState
+        changedState.todos.append(todo(id: "overdue-only", title: "Overdue only", dueEpochMs: yesterday, listId: "list-1"))
+        let second = TodayTasksWidgetSnapshotStore.makeSnapshot(from: changedState, now: now, calendar: calendar)
+
+        XCTAssertEqual(first.taskCount, second.taskCount, "sanity: the global feed itself is unchanged by this edit")
+        XCTAssertFalse(
+            first.hasSameContent(as: second),
+            "a perList-only change (no global-feed change) must still be treated as new content"
+        )
+    }
+
+    // MARK: - Widget configuration picker catalog (R7)
+
+    func testConfigurableListsStoreWritesTodoAndFloaterLists() throws {
+        let fileURL = try appGroupFileURL(WidgetSnapshotFileStore.listsFileName)
+        addTeardownBlock { try? FileManager.default.removeItem(at: fileURL) }
+
+        let state = OfflineSyncState(
+            lists: [list(id: "todo-list-1", name: "Work")],
+            floaterLists: [floaterList(id: "floater-list-1", name: "Someday")]
+        )
+        WidgetConfigurableListsStore.save(from: state)
+
+        let data = try XCTUnwrap(WidgetSnapshotFileStore.read(WidgetSnapshotFileStore.listsFileName))
+        let entries = try JSONDecoder().decode([WidgetConfigurableListEntry].self, from: data)
+
+        XCTAssertEqual(Set(entries.map(\.id)), ["todo-list-1", "floater-list-1"])
+        XCTAssertEqual(entries.first(where: { $0.id == "todo-list-1" })?.kind, "todo")
+        XCTAssertEqual(entries.first(where: { $0.id == "floater-list-1" })?.kind, "floater")
     }
 }
 

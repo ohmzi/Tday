@@ -231,6 +231,15 @@ object GuideCatalog {
             setOf(ANDROID, IOS), body = listOf(para(GuideTopicIds.HOME_WIDGET)),
         ),
         topic(
+            // iOS-only for now: the picker is a real AppIntentConfiguration widget
+            // (long-press ▸ Edit Widget), which Android's Glance widgets don't yet support.
+            // Icon reused from the covered set (tday-web/tests/fixtures/guide-icons.json)
+            // rather than adding a new Lucide glyph across all three platforms blind.
+            GuideTopicIds.WIDGET_LIST_SELECTION, GuideSectionId.WIDGETS_AND_SURFACES, "list-todo",
+            setOf(IOS), sinceVersion = "0.7.7", badge = GuideBadge.PRO_TIP,
+            body = listOf(para(GuideTopicIds.WIDGET_LIST_SELECTION), tip(GuideTopicIds.WIDGET_LIST_SELECTION)),
+        ),
+        topic(
             GuideTopicIds.WIDGET_QUICK_ADD, GuideSectionId.WIDGETS_AND_SURFACES, "square-plus",
             setOf(ANDROID, IOS), badge = GuideBadge.PRO_TIP,
             body = listOf(para(GuideTopicIds.WIDGET_QUICK_ADD)),

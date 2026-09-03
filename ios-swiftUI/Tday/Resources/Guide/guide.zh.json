@@ -1102,6 +1102,39 @@
       "searchBody": "不打开应用也能看到今天的任务。 把 t'day 小组件添加到主屏幕，随手一瞥就能看到今天的任务。点按小组件会把应用打开到相应的位置。"
     },
     {
+      "id": "widget-list-selection",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "list-todo",
+      "platforms": [
+        "IOS"
+      ],
+      "badge": "PRO_TIP",
+      "serverOnly": false,
+      "sinceVersion": "0.7.7",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "为小组件选择一个列表",
+      "summary": "让小组件只显示某一个列表，而不是整个动态。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "长按 T'Day 小组件并选择「编辑小组件」，即可精确指定它显示哪个列表——可以是你的任意计划列表或浮动任务列表。计划列表会显示截止时间并标出逾期任务；浮动任务列表则显示一个没有截止时间的开放列表。若不设置，小组件会继续显示完整的「今天」或「浮动任务」动态。"
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "添加多个小组件，每个指向不同的列表，就能在主屏幕上同时看到它们。"
+          ]
+        }
+      ],
+      "searchTitle": "为小组件选择一个列表",
+      "searchKeywords": "小组件, 列表, 配置, 编辑小组件, 按列表, 主屏幕, ios, widget, list",
+      "searchBody": "让小组件只显示某一个列表，而不是整个动态。 长按 t'day 小组件并选择「编辑小组件」，即可精确指定它显示哪个列表——可以是你的任意计划列表或浮动任务列表。计划列表会显示截止时间并标出逾期任务；浮动任务列表则显示一个没有截止时间的开放列表。若不设置，小组件会继续显示完整的「今天」或「浮动任务」动态。 添加多个小组件，每个指向不同的列表，就能在主屏幕上同时看到它们。"
+    },
+    {
       "id": "widget-quick-add",
       "section": "WIDGETS_AND_SURFACES",
       "sectionOrder": 5,

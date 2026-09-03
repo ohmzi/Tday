@@ -1093,6 +1093,13 @@
         "keywords": "widget, startbildschirm, blick, heute, sperrbildschirm",
         "body": "Füge das T'Day-Widget zu deinem Startbildschirm hinzu, um einen Blick auf die heutigen Aufgaben zu werfen. Ein Tipp auf das Widget öffnet die App an der richtigen Stelle."
       },
+      "widget-list-selection": {
+        "title": "Liste für dein Widget wählen",
+        "summary": "Ein Widget auf eine bestimmte Liste statt den ganzen Feed richten.",
+        "keywords": "widget, liste, konfigurieren, widget bearbeiten, pro liste, startbildschirm, ios",
+        "body": "Widget lange gedrückt halten und „Widget bearbeiten\" wählen, um genau festzulegen, welche Liste es zeigt – jede deiner geplanten Listen oder Floater-Listen. Eine geplante Liste zeigt Fälligkeitszeiten und markiert Überfälliges; eine Floater-Liste zeigt eine offene Liste ohne Fälligkeitszeiten. Bleibt die Auswahl leer, zeigt das Widget weiterhin den vollständigen Today- oder Floater-Feed.",
+        "tip": "Füge mehrere Widgets hinzu, jedes auf eine andere Liste ausgerichtet, um sie alle gleichzeitig auf deinem Startbildschirm zu sehen."
+      },
       "widget-quick-add": {
         "title": "Schnell hinzufügen aus dem Widget",
         "summary": "Starte eine neue Aufgabe direkt aus dem Widget.",

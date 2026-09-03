@@ -13,6 +13,7 @@
     ],
     "widget": [
       "home-widget",
+      "widget-list-selection",
       "widget-quick-add",
       "interactive-widgets",
       "focus-filters"
@@ -54,6 +55,7 @@
       "root-feeds",
       "create-task",
       "morning-sweep",
+      "widget-list-selection",
       "interactive-widgets"
     ],
     "car": [
