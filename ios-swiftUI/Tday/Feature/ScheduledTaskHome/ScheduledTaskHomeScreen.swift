@@ -514,6 +514,7 @@ struct ScheduledTaskHomeScreen: View {
             onComplete: { await viewModel.complete(todo) },
             onDelete: { Task { await viewModel.delete(todo) } },
             onEdit: { editingTodo = todo },
+            onCopy: { viewModel.copyToClipboard(todo) },
             openSwipeTaskID: $openSwipeTaskID
         )
     }
@@ -619,6 +620,7 @@ private struct ScheduledTaskHomeTodayTaskRow: View {
     let onComplete: () async -> Void
     let onDelete: () -> Void
     let onEdit: () -> Void
+    let onCopy: () -> Void
     @Binding var openSwipeTaskID: String?
 
     @Environment(\.tdayColors) private var colors
@@ -652,6 +654,7 @@ private struct ScheduledTaskHomeTodayTaskRow: View {
                 openRowID: $openSwipeTaskID,
                 enabled: !isCompleting,
                 onEdit: onEdit,
+                onCopy: onCopy,
                 onDelete: onDelete
             )
         .opacity(isFading ? 0 : 1)

@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import UIKit
 
 @MainActor
 @Observable
@@ -119,6 +120,13 @@ final class CalendarViewModel {
     /// only commits once the undo window expires. The closures capture
     /// `container` rather than `self` so a pending commit survives this
     /// view model being deallocated.
+    /// Swipe-to-copy: writes the task's title/notes/due/priority as plain text
+    /// to the system pasteboard. See TodoListViewModel.copyToClipboard.
+    func copyToClipboard(_ todo: TodoItem) {
+        UIPasteboard.general.string = ShareSheet.taskShareText(todo)
+        container.snackbarManager.show(L("Copied to clipboard"), kind: .success)
+    }
+
     func delete(_ todo: TodoItem) async {
         TdayTelemetry.addBreadcrumb("calendar.task.delete", data: calendarTelemetryData())
         let container = container

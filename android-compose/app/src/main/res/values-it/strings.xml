@@ -16,6 +16,8 @@
     <string name="action_create_list">Crea elenco</string>
     <string name="action_edit">Modifica</string>
     <string name="action_edit_task">Modifica attività</string>
+    <string name="action_copy">Copia</string>
+    <string name="action_copy_task">Copia attività</string>
     <string name="action_delete_task">Elimina attività</string>
     <string name="action_delete_list">Elimina elenco</string>
     <string name="action_delete">Elimina</string>
@@ -570,6 +572,8 @@
     <string name="release_no_apk">Nessun APK allegato a questo rilascio.</string>
     <string name="release_launch_update_toast">L\'aggiornamento %1$s è disponibile.</string>
     <string name="task_deleted_toast">Attività eliminata</string>
+    <string name="task_copied_toast">Copiato negli appunti</string>
+    <string name="task_copy_failed_toast">Impossibile copiare negli appunti</string>
     <string name="list_deleted_toast">Elenco eliminato</string>
     <string name="release_view_on_github">Visualizza su GitHub</string>
 

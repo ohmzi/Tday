@@ -70,13 +70,15 @@ import ListDot from "@/components/ListDot";
 import EditCalendarFormContainer from "./CalendarForm/EditFormContainer";
 import { useCompleteCalendarTodo } from "../query/complete-calendar-todo";
 import { useCompleteCalendarTodoInstance } from "../query/complete-calendar-todo-instance";
-import { CalendarDays, Check, ChevronLeft, ChevronRight, Flag, GripVertical, Loader2, SquarePen, Trash } from "lucide-react";
+import { CalendarDays, Check, ChevronLeft, ChevronRight, Copy, Flag, GripVertical, Loader2, SquarePen, Trash } from "lucide-react";
 import { isToday } from "date-fns";
 import { getPriorityFlag } from "@/lib/priority";
 import i18n from "@/i18n";
 import { getDateFnsLocale } from "@/lib/date/dateFnsLocale";
 import { flattenNotesToPlainText } from "@/lib/richNotes";
-import { SWIPE_DELETE_COLOR, SWIPE_EDIT_COLOR } from "@/lib/swipeActionColors";
+import { buildTaskShareText } from "@/lib/listShareText";
+import { useToast } from "@/hooks/use-toast";
+import { SWIPE_COPY_COLOR, SWIPE_DELETE_COLOR, SWIPE_EDIT_COLOR } from "@/lib/swipeActionColors";
 
 const ConfirmDelete = lazy(() => import("./ConfirmationModals/ConfirmDelete"));
 const ConfirmDeleteAll = lazy(() => import("./ConfirmationModals/ConfirmDeleteAll"));
@@ -509,6 +511,8 @@ function CalendarTaskRow({
   const [itemElement, setItemElement] = useState<HTMLElement | null>(null);
   const [showHandle, setShowHandle] = useState(false);
   const { t: todayDict } = useTranslation("today");
+  const { t: appDict } = useTranslation("app");
+  const { toast } = useToast();
   const { mutateComplete } = useCompleteCalendarTodo();
   const { mutateComplete: mutateInstanceComplete } = useCompleteCalendarTodoInstance();
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
@@ -524,15 +528,31 @@ function CalendarTaskRow({
   const completeTimers = useRef<number[]>([]);
   const completing = completePhase !== null;
 
-  // Mobile swipe-to-reveal Edit + Delete — mirrors the scheduled task home row exactly (same
-  // 140px slide distance, same pills) so the calendar matches it.
-  const ACTIONS_WIDTH = 140;
+  // Mobile swipe-to-reveal Edit + Copy + Delete — mirrors the scheduled task
+  // home row exactly (same slide distance, same pills) so the calendar
+  // matches it.
+  const ACTIONS_WIDTH = 210;
   const [swipeX, setSwipeX] = useState(0);
   const [swiping, setSwiping] = useState(false);
   const swipeTouch = useRef<
     { x: number; y: number; startX: number; axis: "x" | "y" | null } | null
   >(null);
   const closeSwipe = () => setSwipeX(0);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(
+        buildTaskShareText({
+          todo: { title: todo.title, description: todo.description, due: todo.due, priority: todo.priority },
+          lang: i18n.language,
+          t: appDict,
+        }),
+      );
+      toast({ description: appDict("taskCopied") });
+    } catch {
+      toast({ description: appDict("taskCopyFailed"), variant: "destructive" });
+    }
+  };
 
   const setCombinedRef = (node: HTMLElement | null) => {
     setItemElement(node);
@@ -678,6 +698,26 @@ function CalendarTaskRow({
           </button>
           <button
             type="button"
+            aria-label={todayDict("menu.copy")}
+            onPointerDown={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
+            onClick={() => {
+              closeSwipe();
+              void handleCopy();
+            }}
+            className="flex flex-col items-center gap-1"
+          >
+            <span
+              className="flex h-[34px] w-14 items-center justify-center rounded-[17px]"
+              style={{ backgroundColor: SWIPE_COPY_COLOR }}
+            >
+              <Copy className="h-5 w-5 text-white" strokeWidth={2.2} />
+            </span>
+            <span className="text-[11px] font-bold text-muted-foreground">{todayDict("menu.copy")}</span>
+          </button>
+          <button
+            type="button"
             aria-label={todayDict("menu.delete")}
             onPointerDown={(e) => e.stopPropagation()}
             onMouseDown={(e) => e.stopPropagation()}
@@ -810,8 +850,10 @@ function CalendarTaskRow({
             >
               <TaskActionButtons
                 onEdit={() => setDisplayForm(true)}
+                onCopy={() => void handleCopy()}
                 onDelete={requestDelete}
                 editLabel={todayDict("menu.edit")}
+                copyLabel={todayDict("menu.copy")}
                 deleteLabel={todayDict("menu.delete")}
               />
             </div>

@@ -8,7 +8,7 @@ import {
   TASK_COMPLETION_STRIKE_TO_FADE_MS,
   TASK_COMPLETION_TOTAL_MS,
 } from "@/lib/taskCompletionTiming";
-import { Check, Flag, SquarePen, Trash } from "lucide-react";
+import { Check, Copy, Flag, SquarePen, Trash } from "lucide-react";
 import TodoCheckbox from "@/components/ui/TodoCheckbox";
 import { TaskActionButtons } from "@/components/ui/TaskActionButtons";
 import FloaterListDot from "@/features/floaterList/component/FloaterListDot";
@@ -25,7 +25,10 @@ import { PromoteFloaterMenu } from "@/features/floater/component/PromoteFloaterM
 import type { FloaterItemType } from "@/types";
 import FloaterFormSheet from "./FloaterFormSheet";
 import { hapticButtonTap } from "@/lib/haptics";
-import { SWIPE_DELETE_COLOR, SWIPE_EDIT_COLOR } from "@/lib/swipeActionColors";
+import { SWIPE_COPY_COLOR, SWIPE_DELETE_COLOR, SWIPE_EDIT_COLOR } from "@/lib/swipeActionColors";
+import { useTranslation } from "react-i18next";
+import { useToast } from "@/hooks/use-toast";
+import { buildTaskShareText } from "@/lib/listShareText";
 
 type FloaterItemContainerProps = {
   floater: FloaterItemType;
@@ -49,6 +52,8 @@ export default function FloaterItemContainer({
   const { floaterListMetaData } = useFloaterListMetaData();
   const { completeMutateFn } = useCompleteFloater();
   const { deleteMutateFn } = useDeleteFloater();
+  const { t: appDict, i18n } = useTranslation("app");
+  const { toast } = useToast();
   const { title, description, completed, priority, listID } = floater;
   // "Resting floaters": dim Anytime tasks left untouched for a month+ (read-only cue).
   const resting =
@@ -64,9 +69,9 @@ export default function FloaterItemContainer({
   const completeTimers = useRef<number[]>([]);
   const completing = completePhase !== null;
   // Matches the scheduled task home row (TodoItemCard) so the swipe distance and the
-  // fully-revealed Edit + Delete pills sit in the same place — at 110 the pills
+  // fully-revealed Edit + Copy + Delete pills sit in the same place — at 110 the pills
   // (~136px) outran the slide, leaving the priority flag on top of Edit.
-  const ACTIONS_WIDTH = 140;
+  const ACTIONS_WIDTH = 210;
   const [swipeX, setSwipeX] = useState(0);
   const [swiping, setSwiping] = useState(false);
   const swipeTouch = useRef<
@@ -74,6 +79,21 @@ export default function FloaterItemContainer({
   >(null);
 
   const closeSwipe = () => setSwipeX(0);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(
+        buildTaskShareText({
+          todo: { title, description, priority },
+          lang: i18n.language,
+          t: appDict,
+        }),
+      );
+      toast({ description: appDict("taskCopied") });
+    } catch {
+      toast({ description: appDict("taskCopyFailed"), variant: "destructive" });
+    }
+  };
 
   const handleToggleComplete = () => {
     if (readOnly) return;
@@ -187,6 +207,27 @@ export default function FloaterItemContainer({
               <SquarePen className="h-5 w-5 text-white" strokeWidth={2.2} />
             </span>
             <span className="text-[11px] font-bold text-muted-foreground">Edit</span>
+          </button>
+          <button
+            type="button"
+            aria-label="Copy floater"
+            onPointerDown={(event) => event.stopPropagation()}
+            onMouseDown={(event) => event.stopPropagation()}
+            onTouchStart={(event) => event.stopPropagation()}
+            onClick={() => {
+              hapticButtonTap();
+              closeSwipe();
+              void handleCopy();
+            }}
+            className="flex flex-col items-center gap-1"
+          >
+            <span
+              className="flex h-[34px] w-14 items-center justify-center rounded-[17px]"
+              style={{ backgroundColor: SWIPE_COPY_COLOR }}
+            >
+              <Copy className="h-5 w-5 text-white" strokeWidth={2.2} />
+            </span>
+            <span className="text-[11px] font-bold text-muted-foreground">Copy</span>
           </button>
           <button
             type="button"
@@ -315,8 +356,10 @@ export default function FloaterItemContainer({
                   <PromoteFloaterMenu floater={floater} />
                   <TaskActionButtons
                     onEdit={() => { hapticButtonTap(); setDisplayForm(true); }}
+                    onCopy={() => { hapticButtonTap(); void handleCopy(); }}
                     onDelete={() => { hapticButtonTap(); deleteMutateFn(floater); }}
                     editLabel="Edit floater"
+                    copyLabel="Copy floater"
                     deleteLabel="Delete floater"
                   />
                 </div>

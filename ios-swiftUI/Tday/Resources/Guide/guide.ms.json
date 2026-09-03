@@ -332,6 +332,41 @@
       "searchBody": "leret baris tugasan untuk tindakan pantas tanpa membukanya. leret baris tugasan untuk mendedahkan tindakan pantas — selesaikannya, atau buang — tanpa membuka tugasan langsung. tugasan yang selesai memaparkan toast buat asal selama beberapa saat, jadi leret tersilap tidak pernah muktamad."
     },
     {
+      "id": "copy-task-text",
+      "section": "GESTURES",
+      "sectionOrder": 2,
+      "icon": "copy",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.7.8",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Salin butiran tugasan",
+      "summary": "Salin tajuk, nota, tarikh akhir, dan keutamaan tugasan sebagai teks.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Leret tugasan dan ketik Salin — atau guna butang Salin pada desktop — untuk menyalin tajuk, nota, tarikh akhir, dan keutamaannya sebagai teks biasa, sedia untuk ditampal di mana-mana."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Berguna untuk menampal tugasan ke dalam mesej, e-mel, atau aplikasi lain tanpa menaipnya semula."
+          ]
+        }
+      ],
+      "searchTitle": "salin butiran tugasan",
+      "searchKeywords": "salin, papan keratan, kongsi, teks, leret",
+      "searchBody": "salin tajuk, nota, tarikh akhir, dan keutamaan tugasan sebagai teks. leret tugasan dan ketik salin — atau guna butang salin pada desktop — untuk menyalin tajuk, nota, tarikh akhir, dan keutamaannya sebagai teks biasa, sedia untuk ditampal di mana-mana. berguna untuk menampal tugasan ke dalam mesej, e-mel, atau aplikasi lain tanpa menaipnya semula."
+    },
+    {
       "id": "long-press-actions",
       "section": "GESTURES",
       "sectionOrder": 2,

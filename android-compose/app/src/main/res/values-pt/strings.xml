@@ -16,6 +16,8 @@
     <string name="action_create_list">Criar lista</string>
     <string name="action_edit">Editar</string>
     <string name="action_edit_task">Editar tarefa</string>
+    <string name="action_copy">Copiar</string>
+    <string name="action_copy_task">Copiar tarefa</string>
     <string name="action_delete_task">Excluir tarefa</string>
     <string name="action_delete_list">Excluir lista</string>
     <string name="action_delete">Excluir</string>
@@ -570,6 +572,8 @@
     <string name="release_no_apk">Nenhum APK anexado a esta versão.</string>
     <string name="release_launch_update_toast">A atualização %1$s está disponível.</string>
     <string name="task_deleted_toast">Tarefa excluída</string>
+    <string name="task_copied_toast">Copiado para a área de transferência</string>
+    <string name="task_copy_failed_toast">Não foi possível copiar para a área de transferência</string>
     <string name="list_deleted_toast">Lista excluída</string>
     <string name="release_view_on_github">Ver no GitHub</string>
 

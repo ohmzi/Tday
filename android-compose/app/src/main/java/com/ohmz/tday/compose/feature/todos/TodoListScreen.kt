@@ -106,6 +106,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -117,6 +118,7 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
@@ -147,6 +149,7 @@ import com.ohmz.tday.compose.core.text.flattenNotesToPlainText
 import com.ohmz.tday.compose.core.ui.CategoryCard
 import com.ohmz.tday.compose.core.ui.EmptyTaskWatermark
 import com.ohmz.tday.compose.core.ui.LazyListHeroTitleSettle
+import com.ohmz.tday.compose.core.ui.LocalSnackbarManager
 import com.ohmz.tday.compose.core.ui.RootFeedHeroHeader
 import com.ohmz.tday.compose.core.ui.RootFeedHeroHeaderMetrics
 import com.ohmz.tday.compose.core.ui.RootFeedHeroMark
@@ -158,6 +161,7 @@ import com.ohmz.tday.compose.core.ui.animateTaskSwipeOffsetAsState
 import com.ohmz.tday.compose.core.ui.rememberLazyListHeroTitleCollapse
 import com.ohmz.tday.compose.core.ui.rememberTaskSwipeRevealState
 import com.ohmz.tday.compose.core.ui.shareList
+import com.ohmz.tday.compose.core.ui.taskCopyText
 import com.ohmz.tday.compose.core.ui.tdayBarButtonContainerColor
 import com.ohmz.tday.compose.core.ui.tdayHeroTitleItem
 import com.ohmz.tday.compose.core.ui.TdayHeroTitleMetrics
@@ -188,6 +192,7 @@ import com.ohmz.tday.compose.ui.theme.TdayDimens
 import com.ohmz.tday.compose.ui.theme.TdayFloaterAccent
 import com.ohmz.tday.compose.ui.theme.TdayListColorOptions
 import com.ohmz.tday.compose.ui.theme.TdayListIconOptions
+import com.ohmz.tday.compose.ui.theme.TdaySwipeCopyBackground
 import com.ohmz.tday.compose.ui.theme.TdaySwipeDeleteBackground
 import com.ohmz.tday.compose.ui.theme.TdaySwipeEditBackground
 import com.ohmz.tday.compose.ui.theme.TdaySwipeFloatBackground
@@ -4630,10 +4635,18 @@ private fun SwipeTaskRow(
         )
     }
     val hasExtraSwipeAction = promoteAction != null || demoteAction != null || deferAction != null
+    // Edit + Copy + Delete always show; the optional mode-specific extra
+    // action (Schedule/Float/Defer) adds a 4th pill. Matches the +80dp-per-pill
+    // step already established between the 2- and 3-pill widths below.
     val swipeRevealState = rememberTaskSwipeRevealState(
         todo.id,
-        revealWidth = if (hasExtraSwipeAction) 256.dp else 176.dp,
+        revealWidth = if (hasExtraSwipeAction) 336.dp else 256.dp,
     )
+    val clipboardManager = LocalClipboardManager.current
+    val snackbarManager = LocalSnackbarManager.current
+    val copyContext = LocalContext.current
+    val copiedMessage = stringResource(R.string.task_copied_toast)
+    val copyFailedMessage = stringResource(R.string.task_copy_failed_toast)
     var localChecked by remember(todo.id) { mutableStateOf(false) }
     var localStruck by remember(todo.id) { mutableStateOf(false) }
     var pendingCompletion by remember(todo.id) { mutableStateOf(false) }
@@ -4856,6 +4869,29 @@ private fun SwipeTaskRow(
                             )
                             closeSwipeSlot()
                             onInfo()
+                        },
+                    )
+                    TaskSwipeActionButton(
+                        icon = R.drawable.ic_lucide_copy,
+                        contentDescription = stringResource(R.string.action_copy_task),
+                        label = stringResource(R.string.action_copy),
+                        tint = Color.White,
+                        background = TdaySwipeCopyBackground,
+                        revealProgress = actionRevealProgress,
+                        revealDelay = 0.40f,
+                        onClick = {
+                            ViewCompat.performHapticFeedback(
+                                view,
+                                HapticFeedbackConstantsCompat.CLOCK_TICK,
+                            )
+                            closeSwipeSlot()
+                            runCatching {
+                                clipboardManager.setText(AnnotatedString(taskCopyText(copyContext, todo)))
+                            }.onSuccess {
+                                snackbarManager?.showSuccess(copiedMessage)
+                            }.onFailure {
+                                snackbarManager?.showError(copyFailedMessage)
+                            }
                         },
                     )
                     TaskSwipeActionButton(

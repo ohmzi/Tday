@@ -63,6 +63,7 @@ Image("ActionEdit")
 | Undo (toast action) | `undo-2` | `Undo2` | `ic_lucide_undo_2` | `ActionUndo` |
 | Scheduled (root dock) | `house` | `Home` | `ic_lucide_house` | `NavHouse` |
 | Task edit | `square-pen` | `SquarePen` | `ic_lucide_square_pen` | `ActionEdit` |
+| Task copy | `copy` | `Copy` | `ic_lucide_copy` | `ActionCopy` |
 | Task delete | `trash` | `Trash` | `ic_lucide_trash` | `ActionDelete` |
 | Notes: bold | `bold` | `Bold` | `ic_lucide_bold` | `LucideBold` |
 | Notes: italic | `italic` | `Italic` | `ic_lucide_italic` | `LucideItalic` |

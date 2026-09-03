@@ -340,7 +340,10 @@
     "sharing": "Compartir",
     "share": "Compartir",
     "shareListCopied": "Lista copiada al portapapeles",
+    "taskCopied": "Tarea copiada al portapapeles",
+    "taskCopyFailed": "No se pudo copiar la tarea al portapapeles",
     "shareDueLabel": "Vence: {{date}}",
+    "sharePriorityLabel": "Prioridad: {{priority}}",
     "shareTaskCount_one": "{{count}} tarea",
     "shareTaskCount_few": "{{count}} tareas",
     "shareTaskCount_many": "{{count}} tareas",
@@ -454,6 +457,7 @@
       "pinToTop": "Fijar arriba",
       "edit": "Editar",
       "editAsInstance": "Editar como instancia",
+      "copy": "Copiar",
       "delete": "Eliminar",
       "Move to": "Mover a..."
     },
@@ -975,6 +979,13 @@
         "keywords": "deslizar, gesto, swipe, completar, eliminar, rápido, fila",
         "body": "Desliza una fila de tarea para mostrar acciones rápidas: completarla o eliminarla, sin necesidad de abrir la tarea.",
         "tip": "Una tarea completada muestra un aviso para deshacer durante unos segundos, así que un desliz por error nunca es definitivo."
+      },
+      "copy-task-text": {
+        "title": "Copiar detalles de la tarea",
+        "summary": "Copia el título, las notas, la fecha de vencimiento y la prioridad de una tarea como texto.",
+        "keywords": "copiar, portapapeles, compartir, texto, deslizar",
+        "body": "Desliza una tarea y toca Copiar — o usa el botón Copiar en el escritorio — para copiar su título, notas, fecha de vencimiento y prioridad como texto sin formato, listo para pegar en cualquier lugar.",
+        "tip": "Útil para pegar una tarea en un mensaje, correo electrónico u otra aplicación sin volver a escribirla."
       },
       "long-press-actions": {
         "title": "Mantén pulsada una tarea",

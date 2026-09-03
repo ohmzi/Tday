@@ -11,7 +11,7 @@ import {
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { TodoItemType } from "@/types";
-import { Check, Flag, SquarePen, Trash } from "lucide-react";
+import { Check, Copy, Flag, SquarePen, Trash } from "lucide-react";
 import { getDisplayTime } from "@/lib/date/displayDate";
 import { useLocale } from "@/lib/navigation";
 import { useTodoMutation } from "@/providers/TodoMutationProvider";
@@ -24,9 +24,12 @@ import TaskFormSheet from "@/components/todo/component/TodoForm/TaskFormSheet";
 import { FloatTaskButton, TaskActionButtons } from "@/components/ui/TaskActionButtons";
 import { useDemoteTodo } from "@/features/todayTodos/query/demote-todo";
 import { DeferTodoMenu } from "@/components/todo/component/DeferTodoMenu";
-import { SWIPE_DELETE_COLOR, SWIPE_EDIT_COLOR } from "@/lib/swipeActionColors";
+import { SWIPE_COPY_COLOR, SWIPE_DELETE_COLOR, SWIPE_EDIT_COLOR } from "@/lib/swipeActionColors";
 import { useTaskSelection } from "@/providers/TaskSelectionProvider";
 import { hapticTick } from "@/lib/haptics";
+import { useTranslation } from "react-i18next";
+import { useToast } from "@/hooks/use-toast";
+import { buildTaskShareText } from "@/lib/listShareText";
 
 
 type TodoItemContainerProps = {
@@ -66,6 +69,8 @@ export const TodoItemCard = ({
   const { completeMutateFn } = useCompleteTodo();
   const { deleteMutateFn } = useDeleteTodo();
   const { demoteMutateFn } = useDemoteTodo();
+  const { t: appDict, i18n } = useTranslation("app");
+  const { toast } = useToast();
   const locale = useLocale();
   const userTimeZone = useUserTimezone();
   const [itemElement, setItemElement] = useState<HTMLDivElement | null>(null);
@@ -86,12 +91,12 @@ export const TodoItemCard = ({
   const completeTimers = useRef<number[]>([]);
   const completing = completePhase !== null;
 
-  // Mobile swipe-to-reveal (mirrors the native slide-to-edit/delete). The row
-  // foreground translates left to expose Edit + Delete. A quick horizontal swipe
-  // doesn't start a drag because the DnD sensors require a ~250ms press with
-  // <5px movement, which a swipe exceeds; vertical scroll/drag is preserved via
-  // axis-locking and touch-action: pan-y.
-  const ACTIONS_WIDTH = 140;
+  // Mobile swipe-to-reveal (mirrors the native slide-to-edit/copy/delete). The
+  // row foreground translates left to expose Edit + Copy + Delete. A quick
+  // horizontal swipe doesn't start a drag because the DnD sensors require a
+  // ~250ms press with <5px movement, which a swipe exceeds; vertical
+  // scroll/drag is preserved via axis-locking and touch-action: pan-y.
+  const ACTIONS_WIDTH = 210;
   const [swipeX, setSwipeX] = useState(0);
   const [swiping, setSwiping] = useState(false);
   const swipeTouch = useRef<
@@ -165,6 +170,21 @@ export const TodoItemCard = ({
       completeTimers.current.forEach((id) => window.clearTimeout(id));
     };
   }, []);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(
+        buildTaskShareText({
+          todo: { title, description, due: todoItem.due, priority },
+          lang: i18n.language,
+          t: appDict,
+        }),
+      );
+      toast({ description: appDict("taskCopied") });
+    } catch {
+      toast({ description: appDict("taskCopyFailed"), variant: "destructive" });
+    }
+  };
 
   // Entering selection mode closes any row left open by a swipe, so the mode
   // never starts with a stray Edit/Delete pair showing.
@@ -250,6 +270,26 @@ export const TodoItemCard = ({
               <SquarePen className="h-5 w-5 text-white" strokeWidth={2.2} />
             </span>
             <span className="text-[11px] font-bold text-muted-foreground">Edit</span>
+          </button>
+          <button
+            type="button"
+            aria-label="Copy task"
+            onPointerDown={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
+            onClick={() => {
+              closeSwipe();
+              void handleCopy();
+            }}
+            className="flex flex-col items-center gap-1"
+          >
+            <span
+              className="flex h-[34px] w-14 items-center justify-center rounded-[17px]"
+              style={{ backgroundColor: SWIPE_COPY_COLOR }}
+            >
+              <Copy className="h-5 w-5 text-white" strokeWidth={2.2} />
+            </span>
+            <span className="text-[11px] font-bold text-muted-foreground">Copy</span>
           </button>
           <button
             type="button"
@@ -448,8 +488,10 @@ export const TodoItemCard = ({
                 )}
                 <TaskActionButtons
                   onEdit={() => setDisplayForm(true)}
+                  onCopy={() => void handleCopy()}
                   onDelete={() => deleteMutateFn(todoItem)}
                   editLabel="Edit task"
+                  copyLabel="Copy task"
                   deleteLabel="Delete task"
                 />
               </div>
