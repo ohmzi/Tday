@@ -150,9 +150,14 @@ final class CalendarViewModel {
         errorMessage = nil
     }
 
+    // `[weak self]` is load-bearing here, not style — see the identical note
+    // on `TodoListViewModel.observeCacheChanges()`. Without it this view
+    // model can never deinit, so `observationTask?.cancel()` never runs and
+    // every discarded instance keeps reacting to every future cache write.
     private func observeCacheChanges() {
-        observationTask = Task {
+        observationTask = Task { [weak self] in
             for await _ in NotificationCenter.default.notifications(named: .offlineCacheDidChange) {
+                guard let self else { return }
                 await MainActor.run {
                     self.hydrateFromCache()
                 }

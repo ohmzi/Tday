@@ -783,9 +783,15 @@ final class AppViewModel {
         navigate(to: route)
     }
 
+    // `[weak self]` is load-bearing here, not style — see the identical note
+    // on `TodoListViewModel.observeCacheChanges()`. `AppRootView.init` (see
+    // `_appViewModel = State(initialValue: AppViewModel(...))`) constructs this
+    // view model the same way, so without a weak capture a discarded instance
+    // could never deinit, and `cacheObservationTask?.cancel()` would never run.
     private func observeCacheChanges() {
-        cacheObservationTask = Task {
+        cacheObservationTask = Task { [weak self] in
             for await _ in NotificationCenter.default.notifications(named: .offlineCacheDidChange) {
+                guard let self else { return }
                 await MainActor.run {
                     self.refreshSyncStatusFromCache()
                 }
@@ -806,13 +812,21 @@ final class AppViewModel {
         lastSyncAttemptEpochMs = state.lastSyncAttemptEpochMs
     }
 
+    // Found alongside the four observer tasks above, during the same fix: an
+    // identical strong-self cycle, and arguably the worse one — a leaked
+    // instance would not just react to cache writes forever but run its own
+    // independent 5-minute full-sync timer forever. `[weak self]` here is
+    // required for the same reason as the others: any single strong-self Task
+    // on this object is enough to keep the whole thing (and every other task
+    // it owns) permanently uncollectable.
     private func startSyncLoop() {
         guard syncLoopTask == nil else {
             return
         }
-        syncLoopTask = Task {
+        syncLoopTask = Task { [weak self] in
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(300))
+                guard let self else { return }
                 guard await MainActor.run(body: { self.authenticated }) else {
                     continue
                 }
@@ -944,9 +958,14 @@ final class AppViewModel {
         return true
     }
 
+    // `[weak self]` matters on all four observer tasks in this file, not just
+    // this one: any single strong-self cycle among them is enough to keep this
+    // whole view model uncollectable, which would keep every one of the other
+    // three alive right along with it regardless of their own capture lists.
     private func observeOfflineSyncFailures() {
-        offlineSyncFailureTask = Task {
+        offlineSyncFailureTask = Task { [weak self] in
             for await _ in NotificationCenter.default.notifications(named: .offlineSyncAttemptFailed) {
+                guard let self else { return }
                 await self.confirmOfflineSyncFailure()
             }
         }
@@ -964,8 +983,9 @@ final class AppViewModel {
     /// (bypasses the cooldown), with the right message kind. No second sync: the user's
     /// refresh already synced; we only need to report the outcome.
     private func observeUserInitiatedSyncFailures() {
-        userInitiatedSyncFailureTask = Task {
+        userInitiatedSyncFailureTask = Task { [weak self] in
             for await notification in NotificationCenter.default.notifications(named: .userInitiatedSyncFailedOffline) {
+                guard let self else { return }
                 let serverDown = (notification.userInfo?["serverDown"] as? Bool) ?? false
                 await MainActor.run {
                     guard self.authenticated, !self.isLocalMode else { return }
@@ -979,8 +999,9 @@ final class AppViewModel {
     }
 
     private func observeOfflineSyncSuccesses() {
-        offlineSyncSuccessTask = Task {
+        offlineSyncSuccessTask = Task { [weak self] in
             for await _ in NotificationCenter.default.notifications(named: .offlineSyncAttemptSucceeded) {
+                guard let self else { return }
                 await MainActor.run {
                     guard self.authenticated else {
                         return
