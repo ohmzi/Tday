@@ -46,6 +46,16 @@ object GuideContentExporter {
     private const val IOS_DIR = "ios-swiftUI/Tday/Resources/Guide"
     private const val IOS_VECTORS = "$IOS_DIR/guide-search-vectors.json"
 
+    /**
+     * DeepSource's KT-W1042 ("multiple occurrences of the same string literal
+     * within a single file") thresholds, reproduced empirically: counting literals
+     * in [buildAndroidStrings]'s pre-fix output matches its 7 reported PR #109
+     * findings exactly at content length >= 5 and occurrence count >= 3. Used to
+     * decide which residual duplicate values get pooled into a constant.
+     */
+    private const val DEEPSOURCE_MIN_LEN = 5
+    private const val DEEPSOURCE_MIN_COUNT = 3
+
     @OptIn(ExperimentalSerializationApi::class)
     private val json = Json { prettyPrint = true; prettyPrintIndent = "  "; encodeDefaults = true }
 
@@ -179,10 +189,50 @@ object GuideContentExporter {
      * its per-locale values stored positionally (index = LOCALES.indexOf(locale))
      * instead of once per locale block. The previous locale-major shape repeated
      * every key literal 10x (once per locale), which is what tripped DeepSource's
-     * duplicate-string-literal check (KT-W1042) on every topic in this file.
+     * duplicate-string-literal check (KT-W1042, "multiple occurrences of the same
+     * string literal within a single file") on every topic in this file.
+     *
+     * Two passes close the remaining KT-W1042 surface, in order:
+     *
+     * 1. Within one key's row, a non-English locale whose value is identical to the
+     *    English value (untranslated proper nouns/symbols like "Apple Watch" or
+     *    "Ctrl / ⌘ + K") is written as `null` instead of repeating the literal —
+     *    `resolve()` already falls back to `values[EN_INDEX]` for a null slot, so
+     *    this changes no observable behavior.
+     * 2. What's left is genuine cross-locale or cross-key coincidence — e.g. Spanish
+     *    and Portuguese both translate two unrelated English keys as "Modo
+     *    servidor", or Italian/Chinese/Japanese/Malay all render "Webhooks" as the
+     *    singular "Webhook" — where the repeated text is not interchangeable with
+     *    English, so it can't be nulled away. [DEEPSOURCE_MIN_LEN]/[DEEPSOURCE_MIN_COUNT]
+     *    reproduce DeepSource's own threshold (confirmed empirically against its
+     *    reported PR #109 findings: 7 literals, each >=5 chars and occurring >=3x).
+     *    Any surviving literal meeting it is hoisted once into a `private val`
+     *    constant and every occurrence references that constant instead of
+     *    retyping the text — the standard fix DeepSource itself suggests, applied
+     *    mechanically so it stays correct as translations change.
      */
     private fun buildAndroidStrings(strings: Map<String, Map<String, String>>): String {
         val keys = strings.values.flatMap { it.keys }.toSortedSet()
+        val en = strings.getValue("en")
+
+        // Pass 1: per-row grid with EN-duplicate locales collapsed to null.
+        val grid: Map<String, List<String?>> = keys.associateWith { key ->
+            val enValue = en[key]
+            LOCALES.map { locale ->
+                val value = strings.getValue(locale)[key]
+                when {
+                    value == null -> null
+                    locale != "en" && value == enValue -> null // falls back to EN_INDEX in resolve()
+                    else -> value
+                }
+            }
+        }
+
+        // Pass 2: pool any literal DeepSource would still flag into a named constant.
+        val occurrences = grid.values.flatten().filterNotNull().groupingBy { it }.eachCount()
+        val pooled = occurrences.filter { (value, count) -> value.length >= DEEPSOURCE_MIN_LEN && count >= DEEPSOURCE_MIN_COUNT }
+        val constantNames = pooled.keys.sorted().withIndex().associate { (i, value) -> value to "DUP_$i" }
+
         val sb = StringBuilder()
         sb.appendLine("package com.ohmz.tday.shared.guide")
         sb.appendLine()
@@ -194,11 +244,25 @@ object GuideContentExporter {
         sb.appendLine("    // Locale order for the positional values in stringsByKey below.")
         sb.appendLine("    private val LOCALES = listOf(${LOCALES.joinToString(", ") { kquote(it) }})")
         sb.appendLine("    private val EN_INDEX = LOCALES.indexOf(\"en\")")
+        if (constantNames.isNotEmpty()) {
+            sb.appendLine()
+            sb.appendLine("    // Text that coincidentally repeats across unrelated keys/locales (e.g. two")
+            sb.appendLine("    // different English keys both translate to the same Spanish word) and can't")
+            sb.appendLine("    // be collapsed to the English fallback, hoisted once to satisfy KT-W1042.")
+            for (value in pooled.keys.sorted()) {
+                sb.appendLine("    private val ${constantNames.getValue(value)} = ${kquote(value)}")
+            }
+        }
         sb.appendLine()
         sb.appendLine("    // key -> one value per LOCALES position (null where that locale has no translation).")
         sb.appendLine("    private val stringsByKey: Map<String, List<String?>> = mapOf(")
         for (key in keys) {
-            val values = LOCALES.joinToString(", ") { locale -> strings.getValue(locale)[key]?.let(::kquote) ?: "null" }
+            val values = grid.getValue(key).joinToString(", ") { value ->
+                when {
+                    value == null -> "null"
+                    else -> constantNames[value] ?: kquote(value)
+                }
+            }
             sb.appendLine("        ${kquote(key)} to listOf($values),")
         }
         sb.appendLine("    )")
