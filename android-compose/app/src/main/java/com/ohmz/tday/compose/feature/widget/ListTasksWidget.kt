@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.util.Log
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -93,97 +94,129 @@ class ListTasksWidget : GlanceAppWidget() {
             Log.i(
                 WIDGET_LOG_TAG,
                 "list[$appWidgetId]: composing, version=$snapshotVersion locked=$isAppLocked " +
-                    "listType=${selection?.listType} snapshotNull=${currentSnapshot == null}",
+                    "listType=${selection?.listType?.name ?: "none"} snapshotNull=${currentSnapshot == null}",
             )
 
-            val visuals = when (selection?.listType) {
-                WidgetListType.FLOATER -> FloaterWidgetVisuals
-                WidgetListType.TODO, null -> todayWidgetVisuals(taskWidgetIsDaytime(LocalTime.now().hour))
-            }
-            // A chosen list's NAME is more revealing than Today/Floater's fixed app-supplied
-            // title ("Job search", "Therapy", …), so — unlike Today/Floater's title, which is
-            // shown regardless of state — this falls back to the generic title while locked,
-            // consistent with the app-lock policy of never surfacing user content on a locked
-            // device (see AppSecurityPreferenceStore's KDoc).
-            val title = if (isAppLocked) {
-                appContext.getString(R.string.widget_list_tasks_title)
-            } else {
-                selection?.listName?.takeIf { it.isNotBlank() }
-                    ?: appContext.getString(R.string.widget_list_tasks_title)
-            }
-
             GlanceTheme {
-                if (selection == null) {
-                    // No selection on disk: an instance whose configuration was somehow lost
-                    // (store cleared without the widget itself being removed), or the launcher
-                    // called `provideGlance` before `WidgetListConfigurationActivity` finished
-                    // writing it — reuse the SETUP visual as "tap to finish setting this up"
-                    // rather than inventing a fourth content state.
-                    TaskWidgetContent(
-                        title = title,
-                        state = if (isAppLocked) TaskWidgetContentState.LOCKED else TaskWidgetContentState.SETUP,
-                        countLabel = "",
-                        setupTitle = appContext.getString(R.string.widget_list_tasks_setup_title),
-                        setupMessage = appContext.getString(R.string.widget_list_tasks_setup_message),
-                        emptyTitle = "",
-                        emptyMessage = "",
-                        lockedTitle = appContext.getString(R.string.widget_locked_title),
-                        lockedMessage = appContext.getString(R.string.widget_locked_message),
-                        loadingTitle = appContext.getString(R.string.widget_loading),
-                        rows = emptyList(),
-                        visuals = visuals,
-                        openAction = reconfigureAction(appWidgetId),
-                        addAction = reconfigureAction(appWidgetId),
-                    )
-                } else {
-                    val strings = ListTasksWidgetStrings(
-                        emptyMessage = appContext.getString(
-                            if (selection.listType == WidgetListType.TODO) {
-                                R.string.widget_today_tasks_empty
-                            } else {
-                                R.string.widget_floater_tasks_empty
-                            },
-                        ),
-                        addTaskLabel = appContext.getString(
-                            if (selection.listType == WidgetListType.TODO) {
-                                R.string.widget_today_tasks_add
-                            } else {
-                                R.string.widget_floater_tasks_add
-                            },
-                        ),
-                        countLabelFormat = appContext.getString(
-                            if (selection.listType == WidgetListType.TODO) {
-                                R.string.widget_today_tasks_count
-                            } else {
-                                R.string.widget_floater_tasks_count
-                            },
-                        ),
-                    )
-
-                    TaskWidgetContent(
-                        title = title,
-                        state = listContentState(isAppLocked, currentSnapshot),
-                        countLabel = strings.countLabel(currentSnapshot?.taskCount ?: 0),
-                        setupTitle = appContext.getString(R.string.widget_today_tasks_setup_title),
-                        setupMessage = appContext.getString(R.string.widget_today_tasks_setup_message),
-                        emptyTitle = strings.emptyMessage,
-                        emptyMessage = strings.addTaskLabel,
-                        lockedTitle = appContext.getString(R.string.widget_locked_title),
-                        lockedMessage = appContext.getString(R.string.widget_locked_message),
-                        loadingTitle = appContext.getString(R.string.widget_loading),
-                        rows = if (isAppLocked || currentSnapshot == null) {
-                            emptyList()
-                        } else {
-                            listRows(currentSnapshot, selection.listType)
-                        },
-                        visuals = visuals,
-                        openAction = openListAction(selection.listId, selection.listName, selection.listType),
-                        addAction = openCreateListTaskAction(selection.listId, selection.listType),
-                    )
-                }
+                ListTasksWidgetBody(
+                    appContext = appContext,
+                    appWidgetId = appWidgetId,
+                    selection = selection,
+                    isAppLocked = isAppLocked,
+                    currentSnapshot = currentSnapshot,
+                )
             }
         }
     }
+}
+
+@Composable
+private fun ListTasksWidgetBody(
+    appContext: Context,
+    appWidgetId: Int,
+    selection: WidgetListSelection?,
+    isAppLocked: Boolean,
+    currentSnapshot: WidgetSnapshot?,
+) {
+    val visuals = listWidgetVisualsFor(selection?.listType)
+    val title = listWidgetTitleFor(appContext, selection, isAppLocked)
+
+    if (selection == null) {
+        // No selection on disk: an instance whose configuration was somehow lost (store cleared
+        // without the widget itself being removed), or the launcher called `provideGlance`
+        // before `WidgetListConfigurationActivity` finished writing it — reuse the SETUP visual
+        // as "tap to finish setting this up" rather than inventing a fourth content state.
+        UnconfiguredListWidgetContent(
+            appContext = appContext,
+            appWidgetId = appWidgetId,
+            title = title,
+            visuals = visuals,
+            isAppLocked = isAppLocked,
+        )
+    } else {
+        ConfiguredListWidgetContent(
+            appContext = appContext,
+            selection = selection,
+            title = title,
+            visuals = visuals,
+            isAppLocked = isAppLocked,
+            currentSnapshot = currentSnapshot,
+        )
+    }
+}
+
+private fun listWidgetVisualsFor(listType: WidgetListType?): TaskWidgetVisuals = when (listType) {
+    WidgetListType.FLOATER -> FloaterWidgetVisuals
+    WidgetListType.TODO, null -> todayWidgetVisuals(taskWidgetIsDaytime(LocalTime.now().hour))
+}
+
+/**
+ * A chosen list's NAME is more revealing than Today/Floater's fixed app-supplied title ("Job
+ * search", "Therapy", …), so — unlike Today/Floater's title, which is shown regardless of state —
+ * this falls back to the generic title while locked, consistent with the app-lock policy of never
+ * surfacing user content on a locked device (see AppSecurityPreferenceStore's KDoc).
+ */
+private fun listWidgetTitleFor(appContext: Context, selection: WidgetListSelection?, isAppLocked: Boolean): String {
+    if (isAppLocked) return appContext.getString(R.string.widget_list_tasks_title)
+    return selection?.listName?.takeIf { it.isNotBlank() } ?: appContext.getString(R.string.widget_list_tasks_title)
+}
+
+@Composable
+private fun UnconfiguredListWidgetContent(
+    appContext: Context,
+    appWidgetId: Int,
+    title: String,
+    visuals: TaskWidgetVisuals,
+    isAppLocked: Boolean,
+) {
+    TaskWidgetContent(
+        title = title,
+        state = if (isAppLocked) TaskWidgetContentState.LOCKED else TaskWidgetContentState.SETUP,
+        countLabel = "",
+        setupTitle = appContext.getString(R.string.widget_list_tasks_setup_title),
+        setupMessage = appContext.getString(R.string.widget_list_tasks_setup_message),
+        emptyTitle = "",
+        emptyMessage = "",
+        lockedTitle = appContext.getString(R.string.widget_locked_title),
+        lockedMessage = appContext.getString(R.string.widget_locked_message),
+        loadingTitle = appContext.getString(R.string.widget_loading),
+        rows = emptyList(),
+        visuals = visuals,
+        openAction = reconfigureAction(appWidgetId),
+        addAction = reconfigureAction(appWidgetId),
+    )
+}
+
+@Composable
+private fun ConfiguredListWidgetContent(
+    appContext: Context,
+    selection: WidgetListSelection,
+    title: String,
+    visuals: TaskWidgetVisuals,
+    isAppLocked: Boolean,
+    currentSnapshot: WidgetSnapshot?,
+) {
+    val strings = listTasksWidgetStringsFor(appContext, selection.listType)
+    TaskWidgetContent(
+        title = title,
+        state = listContentState(isAppLocked, currentSnapshot),
+        countLabel = strings.countLabel(currentSnapshot?.taskCount ?: 0),
+        setupTitle = appContext.getString(R.string.widget_today_tasks_setup_title),
+        setupMessage = appContext.getString(R.string.widget_today_tasks_setup_message),
+        emptyTitle = strings.emptyMessage,
+        emptyMessage = strings.addTaskLabel,
+        lockedTitle = appContext.getString(R.string.widget_locked_title),
+        lockedMessage = appContext.getString(R.string.widget_locked_message),
+        loadingTitle = appContext.getString(R.string.widget_loading),
+        rows = if (isAppLocked || currentSnapshot == null) {
+            emptyList()
+        } else {
+            listRows(currentSnapshot, selection.listType)
+        },
+        visuals = visuals,
+        openAction = openListAction(selection.listId, selection.listName, selection.listType),
+        addAction = openCreateListTaskAction(selection.listId, selection.listType),
+    )
 }
 
 private data class ListTasksWidgetStrings(
@@ -191,6 +224,27 @@ private data class ListTasksWidgetStrings(
     val addTaskLabel: String,
     val countLabelFormat: String,
 )
+
+private fun listTasksWidgetStringsFor(appContext: Context, listType: WidgetListType): ListTasksWidgetStrings {
+    val (emptyRes, addRes, countRes) = when (listType) {
+        WidgetListType.TODO -> Triple(
+            R.string.widget_today_tasks_empty,
+            R.string.widget_today_tasks_add,
+            R.string.widget_today_tasks_count,
+        )
+
+        WidgetListType.FLOATER -> Triple(
+            R.string.widget_floater_tasks_empty,
+            R.string.widget_floater_tasks_add,
+            R.string.widget_floater_tasks_count,
+        )
+    }
+    return ListTasksWidgetStrings(
+        emptyMessage = appContext.getString(emptyRes),
+        addTaskLabel = appContext.getString(addRes),
+        countLabelFormat = appContext.getString(countRes),
+    )
+}
 
 private fun ListTasksWidgetStrings.countLabel(count: Int): String =
     String.format(Locale.getDefault(), countLabelFormat, count)

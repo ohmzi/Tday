@@ -20,7 +20,10 @@ import com.ohmz.tday.compose.feature.widget.snapshot.WidgetSnapshotStore
  * timeline every OTHER widget in this app used before that optimisation existed — a deliberate
  * scope cut for this PR, not a correctness gap.
  */
-abstract class BaseListTasksWidgetReceiver : GlanceAppWidgetReceiver() {
+// `open`, not `abstract`: every member below is already concrete — the three subclasses exist
+// only because the manifest/AppWidgetManager need a DISTINCT class per size receiver, not because
+// this base has anything left for them to implement.
+open class BaseListTasksWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = ListTasksWidget()
 
     override fun onEnabled(context: Context) {
