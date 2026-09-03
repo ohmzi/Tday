@@ -1102,6 +1102,39 @@
       "searchBody": "consultez les taches du jour sans ouvrir l'application. ajoutez le widget t'day a votre ecran d'accueil pour jeter un œil aux taches du jour. toucher le widget ouvre l'application au bon endroit."
     },
     {
+      "id": "widget-list-selection",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "list-todo",
+      "platforms": [
+        "IOS"
+      ],
+      "badge": "PRO_TIP",
+      "serverOnly": false,
+      "sinceVersion": "0.7.7",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Choisissez une liste pour votre widget",
+      "summary": "Faites pointer un widget vers une liste précise plutôt que tout le flux.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Appuyez longuement sur un widget T'Day et choisissez Modifier le widget pour définir exactement la liste qu'il affiche — n'importe laquelle de vos listes planifiées ou de vos listes flottantes. Une liste planifiée affiche les heures d'échéance et signale les tâches en retard ; une liste flottante affiche une liste ouverte sans heure d'échéance. Sans choix, le widget continue d'afficher le flux complet Aujourd'hui ou Flottant."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Ajoutez plusieurs widgets, chacun pointant vers une liste différente, pour tous les voir en même temps sur votre écran d'accueil."
+          ]
+        }
+      ],
+      "searchTitle": "choisissez une liste pour votre widget",
+      "searchKeywords": "widget, liste, configurer, modifier le widget, par liste, ecran d'accueil, ios",
+      "searchBody": "faites pointer un widget vers une liste precise plutot que tout le flux. appuyez longuement sur un widget t'day et choisissez modifier le widget pour definir exactement la liste qu'il affiche — n'importe laquelle de vos listes planifiees ou de vos listes flottantes. une liste planifiee affiche les heures d'echeance et signale les taches en retard ; une liste flottante affiche une liste ouverte sans heure d'echeance. sans choix, le widget continue d'afficher le flux complet aujourd'hui ou flottant. ajoutez plusieurs widgets, chacun pointant vers une liste differente, pour tous les voir en meme temps sur votre ecran d'accueil."
+    },
+    {
       "id": "widget-quick-add",
       "section": "WIDGETS_AND_SURFACES",
       "sectionOrder": 5,

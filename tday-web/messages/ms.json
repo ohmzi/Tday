@@ -1099,6 +1099,13 @@
         "keywords": "widget, skrin utama, imbas, hari ini, skrin kunci",
         "body": "Tambah widget T'Day ke skrin utama anda untuk mengimbas tugasan hari ini. Mengetik widget membuka aplikasi di tempat yang betul."
       },
+      "widget-list-selection": {
+        "title": "Pilih senarai untuk widget anda",
+        "summary": "Jadikan mana-mana widget menunjuk pada satu senarai tertentu, bukan seluruh suapan.",
+        "keywords": "widget, senarai, konfigurasi, edit widget, mengikut senarai, skrin utama, ios",
+        "body": "Tekan lama widget T'Day dan pilih Edit Widget untuk menetapkan senarai yang dipaparkan — mana-mana senarai berjadual atau senarai floater anda. Senarai berjadual memaparkan waktu tarikh akhir dan menandakan tugasan tertunggak; senarai floater memaparkan senarai terbuka tanpa waktu tarikh akhir. Jika tidak ditetapkan, widget terus memaparkan suapan penuh Hari Ini atau Floater.",
+        "tip": "Tambah beberapa widget, masing-masing menunjuk ke senarai berbeza, untuk melihat semuanya sekali gus pada skrin utama anda."
+      },
       "list-widgets": {
         "title": "Widget senarai",
         "summary": "Letakkan mana-mana senarai pada skrin utama anda, bukan sekadar Hari Ini.",
