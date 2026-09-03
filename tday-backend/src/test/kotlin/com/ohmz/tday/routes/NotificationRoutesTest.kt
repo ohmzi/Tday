@@ -103,6 +103,9 @@ class NotificationRoutesTest {
             body: String,
             url: String?,
             todoId: String?,
+            listId: String?,
+            listType: String?,
+            listName: String?,
         ): Either<AppError, Unit> = Unit.right()
 
         override fun notifyDataChanged(userIds: Collection<String>) = Unit

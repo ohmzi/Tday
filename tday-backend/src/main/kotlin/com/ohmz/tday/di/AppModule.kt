@@ -106,7 +106,7 @@ val securityModule = module {
 
 val serviceModule = module {
     single<CacheService> { CacheServiceImpl() }
-    single<ListShareService> { ListShareServiceImpl(get(), get()) }
+    single<ListShareService> { ListShareServiceImpl(get(), get(), get()) }
     single<WebhookDispatchService> { WebhookDispatchServiceImpl(get()) }
     single<WebhookService> { WebhookServiceImpl(get()) }
     single { RealtimePublisher(get(), get(), get(), get(), get()) }
