@@ -85,18 +85,28 @@ class UnifiedPushReceiver : MessagingReceiver() {
         val title = field("title") ?: context.getString(R.string.reminder_notification_default_title)
         val body = field("body").orEmpty()
         val todoId = field("todoId")
+        val listId = field("listId")
+        val listType = field("listType")
+        val listName = field("listName")
 
         val deepLinkIntent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            data = if (todoId != null) {
-                Uri.parse("tday://todos/all?highlightTodoId=${Uri.encode(todoId)}")
-            } else {
-                Uri.parse("tday://todos/all")
+            data = when {
+                todoId != null -> Uri.parse("tday://todos/all?highlightTodoId=${Uri.encode(todoId)}")
+                // A list-shared push: open straight into the shared list. listType is only ever
+                // "list" or "floaterList" (see ListType.wireName on the backend); default to the
+                // scheduled-list route for any other/missing value rather than drop the link.
+                listId != null && listType == "floaterList" ->
+                    Uri.parse("tday://floater/list/${Uri.encode(listId)}/${Uri.encode(listName.orEmpty())}")
+                listId != null ->
+                    Uri.parse("tday://todos/list/${Uri.encode(listId)}/${Uri.encode(listName.orEmpty())}")
+                else -> Uri.parse("tday://todos/all")
             }
         }
+        val notificationKey = (todoId ?: listId ?: instance).hashCode()
         val pendingIntent = PendingIntent.getActivity(
             context,
-            (todoId ?: instance).hashCode(),
+            notificationKey,
             deepLinkIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
@@ -112,7 +122,7 @@ class UnifiedPushReceiver : MessagingReceiver() {
 
         runCatching {
             NotificationManagerCompat.from(context)
-                .notify((todoId ?: instance).hashCode(), notification)
+                .notify(notificationKey, notification)
         }.onFailure { Log.w(TAG, "Failed to post UnifiedPush notification: ${it.message}") }
     }
 

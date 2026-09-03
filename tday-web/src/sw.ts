@@ -95,6 +95,8 @@ interface PushPayload {
   icon?: string;
   badgeCount?: number;
   todoId?: string;
+  listId?: string;
+  listType?: string;
 }
 
 self.addEventListener("push", (event) => {
@@ -113,10 +115,17 @@ self.addEventListener("push", (event) => {
     icon: "/icon-192.png",
     badge: "/icon-192.png",
     data: { url: payload.url ?? "/", todoId: payload.todoId },
-    actions: [
-      { action: "complete", title: "Complete" },
-      { action: "snooze", title: "Snooze 1h" },
-    ],
+    // "Complete"/"Snooze" only make sense on a task-reminder push (the only kind that
+    // carries a todoId) — a list-share push showing them would offer to complete or
+    // snooze something that doesn't exist.
+    ...(payload.todoId
+      ? {
+          actions: [
+            { action: "complete", title: "Complete" },
+            { action: "snooze", title: "Snooze 1h" },
+          ],
+        }
+      : {}),
   };
 
   const tasks: Promise<unknown>[] = [

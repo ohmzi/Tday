@@ -26,7 +26,7 @@ import kotlin.test.assertTrue
 class ListShareSearchTest {
     // JUnit builds a new instance per test method, so this is one empty database per test.
     private val db: Database = TestDatabase.fresh()
-    private val service = ListShareServiceImpl(CacheServiceImpl(), RealtimeServiceImpl())
+    private val service = ListShareServiceImpl(CacheServiceImpl(), RealtimeServiceImpl(), NoOpPushNotificationService())
 
     @BeforeEach
     fun setUp() {
