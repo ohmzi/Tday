@@ -133,6 +133,18 @@ class OfflineCacheManager @Inject constructor(
         return state
     }
 
+    /**
+     * Lightweight synchronous read of just the default-home-screen preference, for callers
+     * (Compose initializers, cold-launch seeding) that need a lower-cost alternative to
+     * [loadOfflineStateBlocking]'s full 7-table cache read. Backed by the same single-row
+     * `sync_metadata` table [loadOfflineStateBlocking] reads it from, so the value always
+     * matches; this just skips the todo/floater/list/completed/mutation queries around it.
+     */
+    fun defaultHomeScreenSnapshotBlocking(): String {
+        ensureMigrated()
+        return syncMetadataDao.get()?.defaultHomeScreen ?: "scheduled"
+    }
+
     suspend fun saveOfflineState(
         state: OfflineSyncState,
         consumedMutationIds: Set<String>? = null,

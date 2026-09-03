@@ -63,9 +63,13 @@ final class SettingsRepository {
     /// "scheduled" or "floater" — the root feed a fresh cold launch should open on. Unlike
     /// `isAiSummaryEnabledSnapshot`, this preference IS user-configurable in Local Mode too —
     /// there is no server fallback to hardcode, so the cache (which Local Mode also writes
-    /// through) is read directly in both modes.
+    /// through) is read directly in both modes. Uses the cache's in-memory
+    /// `defaultHomeScreenSnapshot` mirror rather than `loadOfflineState()`: this runs
+    /// synchronously from `AppRootView.init` on cold launch, before the splash screen's own
+    /// body ever evaluates, so it must not repeat a full fetch across every cached SwiftData
+    /// entity type on the main actor.
     func defaultHomeScreenSnapshot() -> String {
-        cacheManager.loadOfflineState().defaultHomeScreen
+        cacheManager.defaultHomeScreenSnapshot
     }
 
     /// Refreshes the default-home-screen preference from the server. In Local Mode there is
