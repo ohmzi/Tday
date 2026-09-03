@@ -1,11 +1,11 @@
 {
-  "version": "0.7.5",
-  "publishedAt": "2026-08-27T04:02:58-04:00",
+  "version": "0.7.6",
+  "publishedAt": "2026-09-03T03:00:44-04:00",
   "notes": [
-    "Restore JUFACN2FS3 as the Apple Team ID",
-    "Complete the series when a recurring todo has no instanceDate",
-    "Purge push subscriptions and widen member search"
+    "Keep existing members in the share search results",
+    "Make the push subscription cascade real and escape member search",
+    "Cascade todo_instances with the todo that owns it"
   ],
-  "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v0.7.5",
-  "compareUrl": "https://github.com/ohmzi/Tday/compare/v0.7.4..v0.7.5"
+  "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v0.7.6",
+  "compareUrl": "https://github.com/ohmzi/Tday/compare/v0.7.5..v0.7.6"
 }
