@@ -38,6 +38,7 @@ const VersionRedirectPage = lazy(() => import("@/pages/VersionRedirectPage"));
 const ListPage = lazy(() => import("@/pages/ListPage"));
 const CalendarPage = lazy(() => import("@/pages/CalendarPage"));
 const AuthLayout = lazy(() => import("@/pages/AuthLayout"));
+const AppHomeRedirectPage = lazy(() => import("@/pages/AppHomeRedirectPage"));
 
 function LazyFallback() {
   return <AppShellSkeleton />;
@@ -95,6 +96,8 @@ export const router = sentryCreateBrowserRouter([
           {
             element: <AppLayout />,
             children: [
+              // The default-home-screen decision: see AppHomeRedirectPage's doc comment.
+              { index: true, element: <AppHomeRedirectPage /> },
               {
                 element: <GeneralLayout />,
                 children: [

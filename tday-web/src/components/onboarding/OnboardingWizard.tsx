@@ -142,7 +142,7 @@ export default function OnboardingWizard({
     clearPendingApproval();
     try {
       await refreshSession();
-      router.replace("/app/tday");
+      router.replace("/app");
     } catch (error) {
       console.error(error);
       setAppMode(null);
@@ -267,7 +267,7 @@ export default function OnboardingWizard({
 
       // Approved sign-in: drop any lingering holding-screen marker.
       clearPendingApproval();
-      router.replace("/app/tday");
+      router.replace("/app");
     } catch (error) {
       console.error(error);
       setErrorMessage(
@@ -352,7 +352,7 @@ export default function OnboardingWizard({
       );
       if (result.ok) {
         clearPendingApproval();
-        router.replace("/app/tday");
+        router.replace("/app");
         return;
       }
       // Still pending (or a transient failure) — keep the holding screen up.

@@ -628,6 +628,10 @@
       "description": "Wählen Sie hell, dunkel oder folgen Sie Ihrer Systemeinstellung.",
       "descriptionSystem": "Folgen Sie Ihrem Gerät, hell oder dunkel. Aktuell: {{theme}}."
     },
+    "behavior": {
+      "title": "Verhalten",
+      "defaultHomeScreen": "Standard-Startbildschirm"
+    },
     "language": {
       "title": "Sprache",
       "description": "Wählen Sie Ihre App-Sprache",
@@ -920,6 +924,12 @@
         "summary": "Zwei ruhige Hauptfeeds, zwischen denen du über das Dock wechselst.",
         "keywords": "geplant, jederzeit, feed, dock, hauptfeed, navigieren, tabs, wechseln",
         "body": "T'Day hat zwei verwandte Feeds. Geplant enthält deine terminierten Aufgaben für heute und darüber hinaus. Jederzeit enthält Floater — Aufgaben ohne Datum. Wechsle über das Dock unten zwischen ihnen und lege aus jedem von beiden eine Aufgabe an."
+      },
+      "default-home-screen": {
+        "title": "Standard-Startbildschirm",
+        "summary": "Wähle, ob T'Day mit Geplant oder Jederzeit startet.",
+        "keywords": "standard, startbildschirm, start, launch, geplant, jederzeit, verhalten, einstellungen",
+        "body": "In den Einstellungen gibt es einen Bereich „Verhalten“, in dem du festlegst, welcher Feed zuerst geöffnet wird — Geplant oder Jederzeit. Das legt nur fest, was dich beim Start begrüßt; über das Dock wechselst du weiterhin jederzeit zwischen beiden."
       },
       "create-task": {
         "title": "Aufgabe erstellen",

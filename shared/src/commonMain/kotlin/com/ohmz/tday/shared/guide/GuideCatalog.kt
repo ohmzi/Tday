@@ -23,6 +23,13 @@ object GuideCatalog {
             setOf(WEB, ANDROID, IOS), body = listOf(para(GuideTopicIds.ROOT_FEEDS)),
         ),
         topic(
+            // Right after Root feeds: this is the Settings control for the same
+            // Scheduled/Floaters choice that topic just introduced.
+            GuideTopicIds.DEFAULT_HOME_SCREEN, GuideSectionId.GETTING_STARTED, "house",
+            setOf(WEB, ANDROID, IOS), sinceVersion = "0.7.7",
+            body = listOf(para(GuideTopicIds.DEFAULT_HOME_SCREEN)),
+        ),
+        topic(
             GuideTopicIds.CREATE_TASK, GuideSectionId.GETTING_STARTED, "plus",
             setOf(WEB, ANDROID, IOS),
             body = listOf(para(GuideTopicIds.CREATE_TASK), tip(GuideTopicIds.CREATE_TASK)),

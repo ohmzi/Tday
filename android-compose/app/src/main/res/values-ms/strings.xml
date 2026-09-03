@@ -207,6 +207,8 @@
     <string name="error_update_name_failed">Gagal mengemas kini nama anda. Sila cuba lagi.</string>
     <string name="error_change_password_failed">Gagal menukar kata laluan anda. Sila cuba lagi.</string>
     <string name="settings_appearance">Penampilan</string>
+    <string name="settings_behavior">Tingkah laku</string>
+    <string name="settings_default_home_screen">Skrin utama lalai</string>
     <string name="settings_reminders">Peringatan</string>
     <string name="settings_feature_toggle">Togol ciri</string>
     <string name="settings_notifications">Pemberitahuan</string>

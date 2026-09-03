@@ -102,6 +102,35 @@
       "searchBody": "deux fils principaux et paisibles entre lesquels vous basculez depuis le dock. t'day propose deux fils jumeaux. le fil planifie reunit vos taches datees d'aujourd'hui et des jours a venir. a tout moment reunit les floaters — les taches sans date. basculez de l'un a l'autre depuis le dock en bas, et creez une tache depuis n'importe lequel."
     },
     {
+      "id": "default-home-screen",
+      "section": "GETTING_STARTED",
+      "sectionOrder": 0,
+      "icon": "house",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.7.7",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Écran d'accueil par défaut",
+      "summary": "Choisissez si T'Day s'ouvre sur Planifié ou À tout moment.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Les réglages ont une section Comportement où vous choisissez quel fil s'ouvre en premier — Planifié ou À tout moment. Cela ne détermine que ce que vous voyez au lancement ; le dock permet toujours de basculer entre les deux à tout moment."
+          ]
+        }
+      ],
+      "searchTitle": "ecran d'accueil par defaut",
+      "searchKeywords": "par defaut, ecran d'accueil, demarrage, lancement, planifie, a tout moment, comportement, reglages",
+      "searchBody": "choisissez si t'day s'ouvre sur planifie ou a tout moment. les reglages ont une section comportement ou vous choisissez quel fil s'ouvre en premier — planifie ou a tout moment. cela ne determine que ce que vous voyez au lancement ; le dock permet toujours de basculer entre les deux a tout moment."
+    },
+    {
       "id": "create-task",
       "section": "GETTING_STARTED",
       "sectionOrder": 0,

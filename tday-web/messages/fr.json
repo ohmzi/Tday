@@ -628,6 +628,10 @@
       "description": "Choisissez clair, sombre ou suivez le réglage de votre système.",
       "descriptionSystem": "Suivez votre appareil, clair ou sombre. Actuellement {{theme}}."
     },
+    "behavior": {
+      "title": "Comportement",
+      "defaultHomeScreen": "Écran d'accueil par défaut"
+    },
     "language": {
       "title": "Langue",
       "description": "Choisissez la langue de l'application",
@@ -920,6 +924,12 @@
         "summary": "Deux fils principaux et paisibles entre lesquels vous basculez depuis le dock.",
         "keywords": "planifié, à tout moment, fil, dock, racine, naviguer, onglets",
         "body": "T'Day propose deux fils jumeaux. Le fil Planifié réunit vos tâches datées d'aujourd'hui et des jours à venir. À tout moment réunit les Floaters — les tâches sans date. Basculez de l'un à l'autre depuis le dock en bas, et créez une tâche depuis n'importe lequel."
+      },
+      "default-home-screen": {
+        "title": "Écran d'accueil par défaut",
+        "summary": "Choisissez si T'Day s'ouvre sur Planifié ou À tout moment.",
+        "keywords": "par défaut, écran d'accueil, démarrage, lancement, planifié, à tout moment, comportement, réglages",
+        "body": "Les réglages ont une section Comportement où vous choisissez quel fil s'ouvre en premier — Planifié ou À tout moment. Cela ne détermine que ce que vous voyez au lancement ; le dock permet toujours de basculer entre les deux à tout moment."
       },
       "create-task": {
         "title": "Créer une tâche",

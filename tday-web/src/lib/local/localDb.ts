@@ -135,6 +135,8 @@ export type LocalPreferencesRow = {
   groupBy: string | null;
   direction: string | null;
   aiSummaryEnabled: boolean;
+  // "scheduled" or "floater" — which root feed opens on a fresh cold launch.
+  defaultHomeScreen: string;
 };
 
 export type LocalWorkspace = {
@@ -174,6 +176,7 @@ export function emptyWorkspace(): LocalWorkspace {
       groupBy: null,
       direction: null,
       aiSummaryEnabled: true,
+      defaultHomeScreen: "scheduled",
     },
   };
 }

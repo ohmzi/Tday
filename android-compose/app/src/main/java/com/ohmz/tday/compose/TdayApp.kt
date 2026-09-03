@@ -170,7 +170,11 @@ fun TdayApp(
     var activeToast by remember { mutableStateOf<TdayToastData?>(null) }
     var hasShownLaunchUpdateToast by rememberSaveable { mutableStateOf(false) }
     var isStartupSplashHeld by remember { mutableStateOf(false) }
-    var rootFeedTab by rememberSaveable { mutableStateOf(RootFeedTab.SCHEDULED_TASK_HOME) }
+    // Seeded once, from the user's "Default home screen" setting, on a genuinely fresh
+    // composition (no saved instance state to restore) — a config change, process-death
+    // restore, or in-session dock tap all keep whatever rootFeedTab already holds instead of
+    // re-applying the default underneath the user.
+    var rootFeedTab by rememberSaveable { mutableStateOf(appViewModel.defaultHomeScreenSnapshot()) }
     var rootCreateTaskRequestSerial by rememberSaveable { mutableStateOf(0) }
     var rootCreateTaskRequestKey by rememberSaveable { mutableStateOf(0) }
     var pendingFloaterTaskHomeCreateTask by rememberSaveable { mutableStateOf(false) }
@@ -988,6 +992,7 @@ fun TdayApp(
                     ) {
                         OnRouteResume {
                             appViewModel.refreshAiSummaryPreference()
+                            appViewModel.refreshDefaultHomeScreen()
                             appViewModel.refreshVersionInfo()
                         }
                         SettingsScreen(
@@ -997,11 +1002,13 @@ fun TdayApp(
                             selectedReminder = appUiState.selectedReminder,
                             syncStatus = appUiState.syncStatus,
                             aiSummaryEnabled = appUiState.aiSummaryEnabled,
+                            defaultHomeScreen = appUiState.defaultHomeScreen,
                             hasUpdate = releaseUiState.hasUpdate,
                             latestVersionName = releaseUiState.latestRelease?.version,
                             backendVersion = appUiState.backendVersion,
                             versionCheckResult = appUiState.versionCheckResult,
                             onThemeModeSelected = appViewModel::setThemeMode,
+                            onDefaultHomeScreenSelected = appViewModel::setDefaultHomeScreen,
                             onReminderSelected = appViewModel::setDefaultReminder,
                         selectedDayAhead = appUiState.selectedDayAhead,
                         onDayAheadSelected = appViewModel::setDayAhead,
