@@ -8,6 +8,7 @@ import com.ohmz.tday.plugins.configureSerialization
 import com.ohmz.tday.security.JwtUserClaims
 import com.ohmz.tday.services.FloaterService
 import com.ohmz.tday.shared.model.FloaterDto
+import com.ohmz.tday.shared.model.FloaterUncompleteResponse
 import com.ohmz.tday.shared.model.TodoDto
 import java.time.LocalDateTime
 import io.ktor.client.request.delete
@@ -309,9 +310,9 @@ class FloaterRoutesTest {
             return Unit.right()
         }
 
-        override suspend fun uncompleteFloater(userId: String, floaterId: String): Either<AppError, Unit> {
+        override suspend fun uncompleteFloater(userId: String, floaterId: String): Either<AppError, FloaterUncompleteResponse> {
             events += "uncomplete:$floaterId"
-            return Unit.right()
+            return FloaterUncompleteResponse(message = "floater uncompleted").right()
         }
 
         override suspend fun prioritize(userId: String, floaterId: String, priority: String): Either<AppError, Unit> =

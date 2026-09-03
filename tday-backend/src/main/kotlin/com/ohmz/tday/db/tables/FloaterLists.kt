@@ -14,5 +14,19 @@ object FloaterLists : Table("FloaterProject") {
     val createdAt = datetime("createdAt")
     val updatedAt = datetime("updatedAt")
 
+    // Set only when this list was recreated by FloaterService.uncompleteFloater()
+    // after its original was deleted -- names the original (now-gone) list's
+    // id. Not a foreign key: the row it names no longer exists by the time
+    // this is ever set. The partial unique index below is the find-or-create
+    // guard: it is what actually stops two undos racing on the same deleted
+    // list from producing two recreated lists.
+    val recreatedFromListID = varchar("recreatedFromListID", 30).nullable()
+
     override val primaryKey = PrimaryKey(id)
+
+    init {
+        index("floaterproject_userid_recreatedfromlistid", true, userID, recreatedFromListID) {
+            recreatedFromListID.isNotNull()
+        }
+    }
 }

@@ -4,6 +4,7 @@ import arrow.core.Either
 import arrow.core.right
 import com.ohmz.tday.db.tables.CompletedFloaters
 import com.ohmz.tday.db.tables.FloaterLists
+import com.ohmz.tday.db.tables.Floaters
 import com.ohmz.tday.db.enums.Priority
 import com.ohmz.tday.domain.AppError
 import com.ohmz.tday.models.response.CompletedFloaterResponse
@@ -50,6 +51,20 @@ class CompletedFloaterServiceImpl(
 
     override suspend fun deleteById(userId: String, id: String): Either<AppError, Int> {
         val count = newSuspendedTransaction(Dispatchers.IO) {
+            // Permanent delete: also remove the primary Floaters row this
+            // completion snapshot points at. completeFloater() leaves that
+            // row behind (completed = true) rather than deleting it, so
+            // without this it would be invisible forever (getAll() filters
+            // completed = false) but never cleaned up -- matching what
+            // FloaterService.delete() already does for the direct-delete path.
+            val row = CompletedFloaters.selectAll().where {
+                (CompletedFloaters.id eq id) and (CompletedFloaters.userID eq userId)
+            }.firstOrNull()
+            if (row != null) {
+                Floaters.deleteWhere {
+                    (Floaters.id eq row[CompletedFloaters.originalFloaterID]) and (Floaters.userID eq userId)
+                }
+            }
             CompletedFloaters.deleteWhere { (CompletedFloaters.id eq id) and (CompletedFloaters.userID eq userId) }
         }
         cache.invalidateFloaterCaches(userId)
@@ -99,5 +114,9 @@ class CompletedFloaterServiceImpl(
         listID = this[CompletedFloaters.listID],
         listName = this[CompletedFloaters.listName],
         listColor = this[CompletedFloaters.listColor],
+        // originalListID is the immutable snapshot; listID is nulled by
+        // ON DELETE SET NULL the moment the list is actually deleted (see
+        // db/migration/V27) -- had one, don't have it live any more.
+        listDeleted = this[CompletedFloaters.originalListID] != null && this[CompletedFloaters.listID] == null,
     )
 }

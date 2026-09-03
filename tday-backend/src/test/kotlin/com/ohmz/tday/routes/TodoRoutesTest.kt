@@ -14,6 +14,7 @@ import com.ohmz.tday.services.TodoNlpService
 import com.ohmz.tday.services.TodoService
 import com.ohmz.tday.services.TodoSummaryService
 import com.ohmz.tday.shared.model.CreateTodoRequest
+import com.ohmz.tday.shared.model.FloaterUncompleteResponse
 import com.ohmz.tday.shared.model.TodoSummaryRequest
 import com.ohmz.tday.shared.model.TodoSummaryResponse
 import com.ohmz.tday.shared.model.UpdateTodoRequest
@@ -817,7 +818,7 @@ class TodoRoutesTest {
 
         override suspend fun completeFloater(userId: String, floaterId: String) = Unit.right()
 
-        override suspend fun uncompleteFloater(userId: String, floaterId: String) = Unit.right()
+        override suspend fun uncompleteFloater(userId: String, floaterId: String) = FloaterUncompleteResponse().right()
 
         override suspend fun prioritize(userId: String, floaterId: String, priority: String) = Unit.right()
 
