@@ -1102,6 +1102,39 @@
       "searchBody": "vedi le attivita di oggi senza aprire l'app. aggiungi il widget t'day alla schermata home per dare un'occhiata alle attivita di oggi. toccando il widget si apre l'app nel punto giusto."
     },
     {
+      "id": "widget-list-selection",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "list-todo",
+      "platforms": [
+        "IOS"
+      ],
+      "badge": "PRO_TIP",
+      "serverOnly": false,
+      "sinceVersion": "0.7.7",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Scegli una lista per il tuo widget",
+      "summary": "Fai puntare un widget su una lista specifica invece che sull'intero flusso.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Tieni premuto un widget T'Day e scegli Modifica widget per decidere esattamente quale lista mostra — una qualsiasi delle tue liste programmate o liste flottanti. Una lista programmata mostra gli orari di scadenza e segnala ciò che è in ritardo; una lista flottante mostra un elenco aperto senza orari di scadenza. Se non scegli nulla, il widget continua a mostrare l'intero flusso Oggi o Flottanti."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Aggiungi più widget, ognuno puntato su una lista diversa, per vederli tutti insieme sulla tua schermata Home."
+          ]
+        }
+      ],
+      "searchTitle": "scegli una lista per il tuo widget",
+      "searchKeywords": "widget, lista, configura, modifica widget, per lista, schermata home, ios",
+      "searchBody": "fai puntare un widget su una lista specifica invece che sull'intero flusso. tieni premuto un widget t'day e scegli modifica widget per decidere esattamente quale lista mostra — una qualsiasi delle tue liste programmate o liste flottanti. una lista programmata mostra gli orari di scadenza e segnala cio che e in ritardo; una lista flottante mostra un elenco aperto senza orari di scadenza. se non scegli nulla, il widget continua a mostrare l'intero flusso oggi o flottanti. aggiungi piu widget, ognuno puntato su una lista diversa, per vederli tutti insieme sulla tua schermata home."
+    },
+    {
       "id": "widget-quick-add",
       "section": "WIDGETS_AND_SURFACES",
       "sectionOrder": 5,

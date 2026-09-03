@@ -1099,6 +1099,13 @@
         "keywords": "widget, home screen, glance, today, lock screen",
         "body": "Add the T'Day widget to your home screen to glance at today's tasks. Tapping the widget opens the app at the right place."
       },
+      "widget-list-selection": {
+        "title": "Pick a list for your widget",
+        "summary": "Point any widget at one specific list instead of the whole feed.",
+        "keywords": "widget, list, configure, edit widget, per-list, home screen, ios",
+        "body": "Long-press a T'Day widget and choose Edit Widget to pick exactly which list it shows — any of your scheduled lists or floater lists. A scheduled list shows due times and flags anything overdue; a floater list shows an open list with no due times. Leave it unset and the widget keeps showing the full Today or Floater feed.",
+        "tip": "Add several widgets, each pointed at a different list, to see them all on your home screen at once."
+      },
       "list-widgets": {
         "title": "List widgets",
         "summary": "Put any list on your home screen, not just Today.",

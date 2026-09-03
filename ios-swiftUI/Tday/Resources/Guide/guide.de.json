@@ -1102,6 +1102,39 @@
       "searchBody": "sieh die heutigen aufgaben, ohne die app zu offnen. fuge das t'day-widget zu deinem startbildschirm hinzu, um einen blick auf die heutigen aufgaben zu werfen. ein tipp auf das widget offnet die app an der richtigen stelle."
     },
     {
+      "id": "widget-list-selection",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "list-todo",
+      "platforms": [
+        "IOS"
+      ],
+      "badge": "PRO_TIP",
+      "serverOnly": false,
+      "sinceVersion": "0.7.7",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Liste für dein Widget wählen",
+      "summary": "Ein Widget auf eine bestimmte Liste statt den ganzen Feed richten.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Widget lange gedrückt halten und „Widget bearbeiten\" wählen, um genau festzulegen, welche Liste es zeigt – jede deiner geplanten Listen oder Floater-Listen. Eine geplante Liste zeigt Fälligkeitszeiten und markiert Überfälliges; eine Floater-Liste zeigt eine offene Liste ohne Fälligkeitszeiten. Bleibt die Auswahl leer, zeigt das Widget weiterhin den vollständigen Today- oder Floater-Feed."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Füge mehrere Widgets hinzu, jedes auf eine andere Liste ausgerichtet, um sie alle gleichzeitig auf deinem Startbildschirm zu sehen."
+          ]
+        }
+      ],
+      "searchTitle": "liste fur dein widget wahlen",
+      "searchKeywords": "widget, liste, konfigurieren, widget bearbeiten, pro liste, startbildschirm, ios",
+      "searchBody": "ein widget auf eine bestimmte liste statt den ganzen feed richten. widget lange gedruckt halten und „widget bearbeiten\" wahlen, um genau festzulegen, welche liste es zeigt – jede deiner geplanten listen oder floater-listen. eine geplante liste zeigt falligkeitszeiten und markiert uberfalliges; eine floater-liste zeigt eine offene liste ohne falligkeitszeiten. bleibt die auswahl leer, zeigt das widget weiterhin den vollstandigen today- oder floater-feed. fuge mehrere widgets hinzu, jedes auf eine andere liste ausgerichtet, um sie alle gleichzeitig auf deinem startbildschirm zu sehen."
+    },
+    {
       "id": "widget-quick-add",
       "section": "WIDGETS_AND_SURFACES",
       "sectionOrder": 5,

@@ -1102,6 +1102,39 @@
       "searchBody": "consulta las tareas de hoy sin abrir la app. anade el widget de t'day a tu pantalla de inicio para echar un vistazo a las tareas de hoy. al tocar el widget, la app se abre en el lugar adecuado."
     },
     {
+      "id": "widget-list-selection",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "list-todo",
+      "platforms": [
+        "IOS"
+      ],
+      "badge": "PRO_TIP",
+      "serverOnly": false,
+      "sinceVersion": "0.7.7",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Elige una lista para tu widget",
+      "summary": "Haz que un widget muestre una lista concreta en vez de todo el feed.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Mantén pulsado un widget de T'Day y elige Editar widget para decidir exactamente qué lista muestra: cualquiera de tus listas programadas o de flotantes. Una lista programada muestra horas de vencimiento y marca lo atrasado; una lista de flotantes muestra una lista abierta sin horas de vencimiento. Si la dejas sin elegir, el widget sigue mostrando el feed completo de Hoy o de Flotantes."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Añade varios widgets, cada uno apuntando a una lista distinta, para verlos todos a la vez en tu pantalla de inicio."
+          ]
+        }
+      ],
+      "searchTitle": "elige una lista para tu widget",
+      "searchKeywords": "widget, lista, configurar, editar widget, por lista, pantalla de inicio, ios",
+      "searchBody": "haz que un widget muestre una lista concreta en vez de todo el feed. manten pulsado un widget de t'day y elige editar widget para decidir exactamente que lista muestra: cualquiera de tus listas programadas o de flotantes. una lista programada muestra horas de vencimiento y marca lo atrasado; una lista de flotantes muestra una lista abierta sin horas de vencimiento. si la dejas sin elegir, el widget sigue mostrando el feed completo de hoy o de flotantes. anade varios widgets, cada uno apuntando a una lista distinta, para verlos todos a la vez en tu pantalla de inicio."
+    },
+    {
       "id": "widget-quick-add",
       "section": "WIDGETS_AND_SURFACES",
       "sectionOrder": 5,

@@ -239,6 +239,14 @@ WorkManager fallback, iOS via `WidgetCenter` reloads backed by an App Group snap
 worker on each platform refreshes every 15 minutes as a freshness fallback, and widget state carries
 a "last updated" indicator.
 
+On iOS, either widget can additionally be pointed at one specific todo list or floater list
+(long-press ▸ Edit Widget) instead of the global feed above — the picked list's type decides the
+rendered shape (due-date for a todo list, undated for a floater list), not which of the two widgets
+it was configured from. See "Per-list configuration (R7)" in
+[`ios-swiftUI/README.md`](ios-swiftUI/README.md) and `docs/DATA_MODEL.md`. Android has no
+configuration precedent yet (no `android:configure`, no per-`appWidgetId` storage) — parity is a
+follow-up, not part of this change.
+
 See [`docs/WIDGET_SYNC.md`](docs/WIDGET_SYNC.md) for the full architecture, file layout, and
 per-platform integration checklist.
 
