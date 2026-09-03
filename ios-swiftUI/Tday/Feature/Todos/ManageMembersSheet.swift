@@ -84,7 +84,7 @@ struct ManageMembersSheet: View {
                                 TextField(
                                     "",
                                     text: $searchQuery,
-                                    prompt: Text(L("Search by username"))
+                                    prompt: Text(L("Search by name or username"))
                                         .foregroundStyle(colors.onSurfaceVariant.opacity(0.78))
                                 )
                                 .textInputAutocapitalization(.never)
@@ -262,24 +262,39 @@ struct ManageMembersSheet: View {
 
             Spacer(minLength: 8)
 
-            Button {
-                add(user)
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "plus")
-                        .font(.system(size: 12, weight: .bold))
-                    Text(L("Add"))
-                        .font(.tdayRounded(size: 13, weight: .heavy))
+            if isExistingMember(user) {
+                Text(L("Already a member"))
+                    .font(.tdayRounded(size: 13, weight: .heavy))
+                    .foregroundStyle(colors.onSurfaceVariant)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Capsule().fill(colors.onSurfaceVariant.opacity(0.12)))
+            } else {
+                Button {
+                    add(user)
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "plus")
+                            .font(.system(size: 12, weight: .bold))
+                        Text(L("Add"))
+                            .font(.tdayRounded(size: 13, weight: .heavy))
+                    }
+                    .foregroundStyle(colors.primary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Capsule().fill(colors.primary.opacity(0.15)))
                 }
-                .foregroundStyle(colors.primary)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(Capsule().fill(colors.primary.opacity(0.15)))
+                .buttonStyle(.plain)
+                .disabled(isWorking)
             }
-            .buttonStyle(.plain)
-            .disabled(isWorking)
         }
         .padding(.vertical, 4)
+        .opacity(isExistingMember(user) ? 0.6 : 1)
+    }
+
+    /// The owner and every current member of this list, so a search result can say so.
+    private func isExistingMember(_ user: UserSearchResultDTO) -> Bool {
+        user.id == owner?.userId || members.contains { $0.userId == user.id }
     }
 
     @ViewBuilder
@@ -349,8 +364,11 @@ struct ManageMembersSheet: View {
             guard !Task.isCancelled else { return }
             let users = (try? await repository.searchUsers(query: trimmed)) ?? []
             guard !Task.isCancelled else { return }
-            let existingIds = Set([owner?.userId].compactMap { $0 } + members.map(\.userId))
-            searchResults = users.filter { !existingIds.contains($0.id) }
+            // Everyone the search matched stays in the list. Dropping the current members here
+            // made the sheet say "No users found" for an account that is already shared with,
+            // which reads as the search being broken rather than as the member already being on
+            // the list. searchResultRow marks them instead.
+            searchResults = users
         }
     }
 

@@ -147,25 +147,35 @@ directly.
 | Workflow | Trigger | Purpose |
 |----------|---------|---------|
 | `pr-gate.yml` | PR to `master` | Validates source branch (`develop` only), runs web lint + test, backend test |
+| `android.yml` | PR to `develop` or `master` | Skips when nothing under `android-compose/` or `shared/` (or `version.json`) changed; otherwise runs the Android JVM unit tests and compiles the instrumentation source set |
 | `release.yml` | Push to `master` | Runs lint + tests, resolves the release version (auto-bumping the patch when it is already tagged), builds the signed APK and the Docker image, pushes the release commit, tags, publishes the GitHub release, and only then pushes the image |
 | `ios-testflight.yml` | Push of a `v*` tag (uploads), or `workflow_dispatch` on any ref (build-only) | Diffs the tag against the last release that actually reached TestFlight; when an iOS-relevant file changed, archives the `Tday` scheme on macOS and — on a tag push only — uploads it to TestFlight |
 
 ### Test-Before-Build Policy
 
-**No Docker image is built or published unless all tests pass.** This is enforced in both CI workflows:
+**No Docker image is built or published unless all tests pass.** This is enforced across the CI workflows:
 
 - **PR Gate** (`pr-gate.yml`): On every PR to `master`, the pipeline validates the source branch is `develop`, then runs `npm run lint` and `npm run test` in `tday-web/`, followed by `./gradlew :tday-backend:test`. PRs cannot merge if either step fails.
-- **Release** (`release.yml`): On push to `master`, a `lint-and-test` job runs first. The `build-and-release` job (Docker build, push, tag, release) has `needs: lint-and-test` — it will not start unless lint and tests pass.
+- **Android** (`android.yml`): On every PR to `develop` *or* `master`, `cd android-compose && ./gradlew :app:testDebugUnitTest :app:compileDebugAndroidTestKotlin`. This is the only gate that runs on PRs into `develop`, which is where essentially all work lands — the Android suite is otherwise never executed by CI. A `changes` job skips the Gradle build when the PR touches no Android-relevant file. `:app:lintDebug` is deliberately not part of it (see below).
+- **Release** (`release.yml`): On push to `master`, a `lint-and-test` job runs first — web lint and tests, backend tests, shared tests, guide-content drift, and the Android unit tests. The `build-and-release` job (Docker build, push, tag, release) has `needs: lint-and-test` — it will not start unless all of those pass.
 
 ```
+PR to develop:
+  android.yml: changes → unit-tests
+
 PR to master:
   check-source-branch → lint-and-test → hook-check → (merge allowed)
+  android.yml: changes → unit-tests
 
 Push to master:
   lint-and-test → build-and-release
                     build:   version bump → APK (signed + cert verified) → Docker image
                     publish: release commit → tag → GitHub release + APK → Docker push
 ```
+
+**Android lint is not in the gate.** `:app:lintDebug` reports 47 errors and 410 warnings against
+today's `develop`, so wiring it in would fail every PR on pre-existing findings. It needs its own
+change — a `lint-baseline.xml`, or the fixes — before it can gate anything.
 
 This ensures:
 - Broken code never produces a Docker image.
@@ -634,9 +644,12 @@ repository settings, and cannot be done from a pull request.
 8. **Create the TestFlight group and public link**: App Store Connect → TestFlight → Groups → `+`.
    Enable **Public Link** and, if you want testers to get builds without per-build action, turn on
    automatic distribution for the group.
-9. **Set `ios.updateUrl`** once that public link exists. It is `""` today, so
-   `AppViewModel.bundleUpdateURL()` returns `nil` and both in-app update surfaces render an
-   explanatory sentence with no button. Edit `version.json`, then:
+9. **Set `ios.updateUrl`** once that public link exists. Done — `version.json` now carries the
+   group's public TestFlight link, and it is the only place that value lives. While it was `""`,
+   `AppViewModel.bundleUpdateURL()` returned `nil` and both in-app update surfaces (the blocking
+   `UpdateRequiredView` and the Settings "Update Available" card) rendered an explanatory sentence
+   with no button. To repoint it — at the App Store listing, once the app leaves TestFlight — edit
+   `version.json`, then:
 
    ```bash
    node scripts/version.mjs sync && node scripts/version.mjs check

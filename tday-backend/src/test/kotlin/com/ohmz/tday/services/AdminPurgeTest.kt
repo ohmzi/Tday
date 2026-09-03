@@ -2,10 +2,12 @@ package com.ohmz.tday.services
 
 import com.ohmz.tday.db.TestDatabase
 import com.ohmz.tday.db.tables.CalendarFeedTokens
+import com.ohmz.tday.db.tables.Lists
 import com.ohmz.tday.db.tables.PushSubscriptions
 import com.ohmz.tday.db.tables.UserApiKeys
 import com.ohmz.tday.db.tables.Users
 import com.ohmz.tday.db.tables.WebhookSubscriptions
+import com.ohmz.tday.domain.AppError
 import com.ohmz.tday.domain.AuthenticatedUser
 import com.ohmz.tday.security.PasswordServiceImpl
 import com.ohmz.tday.security.SessionControl
@@ -118,6 +120,44 @@ class AdminPurgeTest {
     }
 
     @Test
+    fun `a reference the purge cannot clear is reported instead of thrown`() = runBlocking {
+        // A member's task living in a list the target owns. The purge deletes the target's own
+        // todos and then the list, and "todos"."projectID" is ON DELETE RESTRICT, so the
+        // stranger's row blocks it. Deleting somebody else's tasks to remove an account is a
+        // product decision, so this asserts the failure is legible rather than that it succeeds.
+        TestDatabase.insertUser(OTHER_ID, username = "member@tday.test")
+        transaction(db) {
+            Lists.insert {
+                it[id] = "list_1"
+                it[name] = "Shared list"
+                it[userID] = TARGET_ID
+                it[createdAt] = LocalDateTime.now()
+                it[updatedAt] = LocalDateTime.now()
+            }
+            exec(
+                """
+                INSERT INTO todos (id, title, "createdAt", "updatedAt", "userID", priority, due, exdates, "projectID")
+                VALUES ('todo_1', 'Their task', now(), now(), '$OTHER_ID', 'Medium', now(), ARRAY[], 'list_1')
+                """.trimIndent(),
+            )
+        }
+
+        val result = service.deleteUser(TARGET_ID, admin)
+
+        assertEquals(
+            AppError.Conflict(
+                "this account still has data referencing it and was not deleted; " +
+                    "the server log names the constraint that blocked it",
+            ),
+            result.leftOrNull(),
+        )
+        transaction(db) {
+            assertEquals(1, Users.selectAll().where { Users.id eq TARGET_ID }.count(), "the purge rolled back")
+        }
+        assertEquals(emptyList(), revokedSessions, "a failed purge must not revoke sessions")
+    }
+
+    @Test
     fun `every column referencing a user is covered by the purge`() {
         val covered: Set<Column<*>> = USER_OWNED_CHILD_COLUMNS.toSet()
 
@@ -149,5 +189,6 @@ class AdminPurgeTest {
     private companion object {
         const val ADMIN_ID = "admin_1"
         const val TARGET_ID = "user_1"
+        const val OTHER_ID = "user_2"
     }
 }

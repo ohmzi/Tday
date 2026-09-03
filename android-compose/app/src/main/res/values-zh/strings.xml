@@ -333,8 +333,9 @@
     <string name="members_title">成员</string>
     <string name="members_add_section">添加成员</string>
     <string name="members_add_action">添加</string>
-    <string name="members_search_placeholder">按用户名搜索</string>
+    <string name="members_search_placeholder">按姓名或用户名搜索</string>
     <string name="members_no_results">未找到用户</string>
+    <string name="members_already_member">已是成员</string>
     <string name="members_remove">移除成员</string>
     <string name="members_leave_list">退出列表</string>
     <string name="members_shared_by">由 %1$s 分享</string>
