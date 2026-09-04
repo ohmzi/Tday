@@ -26,11 +26,13 @@ import { wasDeletedLocallyJustNow } from "@/lib/task-completion-signal";
  * *remote* delete or move-away of the last task still slips through as a
  * false celebration: this tab has no marker for a mutation that happened on
  * someone else's — a generic "the cache changed" signal carries no reason.
- * That is a deliberate, narrower trade-off than iOS/Android make (their
- * single-ViewModel-per-screen shape lets the equivalent check live right
- * where the ambiguous cache-change notification arrives, with no cross-tab
- * gap); closing it fully here would need the server to say *why* a list
- * changed, not just *that* it did.
+ * This is not a web-only gap: iOS's `remoteEmptiedAt` and Android's
+ * `remoteEmptiedAtMs` are set from the exact same kind of reason-free
+ * "the cache changed, re-read it" signal (see
+ * `TodoListViewModel.hydrateFromExternalCacheChange` on both), so a *remote*
+ * delete of the last task false-celebrates there too — their own doc
+ * comments say so. Closing it fully on any platform would need the server to
+ * say *why* a list changed, not just *that* it did.
  *
  * The comparison runs during render, not in an effect — the same render that
  * discovers `isEmpty` just turned `true` already has the answer, which is
