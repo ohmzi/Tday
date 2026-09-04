@@ -332,6 +332,41 @@
       "searchBody": "deslize a linha de uma tarefa para acoes rapidas sem a abrir. deslize a linha de uma tarefa para revelar acoes rapidas — conclui-la ou remove-la — sem sequer a abrir. uma tarefa concluida mostra uma notificacao para anular durante alguns segundos, por isso um deslize por engano nunca e definitivo."
     },
     {
+      "id": "copy-task-text",
+      "section": "GESTURES",
+      "sectionOrder": 2,
+      "icon": "copy",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.7.8",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Copiar detalhes da tarefa",
+      "summary": "Copie o título, as notas, a data de vencimento e a prioridade de uma tarefa como texto.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Deslize uma tarefa e toque em Copiar — ou use o botão Copiar no desktop — para copiar seu título, notas, data de vencimento e prioridade como texto simples, pronto para colar em qualquer lugar."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Útil para colar uma tarefa em uma mensagem, e-mail ou outro aplicativo sem precisar redigitá-la."
+          ]
+        }
+      ],
+      "searchTitle": "copiar detalhes da tarefa",
+      "searchKeywords": "copiar, area de transferencia, compartilhar, texto, deslizar",
+      "searchBody": "copie o titulo, as notas, a data de vencimento e a prioridade de uma tarefa como texto. deslize uma tarefa e toque em copiar — ou use o botao copiar no desktop — para copiar seu titulo, notas, data de vencimento e prioridade como texto simples, pronto para colar em qualquer lugar. util para colar uma tarefa em uma mensagem, e-mail ou outro aplicativo sem precisar redigita-la."
+    },
+    {
       "id": "long-press-actions",
       "section": "GESTURES",
       "sectionOrder": 2,

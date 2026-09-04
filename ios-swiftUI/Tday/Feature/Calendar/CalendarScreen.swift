@@ -589,6 +589,9 @@ struct CalendarScreen: View {
                         onEdit: {
                             editingTodo = todo
                         },
+                        onCopy: {
+                            viewModel.copyToClipboard(todo)
+                        },
                         onDelete: {
                             Task { await viewModel.delete(todo) }
                         }

@@ -75,6 +75,15 @@ object GuideCatalog {
             deepLink = GuideDeepLink(android = "todos/today", ios = "today"),
         ),
         topic(
+            // Right after Swipe actions: Copy is one of the pills that topic
+            // introduces, and on web it's reachable from the same task row (swipe
+            // on mobile, the hover actions on desktop) even though web has no
+            // separate swipe-actions topic of its own.
+            GuideTopicIds.COPY_TASK_TEXT, GuideSectionId.GESTURES, "copy",
+            setOf(WEB, ANDROID, IOS), badge = GuideBadge.HIDDEN_GEM, sinceVersion = "0.7.8",
+            body = listOf(para(GuideTopicIds.COPY_TASK_TEXT), tip(GuideTopicIds.COPY_TASK_TEXT)),
+        ),
+        topic(
             GuideTopicIds.LONG_PRESS_ACTIONS, GuideSectionId.GESTURES, "hand",
             setOf(ANDROID, IOS), badge = GuideBadge.HIDDEN_GEM,
             body = listOf(para(GuideTopicIds.LONG_PRESS_ACTIONS)),

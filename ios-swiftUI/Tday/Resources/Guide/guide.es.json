@@ -332,6 +332,41 @@
       "searchBody": "desliza una tarea para acciones rapidas sin abrirla. desliza una fila de tarea para mostrar acciones rapidas: completarla o eliminarla, sin necesidad de abrir la tarea. una tarea completada muestra un aviso para deshacer durante unos segundos, asi que un desliz por error nunca es definitivo."
     },
     {
+      "id": "copy-task-text",
+      "section": "GESTURES",
+      "sectionOrder": 2,
+      "icon": "copy",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.7.8",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Copiar detalles de la tarea",
+      "summary": "Copia el título, las notas, la fecha de vencimiento y la prioridad de una tarea como texto.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Desliza una tarea y toca Copiar — o usa el botón Copiar en el escritorio — para copiar su título, notas, fecha de vencimiento y prioridad como texto sin formato, listo para pegar en cualquier lugar."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Útil para pegar una tarea en un mensaje, correo electrónico u otra aplicación sin volver a escribirla."
+          ]
+        }
+      ],
+      "searchTitle": "copiar detalles de la tarea",
+      "searchKeywords": "copiar, portapapeles, compartir, texto, deslizar",
+      "searchBody": "copia el titulo, las notas, la fecha de vencimiento y la prioridad de una tarea como texto. desliza una tarea y toca copiar — o usa el boton copiar en el escritorio — para copiar su titulo, notas, fecha de vencimiento y prioridad como texto sin formato, listo para pegar en cualquier lugar. util para pegar una tarea en un mensaje, correo electronico u otra aplicacion sin volver a escribirla."
+    },
+    {
       "id": "long-press-actions",
       "section": "GESTURES",
       "sectionOrder": 2,

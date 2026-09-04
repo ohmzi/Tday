@@ -340,7 +340,10 @@
     "sharing": "Sharing",
     "share": "Share",
     "shareListCopied": "List copied to clipboard",
+    "taskCopied": "Task copied to clipboard",
+    "taskCopyFailed": "Could not copy task to clipboard",
     "shareDueLabel": "Due: {{date}}",
+    "sharePriorityLabel": "Priority: {{priority}}",
     "shareTaskCount_one": "{{count}} task",
     "shareTaskCount_few": "{{count}} tasks",
     "shareTaskCount_many": "{{count}} tasks",
@@ -454,6 +457,7 @@
       "pinToTop": "Pin to top",
       "edit": "Edit",
       "editAsInstance": "Edit as instance",
+      "copy": "Copy",
       "delete": "Delete",
       "Move to": "Move to..."
     },
@@ -975,6 +979,13 @@
         "keywords": "swipe, gesture, slide, complete, delete, quick, row",
         "body": "Swipe a task row to reveal quick actions — complete it, or remove it — without opening the task at all.",
         "tip": "A completed task shows an undo toast for a few seconds, so a mis-swipe is never final."
+      },
+      "copy-task-text": {
+        "title": "Copy task details",
+        "summary": "Copy a task's title, notes, due date, and priority as text.",
+        "keywords": "copy, clipboard, share, text, swipe",
+        "body": "Swipe a task and tap Copy — or use the Copy button on desktop — to copy its title, notes, due date, and priority as plain text, ready to paste anywhere.",
+        "tip": "Handy for pasting a task into a message, email, or another app without retyping it."
       },
       "long-press-actions": {
         "title": "Long-press a task",

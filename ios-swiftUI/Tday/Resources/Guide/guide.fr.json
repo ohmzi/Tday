@@ -332,6 +332,41 @@
       "searchBody": "balayez une ligne de tache pour des actions rapides sans l'ouvrir. balayez une ligne de tache pour reveler des actions rapides — la terminer ou la supprimer — sans ouvrir la tache du tout. une tache terminee affiche un toast d'annulation pendant quelques secondes, pour qu'un balayage malencontreux ne soit jamais definitif."
     },
     {
+      "id": "copy-task-text",
+      "section": "GESTURES",
+      "sectionOrder": 2,
+      "icon": "copy",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.7.8",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Copier les détails de la tâche",
+      "summary": "Copiez le titre, les notes, l'échéance et la priorité d'une tâche sous forme de texte.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Balayez une tâche et appuyez sur Copier — ou utilisez le bouton Copier sur ordinateur — pour copier son titre, ses notes, son échéance et sa priorité en texte brut, prêt à coller n'importe où."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Pratique pour coller une tâche dans un message, un e-mail ou une autre application sans avoir à la retaper."
+          ]
+        }
+      ],
+      "searchTitle": "copier les details de la tache",
+      "searchKeywords": "copier, presse-papiers, partager, texte, balayer",
+      "searchBody": "copiez le titre, les notes, l'echeance et la priorite d'une tache sous forme de texte. balayez une tache et appuyez sur copier — ou utilisez le bouton copier sur ordinateur — pour copier son titre, ses notes, son echeance et sa priorite en texte brut, pret a coller n'importe ou. pratique pour coller une tache dans un message, un e-mail ou une autre application sans avoir a la retaper."
+    },
+    {
       "id": "long-press-actions",
       "section": "GESTURES",
       "sectionOrder": 2,

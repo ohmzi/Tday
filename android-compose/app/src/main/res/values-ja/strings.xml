@@ -16,6 +16,8 @@
     <string name="action_create_list">リストを作成</string>
     <string name="action_edit">編集</string>
     <string name="action_edit_task">タスクを編集</string>
+    <string name="action_copy">コピー</string>
+    <string name="action_copy_task">タスクをコピー</string>
     <string name="action_delete_task">タスクを削除</string>
     <string name="action_delete_list">リストを削除</string>
     <string name="action_delete">削除</string>
@@ -569,6 +571,8 @@
     <string name="release_no_apk">このリリースに APK は添付されていません。</string>
     <string name="release_launch_update_toast">更新 %1$s が利用可能です。</string>
     <string name="task_deleted_toast">タスクを削除しました</string>
+    <string name="task_copied_toast">クリップボードにコピーしました</string>
+    <string name="task_copy_failed_toast">クリップボードにコピーできませんでした</string>
     <string name="list_deleted_toast">リストを削除しました</string>
     <string name="release_view_on_github">GitHub で表示</string>
 

@@ -340,7 +340,10 @@
     "sharing": "Compartilhamento",
     "share": "Compartilhar",
     "shareListCopied": "Lista copiada para a área de transferência",
+    "taskCopied": "Tarefa copiada para a área de transferência",
+    "taskCopyFailed": "Não foi possível copiar a tarefa para a área de transferência",
     "shareDueLabel": "Vencimento: {{date}}",
+    "sharePriorityLabel": "Prioridade: {{priority}}",
     "shareTaskCount_one": "{{count}} tarefa",
     "shareTaskCount_few": "{{count}} tarefas",
     "shareTaskCount_many": "{{count}} tarefas",
@@ -454,6 +457,7 @@
       "pinToTop": "Fixar no topo",
       "edit": "Editar",
       "editAsInstance": "Editar como instância",
+      "copy": "Copiar",
       "delete": "Eliminar",
       "Move to": "Mover para..."
     },
@@ -975,6 +979,13 @@
         "keywords": "deslizar, gesto, arrastar, concluir, eliminar, rápido, linha",
         "body": "Deslize a linha de uma tarefa para revelar ações rápidas — concluí-la ou removê-la — sem sequer a abrir.",
         "tip": "Uma tarefa concluída mostra uma notificação para anular durante alguns segundos, por isso um deslize por engano nunca é definitivo."
+      },
+      "copy-task-text": {
+        "title": "Copiar detalhes da tarefa",
+        "summary": "Copie o título, as notas, a data de vencimento e a prioridade de uma tarefa como texto.",
+        "keywords": "copiar, área de transferência, compartilhar, texto, deslizar",
+        "body": "Deslize uma tarefa e toque em Copiar — ou use o botão Copiar no desktop — para copiar seu título, notas, data de vencimento e prioridade como texto simples, pronto para colar em qualquer lugar.",
+        "tip": "Útil para colar uma tarefa em uma mensagem, e-mail ou outro aplicativo sem precisar redigitá-la."
       },
       "long-press-actions": {
         "title": "Premir uma tarefa sem largar",

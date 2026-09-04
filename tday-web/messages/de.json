@@ -340,7 +340,10 @@
     "sharing": "Teilen",
     "share": "Teilen",
     "shareListCopied": "Liste in die Zwischenablage kopiert",
+    "taskCopied": "Aufgabe in die Zwischenablage kopiert",
+    "taskCopyFailed": "Aufgabe konnte nicht in die Zwischenablage kopiert werden",
     "shareDueLabel": "Fällig: {{date}}",
+    "sharePriorityLabel": "Priorität: {{priority}}",
     "shareTaskCount_one": "{{count}} Aufgabe",
     "shareTaskCount_few": "{{count}} Aufgaben",
     "shareTaskCount_many": "{{count}} Aufgaben",
@@ -454,6 +457,7 @@
       "pinToTop": "Oben anheften",
       "edit": "Bearbeiten",
       "editAsInstance": "Als Instanz bearbeiten",
+      "copy": "Kopieren",
       "delete": "Löschen",
       "Move to": "Verschieben nach..."
     },
@@ -975,6 +979,13 @@
         "keywords": "wischen, geste, streichen, abschließen, löschen, schnell, zeile",
         "body": "Wische über eine Aufgabenzeile, um schnelle Aktionen einzublenden — sie abschließen oder entfernen —, ohne die Aufgabe überhaupt zu öffnen.",
         "tip": "Eine abgeschlossene Aufgabe zeigt für ein paar Sekunden einen Rückgängig-Hinweis, sodass ein versehentliches Wischen nie endgültig ist."
+      },
+      "copy-task-text": {
+        "title": "Aufgabendetails kopieren",
+        "summary": "Kopiere Titel, Notizen, Fälligkeitsdatum und Priorität einer Aufgabe als Text.",
+        "keywords": "kopieren, zwischenablage, teilen, text, wischen",
+        "body": "Wische eine Aufgabe und tippe auf Kopieren — oder nutze die Kopieren-Schaltfläche am Desktop —, um Titel, Notizen, Fälligkeitsdatum und Priorität als reinen Text zu kopieren, bereit zum Einfügen überall.",
+        "tip": "Praktisch, um eine Aufgabe in eine Nachricht, E-Mail oder eine andere App einzufügen, ohne sie neu zu tippen."
       },
       "long-press-actions": {
         "title": "Aufgabe gedrückt halten",

@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import UIKit
 
 @MainActor
 @Observable
@@ -112,6 +113,13 @@ final class CalendarViewModel {
         } catch {
             container.snackbarManager.show(userFacingMessage(for: error, fallback: "Could not update task."), kind: .error)
         }
+    }
+
+    /// Swipe-to-copy: writes the task's title/notes/due/priority as plain text
+    /// to the system pasteboard. See TodoListViewModel.copyToClipboard.
+    func copyToClipboard(_ todo: TodoItem) {
+        UIPasteboard.general.string = ShareSheet.taskShareText(todo)
+        container.snackbarManager.show(L("Copied to clipboard"), kind: .success)
     }
 
     /// Delayed-commit delete: the task is staged out of the local cache
