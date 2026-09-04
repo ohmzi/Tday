@@ -9,6 +9,7 @@ import NativePageHeader, { useNativePageBarSlots } from "@/components/app/Native
 import ScreenWatermark from "@/components/app/ScreenWatermark";
 import EmptyState from "@/components/app/EmptyState";
 import { taskJustCompleted } from "@/lib/task-completion-signal";
+import { useCelebrateEmptyTransition } from "@/hooks/use-celebrate-empty-transition";
 import MobileSearchHeader from "@/components/ui/MobileSearchHeader";
 import { useShareListAsText } from "@/hooks/use-share-list";
 import { useIsLocalMode } from "@/hooks/useAppMode";
@@ -32,6 +33,9 @@ export default function FloaterListContainer({ id }: { id: string }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [editListOpen, setEditListOpen] = useState(false);
   const [membersOpen, setMembersOpen] = useState(false);
+  // Remote sibling of `taskJustCompleted()` below — fires for a completion on
+  // another device or by a collaborator, not just this tab's own tap.
+  const remoteEmptied = useCelebrateEmptyTransition(floaterListTodos.length === 0);
 
   const listMeta = floaterListMetaData[id] ?? floaterList;
   const listName = listMeta?.name?.trim() || "";
@@ -182,7 +186,9 @@ export default function FloaterListContainer({ id }: { id: string }) {
           description={appDict("floaterListEmptyBody")}
           // Finishing a list is a payoff, not an absence: the confetti is for
           // the tick that emptied it, not for a list that was already empty.
-          celebrate={taskJustCompleted()}
+          // Whether that tick happened here, on another device, or from a
+          // collaborator on this shared list.
+          celebrate={taskJustCompleted() || remoteEmptied}
         />
       ) : null}
 

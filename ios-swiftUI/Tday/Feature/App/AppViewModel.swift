@@ -148,6 +148,7 @@ final class AppViewModel {
 
     @ObservationIgnored nonisolated(unsafe) private var cacheObservationTask: Task<Void, Never>?
     @ObservationIgnored nonisolated(unsafe) private var syncLoopTask: Task<Void, Never>?
+    @ObservationIgnored nonisolated(unsafe) private var realtimeSyncDebounceTask: Task<Void, Never>?
     @ObservationIgnored nonisolated(unsafe) private var offlineSyncFailureTask: Task<Void, Never>?
     @ObservationIgnored nonisolated(unsafe) private var offlineSyncSuccessTask: Task<Void, Never>?
     @ObservationIgnored nonisolated(unsafe) private var userInitiatedSyncFailureTask: Task<Void, Never>?
@@ -174,6 +175,7 @@ final class AppViewModel {
     deinit {
         cacheObservationTask?.cancel()
         syncLoopTask?.cancel()
+        realtimeSyncDebounceTask?.cancel()
         offlineSyncFailureTask?.cancel()
         userInitiatedSyncFailureTask?.cancel()
         offlineSyncSuccessTask?.cancel()
@@ -899,24 +901,53 @@ final class AppViewModel {
                 guard event.requiresRefresh, let self else {
                     return
                 }
-                let result = await self.container.syncAndRefresh(
-                    force: true,
-                    replayPendingMutations: true,
-                    notifyOfflineFailure: false
-                )
-                let recoveredResult = await self.recoverSessionAndRetrySyncIfNeeded(
-                    after: result,
-                    connectionProbeTimeoutSeconds: nil
-                )
-                await MainActor.run {
-                    self.applySyncResult(recoveredResult, suppressAuthenticationExpired: true)
-                }
-                await self.rescheduleReminders()
+                await self.scheduleRealtimeSync()
             }
         }
     }
 
+    // A burst of remote events (e.g. someone bulk-completing tasks on another device) used to
+    // trigger one full force-sync PER event: `RealtimeClient` awaits this handler before reading
+    // its next WebSocket message, so a burst was processed as N serial full sync cycles, each
+    // fetching the complete current server state — the same freeze this fix targets on the
+    // reconnect path, but triggered mid-session by someone else's activity instead. Debounce
+    // into a single trailing sync: each new qualifying event pushes the timer back, so only the
+    // last event in a burst actually runs `syncAndRefresh` — and because each sync fetches the
+    // full current server state (not a delta), that one call picks up everything the whole
+    // burst produced. A single isolated event still syncs, just after this short delay instead
+    // of instantly — imperceptible for a background refresh.
+    private static let realtimeSyncDebounceDelay: Duration = .milliseconds(400)
+
+    private func scheduleRealtimeSync() {
+        realtimeSyncDebounceTask?.cancel()
+        realtimeSyncDebounceTask = Task { [weak self] in
+            try? await Task.sleep(for: Self.realtimeSyncDebounceDelay)
+            guard !Task.isCancelled, let self else {
+                return
+            }
+            await self.performRealtimeSync()
+        }
+    }
+
+    private func performRealtimeSync() async {
+        let result = await self.container.syncAndRefresh(
+            force: true,
+            replayPendingMutations: true,
+            notifyOfflineFailure: false
+        )
+        let recoveredResult = await self.recoverSessionAndRetrySyncIfNeeded(
+            after: result,
+            connectionProbeTimeoutSeconds: nil
+        )
+        await MainActor.run {
+            self.applySyncResult(recoveredResult, suppressAuthenticationExpired: true)
+        }
+        await self.rescheduleReminders()
+    }
+
     private func stopRealtime() {
+        realtimeSyncDebounceTask?.cancel()
+        realtimeSyncDebounceTask = nil
         let realtimeClient = container.realtimeClient
         Task {
             await realtimeClient.stop()
