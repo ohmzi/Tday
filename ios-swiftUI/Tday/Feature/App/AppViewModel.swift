@@ -85,6 +85,11 @@ final class AppViewModel {
     /// old global admin toggle is gone.
     var aiSummaryEnabled = true
     var isAiSummarySaving = false
+    /// Which root feed (Scheduled or Floaters) opens on a fresh cold launch. `AppRootView`
+    /// seeds its own `rootFeedTab` from `SettingsRepository.defaultHomeScreenSnapshot()`
+    /// directly at `init`, ahead of this property loading — this one only drives the Settings
+    /// row and stays in sync with it afterwards.
+    var defaultHomeScreen: RootFeedTab = .scheduledTaskHome
     var selectedReminder: ReminderOption
     var dayAheadOption: DayAheadOption
     var isOffline = false
@@ -143,6 +148,7 @@ final class AppViewModel {
 
     @ObservationIgnored nonisolated(unsafe) private var cacheObservationTask: Task<Void, Never>?
     @ObservationIgnored nonisolated(unsafe) private var syncLoopTask: Task<Void, Never>?
+    @ObservationIgnored nonisolated(unsafe) private var realtimeSyncDebounceTask: Task<Void, Never>?
     @ObservationIgnored nonisolated(unsafe) private var offlineSyncFailureTask: Task<Void, Never>?
     @ObservationIgnored nonisolated(unsafe) private var offlineSyncSuccessTask: Task<Void, Never>?
     @ObservationIgnored nonisolated(unsafe) private var userInitiatedSyncFailureTask: Task<Void, Never>?
@@ -169,6 +175,7 @@ final class AppViewModel {
     deinit {
         cacheObservationTask?.cancel()
         syncLoopTask?.cancel()
+        realtimeSyncDebounceTask?.cancel()
         offlineSyncFailureTask?.cancel()
         userInitiatedSyncFailureTask?.cancel()
         offlineSyncSuccessTask?.cancel()
@@ -592,6 +599,39 @@ final class AppViewModel {
         isAiSummarySaving = false
     }
 
+    /// Loads the default-home-screen preference (cache first, then server). Unlike
+    /// `refreshAiSummarySetting`, this is NOT skipped in Local Mode: the preference is
+    /// user-configurable there too, and `SettingsRepository.refreshDefaultHomeScreen()`
+    /// already resolves to a cache-only read in that mode.
+    func refreshDefaultHomeScreen() async {
+        defaultHomeScreen = rootFeedTabFromDefaultHomeScreenApiValue(
+            container.settingsRepository.defaultHomeScreenSnapshot()
+        )
+        defaultHomeScreen = rootFeedTabFromDefaultHomeScreenApiValue(
+            await container.settingsRepository.refreshDefaultHomeScreen()
+        )
+    }
+
+    /// Sets the default-home-screen preference (optimistic, reverts on failure) — mirrors
+    /// `setAiSummaryEnabled`.
+    func setDefaultHomeScreen(_ tab: RootFeedTab) async {
+        let previous = defaultHomeScreen
+        guard previous != tab else { return }
+        defaultHomeScreen = tab
+        do {
+            let saved = try await container.settingsRepository.setDefaultHomeScreen(
+                tab.defaultHomeScreenApiValue
+            )
+            defaultHomeScreen = rootFeedTabFromDefaultHomeScreenApiValue(saved)
+        } catch {
+            defaultHomeScreen = previous
+            container.snackbarManager.show(
+                userFacingMessage(for: error, fallback: "Could not update your settings."),
+                kind: .error
+            )
+        }
+    }
+
     // MARK: - Account (profile name + password)
 
     /// Lightweight session re-fetch: re-pulls the user from the server and
@@ -783,9 +823,15 @@ final class AppViewModel {
         navigate(to: route)
     }
 
+    // `[weak self]` is load-bearing here, not style — see the identical note
+    // on `TodoListViewModel.observeCacheChanges()`. `AppRootView.init` (see
+    // `_appViewModel = State(initialValue: AppViewModel(...))`) constructs this
+    // view model the same way, so without a weak capture a discarded instance
+    // could never deinit, and `cacheObservationTask?.cancel()` would never run.
     private func observeCacheChanges() {
-        cacheObservationTask = Task {
+        cacheObservationTask = Task { [weak self] in
             for await _ in NotificationCenter.default.notifications(named: .offlineCacheDidChange) {
+                guard let self else { return }
                 await MainActor.run {
                     self.refreshSyncStatusFromCache()
                 }
@@ -806,13 +852,21 @@ final class AppViewModel {
         lastSyncAttemptEpochMs = state.lastSyncAttemptEpochMs
     }
 
+    // Found alongside the four observer tasks above, during the same fix: an
+    // identical strong-self cycle, and arguably the worse one — a leaked
+    // instance would not just react to cache writes forever but run its own
+    // independent 5-minute full-sync timer forever. `[weak self]` here is
+    // required for the same reason as the others: any single strong-self Task
+    // on this object is enough to keep the whole thing (and every other task
+    // it owns) permanently uncollectable.
     private func startSyncLoop() {
         guard syncLoopTask == nil else {
             return
         }
-        syncLoopTask = Task {
+        syncLoopTask = Task { [weak self] in
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(300))
+                guard let self else { return }
                 guard await MainActor.run(body: { self.authenticated }) else {
                     continue
                 }
@@ -847,24 +901,53 @@ final class AppViewModel {
                 guard event.requiresRefresh, let self else {
                     return
                 }
-                let result = await self.container.syncAndRefresh(
-                    force: true,
-                    replayPendingMutations: true,
-                    notifyOfflineFailure: false
-                )
-                let recoveredResult = await self.recoverSessionAndRetrySyncIfNeeded(
-                    after: result,
-                    connectionProbeTimeoutSeconds: nil
-                )
-                await MainActor.run {
-                    self.applySyncResult(recoveredResult, suppressAuthenticationExpired: true)
-                }
-                await self.rescheduleReminders()
+                await self.scheduleRealtimeSync()
             }
         }
     }
 
+    // A burst of remote events (e.g. someone bulk-completing tasks on another device) used to
+    // trigger one full force-sync PER event: `RealtimeClient` awaits this handler before reading
+    // its next WebSocket message, so a burst was processed as N serial full sync cycles, each
+    // fetching the complete current server state — the same freeze this fix targets on the
+    // reconnect path, but triggered mid-session by someone else's activity instead. Debounce
+    // into a single trailing sync: each new qualifying event pushes the timer back, so only the
+    // last event in a burst actually runs `syncAndRefresh` — and because each sync fetches the
+    // full current server state (not a delta), that one call picks up everything the whole
+    // burst produced. A single isolated event still syncs, just after this short delay instead
+    // of instantly — imperceptible for a background refresh.
+    private static let realtimeSyncDebounceDelay: Duration = .milliseconds(400)
+
+    private func scheduleRealtimeSync() {
+        realtimeSyncDebounceTask?.cancel()
+        realtimeSyncDebounceTask = Task { [weak self] in
+            try? await Task.sleep(for: Self.realtimeSyncDebounceDelay)
+            guard !Task.isCancelled, let self else {
+                return
+            }
+            await self.performRealtimeSync()
+        }
+    }
+
+    private func performRealtimeSync() async {
+        let result = await self.container.syncAndRefresh(
+            force: true,
+            replayPendingMutations: true,
+            notifyOfflineFailure: false
+        )
+        let recoveredResult = await self.recoverSessionAndRetrySyncIfNeeded(
+            after: result,
+            connectionProbeTimeoutSeconds: nil
+        )
+        await MainActor.run {
+            self.applySyncResult(recoveredResult, suppressAuthenticationExpired: true)
+        }
+        await self.rescheduleReminders()
+    }
+
     private func stopRealtime() {
+        realtimeSyncDebounceTask?.cancel()
+        realtimeSyncDebounceTask = nil
         let realtimeClient = container.realtimeClient
         Task {
             await realtimeClient.stop()
@@ -944,9 +1027,14 @@ final class AppViewModel {
         return true
     }
 
+    // `[weak self]` matters on all four observer tasks in this file, not just
+    // this one: any single strong-self cycle among them is enough to keep this
+    // whole view model uncollectable, which would keep every one of the other
+    // three alive right along with it regardless of their own capture lists.
     private func observeOfflineSyncFailures() {
-        offlineSyncFailureTask = Task {
+        offlineSyncFailureTask = Task { [weak self] in
             for await _ in NotificationCenter.default.notifications(named: .offlineSyncAttemptFailed) {
+                guard let self else { return }
                 await self.confirmOfflineSyncFailure()
             }
         }
@@ -964,8 +1052,9 @@ final class AppViewModel {
     /// (bypasses the cooldown), with the right message kind. No second sync: the user's
     /// refresh already synced; we only need to report the outcome.
     private func observeUserInitiatedSyncFailures() {
-        userInitiatedSyncFailureTask = Task {
+        userInitiatedSyncFailureTask = Task { [weak self] in
             for await notification in NotificationCenter.default.notifications(named: .userInitiatedSyncFailedOffline) {
+                guard let self else { return }
                 let serverDown = (notification.userInfo?["serverDown"] as? Bool) ?? false
                 await MainActor.run {
                     guard self.authenticated, !self.isLocalMode else { return }
@@ -979,8 +1068,9 @@ final class AppViewModel {
     }
 
     private func observeOfflineSyncSuccesses() {
-        offlineSyncSuccessTask = Task {
+        offlineSyncSuccessTask = Task { [weak self] in
             for await _ in NotificationCenter.default.notifications(named: .offlineSyncAttemptSucceeded) {
+                guard let self else { return }
                 await MainActor.run {
                     guard self.authenticated else {
                         return

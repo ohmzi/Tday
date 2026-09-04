@@ -6,6 +6,7 @@ import com.ohmz.tday.config.AppConfig
 import com.ohmz.tday.domain.AppError
 import com.ohmz.tday.domain.withAuth
 import com.ohmz.tday.models.response.FloaterResponse
+import com.ohmz.tday.models.response.FloaterUncompleteResponse
 import com.ohmz.tday.models.response.TodoResponse
 import com.ohmz.tday.routes.mobileProbeRoutes
 import com.ohmz.tday.routes.todoRoutes
@@ -377,7 +378,7 @@ class RateLimitingTest {
 
         override suspend fun completeFloater(userId: String, floaterId: String): Either<AppError, Unit> = Unit.right()
 
-        override suspend fun uncompleteFloater(userId: String, floaterId: String): Either<AppError, Unit> = Unit.right()
+        override suspend fun uncompleteFloater(userId: String, floaterId: String): Either<AppError, FloaterUncompleteResponse> = FloaterUncompleteResponse().right()
 
         override suspend fun prioritize(userId: String, floaterId: String, priority: String): Either<AppError, Unit> = Unit.right()
 

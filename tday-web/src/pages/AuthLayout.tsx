@@ -25,7 +25,10 @@ export default function AuthLayout() {
   }
 
   if (isApprovedUser) {
-    return <Navigate to={`/${loc}/app/tday`} replace />;
+    // Not straight to /app/tday: the Scheduled-vs-Floater default lives behind
+    // UserPreferencesProvider, which only mounts inside AppLayout, below this gate. The /app
+    // index route (AppHomeRedirectPage) makes the real call once that preference is loaded.
+    return <Navigate to={`/${loc}/app`} replace />;
   }
 
   // The onboarding wizard rendered by /login and /register owns the full-screen

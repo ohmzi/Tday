@@ -340,7 +340,10 @@
     "sharing": "Compartir",
     "share": "Compartir",
     "shareListCopied": "Lista copiada al portapapeles",
+    "taskCopied": "Tarea copiada al portapapeles",
+    "taskCopyFailed": "No se pudo copiar la tarea al portapapeles",
     "shareDueLabel": "Vence: {{date}}",
+    "sharePriorityLabel": "Prioridad: {{priority}}",
     "shareTaskCount_one": "{{count}} tarea",
     "shareTaskCount_few": "{{count}} tareas",
     "shareTaskCount_many": "{{count}} tareas",
@@ -442,7 +445,8 @@
     "bulkUpdateFailed_one": "No se pudo actualizar una tarea",
     "bulkUpdateFailed_few": "No se pudieron actualizar {{count}} tareas",
     "bulkUpdateFailed_many": "No se pudieron actualizar {{count}} tareas",
-    "bulkUpdateFailed_other": "No se pudieron actualizar {{count}} tareas"
+    "bulkUpdateFailed_other": "No se pudieron actualizar {{count}} tareas",
+    "floaterCompletedTile": "Completado"
   },
   "today": {
     "saveInstance": "Guardar instancia",
@@ -453,6 +457,7 @@
       "pinToTop": "Fijar arriba",
       "edit": "Editar",
       "editAsInstance": "Editar como instancia",
+      "copy": "Copiar",
       "delete": "Eliminar",
       "Move to": "Mover a..."
     },
@@ -500,7 +505,12 @@
   "completed": {
     "title": "Historial de tareas completadas",
     "empty": "Aún no has completado nada",
-    "emptyBody": "Marca algo como hecho y aparecerá aquí."
+    "emptyBody": "Marca algo como hecho y aparecerá aquí.",
+    "tabTasks": "Tareas",
+    "floaterEmpty": "Aún no hay flotantes terminados",
+    "floaterEmptyBody": "Marca algo como hecho en Flotante y aparecerá aquí.",
+    "listDeletedSuffix": "lista eliminada",
+    "floaterRestoredIntoRecreatedList": "Restaurado: se recreó “{{listName}}”"
   },
   "modal": {
     "confirm": "Confirmar",
@@ -627,6 +637,10 @@
       "title": "Apariencia",
       "description": "Elige claro, oscuro o sigue la configuración de tu sistema.",
       "descriptionSystem": "Sigue tu dispositivo, claro u oscuro. Actualmente usando {{theme}}."
+    },
+    "behavior": {
+      "title": "Comportamiento",
+      "defaultHomeScreen": "Pantalla de inicio predeterminada"
     },
     "language": {
       "title": "Idioma",
@@ -921,6 +935,12 @@
         "keywords": "programado, en cualquier momento, vista, dock, raíz, navegar, pestañas",
         "body": "T'Day tiene dos vistas hermanas. Programado guarda tus tareas con fecha para hoy y más adelante. En cualquier momento guarda los Flotantes: tareas sin fecha. Cambia entre ellas desde el dock inferior y crea una tarea desde cualquiera de las dos."
       },
+      "default-home-screen": {
+        "title": "Pantalla de inicio predeterminada",
+        "summary": "Elige si T'Day se abre en Programado o En cualquier momento.",
+        "keywords": "predeterminada, pantalla de inicio, inicio, arranque, programado, en cualquier momento, comportamiento, ajustes",
+        "body": "Ajustes tiene una sección Comportamiento donde eliges qué vista se abre primero: Programado o En cualquier momento. Solo determina lo que ves al iniciar la app; el dock sigue permitiéndote cambiar entre ambas en cualquier momento."
+      },
       "create-task": {
         "title": "Crear una tarea",
         "summary": "Añade una tarea programada o un Flotante sin fecha en un par de toques.",
@@ -959,6 +979,13 @@
         "keywords": "deslizar, gesto, swipe, completar, eliminar, rápido, fila",
         "body": "Desliza una fila de tarea para mostrar acciones rápidas: completarla o eliminarla, sin necesidad de abrir la tarea.",
         "tip": "Una tarea completada muestra un aviso para deshacer durante unos segundos, así que un desliz por error nunca es definitivo."
+      },
+      "copy-task-text": {
+        "title": "Copiar detalles de la tarea",
+        "summary": "Copia el título, las notas, la fecha de vencimiento y la prioridad de una tarea como texto.",
+        "keywords": "copiar, portapapeles, compartir, texto, deslizar",
+        "body": "Desliza una tarea y toca Copiar — o usa el botón Copiar en el escritorio — para copiar su título, notas, fecha de vencimiento y prioridad como texto sin formato, listo para pegar en cualquier lugar.",
+        "tip": "Útil para pegar una tarea en un mensaje, correo electrónico u otra aplicación sin volver a escribirla."
       },
       "long-press-actions": {
         "title": "Mantén pulsada una tarea",
@@ -1082,6 +1109,20 @@
         "summary": "Consulta las tareas de hoy sin abrir la app.",
         "keywords": "widget, pantalla de inicio, vistazo, hoy, pantalla de bloqueo",
         "body": "Añade el widget de T'Day a tu pantalla de inicio para echar un vistazo a las tareas de hoy. Al tocar el widget, la app se abre en el lugar adecuado."
+      },
+      "widget-list-selection": {
+        "title": "Elige una lista para tu widget",
+        "summary": "Haz que un widget muestre una lista concreta en vez de todo el feed.",
+        "keywords": "widget, lista, configurar, editar widget, por lista, pantalla de inicio, ios",
+        "body": "Mantén pulsado un widget de T'Day y elige Editar widget para decidir exactamente qué lista muestra: cualquiera de tus listas programadas o de flotantes. Una lista programada muestra horas de vencimiento y marca lo atrasado; una lista de flotantes muestra una lista abierta sin horas de vencimiento. Si la dejas sin elegir, el widget sigue mostrando el feed completo de Hoy o de Flotantes.",
+        "tip": "Añade varios widgets, cada uno apuntando a una lista distinta, para verlos todos a la vez en tu pantalla de inicio."
+      },
+      "list-widgets": {
+        "title": "Widgets de listas",
+        "summary": "Pon cualquier lista en tu pantalla de inicio, no solo Hoy.",
+        "keywords": "widget, pantalla de inicio, lista, configurar, selector, cualquier momento, programado",
+        "body": "Añade un widget de T'Day y un selector te deja elegir qué lista muestra — cualquier lista programada o de cualquier momento, no solo Hoy o Cualquier momento. Añade el widget de nuevo para mostrar otra lista; cada uno recuerda su propia elección.",
+        "tip": "Mantén pulsado un widget colocado y elige Editar (o los ajustes de widgets de tu launcher) para cambiarlo a otra lista más adelante."
       },
       "widget-quick-add": {
         "title": "Añadir rápido desde el widget",

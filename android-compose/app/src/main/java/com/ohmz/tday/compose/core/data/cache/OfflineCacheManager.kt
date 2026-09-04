@@ -10,6 +10,7 @@ import com.ohmz.tday.compose.core.data.db.TdayDatabase
 import com.ohmz.tday.compose.core.data.db.toEntity
 import com.ohmz.tday.compose.core.data.db.toRecord
 import com.ohmz.tday.compose.feature.widget.FloaterTasksWidgetRefresher
+import com.ohmz.tday.compose.feature.widget.ListTasksWidgetRefresher
 import com.ohmz.tday.compose.feature.widget.TodayTasksWidgetRefresher
 import com.ohmz.tday.compose.feature.widget.snapshot.WidgetSnapshotWriter
 import kotlinx.coroutines.Dispatchers
@@ -34,6 +35,7 @@ class OfflineCacheManager @Inject constructor(
     private val cookieManager: CookieManager,
     private val todayTasksWidgetRefresher: TodayTasksWidgetRefresher,
     private val floaterTasksWidgetRefresher: FloaterTasksWidgetRefresher,
+    private val listTasksWidgetRefresher: ListTasksWidgetRefresher,
     private val widgetSnapshotWriter: WidgetSnapshotWriter,
 ) {
     private val todoDao = database.todoDao()
@@ -93,6 +95,7 @@ class OfflineCacheManager @Inject constructor(
         cacheDataVersionMutable.value = cacheDataVersionMutable.value + 1L
         todayTasksWidgetRefresher.requestRefresh()
         floaterTasksWidgetRefresher.requestRefresh()
+        listTasksWidgetRefresher.requestRefresh()
         Log.i(LOG_TAG, "Migrated offline cache from SharedPreferences to Room")
     }
 
@@ -127,9 +130,22 @@ class OfflineCacheManager @Inject constructor(
             floaterLists = floaterLists,
             pendingMutations = mutations,
             aiSummaryEnabled = metadata?.aiSummaryEnabled ?: true,
+            defaultHomeScreen = metadata?.defaultHomeScreen ?: "scheduled",
         )
         lastPersistedState = state
         return state
+    }
+
+    /**
+     * Lightweight synchronous read of just the default-home-screen preference, for callers
+     * (Compose initializers, cold-launch seeding) that need a lower-cost alternative to
+     * [loadOfflineStateBlocking]'s full 7-table cache read. Backed by the same single-row
+     * `sync_metadata` table [loadOfflineStateBlocking] reads it from, so the value always
+     * matches; this just skips the todo/floater/list/completed/mutation queries around it.
+     */
+    fun defaultHomeScreenSnapshotBlocking(): String {
+        ensureMigrated()
+        return syncMetadataDao.get()?.defaultHomeScreen ?: "scheduled"
     }
 
     suspend fun saveOfflineState(
@@ -194,6 +210,7 @@ class OfflineCacheManager @Inject constructor(
             cacheDataVersionMutable.value = cacheDataVersionMutable.value + 1L
             todayTasksWidgetRefresher.requestRefresh()
             floaterTasksWidgetRefresher.requestRefresh()
+            listTasksWidgetRefresher.requestRefresh()
         }
         if (hasSyncMetadataChanges) {
             syncMetadataVersionMutable.value = syncMetadataVersionMutable.value + 1L
@@ -240,6 +257,7 @@ class OfflineCacheManager @Inject constructor(
             cacheDataVersionMutable.value = cacheDataVersionMutable.value + 1L
             todayTasksWidgetRefresher.requestRefresh()
             floaterTasksWidgetRefresher.requestRefresh()
+            listTasksWidgetRefresher.requestRefresh()
         }
         if (hasSyncMetadataChanges(previous, cleared)) {
             syncMetadataVersionMutable.value = syncMetadataVersionMutable.value + 1L
@@ -260,6 +278,7 @@ class OfflineCacheManager @Inject constructor(
             cacheDataVersionMutable.value = cacheDataVersionMutable.value + 1L
             todayTasksWidgetRefresher.requestRefresh()
             floaterTasksWidgetRefresher.requestRefresh()
+            listTasksWidgetRefresher.requestRefresh()
         }
         if (hasSyncMetadataChanges(previous, cleared)) {
             syncMetadataVersionMutable.value = syncMetadataVersionMutable.value + 1L
@@ -291,6 +310,7 @@ class OfflineCacheManager @Inject constructor(
                     lastSuccessfulSyncEpochMs = state.lastSuccessfulSyncEpochMs,
                     lastSyncAttemptEpochMs = state.lastSyncAttemptEpochMs,
                     aiSummaryEnabled = state.aiSummaryEnabled,
+                    defaultHomeScreen = state.defaultHomeScreen,
                 ),
             )
         }

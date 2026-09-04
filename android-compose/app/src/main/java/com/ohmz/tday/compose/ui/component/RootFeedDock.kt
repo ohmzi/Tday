@@ -70,6 +70,18 @@ enum class RootFeedTab {
     FLOATER_TASK_HOME,
 }
 
+/** The API/cache-persisted value for the "Default home screen" preference. */
+fun RootFeedTab.toDefaultHomeScreenApiValue(): String = when (this) {
+    RootFeedTab.SCHEDULED_TASK_HOME -> "scheduled"
+    RootFeedTab.FLOATER_TASK_HOME -> "floater"
+}
+
+/** Inverse of [toDefaultHomeScreenApiValue]; unrecognized/absent values fall back to Scheduled. */
+fun rootFeedTabFromDefaultHomeScreenApiValue(value: String?): RootFeedTab = when (value) {
+    "floater" -> RootFeedTab.FLOATER_TASK_HOME
+    else -> RootFeedTab.SCHEDULED_TASK_HOME
+}
+
 private val RootFeedTabs = listOf(RootFeedTab.SCHEDULED_TASK_HOME, RootFeedTab.FLOATER_TASK_HOME)
 private val RootFeedDockHeight = TdayDimens.RootFeedDockHeight
 private val RootFeedDockCollapsedWidth = RootFeedDockHeight
@@ -81,7 +93,7 @@ private val RootFeedDockShape = RoundedCornerShape(TdayDimens.RootFeedDockRadius
 private val RootFeedDockSelectorShape = RoundedCornerShape(TdayDimens.RootFeedDockSelectorRadius)
 
 @StringRes
-private fun RootFeedTab.labelRes(): Int {
+internal fun RootFeedTab.labelRes(): Int {
     return when (this) {
         RootFeedTab.SCHEDULED_TASK_HOME -> R.string.root_feed_tab_scheduled_task_home
         RootFeedTab.FLOATER_TASK_HOME -> R.string.root_feed_tab_floater

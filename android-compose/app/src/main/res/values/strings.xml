@@ -19,6 +19,8 @@
     <string name="action_create_list">Create list</string>
     <string name="action_edit">Edit</string>
     <string name="action_edit_task">Edit task</string>
+    <string name="action_copy">Copy</string>
+    <string name="action_copy_task">Copy task</string>
     <string name="action_delete_task">Delete task</string>
     <string name="action_delete_list">Delete list</string>
     <string name="action_delete">Delete</string>
@@ -218,6 +220,8 @@
     <string name="settings_account_current_password_required">Enter your current password</string>
     <string name="settings_account_security_questions_updated">Security questions updated</string>
     <string name="settings_appearance">Appearance</string>
+    <string name="settings_behavior">Behavior</string>
+    <string name="settings_default_home_screen">Default home screen</string>
     <string name="settings_reminders">Reminders</string>
     <string name="settings_feature_toggle">Feature toggle</string>
     <string name="settings_notifications">Notifications</string>
@@ -595,6 +599,19 @@
     <string name="widget_locked_title">T\'Day is locked</string>
     <string name="widget_locked_message">Tasks are hidden while app lock is on</string>
     <string name="widget_loading">Loading tasks…</string>
+    <string name="widget_list_tasks_description">Shows one list of your choice at a glance</string>
+    <string name="widget_list_tasks_title">List</string>
+    <string name="widget_list_tasks_title_small">List — Small</string>
+    <string name="widget_list_tasks_title_medium">List — Medium</string>
+    <string name="widget_list_tasks_title_large">List — Large</string>
+    <string name="widget_list_tasks_setup_title">Choose a list</string>
+    <string name="widget_list_tasks_setup_message">Tap to finish setting up this widget</string>
+    <string name="widget_list_picker_title">Choose a list</string>
+    <string name="widget_list_picker_empty">Create a list in T\'Day first, then add this widget again</string>
+    <string name="widget_list_picker_section_todo">Scheduled lists</string>
+    <string name="widget_list_picker_section_floater">Floater lists</string>
+    <string name="widget_list_picker_shared_label">Shared</string>
+    <string name="widget_list_picker_selected">Currently selected</string>
 
     <!-- Settings: updates -->
     <string name="settings_check_updates">Check for updates</string>
@@ -641,7 +658,10 @@
     <string name="release_launch_update_toast">Update %1$s is available.</string>
     <string name="task_deleted_toast">Task deleted</string>
     <string name="task_completed_toast">Task completed</string>
+    <string name="task_copied_toast">Copied to clipboard</string>
+    <string name="task_copy_failed_toast">Could not copy to clipboard</string>
     <string name="list_deleted_toast">List deleted</string>
+    <string name="completed_floater_list_recreated_toast">Restored — recreated “%1$s”</string>
     <string name="password_changed_toast">Password changed successfully</string>
     <string name="profile_name_updated_toast">Name updated successfully</string>
     <string name="release_view_on_github">View on GitHub</string>

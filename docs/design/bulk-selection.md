@@ -319,6 +319,24 @@ a wrong "not recurring" costs the series.
 5. `onUndo` restores the snapshot (web: invalidate; mobile: restore `previousItems` /
    `hydrateFromCache`). Nothing was sent, so undo is lossless.
 
+**iOS diverges from steps 2 and 4 as of the crash/data-loss fix below — web and
+Android still match this section exactly.** Staying in-memory-only until commit means
+nothing durable exists for the whole undo window: a process death in that window (or a
+crash during the commit's own network replay) loses the completion with no trace, even
+though the user already saw it as done. iOS now *stages* the completion into the local
+cache — row flipped, `CachedCompletedRecord` added, mutation queued — at the moment of
+the tap (`TodoRepository.stageCompleteTodo(s)`), so `applyPendingMutations` can replay it
+on next launch regardless of what happens to the in-flight commit. `onCommit` therefore
+only flushes the already-queued mutation (`syncPendingMutations()`) instead of re-running
+the complete transform, and `onUndo` reverses the staged cache write
+(`undoStagedCompletion(_:)`) instead of a lossless no-op re-read. See
+`ios-swiftUI/Tday/Core/Data/Todo/TodoRepository.swift` (`stageCompleteTodo(s)` /
+`undoStagedCompletion`) for the full rationale, including the accepted trade-off if an
+unrelated sync drains the queued mutation before Undo is tapped.
+
+Web and Android have the identical memory-only-until-commit hole this section describes
+— tracked as a follow-up, not fixed here to keep the iOS crash PR reviewable.
+
 No confirmation: complete is reversible from the undo toast and, after that, from the
 Completed history screen.
 

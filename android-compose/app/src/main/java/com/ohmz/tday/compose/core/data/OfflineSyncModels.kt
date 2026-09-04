@@ -14,6 +14,9 @@ data class OfflineSyncState(
     val floaterLists: List<CachedFloaterListRecord> = emptyList(),
     val pendingMutations: List<PendingMutationRecord> = emptyList(),
     val aiSummaryEnabled: Boolean = true,
+    // "scheduled" or "floater" — mirrors the shared DefaultHomeScreen API values verbatim, since
+    // this layer stays free of the Compose-only RootFeedTab enum.
+    val defaultHomeScreen: String = "scheduled",
 )
 
 @Serializable
@@ -102,6 +105,13 @@ data class CachedCompletedFloaterRecord(
     val listId: String? = null,
     val listName: String? = null,
     val listColor: String? = null,
+    // True only when this item had a list at completion time (listName/listColor
+    // populated) and that list has since been deleted — server-computed, see
+    // CompletedFloaterDto.listDeleted. Not recomputed locally: the local cache no
+    // longer prunes completedFloaters on a list delete (see FloaterListRepository),
+    // so a stale-but-harmless listId/listDeleted pair between the delete and the
+    // next sync is expected, not a bug.
+    val listDeleted: Boolean = false,
 )
 
 @Serializable

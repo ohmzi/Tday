@@ -82,6 +82,7 @@ class DatabaseConfig(private val config: AppConfig) {
                     "RED", "ORANGE", "YELLOW", "LIME", "BLUE", "PURPLE", "PINK", "TEAL",
                     "CORAL", "GOLD", "DEEP_BLUE", "ROSE", "LIGHT_RED", "BRICK", "SLATE",
                 ),
+                "\"DefaultHomeScreen\"" to listOf("scheduled", "floater"),
             )
             for ((name, values) in pgEnums) {
                 val valList = values.joinToString(", ") { "'$it'" }

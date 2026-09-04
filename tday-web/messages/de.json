@@ -340,7 +340,10 @@
     "sharing": "Teilen",
     "share": "Teilen",
     "shareListCopied": "Liste in die Zwischenablage kopiert",
+    "taskCopied": "Aufgabe in die Zwischenablage kopiert",
+    "taskCopyFailed": "Aufgabe konnte nicht in die Zwischenablage kopiert werden",
     "shareDueLabel": "Fällig: {{date}}",
+    "sharePriorityLabel": "Priorität: {{priority}}",
     "shareTaskCount_one": "{{count}} Aufgabe",
     "shareTaskCount_few": "{{count}} Aufgaben",
     "shareTaskCount_many": "{{count}} Aufgaben",
@@ -442,7 +445,8 @@
     "bulkUpdateFailed_one": "Eine Aufgabe konnte nicht aktualisiert werden",
     "bulkUpdateFailed_few": "{{count}} Aufgaben konnten nicht aktualisiert werden",
     "bulkUpdateFailed_many": "{{count}} Aufgaben konnten nicht aktualisiert werden",
-    "bulkUpdateFailed_other": "{{count}} Aufgaben konnten nicht aktualisiert werden"
+    "bulkUpdateFailed_other": "{{count}} Aufgaben konnten nicht aktualisiert werden",
+    "floaterCompletedTile": "Erledigt"
   },
   "today": {
     "saveInstance": "Instanz speichern",
@@ -453,6 +457,7 @@
       "pinToTop": "Oben anheften",
       "edit": "Bearbeiten",
       "editAsInstance": "Als Instanz bearbeiten",
+      "copy": "Kopieren",
       "delete": "Löschen",
       "Move to": "Verschieben nach..."
     },
@@ -500,7 +505,12 @@
   "completed": {
     "title": "Verlauf der Erledigungen",
     "empty": "Noch nichts erledigt",
-    "emptyBody": "Hake etwas ab, dann landet es hier."
+    "emptyBody": "Hake etwas ab, dann landet es hier.",
+    "tabTasks": "Aufgaben",
+    "floaterEmpty": "Noch keine erledigten Floater",
+    "floaterEmptyBody": "Hake etwas in Floater ab und es landet hier.",
+    "listDeletedSuffix": "Liste gelöscht",
+    "floaterRestoredIntoRecreatedList": "Wiederhergestellt — „{{listName}}“ wurde neu angelegt"
   },
   "modal": {
     "confirm": "Bestätigen",
@@ -627,6 +637,10 @@
       "title": "Darstellung",
       "description": "Wählen Sie hell, dunkel oder folgen Sie Ihrer Systemeinstellung.",
       "descriptionSystem": "Folgen Sie Ihrem Gerät, hell oder dunkel. Aktuell: {{theme}}."
+    },
+    "behavior": {
+      "title": "Verhalten",
+      "defaultHomeScreen": "Standard-Startbildschirm"
     },
     "language": {
       "title": "Sprache",
@@ -921,6 +935,12 @@
         "keywords": "geplant, jederzeit, feed, dock, hauptfeed, navigieren, tabs, wechseln",
         "body": "T'Day hat zwei verwandte Feeds. Geplant enthält deine terminierten Aufgaben für heute und darüber hinaus. Jederzeit enthält Floater — Aufgaben ohne Datum. Wechsle über das Dock unten zwischen ihnen und lege aus jedem von beiden eine Aufgabe an."
       },
+      "default-home-screen": {
+        "title": "Standard-Startbildschirm",
+        "summary": "Wähle, ob T'Day mit Geplant oder Jederzeit startet.",
+        "keywords": "standard, startbildschirm, start, launch, geplant, jederzeit, verhalten, einstellungen",
+        "body": "In den Einstellungen gibt es einen Bereich „Verhalten“, in dem du festlegst, welcher Feed zuerst geöffnet wird — Geplant oder Jederzeit. Das legt nur fest, was dich beim Start begrüßt; über das Dock wechselst du weiterhin jederzeit zwischen beiden."
+      },
       "create-task": {
         "title": "Aufgabe erstellen",
         "summary": "Füge mit wenigen Tipps eine geplante Aufgabe oder einen Floater ohne Datum hinzu.",
@@ -959,6 +979,13 @@
         "keywords": "wischen, geste, streichen, abschließen, löschen, schnell, zeile",
         "body": "Wische über eine Aufgabenzeile, um schnelle Aktionen einzublenden — sie abschließen oder entfernen —, ohne die Aufgabe überhaupt zu öffnen.",
         "tip": "Eine abgeschlossene Aufgabe zeigt für ein paar Sekunden einen Rückgängig-Hinweis, sodass ein versehentliches Wischen nie endgültig ist."
+      },
+      "copy-task-text": {
+        "title": "Aufgabendetails kopieren",
+        "summary": "Kopiere Titel, Notizen, Fälligkeitsdatum und Priorität einer Aufgabe als Text.",
+        "keywords": "kopieren, zwischenablage, teilen, text, wischen",
+        "body": "Wische eine Aufgabe und tippe auf Kopieren — oder nutze die Kopieren-Schaltfläche am Desktop —, um Titel, Notizen, Fälligkeitsdatum und Priorität als reinen Text zu kopieren, bereit zum Einfügen überall.",
+        "tip": "Praktisch, um eine Aufgabe in eine Nachricht, E-Mail oder eine andere App einzufügen, ohne sie neu zu tippen."
       },
       "long-press-actions": {
         "title": "Aufgabe gedrückt halten",
@@ -1082,6 +1109,20 @@
         "summary": "Sieh die heutigen Aufgaben, ohne die App zu öffnen.",
         "keywords": "widget, startbildschirm, blick, heute, sperrbildschirm",
         "body": "Füge das T'Day-Widget zu deinem Startbildschirm hinzu, um einen Blick auf die heutigen Aufgaben zu werfen. Ein Tipp auf das Widget öffnet die App an der richtigen Stelle."
+      },
+      "widget-list-selection": {
+        "title": "Liste für dein Widget wählen",
+        "summary": "Ein Widget auf eine bestimmte Liste statt den ganzen Feed richten.",
+        "keywords": "widget, liste, konfigurieren, widget bearbeiten, pro liste, startbildschirm, ios",
+        "body": "Widget lange gedrückt halten und „Widget bearbeiten\" wählen, um genau festzulegen, welche Liste es zeigt – jede deiner geplanten Listen oder Floater-Listen. Eine geplante Liste zeigt Fälligkeitszeiten und markiert Überfälliges; eine Floater-Liste zeigt eine offene Liste ohne Fälligkeitszeiten. Bleibt die Auswahl leer, zeigt das Widget weiterhin den vollständigen Today- oder Floater-Feed.",
+        "tip": "Füge mehrere Widgets hinzu, jedes auf eine andere Liste ausgerichtet, um sie alle gleichzeitig auf deinem Startbildschirm zu sehen."
+      },
+      "list-widgets": {
+        "title": "Listen-Widgets",
+        "summary": "Zeige jede Liste auf deinem Startbildschirm, nicht nur Heute.",
+        "keywords": "widget, startbildschirm, liste, konfigurieren, auswahl, jederzeit, geplant",
+        "body": "Füge ein T'Day-Widget hinzu, und eine Auswahl lässt dich entscheiden, welche Liste es zeigt — jede geplante Liste oder Jederzeit-Liste, nicht nur Heute oder Jederzeit. Füge das Widget erneut hinzu, um eine andere Liste zu zeigen; jedes merkt sich seine eigene Wahl.",
+        "tip": "Halte ein platziertes Widget gedrückt und wähle Bearbeiten (oder die Widget-Einstellungen deines Launchers), um es später auf eine andere Liste umzustellen."
       },
       "widget-quick-add": {
         "title": "Schnell hinzufügen aus dem Widget",

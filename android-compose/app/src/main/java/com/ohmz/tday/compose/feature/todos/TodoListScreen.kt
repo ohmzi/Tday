@@ -106,6 +106,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -117,6 +118,7 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
@@ -130,6 +132,9 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.zIndex
 import androidx.core.view.HapticFeedbackConstantsCompat
 import androidx.core.view.ViewCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.currentStateAsState
 import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.data.RestingFloatersPreferenceStore
 import com.ohmz.tday.compose.core.data.list.ShareListKind
@@ -144,8 +149,10 @@ import com.ohmz.tday.compose.core.model.supportsTaskReschedule
 import com.ohmz.tday.compose.core.model.timelineRescheduleTargetDate
 import com.ohmz.tday.compose.core.sound.rememberTaskCompletionSound
 import com.ohmz.tday.compose.core.text.flattenNotesToPlainText
+import com.ohmz.tday.compose.core.ui.CategoryCard
 import com.ohmz.tday.compose.core.ui.EmptyTaskWatermark
 import com.ohmz.tday.compose.core.ui.LazyListHeroTitleSettle
+import com.ohmz.tday.compose.core.ui.LocalSnackbarManager
 import com.ohmz.tday.compose.core.ui.RootFeedHeroHeader
 import com.ohmz.tday.compose.core.ui.RootFeedHeroHeaderMetrics
 import com.ohmz.tday.compose.core.ui.RootFeedHeroMark
@@ -157,6 +164,7 @@ import com.ohmz.tday.compose.core.ui.animateTaskSwipeOffsetAsState
 import com.ohmz.tday.compose.core.ui.rememberLazyListHeroTitleCollapse
 import com.ohmz.tday.compose.core.ui.rememberTaskSwipeRevealState
 import com.ohmz.tday.compose.core.ui.shareList
+import com.ohmz.tday.compose.core.ui.taskCopyText
 import com.ohmz.tday.compose.core.ui.tdayBarButtonContainerColor
 import com.ohmz.tday.compose.core.ui.tdayHeroTitleItem
 import com.ohmz.tday.compose.core.ui.TdayHeroTitleMetrics
@@ -182,10 +190,12 @@ import com.ohmz.tday.compose.ui.priority.isUrgentPriority
 import com.ohmz.tday.compose.ui.priority.priorityDisplayLabelRes
 import com.ohmz.tday.compose.ui.theme.TDAY_DEFAULT_LIST_COLOR_KEY
 import com.ohmz.tday.compose.ui.theme.TDAY_DEFAULT_LIST_ICON_KEY
+import com.ohmz.tday.compose.ui.theme.TdayCompletedTileAccent
 import com.ohmz.tday.compose.ui.theme.TdayDimens
 import com.ohmz.tday.compose.ui.theme.TdayFloaterAccent
 import com.ohmz.tday.compose.ui.theme.TdayListColorOptions
 import com.ohmz.tday.compose.ui.theme.TdayListIconOptions
+import com.ohmz.tday.compose.ui.theme.TdaySwipeCopyBackground
 import com.ohmz.tday.compose.ui.theme.TdaySwipeDeleteBackground
 import com.ohmz.tday.compose.ui.theme.TdaySwipeEditBackground
 import com.ohmz.tday.compose.ui.theme.TdaySwipeFloatBackground
@@ -281,6 +291,7 @@ fun TodoListScreen(
     onUpdateListSettings: (listId: String, name: String, color: String?, iconKey: String?) -> Unit,
     onDeleteList: (listId: String) -> Unit,
     onOpenFloaterList: (listId: String, listName: String) -> Unit = { _, _ -> },
+    onOpenCompleted: () -> Unit = {},
     onOpenSettings: () -> Unit = {},
     onCreateList: (name: String, color: String?, iconKey: String?) -> Unit = { _, _, _ -> },
     rootFeedTab: RootFeedTab? = null,
@@ -307,15 +318,37 @@ fun TodoListScreen(
     // Finishing a list is a payoff, not an absence. The empty state that follows
     // the last row leaving gets confetti — but only when the row left because it
     // was ticked off: deleting the last task, or opening a list that was already
-    // empty, gets the plain arrival.
+    // empty, gets the plain arrival. Whether that tick happened here, on another
+    // device, or from a collaborator on a shared list.
     var lastCompletionAtMs by remember { mutableLongStateOf(0L) }
     val completeAndCelebrate: (TodoItem) -> Unit = { todo ->
         lastCompletionAtMs = SystemClock.uptimeMillis()
         onComplete(todo)
     }
+    // `uiState.remoteEmptiedAtMs` is the remote sibling of the tap-time set
+    // above — see `TodoListViewModel.hydrateFromExternalCacheChange` for how
+    // it is set and why it can't be as precise (it can't tell a remote
+    // completion from a remote delete of the last task the way this composable
+    // tells complete from delete for its own taps). The ViewModel is scoped to
+    // this route's `NavBackStackEntry`, not to this composable being on
+    // screen: a forward push to another destination (or the app going to the
+    // background) leaves the entry — and its `cacheDataVersion` collector —
+    // alive and still updating `remoteEmptiedAtMs` underneath, so "the route
+    // got disposed" is not a real guarantee here the way it is for a popped
+    // entry. `screenLifecycleState` below is the on-screen/foreground gate
+    // that closes that gap: `LocalLifecycleOwner` inside a `NavHost`
+    // destination resolves to the entry's own lifecycle, which only reaches
+    // `RESUMED` while this destination is both the top of the back stack and
+    // the app is foregrounded — the same two conditions iOS's
+    // `isScreenVisible`/`scenePhase == .active` check for `remoteEmptiedAt`.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val screenLifecycleState by lifecycleOwner.lifecycle.currentStateAsState()
     val celebrateEmptyState = uiState.items.isEmpty() &&
-            lastCompletionAtMs != 0L &&
-            SystemClock.uptimeMillis() - lastCompletionAtMs < CompletionCelebrationWindowMs
+            ((lastCompletionAtMs != 0L &&
+                    SystemClock.uptimeMillis() - lastCompletionAtMs < CompletionCelebrationWindowMs) ||
+                    (uiState.remoteEmptiedAtMs != 0L &&
+                            screenLifecycleState == Lifecycle.State.RESUMED &&
+                            SystemClock.uptimeMillis() - uiState.remoteEmptiedAtMs < CompletionCelebrationWindowMs))
     val zoneId = remember { ZoneId.systemDefault() }
     val selectedList = uiState.lists.firstOrNull { it.id == uiState.listId }
     val selectedListColorKey = selectedList?.color
@@ -1577,6 +1610,31 @@ fun TodoListScreen(
                                     celebrate = celebrateEmptyState,
                                 )
                             }
+                        }
+                    }
+
+                    // Floater tab's nav entry to the browsable Completed screen — the
+                    // todo side's own root feed reaches it through an identical
+                    // CategoryCard tile (ScheduledTaskHomeScreen's CategoryGrid); this
+                    // is the same shared component and the same destination (one
+                    // Completed screen renders both item types, distinguished there
+                    // by CompletedItem.isFloater), just placed to fit this screen's
+                    // single-column layout instead of a 2-up grid.
+                    if (isFloaterTaskHomeScreen) {
+                        item(
+                            key = "floater-completed-entry",
+                            contentType = "floater-completed-entry",
+                        ) {
+                            CategoryCard(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(bottom = 10.dp),
+                                color = TdayCompletedTileAccent,
+                                iconRes = R.drawable.ic_lucide_circle_check_big,
+                                watermarkRes = R.drawable.ic_lucide_circle_check_big,
+                                title = stringResource(R.string.scheduled_task_home_category_completed),
+                                onClick = onOpenCompleted,
+                            )
                         }
                     }
 
@@ -4602,10 +4660,18 @@ private fun SwipeTaskRow(
         )
     }
     val hasExtraSwipeAction = promoteAction != null || demoteAction != null || deferAction != null
+    // Edit + Copy + Delete always show; the optional mode-specific extra
+    // action (Schedule/Float/Defer) adds a 4th pill. Matches the +80dp-per-pill
+    // step already established between the 2- and 3-pill widths below.
     val swipeRevealState = rememberTaskSwipeRevealState(
         todo.id,
-        revealWidth = if (hasExtraSwipeAction) 256.dp else 176.dp,
+        revealWidth = if (hasExtraSwipeAction) 336.dp else 256.dp,
     )
+    val clipboardManager = LocalClipboardManager.current
+    val snackbarManager = LocalSnackbarManager.current
+    val copyContext = LocalContext.current
+    val copiedMessage = stringResource(R.string.task_copied_toast)
+    val copyFailedMessage = stringResource(R.string.task_copy_failed_toast)
     var localChecked by remember(todo.id) { mutableStateOf(false) }
     var localStruck by remember(todo.id) { mutableStateOf(false) }
     var pendingCompletion by remember(todo.id) { mutableStateOf(false) }
@@ -4828,6 +4894,29 @@ private fun SwipeTaskRow(
                             )
                             closeSwipeSlot()
                             onInfo()
+                        },
+                    )
+                    TaskSwipeActionButton(
+                        icon = R.drawable.ic_lucide_copy,
+                        contentDescription = stringResource(R.string.action_copy_task),
+                        label = stringResource(R.string.action_copy),
+                        tint = Color.White,
+                        background = TdaySwipeCopyBackground,
+                        revealProgress = actionRevealProgress,
+                        revealDelay = 0.40f,
+                        onClick = {
+                            ViewCompat.performHapticFeedback(
+                                view,
+                                HapticFeedbackConstantsCompat.CLOCK_TICK,
+                            )
+                            closeSwipeSlot()
+                            runCatching {
+                                clipboardManager.setText(AnnotatedString(taskCopyText(copyContext, todo)))
+                            }.onSuccess {
+                                snackbarManager?.showSuccess(copiedMessage)
+                            }.onFailure {
+                                snackbarManager?.showError(copyFailedMessage)
+                            }
                         },
                     )
                     TaskSwipeActionButton(

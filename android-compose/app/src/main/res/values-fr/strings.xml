@@ -16,6 +16,8 @@
     <string name="action_create_list">Créer une liste</string>
     <string name="action_edit">Modifier</string>
     <string name="action_edit_task">Modifier la tâche</string>
+    <string name="action_copy">Copier</string>
+    <string name="action_copy_task">Copier la tâche</string>
     <string name="action_delete_task">Supprimer la tâche</string>
     <string name="action_delete_list">Supprimer la liste</string>
     <string name="action_delete">Supprimer</string>
@@ -207,6 +209,8 @@
     <string name="error_update_name_failed">Impossible de mettre à jour votre nom. Veuillez réessayer.</string>
     <string name="error_change_password_failed">Impossible de modifier votre mot de passe. Veuillez réessayer.</string>
     <string name="settings_appearance">Apparence</string>
+    <string name="settings_behavior">Comportement</string>
+    <string name="settings_default_home_screen">Écran d\'accueil par défaut</string>
     <string name="settings_reminders">Rappels</string>
     <string name="settings_feature_toggle">Activation de fonctionnalité</string>
     <string name="settings_notifications">Notifications</string>
@@ -568,6 +572,8 @@
     <string name="release_no_apk">Aucun APK joint à cette version.</string>
     <string name="release_launch_update_toast">La mise à jour %1$s est disponible.</string>
     <string name="task_deleted_toast">Tâche supprimée</string>
+    <string name="task_copied_toast">Copié dans le presse-papiers</string>
+    <string name="task_copy_failed_toast">Impossible de copier dans le presse-papiers</string>
     <string name="list_deleted_toast">Liste supprimée</string>
     <string name="release_view_on_github">Voir sur GitHub</string>
 

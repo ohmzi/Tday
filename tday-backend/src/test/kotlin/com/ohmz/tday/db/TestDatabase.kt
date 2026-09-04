@@ -45,6 +45,7 @@ object TestDatabase {
     /** Postgres enum types, declared as domains so the DDL Exposed emits for `pgEnum` resolves. */
     private val pgEnumTypes = listOf(
         "UserRole", "ApprovalStatus", "Priority", "ProjectColor", "SortBy", "GroupBy", "Direction",
+        "DefaultHomeScreen",
     )
 
     private val tables: Array<Table> = arrayOf(

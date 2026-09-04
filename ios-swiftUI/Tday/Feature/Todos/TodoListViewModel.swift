@@ -1,5 +1,9 @@
 import Foundation
 import Observation
+import UIKit
+// `withAnimation` below is what gives a remote cache change an explicit
+// SwiftUI transaction — see `hydrateFromExternalCacheChange()`.
+import SwiftUI
 
 @MainActor
 @Observable
@@ -18,8 +22,30 @@ final class TodoListViewModel {
     var completedTodayCount = 0
     /// When the user last ticked something off. Feeds the confetti: an empty
     /// list that emptied under the user's own hand is a payoff, one that was
-    /// already empty when they opened it is not.
+    /// already empty when they opened it is not. Set only by this device's own
+    /// `complete`/`bulkComplete` — precise, but local-only. See
+    /// `remoteEmptiedAt` for the sibling that covers everything else.
     var lastCompletionAt: Date?
+    /// When a cache change this device did not itself just stage last emptied
+    /// the viewed list — set only from `hydrateFromExternalCacheChange()`,
+    /// never from a local mutation's own direct `hydrateFromCache()` call.
+    ///
+    /// This is `lastCompletionAt`'s broader, imprecise sibling: that field
+    /// only ever fires for a completion this device made, because `complete`/
+    /// `bulkComplete` are the only callers. A cache-changed notification
+    /// carries no reason (it is "something changed, re-read the cache", not
+    /// "task N was completed"), so this cannot tell a remote completion from
+    /// a remote delete of the last task the way the local path tells complete
+    /// from delete — it treats any observed non-empty-to-empty transition on
+    /// this path as a payoff. That imprecision is deliberately scoped to just
+    /// this externally-triggered path; every local mutation (including
+    /// `delete`/`bulkDelete`) still never touches this field, so a local
+    /// delete of the last task still gets the plain arrival, exactly as
+    /// today. `TodoListScreen.celebratesEmptyState` also requires the screen
+    /// to be visible before honouring this one, so a transition on a screen
+    /// nobody is looking at does not surface a stale burst when the user
+    /// returns to it later.
+    var remoteEmptiedAt: Date?
     var errorMessage: String?
     var aiSummaryEnabled = true
     var summaryText: String?
@@ -227,6 +253,15 @@ final class TodoListViewModel {
         }
     }
 
+    /// Swipe-to-copy: writes the task's title/notes/due/priority as plain text
+    /// to the system pasteboard. Synchronous and can't meaningfully fail (a
+    /// pasteboard write has no throwing API), so this always confirms success —
+    /// mirroring web's success-toast path for the same action.
+    func copyToClipboard(_ todo: TodoItem) {
+        UIPasteboard.general.string = ShareSheet.taskShareText(todo)
+        container.snackbarManager.show(L("Copied to clipboard"), kind: .success)
+    }
+
     /// "Let it float": demotes an overdue todo into an Anytime floater.
     func demoteTodo(_ todo: TodoItem) async {
         TdayTelemetry.addBreadcrumb("task.demote", data: taskTelemetryData(mode: mode))
@@ -241,41 +276,59 @@ final class TodoListViewModel {
         }
     }
 
-    /// Delayed-commit complete: the row is hidden immediately (in-memory only,
-    /// the cache is untouched), an undoable toast is shown, and the real
-    /// completion only commits once the undo window expires. Tapping Undo cancels
-    /// the pending commit and re-reads the cache to restore the row.
+    /// Delayed-commit complete: the completion is written to the local cache
+    /// (and its mutation queued) immediately, an undoable toast is shown, and
+    /// only the network replay is deferred until the undo window expires.
+    /// Tapping Undo cancels the pending commit and reverses the staged write.
+    ///
+    /// This writes durably up front rather than staying in-memory-only until
+    /// commit: a completion the user already saw must survive the app dying
+    /// inside the undo window, not silently revert with no trace on relaunch.
+    /// See `TodoRepository.stageCompleteTodo(_:)` for the full rationale.
     func complete(_ todo: TodoItem) async {
         TdayTelemetry.addBreadcrumb("task.complete", data: taskTelemetryData(mode: mode))
         let container = container
         let isFloater = mode == .floater
-        items.removeAll { $0.id == todo.id }
         lastCompletionAt = Date()
-        if !isFloater {
-            completedTodayCount += 1
-        }
-        container.undoableDeleteScheduler.schedule(
-            message: L("Task completed"),
-            restore: { [weak self] in
-                // The cache was never changed, so re-reading it restores the row.
-                self?.hydrateFromCache()
-            },
-            commit: { [weak self] in
-                do {
-                    if isFloater {
-                        try await container.todoRepository.completeFloater(todo)
-                    } else {
-                        try await container.completeTodo(todo)
+        if isFloater {
+            let staged = container.todoRepository.stageCompleteFloater(todo)
+            hydrateFromCache()
+            container.undoableDeleteScheduler.schedule(
+                message: L("Task completed"),
+                restore: {
+                    container.todoRepository.undoStagedFloaterCompletion(staged)
+                },
+                commit: {
+                    do {
+                        try await container.todoRepository.syncPendingMutations()
+                    } catch {
+                        container.snackbarManager.show(
+                            userFacingMessage(for: error, fallback: "Could not complete task."),
+                            kind: .error
+                        )
                     }
-                } catch {
-                    container.snackbarManager.show(
-                        userFacingMessage(for: error, fallback: "Could not complete task."),
-                        kind: .error
-                    )
                 }
-                self?.hydrateFromCache()
-            }
-        )
+            )
+        } else {
+            let staged = container.todoRepository.stageCompleteTodo(todo)
+            hydrateFromCache()
+            container.undoableDeleteScheduler.schedule(
+                message: L("Task completed"),
+                restore: {
+                    container.todoRepository.undoStagedCompletion(staged)
+                },
+                commit: {
+                    do {
+                        try await container.todoRepository.syncPendingMutations()
+                    } catch {
+                        container.snackbarManager.show(
+                            userFacingMessage(for: error, fallback: "Could not complete task."),
+                            kind: .error
+                        )
+                    }
+                }
+            )
+        }
     }
 
     /// Delayed-commit delete: the task is staged out of the local cache
@@ -329,11 +382,18 @@ final class TodoListViewModel {
 
     // MARK: - Bulk (multi-select) actions
 
-    /// Delayed-commit bulk complete — the batch shape of `complete(_:)`. The rows
-    /// leave the list in memory only, ONE undoable toast covers the whole
-    /// selection, and nothing touches the cache or the server until the undo
-    /// window closes. N toasts would mean N commit timers with only the last one
-    /// visible, so the user could undo exactly one of them.
+    /// Delayed-commit bulk complete — the batch shape of `complete(_:)`. The
+    /// whole selection is staged into the local cache (and its mutations
+    /// queued) in ONE cache write, ONE undoable toast covers the batch, and
+    /// only the network replay is deferred until the undo window closes. N
+    /// toasts would mean N commit timers with only the last one visible, so the
+    /// user could undo exactly one of them.
+    ///
+    /// Staging durably up front (rather than in-memory-only until commit)
+    /// means a crash or kill during the up-to-100-request replay that commit
+    /// triggers loses nothing: every completion in the batch already survived
+    /// to disk before the network round-trips even began. See
+    /// `TodoRepository.stageCompleteTodos(_:)`.
     ///
     /// Recurring occurrences stay in the batch: complete is the one action with a
     /// per-occurrence route, and the repository carries each row's `instanceDate`.
@@ -343,31 +403,40 @@ final class TodoListViewModel {
         let container = container
         let isFloater = mode == .floater
         let count = todos.count
-        let completedIDs = Set(todos.map(\.id))
-        items.removeAll { completedIDs.contains($0.id) }
         lastCompletionAt = Date()
-        if !isFloater {
-            completedTodayCount += count
-        }
-        container.undoableDeleteScheduler.schedule(
-            message: BulkSelectionCopy.completedToast(count),
-            restore: { [weak self] in
-                // The cache was never changed, so re-reading it restores the rows.
-                self?.hydrateFromCache()
-            },
-            commit: { [weak self] in
-                do {
-                    if isFloater {
-                        try await container.todoRepository.completeFloaters(todos)
-                    } else {
-                        try await container.todoRepository.completeTodos(todos)
+        if isFloater {
+            let staged = container.todoRepository.stageCompleteFloaters(todos)
+            hydrateFromCache()
+            container.undoableDeleteScheduler.schedule(
+                message: BulkSelectionCopy.completedToast(count),
+                restore: {
+                    container.todoRepository.undoStagedFloaterCompletion(staged)
+                },
+                commit: {
+                    do {
+                        try await container.todoRepository.syncPendingMutations()
+                    } catch {
+                        container.snackbarManager.show(BulkSelectionCopy.updateFailed(count), kind: .error)
                     }
-                } catch {
-                    container.snackbarManager.show(BulkSelectionCopy.updateFailed(count), kind: .error)
                 }
-                self?.hydrateFromCache()
-            }
-        )
+            )
+        } else {
+            let staged = container.todoRepository.stageCompleteTodos(todos)
+            hydrateFromCache()
+            container.undoableDeleteScheduler.schedule(
+                message: BulkSelectionCopy.completedToast(count),
+                restore: {
+                    container.todoRepository.undoStagedCompletion(staged)
+                },
+                commit: {
+                    do {
+                        try await container.todoRepository.syncPendingMutations()
+                    } catch {
+                        container.snackbarManager.show(BulkSelectionCopy.updateFailed(count), kind: .error)
+                    }
+                }
+            )
+        }
     }
 
     /// Delayed-commit bulk delete — the batch shape of `delete(_:)`. The screen
@@ -573,13 +642,61 @@ final class TodoListViewModel {
         return Date().epochMilliseconds - state.lastSuccessfulSyncEpochMs < Self.recentSuccessfulSyncSkipWindowMs
     }
 
+    // `[weak self]` here is load-bearing, not style: SwiftUI's
+    // `State(initialValue:)` (see `TodoListScreen.init`) re-runs this view
+    // model's initializer on every parent body pass and discards the surplus
+    // instance. Capturing `self` strongly would keep this Task (and the
+    // NotificationCenter async sequence it iterates) alive forever, which
+    // keeps `self` alive forever too — `deinit` could never run to cancel it.
+    // Every discarded instance would go on reacting to every future cache
+    // write for the life of the process, and a bulk completion posts four of
+    // those writes, each a full cache reload on the main actor. That
+    // unbounded, immortal observer set — not request concurrency, which this
+    // path never has unbounded — is the confirmed mechanism behind the crash
+    // under a large completion.
     private func observeCacheChanges() {
-        observationTask = Task {
+        observationTask = Task { [weak self] in
             for await _ in NotificationCenter.default.notifications(named: .offlineCacheDidChange) {
+                guard let self else { return }
                 await MainActor.run {
-                    self.hydrateFromCache()
+                    self.hydrateFromExternalCacheChange()
                 }
             }
+        }
+    }
+
+    /// Reacts to a cache write this instance did not itself just stage — most
+    /// often a remote sync (another device, or a collaborator on a shared
+    /// list) landing through `OfflineCacheManager.saveOfflineState`'s
+    /// notification, but sometimes just the async echo of this device's own
+    /// write (a staged local completion or delete already calls
+    /// `hydrateFromCache()` directly; that same write's notification still
+    /// reaches this loop a beat later).
+    ///
+    /// `saveOfflineState` posts that notification synchronously
+    /// (`OfflineCacheManager.swift`), but `NotificationCenter.notifications`
+    /// delivers it to this `for await` loop asynchronously, outside any
+    /// SwiftUI transaction. Left alone, a remote completion that empties the
+    /// last section of an open todo list changes both the List's section
+    /// count and its row count in that one uncoordinated update — a known
+    /// trigger for SwiftUI's List diffing engine to throw ("invalid number of
+    /// rows/sections") or crash outright once it cannot reconcile a section
+    /// disappearing at the same moment its last row does. `withAnimation`
+    /// gives the mutation an explicit transaction, so List diffs the
+    /// section-and-row change as one coordinated update instead of an
+    /// external one arriving mid-flight — the same guarantee a user-initiated
+    /// action already gets for free from SwiftUI's own gesture handling,
+    /// which this async loop does not.
+    ///
+    /// Also where a remote-driven empty transition gets to celebrate: see
+    /// `remoteEmptiedAt`.
+    private func hydrateFromExternalCacheChange() {
+        let wasNonEmpty = !items.isEmpty
+        withAnimation(.easeInOut(duration: 0.22)) {
+            hydrateFromCache()
+        }
+        if wasNonEmpty, items.isEmpty {
+            remoteEmptiedAt = Date()
         }
     }
 

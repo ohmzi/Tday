@@ -137,7 +137,21 @@ export function listCompletedFloaters() {
   const workspace = loadWorkspace();
   return {
     completedFloaters: newestFirst(workspace.completedFloaters).map((row) => ({
-      ...row,
+      id: row.id,
+      originalFloaterID: row.originalFloaterID,
+      title: row.title,
+      description: row.description,
+      priority: row.priority,
+      completedAt: row.completedAt,
+      daysToComplete: row.daysToComplete,
+      listID: row.listID,
+      listName: row.listName,
+      listColor: row.listColor,
+      // True only when this item had a list at completion (listName set) and
+      // that list is now gone — the same rule as the backend's
+      // CompletedFloaterDto.listDeleted. originalListID itself never leaves
+      // this module — it is a local-only correlation key.
+      listDeleted: row.originalListID != null && row.listID == null,
       userID: LOCAL_USER_ID,
     })),
   };
@@ -146,6 +160,9 @@ export function listCompletedFloaters() {
 export function deleteCompletedFloaters(body: Record<string, unknown> | null) {
   const id = normalize(body?.id);
   if (!id) {
+    // Clear-everything is left as-is, same as the backend's deleteAll(): it
+    // has the same latent orphan below, not fixed here either — see the
+    // single-id branch's comment.
     updateWorkspace((workspace) => {
       workspace.completedFloaters = [];
     });
@@ -153,11 +170,22 @@ export function deleteCompletedFloaters(body: Record<string, unknown> | null) {
   }
 
   const removed = updateWorkspace((workspace) => {
-    const before = workspace.completedFloaters.length;
+    const entry = workspace.completedFloaters.find((row) => row.id === id);
+    if (!entry) return false;
+    // Adjacent-bug fix (matches the backend's CompletedFloaterService.deleteById):
+    // this used to remove only the history row, leaving the completed
+    // Floaters row it pointed at behind forever — invisible (listFloaters
+    // filters completed=false) but never cleaned up. Remove both, same as
+    // the real permanent-delete path (deleteFloater above).
+    if (entry.originalFloaterID) {
+      workspace.floaters = workspace.floaters.filter(
+        (floater) => floater.id !== entry.originalFloaterID,
+      );
+    }
     workspace.completedFloaters = workspace.completedFloaters.filter(
-      (entry) => entry.id !== id,
+      (row) => row.id !== id,
     );
-    return before !== workspace.completedFloaters.length;
+    return true;
   });
 
   return {

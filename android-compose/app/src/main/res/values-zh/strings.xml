@@ -16,6 +16,8 @@
     <string name="action_create_list">创建列表</string>
     <string name="action_edit">编辑</string>
     <string name="action_edit_task">编辑任务</string>
+    <string name="action_copy">复制</string>
+    <string name="action_copy_task">复制任务</string>
     <string name="action_delete_task">删除任务</string>
     <string name="action_delete_list">删除列表</string>
     <string name="action_delete">删除</string>
@@ -207,6 +209,8 @@
     <string name="error_update_name_failed">无法更新您的姓名，请重试。</string>
     <string name="error_change_password_failed">无法更改您的密码，请重试。</string>
     <string name="settings_appearance">外观</string>
+    <string name="settings_behavior">行为</string>
+    <string name="settings_default_home_screen">默认主屏幕</string>
     <string name="settings_reminders">提醒</string>
     <string name="settings_feature_toggle">功能开关</string>
     <string name="settings_notifications">通知</string>
@@ -567,6 +571,8 @@
     <string name="release_no_apk">此版本未附带 APK。</string>
     <string name="release_launch_update_toast">更新 %1$s 已可用。</string>
     <string name="task_deleted_toast">任务已删除</string>
+    <string name="task_copied_toast">已复制到剪贴板</string>
+    <string name="task_copy_failed_toast">无法复制到剪贴板</string>
     <string name="list_deleted_toast">列表已删除</string>
     <string name="release_view_on_github">在 GitHub 上查看</string>
 

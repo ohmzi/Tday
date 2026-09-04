@@ -87,11 +87,14 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
@@ -111,10 +114,12 @@ import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
 import com.ohmz.tday.compose.core.observability.TdayTelemetry
 import com.ohmz.tday.compose.core.sound.rememberTaskCompletionSound
 import com.ohmz.tday.compose.core.ui.EmptyTaskWatermark
+import com.ohmz.tday.compose.core.ui.LocalSnackbarManager
 import com.ohmz.tday.compose.core.ui.TdayEmptyState
 import com.ohmz.tday.compose.core.ui.TdayHeroToolbar
 import com.ohmz.tday.compose.core.ui.TdaySearchCapsule
 import com.ohmz.tday.compose.core.ui.rememberLazyListHeroTitleCollapse
+import com.ohmz.tday.compose.core.ui.taskCopyText
 import com.ohmz.tday.compose.core.ui.tdayBarButtonContainerColor
 import com.ohmz.tday.compose.core.ui.tdayHeroTitleItem
 import com.ohmz.tday.compose.core.ui.TdayHeroTitleMetrics
@@ -122,6 +127,7 @@ import com.ohmz.tday.compose.core.ui.tdayClosesSearchOnOutsideTap
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.component.TdaySegmentedSlider
 import com.ohmz.tday.compose.ui.theme.TdayDimens
+import com.ohmz.tday.compose.ui.theme.TdaySwipeCopyBackground
 import com.ohmz.tday.compose.ui.theme.TdaySwipeDeleteBackground
 import com.ohmz.tday.compose.ui.theme.TdaySwipeEditBackground
 import com.ohmz.tday.compose.ui.theme.TdayTaskCompleteAccent
@@ -2240,9 +2246,16 @@ private fun CalendarTodoRow(
     val taskCompletionSound = rememberTaskCompletionSound()
     val density = LocalDensity.current
     val coroutineScope = rememberCoroutineScope()
-    val actionRevealPx = with(density) { 176.dp.toPx() }
+    // Edit + Copy + Delete: matches the 3-pill width used elsewhere (see
+    // SwipeTaskRow.revealWidth).
+    val actionRevealPx = with(density) { 256.dp.toPx() }
     val swipeHintOffsetPx = with(density) { 42.dp.toPx() }.coerceAtMost(actionRevealPx * 0.24f)
     val maxElasticDragPx = actionRevealPx * 1.14f
+    val clipboardManager = LocalClipboardManager.current
+    val snackbarManager = LocalSnackbarManager.current
+    val copyContext = LocalContext.current
+    val copiedMessage = stringResource(R.string.task_copied_toast)
+    val copyFailedMessage = stringResource(R.string.task_copy_failed_toast)
     var targetOffsetX by remember(todo.id) { mutableFloatStateOf(0f) }
     var swipeHinting by remember(todo.id) { mutableStateOf(false) }
     var localChecked by remember(todo.id) { mutableStateOf(false) }
@@ -2345,6 +2358,26 @@ private fun CalendarTodoRow(
                         ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
                         closeSwipeSlot()
                         onInfo()
+                    },
+                )
+                CalendarSwipeActionButton(
+                    icon = ImageVector.vectorResource(R.drawable.ic_lucide_copy),
+                    contentDescription = stringResource(R.string.action_copy_task),
+                    label = stringResource(R.string.action_copy),
+                    tint = Color.White,
+                    background = TdaySwipeCopyBackground,
+                    revealProgress = actionRevealProgress,
+                    revealDelay = 0.40f,
+                    onClick = {
+                        ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+                        closeSwipeSlot()
+                        runCatching {
+                            clipboardManager.setText(AnnotatedString(taskCopyText(copyContext, todo)))
+                        }.onSuccess {
+                            snackbarManager?.showSuccess(copiedMessage)
+                        }.onFailure {
+                            snackbarManager?.showError(copyFailedMessage)
+                        }
                     },
                 )
                 CalendarSwipeActionButton(

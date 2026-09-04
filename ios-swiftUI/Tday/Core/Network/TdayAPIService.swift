@@ -377,8 +377,8 @@ final class TdayAPIService {
         try await request(path: "/api/todo/\(id)/demote", method: "POST", responseType: DemoteTodoResponse.self)
     }
 
-    func uncompleteFloaterByBody(payload: FloaterUncompleteRequest) async throws -> MessageResponse {
-        try await request(path: "/api/floater/uncomplete", method: "PATCH", body: payload, responseType: MessageResponse.self)
+    func uncompleteFloaterByBody(payload: FloaterUncompleteRequest) async throws -> FloaterUncompleteResponse {
+        try await request(path: "/api/floater/uncomplete", method: "PATCH", body: payload, responseType: FloaterUncompleteResponse.self)
     }
 
     func prioritizeFloaterByBody(payload: FloaterPrioritizeRequest) async throws -> MessageResponse {

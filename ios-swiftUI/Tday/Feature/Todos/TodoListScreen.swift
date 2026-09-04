@@ -439,9 +439,18 @@ struct TodoListScreen: View {
     let summaryAvailable: Bool
     let onOpenFloaterList: (String, String) -> Void
     let onOpenSettings: () -> Void
+    /// Floater root feed only — see `RootFeedHeroHeader.onOpenCompleted`. Every
+    /// other `TodoListScreen` mode never renders the root-feed header at all
+    /// (`usesRootFeedHeader` gates it), so the default no-op is never reached.
+    let onOpenCompleted: () -> Void
     @State private var viewModel: TodoListViewModel
     @Environment(\.tdayColors) private var colors
     @Environment(\.dismiss) private var dismiss
+    /// Foreground half of "the screen is actually visible/foregrounded" for
+    /// `celebratesEmptyState`'s remote branch — the app can be backgrounded
+    /// while this screen is still the one on top. See `isScreenVisible` for
+    /// the on-screen half.
+    @Environment(\.scenePhase) private var scenePhase
     @FocusState private var floaterTaskHomeSearchFieldFocused: Bool
     @FocusState private var listSearchFieldFocused: Bool
     @State private var showingCreateTask = false
@@ -487,6 +496,12 @@ struct TodoListScreen: View {
     @State private var showingBulkMoveConfirmation = false
     @State private var pendingBulkMoveListID: String?
     @State private var hasOpenedCreateTaskOnAppear = false
+    /// On-screen half of "the screen is actually visible/foregrounded" for
+    /// `celebratesEmptyState`'s remote branch. Set by this screen's own
+    /// `onAppear`/`onDisappear`, so a remote-driven empty transition that
+    /// lands while this screen is pushed behind another, or backgrounded,
+    /// does not surface a stale burst when the user comes back to it later.
+    @State private var isScreenVisible = false
 
     init(
         container: AppContainer,
@@ -506,6 +521,7 @@ struct TodoListScreen: View {
         onRootControlsVisibleChange: @escaping (Bool) -> Void = { _ in },
         onOpenFloaterList: @escaping (String, String) -> Void = { _, _ in },
         onOpenSettings: @escaping () -> Void = {},
+        onOpenCompleted: @escaping () -> Void = {},
         summaryAvailable: Bool = true,
         onListDeleted: @escaping () -> Void = {}
     ) {
@@ -523,6 +539,7 @@ struct TodoListScreen: View {
         self.onRootControlsVisibleChange = onRootControlsVisibleChange
         self.onOpenFloaterList = onOpenFloaterList
         self.onOpenSettings = onOpenSettings
+        self.onOpenCompleted = onOpenCompleted
         self.summaryAvailable = summaryAvailable
         _viewModel = State(initialValue: TodoListViewModel(container: container, mode: mode, listId: listId, listName: listName))
         _collapsedSectionIDs = State(initialValue: mode == .priority || mode == .all || mode == .list ? ["earlier"] : [])
@@ -786,13 +803,32 @@ struct TodoListScreen: View {
     /// Whether the empty state about to be shown is the end of a finished list
     /// rather than a list that was never filled. Deleting the last task, or
     /// opening an empty list, gets the plain arrival; ticking the last one off
-    /// gets the confetti.
+    /// gets the confetti — whether that tick happened here, on another
+    /// device, or from a collaborator on a shared list.
+    ///
+    /// Two independent triggers, both windowed the same way: `lastCompletionAt`
+    /// is this device's own precise signal (only `complete`/`bulkComplete` set
+    /// it); `remoteEmptiedAt` is the broader one a cache change this device
+    /// did not stage leaves behind (see its doc comment for why it cannot be
+    /// as precise). The remote branch additionally requires the screen to be
+    /// visible and the app foregrounded — a transition nobody was looking at
+    /// does not get to surface a burst retroactively when the user returns.
     ///
     /// The window is wider than the burst's own flight, so a redraw mid-flight
     /// cannot cut the paper off in mid-air.
     private var celebratesEmptyState: Bool {
-        guard viewModel.items.isEmpty, let completedAt = viewModel.lastCompletionAt else { return false }
-        return Date().timeIntervalSince(completedAt) < TodoListScreen.completionCelebrationWindow
+        guard viewModel.items.isEmpty else { return false }
+        let window = TodoListScreen.completionCelebrationWindow
+        if let completedAt = viewModel.lastCompletionAt,
+           Date().timeIntervalSince(completedAt) < window {
+            return true
+        }
+        if let emptiedAt = viewModel.remoteEmptiedAt,
+           isScreenVisible, scenePhase == .active,
+           Date().timeIntervalSince(emptiedAt) < window {
+            return true
+        }
+        return false
     }
 
     private static let completionCelebrationWindow: TimeInterval = 4
@@ -1348,6 +1384,7 @@ struct TodoListScreen: View {
             showingCreateTask = true
         }
         .onAppear {
+            isScreenVisible = true
             onRootControlsVisibleChange(!(isFloaterTaskHomeScreen && floaterTaskHomeSearchExpanded))
             onRootDockCollapsedChange(shouldCollapseRootDock)
             if openCreateTaskOnAppear && !hasOpenedCreateTaskOnAppear {
@@ -1357,6 +1394,7 @@ struct TodoListScreen: View {
             }
         }
         .onDisappear {
+            isScreenVisible = false
             onRootControlsVisibleChange(true)
         }
     }
@@ -1643,6 +1681,10 @@ struct TodoListScreen: View {
             onOpenSettings: {
                 closeFloaterTaskHomeSearch()
                 onOpenSettings()
+            },
+            onOpenCompleted: {
+                closeFloaterTaskHomeSearch()
+                onOpenCompleted()
             },
             onScrollToTop: {
                 titleScrollToTopRequestID += 1
@@ -2832,6 +2874,9 @@ struct TodoListScreen: View {
             onEdit: {
                 editingTodo = todo
             },
+            onCopy: {
+                viewModel.copyToClipboard(todo)
+            },
             onDelete: {
                 Task { await viewModel.delete(todo) }
             }
@@ -2998,6 +3043,9 @@ struct TodoListScreen: View {
             extraAction: promoteOrFloatSwipeAction(for: todo),
             onEdit: {
                 editingTodo = todo
+            },
+            onCopy: {
+                viewModel.copyToClipboard(todo)
             },
             onDelete: {
                 Task { await viewModel.delete(todo) }

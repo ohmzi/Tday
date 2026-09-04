@@ -19,6 +19,8 @@ struct OfflineSyncState: Equatable, Codable {
     var floaterLists: [CachedFloaterListRecord] = []
     var pendingMutations: [PendingMutationRecord] = []
     var aiSummaryEnabled: Bool = true
+    // "scheduled" or "floater" — mirrors the shared DefaultHomeScreen API values verbatim.
+    var defaultHomeScreen: String = "scheduled"
 }
 
 struct MobileSyncStatus: Equatable {

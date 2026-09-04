@@ -28,8 +28,8 @@ This document describes the durable and local data structures that define T'Day.
 | Floater | `Floaters` | `FloaterDto`, `CreateFloaterRequest`, `UpdateFloaterRequest` | Unscheduled task for Anytime/Floater planning. No `due`. |
 | Floater list | `FloaterLists` / `FloaterProject` | `FloaterListDto`, `FloaterListDetailResponse` | Project/group for floaters. Keep separate from scheduled-task lists. Carries the same sharing metadata as `ListDto`. |
 | Floater list share | `FloaterListShares` (`floater_list_shares`) | Same share DTOs as scheduled lists | EDITOR/VIEWER membership on a floater list. |
-| Completed floater | `CompletedFloaters` | `CompletedFloaterDto` | Completion history for floaters. |
-| Preferences | `UserPreferences` | `PreferencesDto`, `PreferencesResponse` | Per-user sorting/grouping/direction preferences. |
+| Completed floater | `CompletedFloaters` | `CompletedFloaterDto` | Completion history for floaters; survives the source list being deleted (`listDeleted`), and undo recreates it under its original name/color — see `docs/design/completed-floaters-durability.md`. |
+| Preferences | `UserPreferences` | `PreferencesDto`, `PreferencesResponse` | Per-user sorting/grouping/direction preferences, plus `aiSummaryEnabled` and `defaultHomeScreen` (`"scheduled"` \| `"floater"` — which root feed opens on a fresh cold launch; defaults to `"scheduled"`). |
 | App config | `AppConfigs` | `AppSettingsResponse`, `AdminSettingsResponse` | Public/admin app settings such as Summary availability. |
 | File metadata | `Files` | Internal only | Retained table for cleanup/compatibility paths; there is no active upload/download API surface. |
 | Event/auth logs | `EventLogs`, `AuthThrottles`, `AuthSignals`, `VerificationTokens`, `CronLogs` | Internal models | Security, throttling, verification, diagnostics, and operational state. |
@@ -50,7 +50,7 @@ Scheduled tasks and floaters are intentionally different:
 - A task should not be made "unscheduled" by nulling `Todo.due`; use a floater instead.
 - Scheduled-task `listID` values must belong to the authenticated user. Stale or cross-user list IDs are rejected before database writes.
 - Completing a todo creates completed-todo history; completing a floater creates completed-floater history.
-- List deletion must preserve completed history metadata (`listName`, `listColor`) where the backend/mobile model supports it.
+- List deletion must preserve completed history metadata (`listName`, `listColor`) where the backend/mobile model supports it. For floaters specifically, deleting a list no longer deletes its `CompletedFloaters` rows (backend: `ON DELETE SET NULL`, plus an unconstrained `originalListID` snapshot; Android: `FloaterListRepository` stops pruning `completedFloaters` on list delete) — undoing such an item recreates the list under its original name/color, converging duplicate undos from the same deleted list onto one recreated list. `CompletedFloaterDto.listDeleted` / `CachedCompletedFloaterRecord.listDeleted` flag this case. See `docs/design/completed-floaters-durability.md`. The identical bug for scheduled `Todo`/`CompletedTodos` is a deliberate, separate product decision and is untouched.
 
 ## Recurrence
 
@@ -81,7 +81,8 @@ OfflineSyncState
 ├── pendingMutations
 ├── lastSuccessfulSyncEpochMs
 ├── lastSyncAttemptEpochMs
-└── aiSummaryEnabled
+├── aiSummaryEnabled
+└── defaultHomeScreen
 ```
 
 Android stores this state in Room tables:
@@ -114,18 +115,40 @@ The Today Tasks widgets do not add backend or shared DTOs. Android builds its wi
 from the Room-backed `OfflineSyncState`; iOS writes a versioned JSON snapshot into App Group defaults
 for the WidgetKit extension.
 
-The current iOS snapshot schema is version `2` and includes:
+The current iOS snapshot schema is version `2` (Today) / `1` (Floater) and includes:
 
 - `schemaVersion`
 - `generatedAtEpochMs`
 - `title`
 - `status` (`setup`, `empty`, or `tasks`)
 - `taskCount`
-- `tasks`, with each row carrying `id`, `title`, `dueEpochMs`, and `priority`
+- `tasks`, with each row carrying `id`, `title`, `dueEpochMs` (todo only), and `priority`
+- `perList` (iOS only, R7): a `[listId: PerListSnapshot]` map alongside `tasks`, one entry per
+  todo/floater list that currently has open items. Each entry carries its own `totalCount` (true
+  count) and a capped `tasks` array, mirroring the top-level `taskCount`/`tasks` split — see
+  "Per-list configurable widgets (iOS)" below.
 
 Both platforms filter the source cache to pending scheduled tasks due today, sort by due time then
-title, cap displayed rows to the widget task limit, and exclude floaters, completed tasks, and overdue
-tasks from the v1 widget surface.
+title, cap displayed rows to the widget task limit, and exclude floaters and completed tasks from the
+global feed. The global Today aggregate still excludes overdue tasks (due strictly today only); a
+per-list widget instance (see below) does not — it includes overdue.
+
+### Per-list configurable widgets (iOS)
+
+iOS widgets (R7) are `AppIntentConfiguration`s: on placement (or via "Edit Widget") the user picks
+one specific todo list or floater list, or leaves it unset to keep the original global feed. The
+widget extension cannot reach `AppContainer`/SwiftData directly (by design — see the file header on
+`WidgetSnapshotFileStore`), so the app additionally writes a lightweight, content-free list catalog,
+`widget-lists-snapshot.json` (`[{id, name, kind}]`, `kind` = `"todo"` or `"floater"`), which backs the
+configuration picker's `EntityQuery`.
+
+The picked list's TYPE decides the widget's rendered shape, not which of the two widget kinds
+(`TodayTasksWidget` / `FloaterTasksWidget`) it was dragged out of: a todo list always renders
+due-date-shaped (due times, overdue in red), a floater list always renders undated-shaped. Either
+gallery slot can render either shape once configured. Content comes from the SAME two snapshot files
+via `perList[listId]` — there is no third, per-instance file; two widget instances configured to the
+same list read the same `perList` entry, and WidgetKit itself (not the app) tracks which instance
+has which configuration.
 
 ## Device Calendar Mirror
 
@@ -209,6 +232,13 @@ Differences from the server contract, all deliberate:
 - Clearing the browser's cookies/site data deletes the workspace. Export/import
   (`/api/export`, `/api/import`, same `TdayExport` bundle) is the only way to carry it off
   the device; import stays additive with the same id-remap rule as `ExportRemap`.
+- `LocalCompletedFloaterRow`/`LocalFloaterListRow` mirror the backend's floater-completion
+  durability fix (see `docs/design/completed-floaters-durability.md`): deleting a floater
+  list detaches its `CompletedFloaters` rows (`listID` cleared) instead of deleting them,
+  and `originalListID`/`recreatedFromListID` are the same unconstrained correlation pair
+  the backend uses so `uncompleteFloater` can find-or-create the list under its original
+  name/color. **Floaters only** — the identical bug in `CompletedTodos`/scheduled lists is
+  left as-is, matching the backend's scope.
 
 ## Tenant Isolation
 

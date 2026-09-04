@@ -14,7 +14,7 @@ import androidx.room.RoomDatabase
         PendingMutationEntity::class,
         SyncMetadataEntity::class,
     ],
-    version = 8,
+    version = 10,
     // Schema is exported to app/schemas so version bumps ship real Migration
     // objects instead of destroying the DB (which holds unsynced pending
     // mutations, not just re-fetchable cache). See DatabaseModule.

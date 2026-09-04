@@ -195,6 +195,14 @@ data class CompletedItem(
     val listId: String? = null,
     val listName: String? = null,
     val listColor: String? = null,
+    // Distinguishes a completed floater from a completed todo in the merged
+    // Completed timeline; false (todo) is the default so every existing
+    // CompletedItem call site keeps building todos without change.
+    val isFloater: Boolean = false,
+    // Floaters only (see CompletedFloaterDto.listDeleted): true when this item's
+    // list existed at completion time but was later deleted. Undoing it
+    // recreates the list under its original name/color.
+    val listDeleted: Boolean = false,
 )
 
 @Immutable

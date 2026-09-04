@@ -16,6 +16,8 @@
     <string name="action_create_list">Crear lista</string>
     <string name="action_edit">Editar</string>
     <string name="action_edit_task">Editar tarea</string>
+    <string name="action_copy">Copiar</string>
+    <string name="action_copy_task">Copiar tarea</string>
     <string name="action_delete_task">Eliminar tarea</string>
     <string name="action_delete_list">Eliminar lista</string>
     <string name="action_delete">Eliminar</string>
@@ -207,6 +209,8 @@
     <string name="error_update_name_failed">No se pudo actualizar tu nombre. Inténtalo de nuevo.</string>
     <string name="error_change_password_failed">No se pudo cambiar tu contraseña. Inténtalo de nuevo.</string>
     <string name="settings_appearance">Apariencia</string>
+    <string name="settings_behavior">Comportamiento</string>
+    <string name="settings_default_home_screen">Pantalla de inicio predeterminada</string>
     <string name="settings_reminders">Recordatorios</string>
     <string name="settings_feature_toggle">Activar función</string>
     <string name="settings_notifications">Notificaciones</string>
@@ -568,6 +572,8 @@
     <string name="release_no_apk">No hay ningún APK adjunto a esta versión.</string>
     <string name="release_launch_update_toast">La actualización %1$s está disponible.</string>
     <string name="task_deleted_toast">Tarea eliminada</string>
+    <string name="task_copied_toast">Copiado al portapapeles</string>
+    <string name="task_copy_failed_toast">No se pudo copiar al portapapeles</string>
     <string name="list_deleted_toast">Lista eliminada</string>
     <string name="release_view_on_github">Ver en GitHub</string>
 

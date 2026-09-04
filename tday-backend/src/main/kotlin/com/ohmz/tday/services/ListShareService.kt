@@ -33,10 +33,18 @@ import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.stringLiteral
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import org.jetbrains.exposed.sql.update
+import org.slf4j.LoggerFactory
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 
 enum class ListType { SCHEDULED, FLOATER }
+
+/** The wire value clients use to tell a scheduled list from a floater list, matching the
+ * `/list` vs `/floaterList` route prefix and the `list.*`/`floaterList.*` [DomainEvent] names. */
+fun ListType.wireName(): String = when (this) {
+    ListType.SCHEDULED -> "list"
+    ListType.FLOATER -> "floaterList"
+}
 
 /** Shortest member-search query worth running, and the cap on how many members come back. */
 private const val MIN_SEARCH_LENGTH = 2
@@ -128,7 +136,9 @@ interface ListShareService {
 class ListShareServiceImpl(
     private val cache: CacheService,
     private val realtime: RealtimeService,
+    private val push: PushNotificationService,
 ) : ListShareService {
+    private val logger = LoggerFactory.getLogger(ListShareServiceImpl::class.java)
 
     override suspend fun accessFor(userId: String, listId: String, type: ListType): ShareRole? =
         newSuspendedTransaction(Dispatchers.IO) { accessForInTx(userId, listId, type) }
@@ -212,6 +222,12 @@ class ListShareServiceImpl(
         val normalizedUsername = username.trim()
         if (normalizedUsername.isEmpty()) return AppError.BadRequest("username is required", "username").left()
 
+        // Set inside the transaction below; read after it commits to decide whether this is a
+        // brand-new share (worth a push) or a re-share/role-change on an existing member (not).
+        var isNewMember = false
+        var listName = ""
+        var sharerLabel = "Someone"
+
         val result = newSuspendedTransaction(Dispatchers.IO) {
             val access = accessForInTx(requesterId, listId, type)
                 ?: return@newSuspendedTransaction AppError.NotFound("list not found").left()
@@ -227,49 +243,11 @@ class ListShareServiceImpl(
                 return@newSuspendedTransaction AppError.BadRequest("you already own this list", "username").left()
             }
 
+            listName = listNameInTx(listId, type)
+            sharerLabelInTx(requesterId)?.let { sharerLabel = it }
+
             val now = LocalDateTime.now(ZoneOffset.UTC)
-            when (type) {
-                ListType.SCHEDULED -> {
-                    val existing = ListShares.selectAll().where {
-                        (ListShares.listID eq listId) and (ListShares.userID eq targetId)
-                    }.firstOrNull()
-                    if (existing != null) {
-                        ListShares.update({ (ListShares.listID eq listId) and (ListShares.userID eq targetId) }) {
-                            it[ListShares.role] = parsedRole.name
-                            it[ListShares.updatedAt] = now
-                        }
-                    } else {
-                        ListShares.insert {
-                            it[ListShares.id] = CuidGenerator.newCuid()
-                            it[ListShares.listID] = listId
-                            it[ListShares.userID] = targetId
-                            it[ListShares.role] = parsedRole.name
-                            it[ListShares.createdAt] = now
-                            it[ListShares.updatedAt] = now
-                        }
-                    }
-                }
-                ListType.FLOATER -> {
-                    val existing = FloaterListShares.selectAll().where {
-                        (FloaterListShares.listID eq listId) and (FloaterListShares.userID eq targetId)
-                    }.firstOrNull()
-                    if (existing != null) {
-                        FloaterListShares.update({ (FloaterListShares.listID eq listId) and (FloaterListShares.userID eq targetId) }) {
-                            it[FloaterListShares.role] = parsedRole.name
-                            it[FloaterListShares.updatedAt] = now
-                        }
-                    } else {
-                        FloaterListShares.insert {
-                            it[FloaterListShares.id] = CuidGenerator.newCuid()
-                            it[FloaterListShares.listID] = listId
-                            it[FloaterListShares.userID] = targetId
-                            it[FloaterListShares.role] = parsedRole.name
-                            it[FloaterListShares.createdAt] = now
-                            it[FloaterListShares.updatedAt] = now
-                        }
-                    }
-                }
-            }
+            isNewMember = upsertShareRoleInTx(listId, type, targetId, parsedRole.name, now)
             ListMemberDto(
                 userId = targetId,
                 username = targetRow[Users.username],
@@ -279,8 +257,49 @@ class ListShareServiceImpl(
             ).right()
         }
 
-        result.onRight { afterMembershipChange(requesterId, listId, type) }
+        result.onRight { member ->
+            afterMembershipChange(requesterId, listId, type)
+            // Only a genuinely new share is push-worthy — re-adding an existing member just
+            // changes their role via the same request and already reaches them over the
+            // realtime `list.members` event above.
+            if (isNewMember) {
+                notifyNewMember(targetId = member.userId, listId = listId, type = type, listName = listName, sharerLabel = sharerLabel)
+            }
+        }
         return result
+    }
+
+    /**
+     * Pushes the newly-added member a "you've been shared a list" notification.
+     *
+     * Awaited (not detached like [PushNotificationService.notifyDataChanged]) because this fires
+     * once per explicit "add member" action, not on every mutation — the added latency of a
+     * network push send is an acceptable trade for keeping the send observable/testable in the
+     * same request instead of a fire-and-forget scope. A failed send is logged, never surfaced
+     * to the caller: the share itself already succeeded.
+     */
+    private suspend fun notifyNewMember(targetId: String, listId: String, type: ListType, listName: String, sharerLabel: String) {
+        val title = "New list shared with you"
+        val body = if (listName.isNotBlank()) {
+            "$sharerLabel shared \"$listName\" with you"
+        } else {
+            "$sharerLabel shared a list with you"
+        }
+        runCatching {
+            push.sendToUser(
+                userId = targetId,
+                title = title,
+                body = body,
+                listId = listId,
+                listType = type.wireName(),
+                listName = listName.ifBlank { null },
+            )
+        }.onSuccess { result ->
+            result.fold(
+                { error -> logger.warn("List-share push to {} failed: {}", targetId, error.message) },
+                { /* delivered, or no-op if the member has no push subscription */ },
+            )
+        }.onFailure { logger.warn("List-share push to {} threw: {}", targetId, it.message) }
     }
 
     override suspend fun updateRole(
@@ -418,6 +437,63 @@ class ListShareServiceImpl(
     private fun ownerOfInTx(listId: String, type: ListType): String? = when (type) {
         ListType.SCHEDULED -> Lists.selectAll().where { Lists.id eq listId }.firstOrNull()?.get(Lists.userID)
         ListType.FLOATER -> FloaterLists.selectAll().where { FloaterLists.id eq listId }.firstOrNull()?.get(FloaterLists.userID)
+    }
+
+    private fun listNameInTx(listId: String, type: ListType): String = when (type) {
+        ListType.SCHEDULED -> Lists.selectAll().where { Lists.id eq listId }.firstOrNull()?.get(Lists.name)
+        ListType.FLOATER -> FloaterLists.selectAll().where { FloaterLists.id eq listId }.firstOrNull()?.get(FloaterLists.name)
+    }.orEmpty()
+
+    private fun sharerLabelInTx(userId: String): String? =
+        Users.selectAll().where { Users.id eq userId }.firstOrNull()?.let { it[Users.name] ?: it[Users.username] }
+
+    /**
+     * Inserts a new share row, or updates the role on an existing one. Returns whether this was
+     * a brand-new share (an insert) rather than a role change on an existing member — that
+     * distinction is what decides whether [addMember] pushes the target a notification.
+     */
+    private fun upsertShareRoleInTx(listId: String, type: ListType, targetId: String, role: String, now: LocalDateTime): Boolean {
+        val isNew = when (type) {
+            ListType.SCHEDULED -> ListShares.selectAll().where {
+                (ListShares.listID eq listId) and (ListShares.userID eq targetId)
+            }.firstOrNull() == null
+            ListType.FLOATER -> FloaterListShares.selectAll().where {
+                (FloaterListShares.listID eq listId) and (FloaterListShares.userID eq targetId)
+            }.firstOrNull() == null
+        }
+        when (type) {
+            ListType.SCHEDULED -> if (isNew) {
+                ListShares.insert {
+                    it[ListShares.id] = CuidGenerator.newCuid()
+                    it[ListShares.listID] = listId
+                    it[ListShares.userID] = targetId
+                    it[ListShares.role] = role
+                    it[ListShares.createdAt] = now
+                    it[ListShares.updatedAt] = now
+                }
+            } else {
+                ListShares.update({ (ListShares.listID eq listId) and (ListShares.userID eq targetId) }) {
+                    it[ListShares.role] = role
+                    it[ListShares.updatedAt] = now
+                }
+            }
+            ListType.FLOATER -> if (isNew) {
+                FloaterListShares.insert {
+                    it[FloaterListShares.id] = CuidGenerator.newCuid()
+                    it[FloaterListShares.listID] = listId
+                    it[FloaterListShares.userID] = targetId
+                    it[FloaterListShares.role] = role
+                    it[FloaterListShares.createdAt] = now
+                    it[FloaterListShares.updatedAt] = now
+                }
+            } else {
+                FloaterListShares.update({ (FloaterListShares.listID eq listId) and (FloaterListShares.userID eq targetId) }) {
+                    it[FloaterListShares.role] = role
+                    it[FloaterListShares.updatedAt] = now
+                }
+            }
+        }
+        return isNew
     }
 
     private fun memberRowsInTx(listId: String, type: ListType): List<ListMemberDto> = when (type) {

@@ -42,6 +42,10 @@ function createAuthState(overrides: Partial<AuthState> = {}): AuthState {
   };
 }
 
+// AuthLayout/LandingPage redirect to the bare "/:locale/app" index route, not straight to
+// "/app/tday" — the real Scheduled-vs-Floater choice is AppHomeRedirectPage's job, once
+// UserPreferencesProvider (mounted inside AppLayout) has loaded. That hop has its own test in
+// appHomeRedirect.test.tsx; here it's enough that these two gates land inside the app at all.
 function renderAuthLayout(initialEntry = "/en/login") {
   return render(
     <MemoryRouter initialEntries={[initialEntry]}>
@@ -50,7 +54,7 @@ function renderAuthLayout(initialEntry = "/en/login") {
           <Route path="login" element={<div>Login Screen</div>} />
           <Route path="register" element={<div>Register Screen</div>} />
         </Route>
-        <Route path="/:locale/app/tday" element={<div>Scheduled Task Home Screen</div>} />
+        <Route path="/:locale/app" element={<div>Scheduled Task Home Screen</div>} />
       </Routes>
     </MemoryRouter>,
   );
@@ -62,7 +66,7 @@ function renderLandingPage(initialEntry = "/en") {
       <Routes>
         <Route path="/:locale" element={<LandingPage />} />
         <Route path="/:locale/login" element={<div>Login Screen</div>} />
-        <Route path="/:locale/app/tday" element={<div>Scheduled Task Home Screen</div>} />
+        <Route path="/:locale/app" element={<div>Scheduled Task Home Screen</div>} />
       </Routes>
     </MemoryRouter>,
   );

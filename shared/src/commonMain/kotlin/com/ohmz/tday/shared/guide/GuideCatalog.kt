@@ -23,6 +23,13 @@ object GuideCatalog {
             setOf(WEB, ANDROID, IOS), body = listOf(para(GuideTopicIds.ROOT_FEEDS)),
         ),
         topic(
+            // Right after Root feeds: this is the Settings control for the same
+            // Scheduled/Floaters choice that topic just introduced.
+            GuideTopicIds.DEFAULT_HOME_SCREEN, GuideSectionId.GETTING_STARTED, "house",
+            setOf(WEB, ANDROID, IOS), sinceVersion = "0.7.7",
+            body = listOf(para(GuideTopicIds.DEFAULT_HOME_SCREEN)),
+        ),
+        topic(
             GuideTopicIds.CREATE_TASK, GuideSectionId.GETTING_STARTED, "plus",
             setOf(WEB, ANDROID, IOS),
             body = listOf(para(GuideTopicIds.CREATE_TASK), tip(GuideTopicIds.CREATE_TASK)),
@@ -66,6 +73,15 @@ object GuideCatalog {
             setOf(ANDROID, IOS), badge = GuideBadge.HIDDEN_GEM,
             body = listOf(para(GuideTopicIds.SWIPE_ACTIONS), tip(GuideTopicIds.SWIPE_ACTIONS)),
             deepLink = GuideDeepLink(android = "todos/today", ios = "today"),
+        ),
+        topic(
+            // Right after Swipe actions: Copy is one of the pills that topic
+            // introduces, and on web it's reachable from the same task row (swipe
+            // on mobile, the hover actions on desktop) even though web has no
+            // separate swipe-actions topic of its own.
+            GuideTopicIds.COPY_TASK_TEXT, GuideSectionId.GESTURES, "copy",
+            setOf(WEB, ANDROID, IOS), badge = GuideBadge.HIDDEN_GEM, sinceVersion = "0.7.8",
+            body = listOf(para(GuideTopicIds.COPY_TASK_TEXT), tip(GuideTopicIds.COPY_TASK_TEXT)),
         ),
         topic(
             GuideTopicIds.LONG_PRESS_ACTIONS, GuideSectionId.GESTURES, "hand",
@@ -220,8 +236,28 @@ object GuideCatalog {
 
         // ── Widgets & surfaces ───────────────────────────────────────────
         topic(
-            GuideTopicIds.HOME_WIDGET, GuideSectionId.WIDGETS_AND_SURFACES, "layout-grid",
+            // "layout-grid" here, on FOCUS_FILTERS below, and on the new LIST_WIDGETS topic are
+            // three independently-chosen icons for unrelated topics that happen to share a
+            // glyph; a shared constant would assert a coupling that doesn't exist between them.
+            GuideTopicIds.HOME_WIDGET, GuideSectionId.WIDGETS_AND_SURFACES, "layout-grid",  // skipcq: KT-W1042
             setOf(ANDROID, IOS), body = listOf(para(GuideTopicIds.HOME_WIDGET)),
+        ),
+        topic(
+            // iOS-only: the picker is a real AppIntentConfiguration widget
+            // (long-press ▸ Edit Widget) that re-targets an already-placed widget at a
+            // different list. Icon reused from the covered set
+            // (tday-web/tests/fixtures/guide-icons.json) rather than adding a new Lucide
+            // glyph across all three platforms blind.
+            GuideTopicIds.WIDGET_LIST_SELECTION, GuideSectionId.WIDGETS_AND_SURFACES, "list-todo",
+            setOf(IOS), sinceVersion = "0.7.7", badge = GuideBadge.PRO_TIP,
+            body = listOf(para(GuideTopicIds.WIDGET_LIST_SELECTION), tip(GuideTopicIds.WIDGET_LIST_SELECTION)),
+        ),
+        topic(
+            // Android only: a distinct per-list widget type (add-time configuration
+            // Activity), not the same mechanism as iOS's WIDGET_LIST_SELECTION picker above.
+            GuideTopicIds.LIST_WIDGETS, GuideSectionId.WIDGETS_AND_SURFACES, "layout-grid",
+            setOf(ANDROID), sinceVersion = "0.7.8",
+            body = listOf(para(GuideTopicIds.LIST_WIDGETS), tip(GuideTopicIds.LIST_WIDGETS)),
         ),
         topic(
             GuideTopicIds.WIDGET_QUICK_ADD, GuideSectionId.WIDGETS_AND_SURFACES, "square-plus",

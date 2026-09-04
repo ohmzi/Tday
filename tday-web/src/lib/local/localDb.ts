@@ -88,7 +88,16 @@ export type LocalListRow = {
   updatedAt: string;
 };
 
-export type LocalFloaterListRow = LocalListRow & { reusable: boolean };
+export type LocalFloaterListRow = LocalListRow & {
+  reusable: boolean;
+  /**
+   * Set only on a list this workspace recreated from `uncompleteFloater`'s
+   * find-or-create step (see localFloaters.ts) — names the id of the
+   * original (deleted) list. Never surfaced in a FloaterListDto response;
+   * purely the local twin of the backend's `FloaterLists.recreatedFromListID`.
+   */
+  recreatedFromListID?: string | null;
+};
 
 export type LocalCompletedTodoRow = {
   id: string;
@@ -119,6 +128,14 @@ export type LocalCompletedFloaterRow = {
   listID: string | null;
   listName: string | null;
   listColor: string | null;
+  /**
+   * Snapshot of `listID` at completion time, kept even after `listID` is
+   * cleared by a list deletion — the local twin of the backend's
+   * `CompletedFloaters.originalListID`. Never sent in a DTO response; it is
+   * only what `uncompleteFloater`'s find-or-create reads to recreate the
+   * list. See docs/design/completed-floaters-durability.md.
+   */
+  originalListID?: string | null;
 };
 
 export type LocalTaskStepRow = {
@@ -135,6 +152,8 @@ export type LocalPreferencesRow = {
   groupBy: string | null;
   direction: string | null;
   aiSummaryEnabled: boolean;
+  // "scheduled" or "floater" — which root feed opens on a fresh cold launch.
+  defaultHomeScreen: string;
 };
 
 export type LocalWorkspace = {
@@ -174,6 +193,7 @@ export function emptyWorkspace(): LocalWorkspace {
       groupBy: null,
       direction: null,
       aiSummaryEnabled: true,
+      defaultHomeScreen: "scheduled",
     },
   };
 }

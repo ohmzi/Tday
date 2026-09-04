@@ -159,6 +159,7 @@ fun CachedCompletedFloaterRecord.toEntity() = CachedCompletedFloaterEntity(
     listId = listId,
     listName = listName,
     listColor = listColor,
+    listDeleted = listDeleted,
 )
 
 fun CachedCompletedFloaterEntity.toRecord() = CachedCompletedFloaterRecord(
@@ -171,6 +172,7 @@ fun CachedCompletedFloaterEntity.toRecord() = CachedCompletedFloaterRecord(
     listId = listId,
     listName = listName,
     listColor = listColor,
+    listDeleted = listDeleted,
 )
 
 fun PendingMutationRecord.toEntity() = PendingMutationEntity(

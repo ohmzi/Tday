@@ -9,10 +9,12 @@
     ],
     "swipe": [
       "swipe-actions",
+      "copy-task-text",
       "calendar-views"
     ],
     "widget": [
       "home-widget",
+      "widget-list-selection",
       "widget-quick-add",
       "interactive-widgets",
       "focus-filters"
@@ -28,6 +30,7 @@
       "calendar-views",
       "root-feeds",
       "create-task",
+      "copy-task-text",
       "promote-and-float",
       "quick-defer",
       "day-done",
@@ -48,11 +51,13 @@
       "floaters-vs-todos",
       "resting-floaters",
       "floater-lists",
+      "default-home-screen",
       "promote-and-float",
       "reusable-lists",
       "root-feeds",
       "create-task",
       "morning-sweep",
+      "widget-list-selection",
       "interactive-widgets"
     ],
     "car": [
@@ -71,11 +76,13 @@
       "priorities",
       "bulk-actions",
       "nlp-date-syntax",
+      "copy-task-text",
       "promote-and-float"
     ],
     "pin": [
       "pin-task",
       "create-task",
+      "copy-task-text",
       "promote-and-float",
       "home-widget"
     ],

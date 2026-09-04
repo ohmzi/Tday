@@ -49,7 +49,16 @@ interface PushNotificationService {
         transport: String = TRANSPORT_WEBPUSH,
     ): Either<AppError, Unit>
     suspend fun unsubscribe(userId: String, endpoint: String): Either<AppError, Unit>
-    suspend fun sendToUser(userId: String, title: String, body: String, url: String? = null, todoId: String? = null): Either<AppError, Unit>
+    suspend fun sendToUser(
+        userId: String,
+        title: String,
+        body: String,
+        url: String? = null,
+        todoId: String? = null,
+        listId: String? = null,
+        listType: String? = null,
+        listName: String? = null,
+    ): Either<AppError, Unit>
 
     /**
      * Fire-and-forget SILENT "data changed" ping so a backgrounded device can refresh its
@@ -144,7 +153,16 @@ class PushNotificationServiceImpl(private val config: AppConfig) : PushNotificat
         return Unit.right()
     }
 
-    override suspend fun sendToUser(userId: String, title: String, body: String, url: String?, todoId: String?): Either<AppError, Unit> {
+    override suspend fun sendToUser(
+        userId: String,
+        title: String,
+        body: String,
+        url: String?,
+        todoId: String?,
+        listId: String?,
+        listType: String?,
+        listName: String?,
+    ): Either<AppError, Unit> {
         val subscriptions = newSuspendedTransaction(Dispatchers.IO) {
             PushSubscriptions.selectAll()
                 .where { PushSubscriptions.userID eq userId }
@@ -166,6 +184,9 @@ class PushNotificationServiceImpl(private val config: AppConfig) : PushNotificat
             put("body", body)
             if (url != null) put("url", url)
             if (todoId != null) put("todoId", todoId)
+            if (listId != null) put("listId", listId)
+            if (listType != null) put("listType", listType)
+            if (listName != null) put("listName", listName)
         }.toString()
 
         val svc = pushService

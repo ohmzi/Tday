@@ -110,6 +110,7 @@ data class CachedCompletedFloaterEntity(
     val listId: String?,
     val listName: String?,
     val listColor: String?,
+    @ColumnInfo(defaultValue = "0") val listDeleted: Boolean = false,
 )
 
 @Entity(
@@ -141,4 +142,5 @@ data class SyncMetadataEntity(
     val lastSuccessfulSyncEpochMs: Long = 0L,
     val lastSyncAttemptEpochMs: Long = 0L,
     val aiSummaryEnabled: Boolean = true,
+    val defaultHomeScreen: String = "scheduled",
 )

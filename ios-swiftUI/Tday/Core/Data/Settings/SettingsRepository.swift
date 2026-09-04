@@ -59,4 +59,58 @@ final class SettingsRepository {
         ))
         return response.aiSummaryEnabled ?? enabled
     }
+
+    /// "scheduled" or "floater" — the root feed a fresh cold launch should open on. Unlike
+    /// `isAiSummaryEnabledSnapshot`, this preference IS user-configurable in Local Mode too —
+    /// there is no server fallback to hardcode, so the cache (which Local Mode also writes
+    /// through) is read directly in both modes. Uses the cache's in-memory
+    /// `defaultHomeScreenSnapshot` mirror rather than `loadOfflineState()`: this runs
+    /// synchronously from `AppRootView.init` on cold launch, before the splash screen's own
+    /// body ever evaluates, so it must not repeat a full fetch across every cached SwiftData
+    /// entity type on the main actor.
+    func defaultHomeScreenSnapshot() -> String {
+        cacheManager.defaultHomeScreenSnapshot
+    }
+
+    /// Refreshes the default-home-screen preference from the server. In Local Mode there is
+    /// nothing to fetch, so the cached value is returned untouched.
+    func refreshDefaultHomeScreen() async -> String {
+        if secureStore.isLocalMode() {
+            return (try? await cacheManager.loadOfflineState().defaultHomeScreen) ?? "scheduled"
+        }
+
+        do {
+            let value = try await api.getPreferences().defaultHomeScreen ?? "scheduled"
+            _ = try await cacheManager.updateOfflineState { state in
+                var nextState = state
+                nextState.defaultHomeScreen = value
+                return nextState
+            }
+            return value
+        } catch {
+            return (try? await cacheManager.loadOfflineState().defaultHomeScreen) ?? "scheduled"
+        }
+    }
+
+    /// Persists the default-home-screen preference via `/api/preferences` (server mode) or
+    /// the offline cache directly (Local Mode), mirroring `setAiSummaryEnabled`'s split.
+    @discardableResult
+    func setDefaultHomeScreen(_ value: String) async throws -> String {
+        _ = try await cacheManager.updateOfflineState { state in
+            var nextState = state
+            nextState.defaultHomeScreen = value
+            return nextState
+        }
+        if secureStore.isLocalMode() {
+            return value
+        }
+        let response = try await api.patchPreferences(payload: PreferencesDTO(
+            direction: nil,
+            sortBy: nil,
+            groupBy: nil,
+            rrule: nil,
+            defaultHomeScreen: value
+        ))
+        return response.defaultHomeScreen ?? value
+    }
 }

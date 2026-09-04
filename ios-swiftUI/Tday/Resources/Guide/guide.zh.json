@@ -102,6 +102,35 @@
       "searchBody": "两个宁静的主信息流，可从底栏切换。 t'day 有两个并列的信息流。“已安排”存放你今天及以后有日期的任务。“随时”存放浮动任务——没有日期的任务。从底部的底栏在两者之间切换，也可以从任意一个创建任务。"
     },
     {
+      "id": "default-home-screen",
+      "section": "GETTING_STARTED",
+      "sectionOrder": 0,
+      "icon": "house",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.7.7",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "默认主屏幕",
+      "summary": "选择 T'Day 启动后打开“已安排”还是“随时”。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "设置中有一个“行为”部分，可以选择启动时先打开哪个信息流——“已安排”或“随时”。这只决定启动时看到的画面；底栏仍然可以随时在两者间切换。"
+          ]
+        }
+      ],
+      "searchTitle": "默认主屏幕",
+      "searchKeywords": "默认, 主屏幕, 启动, 已安排, 随时, 行为, 设置",
+      "searchBody": "选择 t'day 启动后打开“已安排”还是“随时”。 设置中有一个“行为”部分，可以选择启动时先打开哪个信息流——“已安排”或“随时”。这只决定启动时看到的画面；底栏仍然可以随时在两者间切换。"
+    },
+    {
       "id": "create-task",
       "section": "GETTING_STARTED",
       "sectionOrder": 0,
@@ -301,6 +330,41 @@
       "searchTitle": "滑动操作",
       "searchKeywords": "滑动, 手势, 滑, 完成, 删除, 快捷, 行, swipe, gesture, complete, delete",
       "searchBody": "在任务行上滑动，无需打开即可快速操作。 在任务行上滑动即可显示快捷操作——完成它，或移除它——完全不用打开任务。 已完成的任务会显示几秒钟的撤销提示，所以误滑绝不会成为定局。"
+    },
+    {
+      "id": "copy-task-text",
+      "section": "GESTURES",
+      "sectionOrder": 2,
+      "icon": "copy",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.7.8",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "复制任务详情",
+      "summary": "将任务的标题、备注、截止日期和优先级复制为文本。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "滑动任务并点击复制——或在桌面端使用复制按钮——即可将其标题、备注、截止日期和优先级复制为纯文本，随时粘贴到任何地方。"
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "方便将任务粘贴到消息、邮件或其他应用中，无需重新输入。"
+          ]
+        }
+      ],
+      "searchTitle": "复制任务详情",
+      "searchKeywords": "复制, 剪贴板, 分享, 文本, 滑动",
+      "searchBody": "将任务的标题、备注、截止日期和优先级复制为文本。 滑动任务并点击复制——或在桌面端使用复制按钮——即可将其标题、备注、截止日期和优先级复制为纯文本，随时粘贴到任何地方。 方便将任务粘贴到消息、邮件或其他应用中，无需重新输入。"
     },
     {
       "id": "long-press-actions",
@@ -1071,6 +1135,39 @@
       "searchTitle": "主屏幕小组件",
       "searchKeywords": "小组件, 主屏幕, 一瞥, 今天, 锁屏, widget, home screen, today, lock screen",
       "searchBody": "不打开应用也能看到今天的任务。 把 t'day 小组件添加到主屏幕，随手一瞥就能看到今天的任务。点按小组件会把应用打开到相应的位置。"
+    },
+    {
+      "id": "widget-list-selection",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "list-todo",
+      "platforms": [
+        "IOS"
+      ],
+      "badge": "PRO_TIP",
+      "serverOnly": false,
+      "sinceVersion": "0.7.7",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "为小组件选择一个列表",
+      "summary": "让小组件只显示某一个列表，而不是整个动态。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "长按 T'Day 小组件并选择「编辑小组件」，即可精确指定它显示哪个列表——可以是你的任意计划列表或浮动任务列表。计划列表会显示截止时间并标出逾期任务；浮动任务列表则显示一个没有截止时间的开放列表。若不设置，小组件会继续显示完整的「今天」或「浮动任务」动态。"
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "添加多个小组件，每个指向不同的列表，就能在主屏幕上同时看到它们。"
+          ]
+        }
+      ],
+      "searchTitle": "为小组件选择一个列表",
+      "searchKeywords": "小组件, 列表, 配置, 编辑小组件, 按列表, 主屏幕, ios, widget, list",
+      "searchBody": "让小组件只显示某一个列表，而不是整个动态。 长按 t'day 小组件并选择「编辑小组件」，即可精确指定它显示哪个列表——可以是你的任意计划列表或浮动任务列表。计划列表会显示截止时间并标出逾期任务；浮动任务列表则显示一个没有截止时间的开放列表。若不设置，小组件会继续显示完整的「今天」或「浮动任务」动态。 添加多个小组件，每个指向不同的列表，就能在主屏幕上同时看到它们。"
     },
     {
       "id": "widget-quick-add",
