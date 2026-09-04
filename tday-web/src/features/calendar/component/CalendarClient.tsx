@@ -539,6 +539,7 @@ function CalendarTaskRow({
   >(null);
   const closeSwipe = () => setSwipeX(0);
 
+  /** Copies the task's title/notes/due/priority to the clipboard as plain text. */
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(
