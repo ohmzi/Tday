@@ -80,6 +80,7 @@ export default function FloaterItemContainer({
 
   const closeSwipe = () => setSwipeX(0);
 
+  /** Copies the floater's title/notes/priority to the clipboard as plain text. */
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(
