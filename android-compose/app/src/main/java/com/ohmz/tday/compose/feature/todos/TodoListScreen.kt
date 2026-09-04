@@ -132,6 +132,9 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.zIndex
 import androidx.core.view.HapticFeedbackConstantsCompat
 import androidx.core.view.ViewCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.currentStateAsState
 import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.data.RestingFloatersPreferenceStore
 import com.ohmz.tday.compose.core.data.list.ShareListKind
@@ -315,15 +318,37 @@ fun TodoListScreen(
     // Finishing a list is a payoff, not an absence. The empty state that follows
     // the last row leaving gets confetti — but only when the row left because it
     // was ticked off: deleting the last task, or opening a list that was already
-    // empty, gets the plain arrival.
+    // empty, gets the plain arrival. Whether that tick happened here, on another
+    // device, or from a collaborator on a shared list.
     var lastCompletionAtMs by remember { mutableLongStateOf(0L) }
     val completeAndCelebrate: (TodoItem) -> Unit = { todo ->
         lastCompletionAtMs = SystemClock.uptimeMillis()
         onComplete(todo)
     }
+    // `uiState.remoteEmptiedAtMs` is the remote sibling of the tap-time set
+    // above — see `TodoListViewModel.hydrateFromExternalCacheChange` for how
+    // it is set and why it can't be as precise (it can't tell a remote
+    // completion from a remote delete of the last task the way this composable
+    // tells complete from delete for its own taps). The ViewModel is scoped to
+    // this route's `NavBackStackEntry`, not to this composable being on
+    // screen: a forward push to another destination (or the app going to the
+    // background) leaves the entry — and its `cacheDataVersion` collector —
+    // alive and still updating `remoteEmptiedAtMs` underneath, so "the route
+    // got disposed" is not a real guarantee here the way it is for a popped
+    // entry. `screenLifecycleState` below is the on-screen/foreground gate
+    // that closes that gap: `LocalLifecycleOwner` inside a `NavHost`
+    // destination resolves to the entry's own lifecycle, which only reaches
+    // `RESUMED` while this destination is both the top of the back stack and
+    // the app is foregrounded — the same two conditions iOS's
+    // `isScreenVisible`/`scenePhase == .active` check for `remoteEmptiedAt`.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val screenLifecycleState by lifecycleOwner.lifecycle.currentStateAsState()
     val celebrateEmptyState = uiState.items.isEmpty() &&
-            lastCompletionAtMs != 0L &&
-            SystemClock.uptimeMillis() - lastCompletionAtMs < CompletionCelebrationWindowMs
+            ((lastCompletionAtMs != 0L &&
+                    SystemClock.uptimeMillis() - lastCompletionAtMs < CompletionCelebrationWindowMs) ||
+                    (uiState.remoteEmptiedAtMs != 0L &&
+                            screenLifecycleState == Lifecycle.State.RESUMED &&
+                            SystemClock.uptimeMillis() - uiState.remoteEmptiedAtMs < CompletionCelebrationWindowMs))
     val zoneId = remember { ZoneId.systemDefault() }
     val selectedList = uiState.lists.firstOrNull { it.id == uiState.listId }
     val selectedListColorKey = selectedList?.color

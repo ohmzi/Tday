@@ -4,6 +4,7 @@ import { api } from "@/lib/api-client";
 import { canonicalTodoId } from "@/lib/todo/todo-id";
 import { TodoItemType } from "@/types";
 import { useTodoActionToast } from "@/hooks/use-todo-action-toast";
+import { markTaskDeletedLocally } from "@/lib/task-completion-signal";
 
 // Delayed-commit delete: `deleteMutateFn` only stages the delete (prunes the
 // caches and shows an undoable toast). The DELETE request fires when the toast
@@ -44,6 +45,9 @@ export const useDeleteListTodo = () => {
     // Stage: prune the caches now, but DON'T send the DELETE yet — the undo
     // toast decides whether the request ever fires.
     const deleteMutateFn = (todo: TodoItemType) => {
+        // The empty state that follows the last row leaving reads this to tell
+        // a list a task was deleted out of from one that was just finished.
+        markTaskDeletedLocally();
         void queryClient.cancelQueries({ queryKey: ["list"] });
         queryClient.setQueriesData<TodoItemType[]>(
             { queryKey: ["list"] },

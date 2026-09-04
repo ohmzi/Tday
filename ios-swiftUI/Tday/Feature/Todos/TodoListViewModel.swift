@@ -1,6 +1,9 @@
 import Foundation
 import Observation
 import UIKit
+// `withAnimation` below is what gives a remote cache change an explicit
+// SwiftUI transaction — see `hydrateFromExternalCacheChange()`.
+import SwiftUI
 
 @MainActor
 @Observable
@@ -19,8 +22,30 @@ final class TodoListViewModel {
     var completedTodayCount = 0
     /// When the user last ticked something off. Feeds the confetti: an empty
     /// list that emptied under the user's own hand is a payoff, one that was
-    /// already empty when they opened it is not.
+    /// already empty when they opened it is not. Set only by this device's own
+    /// `complete`/`bulkComplete` — precise, but local-only. See
+    /// `remoteEmptiedAt` for the sibling that covers everything else.
     var lastCompletionAt: Date?
+    /// When a cache change this device did not itself just stage last emptied
+    /// the viewed list — set only from `hydrateFromExternalCacheChange()`,
+    /// never from a local mutation's own direct `hydrateFromCache()` call.
+    ///
+    /// This is `lastCompletionAt`'s broader, imprecise sibling: that field
+    /// only ever fires for a completion this device made, because `complete`/
+    /// `bulkComplete` are the only callers. A cache-changed notification
+    /// carries no reason (it is "something changed, re-read the cache", not
+    /// "task N was completed"), so this cannot tell a remote completion from
+    /// a remote delete of the last task the way the local path tells complete
+    /// from delete — it treats any observed non-empty-to-empty transition on
+    /// this path as a payoff. That imprecision is deliberately scoped to just
+    /// this externally-triggered path; every local mutation (including
+    /// `delete`/`bulkDelete`) still never touches this field, so a local
+    /// delete of the last task still gets the plain arrival, exactly as
+    /// today. `TodoListScreen.celebratesEmptyState` also requires the screen
+    /// to be visible before honouring this one, so a transition on a screen
+    /// nobody is looking at does not surface a stale burst when the user
+    /// returns to it later.
+    var remoteEmptiedAt: Date?
     var errorMessage: String?
     var aiSummaryEnabled = true
     var summaryText: String?
@@ -634,9 +659,44 @@ final class TodoListViewModel {
             for await _ in NotificationCenter.default.notifications(named: .offlineCacheDidChange) {
                 guard let self else { return }
                 await MainActor.run {
-                    self.hydrateFromCache()
+                    self.hydrateFromExternalCacheChange()
                 }
             }
+        }
+    }
+
+    /// Reacts to a cache write this instance did not itself just stage — most
+    /// often a remote sync (another device, or a collaborator on a shared
+    /// list) landing through `OfflineCacheManager.saveOfflineState`'s
+    /// notification, but sometimes just the async echo of this device's own
+    /// write (a staged local completion or delete already calls
+    /// `hydrateFromCache()` directly; that same write's notification still
+    /// reaches this loop a beat later).
+    ///
+    /// `saveOfflineState` posts that notification synchronously
+    /// (`OfflineCacheManager.swift`), but `NotificationCenter.notifications`
+    /// delivers it to this `for await` loop asynchronously, outside any
+    /// SwiftUI transaction. Left alone, a remote completion that empties the
+    /// last section of an open todo list changes both the List's section
+    /// count and its row count in that one uncoordinated update — a known
+    /// trigger for SwiftUI's List diffing engine to throw ("invalid number of
+    /// rows/sections") or crash outright once it cannot reconcile a section
+    /// disappearing at the same moment its last row does. `withAnimation`
+    /// gives the mutation an explicit transaction, so List diffs the
+    /// section-and-row change as one coordinated update instead of an
+    /// external one arriving mid-flight — the same guarantee a user-initiated
+    /// action already gets for free from SwiftUI's own gesture handling,
+    /// which this async loop does not.
+    ///
+    /// Also where a remote-driven empty transition gets to celebrate: see
+    /// `remoteEmptiedAt`.
+    private func hydrateFromExternalCacheChange() {
+        let wasNonEmpty = !items.isEmpty
+        withAnimation(.easeInOut(duration: 0.22)) {
+            hydrateFromCache()
+        }
+        if wasNonEmpty, items.isEmpty {
+            remoteEmptiedAt = Date()
         }
     }
 

@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import ScreenWatermark from "@/components/app/ScreenWatermark";
 import EmptyState from "@/components/app/EmptyState";
 import { taskJustCompleted } from "@/lib/task-completion-signal";
+import { useCelebrateEmptyTransition } from "@/hooks/use-celebrate-empty-transition";
 import { Link, useRouter } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
 import { sortFloatersByPriority } from "@/lib/floater/buildFloaterSections";
@@ -79,6 +80,9 @@ export default function NativeFloaterTaskHomeDashboard() {
   );
   const isSearching = Boolean(searchQuery.trim());
   const hasFloaters = floaters.some((floater) => !floater.completed);
+  // Remote sibling of `taskJustCompleted()` below — fires for a completion on
+  // another device or by a collaborator, not just this tab's own tap.
+  const remoteEmptied = useCelebrateEmptyTransition(!hasFloaters);
 
   return (
     <>
@@ -190,7 +194,9 @@ export default function NativeFloaterTaskHomeDashboard() {
             description={appDict("floaterEmptyBody")}
             // Finishing the feed is a payoff, not an absence: the confetti is
             // for the tick that emptied it, not for an empty Anytime feed.
-            celebrate={taskJustCompleted()}
+            // Whether that tick happened here, on another device, or from a
+            // collaborator on a shared list.
+            celebrate={taskJustCompleted() || remoteEmptied}
           />
         ) : null}
 
