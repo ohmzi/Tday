@@ -5,6 +5,7 @@ enum TaskSwipeActionTint {
     static let delete = Color(.sRGB, red: 255.0 / 255.0, green: 69.0 / 255.0, blue: 58.0 / 255.0, opacity: 1)
     static let schedule = Color(.sRGB, red: 51.0 / 255.0, green: 153.0 / 255.0, blue: 136.0 / 255.0, opacity: 1)
     static let float = Color(.sRGB, red: 122.0 / 255.0, green: 156.0 / 255.0, blue: 108.0 / 255.0, opacity: 1)
+    static let copy = Color(.sRGB, red: 175.0 / 255.0, green: 82.0 / 255.0, blue: 222.0 / 255.0, opacity: 1)
 }
 
 /// An optional mode-specific action revealed before Edit/Delete in the
@@ -48,6 +49,7 @@ extension View {
         enabled: Bool = true,
         extraAction: TodoSwipeExtraAction? = nil,
         onEdit: @escaping () -> Void,
+        onCopy: @escaping () -> Void,
         onDelete: @escaping () -> Void
     ) -> some View {
         modifier(
@@ -57,6 +59,7 @@ extension View {
                 enabled: enabled,
                 extraAction: extraAction,
                 onEdit: onEdit,
+                onCopy: onCopy,
                 onDelete: onDelete
             )
         )
@@ -69,12 +72,19 @@ private struct TodoTrailingSwipeActionsModifier: ViewModifier {
     let enabled: Bool
     let extraAction: TodoSwipeExtraAction?
     let onEdit: () -> Void
+    let onCopy: () -> Void
     let onDelete: () -> Void
 
     @State private var offsetX: CGFloat = 0
     @State private var isHinting = false
 
-    private var revealWidth: CGFloat { extraAction == nil ? 152 : 228 }
+    // Edit + Copy + Delete always show (76pt/pill); the optional mode-specific
+    // extraAction (Schedule/Float/Defer) adds a 4th. Reveal width is simply
+    // pill-width × button count so the fully-revealed row always seats every
+    // pill without clipping or leftover slack.
+    private static let pillWidth: CGFloat = 76
+    private var buttonCount: Int { extraAction == nil ? 3 : 4 }
+    private var revealWidth: CGFloat { Self.pillWidth * CGFloat(buttonCount) }
     private let openVelocityThreshold: CGFloat = -180
 
     private var revealProgress: CGFloat {
@@ -142,6 +152,18 @@ private struct TodoTrailingSwipeActionsModifier: ViewModifier {
                     HapticManager.buttonTap()
                     closeActions()
                     onEdit()
+                }
+
+                TodoSwipePillActionButton(
+                    title: "Copy",
+                    assetName: "ActionCopy",
+                    tint: TaskSwipeActionTint.copy,
+                    revealProgress: revealProgress,
+                    revealDelay: 0.40
+                ) {
+                    HapticManager.buttonTap()
+                    closeActions()
+                    onCopy()
                 }
 
                 TodoSwipePillActionButton(

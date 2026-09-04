@@ -9,6 +9,7 @@
     ],
     "swipe": [
       "swipe-actions",
+      "copy-task-text",
       "calendar-views"
     ],
     "widget": [
@@ -29,6 +30,7 @@
       "calendar-views",
       "root-feeds",
       "create-task",
+      "copy-task-text",
       "promote-and-float",
       "quick-defer",
       "day-done",
@@ -74,11 +76,13 @@
       "priorities",
       "bulk-actions",
       "nlp-date-syntax",
+      "copy-task-text",
       "promote-and-float"
     ],
     "pin": [
       "pin-task",
       "create-task",
+      "copy-task-text",
       "promote-and-float",
       "home-widget"
     ],

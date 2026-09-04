@@ -340,7 +340,10 @@
     "sharing": "Perkongsian",
     "share": "Kongsi",
     "shareListCopied": "Senarai disalin ke papan keratan",
+    "taskCopied": "Tugasan disalin ke papan keratan",
+    "taskCopyFailed": "Tidak dapat menyalin tugasan ke papan keratan",
     "shareDueLabel": "Tarikh akhir: {{date}}",
+    "sharePriorityLabel": "Keutamaan: {{priority}}",
     "shareTaskCount_one": "{{count}} tugasan",
     "shareTaskCount_few": "{{count}} tugasan",
     "shareTaskCount_many": "{{count}} tugasan",
@@ -454,6 +457,7 @@
       "pinToTop": "Semat ke atas",
       "edit": "Edit",
       "editAsInstance": "Edit sebagai kejadian",
+      "copy": "Salin",
       "delete": "Padam",
       "Move to": "Pindah ke..."
     },
@@ -975,6 +979,13 @@
         "keywords": "leret, gerak isyarat, sapu, selesai, padam, pantas, baris",
         "body": "Leret baris tugasan untuk mendedahkan tindakan pantas — selesaikannya, atau buang — tanpa membuka tugasan langsung.",
         "tip": "Tugasan yang selesai memaparkan toast buat asal selama beberapa saat, jadi leret tersilap tidak pernah muktamad."
+      },
+      "copy-task-text": {
+        "title": "Salin butiran tugasan",
+        "summary": "Salin tajuk, nota, tarikh akhir, dan keutamaan tugasan sebagai teks.",
+        "keywords": "salin, papan keratan, kongsi, teks, leret",
+        "body": "Leret tugasan dan ketik Salin — atau guna butang Salin pada desktop — untuk menyalin tajuk, nota, tarikh akhir, dan keutamaannya sebagai teks biasa, sedia untuk ditampal di mana-mana.",
+        "tip": "Berguna untuk menampal tugasan ke dalam mesej, e-mel, atau aplikasi lain tanpa menaipnya semula."
       },
       "long-press-actions": {
         "title": "Tekan lama tugasan",

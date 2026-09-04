@@ -340,7 +340,10 @@
     "sharing": "共有",
     "share": "共有",
     "shareListCopied": "リストをクリップボードにコピーしました",
+    "taskCopied": "タスクをクリップボードにコピーしました",
+    "taskCopyFailed": "タスクをクリップボードにコピーできませんでした",
     "shareDueLabel": "期限: {{date}}",
+    "sharePriorityLabel": "優先度: {{priority}}",
     "shareTaskCount_one": "{{count}}件のタスク",
     "shareTaskCount_few": "{{count}}件のタスク",
     "shareTaskCount_many": "{{count}}件のタスク",
@@ -454,6 +457,7 @@
       "pinToTop": "トップに固定",
       "edit": "編集",
       "editAsInstance": "インスタンスとして編集",
+      "copy": "コピー",
       "delete": "削除",
       "Move to": "移動..."
     },
@@ -975,6 +979,13 @@
         "keywords": "スワイプ, ジェスチャー, スライド, 完了, 削除, クイック, 行, swipe, gesture, complete",
         "body": "タスクの行をスワイプすると、タスクを開かずにすばやく操作できます — 完了にしたり、削除したり。",
         "tip": "完了したタスクは数秒間「元に戻す」トーストを表示するので、誤ってスワイプしても取り返しがつかなくなることはありません。"
+      },
+      "copy-task-text": {
+        "title": "タスクの詳細をコピー",
+        "summary": "タスクのタイトル・メモ・期限・優先度をテキストとしてコピー。",
+        "keywords": "コピー, クリップボード, 共有, テキスト, スワイプ, copy, clipboard",
+        "body": "タスクをスワイプしてコピーをタップするか、デスクトップではコピーボタンを使うと、タイトル・メモ・期限・優先度をプレーンテキストとしてコピーでき、どこにでも貼り付けられます。",
+        "tip": "メッセージやメール、他のアプリにタスクを貼り付けたいときに、入力し直さずに済んで便利です。"
       },
       "long-press-actions": {
         "title": "タスクを長押しする",

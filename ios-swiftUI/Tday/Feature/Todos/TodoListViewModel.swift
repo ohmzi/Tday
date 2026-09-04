@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import UIKit
 // `withAnimation` below is what gives a remote cache change an explicit
 // SwiftUI transaction — see `hydrateFromExternalCacheChange()`.
 import SwiftUI
@@ -250,6 +251,15 @@ final class TodoListViewModel {
                 kind: .error
             )
         }
+    }
+
+    /// Swipe-to-copy: writes the task's title/notes/due/priority as plain text
+    /// to the system pasteboard. Synchronous and can't meaningfully fail (a
+    /// pasteboard write has no throwing API), so this always confirms success —
+    /// mirroring web's success-toast path for the same action.
+    func copyToClipboard(_ todo: TodoItem) {
+        UIPasteboard.general.string = ShareSheet.taskShareText(todo)
+        container.snackbarManager.show(L("Copied to clipboard"), kind: .success)
     }
 
     /// "Let it float": demotes an overdue todo into an Anytime floater.

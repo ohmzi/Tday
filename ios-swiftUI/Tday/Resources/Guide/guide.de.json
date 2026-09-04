@@ -332,6 +332,41 @@
       "searchBody": "wische uber eine aufgabenzeile fur schnelle aktionen, ohne sie zu offnen. wische uber eine aufgabenzeile, um schnelle aktionen einzublenden — sie abschliesen oder entfernen —, ohne die aufgabe uberhaupt zu offnen. eine abgeschlossene aufgabe zeigt fur ein paar sekunden einen ruckgangig-hinweis, sodass ein versehentliches wischen nie endgultig ist."
     },
     {
+      "id": "copy-task-text",
+      "section": "GESTURES",
+      "sectionOrder": 2,
+      "icon": "copy",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.7.8",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Aufgabendetails kopieren",
+      "summary": "Kopiere Titel, Notizen, Fälligkeitsdatum und Priorität einer Aufgabe als Text.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Wische eine Aufgabe und tippe auf Kopieren — oder nutze die Kopieren-Schaltfläche am Desktop —, um Titel, Notizen, Fälligkeitsdatum und Priorität als reinen Text zu kopieren, bereit zum Einfügen überall."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Praktisch, um eine Aufgabe in eine Nachricht, E-Mail oder eine andere App einzufügen, ohne sie neu zu tippen."
+          ]
+        }
+      ],
+      "searchTitle": "aufgabendetails kopieren",
+      "searchKeywords": "kopieren, zwischenablage, teilen, text, wischen",
+      "searchBody": "kopiere titel, notizen, falligkeitsdatum und prioritat einer aufgabe als text. wische eine aufgabe und tippe auf kopieren — oder nutze die kopieren-schaltflache am desktop —, um titel, notizen, falligkeitsdatum und prioritat als reinen text zu kopieren, bereit zum einfugen uberall. praktisch, um eine aufgabe in eine nachricht, e-mail oder eine andere app einzufugen, ohne sie neu zu tippen."
+    },
+    {
       "id": "long-press-actions",
       "section": "GESTURES",
       "sectionOrder": 2,

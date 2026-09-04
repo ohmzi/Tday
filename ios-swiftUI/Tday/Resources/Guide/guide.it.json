@@ -332,6 +332,41 @@
       "searchBody": "scorri la riga di un'attivita per azioni rapide senza aprirla. scorri la riga di un'attivita per rivelare azioni rapide — completala o rimuovila — senza aprire affatto l'attivita. un'attivita completata mostra un avviso di annullamento per qualche secondo, cosi uno scorrimento sbagliato non e mai definitivo."
     },
     {
+      "id": "copy-task-text",
+      "section": "GESTURES",
+      "sectionOrder": 2,
+      "icon": "copy",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.7.8",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Copia i dettagli dell'attività",
+      "summary": "Copia il titolo, le note, la scadenza e la priorità di un'attività come testo.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Scorri un'attività e tocca Copia — oppure usa il pulsante Copia su desktop — per copiarne titolo, note, scadenza e priorità come testo semplice, pronto da incollare ovunque."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Utile per incollare un'attività in un messaggio, un'email o un'altra app senza doverla riscrivere."
+          ]
+        }
+      ],
+      "searchTitle": "copia i dettagli dell'attivita",
+      "searchKeywords": "copia, appunti, condividi, testo, scorri",
+      "searchBody": "copia il titolo, le note, la scadenza e la priorita di un'attivita come testo. scorri un'attivita e tocca copia — oppure usa il pulsante copia su desktop — per copiarne titolo, note, scadenza e priorita come testo semplice, pronto da incollare ovunque. utile per incollare un'attivita in un messaggio, un'email o un'altra app senza doverla riscrivere."
+    },
+    {
       "id": "long-press-actions",
       "section": "GESTURES",
       "sectionOrder": 2,

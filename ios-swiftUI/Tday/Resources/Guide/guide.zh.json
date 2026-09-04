@@ -332,6 +332,41 @@
       "searchBody": "在任务行上滑动，无需打开即可快速操作。 在任务行上滑动即可显示快捷操作——完成它，或移除它——完全不用打开任务。 已完成的任务会显示几秒钟的撤销提示，所以误滑绝不会成为定局。"
     },
     {
+      "id": "copy-task-text",
+      "section": "GESTURES",
+      "sectionOrder": 2,
+      "icon": "copy",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.7.8",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "复制任务详情",
+      "summary": "将任务的标题、备注、截止日期和优先级复制为文本。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "滑动任务并点击复制——或在桌面端使用复制按钮——即可将其标题、备注、截止日期和优先级复制为纯文本，随时粘贴到任何地方。"
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "方便将任务粘贴到消息、邮件或其他应用中，无需重新输入。"
+          ]
+        }
+      ],
+      "searchTitle": "复制任务详情",
+      "searchKeywords": "复制, 剪贴板, 分享, 文本, 滑动",
+      "searchBody": "将任务的标题、备注、截止日期和优先级复制为文本。 滑动任务并点击复制——或在桌面端使用复制按钮——即可将其标题、备注、截止日期和优先级复制为纯文本，随时粘贴到任何地方。 方便将任务粘贴到消息、邮件或其他应用中，无需重新输入。"
+    },
+    {
       "id": "long-press-actions",
       "section": "GESTURES",
       "sectionOrder": 2,
