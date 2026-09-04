@@ -16,6 +16,8 @@
     <string name="action_create_list">Создать список</string>
     <string name="action_edit">Изменить</string>
     <string name="action_edit_task">Изменить задачу</string>
+    <string name="action_copy">Копировать</string>
+    <string name="action_copy_task">Копировать задачу</string>
     <string name="action_delete_task">Удалить задачу</string>
     <string name="action_delete_list">Удалить список</string>
     <string name="action_delete">Удалить</string>
@@ -207,6 +209,8 @@
     <string name="error_update_name_failed">Не удалось обновить имя. Повторите попытку.</string>
     <string name="error_change_password_failed">Не удалось изменить пароль. Повторите попытку.</string>
     <string name="settings_appearance">Оформление</string>
+    <string name="settings_behavior">Поведение</string>
+    <string name="settings_default_home_screen">Домашний экран по умолчанию</string>
     <string name="settings_reminders">Напоминания</string>
     <string name="settings_feature_toggle">Переключатель функций</string>
     <string name="settings_notifications">Уведомления</string>
@@ -570,6 +574,8 @@
     <string name="release_no_apk">К этому релизу не прикреплён APK.</string>
     <string name="release_launch_update_toast">Доступно обновление %1$s.</string>
     <string name="task_deleted_toast">Задача удалена</string>
+    <string name="task_copied_toast">Скопировано в буфер обмена</string>
+    <string name="task_copy_failed_toast">Не удалось скопировать в буфер обмена</string>
     <string name="list_deleted_toast">Список удалён</string>
     <string name="release_view_on_github">Посмотреть на GitHub</string>
 

@@ -1,6 +1,6 @@
 import React from "react";
 import clsx from "clsx";
-import { Leaf, SquarePen, Trash } from "lucide-react";
+import { Copy, Leaf, SquarePen, Trash } from "lucide-react";
 
 /**
  * Canonical edit / delete action buttons used across the web app (Today,
@@ -70,6 +70,26 @@ export function DeleteTaskButton({ onActivate, label, className }: ActionButtonP
   );
 }
 
+/** Copies a task's title/notes/due/priority to the clipboard as plain text. */
+export function CopyTaskButton({ onActivate, label, className }: ActionButtonProps) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      onPointerDown={suppressDragActivation}
+      onMouseDown={suppressDragActivation}
+      onTouchStart={suppressDragActivation}
+      onClick={(event) => {
+        event.stopPropagation();
+        onActivate();
+      }}
+      className={clsx(BASE_BUTTON_CLASS, "hover:bg-muted hover:text-foreground", className)}
+    >
+      <Copy className="h-4 w-4" strokeWidth={1.8} />
+    </button>
+  );
+}
+
 /** "Let it float": demote a stale todo into an Anytime floater. */
 export function FloatTaskButton({ onActivate, label, className }: ActionButtonProps) {
   return (
@@ -93,22 +113,27 @@ export function FloatTaskButton({ onActivate, label, className }: ActionButtonPr
 
 type TaskActionButtonsProps = {
   onEdit: () => void;
+  onCopy: () => void;
   onDelete: () => void;
   editLabel?: string;
+  copyLabel?: string;
   deleteLabel?: string;
   className?: string;
 };
 
 export function TaskActionButtons({
   onEdit,
+  onCopy,
   onDelete,
   editLabel = "Edit task",
+  copyLabel = "Copy task",
   deleteLabel = "Delete task",
   className,
 }: TaskActionButtonsProps) {
   return (
     <div className={clsx("flex items-center gap-1", className)}>
       <EditTaskButton onActivate={onEdit} label={editLabel} />
+      <CopyTaskButton onActivate={onCopy} label={copyLabel} />
       <DeleteTaskButton onActivate={onDelete} label={deleteLabel} />
     </div>
   );

@@ -10,6 +10,7 @@ object UserPreferences : Table("UserPreferences") {
     val groupBy = pgEnum<GroupBy>("groupBy", "\"GroupBy\"").nullable()
     val direction = pgEnum<Direction>("direction", "\"Direction\"").nullable()
     val aiSummaryEnabled = bool("aiSummaryEnabled").nullable()
+    val defaultHomeScreen = pgEnum<DefaultHomeScreen>("defaultHomeScreen", "\"DefaultHomeScreen\"").nullable()
 
     override val primaryKey = PrimaryKey(id)
 }

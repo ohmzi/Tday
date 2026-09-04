@@ -102,6 +102,35 @@
       "searchBody": "two calm main feeds you switch between from the dock. t'day has two sibling feeds. scheduled holds your dated tasks for today and beyond. anytime holds floaters — tasks with no date. switch between them from the dock at the bottom, and create a task from either one."
     },
     {
+      "id": "default-home-screen",
+      "section": "GETTING_STARTED",
+      "sectionOrder": 0,
+      "icon": "house",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.7.7",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Default home screen",
+      "summary": "Choose whether T'Day opens on Scheduled or Floaters.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Settings has a Behavior section where you can choose which feed opens first — Scheduled or Floaters. It only sets what greets you at launch; the dock still switches between both anytime."
+          ]
+        }
+      ],
+      "searchTitle": "default home screen",
+      "searchKeywords": "default, home screen, launch, startup, scheduled, floater, behavior, settings",
+      "searchBody": "choose whether t'day opens on scheduled or floaters. settings has a behavior section where you can choose which feed opens first — scheduled or floaters. it only sets what greets you at launch; the dock still switches between both anytime."
+    },
+    {
       "id": "create-task",
       "section": "GETTING_STARTED",
       "sectionOrder": 0,
@@ -301,6 +330,41 @@
       "searchTitle": "swipe actions",
       "searchKeywords": "swipe, gesture, slide, complete, delete, quick, row",
       "searchBody": "swipe a task row for quick actions without opening it. swipe a task row to reveal quick actions — complete it, or remove it — without opening the task at all. a completed task shows an undo toast for a few seconds, so a mis-swipe is never final."
+    },
+    {
+      "id": "copy-task-text",
+      "section": "GESTURES",
+      "sectionOrder": 2,
+      "icon": "copy",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.7.8",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Copy task details",
+      "summary": "Copy a task's title, notes, due date, and priority as text.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Swipe a task and tap Copy — or use the Copy button on desktop — to copy its title, notes, due date, and priority as plain text, ready to paste anywhere."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Handy for pasting a task into a message, email, or another app without retyping it."
+          ]
+        }
+      ],
+      "searchTitle": "copy task details",
+      "searchKeywords": "copy, clipboard, share, text, swipe",
+      "searchBody": "copy a task's title, notes, due date, and priority as text. swipe a task and tap copy — or use the copy button on desktop — to copy its title, notes, due date, and priority as plain text, ready to paste anywhere. handy for pasting a task into a message, email, or another app without retyping it."
     },
     {
       "id": "long-press-actions",
@@ -1071,6 +1135,39 @@
       "searchTitle": "home-screen widget",
       "searchKeywords": "widget, home screen, glance, today, lock screen",
       "searchBody": "see today's tasks without opening the app. add the t'day widget to your home screen to glance at today's tasks. tapping the widget opens the app at the right place."
+    },
+    {
+      "id": "widget-list-selection",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "list-todo",
+      "platforms": [
+        "IOS"
+      ],
+      "badge": "PRO_TIP",
+      "serverOnly": false,
+      "sinceVersion": "0.7.7",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Pick a list for your widget",
+      "summary": "Point any widget at one specific list instead of the whole feed.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Long-press a T'Day widget and choose Edit Widget to pick exactly which list it shows — any of your scheduled lists or floater lists. A scheduled list shows due times and flags anything overdue; a floater list shows an open list with no due times. Leave it unset and the widget keeps showing the full Today or Floater feed."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Add several widgets, each pointed at a different list, to see them all on your home screen at once."
+          ]
+        }
+      ],
+      "searchTitle": "pick a list for your widget",
+      "searchKeywords": "widget, list, configure, edit widget, per-list, home screen, ios",
+      "searchBody": "point any widget at one specific list instead of the whole feed. long-press a t'day widget and choose edit widget to pick exactly which list it shows — any of your scheduled lists or floater lists. a scheduled list shows due times and flags anything overdue; a floater list shows an open list with no due times. leave it unset and the widget keeps showing the full today or floater feed. add several widgets, each pointed at a different list, to see them all on your home screen at once."
     },
     {
       "id": "widget-quick-add",

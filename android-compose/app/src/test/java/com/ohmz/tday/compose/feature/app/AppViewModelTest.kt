@@ -109,6 +109,7 @@ class AppViewModelTest {
         every { realtimeClient.disconnect() } returns Unit
         every { connectivityObserver.connectivityChanges } returns emptyFlow()
         every { settingsRepository.isAiSummaryEnabledSnapshot() } returns true
+        every { settingsRepository.defaultHomeScreenSnapshot() } returns "scheduled"
         coEvery { authRepository.syncTimezone() } returns Unit
         every { reminderScheduler.rescheduleAll() } returns Unit
         every { reminderScheduler.cancelAll() } returns Unit

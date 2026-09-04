@@ -368,6 +368,24 @@ struct FloaterUncompleteRequest: Codable {
     let id: String
 }
 
+/// Response of `PATCH /api/floater/uncomplete`. Was a bare `{"message": ...}`;
+/// now typed so a caller can tell "restored in place" apart from "the list
+/// was gone, so a new one was created (or an earlier undo's already stands)"
+/// without a follow-up call. `listRecreated` means *the floater didn't land
+/// back in the list it was completed from* — true for every item that goes
+/// through the recreate path, including a second undo from the same deleted
+/// list that converges onto the first undo's new list rather than creating
+/// another one. It is NOT "did this call insert a new list." Optional fields
+/// so a backend that predates list-recreation still decodes.
+struct FloaterUncompleteResponse: Codable {
+    let message: String?
+    let floater: FloaterDTO?
+    let listRecreated: Bool?
+    let listID: String?
+    let listName: String?
+    let listColor: String?
+}
+
 struct FloaterPrioritizeRequest: Codable {
     let id: String
     let priority: String
@@ -763,6 +781,8 @@ struct PreferencesResponse: Codable {
     let groupBy: String?
     let direction: String?
     let aiSummaryEnabled: Bool?
+    // "scheduled" or "floater" — which root feed opens on a fresh cold launch.
+    let defaultHomeScreen: String?
 }
 
 struct PreferencesDTO: Codable, Equatable {
@@ -771,6 +791,7 @@ struct PreferencesDTO: Codable, Equatable {
     let groupBy: String?
     let rrule: String?
     var aiSummaryEnabled: Bool? = nil
+    var defaultHomeScreen: String? = nil
 }
 
 struct UserResponse: Codable, Equatable {

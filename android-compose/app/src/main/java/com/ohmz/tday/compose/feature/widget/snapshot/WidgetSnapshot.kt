@@ -4,6 +4,7 @@ import kotlinx.serialization.Serializable
 
 internal const val TODAY_TASKS_WIDGET_TASK_LIMIT = 50
 internal const val FLOATER_TASKS_WIDGET_TASK_LIMIT = 50
+internal const val LIST_TASKS_WIDGET_TASK_LIMIT = 50
 
 @Serializable
 internal enum class WidgetSnapshotStatus { SETUP, EMPTY, TASKS }
@@ -11,6 +12,16 @@ internal enum class WidgetSnapshotStatus { SETUP, EMPTY, TASKS }
 /** The three priority buckets a widget row can render (see `taskWidgetPriorityRingResource`). */
 @Serializable
 internal enum class WidgetPriorityRing { HIGH, MEDIUM, LOW }
+
+/**
+ * Which shape a per-list widget instance renders in — chosen once, at configuration time, by
+ * which kind of list the user picked (a todo-list vs. a floater-list). Deliberately only two
+ * values: the content-shape decision for this feature is that a widget always matches whichever
+ * list TYPE was picked (due-date-shaped for a todo-list, undated-shaped for a floater-list), the
+ * same two shapes the fixed Today/Floater widgets already use — never a third shape.
+ */
+@Serializable
+internal enum class WidgetListType { TODO, FLOATER }
 
 /**
  * The exact render payload a widget needs — nothing more. Written by the app process (which has
@@ -50,4 +61,10 @@ internal data class WidgetSnapshotRow(
     val priorityRing: WidgetPriorityRing,
     val dueEpochMs: Long? = null,
     val description: String? = null,
+    /**
+     * Today/Floater never set this (they pass no `nowEpochMs` to their row mapper, so it stays
+     * false — pixel-identical to before this field existed). Only the per-list todo snapshot
+     * computes it, at build time against the same [WidgetSnapshot.generatedAtEpochMs] instant.
+     */
+    val overdue: Boolean = false,
 )

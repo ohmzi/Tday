@@ -30,6 +30,7 @@ class WidgetHydrateWorker @AssistedInject constructor(
     private val snapshotWriter: WidgetSnapshotWriter,
     private val todayTasksWidgetRefresher: TodayTasksWidgetRefresher,
     private val floaterTasksWidgetRefresher: FloaterTasksWidgetRefresher,
+    private val listTasksWidgetRefresher: ListTasksWidgetRefresher,
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
@@ -38,6 +39,7 @@ class WidgetHydrateWorker @AssistedInject constructor(
             snapshotWriter.write(state)
             todayTasksWidgetRefresher.refreshNow()
             floaterTasksWidgetRefresher.refreshNow()
+            listTasksWidgetRefresher.refreshNow()
             Result.success()
         }.getOrElse { e ->
             // Best-effort: if this fails, the widget simply stays in LOADING until the app is

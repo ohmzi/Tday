@@ -340,7 +340,10 @@
     "sharing": "Partage",
     "share": "Partager",
     "shareListCopied": "Liste copiée dans le presse-papiers",
+    "taskCopied": "Tâche copiée dans le presse-papiers",
+    "taskCopyFailed": "Impossible de copier la tâche dans le presse-papiers",
     "shareDueLabel": "Échéance : {{date}}",
+    "sharePriorityLabel": "Priorité : {{priority}}",
     "shareTaskCount_one": "{{count}} tâche",
     "shareTaskCount_few": "{{count}} tâches",
     "shareTaskCount_many": "{{count}} tâches",
@@ -442,7 +445,8 @@
     "bulkUpdateFailed_one": "Une tâche n'a pas pu être mise à jour",
     "bulkUpdateFailed_few": "{{count}} tâches n'ont pas pu être mises à jour",
     "bulkUpdateFailed_many": "{{count}} tâches n'ont pas pu être mises à jour",
-    "bulkUpdateFailed_other": "{{count}} tâches n'ont pas pu être mises à jour"
+    "bulkUpdateFailed_other": "{{count}} tâches n'ont pas pu être mises à jour",
+    "floaterCompletedTile": "Terminé"
   },
   "today": {
     "saveInstance": "Enregistrer l'instance",
@@ -453,6 +457,7 @@
       "pinToTop": "Épingler en haut",
       "edit": "Modifier",
       "editAsInstance": "Modifier comme instance",
+      "copy": "Copier",
       "delete": "Supprimer",
       "Move to": "Déplacer vers..."
     },
@@ -500,7 +505,12 @@
   "completed": {
     "title": "Historique des achèvements",
     "empty": "Rien de terminé pour l'instant",
-    "emptyBody": "Cochez une tâche et elle atterrira ici."
+    "emptyBody": "Cochez une tâche et elle atterrira ici.",
+    "tabTasks": "Tâches",
+    "floaterEmpty": "Aucun élément flottant terminé",
+    "floaterEmptyBody": "Cochez un élément dans Flottant et il apparaîtra ici.",
+    "listDeletedSuffix": "liste supprimée",
+    "floaterRestoredIntoRecreatedList": "Restauré — « {{listName}} » a été recréée"
   },
   "modal": {
     "confirm": "Confirmer",
@@ -627,6 +637,10 @@
       "title": "Apparence",
       "description": "Choisissez clair, sombre ou suivez le réglage de votre système.",
       "descriptionSystem": "Suivez votre appareil, clair ou sombre. Actuellement {{theme}}."
+    },
+    "behavior": {
+      "title": "Comportement",
+      "defaultHomeScreen": "Écran d'accueil par défaut"
     },
     "language": {
       "title": "Langue",
@@ -921,6 +935,12 @@
         "keywords": "planifié, à tout moment, fil, dock, racine, naviguer, onglets",
         "body": "T'Day propose deux fils jumeaux. Le fil Planifié réunit vos tâches datées d'aujourd'hui et des jours à venir. À tout moment réunit les Floaters — les tâches sans date. Basculez de l'un à l'autre depuis le dock en bas, et créez une tâche depuis n'importe lequel."
       },
+      "default-home-screen": {
+        "title": "Écran d'accueil par défaut",
+        "summary": "Choisissez si T'Day s'ouvre sur Planifié ou À tout moment.",
+        "keywords": "par défaut, écran d'accueil, démarrage, lancement, planifié, à tout moment, comportement, réglages",
+        "body": "Les réglages ont une section Comportement où vous choisissez quel fil s'ouvre en premier — Planifié ou À tout moment. Cela ne détermine que ce que vous voyez au lancement ; le dock permet toujours de basculer entre les deux à tout moment."
+      },
       "create-task": {
         "title": "Créer une tâche",
         "summary": "Ajoutez une tâche planifiée ou un Floater sans date en quelques touches.",
@@ -959,6 +979,13 @@
         "keywords": "balayer, geste, glisser, terminer, supprimer, rapide, ligne",
         "body": "Balayez une ligne de tâche pour révéler des actions rapides — la terminer ou la supprimer — sans ouvrir la tâche du tout.",
         "tip": "Une tâche terminée affiche un toast d'annulation pendant quelques secondes, pour qu'un balayage malencontreux ne soit jamais définitif."
+      },
+      "copy-task-text": {
+        "title": "Copier les détails de la tâche",
+        "summary": "Copiez le titre, les notes, l'échéance et la priorité d'une tâche sous forme de texte.",
+        "keywords": "copier, presse-papiers, partager, texte, balayer",
+        "body": "Balayez une tâche et appuyez sur Copier — ou utilisez le bouton Copier sur ordinateur — pour copier son titre, ses notes, son échéance et sa priorité en texte brut, prêt à coller n'importe où.",
+        "tip": "Pratique pour coller une tâche dans un message, un e-mail ou une autre application sans avoir à la retaper."
       },
       "long-press-actions": {
         "title": "Appui long sur une tâche",
@@ -1082,6 +1109,20 @@
         "summary": "Consultez les tâches du jour sans ouvrir l'application.",
         "keywords": "widget, écran d'accueil, coup d'œil, aujourd'hui, écran verrouillé",
         "body": "Ajoutez le widget T'Day à votre écran d'accueil pour jeter un œil aux tâches du jour. Toucher le widget ouvre l'application au bon endroit."
+      },
+      "widget-list-selection": {
+        "title": "Choisissez une liste pour votre widget",
+        "summary": "Faites pointer un widget vers une liste précise plutôt que tout le flux.",
+        "keywords": "widget, liste, configurer, modifier le widget, par liste, écran d'accueil, ios",
+        "body": "Appuyez longuement sur un widget T'Day et choisissez Modifier le widget pour définir exactement la liste qu'il affiche — n'importe laquelle de vos listes planifiées ou de vos listes flottantes. Une liste planifiée affiche les heures d'échéance et signale les tâches en retard ; une liste flottante affiche une liste ouverte sans heure d'échéance. Sans choix, le widget continue d'afficher le flux complet Aujourd'hui ou Flottant.",
+        "tip": "Ajoutez plusieurs widgets, chacun pointant vers une liste différente, pour tous les voir en même temps sur votre écran d'accueil."
+      },
+      "list-widgets": {
+        "title": "Widgets de listes",
+        "summary": "Affichez n'importe quelle liste sur votre écran d'accueil, pas seulement Aujourd'hui.",
+        "keywords": "widget, écran d'accueil, liste, configurer, sélecteur, flottant, prévu",
+        "body": "Ajoutez un widget T'Day et un sélecteur vous permet de choisir la liste qu'il affiche — n'importe quelle liste planifiée ou de tâches flottantes, pas seulement Aujourd'hui ou Flottantes. Ajoutez à nouveau le widget pour afficher une autre liste ; chacun mémorise son propre choix.",
+        "tip": "Appuyez longuement sur un widget placé et choisissez Modifier (ou les réglages de widgets de votre launcher) pour le changer de liste plus tard."
       },
       "widget-quick-add": {
         "title": "Ajout rapide depuis le widget",

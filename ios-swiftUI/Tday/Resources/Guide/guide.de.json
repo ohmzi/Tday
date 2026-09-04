@@ -102,6 +102,35 @@
       "searchBody": "zwei ruhige hauptfeeds, zwischen denen du uber das dock wechselst. t'day hat zwei verwandte feeds. geplant enthalt deine terminierten aufgaben fur heute und daruber hinaus. jederzeit enthalt floater — aufgaben ohne datum. wechsle uber das dock unten zwischen ihnen und lege aus jedem von beiden eine aufgabe an."
     },
     {
+      "id": "default-home-screen",
+      "section": "GETTING_STARTED",
+      "sectionOrder": 0,
+      "icon": "house",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.7.7",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Standard-Startbildschirm",
+      "summary": "Wähle, ob T'Day mit Geplant oder Jederzeit startet.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "In den Einstellungen gibt es einen Bereich „Verhalten“, in dem du festlegst, welcher Feed zuerst geöffnet wird — Geplant oder Jederzeit. Das legt nur fest, was dich beim Start begrüßt; über das Dock wechselst du weiterhin jederzeit zwischen beiden."
+          ]
+        }
+      ],
+      "searchTitle": "standard-startbildschirm",
+      "searchKeywords": "standard, startbildschirm, start, launch, geplant, jederzeit, verhalten, einstellungen",
+      "searchBody": "wahle, ob t'day mit geplant oder jederzeit startet. in den einstellungen gibt es einen bereich „verhalten“, in dem du festlegst, welcher feed zuerst geoffnet wird — geplant oder jederzeit. das legt nur fest, was dich beim start begrust; uber das dock wechselst du weiterhin jederzeit zwischen beiden."
+    },
+    {
       "id": "create-task",
       "section": "GETTING_STARTED",
       "sectionOrder": 0,
@@ -301,6 +330,41 @@
       "searchTitle": "wischaktionen",
       "searchKeywords": "wischen, geste, streichen, abschliesen, loschen, schnell, zeile",
       "searchBody": "wische uber eine aufgabenzeile fur schnelle aktionen, ohne sie zu offnen. wische uber eine aufgabenzeile, um schnelle aktionen einzublenden — sie abschliesen oder entfernen —, ohne die aufgabe uberhaupt zu offnen. eine abgeschlossene aufgabe zeigt fur ein paar sekunden einen ruckgangig-hinweis, sodass ein versehentliches wischen nie endgultig ist."
+    },
+    {
+      "id": "copy-task-text",
+      "section": "GESTURES",
+      "sectionOrder": 2,
+      "icon": "copy",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.7.8",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Aufgabendetails kopieren",
+      "summary": "Kopiere Titel, Notizen, Fälligkeitsdatum und Priorität einer Aufgabe als Text.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Wische eine Aufgabe und tippe auf Kopieren — oder nutze die Kopieren-Schaltfläche am Desktop —, um Titel, Notizen, Fälligkeitsdatum und Priorität als reinen Text zu kopieren, bereit zum Einfügen überall."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Praktisch, um eine Aufgabe in eine Nachricht, E-Mail oder eine andere App einzufügen, ohne sie neu zu tippen."
+          ]
+        }
+      ],
+      "searchTitle": "aufgabendetails kopieren",
+      "searchKeywords": "kopieren, zwischenablage, teilen, text, wischen",
+      "searchBody": "kopiere titel, notizen, falligkeitsdatum und prioritat einer aufgabe als text. wische eine aufgabe und tippe auf kopieren — oder nutze die kopieren-schaltflache am desktop —, um titel, notizen, falligkeitsdatum und prioritat als reinen text zu kopieren, bereit zum einfugen uberall. praktisch, um eine aufgabe in eine nachricht, e-mail oder eine andere app einzufugen, ohne sie neu zu tippen."
     },
     {
       "id": "long-press-actions",
@@ -1071,6 +1135,39 @@
       "searchTitle": "startbildschirm-widget",
       "searchKeywords": "widget, startbildschirm, blick, heute, sperrbildschirm",
       "searchBody": "sieh die heutigen aufgaben, ohne die app zu offnen. fuge das t'day-widget zu deinem startbildschirm hinzu, um einen blick auf die heutigen aufgaben zu werfen. ein tipp auf das widget offnet die app an der richtigen stelle."
+    },
+    {
+      "id": "widget-list-selection",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "list-todo",
+      "platforms": [
+        "IOS"
+      ],
+      "badge": "PRO_TIP",
+      "serverOnly": false,
+      "sinceVersion": "0.7.7",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Liste für dein Widget wählen",
+      "summary": "Ein Widget auf eine bestimmte Liste statt den ganzen Feed richten.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Widget lange gedrückt halten und „Widget bearbeiten\" wählen, um genau festzulegen, welche Liste es zeigt – jede deiner geplanten Listen oder Floater-Listen. Eine geplante Liste zeigt Fälligkeitszeiten und markiert Überfälliges; eine Floater-Liste zeigt eine offene Liste ohne Fälligkeitszeiten. Bleibt die Auswahl leer, zeigt das Widget weiterhin den vollständigen Today- oder Floater-Feed."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Füge mehrere Widgets hinzu, jedes auf eine andere Liste ausgerichtet, um sie alle gleichzeitig auf deinem Startbildschirm zu sehen."
+          ]
+        }
+      ],
+      "searchTitle": "liste fur dein widget wahlen",
+      "searchKeywords": "widget, liste, konfigurieren, widget bearbeiten, pro liste, startbildschirm, ios",
+      "searchBody": "ein widget auf eine bestimmte liste statt den ganzen feed richten. widget lange gedruckt halten und „widget bearbeiten\" wahlen, um genau festzulegen, welche liste es zeigt – jede deiner geplanten listen oder floater-listen. eine geplante liste zeigt falligkeitszeiten und markiert uberfalliges; eine floater-liste zeigt eine offene liste ohne falligkeitszeiten. bleibt die auswahl leer, zeigt das widget weiterhin den vollstandigen today- oder floater-feed. fuge mehrere widgets hinzu, jedes auf eine andere liste ausgerichtet, um sie alle gleichzeitig auf deinem startbildschirm zu sehen."
     },
     {
       "id": "widget-quick-add",

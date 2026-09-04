@@ -17,8 +17,11 @@ const SonnerToaster = ({ ...props }: ToasterProps) => {
       toastOptions={{
         classNames: {
           // Floating, on-brand pill (matches iOS): fully-rounded, translucent
-          // blurred surface, subtle border, generous padding. Icons are removed
-          // app-wide; all variants share one neutral surface.
+          // blurred surface, subtle border, generous padding. Each variant's own
+          // status glyph is removed (see `icon` below) so success/error/info/
+          // normal all share one neutral surface — the one deliberate exception
+          // is the Undo action itself, which is icon-based (see `actionButton`
+          // below and use-undoable-delete.tsx).
           //
           // The background is set here as a Tailwind utility (not only via the
           // sonner --*-bg vars) so it also applies to custom/clickable toasts,
@@ -34,7 +37,8 @@ const SonnerToaster = ({ ...props }: ToasterProps) => {
           // parity.
           toast:
             "group toast group-[.toaster]:flex group-[.toaster]:items-center group-[.toaster]:gap-3 group-[.toaster]:rounded-full group-[.toaster]:border group-[.toaster]:border-border/60 group-[.toaster]:bg-popover/55 group-[.toaster]:px-4 group-[.toaster]:py-3.5 group-[.toaster]:text-[15px] group-[.toaster]:backdrop-blur-xl group-[.toaster]:shadow-[0_10px_30px_-12px_hsl(var(--shadow)/0.45)]",
-          // No icon — hide Sonner's default per-variant icon slot entirely.
+          // No status glyph — hide Sonner's default per-variant icon slot
+          // entirely (unrelated to the Undo action's own icon, below).
           // !important is required: the plain `hidden` ties specificity with
           // sonner's runtime-injected `[data-styled=true] [data-icon]{display:flex}`
           // and loses on source order, so the icon would otherwise still show.
@@ -44,17 +48,23 @@ const SonnerToaster = ({ ...props }: ToasterProps) => {
           title: "group-[.toast]:font-extrabold group-[.toast]:leading-tight group-[.toast]:text-center",
           description:
             "group-[.toast]:mt-0.5 group-[.toast]:text-current/75 group-[.toast]:font-medium group-[.toast]:leading-snug group-[.toast]:text-center",
-          // Plain text, not a filled pill — iOS renders the action as a bare
-          // Button(.plain) in `.subheadline` heavy on the snackbar accent (see
-          // AppRootView.AppSnackbar).
+          // Icon-based, not a filled pill — the Undo action is the one
+          // deliberate reversal of "icons removed app-wide" (see the toast
+          // comment above and use-undoable-delete.tsx), matching iOS's
+          // AppSnackbar carrying an icon for the same action, with sign-off.
+          // Colour still matters even though the label is no longer text:
+          // the icon paints with `currentColor`, so the forced colour below
+          // is what tints it.
           //
           // EVERY property here needs `!`. Sonner injects
           // `[data-sonner-toast][data-styled=true] [data-button]` at runtime — specificity
           // (0,3,0), which outranks any utility class, so a plain utility silently loses.
           // Colour especially: sonner paints the action `color: var(--normal-bg)`, i.e. the
           // toast's OWN surface colour, because it normally sits on a filled chip. Drop the
-          // chip without forcing the colour and the label is painted in the surface it sits
-          // on — invisible. It also forces 12px/500, so size and weight are pinned too.
+          // chip without forcing the colour and the icon is painted in the surface it sits
+          // on — invisible. It also forces 12px/500 text sizing, so size and weight stay
+          // pinned even though there is no text to size — dropping them is untested territory
+          // this class list has no reason to wander into.
           actionButton:
             "group-[.toast]:!bg-transparent group-[.toast]:!px-0 group-[.toast]:!h-auto group-[.toast]:shrink-0 group-[.toast]:!text-[15px] group-[.toast]:!font-extrabold group-[.toast]:!text-[hsl(var(--toast-action))]",
           cancelButton:

@@ -105,7 +105,9 @@ import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -115,6 +117,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -134,10 +137,13 @@ import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
 import com.ohmz.tday.compose.core.model.capitalizeFirstListLetter
 import com.ohmz.tday.compose.core.ui.LazyListHeroTitleSettle
+import com.ohmz.tday.compose.core.ui.CategoryCard
 import com.ohmz.tday.compose.core.ui.EmptyTaskWatermark
+import com.ohmz.tday.compose.core.ui.LocalSnackbarManager
 import com.ohmz.tday.compose.core.ui.TaskSwipeActionButton
 import com.ohmz.tday.compose.core.ui.animateTaskSwipeOffsetAsState
 import com.ohmz.tday.compose.core.ui.rememberTaskSwipeRevealState
+import com.ohmz.tday.compose.core.ui.taskCopyText
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.core.ui.RootFeedHeroHeader
 import com.ohmz.tday.compose.core.ui.RootFeedHeroHeaderMetrics
@@ -154,10 +160,12 @@ import com.ohmz.tday.compose.ui.component.TdaySheetHeader
 import com.ohmz.tday.compose.ui.component.TdaySheetSectionTitle
 import com.ohmz.tday.compose.ui.theme.TDAY_DEFAULT_LIST_COLOR_KEY
 import com.ohmz.tday.compose.ui.theme.TDAY_DEFAULT_LIST_ICON_KEY
+import com.ohmz.tday.compose.ui.theme.TdayCompletedTileAccent
 import com.ohmz.tday.compose.ui.theme.TdayDimens
 import com.ohmz.tday.compose.ui.theme.TdayFontFamily
 import com.ohmz.tday.compose.ui.theme.TdayListColorOptions
 import com.ohmz.tday.compose.ui.theme.TdayListIconOptions
+import com.ohmz.tday.compose.ui.theme.TdaySwipeCopyBackground
 import com.ohmz.tday.compose.ui.theme.TdaySwipeDeleteBackground
 import com.ohmz.tday.compose.ui.theme.TdaySwipeEditBackground
 import com.ohmz.tday.compose.ui.theme.TdayTaskCompleteAccent
@@ -1501,7 +1509,14 @@ private fun ScheduledTaskHomeTodayTaskRow(
     val view = LocalView.current
     val taskCompletionSound = rememberTaskCompletionSound()
     val coroutineScope = rememberCoroutineScope()
-    val swipeRevealState = rememberTaskSwipeRevealState(todo.id)
+    // Edit + Copy + Delete: matches the 3-pill width used elsewhere (see
+    // SwipeTaskRow.revealWidth).
+    val swipeRevealState = rememberTaskSwipeRevealState(todo.id, revealWidth = 256.dp)
+    val clipboardManager = LocalClipboardManager.current
+    val snackbarManager = LocalSnackbarManager.current
+    val copyContext = LocalContext.current
+    val copiedMessage = stringResource(R.string.task_copied_toast)
+    val copyFailedMessage = stringResource(R.string.task_copy_failed_toast)
     var localChecked by remember(todo.id) { mutableStateOf(false) }
     var localStruck by remember(todo.id) { mutableStateOf(false) }
     var pendingCompletion by remember(todo.id) { mutableStateOf(false) }
@@ -1599,6 +1614,29 @@ private fun ScheduledTaskHomeTodayTaskRow(
                         )
                         closeSwipeSlot()
                         onEdit()
+                    },
+                )
+                TaskSwipeActionButton(
+                    icon = R.drawable.ic_lucide_copy,
+                    contentDescription = stringResource(R.string.action_copy_task),
+                    label = stringResource(R.string.action_copy),
+                    tint = Color.White,
+                    background = TdaySwipeCopyBackground,
+                    revealProgress = actionRevealProgress,
+                    revealDelay = 0.40f,
+                    onClick = {
+                        ViewCompat.performHapticFeedback(
+                            view,
+                            HapticFeedbackConstantsCompat.SEGMENT_FREQUENT_TICK
+                        )
+                        closeSwipeSlot()
+                        runCatching {
+                            clipboardManager.setText(AnnotatedString(taskCopyText(copyContext, todo)))
+                        }.onSuccess {
+                            snackbarManager?.showSuccess(copiedMessage)
+                        }.onFailure {
+                            snackbarManager?.showError(copyFailedMessage)
+                        }
                     },
                 )
                 TaskSwipeActionButton(
@@ -1896,149 +1934,10 @@ private fun CategoryGrid(
     }
 }
 
-private fun completedTileColor(colorScheme: ColorScheme): Color {
-    return Color(0xFF719F84)
-}
+private fun completedTileColor(colorScheme: ColorScheme): Color = TdayCompletedTileAccent
 
 private fun calendarTileColor(colorScheme: ColorScheme): Color {
     return Color(0xFF9A89D2)
-}
-
-@Composable
-private fun CategoryCard(
-    modifier: Modifier,
-    color: Color,
-    @DrawableRes iconRes: Int,
-    @DrawableRes watermarkRes: Int? = null,
-    title: String,
-    count: Int? = null,
-    onClick: () -> Unit,
-) {
-    val view = LocalView.current
-    val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
-    val animatedScale by animateFloatAsState(
-        targetValue = if (isPressed) 0.97f else 1f,
-        label = "categoryCardScale",
-    )
-    val animatedOffsetY by animateDpAsState(
-        targetValue = if (isPressed) 2.dp else 0.dp,
-        label = "categoryCardOffsetY",
-    )
-    val animatedElevation by animateDpAsState(
-        targetValue = if (isPressed) 2.dp else 9.dp,
-        label = "categoryCardElevation",
-    )
-
-    Card(
-        modifier = modifier
-            .semantics(mergeDescendants = true) {}
-            .offset(y = animatedOffsetY)
-            .graphicsLayer {
-                scaleX = animatedScale
-                scaleY = animatedScale
-            },
-        onClick = {
-            performGentleHaptic(view)
-            onClick()
-        },
-        interactionSource = interactionSource,
-        colors = CardDefaults.cardColors(containerColor = color),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = animatedElevation,
-            pressedElevation = animatedElevation,
-        ),
-        shape = RoundedCornerShape(26.dp),
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .drawWithCache {
-                    val iconSideGlow = Brush.radialGradient(
-                        colors = listOf(
-                            Color.White.copy(alpha = 0.22f),
-                            Color.White.copy(alpha = 0.08f),
-                            Color.Transparent,
-                        ),
-                        center = Offset(
-                            x = size.width * 0.22f,
-                            y = size.height * 0.2f,
-                        ),
-                        radius = size.maxDimension * 0.9f,
-                    )
-                    val pearlWash = Brush.linearGradient(
-                        colors = listOf(
-                            Color.White.copy(alpha = 0.12f),
-                            Color(0xFFE7F3FF).copy(alpha = 0.1f),
-                            Color(0xFFFFF2FA).copy(alpha = 0.08f),
-                            Color.Transparent,
-                        ),
-                        start = Offset(
-                            x = size.width * 0.05f,
-                            y = size.height * 0.04f,
-                        ),
-                        end = Offset(
-                            x = size.width * 0.9f,
-                            y = size.height * 0.75f,
-                        ),
-                    )
-                    onDrawWithContent {
-                        drawRect(iconSideGlow)
-                        drawRect(pearlWash)
-                        drawContent()
-                    }
-                }
-        ) {
-            if (watermarkRes != null) {
-                Box(modifier = Modifier.matchParentSize()) {
-                    Icon(
-                        modifier = Modifier
-                            .align(Alignment.CenterEnd)
-                            .offset(x = 22.dp, y = 12.dp)
-                            .size(124.dp),
-                        painter = painterResource(watermarkRes),
-                        contentDescription = null,
-                        tint = lerp(color, Color.White, 0.28f).copy(alpha = 0.4f),
-                    )
-                }
-            }
-
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(12.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(
-                        painter = painterResource(iconRes),
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(26.dp),
-                    )
-                    if (count != null) {
-                        Text(
-                            text = count.toString(),
-                            style = MaterialTheme.typography.headlineMedium,
-                            color = Color.White,
-                            fontWeight = FontWeight.Black,
-                        )
-                    }
-                }
-
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleLarge,
-                    color = Color.White,
-                    fontWeight = FontWeight.ExtraBold,
-                )
-            }
-        }
-    }
 }
 
 @Composable

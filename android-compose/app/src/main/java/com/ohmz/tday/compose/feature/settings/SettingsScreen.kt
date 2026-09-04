@@ -139,8 +139,10 @@ import com.ohmz.tday.compose.feature.guide.GuideHelpLink
 import com.ohmz.tday.compose.feature.lock.canSatisfyAppLock
 import com.ohmz.tday.compose.feature.settings.data.DataTransferCard
 import com.ohmz.tday.compose.feature.widget.WidgetEntryPoint
+import com.ohmz.tday.compose.ui.component.RootFeedTab
 import com.ohmz.tday.compose.ui.component.TdayCenteredSelectorDialog
 import com.ohmz.tday.compose.ui.component.TdaySegmentedSlider
+import com.ohmz.tday.compose.ui.component.labelRes
 import com.ohmz.tday.compose.ui.theme.AppThemeMode
 import com.ohmz.tday.compose.ui.theme.TdayDimens
 import com.ohmz.tday.compose.ui.theme.TdayStatusSuccess
@@ -168,11 +170,13 @@ fun SettingsScreen(
     selectedReminder: ReminderOption,
     syncStatus: MobileSyncStatus,
     aiSummaryEnabled: Boolean,
+    defaultHomeScreen: RootFeedTab,
     hasUpdate: Boolean = false,
     latestVersionName: String? = null,
     backendVersion: String? = null,
     versionCheckResult: VersionCheckResult? = null,
     onThemeModeSelected: (AppThemeMode) -> Unit,
+    onDefaultHomeScreenSelected: (RootFeedTab) -> Unit,
     onReminderSelected: (ReminderOption) -> Unit,
     selectedDayAhead: DayAheadOption = DayAheadOption.OFF,
     onDayAheadSelected: (DayAheadOption) -> Unit = {},
@@ -225,6 +229,7 @@ fun SettingsScreen(
     // sits under: searching "reminders" keeps the whole group rather than only
     // the one row that happens to draw the heading.
     val appearanceTitle = stringResource(R.string.settings_appearance)
+    val behaviorTitle = stringResource(R.string.settings_behavior)
     val remindersTitle = stringResource(R.string.settings_reminders)
     // Whether a notification would actually arrive — the OS permission AND the
     // app's own switch. Owned here because the switch is in one card and the
@@ -295,6 +300,23 @@ fun SettingsScreen(
             ThemeModeSelector(
                 selectedThemeMode = selectedThemeMode,
                 onThemeModeSelected = onThemeModeSelected,
+            )
+        },
+        SettingsEntry(
+            key = "default-home-screen",
+            visible = search.matches(
+                behaviorTitle,
+                stringResource(R.string.settings_default_home_screen),
+                stringResource(R.string.root_feed_tab_scheduled_task_home),
+                stringResource(R.string.root_feed_tab_floater),
+            ),
+            // The root feeds explain themselves from the same Home/Leaf language as the
+            // in-app dock; no guide topic needed.
+            section = behaviorTitle,
+        ) {
+            DefaultHomeScreenRow(
+                defaultHomeScreen = defaultHomeScreen,
+                onDefaultHomeScreenSelected = onDefaultHomeScreenSelected,
             )
         },
         SettingsEntry(
@@ -1838,6 +1860,46 @@ private fun ThemeModeSelector(
         selectedOption = selectedThemeMode,
         onOptionSelected = onThemeModeSelected,
         label = { mode -> context.getString(mode.labelRes) },
+    )
+}
+
+/** The "Behavior" card row: label plus [RootFeedTabSelector]. Its own composable, out of
+ * [SettingsScreen]'s body, purely to keep that already-large function from growing further. */
+@Composable
+private fun DefaultHomeScreenRow(
+    defaultHomeScreen: RootFeedTab,
+    onDefaultHomeScreenSelected: (RootFeedTab) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingSm)) {
+        Text(
+            text = stringResource(R.string.settings_default_home_screen),
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+            fontWeight = FontWeight.ExtraBold,
+        )
+        RootFeedTabSelector(
+            selectedTab = defaultHomeScreen,
+            onTabSelected = onDefaultHomeScreenSelected,
+        )
+    }
+}
+
+/**
+ * Which root feed (Scheduled or Floaters) opens on a fresh cold launch. Same
+ * [TdaySegmentedSlider] shape as [ThemeModeSelector] — a named, mutually-exclusive choice, not
+ * a Switch — and reuses [RootFeedTab]'s own labels so the wording matches the in-app dock.
+ */
+@Composable
+private fun RootFeedTabSelector(
+    selectedTab: RootFeedTab,
+    onTabSelected: (RootFeedTab) -> Unit,
+) {
+    val context = LocalContext.current
+    TdaySegmentedSlider(
+        options = listOf(RootFeedTab.SCHEDULED_TASK_HOME, RootFeedTab.FLOATER_TASK_HOME),
+        selectedOption = selectedTab,
+        onOptionSelected = onTabSelected,
+        label = { tab -> context.getString(tab.labelRes()) },
     )
 }
 

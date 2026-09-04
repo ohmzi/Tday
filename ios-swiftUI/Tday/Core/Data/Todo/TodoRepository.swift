@@ -27,6 +27,23 @@ struct StagedFloaterDeletion {
     let pendingMutations: [PendingMutationRecord]
 }
 
+/// Snapshot of everything `stageCompleteTodo(s)` wrote into the local cache —
+/// the pre-completion row(s), the new completed-history record(s), and the new
+/// queued mutation(s) — so `undoStagedCompletion(_:)` can restore the exact
+/// pre-completion state.
+struct StagedTodoCompletion {
+    let todos: [CachedTodoRecord]
+    let completedItems: [CachedCompletedRecord]
+    let pendingMutations: [PendingMutationRecord]
+}
+
+/// Floater sibling of `StagedTodoCompletion`.
+struct StagedFloaterCompletion {
+    let floaters: [CachedFloaterRecord]
+    let completedFloaters: [CachedCompletedFloaterRecord]
+    let pendingMutations: [PendingMutationRecord]
+}
+
 @MainActor
 final class TodoRepository {
     private let api: TdayAPIService
@@ -597,6 +614,143 @@ final class TodoRepository {
         _ = try await cacheManager.updateOfflineState { state in
             self.applyingFloaterCompletion(of: floater, to: state, now: now)
         }
+        try await syncAfterMutation()
+    }
+
+    /// First half of a delayed-commit complete: writes the completion (row
+    /// flipped to `completed: true`, a new `CachedCompletedRecord`, and a
+    /// queued `COMPLETE_TODO`/`COMPLETE_TODO_INSTANCE` mutation) straight to the
+    /// local cache, durably, at the moment of the tap — not deferred to commit.
+    ///
+    /// This differs from `stageDeleteTodo(_:)` on purpose. A staged delete can
+    /// safely defer queuing its mutation to commit because leaving it queued
+    /// costs nothing (the row is already gone from the screen either way and a
+    /// hard delete can't be replayed faithfully after the fact per the
+    /// scheduler's own doc comment). A staged complete cannot: if the process
+    /// dies inside the undo window with nothing durable yet, the completion the
+    /// user already saw silently reverts on next launch with no trace, because
+    /// there is nothing to replay. Writing it now means a crash or kill inside
+    /// the window loses nothing — `applyPendingMutations` replays the queued
+    /// mutation on next launch like any other.
+    ///
+    /// Commit later with `syncPendingMutations()` (it only needs to flush the
+    /// already-queued mutation, not re-run this transform) or restore with
+    /// `undoStagedCompletion(_:)`.
+    func stageCompleteTodo(_ todo: TodoItem) -> StagedTodoCompletion {
+        stageCompleteTodos([todo])
+    }
+
+    /// Bulk sibling of `stageCompleteTodo(_:)`: folds the whole selection into
+    /// ONE cache write and returns one combined snapshot, so completing 100
+    /// rows costs one full-cache rewrite here instead of 100 — see the note
+    /// above `completeTodos(_:)` for why that matters.
+    func stageCompleteTodos(_ todos: [TodoItem]) -> StagedTodoCompletion {
+        guard !todos.isEmpty else {
+            return StagedTodoCompletion(todos: [], completedItems: [], pendingMutations: [])
+        }
+        var previousTodos: [CachedTodoRecord] = []
+        var addedCompletedItems: [CachedCompletedRecord] = []
+        var addedMutations: [PendingMutationRecord] = []
+        let now = Date().epochMilliseconds
+        cacheManager.updateOfflineState { state in
+            let beforeCompletedIds = Set(state.completedItems.map(\.id))
+            let beforeMutationIds = Set(state.pendingMutations.map(\.mutationId))
+            var nextState = state
+            for todo in todos {
+                previousTodos.append(contentsOf: nextState.todos.filter {
+                    $0.canonicalId == todo.canonicalId && $0.instanceDateEpochMs == todo.instanceDateEpochMilliseconds
+                })
+                nextState = self.applyingCompletion(of: todo, to: nextState, now: now)
+            }
+            addedCompletedItems = nextState.completedItems.filter { !beforeCompletedIds.contains($0.id) }
+            addedMutations = nextState.pendingMutations.filter { !beforeMutationIds.contains($0.mutationId) }
+            return nextState
+        }
+        return StagedTodoCompletion(todos: previousTodos, completedItems: addedCompletedItems, pendingMutations: addedMutations)
+    }
+
+    /// Restores the local state captured by `stageCompleteTodo(s)`: puts the
+    /// pre-completion row(s) back and removes exactly the completed-history
+    /// record(s) and queued mutation(s) that staging added — idempotent the
+    /// same way `undoStagedTodo(_:)` is. Known edge case, shared with every
+    /// other delayed-commit action in this scheduler: if an unrelated sync
+    /// drains the queued mutation before Undo is tapped, the completion has
+    /// already reached the server and this only reverts the local copy — the
+    /// same trade-off `undoStagedTodo(_:)` already makes for delete.
+    func undoStagedCompletion(_ staged: StagedTodoCompletion) {
+        guard !staged.todos.isEmpty || !staged.completedItems.isEmpty || !staged.pendingMutations.isEmpty else {
+            return
+        }
+        cacheManager.updateOfflineState { state in
+            var nextState = state
+            for record in staged.todos {
+                nextState.todos.removeAll {
+                    $0.canonicalId == record.canonicalId && $0.instanceDateEpochMs == record.instanceDateEpochMs
+                }
+                nextState.todos.append(record)
+            }
+            let completedIdsToRemove = Set(staged.completedItems.map(\.id))
+            nextState.completedItems.removeAll { completedIdsToRemove.contains($0.id) }
+            let mutationIdsToRemove = Set(staged.pendingMutations.map(\.mutationId))
+            nextState.pendingMutations.removeAll { mutationIdsToRemove.contains($0.mutationId) }
+            return nextState
+        }
+    }
+
+    /// Floater sibling of `stageCompleteTodo(_:)` — see its doc comment.
+    func stageCompleteFloater(_ floater: TodoItem) -> StagedFloaterCompletion {
+        stageCompleteFloaters([floater])
+    }
+
+    /// Floater sibling of `stageCompleteTodos(_:)`.
+    func stageCompleteFloaters(_ floaters: [TodoItem]) -> StagedFloaterCompletion {
+        guard !floaters.isEmpty else {
+            return StagedFloaterCompletion(floaters: [], completedFloaters: [], pendingMutations: [])
+        }
+        var previousFloaters: [CachedFloaterRecord] = []
+        var addedCompletedFloaters: [CachedCompletedFloaterRecord] = []
+        var addedMutations: [PendingMutationRecord] = []
+        let now = Date().epochMilliseconds
+        cacheManager.updateOfflineState { state in
+            let beforeCompletedIds = Set(state.completedFloaters.map(\.id))
+            let beforeMutationIds = Set(state.pendingMutations.map(\.mutationId))
+            var nextState = state
+            for floater in floaters {
+                previousFloaters.append(contentsOf: nextState.floaters.filter { $0.canonicalId == floater.canonicalId })
+                nextState = self.applyingFloaterCompletion(of: floater, to: nextState, now: now)
+            }
+            addedCompletedFloaters = nextState.completedFloaters.filter { !beforeCompletedIds.contains($0.id) }
+            addedMutations = nextState.pendingMutations.filter { !beforeMutationIds.contains($0.mutationId) }
+            return nextState
+        }
+        return StagedFloaterCompletion(floaters: previousFloaters, completedFloaters: addedCompletedFloaters, pendingMutations: addedMutations)
+    }
+
+    /// Floater sibling of `undoStagedCompletion(_:)`.
+    func undoStagedFloaterCompletion(_ staged: StagedFloaterCompletion) {
+        guard !staged.floaters.isEmpty || !staged.completedFloaters.isEmpty || !staged.pendingMutations.isEmpty else {
+            return
+        }
+        cacheManager.updateOfflineState { state in
+            var nextState = state
+            for record in staged.floaters {
+                nextState.floaters.removeAll { $0.canonicalId == record.canonicalId }
+                nextState.floaters.append(record)
+            }
+            let completedIdsToRemove = Set(staged.completedFloaters.map(\.id))
+            nextState.completedFloaters.removeAll { completedIdsToRemove.contains($0.id) }
+            let mutationIdsToRemove = Set(staged.pendingMutations.map(\.mutationId))
+            nextState.pendingMutations.removeAll { mutationIdsToRemove.contains($0.mutationId) }
+            return nextState
+        }
+    }
+
+    /// Commit half of a staged complete: `stageCompleteTodo(s)` /
+    /// `stageCompleteFloater(s)` already wrote the completion and queued its
+    /// mutation at the moment of the tap, so committing only needs to flush the
+    /// queue — re-running a transform here would double the completed-history
+    /// record and send the completion twice.
+    func syncPendingMutations() async throws {
         try await syncAfterMutation()
     }
 

@@ -102,6 +102,35 @@
       "searchBody": "dua suapan utama yang tenang, boleh ditukar dari dok. t'day mempunyai dua suapan seiring. tugasan bertarikh anda untuk hari ini dan seterusnya tersimpan dalam suapan dijadualkan. bila-bila menyimpan floater — tugasan tanpa tarikh. tukar antara keduanya dari dok di bahagian bawah, dan cipta tugasan dari mana-mana satu."
     },
     {
+      "id": "default-home-screen",
+      "section": "GETTING_STARTED",
+      "sectionOrder": 0,
+      "icon": "house",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.7.7",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Skrin utama lalai",
+      "summary": "Pilih sama ada T'Day dibuka pada Dijadualkan atau Bila-bila.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Tetapan mempunyai bahagian Tingkah laku di mana anda memilih suapan mana yang dibuka dahulu — Dijadualkan atau Bila-bila. Ia hanya menetapkan apa yang anda lihat semasa pelancaran; dok masih membenarkan anda menukar antara kedua-duanya pada bila-bila masa."
+          ]
+        }
+      ],
+      "searchTitle": "skrin utama lalai",
+      "searchKeywords": "lalai, skrin utama, pelancaran, permulaan, dijadualkan, bila-bila, tingkah laku, tetapan",
+      "searchBody": "pilih sama ada t'day dibuka pada dijadualkan atau bila-bila. tetapan mempunyai bahagian tingkah laku di mana anda memilih suapan mana yang dibuka dahulu — dijadualkan atau bila-bila. ia hanya menetapkan apa yang anda lihat semasa pelancaran; dok masih membenarkan anda menukar antara kedua-duanya pada bila-bila masa."
+    },
+    {
       "id": "create-task",
       "section": "GETTING_STARTED",
       "sectionOrder": 0,
@@ -301,6 +330,41 @@
       "searchTitle": "tindakan leret",
       "searchKeywords": "leret, gerak isyarat, sapu, selesai, padam, pantas, baris",
       "searchBody": "leret baris tugasan untuk tindakan pantas tanpa membukanya. leret baris tugasan untuk mendedahkan tindakan pantas — selesaikannya, atau buang — tanpa membuka tugasan langsung. tugasan yang selesai memaparkan toast buat asal selama beberapa saat, jadi leret tersilap tidak pernah muktamad."
+    },
+    {
+      "id": "copy-task-text",
+      "section": "GESTURES",
+      "sectionOrder": 2,
+      "icon": "copy",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.7.8",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Salin butiran tugasan",
+      "summary": "Salin tajuk, nota, tarikh akhir, dan keutamaan tugasan sebagai teks.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Leret tugasan dan ketik Salin — atau guna butang Salin pada desktop — untuk menyalin tajuk, nota, tarikh akhir, dan keutamaannya sebagai teks biasa, sedia untuk ditampal di mana-mana."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Berguna untuk menampal tugasan ke dalam mesej, e-mel, atau aplikasi lain tanpa menaipnya semula."
+          ]
+        }
+      ],
+      "searchTitle": "salin butiran tugasan",
+      "searchKeywords": "salin, papan keratan, kongsi, teks, leret",
+      "searchBody": "salin tajuk, nota, tarikh akhir, dan keutamaan tugasan sebagai teks. leret tugasan dan ketik salin — atau guna butang salin pada desktop — untuk menyalin tajuk, nota, tarikh akhir, dan keutamaannya sebagai teks biasa, sedia untuk ditampal di mana-mana. berguna untuk menampal tugasan ke dalam mesej, e-mel, atau aplikasi lain tanpa menaipnya semula."
     },
     {
       "id": "long-press-actions",
@@ -1071,6 +1135,39 @@
       "searchTitle": "widget skrin utama",
       "searchKeywords": "widget, skrin utama, imbas, hari ini, skrin kunci",
       "searchBody": "lihat tugasan hari ini tanpa membuka aplikasi. tambah widget t'day ke skrin utama anda untuk mengimbas tugasan hari ini. mengetik widget membuka aplikasi di tempat yang betul."
+    },
+    {
+      "id": "widget-list-selection",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "list-todo",
+      "platforms": [
+        "IOS"
+      ],
+      "badge": "PRO_TIP",
+      "serverOnly": false,
+      "sinceVersion": "0.7.7",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Pilih senarai untuk widget anda",
+      "summary": "Jadikan mana-mana widget menunjuk pada satu senarai tertentu, bukan seluruh suapan.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Tekan lama widget T'Day dan pilih Edit Widget untuk menetapkan senarai yang dipaparkan — mana-mana senarai berjadual atau senarai floater anda. Senarai berjadual memaparkan waktu tarikh akhir dan menandakan tugasan tertunggak; senarai floater memaparkan senarai terbuka tanpa waktu tarikh akhir. Jika tidak ditetapkan, widget terus memaparkan suapan penuh Hari Ini atau Floater."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Tambah beberapa widget, masing-masing menunjuk ke senarai berbeza, untuk melihat semuanya sekali gus pada skrin utama anda."
+          ]
+        }
+      ],
+      "searchTitle": "pilih senarai untuk widget anda",
+      "searchKeywords": "widget, senarai, konfigurasi, edit widget, mengikut senarai, skrin utama, ios",
+      "searchBody": "jadikan mana-mana widget menunjuk pada satu senarai tertentu, bukan seluruh suapan. tekan lama widget t'day dan pilih edit widget untuk menetapkan senarai yang dipaparkan — mana-mana senarai berjadual atau senarai floater anda. senarai berjadual memaparkan waktu tarikh akhir dan menandakan tugasan tertunggak; senarai floater memaparkan senarai terbuka tanpa waktu tarikh akhir. jika tidak ditetapkan, widget terus memaparkan suapan penuh hari ini atau floater. tambah beberapa widget, masing-masing menunjuk ke senarai berbeza, untuk melihat semuanya sekali gus pada skrin utama anda."
     },
     {
       "id": "widget-quick-add",

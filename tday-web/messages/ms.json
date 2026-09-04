@@ -340,7 +340,10 @@
     "sharing": "Perkongsian",
     "share": "Kongsi",
     "shareListCopied": "Senarai disalin ke papan keratan",
+    "taskCopied": "Tugasan disalin ke papan keratan",
+    "taskCopyFailed": "Tidak dapat menyalin tugasan ke papan keratan",
     "shareDueLabel": "Tarikh akhir: {{date}}",
+    "sharePriorityLabel": "Keutamaan: {{priority}}",
     "shareTaskCount_one": "{{count}} tugasan",
     "shareTaskCount_few": "{{count}} tugasan",
     "shareTaskCount_many": "{{count}} tugasan",
@@ -442,7 +445,8 @@
     "bulkUpdateFailed_one": "Satu tugasan tidak dapat dikemas kini",
     "bulkUpdateFailed_few": "{{count}} tugasan tidak dapat dikemas kini",
     "bulkUpdateFailed_many": "{{count}} tugasan tidak dapat dikemas kini",
-    "bulkUpdateFailed_other": "{{count}} tugasan tidak dapat dikemas kini"
+    "bulkUpdateFailed_other": "{{count}} tugasan tidak dapat dikemas kini",
+    "floaterCompletedTile": "Selesai"
   },
   "today": {
     "saveInstance": "Simpan kejadian",
@@ -453,6 +457,7 @@
       "pinToTop": "Semat ke atas",
       "edit": "Edit",
       "editAsInstance": "Edit sebagai kejadian",
+      "copy": "Salin",
       "delete": "Padam",
       "Move to": "Pindah ke..."
     },
@@ -500,7 +505,12 @@
   "completed": {
     "title": "Sejarah penyelesaian",
     "empty": "Belum ada yang selesai",
-    "emptyBody": "Tandakan sesuatu sebagai selesai dan ia akan muncul di sini."
+    "emptyBody": "Tandakan sesuatu sebagai selesai dan ia akan muncul di sini.",
+    "tabTasks": "Tugasan",
+    "floaterEmpty": "Belum ada floater yang selesai",
+    "floaterEmptyBody": "Tandakan sesuatu selesai dalam Floater dan ia akan muncul di sini.",
+    "listDeletedSuffix": "senarai dipadam",
+    "floaterRestoredIntoRecreatedList": "Dipulihkan — “{{listName}}” telah dicipta semula"
   },
   "modal": {
     "confirm": "Sahkan",
@@ -627,6 +637,10 @@
       "title": "Penampilan",
       "description": "Pilih cerah, gelap, atau ikut tetapan sistem anda.",
       "descriptionSystem": "Ikut peranti anda, cerah, atau gelap. Sedang menggunakan {{theme}}."
+    },
+    "behavior": {
+      "title": "Tingkah laku",
+      "defaultHomeScreen": "Skrin utama lalai"
     },
     "language": {
       "title": "Bahasa",
@@ -921,6 +935,12 @@
         "keywords": "dijadualkan, bila-bila, suapan, dok, akar, navigasi, tab",
         "body": "T'Day mempunyai dua suapan seiring. Tugasan bertarikh anda untuk hari ini dan seterusnya tersimpan dalam suapan Dijadualkan. Bila-bila menyimpan Floater — tugasan tanpa tarikh. Tukar antara keduanya dari dok di bahagian bawah, dan cipta tugasan dari mana-mana satu."
       },
+      "default-home-screen": {
+        "title": "Skrin utama lalai",
+        "summary": "Pilih sama ada T'Day dibuka pada Dijadualkan atau Bila-bila.",
+        "keywords": "lalai, skrin utama, pelancaran, permulaan, dijadualkan, bila-bila, tingkah laku, tetapan",
+        "body": "Tetapan mempunyai bahagian Tingkah laku di mana anda memilih suapan mana yang dibuka dahulu — Dijadualkan atau Bila-bila. Ia hanya menetapkan apa yang anda lihat semasa pelancaran; dok masih membenarkan anda menukar antara kedua-duanya pada bila-bila masa."
+      },
       "create-task": {
         "title": "Cipta tugasan",
         "summary": "Tambah tugasan berjadual atau Floater tanpa tarikh dengan beberapa ketikan.",
@@ -959,6 +979,13 @@
         "keywords": "leret, gerak isyarat, sapu, selesai, padam, pantas, baris",
         "body": "Leret baris tugasan untuk mendedahkan tindakan pantas — selesaikannya, atau buang — tanpa membuka tugasan langsung.",
         "tip": "Tugasan yang selesai memaparkan toast buat asal selama beberapa saat, jadi leret tersilap tidak pernah muktamad."
+      },
+      "copy-task-text": {
+        "title": "Salin butiran tugasan",
+        "summary": "Salin tajuk, nota, tarikh akhir, dan keutamaan tugasan sebagai teks.",
+        "keywords": "salin, papan keratan, kongsi, teks, leret",
+        "body": "Leret tugasan dan ketik Salin — atau guna butang Salin pada desktop — untuk menyalin tajuk, nota, tarikh akhir, dan keutamaannya sebagai teks biasa, sedia untuk ditampal di mana-mana.",
+        "tip": "Berguna untuk menampal tugasan ke dalam mesej, e-mel, atau aplikasi lain tanpa menaipnya semula."
       },
       "long-press-actions": {
         "title": "Tekan lama tugasan",
@@ -1082,6 +1109,20 @@
         "summary": "Lihat tugasan hari ini tanpa membuka aplikasi.",
         "keywords": "widget, skrin utama, imbas, hari ini, skrin kunci",
         "body": "Tambah widget T'Day ke skrin utama anda untuk mengimbas tugasan hari ini. Mengetik widget membuka aplikasi di tempat yang betul."
+      },
+      "widget-list-selection": {
+        "title": "Pilih senarai untuk widget anda",
+        "summary": "Jadikan mana-mana widget menunjuk pada satu senarai tertentu, bukan seluruh suapan.",
+        "keywords": "widget, senarai, konfigurasi, edit widget, mengikut senarai, skrin utama, ios",
+        "body": "Tekan lama widget T'Day dan pilih Edit Widget untuk menetapkan senarai yang dipaparkan — mana-mana senarai berjadual atau senarai floater anda. Senarai berjadual memaparkan waktu tarikh akhir dan menandakan tugasan tertunggak; senarai floater memaparkan senarai terbuka tanpa waktu tarikh akhir. Jika tidak ditetapkan, widget terus memaparkan suapan penuh Hari Ini atau Floater.",
+        "tip": "Tambah beberapa widget, masing-masing menunjuk ke senarai berbeza, untuk melihat semuanya sekali gus pada skrin utama anda."
+      },
+      "list-widgets": {
+        "title": "Widget senarai",
+        "summary": "Letakkan mana-mana senarai pada skrin utama anda, bukan sekadar Hari Ini.",
+        "keywords": "widget, skrin utama, senarai, konfigurasi, pemilih, terapung, berjadual",
+        "body": "Tambah widget T'Day dan pemilih membolehkan anda memilih senarai yang dipaparkan — mana-mana senarai berjadual atau senarai terapung, bukan sekadar Hari Ini atau Terapung. Tambah widget itu semula untuk memaparkan senarai lain; setiap satu mengingati pilihannya sendiri.",
+        "tip": "Tekan lama widget yang telah diletakkan dan pilih Edit (atau tetapan widget pelancar anda) untuk menukarnya ke senarai lain kemudian."
       },
       "widget-quick-add": {
         "title": "Tambah pantas dari widget",

@@ -8,6 +8,7 @@ package com.ohmz.tday.shared.guide
  */
 object GuideTopicIds {
     const val ROOT_FEEDS = "root-feeds"
+    const val DEFAULT_HOME_SCREEN = "default-home-screen"
     const val CREATE_TASK = "create-task"
     const val NLP_DATE_SYNTAX = "nlp-date-syntax"
     const val BRAIN_DUMP = "brain-dump"
@@ -16,6 +17,7 @@ object GuideTopicIds {
     const val PRIORITIES = "priorities"
     const val PIN_TASK = "pin-task"
     const val SWIPE_ACTIONS = "swipe-actions"
+    const val COPY_TASK_TEXT = "copy-task-text"
     const val LONG_PRESS_ACTIONS = "long-press-actions"
     const val DRAG_REORDER = "drag-reorder"
     const val FLOATERS_VS_TODOS = "floaters-vs-todos"
@@ -41,6 +43,8 @@ object GuideTopicIds {
     const val REMINDERS = "reminders"
     const val PUSH_NOTIFICATIONS = "push-notifications"
     const val HOME_WIDGET = "home-widget"
+    const val WIDGET_LIST_SELECTION = "widget-list-selection"
+    const val LIST_WIDGETS = "list-widgets"
     const val WIDGET_QUICK_ADD = "widget-quick-add"
     const val INTERACTIVE_WIDGETS = "interactive-widgets"
     const val SHARE_INTO_TDAY = "share-into-tday"

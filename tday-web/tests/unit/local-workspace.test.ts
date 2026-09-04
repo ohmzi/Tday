@@ -381,13 +381,14 @@ describe("local mode preferences", () => {
   it("persists a preference patch across a reload of the workspace", async () => {
     await api.PATCH({
       url: "/api/preferences",
-      ...json({ sortBy: "priority", aiSummaryEnabled: false }),
+      ...json({ sortBy: "priority", aiSummaryEnabled: false, defaultHomeScreen: "floater" }),
     });
 
     await reopenWorkspace();
     const prefs = await api.GET({ url: "/api/preferences" });
     expect(prefs.sortBy).toBe("priority");
     expect(prefs.aiSummaryEnabled).toBe(false);
+    expect(prefs.defaultHomeScreen).toBe("floater");
     // The deprecated nested mirror stays null, as on the server.
     expect(prefs.userPreferences).toBeNull();
   });

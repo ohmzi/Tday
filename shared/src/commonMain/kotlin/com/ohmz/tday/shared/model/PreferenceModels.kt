@@ -8,6 +8,7 @@ data class PreferencesDto(
     val groupBy: String? = null,
     val direction: String? = null,
     val aiSummaryEnabled: Boolean? = null,
+    val defaultHomeScreen: String? = null,
 )
 
 /**
@@ -29,5 +30,7 @@ data class PreferencesResponse(
     val groupBy: String? = null,
     val direction: String? = null,
     val aiSummaryEnabled: Boolean = true,
+    // NULL (no row / never set) means the app opens on the Scheduled root feed by default.
+    val defaultHomeScreen: String = "scheduled",
     val userPreferences: PreferencesDto? = null,
 )

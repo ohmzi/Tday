@@ -76,6 +76,32 @@
       "sinceVersion": null
     },
     {
+      "id": "default-home-screen",
+      "section": "GETTING_STARTED",
+      "icon": "house",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "titleKey": "guide.topics.default-home-screen.title",
+      "summaryKey": "guide.topics.default-home-screen.summary",
+      "keywordsKey": "guide.topics.default-home-screen.keywords",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "keys": [
+            "guide.topics.default-home-screen.body"
+          ]
+        }
+      ],
+      "badge": null,
+      "deepLink": null,
+      "helpAnchors": [],
+      "serverOnly": false,
+      "sinceVersion": "0.7.7"
+    },
+    {
       "id": "create-task",
       "section": "GETTING_STARTED",
       "icon": "plus",
@@ -286,6 +312,38 @@
       "helpAnchors": [],
       "serverOnly": false,
       "sinceVersion": null
+    },
+    {
+      "id": "copy-task-text",
+      "section": "GESTURES",
+      "icon": "copy",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "titleKey": "guide.topics.copy-task-text.title",
+      "summaryKey": "guide.topics.copy-task-text.summary",
+      "keywordsKey": "guide.topics.copy-task-text.keywords",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "keys": [
+            "guide.topics.copy-task-text.body"
+          ]
+        },
+        {
+          "type": "TIP",
+          "keys": [
+            "guide.topics.copy-task-text.tip"
+          ]
+        }
+      ],
+      "badge": "HIDDEN_GEM",
+      "deepLink": null,
+      "helpAnchors": [],
+      "serverOnly": false,
+      "sinceVersion": "0.7.8"
     },
     {
       "id": "drag-reorder",

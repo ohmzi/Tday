@@ -102,6 +102,35 @@
       "searchBody": "dois feeds principais e serenos entre os quais alterna a partir da barra. o t'day tem dois feeds irmaos. o agendado contem as suas tarefas com data para hoje e para os dias seguintes. o qualquer altura contem os flutuantes — tarefas sem data. alterne entre eles pela barra ao fundo e crie uma tarefa a partir de qualquer um."
     },
     {
+      "id": "default-home-screen",
+      "section": "GETTING_STARTED",
+      "sectionOrder": 0,
+      "icon": "house",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.7.7",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Tela inicial padrão",
+      "summary": "Escolha se o T'Day abre em Agendado ou Qualquer altura.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "As Configurações têm uma secção Comportamento onde escolhe qual feed abre primeiro — Agendado ou Qualquer altura. Isto define apenas o que vê ao abrir a aplicação; a barra continua a permitir alternar entre os dois a qualquer momento."
+          ]
+        }
+      ],
+      "searchTitle": "tela inicial padrao",
+      "searchKeywords": "padrao, tela inicial, ecra inicial, lancamento, agendado, qualquer altura, comportamento, configuracoes",
+      "searchBody": "escolha se o t'day abre em agendado ou qualquer altura. as configuracoes tem uma seccao comportamento onde escolhe qual feed abre primeiro — agendado ou qualquer altura. isto define apenas o que ve ao abrir a aplicacao; a barra continua a permitir alternar entre os dois a qualquer momento."
+    },
+    {
       "id": "create-task",
       "section": "GETTING_STARTED",
       "sectionOrder": 0,
@@ -301,6 +330,41 @@
       "searchTitle": "acoes de deslize",
       "searchKeywords": "deslizar, gesto, arrastar, concluir, eliminar, rapido, linha",
       "searchBody": "deslize a linha de uma tarefa para acoes rapidas sem a abrir. deslize a linha de uma tarefa para revelar acoes rapidas — conclui-la ou remove-la — sem sequer a abrir. uma tarefa concluida mostra uma notificacao para anular durante alguns segundos, por isso um deslize por engano nunca e definitivo."
+    },
+    {
+      "id": "copy-task-text",
+      "section": "GESTURES",
+      "sectionOrder": 2,
+      "icon": "copy",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.7.8",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Copiar detalhes da tarefa",
+      "summary": "Copie o título, as notas, a data de vencimento e a prioridade de uma tarefa como texto.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Deslize uma tarefa e toque em Copiar — ou use o botão Copiar no desktop — para copiar seu título, notas, data de vencimento e prioridade como texto simples, pronto para colar em qualquer lugar."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Útil para colar uma tarefa em uma mensagem, e-mail ou outro aplicativo sem precisar redigitá-la."
+          ]
+        }
+      ],
+      "searchTitle": "copiar detalhes da tarefa",
+      "searchKeywords": "copiar, area de transferencia, compartilhar, texto, deslizar",
+      "searchBody": "copie o titulo, as notas, a data de vencimento e a prioridade de uma tarefa como texto. deslize uma tarefa e toque em copiar — ou use o botao copiar no desktop — para copiar seu titulo, notas, data de vencimento e prioridade como texto simples, pronto para colar em qualquer lugar. util para colar uma tarefa em uma mensagem, e-mail ou outro aplicativo sem precisar redigita-la."
     },
     {
       "id": "long-press-actions",
@@ -1071,6 +1135,39 @@
       "searchTitle": "widget no ecra principal",
       "searchKeywords": "widget, ecra principal, relance, hoje, ecra de bloqueio",
       "searchBody": "veja as tarefas de hoje sem abrir a aplicacao. adicione o widget do t'day ao seu ecra principal para dar uma olhada as tarefas de hoje. tocar no widget abre a aplicacao no sitio certo."
+    },
+    {
+      "id": "widget-list-selection",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "list-todo",
+      "platforms": [
+        "IOS"
+      ],
+      "badge": "PRO_TIP",
+      "serverOnly": false,
+      "sinceVersion": "0.7.7",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Escolha uma lista para o seu widget",
+      "summary": "Faça um widget apontar para uma lista específica em vez de todo o feed.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Mantenha premido um widget do T'Day e escolha Editar Widget para definir exatamente que lista ele mostra — qualquer uma das suas listas agendadas ou listas de flutuantes. Uma lista agendada mostra horas de vencimento e assinala o que está atrasado; uma lista de flutuantes mostra uma lista aberta sem horas de vencimento. Se não escolher nada, o widget continua a mostrar o feed completo de Hoje ou de Flutuantes."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Adicione vários widgets, cada um apontando para uma lista diferente, para os ver todos ao mesmo tempo no seu ecrã principal."
+          ]
+        }
+      ],
+      "searchTitle": "escolha uma lista para o seu widget",
+      "searchKeywords": "widget, lista, configurar, editar widget, por lista, ecra principal, ios",
+      "searchBody": "faca um widget apontar para uma lista especifica em vez de todo o feed. mantenha premido um widget do t'day e escolha editar widget para definir exatamente que lista ele mostra — qualquer uma das suas listas agendadas ou listas de flutuantes. uma lista agendada mostra horas de vencimento e assinala o que esta atrasado; uma lista de flutuantes mostra uma lista aberta sem horas de vencimento. se nao escolher nada, o widget continua a mostrar o feed completo de hoje ou de flutuantes. adicione varios widgets, cada um apontando para uma lista diferente, para os ver todos ao mesmo tempo no seu ecra principal."
     },
     {
       "id": "widget-quick-add",

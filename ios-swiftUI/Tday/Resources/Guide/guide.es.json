@@ -102,6 +102,35 @@
       "searchBody": "dos vistas principales y serenas entre las que cambias desde el dock. t'day tiene dos vistas hermanas. programado guarda tus tareas con fecha para hoy y mas adelante. en cualquier momento guarda los flotantes: tareas sin fecha. cambia entre ellas desde el dock inferior y crea una tarea desde cualquiera de las dos."
     },
     {
+      "id": "default-home-screen",
+      "section": "GETTING_STARTED",
+      "sectionOrder": 0,
+      "icon": "house",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.7.7",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Pantalla de inicio predeterminada",
+      "summary": "Elige si T'Day se abre en Programado o En cualquier momento.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Ajustes tiene una sección Comportamiento donde eliges qué vista se abre primero: Programado o En cualquier momento. Solo determina lo que ves al iniciar la app; el dock sigue permitiéndote cambiar entre ambas en cualquier momento."
+          ]
+        }
+      ],
+      "searchTitle": "pantalla de inicio predeterminada",
+      "searchKeywords": "predeterminada, pantalla de inicio, inicio, arranque, programado, en cualquier momento, comportamiento, ajustes",
+      "searchBody": "elige si t'day se abre en programado o en cualquier momento. ajustes tiene una seccion comportamiento donde eliges que vista se abre primero: programado o en cualquier momento. solo determina lo que ves al iniciar la app; el dock sigue permitiendote cambiar entre ambas en cualquier momento."
+    },
+    {
       "id": "create-task",
       "section": "GETTING_STARTED",
       "sectionOrder": 0,
@@ -301,6 +330,41 @@
       "searchTitle": "acciones al deslizar",
       "searchKeywords": "deslizar, gesto, swipe, completar, eliminar, rapido, fila",
       "searchBody": "desliza una tarea para acciones rapidas sin abrirla. desliza una fila de tarea para mostrar acciones rapidas: completarla o eliminarla, sin necesidad de abrir la tarea. una tarea completada muestra un aviso para deshacer durante unos segundos, asi que un desliz por error nunca es definitivo."
+    },
+    {
+      "id": "copy-task-text",
+      "section": "GESTURES",
+      "sectionOrder": 2,
+      "icon": "copy",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.7.8",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Copiar detalles de la tarea",
+      "summary": "Copia el título, las notas, la fecha de vencimiento y la prioridad de una tarea como texto.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Desliza una tarea y toca Copiar — o usa el botón Copiar en el escritorio — para copiar su título, notas, fecha de vencimiento y prioridad como texto sin formato, listo para pegar en cualquier lugar."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Útil para pegar una tarea en un mensaje, correo electrónico u otra aplicación sin volver a escribirla."
+          ]
+        }
+      ],
+      "searchTitle": "copiar detalles de la tarea",
+      "searchKeywords": "copiar, portapapeles, compartir, texto, deslizar",
+      "searchBody": "copia el titulo, las notas, la fecha de vencimiento y la prioridad de una tarea como texto. desliza una tarea y toca copiar — o usa el boton copiar en el escritorio — para copiar su titulo, notas, fecha de vencimiento y prioridad como texto sin formato, listo para pegar en cualquier lugar. util para pegar una tarea en un mensaje, correo electronico u otra aplicacion sin volver a escribirla."
     },
     {
       "id": "long-press-actions",
@@ -1071,6 +1135,39 @@
       "searchTitle": "widget de pantalla de inicio",
       "searchKeywords": "widget, pantalla de inicio, vistazo, hoy, pantalla de bloqueo",
       "searchBody": "consulta las tareas de hoy sin abrir la app. anade el widget de t'day a tu pantalla de inicio para echar un vistazo a las tareas de hoy. al tocar el widget, la app se abre en el lugar adecuado."
+    },
+    {
+      "id": "widget-list-selection",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "list-todo",
+      "platforms": [
+        "IOS"
+      ],
+      "badge": "PRO_TIP",
+      "serverOnly": false,
+      "sinceVersion": "0.7.7",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Elige una lista para tu widget",
+      "summary": "Haz que un widget muestre una lista concreta en vez de todo el feed.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Mantén pulsado un widget de T'Day y elige Editar widget para decidir exactamente qué lista muestra: cualquiera de tus listas programadas o de flotantes. Una lista programada muestra horas de vencimiento y marca lo atrasado; una lista de flotantes muestra una lista abierta sin horas de vencimiento. Si la dejas sin elegir, el widget sigue mostrando el feed completo de Hoy o de Flotantes."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Añade varios widgets, cada uno apuntando a una lista distinta, para verlos todos a la vez en tu pantalla de inicio."
+          ]
+        }
+      ],
+      "searchTitle": "elige una lista para tu widget",
+      "searchKeywords": "widget, lista, configurar, editar widget, por lista, pantalla de inicio, ios",
+      "searchBody": "haz que un widget muestre una lista concreta en vez de todo el feed. manten pulsado un widget de t'day y elige editar widget para decidir exactamente que lista muestra: cualquiera de tus listas programadas o de flotantes. una lista programada muestra horas de vencimiento y marca lo atrasado; una lista de flotantes muestra una lista abierta sin horas de vencimiento. si la dejas sin elegir, el widget sigue mostrando el feed completo de hoy o de flotantes. anade varios widgets, cada uno apuntando a una lista distinta, para verlos todos a la vez en tu pantalla de inicio."
     },
     {
       "id": "widget-quick-add",

@@ -371,6 +371,14 @@ struct CompletedItem: Identifiable, Equatable, Hashable, Codable {
     let listId: String?
     let listName: String?
     let listColor: String?
+    /// Distinguishes a completed Floater from a completed (scheduled) Todo —
+    /// the two share this one model and this one Completed screen, but need
+    /// different repository calls for uncomplete/edit/delete (different
+    /// backend routes, different cache tables). A Floater never has a due
+    /// date, but that's an implementation detail of the domain, not something
+    /// call sites should have to infer; this field is the explicit source of
+    /// truth. See `CompletedViewModel`.
+    let isFloater: Bool
 }
 
 struct RegisterOutcome: Equatable, Hashable {

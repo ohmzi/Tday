@@ -54,10 +54,13 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
@@ -70,6 +73,7 @@ import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.text.flattenNotesToPlainText
 import com.ohmz.tday.compose.core.ui.EmptyTaskWatermark
+import com.ohmz.tday.compose.core.ui.LocalSnackbarManager
 import com.ohmz.tday.compose.core.ui.TaskSwipeActionButton
 import com.ohmz.tday.compose.core.ui.TdayEmptyState
 import com.ohmz.tday.compose.core.ui.TdayHeroToolbar
@@ -77,6 +81,7 @@ import com.ohmz.tday.compose.core.ui.TdaySearchCapsule
 import com.ohmz.tday.compose.core.ui.animateTaskSwipeOffsetAsState
 import com.ohmz.tday.compose.core.ui.rememberLazyListHeroTitleCollapse
 import com.ohmz.tday.compose.core.ui.rememberTaskSwipeRevealState
+import com.ohmz.tday.compose.core.ui.taskCopyText
 import com.ohmz.tday.compose.core.ui.tdayBarButtonContainerColor
 import com.ohmz.tday.compose.core.ui.tdayHeroTitleItem
 import com.ohmz.tday.compose.core.ui.TdayHeroTitleMetrics
@@ -84,6 +89,8 @@ import com.ohmz.tday.compose.core.ui.tdayClosesSearchOnOutsideTap
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.theme.TdayCompletedTitleAccent
 import com.ohmz.tday.compose.ui.theme.TdayDimens
+import com.ohmz.tday.compose.ui.theme.TdayFloaterAccent
+import com.ohmz.tday.compose.ui.theme.TdaySwipeCopyBackground
 import com.ohmz.tday.compose.ui.theme.TdaySwipeDeleteBackground
 import com.ohmz.tday.compose.ui.theme.TdaySwipeEditBackground
 import com.ohmz.tday.compose.ui.theme.TdayTaskCompleteAccent
@@ -301,7 +308,11 @@ fun CompletedScreen(
                                                 ),
                                             ),
                                         item = completed,
-                                        lists = uiState.lists,
+                                        // Floater lists are a separate namespace from
+                                        // scheduled-task lists (uiState.lists) — resolve
+                                        // each row's icon/color against the set it
+                                        // actually belongs to.
+                                        lists = if (completed.isFloater) uiState.floaterLists else uiState.lists,
                                         showDateDivider = showCompletedDateDivider,
                                         onInfo = { editTargetId = completed.id },
                                         onDelete = { onDelete(completed) },
@@ -429,10 +440,15 @@ fun CompletedScreen(
     }
 
     editTarget?.let { completed ->
+        val editableLists = if (completed.isFloater) uiState.floaterLists else uiState.lists
         CreateTaskBottomSheet(
-            lists = uiState.lists,
-            editingTask = completed.toEditableTodo(uiState.lists),
-            defaultListId = completed.resolveListId(uiState.lists),
+            lists = editableLists,
+            editingTask = completed.toEditableTodo(editableLists),
+            defaultListId = completed.resolveListId(editableLists),
+            // Floaters have no due date — hide the schedule controls the same
+            // way the live Floater tab's own edit sheet does.
+            defaultScheduled = !completed.isFloater,
+            showScheduleControls = !completed.isFloater,
             onDismiss = { editTargetId = null },
             onCreateTask = { _ -> },
             onUpdateTask = { _, payload ->
@@ -522,7 +538,14 @@ private fun CompletedSwipeRow(
     val colorScheme = MaterialTheme.colorScheme
     val view = LocalView.current
     val coroutineScope = rememberCoroutineScope()
-    val swipeRevealState = rememberTaskSwipeRevealState(item.id)
+    // Edit + Copy + Delete: matches the 3-pill width used elsewhere (see
+    // SwipeTaskRow.revealWidth).
+    val swipeRevealState = rememberTaskSwipeRevealState(item.id, revealWidth = 256.dp)
+    val clipboardManager = LocalClipboardManager.current
+    val snackbarManager = LocalSnackbarManager.current
+    val copyContext = LocalContext.current
+    val copiedMessage = stringResource(R.string.task_copied_toast)
+    val copyFailedMessage = stringResource(R.string.task_copy_failed_toast)
     var restorePhase by remember(item.id) { mutableStateOf(CompletedRestorePhase.Completed) }
     val latestOpenSwipeTaskId = rememberUpdatedState(openSwipeTaskId)
     fun claimSwipeSlot() {
@@ -636,6 +659,29 @@ private fun CompletedSwipeRow(
                             )
                             closeSwipeSlot()
                             onInfo()
+                        },
+                    )
+                    TaskSwipeActionButton(
+                        icon = R.drawable.ic_lucide_copy,
+                        contentDescription = stringResource(R.string.action_copy_task),
+                        label = stringResource(R.string.action_copy),
+                        tint = Color.White,
+                        background = TdaySwipeCopyBackground,
+                        revealProgress = actionRevealProgress,
+                        revealDelay = 0.40f,
+                        onClick = {
+                            ViewCompat.performHapticFeedback(
+                                view,
+                                HapticFeedbackConstantsCompat.CLOCK_TICK,
+                            )
+                            closeSwipeSlot()
+                            runCatching {
+                                clipboardManager.setText(AnnotatedString(taskCopyText(copyContext, item)))
+                            }.onSuccess {
+                                snackbarManager?.showSuccess(copiedMessage)
+                            }.onFailure {
+                                snackbarManager?.showError(copyFailedMessage)
+                            }
                         },
                     )
                     TaskSwipeActionButton(
@@ -762,6 +808,18 @@ private fun CompletedSwipeRow(
                                 horizontalArrangement = Arrangement.spacedBy(5.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
+                                if (item.isFloater) {
+                                    // The app's one existing floater marker (leaf + teal),
+                                    // reused here so a floater reads as one at a glance
+                                    // even interleaved with todos in the same timeline —
+                                    // same glyph/color as the Floater root-feed tab.
+                                    Icon(
+                                        imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_leaf),
+                                        contentDescription = stringResource(R.string.root_feed_tab_floater),
+                                        tint = TdayFloaterAccent,
+                                        modifier = Modifier.size(13.dp),
+                                    )
+                                }
                                 Icon(
                                     imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_clock),
                                     contentDescription = null,

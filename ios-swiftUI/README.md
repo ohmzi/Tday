@@ -83,6 +83,11 @@ xcodebuild test -project ios-swiftUI/TdayApp.xcodeproj -scheme Tday -destination
   ref, so no input can make a manual run upload; only the push of a `v*` tag uploads.
 - The lane never derives a build number — `CURRENT_PROJECT_VERSION` already equals
   `version.json`'s `ios.buildNumber` at the tag.
+- The upload does not wait for App Store Connect processing (`skip_waiting_for_build_processing`),
+  so a green archive/upload only means ASC *accepted* the binary. A follow-up `confirm-processing`
+  job — Linux, not macOS, since it is only an HTTP poll — checks the result on a bounded window and
+  fails loudly if it comes back `FAILED`/`INVALID`, naming the spent build number and the one the
+  next release needs.
 - `XcodeGen must never be run here.` `project.yml` is a mirror kept for tooling;
   `TdayApp.xcodeproj/project.pbxproj` is the source of truth, and regenerating would discard it
   along with the shared `Tday.xcscheme` the pipeline archives.
@@ -135,6 +140,28 @@ Widget UI should keep using system WidgetKit margins/backgrounds, removable cont
 tinted/accented rendering support while carrying T'Day identity through rounded typography, native
 add icons, persistent calm watermarks, and Today/Floater accent treatment reserved for the plus add
 button.
+
+### Per-list configuration (R7)
+
+Both widget kinds are `AppIntentConfiguration`s: long-press ▸ Edit Widget (or the placement flow) lets
+the user pick any one todo list or floater list via `TdayWidgetListEntity`/`TdayWidgetListEntityQuery`
+(`TdayWidget/TodayTasksWidget.swift`), backed by a lightweight catalog file
+(`widget-lists-snapshot.json`, written by `WidgetConfigurableListsStore`) so the extension never needs
+`AppContainer`/SwiftData. Leaving the picker unset keeps the ORIGINAL global feed — this is also what
+every widget placed before R7 falls back to.
+
+The picked list's TYPE, not the gallery slot it came from, decides the rendered shape: a todo list
+always renders due-date-shaped (due times, overdue tinted red); a floater list always renders
+undated-shaped. So a floater list picked from the "Today's Tasks" gallery entry renders
+floater-shaped, and vice versa — there is no third shape. Content for a configured instance comes
+from the same two snapshot files' new `perList[listId]` map (see `docs/DATA_MODEL.md`); a per-list
+instance's todo window is due-today-OR-overdue (wider than the global "due today" feed), since the
+user explicitly chose that one list rather than the aggregate.
+
+This is a sibling to, not a replacement for, iOS Focus Filters (`Feature/CarPlay/CarTaskIntents.swift`
+— `TdayFocusFilterStore`/`TdayListAppEntity`), which narrows the Today feed to a set of lists while a
+Focus is active. Both mechanisms can be in play at once; a per-list widget's content ignores the
+active Focus filter (it already narrowed to one list on purpose).
 
 ## CarPlay
 

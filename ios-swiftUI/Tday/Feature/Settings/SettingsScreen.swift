@@ -79,12 +79,14 @@ struct SettingsScreen: View {
         matchesSearch(
             [
                 "Appearance",
+                "Behavior",
+                "Default home screen",
                 "Reminders",
                 "Default reminder",
                 "Day Ahead digest",
                 "Quiet hours",
                 "Language",
-            ] + AppThemeMode.allCases.map(\.label)
+            ] + AppThemeMode.allCases.map(\.label) + [RootFeedTab.scheduledTaskHome.title, RootFeedTab.floaterTaskHome.title]
         )
     }
 
@@ -266,6 +268,7 @@ struct SettingsScreen: View {
         .task {
             viewModel.refreshSyncStatusFromCache()
             await viewModel.refreshAiSummarySetting()
+            await viewModel.refreshDefaultHomeScreen()
             await viewModel.refreshVersionInfo()
         }
         .animation(.spring(response: 0.24, dampingFraction: 0.9), value: showingReminderSelector)
@@ -290,6 +293,17 @@ struct SettingsScreen: View {
                         SettingsThemeSelector(
                             selectedMode: viewModel.themeMode,
                             onSelect: viewModel.setThemeMode
+                        )
+                        SettingsDivider()
+                        SettingsSectionTitle("Behavior")
+                        Text(L("Default home screen"))
+                            .font(.tdayRounded(size: 15, weight: .heavy))
+                            .foregroundStyle(colors.onSurface)
+                        SettingsRootFeedTabSelector(
+                            selectedTab: viewModel.defaultHomeScreen,
+                            onSelect: { tab in
+                                Task { await viewModel.setDefaultHomeScreen(tab) }
+                            }
                         )
                         SettingsDivider()
                         HStack {
@@ -1876,6 +1890,33 @@ private struct SettingsThemeSelector: View {
                     return
                 }
                 onSelect(modes[index])
+            }
+        )
+        .frame(maxWidth: .infinity)
+        .frame(height: TdayNativeSegmentedControlMetrics.height)
+    }
+}
+
+/// Which root feed (Scheduled or Floaters) opens on a fresh cold launch. Same
+/// `TdayNativeSegmentedControl` shape as `SettingsThemeSelector` — a named,
+/// mutually-exclusive choice, not a toggle — and reuses `RootFeedTab.title` so the wording
+/// matches the in-app dock.
+private struct SettingsRootFeedTabSelector: View {
+    let selectedTab: RootFeedTab
+    let onSelect: (RootFeedTab) -> Void
+
+    private let tabs: [RootFeedTab] = [.scheduledTaskHome, .floaterTaskHome]
+
+    var body: some View {
+        TdayNativeSegmentedControl(
+            labels: tabs.map(\.title),
+            selectedIndex: tabs.firstIndex(of: selectedTab) ?? 0,
+            accentColor: settingsSegmentedControlAccentColor,
+            onSelect: { index in
+                guard tabs.indices.contains(index) else {
+                    return
+                }
+                onSelect(tabs[index])
             }
         )
         .frame(maxWidth: .infinity)

@@ -41,6 +41,9 @@ import com.ohmz.tday.compose.core.ui.SnackbarKind
 import com.ohmz.tday.compose.core.ui.SnackbarManager
 import com.ohmz.tday.compose.core.ui.userFacingMessage
 import com.ohmz.tday.compose.feature.release.GitHubRelease
+import com.ohmz.tday.compose.ui.component.RootFeedTab
+import com.ohmz.tday.compose.ui.component.rootFeedTabFromDefaultHomeScreenApiValue
+import com.ohmz.tday.compose.ui.component.toDefaultHomeScreenApiValue
 import com.ohmz.tday.compose.ui.theme.AppThemeMode
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -82,6 +85,7 @@ data class AppUiState(
     val isCheckingApproval: Boolean = false,
     val isManualSyncing: Boolean = false,
     val aiSummaryEnabled: Boolean = true,
+    val defaultHomeScreen: RootFeedTab = RootFeedTab.SCHEDULED_TASK_HOME,
     val selectedReminder: ReminderOption = ReminderOption.DEFAULT,
     val selectedDayAhead: DayAheadOption = DayAheadOption.OFF,
     val isOffline: Boolean = false,
@@ -295,6 +299,9 @@ class AppViewModel @Inject constructor(
                         pendingApprovalMessage = null,
                         isManualSyncing = false,
                         aiSummaryEnabled = settingsRepository.isAiSummaryEnabledSnapshot(),
+                        defaultHomeScreen = rootFeedTabFromDefaultHomeScreenApiValue(
+                            settingsRepository.defaultHomeScreenSnapshot(),
+                        ),
                         isOffline = sessionResult.isOffline,
                         offlineReason = sessionResult.offlineReason,
                         pendingMutationCount = syncMetadata.pendingMutationCount,
@@ -495,6 +502,9 @@ class AppViewModel @Inject constructor(
                 pendingApprovalMessage = null,
                 isManualSyncing = false,
                 aiSummaryEnabled = true,
+                defaultHomeScreen = rootFeedTabFromDefaultHomeScreenApiValue(
+                    settingsRepository.defaultHomeScreenSnapshot(),
+                ),
                 isOffline = false,
                 pendingMutationCount = 0,
                 lastSuccessfulSyncEpochMs = 0L,
@@ -543,6 +553,38 @@ class AppViewModel @Inject constructor(
     }
 
     fun refreshSession() = bootstrap()
+
+    /**
+     * Synchronous snapshot for seeding `rootFeedTab`'s initial value at composition time — see
+     * [SettingsRepository.defaultHomeScreenSnapshot]. Must stay synchronous: it runs before the
+     * first frame, ahead of any `uiState` collection.
+     */
+    fun defaultHomeScreenSnapshot(): RootFeedTab =
+        rootFeedTabFromDefaultHomeScreenApiValue(settingsRepository.defaultHomeScreenSnapshot())
+
+    fun refreshDefaultHomeScreen() {
+        if (_uiState.value.isLocalMode) return
+        viewModelScope.launch {
+            val tab = rootFeedTabFromDefaultHomeScreenApiValue(settingsRepository.refreshDefaultHomeScreen())
+            _uiState.update {
+                if (it.defaultHomeScreen == tab) it else it.copy(defaultHomeScreen = tab)
+            }
+        }
+    }
+
+    fun setDefaultHomeScreen(tab: RootFeedTab) {
+        val previous = _uiState.value.defaultHomeScreen
+        if (previous == tab) return
+
+        _uiState.update { it.copy(defaultHomeScreen = tab) }
+        viewModelScope.launch {
+            runCatching { settingsRepository.setDefaultHomeScreen(tab.toDefaultHomeScreenApiValue()) }
+                .onFailure { error ->
+                    android.util.Log.e("AppViewModel", "Default home screen update failed", error)
+                    _uiState.update { it.copy(defaultHomeScreen = previous) }
+                }
+        }
+    }
 
     fun refreshAiSummaryPreference() {
         if (_uiState.value.isLocalMode) return

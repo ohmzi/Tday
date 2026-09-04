@@ -16,6 +16,8 @@
     <string name="action_create_list">Cipta senarai</string>
     <string name="action_edit">Edit</string>
     <string name="action_edit_task">Edit tugasan</string>
+    <string name="action_copy">Salin</string>
+    <string name="action_copy_task">Salin tugasan</string>
     <string name="action_delete_task">Padam tugasan</string>
     <string name="action_delete_list">Padam senarai</string>
     <string name="action_delete">Padam</string>
@@ -207,6 +209,8 @@
     <string name="error_update_name_failed">Gagal mengemas kini nama anda. Sila cuba lagi.</string>
     <string name="error_change_password_failed">Gagal menukar kata laluan anda. Sila cuba lagi.</string>
     <string name="settings_appearance">Penampilan</string>
+    <string name="settings_behavior">Tingkah laku</string>
+    <string name="settings_default_home_screen">Skrin utama lalai</string>
     <string name="settings_reminders">Peringatan</string>
     <string name="settings_feature_toggle">Togol ciri</string>
     <string name="settings_notifications">Pemberitahuan</string>
@@ -567,6 +571,8 @@
     <string name="release_no_apk">Tiada APK dilampirkan pada keluaran ini.</string>
     <string name="release_launch_update_toast">Kemas kini %1$s tersedia.</string>
     <string name="task_deleted_toast">Tugasan dipadam</string>
+    <string name="task_copied_toast">Disalin ke papan keratan</string>
+    <string name="task_copy_failed_toast">Tidak dapat menyalin ke papan keratan</string>
     <string name="list_deleted_toast">Senarai dipadam</string>
     <string name="release_view_on_github">Lihat di GitHub</string>
 

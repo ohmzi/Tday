@@ -12,6 +12,44 @@ export interface ShareableTodo {
   due?: Date | null;
 }
 
+// Minimal shape for a single task's plain-text export (swipe-to-copy, and
+// eventually a single-task share sheet). Unlike ShareableTodo above this
+// carries priority instead of completed — a standalone task's text reads as
+// title/notes/due/priority, not a list-row bullet.
+export interface ShareableSingleTodo {
+  title: string;
+  description?: string | null;
+  due?: Date | null;
+  priority?: string | null;
+}
+
+// Canonical plain-text export of a single task — title + flattened notes +
+// due + priority. Mirrors iOS's ShareSheet.taskShareText and Android's
+// ShareUtils.taskCopyText so a task copied from any platform reads the same.
+export function buildTaskShareText({
+  todo,
+  lang,
+  t,
+}: {
+  todo: ShareableSingleTodo;
+  lang: string;
+  t: TFunction;
+}): string {
+  const locale = getDateFnsLocale(lang);
+  const lines: string[] = [todo.title];
+  const notes = flattenNotesToPlainText(todo.description).trim();
+  if (notes) {
+    lines.push(notes);
+  }
+  if (todo.due) {
+    lines.push(t("shareDueLabel", { date: format(todo.due, "PPp", { locale }) }));
+  }
+  if (todo.priority && todo.priority !== "Low") {
+    lines.push(t("sharePriorityLabel", { priority: todo.priority }));
+  }
+  return lines.join("\n");
+}
+
 // Canonical plain-text export of a list. Mirrors the Android
 // ShareUtils.buildListShareText output so a shared list reads the same from
 // every platform.

@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import UIKit
 
 @MainActor
 @Observable
@@ -157,6 +158,13 @@ final class ScheduledTaskHomeViewModel {
         )
     }
 
+    /// Swipe-to-copy: writes the task's title/notes/due/priority as plain text
+    /// to the system pasteboard. See TodoListViewModel.copyToClipboard.
+    func copyToClipboard(_ todo: TodoItem) {
+        UIPasteboard.general.string = ShareSheet.taskShareText(todo)
+        container.snackbarManager.show(L("Copied to clipboard"), kind: .success)
+    }
+
     /// Delayed-commit delete: the task is staged out of the local cache
     /// immediately, an undoable toast is shown, and the real (server) delete
     /// only commits once the undo window expires. The closures capture
@@ -215,9 +223,14 @@ final class ScheduledTaskHomeViewModel {
         return RepeatSuggestionEngine.suggest(currentTitle: title, completions: completions)
     }
 
+    // `[weak self]` is load-bearing here, not style — see the identical note
+    // on `TodoListViewModel.observeCacheChanges()`. Without it this view
+    // model can never deinit, so `observationTask?.cancel()` never runs and
+    // every discarded instance keeps reacting to every future cache write.
     private func observeCacheChanges() {
-        observationTask = Task {
+        observationTask = Task { [weak self] in
             for await _ in NotificationCenter.default.notifications(named: .offlineCacheDidChange) {
+                guard let self else { return }
                 await MainActor.run {
                     self.refreshFromCache()
                 }
