@@ -1,11 +1,11 @@
 {
-  "version": "0.7.6",
-  "publishedAt": "2026-09-03T03:00:44-04:00",
+  "version": "0.7.7",
+  "publishedAt": "2026-09-03T22:15:27-04:00",
   "notes": [
-    "Keep existing members in the share search results",
-    "Make the push subscription cascade real and escape member search",
-    "Cascade todo_instances with the todo that owns it"
+    "Add default home screen preference",
+    "Add swipe-to-copy task action",
+    "Add per-list configurable widgets"
   ],
-  "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v0.7.6",
-  "compareUrl": "https://github.com/ohmzi/Tday/compare/v0.7.5..v0.7.6"
+  "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v0.7.7",
+  "compareUrl": "https://github.com/ohmzi/Tday/compare/v0.7.6..v0.7.7"
 }
