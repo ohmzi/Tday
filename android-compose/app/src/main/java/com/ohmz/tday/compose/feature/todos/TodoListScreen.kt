@@ -5,6 +5,7 @@ import androidx.activity.compose.BackHandler
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -44,6 +45,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -158,6 +160,7 @@ import com.ohmz.tday.compose.core.ui.RootFeedHeroHeaderMetrics
 import com.ohmz.tday.compose.core.ui.RootFeedHeroMark
 import com.ohmz.tday.compose.core.ui.TaskSwipeActionButton
 import com.ohmz.tday.compose.core.ui.TdayEmptyState
+import com.ohmz.tday.compose.core.ui.TdayFeedItemMotion
 import com.ohmz.tday.compose.core.ui.TdayHeroToolbar
 import com.ohmz.tday.compose.core.ui.TdaySearchCapsule
 import com.ohmz.tday.compose.core.ui.animateTaskSwipeOffsetAsState
@@ -253,6 +256,29 @@ private fun timelineTaskBottomSpacing(
     } else {
         TimelineSameDateTaskSpacing
     }
+}
+
+/**
+ * [TdayFeedItemMotion] on one item of this screen's feed.
+ *
+ * Every item that a completion can move goes through here rather than declaring
+ * its own specs, so the row that leaves, the empty scene that takes its slot and
+ * the tiles that scene pushes down are all on one clock. The specs default to
+ * the full set; a caller passes `null` for a fade it owns itself.
+ */
+private fun LazyItemScope.feedItemMotion(
+    enabled: Boolean,
+    fadeInSpec: FiniteAnimationSpec<Float>? = TdayFeedItemMotion.FadeIn,
+    placementSpec: FiniteAnimationSpec<IntOffset>? = TdayFeedItemMotion.Placement,
+    fadeOutSpec: FiniteAnimationSpec<Float>? = TdayFeedItemMotion.FadeOut,
+): Modifier = if (enabled) {
+    Modifier.animateItem(
+        fadeInSpec = fadeInSpec,
+        placementSpec = placementSpec,
+        fadeOutSpec = fadeOutSpec,
+    )
+} else {
+    Modifier
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
@@ -1337,17 +1363,14 @@ fun TodoListScreen(
                                     key = "timeline-header-${section.key}",
                                     contentType = "timeline-header",
                                 ) {
-                                    var headerModifier: Modifier = Modifier
-                                    if (timelineAnimationsEnabled) {
-                                        headerModifier = headerModifier.animateItem(
-                                            fadeInSpec = null,
-                                            placementSpec = tween(
-                                                durationMillis = 320,
-                                                easing = FastOutSlowInEasing,
-                                            ),
-                                            fadeOutSpec = null,
-                                        )
-                                    }
+                                    // A header slides with its section but never
+                                    // fades: it is a label on content that is
+                                    // doing its own arriving and leaving.
+                                    val headerModifier = feedItemMotion(
+                                        enabled = timelineAnimationsEnabled,
+                                        fadeInSpec = null,
+                                        fadeOutSpec = null,
+                                    )
                                     TimelineSectionHeader(
                                         modifier = headerModifier
                                             .fillMaxWidth()
@@ -1450,23 +1473,8 @@ fun TodoListScreen(
                                         key = "timeline-todo-${section.key}-${todo.id}",
                                         contentType = "timeline-todo",
                                     ) {
-                                        var rowModifier: Modifier = Modifier
-                                        if (timelineAnimationsEnabled) {
-                                            rowModifier = rowModifier.animateItem(
-                                                fadeInSpec = tween(
-                                                    durationMillis = 190,
-                                                    easing = FastOutSlowInEasing,
-                                                ),
-                                                placementSpec = tween(
-                                                    durationMillis = 320,
-                                                    easing = FastOutSlowInEasing,
-                                                ),
-                                                fadeOutSpec = tween(
-                                                    durationMillis = 150,
-                                                    easing = FastOutSlowInEasing,
-                                                ),
-                                            )
-                                        }
+                                        val rowModifier =
+                                            feedItemMotion(timelineAnimationsEnabled)
                                         TimelineTaskRow(
                                             modifier = rowModifier
                                                 .alpha(
@@ -1591,7 +1599,16 @@ fun TodoListScreen(
                         ) {
                             val gapHeight = (LocalConfiguration.current.screenHeightDp * 0.42f).dp
                             Box(
-                                modifier = Modifier
+                                // No fade in: the scene inside runs its own
+                                // arrival on the confetti's clock, and a second
+                                // one layered over it would also fade the burst
+                                // during the frames it is meant to lead at full
+                                // opacity. The list-detail overlay is composed
+                                // at full alpha for exactly the same reason.
+                                modifier = feedItemMotion(
+                                    enabled = timelineAnimationsEnabled,
+                                    fadeInSpec = null,
+                                )
                                     .fillMaxWidth()
                                     .heightIn(min = gapHeight),
                                 contentAlignment = Alignment.Center,
@@ -1625,8 +1642,14 @@ fun TodoListScreen(
                             key = "floater-completed-entry",
                             contentType = "floater-completed-entry",
                         ) {
+                            // The empty scene above opens a near-half-screen gap
+                            // in the slot the last row leaves, and this tile and
+                            // the lists under it are what that gap displaces.
+                            // Without the shared placement they cover that
+                            // distance in one frame — the snap the celebration
+                            // was landing in the middle of.
                             CategoryCard(
-                                modifier = Modifier
+                                modifier = feedItemMotion(timelineAnimationsEnabled)
                                     .fillMaxWidth()
                                     .padding(bottom = 10.dp),
                                 color = TdayCompletedTileAccent,
@@ -1644,7 +1667,8 @@ fun TodoListScreen(
                             contentType = "floater-list-header",
                         ) {
                             FloaterTaskHomeMyListsHeader(
-                                modifier = Modifier.padding(top = 4.dp, bottom = 10.dp),
+                                modifier = feedItemMotion(timelineAnimationsEnabled)
+                                    .padding(top = 4.dp, bottom = 10.dp),
                             )
                         }
                         items(
@@ -1653,7 +1677,8 @@ fun TodoListScreen(
                             contentType = { "floater-list-row" },
                         ) { (list, count) ->
                             FloaterTaskHomeListRow(
-                                modifier = Modifier.padding(bottom = 10.dp),
+                                modifier = feedItemMotion(timelineAnimationsEnabled)
+                                    .padding(bottom = 10.dp),
                                 name = list.name,
                                 colorKey = list.color,
                                 iconKey = list.iconKey,
