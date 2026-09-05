@@ -23,14 +23,25 @@ import javax.inject.Singleton
  *
  * Replaces the three per-kind refreshers this app used to have. They were structurally identical
  * but each owned a SEPARATE mutex and coroutine, so a single cache write fired three renders that
- * raced each other, and every caller had to decide up front which of the three to call. That
- * decision is what went wrong: the widget's own "+" routed its post-save repaint by a guessed
- * create target rather than by the instance that was tapped, and half the call sites in the app
- * (`MainActivity`, `TodoRepository`, `SyncManager`, `BulkTaskRepository`, `BootRescheduleReceiver`)
- * never called the per-list one at all, so list widgets simply went stale. With one refresher there
- * is no routing decision left to get wrong: [renderNow] walks [WidgetInstanceCatalog.bindings] and
- * pairs every id with the kind of the receiver it was enumerated from, so an id can never be handed
- * to a foreign widget class.
+ * raced each other, and every caller had to decide up front which of the three to call. Two things
+ * went wrong with that decision, both fixed here:
+ *
+ *  - `MainActivity`, `TodoRepository`, `SyncManager`, `BulkTaskRepository` and
+ *    `BootRescheduleReceiver` only ever called the Today and Floater refreshers, so per-list
+ *    widgets went stale on every one of those paths. The boot one is the worst of them: after a
+ *    reboot a per-list instance sat on its static `android:initialLayout` until some unrelated
+ *    cache write happened to repaint it.
+ *  - The widget's own "+" chose which refresher to AWAIT from a guessed create target rather than
+ *    from the instance that was tapped. A misroute could not paint the wrong content — each
+ *    refresher only ever enumerated its own receivers' ids — but it aimed the one SYNCHRONOUS
+ *    repaint at the wrong kind, leaving the widget that was actually tapped to rely on the
+ *    fire-and-forget request from the cache write, which a short-lived widget process can be torn
+ *    down before it paints.
+ *
+ * With one refresher there is no routing decision left to get wrong: [renderNow] walks
+ * [WidgetInstanceCatalog.bindings] and pairs every id with the kind of the receiver it was
+ * enumerated from, so an id can never be handed to a foreign widget class, and one call covers all
+ * three kinds.
  *
  * Renders stay UNCONDITIONAL and SINGLE-FLIGHT for the reasons the old Today refresher documented:
  * `provideGlance` always reads the current snapshot, so a re-render with unchanged data is an
@@ -75,10 +86,18 @@ class WidgetRefresher @Inject constructor(
     }
 
     // `updateAll` alone is not enough and never was: it resolves a GlanceAppWidget class to the
-    // receivers Glance itself recorded, so an on-screen widget of a size whose receiver Glance has
-    // not seen this process is silently skipped. Enumerating each declared receiver's real ids
-    // covers all nine; `updateAll` is kept per kind only as cheap belt-and-braces, exactly as the
-    // per-kind refreshers had it.
+    // receivers Glance itself recorded (`GlanceAppWidgetManager.getGlanceIds` looks the class up in
+    // Glance's own DataStore), so an on-screen widget of a size whose receiver Glance has not seen
+    // this process is silently skipped. Enumerating each declared receiver's real ids covers all
+    // nine; `updateAll` is kept as cheap belt-and-braces.
+    //
+    // It is run for EVERY kind, not only for the kinds the plan already covers — deliberately, and
+    // this is the one case it can still catch. Both paths bottom out in
+    // `AppWidgetManager.getAppWidgetIds`, so `updateAll` cannot reach an id the loop below simply
+    // did not find; it can only help when OUR call threw and `idsForReceiver` returned null, which
+    // is exactly when that kind is absent from the plan. Gating on `plan`'s kinds would skip it
+    // precisely then, and would also drop the unconditional sweep the three per-kind refreshers
+    // this class replaced each performed on every render.
     private suspend fun renderNow(firstAppWidgetId: Int?) {
         renderMutex.withLock {
             val manager = AppWidgetManager.getInstance(context)
@@ -96,7 +115,7 @@ class WidgetRefresher @Inject constructor(
             for ((appWidgetId, kind) in plan) {
                 if (update(kind, appWidgetId)) updated++
             }
-            for (kind in plan.map { it.kind }.toSet()) {
+            for (kind in WidgetInstanceKind.entries) {
                 runCatching { WidgetInstanceCatalog.newWidget(kind).updateAll(context) }
                     .onFailure { Log.e(WIDGET_LOG_TAG, "${kind.name.lowercase()}: updateAll failed", it) }
             }
