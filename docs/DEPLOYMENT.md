@@ -539,8 +539,11 @@ refused rather than allowed to mint a few more times):
    default keychain and added to the search list — both, because Xcode looks identities up through
    the search list and would store anything it created in the default);
 3. imports the certificate and key (`import_certificate` with the keychain password, which also
-   runs `security set-key-partition-list` so `codesign` can use the key headlessly), then installs
-   Apple's WWDR intermediates into that keychain so the identity is *valid*, not merely present;
+   runs `security set-key-partition-list` so `codesign` can use the key headlessly) and checks
+   that something actually landed — fastlane only *prints* a failed `security import` and carries
+   on, so a wrong password or a `.p12` exported without `-legacy` would otherwise be diagnosed
+   fifteen lines later as the wrong problem; then installs Apple's WWDR intermediates into that
+   keychain so the identity is *valid*, not merely present;
 4. verifies what it imported before spending macOS minutes on an archive: it must be an
    `Apple Development` identity **for the team the build signs as** (`IOS_TEAM_ID`), and not
    expired. The name, team and expiry date are printed (they are not secrets — every provisioning
