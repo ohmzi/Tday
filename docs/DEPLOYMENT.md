@@ -354,7 +354,7 @@ Distributable Android release builds must use the same release keystore every ti
 - `/.well-known/apple-app-site-association` is served by the backend for webcredentials/deep-link support.
 - `CFBundleShortVersionString`, `CFBundleVersion`, iOS `MARKETING_VERSION`, `CURRENT_PROJECT_VERSION`, `TdayUpdateURL`, and example `TDAY_APP_VERSION` values are synced from root `version.json` by `scripts/version.mjs sync`.
 - Set `ios.updateUrl` in `version.json` to the App Store or TestFlight URL before distributing an iOS build that should offer direct updates.
-- Both configurations set `CODE_SIGN_IDENTITY = Apple Development` once at the project level, with no target overrides. That is deliberate and is **not** a bug: under `CODE_SIGN_STYLE = Automatic` the archive is signed with a development identity and the App Store re-sign happens in `-exportArchive`, which the lane drives with `signingStyle: automatic` + `method: app-store`. Forcing `Apple Distribution` at archive time would require a distribution certificate to resolve ~30 minutes earlier than it is actually needed, for no benefit.
+- Both configurations set `CODE_SIGN_IDENTITY = Apple Development` once at the project level, with no target overrides. That is deliberate and is **not** a bug: under `CODE_SIGN_STYLE = Automatic` the archive is signed with a development identity and the App Store re-sign happens in `-exportArchive`, which the lane drives with `signingStyle: automatic` + `method: app-store`. It is also not optional — Xcode refuses `Apple Distribution` at archive time under automatic signing (*"is automatically signed for development, but a conflicting code signing identity Apple Distribution has been manually specified"*), so the archive always needs a development identity with its private key on the machine doing the archiving. On CI that identity comes from the `IOS_DEVELOPMENT_CERT_P12_*` secrets — see [CI development certificate](#ci-development-certificate).
 - `DEVELOPMENT_TEAM` is `JUFACN2FS3` in the project and is overridden from CI by the `IOS_TEAM_ID` repository variable.
 
 ### iOS TestFlight Releases
@@ -467,45 +467,121 @@ release.
 
 #### Signing model
 
-App Store Connect API key (`.p8`) plus Xcode automatic ("cloud") signing via
-`-allowProvisioningUpdates` — **not** `fastlane match`. No certificates are committed and no
-keychain is provisioned.
+App Store Connect API key (`.p8`) plus Xcode automatic signing via `-allowProvisioningUpdates` —
+**not** `fastlane match` — plus, on CI only, **one persistent Apple Development certificate**
+imported from a secret. No certificates are committed. The three pieces do three different jobs:
 
-What `-allowProvisioningUpdates` does here is **mint and renew the five App Store provisioning
-profiles on demand**, against App IDs and an App Group that **already exist**. It does not create
-the App Group, and you should not rely on it to create the App IDs either. All five entitlements
-files request `com.apple.security.application-groups`, so if `group.com.ohmz.tday` is missing the
-archive fails on the first App-Group-bearing target with *"Provisioning profile … doesn't include
-the com.apple.security.application-groups entitlement"* — and missing it on only one of the five
-(the watch complication is the easy one to forget) fails only that target, deep into a 40-minute
-build. Steps 1–3 of the one-time setup below are therefore mandatory, not optional.
+| Step | Signed with | Where the key lives | Provided by |
+|---|---|---|---|
+| `xcodebuild archive` (all five bundles) | **Apple Development** — automatic signing always development-signs the archive | A keychain on the runner | `IOS_DEVELOPMENT_CERT_P12_BASE64` + `_PASSWORD`, imported by the lane into a throwaway keychain |
+| Development + App Store provisioning profiles | — | Minted/renewed by Xcode in the Developer portal | `-allowProvisioningUpdates` + the API key |
+| `-exportArchive` (App Store re-sign) | **Apple Distribution**, cloud-managed | Apple's servers; the private key never leaves them | Xcode cloud signing, authenticated with the same API key |
+
+What `-allowProvisioningUpdates` does here is **mint and renew provisioning profiles on demand**,
+against App IDs and an App Group that **already exist**. It does not create the App Group, and you
+should not rely on it to create the App IDs either. All five entitlements files request
+`com.apple.security.application-groups`, so if `group.com.ohmz.tday` is missing the archive fails
+on the first App-Group-bearing target with *"Provisioning profile … doesn't include the
+com.apple.security.application-groups entitlement"* — and missing it on only one of the five (the
+watch complication is the easy one to forget) fails only that target, deep into a 40-minute build.
+Steps 1–3 of the one-time setup below are therefore mandatory, not optional.
 
 **The API key needs the Admin role.** See step 4 — App Manager is enough to upload a build but not
-to create the distribution certificate and profiles this model depends on.
+to create profiles, and not to cloud-sign with the team's managed distribution certificate.
 
-The `.p8` is written `0600` under `RUNNER_TEMP`, which is outside the checked-out workspace, and
-deleted in an `ensure` block. It is never written into the repository, the `.ipa`, or a workflow
-artifact — the `.ipa` is deliberately not uploaded as an artifact at all.
+The `.p8` and the `.p12` are written `0600` under `RUNNER_TEMP`, which is outside the checked-out
+workspace, and deleted in an `ensure` block along with the throwaway keychain. Neither is ever
+written into the repository, the `.ipa`, or a workflow artifact — the `.ipa` is deliberately not
+uploaded as an artifact at all.
 
-**Where the distribution certificate comes from — watch this on the first few runs.** Nothing in
-the pipeline installs or persists a certificate, so the only path to an Apple Distribution identity
-is Xcode obtaining one during the build. There are two possibilities and the workflow does not get
-to choose:
+##### CI development certificate
 
-- **Cloud-managed** (expected, and what Xcode 13+ does when it authenticates with an API key rather
-  than a signed-in Apple ID): Apple holds the private key, and every run reuses the same
-  certificate. This is the arrangement this pipeline is designed around.
-- **Local**: Xcode mints a certificate whose private key exists only in that ephemeral runner's
-  keychain and dies with the job. Apple caps Apple Distribution certificates at **2 per team**, so
-  the third release would fail at CodeSign with *"You already have a current Distribution
-  certificate"* and keep failing until someone revokes by hand in the portal.
+**Why the archive needs a certificate at all when the export is App Store.** Under
+`CODE_SIGN_STYLE = Automatic`, `xcodebuild archive` is *always* development-signed. Passing
+`CODE_SIGN_IDENTITY=Apple Distribution` at archive time does not change that — Xcode refuses it
+before compiling anything (run 33939427858, all five targets):
 
-The `Report the signing identities that were used` step prints
-`security find-identity -v -p codesigning` after every build so this is observable rather than
-guesswork. After the first successful run, check the Developer portal: the distribution certificate
-should be listed as **Managed**. If a new certificate appears on each release instead, the fallback
-is to export a distribution `.p12` once, store it as a secret, and have the lane `create_keychain` +
-`import_certificate` — leaving `-allowProvisioningUpdates` responsible only for profiles.
+> `Tday has conflicting provisioning settings. Tday is automatically signed for development, but a
+> conflicting code signing identity Apple Distribution has been manually specified. Set the code
+> signing identity value to "Apple Development" in the build settings editor, or switch to manual
+> signing in the project editor.`
+
+Cloud signing — the Apple-managed distribution certificate whose private key never leaves Apple —
+exists only in the distribution step. Apple's own description is *"Xcode 13 or later will cloud
+sign any apps or software for distribution if you're using the Xcode Organizer archive and
+distribution workflow"* ([Cloud-managed certificates](https://developer.apple.com/help/account/certificates/cloud-managed-certificates/)),
+and the community's experience with `xcodebuild` + API key on ephemeral CI is the same: the
+archive *"always demands a local Development certificate + private key installed on the building
+machine even if you provide authentication parameters to xcodebuild"*
+([fastlane discussion #19973](https://github.com/fastlane/fastlane/discussions/19973), still true
+on Xcode 26). So every archive needs an Apple Development identity **with its private key** in a
+keychain on the runner.
+
+**What went wrong before this existed.** A fresh runner has no such identity, and
+`-allowProvisioningUpdates` "helpfully" mints one: every successful run's identity report showed a
+*different* `Apple Development: Created via API (…)`. Its private key died with the runner, so the
+next run minted another, and the team's certificate quota filled up one run at a time until the
+v0.7.7 release (run 33830438480) failed at the archive step with:
+
+> `Choose a certificate to revoke. Your account has reached the maximum number of certificates. To
+> create a new one, you must choose a certificate to revoke.` / `No profiles for 'com.ohmz.tday.ios'
+> were found: Xcode couldn't find any iOS App Development provisioning profiles`
+
+Once the quota was full, nothing in the pipeline could recover it; the stale certificates had to
+be revoked by hand in the portal. Revoking them clears the symptom, not the cause.
+
+**The fix.** The `beta` lane, **only when `IOS_DEVELOPMENT_CERT_P12_BASE64` is set** (which the
+workflow always does, and which the lane *requires* under `GITHUB_ACTIONS` so a missing secret is
+refused rather than allowed to mint a few more times):
+
+1. decodes the `.p12` to `RUNNER_TEMP`, `0600`;
+2. creates a throwaway keychain there (`create_keychain`, random password, no auto-lock, made the
+   default keychain and added to the search list — both, because Xcode looks identities up through
+   the search list and would store anything it created in the default);
+3. imports the certificate and key (`import_certificate` with the keychain password, which also
+   runs `security set-key-partition-list` so `codesign` can use the key headlessly) and checks
+   that something actually landed — fastlane only *prints* a failed `security import` and carries
+   on, so a wrong password or a `.p12` exported without `-legacy` would otherwise be diagnosed
+   fifteen lines later as the wrong problem; then installs Apple's WWDR intermediates into that
+   keychain so the identity is *valid*, not merely present;
+4. verifies what it imported before spending macOS minutes on an archive: it must be an
+   `Apple Development` identity **for the team the build signs as** (`IOS_TEAM_ID`), and not
+   expired. The name, team and expiry date are printed (they are not secrets — every provisioning
+   profile carries them). Fewer than 30 days of validity left produces a `::warning::` annotation;
+5. archives as before — with a usable identity in the search list, `-allowProvisioningUpdates`
+   creates nothing and only manages profiles;
+6. in `ensure`, diffs the keychain's identities against what it imported and emits a `::warning::`
+   naming any certificate Xcode minted anyway, then deletes the `.p12` and the keychain (restoring
+   the original default). Nothing persists on the runner.
+
+**The local developer path is unchanged.** Xcode on a Mac keeps using the developer's own Apple
+Development certificate and automatic signing; the project file is untouched. A local
+`fastlane beta` without the two variables archives with whatever identity that Mac's keychain
+already holds. Setting them locally exercises exactly the CI path, which is the way to test a new
+`.p12` before rotating the secret.
+
+**What to expect in the logs.** The lane prints `Imported development identity: Apple Development:
+… (team JUFACN2FS3), expires …` before the archive and `Xcode created no certificate on this
+runner` after it. The workflow's `Report the signing identities that were used` step then lists the
+runner's *login* keychain and expects **`0 valid identities found`**: the imported identity left
+with the throwaway keychain, and the cloud-managed distribution certificate has no local private
+key, so it is never an identity in any local keychain. Any identity listed there, or any
+`::warning::` from the lane's diff, means the archive fell back to minting — check the secret
+(team, expiry, private key present), and revoke the stray certificate.
+
+**Rotation.** Apple Development certificates are valid for one year. The lane warns from 30 days
+out and refuses an expired one (an expired identity is ignored by Xcode, which would go straight
+back to minting). Rotating is the one-time procedure below, repeated: new certificate, new `.p12`,
+`gh secret set` both values. Revoke the old certificate in the portal afterwards. Revoking a
+*development* certificate affects nothing shipped — TestFlight and App Store builds are signed with
+the distribution certificate.
+
+**Rejected alternatives.** Archiving with `Apple Distribution` directly is refused by Xcode, as
+shown above; making it work would mean switching all five targets to manual signing with pinned
+profiles, which is a different signing model and still needs a local private key. Auto-revoking
+certificates through the App Store Connect API is dangerous — nothing distinguishes a CI-minted
+certificate from one a developer's Mac depends on — and would only reset the quota, not stop the
+minting.
 
 #### Re-run safety
 
@@ -623,12 +699,14 @@ Two bases are deliberately **not** relied on:
 | `ASC_ISSUER_ID` | secret | Issuer UUID shown above the key list |
 | `ASC_KEY_P8_BASE64` | secret | base64 of the `.p8` Apple lets you download exactly once |
 | `TDAY_PROBE_ENCRYPTION_KEY` | secret | Already set — the same secret `release.yml` passes to the Android build. `Tday/Info.plist` publishes `TdayProbeEncryptionKey` as `$(TDAY_PROBE_ENCRYPTION_KEY)`, and an undefined build setting expands to `""`, which makes `ProbeDecryptor` return `nil` and silently disables the whole server version-compatibility gate |
+| `IOS_DEVELOPMENT_CERT_P12_BASE64` | secret | base64 of a PKCS#12 export of an **Apple Development** certificate *and its private key* for team `IOS_TEAM_ID`. The archive is signed with it — see [CI development certificate](#ci-development-certificate). Valid one year; rotate before expiry |
+| `IOS_DEVELOPMENT_CERT_P12_PASSWORD` | secret | The password the `.p12` was exported with. Must be non-empty |
 | `IOS_TEAM_ID` | **variable** | Apple Team ID (`JUFACN2FS3`). Not a secret — it is printed on every provisioning profile |
 | `IOS_XCODE_VERSION` | **variable** | Optional Xcode pin, e.g. `16.4`. Unset, the job warns and uses the runner default |
 
 The **`decide` job on Linux** fails with an actionable message if any of those secrets is missing,
 rather than 40 minutes later inside `xcodebuild` — and rather than booting a macOS runner (billed at
-10x the Linux rate) to run a four-variable emptiness test. No secret is ever echoed; only emptiness
+10x the Linux rate) to run a six-variable emptiness test. No secret is ever echoed; only emptiness
 is tested. The check is gated on the build actually being wanted, so a web-only release still
 reports green on a repo where the Apple setup is unfinished.
 
@@ -655,12 +733,104 @@ repository settings, and cannot be done from a pull request.
    > **Admin, not App Manager.** App Manager covers the TestFlight half — it can upload a build.
    > It does **not** cover the Developer-Portal half, and this signing model lives on that half:
    > `-allowProvisioningUpdates` drives xcodebuild against Certificates, Identifiers & Profiles to
-   > create the distribution certificate and the five App Store profiles, and Apple's program-roles
-   > matrix restricts creating *distribution* certificates and *distribution* profiles to Account
-   > Holder and Admin. With an App Manager key the run gets all the way to the CodeSign step of the
-   > first signed target — roughly 40 minutes of macOS time — and then fails with a provisioning
-   > error. **If the key already in the repository secrets was minted as App Manager, re-mint it.**
-5. **Set the repository secrets and variables** (from the repo root):
+   > create the development and App Store profiles, and cloud signing uses the team's managed
+   > distribution certificate; Apple's program-roles matrix restricts *distribution* profiles and
+   > cloud-managed distribution signing to Account Holder and Admin. With an App Manager key the
+   > run gets all the way to the CodeSign step of the first signed target — roughly 40 minutes of
+   > macOS time — and then fails with a provisioning error. **If the key already in the
+   > repository secrets was minted as App Manager, re-mint it.**
+5. **Create the CI development certificate** — one Apple Development certificate whose private
+   key is kept as a repository secret, so the archive never has to mint one (see
+   [CI development certificate](#ci-development-certificate) for why). It must belong to the
+   same team as `IOS_TEAM_ID`. Two ways to get the `.p12`:
+
+   **Without a Mac** (this repository's own deploy host is Linux) — generate the key pair and a
+   CSR with OpenSSL, have Apple sign it, and bundle the result:
+
+   ```bash
+   # 1. Private key + CSR. Apple names the certificate after your account, not after the CSR,
+   #    so the subject values here are cosmetic.
+   openssl req -new -newkey rsa:2048 -nodes \
+     -keyout tday-ci-development.key -out tday-ci-development.csr \
+     -subj "/emailAddress=you@example.com/CN=Tday CI/C=US"
+
+   # 2. developer.apple.com -> Certificates, Identifiers & Profiles -> Certificates -> "+"
+   #    -> "Apple Development" -> upload tday-ci-development.csr -> download development.cer
+   #    It appears as "Apple Development: <your name> (<id>)"; the run log prints that name and
+   #    the expiry date, which is what tells it apart from the "Created via API" leftovers.
+
+   # 3. Choose the export password FIRST. It is used twice below — the export and the second
+   #    `gh secret set` — so it has to exist before either. Nothing has to memorise it; it only
+   #    travels to the repository secret. An empty one is silently fatal: OpenSSL exports a
+   #    passwordless .p12 and exits 0, `security import` on the runner will not reliably read it,
+   #    and the `decide` job rejects an empty IOS_DEVELOPMENT_CERT_P12_PASSWORD. Hex, so the
+   #    value needs no quoting anywhere it travels (gh -> Actions env -> `security import -P`).
+   #    Exported because the `openssl` call below reads it from the environment, not the argv.
+   P12_PASSWORD=$(openssl rand -hex 24)
+   export P12_PASSWORD
+
+   # 4. Bundle certificate + key as PKCS#12. `-legacy` matters: OpenSSL 3 defaults to a MAC and
+   #    ciphers that `security import` on macOS 14 rejects with "MAC verification failed".
+   #    `-passout env:` rather than `pass:"$P12_PASSWORD"`: with the variable unset, `env:` errors
+   #    and writes no file, where `pass:` quietly produces a passwordless .p12.
+   openssl x509 -in development.cer -inform DER -out tday-ci-development.pem
+   openssl pkcs12 -export -legacy \
+     -inkey tday-ci-development.key -in tday-ci-development.pem \
+     -out tday-ci-development.p12 -passout env:P12_PASSWORD
+
+   # 5. Verify BEFORE destroying anything — this is the last moment the private key exists
+   #    locally. These are the checks the lane runs on CI, minus the ones only macOS can do.
+   openssl x509 -in tday-ci-development.pem -noout -enddate
+   openssl x509 -in tday-ci-development.pem -noout -subject \
+     -nameopt multiline,-esc_msb | grep -E 'commonName|organizationalUnitName'
+   #    commonName             must start with "Apple Development:" — a distribution certificate
+   #                           fails the archive with a conflicting-identity error.
+   #    organizationalUnitName must equal IOS_TEAM_ID (JUFACN2FS3). This account has more than
+   #                           one team and the portal will happily issue under the other.
+   #    notAfter               must be about a year out.
+
+   openssl pkcs12 -in tday-ci-development.p12 -info -legacy -noout \
+     -passin env:P12_PASSWORD 2>&1 | grep -E 'MAC:|Shrouded Keybag|Mac verify error'
+   #    Expect exactly these two lines, and no error:
+   #      MAC: sha1, Iteration 2048
+   #      Shrouded Keybag: pbeWithSHA1And3-KeyTripleDES-CBC, Iteration 2048
+   #    "Mac verify error: invalid password?" -> $P12_PASSWORD is not what the file was made with.
+   #    No "Shrouded Keybag" line       -> the export lost the private key; redo step 4.
+   #    "MAC: sha256" / PBES2, AES-256  -> `-legacy` did not take effect. It reads fine here and
+   #                                       `security import` on the runner rejects it. Redo step 4.
+
+   # 6. Store both secrets, and only then delete the local files. Chained on `&&`: after the
+   #    shred the private key exists nowhere but in a GitHub secret, and a secret cannot be read
+   #    back — a half-finished upload here costs a second certificate against the quota. Piping
+   #    keeps the key and the password out of the process list.
+   base64 -w0 tday-ci-development.p12 | gh secret set IOS_DEVELOPMENT_CERT_P12_BASE64 &&
+     printf '%s' "$P12_PASSWORD" | gh secret set IOS_DEVELOPMENT_CERT_P12_PASSWORD &&
+     shred -u tday-ci-development.key tday-ci-development.p12
+   ```
+
+   Those checks are the whole of what Linux can prove. The remaining risk — that the runner's
+   `security import` rejects the file for a reason `openssl` cannot see — is settled by a
+   `verify`-mode run (see [The first run](#the-first-run)); recovery is this step again plus
+   revoking the unused certificate in the portal.
+
+   **On a Mac** — Keychain Access → Certificate Assistant → *Request a Certificate From a
+   Certificate Authority* (saved to disk), create the Apple Development certificate from that CSR
+   in the portal, double-click the downloaded `.cer` so it pairs with the key, then in Keychain
+   Access select the certificate *and* its private key → *Export 2 items…* → `.p12` with a
+   password. Selecting the certificate row alone produces a `.p12` with no private key, which the
+   lane rejects with *"`security import` put no code-signing identity in the CI keychain"* — the
+   `Shrouded Keybag` check in the verification block above is what catches that before the key is
+   shredded, so run it here too (a Keychain Access export is already in the legacy format, so only
+   the `MAC: sha1` expectation is Mac-optional). Then put the password you typed in the export
+   dialog into the same variable the steps above use — `read -rs P12_PASSWORD && export
+   P12_PASSWORD`, which prompts without echoing and keeps it out of the shell history — and run
+   the two `gh secret set` lines above (`base64 -i` instead of `base64 -w0`). The second one reads
+   that variable, and an empty value fails the `decide` job.
+
+   Keep it separate from any developer's personal certificate: the CI one can be revoked and
+   re-issued without touching a Mac. The lane prints its name, team and expiry on every run and
+   warns 30 days before it expires; rotation is this step again.
+6. **Set the remaining repository secrets and variables** (from the repo root):
 
    ```bash
    gh secret set ASC_KEY_ID        --body "XXXXXXXXXX"
@@ -672,18 +842,18 @@ repository settings, and cannot be done from a pull request.
    gh variable set IOS_TEAM_ID --body "JUFACN2FS3"
    ```
 
-6. **Pin Xcode** once you have seen a run log (the "Select Xcode" step prints every version
+7. **Pin Xcode** once you have seen a run log (the "Select Xcode" step prints every version
    installed on the runner):
 
    ```bash
    gh variable set IOS_XCODE_VERSION --body "16.4"   # use a version the log actually lists
    ```
 
-7. **Confirm the export-compliance declaration** described above.
-8. **Create the TestFlight group and public link**: App Store Connect → TestFlight → Groups → `+`.
+8. **Confirm the export-compliance declaration** described above.
+9. **Create the TestFlight group and public link**: App Store Connect → TestFlight → Groups → `+`.
    Enable **Public Link** and, if you want testers to get builds without per-build action, turn on
    automatic distribution for the group.
-9. **Set `ios.updateUrl`** once that public link exists. Done — `version.json` now carries the
+10. **Set `ios.updateUrl`** once that public link exists. Done — `version.json` now carries the
    group's public TestFlight link, and it is the only place that value lives. While it was `""`,
    `AppViewModel.bundleUpdateURL()` returned `nil` and both in-app update surfaces (the blocking
    `UpdateRequiredView` and the Settings "Update Available" card) rendered an explanatory sentence
@@ -710,7 +880,7 @@ That means the first execution would otherwise be an unsupervised production arc
 bundles plus a real TestFlight upload, on a pipeline where `xcodebuild` and `fastlane` have never
 run once. Rehearse it with a `verify` run instead:
 
-1. Finish steps 1–9 below **before** merging.
+1. Finish steps 1–10 above **before** merging.
 2. Merge to `master`. Cancel the automatic run the release tag triggers.
 3. Dispatch the workflow manually — `gh workflow run ios-testflight.yml --ref develop`, or the
    **Run workflow** button. It archives, signs, exports the `.ipa` and stops, proving signing,
@@ -736,6 +906,21 @@ the lane additionally refuses to upload from anything but a tag push, whatever t
 
 `TDAY_PROBE_ENCRYPTION_KEY` is optional locally: the lane warns loudly and continues without it,
 producing a build whose server version-compatibility gate is inert. CI treats it as required.
+
+`IOS_DEVELOPMENT_CERT_P12_BASE64` / `IOS_DEVELOPMENT_CERT_P12_PASSWORD` are optional locally too:
+without them the archive is signed with whatever Apple Development identity the Mac's own keychain
+holds, exactly as Xcode would. Set them to run the CI path — throwaway keychain, import,
+verification, cleanup — which is how to check a freshly exported `.p12` before rotating the
+secret. CI refuses to archive without them.
+
+That path makes the throwaway keychain the Mac's **default** keychain for the length of the run
+and puts the original back in the lane's `ensure`. If a run is killed outright (`kill -9`, a
+closed lid) that `ensure` never runs, and the default is left pointing at a file under `$TMPDIR`.
+The next run repairs it; to repair it by hand:
+
+```bash
+security default-keychain -s ~/Library/Keychains/login.keychain-db
+```
 
 There is deliberately **no committed `Gemfile.lock`** — see the comment in `ios-swiftUI/Gemfile`.
 To add one, run `bundle lock --add-platform arm64-darwin --add-platform x86_64-darwin` on a machine

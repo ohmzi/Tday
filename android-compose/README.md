@@ -79,6 +79,30 @@ Server URLs are normalized and persisted only after successful authenticated set
 credentials use Android Credential Manager where available, while real login credentials and cookies
 are stored through encrypted local stores.
 
+### Cold launch
+
+A cold launch holds the branded splash until `AppViewModel.bootstrap()` has resolved the persisted
+session. `AppUiState.rootDestination` is the tri-state routing decision (`SPLASH` while the session
+is `UNKNOWN`, then `WORKSPACE` or `ONBOARDING`), and `TdayApp` does not build the `NavHost` until
+it has left `SPLASH`. Setting the graph is where Navigation handles the launch intent's deep link
+(`tday://home` from the update notification, widget links) and restores a saved back stack after
+process death, both of which land on `home` directly — and `home` shows the onboarding wizard
+whenever no workspace is available, which is always the case before bootstrap has answered.
+Building the graph only once the answer is known means the first real screen composed is already
+the right one, so a signed-in user never sees sign-in on the way in. `SessionResolution` is
+monotonic: sign-out and session expiry leave it `RESOLVED`, so the splash never returns mid-session.
+
+While the graph is withheld there is no `NavController` back stack, and
+`NavController.handleDeepLink` dereferences the graph unconditionally, so anything that reaches
+for it must first check that a current entry exists — both `HandleStartupNavigation` and the
+pending-deep-link effect in `TdayApp` do, and both keep `currentRoute` as an effect key so the
+work is deferred rather than dropped. The window is real because the splash's tap-and-hold can
+outlast the session resolving. Verification note: the routing decision and the ViewModel's
+resolution writes are covered by `RootDestinationTest` and `AppViewModelTest`; the composition
+gate itself — that `TdayApp` withholds the `NavHost` — has no automated test, because the module
+has no Robolectric toolchain and an instrumented test of `TdayApp` would need the full Hilt graph
+and a device. It is verified on device.
+
 ## Version Compatibility
 
 - `android-compose/app/build.gradle.kts` reads root `../version.json` for `versionName` and computes
