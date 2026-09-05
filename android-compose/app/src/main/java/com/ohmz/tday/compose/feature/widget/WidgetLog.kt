@@ -35,13 +35,19 @@ internal const val WIDGET_KIND_MISMATCH_MARKER = "KIND-MISMATCH"
  * exactly "my Floater widget is showing the Today widget", including the "it flips back" once the
  * process is replaced.
  *
- * No path in this app can start one: [WidgetRefresher] only ever executes
+ * A release build DID start one, and the argument that said it could not is instructive: no path in
+ * this app hands an id to a foreign widget class — [WidgetRefresher] only ever executes
  * [WidgetInstanceCatalog.renderPlan], which pairs every id with the kind of the receiver it was
- * enumerated FROM; `WidgetFastPaint` composes with the calling receiver's own `glanceAppWidget`
- * over that receiver's own broadcast ids; and Glance's `updateAll` resolves a class only through
- * that class's own receivers. But that is an argument, and a user report is not settled by one. A
- * line whose `provider=` disagrees with its own prefix is that bug, printed; the absence of one
- * across a reproduction rules the mechanism out and points the investigation elsewhere.
+ * enumerated FROM, and `WidgetFastPaint` composes with the calling receiver's own
+ * `glanceAppWidget` over that receiver's own broadcast ids. What that reasoning missed is that
+ * "class" is not an identity in a minified build: R8 merged the three widget classes into one, so
+ * `TodayTasksWidget().updateAll` enumerated Floater ids and Glance's `updateAll` no longer resolved
+ * "a class's own receivers" at all. See the Glance section of `proguard-rules.pro`, the keep rules
+ * that fix it, and `:app:verifyReleaseWidgetClassIdentity`, which fails the build if it recurs.
+ *
+ * This line stays because a keep rule is not a proof about a device. A line whose `provider=`
+ * disagrees with its own prefix is the bug, printed; its absence across a reproduction rules the
+ * mechanism out and points the investigation elsewhere.
  */
 internal fun widgetComposeLogLine(
     composingAs: WidgetInstanceKind,
