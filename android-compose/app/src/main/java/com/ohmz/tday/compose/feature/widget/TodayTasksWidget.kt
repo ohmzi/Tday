@@ -181,7 +181,7 @@ private fun dueTimeText(formatter: DateFormat, epochMs: Long): String {
 private fun openCreateTodayAction(appWidgetId: Int) = actionStartActivity(
     Intent(
         Intent.ACTION_VIEW,
-        Uri.parse(WidgetCreateRoute.deepLink(WidgetCreateRoute.TARGET_TODAY, appWidgetId)),
+        Uri.parse(WidgetCreateRoute.deepLink(WidgetCreateRoute.targetFor(WidgetFeed.SCHEDULED), appWidgetId)),
     ).apply {
         component = ComponentName(
             BuildConfig.APPLICATION_ID,

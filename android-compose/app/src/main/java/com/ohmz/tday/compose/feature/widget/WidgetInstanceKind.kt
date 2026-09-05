@@ -12,10 +12,10 @@ import com.ohmz.tday.compose.feature.widget.snapshot.WidgetListType
  * This exists because the app used to answer "which widget is this?" three different ways — the
  * Glance class a refresher happened to construct, the per-instance selection in
  * [WidgetListSelectionStore], and a `target=` query parameter on the create deep link that
- * silently defaulted to "today". The last one is what made a Floater instance repaint as the
- * scheduled widget after its own "+" was used: the tap threw the instance identity away, the
- * activity guessed it back, and the guess routed the repaint. There is now exactly one source of
- * truth, and it is the placement itself.
+ * silently defaulted to "today". The tap on a widget's "+" threw the instance identity away and
+ * the activity guessed it back, so which task the "+" created, and which widget got the one
+ * synchronous repaint afterwards, both came from the guess rather than from the placement. There
+ * is now exactly one source of truth, and it is the placement itself.
  */
 internal enum class WidgetInstanceKind { TODAY, FLOATER, LIST }
 
@@ -78,9 +78,12 @@ internal object WidgetInstanceCatalog {
      *
      * [listType] is only consulted for [WidgetInstanceKind.LIST], and a LIST instance whose
      * selection is missing resolves to `null` rather than to [WidgetFeed.SCHEDULED]. That is the
-     * whole point: a per-list widget on a floater list must never be repainted, or have its "+"
-     * routed, as if it were the scheduled widget just because its configuration could not be read
-     * at that instant.
+     * whole point: a per-list widget on a floater list must never be treated as the scheduled
+     * widget just because its configuration could not be read at that instant. What the caller
+     * does with that `null` is the caller's business — [WidgetCreateTarget.resolve] falls back to
+     * the `target=` the instance itself stamped on its deep link (see [WidgetCreateRoute.targetFor],
+     * which keeps that fallback lossless), and [ListTasksWidget] renders a kind-neutral setup state.
+     * Neither silently promotes the unknown to "scheduled".
      *
      * Nothing here reads the "default home screen" preference, or any other global default — the
      * feed of a placed instance is a function of that instance alone.
@@ -88,13 +91,19 @@ internal object WidgetInstanceCatalog {
     fun feedFor(kind: WidgetInstanceKind?, listType: WidgetListType?): WidgetFeed? = when (kind) {
         WidgetInstanceKind.TODAY -> WidgetFeed.SCHEDULED
         WidgetInstanceKind.FLOATER -> WidgetFeed.FLOATER
-        WidgetInstanceKind.LIST -> when (listType) {
-            WidgetListType.TODO -> WidgetFeed.SCHEDULED
-            WidgetListType.FLOATER -> WidgetFeed.FLOATER
-            null -> null
-        }
-
+        WidgetInstanceKind.LIST -> listType?.let(::feedForListType)
         null -> null
+    }
+
+    /**
+     * The feed a per-list instance whose selection IS readable shows — the same rule as
+     * [feedFor]'s LIST branch, split out so the paths that already hold a real [WidgetListType]
+     * (rendering a configured instance, building its "+" link) do not have to launder a non-null
+     * answer back through a nullable one.
+     */
+    fun feedForListType(listType: WidgetListType): WidgetFeed = when (listType) {
+        WidgetListType.TODO -> WidgetFeed.SCHEDULED
+        WidgetListType.FLOATER -> WidgetFeed.FLOATER
     }
 
     /**

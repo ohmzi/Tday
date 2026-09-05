@@ -9,11 +9,13 @@ import org.junit.Test
  * `appWidgetId` with the widget class that id's OWN receiver declares.
  *
  * Before the fix there were three refreshers and each caller chose which to call. The add-task path
- * chose by a guessed create target rather than by the instance that was tapped, so the instance's
- * repaint could be routed at the wrong widget (or, for a per-list instance, at no refresher at
- * all — nothing outside `OfflineCacheManager` ever called the list one). The scenario below is the
- * one that reproduces it: a home screen holding all three kinds at once, with the add coming from a
- * floater instance.
+ * chose by a guessed create target rather than by the instance that was tapped, so the one
+ * SYNCHRONOUS repaint could be aimed at the wrong kind — leaving the widget actually tapped to the
+ * fire-and-forget request from the cache write, which a short-lived widget process can be killed
+ * before it paints. Per-list instances had it worse: nothing outside `OfflineCacheManager` called
+ * the list refresher at all, so `MainActivity`, `SyncManager`, `BulkTaskRepository` and (worst) the
+ * boot receiver left them stale. The scenario below is the one that reproduces both: a home screen
+ * holding all three kinds at once, with the add coming from a floater instance.
  */
 class WidgetRefreshRoutingTest {
 

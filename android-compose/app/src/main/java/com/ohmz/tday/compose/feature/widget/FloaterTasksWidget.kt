@@ -149,7 +149,7 @@ private fun FloaterTasksWidgetStrings.countLabel(count: Int): String {
 private fun openCreateFloaterAction(appWidgetId: Int) = actionStartActivity(
     Intent(
         Intent.ACTION_VIEW,
-        Uri.parse(WidgetCreateRoute.deepLink(WidgetCreateRoute.TARGET_FLOATER, appWidgetId)),
+        Uri.parse(WidgetCreateRoute.deepLink(WidgetCreateRoute.targetFor(WidgetFeed.FLOATER), appWidgetId)),
     ).apply {
         component = ComponentName(
             BuildConfig.APPLICATION_ID,
