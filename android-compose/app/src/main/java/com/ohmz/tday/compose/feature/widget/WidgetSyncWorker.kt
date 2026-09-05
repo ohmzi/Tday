@@ -26,10 +26,14 @@ import java.util.concurrent.TimeUnit
  * stay fresh even when the app process has been killed.
  *
  * It runs a full [SyncManager.syncCachedData] (network), then writes through the single cache
- * path. The reload itself is CONDITIONAL: the refreshers only re-render when the widget's
- * displayed content actually changed (see [WidgetRefresher]). So a sync that finds
- * nothing new for the widget leaves it untouched while the app still holds the latest data.
- * It runs quietly — no offline toast — because it's a background refresh, not user-initiated.
+ * path. The repaint that follows is UNCONDITIONAL and single-flight (see [WidgetRefresher]):
+ * [SyncManager.syncCachedData] ends in a `refreshNow()` on every exit path, and re-rendering
+ * unchanged data is an invisible no-op because `provideGlance` re-reads the current snapshot —
+ * skipping a render is what risks a stuck widget. The only content guard on this pipeline sits
+ * one layer up, in `OfflineCacheManager`, which rewrites the snapshot and requests a refresh from
+ * a cache write only when the UI-visible state actually changed; it does not gate this worker's
+ * own repaint. It runs quietly — no offline toast — because it's a background refresh, not
+ * user-initiated.
  *
  * Enqueue once at app start via [schedule] from [TdayApplication.runDeferredStartup].
  */
