@@ -765,7 +765,9 @@ repository settings, and cannot be done from a pull request.
    #    passwordless .p12 and exits 0, `security import` on the runner will not reliably read it,
    #    and the `decide` job rejects an empty IOS_DEVELOPMENT_CERT_P12_PASSWORD. Hex, so the
    #    value needs no quoting anywhere it travels (gh -> Actions env -> `security import -P`).
-   export P12_PASSWORD="$(openssl rand -hex 24)"
+   #    Exported because the `openssl` call below reads it from the environment, not the argv.
+   P12_PASSWORD=$(openssl rand -hex 24)
+   export P12_PASSWORD
 
    # 4. Bundle certificate + key as PKCS#12. `-legacy` matters: OpenSSL 3 defaults to a MAC and
    #    ciphers that `security import` on macOS 14 rejects with "MAC verification failed".
@@ -819,10 +821,11 @@ repository settings, and cannot be done from a pull request.
    lane rejects with *"`security import` put no code-signing identity in the CI keychain"* — the
    `Shrouded Keybag` check in the verification block above is what catches that before the key is
    shredded, so run it here too (a Keychain Access export is already in the legacy format, so only
-   the `MAC: sha1` expectation is Mac-optional). Then, in the same shell,
-   `export P12_PASSWORD='<the password you typed in the export dialog>'` and run the two
-   `gh secret set` lines above (`base64 -i` instead of `base64 -w0`) — the second one reads that
-   variable, and an empty value fails the `decide` job.
+   the `MAC: sha1` expectation is Mac-optional). Then put the password you typed in the export
+   dialog into the same variable the steps above use — `read -rs P12_PASSWORD && export
+   P12_PASSWORD`, which prompts without echoing and keeps it out of the shell history — and run
+   the two `gh secret set` lines above (`base64 -i` instead of `base64 -w0`). The second one reads
+   that variable, and an empty value fails the `decide` job.
 
    Keep it separate from any developer's personal certificate: the CI one can be revoked and
    re-issued without touching a Mac. The lane prints its name, team and expiry on every run and
