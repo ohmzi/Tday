@@ -3,6 +3,8 @@ package com.ohmz.tday.compose.feature.widget.snapshot
 import android.content.Context
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
+import android.util.Log
+import com.ohmz.tday.compose.feature.widget.WIDGET_LOG_TAG
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -60,10 +62,13 @@ internal object WidgetSnapshotSignal {
  * `AndroidKeyStore` directly instead — `AES/GCM/NoPadding`, no Tink layer, same
  * `setUserAuthenticationRequired(false)` key every other Keystore use in this app already relies
  * on to stay readable on a locked device. The 12-byte GCM IV is generated fresh per write and
- * prefixed onto the ciphertext; GCM's auth tag makes a truncated/tampered file fail to decrypt
- * rather than decrypt wrong, so [read] treats "missing" and "fails to decrypt" identically as
- * `null` — which the read path already has to handle for the fresh-install case anyway. [write]
- * deletes the target then writes fresh rather than write-to-tmp-then-rename for the same reason.
+ * prefixed onto the ciphertext; GCM's auth tag makes a tampered file fail to decrypt rather than
+ * decrypt wrong, so [read] treats "missing" and "fails to decrypt" identically as `null` — which
+ * the read path already has to handle for the fresh-install case anyway.
+ *
+ * Every read and write goes through [WidgetSnapshotIo]: one process-wide lock (the writers do not
+ * otherwise coordinate) and a write that encrypts first and swaps the file in with a rename, so a
+ * failure keeps the last good snapshot rather than destroying it. That file's KDoc has the history.
  */
 internal class WidgetSnapshotStore(
     context: Context,
@@ -97,38 +102,50 @@ internal class WidgetSnapshotStore(
 
     /** Called from the widget's `onDeleted`: an instance removed from the host never comes back. */
     fun deleteList(appWidgetId: Int) {
-        fileFor(listFileName(appWidgetId)).delete()
+        WidgetSnapshotIo.withStoreLock { fileFor(listFileName(appWidgetId)).delete() }
     }
 
     private fun listFileName(appWidgetId: Int) = "widget-list-snapshot-$appWidgetId.json"
 
-    private fun write(fileName: String, snapshot: WidgetSnapshot): Boolean {
-        return runCatching {
-            val bytes = json.encodeToString(WidgetSnapshot.serializer(), snapshot)
-                .toByteArray(Charsets.UTF_8)
-            val target = fileFor(fileName)
-            target.delete()
-            target.writeBytes(encrypt(bytes))
-            true
-        }.getOrElse { false }
-    }
+    /**
+     * Serialise, encrypt, then swap the file in one rename. Nothing touches [fileName] until a
+     * complete ciphertext exists, so a Keystore/cipher/IO failure leaves the previous good snapshot
+     * readable instead of destroying it — see [WidgetSnapshotIo] for the full argument.
+     *
+     * Still returns a boolean because [WidgetSnapshotWriter] uses it to decide whether to bump
+     * [WidgetSnapshotSignal], but the throwable is now LOGGED rather than swallowed: a widget stuck
+     * on "Loading tasks…" used to leave no trace at all of why.
+     */
+    private fun write(fileName: String, snapshot: WidgetSnapshot): Boolean =
+        WidgetSnapshotIo.withStoreLock {
+            runCatching {
+                val bytes = json.encodeToString(WidgetSnapshot.serializer(), snapshot)
+                    .toByteArray(Charsets.UTF_8)
+                WidgetSnapshotIo.writeAtomically(fileFor(fileName), encrypt(bytes))
+                true
+            }.getOrElse {
+                Log.w(WIDGET_LOG_TAG, "snapshot write failed ($fileName); previous snapshot kept", it)
+                false
+            }
+        }
 
-    private fun read(fileName: String): WidgetSnapshot? {
+    private fun read(fileName: String): WidgetSnapshot? = WidgetSnapshotIo.withStoreLock {
         val target = fileFor(fileName)
-        if (!target.exists()) return null
+        if (!target.exists()) return@withStoreLock null
         val bytes = runCatching { decrypt(target.readBytes()) }.getOrNull()
         if (bytes == null) {
-            // Undecryptable (a stale key, a truncated write). Delete it so `exists()` stays
-            // truthful — callers use it as a cheap "do we already have something to show" check
-            // without paying for a full decrypt.
+            // Undecryptable (a stale key). Delete it so `exists()` stays truthful — callers use it
+            // as a cheap "do we already have something to show" check without paying for a full
+            // decrypt. A partial write can no longer land here: the write is a rename.
+            Log.w(WIDGET_LOG_TAG, "snapshot $fileName failed to decrypt; discarding it")
             target.delete()
-            return null
+            return@withStoreLock null
         }
         val snapshot = runCatching {
             json.decodeFromString(WidgetSnapshot.serializer(), bytes.toString(Charsets.UTF_8))
         }.getOrNull()
         if (snapshot == null) target.delete()
-        return snapshot
+        snapshot
     }
 
     private fun fileFor(fileName: String) = File(directory, fileName)
