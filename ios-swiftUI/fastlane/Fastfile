@@ -1,10 +1,13 @@
 # iOS TestFlight lane for T'Day.
 #
-# Signing model: App Store Connect API key (.p8) + Xcode automatic ("cloud") signing driven by
-# `-allowProvisioningUpdates`. No `match`, no committed certificates, no keychain juggling —
-# Xcode mints and renews the five App Store distribution profiles itself, authenticating with
-# the same API key that authorises the upload. The five App IDs and the `group.com.ohmz.tday`
-# App Group must already exist in the Developer portal; see docs/DEPLOYMENT.md § One-time setup.
+# Signing model: App Store Connect API key (.p8) + Xcode automatic signing driven by
+# `-allowProvisioningUpdates`, plus — on CI only — one persistent Apple Development certificate
+# imported from a secret (see "CI signing keychain" below for why the archive needs it). No
+# `match`, no committed certificates. Xcode mints and renews the development and App Store
+# profiles itself, authenticating with the same API key that authorises the upload, and the
+# App Store export is cloud-signed with the team's Apple-managed distribution certificate. The
+# five App IDs and the `group.com.ohmz.tday` App Group must already exist in the Developer
+# portal; see docs/DEPLOYMENT.md § One-time setup.
 #
 # Versioning: root `version.json` is the only source of truth. `scripts/version.mjs sync` has
 # already mirrored it into the pbxproj as MARKETING_VERSION / CURRENT_PROJECT_VERSION by the
@@ -13,6 +16,8 @@
 # question: "is this exact build already on TestFlight?"
 
 require "json"
+require "openssl"
+require "securerandom"
 require "shellwords"
 require "tmpdir"
 
@@ -39,6 +44,10 @@ PROCESSING_SUCCESS_STATE = "VALID".freeze
 # key this app can decode, and `/` in particular has to be rejected before it reaches an
 # xcconfig, where a `//` sequence starts a comment and would silently truncate the value.
 PROBE_KEY_SHAPE = %r{\A[A-Za-z0-9+/=_-]+\z}
+
+# Apple Development certificates are valid for one year. Warn this far ahead of expiry so the
+# secret gets rotated before the archive silently goes back to minting throwaway certificates.
+DEVELOPMENT_CERT_RENEWAL_WARNING_DAYS = 30
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -123,6 +132,190 @@ def write_build_settings_xcconfig(probe_setting) # skipcq: SCT-A000
     file.write("TDAY_PROBE_ENCRYPTION_KEY = #{probe_setting}\n") # skipcq: SCT-A000
   end
   path
+end
+
+# ---------------------------------------------------------------------------
+# CI signing keychain
+# ---------------------------------------------------------------------------
+#
+# WHY CI IMPORTS AN APPLE DEVELOPMENT CERTIFICATE WHEN THE EXPORT IS APP STORE.
+#
+# Under CODE_SIGN_STYLE = Automatic the `archive` action is always signed for development —
+# Xcode refuses a distribution identity there outright: "<target> is automatically signed for
+# development, but a conflicting code signing identity Apple Distribution has been manually
+# specified" (run 33939427858, all five targets, before a single file compiled). Cloud signing,
+# where Apple holds the Apple Distribution private key, exists only in the distribution step,
+# i.e. `-exportArchive`. So every archive needs an Apple Development identity whose PRIVATE KEY
+# is in a keychain on the machine doing the archiving.
+#
+# A fresh runner has none, and `-allowProvisioningUpdates` fills the gap by minting one —
+# "Apple Development: Created via API" — whose private key dies with the runner. Each run mints
+# another, until the team hits Apple's certificate quota and every archive fails with "Choose a
+# certificate to revoke. Your account has reached the maximum number of certificates" (run
+# 33830438480, the v0.7.7 release). Importing ONE long-lived development certificate from a
+# secret is what stops the minting: with a usable identity in the search list, Xcode creates
+# nothing and only manages profiles. See docs/DEPLOYMENT.md § CI development certificate.
+#
+# Local `fastlane beta` on a Mac is unchanged unless the same two variables are set: without
+# them the developer's own keychain is used, exactly as Xcode itself would.
+
+def decode_development_certificate(encoded)
+  p12 = encoded.unpack1("m").to_s
+  # PKCS#12 is DER, so the file starts with a SEQUENCE tag (0x30). Anything else is not the
+  # secret this lane expects — most often a PEM, a bare .cer with no private key, or base64 of
+  # base64. The content itself is never printed.
+  unless p12.bytesize > 64 && p12.getbyte(0) == 0x30
+    UI.user_error!(
+      "IOS_DEVELOPMENT_CERT_P12_BASE64 did not decode to a PKCS#12 (.p12) file. Re-encode the " \
+      "export with `base64 -w0 development.p12` (Linux) or `base64 -i development.p12` (macOS). " \
+      "See docs/DEPLOYMENT.md § CI development certificate."
+    )
+  end
+  p12
+end
+
+# Same handling as the .p8: 0600, under RUNNER_TEMP, deleted by the caller in an `ensure`.
+def write_development_certificate(p12)
+  path = File.join(scratch_dir, "tday-ios-development.p12")
+  File.open(path, File::WRONLY | File::CREAT | File::TRUNC, 0o600) { |file| file.write(p12) }
+  path
+end
+
+# Creates a throwaway keychain, imports the .p12 into it and makes the identity usable by
+# codesign without a UI prompt. Returns the keychain path; the caller deletes it in an `ensure`.
+def install_development_certificate(p12_path, p12_password)
+  keychain_path = File.join(scratch_dir, "tday-ios-ci.keychain-db")
+  keychain_password = SecureRandom.hex(24)
+
+  # Only ever true locally, after a run was killed before its `ensure` ran. A runner is fresh.
+  delete_keychain(keychain_path: keychain_path) if File.exist?(keychain_path)
+
+  create_keychain(
+    path: keychain_path,
+    password: keychain_password,
+    # Default AND in the search list. Xcode's automatic signing looks identities up through the
+    # keychain search list, and the default keychain is where it would store anything it
+    # created — so a minted certificate lands in here and is caught by the identity diff the
+    # lane prints afterwards. `delete_keychain` restores the original default.
+    default_keychain: true,
+    unlock: true,
+    # 0 = never auto-lock. A 40-minute archive must not find the keychain locked halfway
+    # through CodeSign.
+    timeout: 0,
+    lock_when_sleeps: false,
+    add_to_search_list: true,
+    require_create: true
+  )
+
+  import_certificate(
+    certificate_path: p12_path,
+    certificate_password: p12_password,
+    certificate_format: "pkcs12",
+    keychain_name: File.basename(keychain_path),
+    keychain_path: keychain_path,
+    # Handing fastlane the keychain password makes it also run `security set-key-partition-list`,
+    # which is what lets codesign use the private key headlessly instead of blocking on a
+    # keychain dialog that nothing on a runner can click.
+    keychain_password: keychain_password,
+    log_output: false
+  )
+
+  # An identity only counts as valid when its issuer chain resolves, and a brand-new keychain
+  # holds none of Apple's WWDR intermediates. This is the same helper `match` and `cert` use.
+  FastlaneCore::CertChecker.install_missing_wwdr_certificates(in_keychain: keychain_path)
+
+  keychain_path
+end
+
+# SHA-1 → common name of every VALID code-signing identity in a keychain, i.e. certificates that
+# have their private key present and whose chain resolves.
+def codesigning_identities(keychain_path)
+  output = sh("security find-identity -v -p codesigning #{keychain_path.shellescape}", log: false)
+  output.scan(/^\s*\d+\)\s+([0-9A-F]{40})\s+"([^"]+)"/).to_h
+end
+
+# Fails fast — on the Linux-cheap side of a 40-minute archive — when the imported .p12 is not
+# an Apple Development identity for this team, or has expired. Prints what was imported so the
+# run log says which certificate signed the archive. Certificate names, team IDs and expiry
+# dates are not secrets; they are printed on every provisioning profile.
+def verify_development_certificate(keychain_path, team_id)
+  identities = codesigning_identities(keychain_path)
+  pems = sh("security find-certificate -a -p #{keychain_path.shellescape}", log: false)
+  certificates = pems.scan(/-----BEGIN CERTIFICATE-----.*?-----END CERTIFICATE-----/m)
+                     .map { |pem| OpenSSL::X509::Certificate.new(pem) }
+                     .select { |cert| identities.key?(OpenSSL::Digest.new("SHA1").hexdigest(cert.to_der).upcase) }
+
+  development = certificates.select do |cert|
+    cert.subject.to_a.any? { |name, value, _| name == "CN" && value.to_s.start_with?("Apple Development") }
+  end
+
+  if development.empty?
+    found = identities.values.map(&:inspect).join(", ")
+    UI.user_error!(
+      "The imported .p12 holds no valid 'Apple Development' identity (found: " \
+      "#{found.empty? ? 'nothing' : found}). " \
+      "It must contain an Apple Development certificate AND its private key, exported as " \
+      "PKCS#12, and its issuer chain must resolve. A distribution certificate, a bare .cer, or " \
+      "a .p12 without the key will not archive. See docs/DEPLOYMENT.md § CI development certificate."
+    )
+  end
+
+  development.each do |cert|
+    subject = cert.subject.to_a.to_h { |name, value, _| [name, value.to_s] }
+    common_name = subject.fetch("CN", "")
+    cert_team = subject.fetch("OU", "")
+    days_left = ((cert.not_after - Time.now) / 86_400).floor
+
+    UI.message(
+      "Imported development identity: #{common_name} (team #{cert_team}), expires " \
+      "#{cert.not_after.utc.strftime('%Y-%m-%d')} — #{days_left} days from now."
+    )
+
+    unless cert_team == team_id
+      UI.user_error!(
+        "The imported development certificate belongs to team #{cert_team}, but this build " \
+        "signs as team #{team_id} (IOS_TEAM_ID / DEVELOPMENT_TEAM). Xcode would ignore it and " \
+        "mint a throwaway one. Export a certificate from the right team."
+      )
+    end
+
+    if days_left.negative?
+      UI.user_error!(
+        "The imported development certificate expired on #{cert.not_after.utc.strftime('%Y-%m-%d')}. " \
+        "Xcode would ignore it and mint a throwaway one — the failure mode this secret exists to " \
+        "prevent. Create a new Apple Development certificate and rotate " \
+        "IOS_DEVELOPMENT_CERT_P12_BASE64 / IOS_DEVELOPMENT_CERT_P12_PASSWORD; see " \
+        "docs/DEPLOYMENT.md § CI development certificate."
+      )
+    elsif days_left < DEVELOPMENT_CERT_RENEWAL_WARNING_DAYS
+      # Plain `puts` so the `::warning::` workflow command starts the line — see the note on the
+      # `::error::` in await_processing below.
+      puts "::warning::The CI development certificate (#{common_name}) expires in #{days_left} " \
+           "days. Create a new Apple Development certificate and rotate " \
+           "IOS_DEVELOPMENT_CERT_P12_BASE64 / IOS_DEVELOPMENT_CERT_P12_PASSWORD before then, or " \
+           "the archive goes back to minting throwaway certificates. See docs/DEPLOYMENT.md."
+    end
+  end
+end
+
+# The whole point of importing a certificate is that Xcode then creates none. This says so, or
+# says loudly that it did not work: any identity in the CI keychain that was not there before the
+# archive was minted by `-allowProvisioningUpdates`, its private key is about to die with this
+# runner, and it now counts against the team's quota. A warning rather than a failure — the
+# archive that just succeeded is still good, and this must never be what fails a release.
+def report_minted_identities(keychain_path, before)
+  minted = codesigning_identities(keychain_path).reject { |sha1, _| before.key?(sha1) }
+  if minted.empty?
+    UI.success("Xcode created no certificate on this runner: the imported development identity was used.")
+    return
+  end
+
+  names = minted.map { |sha1, name| "#{name} [#{sha1}]" }.join(", ")
+  puts "::warning::Xcode minted #{minted.size} certificate(s) on this runner during the archive " \
+       "(#{names}) instead of using the imported development identity. Its private key is gone " \
+       "with the runner and it now counts against the team's certificate quota — revoke it in " \
+       "the Developer portal, and check the imported .p12 (team, expiry, private key present). " \
+       "See docs/DEPLOYMENT.md § CI development certificate."
 end
 
 # Asks App Store Connect what state it is holding this exact (marketing version, build number)
@@ -251,6 +444,44 @@ platform :ios do
       xcconfig_path = write_build_settings_xcconfig(probe_setting)
     end
 
+    # The persistent Apple Development certificate the archive is signed with — see "CI signing
+    # keychain" above. REQUIRED on GitHub Actions: without it the archive would fall back to
+    # minting a throwaway certificate, which is exactly the quota failure this exists to stop, so
+    # a missing secret is refused here rather than allowed to "work" a few more times. Optional
+    # everywhere else: a local `fastlane beta` archives with whatever Apple Development identity
+    # the developer's own keychain already holds, unchanged.
+    #
+    # Only decoded and written here; the keychain is created inside the `begin` below so that the
+    # same `ensure` that deletes the .p8 also deletes the .p12 and the keychain.
+    p12_encoded = ENV["IOS_DEVELOPMENT_CERT_P12_BASE64"].to_s.strip # skipcq: SCT-A000
+    p12_password = ENV["IOS_DEVELOPMENT_CERT_P12_PASSWORD"].to_s # skipcq: SCT-A000
+    p12_path = nil
+    if p12_encoded.empty?
+      if ENV["GITHUB_ACTIONS"].to_s == "true"
+        UI.user_error!(
+          "IOS_DEVELOPMENT_CERT_P12_BASE64 is not set. On a fresh runner there is no Apple " \
+          "Development identity to sign the archive with, and -allowProvisioningUpdates would " \
+          "mint a throwaway one that counts against the team's certificate quota. Refusing to " \
+          "archive. See docs/DEPLOYMENT.md § CI development certificate."
+        )
+      end
+      UI.message(
+        "IOS_DEVELOPMENT_CERT_P12_BASE64 is not set: archiving with the Apple Development " \
+        "identity already in this machine's keychain."
+      )
+    else
+      if p12_password.empty?
+        UI.user_error!(
+          "IOS_DEVELOPMENT_CERT_P12_PASSWORD is not set. The .p12 must be exported with a " \
+          "password — `security import` does not reliably accept a passwordless PKCS#12."
+        )
+      end
+      p12_path = write_development_certificate(decode_development_certificate(p12_encoded))
+    end
+
+    keychain_path = nil
+    identities_before = nil
+
     begin
       api_key = app_store_connect_api_key( # skipcq: SCT-A000 — every value comes from ENV above.
         key_id: key_id,
@@ -320,11 +551,20 @@ platform :ios do
         end
       end
 
-      # `-allowProvisioningUpdates` lets Xcode mint and renew the five App Store profiles on
-      # demand against App IDs and an App Group that already exist (see docs/DEPLOYMENT.md §
+      # After the duplicate check, so a run that is going to skip never touches a keychain.
+      if p12_path
+        keychain_path = install_development_certificate(p12_path, p12_password)
+        verify_development_certificate(keychain_path, team_id)
+        identities_before = codesigning_identities(keychain_path)
+      end
+
+      # `-allowProvisioningUpdates` lets Xcode mint and renew the development profiles the
+      # archive is signed with and the five App Store profiles the export re-signs with, on
+      # demand, against App IDs and an App Group that already exist (see docs/DEPLOYMENT.md §
       # One-time setup — it does not create the App Group). On a runner with no signed-in Xcode
       # account it can only reach the Developer portal if it is handed the same API key, hence
-      # the -authentication* trio.
+      # the -authentication* trio. It would also mint a CERTIFICATE if it found no usable one —
+      # which is why the development identity is imported above before it runs.
       #
       # This string is passed to gym ONCE, as `xcargs`, and gym puts it on both xcodebuild
       # invocations for us — see the comment on `xcargs:` below. Adding `export_xcargs:` as
@@ -431,6 +671,27 @@ platform :ios do
     ensure
       File.delete(key_path) if key_path && File.exist?(key_path)
       File.delete(xcconfig_path) if xcconfig_path && File.exist?(xcconfig_path)
+      File.delete(p12_path) if p12_path && File.exist?(p12_path)
+      if keychain_path && File.exist?(keychain_path)
+        # Both rescued: cleanup must never replace the error that actually failed the run.
+        begin
+          # Runs on failure too: a run that died inside xcodebuild is exactly the one whose
+          # keychain should be inspected for a minted certificate.
+          report_minted_identities(keychain_path, identities_before) if identities_before
+        rescue StandardError => e
+          UI.important("Could not diff the CI keychain's identities (#{e.class}: #{e.message}).")
+        end
+        begin
+          # Also restores the original default keychain. The identity and its private key leave
+          # with the keychain, so nothing persists on the runner after the lane.
+          delete_keychain(keychain_path: keychain_path)
+        rescue StandardError => e
+          UI.important(
+            "Could not delete the CI keychain #{keychain_path} (#{e.class}: #{e.message}). " \
+            "A GitHub runner is discarded after the job, so nothing outlives it there."
+          )
+        end
+      end
     end
   end
 
