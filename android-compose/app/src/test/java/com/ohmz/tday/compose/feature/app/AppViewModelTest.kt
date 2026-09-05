@@ -36,6 +36,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
@@ -419,6 +420,152 @@ class AppViewModelTest {
 
         viewModel.logout()
         runCurrent()
+    }
+
+    /**
+     * The cold-launch contract, at the ViewModel: from construction until the persisted session
+     * has been resolved, the root destination is the splash — not the sign-in wizard, which is
+     * what a signed-out-looking `authenticated = false` used to be read as. A real session
+     * restore is a network round-trip, so it is parked on the test scheduler to make the window
+     * between "bootstrap started" and "bootstrap answered" observable.
+     */
+    @Test
+    fun `should hold the splash until the server session resolves when signed in`() = runTest {
+        val restoredSession = AuthRepository.RestoredSession(
+            user = restoredUser,
+            usedCachedSession = false,
+        )
+        coEvery { authRepository.restoreSessionForBootstrap() } coAnswers {
+            delay(1)
+            restoredSession
+        }
+        coEvery {
+            syncManager.syncCachedData(
+                force = true,
+                replayPendingMutations = true,
+                notifyOfflineFailure = false,
+                connectionProbeTimeoutMs = null,
+            )
+        } returns Result.success(Unit)
+
+        val viewModel = makeViewModel()
+        runCurrent()
+
+        val unresolved = viewModel.uiState.value
+        assertTrue(unresolved.loading)
+        assertFalse(unresolved.isWorkspaceAvailable)
+        assertEquals(SessionResolution.UNKNOWN, unresolved.sessionResolution)
+        assertEquals(RootDestination.SPLASH, unresolved.rootDestination)
+
+        advanceTimeBy(1)
+        runCurrent()
+
+        val resolved = viewModel.uiState.value
+        assertFalse(resolved.loading)
+        assertTrue(resolved.authenticated)
+        assertEquals(SessionResolution.RESOLVED, resolved.sessionResolution)
+        assertEquals(RootDestination.WORKSPACE, resolved.rootDestination)
+
+        viewModel.logout()
+        runCurrent()
+    }
+
+    @Test
+    fun `should hold the splash until Local Mode resolves and then open the workspace`() = runTest {
+        every { serverConfigRepository.getAppDataMode() } returns AppDataMode.LOCAL
+        coEvery { cacheManager.updateOfflineState(any()) } coAnswers {
+            delay(1)
+            firstArg<(OfflineSyncState) -> OfflineSyncState>().invoke(OfflineSyncState())
+        }
+
+        val viewModel = makeViewModel()
+        runCurrent()
+
+        assertEquals(SessionResolution.UNKNOWN, viewModel.uiState.value.sessionResolution)
+        assertEquals(RootDestination.SPLASH, viewModel.uiState.value.rootDestination)
+        // SPLASH and an available workspace must never be true together. The nav graph does not
+        // exist while the root is SPLASH — TdayApp holds the branded splash in the NavHost's
+        // place — but the pending-deep-link effect keys off isWorkspaceAvailable and calls
+        // NavController.handleDeepLink, which dereferences the graph unconditionally. Because
+        // enterLocalWorkspace() writes the mode and RESOLVED in one update, that effect can only
+        // ever outrun the graph while the user is holding the splash (guarded separately in
+        // TdayApp); a branch that opened the workspace without resolving would make it a crash
+        // on every cold launch instead.
+        assertFalse(viewModel.uiState.value.isWorkspaceAvailable)
+
+        advanceTimeBy(1)
+        runCurrent()
+
+        val resolved = viewModel.uiState.value
+        assertTrue(resolved.isLocalMode)
+        assertEquals(SessionResolution.RESOLVED, resolved.sessionResolution)
+        assertEquals(RootDestination.WORKSPACE, resolved.rootDestination)
+        coVerify(exactly = 0) { authRepository.restoreSessionForBootstrap() }
+    }
+
+    /** A signed-out user still reaches onboarding promptly: no server means no session lookup. */
+    @Test
+    fun `should resolve to onboarding without a session lookup when no server is configured`() = runTest {
+        every { serverConfigRepository.hasServerConfigured() } returns false
+        every { serverConfigRepository.hasRetainedLocalWorkspace() } returns false
+        every { authRepository.clearAllLocalUserDataForUnauthenticatedState() } returns Unit
+
+        val viewModel = makeViewModel()
+        runCurrent()
+
+        val state = viewModel.uiState.value
+        assertFalse(state.loading)
+        assertTrue(state.requiresServerSetup)
+        assertEquals(SessionResolution.RESOLVED, state.sessionResolution)
+        assertEquals(RootDestination.ONBOARDING, state.rootDestination)
+        coVerify(exactly = 0) { authRepository.restoreSessionForBootstrap() }
+    }
+
+    @Test
+    fun `should resolve to onboarding when the server session cannot be restored`() = runTest {
+        coEvery { authRepository.restoreSessionForBootstrap() } returns null
+        every { authRepository.clearSessionOnly() } returns Unit
+        every { authRepository.loadPendingApproval() } returns null
+
+        val viewModel = makeViewModel()
+        runCurrent()
+
+        val state = viewModel.uiState.value
+        assertFalse(state.loading)
+        assertTrue(state.requiresLogin)
+        assertEquals(SessionResolution.RESOLVED, state.sessionResolution)
+        assertEquals(RootDestination.ONBOARDING, state.rootDestination)
+    }
+
+    @Test
+    fun `should stay resolved after sign-out so the splash never returns`() = runTest {
+        val restoredSession = AuthRepository.RestoredSession(
+            user = restoredUser,
+            usedCachedSession = false,
+        )
+        coEvery { authRepository.restoreSessionForBootstrap() } returns restoredSession
+        coEvery {
+            syncManager.syncCachedData(
+                force = true,
+                replayPendingMutations = true,
+                notifyOfflineFailure = false,
+                connectionProbeTimeoutMs = null,
+            )
+        } returns Result.success(Unit)
+        coEvery { authRepository.logout() } returns Unit
+        coEvery { systemCredentialService.clearCredentialState() } returns Unit
+
+        val viewModel = makeViewModel()
+        runCurrent()
+        assertEquals(RootDestination.WORKSPACE, viewModel.uiState.value.rootDestination)
+
+        viewModel.logout()
+        runCurrent()
+
+        val state = viewModel.uiState.value
+        assertFalse(state.authenticated)
+        assertEquals(SessionResolution.RESOLVED, state.sessionResolution)
+        assertEquals(RootDestination.ONBOARDING, state.rootDestination)
     }
 
     @Test
