@@ -91,6 +91,10 @@ val projectVersionCode: Int by lazy {
     code.toInt()
 }
 
+// One name for the release build type, its signing config and the variant filter below, so the
+// three do not drift apart (and so the literal is not repeated — DeepSource KT-W1042).
+val releaseBuildType = "release"
+
 val releaseKeystorePath = System.getenv("RELEASE_KEYSTORE_PATH")
 val releaseKeystoreFile = releaseKeystorePath
     ?.takeIf(String::isNotBlank)
@@ -148,7 +152,7 @@ android {
 
     signingConfigs {
         if (hasReleaseSigning) {
-            create("release") {
+            create(releaseBuildType) {
                 storeFile = releaseKeystoreFile
                 storePassword = System.getenv("RELEASE_KEYSTORE_PASSWORD")
                 keyAlias = System.getenv("RELEASE_KEY_ALIAS")
@@ -170,7 +174,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
-            signingConfig = signingConfigs.findByName("release")
+            signingConfig = signingConfigs.findByName(releaseBuildType)
                 ?: signingConfigs.getByName("debug")
         }
     }
@@ -346,7 +350,7 @@ val widgetClassesRequiringDistinctNames = listOf(
 // literal path just gets the PREVIOUS build's mapping, which is worse than no check at all. The
 // artifact provider carries whichever task actually produces it.
 androidComponents.onVariants { variant ->
-    if (variant.buildType != "release") return@onVariants
+    if (variant.buildType != releaseBuildType) return@onVariants
 
     val mappingFile = variant.artifacts.get(SingleArtifact.OBFUSCATION_MAPPING_FILE)
     val expected = widgetClassesRequiringDistinctNames
