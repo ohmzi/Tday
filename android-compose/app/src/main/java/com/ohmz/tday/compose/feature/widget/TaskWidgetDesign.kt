@@ -614,10 +614,16 @@ private fun TaskWidgetRow(
             }
         }
         if (description != null) {
+            // The title Row's own 3dp bottom padding is what separates a title-only row
+            // from the next task. Notes sit OUTSIDE that Row, so without a bottom pad here
+            // a notes-bearing task would end flush against the inter-row spacer: 3dp from
+            // its own title but only 6dp from the next task. With no divider line left to
+            // mark the boundary, that reads as one run-on block. Matching the Row's 3dp
+            // keeps every row shape at 3dp title->notes and 9dp task->task.
             WidgetText(
                 modifier = GlanceModifier
                     .fillMaxWidth()
-                    .padding(start = 14.dp),
+                    .padding(start = 14.dp, bottom = 3.dp),
                 text = description,
                 color = TaskWidgetTextColor.SECONDARY,
                 fontSize = 11.sp,
