@@ -120,6 +120,19 @@ private const val NAV_FADE_IN_DURATION_MS = 360
 private const val NAV_FADE_OUT_DURATION_MS = 240
 private const val PENDING_SEARCH_HIGHLIGHT_TODO_ID = "pendingSearchHighlightTodoId"
 
+// Nav argument names, shared by the route templates that declare them and the back stack
+// entries that read them back.
+private const val ARG_LIST_ID = "listId"
+private const val ARG_LIST_NAME = "listName"
+private const val ARG_CREATE_TARGET = "target"
+private const val ARG_HIGHLIGHT_TODO_ID = "highlightTodoId"
+private const val ARG_GUIDE_TOPIC = "topic"
+
+// The `target` vocabulary of `tday://todos/create?target=...` — the widget, the reminder
+// notification and the car surface all speak it.
+private const val CREATE_TARGET_TODAY = "today"
+private const val CREATE_TARGET_FLOATER = "floater"
+
 @Composable
 fun TdayApp(
     onFirstFrameDrawn: () -> Unit = {},
@@ -558,7 +571,7 @@ private fun NavGraphBuilder.todoScopeRoutes(
     composable(
         route = AppRoute.AllTodos.route,
         arguments = listOf(
-            navArgument("highlightTodoId") {
+            navArgument(ARG_HIGHLIGHT_TODO_ID) {
                 type = NavType.StringType
                 nullable = true
                 defaultValue = null
@@ -574,7 +587,7 @@ private fun NavGraphBuilder.todoScopeRoutes(
                 ?.remove<String>(PENDING_SEARCH_HIGHLIGHT_TODO_ID)
         }
         val argumentHighlightTodoId = Uri.decode(
-            entry.arguments?.getString("highlightTodoId").orEmpty(),
+            entry.arguments?.getString(ARG_HIGHLIGHT_TODO_ID).orEmpty(),
         ).ifBlank { null }
         val highlightTodoId = pendingSearchHighlightTodoId ?: argumentHighlightTodoId
         TodosRoute(
@@ -613,17 +626,17 @@ private fun NavGraphBuilder.createTodayTodoRoute(
     composable(
         route = AppRoute.CreateTodayTodo.route,
         arguments = listOf(
-            navArgument("target") {
+            navArgument(ARG_CREATE_TARGET) {
                 type = NavType.StringType
-                defaultValue = "today"
+                defaultValue = CREATE_TARGET_TODAY
             },
         ),
         deepLinks = listOf(navDeepLink {
             uriPattern = "tday://todos/create?target={target}"
         }),
     ) { entry ->
-        val createTarget = entry.arguments?.getString("target") ?: "today"
-        if (createTarget.equals("floater", ignoreCase = true)) {
+        val createTarget = entry.arguments?.getString(ARG_CREATE_TARGET) ?: CREATE_TARGET_TODAY
+        if (createTarget.equals(CREATE_TARGET_FLOATER, ignoreCase = true)) {
             LaunchedEffect(entry.destination.id, createTarget) {
                 onChangeRootFeedTab(RootFeedTab.FLOATER_TASK_HOME)
                 onRequestFloaterCreateTask()
@@ -671,15 +684,15 @@ private fun NavGraphBuilder.listRoutes(
     composable(
         route = AppRoute.ListTodos.route,
         arguments = listOf(
-            navArgument("listId") { type = NavType.StringType },
-            navArgument("listName") { type = NavType.StringType },
+            navArgument(ARG_LIST_ID) { type = NavType.StringType },
+            navArgument(ARG_LIST_NAME) { type = NavType.StringType },
         ),
         deepLinks = listOf(
             navDeepLink { uriPattern = "tday://todos/list/{listId}/{listName}" },
         ),
     ) { entry ->
-        val listId = entry.arguments?.getString("listId").orEmpty()
-        val listName = Uri.decode(entry.arguments?.getString("listName").orEmpty())
+        val listId = entry.arguments?.getString(ARG_LIST_ID).orEmpty()
+        val listName = Uri.decode(entry.arguments?.getString(ARG_LIST_NAME).orEmpty())
         TodosRoute(
             mode = TodoListMode.LIST,
             listId = listId,
@@ -699,15 +712,15 @@ private fun NavGraphBuilder.listRoutes(
     composable(
         route = AppRoute.FloaterListTodos.route,
         arguments = listOf(
-            navArgument("listId") { type = NavType.StringType },
-            navArgument("listName") { type = NavType.StringType },
+            navArgument(ARG_LIST_ID) { type = NavType.StringType },
+            navArgument(ARG_LIST_NAME) { type = NavType.StringType },
         ),
         deepLinks = listOf(
             navDeepLink { uriPattern = "tday://floater/list/{listId}/{listName}" },
         ),
     ) { entry ->
-        val listId = entry.arguments?.getString("listId").orEmpty()
-        val listName = Uri.decode(entry.arguments?.getString("listName").orEmpty())
+        val listId = entry.arguments?.getString(ARG_LIST_ID).orEmpty()
+        val listName = Uri.decode(entry.arguments?.getString(ARG_LIST_NAME).orEmpty())
         TodosRoute(
             mode = TodoListMode.FLOATER,
             listId = listId,
@@ -778,8 +791,8 @@ private fun NavGraphBuilder.utilityRoutes(
             onVoiceTitle = viewModel::createFromVoice,
             onVoiceUnavailable = { mode ->
                 val target = when (mode) {
-                    CarTaskMode.TODAY -> "today"
-                    CarTaskMode.FLOATER -> "floater"
+                    CarTaskMode.TODAY -> CREATE_TARGET_TODAY
+                    CarTaskMode.FLOATER -> CREATE_TARGET_FLOATER
                 }
                 navController.navigate("todos/create?target=$target") {
                     launchSingleTop = true
@@ -811,7 +824,7 @@ private fun NavGraphBuilder.utilityRoutes(
     composable(
         route = AppRoute.HelpGuide.route,
         arguments = listOf(
-            navArgument("topic") {
+            navArgument(ARG_GUIDE_TOPIC) {
                 type = NavType.StringType
                 nullable = true
                 defaultValue = null
@@ -828,7 +841,7 @@ private fun NavGraphBuilder.utilityRoutes(
             onOpenDeepLink = { route ->
                 navController.navigate(route) { launchSingleTop = true }
             },
-            initialTopic = backStackEntry.arguments?.getString("topic"),
+            initialTopic = backStackEntry.arguments?.getString(ARG_GUIDE_TOPIC),
         )
     }
 }
