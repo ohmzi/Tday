@@ -49,6 +49,7 @@ app/src/main/java/com/ohmz/tday/compose/feature/widget/
 └── snapshot/
     ├── WidgetSnapshot.kt               ← the render-payload DTOs
     ├── WidgetSnapshotStore.kt          ← AES/GCM (AndroidKeyStore) encrypted read/write of the two snapshot files
+    ├── WidgetSnapshotIo.kt             ← the store's process-wide lock + encrypt-then-rename write (JVM-testable)
     ├── WidgetSnapshotWriter.kt         ← builds + writes both snapshots from OfflineSyncState, bumps the repaint signal
     └── WidgetSnapshotBuilders.kt       ← buildTodayWidgetSnapshot / buildFloaterWidgetSnapshot (selection, ordering, capping)
 ```
@@ -256,10 +257,12 @@ and every question of the form "which widget is this instance?" is answered in e
   live `appWidgetId` with the kind of the receiver it was enumerated from, so no id can ever be
   handed to a foreign widget class, and one call repaints all three kinds — there is no per-kind
   refresher left for a call site to forget. `refreshNow(firstAppWidgetId = …)` paints the instance
-  the user just interacted with first. Its `updateAll` belt-and-braces pass runs for **every** kind,
-  not only the kinds already in the plan: both paths bottom out in
-  `AppWidgetManager.getAppWidgetIds`, so the only case `updateAll` can still cover is the one where
-  our own enumeration threw and that kind is therefore absent from the plan.
+  the user just interacted with first. The plan is the **only** thing it renders through: the
+  `updateAll` belt-and-braces sweep that used to follow it was removed, because `updateAll` bottoms
+  out in the same `AppWidgetManager.getAppWidgetIds` over a *subset* of the receivers (only those
+  Glance has recorded this process), so it can never reach an id the plan missed — and it routes by
+  class, which is not an instance identity in a release build (see below). An enumeration failure is
+  now logged at ERROR instead of silently compensated for.
 
 - Every widget's composition logs its own identity, so a report of the form "my Floater widget
   rendered as the Today widget" is answerable from one `adb logcat -s TdayWidget` capture instead
@@ -274,21 +277,85 @@ and every question of the form "which widget is this instance?" is answered in e
   `AppWidgetManager.getAppWidgetInfo` says owns that id. Glance keys its render session by
   `appWidgetId` **alone** (`AppWidgetSession` → `createUniqueRemoteUiName(appWidgetId)`) and reuses
   a running session with the `GlanceAppWidget` it was constructed with, so a session started with
-  the wrong class would render the wrong kind for that instance until the process died. Nothing in
-  this app can start one — see `WidgetRefresher` above — but if one ever appeared, the line would
-  read `today[42]: composing, provider=FLOATER KIND-MISMATCH …`, at ERROR level.
+  the wrong class renders the wrong kind for that instance until the process dies. That is not
+  hypothetical — it is what the R8 section below describes — and if it happens again the line reads
+  `today[42]: composing, provider=FLOATER KIND-MISMATCH …`, at ERROR level.
 
 `WidgetInstanceKindTest` and `WidgetRefreshRoutingTest` cover these rules as plain JVM tests.
 
+### Widget class identity survives R8 only because of a keep rule
+
+**Everything above assumes `TodayTasksWidget`, `FloaterTasksWidget` and `ListTasksWidget` are three
+different classes at runtime. In a release build that is true only because `proguard-rules.pro`
+says so.**
+
+Glance identifies a widget provider by class NAME, never by class identity:
+`GlanceAppWidgetManager.updateReceiver` records `provider:<receiver>` as
+`appWidget.javaClass.canonicalName`; `updateAll` reads it back through an unvalidated
+`providerNameToReceivers[canonicalName]`; and `GlanceAppWidget.update` keys its render session on
+`createUniqueRemoteUiName(appWidgetId)` — the id alone, with no class in the key.
+
+The three widget classes are structurally identical, so R8's horizontal class merger collapsed all
+three into one. In the mapping of a release build made without the keep rules, `FloaterTasksWidget`
+mapped to `ki1` carrying a synthesized `$r8$classId` discriminator and a `provideGlance` inlined
+from all three, and the other two classes had no mapping entry at all; `GlanceAppWidget` itself was
+then *vertically* merged into it, which R8 only does once a class has one subclass left. All nine
+receivers therefore registered under one provider name, every kind's `updateAll` enumerated every
+other kind's ids, and a Today-flavoured instance could take ownership of a Floater instance's render
+session until the process was replaced — "my Floater widget turned into the Today widget until I
+reopened the app". Debug builds and unit tests are unminified, which is why source review and JVM
+tests all said this was impossible.
+
+Two things keep it fixed:
+
+- `-keep class * extends androidx.glance.appwidget.GlanceAppWidget` (and the same for
+  `GlanceAppWidgetReceiver`) in `android-compose/app/proguard-rules.pro`. Pinning the names is what
+  excludes the classes from the merger. glance-appwidget ships no such rule of its own — its
+  consumer rules cover only `ActionCallback` subclasses, which is why `CompleteTodayTaskAction` and
+  `CompleteFloaterTaskAction`, identically-shaped siblings, were never merged.
+- `:app:verifyReleaseWidgetClassIdentity`, wired into `assembleRelease`/`bundleRelease`. It reads
+  the R8 mapping back and fails the build unless each of the twelve classes appears under its **own**
+  name. All twelve are `-keep`-pinned, so that identity check is available and is strictly stronger
+  than asking whether any two share an output name: it also catches a class R8 *removed* (which
+  still gets a mapping line, as `<original> -> R8$$REMOVED$$CLASS$$<N>:`, unique per class and so
+  invisible to a collision check) and a class R8 *renamed* because a keep rule stopped matching.
+  There is no unit-test equivalent — the defect exists only in the minified artifact.
+
 What the single refresher fixed, precisely — the per-kind refreshers could not paint the wrong
-content (each only ever enumerated its own receivers' ids, and Glance's `updateAll` resolves a
-`GlanceAppWidget` class to that class's own receivers via `GlanceAppWidgetManager.getGlanceIds`).
+content *in an unminified build* (each only ever enumerated its own receivers' ids, and Glance's
+`updateAll` resolves a `GlanceAppWidget` class to that class's own receivers via
+`GlanceAppWidgetManager.getGlanceIds`); under class merging that guarantee did not hold.
 What they got wrong was coverage: the add path aimed its one *synchronous* repaint by a guessed
 create target, leaving the widget actually tapped to the fire-and-forget request from the cache
 write — which a short-lived widget process can be torn down before it paints — and `MainActivity`,
 `TodoRepository`, `SyncManager`, `BulkTaskRepository` and `BootRescheduleReceiver` never called the
 per-list refresher at all, so a per-list instance sat on its static `android:initialLayout` after a
 reboot until some unrelated cache write repainted it.
+
+## Snapshot durability (Android)
+
+Every widget renders from `filesDir/widget/*.json`, so how those files are written decides whether a
+widget shows content or "Loading tasks…". Three rules, all in `WidgetSnapshotIo`:
+
+- **Encrypt first, then swap.** The write serialises and encrypts into memory, writes a sibling
+  `.tmp`, and `rename(2)`s it onto the target. A Keystore failure (a key invalidated by a
+  lock-screen change, a provider unavailable before first unlock), a cipher failure or a full disk
+  therefore leaves the *previous* good snapshot readable. The store used to `delete()` the target
+  and only then evaluate `encrypt(bytes)`, inside a `runCatching {}.getOrElse { false }` — so those
+  failures destroyed the last good snapshot and left no log line explaining why.
+- **One process-wide lock** around every read and write. The writers do not otherwise coordinate:
+  `OfflineCacheManager`'s save, clear and legacy-migration paths, `WidgetHydrateWorker` on a
+  WorkManager thread and `WidgetListConfigurationViewModel.selectList` on `viewModelScope` all write
+  the same files. Two interleaving inside one `writeBytes` produced a file that failed GCM
+  authentication, which `read` then deleted.
+- **The file is never absent.** `FloaterTasksWidget`, `TodayTasksWidget`, `ListTasksWidget` and
+  `WidgetFastPaint` all decide whether to hydrate (or whether to fast-paint at all) from a bare
+  `File.exists()`. Under delete-then-write that probe was transiently false on *every* cache write,
+  which spuriously enqueued `WidgetHydrateWorker` as one more unsynchronised writer and made fast
+  paint silently skip. A rename-based write closes all four windows with no call-site change.
+
+`WidgetSnapshotIoTest` covers all three as plain JVM tests — the store itself needs AndroidKeyStore
+and a real `Context`, which is why the file behaviour lives in its own class.
 
 ## Background refresh cadence
 
