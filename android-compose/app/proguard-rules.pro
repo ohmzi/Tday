@@ -100,8 +100,9 @@
 # solely because glance-appwidget's own consumer rules keep `ActionCallback` subclasses. Glance
 # ships no such rule for `GlanceAppWidget`, so it has to live here.
 #
-# `:app:verifyWidgetClassIdentity` (app/build.gradle.kts) re-reads mapping.txt after every R8 run
-# and fails the release build if these classes ever share an output name again.
+# `:app:verifyReleaseWidgetClassIdentity` (app/build.gradle.kts) re-reads mapping.txt after every
+# R8 run and fails the release build unless each of these classes still appears under its OWN name
+# — which catches a merge, a shrink and a rename alike.
 -keep class * extends androidx.glance.appwidget.GlanceAppWidget
 # The nine concrete receivers are already pinned by the manifest, but their canonical names are
 # the other half of the same lookup, so pin them explicitly rather than by side effect.
