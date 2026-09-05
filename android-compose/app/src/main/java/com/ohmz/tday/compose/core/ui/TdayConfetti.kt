@@ -14,6 +14,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.delay
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.sin
@@ -42,6 +43,11 @@ import kotlin.random.Random
  *   `true` restarts the burst.
  * @param accentColor the screen's own accent, mixed into the palette so the
  *   celebration still belongs to the list it happened on.
+ * @param startDelayMillis how long after [play] turns true before the first
+ *   piece is thrown. Zero when the burst can have the frame it was triggered
+ *   on. A caller whose layout is still settling on that frame passes the time
+ *   that settling takes: paper thrown over content that is still sliding reads
+ *   as a dropped frame, not as a celebration.
  */
 @Composable
 fun TdayConfetti(
@@ -49,6 +55,7 @@ fun TdayConfetti(
     accentColor: Color,
     modifier: Modifier = Modifier,
     runKey: Any? = Unit,
+    startDelayMillis: Long = 0L,
 ) {
     val motionEnabled = rememberTdayMotionEnabled()
     if (!play || !motionEnabled) return
@@ -61,6 +68,9 @@ fun TdayConfetti(
 
     LaunchedEffect(runKey) {
         progress.snapTo(0f)
+        // Held at 0, where the canvas below draws nothing at all, so the wait
+        // costs a composition and not a frame of half-drawn paper.
+        if (startDelayMillis > 0L) delay(startDelayMillis)
         progress.animateTo(
             targetValue = 1f,
             // Linear: the arc is the physics below, and an eased clock on top of

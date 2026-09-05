@@ -53,6 +53,7 @@ import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
@@ -553,11 +554,7 @@ fun ScheduledTaskHomeScreen(
                     // and re-added a row height higher in one frame.
                     item(key = "scheduled-task-home-category-grid") {
                         Column(
-                            modifier = Modifier.animateItem(
-                                fadeInSpec = ScheduledTaskHomeItemFadeIn,
-                                placementSpec = ScheduledTaskHomeItemPlacement,
-                                fadeOutSpec = ScheduledTaskHomeItemFadeOut,
-                            ),
+                            modifier = scheduledTaskHomeDisplacedItemMotion(),
                             verticalArrangement = Arrangement.spacedBy(10.dp),
                         ) {
                             CategoryGrid(
@@ -598,11 +595,7 @@ fun ScheduledTaskHomeScreen(
                     if (uiState.summary.lists.isNotEmpty()) {
                         item(key = "scheduled-task-home-my-lists-header") {
                             MyListsHeader(
-                                modifier = Modifier.animateItem(
-                                    fadeInSpec = ScheduledTaskHomeItemFadeIn,
-                                    placementSpec = ScheduledTaskHomeItemPlacement,
-                                    fadeOutSpec = ScheduledTaskHomeItemFadeOut,
-                                ),
+                                modifier = scheduledTaskHomeDisplacedItemMotion(),
                             )
                         }
                         itemsIndexed(
@@ -611,11 +604,7 @@ fun ScheduledTaskHomeScreen(
                             contentType = { _, _ -> "list_row" },
                         ) { _, list ->
                             ListRow(
-                                modifier = Modifier.animateItem(
-                                    fadeInSpec = ScheduledTaskHomeItemFadeIn,
-                                    placementSpec = ScheduledTaskHomeItemPlacement,
-                                    fadeOutSpec = ScheduledTaskHomeItemFadeOut,
-                                ),
+                                modifier = scheduledTaskHomeDisplacedItemMotion(),
                                 name = list.name,
                                 colorKey = list.color,
                                 iconKey = list.iconKey,
@@ -2145,6 +2134,22 @@ private val ScheduledTaskHomeItemPlacement = spring<IntOffset>(
 )
 private val ScheduledTaskHomeItemFadeOut =
     tween<Float>(durationMillis = 140, easing = FastOutSlowInEasing)
+
+/**
+ * The same spring, for a block a completion *moves* but never adds or removes.
+ *
+ * Placement only. The grid and the list rows are on screen before the row above
+ * them is ticked and still on screen after, so a fade describes nothing here —
+ * and it would fire where it has no business firing: a live search query
+ * replaces this whole feed body at once, and a block with a fade spec fades out
+ * and back in every time the field opens or closes.
+ */
+private fun LazyItemScope.scheduledTaskHomeDisplacedItemMotion(): Modifier =
+    Modifier.animateItem(
+        fadeInSpec = null,
+        placementSpec = ScheduledTaskHomeItemPlacement,
+        fadeOutSpec = null,
+    )
 
 private const val SCHEDULED_TASK_HOME_LIST_CONTAINER_COLOR_WEIGHT = 0.66f
 private const val CREATE_LIST_SHEET_MAX_HEIGHT_FRACTION = 0.80f
