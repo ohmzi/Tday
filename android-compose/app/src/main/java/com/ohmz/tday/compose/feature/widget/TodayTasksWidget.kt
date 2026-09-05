@@ -4,7 +4,6 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.util.Log
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -64,6 +63,11 @@ class TodayTasksWidget : GlanceAppWidget() {
         // which are collected as state inside). It travels on the "+" deep link so the create sheet
         // and its repaint can identify THIS instance instead of guessing a kind.
         val appWidgetId = GlanceAppWidgetManager(appContext).getAppWidgetId(id)
+        // Which receiver the PLATFORM says owns this id — resolved here for the same reason as the
+        // id itself (fixed for the instance's lifetime, one binder call per Glance session) and
+        // used only by the composing log line. See `widgetComposeLogLine`: it is what makes "did a
+        // Today session paint a Floater instance?" answerable from one logcat capture.
+        val providerKind = WidgetInstanceResolver(appContext).kindOf(appWidgetId)
         val securityPreferenceStore = AppSecurityPreferenceStore(appContext)
         val snapshotStore = WidgetSnapshotStore(appContext)
         val title = appContext.getString(R.string.widget_today_tasks_title)
@@ -104,9 +108,11 @@ class TodayTasksWidget : GlanceAppWidget() {
             // Fires on every recompute this key change causes (cold start, a fresh snapshot, or
             // a lock toggle) — absence after a reboot means the widget was never composed at all;
             // presence with snapshotNull=true past the first frame means something is stuck.
-            Log.i(
-                WIDGET_LOG_TAG,
-                "today: composing, version=$snapshotVersion locked=$isAppLocked " +
+            logWidgetComposition(
+                composingAs = WidgetInstanceKind.TODAY,
+                appWidgetId = appWidgetId,
+                providerKind = providerKind,
+                details = "version=$snapshotVersion locked=$isAppLocked " +
                     "snapshotNull=${currentSnapshot == null}",
             )
             // Inside the composition so the day/night artwork follows the clock too.
