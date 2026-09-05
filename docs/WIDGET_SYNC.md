@@ -314,9 +314,12 @@ Two things keep it fixed:
   consumer rules cover only `ActionCallback` subclasses, which is why `CompleteTodayTaskAction` and
   `CompleteFloaterTaskAction`, identically-shaped siblings, were never merged.
 - `:app:verifyReleaseWidgetClassIdentity`, wired into `assembleRelease`/`bundleRelease`. It reads
-  the R8 mapping back and fails the build if any of the twelve classes lost its mapping entry or
-  shares an output name with another. There is no unit-test equivalent — the defect exists only in
-  the minified artifact.
+  the R8 mapping back and fails the build unless each of the twelve classes appears under its **own**
+  name. All twelve are `-keep`-pinned, so that identity check is available and is strictly stronger
+  than asking whether any two share an output name: it also catches a class R8 *removed* (which
+  still gets a mapping line, as `<original> -> R8$$REMOVED$$CLASS$$<N>:`, unique per class and so
+  invisible to a collision check) and a class R8 *renamed* because a keep rule stopped matching.
+  There is no unit-test equivalent — the defect exists only in the minified artifact.
 
 What the single refresher fixed, precisely — the per-kind refreshers could not paint the wrong
 content *in an unminified build* (each only ever enumerated its own receivers' ids, and Glance's

@@ -329,7 +329,11 @@ sentry {
 //
 // Release-only by construction — there is no mapping file without R8 — so it runs in
 // `release.yml`'s `assembleRelease`, not in the PR unit-test job.
-val widgetClassesRequiringDistinctNames = listOf(
+//
+// Every class below is pinned by a `-keep` rule, so R8 must emit it under its ORIGINAL name. The
+// check is therefore `output == original`, not merely "no two share an output name" — see the
+// three defect shapes enumerated at the comparison itself.
+val widgetClassesRequiringOwnRuntimeName = listOf(
     "com.ohmz.tday.compose.feature.widget.TodayTasksWidget",
     "com.ohmz.tday.compose.feature.widget.FloaterTasksWidget",
     "com.ohmz.tday.compose.feature.widget.ListTasksWidget",
@@ -353,13 +357,13 @@ androidComponents.onVariants { variant ->
     if (variant.buildType != releaseBuildType) return@onVariants
 
     val mappingFile = variant.artifacts.get(SingleArtifact.OBFUSCATION_MAPPING_FILE)
-    val expected = widgetClassesRequiringDistinctNames
+    val expected = widgetClassesRequiringOwnRuntimeName
     val variantName = variant.name.replaceFirstChar { it.uppercase() }
 
     val verifyWidgetClassIdentity = tasks.register("verify${variantName}WidgetClassIdentity") {
         group = "verification"
         description =
-            "Fails if R8 merged two Glance widget classes or receivers into one runtime class."
+            "Fails if R8 merged, removed or renamed a Glance widget class or receiver."
 
         inputs.file(mappingFile).withPropertyName("r8Mapping")
         // Cheap, and a stale "pass" here would be a silently broken gate.
@@ -388,27 +392,41 @@ androidComponents.onVariants { variant ->
                 }
             }
 
-            // A class R8 merged INTO another loses its own definition line entirely, which is how
-            // TodayTasksWidget and ListTasksWidget vanished. Absence is the primary symptom.
-            val missing = expected.filterNot { it in outputNameByClass }
-            val collisions = outputNameByClass.entries
-                .groupBy({ it.value }, { it.key })
-                .filterValues { it.size > 1 }
+            // These classes are `-keep`-pinned, so the contract is the strongest one available:
+            // each must appear under its OWN name. Asserting that catches all three ways the
+            // guarantee can be lost, where a "no two share an output name" check catches only one:
+            //
+            //  - MERGED into a sibling — the class loses its definition line entirely. This is how
+            //    TodayTasksWidget and ListTasksWidget vanished, and it is the reported bug.
+            //  - SHRUNK OUT — R8 still writes a line, as `<original> -> R8$$REMOVED$$CLASS$$<N>:`.
+            //    It has the same `" -> "` + trailing-colon shape as a real class, so a naive parse
+            //    records it as present, and <N> is unique per removed class so it collides with
+            //    nothing. A distinctness-only check would report success on a class that is not in
+            //    the APK at all. Not hypothetical: this build's own mapping carries ~1000 of them.
+            //  - RENAMED — the keep rule stopped matching (a package move, a rule edit). Glance's
+            //    `providerNameToReceivers` lookup is by canonical name, so a rename breaks the same
+            //    resolution a merge does.
+            val removedMarker = "R8\$\$REMOVED\$\$CLASS\$\$"
+            val defects = expected.mapNotNull { original ->
+                val output = outputNameByClass[original]
+                when {
+                    output == null -> original to "no mapping entry: merged into another class"
+                    output == original -> null
+                    output.startsWith(removedMarker) ->
+                        original to "shrunk out of the APK: R8 emitted '$output'"
+                    else -> original to "renamed to '$output': its keep rule is not applying"
+                }
+            }
 
-            if (missing.isNotEmpty() || collisions.isNotEmpty()) {
+            if (defects.isNotEmpty()) {
                 val detail = buildString {
-                    appendLine("R8 collapsed Glance widget class identities in the release build.")
+                    appendLine(
+                        "Glance widget classes lost their own runtime names in the release build.",
+                    )
                     appendLine("Glance resolves providers by canonical class name and keys render")
                     appendLine("sessions on the appWidgetId alone, so this makes a widget render as")
                     appendLine("another kind until the process is replaced.")
-                    if (missing.isNotEmpty()) {
-                        appendLine("No mapping entry (merged away or shrunk out):")
-                        missing.forEach { appendLine("  - $it") }
-                    }
-                    collisions.forEach { (output, originals) ->
-                        appendLine("Share the output name '$output':")
-                        originals.forEach { appendLine("  - $it") }
-                    }
+                    defects.forEach { (original, reason) -> appendLine("  - $original — $reason") }
                     appendLine("Restore the Glance keep rules in app/proguard-rules.pro.")
                     append("Mapping: ${mapping.absolutePath}")
                 }
@@ -416,7 +434,7 @@ androidComponents.onVariants { variant ->
             }
 
             logger.lifecycle(
-                "verifyWidgetClassIdentity: ${expected.size} widget classes have distinct " +
+                "verifyWidgetClassIdentity: ${expected.size} widget classes kept their own " +
                     "runtime names.",
             )
         }
