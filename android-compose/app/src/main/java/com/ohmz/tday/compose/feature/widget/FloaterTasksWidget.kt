@@ -4,13 +4,13 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.util.Log
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.glance.GlanceId
 import androidx.glance.GlanceTheme
 import androidx.glance.appwidget.GlanceAppWidget
+import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.provideContent
@@ -44,6 +44,14 @@ class FloaterTasksWidget : GlanceAppWidget() {
         // See TodayTasksWidget for the full rationale — no EntryPointAccessors / Hilt / DB on
         // this path. Both stores below are constructed directly from applicationContext.
         val appContext = context.applicationContext
+        // See TodayTasksWidget: fixed for this instance's lifetime, so safe above `provideContent`,
+        // and it rides the "+" deep link so the create sheet resolves THIS instance's feed rather
+        // than trusting the deep link's own `target` parameter.
+        val appWidgetId = GlanceAppWidgetManager(appContext).getAppWidgetId(id)
+        // See TodayTasksWidget: the platform's own owner for this id, logged alongside the class
+        // that is composing so a cross-kind render would print itself rather than needing to be
+        // argued about. `widgetComposeLogLine` has the full rationale.
+        val providerKind = WidgetInstanceResolver(appContext).kindOf(appWidgetId)
         val securityPreferenceStore = AppSecurityPreferenceStore(appContext)
         val snapshotStore = WidgetSnapshotStore(appContext)
         val title = appContext.getString(R.string.widget_floater_tasks_title)
@@ -80,9 +88,11 @@ class FloaterTasksWidget : GlanceAppWidget() {
                 if (isAppLocked) null else snapshotStore.readFloater()
             }
             // See TodayTasksWidget: fires on every recompute this key change causes.
-            Log.i(
-                WIDGET_LOG_TAG,
-                "floater: composing, version=$snapshotVersion locked=$isAppLocked " +
+            logWidgetComposition(
+                composingAs = WidgetInstanceKind.FLOATER,
+                appWidgetId = appWidgetId,
+                providerKind = providerKind,
+                details = "version=$snapshotVersion locked=$isAppLocked " +
                     "snapshotNull=${currentSnapshot == null}",
             )
 
@@ -113,7 +123,7 @@ class FloaterTasksWidget : GlanceAppWidget() {
                     },
                     visuals = FloaterWidgetVisuals,
                     openAction = openFloaterAction(),
-                    addAction = openCreateFloaterAction(),
+                    addAction = openCreateFloaterAction(appWidgetId),
                 )
             }
         }
@@ -141,8 +151,11 @@ private fun FloaterTasksWidgetStrings.countLabel(count: Int): String {
     return String.format(Locale.getDefault(), countLabelFormat, count)
 }
 
-private fun openCreateFloaterAction() = actionStartActivity(
-    Intent(Intent.ACTION_VIEW, Uri.parse(CREATE_FLOATER_DEEP_LINK)).apply {
+private fun openCreateFloaterAction(appWidgetId: Int) = actionStartActivity(
+    Intent(
+        Intent.ACTION_VIEW,
+        Uri.parse(WidgetCreateRoute.deepLink(WidgetCreateRoute.targetFor(WidgetFeed.FLOATER), appWidgetId)),
+    ).apply {
         component = ComponentName(
             BuildConfig.APPLICATION_ID,
             WidgetCreateTaskActivity::class.java.name,
@@ -159,4 +172,3 @@ private fun openFloaterAction() = actionStartActivity(
 )
 
 private const val FLOATER_DEEP_LINK = "tday://floater"
-private const val CREATE_FLOATER_DEEP_LINK = "tday://todos/create?target=floater"

@@ -4,13 +4,13 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.util.Log
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.glance.GlanceId
 import androidx.glance.GlanceTheme
 import androidx.glance.appwidget.GlanceAppWidget
+import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.provideContent
@@ -58,6 +58,16 @@ class TodayTasksWidget : GlanceAppWidget() {
         // stores below are constructed directly from applicationContext, exactly the way
         // AppSecurityPreferenceStore already was before this change.
         val appContext = context.applicationContext
+        // Safe to resolve once above `provideContent`, exactly as ListTasksWidget already does: an
+        // instance's own id is fixed for its lifetime (unlike the snapshot and the lock flag below,
+        // which are collected as state inside). It travels on the "+" deep link so the create sheet
+        // and its repaint can identify THIS instance instead of guessing a kind.
+        val appWidgetId = GlanceAppWidgetManager(appContext).getAppWidgetId(id)
+        // Which receiver the PLATFORM says owns this id — resolved here for the same reason as the
+        // id itself (fixed for the instance's lifetime, one binder call per Glance session) and
+        // used only by the composing log line. See `widgetComposeLogLine`: it is what makes "did a
+        // Today session paint a Floater instance?" answerable from one logcat capture.
+        val providerKind = WidgetInstanceResolver(appContext).kindOf(appWidgetId)
         val securityPreferenceStore = AppSecurityPreferenceStore(appContext)
         val snapshotStore = WidgetSnapshotStore(appContext)
         val title = appContext.getString(R.string.widget_today_tasks_title)
@@ -98,9 +108,11 @@ class TodayTasksWidget : GlanceAppWidget() {
             // Fires on every recompute this key change causes (cold start, a fresh snapshot, or
             // a lock toggle) — absence after a reboot means the widget was never composed at all;
             // presence with snapshotNull=true past the first frame means something is stuck.
-            Log.i(
-                WIDGET_LOG_TAG,
-                "today: composing, version=$snapshotVersion locked=$isAppLocked " +
+            logWidgetComposition(
+                composingAs = WidgetInstanceKind.TODAY,
+                appWidgetId = appWidgetId,
+                providerKind = providerKind,
+                details = "version=$snapshotVersion locked=$isAppLocked " +
                     "snapshotNull=${currentSnapshot == null}",
             )
             // Inside the composition so the day/night artwork follows the clock too.
@@ -140,7 +152,7 @@ class TodayTasksWidget : GlanceAppWidget() {
                     },
                     visuals = visuals,
                     openAction = openAppAction(),
-                    addAction = openCreateTodayAction(),
+                    addAction = openCreateTodayAction(appWidgetId),
                 )
             }
         }
@@ -172,8 +184,11 @@ private fun dueTimeText(formatter: DateFormat, epochMs: Long): String {
     return formatter.format(Date.from(Instant.ofEpochMilli(epochMs)))
 }
 
-private fun openCreateTodayAction() = actionStartActivity(
-    Intent(Intent.ACTION_VIEW, Uri.parse(CREATE_TODAY_DEEP_LINK)).apply {
+private fun openCreateTodayAction(appWidgetId: Int) = actionStartActivity(
+    Intent(
+        Intent.ACTION_VIEW,
+        Uri.parse(WidgetCreateRoute.deepLink(WidgetCreateRoute.targetFor(WidgetFeed.SCHEDULED), appWidgetId)),
+    ).apply {
         component = ComponentName(
             BuildConfig.APPLICATION_ID,
             WidgetCreateTaskActivity::class.java.name,
@@ -189,5 +204,3 @@ private fun openAppAction() = actionStartActivity(
         addCategory(Intent.CATEGORY_LAUNCHER)
     },
 )
-
-private const val CREATE_TODAY_DEEP_LINK = "tday://todos/create?target=today"

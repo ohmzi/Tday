@@ -5,7 +5,6 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -60,6 +59,9 @@ class ListTasksWidget : GlanceAppWidget() {
         // own id is fixed for its lifetime, so this is the one piece of per-instance state that
         // is fine to read above `provideContent`.
         val appWidgetId = GlanceAppWidgetManager(appContext).getAppWidgetId(id)
+        // See TodayTasksWidget: the platform's own owner for this id, logged alongside the class
+        // that is composing. Same "fixed for this instance's lifetime" argument as the id above.
+        val providerKind = WidgetInstanceResolver(appContext).kindOf(appWidgetId)
 
         val securityPreferenceStore = AppSecurityPreferenceStore(appContext)
         val snapshotStore = WidgetSnapshotStore(appContext)
@@ -77,7 +79,14 @@ class ListTasksWidget : GlanceAppWidget() {
         }
 
         provideContent {
-            ListTasksWidgetContent(appContext, appWidgetId, securityPreferenceStore, snapshotStore, selectionStore)
+            ListTasksWidgetContent(
+                appContext = appContext,
+                appWidgetId = appWidgetId,
+                providerKind = providerKind,
+                securityPreferenceStore = securityPreferenceStore,
+                snapshotStore = snapshotStore,
+                selectionStore = selectionStore,
+            )
         }
     }
 }
@@ -92,6 +101,7 @@ class ListTasksWidget : GlanceAppWidget() {
 private fun ListTasksWidgetContent(
     appContext: Context,
     appWidgetId: Int,
+    providerKind: WidgetInstanceKind?,
     securityPreferenceStore: AppSecurityPreferenceStore,
     snapshotStore: WidgetSnapshotStore,
     selectionStore: WidgetListSelectionStore,
@@ -107,9 +117,11 @@ private fun ListTasksWidgetContent(
     val currentSnapshot = remember(snapshotVersion, isAppLocked, selection) {
         if (isAppLocked || selection == null) null else snapshotStore.readList(appWidgetId)
     }
-    Log.i(
-        WIDGET_LOG_TAG,
-        "list[$appWidgetId]: composing, version=$snapshotVersion locked=$isAppLocked " +
+    logWidgetComposition(
+        composingAs = WidgetInstanceKind.LIST,
+        appWidgetId = appWidgetId,
+        providerKind = providerKind,
+        details = "version=$snapshotVersion locked=$isAppLocked " +
             "listType=${selection?.listType?.name ?: "none"} snapshotNull=${currentSnapshot == null}",
     )
 
@@ -138,8 +150,10 @@ private fun ListTasksWidgetBody(
     if (selection == null) {
         // No selection on disk: an instance whose configuration was somehow lost (store cleared
         // without the widget itself being removed), or the launcher called `provideGlance`
-        // before `WidgetListConfigurationActivity` finished writing it — reuse the SETUP visual
-        // as "tap to finish setting this up" rather than inventing a fourth content state.
+        // before `WidgetListConfigurationActivity` finished writing it — reuse the SETUP content
+        // state as "tap to finish setting this up" rather than inventing a fourth one. The
+        // VISUALS for it are kind-neutral (see UnconfiguredListWidgetVisuals): the content state
+        // is shared with the configured widgets, the identity is not.
         UnconfiguredListWidgetContent(
             appContext = appContext,
             appWidgetId = appWidgetId,
@@ -150,6 +164,7 @@ private fun ListTasksWidgetBody(
     } else {
         ConfiguredListWidgetContent(
             appContext = appContext,
+            appWidgetId = appWidgetId,
             selection = selection,
             title = title,
             visuals = visuals,
@@ -159,9 +174,29 @@ private fun ListTasksWidgetBody(
     }
 }
 
-private fun listWidgetVisualsFor(listType: WidgetListType?): TaskWidgetVisuals = when (listType) {
+/**
+ * The look of an instance whose selection could not be read — no watermark and a neutral "+",
+ * rather than any kind's accent.
+ *
+ * This is the render half of the same rule [WidgetInstanceCatalog.feedFor] holds for routing: an
+ * unresolved instance must not be presented as the scheduled widget. It used to fall in with
+ * [WidgetListType.TODO] on the `null` branch below, which meant a per-list instance whose
+ * selection was momentarily unreadable painted the Today sun watermark and the Today accent — the
+ * scheduled widget's whole visual identity — on a widget that may well be on a floater list, then
+ * changed back the moment the selection re-read. The state it is really in is "not configured
+ * yet", and it now looks like that and nothing else.
+ */
+internal val UnconfiguredListWidgetVisuals = TaskWidgetVisuals(
+    addButtonBackground = R.drawable.widget_add_button_background_neutral,
+    addIcon = R.drawable.widget_add_icon_neutral,
+    emptyWatermark = null,
+    setupWatermark = null,
+)
+
+internal fun listWidgetVisualsFor(listType: WidgetListType?): TaskWidgetVisuals = when (listType) {
     WidgetListType.FLOATER -> FloaterWidgetVisuals
-    WidgetListType.TODO, null -> todayWidgetVisuals(taskWidgetIsDaytime(LocalTime.now().hour))
+    WidgetListType.TODO -> todayWidgetVisuals(taskWidgetIsDaytime(LocalTime.now().hour))
+    null -> UnconfiguredListWidgetVisuals
 }
 
 /**
@@ -204,6 +239,7 @@ private fun UnconfiguredListWidgetContent(
 @Composable
 private fun ConfiguredListWidgetContent(
     appContext: Context,
+    appWidgetId: Int,
     selection: WidgetListSelection,
     title: String,
     visuals: TaskWidgetVisuals,
@@ -229,7 +265,7 @@ private fun ConfiguredListWidgetContent(
         },
         visuals = visuals,
         openAction = openListAction(selection.listId, selection.listName, selection.listType),
-        addAction = openCreateListTaskAction(selection.listId, selection.listType),
+        addAction = openCreateListTaskAction(appWidgetId, selection.listId, selection.listType),
     )
 }
 
@@ -321,12 +357,25 @@ private fun reconfigureAction(appWidgetId: Int) = actionStartActivity(
     },
 )
 
-private fun openCreateListTaskAction(listId: String, listType: WidgetListType) = actionStartActivity(
+/**
+ * Carries this instance's own `appWidgetId`, so the create sheet resolves the feed from the
+ * placement itself. The `target` parameter stays for the entry points that have no widget, but it
+ * is no longer what decides this widget's behavior — a list instance whose stored selection cannot
+ * be read now fails closed instead of quietly creating a scheduled task.
+ */
+private fun openCreateListTaskAction(
+    appWidgetId: Int,
+    listId: String,
+    listType: WidgetListType,
+) = actionStartActivity(
     Intent(
         Intent.ACTION_VIEW,
         Uri.parse(
-            "tday://todos/create?target=${if (listType == WidgetListType.TODO) "today" else "floater"}" +
-                "&listId=${Uri.encode(listId)}",
+            WidgetCreateRoute.deepLink(
+                target = WidgetCreateRoute.targetFor(WidgetInstanceCatalog.feedForListType(listType)),
+                appWidgetId = appWidgetId,
+                listId = listId,
+            ),
         ),
     ).apply {
         component = ComponentName(

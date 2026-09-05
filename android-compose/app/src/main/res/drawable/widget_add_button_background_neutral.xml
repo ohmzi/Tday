@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?><!-- Add-button background for a widget instance whose kind is not resolved yet (see
+     ListTasksWidget.UnconfiguredListWidgetVisuals). Uses the neutral chip surface rather than
+     either accent wash, so a per-list widget awaiting configuration does not borrow the scheduled
+     or floater widget's identity. Same 14dp radius as the accent variants. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/tday_widget_due_chip_background" />
+    <corners android:radius="14dp" />
+</shape>
