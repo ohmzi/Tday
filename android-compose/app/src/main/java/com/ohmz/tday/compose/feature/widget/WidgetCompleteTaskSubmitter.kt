@@ -30,8 +30,7 @@ class WidgetCompleteTaskSubmitter @Inject constructor(
     @ApplicationContext private val context: Context,
     private val cacheManager: OfflineCacheManager,
     private val todoRepository: TodoRepository,
-    private val todayTasksWidgetRefresher: TodayTasksWidgetRefresher,
-    private val floaterTasksWidgetRefresher: FloaterTasksWidgetRefresher,
+    private val widgetRefresher: WidgetRefresher,
 ) {
     suspend fun completeTodayTask(taskId: String) = withContext(Dispatchers.Default) {
         runCatching {
@@ -49,7 +48,7 @@ class WidgetCompleteTaskSubmitter @Inject constructor(
             WidgetSyncWorker.runOnce(context)
         }.onFailure { error ->
             TdayTelemetry.capture(error, operation = "widget_complete_task.submit")
-            todayTasksWidgetRefresher.refreshNow()
+            widgetRefresher.refreshNow()
         }
     }
 
@@ -62,7 +61,7 @@ class WidgetCompleteTaskSubmitter @Inject constructor(
             WidgetSyncWorker.runOnce(context)
         }.onFailure { error ->
             TdayTelemetry.capture(error, operation = "widget_complete_floater.submit")
-            floaterTasksWidgetRefresher.refreshNow()
+            widgetRefresher.refreshNow()
         }
     }
 }

@@ -9,9 +9,7 @@ import com.ohmz.tday.compose.core.data.db.SyncMetadataEntity
 import com.ohmz.tday.compose.core.data.db.TdayDatabase
 import com.ohmz.tday.compose.core.data.db.toEntity
 import com.ohmz.tday.compose.core.data.db.toRecord
-import com.ohmz.tday.compose.feature.widget.FloaterTasksWidgetRefresher
-import com.ohmz.tday.compose.feature.widget.ListTasksWidgetRefresher
-import com.ohmz.tday.compose.feature.widget.TodayTasksWidgetRefresher
+import com.ohmz.tday.compose.feature.widget.WidgetRefresher
 import com.ohmz.tday.compose.feature.widget.snapshot.WidgetSnapshotWriter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -33,9 +31,7 @@ class OfflineCacheManager @Inject constructor(
     private val json: Json,
     private val themePreferenceStore: ThemePreferenceStore,
     private val cookieManager: CookieManager,
-    private val todayTasksWidgetRefresher: TodayTasksWidgetRefresher,
-    private val floaterTasksWidgetRefresher: FloaterTasksWidgetRefresher,
-    private val listTasksWidgetRefresher: ListTasksWidgetRefresher,
+    private val widgetRefresher: WidgetRefresher,
     private val widgetSnapshotWriter: WidgetSnapshotWriter,
 ) {
     private val todoDao = database.todoDao()
@@ -93,9 +89,7 @@ class OfflineCacheManager @Inject constructor(
         widgetSnapshotWriter.write(state)
         lastPersistedState = state
         cacheDataVersionMutable.value = cacheDataVersionMutable.value + 1L
-        todayTasksWidgetRefresher.requestRefresh()
-        floaterTasksWidgetRefresher.requestRefresh()
-        listTasksWidgetRefresher.requestRefresh()
+        widgetRefresher.requestRefresh()
         Log.i(LOG_TAG, "Migrated offline cache from SharedPreferences to Room")
     }
 
@@ -208,9 +202,7 @@ class OfflineCacheManager @Inject constructor(
             // write and paints the previous snapshot.
             widgetSnapshotWriter.write(normalizedState)
             cacheDataVersionMutable.value = cacheDataVersionMutable.value + 1L
-            todayTasksWidgetRefresher.requestRefresh()
-            floaterTasksWidgetRefresher.requestRefresh()
-            listTasksWidgetRefresher.requestRefresh()
+            widgetRefresher.requestRefresh()
         }
         if (hasSyncMetadataChanges) {
             syncMetadataVersionMutable.value = syncMetadataVersionMutable.value + 1L
@@ -255,9 +247,7 @@ class OfflineCacheManager @Inject constructor(
             // correctly reads UNSET — this writes a SETUP snapshot, not a stale TASKS one.
             widgetSnapshotWriter.write(cleared)
             cacheDataVersionMutable.value = cacheDataVersionMutable.value + 1L
-            todayTasksWidgetRefresher.requestRefresh()
-            floaterTasksWidgetRefresher.requestRefresh()
-            listTasksWidgetRefresher.requestRefresh()
+            widgetRefresher.requestRefresh()
         }
         if (hasSyncMetadataChanges(previous, cleared)) {
             syncMetadataVersionMutable.value = syncMetadataVersionMutable.value + 1L
@@ -276,9 +266,7 @@ class OfflineCacheManager @Inject constructor(
         if (hasUiDataChanges(previous, cleared)) {
             widgetSnapshotWriter.write(cleared)
             cacheDataVersionMutable.value = cacheDataVersionMutable.value + 1L
-            todayTasksWidgetRefresher.requestRefresh()
-            floaterTasksWidgetRefresher.requestRefresh()
-            listTasksWidgetRefresher.requestRefresh()
+            widgetRefresher.requestRefresh()
         }
         if (hasSyncMetadataChanges(previous, cleared)) {
             syncMetadataVersionMutable.value = syncMetadataVersionMutable.value + 1L
