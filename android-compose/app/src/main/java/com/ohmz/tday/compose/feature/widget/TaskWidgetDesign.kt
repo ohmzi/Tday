@@ -701,9 +701,7 @@ internal fun taskWidgetPriorityRingResource(priority: String): Int {
     }
 }
 
-internal fun taskWidgetIsDaytime(hour: Int): Boolean {
-    return hour in 6 until 18
-}
+internal fun taskWidgetIsDaytime(hour: Int): Boolean = hour in 6 until 18
 
 internal fun taskWidgetLayoutFor(size: DpSize): TaskWidgetLayout {
     return when {
@@ -714,9 +712,8 @@ internal fun taskWidgetLayoutFor(size: DpSize): TaskWidgetLayout {
     }
 }
 
-internal fun taskWidgetShowsTrailingText(layout: TaskWidgetLayout): Boolean {
-    return layout == TaskWidgetLayout.MEDIUM || layout == TaskWidgetLayout.TALL
-}
+internal fun taskWidgetShowsTrailingText(layout: TaskWidgetLayout): Boolean =
+    layout == TaskWidgetLayout.MEDIUM || layout == TaskWidgetLayout.TALL
 
 private fun taskWidgetMetrics(layout: TaskWidgetLayout): TaskWidgetMetrics {
     return when (layout) {
