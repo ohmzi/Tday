@@ -200,7 +200,7 @@ fun TdayApp(
     val deepLinkIntent by activity?.deepLinkIntent?.collectAsStateWithLifecycle()
         ?: remember { mutableStateOf(null) }
 
-    LaunchedEffect(deepLinkIntent, appUiState.isWorkspaceAvailable) {
+    LaunchedEffect(deepLinkIntent, appUiState.isWorkspaceAvailable, currentRoute) {
         val intent = deepLinkIntent ?: return@LaunchedEffect
         // Defer deep links (e.g. the Floater widget's tday://floater) until the session is
         // restored and the workspace is available. Handling one during cold-start bootstrap
@@ -208,6 +208,17 @@ fun TdayApp(
         // auth was ready — which flashed the login screen and fired a generic
         // "something went wrong" error toast before settling. Consume it after so it fires once.
         if (!appUiState.isWorkspaceAvailable) return@LaunchedEffect
+        // No current entry means no graph yet — same guard, same reason, as
+        // HandleStartupNavigation's. Normally the NavHost composes and sets the graph in the very
+        // pass that flips isWorkspaceAvailable, so this effect always ran after it. It no longer
+        // has to: holding the pre-graph splash keeps the NavHost unbuilt past that flip, and a
+        // press there is a supported gesture, so the graph can still be unset when this runs.
+        // handleDeepLink(Intent) reads it unconditionally — navigation-runtime 2.8.5 goes
+        // getTopGraph(backQueue) -> backQueue.lastOrNull() is null -> _graph!! — and does so for
+        // the plain launcher Intent MainActivity dispatches on every cold launch just as much as
+        // for a tday:// one, so calling it here would NPE. currentRoute is a key, so the deep
+        // link is held rather than dropped and fires once the graph exists.
+        if (currentRoute == null) return@LaunchedEffect
         navController.handleDeepLink(intent.withoutTaskRestartFlags())
         activity?.consumeDeepLink()
     }
