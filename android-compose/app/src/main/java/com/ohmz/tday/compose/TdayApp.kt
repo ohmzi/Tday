@@ -141,6 +141,11 @@ fun TdayApp(
     val startupTagline = rememberSaveable(splashTaglineOptions.contentHashCode()) {
         splashTaglineOptions.random()
     }
+    // A fresh instance every composition, which makes it the one unstable key of the memoized
+    // NavHost builder lambda below and so rebuilds the nav graph on every recomposition. That is
+    // incidental, not load-bearing: nothing the graph hands a destination is a snapshot value, so
+    // no screen depends on the rebuild to see a change (see the note at the builder). Memoizing it
+    // is therefore safe, but it is a perf change rather than a fix and does not belong here.
     val unauthenticatedScheduledTaskHomeUiState = unauthenticatedScheduledTaskHomeUiState(
         lockedListName = stringResource(R.string.scheduled_task_home_locked_list_name),
     )
@@ -338,44 +343,52 @@ fun TdayApp(
                         navController = navController,
                         appViewModel = appViewModel,
                     )
+                    // Every changing value crosses into a route as a `() -> T` reader, never as
+                    // the value itself. This lambda is the NavGraph *builder*: it runs once per
+                    // graph build, inside NavHost's `remember(route, startDestination, builder)`,
+                    // and NOT on recomposition. A `by`-delegated read performed here is recorded
+                    // against NavHost's scope and then frozen into the destination for the life of
+                    // the graph, so writing the state would never reach the screen. Reading through
+                    // the lambda instead defers the snapshot read to the `composable { }` body,
+                    // where it belongs to the destination's own recompose scope.
                     rootFeedRoutes(
-                        appUiState = appUiState,
+                        appUiState = { appUiState },
                         appViewModel = appViewModel,
                         navController = navController,
                         unauthenticatedUiState = unauthenticatedScheduledTaskHomeUiState,
-                        rootFeedTab = rootFeedTab,
+                        rootFeedTab = { rootFeedTab },
                         onSelectRootFeedTab = ::handleRootFeedTabSelection,
                         onChangeRootFeedTab = { rootFeedTab = it },
-                        rootCreateTaskRequestKey = rootCreateTaskRequestKey,
+                        rootCreateTaskRequestKey = { rootCreateTaskRequestKey },
                         onCreateTaskRequestHandled = ::consumeRootCreateTaskRequest,
                         onRequestCreateTask = ::requestRootCreateTask,
-                        scheduledScrollToTopRequestKey = scheduledTaskHomeScrollToTopRequestKey,
-                        floaterScrollToTopRequestKey = floaterTaskHomeScrollToTopRequestKey,
-                        rootDockCollapsed = rootDockCollapsed,
+                        scheduledScrollToTopRequestKey = { scheduledTaskHomeScrollToTopRequestKey },
+                        floaterScrollToTopRequestKey = { floaterTaskHomeScrollToTopRequestKey },
+                        rootDockCollapsed = { rootDockCollapsed },
                         onRootDockCollapsedChange = { rootDockCollapsed = it },
-                        rootControlsVisible = rootControlsVisible,
+                        rootControlsVisible = { rootControlsVisible },
                         onRootControlsVisibleChange = { rootControlsVisible = it },
                     )
                     todoScopeRoutes(
                         navController = navController,
-                        isLocalMode = appUiState.isLocalMode,
+                        isLocalMode = { appUiState.isLocalMode },
                         onChangeRootFeedTab = { rootFeedTab = it },
                         onRequestFloaterCreateTask = { pendingFloaterTaskHomeCreateTask = true },
                     )
                     listRoutes(
                         navController = navController,
-                        isLocalMode = appUiState.isLocalMode,
+                        isLocalMode = { appUiState.isLocalMode },
                         onChangeRootFeedTab = { rootFeedTab = it },
                     )
                     utilityRoutes(
                         navController = navController,
-                        isLocalMode = appUiState.isLocalMode,
+                        isLocalMode = { appUiState.isLocalMode },
                     )
                     settingsRoutes(
                         navController = navController,
-                        appUiState = appUiState,
+                        appUiState = { appUiState },
                         appViewModel = appViewModel,
-                        releaseUiState = releaseUiState,
+                        releaseUiState = { releaseUiState },
                         releaseViewModel = releaseViewModel,
                         passwordChangedToastMessage = passwordChangedToastMessage,
                         profileNameUpdatedToastMessage = profileNameUpdatedToastMessage,
@@ -455,23 +468,26 @@ private fun NavGraphBuilder.splashAndAuthRoutes(
  * The two root feeds. `home` is the real one — it draws whichever feed the dock has selected, plus
  * the onboarding wizard when there is no workspace — and `floater` only exists so the widget's
  * `tday://floater` has a destination to land on before it hands over to `home`.
+ *
+ * The changing values arrive as `() -> T` readers and are dereferenced inside `composable { }`, so
+ * the snapshot read lands in the destination's recompose scope rather than in the graph builder's.
  */
 private fun NavGraphBuilder.rootFeedRoutes(
-    appUiState: AppUiState,
+    appUiState: () -> AppUiState,
     appViewModel: AppViewModel,
     navController: NavHostController,
     unauthenticatedUiState: ScheduledTaskHomeUiState,
-    rootFeedTab: RootFeedTab,
+    rootFeedTab: () -> RootFeedTab,
     onSelectRootFeedTab: (RootFeedTab) -> Unit,
     onChangeRootFeedTab: (RootFeedTab) -> Unit,
-    rootCreateTaskRequestKey: Int,
+    rootCreateTaskRequestKey: () -> Int,
     onCreateTaskRequestHandled: (Int) -> Unit,
     onRequestCreateTask: () -> Unit,
-    scheduledScrollToTopRequestKey: Int,
-    floaterScrollToTopRequestKey: Int,
-    rootDockCollapsed: Boolean,
+    scheduledScrollToTopRequestKey: () -> Int,
+    floaterScrollToTopRequestKey: () -> Int,
+    rootDockCollapsed: () -> Boolean,
     onRootDockCollapsedChange: (Boolean) -> Unit,
-    rootControlsVisible: Boolean,
+    rootControlsVisible: () -> Boolean,
     onRootControlsVisibleChange: (Boolean) -> Unit,
 ) {
     composable(
@@ -479,21 +495,21 @@ private fun NavGraphBuilder.rootFeedRoutes(
         deepLinks = listOf(navDeepLink { uriPattern = "tday://home" }),
     ) {
         ScheduledTaskHomeRoute(
-            appUiState = appUiState,
+            appUiState = appUiState(),
             appViewModel = appViewModel,
             navController = navController,
             unauthenticatedUiState = unauthenticatedUiState,
-            rootFeedTab = rootFeedTab,
+            rootFeedTab = rootFeedTab(),
             onSelectRootFeedTab = onSelectRootFeedTab,
             onChangeRootFeedTab = onChangeRootFeedTab,
-            rootCreateTaskRequestKey = rootCreateTaskRequestKey,
+            rootCreateTaskRequestKey = rootCreateTaskRequestKey(),
             onCreateTaskRequestHandled = onCreateTaskRequestHandled,
             onRequestCreateTask = onRequestCreateTask,
-            scheduledScrollToTopRequestKey = scheduledScrollToTopRequestKey,
-            floaterScrollToTopRequestKey = floaterScrollToTopRequestKey,
-            rootDockCollapsed = rootDockCollapsed,
+            scheduledScrollToTopRequestKey = scheduledScrollToTopRequestKey(),
+            floaterScrollToTopRequestKey = floaterScrollToTopRequestKey(),
+            rootDockCollapsed = rootDockCollapsed(),
             onRootDockCollapsedChange = onRootDockCollapsedChange,
-            rootControlsVisible = rootControlsVisible,
+            rootControlsVisible = rootControlsVisible(),
             onRootControlsVisibleChange = onRootControlsVisibleChange,
         )
     }
@@ -516,7 +532,7 @@ private fun NavGraphBuilder.rootFeedRoutes(
 /** The five scheduled-task scopes reachable from the home cards, plus the create-task deep link. */
 private fun NavGraphBuilder.todoScopeRoutes(
     navController: NavHostController,
-    isLocalMode: Boolean,
+    isLocalMode: () -> Boolean,
     onChangeRootFeedTab: (RootFeedTab) -> Unit,
     onRequestFloaterCreateTask: () -> Unit,
 ) {
@@ -527,8 +543,8 @@ private fun NavGraphBuilder.todoScopeRoutes(
         TodosRoute(
             mode = TodoListMode.TODAY,
             onBack = { navController.popBackStack() },
-            pullRefreshEnabled = !isLocalMode,
-            summaryAvailable = !isLocalMode,
+            pullRefreshEnabled = !isLocalMode(),
+            summaryAvailable = !isLocalMode(),
         )
     }
 
@@ -551,8 +567,8 @@ private fun NavGraphBuilder.todoScopeRoutes(
                     launchSingleTop = true
                 }
             },
-            pullRefreshEnabled = !isLocalMode,
-            summaryAvailable = !isLocalMode,
+            pullRefreshEnabled = !isLocalMode(),
+            summaryAvailable = !isLocalMode(),
         )
     }
 
@@ -563,8 +579,8 @@ private fun NavGraphBuilder.todoScopeRoutes(
         TodosRoute(
             mode = TodoListMode.SCHEDULED,
             onBack = { navController.popBackStack() },
-            pullRefreshEnabled = !isLocalMode,
-            summaryAvailable = !isLocalMode,
+            pullRefreshEnabled = !isLocalMode(),
+            summaryAvailable = !isLocalMode(),
         )
     }
 
@@ -594,8 +610,8 @@ private fun NavGraphBuilder.todoScopeRoutes(
             mode = TodoListMode.ALL,
             highlightTodoId = highlightTodoId,
             onBack = { navController.popBackStack() },
-            pullRefreshEnabled = !isLocalMode,
-            summaryAvailable = !isLocalMode,
+            pullRefreshEnabled = !isLocalMode(),
+            summaryAvailable = !isLocalMode(),
         )
     }
 
@@ -606,8 +622,8 @@ private fun NavGraphBuilder.todoScopeRoutes(
         TodosRoute(
             mode = TodoListMode.PRIORITY,
             onBack = { navController.popBackStack() },
-            pullRefreshEnabled = !isLocalMode,
-            summaryAvailable = !isLocalMode,
+            pullRefreshEnabled = !isLocalMode(),
+            summaryAvailable = !isLocalMode(),
         )
     }
 }
@@ -619,7 +635,7 @@ private fun NavGraphBuilder.todoScopeRoutes(
  */
 private fun NavGraphBuilder.createTodayTodoRoute(
     navController: NavHostController,
-    isLocalMode: Boolean,
+    isLocalMode: () -> Boolean,
     onChangeRootFeedTab: (RootFeedTab) -> Unit,
     onRequestFloaterCreateTask: () -> Unit,
 ) {
@@ -668,8 +684,8 @@ private fun NavGraphBuilder.createTodayTodoRoute(
                 onBack = finishCreateTodayFlow,
                 openCreateTaskOnStart = true,
                 onCreateTaskFlowFinished = finishCreateTodayFlow,
-                pullRefreshEnabled = !isLocalMode,
-                summaryAvailable = !isLocalMode,
+                pullRefreshEnabled = !isLocalMode(),
+                summaryAvailable = !isLocalMode(),
             )
         }
     }
@@ -678,7 +694,7 @@ private fun NavGraphBuilder.createTodayTodoRoute(
 /** The two per-list feeds: a scheduled list and a floater list. */
 private fun NavGraphBuilder.listRoutes(
     navController: NavHostController,
-    isLocalMode: Boolean,
+    isLocalMode: () -> Boolean,
     onChangeRootFeedTab: (RootFeedTab) -> Unit,
 ) {
     composable(
@@ -698,8 +714,8 @@ private fun NavGraphBuilder.listRoutes(
             listId = listId,
             listName = listName,
             onBack = { navController.popBackStack() },
-            pullRefreshEnabled = !isLocalMode,
-            summaryAvailable = !isLocalMode,
+            pullRefreshEnabled = !isLocalMode(),
+            summaryAvailable = !isLocalMode(),
             onListDeleted = {
                 navController.navigate(AppRoute.ScheduledTaskHome.route) {
                     popUpTo(AppRoute.ScheduledTaskHome.route) { inclusive = false }
@@ -726,8 +742,8 @@ private fun NavGraphBuilder.listRoutes(
             listId = listId,
             listName = listName,
             onBack = { navController.popBackStack() },
-            pullRefreshEnabled = !isLocalMode,
-            summaryAvailable = !isLocalMode,
+            pullRefreshEnabled = !isLocalMode(),
+            summaryAvailable = !isLocalMode(),
             onListDeleted = {
                 onChangeRootFeedTab(RootFeedTab.FLOATER_TASK_HOME)
                 navController.navigate(AppRoute.ScheduledTaskHome.route) {
@@ -742,7 +758,7 @@ private fun NavGraphBuilder.listRoutes(
 /** Completed history, calendar, the car surface, morning sweep, and the in-app guide. */
 private fun NavGraphBuilder.utilityRoutes(
     navController: NavHostController,
-    isLocalMode: Boolean,
+    isLocalMode: () -> Boolean,
 ) {
     composable(
         route = AppRoute.Completed.route,
@@ -836,7 +852,7 @@ private fun NavGraphBuilder.utilityRoutes(
         popExitTransition = { settingsExitTransition() },
     ) { backStackEntry ->
         HelpGuideScreen(
-            isLocalMode = isLocalMode,
+            isLocalMode = isLocalMode(),
             onBack = { navController.popBackStack() },
             onOpenDeepLink = { route ->
                 navController.navigate(route) { launchSingleTop = true }
@@ -846,12 +862,16 @@ private fun NavGraphBuilder.utilityRoutes(
     }
 }
 
-/** Settings and the release notes screen it links to. */
+/**
+ * Settings and the release notes screen it links to. Both states arrive as `() -> T` readers for
+ * the same reason as [rootFeedRoutes]: the read has to happen in the destination, not in the
+ * builder.
+ */
 private fun NavGraphBuilder.settingsRoutes(
     navController: NavHostController,
-    appUiState: AppUiState,
+    appUiState: () -> AppUiState,
     appViewModel: AppViewModel,
-    releaseUiState: LatestReleaseUiState,
+    releaseUiState: () -> LatestReleaseUiState,
     releaseViewModel: LatestReleaseViewModel,
     passwordChangedToastMessage: String,
     profileNameUpdatedToastMessage: String,
@@ -878,22 +898,24 @@ private fun NavGraphBuilder.settingsRoutes(
             appViewModel.refreshDefaultHomeScreen()
             appViewModel.refreshVersionInfo()
         }
+        val settingsUiState = appUiState()
+        val settingsReleaseUiState = releaseUiState()
         SettingsScreen(
-            user = appUiState.user,
-            isLocalMode = appUiState.isLocalMode,
-            selectedThemeMode = appUiState.themeMode,
-            selectedReminder = appUiState.selectedReminder,
-            syncStatus = appUiState.syncStatus,
-            aiSummaryEnabled = appUiState.aiSummaryEnabled,
-            defaultHomeScreen = appUiState.defaultHomeScreen,
-            hasUpdate = releaseUiState.hasUpdate,
-            latestVersionName = releaseUiState.latestRelease?.version,
-            backendVersion = appUiState.backendVersion,
-            versionCheckResult = appUiState.versionCheckResult,
+            user = settingsUiState.user,
+            isLocalMode = settingsUiState.isLocalMode,
+            selectedThemeMode = settingsUiState.themeMode,
+            selectedReminder = settingsUiState.selectedReminder,
+            syncStatus = settingsUiState.syncStatus,
+            aiSummaryEnabled = settingsUiState.aiSummaryEnabled,
+            defaultHomeScreen = settingsUiState.defaultHomeScreen,
+            hasUpdate = settingsReleaseUiState.hasUpdate,
+            latestVersionName = settingsReleaseUiState.latestRelease?.version,
+            backendVersion = settingsUiState.backendVersion,
+            versionCheckResult = settingsUiState.versionCheckResult,
             onThemeModeSelected = appViewModel::setThemeMode,
             onDefaultHomeScreenSelected = appViewModel::setDefaultHomeScreen,
             onReminderSelected = appViewModel::setDefaultReminder,
-        selectedDayAhead = appUiState.selectedDayAhead,
+        selectedDayAhead = settingsUiState.selectedDayAhead,
         onDayAheadSelected = appViewModel::setDayAhead,
             onSyncNow = appViewModel::syncNow,
             onToggleAiSummary = appViewModel::setAiSummaryEnabled,
@@ -950,7 +972,7 @@ private fun NavGraphBuilder.settingsRoutes(
             appViewModel.refreshVersionInfo()
         }
         LatestReleaseScreen(
-            uiState = releaseUiState,
+            uiState = releaseUiState(),
             onBack = { navController.popBackStack() },
             onRetry = releaseViewModel::load,
         )
