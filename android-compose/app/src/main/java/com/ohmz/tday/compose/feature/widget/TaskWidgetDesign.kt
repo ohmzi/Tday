@@ -97,8 +97,13 @@ internal val TaskWidgetResponsiveSizes = setOf(
 internal data class TaskWidgetVisuals(
     val addButtonBackground: Int,
     val addIcon: Int,
-    val emptyWatermark: Int,
-    val setupWatermark: Int,
+    // Nullable so a widget that does not yet KNOW which kind it is can decline to draw one. Every
+    // watermark this app ships is a kind-specific glyph in that kind's accent (the Today sun, the
+    // Floater leaf) filling most of the widget, so picking one is an assertion about the
+    // instance's identity — see ListTasksWidget's UnconfiguredListWidgetVisuals. A null renders
+    // the same way LOADING already does: no watermark, just the header and the message.
+    val emptyWatermark: Int?,
+    val setupWatermark: Int?,
     // When set, every task row uses this check ring instead of a priority-coloured one
     // (floater tasks have no priority, so they use the widget's green accent).
     val priorityRingOverride: Int? = null,
@@ -696,9 +701,7 @@ internal fun taskWidgetPriorityRingResource(priority: String): Int {
     }
 }
 
-internal fun taskWidgetIsDaytime(hour: Int): Boolean {
-    return hour in 6 until 18
-}
+internal fun taskWidgetIsDaytime(hour: Int): Boolean = hour in 6 until 18
 
 internal fun taskWidgetLayoutFor(size: DpSize): TaskWidgetLayout {
     return when {
@@ -709,9 +712,8 @@ internal fun taskWidgetLayoutFor(size: DpSize): TaskWidgetLayout {
     }
 }
 
-internal fun taskWidgetShowsTrailingText(layout: TaskWidgetLayout): Boolean {
-    return layout == TaskWidgetLayout.MEDIUM || layout == TaskWidgetLayout.TALL
-}
+internal fun taskWidgetShowsTrailingText(layout: TaskWidgetLayout): Boolean =
+    layout == TaskWidgetLayout.MEDIUM || layout == TaskWidgetLayout.TALL
 
 private fun taskWidgetMetrics(layout: TaskWidgetLayout): TaskWidgetMetrics {
     return when (layout) {

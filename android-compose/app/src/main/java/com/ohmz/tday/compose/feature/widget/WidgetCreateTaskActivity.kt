@@ -27,7 +27,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ohmz.tday.compose.MainActivity
 import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.data.applyScreenshotProtection
-import com.ohmz.tday.compose.core.model.TodoListMode
 import com.ohmz.tday.compose.feature.app.AppViewModel
 import com.ohmz.tday.compose.feature.todos.TodoListViewModel
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
@@ -50,11 +49,35 @@ class WidgetCreateTaskActivity : AppCompatActivity() {
             exit = R.anim.widget_create_hold,
         )
         enableEdgeToEdge()
-        val createTarget = WidgetCreateTarget.from(intent)
+        renderFor(intent)
+    }
+
+    /**
+     * This activity is `singleTop`, so a second tap on a widget's "+" while it is already showing
+     * is delivered here instead of running [onCreate] again. Without this override `getIntent()`
+     * kept returning the FIRST intent and the sheet stayed bound to the first widget's feed — tap
+     * the Floater widget's "+", dismiss, then tap the Today widget's "+", and the sheet was still
+     * the floater one. Re-resolving from the new intent is the whole fix.
+     */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        renderFor(intent)
+    }
+
+    private fun renderFor(intent: Intent?) {
+        // The instance that was tapped is authoritative; the `target` parameter is only a fallback
+        // for the entry points that have no widget (see WidgetCreateTarget.resolve).
+        val appWidgetId = WidgetCreateRoute.appWidgetIdFrom(intent)
+        val instanceFeed = appWidgetId?.let { WidgetInstanceResolver(this).feedOf(it) }
+        val createTarget = WidgetCreateTarget.resolve(
+            instanceFeed = instanceFeed,
+            targetParam = WidgetCreateRoute.targetParamFrom(intent),
+        )
         // Set only by ListTasksWidget's add button, so the sheet's list picker preselects the
         // instance's own list instead of whatever the user picked last. Today/Floater's add
         // button never sends this, so their behavior is unchanged.
-        val defaultListId = intent.data?.getQueryParameter("listId")
+        val defaultListId = WidgetCreateRoute.listIdFrom(intent)
         setContent {
             WidgetCreateTaskSurface(
                 createTarget = createTarget,
@@ -62,6 +85,7 @@ class WidgetCreateTaskActivity : AppCompatActivity() {
                 onExit = ::exitToLauncher,
                 onOpenMainApp = ::openMainApp,
                 defaultListId = defaultListId,
+                appWidgetId = appWidgetId,
             )
         }
     }
@@ -115,6 +139,7 @@ internal fun WidgetCreateTaskSurface(
     initialTitle: String? = null,
     initialNotes: String? = null,
     defaultListId: String? = null,
+    appWidgetId: Int? = null,
 ) {
     val appViewModel: AppViewModel = hiltViewModel()
     val appUiState by appViewModel.uiState.collectAsStateWithLifecycle()
@@ -167,11 +192,11 @@ internal fun WidgetCreateTaskSurface(
                         submitScope.launch {
                             when (createTarget) {
                                 WidgetCreateTarget.TODAY -> {
-                                    widgetCreateTaskSubmitter.submitTodayTask(payload)
+                                    widgetCreateTaskSubmitter.submitTodayTask(payload, appWidgetId)
                                 }
 
                                 WidgetCreateTarget.FLOATER -> {
-                                    widgetCreateTaskSubmitter.submitFloaterTask(payload)
+                                    widgetCreateTaskSubmitter.submitFloaterTask(payload, appWidgetId)
                                 }
                             }
                             onExit()
@@ -179,23 +204,6 @@ internal fun WidgetCreateTaskSurface(
                     }
                 },
             )
-        }
-    }
-}
-
-internal enum class WidgetCreateTarget(
-    val mode: TodoListMode,
-    val showScheduleControls: Boolean,
-) {
-    TODAY(TodoListMode.TODAY, true),
-    FLOATER(TodoListMode.FLOATER, false);
-
-    companion object {
-        fun from(intent: Intent): WidgetCreateTarget {
-            return when (intent.data?.getQueryParameter("target")?.lowercase()) {
-                "floater" -> FLOATER
-                else -> TODAY
-            }
         }
     }
 }

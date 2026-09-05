@@ -12,8 +12,7 @@ import com.ohmz.tday.compose.core.data.cache.LOCAL_TODO_PREFIX
 import com.ohmz.tday.compose.core.data.cache.OfflineCacheManager
 import com.ohmz.tday.compose.core.data.sync.SyncManager
 import com.ohmz.tday.compose.core.model.TodoItem
-import com.ohmz.tday.compose.feature.widget.FloaterTasksWidgetRefresher
-import com.ohmz.tday.compose.feature.widget.TodayTasksWidgetRefresher
+import com.ohmz.tday.compose.feature.widget.WidgetRefresher
 import com.ohmz.tday.compose.ui.priority.canonicalPriorityValue
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
@@ -49,8 +48,7 @@ import javax.inject.Singleton
 class BulkTaskRepository @Inject constructor(
     private val cacheManager: OfflineCacheManager,
     private val syncManager: SyncManager,
-    private val todayTasksWidgetRefresher: TodayTasksWidgetRefresher,
-    private val floaterTasksWidgetRefresher: FloaterTasksWidgetRefresher,
+    private val widgetRefresher: WidgetRefresher,
 ) {
 
     /**
@@ -78,7 +76,7 @@ class BulkTaskRepository @Inject constructor(
             staged = collected
             next
         }
-        refreshTodayWidgetNow()
+        refreshWidgetsNow()
         return staged
     }
 
@@ -99,7 +97,7 @@ class BulkTaskRepository @Inject constructor(
             staged = collected
             next
         }
-        refreshFloaterWidgetNow()
+        refreshWidgetsNow()
         return staged
     }
 
@@ -110,7 +108,7 @@ class BulkTaskRepository @Inject constructor(
     suspend fun deleteTodos(todos: List<TodoItem>) {
         if (todos.isEmpty()) return
         val timestampMs = System.currentTimeMillis()
-        applyBulk(isFloater = false) { state ->
+        applyBulk { state ->
             todos.fold(state) { current, todo ->
                 current.withDeletedTodoCached(
                     canonicalId = todo.canonicalId,
@@ -128,7 +126,7 @@ class BulkTaskRepository @Inject constructor(
     suspend fun deleteFloaters(floaters: List<TodoItem>) {
         if (floaters.isEmpty()) return
         val timestampMs = System.currentTimeMillis()
-        applyBulk(isFloater = true) { state ->
+        applyBulk { state ->
             floaters.fold(state) { current, floater ->
                 current.withDeletedFloaterCached(
                     canonicalId = floater.canonicalId,
@@ -149,7 +147,7 @@ class BulkTaskRepository @Inject constructor(
     suspend fun completeTodos(todos: List<TodoItem>) {
         if (todos.isEmpty()) return
         val timestampMs = System.currentTimeMillis()
-        applyBulk(isFloater = false) { state ->
+        applyBulk { state ->
             todos.fold(state) { current, todo ->
                 current.withCompletedTodoCached(
                     todo = todo,
@@ -165,7 +163,7 @@ class BulkTaskRepository @Inject constructor(
     suspend fun completeFloaters(floaters: List<TodoItem>) {
         if (floaters.isEmpty()) return
         val timestampMs = System.currentTimeMillis()
-        applyBulk(isFloater = true) { state ->
+        applyBulk { state ->
             floaters.fold(state) { current, floater ->
                 current.withCompletedFloaterCached(
                     floater = floater,
@@ -187,7 +185,7 @@ class BulkTaskRepository @Inject constructor(
         if (todos.isEmpty()) return
         val normalizedPriority = canonicalPriorityValue(priority)
         val timestampMs = System.currentTimeMillis()
-        applyBulk(isFloater = false) { state ->
+        applyBulk { state ->
             todos.fold(state) { current, todo ->
                 current.withTodoPriorityCached(
                     todo = todo,
@@ -208,7 +206,7 @@ class BulkTaskRepository @Inject constructor(
         if (floaters.isEmpty()) return
         val normalizedPriority = canonicalPriorityValue(priority)
         val timestampMs = System.currentTimeMillis()
-        applyBulk(isFloater = true) { state ->
+        applyBulk { state ->
             floaters.fold(state) { current, floater ->
                 current.withFloaterEditCached(
                     floater = floater,
@@ -229,7 +227,7 @@ class BulkTaskRepository @Inject constructor(
     suspend fun moveTodosToList(todos: List<TodoItem>, listId: String?) {
         if (todos.isEmpty()) return
         val timestampMs = System.currentTimeMillis()
-        applyBulk(isFloater = false) { state ->
+        applyBulk { state ->
             todos.fold(state) { current, todo ->
                 current.withTodoListCached(
                     todo = todo,
@@ -245,7 +243,7 @@ class BulkTaskRepository @Inject constructor(
     suspend fun moveFloatersToList(floaters: List<TodoItem>, listId: String?) {
         if (floaters.isEmpty()) return
         val timestampMs = System.currentTimeMillis()
-        applyBulk(isFloater = true) { state ->
+        applyBulk { state ->
             floaters.fold(state) { current, floater ->
                 current.withFloaterEditCached(
                     floater = floater,
@@ -264,24 +262,23 @@ class BulkTaskRepository @Inject constructor(
      * one HTTP call per row, and drops each one as it lands.
      */
     private suspend fun applyBulk(
-        isFloater: Boolean,
         transform: (OfflineSyncState) -> OfflineSyncState,
     ) {
         cacheManager.updateOfflineState(transform)
-        if (isFloater) refreshFloaterWidgetNow() else refreshTodayWidgetNow()
+        refreshWidgetsNow()
         if (syncManager.isLocalMode()) return
         syncManager.syncCachedData(force = true, replayPendingMutations = true)
     }
 
-    private suspend fun refreshTodayWidgetNow() {
+    /**
+     * One call repaints every placed widget instance with its OWN kind — there is no longer a
+     * per-kind refresher to pick between, and picking wrong is exactly what left a widget rendering
+     * as the wrong one. `NonCancellable` because the repaint must still land when the caller's
+     * scope is torn down mid-write.
+     */
+    private suspend fun refreshWidgetsNow() {
         withContext(NonCancellable) {
-            runCatching { todayTasksWidgetRefresher.refreshNow() }
-        }
-    }
-
-    private suspend fun refreshFloaterWidgetNow() {
-        withContext(NonCancellable) {
-            runCatching { floaterTasksWidgetRefresher.refreshNow() }
+            runCatching { widgetRefresher.refreshNow() }
         }
     }
 }

@@ -28,18 +28,14 @@ class WidgetHydrateWorker @AssistedInject constructor(
     @Assisted params: WorkerParameters,
     private val cacheManager: OfflineCacheManager,
     private val snapshotWriter: WidgetSnapshotWriter,
-    private val todayTasksWidgetRefresher: TodayTasksWidgetRefresher,
-    private val floaterTasksWidgetRefresher: FloaterTasksWidgetRefresher,
-    private val listTasksWidgetRefresher: ListTasksWidgetRefresher,
+    private val widgetRefresher: WidgetRefresher,
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
         return runCatching {
             val state = cacheManager.loadOfflineState()
             snapshotWriter.write(state)
-            todayTasksWidgetRefresher.refreshNow()
-            floaterTasksWidgetRefresher.refreshNow()
-            listTasksWidgetRefresher.refreshNow()
+            widgetRefresher.refreshNow()
             Result.success()
         }.getOrElse { e ->
             // Best-effort: if this fails, the widget simply stays in LOADING until the app is

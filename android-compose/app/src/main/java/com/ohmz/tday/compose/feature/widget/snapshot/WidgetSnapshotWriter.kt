@@ -18,7 +18,7 @@ import javax.inject.Singleton
  * `widget-list-snapshot-<appWidgetId>.json` current.
  *
  * Every call re-encrypts and rewrites every file unconditionally, matching
- * `TodayTasksWidgetRefresher`'s documented "reliability over micro-optimization" stance for the
+ * `WidgetRefresher`'s documented "reliability over micro-optimization" stance for the
  * refreshers it triggers via [WidgetSnapshotSignal.bump]. Callers already gate on whether there's
  * anything to write (`OfflineCacheManager`'s `hasUiChanges` check) before reaching this class.
  *
