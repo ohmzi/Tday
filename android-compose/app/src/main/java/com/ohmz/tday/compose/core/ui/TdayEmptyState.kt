@@ -103,7 +103,7 @@ fun TdayEmptyState(
         // The burst leads; the scene follows through it. Without the wait the
         // illustration is already sitting there when the first piece of paper
         // clears it, and the confetti reads as decoration on a static page.
-        if (celebrate) delay(CelebrationLeadMillis)
+        if (celebrate) delay(TdayEmptyStateCelebrationLeadMillis)
         appear.animateTo(
             targetValue = 1f,
             animationSpec = tween(durationMillis = EnterMillis, easing = EnterEasing),
@@ -348,8 +348,14 @@ private val EnterEasing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1f)
 private const val EnterStartScale = 0.92f
 private val EnterRise = 18.dp
 
-/** How long the confetti has the screen to itself before the scene comes up. */
-private const val CelebrationLeadMillis = 320L
+/**
+ * How long the confetti has the screen to itself before the scene comes up.
+ *
+ * Public because a feed that draws this scene inline rather than as an overlay
+ * has to move its own layout out of the way inside this window — see
+ * [TdayFeedItemMotion].
+ */
+const val TdayEmptyStateCelebrationLeadMillis = 320L
 
 /** Half of the float's 6s cycle; [RepeatMode.Reverse] plays the other half. */
 private const val SceneFloatMillis = 3000

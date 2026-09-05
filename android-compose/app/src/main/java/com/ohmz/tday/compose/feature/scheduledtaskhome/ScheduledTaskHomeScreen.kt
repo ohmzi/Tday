@@ -123,6 +123,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -532,18 +533,9 @@ fun ScheduledTaskHomeScreen(
                         ) { _, todo ->
                             ScheduledTaskHomeTodayTaskRow(
                                 modifier = Modifier.animateItem(
-                                    fadeInSpec = tween(
-                                        durationMillis = 180,
-                                        easing = FastOutSlowInEasing,
-                                    ),
-                                    placementSpec = spring(
-                                        dampingRatio = Spring.DampingRatioNoBouncy,
-                                        stiffness = Spring.StiffnessMediumLow,
-                                    ),
-                                    fadeOutSpec = tween(
-                                        durationMillis = 140,
-                                        easing = FastOutSlowInEasing,
-                                    ),
+                                    fadeInSpec = ScheduledTaskHomeItemFadeIn,
+                                    placementSpec = ScheduledTaskHomeItemPlacement,
+                                    fadeOutSpec = ScheduledTaskHomeItemFadeOut,
                                 ),
                                 todo = todo,
                                 lists = uiState.summary.lists,
@@ -555,8 +547,19 @@ fun ScheduledTaskHomeScreen(
                             )
                         }
 
-                    item {
-                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    // Keyed so a completion moves this block rather than
+                    // rebuilding it: without a key its slot is its index, which
+                    // the departing row changes, and the whole grid was dropped
+                    // and re-added a row height higher in one frame.
+                    item(key = "scheduled-task-home-category-grid") {
+                        Column(
+                            modifier = Modifier.animateItem(
+                                fadeInSpec = ScheduledTaskHomeItemFadeIn,
+                                placementSpec = ScheduledTaskHomeItemPlacement,
+                                fadeOutSpec = ScheduledTaskHomeItemFadeOut,
+                            ),
+                            verticalArrangement = Arrangement.spacedBy(10.dp),
+                        ) {
                             CategoryGrid(
                                 overdueCount = overdueCount,
                                 scheduledCount = uiState.summary.scheduledCount,
@@ -593,8 +596,14 @@ fun ScheduledTaskHomeScreen(
                     }
 
                     if (uiState.summary.lists.isNotEmpty()) {
-                        item {
-                            MyListsHeader()
+                        item(key = "scheduled-task-home-my-lists-header") {
+                            MyListsHeader(
+                                modifier = Modifier.animateItem(
+                                    fadeInSpec = ScheduledTaskHomeItemFadeIn,
+                                    placementSpec = ScheduledTaskHomeItemPlacement,
+                                    fadeOutSpec = ScheduledTaskHomeItemFadeOut,
+                                ),
+                            )
                         }
                         itemsIndexed(
                             items = uiState.summary.lists,
@@ -602,6 +611,11 @@ fun ScheduledTaskHomeScreen(
                             contentType = { _, _ -> "list_row" },
                         ) { _, list ->
                             ListRow(
+                                modifier = Modifier.animateItem(
+                                    fadeInSpec = ScheduledTaskHomeItemFadeIn,
+                                    placementSpec = ScheduledTaskHomeItemPlacement,
+                                    fadeOutSpec = ScheduledTaskHomeItemFadeOut,
+                                ),
                                 name = list.name,
                                 colorKey = list.color,
                                 iconKey = list.iconKey,
@@ -1319,9 +1333,10 @@ private fun rememberIsDaytime(): Boolean {
 }
 
 @Composable
-private fun MyListsHeader() {
+private fun MyListsHeader(modifier: Modifier = Modifier) {
     val colorScheme = MaterialTheme.colorScheme
     Row(
+        modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
@@ -2111,6 +2126,25 @@ private fun ListRow(
         }
     }
 }
+
+/**
+ * This feed's item motion, in one place so a row and everything its departure
+ * moves travel together.
+ *
+ * The Today rows already left on this spring; the tiles and list rows under them
+ * had no keys, so every completion re-keyed them by index and they jumped a row
+ * height in a single frame while the row above was still gliding away. Same
+ * defect as the floater home's empty-state snap, an order of magnitude smaller —
+ * this screen never draws an empty scene, so there is no gap to open.
+ */
+private val ScheduledTaskHomeItemFadeIn =
+    tween<Float>(durationMillis = 180, easing = FastOutSlowInEasing)
+private val ScheduledTaskHomeItemPlacement = spring<IntOffset>(
+    dampingRatio = Spring.DampingRatioNoBouncy,
+    stiffness = Spring.StiffnessMediumLow,
+)
+private val ScheduledTaskHomeItemFadeOut =
+    tween<Float>(durationMillis = 140, easing = FastOutSlowInEasing)
 
 private const val SCHEDULED_TASK_HOME_LIST_CONTAINER_COLOR_WEIGHT = 0.66f
 private const val CREATE_LIST_SHEET_MAX_HEIGHT_FRACTION = 0.80f
