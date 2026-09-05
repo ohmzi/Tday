@@ -815,10 +815,11 @@ repository settings, and cannot be done from a pull request.
    Certificate Authority* (saved to disk), create the Apple Development certificate from that CSR
    in the portal, double-click the downloaded `.cer` so it pairs with the key, then in Keychain
    Access select the certificate *and* its private key → *Export 2 items…* → `.p12` with a
-   password. Selecting the certificate row alone produces a `.p12` the lane rejects with *"holds
-   no valid 'Apple Development' identity"* — the `Shrouded Keybag` check in the verification block
-   above is what catches that, so run it here too (a Keychain Access export is already in the
-   legacy format, so only the `MAC: sha1` expectation is Mac-optional). Then, in the same shell,
+   password. Selecting the certificate row alone produces a `.p12` with no private key, which the
+   lane rejects with *"`security import` put no code-signing identity in the CI keychain"* — the
+   `Shrouded Keybag` check in the verification block above is what catches that before the key is
+   shredded, so run it here too (a Keychain Access export is already in the legacy format, so only
+   the `MAC: sha1` expectation is Mac-optional). Then, in the same shell,
    `export P12_PASSWORD='<the password you typed in the export dialog>'` and run the two
    `gh secret set` lines above (`base64 -i` instead of `base64 -w0`) — the second one reads that
    variable, and an empty value fails the `decide` job.
