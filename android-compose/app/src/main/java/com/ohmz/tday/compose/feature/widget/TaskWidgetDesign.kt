@@ -522,9 +522,9 @@ private fun TaskWidgetList(
 ) {
     LazyColumn(modifier = modifier) {
         itemsIndexed(rows, itemId = { _, row -> row.key }) { index, row ->
-            // Row + divider must live under ONE root per item: Glance wraps multiple
-            // item children in a Box (which overlaps them), so the divider landed on top
-            // of the row instead of below it. A Column stacks them vertically.
+            // Row + spacer must live under ONE root per item: Glance wraps multiple
+            // item children in a Box (which overlaps them), so a bare Spacer sibling
+            // would add no height. A Column stacks them so the gap is real.
             Column(modifier = GlanceModifier.fillMaxWidth()) {
                 TaskWidgetRow(
                     row = row,
@@ -534,31 +534,13 @@ private fun TaskWidgetList(
                     openAction = openAction,
                 )
                 if (index < rows.lastIndex) {
-                    TaskWidgetRowDivider(gap = metrics.rowSpacing)
+                    // Plain whitespace between rows, no separator line — matches the
+                    // widget-picker preview layouts, which never drew one. Same height
+                    // as before, so the visible row count is unchanged.
+                    Spacer(modifier = GlanceModifier.height(metrics.rowSpacing))
                 }
             }
         }
-    }
-}
-
-// ColorProvider(resourceId) is Glance's documented day/night color API; only lint-restricted.
-@android.annotation.SuppressLint("RestrictedApi")
-@Composable
-private fun TaskWidgetRowDivider(gap: Dp) {
-    // Native Notes-widget-style separator: a full-width hairline centred in the SAME
-    // inter-row gap that used to be an empty Spacer, so it adds no height and the visible
-    // row count is unchanged (still ~3 medium / ~9 large). Each row's own 3dp vertical
-    // padding gives the line its breathing room, so a tiny gap here is not cramped.
-    Box(
-        modifier = GlanceModifier.fillMaxWidth().height(gap),
-        contentAlignment = Alignment.Center,
-    ) {
-        Box(
-            modifier = GlanceModifier
-                .fillMaxWidth()
-                .height(1.dp)
-                .background(ColorProvider(R.color.tday_widget_divider)),
-        ) {}
     }
 }
 
@@ -632,10 +614,16 @@ private fun TaskWidgetRow(
             }
         }
         if (description != null) {
+            // The title Row's own 3dp bottom padding is what separates a title-only row
+            // from the next task. Notes sit OUTSIDE that Row, so without a bottom pad here
+            // a notes-bearing task would end flush against the inter-row spacer: 3dp from
+            // its own title but only 6dp from the next task. With no divider line left to
+            // mark the boundary, that reads as one run-on block. Matching the Row's 3dp
+            // keeps every row shape at 3dp title->notes and 9dp task->task.
             WidgetText(
                 modifier = GlanceModifier
                     .fillMaxWidth()
-                    .padding(start = 14.dp),
+                    .padding(start = 14.dp, bottom = 3.dp),
                 text = description,
                 color = TaskWidgetTextColor.SECONDARY,
                 fontSize = 11.sp,

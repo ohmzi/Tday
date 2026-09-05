@@ -65,6 +65,10 @@ import javax.net.ssl.SSLPeerUnverifiedException
 
 data class AppUiState(
     val loading: Boolean = true,
+    // Whether bootstrap has EVER answered this process. `loading` says a bootstrap is in flight;
+    // this says the answer is known. Written RESOLVED by every terminal branch of bootstrap()
+    // and by enterLocalWorkspace(), and never written back — see [SessionResolution].
+    val sessionResolution: SessionResolution = SessionResolution.UNKNOWN,
     val authenticated: Boolean = false,
     val requiresServerSetup: Boolean = false,
     val requiresLogin: Boolean = false,
@@ -109,6 +113,19 @@ data class AppUiState(
 
     val isWorkspaceAvailable: Boolean
         get() = authenticated || isLocalMode
+
+    /**
+     * The root routing decision, as a pure function of this state. The order of the branches is
+     * the point: neither the workspace nor the sign-in wizard is chosen until the persisted
+     * session has been resolved, so a signed-in user cold-launching is never shown sign-in for
+     * the frames it takes bootstrap to answer. Pinned by `RootDestinationTest`.
+     */
+    val rootDestination: RootDestination
+        get() = when {
+            sessionResolution == SessionResolution.UNKNOWN -> RootDestination.SPLASH
+            isWorkspaceAvailable -> RootDestination.WORKSPACE
+            else -> RootDestination.ONBOARDING
+        }
 
     val syncStatus: MobileSyncStatus
         get() = MobileSyncStatus(
@@ -243,6 +260,7 @@ class AppViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         loading = false,
+                        sessionResolution = SessionResolution.RESOLVED,
                         authenticated = false,
                         requiresServerSetup = true,
                         requiresLogin = false,
@@ -283,6 +301,7 @@ class AppViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         loading = false,
+                        sessionResolution = SessionResolution.RESOLVED,
                         authenticated = true,
                         requiresServerSetup = false,
                         requiresLogin = false,
@@ -326,6 +345,7 @@ class AppViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         loading = false,
+                        sessionResolution = SessionResolution.RESOLVED,
                         authenticated = false,
                         requiresServerSetup = false,
                         requiresLogin = false,
@@ -372,6 +392,7 @@ class AppViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         loading = false,
+                        sessionResolution = SessionResolution.RESOLVED,
                         authenticated = false,
                         requiresServerSetup = false,
                         requiresLogin = false,
@@ -395,6 +416,7 @@ class AppViewModel @Inject constructor(
             _uiState.update {
                 it.copy(
                     loading = false,
+                    sessionResolution = SessionResolution.RESOLVED,
                     authenticated = false,
                     requiresServerSetup = false,
                     requiresLogin = true,
@@ -491,6 +513,7 @@ class AppViewModel @Inject constructor(
         _uiState.update {
             it.copy(
                 loading = false,
+                sessionResolution = SessionResolution.RESOLVED,
                 authenticated = false,
                 requiresServerSetup = false,
                 requiresLogin = false,

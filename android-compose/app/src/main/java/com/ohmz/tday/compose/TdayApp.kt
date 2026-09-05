@@ -54,6 +54,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -76,6 +77,8 @@ import com.ohmz.tday.compose.core.ui.TdayToastKind
 import com.ohmz.tday.compose.feature.app.AppUiState
 import com.ohmz.tday.compose.feature.app.AppViewModel
 import com.ohmz.tday.compose.feature.app.ProfileEditResult
+import com.ohmz.tday.compose.feature.app.RootDestination
+import com.ohmz.tday.compose.feature.auth.AuthUiState
 import com.ohmz.tday.compose.feature.auth.AuthViewModel
 import com.ohmz.tday.compose.feature.auth.ForgotPasswordScreen
 import com.ohmz.tday.compose.feature.auth.SetSecurityQuestionsGate
@@ -117,6 +120,19 @@ private const val NAV_FADE_IN_DURATION_MS = 360
 private const val NAV_FADE_OUT_DURATION_MS = 240
 private const val PENDING_SEARCH_HIGHLIGHT_TODO_ID = "pendingSearchHighlightTodoId"
 
+// Nav argument names, shared by the route templates that declare them and the back stack
+// entries that read them back.
+private const val ARG_LIST_ID = "listId"
+private const val ARG_LIST_NAME = "listName"
+private const val ARG_CREATE_TARGET = "target"
+private const val ARG_HIGHLIGHT_TODO_ID = "highlightTodoId"
+private const val ARG_GUIDE_TOPIC = "topic"
+
+// The `target` vocabulary of `tday://todos/create?target=...` — the widget, the reminder
+// notification and the car surface all speak it.
+private const val CREATE_TARGET_TODAY = "today"
+private const val CREATE_TARGET_FLOATER = "floater"
+
 @Composable
 fun TdayApp(
     onFirstFrameDrawn: () -> Unit = {},
@@ -125,6 +141,11 @@ fun TdayApp(
     val startupTagline = rememberSaveable(splashTaglineOptions.contentHashCode()) {
         splashTaglineOptions.random()
     }
+    // A fresh instance every composition, which makes it the one unstable key of the memoized
+    // NavHost builder lambda below and so rebuilds the nav graph on every recomposition. That is
+    // incidental, not load-bearing: nothing the graph hands a destination is a snapshot value, so
+    // no screen depends on the rebuild to see a change (see the note at the builder). Memoizing it
+    // is therefore safe, but it is a perf change rather than a fix and does not belong here.
     val unauthenticatedScheduledTaskHomeUiState = unauthenticatedScheduledTaskHomeUiState(
         lockedListName = stringResource(R.string.scheduled_task_home_locked_list_name),
     )
@@ -170,6 +191,7 @@ fun TdayApp(
     var activeToast by remember { mutableStateOf<TdayToastData?>(null) }
     var hasShownLaunchUpdateToast by rememberSaveable { mutableStateOf(false) }
     var isStartupSplashHeld by remember { mutableStateOf(false) }
+    var isSessionSplashHeld by remember { mutableStateOf(false) }
     // Seeded once, from the user's "Default home screen" setting, on a genuinely fresh
     // composition (no saved instance state to restore) — a config change, process-death
     // restore, or in-session dock tap all keep whatever rootFeedTab already holds instead of
@@ -182,7 +204,7 @@ fun TdayApp(
     var floaterTaskHomeScrollToTopRequestKey by remember { mutableStateOf(0) }
     var rootDockCollapsed by rememberSaveable { mutableStateOf(false) }
     var rootControlsVisible by rememberSaveable { mutableStateOf(true) }
-    val context = LocalContext.current
+
     fun requestRootCreateTask() {
         rootCreateTaskRequestSerial += 1
         rootCreateTaskRequestKey = rootCreateTaskRequestSerial
@@ -194,37 +216,22 @@ fun TdayApp(
         }
     }
 
-    val activity = LocalContext.current as? MainActivity
-    val deepLinkIntent by activity?.deepLinkIntent?.collectAsStateWithLifecycle()
-        ?: remember { mutableStateOf(null) }
+    HandlePendingDeepLink(
+        isWorkspaceAvailable = appUiState.isWorkspaceAvailable,
+        currentRoute = currentRoute,
+        navController = navController,
+    )
 
-    LaunchedEffect(deepLinkIntent, appUiState.isWorkspaceAvailable) {
-        val intent = deepLinkIntent ?: return@LaunchedEffect
-        // Defer deep links (e.g. the Floater widget's tday://floater) until the session is
-        // restored and the workspace is available. Handling one during cold-start bootstrap
-        // navigated the target route UNDER the login overlay and mounted its screen before
-        // auth was ready — which flashed the login screen and fired a generic
-        // "something went wrong" error toast before settling. Consume it after so it fires once.
-        if (!appUiState.isWorkspaceAvailable) return@LaunchedEffect
-        navController.handleDeepLink(intent.withoutTaskRestartFlags())
-        activity?.consumeDeepLink()
-    }
-    LaunchedEffect(
-        pendingFloaterTaskHomeCreateTask,
-        currentRoute,
-        rootFeedTab,
-        appUiState.isWorkspaceAvailable,
-    ) {
-        if (
-            pendingFloaterTaskHomeCreateTask &&
-            currentRoute == AppRoute.ScheduledTaskHome.route &&
-            rootFeedTab == RootFeedTab.FLOATER_TASK_HOME &&
-            appUiState.isWorkspaceAvailable
-        ) {
+    HandlePendingFloaterCreateTask(
+        isCreateTaskPending = pendingFloaterTaskHomeCreateTask,
+        currentRoute = currentRoute,
+        rootFeedTab = rootFeedTab,
+        isWorkspaceAvailable = appUiState.isWorkspaceAvailable,
+        onCreateTask = {
             pendingFloaterTaskHomeCreateTask = false
             requestRootCreateTask()
-        }
-    }
+        },
+    )
 
     CollectAppSnackbars(
         appViewModel = appViewModel,
@@ -232,9 +239,7 @@ fun TdayApp(
     )
     CollectConnectivityToasts(
         appViewModel = appViewModel,
-        isOffline = appUiState.isOffline &&
-                appUiState.authenticated &&
-                !appUiState.isLocalMode,
+        isOffline = appUiState.showsOfflineNotice(),
         offlineReason = appUiState.offlineReason,
         pendingMutationCount = appUiState.pendingMutationCount,
         manualNoticePulse = appUiState.manualNoticePulse,
@@ -295,6 +300,23 @@ fun TdayApp(
                 // LocalSnackbarManager, instead of the plain system Toast.makeText.
                 LocalSnackbarManager provides appViewModel.snackbarManager,
             ) {
+                // No nav graph until the persisted session has resolved. Setting the graph is
+                // where Navigation handles the launch intent's deep link (tday://home from the
+                // update-ready notification, tday://floater from the widget) and restores a
+                // saved back stack after process death — both land on `home` directly, and
+                // `home` draws the sign-in wizard whenever the workspace is unavailable, which
+                // it always is before bootstrap has answered. Holding the branded splash here
+                // means the first real screen composed is already the right one. The splash
+                // keeps its tap-and-hold pause; that hold is tracked apart from the in-graph
+                // Splash route's (isStartupSplashHeld) so a press there can never tear the
+                // graph back down.
+                if (shouldHoldSessionSplash(appUiState.rootDestination, isSessionSplashHeld)) {
+                    SplashScreen(
+                        tagline = startupTagline,
+                        onHoldChanged = { isSessionSplashHeld = it },
+                    )
+                    return@CompositionLocalProvider
+                }
                 NavHost(
                     navController = navController,
                     startDestination = AppRoute.Splash.route,
@@ -315,803 +337,63 @@ fun TdayApp(
                     popEnterTransition = { navigationEnterTransition() },
                     popExitTransition = { navigationExitTransition() },
                 ) {
-                    composable(
-                        route = AppRoute.Splash.route,
-                        enterTransition = { fadeIn(tween(300)) },
-                        exitTransition = { fadeOut(tween(300)) },
-                    ) {
-                        SplashScreen(onHoldChanged = { isStartupSplashHeld = it })
-                    }
-
-                    composable(
-                        route = AppRoute.ServerSetup.route,
-                        enterTransition = { fadeIn(tween(300)) },
-                        exitTransition = { fadeOut(tween(300)) },
-                    ) {
-                        SplashScreen(onHoldChanged = { isStartupSplashHeld = it })
-                    }
-
-                    composable(
-                        route = AppRoute.Login.route,
-                        enterTransition = { fadeIn(tween(300)) },
-                        exitTransition = { fadeOut(tween(300)) },
-                    ) {
-                        SplashScreen(onHoldChanged = { isStartupSplashHeld = it })
-                    }
-
-                    composable(
-                        route = AppRoute.ForgotPassword.route,
-                        enterTransition = { settingsEnterTransition() },
-                        exitTransition = { settingsExitTransition() },
-                        popEnterTransition = { settingsEnterTransition() },
-                        popExitTransition = { settingsExitTransition() },
-                    ) {
-                        val passwordResetMessage =
-                            stringResource(R.string.forgot_password_reset_success)
-                        ForgotPasswordScreen(
-                            onBackToLogin = { navController.popBackStack() },
-                            onResetComplete = {
-                                navController.popBackStack()
-                                appViewModel.snackbarManager.showSuccess(passwordResetMessage)
-                            },
-                        )
-                    }
-
-                    composable(
-                        route = AppRoute.ScheduledTaskHome.route,
-                        deepLinks = listOf(navDeepLink { uriPattern = "tday://home" }),
-                    ) {
-                        val authViewModel: AuthViewModel = hiltViewModel()
-                        val authUiState by authViewModel.uiState.collectAsStateWithLifecycle()
-                        val showOnboardingWizard = !appUiState.isWorkspaceAvailable
-
-                        // Remember the last attempted credentials so a pending-approval result
-                        // can be persisted into the holding screen (which re-attempts login).
-                        var lastAuthUsername by remember { mutableStateOf("") }
-                        var lastAuthPassword by remember { mutableStateOf("") }
-                        LaunchedEffect(authUiState.pendingApproval) {
-                            if (authUiState.pendingApproval && lastAuthPassword.isNotBlank()) {
-                                appViewModel.enterPendingApproval(lastAuthUsername, lastAuthPassword)
-                            }
-                        }
-
-                        Box(modifier = Modifier.fillMaxSize()) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .then(
-                                        if (showOnboardingWizard) {
-                                            Modifier.blur(14.dp)
-                                        } else {
-                                            Modifier
-                                        },
-                                    ),
-                            ) {
-                                if (appUiState.isWorkspaceAvailable) {
-                                    Box(modifier = Modifier.fillMaxSize()) {
-                                        when (rootFeedTab) {
-                                            RootFeedTab.SCHEDULED_TASK_HOME -> {
-                                                val scheduledTaskHomeViewModel: ScheduledTaskHomeViewModel = hiltViewModel()
-                                                val scheduledTaskHomeUiState by scheduledTaskHomeViewModel.uiState.collectAsStateWithLifecycle()
-                                                OnRouteResume {
-                                                    scheduledTaskHomeViewModel.refreshFromCache()
-                                                    appViewModel.refreshVersionInfo()
-                                                }
-                                                ScheduledTaskHomeScreen(
-                                                    uiState = scheduledTaskHomeUiState,
-                                                    onRefresh = { scheduledTaskHomeViewModel.refresh(userInitiated = true) },
-                                                    pullRefreshEnabled = !appUiState.isLocalMode,
-                                                    onOpenToday = { navController.navigate(AppRoute.TodayTodos.route) },
-                                                    onOpenOverdue = { navController.navigate(AppRoute.OverdueTodos.route) },
-                                                    onOpenScheduled = { navController.navigate(AppRoute.ScheduledTodos.route) },
-                                                    onOpenAll = { navController.navigate(AppRoute.AllTodos.create()) },
-                                                    onOpenPriority = { navController.navigate(AppRoute.PriorityTodos.route) },
-                                                    onOpenCompleted = { navController.navigate(AppRoute.Completed.route) },
-                                                    onOpenCalendar = { navController.navigate(AppRoute.Calendar.route) },
-                                                    onOpenFloater = {
-                                                        rootFeedTab = RootFeedTab.FLOATER_TASK_HOME
-                                                    },
-                                                    onOpenSettings = { navController.navigate(AppRoute.Settings.route) },
-                                                    onOpenTaskFromSearch = { todoId ->
-                                                        navController.currentBackStackEntry
-                                                            ?.savedStateHandle
-                                                            ?.set(
-                                                                PENDING_SEARCH_HIGHLIGHT_TODO_ID,
-                                                                todoId
-                                                            )
-                                                        navController.navigate(AppRoute.AllTodos.create())
-                                                    },
-                                                    onOpenList = { id, name ->
-                                                        navController.navigate(
-                                                            AppRoute.ListTodos.create(
-                                                                id,
-                                                                name
-                                                            )
-                                                        )
-                                                    },
-                                                    onCreateTask = { payload ->
-                                                        scheduledTaskHomeViewModel.createTask(payload)
-                                                    },
-                                                    onParseTaskTitleNlp = scheduledTaskHomeViewModel::parseTaskTitleNlp,
-                                                    onSuggestRepeat = scheduledTaskHomeViewModel::suggestRepeatRrule,
-                                                    onCreateList = { name, color, iconKey ->
-                                                        scheduledTaskHomeViewModel.createList(
-                                                            name = name,
-                                                            color = color,
-                                                            iconKey = iconKey,
-                                                        )
-                                                    },
-                                                    onCompleteTask = { todo ->
-                                                        scheduledTaskHomeViewModel.completeTodo(
-                                                            todo
-                                                        )
-                                                    },
-                                                    onDeleteTask = { todo ->
-                                                        scheduledTaskHomeViewModel.deleteTodo(
-                                                            todo
-                                                        )
-                                                    },
-                                                    onUpdateTask = { todo, payload ->
-                                                        scheduledTaskHomeViewModel.updateTask(
-                                                            todo,
-                                                            payload
-                                                        )
-                                                    },
-                                                    onSummarize = scheduledTaskHomeViewModel::summarizeToday,
-                                                    summaryAvailable = !appUiState.isLocalMode,
-                                                    showRootFeedDock = false,
-                                                    showCreateTaskButton = false,
-                                                    createTaskRequestKey = rootCreateTaskRequestKey,
-                                                    onCreateTaskRequestHandled = ::consumeRootCreateTaskRequest,
-                                                    scrollToTopRequestKey = scheduledTaskHomeScrollToTopRequestKey,
-                                                    onRootDockCollapsedChange = {
-                                                        rootDockCollapsed = it
-                                                    },
-                                                    onRootControlsVisibleChange = {
-                                                        rootControlsVisible = it
-                                                    },
-                                                )
-                                            }
-
-                                            RootFeedTab.FLOATER_TASK_HOME -> {
-                                                TodosRoute(
-                                                    mode = TodoListMode.FLOATER,
-                                                    onBack = { rootFeedTab = RootFeedTab.SCHEDULED_TASK_HOME },
-                                                    pullRefreshEnabled = !appUiState.isLocalMode,
-                                                    summaryAvailable = !appUiState.isLocalMode,
-                                                    onOpenFloaterList = { id, name ->
-                                                        navController.navigate(
-                                                            AppRoute.FloaterListTodos.create(
-                                                                id,
-                                                                name
-                                                            )
-                                                        )
-                                                    },
-                                                    onOpenCompleted = {
-                                                        navController.navigate(AppRoute.Completed.route)
-                                                    },
-                                                    onOpenSettings = {
-                                                        navController.navigate(AppRoute.Settings.route)
-                                                    },
-                                                    showRootFeedDock = false,
-                                                    showCreateTaskButton = false,
-                                                    usesRootFeedHeader = true,
-                                                    createTaskRequestKey = rootCreateTaskRequestKey,
-                                                    onCreateTaskRequestHandled = ::consumeRootCreateTaskRequest,
-                                                    scrollToTopRequestKey = floaterTaskHomeScrollToTopRequestKey,
-                                                    onRootDockCollapsedChange = {
-                                                        rootDockCollapsed = it
-                                                    },
-                                                    onRootControlsVisibleChange = {
-                                                        rootControlsVisible = it
-                                                    },
-                                                )
-                                            }
-                                        }
-
-                                        if (rootControlsVisible) {
-                                            val rootCreateTaskButtonColor =
-                                                if (rootFeedTab == RootFeedTab.FLOATER_TASK_HOME) {
-                                                    TdayFloaterAccent
-                                                } else {
-                                                    TdayTodayBlue
-                                                }
-
-                                            RootFeedDock(
-                                                activeTab = rootFeedTab,
-                                                collapsed = rootDockCollapsed,
-                                                onTabSelected = ::handleRootFeedTabSelection,
-                                                modifier = Modifier
-                                                    .align(Alignment.BottomStart)
-                                                    .zIndex(8f),
-                                            )
-                                            RootCreateTaskButton(
-                                                onClick = ::requestRootCreateTask,
-                                                backgroundColor = rootCreateTaskButtonColor,
-                                                modifier = Modifier
-                                                    .align(Alignment.BottomEnd)
-                                                    .navigationBarsPadding()
-                                                    .padding(
-                                                        end = TdayDimens.ContentPaddingHorizontal,
-                                                        bottom = TdayDimens.ContentPaddingHorizontal,
-                                                    )
-                                                    .zIndex(8f),
-                                            )
-                                        }
-                                    }
-                                } else {
-                                    ScheduledTaskHomeScreen(
-                                        uiState = unauthenticatedScheduledTaskHomeUiState,
-                                        onRefresh = {},
-                                        onOpenToday = {},
-                                        onOpenOverdue = {},
-                                        onOpenScheduled = {},
-                                        onOpenAll = {},
-                                        onOpenPriority = {},
-                                        onOpenCompleted = {},
-                                        onOpenCalendar = {},
-                                        onOpenFloater = {},
-                                        onOpenSettings = {},
-                                        onOpenTaskFromSearch = {},
-                                        onOpenList = { _, _ -> },
-                                        onCreateTask = { _ -> },
-                                        onParseTaskTitleNlp = { _, _ -> null },
-                                        onCreateList = { _, _, _ -> },
-                                        onCompleteTask = {},
-                                        onDeleteTask = {},
-                                        onUpdateTask = { _, _ -> },
-                                        summaryAvailable = false,
-                                    )
-                                }
-                            }
-
-                            if (showOnboardingWizard) {
-                                if (appUiState.pendingApproval) {
-                                    com.ohmz.tday.compose.feature.app.PendingApprovalOverlay(
-                                        username = appUiState.pendingApprovalUsername,
-                                        isChecking = appUiState.isCheckingApproval,
-                                        onCheckStatus = { appViewModel.checkPendingApproval() },
-                                        onUseDifferentAccount = {
-                                            authViewModel.clearStatus()
-                                            appViewModel.cancelPendingApproval()
-                                        },
-                                    )
-                                } else when (val versionResult = appUiState.versionCheckResult) {
-                                    is com.ohmz.tday.compose.core.data.server.VersionCheckResult.AppUpdateRequired,
-                                    is com.ohmz.tday.compose.core.data.server.VersionCheckResult.ServerUpdateRequired -> {
-                                        com.ohmz.tday.compose.feature.app.UpdateRequiredOverlay(
-                                            versionCheckResult = versionResult,
-                                            requiredUpdateRelease = appUiState.requiredUpdateRelease,
-                                            isCheckingRelease = appUiState.isCheckingUpdateRelease,
-                                            onRetry = { appViewModel.recheckVersion() },
-                                        )
-                                    }
-                                    else -> {
-                                        OnboardingWizardOverlay(
-                                            initialServerUrl = appUiState.serverUrl,
-                                            serverErrorMessage = appUiState.error,
-                                            serverCanResetTrust = appUiState.canResetServerTrust,
-                                            serverTrustFingerprint = appUiState.pendingServerTrustFingerprint,
-                                            pendingApprovalMessage = appUiState.pendingApprovalMessage,
-                                            authUiState = authUiState,
-                                            onUseLocalMode = {
-                                                authViewModel.clearStatus()
-                                                appViewModel.clearPendingApprovalNotice()
-                                                appViewModel.useLocalMode()
-                                            },
-                                            onConnectServer = { rawUrl, onResult ->
-                                                appViewModel.saveServerUrl(
-                                                    rawUrl = rawUrl,
-                                                    onSuccess = { serverUrl ->
-                                                        onResult(Result.success(serverUrl))
-                                                    },
-                                                    onFailure = { message ->
-                                                        onResult(Result.failure(IllegalStateException(message)))
-                                                    },
-                                                )
-                                            },
-                                            onResetServerTrust = { rawUrl, onResult ->
-                                                appViewModel.resetTrustedServer(
-                                                    rawUrl = rawUrl,
-                                                    onSuccess = { onResult(Result.success(Unit)) },
-                                                    onFailure = { message ->
-                                                        onResult(Result.failure(IllegalStateException(message)))
-                                                    },
-                                                )
-                                            },
-                                            onConfirmServerTrust = { rawUrl, fingerprint, onResult ->
-                                                appViewModel.confirmServerTrust(
-                                                    rawUrl = rawUrl,
-                                                    fingerprint = fingerprint,
-                                                    onSuccess = { serverUrl ->
-                                                        onResult(Result.success(serverUrl))
-                                                    },
-                                                    onFailure = { message ->
-                                                        onResult(Result.failure(IllegalStateException(message)))
-                                                    },
-                                                )
-                                            },
-                                            onDismissServerTrust = appViewModel::dismissServerTrustPrompt,
-                                            onLogin = { username, password, source ->
-                                                lastAuthUsername = username
-                                                lastAuthPassword = password
-                                                authViewModel.login(
-                                                    username = username,
-                                                    password = password,
-                                                    credentialContext = context,
-                                                    source = source,
-                                                ) {
-                                                    appViewModel.refreshSession()
-                                                }
-                                            },
-                                            onRegister = { firstName, username, password, securityAnswers, onSuccess ->
-                                                lastAuthUsername = username
-                                                lastAuthPassword = password
-                                                authViewModel.register(
-                                                    firstName = firstName,
-                                                    lastName = "",
-                                                    username = username,
-                                                    password = password,
-                                                    securityAnswers = securityAnswers,
-                                                    credentialContext = context,
-                                                ) {
-                                                    onSuccess()
-                                                    appViewModel.refreshSession()
-                                                }
-                                            },
-                                            onFetchSecurityQuestions = authViewModel::fetchAllSecurityQuestions,
-                                            onRequestSavedCredential = authViewModel::requestSavedCredential,
-                                            onRequestSavedServerUrl = authViewModel::requestSavedServerUrl,
-                                            onSaveServerUrlCredential = authViewModel::offerSaveOrUpdateServerUrl,
-                                            onClearAuthStatus = {
-                                                authViewModel.clearStatus()
-                                                appViewModel.clearPendingApprovalNotice()
-                                            },
-                                        )
-                                    }
-                                }
-                            }
-
-                            val authenticatedVersionCheck = appUiState.versionCheckResult
-                            if (appUiState.authenticated &&
-                                !appUiState.isLocalMode &&
-                                (authenticatedVersionCheck is com.ohmz.tday.compose.core.data.server.VersionCheckResult.AppUpdateRequired ||
-                                    authenticatedVersionCheck is com.ohmz.tday.compose.core.data.server.VersionCheckResult.ServerUpdateRequired)
-                            ) {
-                                com.ohmz.tday.compose.feature.app.UpdateRequiredOverlay(
-                                    versionCheckResult = authenticatedVersionCheck,
-                                    requiredUpdateRelease = appUiState.requiredUpdateRelease,
-                                    isCheckingRelease = appUiState.isCheckingUpdateRelease,
-                                    onRetry = { appViewModel.recheckVersion() },
-                                )
-                            }
-
-                            if (appUiState.authenticated &&
-                                !appUiState.isLocalMode &&
-                                appUiState.user?.requireSecurityQuestions == true
-                            ) {
-                                SetSecurityQuestionsGate(
-                                    onFetchQuestions = authViewModel::fetchAllSecurityQuestions,
-                                    onSubmit = { answers, onSuccess, onError ->
-                                        authViewModel.submitSecurityQuestions(
-                                            answers = answers,
-                                            onSuccess = {
-                                                onSuccess()
-                                                appViewModel.refreshSession()
-                                            },
-                                            onError = onError,
-                                        )
-                                    },
-                                )
-                            }
-                        }
-                    }
-
-                    composable(
-                        route = AppRoute.FloaterTaskHome.route,
-                        deepLinks = listOf(navDeepLink { uriPattern = "tday://floater" }),
-                    ) { entry ->
-                        LaunchedEffect(entry.destination.id) {
-                            rootFeedTab = RootFeedTab.FLOATER_TASK_HOME
-                            navController.navigate(AppRoute.ScheduledTaskHome.route) {
-                                popUpTo(entry.destination.id) { inclusive = true }
-                                launchSingleTop = true
-                            }
-                        }
-                        Box(modifier = Modifier.fillMaxSize())
-                    }
-
-                    composable(
-                        route = AppRoute.TodayTodos.route,
-                        deepLinks = listOf(navDeepLink { uriPattern = "tday://todos/today" }),
-                    ) {
-                        TodosRoute(
-                            mode = TodoListMode.TODAY,
-                            onBack = { navController.popBackStack() },
-                            pullRefreshEnabled = !appUiState.isLocalMode,
-                            summaryAvailable = !appUiState.isLocalMode,
-                        )
-                    }
-
-                    composable(
-                        route = AppRoute.CreateTodayTodo.route,
-                        arguments = listOf(
-                            navArgument("target") {
-                                type = NavType.StringType
-                                defaultValue = "today"
-                            },
-                        ),
-                        deepLinks = listOf(navDeepLink {
-                            uriPattern = "tday://todos/create?target={target}"
-                        }),
-                    ) { entry ->
-                        val createTarget = entry.arguments?.getString("target") ?: "today"
-                        if (createTarget.equals("floater", ignoreCase = true)) {
-                            LaunchedEffect(entry.destination.id, createTarget) {
-                                rootFeedTab = RootFeedTab.FLOATER_TASK_HOME
-                                pendingFloaterTaskHomeCreateTask = true
-                                navController.navigate(AppRoute.ScheduledTaskHome.route) {
-                                    popUpTo(entry.destination.id) { inclusive = true }
-                                    launchSingleTop = true
-                                }
-                            }
-                            Box(modifier = Modifier.fillMaxSize())
-                        } else {
-                            val finishCreateTodayFlow = {
-                                rootFeedTab = RootFeedTab.SCHEDULED_TASK_HOME
-                                val returnedToScheduledTaskHome = navController.popBackStack(
-                                    route = AppRoute.ScheduledTaskHome.route,
-                                    inclusive = false,
-                                )
-                                if (!returnedToScheduledTaskHome) {
-                                    navController.navigate(AppRoute.ScheduledTaskHome.route) {
-                                        popUpTo(AppRoute.CreateTodayTodo.route) { inclusive = true }
-                                        launchSingleTop = true
-                                    }
-                                }
-                                navController.navigate(AppRoute.TodayTodos.route) {
-                                    launchSingleTop = true
-                                }
-                            }
-                            TodosRoute(
-                                mode = TodoListMode.TODAY,
-                                onBack = finishCreateTodayFlow,
-                                openCreateTaskOnStart = true,
-                                onCreateTaskFlowFinished = finishCreateTodayFlow,
-                                pullRefreshEnabled = !appUiState.isLocalMode,
-                                summaryAvailable = !appUiState.isLocalMode,
-                            )
-                        }
-                    }
-
-                    composable(
-                        route = AppRoute.OverdueTodos.route,
-                        deepLinks = listOf(navDeepLink { uriPattern = "tday://todos/overdue" }),
-                    ) {
-                        TodosRoute(
-                            mode = TodoListMode.OVERDUE,
-                            onBack = { navController.popBackStack() },
-                            onOpenMorningSweep = {
-                                navController.navigate(AppRoute.MorningSweep.route) {
-                                    launchSingleTop = true
-                                }
-                            },
-                            pullRefreshEnabled = !appUiState.isLocalMode,
-                            summaryAvailable = !appUiState.isLocalMode,
-                        )
-                    }
-
-                    composable(
-                        route = AppRoute.ScheduledTodos.route,
-                        deepLinks = listOf(navDeepLink { uriPattern = "tday://todos/scheduled" }),
-                    ) {
-                        TodosRoute(
-                            mode = TodoListMode.SCHEDULED,
-                            onBack = { navController.popBackStack() },
-                            pullRefreshEnabled = !appUiState.isLocalMode,
-                            summaryAvailable = !appUiState.isLocalMode,
-                        )
-                    }
-
-                    composable(
-                        route = AppRoute.AllTodos.route,
-                        arguments = listOf(
-                            navArgument("highlightTodoId") {
-                                type = NavType.StringType
-                                nullable = true
-                                defaultValue = null
-                            },
-                        ),
-                        deepLinks = listOf(
-                            navDeepLink { uriPattern = "tday://todos/all?highlightTodoId={highlightTodoId}" },
-                        ),
-                    ) { entry ->
-                        val pendingSearchHighlightTodoId = remember(entry) {
-                            navController.previousBackStackEntry
-                                ?.savedStateHandle
-                                ?.remove<String>(PENDING_SEARCH_HIGHLIGHT_TODO_ID)
-                        }
-                        val argumentHighlightTodoId = Uri.decode(
-                            entry.arguments?.getString("highlightTodoId").orEmpty(),
-                        ).ifBlank { null }
-                        val highlightTodoId = pendingSearchHighlightTodoId ?: argumentHighlightTodoId
-                        TodosRoute(
-                            mode = TodoListMode.ALL,
-                            highlightTodoId = highlightTodoId,
-                            onBack = { navController.popBackStack() },
-                            pullRefreshEnabled = !appUiState.isLocalMode,
-                            summaryAvailable = !appUiState.isLocalMode,
-                        )
-                    }
-
-                    composable(
-                        route = AppRoute.PriorityTodos.route,
-                        deepLinks = listOf(navDeepLink { uriPattern = "tday://todos/priority" }),
-                    ) {
-                        TodosRoute(
-                            mode = TodoListMode.PRIORITY,
-                            onBack = { navController.popBackStack() },
-                            pullRefreshEnabled = !appUiState.isLocalMode,
-                            summaryAvailable = !appUiState.isLocalMode,
-                        )
-                    }
-
-                    composable(
-                        route = AppRoute.ListTodos.route,
-                        arguments = listOf(
-                            navArgument("listId") { type = NavType.StringType },
-                            navArgument("listName") { type = NavType.StringType },
-                        ),
-                        deepLinks = listOf(
-                            navDeepLink { uriPattern = "tday://todos/list/{listId}/{listName}" },
-                        ),
-                    ) { entry ->
-                        val listId = entry.arguments?.getString("listId").orEmpty()
-                        val listName = Uri.decode(entry.arguments?.getString("listName").orEmpty())
-                        TodosRoute(
-                            mode = TodoListMode.LIST,
-                            listId = listId,
-                            listName = listName,
-                            onBack = { navController.popBackStack() },
-                            pullRefreshEnabled = !appUiState.isLocalMode,
-                            summaryAvailable = !appUiState.isLocalMode,
-                            onListDeleted = {
-                                navController.navigate(AppRoute.ScheduledTaskHome.route) {
-                                    popUpTo(AppRoute.ScheduledTaskHome.route) { inclusive = false }
-                                    launchSingleTop = true
-                                }
-                            },
-                        )
-                    }
-
-                    composable(
-                        route = AppRoute.FloaterListTodos.route,
-                        arguments = listOf(
-                            navArgument("listId") { type = NavType.StringType },
-                            navArgument("listName") { type = NavType.StringType },
-                        ),
-                        deepLinks = listOf(
-                            navDeepLink { uriPattern = "tday://floater/list/{listId}/{listName}" },
-                        ),
-                    ) { entry ->
-                        val listId = entry.arguments?.getString("listId").orEmpty()
-                        val listName = Uri.decode(entry.arguments?.getString("listName").orEmpty())
-                        TodosRoute(
-                            mode = TodoListMode.FLOATER,
-                            listId = listId,
-                            listName = listName,
-                            onBack = { navController.popBackStack() },
-                            pullRefreshEnabled = !appUiState.isLocalMode,
-                            summaryAvailable = !appUiState.isLocalMode,
-                            onListDeleted = {
-                                rootFeedTab = RootFeedTab.FLOATER_TASK_HOME
-                                navController.navigate(AppRoute.ScheduledTaskHome.route) {
-                                    popUpTo(AppRoute.ScheduledTaskHome.route) { inclusive = false }
-                                    launchSingleTop = true
-                                }
-                            },
-                        )
-                    }
-
-                    composable(
-                        route = AppRoute.Completed.route,
-                        deepLinks = listOf(navDeepLink { uriPattern = "tday://completed" }),
-                    ) {
-                        val viewModel: CompletedViewModel = hiltViewModel()
-                        val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-                        OnRouteResume { viewModel.load() }
-                        CompletedScreen(
-                            uiState = uiState,
-                            onBack = { navController.popBackStack() },
-                            onRefresh = { viewModel.refresh(userInitiated = true) },
-                            onUncomplete = viewModel::uncomplete,
-                            onDelete = viewModel::delete,
-                            onUpdateTask = viewModel::update,
-                        )
-                    }
-
-                    composable(
-                        route = AppRoute.Calendar.route,
-                        deepLinks = listOf(navDeepLink { uriPattern = "tday://calendar" }),
-                    ) {
-                        val viewModel: CalendarViewModel = hiltViewModel()
-                        val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-                        OnRouteResume { viewModel.load() }
-                        CalendarScreen(
-                            uiState = uiState,
-                            onBack = { navController.popBackStack() },
-                            onRefresh = { viewModel.refresh(userInitiated = true) },
-                            onCreateTask = viewModel::createTask,
-                            onParseTaskTitleNlp = viewModel::parseTaskTitleNlp,
-                            onCompleteTask = viewModel::complete,
-                            onUpdateTask = viewModel::updateTask,
-                            onMoveTask = viewModel::moveTask,
-                            onDelete = viewModel::delete,
-                        )
-                    }
-
-                    composable(
-                        route = AppRoute.Car.route,
-                        deepLinks = listOf(navDeepLink { uriPattern = "tday://car" }),
-                    ) {
-                        val viewModel: CarTaskSurfaceViewModel = hiltViewModel()
-                        val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-                        val voiceLauncher = rememberCarTaskVoiceCreateLauncher(
-                            onVoiceTitle = viewModel::createFromVoice,
-                            onVoiceUnavailable = { mode ->
-                                val target = when (mode) {
-                                    CarTaskMode.TODAY -> "today"
-                                    CarTaskMode.FLOATER -> "floater"
-                                }
-                                navController.navigate("todos/create?target=$target") {
-                                    launchSingleTop = true
-                                }
-                            },
-                        )
-                        OnRouteResume { viewModel.refresh() }
-                        CarTaskSurfaceScreen(
-                            uiState = uiState,
-                            onModeSelected = viewModel::selectMode,
-                            onCreateWithVoice = { voiceLauncher(uiState.mode) },
-                            onComplete = viewModel::complete,
-                        )
-                    }
-
-                    composable(
-                        route = AppRoute.Settings.route,
-                        deepLinks = listOf(navDeepLink { uriPattern = "tday://settings" }),
-                        enterTransition = {
-                            settingsEnterTransition()
-                        },
-                        exitTransition = {
-                            settingsExitTransition()
-                        },
-                        popEnterTransition = {
-                            settingsEnterTransition()
-                        },
-                        popExitTransition = {
-                            settingsExitTransition()
-                        },
-                    ) {
-                        OnRouteResume {
-                            appViewModel.refreshAiSummaryPreference()
-                            appViewModel.refreshDefaultHomeScreen()
-                            appViewModel.refreshVersionInfo()
-                        }
-                        SettingsScreen(
-                            user = appUiState.user,
-                            isLocalMode = appUiState.isLocalMode,
-                            selectedThemeMode = appUiState.themeMode,
-                            selectedReminder = appUiState.selectedReminder,
-                            syncStatus = appUiState.syncStatus,
-                            aiSummaryEnabled = appUiState.aiSummaryEnabled,
-                            defaultHomeScreen = appUiState.defaultHomeScreen,
-                            hasUpdate = releaseUiState.hasUpdate,
-                            latestVersionName = releaseUiState.latestRelease?.version,
-                            backendVersion = appUiState.backendVersion,
-                            versionCheckResult = appUiState.versionCheckResult,
-                            onThemeModeSelected = appViewModel::setThemeMode,
-                            onDefaultHomeScreenSelected = appViewModel::setDefaultHomeScreen,
-                            onReminderSelected = appViewModel::setDefaultReminder,
-                        selectedDayAhead = appUiState.selectedDayAhead,
-                        onDayAheadSelected = appViewModel::setDayAhead,
-                            onSyncNow = appViewModel::syncNow,
-                            onToggleAiSummary = appViewModel::setAiSummaryEnabled,
-                            onBack = { navController.popBackStack() },
-                            onLogout = { appViewModel.logout() },
-                            onLeaveLocalWorkspace = { appViewModel.leaveLocalWorkspace() },
-                            onOpenLatestRelease = { navController.navigate(AppRoute.LatestRelease.route) },
-                            onOpenHelpGuide = { navController.navigate(AppRoute.HelpGuide.create()) },
-                            onUpdateName = { newName ->
-                                appViewModel.updateDisplayName(newName).also { result ->
-                                    if (result is ProfileEditResult.Success) {
-                                        appViewModel.snackbarManager.showSuccess(
-                                            profileNameUpdatedToastMessage,
-                                        )
-                                    }
-                                }
-                            },
-                            onChangePassword = { current, newPassword ->
-                                appViewModel.changePassword(current, newPassword).also { result ->
-                                    if (result is ProfileEditResult.Success) {
-                                        appViewModel.snackbarManager.showSuccess(
-                                            passwordChangedToastMessage,
-                                        )
-                                    }
-                                }
-                            },
-                            onForgotPassword = {
-                                navController.navigate(AppRoute.ForgotPassword.route) {
-                                    launchSingleTop = true
-                                }
-                            },
-                            onLoadSecurityQuestionStatus = { appViewModel.securityQuestionStatus() },
-                            onFetchSecurityQuestions = { appViewModel.fetchSecurityQuestions() },
-                            onUpdateSecurityQuestions = { current, answers ->
-                                appViewModel.updateSecurityQuestions(current, answers).also { result ->
-                                    if (result is ProfileEditResult.Success) {
-                                        appViewModel.snackbarManager.showSuccess(
-                                            securityQuestionsUpdatedToastMessage,
-                                        )
-                                    }
-                                }
-                            },
-                        )
-                    }
-
-                    composable(
-                        route = AppRoute.LatestRelease.route,
-                        enterTransition = { settingsEnterTransition() },
-                        exitTransition = { settingsExitTransition() },
-                        popEnterTransition = { settingsEnterTransition() },
-                        popExitTransition = { settingsExitTransition() },
-                    ) {
-                        OnRouteResume {
-                            appViewModel.refreshVersionInfo()
-                        }
-                        LatestReleaseScreen(
-                            uiState = releaseUiState,
-                            onBack = { navController.popBackStack() },
-                            onRetry = releaseViewModel::load,
-                        )
-                    }
-
-                    composable(
-                        route = AppRoute.MorningSweep.route,
-                        deepLinks = listOf(navDeepLink { uriPattern = "tday://morning-sweep" }),
-                        enterTransition = { settingsEnterTransition() },
-                        exitTransition = { settingsExitTransition() },
-                        popEnterTransition = { settingsEnterTransition() },
-                        popExitTransition = { settingsExitTransition() },
-                    ) {
-                        MorningSweepScreen(
-                            onBack = { navController.popBackStack() },
-                        )
-                    }
-
-                    composable(
-                        route = AppRoute.HelpGuide.route,
-                        arguments = listOf(
-                            navArgument("topic") {
-                                type = NavType.StringType
-                                nullable = true
-                                defaultValue = null
-                            },
-                        ),
-                        enterTransition = { settingsEnterTransition() },
-                        exitTransition = { settingsExitTransition() },
-                        popEnterTransition = { settingsEnterTransition() },
-                        popExitTransition = { settingsExitTransition() },
-                    ) { backStackEntry ->
-                        HelpGuideScreen(
-                            isLocalMode = appUiState.isLocalMode,
-                            onBack = { navController.popBackStack() },
-                            onOpenDeepLink = { route ->
-                                navController.navigate(route) { launchSingleTop = true }
-                            },
-                            initialTopic = backStackEntry.arguments?.getString("topic"),
-                        )
-                    }
+                    splashAndAuthRoutes(
+                        startupTagline = startupTagline,
+                        onStartupSplashHoldChanged = { isStartupSplashHeld = it },
+                        navController = navController,
+                        appViewModel = appViewModel,
+                    )
+                    // Every changing value crosses into a route as a `() -> T` reader, never as
+                    // the value itself. This lambda is the NavGraph *builder*: it runs once per
+                    // graph build, inside NavHost's `remember(route, startDestination, builder)`,
+                    // and NOT on recomposition. A `by`-delegated read performed here is recorded
+                    // against NavHost's scope and then frozen into the destination for the life of
+                    // the graph, so writing the state would never reach the screen. Reading through
+                    // the lambda instead defers the snapshot read to the `composable { }` body,
+                    // where it belongs to the destination's own recompose scope.
+                    rootFeedRoutes(
+                        appUiState = { appUiState },
+                        appViewModel = appViewModel,
+                        navController = navController,
+                        unauthenticatedUiState = unauthenticatedScheduledTaskHomeUiState,
+                        rootFeedTab = { rootFeedTab },
+                        onSelectRootFeedTab = ::handleRootFeedTabSelection,
+                        onChangeRootFeedTab = { rootFeedTab = it },
+                        rootCreateTaskRequestKey = { rootCreateTaskRequestKey },
+                        onCreateTaskRequestHandled = ::consumeRootCreateTaskRequest,
+                        onRequestCreateTask = ::requestRootCreateTask,
+                        scheduledScrollToTopRequestKey = { scheduledTaskHomeScrollToTopRequestKey },
+                        floaterScrollToTopRequestKey = { floaterTaskHomeScrollToTopRequestKey },
+                        rootDockCollapsed = { rootDockCollapsed },
+                        onRootDockCollapsedChange = { rootDockCollapsed = it },
+                        rootControlsVisible = { rootControlsVisible },
+                        onRootControlsVisibleChange = { rootControlsVisible = it },
+                    )
+                    todoScopeRoutes(
+                        navController = navController,
+                        isLocalMode = { appUiState.isLocalMode },
+                        onChangeRootFeedTab = { rootFeedTab = it },
+                        onRequestFloaterCreateTask = { pendingFloaterTaskHomeCreateTask = true },
+                    )
+                    listRoutes(
+                        navController = navController,
+                        isLocalMode = { appUiState.isLocalMode },
+                        onChangeRootFeedTab = { rootFeedTab = it },
+                    )
+                    utilityRoutes(
+                        navController = navController,
+                        isLocalMode = { appUiState.isLocalMode },
+                    )
+                    settingsRoutes(
+                        navController = navController,
+                        appUiState = { appUiState },
+                        appViewModel = appViewModel,
+                        releaseUiState = { releaseUiState },
+                        releaseViewModel = releaseViewModel,
+                        passwordChangedToastMessage = passwordChangedToastMessage,
+                        profileNameUpdatedToastMessage = profileNameUpdatedToastMessage,
+                        securityQuestionsUpdatedToastMessage = securityQuestionsUpdatedToastMessage,
+                    )
                 }
             }
 
@@ -1123,6 +405,1111 @@ fun TdayApp(
         }
     }
 }
+
+/**
+ * The pre-workspace routes: the in-graph splash, the two legacy entry points that still resolve to
+ * it, and the logged-out password reset.
+ */
+private fun NavGraphBuilder.splashAndAuthRoutes(
+    startupTagline: String,
+    onStartupSplashHoldChanged: (Boolean) -> Unit,
+    navController: NavHostController,
+    appViewModel: AppViewModel,
+) {
+    composable(
+        route = AppRoute.Splash.route,
+        enterTransition = { fadeIn(tween(300)) },
+        exitTransition = { fadeOut(tween(300)) },
+    ) {
+        // Same tagline as the pre-graph splash it takes over from, so the
+        // hand-off between the two is not visible.
+        SplashScreen(
+            tagline = startupTagline,
+            onHoldChanged = onStartupSplashHoldChanged,
+        )
+    }
+
+    composable(
+        route = AppRoute.ServerSetup.route,
+        enterTransition = { fadeIn(tween(300)) },
+        exitTransition = { fadeOut(tween(300)) },
+    ) {
+        SplashScreen(onHoldChanged = onStartupSplashHoldChanged)
+    }
+
+    composable(
+        route = AppRoute.Login.route,
+        enterTransition = { fadeIn(tween(300)) },
+        exitTransition = { fadeOut(tween(300)) },
+    ) {
+        SplashScreen(onHoldChanged = onStartupSplashHoldChanged)
+    }
+
+    composable(
+        route = AppRoute.ForgotPassword.route,
+        enterTransition = { settingsEnterTransition() },
+        exitTransition = { settingsExitTransition() },
+        popEnterTransition = { settingsEnterTransition() },
+        popExitTransition = { settingsExitTransition() },
+    ) {
+        val passwordResetMessage =
+            stringResource(R.string.forgot_password_reset_success)
+        ForgotPasswordScreen(
+            onBackToLogin = { navController.popBackStack() },
+            onResetComplete = {
+                navController.popBackStack()
+                appViewModel.snackbarManager.showSuccess(passwordResetMessage)
+            },
+        )
+    }
+}
+
+/**
+ * The two root feeds. `home` is the real one — it draws whichever feed the dock has selected, plus
+ * the onboarding wizard when there is no workspace — and `floater` only exists so the widget's
+ * `tday://floater` has a destination to land on before it hands over to `home`.
+ *
+ * The changing values arrive as `() -> T` readers and are dereferenced inside `composable { }`, so
+ * the snapshot read lands in the destination's recompose scope rather than in the graph builder's.
+ */
+private fun NavGraphBuilder.rootFeedRoutes(
+    appUiState: () -> AppUiState,
+    appViewModel: AppViewModel,
+    navController: NavHostController,
+    unauthenticatedUiState: ScheduledTaskHomeUiState,
+    rootFeedTab: () -> RootFeedTab,
+    onSelectRootFeedTab: (RootFeedTab) -> Unit,
+    onChangeRootFeedTab: (RootFeedTab) -> Unit,
+    rootCreateTaskRequestKey: () -> Int,
+    onCreateTaskRequestHandled: (Int) -> Unit,
+    onRequestCreateTask: () -> Unit,
+    scheduledScrollToTopRequestKey: () -> Int,
+    floaterScrollToTopRequestKey: () -> Int,
+    rootDockCollapsed: () -> Boolean,
+    onRootDockCollapsedChange: (Boolean) -> Unit,
+    rootControlsVisible: () -> Boolean,
+    onRootControlsVisibleChange: (Boolean) -> Unit,
+) {
+    composable(
+        route = AppRoute.ScheduledTaskHome.route,
+        deepLinks = listOf(navDeepLink { uriPattern = "tday://home" }),
+    ) {
+        ScheduledTaskHomeRoute(
+            appUiState = appUiState(),
+            appViewModel = appViewModel,
+            navController = navController,
+            unauthenticatedUiState = unauthenticatedUiState,
+            rootFeedTab = rootFeedTab(),
+            onSelectRootFeedTab = onSelectRootFeedTab,
+            onChangeRootFeedTab = onChangeRootFeedTab,
+            rootCreateTaskRequestKey = rootCreateTaskRequestKey(),
+            onCreateTaskRequestHandled = onCreateTaskRequestHandled,
+            onRequestCreateTask = onRequestCreateTask,
+            scheduledScrollToTopRequestKey = scheduledScrollToTopRequestKey(),
+            floaterScrollToTopRequestKey = floaterScrollToTopRequestKey(),
+            rootDockCollapsed = rootDockCollapsed(),
+            onRootDockCollapsedChange = onRootDockCollapsedChange,
+            rootControlsVisible = rootControlsVisible(),
+            onRootControlsVisibleChange = onRootControlsVisibleChange,
+        )
+    }
+
+    composable(
+        route = AppRoute.FloaterTaskHome.route,
+        deepLinks = listOf(navDeepLink { uriPattern = "tday://floater" }),
+    ) { entry ->
+        LaunchedEffect(entry.destination.id) {
+            onChangeRootFeedTab(RootFeedTab.FLOATER_TASK_HOME)
+            navController.navigate(AppRoute.ScheduledTaskHome.route) {
+                popUpTo(entry.destination.id) { inclusive = true }
+                launchSingleTop = true
+            }
+        }
+        Box(modifier = Modifier.fillMaxSize())
+    }
+}
+
+/** The five scheduled-task scopes reachable from the home cards, plus the create-task deep link. */
+private fun NavGraphBuilder.todoScopeRoutes(
+    navController: NavHostController,
+    isLocalMode: () -> Boolean,
+    onChangeRootFeedTab: (RootFeedTab) -> Unit,
+    onRequestFloaterCreateTask: () -> Unit,
+) {
+    composable(
+        route = AppRoute.TodayTodos.route,
+        deepLinks = listOf(navDeepLink { uriPattern = "tday://todos/today" }),
+    ) {
+        TodosRoute(
+            mode = TodoListMode.TODAY,
+            onBack = { navController.popBackStack() },
+            pullRefreshEnabled = !isLocalMode(),
+            summaryAvailable = !isLocalMode(),
+        )
+    }
+
+    createTodayTodoRoute(
+        navController = navController,
+        isLocalMode = isLocalMode,
+        onChangeRootFeedTab = onChangeRootFeedTab,
+        onRequestFloaterCreateTask = onRequestFloaterCreateTask,
+    )
+
+    composable(
+        route = AppRoute.OverdueTodos.route,
+        deepLinks = listOf(navDeepLink { uriPattern = "tday://todos/overdue" }),
+    ) {
+        TodosRoute(
+            mode = TodoListMode.OVERDUE,
+            onBack = { navController.popBackStack() },
+            onOpenMorningSweep = {
+                navController.navigate(AppRoute.MorningSweep.route) {
+                    launchSingleTop = true
+                }
+            },
+            pullRefreshEnabled = !isLocalMode(),
+            summaryAvailable = !isLocalMode(),
+        )
+    }
+
+    composable(
+        route = AppRoute.ScheduledTodos.route,
+        deepLinks = listOf(navDeepLink { uriPattern = "tday://todos/scheduled" }),
+    ) {
+        TodosRoute(
+            mode = TodoListMode.SCHEDULED,
+            onBack = { navController.popBackStack() },
+            pullRefreshEnabled = !isLocalMode(),
+            summaryAvailable = !isLocalMode(),
+        )
+    }
+
+    composable(
+        route = AppRoute.AllTodos.route,
+        arguments = listOf(
+            navArgument(ARG_HIGHLIGHT_TODO_ID) {
+                type = NavType.StringType
+                nullable = true
+                defaultValue = null
+            },
+        ),
+        deepLinks = listOf(
+            navDeepLink { uriPattern = "tday://todos/all?highlightTodoId={highlightTodoId}" },
+        ),
+    ) { entry ->
+        val pendingSearchHighlightTodoId = remember(entry) {
+            navController.previousBackStackEntry
+                ?.savedStateHandle
+                ?.remove<String>(PENDING_SEARCH_HIGHLIGHT_TODO_ID)
+        }
+        val argumentHighlightTodoId = Uri.decode(
+            entry.arguments?.getString(ARG_HIGHLIGHT_TODO_ID).orEmpty(),
+        ).ifBlank { null }
+        val highlightTodoId = pendingSearchHighlightTodoId ?: argumentHighlightTodoId
+        TodosRoute(
+            mode = TodoListMode.ALL,
+            highlightTodoId = highlightTodoId,
+            onBack = { navController.popBackStack() },
+            pullRefreshEnabled = !isLocalMode(),
+            summaryAvailable = !isLocalMode(),
+        )
+    }
+
+    composable(
+        route = AppRoute.PriorityTodos.route,
+        deepLinks = listOf(navDeepLink { uriPattern = "tday://todos/priority" }),
+    ) {
+        TodosRoute(
+            mode = TodoListMode.PRIORITY,
+            onBack = { navController.popBackStack() },
+            pullRefreshEnabled = !isLocalMode(),
+            summaryAvailable = !isLocalMode(),
+        )
+    }
+}
+
+/**
+ * `tday://todos/create` — the widget and car surface's "add a task" entry point. A floater target
+ * cannot create anything here (the floater feed lives inside `home`), so it re-points at `home`
+ * with the request held as state; a scheduled target opens the sheet on Today directly.
+ */
+private fun NavGraphBuilder.createTodayTodoRoute(
+    navController: NavHostController,
+    isLocalMode: () -> Boolean,
+    onChangeRootFeedTab: (RootFeedTab) -> Unit,
+    onRequestFloaterCreateTask: () -> Unit,
+) {
+    composable(
+        route = AppRoute.CreateTodayTodo.route,
+        arguments = listOf(
+            navArgument(ARG_CREATE_TARGET) {
+                type = NavType.StringType
+                defaultValue = CREATE_TARGET_TODAY
+            },
+        ),
+        deepLinks = listOf(navDeepLink {
+            uriPattern = "tday://todos/create?target={target}"
+        }),
+    ) { entry ->
+        val createTarget = entry.arguments?.getString(ARG_CREATE_TARGET) ?: CREATE_TARGET_TODAY
+        if (createTarget.equals(CREATE_TARGET_FLOATER, ignoreCase = true)) {
+            LaunchedEffect(entry.destination.id, createTarget) {
+                onChangeRootFeedTab(RootFeedTab.FLOATER_TASK_HOME)
+                onRequestFloaterCreateTask()
+                navController.navigate(AppRoute.ScheduledTaskHome.route) {
+                    popUpTo(entry.destination.id) { inclusive = true }
+                    launchSingleTop = true
+                }
+            }
+            Box(modifier = Modifier.fillMaxSize())
+        } else {
+            val finishCreateTodayFlow = {
+                onChangeRootFeedTab(RootFeedTab.SCHEDULED_TASK_HOME)
+                val returnedToScheduledTaskHome = navController.popBackStack(
+                    route = AppRoute.ScheduledTaskHome.route,
+                    inclusive = false,
+                )
+                if (!returnedToScheduledTaskHome) {
+                    navController.navigate(AppRoute.ScheduledTaskHome.route) {
+                        popUpTo(AppRoute.CreateTodayTodo.route) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                }
+                navController.navigate(AppRoute.TodayTodos.route) {
+                    launchSingleTop = true
+                }
+            }
+            TodosRoute(
+                mode = TodoListMode.TODAY,
+                onBack = finishCreateTodayFlow,
+                openCreateTaskOnStart = true,
+                onCreateTaskFlowFinished = finishCreateTodayFlow,
+                pullRefreshEnabled = !isLocalMode(),
+                summaryAvailable = !isLocalMode(),
+            )
+        }
+    }
+}
+
+/** The two per-list feeds: a scheduled list and a floater list. */
+private fun NavGraphBuilder.listRoutes(
+    navController: NavHostController,
+    isLocalMode: () -> Boolean,
+    onChangeRootFeedTab: (RootFeedTab) -> Unit,
+) {
+    composable(
+        route = AppRoute.ListTodos.route,
+        arguments = listOf(
+            navArgument(ARG_LIST_ID) { type = NavType.StringType },
+            navArgument(ARG_LIST_NAME) { type = NavType.StringType },
+        ),
+        deepLinks = listOf(
+            navDeepLink { uriPattern = "tday://todos/list/{listId}/{listName}" },
+        ),
+    ) { entry ->
+        val listId = entry.arguments?.getString(ARG_LIST_ID).orEmpty()
+        val listName = Uri.decode(entry.arguments?.getString(ARG_LIST_NAME).orEmpty())
+        TodosRoute(
+            mode = TodoListMode.LIST,
+            listId = listId,
+            listName = listName,
+            onBack = { navController.popBackStack() },
+            pullRefreshEnabled = !isLocalMode(),
+            summaryAvailable = !isLocalMode(),
+            onListDeleted = {
+                navController.navigate(AppRoute.ScheduledTaskHome.route) {
+                    popUpTo(AppRoute.ScheduledTaskHome.route) { inclusive = false }
+                    launchSingleTop = true
+                }
+            },
+        )
+    }
+
+    composable(
+        route = AppRoute.FloaterListTodos.route,
+        arguments = listOf(
+            navArgument(ARG_LIST_ID) { type = NavType.StringType },
+            navArgument(ARG_LIST_NAME) { type = NavType.StringType },
+        ),
+        deepLinks = listOf(
+            navDeepLink { uriPattern = "tday://floater/list/{listId}/{listName}" },
+        ),
+    ) { entry ->
+        val listId = entry.arguments?.getString(ARG_LIST_ID).orEmpty()
+        val listName = Uri.decode(entry.arguments?.getString(ARG_LIST_NAME).orEmpty())
+        TodosRoute(
+            mode = TodoListMode.FLOATER,
+            listId = listId,
+            listName = listName,
+            onBack = { navController.popBackStack() },
+            pullRefreshEnabled = !isLocalMode(),
+            summaryAvailable = !isLocalMode(),
+            onListDeleted = {
+                onChangeRootFeedTab(RootFeedTab.FLOATER_TASK_HOME)
+                navController.navigate(AppRoute.ScheduledTaskHome.route) {
+                    popUpTo(AppRoute.ScheduledTaskHome.route) { inclusive = false }
+                    launchSingleTop = true
+                }
+            },
+        )
+    }
+}
+
+/** Completed history, calendar, the car surface, morning sweep, and the in-app guide. */
+private fun NavGraphBuilder.utilityRoutes(
+    navController: NavHostController,
+    isLocalMode: () -> Boolean,
+) {
+    composable(
+        route = AppRoute.Completed.route,
+        deepLinks = listOf(navDeepLink { uriPattern = "tday://completed" }),
+    ) {
+        val viewModel: CompletedViewModel = hiltViewModel()
+        val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+        OnRouteResume { viewModel.load() }
+        CompletedScreen(
+            uiState = uiState,
+            onBack = { navController.popBackStack() },
+            onRefresh = { viewModel.refresh(userInitiated = true) },
+            onUncomplete = viewModel::uncomplete,
+            onDelete = viewModel::delete,
+            onUpdateTask = viewModel::update,
+        )
+    }
+
+    composable(
+        route = AppRoute.Calendar.route,
+        deepLinks = listOf(navDeepLink { uriPattern = "tday://calendar" }),
+    ) {
+        val viewModel: CalendarViewModel = hiltViewModel()
+        val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+        OnRouteResume { viewModel.load() }
+        CalendarScreen(
+            uiState = uiState,
+            onBack = { navController.popBackStack() },
+            onRefresh = { viewModel.refresh(userInitiated = true) },
+            onCreateTask = viewModel::createTask,
+            onParseTaskTitleNlp = viewModel::parseTaskTitleNlp,
+            onCompleteTask = viewModel::complete,
+            onUpdateTask = viewModel::updateTask,
+            onMoveTask = viewModel::moveTask,
+            onDelete = viewModel::delete,
+        )
+    }
+
+    composable(
+        route = AppRoute.Car.route,
+        deepLinks = listOf(navDeepLink { uriPattern = "tday://car" }),
+    ) {
+        val viewModel: CarTaskSurfaceViewModel = hiltViewModel()
+        val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+        val voiceLauncher = rememberCarTaskVoiceCreateLauncher(
+            onVoiceTitle = viewModel::createFromVoice,
+            onVoiceUnavailable = { mode ->
+                val target = when (mode) {
+                    CarTaskMode.TODAY -> CREATE_TARGET_TODAY
+                    CarTaskMode.FLOATER -> CREATE_TARGET_FLOATER
+                }
+                navController.navigate("todos/create?target=$target") {
+                    launchSingleTop = true
+                }
+            },
+        )
+        OnRouteResume { viewModel.refresh() }
+        CarTaskSurfaceScreen(
+            uiState = uiState,
+            onModeSelected = viewModel::selectMode,
+            onCreateWithVoice = { voiceLauncher(uiState.mode) },
+            onComplete = viewModel::complete,
+        )
+    }
+
+    composable(
+        route = AppRoute.MorningSweep.route,
+        deepLinks = listOf(navDeepLink { uriPattern = "tday://morning-sweep" }),
+        enterTransition = { settingsEnterTransition() },
+        exitTransition = { settingsExitTransition() },
+        popEnterTransition = { settingsEnterTransition() },
+        popExitTransition = { settingsExitTransition() },
+    ) {
+        MorningSweepScreen(
+            onBack = { navController.popBackStack() },
+        )
+    }
+
+    composable(
+        route = AppRoute.HelpGuide.route,
+        arguments = listOf(
+            navArgument(ARG_GUIDE_TOPIC) {
+                type = NavType.StringType
+                nullable = true
+                defaultValue = null
+            },
+        ),
+        enterTransition = { settingsEnterTransition() },
+        exitTransition = { settingsExitTransition() },
+        popEnterTransition = { settingsEnterTransition() },
+        popExitTransition = { settingsExitTransition() },
+    ) { backStackEntry ->
+        HelpGuideScreen(
+            isLocalMode = isLocalMode(),
+            onBack = { navController.popBackStack() },
+            onOpenDeepLink = { route ->
+                navController.navigate(route) { launchSingleTop = true }
+            },
+            initialTopic = backStackEntry.arguments?.getString(ARG_GUIDE_TOPIC),
+        )
+    }
+}
+
+/**
+ * Settings and the release notes screen it links to. Both states arrive as `() -> T` readers for
+ * the same reason as [rootFeedRoutes]: the read has to happen in the destination, not in the
+ * builder.
+ */
+private fun NavGraphBuilder.settingsRoutes(
+    navController: NavHostController,
+    appUiState: () -> AppUiState,
+    appViewModel: AppViewModel,
+    releaseUiState: () -> LatestReleaseUiState,
+    releaseViewModel: LatestReleaseViewModel,
+    passwordChangedToastMessage: String,
+    profileNameUpdatedToastMessage: String,
+    securityQuestionsUpdatedToastMessage: String,
+) {
+    composable(
+        route = AppRoute.Settings.route,
+        deepLinks = listOf(navDeepLink { uriPattern = "tday://settings" }),
+        enterTransition = {
+            settingsEnterTransition()
+        },
+        exitTransition = {
+            settingsExitTransition()
+        },
+        popEnterTransition = {
+            settingsEnterTransition()
+        },
+        popExitTransition = {
+            settingsExitTransition()
+        },
+    ) {
+        OnRouteResume {
+            appViewModel.refreshAiSummaryPreference()
+            appViewModel.refreshDefaultHomeScreen()
+            appViewModel.refreshVersionInfo()
+        }
+        val settingsUiState = appUiState()
+        val settingsReleaseUiState = releaseUiState()
+        SettingsScreen(
+            user = settingsUiState.user,
+            isLocalMode = settingsUiState.isLocalMode,
+            selectedThemeMode = settingsUiState.themeMode,
+            selectedReminder = settingsUiState.selectedReminder,
+            syncStatus = settingsUiState.syncStatus,
+            aiSummaryEnabled = settingsUiState.aiSummaryEnabled,
+            defaultHomeScreen = settingsUiState.defaultHomeScreen,
+            hasUpdate = settingsReleaseUiState.hasUpdate,
+            latestVersionName = settingsReleaseUiState.latestRelease?.version,
+            backendVersion = settingsUiState.backendVersion,
+            versionCheckResult = settingsUiState.versionCheckResult,
+            onThemeModeSelected = appViewModel::setThemeMode,
+            onDefaultHomeScreenSelected = appViewModel::setDefaultHomeScreen,
+            onReminderSelected = appViewModel::setDefaultReminder,
+        selectedDayAhead = settingsUiState.selectedDayAhead,
+        onDayAheadSelected = appViewModel::setDayAhead,
+            onSyncNow = appViewModel::syncNow,
+            onToggleAiSummary = appViewModel::setAiSummaryEnabled,
+            onBack = { navController.popBackStack() },
+            onLogout = { appViewModel.logout() },
+            onLeaveLocalWorkspace = { appViewModel.leaveLocalWorkspace() },
+            onOpenLatestRelease = { navController.navigate(AppRoute.LatestRelease.route) },
+            onOpenHelpGuide = { navController.navigate(AppRoute.HelpGuide.create()) },
+            onUpdateName = { newName ->
+                appViewModel.updateDisplayName(newName).also { result ->
+                    if (result is ProfileEditResult.Success) {
+                        appViewModel.snackbarManager.showSuccess(
+                            profileNameUpdatedToastMessage,
+                        )
+                    }
+                }
+            },
+            onChangePassword = { current, newPassword ->
+                appViewModel.changePassword(current, newPassword).also { result ->
+                    if (result is ProfileEditResult.Success) {
+                        appViewModel.snackbarManager.showSuccess(
+                            passwordChangedToastMessage,
+                        )
+                    }
+                }
+            },
+            onForgotPassword = {
+                navController.navigate(AppRoute.ForgotPassword.route) {
+                    launchSingleTop = true
+                }
+            },
+            onLoadSecurityQuestionStatus = { appViewModel.securityQuestionStatus() },
+            onFetchSecurityQuestions = { appViewModel.fetchSecurityQuestions() },
+            onUpdateSecurityQuestions = { current, answers ->
+                appViewModel.updateSecurityQuestions(current, answers).also { result ->
+                    if (result is ProfileEditResult.Success) {
+                        appViewModel.snackbarManager.showSuccess(
+                            securityQuestionsUpdatedToastMessage,
+                        )
+                    }
+                }
+            },
+        )
+    }
+
+    composable(
+        route = AppRoute.LatestRelease.route,
+        enterTransition = { settingsEnterTransition() },
+        exitTransition = { settingsExitTransition() },
+        popEnterTransition = { settingsEnterTransition() },
+        popExitTransition = { settingsExitTransition() },
+    ) {
+        OnRouteResume {
+            appViewModel.refreshVersionInfo()
+        }
+        LatestReleaseScreen(
+            uiState = releaseUiState(),
+            onBack = { navController.popBackStack() },
+            onRetry = releaseViewModel::load,
+        )
+    }
+}
+
+/**
+ * The `home` route: the selected root feed, with the onboarding wizard and the blocking gates
+ * (update required, security questions) layered over it.
+ */
+@Composable
+private fun ScheduledTaskHomeRoute(
+    appUiState: AppUiState,
+    appViewModel: AppViewModel,
+    navController: NavHostController,
+    unauthenticatedUiState: ScheduledTaskHomeUiState,
+    rootFeedTab: RootFeedTab,
+    onSelectRootFeedTab: (RootFeedTab) -> Unit,
+    onChangeRootFeedTab: (RootFeedTab) -> Unit,
+    rootCreateTaskRequestKey: Int,
+    onCreateTaskRequestHandled: (Int) -> Unit,
+    onRequestCreateTask: () -> Unit,
+    scheduledScrollToTopRequestKey: Int,
+    floaterScrollToTopRequestKey: Int,
+    rootDockCollapsed: Boolean,
+    onRootDockCollapsedChange: (Boolean) -> Unit,
+    rootControlsVisible: Boolean,
+    onRootControlsVisibleChange: (Boolean) -> Unit,
+) {
+    val authViewModel: AuthViewModel = hiltViewModel()
+    val authUiState by authViewModel.uiState.collectAsStateWithLifecycle()
+    // Never true before the session has resolved: this route only exists
+    // once the graph is built, and that waits for rootDestination to
+    // leave SPLASH.
+    val showOnboardingWizard = appUiState.rootDestination == RootDestination.ONBOARDING
+
+    // Remember the last attempted credentials so a pending-approval result
+    // can be persisted into the holding screen (which re-attempts login).
+    var lastAuthUsername by remember { mutableStateOf("") }
+    var lastAuthPassword by remember { mutableStateOf("") }
+    LaunchedEffect(authUiState.pendingApproval) {
+        if (authUiState.pendingApproval && lastAuthPassword.isNotBlank()) {
+            appViewModel.enterPendingApproval(lastAuthUsername, lastAuthPassword)
+        }
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .then(
+                    if (showOnboardingWizard) {
+                        Modifier.blur(14.dp)
+                    } else {
+                        Modifier
+                    },
+                ),
+        ) {
+            RootFeedContent(
+                appUiState = appUiState,
+                appViewModel = appViewModel,
+                navController = navController,
+                unauthenticatedUiState = unauthenticatedUiState,
+                rootFeedTab = rootFeedTab,
+                onSelectRootFeedTab = onSelectRootFeedTab,
+                onChangeRootFeedTab = onChangeRootFeedTab,
+                rootCreateTaskRequestKey = rootCreateTaskRequestKey,
+                onCreateTaskRequestHandled = onCreateTaskRequestHandled,
+                onRequestCreateTask = onRequestCreateTask,
+                scheduledScrollToTopRequestKey = scheduledScrollToTopRequestKey,
+                floaterScrollToTopRequestKey = floaterScrollToTopRequestKey,
+                rootDockCollapsed = rootDockCollapsed,
+                onRootDockCollapsedChange = onRootDockCollapsedChange,
+                rootControlsVisible = rootControlsVisible,
+                onRootControlsVisibleChange = onRootControlsVisibleChange,
+            )
+        }
+
+        if (showOnboardingWizard) {
+            OnboardingOverlay(
+                appUiState = appUiState,
+                appViewModel = appViewModel,
+                authViewModel = authViewModel,
+                authUiState = authUiState,
+                onCredentialsAttempted = { username, password ->
+                    lastAuthUsername = username
+                    lastAuthPassword = password
+                },
+            )
+        }
+
+        AuthenticatedGates(
+            appUiState = appUiState,
+            appViewModel = appViewModel,
+            authViewModel = authViewModel,
+        )
+    }
+}
+
+/**
+ * Whichever root feed the dock has selected, with the dock and create button floating over it —
+ * or the locked placeholder feed that sits under the onboarding wizard when there is no workspace.
+ */
+@Composable
+private fun RootFeedContent(
+    appUiState: AppUiState,
+    appViewModel: AppViewModel,
+    navController: NavHostController,
+    unauthenticatedUiState: ScheduledTaskHomeUiState,
+    rootFeedTab: RootFeedTab,
+    onSelectRootFeedTab: (RootFeedTab) -> Unit,
+    onChangeRootFeedTab: (RootFeedTab) -> Unit,
+    rootCreateTaskRequestKey: Int,
+    onCreateTaskRequestHandled: (Int) -> Unit,
+    onRequestCreateTask: () -> Unit,
+    scheduledScrollToTopRequestKey: Int,
+    floaterScrollToTopRequestKey: Int,
+    rootDockCollapsed: Boolean,
+    onRootDockCollapsedChange: (Boolean) -> Unit,
+    rootControlsVisible: Boolean,
+    onRootControlsVisibleChange: (Boolean) -> Unit,
+) {
+    if (!appUiState.isWorkspaceAvailable) {
+        LockedRootFeed(uiState = unauthenticatedUiState)
+        return
+    }
+    Box(modifier = Modifier.fillMaxSize()) {
+        when (rootFeedTab) {
+            RootFeedTab.SCHEDULED_TASK_HOME -> ScheduledTaskHomeFeed(
+                appUiState = appUiState,
+                appViewModel = appViewModel,
+                navController = navController,
+                onChangeRootFeedTab = onChangeRootFeedTab,
+                rootCreateTaskRequestKey = rootCreateTaskRequestKey,
+                onCreateTaskRequestHandled = onCreateTaskRequestHandled,
+                scrollToTopRequestKey = scheduledScrollToTopRequestKey,
+                onRootDockCollapsedChange = onRootDockCollapsedChange,
+                onRootControlsVisibleChange = onRootControlsVisibleChange,
+            )
+
+            RootFeedTab.FLOATER_TASK_HOME -> FloaterTaskHomeFeed(
+                appUiState = appUiState,
+                navController = navController,
+                onChangeRootFeedTab = onChangeRootFeedTab,
+                rootCreateTaskRequestKey = rootCreateTaskRequestKey,
+                onCreateTaskRequestHandled = onCreateTaskRequestHandled,
+                scrollToTopRequestKey = floaterScrollToTopRequestKey,
+                onRootDockCollapsedChange = onRootDockCollapsedChange,
+                onRootControlsVisibleChange = onRootControlsVisibleChange,
+            )
+        }
+
+        if (rootControlsVisible) {
+            val rootCreateTaskButtonColor =
+                if (rootFeedTab == RootFeedTab.FLOATER_TASK_HOME) {
+                    TdayFloaterAccent
+                } else {
+                    TdayTodayBlue
+                }
+
+            RootFeedDock(
+                activeTab = rootFeedTab,
+                collapsed = rootDockCollapsed,
+                onTabSelected = onSelectRootFeedTab,
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .zIndex(8f),
+            )
+            RootCreateTaskButton(
+                onClick = onRequestCreateTask,
+                backgroundColor = rootCreateTaskButtonColor,
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .navigationBarsPadding()
+                    .padding(
+                        end = TdayDimens.ContentPaddingHorizontal,
+                        bottom = TdayDimens.ContentPaddingHorizontal,
+                    )
+                    .zIndex(8f),
+            )
+        }
+    }
+}
+
+/** The scheduled-task home feed: the card grid every timeline scope is opened from. */
+@Composable
+private fun ScheduledTaskHomeFeed(
+    appUiState: AppUiState,
+    appViewModel: AppViewModel,
+    navController: NavHostController,
+    onChangeRootFeedTab: (RootFeedTab) -> Unit,
+    rootCreateTaskRequestKey: Int,
+    onCreateTaskRequestHandled: (Int) -> Unit,
+    scrollToTopRequestKey: Int,
+    onRootDockCollapsedChange: (Boolean) -> Unit,
+    onRootControlsVisibleChange: (Boolean) -> Unit,
+) {
+    val scheduledTaskHomeViewModel: ScheduledTaskHomeViewModel = hiltViewModel()
+    val scheduledTaskHomeUiState by scheduledTaskHomeViewModel.uiState.collectAsStateWithLifecycle()
+    OnRouteResume {
+        scheduledTaskHomeViewModel.refreshFromCache()
+        appViewModel.refreshVersionInfo()
+    }
+    ScheduledTaskHomeScreen(
+        uiState = scheduledTaskHomeUiState,
+        onRefresh = { scheduledTaskHomeViewModel.refresh(userInitiated = true) },
+        pullRefreshEnabled = !appUiState.isLocalMode,
+        onOpenToday = { navController.navigate(AppRoute.TodayTodos.route) },
+        onOpenOverdue = { navController.navigate(AppRoute.OverdueTodos.route) },
+        onOpenScheduled = { navController.navigate(AppRoute.ScheduledTodos.route) },
+        onOpenAll = { navController.navigate(AppRoute.AllTodos.create()) },
+        onOpenPriority = { navController.navigate(AppRoute.PriorityTodos.route) },
+        onOpenCompleted = { navController.navigate(AppRoute.Completed.route) },
+        onOpenCalendar = { navController.navigate(AppRoute.Calendar.route) },
+        onOpenFloater = {
+            onChangeRootFeedTab(RootFeedTab.FLOATER_TASK_HOME)
+        },
+        onOpenSettings = { navController.navigate(AppRoute.Settings.route) },
+        onOpenTaskFromSearch = { todoId ->
+            navController.currentBackStackEntry
+                ?.savedStateHandle
+                ?.set(
+                    PENDING_SEARCH_HIGHLIGHT_TODO_ID,
+                    todoId
+                )
+            navController.navigate(AppRoute.AllTodos.create())
+        },
+        onOpenList = { id, name ->
+            navController.navigate(
+                AppRoute.ListTodos.create(
+                    id,
+                    name
+                )
+            )
+        },
+        onCreateTask = { payload ->
+            scheduledTaskHomeViewModel.createTask(payload)
+        },
+        onParseTaskTitleNlp = scheduledTaskHomeViewModel::parseTaskTitleNlp,
+        onSuggestRepeat = scheduledTaskHomeViewModel::suggestRepeatRrule,
+        onCreateList = { name, color, iconKey ->
+            scheduledTaskHomeViewModel.createList(
+                name = name,
+                color = color,
+                iconKey = iconKey,
+            )
+        },
+        onCompleteTask = { todo ->
+            scheduledTaskHomeViewModel.completeTodo(
+                todo
+            )
+        },
+        onDeleteTask = { todo ->
+            scheduledTaskHomeViewModel.deleteTodo(
+                todo
+            )
+        },
+        onUpdateTask = { todo, payload ->
+            scheduledTaskHomeViewModel.updateTask(
+                todo,
+                payload
+            )
+        },
+        onSummarize = scheduledTaskHomeViewModel::summarizeToday,
+        summaryAvailable = !appUiState.isLocalMode,
+        showRootFeedDock = false,
+        showCreateTaskButton = false,
+        createTaskRequestKey = rootCreateTaskRequestKey,
+        onCreateTaskRequestHandled = onCreateTaskRequestHandled,
+        scrollToTopRequestKey = scrollToTopRequestKey,
+        onRootDockCollapsedChange = onRootDockCollapsedChange,
+        onRootControlsVisibleChange = onRootControlsVisibleChange,
+    )
+}
+
+/** The Anytime/Floater sibling feed, drawn in the same slot as the scheduled one. */
+@Composable
+private fun FloaterTaskHomeFeed(
+    appUiState: AppUiState,
+    navController: NavHostController,
+    onChangeRootFeedTab: (RootFeedTab) -> Unit,
+    rootCreateTaskRequestKey: Int,
+    onCreateTaskRequestHandled: (Int) -> Unit,
+    scrollToTopRequestKey: Int,
+    onRootDockCollapsedChange: (Boolean) -> Unit,
+    onRootControlsVisibleChange: (Boolean) -> Unit,
+) {
+    TodosRoute(
+        mode = TodoListMode.FLOATER,
+        onBack = { onChangeRootFeedTab(RootFeedTab.SCHEDULED_TASK_HOME) },
+        pullRefreshEnabled = !appUiState.isLocalMode,
+        summaryAvailable = !appUiState.isLocalMode,
+        onOpenFloaterList = { id, name ->
+            navController.navigate(
+                AppRoute.FloaterListTodos.create(
+                    id,
+                    name
+                )
+            )
+        },
+        onOpenCompleted = {
+            navController.navigate(AppRoute.Completed.route)
+        },
+        onOpenSettings = {
+            navController.navigate(AppRoute.Settings.route)
+        },
+        showRootFeedDock = false,
+        showCreateTaskButton = false,
+        usesRootFeedHeader = true,
+        createTaskRequestKey = rootCreateTaskRequestKey,
+        onCreateTaskRequestHandled = onCreateTaskRequestHandled,
+        scrollToTopRequestKey = scrollToTopRequestKey,
+        onRootDockCollapsedChange = onRootDockCollapsedChange,
+        onRootControlsVisibleChange = onRootControlsVisibleChange,
+    )
+}
+
+/**
+ * The inert feed drawn behind the onboarding wizard, so the blurred backdrop is the app's own
+ * layout rather than an empty screen. Every action is a no-op and the only list is a placeholder.
+ */
+@Composable
+private fun LockedRootFeed(uiState: ScheduledTaskHomeUiState) {
+    ScheduledTaskHomeScreen(
+        uiState = uiState,
+        onRefresh = {},
+        onOpenToday = {},
+        onOpenOverdue = {},
+        onOpenScheduled = {},
+        onOpenAll = {},
+        onOpenPriority = {},
+        onOpenCompleted = {},
+        onOpenCalendar = {},
+        onOpenFloater = {},
+        onOpenSettings = {},
+        onOpenTaskFromSearch = {},
+        onOpenList = { _, _ -> },
+        onCreateTask = { _ -> },
+        onParseTaskTitleNlp = { _, _ -> null },
+        onCreateList = { _, _, _ -> },
+        onCompleteTask = {},
+        onDeleteTask = {},
+        onUpdateTask = { _, _ -> },
+        summaryAvailable = false,
+    )
+}
+
+/** The sign-in / server-setup wizard, and the two holding screens that can stand in for it. */
+@Composable
+private fun OnboardingOverlay(
+    appUiState: AppUiState,
+    appViewModel: AppViewModel,
+    authViewModel: AuthViewModel,
+    authUiState: AuthUiState,
+    onCredentialsAttempted: (String, String) -> Unit,
+) {
+    val context = LocalContext.current
+    if (appUiState.pendingApproval) {
+        com.ohmz.tday.compose.feature.app.PendingApprovalOverlay(
+            username = appUiState.pendingApprovalUsername,
+            isChecking = appUiState.isCheckingApproval,
+            onCheckStatus = { appViewModel.checkPendingApproval() },
+            onUseDifferentAccount = {
+                authViewModel.clearStatus()
+                appViewModel.cancelPendingApproval()
+            },
+        )
+    } else when (val versionResult = appUiState.versionCheckResult) {
+        is com.ohmz.tday.compose.core.data.server.VersionCheckResult.AppUpdateRequired,
+        is com.ohmz.tday.compose.core.data.server.VersionCheckResult.ServerUpdateRequired -> {
+            com.ohmz.tday.compose.feature.app.UpdateRequiredOverlay(
+                versionCheckResult = versionResult,
+                requiredUpdateRelease = appUiState.requiredUpdateRelease,
+                isCheckingRelease = appUiState.isCheckingUpdateRelease,
+                onRetry = { appViewModel.recheckVersion() },
+            )
+        }
+        else -> {
+            OnboardingWizardOverlay(
+                initialServerUrl = appUiState.serverUrl,
+                serverErrorMessage = appUiState.error,
+                serverCanResetTrust = appUiState.canResetServerTrust,
+                serverTrustFingerprint = appUiState.pendingServerTrustFingerprint,
+                pendingApprovalMessage = appUiState.pendingApprovalMessage,
+                authUiState = authUiState,
+                onUseLocalMode = {
+                    authViewModel.clearStatus()
+                    appViewModel.clearPendingApprovalNotice()
+                    appViewModel.useLocalMode()
+                },
+                onConnectServer = { rawUrl, onResult ->
+                    appViewModel.saveServerUrl(
+                        rawUrl = rawUrl,
+                        onSuccess = { serverUrl ->
+                            onResult(Result.success(serverUrl))
+                        },
+                        onFailure = { message ->
+                            onResult(Result.failure(IllegalStateException(message)))
+                        },
+                    )
+                },
+                onResetServerTrust = { rawUrl, onResult ->
+                    appViewModel.resetTrustedServer(
+                        rawUrl = rawUrl,
+                        onSuccess = { onResult(Result.success(Unit)) },
+                        onFailure = { message ->
+                            onResult(Result.failure(IllegalStateException(message)))
+                        },
+                    )
+                },
+                onConfirmServerTrust = { rawUrl, fingerprint, onResult ->
+                    appViewModel.confirmServerTrust(
+                        rawUrl = rawUrl,
+                        fingerprint = fingerprint,
+                        onSuccess = { serverUrl ->
+                            onResult(Result.success(serverUrl))
+                        },
+                        onFailure = { message ->
+                            onResult(Result.failure(IllegalStateException(message)))
+                        },
+                    )
+                },
+                onDismissServerTrust = appViewModel::dismissServerTrustPrompt,
+                onLogin = { username, password, source ->
+                    onCredentialsAttempted(username, password)
+                    authViewModel.login(
+                        username = username,
+                        password = password,
+                        credentialContext = context,
+                        source = source,
+                    ) {
+                        appViewModel.refreshSession()
+                    }
+                },
+                onRegister = { firstName, username, password, securityAnswers, onSuccess ->
+                    onCredentialsAttempted(username, password)
+                    authViewModel.register(
+                        firstName = firstName,
+                        lastName = "",
+                        username = username,
+                        password = password,
+                        securityAnswers = securityAnswers,
+                        credentialContext = context,
+                    ) {
+                        onSuccess()
+                        appViewModel.refreshSession()
+                    }
+                },
+                onFetchSecurityQuestions = authViewModel::fetchAllSecurityQuestions,
+                onRequestSavedCredential = authViewModel::requestSavedCredential,
+                onRequestSavedServerUrl = authViewModel::requestSavedServerUrl,
+                onSaveServerUrlCredential = authViewModel::offerSaveOrUpdateServerUrl,
+                onClearAuthStatus = {
+                    authViewModel.clearStatus()
+                    appViewModel.clearPendingApprovalNotice()
+                },
+            )
+        }
+    }
+}
+
+/**
+ * The gates that can block an already-signed-in server session: a mandatory app/server update, and
+ * the security questions an admin can require before the account is usable.
+ */
+@Composable
+private fun AuthenticatedGates(
+    appUiState: AppUiState,
+    appViewModel: AppViewModel,
+    authViewModel: AuthViewModel,
+) {
+    val authenticatedVersionCheck = appUiState.versionCheckResult
+    if (appUiState.authenticated &&
+        !appUiState.isLocalMode &&
+        (authenticatedVersionCheck is com.ohmz.tday.compose.core.data.server.VersionCheckResult.AppUpdateRequired ||
+            authenticatedVersionCheck is com.ohmz.tday.compose.core.data.server.VersionCheckResult.ServerUpdateRequired)
+    ) {
+        com.ohmz.tday.compose.feature.app.UpdateRequiredOverlay(
+            versionCheckResult = authenticatedVersionCheck,
+            requiredUpdateRelease = appUiState.requiredUpdateRelease,
+            isCheckingRelease = appUiState.isCheckingUpdateRelease,
+            onRetry = { appViewModel.recheckVersion() },
+        )
+    }
+
+    if (appUiState.authenticated &&
+        !appUiState.isLocalMode &&
+        appUiState.user?.requireSecurityQuestions == true
+    ) {
+        SetSecurityQuestionsGate(
+            onFetchQuestions = authViewModel::fetchAllSecurityQuestions,
+            onSubmit = { answers, onSuccess, onError ->
+                authViewModel.submitSecurityQuestions(
+                    answers = answers,
+                    onSuccess = {
+                        onSuccess()
+                        appViewModel.refreshSession()
+                    },
+                    onError = onError,
+                )
+            },
+        )
+    }
+}
+
+/**
+ * Fires the create-task sheet that `tday://todos/create?target=floater` asked for, once the floater
+ * feed it belongs to is actually on screen. The request outlives the hop through `home` (the deep
+ * link re-points there and switches the dock tab) because it is held as state rather than acted on
+ * where it arrived.
+ */
+@Composable
+private fun HandlePendingFloaterCreateTask(
+    isCreateTaskPending: Boolean,
+    currentRoute: String?,
+    rootFeedTab: RootFeedTab,
+    isWorkspaceAvailable: Boolean,
+    onCreateTask: () -> Unit,
+) {
+    LaunchedEffect(isCreateTaskPending, currentRoute, rootFeedTab, isWorkspaceAvailable) {
+        if (
+            isCreateTaskPending &&
+            currentRoute == AppRoute.ScheduledTaskHome.route &&
+            rootFeedTab == RootFeedTab.FLOATER_TASK_HOME &&
+            isWorkspaceAvailable
+        ) {
+            onCreateTask()
+        }
+    }
+}
+
+/**
+ * Whether losing the connection is worth announcing. Only a signed-in server workspace has a
+ * server to lose: Local Mode is offline by design, and a signed-out app has nothing to sync.
+ */
+private fun AppUiState.showsOfflineNotice(): Boolean =
+    isOffline && authenticated && !isLocalMode
 
 private const val TOAST_AUTO_DISMISS_SHORT_MS = 4_000L
 private const val TOAST_AUTO_DISMISS_WITH_ACTION_MS = 8_000L
@@ -1231,6 +1618,58 @@ private fun CollectConnectivityToasts(
     }
 }
 
+/**
+ * Whether the branded splash still stands in for the whole nav graph.
+ *
+ * True until the persisted session has resolved, and for as long after that as a finger is down on
+ * the splash — the tap-and-hold pause it has always offered. Both are reasons NOT to build the
+ * NavHost, which is why anything reading the graph has to tolerate its absence: this can outlast
+ * the session resolving, and does whenever the user is pressing the splash at that moment.
+ */
+private fun shouldHoldSessionSplash(
+    rootDestination: RootDestination,
+    isSessionSplashHeld: Boolean,
+): Boolean = rootDestination == RootDestination.SPLASH || isSessionSplashHeld
+
+/**
+ * Navigates the deep link MainActivity is holding — the Floater widget's `tday://floater`, a
+ * reminder's `tday://todos/...`, `tday://home` from the update-ready notification — once there is
+ * somewhere to navigate it to. Both waits matter, and neither drops the link: it stays pending in
+ * [MainActivity.deepLinkIntent] until it can be handled, and every key here re-runs the effect.
+ */
+@Composable
+private fun HandlePendingDeepLink(
+    isWorkspaceAvailable: Boolean,
+    currentRoute: String?,
+    navController: NavHostController,
+) {
+    val activity = LocalContext.current as? MainActivity
+    val deepLinkIntent by activity?.deepLinkIntent?.collectAsStateWithLifecycle()
+        ?: remember { mutableStateOf(null) }
+
+    LaunchedEffect(deepLinkIntent, isWorkspaceAvailable, currentRoute) {
+        val intent = deepLinkIntent ?: return@LaunchedEffect
+        // Defer deep links until the session is restored and the workspace is available.
+        // Handling one during cold-start bootstrap navigated the target route UNDER the login
+        // overlay and mounted its screen before auth was ready — which flashed the login screen
+        // and fired a generic "something went wrong" error toast before settling. Consume it
+        // after so it fires once.
+        if (!isWorkspaceAvailable) return@LaunchedEffect
+        // No current entry means no graph yet — same guard, same reason, as
+        // HandleStartupNavigation's. Normally the NavHost composes and sets the graph in the very
+        // pass that flips isWorkspaceAvailable, so this effect always ran after it. It no longer
+        // has to: holding the pre-graph splash keeps the NavHost unbuilt past that flip, and a
+        // press there is a supported gesture, so the graph can still be unset when this runs.
+        // handleDeepLink(Intent) reads it unconditionally — navigation-runtime 2.8.5 goes
+        // getTopGraph(backQueue) -> backQueue.lastOrNull() is null -> _graph!! — and does so for
+        // the plain launcher Intent MainActivity dispatches on every cold launch just as much as
+        // for a tday:// one, so calling it here would NPE.
+        if (currentRoute == null) return@LaunchedEffect
+        navController.handleDeepLink(intent.withoutTaskRestartFlags())
+        activity?.consumeDeepLink()
+    }
+}
+
 @Composable
 private fun HandleStartupNavigation(
     appUiState: AppUiState,
@@ -1240,31 +1679,41 @@ private fun HandleStartupNavigation(
 ) {
     LaunchedEffect(
         appUiState.loading,
-        appUiState.isWorkspaceAvailable,
+        appUiState.rootDestination,
         currentRoute,
         isStartupSplashHeld,
     ) {
         if (appUiState.loading) return@LaunchedEffect
         if (isStartupSplashHeld) return@LaunchedEffect
+        // No current entry means no graph yet: nothing to route from. Navigating here would
+        // push `home` on top of the start destination instead of replacing it.
+        if (currentRoute == null) return@LaunchedEffect
 
-        if (appUiState.isWorkspaceAvailable) {
-            val unauthenticatedRoutes = setOf(
-                AppRoute.Splash.route,
-                AppRoute.Login.route,
-                AppRoute.ServerSetup.route,
-            )
-            if (currentRoute in unauthenticatedRoutes) {
-                navigateScheduledTaskHome(navController, currentRoute)
+        when (appUiState.rootDestination) {
+            // The graph is not built while the session is unresolved (TdayApp holds the splash
+            // in its place), so there is no route to steer yet.
+            RootDestination.SPLASH -> Unit
+
+            RootDestination.WORKSPACE -> {
+                val unauthenticatedRoutes = setOf(
+                    AppRoute.Splash.route,
+                    AppRoute.Login.route,
+                    AppRoute.ServerSetup.route,
+                )
+                if (currentRoute in unauthenticatedRoutes) {
+                    navigateScheduledTaskHome(navController, currentRoute)
+                }
             }
-            return@LaunchedEffect
-        }
 
-        // The reset-password screen is reachable while logged out — don't bounce it
-        // back to the login/scheduled-task-home overlay.
-        if (currentRoute != AppRoute.ScheduledTaskHome.route &&
-            currentRoute != AppRoute.ForgotPassword.route
-        ) {
-            navigateScheduledTaskHome(navController, currentRoute)
+            RootDestination.ONBOARDING -> {
+                // The reset-password screen is reachable while logged out — don't bounce it
+                // back to the login/scheduled-task-home overlay.
+                if (currentRoute != AppRoute.ScheduledTaskHome.route &&
+                    currentRoute != AppRoute.ForgotPassword.route
+                ) {
+                    navigateScheduledTaskHome(navController, currentRoute)
+                }
+            }
         }
     }
 }

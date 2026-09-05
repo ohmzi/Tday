@@ -79,6 +79,13 @@ import kotlinx.coroutines.delay
  * @param celebrate the list emptied because the user finished it, rather than
  *   because there was never anything in it: confetti flies first and the scene
  *   comes up through it a beat later.
+ * @param celebrationStartDelayMillis how long the celebration waits before any
+ *   of it plays — the burst and the scene shift together, so the burst still
+ *   leads. Zero for the overlay callers, which draw over a page where nothing
+ *   is moving. A caller that draws this scene *inline*, in the slot the last
+ *   row vacated, passes the time its own feed takes to move out of the way:
+ *   the reference experience is the overlay's, and there the paper is the only
+ *   thing on screen that travels.
  */
 @Composable
 fun TdayEmptyState(
@@ -89,6 +96,7 @@ fun TdayEmptyState(
     description: String? = null,
     action: (@Composable () -> Unit)? = null,
     celebrate: Boolean = false,
+    celebrationStartDelayMillis: Long = 0L,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val motion = rememberEmptySceneMotion()
@@ -103,7 +111,9 @@ fun TdayEmptyState(
         // The burst leads; the scene follows through it. Without the wait the
         // illustration is already sitting there when the first piece of paper
         // clears it, and the confetti reads as decoration on a static page.
-        if (celebrate) delay(CelebrationLeadMillis)
+        // The start delay is the burst's own — the two are added, never traded,
+        // so holding the celebration back never eats into the lead.
+        if (celebrate) delay(celebrationStartDelayMillis + CelebrationLeadMillis)
         appear.animateTo(
             targetValue = 1f,
             animationSpec = tween(durationMillis = EnterMillis, easing = EnterEasing),
@@ -260,6 +270,7 @@ fun TdayEmptyState(
             play = celebrate,
             accentColor = accentColor,
             modifier = Modifier.matchParentSize(),
+            startDelayMillis = celebrationStartDelayMillis,
         )
     }
 }
@@ -348,7 +359,14 @@ private val EnterEasing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1f)
 private const val EnterStartScale = 0.92f
 private val EnterRise = 18.dp
 
-/** How long the confetti has the screen to itself before the scene comes up. */
+/**
+ * How long the confetti has the screen to itself before the scene comes up.
+ *
+ * Private, and independent of anything a host feed does: a feed that draws this
+ * scene inline moves its own layout out of the way *before* the celebration
+ * starts at all, through `celebrationStartDelayMillis`, rather than trying to
+ * fit that movement inside this window.
+ */
 private const val CelebrationLeadMillis = 320L
 
 /** Half of the float's 6s cycle; [RepeatMode.Reverse] plays the other half. */
