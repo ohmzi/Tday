@@ -5,7 +5,6 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -60,6 +59,9 @@ class ListTasksWidget : GlanceAppWidget() {
         // own id is fixed for its lifetime, so this is the one piece of per-instance state that
         // is fine to read above `provideContent`.
         val appWidgetId = GlanceAppWidgetManager(appContext).getAppWidgetId(id)
+        // See TodayTasksWidget: the platform's own owner for this id, logged alongside the class
+        // that is composing. Same "fixed for this instance's lifetime" argument as the id above.
+        val providerKind = WidgetInstanceResolver(appContext).kindOf(appWidgetId)
 
         val securityPreferenceStore = AppSecurityPreferenceStore(appContext)
         val snapshotStore = WidgetSnapshotStore(appContext)
@@ -77,7 +79,14 @@ class ListTasksWidget : GlanceAppWidget() {
         }
 
         provideContent {
-            ListTasksWidgetContent(appContext, appWidgetId, securityPreferenceStore, snapshotStore, selectionStore)
+            ListTasksWidgetContent(
+                appContext = appContext,
+                appWidgetId = appWidgetId,
+                providerKind = providerKind,
+                securityPreferenceStore = securityPreferenceStore,
+                snapshotStore = snapshotStore,
+                selectionStore = selectionStore,
+            )
         }
     }
 }
@@ -92,6 +101,7 @@ class ListTasksWidget : GlanceAppWidget() {
 private fun ListTasksWidgetContent(
     appContext: Context,
     appWidgetId: Int,
+    providerKind: WidgetInstanceKind?,
     securityPreferenceStore: AppSecurityPreferenceStore,
     snapshotStore: WidgetSnapshotStore,
     selectionStore: WidgetListSelectionStore,
@@ -107,9 +117,11 @@ private fun ListTasksWidgetContent(
     val currentSnapshot = remember(snapshotVersion, isAppLocked, selection) {
         if (isAppLocked || selection == null) null else snapshotStore.readList(appWidgetId)
     }
-    Log.i(
-        WIDGET_LOG_TAG,
-        "list[$appWidgetId]: composing, version=$snapshotVersion locked=$isAppLocked " +
+    logWidgetComposition(
+        composingAs = WidgetInstanceKind.LIST,
+        appWidgetId = appWidgetId,
+        providerKind = providerKind,
+        details = "version=$snapshotVersion locked=$isAppLocked " +
             "listType=${selection?.listType?.name ?: "none"} snapshotNull=${currentSnapshot == null}",
     )
 

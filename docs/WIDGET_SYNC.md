@@ -261,6 +261,23 @@ and every question of the form "which widget is this instance?" is answered in e
   `AppWidgetManager.getAppWidgetIds`, so the only case `updateAll` can still cover is the one where
   our own enumeration threw and that kind is therefore absent from the plan.
 
+- Every widget's composition logs its own identity, so a report of the form "my Floater widget
+  rendered as the Today widget" is answerable from one `adb logcat -s TdayWidget` capture instead
+  of from code review:
+
+  ```
+  floater[42]: composing, provider=FLOATER, version=7 locked=false snapshotNull=false
+  list[43]:    composing, provider=LIST, version=7 locked=false listType=none snapshotNull=false
+  ```
+
+  The prefix is the Glance class that is composing; `provider=` is the receiver
+  `AppWidgetManager.getAppWidgetInfo` says owns that id. Glance keys its render session by
+  `appWidgetId` **alone** (`AppWidgetSession` → `createUniqueRemoteUiName(appWidgetId)`) and reuses
+  a running session with the `GlanceAppWidget` it was constructed with, so a session started with
+  the wrong class would render the wrong kind for that instance until the process died. Nothing in
+  this app can start one — see `WidgetRefresher` above — but if one ever appeared, the line would
+  read `today[42]: composing, provider=FLOATER KIND-MISMATCH …`, at ERROR level.
+
 `WidgetInstanceKindTest` and `WidgetRefreshRoutingTest` cover these rules as plain JVM tests.
 
 What the single refresher fixed, precisely — the per-kind refreshers could not paint the wrong

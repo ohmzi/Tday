@@ -1,6 +1,8 @@
 package com.ohmz.tday.compose.feature.widget
 
+import android.appwidget.AppWidgetManager
 import com.ohmz.tday.compose.feature.widget.snapshot.WidgetListType
+import java.net.URI
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
@@ -24,7 +26,15 @@ import org.junit.Test
  *  2. "unknown" stays unknown: `feedFor` never falls through to SCHEDULED, and an unresolved
  *     instance renders with neither kind's identity; and
  *  3. where a fallback genuinely remains (no instance at all), it is lossless — the `target=` a
- *     widget stamps on its own link round-trips back to that widget's feed.
+ *     widget stamps on its own link round-trips back to that widget's feed; and
+ *  4. the channel that carries the instance to the sheet in the first place — the `appWidgetId` on
+ *     the "+" deep link — is actually there and is per-instance. Without it every one of the rules
+ *     above is unreachable: `instanceFeed` is always null and the `target=` parameter decides, which
+ *     is exactly the pre-fix behavior.
+ *
+ * The last test covers the composing log line instead, which is what makes the one mechanism these
+ * rules CANNOT reach — a Glance session started with the wrong widget class for an id — visible in
+ * a logcat capture rather than only arguable from the code.
  */
 class WidgetInstanceKindTest {
 
@@ -234,5 +244,135 @@ class WidgetInstanceKindTest {
     fun `create targets keep their own feed shape`() {
         assertTrue(WidgetCreateTarget.TODAY.showScheduleControls)
         assertTrue(!WidgetCreateTarget.FLOATER.showScheduleControls)
+    }
+
+    @Test
+    fun `every widget's + link carries the tapped instance's own id`() {
+        // The load-bearing half of "the instance wins": WidgetCreateTarget.resolve can only prefer
+        // the instance over the `target=` parameter if the sheet can SEE which instance was
+        // tapped, and the only channel for that is this link. The pre-fix links were the bare
+        // literals `tday://todos/create?target=today|floater` with no id at all, so `instanceFeed`
+        // was always null and the parameter always decided — which is the whole bug. Drop the id
+        // from `deepLink` and every other test here still passes.
+        for (feed in WidgetFeed.entries) {
+            val params = queryParamsOf(WidgetCreateRoute.deepLink(WidgetCreateRoute.targetFor(feed), APP_WIDGET_ID_A))
+            assertEquals(
+                "a $feed widget's + link must identify the instance that was tapped",
+                APP_WIDGET_ID_A.toString(),
+                params[WidgetCreateRoute.PARAM_APP_WIDGET_ID],
+            )
+            assertEquals(
+                WidgetCreateRoute.targetFor(feed),
+                params[WidgetCreateRoute.PARAM_TARGET],
+            )
+        }
+    }
+
+    @Test
+    fun `two instances of the same kind do not share a + link`() {
+        // Glance builds these PendingIntents with request code 0 and FLAG_UPDATE_CURRENT, and
+        // Intent.filterEquals compares the DATA URI while ignoring extras — so two instances whose
+        // links are byte-identical share one PendingIntent and the second placement silently
+        // overwrites the first. Distinctness is what makes the id usable at all.
+        val first = WidgetCreateRoute.deepLink(WidgetCreateRoute.targetFor(WidgetFeed.FLOATER), APP_WIDGET_ID_A)
+        val second = WidgetCreateRoute.deepLink(WidgetCreateRoute.targetFor(WidgetFeed.FLOATER), APP_WIDGET_ID_B)
+        assertNotEquals(first, second)
+    }
+
+    @Test
+    fun `a synthetic preview id is left off the link rather than stamped as a real instance`() {
+        // provideGlance also runs for Glance's own non-placed ids. Stamping one would make
+        // WidgetInstanceResolver.kindOf answer for an instance that does not exist; omitting it
+        // falls back to the `target=` the widget wrote, which the round-trip test above pins.
+        val params = queryParamsOf(
+            WidgetCreateRoute.deepLink(
+                WidgetCreateRoute.targetFor(WidgetFeed.FLOATER),
+                AppWidgetManager.INVALID_APPWIDGET_ID,
+            ),
+        )
+        assertNull(params[WidgetCreateRoute.PARAM_APP_WIDGET_ID])
+        assertEquals(WidgetCreateRoute.TARGET_FLOATER, params[WidgetCreateRoute.PARAM_TARGET])
+    }
+
+    @Test
+    fun `a stale sheet intent cannot make a floater instance create a scheduled task`() {
+        // WidgetCreateTaskActivity is `singleTop`, so tapping a second widget's + while the sheet
+        // is still alive (swipe home rather than dismiss) re-delivers into the SAME activity. With
+        // no onNewIntent override the sheet kept resolving from the FIRST intent, so a Floater "+"
+        // showed the Today sheet, with its scheduling controls, and wrote a scheduled todo.
+        //
+        // The activity now re-resolves on the new intent; this pins the rule that makes that
+        // re-resolution safe even if the two intents disagree. The id comes from the FLOATER
+        // instance that was actually tapped, the `target=` from the stale TODAY link.
+        val tapped = queryParamsOf(
+            WidgetCreateRoute.deepLink(WidgetCreateRoute.targetFor(WidgetFeed.FLOATER), APP_WIDGET_ID_A),
+        )
+        val stale = queryParamsOf(
+            WidgetCreateRoute.deepLink(WidgetCreateRoute.targetFor(WidgetFeed.SCHEDULED), APP_WIDGET_ID_B),
+        )
+        assertEquals(APP_WIDGET_ID_A.toString(), tapped[WidgetCreateRoute.PARAM_APP_WIDGET_ID])
+        assertEquals(WidgetCreateRoute.TARGET_TODAY, stale[WidgetCreateRoute.PARAM_TARGET])
+
+        // What WidgetCreateTaskActivity.renderFor does with those two: the instance the id names
+        // decides, the parameter is only consulted when there is no instance to ask.
+        val instanceFeed = WidgetInstanceCatalog.feedFor(WidgetInstanceKind.FLOATER, null)
+        assertEquals(
+            "a floater instance's + must not create a scheduled task from a stale today intent",
+            WidgetCreateTarget.FLOATER,
+            WidgetCreateTarget.resolve(instanceFeed, stale[WidgetCreateRoute.PARAM_TARGET]),
+        )
+    }
+
+    @Test
+    fun `a composing line names the instance and flags a class the platform disagrees with`() {
+        // The remaining unfalsified hypothesis for the report is a Glance session started with the
+        // wrong widget class for an id (sessions are keyed by appWidgetId alone). Nothing in this
+        // app can start one, but the log line has to be able to SAY so from one capture.
+        val agreeing = widgetComposeLogLine(
+            composingAs = WidgetInstanceKind.FLOATER,
+            appWidgetId = APP_WIDGET_ID_A,
+            providerKind = WidgetInstanceKind.FLOATER,
+            details = "snapshotNull=false",
+        )
+        assertTrue(agreeing.startsWith("floater[$APP_WIDGET_ID_A]: composing, provider=FLOATER,"))
+        assertTrue("an agreeing line must not cry wolf", !agreeing.contains("KIND-MISMATCH"))
+        assertTrue(!isWidgetKindMismatch(WidgetInstanceKind.FLOATER, WidgetInstanceKind.FLOATER))
+
+        val crossKind = widgetComposeLogLine(
+            composingAs = WidgetInstanceKind.TODAY,
+            appWidgetId = APP_WIDGET_ID_A,
+            providerKind = WidgetInstanceKind.FLOATER,
+            details = "snapshotNull=false",
+        )
+        assertTrue("the reported symptom must print itself", crossKind.contains("KIND-MISMATCH"))
+        assertTrue(isWidgetKindMismatch(WidgetInstanceKind.TODAY, WidgetInstanceKind.FLOATER))
+
+        // "the platform would not tell us" is not a disagreement, and must not be reported as one.
+        val unknown = widgetComposeLogLine(
+            composingAs = WidgetInstanceKind.TODAY,
+            appWidgetId = APP_WIDGET_ID_A,
+            providerKind = null,
+            details = "snapshotNull=false",
+        )
+        assertTrue(unknown.contains("provider=unknown"))
+        assertTrue(!unknown.contains("KIND-MISMATCH"))
+        assertTrue(!isWidgetKindMismatch(WidgetInstanceKind.TODAY, null))
+    }
+
+    /**
+     * Parses the built link with `java.net.URI` rather than `android.net.Uri` — the production
+     * reader uses the latter, which is not available to a plain JVM unit test, so this asserts on
+     * the STRING the widget actually stamps on its PendingIntent. `listId` is deliberately never
+     * passed here: that parameter goes through `Uri.encode`, which would throw unmocked.
+     */
+    private fun queryParamsOf(link: String): Map<String, String> =
+        URI(link).query.orEmpty()
+            .split("&")
+            .filter { it.isNotEmpty() }
+            .associate { it.substringBefore("=") to it.substringAfter("=", "") }
+
+    private companion object {
+        const val APP_WIDGET_ID_A = 42
+        const val APP_WIDGET_ID_B = 43
     }
 }

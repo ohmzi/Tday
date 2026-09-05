@@ -4,7 +4,6 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.util.Log
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -49,6 +48,10 @@ class FloaterTasksWidget : GlanceAppWidget() {
         // and it rides the "+" deep link so the create sheet resolves THIS instance's feed rather
         // than trusting the deep link's own `target` parameter.
         val appWidgetId = GlanceAppWidgetManager(appContext).getAppWidgetId(id)
+        // See TodayTasksWidget: the platform's own owner for this id, logged alongside the class
+        // that is composing so a cross-kind render would print itself rather than needing to be
+        // argued about. `widgetComposeLogLine` has the full rationale.
+        val providerKind = WidgetInstanceResolver(appContext).kindOf(appWidgetId)
         val securityPreferenceStore = AppSecurityPreferenceStore(appContext)
         val snapshotStore = WidgetSnapshotStore(appContext)
         val title = appContext.getString(R.string.widget_floater_tasks_title)
@@ -85,9 +88,11 @@ class FloaterTasksWidget : GlanceAppWidget() {
                 if (isAppLocked) null else snapshotStore.readFloater()
             }
             // See TodayTasksWidget: fires on every recompute this key change causes.
-            Log.i(
-                WIDGET_LOG_TAG,
-                "floater: composing, version=$snapshotVersion locked=$isAppLocked " +
+            logWidgetComposition(
+                composingAs = WidgetInstanceKind.FLOATER,
+                appWidgetId = appWidgetId,
+                providerKind = providerKind,
+                details = "version=$snapshotVersion locked=$isAppLocked " +
                     "snapshotNull=${currentSnapshot == null}",
             )
 
