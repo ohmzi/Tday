@@ -74,17 +74,6 @@ class WidgetRefresher @Inject constructor(
         renderNow(firstAppWidgetId)
     }
 
-    /**
-     * Repaint exactly one instance, with the kind its own receiver declares. Returns false when the
-     * id could not be resolved (already removed from the host, or never one of ours) — callers
-     * should fall back to [refreshNow] rather than assuming a kind.
-     */
-    suspend fun refreshInstance(appWidgetId: Int): Boolean {
-        val kind = resolver.kindOf(appWidgetId) ?: return false
-        renderMutex.withLock { update(kind, appWidgetId) }
-        return true
-    }
-
     // `updateAll` alone is not enough and never was: it resolves a GlanceAppWidget class to the
     // receivers Glance itself recorded, so an on-screen widget of a size whose receiver Glance has
     // not seen this process is silently skipped. Enumerating each declared receiver's real ids
