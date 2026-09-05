@@ -756,24 +756,69 @@ repository settings, and cannot be done from a pull request.
    #    It appears as "Apple Development: <your name> (<id>)"; the run log prints that name and
    #    the expiry date, which is what tells it apart from the "Created via API" leftovers.
 
-   # 3. Bundle certificate + key as PKCS#12. `-legacy` matters: OpenSSL 3 defaults to a MAC and
+   # 3. Choose the export password FIRST. It is used twice below — the export and the second
+   #    `gh secret set` — so it has to exist before either. Nothing has to memorise it; it only
+   #    travels to the repository secret. An empty one is silently fatal: OpenSSL exports a
+   #    passwordless .p12 and exits 0, `security import` on the runner will not reliably read it,
+   #    and the `decide` job rejects an empty IOS_DEVELOPMENT_CERT_P12_PASSWORD. Hex, so the
+   #    value needs no quoting anywhere it travels (gh -> Actions env -> `security import -P`).
+   export P12_PASSWORD="$(openssl rand -hex 24)"
+
+   # 4. Bundle certificate + key as PKCS#12. `-legacy` matters: OpenSSL 3 defaults to a MAC and
    #    ciphers that `security import` on macOS 14 rejects with "MAC verification failed".
+   #    `-passout env:` rather than `pass:"$P12_PASSWORD"`: with the variable unset, `env:` errors
+   #    and writes no file, where `pass:` quietly produces a passwordless .p12.
    openssl x509 -in development.cer -inform DER -out tday-ci-development.pem
    openssl pkcs12 -export -legacy \
      -inkey tday-ci-development.key -in tday-ci-development.pem \
-     -out tday-ci-development.p12 -passout pass:"$P12_PASSWORD"
+     -out tday-ci-development.p12 -passout env:P12_PASSWORD
 
-   # 4. Store, then delete the local files — the private key must exist nowhere else.
-   gh secret set IOS_DEVELOPMENT_CERT_P12_BASE64  --body "$(base64 -w0 tday-ci-development.p12)"
-   gh secret set IOS_DEVELOPMENT_CERT_P12_PASSWORD --body "$P12_PASSWORD"
-   shred -u tday-ci-development.key tday-ci-development.p12
+   # 5. Verify BEFORE destroying anything — this is the last moment the private key exists
+   #    locally. These are the checks the lane runs on CI, minus the ones only macOS can do.
+   openssl x509 -in tday-ci-development.pem -noout -enddate
+   openssl x509 -in tday-ci-development.pem -noout -subject \
+     -nameopt multiline,-esc_msb | grep -E 'commonName|organizationalUnitName'
+   #    commonName             must start with "Apple Development:" — a distribution certificate
+   #                           fails the archive with a conflicting-identity error.
+   #    organizationalUnitName must equal IOS_TEAM_ID (JUFACN2FS3). This account has more than
+   #                           one team and the portal will happily issue under the other.
+   #    notAfter               must be about a year out.
+
+   openssl pkcs12 -in tday-ci-development.p12 -info -legacy -noout \
+     -passin env:P12_PASSWORD 2>&1 | grep -E 'MAC:|Shrouded Keybag|Mac verify error'
+   #    Expect exactly these two lines, and no error:
+   #      MAC: sha1, Iteration 2048
+   #      Shrouded Keybag: pbeWithSHA1And3-KeyTripleDES-CBC, Iteration 2048
+   #    "Mac verify error: invalid password?" -> $P12_PASSWORD is not what the file was made with.
+   #    No "Shrouded Keybag" line       -> the export lost the private key; redo step 4.
+   #    "MAC: sha256" / PBES2, AES-256  -> `-legacy` did not take effect. It reads fine here and
+   #                                       `security import` on the runner rejects it. Redo step 4.
+
+   # 6. Store both secrets, and only then delete the local files. Chained on `&&`: after the
+   #    shred the private key exists nowhere but in a GitHub secret, and a secret cannot be read
+   #    back — a half-finished upload here costs a second certificate against the quota. Piping
+   #    keeps the key and the password out of the process list.
+   base64 -w0 tday-ci-development.p12 | gh secret set IOS_DEVELOPMENT_CERT_P12_BASE64 &&
+     printf '%s' "$P12_PASSWORD" | gh secret set IOS_DEVELOPMENT_CERT_P12_PASSWORD &&
+     shred -u tday-ci-development.key tday-ci-development.p12
    ```
+
+   Those checks are the whole of what Linux can prove. The remaining risk — that the runner's
+   `security import` rejects the file for a reason `openssl` cannot see — is settled by a
+   `verify`-mode run (see [The first run](#the-first-run)); recovery is this step again plus
+   revoking the unused certificate in the portal.
 
    **On a Mac** — Keychain Access → Certificate Assistant → *Request a Certificate From a
    Certificate Authority* (saved to disk), create the Apple Development certificate from that CSR
    in the portal, double-click the downloaded `.cer` so it pairs with the key, then in Keychain
    Access select the certificate *and* its private key → *Export 2 items…* → `.p12` with a
-   password. Then the two `gh secret set` lines above (`base64 -i` instead of `base64 -w0`).
+   password. Selecting the certificate row alone produces a `.p12` the lane rejects with *"holds
+   no valid 'Apple Development' identity"* — the `Shrouded Keybag` check in the verification block
+   above is what catches that, so run it here too (a Keychain Access export is already in the
+   legacy format, so only the `MAC: sha1` expectation is Mac-optional). Then, in the same shell,
+   `export P12_PASSWORD='<the password you typed in the export dialog>'` and run the two
+   `gh secret set` lines above (`base64 -i` instead of `base64 -w0`) — the second one reads that
+   variable, and an empty value fails the `decide` job.
 
    Keep it separate from any developer's personal certificate: the CI one can be revoked and
    re-issued without touching a Mac. The lane prints its name, team and expiry on every run and
@@ -860,6 +905,15 @@ without them the archive is signed with whatever Apple Development identity the 
 holds, exactly as Xcode would. Set them to run the CI path — throwaway keychain, import,
 verification, cleanup — which is how to check a freshly exported `.p12` before rotating the
 secret. CI refuses to archive without them.
+
+That path makes the throwaway keychain the Mac's **default** keychain for the length of the run
+and puts the original back in the lane's `ensure`. If a run is killed outright (`kill -9`, a
+closed lid) that `ensure` never runs, and the default is left pointing at a file under `$TMPDIR`.
+The next run repairs it; to repair it by hand:
+
+```bash
+security default-keychain -s ~/Library/Keychains/login.keychain-db
+```
 
 There is deliberately **no committed `Gemfile.lock`** — see the comment in `ios-swiftUI/Gemfile`.
 To add one, run `bundle lock --add-platform arm64-darwin --add-platform x86_64-darwin` on a machine
