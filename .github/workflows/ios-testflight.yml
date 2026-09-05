@@ -286,9 +286,17 @@ jobs:
 
       # Fail on a missing secret HERE — on Linux, and only once we know a build is actually
       # wanted — rather than 40 minutes into xcodebuild with a provisioning error that names
-      # none of them. macOS runners bill at 10x the Linux rate, so a three-variable emptiness
+      # none of them. macOS runners bill at 10x the Linux rate, so a six-variable emptiness
       # test has no business booting one. Only emptiness is ever tested; no secret is printed,
       # interpolated into a log line, or written to the workspace.
+      #
+      # The two IOS_DEVELOPMENT_CERT_* secrets are the persistent Apple Development certificate
+      # the ARCHIVE is signed with. Under automatic signing the archive is always development-
+      # signed (cloud signing only covers the App Store export), and a fresh runner has no such
+      # identity — so without this secret `-allowProvisioningUpdates` mints a throwaway one on
+      # every run, until the team's certificate quota is full and every archive fails with
+      # "Choose a certificate to revoke". The lane refuses to run on CI without it for that
+      # reason, so this check is what turns that refusal into a Linux-priced one.
       - name: Verify the Apple credentials are configured
         if: steps.decision.outputs.should_build == 'true'
         env:
@@ -296,10 +304,13 @@ jobs:
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_KEY_P8_BASE64: ${{ secrets.ASC_KEY_P8_BASE64 }}
           TDAY_PROBE_ENCRYPTION_KEY: ${{ secrets.TDAY_PROBE_ENCRYPTION_KEY }}
+          IOS_DEVELOPMENT_CERT_P12_BASE64: ${{ secrets.IOS_DEVELOPMENT_CERT_P12_BASE64 }}
+          IOS_DEVELOPMENT_CERT_P12_PASSWORD: ${{ secrets.IOS_DEVELOPMENT_CERT_P12_PASSWORD }}
         run: |
           set -uo pipefail
           missing=""
-          for name in ASC_KEY_ID ASC_ISSUER_ID ASC_KEY_P8_BASE64 TDAY_PROBE_ENCRYPTION_KEY; do
+          for name in ASC_KEY_ID ASC_ISSUER_ID ASC_KEY_P8_BASE64 TDAY_PROBE_ENCRYPTION_KEY \
+                      IOS_DEVELOPMENT_CERT_P12_BASE64 IOS_DEVELOPMENT_CERT_P12_PASSWORD; do
             if [ -z "${!name}" ]; then
               missing="${missing}${name} "
             fi
@@ -308,15 +319,21 @@ jobs:
           if [ -n "$missing" ]; then
             echo "::error::Missing secret(s) for the iOS release: ${missing% }."
             echo "The App Store Connect API key must carry the ADMIN role (or Account Holder)."
-            echo "App Manager is enough to upload a build but NOT to create the distribution"
-            echo "certificate and the five App Store profiles that -allowProvisioningUpdates"
-            echo "mints on a fresh runner. Then set:"
+            echo "App Manager is enough to upload a build but NOT to create the provisioning"
+            echo "profiles that -allowProvisioningUpdates mints on a fresh runner, nor to sign"
+            echo "the export with the team's cloud-managed distribution certificate. Then set:"
             echo "  gh secret set ASC_KEY_ID        # the 10-character Key ID"
             echo "  gh secret set ASC_ISSUER_ID     # the issuer UUID above the key list"
             echo "  gh secret set ASC_KEY_P8_BASE64 < <(base64 -w0 AuthKey_XXXXXXXXXX.p8)"
             echo "TDAY_PROBE_ENCRYPTION_KEY is the same secret release.yml passes to the Android"
             echo "build; without it the shipped app cannot decrypt the server compatibility"
             echo "probe and the 'update required' gate is inert."
+            echo "IOS_DEVELOPMENT_CERT_P12_BASE64 / IOS_DEVELOPMENT_CERT_P12_PASSWORD are the"
+            echo "persistent Apple Development certificate (with its private key, as a .p12)"
+            echo "that the archive is signed with. Without it the archive mints a throwaway"
+            echo "certificate on every run until the team's quota is full:"
+            echo "  gh secret set IOS_DEVELOPMENT_CERT_P12_BASE64 < <(base64 -w0 development.p12)"
+            echo "  gh secret set IOS_DEVELOPMENT_CERT_P12_PASSWORD  # the .p12 export password"
             echo "See docs/DEPLOYMENT.md - iOS TestFlight Releases for the full checklist."
             exit 1
           fi
@@ -462,6 +479,11 @@ jobs:
           # silently disables the server version-compatibility gate. release.yml already passes
           # this same secret to the Android build; this is the iOS half of that parity.
           TDAY_PROBE_ENCRYPTION_KEY: ${{ secrets.TDAY_PROBE_ENCRYPTION_KEY }}
+          # The persistent Apple Development certificate the archive is signed with. The lane
+          # writes it 0600 under RUNNER_TEMP, imports it into a throwaway keychain it creates
+          # there, and deletes both in its `ensure` — see "CI signing keychain" in the Fastfile.
+          IOS_DEVELOPMENT_CERT_P12_BASE64: ${{ secrets.IOS_DEVELOPMENT_CERT_P12_BASE64 }}
+          IOS_DEVELOPMENT_CERT_P12_PASSWORD: ${{ secrets.IOS_DEVELOPMENT_CERT_P12_PASSWORD }}
           # Not a secret: a Team ID is printed on every provisioning profile. Keeping it a
           # variable means an Apple account change needs no code edit and no new secret.
           IOS_TEAM_ID: ${{ vars.IOS_TEAM_ID }}
@@ -476,6 +498,10 @@ jobs:
           # fastlane's own noise reduction; neither affects what is built.
           FASTLANE_SKIP_UPDATE_CHECK: "1"
           FASTLANE_HIDE_CHANGELOG: "1"
+          # The lane downloads Apple's WWDR intermediate certificates into its throwaway
+          # keychain; this makes fastlane retry that download over HTTP/1.1 instead of failing a
+          # 40-minute job on one dropped connection to apple.com.
+          FASTLANE_WWDR_USE_HTTP1_AND_RETRIES: "1"
         run: bundle exec fastlane beta
 
       # Only after the lane has produced an .ipa — see the split-cache rationale above.
@@ -486,26 +512,39 @@ jobs:
           path: ios-swiftUI/.spm-cache
           key: ${{ steps.spm-cache.outputs.cache-primary-key }}
 
-      # Nothing in this pipeline installs a certificate: the only path to an Apple Distribution
-      # identity is Xcode's automatic signing obtaining one during the build. Which path it took
-      # matters, and is otherwise invisible. If the identity is CLOUD-MANAGED, Apple holds the
-      # private key and every run reuses it. If Xcode instead minted a LOCAL certificate, its
-      # private key dies with this ephemeral runner and the next run needs a new one — and Apple
-      # caps distribution certificates at 2 per team, so the third release would fail at
-      # CodeSign until someone revokes by hand in the portal.
+      # The lane imports the persistent Apple Development certificate into a throwaway keychain
+      # and deletes that keychain in its `ensure`, so by the time this step runs the only
+      # identities left on the runner are ones Xcode CREATED during the build. There should be
+      # none: with a usable identity in the search list, `-allowProvisioningUpdates` manages
+      # profiles and mints nothing. The Apple Distribution certificate never shows up here
+      # either — it is cloud-managed, Apple holds its private key, so it is not an identity in
+      # any local keychain.
       #
-      # Informational on purpose (`|| true`): this must never be the thing that fails a release.
-      # Certificate common names are not secrets — they are printed on every provisioning
-      # profile, and the Team ID is already a public repository variable.
+      # An identity listed here therefore means the archive fell back to minting a certificate
+      # whose private key is now gone with this runner and which counts against the team's
+      # quota — the exact failure mode the imported certificate exists to prevent. Surfaced as
+      # a warning annotation, not a failure: the archive that just ran is still good, and this
+      # must never be the thing that fails a release (`|| true` throughout). The lane prints the
+      # same diff for its own keychain before deleting it. Certificate common names are not
+      # secrets — they are printed on every provisioning profile — and the Team ID is already a
+      # public repository variable.
       - name: Report the signing identities that were used
         if: always()
+        env:
+          IOS_TEAM_ID: ${{ vars.IOS_TEAM_ID }}
         run: |
-          echo "Code-signing identities present in the runner keychain after the build:"
-          security find-identity -v -p codesigning || true
+          echo "Code-signing identities left in the runner's login keychain after the build:"
+          IDENTITIES=$(security find-identity -v -p codesigning 2>&1 || true)
+          echo "${IDENTITIES}"
           echo ""
-          echo "Expectation: exactly one 'Apple Distribution' identity, cloud-managed by Apple."
-          echo "If a NEW certificate appears here on every release, check the Developer portal —"
-          echo "it should list the distribution certificate as 'Managed'. See docs/DEPLOYMENT.md."
+          if echo "${IDENTITIES}" | grep -q -E '^ *[0-9]+\) '; then
+            echo "::warning::Xcode created a code-signing certificate on this runner instead of using the imported Apple Development certificate. Its private key is gone with the runner and it counts against the team's certificate quota: revoke it in the Developer portal, then check that IOS_DEVELOPMENT_CERT_P12_BASE64 holds a valid, unexpired Apple Development certificate (with its private key) for team ${IOS_TEAM_ID:-JUFACN2FS3}. See docs/DEPLOYMENT.md - CI development certificate."
+          else
+            echo "Expected: no identities. The imported development certificate lived in a keychain"
+            echo "the lane has already deleted, and the Apple Distribution certificate is cloud-managed"
+            echo "(no local private key), so nothing Xcode used is left behind — and nothing new was"
+            echo "minted. See docs/DEPLOYMENT.md - CI development certificate."
+          fi
 
       # The .ipa is deliberately NOT uploaded as a workflow artifact. TestFlight already has it,
       # and a signed build of a personal task app is not something to leave sitting in artifact
