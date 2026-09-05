@@ -13,15 +13,23 @@ import androidx.compose.ui.unit.IntOffset
  * The floater home is where that shows worst: ticking off the last task drops a
  * near-half-screen empty scene into the slot the row just left, and anything
  * below it that is not animating is teleported down that whole distance in a
- * single frame — under the confetti, which is going off over the top of it.
+ * single frame.
  *
- * [PlacementMillis] is deliberately the same number as
- * [TdayEmptyStateCelebrationLeadMillis]: whatever the scene pushes down finishes
- * sliding on the frame the scene itself starts rising through the burst. That is
- * the order the list-detail screens get for free — there the empty state is a
- * full-screen overlay, so the burst leads and the scene follows with nothing
- * else on screen moving at all. The floater home keeps its inline layout (the
- * one iOS and web share) and buys the same sequencing with motion instead.
+ * Two rules come out of that, and both matter more than the numbers:
+ *
+ * 1. **A displaced item takes [Placement] and nothing else.** The Completed
+ *    tile, the "My Lists" header and the list rows are never added or removed by
+ *    a completion — they are only moved by one. Giving them fades as well buys
+ *    nothing here and costs elsewhere: search swaps the whole feed body out in
+ *    one go, and an item that fades would fade the entire screen in and out on
+ *    every open and close of the field.
+ * 2. **The celebration waits for the move, it does not race it.** The scene's
+ *    host passes [PlacementMillis] as `TdayEmptyState`'s
+ *    `celebrationStartDelayMillis`, so the burst begins on the frame the feed
+ *    finishes settling. The list-detail screens get that ordering for free —
+ *    there the empty state is a full-screen overlay and nothing on the page
+ *    moves at all — and the floater home, which keeps the inline layout iOS and
+ *    web share, buys it with this delay instead.
  */
 object TdayFeedItemMotion {
 
@@ -42,4 +50,11 @@ object TdayFeedItemMotion {
 
     val FadeOut: FiniteAnimationSpec<Float> =
         tween(durationMillis = FadeOutMillis, easing = FastOutSlowInEasing)
+
+    /**
+     * How long a feed that hosts `TdayEmptyState` inline holds its celebration
+     * back — exactly as long as the items that scene displaces take to reach
+     * their new slots.
+     */
+    const val CelebrationStartDelayMillis: Long = PlacementMillis.toLong()
 }

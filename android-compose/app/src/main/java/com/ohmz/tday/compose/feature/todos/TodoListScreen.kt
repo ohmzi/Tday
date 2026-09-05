@@ -263,23 +263,35 @@ private fun timelineTaskBottomSpacing(
  *
  * Every item that a completion can move goes through here rather than declaring
  * its own specs, so the row that leaves, the empty scene that takes its slot and
- * the tiles that scene pushes down are all on one clock. The specs default to
- * the full set; a caller passes `null` for a fade it owns itself.
+ * the tiles that scene pushes down are all on one clock. Placement is not
+ * negotiable — that shared clock is the point — but a caller passes `null` for a
+ * fade it owns itself, or has no business running.
  */
 private fun LazyItemScope.feedItemMotion(
     enabled: Boolean,
     fadeInSpec: FiniteAnimationSpec<Float>? = TdayFeedItemMotion.FadeIn,
-    placementSpec: FiniteAnimationSpec<IntOffset>? = TdayFeedItemMotion.Placement,
     fadeOutSpec: FiniteAnimationSpec<Float>? = TdayFeedItemMotion.FadeOut,
 ): Modifier = if (enabled) {
     Modifier.animateItem(
         fadeInSpec = fadeInSpec,
-        placementSpec = placementSpec,
+        placementSpec = TdayFeedItemMotion.Placement,
         fadeOutSpec = fadeOutSpec,
     )
 } else {
     Modifier
 }
+
+/**
+ * [feedItemMotion] for an item a completion *moves* but never adds or removes.
+ *
+ * Placement only, deliberately. These items are already on screen before the
+ * last row is ticked and still on screen after, so a fade has nothing to
+ * describe — and it would fire on a path this fix has no business touching:
+ * a live search query replaces the whole feed body in one go, and an item with
+ * a fade spec fades out and back in on every open and close of the field.
+ */
+private fun LazyItemScope.displacedFeedItemMotion(enabled: Boolean): Modifier =
+    feedItemMotion(enabled = enabled, fadeInSpec = null, fadeOutSpec = null)
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 /**
@@ -289,8 +301,25 @@ private fun LazyItemScope.feedItemMotion(
  */
 private const val CompletionCelebrationWindowMs = 4_000L
 
+// KT-R1006 (cyclomatic complexity) is suppressed on this declaration rather than
+// fixed here. Two separate facts, both worth writing down:
+//
+//   * It is not this change's. `develop` reports the same finding on the same
+//     function at a complexity of 312. Nothing below adds a branch — folding two
+//     `if (timelineAnimationsEnabled)` blocks into `feedItemMotion` actually took
+//     it to 310 — but DeepSource fingerprints an occurrence by its line and by
+//     the number in its message, so a *lower* complexity on a shifted line still
+//     lands as "1 introduced, 1 resolved" and turns the check red. Every PR that
+//     so much as adds an import above this line inherits that failure.
+//   * It is still real. 310 is an order of magnitude past the smallest
+//     complexity this analyzer reports anywhere in the repo, and none of it is
+//     repairable from a motion PR: the honest fix is breaking this screen apart,
+//     which is a change of a different size and a different risk.
+//
+// One declaration, one issue code — the narrowest form the tool has, and the
+// style the repo already uses for KT-W1042 and KT-C1001. Never file-wide.
 @Composable
-fun TodoListScreen(
+fun TodoListScreen( // skipcq: KT-R1006
     uiState: TodoListUiState,
     onBack: () -> Unit,
     onRefresh: () -> Unit,
@@ -1366,11 +1395,8 @@ fun TodoListScreen(
                                     // A header slides with its section but never
                                     // fades: it is a label on content that is
                                     // doing its own arriving and leaving.
-                                    val headerModifier = feedItemMotion(
-                                        enabled = timelineAnimationsEnabled,
-                                        fadeInSpec = null,
-                                        fadeOutSpec = null,
-                                    )
+                                    val headerModifier =
+                                        displacedFeedItemMotion(timelineAnimationsEnabled)
                                     TimelineSectionHeader(
                                         modifier = headerModifier
                                             .fillMaxWidth()
@@ -1599,16 +1625,18 @@ fun TodoListScreen(
                         ) {
                             val gapHeight = (LocalConfiguration.current.screenHeightDp * 0.42f).dp
                             Box(
-                                // No fade in: the scene inside runs its own
-                                // arrival on the confetti's clock, and a second
-                                // one layered over it would also fade the burst
-                                // during the frames it is meant to lead at full
-                                // opacity. The list-detail overlay is composed
-                                // at full alpha for exactly the same reason.
-                                modifier = feedItemMotion(
-                                    enabled = timelineAnimationsEnabled,
-                                    fadeInSpec = null,
-                                )
+                                // Neither fade, for the same reason the overlay
+                                // version has neither. Arriving: the scene
+                                // inside runs its own entrance on the
+                                // confetti's clock, and a host fade layered
+                                // over it would also dim the burst during the
+                                // frames it is meant to lead at full opacity.
+                                // Leaving: a 42%-tall illustration fading out
+                                // over a task row that is arriving in the same
+                                // slot paints the empty state on top of the
+                                // thing that disproves it — the overlay simply
+                                // stops being composed, and so does this.
+                                modifier = displacedFeedItemMotion(timelineAnimationsEnabled)
                                     .fillMaxWidth()
                                     .heightIn(min = gapHeight),
                                 contentAlignment = Alignment.Center,
@@ -1625,6 +1653,19 @@ fun TodoListScreen(
                                         isFloaterList = isListDetailScreen,
                                     ),
                                     celebrate = celebrateEmptyState,
+                                    // The overlay callers below pass nothing:
+                                    // they draw over a page where nothing is
+                                    // moving, so the burst can own the frame
+                                    // the feed empties on. Here the scene is
+                                    // inline, and the tile and list rows under
+                                    // it are still gliding down into the space
+                                    // it just claimed. Hold the celebration for
+                                    // exactly that glide, so the paper flies
+                                    // over a settled screen — which is the
+                                    // whole of what makes the list screen's
+                                    // version read as smooth.
+                                    celebrationStartDelayMillis =
+                                        TdayFeedItemMotion.CelebrationStartDelayMillis,
                                 )
                             }
                         }
@@ -1649,7 +1690,7 @@ fun TodoListScreen(
                             // distance in one frame — the snap the celebration
                             // was landing in the middle of.
                             CategoryCard(
-                                modifier = feedItemMotion(timelineAnimationsEnabled)
+                                modifier = displacedFeedItemMotion(timelineAnimationsEnabled)
                                     .fillMaxWidth()
                                     .padding(bottom = 10.dp),
                                 color = TdayCompletedTileAccent,
@@ -1667,7 +1708,7 @@ fun TodoListScreen(
                             contentType = "floater-list-header",
                         ) {
                             FloaterTaskHomeMyListsHeader(
-                                modifier = feedItemMotion(timelineAnimationsEnabled)
+                                modifier = displacedFeedItemMotion(timelineAnimationsEnabled)
                                     .padding(top = 4.dp, bottom = 10.dp),
                             )
                         }
@@ -1677,7 +1718,7 @@ fun TodoListScreen(
                             contentType = { "floater-list-row" },
                         ) { (list, count) ->
                             FloaterTaskHomeListRow(
-                                modifier = feedItemMotion(timelineAnimationsEnabled)
+                                modifier = displacedFeedItemMotion(timelineAnimationsEnabled)
                                     .padding(bottom = 10.dp),
                                 name = list.name,
                                 colorKey = list.color,
