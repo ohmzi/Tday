@@ -25,12 +25,12 @@ import com.ohmz.tday.compose.feature.lock.AppLockOverlay
 import com.ohmz.tday.compose.feature.lock.appLockAuthenticators
 import com.ohmz.tday.compose.feature.lock.canSatisfyAppLock
 import com.ohmz.tday.compose.feature.lock.shouldLockOnForeground
-import com.ohmz.tday.compose.feature.widget.WidgetRefresher
+import com.ohmz.tday.compose.feature.widget.WidgetEntryPoint
 import com.ohmz.tday.compose.ui.theme.TdayTheme
 import dagger.hilt.android.AndroidEntryPoint
+import dagger.hilt.android.EntryPointAccessors
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
@@ -54,7 +54,15 @@ class MainActivity : AppCompatActivity() {
 
     private val notificationPreferences by lazy { NotificationPreferenceStore(applicationContext) }
 
-    @Inject lateinit var widgetRefresher: WidgetRefresher
+    // Resolved lazily through WidgetEntryPoint rather than an `@Inject lateinit` field, matching
+    // the other widget call sites (SettingsScreen, BootRescheduleReceiver, CompleteTaskAction) and
+    // the neighbouring stores above: the refresher is only needed in onStart, and a lazy val has
+    // no uninitialized window to get wrong.
+    private val widgetRefresher by lazy {
+        EntryPointAccessors
+            .fromApplication(applicationContext, WidgetEntryPoint::class.java)
+            .widgetRefresher()
+    }
 
     private val _locked = MutableStateFlow(false)
 
@@ -110,7 +118,8 @@ class MainActivity : AppCompatActivity() {
         // install that already had the lock on before this feature shipped (or any other
         // drift between the flag and the last-rendered widget) would otherwise sit stale
         // until an unrelated data sync happens to fire. Every foreground is cheap to cover —
-        // both refreshers are unconditional, so a re-render with nothing changed is a no-op.
+        // the refresher is unconditional, so a re-render with nothing changed is a no-op. One
+        // call now covers per-list instances too; they were skipped here while there were three.
         widgetRefresher.requestRefresh()
     }
 
