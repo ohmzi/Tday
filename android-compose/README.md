@@ -92,6 +92,17 @@ Building the graph only once the answer is known means the first real screen com
 the right one, so a signed-in user never sees sign-in on the way in. `SessionResolution` is
 monotonic: sign-out and session expiry leave it `RESOLVED`, so the splash never returns mid-session.
 
+While the graph is withheld there is no `NavController` back stack, and
+`NavController.handleDeepLink` dereferences the graph unconditionally, so anything that reaches
+for it must first check that a current entry exists — both `HandleStartupNavigation` and the
+pending-deep-link effect in `TdayApp` do, and both keep `currentRoute` as an effect key so the
+work is deferred rather than dropped. The window is real because the splash's tap-and-hold can
+outlast the session resolving. Verification note: the routing decision and the ViewModel's
+resolution writes are covered by `RootDestinationTest` and `AppViewModelTest`; the composition
+gate itself — that `TdayApp` withholds the `NavHost` — has no automated test, because the module
+has no Robolectric toolchain and an instrumented test of `TdayApp` would need the full Hilt graph
+and a device. It is verified on device.
+
 ## Version Compatibility
 
 - `android-compose/app/build.gradle.kts` reads root `../version.json` for `versionName` and computes

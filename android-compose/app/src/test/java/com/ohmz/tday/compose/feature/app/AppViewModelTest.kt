@@ -483,6 +483,15 @@ class AppViewModelTest {
 
         assertEquals(SessionResolution.UNKNOWN, viewModel.uiState.value.sessionResolution)
         assertEquals(RootDestination.SPLASH, viewModel.uiState.value.rootDestination)
+        // SPLASH and an available workspace must never be true together. The nav graph does not
+        // exist while the root is SPLASH — TdayApp holds the branded splash in the NavHost's
+        // place — but the pending-deep-link effect keys off isWorkspaceAvailable and calls
+        // NavController.handleDeepLink, which dereferences the graph unconditionally. Because
+        // enterLocalWorkspace() writes the mode and RESOLVED in one update, that effect can only
+        // ever outrun the graph while the user is holding the splash (guarded separately in
+        // TdayApp); a branch that opened the workspace without resolving would make it a crash
+        // on every cold launch instead.
+        assertFalse(viewModel.uiState.value.isWorkspaceAvailable)
 
         advanceTimeBy(1)
         runCurrent()
