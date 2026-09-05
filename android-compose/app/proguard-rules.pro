@@ -70,6 +70,43 @@
 -dontwarn sun.misc.Perf
 -dontwarn sun.misc.Unsafe
 
+# ── Glance app widgets ──────────────────────────────────────────────
+# DO NOT DELETE. Nothing else in this build makes two widget classes distinct at runtime, and
+# without these rules a release APK silently renders the wrong widget.
+#
+# Glance identifies a widget provider by CLASS NAME, never by class identity:
+#   * `GlanceAppWidgetManager.updateReceiver` records `provider:<receiver>` as
+#     `appWidget.javaClass.canonicalName`;
+#   * `GlanceAppWidgetKt.updateAll` calls `getGlanceIds(this.javaClass)`, which is a raw
+#     `providerNameToReceivers[canonicalName]` lookup with no validation; and
+#   * `GlanceAppWidget.update` keys its render session on `createUniqueRemoteUiName(appWidgetId)`
+#     — the appWidgetId ALONE, with no widget class in the key — and, when no session is running
+#     for that id, constructs `AppWidgetSession` with whichever `GlanceAppWidget` instance called
+#     `update`. A running session keeps the class it was constructed with until the process dies.
+#
+# `TodayTasksWidget`, `FloaterTasksWidget` and `ListTasksWidget` are structurally identical, so
+# R8's horizontal class merger collapsed all three into ONE runtime class. Verified in the
+# mapping.txt of a release build made without these rules: `FloaterTasksWidget -> ki1` carrying a
+# synthesized `$r8$classId` discriminator and a `provideGlance` body inlined from all three, with
+# no top-level mapping line at all for the other two classes. All nine receivers then registered
+# under that single provider name, so every kind's `updateAll` enumerated every OTHER kind's
+# appWidgetIds and a Today-flavoured instance could take ownership of a Floater instance's render
+# session — the "my Floater widget turned into the Today widget until I reopened the app" report.
+# Debug builds are unminified, which is why this is invisible outside a release APK.
+#
+# Keeping the classes pins their names, which is what excludes them from the merger. The proof
+# that a keep rule is sufficient is in the same build: `CompleteTodayTaskAction` and
+# `CompleteFloaterTaskAction` are identically-shaped siblings that R8 left unmerged and unrenamed,
+# solely because glance-appwidget's own consumer rules keep `ActionCallback` subclasses. Glance
+# ships no such rule for `GlanceAppWidget`, so it has to live here.
+#
+# `:app:verifyWidgetClassIdentity` (app/build.gradle.kts) re-reads mapping.txt after every R8 run
+# and fails the release build if these classes ever share an output name again.
+-keep class * extends androidx.glance.appwidget.GlanceAppWidget
+# The nine concrete receivers are already pinned by the manifest, but their canonical names are
+# the other half of the same lookup, so pin them explicitly rather than by side effect.
+-keep class * extends androidx.glance.appwidget.GlanceAppWidgetReceiver
+
 # ── SQLCipher (encrypted offline cache) ─────────────────────────────
 # The native layer looks these classes and their members up by name through JNI, so R8 renaming
 # any of them turns into an UnsatisfiedLinkError at the first query — in release builds only.

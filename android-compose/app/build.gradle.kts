@@ -1,3 +1,4 @@
+import com.android.build.api.artifact.SingleArtifact
 import java.util.Properties
 
 plugins {
@@ -307,4 +308,118 @@ sentry {
         enabled = true
         sentryVersion = "8.13.0"
     }
+}
+
+// ── Widget class identity (R8) ──────────────────────────────────────────────
+//
+// Glance looks a widget provider up by CLASS NAME — `GlanceAppWidgetManager` stores
+// `provider:<receiver>` as `appWidget.javaClass.canonicalName`, `updateAll` reads it back with an
+// unvalidated `providerNameToReceivers[canonicalName]`, and `GlanceAppWidget.update` keys its
+// render session on the appWidgetId alone. So two widget classes sharing one runtime name is not a
+// size regression, it is a widget rendering as the wrong kind.
+//
+// R8 did exactly that: without the keep rules in `proguard-rules.pro`, its horizontal class merger
+// collapsed TodayTasksWidget, FloaterTasksWidget and ListTasksWidget into a single class. The keep
+// rules prevent it, but a keep rule is easy to delete and the symptom only appears in a signed
+// release build on a real home screen. This reads the R8 mapping back and fails the build instead.
+//
+// Release-only by construction — there is no mapping file without R8 — so it runs in
+// `release.yml`'s `assembleRelease`, not in the PR unit-test job.
+val widgetClassesRequiringDistinctNames = listOf(
+    "com.ohmz.tday.compose.feature.widget.TodayTasksWidget",
+    "com.ohmz.tday.compose.feature.widget.FloaterTasksWidget",
+    "com.ohmz.tday.compose.feature.widget.ListTasksWidget",
+    "com.ohmz.tday.compose.feature.widget.TodayTasksWidgetSmallReceiver",
+    "com.ohmz.tday.compose.feature.widget.TodayTasksWidgetReceiver",
+    "com.ohmz.tday.compose.feature.widget.TodayTasksWidgetLargeReceiver",
+    "com.ohmz.tday.compose.feature.widget.FloaterTasksWidgetSmallReceiver",
+    "com.ohmz.tday.compose.feature.widget.FloaterTasksWidgetReceiver",
+    "com.ohmz.tday.compose.feature.widget.FloaterTasksWidgetLargeReceiver",
+    "com.ohmz.tday.compose.feature.widget.ListTasksWidgetSmallReceiver",
+    "com.ohmz.tday.compose.feature.widget.ListTasksWidgetReceiver",
+    "com.ohmz.tday.compose.feature.widget.ListTasksWidgetLargeReceiver",
+)
+
+// The mapping comes from AGP's artifact API rather than a hardcoded
+// `outputs/mapping/<variant>/mapping.txt`. With core library desugaring enabled that path is only
+// finalised by `l8DexDesugarLibRelease`, several tasks AFTER `minifyReleaseWithR8` — reading the
+// literal path just gets the PREVIOUS build's mapping, which is worse than no check at all. The
+// artifact provider carries whichever task actually produces it.
+androidComponents.onVariants { variant ->
+    if (variant.buildType != "release") return@onVariants
+
+    val mappingFile = variant.artifacts.get(SingleArtifact.OBFUSCATION_MAPPING_FILE)
+    val expected = widgetClassesRequiringDistinctNames
+    val variantName = variant.name.replaceFirstChar { it.uppercase() }
+
+    val verifyWidgetClassIdentity = tasks.register("verify${variantName}WidgetClassIdentity") {
+        group = "verification"
+        description =
+            "Fails if R8 merged two Glance widget classes or receivers into one runtime class."
+
+        inputs.file(mappingFile).withPropertyName("r8Mapping")
+        // Cheap, and a stale "pass" here would be a silently broken gate.
+        outputs.upToDateWhen { false }
+
+        doLast {
+            val mapping = mappingFile.get().asFile
+            if (!mapping.isFile) {
+                throw GradleException(
+                    "No R8 mapping at ${mapping.absolutePath}; cannot verify widget class identity.",
+                )
+            }
+
+            // A class definition in mapping.txt is the only kind of line starting at column 0:
+            // `<original> -> <obfuscated>:`. Member lines are all indented.
+            val outputNameByClass = mutableMapOf<String, String>()
+            mapping.useLines { lines ->
+                for (line in lines) {
+                    if (line.isEmpty() || line[0].isWhitespace() || line.startsWith("#")) continue
+                    val arrow = line.indexOf(" -> ")
+                    if (arrow < 0 || !line.endsWith(":")) continue
+                    val original = line.substring(0, arrow)
+                    if (original in expected) {
+                        outputNameByClass[original] = line.substring(arrow + 4, line.length - 1)
+                    }
+                }
+            }
+
+            // A class R8 merged INTO another loses its own definition line entirely, which is how
+            // TodayTasksWidget and ListTasksWidget vanished. Absence is the primary symptom.
+            val missing = expected.filterNot { it in outputNameByClass }
+            val collisions = outputNameByClass.entries
+                .groupBy({ it.value }, { it.key })
+                .filterValues { it.size > 1 }
+
+            if (missing.isNotEmpty() || collisions.isNotEmpty()) {
+                val detail = buildString {
+                    appendLine("R8 collapsed Glance widget class identities in the release build.")
+                    appendLine("Glance resolves providers by canonical class name and keys render")
+                    appendLine("sessions on the appWidgetId alone, so this makes a widget render as")
+                    appendLine("another kind until the process is replaced.")
+                    if (missing.isNotEmpty()) {
+                        appendLine("No mapping entry (merged away or shrunk out):")
+                        missing.forEach { appendLine("  - $it") }
+                    }
+                    collisions.forEach { (output, originals) ->
+                        appendLine("Share the output name '$output':")
+                        originals.forEach { appendLine("  - $it") }
+                    }
+                    appendLine("Restore the Glance keep rules in app/proguard-rules.pro.")
+                    append("Mapping: ${mapping.absolutePath}")
+                }
+                throw GradleException(detail)
+            }
+
+            logger.lifecycle(
+                "verifyWidgetClassIdentity: ${expected.size} widget classes have distinct " +
+                    "runtime names.",
+            )
+        }
+    }
+
+    // Hung off `assemble`/`bundle` rather than finalizing the R8 task: a finalizer also runs when
+    // R8 itself failed, and would then report a missing mapping on top of the real error.
+    tasks.matching { it.name == "assemble$variantName" || it.name == "bundle$variantName" }
+        .configureEach { dependsOn(verifyWidgetClassIdentity) }
 }

@@ -77,9 +77,9 @@ class WidgetInstanceKindTest {
             WidgetInstanceCatalog.kindForReceiverClassName(ListTasksWidgetLargeReceiver::class.java.name),
         )
         assertEquals(9, WidgetInstanceCatalog.bindings.size)
-        // Every kind has at least one receiver. WidgetRefresher's belt-and-braces `updateAll` pass
-        // walks WidgetInstanceKind.entries while its primary pass walks these bindings; a kind
-        // present in one and absent from the other would mean a widget class nothing enumerates.
+        // Every kind has at least one receiver. These bindings are now the ONLY thing a repaint
+        // walks (WidgetRefresher's `updateAll` sweep over WidgetInstanceKind.entries was removed),
+        // so a kind with no binding here would be a widget class nothing ever enumerates.
         assertEquals(
             WidgetInstanceKind.entries.toSet(),
             WidgetInstanceCatalog.bindings.map { it.kind }.toSet(),

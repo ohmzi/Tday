@@ -5,7 +5,6 @@ import android.content.ComponentName
 import android.content.Context
 import android.util.Log
 import androidx.glance.appwidget.AppWidgetId
-import androidx.glance.appwidget.updateAll
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -85,19 +84,27 @@ class WidgetRefresher @Inject constructor(
         renderNow(firstAppWidgetId)
     }
 
-    // `updateAll` alone is not enough and never was: it resolves a GlanceAppWidget class to the
-    // receivers Glance itself recorded (`GlanceAppWidgetManager.getGlanceIds` looks the class up in
-    // Glance's own DataStore), so an on-screen widget of a size whose receiver Glance has not seen
-    // this process is silently skipped. Enumerating each declared receiver's real ids covers all
-    // nine; `updateAll` is kept as cheap belt-and-braces.
+    // THIS RENDERS THROUGH THE PLAN AND NOTHING ELSE. There used to be a trailing
+    // `WidgetInstanceKind.entries.forEach { newWidget(it).updateAll(context) }` sweep here as
+    // "cheap belt-and-braces". It was removed because it could not do the job it was kept for and
+    // could do real harm:
     //
-    // It is run for EVERY kind, not only for the kinds the plan already covers — deliberately, and
-    // this is the one case it can still catch. Both paths bottom out in
-    // `AppWidgetManager.getAppWidgetIds`, so `updateAll` cannot reach an id the loop below simply
-    // did not find; it can only help when OUR call threw and `idsForReceiver` returned null, which
-    // is exactly when that kind is absent from the plan. Gating on `plan`'s kinds would skip it
-    // precisely then, and would also drop the unconditional sweep the three per-kind refreshers
-    // this class replaced each performed on every render.
+    //  - It cannot reach an id the plan missed. `updateAll` resolves a class through
+    //    `GlanceAppWidgetManager.getGlanceIds`, which looks the class up in Glance's own DataStore
+    //    and then calls `AppWidgetManager.getAppWidgetIds` on each recorded receiver — the same
+    //    platform call `idsForReceiver` below makes, over a subset of the receivers (only those
+    //    Glance has seen this process). It is strictly weaker than the plan, never wider. The one
+    //    case it was justified by — our own `getAppWidgetIds` threw, so the kind is absent from the
+    //    plan — is exactly the case where Glance's identical call throws too.
+    //  - It routes by class, and a class is not an instance identity in a release build. R8's
+    //    horizontal merger collapsed all three widget classes into one (see the Glance section of
+    //    `proguard-rules.pro`), which made `TodayTasksWidget().updateAll` enumerate FLOATER and
+    //    LIST ids and take ownership of their Glance sessions — painting Today's Tasks onto a
+    //    Floater widget until the process died. The keep rules fix that; deleting the sweep means
+    //    a future regression of them cannot reach a foreign id through this class at all.
+    //
+    // So an enumeration failure is now LOGGED rather than silently compensated for. Painting
+    // nothing and saying so beats painting the wrong kind.
     private suspend fun renderNow(firstAppWidgetId: Int?) {
         renderMutex.withLock {
             val manager = AppWidgetManager.getInstance(context)
@@ -107,17 +114,22 @@ class WidgetRefresher @Inject constructor(
                 firstAppWidgetId = firstAppWidgetId,
                 kindOf = resolver::kindOf,
                 idsForReceiver = { receiverClass ->
-                    runCatching { manager.getAppWidgetIds(ComponentName(context, receiverClass)) }.getOrNull()
+                    runCatching { manager.getAppWidgetIds(ComponentName(context, receiverClass)) }
+                        .onFailure {
+                            Log.e(
+                                WIDGET_LOG_TAG,
+                                "widgets: could not enumerate ids for ${receiverClass.simpleName}; " +
+                                    "its instances are not in this render plan",
+                                it,
+                            )
+                        }
+                        .getOrNull()
                 },
             )
 
             var updated = 0
             for ((appWidgetId, kind) in plan) {
                 if (update(kind, appWidgetId)) updated++
-            }
-            for (kind in WidgetInstanceKind.entries) {
-                runCatching { WidgetInstanceCatalog.newWidget(kind).updateAll(context) }
-                    .onFailure { Log.e(WIDGET_LOG_TAG, "${kind.name.lowercase()}: updateAll failed", it) }
             }
             // 0 distinguishes "no widget placed" from "painted nothing" when diagnosing a blank
             // widget after a reboot.
