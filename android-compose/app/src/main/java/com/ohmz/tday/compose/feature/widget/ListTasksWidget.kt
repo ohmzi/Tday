@@ -138,8 +138,10 @@ private fun ListTasksWidgetBody(
     if (selection == null) {
         // No selection on disk: an instance whose configuration was somehow lost (store cleared
         // without the widget itself being removed), or the launcher called `provideGlance`
-        // before `WidgetListConfigurationActivity` finished writing it — reuse the SETUP visual
-        // as "tap to finish setting this up" rather than inventing a fourth content state.
+        // before `WidgetListConfigurationActivity` finished writing it — reuse the SETUP content
+        // state as "tap to finish setting this up" rather than inventing a fourth one. The
+        // VISUALS for it are kind-neutral (see UnconfiguredListWidgetVisuals): the content state
+        // is shared with the configured widgets, the identity is not.
         UnconfiguredListWidgetContent(
             appContext = appContext,
             appWidgetId = appWidgetId,
@@ -160,9 +162,29 @@ private fun ListTasksWidgetBody(
     }
 }
 
-private fun listWidgetVisualsFor(listType: WidgetListType?): TaskWidgetVisuals = when (listType) {
+/**
+ * The look of an instance whose selection could not be read — no watermark and a neutral "+",
+ * rather than any kind's accent.
+ *
+ * This is the render half of the same rule [WidgetInstanceCatalog.feedFor] holds for routing: an
+ * unresolved instance must not be presented as the scheduled widget. It used to fall in with
+ * [WidgetListType.TODO] on the `null` branch below, which meant a per-list instance whose
+ * selection was momentarily unreadable painted the Today sun watermark and the Today accent — the
+ * scheduled widget's whole visual identity — on a widget that may well be on a floater list, then
+ * changed back the moment the selection re-read. The state it is really in is "not configured
+ * yet", and it now looks like that and nothing else.
+ */
+internal val UnconfiguredListWidgetVisuals = TaskWidgetVisuals(
+    addButtonBackground = R.drawable.widget_add_button_background_neutral,
+    addIcon = R.drawable.widget_add_icon_neutral,
+    emptyWatermark = null,
+    setupWatermark = null,
+)
+
+internal fun listWidgetVisualsFor(listType: WidgetListType?): TaskWidgetVisuals = when (listType) {
     WidgetListType.FLOATER -> FloaterWidgetVisuals
-    WidgetListType.TODO, null -> todayWidgetVisuals(taskWidgetIsDaytime(LocalTime.now().hour))
+    WidgetListType.TODO -> todayWidgetVisuals(taskWidgetIsDaytime(LocalTime.now().hour))
+    null -> UnconfiguredListWidgetVisuals
 }
 
 /**
@@ -338,11 +360,7 @@ private fun openCreateListTaskAction(
         Intent.ACTION_VIEW,
         Uri.parse(
             WidgetCreateRoute.deepLink(
-                target = if (listType == WidgetListType.TODO) {
-                    WidgetCreateRoute.TARGET_TODAY
-                } else {
-                    WidgetCreateRoute.TARGET_FLOATER
-                },
+                target = WidgetCreateRoute.targetFor(WidgetInstanceCatalog.feedForListType(listType)),
                 appWidgetId = appWidgetId,
                 listId = listId,
             ),
