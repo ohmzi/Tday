@@ -63,8 +63,7 @@ import com.ohmz.tday.compose.core.model.UpdateListRequest
 import com.ohmz.tday.compose.core.model.UpdateTodoRequest
 import com.ohmz.tday.compose.core.network.TdayApiService
 import com.ohmz.tday.compose.core.observability.TdayTelemetry
-import com.ohmz.tday.compose.feature.widget.FloaterTasksWidgetRefresher
-import com.ohmz.tday.compose.feature.widget.TodayTasksWidgetRefresher
+import com.ohmz.tday.compose.feature.widget.WidgetRefresher
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -81,8 +80,7 @@ class SyncManager @Inject constructor(
     private val api: TdayApiService,
     private val cacheManager: OfflineCacheManager,
     private val secureConfigStore: SecureConfigStore,
-    private val todayTasksWidgetRefresher: TodayTasksWidgetRefresher,
-    private val floaterTasksWidgetRefresher: FloaterTasksWidgetRefresher,
+    private val widgetRefresher: WidgetRefresher,
 ) {
     private val offlineSyncFailureMutable = MutableSharedFlow<Unit>(extraBufferCapacity = 8)
     val offlineSyncFailures: SharedFlow<Unit> = offlineSyncFailureMutable.asSharedFlow()
@@ -168,8 +166,7 @@ class SyncManager @Inject constructor(
     }
 
     private suspend fun refreshTaskWidgets() {
-        runCatching { todayTasksWidgetRefresher.refreshNow() }
-        runCatching { floaterTasksWidgetRefresher.refreshNow() }
+        runCatching { widgetRefresher.refreshNow() }
     }
 
     private suspend fun syncLocalCache(

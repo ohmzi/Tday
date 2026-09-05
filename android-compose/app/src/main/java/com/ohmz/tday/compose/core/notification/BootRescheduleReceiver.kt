@@ -79,7 +79,7 @@ class BootRescheduleReceiver : BroadcastReceiver() {
      *
      * A reboot drops every widget's RemoteViews (AppWidgetService persists the provider/host
      * *bindings* but not the rendered views), so without this the widget sits on
-     * `android:initialLayout` until something repaints it. Uses [TodayTasksWidgetRefresher.refreshNow]
+     * `android:initialLayout` until something repaints it. Uses [WidgetRefresher.refreshNow]
      * rather than the fire-and-forget request so the render completes while [goAsync] still holds
      * the process alive.
      */
@@ -100,8 +100,7 @@ class BootRescheduleReceiver : BroadcastReceiver() {
             // Bounded because this runs inside goAsync's window, which the system closes if we
             // take too long — a slow render must not hold the broadcast.
             withTimeout(WIDGET_REPAINT_TIMEOUT_MS) {
-                widgets.todayTasksWidgetRefresher().refreshNow()
-                widgets.floaterTasksWidgetRefresher().refreshNow()
+                widgets.widgetRefresher().refreshNow()
             }
         }.onFailure { Log.e(LOG_TAG, "Failed to repaint widgets after boot", it) }
         Log.i(WIDGET_LOG_TAG, "boot: repaint finished in ${System.currentTimeMillis() - startedAtMs}ms")

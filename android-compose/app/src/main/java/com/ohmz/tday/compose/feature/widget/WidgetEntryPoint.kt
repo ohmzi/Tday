@@ -17,6 +17,5 @@ import dagger.hilt.components.SingletonComponent
 @InstallIn(SingletonComponent::class)
 interface WidgetEntryPoint {
     fun widgetCompleteTaskSubmitter(): WidgetCompleteTaskSubmitter
-    fun todayTasksWidgetRefresher(): TodayTasksWidgetRefresher
-    fun floaterTasksWidgetRefresher(): FloaterTasksWidgetRefresher
+    fun widgetRefresher(): WidgetRefresher
 }

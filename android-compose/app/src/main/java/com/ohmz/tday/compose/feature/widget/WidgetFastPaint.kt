@@ -67,7 +67,7 @@ internal object WidgetFastPaint {
      * session from running concurrently, which would otherwise race allocating layout ids for the
      * same widget id in Glance's shared `LayoutConfiguration`.
      */
-    @SuppressLint("RestrictedApi") // AppWidgetId, exactly as TodayTasksWidgetRefresher already does
+    @SuppressLint("RestrictedApi") // AppWidgetId, exactly as WidgetRefresher already does
     fun publish(
         context: Context,
         widget: GlanceAppWidget,

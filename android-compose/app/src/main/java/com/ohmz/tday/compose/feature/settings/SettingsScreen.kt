@@ -1993,9 +1993,11 @@ private fun AppLockRow() {
                 store.setAppLockEnabled(requested)
                 // Immediate effect: the home-screen widgets read this flag fresh on every
                 // render, but nothing else would prompt a render right now — without this
-                // they'd keep showing task content until the next unrelated sync.
-                widgetEntryPoint.todayTasksWidgetRefresher().requestRefresh()
-                widgetEntryPoint.floaterTasksWidgetRefresher().requestRefresh()
+                // they'd keep showing task content until the next unrelated sync. One refresher
+                // covers every placed instance, per-list widgets included — they were missed
+                // here while there were three, so turning app lock on left them showing task
+                // titles until something else happened to repaint them.
+                widgetEntryPoint.widgetRefresher().requestRefresh()
             },
         )
         if (showUnavailable) {
