@@ -73,9 +73,16 @@ xcodebuild test -project ios-swiftUI/TdayApp.xcodeproj -scheme Tday -destination
   actually reached TestFlight** touched an iOS-relevant file. Anchoring on the previous *tag*
   instead would silently strand a release whose iOS build failed.
 - Signing is App Store Connect API key plus Xcode automatic signing (`-allowProvisioningUpdates`);
-  there is no `match` repository and no committed certificate. The five App IDs and the
+  there is no `match` repository and no certificate in the repo. The five App IDs and the
   `group.com.ohmz.tday` App Group must already exist — Xcode mints *profiles* on demand, not those.
   The API key needs the **Admin** role, not App Manager.
+- Automatic signing always *development*-signs the archive — the App Store re-sign happens at
+  export — so CI also needs one persistent **Apple Development** certificate *with its private
+  key*, held as the `IOS_DEVELOPMENT_CERT_P12_BASE64` / `IOS_DEVELOPMENT_CERT_P12_PASSWORD`
+  secrets and imported into a throwaway keychain for the run. The pipeline refuses to archive
+  without them, in build-only mode too: letting `-allowProvisioningUpdates` mint a fresh
+  certificate every run is what filled the team's certificate quota and broke v0.7.7. See
+  `docs/DEPLOYMENT.md` § CI development certificate.
 - `workflow_dispatch` runs the same pipeline in **build-only** mode on any ref
   (`gh workflow run ios-testflight.yml --ref develop`): it archives, signs and exports, then
   stops. That is how a change to the pipeline — or a Swift compile error only a macOS runner
