@@ -229,22 +229,49 @@ and every question of the form "which widget is this instance?" is answered in e
   platform's own record of what was placed, so it cannot disagree with the home screen.
 - `feedOf(appWidgetId)` turns that into a `WidgetFeed` (`SCHEDULED` or `FLOATER`), consulting
   `WidgetListSelectionStore` for a `LIST` instance. An id that cannot be resolved returns **null**,
-  never a default. That is deliberate: an earlier version defaulted an unknown instance to the
-  scheduled widget, which is what made a Floater widget repaint as the Today widget after its own
-  "+" was used, and flip back on the next `MainActivity.onStart()`.
+  never a default. That is deliberate: an unknown instance used to become the scheduled one on two
+  separate paths — the create sheet's `target=` parameter defaulted to `today`, and
+  `ListTasksWidget` picked its visuals on a `when` whose `null` branch shared the todo-list arm, so
+  a per-list instance whose selection would not read painted the Today sun watermark and the Today
+  accent until the selection re-read (opening the app bumps `WidgetSnapshotSignal`, which is what
+  made it flip back).
+- Rendering an unresolved instance is now explicitly kind-neutral:
+  `ListTasksWidget.UnconfiguredListWidgetVisuals` draws no watermark at all and a neutral "+",
+  because every watermark this app ships is a kind-specific glyph in that kind's accent, so
+  choosing one asserts an identity the instance may not have. `TaskWidgetVisuals`' watermarks are
+  nullable for exactly this.
 - The widget's "+" carries its own `appWidgetId` on the deep link
   (`tday://todos/create?target=…&appWidgetId=…`, built by `WidgetCreateRoute`). It rides in the
   **data URI**, not an intent extra: Glance builds these `PendingIntent`s with request code 0 and
   `FLAG_UPDATE_CURRENT`, and `Intent.filterEquals` ignores extras — an extra would be shared across
   instances, a query parameter is not. `WidgetCreateTaskActivity` is `singleTop`, so it also
   re-resolves in `onNewIntent`.
+- `WidgetCreateTarget.resolve` still ends in `else -> TODAY`, and that is intended: it is the
+  no-widget default for the Quick Settings tile, the launcher shortcut and the share sheet. A
+  widget-originated tap never reaches it, because every widget stamps
+  `WidgetCreateRoute.targetFor(feed)` on its own link, so the parameter still answers even when the
+  placement cannot be resolved at sheet time. That mapping and `resolve`'s parameter branch must
+  stay exact inverses; `WidgetInstanceKindTest` pins the round trip.
 - `WidgetRefresher` is the single repaint trigger. `WidgetInstanceCatalog.renderPlan` pairs every
   live `appWidgetId` with the kind of the receiver it was enumerated from, so no id can ever be
   handed to a foreign widget class, and one call repaints all three kinds — there is no per-kind
   refresher left for a call site to forget. `refreshNow(firstAppWidgetId = …)` paints the instance
-  the user just interacted with first.
+  the user just interacted with first. Its `updateAll` belt-and-braces pass runs for **every** kind,
+  not only the kinds already in the plan: both paths bottom out in
+  `AppWidgetManager.getAppWidgetIds`, so the only case `updateAll` can still cover is the one where
+  our own enumeration threw and that kind is therefore absent from the plan.
 
-`WidgetInstanceKindTest` and `WidgetRefreshRoutingTest` cover both rules as plain JVM tests.
+`WidgetInstanceKindTest` and `WidgetRefreshRoutingTest` cover these rules as plain JVM tests.
+
+What the single refresher fixed, precisely — the per-kind refreshers could not paint the wrong
+content (each only ever enumerated its own receivers' ids, and Glance's `updateAll` resolves a
+`GlanceAppWidget` class to that class's own receivers via `GlanceAppWidgetManager.getGlanceIds`).
+What they got wrong was coverage: the add path aimed its one *synchronous* repaint by a guessed
+create target, leaving the widget actually tapped to the fire-and-forget request from the cache
+write — which a short-lived widget process can be torn down before it paints — and `MainActivity`,
+`TodoRepository`, `SyncManager`, `BulkTaskRepository` and `BootRescheduleReceiver` never called the
+per-list refresher at all, so a per-list instance sat on its static `android:initialLayout` after a
+reboot until some unrelated cache write repainted it.
 
 ## Background refresh cadence
 

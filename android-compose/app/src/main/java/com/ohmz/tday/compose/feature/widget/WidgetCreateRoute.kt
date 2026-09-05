@@ -27,6 +27,21 @@ internal object WidgetCreateRoute {
     private const val CREATE_PATH = "tday://todos/create"
 
     /**
+     * The `target=` a widget instance showing [feed] must stamp on its own "+" link.
+     *
+     * Load-bearing, and the reason all three widgets go through it rather than writing the literal:
+     * [WidgetCreateTarget.resolve] only reaches its no-instance `else` branch when the placement
+     * could not be resolved at sheet time, and it is this parameter that answers instead. That is
+     * only safe while every widget's link carries one, and carries the RIGHT one — so this mapping
+     * and [WidgetCreateTarget.resolve]'s parameter branch have to stay exact inverses.
+     * `WidgetInstanceKindTest` pins the round trip.
+     */
+    fun targetFor(feed: WidgetFeed): String = when (feed) {
+        WidgetFeed.SCHEDULED -> TARGET_TODAY
+        WidgetFeed.FLOATER -> TARGET_FLOATER
+    }
+
+    /**
      * [appWidgetId] is omitted when it is not a real placed id — `provideGlance` also runs for
      * Glance's own synthetic (negative) preview ids, and those resolve to nothing.
      */
@@ -73,11 +88,17 @@ internal enum class WidgetCreateTarget(
          * WINS OUTRIGHT, including over a contradicting [targetParam] — a stale PendingIntent
          * cannot then create a scheduled task from a floater widget.
          *
-         * [targetParam] is consulted only when there is no widget instance to ask. The final
-         * `else` is the no-widget default (the QS tile and launcher shortcut both send
-         * `target=today` explicitly; the share sheet passes [TODAY] directly), NOT a fallback for
-         * a widget whose kind failed to resolve — that case never reaches it, because the
-         * parameter the widget itself wrote is still there to answer.
+         * [targetParam] is consulted only when there is no [instanceFeed] to ask — either because
+         * the sheet was opened without a widget at all (the Quick Settings tile and the launcher
+         * shortcut both send `target=today` explicitly; the share sheet passes [TODAY] directly),
+         * or because a widget's placement could not be resolved at sheet time (its instance was
+         * removed while the sheet was open, or a LIST instance's selection could not be read).
+         *
+         * That second case does NOT reach the final `else`: every widget's "+" stamps its own
+         * feed's [WidgetCreateRoute.targetFor] on the link, so a floater instance still answers
+         * "floater" from the parameter alone. The `else` is therefore only ever the no-widget
+         * default, and `WidgetInstanceKindTest` pins that round trip rather than leaving it to
+         * this comment.
          */
         fun resolve(instanceFeed: WidgetFeed?, targetParam: String?): WidgetCreateTarget = when {
             instanceFeed == WidgetFeed.FLOATER -> FLOATER

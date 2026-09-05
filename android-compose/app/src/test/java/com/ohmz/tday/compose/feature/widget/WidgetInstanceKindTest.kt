@@ -2,23 +2,29 @@ package com.ohmz.tday.compose.feature.widget
 
 import com.ohmz.tday.compose.feature.widget.snapshot.WidgetListType
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * The regression tests for "the Floater widget re-renders as the Today widget after using its own
- * +, then flips back when the app is opened".
+ * The regression tests for "a widget re-renders as the Today widget, then flips back when the app
+ * is opened".
  *
- * The defect was that three code paths each answered "which widget is this?" differently, and the
- * add-task path answered it from a `target=` query parameter whose `else` branch was TODAY — so a
- * missing, stale or unreadable per-instance answer silently became "the scheduled widget". These
- * tests pin the two rules that make that impossible:
+ * Three code paths each answered "which widget is this?" differently, and two of them could answer
+ * "the scheduled one" for an instance that is not: the add-task path read a `target=` query
+ * parameter whose `else` branch was TODAY, and a per-list instance whose selection would not read
+ * fell in with the todo-list branch when picking its visuals — painting the scheduled widget's
+ * watermark and accent until the selection re-read. These tests pin the rules that make both
+ * impossible:
  *
  *  1. a placed instance's kind and feed are a function of the instance ALONE — its provider binding
- *     plus its own persisted selection — never of a global default; and
- *  2. "unknown" stays unknown. No input combination is allowed to fall through to SCHEDULED.
+ *     plus its own persisted selection — never of a global default;
+ *  2. "unknown" stays unknown: `feedFor` never falls through to SCHEDULED, and an unresolved
+ *     instance renders with neither kind's identity; and
+ *  3. where a fallback genuinely remains (no instance at all), it is lossless — the `target=` a
+ *     widget stamps on its own link round-trips back to that widget's feed.
  */
 class WidgetInstanceKindTest {
 
@@ -61,6 +67,13 @@ class WidgetInstanceKindTest {
             WidgetInstanceCatalog.kindForReceiverClassName(ListTasksWidgetLargeReceiver::class.java.name),
         )
         assertEquals(9, WidgetInstanceCatalog.bindings.size)
+        // Every kind has at least one receiver. WidgetRefresher's belt-and-braces `updateAll` pass
+        // walks WidgetInstanceKind.entries while its primary pass walks these bindings; a kind
+        // present in one and absent from the other would mean a widget class nothing enumerates.
+        assertEquals(
+            WidgetInstanceKind.entries.toSet(),
+            WidgetInstanceCatalog.bindings.map { it.kind }.toSet(),
+        )
     }
 
     @Test
@@ -151,6 +164,70 @@ class WidgetInstanceKindTest {
         assertEquals(WidgetCreateTarget.FLOATER, WidgetCreateTarget.resolve(null, "FLOATER"))
         assertEquals(WidgetCreateTarget.TODAY, WidgetCreateTarget.resolve(null, "today"))
         assertEquals(WidgetCreateTarget.TODAY, WidgetCreateTarget.resolve(null, null))
+    }
+
+    @Test
+    fun `a per-list instance's own list type answers without laundering through null`() {
+        // The paths that already hold a real list type (rendering a configured instance, building
+        // its + link) must get the SAME answer as the nullable resolver, or the deep link a
+        // floater-list widget writes could disagree with the feed its own instance resolves to.
+        for (listType in WidgetListType.entries) {
+            assertEquals(
+                "feedForListType($listType) disagrees with feedFor(LIST, $listType)",
+                WidgetInstanceCatalog.feedFor(WidgetInstanceKind.LIST, listType),
+                WidgetInstanceCatalog.feedForListType(listType),
+            )
+        }
+    }
+
+    @Test
+    fun `the target a widget stamps on its own link round-trips back to that same feed`() {
+        // This is what makes WidgetCreateTarget.resolve's `else -> TODAY` safe. An instance whose
+        // placement cannot be resolved at sheet time (removed from the host while the sheet was
+        // open, or a per-list selection that would not read) falls back to the parameter, so the
+        // parameter every widget writes has to be a lossless encoding of that widget's feed. If
+        // this mapping and resolve's parameter branch ever stop being exact inverses, a floater
+        // instance silently starts creating scheduled tasks again — which is the original bug.
+        assertEquals(
+            WidgetCreateTarget.TODAY,
+            WidgetCreateTarget.resolve(null, WidgetCreateRoute.targetFor(WidgetFeed.SCHEDULED)),
+        )
+        assertEquals(
+            WidgetCreateTarget.FLOATER,
+            WidgetCreateTarget.resolve(null, WidgetCreateRoute.targetFor(WidgetFeed.FLOATER)),
+        )
+        // Exhaustively, including via the per-list route, where the target is derived from the
+        // stored list type rather than written as a literal.
+        for (listType in WidgetListType.entries) {
+            val feed = WidgetInstanceCatalog.feedForListType(listType)
+            assertEquals(
+                "a $listType list widget's + would create the wrong kind of task without its instance",
+                WidgetCreateTarget.resolve(feed, null),
+                WidgetCreateTarget.resolve(null, WidgetCreateRoute.targetFor(feed)),
+            )
+        }
+    }
+
+    @Test
+    fun `an unresolved per-list instance renders as neither kind, not as the scheduled one`() {
+        // The render half of the same rule. `null` used to share the TODO branch, so an instance
+        // whose selection would not read painted the Today sun watermark and the Today accent —
+        // the scheduled widget's whole visual identity — and changed back once it re-read.
+        val unresolved = listWidgetVisualsFor(null)
+        val scheduled = listWidgetVisualsFor(WidgetListType.TODO)
+        val floater = listWidgetVisualsFor(WidgetListType.FLOATER)
+
+        assertNull("an unresolved instance must not claim a kind's watermark", unresolved.emptyWatermark)
+        assertNull("an unresolved instance must not claim a kind's watermark", unresolved.setupWatermark)
+        // Not just "different from Today" — it must borrow no drawable from EITHER kind, or it
+        // would still be asserting an identity it does not have.
+        for (known in listOf(scheduled, floater)) {
+            assertNotEquals(known.addButtonBackground, unresolved.addButtonBackground)
+            assertNotEquals(known.addIcon, unresolved.addIcon)
+        }
+        // ...while a readable selection still gets its own kind's look, unchanged.
+        assertEquals(FloaterWidgetVisuals, floater)
+        assertNotNull(scheduled.setupWatermark)
     }
 
     @Test
