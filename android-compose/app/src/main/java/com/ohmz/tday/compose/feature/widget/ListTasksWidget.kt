@@ -150,6 +150,7 @@ private fun ListTasksWidgetBody(
     } else {
         ConfiguredListWidgetContent(
             appContext = appContext,
+            appWidgetId = appWidgetId,
             selection = selection,
             title = title,
             visuals = visuals,
@@ -204,6 +205,7 @@ private fun UnconfiguredListWidgetContent(
 @Composable
 private fun ConfiguredListWidgetContent(
     appContext: Context,
+    appWidgetId: Int,
     selection: WidgetListSelection,
     title: String,
     visuals: TaskWidgetVisuals,
@@ -229,7 +231,7 @@ private fun ConfiguredListWidgetContent(
         },
         visuals = visuals,
         openAction = openListAction(selection.listId, selection.listName, selection.listType),
-        addAction = openCreateListTaskAction(selection.listId, selection.listType),
+        addAction = openCreateListTaskAction(appWidgetId, selection.listId, selection.listType),
     )
 }
 
@@ -321,12 +323,29 @@ private fun reconfigureAction(appWidgetId: Int) = actionStartActivity(
     },
 )
 
-private fun openCreateListTaskAction(listId: String, listType: WidgetListType) = actionStartActivity(
+/**
+ * Carries this instance's own `appWidgetId`, so the create sheet resolves the feed from the
+ * placement itself. The `target` parameter stays for the entry points that have no widget, but it
+ * is no longer what decides this widget's behavior — a list instance whose stored selection cannot
+ * be read now fails closed instead of quietly creating a scheduled task.
+ */
+private fun openCreateListTaskAction(
+    appWidgetId: Int,
+    listId: String,
+    listType: WidgetListType,
+) = actionStartActivity(
     Intent(
         Intent.ACTION_VIEW,
         Uri.parse(
-            "tday://todos/create?target=${if (listType == WidgetListType.TODO) "today" else "floater"}" +
-                "&listId=${Uri.encode(listId)}",
+            WidgetCreateRoute.deepLink(
+                target = if (listType == WidgetListType.TODO) {
+                    WidgetCreateRoute.TARGET_TODAY
+                } else {
+                    WidgetCreateRoute.TARGET_FLOATER
+                },
+                appWidgetId = appWidgetId,
+                listId = listId,
+            ),
         ),
     ).apply {
         component = ComponentName(

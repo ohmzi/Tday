@@ -138,7 +138,7 @@ internal class WidgetListConfigurationViewModel @Inject constructor(
     @ApplicationContext private val appContext: Context,
     private val offlineCacheManager: OfflineCacheManager,
     private val widgetSnapshotWriter: WidgetSnapshotWriter,
-    private val listTasksWidgetRefresher: ListTasksWidgetRefresher,
+    private val widgetRefresher: WidgetRefresher,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(WidgetListPickerUiState())
     val uiState: StateFlow<WidgetListPickerUiState> = _uiState.asStateFlow()
@@ -171,7 +171,7 @@ internal class WidgetListConfigurationViewModel @Inject constructor(
             runCatching {
                 val state = offlineCacheManager.loadOfflineState()
                 widgetSnapshotWriter.write(state)
-                listTasksWidgetRefresher.refreshNow()
+                widgetRefresher.refreshNow(firstAppWidgetId = appWidgetId)
             }
             onDone()
         }

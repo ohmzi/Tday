@@ -11,6 +11,7 @@ import androidx.compose.runtime.remember
 import androidx.glance.GlanceId
 import androidx.glance.GlanceTheme
 import androidx.glance.appwidget.GlanceAppWidget
+import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.provideContent
@@ -58,6 +59,11 @@ class TodayTasksWidget : GlanceAppWidget() {
         // stores below are constructed directly from applicationContext, exactly the way
         // AppSecurityPreferenceStore already was before this change.
         val appContext = context.applicationContext
+        // Safe to resolve once above `provideContent`, exactly as ListTasksWidget already does: an
+        // instance's own id is fixed for its lifetime (unlike the snapshot and the lock flag below,
+        // which are collected as state inside). It travels on the "+" deep link so the create sheet
+        // and its repaint can identify THIS instance instead of guessing a kind.
+        val appWidgetId = GlanceAppWidgetManager(appContext).getAppWidgetId(id)
         val securityPreferenceStore = AppSecurityPreferenceStore(appContext)
         val snapshotStore = WidgetSnapshotStore(appContext)
         val title = appContext.getString(R.string.widget_today_tasks_title)
@@ -140,7 +146,7 @@ class TodayTasksWidget : GlanceAppWidget() {
                     },
                     visuals = visuals,
                     openAction = openAppAction(),
-                    addAction = openCreateTodayAction(),
+                    addAction = openCreateTodayAction(appWidgetId),
                 )
             }
         }
@@ -172,8 +178,11 @@ private fun dueTimeText(formatter: DateFormat, epochMs: Long): String {
     return formatter.format(Date.from(Instant.ofEpochMilli(epochMs)))
 }
 
-private fun openCreateTodayAction() = actionStartActivity(
-    Intent(Intent.ACTION_VIEW, Uri.parse(CREATE_TODAY_DEEP_LINK)).apply {
+private fun openCreateTodayAction(appWidgetId: Int) = actionStartActivity(
+    Intent(
+        Intent.ACTION_VIEW,
+        Uri.parse(WidgetCreateRoute.deepLink(WidgetCreateRoute.TARGET_TODAY, appWidgetId)),
+    ).apply {
         component = ComponentName(
             BuildConfig.APPLICATION_ID,
             WidgetCreateTaskActivity::class.java.name,
@@ -189,5 +198,3 @@ private fun openAppAction() = actionStartActivity(
         addCategory(Intent.CATEGORY_LAUNCHER)
     },
 )
-
-private const val CREATE_TODAY_DEEP_LINK = "tday://todos/create?target=today"
