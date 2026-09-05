@@ -26,15 +26,20 @@ fallback for when the app process isn't running to make that write.
 app/src/main/java/com/ohmz/tday/compose/feature/widget/
 ├── TodayTasksWidget.kt                 ← Glance widget (Today): renders WidgetSnapshotStore, no Hilt on the render path
 ├── TodayTasksWidgetReceiver.kt         ← Small/default/Large AppWidgetReceivers + WidgetFastPaint cold-boot hook
-├── TodayTasksWidgetRefresher.kt        ← single-flight repaint trigger (Hilt Singleton: mutex + conflated channel)
+├── WidgetRefresher.kt                  ← the ONE repaint trigger for all three widgets (Hilt Singleton: one mutex + one conflated channel)
+├── WidgetInstanceKind.kt               ← the ONE per-instance kind/feed resolution (provider binding -> TODAY/FLOATER/LIST) + the render plan
 ├── TodayTasksWidgetPreviewPublisher.kt ← Android 15+ widget-picker preview (setWidgetPreview)
 ├── FloaterTasksWidget.kt               ← mirror of TodayTasksWidget for floaters
 ├── FloaterTasksWidgetReceiver.kt       ← mirror receivers
-├── FloaterTasksWidgetRefresher.kt      ← mirror refresher
 ├── CompleteTaskAction.kt               ← inline-completion ActionCallbacks (widgets v2)
 ├── WidgetCompleteTaskSubmitter.kt      ← resolves the tapped row, completes it, pushes an expedited sync
 ├── WidgetCreateTaskActivity.kt         ← translucent Activity behind the widget's + button (a bottom sheet, not MainActivity)
-├── WidgetCreateTaskSubmitter.kt        ← creates the task and refreshes the relevant widget
+├── WidgetCreateRoute.kt                ← the tday://todos/create deep link (carries the tapped appWidgetId) + WidgetCreateTarget
+├── WidgetCreateTaskSubmitter.kt        ← creates the task, then repaints every instance with the tapped one first
+├── ListTasksWidget.kt                  ← per-list widget (widgets v3): one class, per-instance selection
+├── ListTasksWidgetReceiver.kt          ← its Small/default/Large receivers
+├── WidgetListConfigurationActivity.kt  ← the ACTION_APPWIDGET_CONFIGURE list picker
+├── WidgetListSelectionStore.kt         ← per-appWidgetId list selection (plain SharedPreferences)
 ├── WidgetEntryPoint.kt                 ← Hilt @EntryPoint exposing only the completion/refresh singletons to the render path
 ├── WidgetFastPaint.kt                  ← paints from the cold-boot broadcast before Glance's managed session starts (~2.4-3.0s saved)
 ├── WidgetHydrateWorker.kt              ← the only widget-flow class allowed to open the encrypted cache; seeds a missing snapshot
@@ -51,7 +56,7 @@ app/src/main/java/com/ohmz/tday/compose/feature/widget/
 The write chokepoint lives outside this package, in `core/data/cache/OfflineCacheManager.kt`:
 every place that persists a cache change (`saveOfflineStateBlocking`, `clearAllLocalData`,
 `clearSessionOnly`, the legacy-SharedPreferences migration) calls `WidgetSnapshotWriter.write(...)`
-and then both refreshers' `requestRefresh()`.
+and then `WidgetRefresher.requestRefresh()`.
 
 **res/xml/{today,floater}_tasks_widget_{,small_,large}_info.xml** — `android:updatePeriodMillis="1800000"`
 (30 min). This is only the OS-level fallback; the app still refreshes explicitly on every cache write.
@@ -80,7 +85,7 @@ The write chokepoint is `Tday/Core/Data/Cache/OfflineCacheManager.swift`: `saveO
 directly — there is no separate "reload helper" class. Both `save*Tasks` calls are **conditional**:
 they skip the file write and the `WidgetCenter.reloadTimelines` call when the snapshot's *displayed*
 content (everything but `generatedAtEpochMs`) hasn't changed. That's the opposite of the Android
-refreshers' deliberately-unconditional stance (see their KDoc) — the two platforms made different
+refresher's deliberately-unconditional stance (see its KDoc) — the two platforms made different
 reliability/efficiency trade-offs at this same point in the pipeline.
 
 ## Where it's wired in
@@ -92,7 +97,7 @@ reliability/efficiency trade-offs at this same point in the pipeline.
 - `TdayApplication.runDeferredStartup()` calls `WidgetSyncWorker.schedule(this)` once at process
   start (`ExistingPeriodicWorkPolicy.UPDATE`); `BootRescheduleReceiver` re-schedules with `.KEEP`
   after a reboot and also fires a `WidgetSyncWorker.runOnce()`.
-- `MainActivity.onStart()` calls both refreshers' `requestRefresh()` as belt-and-braces (covers
+- `MainActivity.onStart()` calls `WidgetRefresher.requestRefresh()` as belt-and-braces (covers
   drift such as an app-lock toggle that predates a render) — `onStop()` touches nothing widget-related.
 - A widget row's render payload comes from `WidgetSnapshotBuilders.buildTodayWidgetSnapshot` /
   `buildFloaterWidgetSnapshot`, which read `OfflineSyncState` directly — there is no separate
@@ -179,8 +184,9 @@ repository.createTodo(payload)  /  createFloater(payload)
         ├─[Android]──▶  OfflineCacheManager.saveOfflineStateBlocking(state)
         │                 ├─ WidgetSnapshotWriter.write(state)      ← unconditional: always re-encrypts + rewrites
         │                 │    └─ WidgetSnapshotSignal.bump()
-        │                 └─ todayTasksWidgetRefresher.requestRefresh() / floaterTasksWidgetRefresher.requestRefresh()
-        │                      └─ widget.update(id) per real appWidgetId ──▶ widget recomposes ~instantly
+        │                 └─ widgetRefresher.requestRefresh()
+        │                      └─ widget.update(id) per real appWidgetId, paired with THAT id's own
+        │                         widget class ──▶ widget recomposes ~instantly
         │
         └─[iOS]──────▶  OfflineCacheManager.saveOfflineState(state)
                           ├─ TodayTasksWidgetSnapshotStore.saveTodayTasks(from: state)     ← conditional: skipped if content unchanged
@@ -210,6 +216,35 @@ App backgrounds / user leaves it
                         WidgetBackgroundRefresh.scheduleNext()   ← re-arms the ~30-min BGAppRefreshTask;
                         the widget itself was already reloaded at the moment of the write above
 ```
+
+## Which widget is which (Android)
+
+There are three Glance classes — `TodayTasksWidget`, `FloaterTasksWidget` and `ListTasksWidget` —
+and every question of the form "which widget is this instance?" is answered in exactly one place:
+`WidgetInstanceKind.kt`.
+
+- `WidgetInstanceResolver.kindOf(appWidgetId)` reads
+  `AppWidgetManager.getAppWidgetInfo(id).provider` and maps that receiver to `TODAY` / `FLOATER` /
+  `LIST` through `WidgetInstanceCatalog.bindings` (the nine receivers in the manifest). This is the
+  platform's own record of what was placed, so it cannot disagree with the home screen.
+- `feedOf(appWidgetId)` turns that into a `WidgetFeed` (`SCHEDULED` or `FLOATER`), consulting
+  `WidgetListSelectionStore` for a `LIST` instance. An id that cannot be resolved returns **null**,
+  never a default. That is deliberate: an earlier version defaulted an unknown instance to the
+  scheduled widget, which is what made a Floater widget repaint as the Today widget after its own
+  "+" was used, and flip back on the next `MainActivity.onStart()`.
+- The widget's "+" carries its own `appWidgetId` on the deep link
+  (`tday://todos/create?target=…&appWidgetId=…`, built by `WidgetCreateRoute`). It rides in the
+  **data URI**, not an intent extra: Glance builds these `PendingIntent`s with request code 0 and
+  `FLAG_UPDATE_CURRENT`, and `Intent.filterEquals` ignores extras — an extra would be shared across
+  instances, a query parameter is not. `WidgetCreateTaskActivity` is `singleTop`, so it also
+  re-resolves in `onNewIntent`.
+- `WidgetRefresher` is the single repaint trigger. `WidgetInstanceCatalog.renderPlan` pairs every
+  live `appWidgetId` with the kind of the receiver it was enumerated from, so no id can ever be
+  handed to a foreign widget class, and one call repaints all three kinds — there is no per-kind
+  refresher left for a call site to forget. `refreshNow(firstAppWidgetId = …)` paints the instance
+  the user just interacted with first.
+
+`WidgetInstanceKindTest` and `WidgetRefreshRoutingTest` cover both rules as plain JVM tests.
 
 ## Background refresh cadence
 

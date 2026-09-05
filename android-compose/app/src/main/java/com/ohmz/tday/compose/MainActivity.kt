@@ -25,8 +25,7 @@ import com.ohmz.tday.compose.feature.lock.AppLockOverlay
 import com.ohmz.tday.compose.feature.lock.appLockAuthenticators
 import com.ohmz.tday.compose.feature.lock.canSatisfyAppLock
 import com.ohmz.tday.compose.feature.lock.shouldLockOnForeground
-import com.ohmz.tday.compose.feature.widget.FloaterTasksWidgetRefresher
-import com.ohmz.tday.compose.feature.widget.TodayTasksWidgetRefresher
+import com.ohmz.tday.compose.feature.widget.WidgetRefresher
 import com.ohmz.tday.compose.ui.theme.TdayTheme
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -55,8 +54,7 @@ class MainActivity : AppCompatActivity() {
 
     private val notificationPreferences by lazy { NotificationPreferenceStore(applicationContext) }
 
-    @Inject lateinit var todayTasksWidgetRefresher: TodayTasksWidgetRefresher
-    @Inject lateinit var floaterTasksWidgetRefresher: FloaterTasksWidgetRefresher
+    @Inject lateinit var widgetRefresher: WidgetRefresher
 
     private val _locked = MutableStateFlow(false)
 
@@ -113,8 +111,7 @@ class MainActivity : AppCompatActivity() {
         // drift between the flag and the last-rendered widget) would otherwise sit stale
         // until an unrelated data sync happens to fire. Every foreground is cheap to cover —
         // both refreshers are unconditional, so a re-render with nothing changed is a no-op.
-        todayTasksWidgetRefresher.requestRefresh()
-        floaterTasksWidgetRefresher.requestRefresh()
+        widgetRefresher.requestRefresh()
     }
 
     override fun onStop() {

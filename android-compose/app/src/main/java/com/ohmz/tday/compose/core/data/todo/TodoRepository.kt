@@ -36,8 +36,7 @@ import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
 import com.ohmz.tday.compose.core.model.UpdateFloaterRequest
 import com.ohmz.tday.compose.core.model.UpdateTodoRequest
 import com.ohmz.tday.compose.core.network.TdayApiService
-import com.ohmz.tday.compose.feature.widget.FloaterTasksWidgetRefresher
-import com.ohmz.tday.compose.feature.widget.TodayTasksWidgetRefresher
+import com.ohmz.tday.compose.feature.widget.WidgetRefresher
 import com.ohmz.tday.compose.ui.priority.canonicalPriorityValue
 import com.ohmz.tday.shared.sort.TaskSortEngine
 import com.ohmz.tday.shared.sort.TaskSortKey
@@ -62,21 +61,20 @@ class TodoRepository @Inject constructor(
     private val cacheManager: OfflineCacheManager,
     private val syncManager: SyncManager,
     private val settingsRepository: SettingsRepository,
-    private val todayTasksWidgetRefresher: TodayTasksWidgetRefresher,
-    private val floaterTasksWidgetRefresher: FloaterTasksWidgetRefresher,
+    private val widgetRefresher: WidgetRefresher,
 ) {
     private val zoneId: ZoneId
         get() = ZoneId.systemDefault()
 
-    private suspend fun refreshTodayWidgetNow() {
+    /**
+     * One call repaints every placed widget instance with its OWN kind — there is no longer a
+     * per-kind refresher to pick between, and picking wrong is exactly what left a widget rendering
+     * as the wrong one. `NonCancellable` because the repaint must still land when the caller's
+     * scope is torn down mid-write.
+     */
+    private suspend fun refreshWidgetsNow() {
         withContext(NonCancellable) {
-            runCatching { todayTasksWidgetRefresher.refreshNow() }
-        }
-    }
-
-    private suspend fun refreshFloaterWidgetNow() {
-        withContext(NonCancellable) {
-            runCatching { floaterTasksWidgetRefresher.refreshNow() }
+            runCatching { widgetRefresher.refreshNow() }
         }
     }
 
@@ -176,7 +174,7 @@ class TodoRepository @Inject constructor(
                 ),
             )
         }
-        refreshTodayWidgetNow()
+        refreshWidgetsNow()
 
         if (syncManager.isLocalMode()) return
 
@@ -225,7 +223,7 @@ class TodoRepository @Inject constructor(
                 ),
             )
         }
-        refreshFloaterWidgetNow()
+        refreshWidgetsNow()
 
         if (syncManager.isLocalMode()) return
 
@@ -304,7 +302,7 @@ class TodoRepository @Inject constructor(
                     },
                 )
             }
-            refreshTodayWidgetNow()
+            refreshWidgetsNow()
             if (syncManager.isLocalMode()) return
             syncManager.syncCachedData(force = true, replayPendingMutations = true)
             return
@@ -337,7 +335,7 @@ class TodoRepository @Inject constructor(
                     } + pendingMutation,
             )
         }
-        refreshTodayWidgetNow()
+        refreshWidgetsNow()
 
         if (syncManager.isLocalMode()) return
 
@@ -457,7 +455,7 @@ class TodoRepository @Inject constructor(
                     },
                 )
             }
-            refreshFloaterWidgetNow()
+            refreshWidgetsNow()
             if (syncManager.isLocalMode()) return
             syncManager.syncCachedData(force = true, replayPendingMutations = true)
             return
@@ -482,7 +480,7 @@ class TodoRepository @Inject constructor(
                     .filterNot { it.kind == MutationKind.UPDATE_FLOATER && it.targetId == canonicalId } + pendingMutation,
             )
         }
-        refreshFloaterWidgetNow()
+        refreshWidgetsNow()
 
         if (syncManager.isLocalMode()) return
 
@@ -592,7 +590,7 @@ class TodoRepository @Inject constructor(
                 },
             )
         }
-        refreshTodayWidgetNow()
+        refreshWidgetsNow()
 
         if (syncManager.isLocalMode()) return
 
@@ -672,7 +670,7 @@ class TodoRepository @Inject constructor(
             staged = removed
             pruned
         }
-        refreshTodayWidgetNow()
+        refreshWidgetsNow()
         return staged
     }
 
@@ -691,7 +689,7 @@ class TodoRepository @Inject constructor(
                     staged.removedPendingMutations.filterNot { it.mutationId in mutationIds },
             )
         }
-        refreshTodayWidgetNow()
+        refreshWidgetsNow()
     }
 
     /** Stage step of the delayed-commit floater delete; see [stageDeleteTodo]. */
@@ -708,7 +706,7 @@ class TodoRepository @Inject constructor(
             staged = removed
             pruned
         }
-        refreshFloaterWidgetNow()
+        refreshWidgetsNow()
         return staged
     }
 
@@ -727,7 +725,7 @@ class TodoRepository @Inject constructor(
                     staged.removedPendingMutations.filterNot { it.mutationId in mutationIds },
             )
         }
-        refreshFloaterWidgetNow()
+        refreshWidgetsNow()
     }
 
     suspend fun deleteTodo(todo: TodoItem) {
@@ -748,7 +746,7 @@ class TodoRepository @Inject constructor(
                 timestampEpochMs = timestampMs,
             )
         }
-        refreshTodayWidgetNow()
+        refreshWidgetsNow()
 
         if (syncManager.isLocalMode()) return
 
@@ -795,7 +793,7 @@ class TodoRepository @Inject constructor(
                 timestampEpochMs = timestampMs,
             )
         }
-        refreshFloaterWidgetNow()
+        refreshWidgetsNow()
 
         if (syncManager.isLocalMode()) return
 
@@ -824,7 +822,7 @@ class TodoRepository @Inject constructor(
                 completedRecordId = "${com.ohmz.tday.compose.core.data.cache.LOCAL_COMPLETED_PREFIX}${UUID.randomUUID()}",
             )
         }
-        refreshTodayWidgetNow()
+        refreshWidgetsNow()
 
         // Widget-initiated completions pass eagerSync=false so the tap returns the moment the
         // optimistic write + widget refresh are done, instead of the Glance action holding the
@@ -876,7 +874,7 @@ class TodoRepository @Inject constructor(
                 completedRecordId = "$LOCAL_COMPLETED_FLOATER_PREFIX${UUID.randomUUID()}",
             )
         }
-        refreshFloaterWidgetNow()
+        refreshWidgetsNow()
 
         // See completeTodo: widget taps skip the blocking eager sync so the widget re-renders
         // immediately; the queued COMPLETE_FLOATER mutation syncs on the next sync.
@@ -939,8 +937,7 @@ class TodoRepository @Inject constructor(
                 ),
             )
         }
-        refreshFloaterWidgetNow()
-        refreshTodayWidgetNow()
+        refreshWidgetsNow()
 
         if (syncManager.isLocalMode()) return
 
@@ -982,8 +979,7 @@ class TodoRepository @Inject constructor(
                 ),
             )
         }
-        refreshTodayWidgetNow()
-        refreshFloaterWidgetNow()
+        refreshWidgetsNow()
 
         if (syncManager.isLocalMode()) return
 

@@ -27,7 +27,7 @@ import java.util.concurrent.TimeUnit
  *
  * It runs a full [SyncManager.syncCachedData] (network), then writes through the single cache
  * path. The reload itself is CONDITIONAL: the refreshers only re-render when the widget's
- * displayed content actually changed (see [TodayTasksWidgetRefresher]). So a sync that finds
+ * displayed content actually changed (see [WidgetRefresher]). So a sync that finds
  * nothing new for the widget leaves it untouched while the app still holds the latest data.
  * It runs quietly — no offline toast — because it's a background refresh, not user-initiated.
  *
