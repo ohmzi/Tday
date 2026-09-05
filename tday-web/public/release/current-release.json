@@ -1,11 +1,11 @@
 {
-  "version": "0.7.8",
-  "publishedAt": "2026-09-05T14:52:39-04:00",
+  "version": "0.7.9",
+  "publishedAt": "2026-09-05T15:59:48-04:00",
   "notes": [
-    "Let the floater celebration land on a settled feed",
-    "Hold the splash until the session resolves on cold launch",
-    "Smooth the floater home's empty-state celebration"
+    "Resolve a widget's kind from the instance, not the deep link",
+    "Name the instance and its real provider in the composing log",
+    "Render an unconfigured list widget as neither kind"
   ],
-  "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v0.7.8",
-  "compareUrl": "https://github.com/ohmzi/Tday/compare/v0.7.7..v0.7.8"
+  "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v0.7.9",
+  "compareUrl": "https://github.com/ohmzi/Tday/compare/v0.7.8..v0.7.9"
 }
