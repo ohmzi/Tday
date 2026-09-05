@@ -14,6 +14,13 @@ import java.util.Locale
 const val WIDGET_LOG_TAG = "TdayWidget"
 
 /**
+ * What a composing line carries when the Glance class rendering an instance is not the one the
+ * platform says owns it. Grep for this in a capture: one occurrence is the reported symptom caught
+ * in the act. Named rather than inlined so the test asserts on the same string the widget writes.
+ */
+internal const val WIDGET_KIND_MISMATCH_MARKER = "KIND-MISMATCH"
+
+/**
  * The identity half of a widget's "composing" line: which Glance class is composing, for which
  * placed instance, and which receiver the PLATFORM says owns that instance.
  *
@@ -44,7 +51,7 @@ internal fun widgetComposeLogLine(
 ): String {
     val self = composingAs.name.lowercase(Locale.ROOT)
     val provider = providerKind?.name ?: "unknown"
-    val mismatch = if (isWidgetKindMismatch(composingAs, providerKind)) " KIND-MISMATCH" else ""
+    val mismatch = if (isWidgetKindMismatch(composingAs, providerKind)) " $WIDGET_KIND_MISMATCH_MARKER" else ""
     return "$self[$appWidgetId]: composing, provider=$provider$mismatch, $details"
 }
 

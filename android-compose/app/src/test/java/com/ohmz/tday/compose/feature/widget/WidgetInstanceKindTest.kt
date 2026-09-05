@@ -332,19 +332,19 @@ class WidgetInstanceKindTest {
             composingAs = WidgetInstanceKind.FLOATER,
             appWidgetId = APP_WIDGET_ID_A,
             providerKind = WidgetInstanceKind.FLOATER,
-            details = "snapshotNull=false",
+            details = SAMPLE_DETAILS,
         )
         assertTrue(agreeing.startsWith("floater[$APP_WIDGET_ID_A]: composing, provider=FLOATER,"))
-        assertTrue("an agreeing line must not cry wolf", !agreeing.contains("KIND-MISMATCH"))
+        assertTrue("an agreeing line must not cry wolf", !agreeing.contains(WIDGET_KIND_MISMATCH_MARKER))
         assertTrue(!isWidgetKindMismatch(WidgetInstanceKind.FLOATER, WidgetInstanceKind.FLOATER))
 
         val crossKind = widgetComposeLogLine(
             composingAs = WidgetInstanceKind.TODAY,
             appWidgetId = APP_WIDGET_ID_A,
             providerKind = WidgetInstanceKind.FLOATER,
-            details = "snapshotNull=false",
+            details = SAMPLE_DETAILS,
         )
-        assertTrue("the reported symptom must print itself", crossKind.contains("KIND-MISMATCH"))
+        assertTrue("the reported symptom must print itself", crossKind.contains(WIDGET_KIND_MISMATCH_MARKER))
         assertTrue(isWidgetKindMismatch(WidgetInstanceKind.TODAY, WidgetInstanceKind.FLOATER))
 
         // "the platform would not tell us" is not a disagreement, and must not be reported as one.
@@ -352,10 +352,10 @@ class WidgetInstanceKindTest {
             composingAs = WidgetInstanceKind.TODAY,
             appWidgetId = APP_WIDGET_ID_A,
             providerKind = null,
-            details = "snapshotNull=false",
+            details = SAMPLE_DETAILS,
         )
         assertTrue(unknown.contains("provider=unknown"))
-        assertTrue(!unknown.contains("KIND-MISMATCH"))
+        assertTrue(!unknown.contains(WIDGET_KIND_MISMATCH_MARKER))
         assertTrue(!isWidgetKindMismatch(WidgetInstanceKind.TODAY, null))
     }
 
@@ -369,10 +369,13 @@ class WidgetInstanceKindTest {
         URI(link).query.orEmpty()
             .split("&")
             .filter { it.isNotEmpty() }
-            .associate { it.substringBefore("=") to it.substringAfter("=", "") }
+            .associate { it.substringBefore('=') to it.substringAfter('=') }
 
     private companion object {
         const val APP_WIDGET_ID_A = 42
         const val APP_WIDGET_ID_B = 43
+
+        /** Stand-in for the per-widget tail of a composing line; its content is not under test. */
+        const val SAMPLE_DETAILS = "snapshotNull=false"
     }
 }
