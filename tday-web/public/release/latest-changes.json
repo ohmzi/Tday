@@ -1,11 +1,11 @@
 {
-  "version": "0.7.7",
-  "publishedAt": "2026-09-03T22:15:27-04:00",
+  "version": "0.7.8",
+  "publishedAt": "2026-09-05T14:52:39-04:00",
   "notes": [
-    "Add default home screen preference",
-    "Add swipe-to-copy task action",
-    "Add per-list configurable widgets"
+    "Let the floater celebration land on a settled feed",
+    "Hold the splash until the session resolves on cold launch",
+    "Smooth the floater home's empty-state celebration"
   ],
-  "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v0.7.7",
-  "compareUrl": "https://github.com/ohmzi/Tday/compare/v0.7.6..v0.7.7"
+  "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v0.7.8",
+  "compareUrl": "https://github.com/ohmzi/Tday/compare/v0.7.7..v0.7.8"
 }
