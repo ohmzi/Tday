@@ -76,6 +76,7 @@ import com.ohmz.tday.compose.core.ui.TdayToastKind
 import com.ohmz.tday.compose.feature.app.AppUiState
 import com.ohmz.tday.compose.feature.app.AppViewModel
 import com.ohmz.tday.compose.feature.app.ProfileEditResult
+import com.ohmz.tday.compose.feature.app.RootDestination
 import com.ohmz.tday.compose.feature.auth.AuthViewModel
 import com.ohmz.tday.compose.feature.auth.ForgotPasswordScreen
 import com.ohmz.tday.compose.feature.auth.SetSecurityQuestionsGate
@@ -170,6 +171,7 @@ fun TdayApp(
     var activeToast by remember { mutableStateOf<TdayToastData?>(null) }
     var hasShownLaunchUpdateToast by rememberSaveable { mutableStateOf(false) }
     var isStartupSplashHeld by remember { mutableStateOf(false) }
+    var isSessionSplashHeld by remember { mutableStateOf(false) }
     // Seeded once, from the user's "Default home screen" setting, on a genuinely fresh
     // composition (no saved instance state to restore) — a config change, process-death
     // restore, or in-session dock tap all keep whatever rootFeedTab already holds instead of
@@ -295,6 +297,23 @@ fun TdayApp(
                 // LocalSnackbarManager, instead of the plain system Toast.makeText.
                 LocalSnackbarManager provides appViewModel.snackbarManager,
             ) {
+                // No nav graph until the persisted session has resolved. Setting the graph is
+                // where Navigation handles the launch intent's deep link (tday://home from the
+                // update-ready notification, tday://floater from the widget) and restores a
+                // saved back stack after process death — both land on `home` directly, and
+                // `home` draws the sign-in wizard whenever the workspace is unavailable, which
+                // it always is before bootstrap has answered. Holding the branded splash here
+                // means the first real screen composed is already the right one. The splash
+                // keeps its tap-and-hold pause; that hold is tracked apart from the in-graph
+                // Splash route's (isStartupSplashHeld) so a press there can never tear the
+                // graph back down.
+                if (appUiState.rootDestination == RootDestination.SPLASH || isSessionSplashHeld) {
+                    SplashScreen(
+                        tagline = startupTagline,
+                        onHoldChanged = { isSessionSplashHeld = it },
+                    )
+                    return@CompositionLocalProvider
+                }
                 NavHost(
                     navController = navController,
                     startDestination = AppRoute.Splash.route,
@@ -320,7 +339,12 @@ fun TdayApp(
                         enterTransition = { fadeIn(tween(300)) },
                         exitTransition = { fadeOut(tween(300)) },
                     ) {
-                        SplashScreen(onHoldChanged = { isStartupSplashHeld = it })
+                        // Same tagline as the pre-graph splash it takes over from, so the
+                        // hand-off between the two is not visible.
+                        SplashScreen(
+                            tagline = startupTagline,
+                            onHoldChanged = { isStartupSplashHeld = it },
+                        )
                     }
 
                     composable(
@@ -363,7 +387,11 @@ fun TdayApp(
                     ) {
                         val authViewModel: AuthViewModel = hiltViewModel()
                         val authUiState by authViewModel.uiState.collectAsStateWithLifecycle()
-                        val showOnboardingWizard = !appUiState.isWorkspaceAvailable
+                        // Never true before the session has resolved: this route only exists
+                        // once the graph is built, and that waits for rootDestination to
+                        // leave SPLASH.
+                        val showOnboardingWizard =
+                            appUiState.rootDestination == RootDestination.ONBOARDING
 
                         // Remember the last attempted credentials so a pending-approval result
                         // can be persisted into the holding screen (which re-attempts login).
@@ -1240,31 +1268,41 @@ private fun HandleStartupNavigation(
 ) {
     LaunchedEffect(
         appUiState.loading,
-        appUiState.isWorkspaceAvailable,
+        appUiState.rootDestination,
         currentRoute,
         isStartupSplashHeld,
     ) {
         if (appUiState.loading) return@LaunchedEffect
         if (isStartupSplashHeld) return@LaunchedEffect
+        // No current entry means no graph yet: nothing to route from. Navigating here would
+        // push `home` on top of the start destination instead of replacing it.
+        if (currentRoute == null) return@LaunchedEffect
 
-        if (appUiState.isWorkspaceAvailable) {
-            val unauthenticatedRoutes = setOf(
-                AppRoute.Splash.route,
-                AppRoute.Login.route,
-                AppRoute.ServerSetup.route,
-            )
-            if (currentRoute in unauthenticatedRoutes) {
-                navigateScheduledTaskHome(navController, currentRoute)
+        when (appUiState.rootDestination) {
+            // The graph is not built while the session is unresolved (TdayApp holds the splash
+            // in its place), so there is no route to steer yet.
+            RootDestination.SPLASH -> Unit
+
+            RootDestination.WORKSPACE -> {
+                val unauthenticatedRoutes = setOf(
+                    AppRoute.Splash.route,
+                    AppRoute.Login.route,
+                    AppRoute.ServerSetup.route,
+                )
+                if (currentRoute in unauthenticatedRoutes) {
+                    navigateScheduledTaskHome(navController, currentRoute)
+                }
             }
-            return@LaunchedEffect
-        }
 
-        // The reset-password screen is reachable while logged out — don't bounce it
-        // back to the login/scheduled-task-home overlay.
-        if (currentRoute != AppRoute.ScheduledTaskHome.route &&
-            currentRoute != AppRoute.ForgotPassword.route
-        ) {
-            navigateScheduledTaskHome(navController, currentRoute)
+            RootDestination.ONBOARDING -> {
+                // The reset-password screen is reachable while logged out — don't bounce it
+                // back to the login/scheduled-task-home overlay.
+                if (currentRoute != AppRoute.ScheduledTaskHome.route &&
+                    currentRoute != AppRoute.ForgotPassword.route
+                ) {
+                    navigateScheduledTaskHome(navController, currentRoute)
+                }
+            }
         }
     }
 }
