@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Corner radius of every widget surface this app paints: the runtime Glance background,
+         the static initialLayout backgrounds, and the widget-picker preview art.
+
+         This must never be LARGER than the radius the host clips the widget to. Since Android 12
+         the launcher clips both placed widgets and picker previews to its own enforced radius
+         (`android:dimen/system_app_widget_background_radius`, capped by Launcher3's
+         `enforced_rounded_corner_max_radius`). A rounder-than-the-clip background does not look
+         rounder — it leaves a crescent-shaped hole at each corner, between our arc and the host's,
+         through which whatever the host paints behind the widget shows. In the widget picker that
+         backing is an opaque light surface, so the hole reads as a thin light outline around the
+         preview card.
+
+         16dp is the AOSP default for both of the values above, so our surface stays at or inside
+         the host's clip on every launcher, while still reading as a rounded card on the API 26-30
+         hosts that do no clipping at all. -->
+    <dimen name="tday_widget_corner_radius">16dp</dimen>
+</resources>
