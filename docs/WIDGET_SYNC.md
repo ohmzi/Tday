@@ -332,6 +332,34 @@ write — which a short-lived widget process can be torn down before it paints �
 per-list refresher at all, so a per-list instance sat on its static `android:initialLayout` after a
 reboot until some unrelated cache write repainted it.
 
+## Widget corner radius (Android)
+
+Every surface this app paints at a widget's outer edge — the Glance runtime background
+(`TaskWidgetDesign`), the static `android:initialLayout` backgrounds, and the three
+widget-picker preview drawables — takes its corner radius from one token,
+`@dimen/tday_widget_corner_radius` (`app/src/main/res/values/dimens.xml`). Nothing else may
+declare one, and `WidgetCornerRadiusTest` fails the build if it does.
+
+**The rule is that our radius must never be LARGER than the host's.** Since Android 12 the
+launcher clips both a placed widget and its picker preview to its own enforced radius
+(`android:dimen/system_app_widget_background_radius`, capped by Launcher3's
+`enforced_rounded_corner_max_radius`; both default to 16dp, and OEMs raise them). Drawing a
+rounder corner than that does not render rounder — the host's clip still decides the silhouette,
+and the gap between the two arcs is a hole in our own artwork through which whatever the host
+paints behind the widget shows.
+
+That is what shipped as "the medium widget preview has a thin light outline around it": the
+surfaces were hardcoded at 24dp against a host clipping at ~20dp, so each corner of the preview
+card leaked a crescent of the picker's own opaque light backing (roughly 8px thick at 3x
+density, closing into a ring with a fainter sliver along the straight edges). It was never a
+stroke — there is no `<stroke>` anywhere in the widget drawables — and it was never
+size-specific: all nine descriptors share the same art, and the same latent hole existed at
+every size and over the wallpaper on the home screen.
+
+The token is 16dp because that is the AOSP default of both platform values, so the surface stays
+at or inside the clip on every launcher, while still reading as a rounded card on the API 26-30
+hosts that do no clipping at all.
+
 ## Snapshot durability (Android)
 
 Every widget renders from `filesDir/widget/*.json`, so how those files are written decides whether a
