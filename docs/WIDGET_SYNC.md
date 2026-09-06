@@ -334,31 +334,63 @@ reboot until some unrelated cache write repainted it.
 
 ## Widget corner radius (Android)
 
-Every surface this app paints at a widget's outer edge — the Glance runtime background
-(`TaskWidgetDesign`), the static `android:initialLayout` backgrounds, and the three
-widget-picker preview drawables — takes its corner radius from one token,
-`@dimen/tday_widget_corner_radius` (`app/src/main/res/values/dimens.xml`). Nothing else may
-declare one, and `WidgetCornerRadiusTest` fails the build if it does.
+A widget has **two** outer surfaces here, and they are deliberately separate drawables with
+separate radius tokens (`app/src/main/res/values/dimens.xml`):
 
-**The rule is that our radius must never be LARGER than the host's.** Since Android 12 the
-launcher clips both a placed widget and its picker preview to its own enforced radius
+| Surface | Drawable | Token | Where it renders |
+| --- | --- | --- | --- |
+| Placed widget | `widget_preview_background` | `tday_widget_surface_corner_radius` (24dp) | The Glance runtime background (`TaskWidgetDesign`) and the three `android:initialLayout`s — i.e. the widget on a home screen |
+| Picker preview | `widget_preview_bg_today`, `widget_preview_bg_floater` | `tday_widget_picker_preview_corner_radius` (16dp) | The six `android:previewLayout`s and `TodayTasksWidgetPreviewPublisher`'s `setWidgetPreview` — i.e. the card in the launcher's widget picker, API 31+ only |
+
+**The picker preview's radius must never be LARGER than the host's clip.** Since Android 12 the
+launcher clips the preview card to its own enforced radius
 (`android:dimen/system_app_widget_background_radius`, capped by Launcher3's
 `enforced_rounded_corner_max_radius`; both default to 16dp, and OEMs raise them). Drawing a
-rounder corner than that does not render rounder — the host's clip still decides the silhouette,
-and the gap between the two arcs is a hole in our own artwork through which whatever the host
-paints behind the widget shows.
+rounder corner than that does not render rounder: our fill lands wholly *inside* the clip, our
+arc becomes the visible edge, and the crescent between the two arcs is a hole in our own artwork
+through which whatever the host paints behind the card shows.
 
-That is what shipped as "the medium widget preview has a thin light outline around it": the
-surfaces were hardcoded at 24dp against a host clipping at ~20dp, so each corner of the preview
-card leaked a crescent of the picker's own opaque light backing (roughly 8px thick at 3x
-density, closing into a ring with a fainter sliver along the straight edges). It was never a
-stroke — there is no `<stroke>` anywhere in the widget drawables — and it was never
-size-specific: all nine descriptors share the same art, and the same latent hole existed at
-every size and over the wallpaper on the home screen.
+That is what shipped as "the medium widget preview has a thin light outline around it": the art
+was hardcoded at 24dp against a host clipping at ~19.8dp, so each corner leaked a crescent of the
+picker's own opaque light backing (~354px² per corner at density 3, closing into a ring with a
+fainter sliver along the straight edges). It was never a `<stroke>` — there is none anywhere in
+the widget drawables. 16dp is the AOSP default of both platform values, so the art now stays at
+or inside the clip on any launcher.
 
-The token is 16dp because that is the AOSP default of both platform values, so the surface stays
-at or inside the clip on every launcher, while still reading as a rounded card on the API 26-30
-hosts that do no clipping at all.
+**Do not point the placed widget at the picker token.** They were briefly one token, which is the
+mistake this table exists to prevent. Lowering the placed radius is *not* a no-op that the host's
+clip absorbs: at 24dp inside a 19.8dp clip our arc is the silhouette (that is exactly why the
+crescent existed), so going to 16dp moves every placed widget's visible corner to 19.8dp on a
+clipping host, and to 16dp outright on the API 26-30 hosts that clip nothing and on any API 31+
+launcher that does not implement the enforcement. That is a visible change to every home screen,
+so treat it as a design decision with a device in hand, not as a side effect of a picker fix.
+Over wallpaper the same "hole" has nothing bright behind it, so there is no artifact to fix there.
+
+The accepted cost of keeping them apart is that the picker card reads slightly *squarer* than the
+widget it previews — the card shows the host's clip (~19.8dp on the reporting device, 16dp on a
+launcher that does not clip previews) against the placed widget's 24dp. That is the cheaper of the
+two mismatches: the alternative is either the light outline the picker leak produced, or re-rounding
+every home screen to remove it. Revisit it only with a device.
+
+`WidgetCornerRadiusTest` pins this by **discovery**, not by a list of filenames: it walks the
+manifest's `android.appwidget.provider` meta-data to every descriptor, each descriptor's
+`initialLayout`/`previewLayout` to a layout, and each layout's root `android:background` to a
+drawable, then asserts each drawable uses the token for its side and that no drawable serves both
+sides. A new widget, size, or preview layout is covered as soon as it is wired up. A drawable no
+widget roots on is not a widget surface and is not checked — so `widget_add_button_background`
+and friends keep their own literals, and so would an orphaned file.
+
+### Open: why the report singled out the medium card
+
+Established: the art is identical across all nine descriptors (the manifest → info-xml →
+`previewLayout` mapping and `TodayTasksWidgetPreviewPublisher`'s nine entries agree layout for
+layout, rooting on just those two drawables), and the corner hole is present wherever the host
+paints something bright behind the card. **Unresolved:** the report describes the outline on the
+medium preview specifically. In the report screenshot the neighbouring preview pages carry the
+same 24dp art at the same scale and opacity yet have no pixel brighter than 41/255 on their
+perimeter, which suggests the light backing is painted only behind the *focused* page — host
+behaviour, unverified, no device on the build machine. If a size-to-size difference is still
+visible after this ships, that difference is the thing to chase; it was never explained.
 
 ## Snapshot durability (Android)
 
