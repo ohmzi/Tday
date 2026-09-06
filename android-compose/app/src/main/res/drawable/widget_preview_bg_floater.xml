@@ -4,7 +4,7 @@
     <item>
         <shape android:shape="rectangle">
             <solid android:color="@color/tday_widget_surface" />
-            <corners android:radius="24dp" />
+            <corners android:radius="@dimen/tday_widget_picker_preview_corner_radius" />
         </shape>
     </item>
     <item
