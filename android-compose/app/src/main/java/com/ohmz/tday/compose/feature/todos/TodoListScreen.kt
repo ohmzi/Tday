@@ -2409,7 +2409,32 @@ private fun LazyListScope.floaterTaskHomeRootFeedContent(
  * celebration/drag choreography and are unchanged by this extraction — same
  * calls, same order, same keys as when this loop lived inline.
  */
-private fun LazyListScope.sectionedTimelineContent(
+// KT-R1006 (cyclomatic complexity, reported at 33) is suppressed on this
+// declaration rather than split further. Two separate facts, both worth
+// writing down:
+//
+//   * It is unavoidable at this size, not just high. DeepSource fingerprints
+//     an issue by (file, line, message), so a function that never existed on
+//     `develop` reads as "introduced" the moment it appears, regardless of
+//     its complexity value — pulling this loop out of [TodoListScreen] (see
+//     that function's own KT-R1006 note above) could only ever relocate this
+//     finding, never make it disappear on arrival.
+//   * Fragmenting it further is the wrong trade here, not just an unwanted
+//     one. The header item, the drop-placeholder item and the per-todo item
+//     below carry the PR #122 celebration/drag choreography this function's
+//     own doc comment above describes — splitting each into its own
+//     LazyItemScope helper to shave a few complexity points would multiply
+//     the function boundaries that section/drag state and `animateItem`
+//     specs have to keep crossing correctly, on a screen with no Compose UI
+//     test coverage to catch a mistake. The 33 is real (five collapsible-
+//     section rules, a drag/drop eligibility check, and three item kinds
+//     sharing one loop), but it is complexity this loop always had —
+//     extraction only gave it its own line number.
+//
+// One declaration, one issue code — the narrowest form the tool has, and the
+// style the repo already uses for KT-W1042, KT-C1001, and TodoListScreen's
+// own KT-R1006 above. Never file-wide.
+private fun LazyListScope.sectionedTimelineContent( // skipcq: KT-R1006
     uiState: TodoListUiState,
     timelineSections: List<TodoSection>,
     usesRootFeedChrome: Boolean,
