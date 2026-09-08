@@ -28,6 +28,9 @@ class CacheMappersTest {
     private val completedInstant: Instant = Instant.parse("2025-06-15T14:00:00Z")
     private val updatedInstant: Instant = Instant.parse("2025-06-15T12:00:00Z")
     private val createdInstant: Instant = Instant.parse("2025-06-10T12:00:00Z")
+    private val localListId = "local-list-1"
+    private val localFloaterListId = "local-floater-list-1"
+    private val serverListId = "server-1"
 
     // --- todoToCache / todoFromCache round-trip ---
 
@@ -322,26 +325,26 @@ class CacheMappersTest {
     @Test
     fun `replaceLocalListId renames the list, its todos, completed items and pending mutation`() {
         val state = OfflineSyncState(
-            lists = listOf(makeCachedList().copy(id = "local-list-1", name = "Groceries")),
-            todos = listOf(makeCachedTodo().copy(listId = "local-list-1")),
-            completedItems = listOf(makeCachedCompleted().copy(listId = "local-list-1")),
+            lists = listOf(makeCachedList().copy(id = localListId, name = "Groceries")),
+            todos = listOf(makeCachedTodo().copy(listId = localListId)),
+            completedItems = listOf(makeCachedCompleted().copy(listId = localListId)),
             pendingMutations = listOf(
                 PendingMutationRecord(
                     mutationId = "m1",
                     kind = MutationKind.CREATE_LIST,
-                    targetId = "local-list-1",
+                    targetId = localListId,
                     timestampEpochMs = 1L,
                     name = "Groceries",
                 ),
             ),
         )
 
-        val result = replaceLocalListId(state, localListId = "local-list-1", serverListId = "server-1")
+        val result = replaceLocalListId(state, localListId = localListId, serverListId = serverListId)
 
-        assertEquals(listOf("server-1"), result.lists.map { it.id })
-        assertEquals(listOf("server-1"), result.todos.map { it.listId })
-        assertEquals(listOf("server-1"), result.completedItems.map { it.listId })
-        assertEquals("server-1", result.pendingMutations.single().targetId)
+        assertEquals(listOf(serverListId), result.lists.map { it.id })
+        assertEquals(listOf(serverListId), result.todos.map { it.listId })
+        assertEquals(listOf(serverListId), result.completedItems.map { it.listId })
+        assertEquals(serverListId, result.pendingMutations.single().targetId)
     }
 
     @Test
@@ -350,26 +353,26 @@ class CacheMappersTest {
         // server row in under its real id *before* this rename ran, so the
         // local placeholder and the server row briefly coexist under
         // different ids. Renaming the placeholder must converge to one row,
-        // not leave two rows sharing "server-1".
+        // not leave two rows sharing the server id.
         val state = OfflineSyncState(
             lists = listOf(
-                makeCachedList().copy(id = "local-list-1", name = "Groceries"),
-                makeCachedList().copy(id = "server-1", name = "Groceries"),
+                makeCachedList().copy(id = localListId, name = "Groceries"),
+                makeCachedList().copy(id = serverListId, name = "Groceries"),
             ),
         )
 
-        val result = replaceLocalListId(state, localListId = "local-list-1", serverListId = "server-1")
+        val result = replaceLocalListId(state, localListId = localListId, serverListId = serverListId)
 
-        assertEquals(listOf("server-1"), result.lists.map { it.id })
+        assertEquals(listOf(serverListId), result.lists.map { it.id })
     }
 
     @Test
     fun `replaceLocalListId is a no-op when the local id is not present`() {
-        val state = OfflineSyncState(lists = listOf(makeCachedList().copy(id = "server-1")))
+        val state = OfflineSyncState(lists = listOf(makeCachedList().copy(id = serverListId)))
 
         val result = replaceLocalListId(state, localListId = "local-list-missing", serverListId = "server-2")
 
-        assertEquals(listOf("server-1"), result.lists.map { it.id })
+        assertEquals(listOf(serverListId), result.lists.map { it.id })
     }
 
     // --- replaceLocalFloaterListId ---
@@ -377,12 +380,12 @@ class CacheMappersTest {
     @Test
     fun `replaceLocalFloaterListId renames the floater list, its floaters and pending mutation`() {
         val state = OfflineSyncState(
-            floaterLists = listOf(makeCachedFloaterList().copy(id = "local-floater-list-1")),
+            floaterLists = listOf(makeCachedFloaterList().copy(id = localFloaterListId)),
             pendingMutations = listOf(
                 PendingMutationRecord(
                     mutationId = "m1",
                     kind = MutationKind.CREATE_FLOATER_LIST,
-                    targetId = "local-floater-list-1",
+                    targetId = localFloaterListId,
                     timestampEpochMs = 1L,
                 ),
             ),
@@ -390,30 +393,30 @@ class CacheMappersTest {
 
         val result = replaceLocalFloaterListId(
             state,
-            localListId = "local-floater-list-1",
-            serverListId = "server-1",
+            localListId = localFloaterListId,
+            serverListId = serverListId,
         )
 
-        assertEquals(listOf("server-1"), result.floaterLists.map { it.id })
-        assertEquals("server-1", result.pendingMutations.single().targetId)
+        assertEquals(listOf(serverListId), result.floaterLists.map { it.id })
+        assertEquals(serverListId, result.pendingMutations.single().targetId)
     }
 
     @Test
     fun `replaceLocalFloaterListId drops the duplicate when a server-echoed row already claimed the target id`() {
         val state = OfflineSyncState(
             floaterLists = listOf(
-                makeCachedFloaterList().copy(id = "local-floater-list-1"),
-                makeCachedFloaterList().copy(id = "server-1"),
+                makeCachedFloaterList().copy(id = localFloaterListId),
+                makeCachedFloaterList().copy(id = serverListId),
             ),
         )
 
         val result = replaceLocalFloaterListId(
             state,
-            localListId = "local-floater-list-1",
-            serverListId = "server-1",
+            localListId = localFloaterListId,
+            serverListId = serverListId,
         )
 
-        assertEquals(listOf("server-1"), result.floaterLists.map { it.id })
+        assertEquals(listOf(serverListId), result.floaterLists.map { it.id })
     }
 
     // --- factory helpers ---
