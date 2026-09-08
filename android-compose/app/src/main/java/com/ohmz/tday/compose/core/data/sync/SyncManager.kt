@@ -434,114 +434,30 @@ class SyncManager @Inject constructor(
                             resolvedListIds,
                         ).also { state = it.second }.first
 
-                    MutationKind.DELETE_TODO -> {
-                        val targetId = resolvedTargetId ?: return@runCatching false
-                        if (targetId.startsWith(LOCAL_TODO_PREFIX)) return@runCatching true
+                    MutationKind.DELETE_TODO ->
+                        applyDeleteTodoMutation(mutation, resolvedTargetId, remoteSnapshot, state)
+                            .also { state = it.second }.first
 
-                        val instanceDateEpochMs = mutation.instanceDateEpochMs
-                        if (instanceDateEpochMs != null) {
-                            requireApiBody(
-                                api.deleteTodoInstanceByBody(
-                                    com.ohmz.tday.compose.core.model.TodoInstanceDeleteRequest(
-                                        todoId = targetId,
-                                        instanceDate = Instant.ofEpochMilli(instanceDateEpochMs).toString(),
-                                    ),
-                                ),
-                                "Could not delete recurring task instance",
-                            )
-                            return@runCatching true
-                        }
+                    MutationKind.CREATE_FLOATER ->
+                        applyCreateFloaterMutation(
+                            mutation,
+                            state,
+                            resolvedFloaterListIds,
+                            resolvedTodoIds,
+                        ).also { state = it.second }.first
 
-                        val remoteUpdatedAt = remoteSnapshot.todoUpdatedAtByCanonical[targetId] ?: 0L
-                        if (remoteUpdatedAt > mutation.timestampEpochMs) return@runCatching true
-                        requireApiBody(
-                            api.deleteTodoByBody(DeleteTodoRequest(id = targetId)),
-                            "Could not delete task",
-                        )
-                        true
-                    }
+                    MutationKind.UPDATE_FLOATER ->
+                        applyUpdateFloaterMutation(
+                            mutation,
+                            resolvedTargetId,
+                            remoteSnapshot,
+                            state,
+                            resolvedFloaterListIds,
+                        ).also { state = it.second }.first
 
-                    MutationKind.CREATE_FLOATER -> {
-                        val localFloaterId = mutation.targetId ?: return@runCatching false
-                        if (!localFloaterId.startsWith(LOCAL_FLOATER_PREFIX)) return@runCatching true
-                        val localFloaterExists =
-                            state.floaters.any { it.canonicalId == localFloaterId }
-                        if (!localFloaterExists) return@runCatching true
-                        val resolvedListId = mutation.listId?.let {
-                            resolvedFloaterListIds[it] ?: it
-                        }
-                        if (resolvedListId != null && resolvedListId.startsWith(
-                                LOCAL_FLOATER_LIST_PREFIX
-                            )
-                        ) {
-                            return@runCatching false
-                        }
-                        val created = requireApiBody(
-                            api.createFloater(
-                                CreateFloaterRequest(
-                                    title = mutation.title?.trim().orEmpty(),
-                                    description = mutation.description,
-                                    priority = mutation.priority ?: "Low",
-                                    listID = resolvedListId,
-                                ),
-                            ),
-                            "Could not create floater",
-                        ).floater ?: return@runCatching false
-                        val createdFloater = mapFloaterDto(created)
-                        resolvedTodoIds[localFloaterId] = createdFloater.canonicalId
-                        state =
-                            replaceLocalFloaterId(state, localFloaterId, createdFloater.canonicalId)
-                        true
-                    }
-
-                    MutationKind.UPDATE_FLOATER -> {
-                        val targetId = resolvedTargetId ?: return@runCatching false
-                        if (targetId.startsWith(LOCAL_FLOATER_PREFIX)) return@runCatching false
-                        val remoteUpdatedAt =
-                            remoteSnapshot.floaterUpdatedAtByCanonical[targetId] ?: 0L
-                        if (remoteUpdatedAt > mutation.timestampEpochMs) return@runCatching true
-                        val resolvedListId =
-                            mutation.listId?.let { resolvedFloaterListIds[it] ?: it }
-                        if (!resolvedListId.isNullOrBlank() && resolvedListId.startsWith(
-                                LOCAL_FLOATER_LIST_PREFIX
-                            )
-                        ) {
-                            return@runCatching false
-                        }
-                        val remoteFloater =
-                            remoteSnapshot.floaters.firstOrNull { it.canonicalId == targetId }
-                        val listIdForApi = resolvedListId
-                            ?: if (!remoteFloater?.listId.isNullOrBlank()) "" else null
-                        requireApiBody(
-                            api.patchFloaterByBody(
-                                UpdateFloaterRequest(
-                                    id = targetId,
-                                    title = mutation.title,
-                                    description = mutation.description
-                                        ?: if (remoteFloater?.description != null) "" else null,
-                                    pinned = mutation.pinned,
-                                    priority = mutation.priority,
-                                    completed = mutation.completed,
-                                    listID = listIdForApi,
-                                ),
-                            ),
-                            "Could not update floater",
-                        )
-                        true
-                    }
-
-                    MutationKind.DELETE_FLOATER -> {
-                        val targetId = resolvedTargetId ?: return@runCatching false
-                        if (targetId.startsWith(LOCAL_FLOATER_PREFIX)) return@runCatching true
-                        val remoteUpdatedAt =
-                            remoteSnapshot.floaterUpdatedAtByCanonical[targetId] ?: 0L
-                        if (remoteUpdatedAt > mutation.timestampEpochMs) return@runCatching true
-                        requireApiBody(
-                            api.deleteFloaterByBody(DeleteFloaterRequest(id = targetId)),
-                            "Could not delete floater",
-                        )
-                        true
-                    }
+                    MutationKind.DELETE_FLOATER ->
+                        applyDeleteFloaterMutation(mutation, resolvedTargetId, remoteSnapshot, state)
+                            .also { state = it.second }.first
 
                     MutationKind.SET_PINNED -> {
                         val targetId = resolvedTargetId ?: return@runCatching false
@@ -1062,6 +978,137 @@ class SyncManager @Inject constructor(
                 "Could not update task",
             )
         }
+        return true to state
+    }
+
+    private suspend fun applyDeleteTodoMutation(
+        mutation: PendingMutationRecord,
+        resolvedTargetId: String?,
+        remoteSnapshot: RemoteSnapshot,
+        state: OfflineSyncState,
+    ): Pair<Boolean, OfflineSyncState> {
+        val targetId = resolvedTargetId ?: return false to state
+        if (targetId.startsWith(LOCAL_TODO_PREFIX)) return true to state
+
+        val instanceDateEpochMs = mutation.instanceDateEpochMs
+        if (instanceDateEpochMs != null) {
+            requireApiBody(
+                api.deleteTodoInstanceByBody(
+                    com.ohmz.tday.compose.core.model.TodoInstanceDeleteRequest(
+                        todoId = targetId,
+                        instanceDate = Instant.ofEpochMilli(instanceDateEpochMs).toString(),
+                    ),
+                ),
+                "Could not delete recurring task instance",
+            )
+            return true to state
+        }
+
+        val remoteUpdatedAt = remoteSnapshot.todoUpdatedAtByCanonical[targetId] ?: 0L
+        if (remoteUpdatedAt > mutation.timestampEpochMs) return true to state
+        requireApiBody(
+            api.deleteTodoByBody(DeleteTodoRequest(id = targetId)),
+            "Could not delete task",
+        )
+        return true to state
+    }
+
+    private suspend fun applyCreateFloaterMutation(
+        mutation: PendingMutationRecord,
+        state: OfflineSyncState,
+        resolvedFloaterListIds: MutableMap<String, String>,
+        resolvedTodoIds: MutableMap<String, String>,
+    ): Pair<Boolean, OfflineSyncState> {
+        var nextState = state
+        val localFloaterId = mutation.targetId ?: return false to nextState
+        if (!localFloaterId.startsWith(LOCAL_FLOATER_PREFIX)) return true to nextState
+        val localFloaterExists =
+            nextState.floaters.any { it.canonicalId == localFloaterId }
+        if (!localFloaterExists) return true to nextState
+        val resolvedListId = mutation.listId?.let {
+            resolvedFloaterListIds[it] ?: it
+        }
+        if (resolvedListId != null && resolvedListId.startsWith(
+                LOCAL_FLOATER_LIST_PREFIX
+            )
+        ) {
+            return false to nextState
+        }
+        val created = requireApiBody(
+            api.createFloater(
+                CreateFloaterRequest(
+                    title = mutation.title?.trim().orEmpty(),
+                    description = mutation.description,
+                    priority = mutation.priority ?: "Low",
+                    listID = resolvedListId,
+                ),
+            ),
+            "Could not create floater",
+        ).floater ?: return false to nextState
+        val createdFloater = mapFloaterDto(created)
+        resolvedTodoIds[localFloaterId] = createdFloater.canonicalId
+        nextState =
+            replaceLocalFloaterId(nextState, localFloaterId, createdFloater.canonicalId)
+        return true to nextState
+    }
+
+    private suspend fun applyUpdateFloaterMutation(
+        mutation: PendingMutationRecord,
+        resolvedTargetId: String?,
+        remoteSnapshot: RemoteSnapshot,
+        state: OfflineSyncState,
+        resolvedFloaterListIds: MutableMap<String, String>,
+    ): Pair<Boolean, OfflineSyncState> {
+        val targetId = resolvedTargetId ?: return false to state
+        if (targetId.startsWith(LOCAL_FLOATER_PREFIX)) return false to state
+        val remoteUpdatedAt =
+            remoteSnapshot.floaterUpdatedAtByCanonical[targetId] ?: 0L
+        if (remoteUpdatedAt > mutation.timestampEpochMs) return true to state
+        val resolvedListId =
+            mutation.listId?.let { resolvedFloaterListIds[it] ?: it }
+        if (!resolvedListId.isNullOrBlank() && resolvedListId.startsWith(
+                LOCAL_FLOATER_LIST_PREFIX
+            )
+        ) {
+            return false to state
+        }
+        val remoteFloater =
+            remoteSnapshot.floaters.firstOrNull { it.canonicalId == targetId }
+        val listIdForApi = resolvedListId
+            ?: if (!remoteFloater?.listId.isNullOrBlank()) "" else null
+        requireApiBody(
+            api.patchFloaterByBody(
+                UpdateFloaterRequest(
+                    id = targetId,
+                    title = mutation.title,
+                    description = mutation.description
+                        ?: if (remoteFloater?.description != null) "" else null,
+                    pinned = mutation.pinned,
+                    priority = mutation.priority,
+                    completed = mutation.completed,
+                    listID = listIdForApi,
+                ),
+            ),
+            "Could not update floater",
+        )
+        return true to state
+    }
+
+    private suspend fun applyDeleteFloaterMutation(
+        mutation: PendingMutationRecord,
+        resolvedTargetId: String?,
+        remoteSnapshot: RemoteSnapshot,
+        state: OfflineSyncState,
+    ): Pair<Boolean, OfflineSyncState> {
+        val targetId = resolvedTargetId ?: return false to state
+        if (targetId.startsWith(LOCAL_FLOATER_PREFIX)) return true to state
+        val remoteUpdatedAt =
+            remoteSnapshot.floaterUpdatedAtByCanonical[targetId] ?: 0L
+        if (remoteUpdatedAt > mutation.timestampEpochMs) return true to state
+        requireApiBody(
+            api.deleteFloaterByBody(DeleteFloaterRequest(id = targetId)),
+            "Could not delete floater",
+        )
         return true to state
     }
 
