@@ -1,8 +1,12 @@
 package com.ohmz.tday.compose.core.data.cache
 
 import com.ohmz.tday.compose.core.data.CachedCompletedRecord
+import com.ohmz.tday.compose.core.data.CachedFloaterListRecord
 import com.ohmz.tday.compose.core.data.CachedListRecord
 import com.ohmz.tday.compose.core.data.CachedTodoRecord
+import com.ohmz.tday.compose.core.data.MutationKind
+import com.ohmz.tday.compose.core.data.OfflineSyncState
+import com.ohmz.tday.compose.core.data.PendingMutationRecord
 import com.ohmz.tday.compose.core.model.CompletedItem
 import com.ohmz.tday.compose.core.model.CompletedTodoDto
 import com.ohmz.tday.compose.core.model.ListDto
@@ -313,6 +317,105 @@ class CacheMappersTest {
         assertEquals(fixedInstant, parseOptionalInstant("2025-06-15T10:30:00"))
     }
 
+    // --- replaceLocalListId ---
+
+    @Test
+    fun `replaceLocalListId renames the list, its todos, completed items and pending mutation`() {
+        val state = OfflineSyncState(
+            lists = listOf(makeCachedList().copy(id = "local-list-1", name = "Groceries")),
+            todos = listOf(makeCachedTodo().copy(listId = "local-list-1")),
+            completedItems = listOf(makeCachedCompleted().copy(listId = "local-list-1")),
+            pendingMutations = listOf(
+                PendingMutationRecord(
+                    mutationId = "m1",
+                    kind = MutationKind.CREATE_LIST,
+                    targetId = "local-list-1",
+                    timestampEpochMs = 1L,
+                    name = "Groceries",
+                ),
+            ),
+        )
+
+        val result = replaceLocalListId(state, localListId = "local-list-1", serverListId = "server-1")
+
+        assertEquals(listOf("server-1"), result.lists.map { it.id })
+        assertEquals(listOf("server-1"), result.todos.map { it.listId })
+        assertEquals(listOf("server-1"), result.completedItems.map { it.listId })
+        assertEquals("server-1", result.pendingMutations.single().targetId)
+    }
+
+    @Test
+    fun `replaceLocalListId drops the duplicate when a server-echoed row already claimed the target id`() {
+        // Reproduces the create-list race: a realtime self-echo synced the new
+        // server row in under its real id *before* this rename ran, so the
+        // local placeholder and the server row briefly coexist under
+        // different ids. Renaming the placeholder must converge to one row,
+        // not leave two rows sharing "server-1".
+        val state = OfflineSyncState(
+            lists = listOf(
+                makeCachedList().copy(id = "local-list-1", name = "Groceries"),
+                makeCachedList().copy(id = "server-1", name = "Groceries"),
+            ),
+        )
+
+        val result = replaceLocalListId(state, localListId = "local-list-1", serverListId = "server-1")
+
+        assertEquals(listOf("server-1"), result.lists.map { it.id })
+    }
+
+    @Test
+    fun `replaceLocalListId is a no-op when the local id is not present`() {
+        val state = OfflineSyncState(lists = listOf(makeCachedList().copy(id = "server-1")))
+
+        val result = replaceLocalListId(state, localListId = "local-list-missing", serverListId = "server-2")
+
+        assertEquals(listOf("server-1"), result.lists.map { it.id })
+    }
+
+    // --- replaceLocalFloaterListId ---
+
+    @Test
+    fun `replaceLocalFloaterListId renames the floater list, its floaters and pending mutation`() {
+        val state = OfflineSyncState(
+            floaterLists = listOf(makeCachedFloaterList().copy(id = "local-floater-list-1")),
+            pendingMutations = listOf(
+                PendingMutationRecord(
+                    mutationId = "m1",
+                    kind = MutationKind.CREATE_FLOATER_LIST,
+                    targetId = "local-floater-list-1",
+                    timestampEpochMs = 1L,
+                ),
+            ),
+        )
+
+        val result = replaceLocalFloaterListId(
+            state,
+            localListId = "local-floater-list-1",
+            serverListId = "server-1",
+        )
+
+        assertEquals(listOf("server-1"), result.floaterLists.map { it.id })
+        assertEquals("server-1", result.pendingMutations.single().targetId)
+    }
+
+    @Test
+    fun `replaceLocalFloaterListId drops the duplicate when a server-echoed row already claimed the target id`() {
+        val state = OfflineSyncState(
+            floaterLists = listOf(
+                makeCachedFloaterList().copy(id = "local-floater-list-1"),
+                makeCachedFloaterList().copy(id = "server-1"),
+            ),
+        )
+
+        val result = replaceLocalFloaterListId(
+            state,
+            localListId = "local-floater-list-1",
+            serverListId = "server-1",
+        )
+
+        assertEquals(listOf("server-1"), result.floaterLists.map { it.id })
+    }
+
     // --- factory helpers ---
 
     private fun makeTodoItem() = TodoItem(
@@ -361,6 +464,16 @@ class CacheMappersTest {
         color = "#FF0000",
         iconKey = "cart",
         todoCount = 5,
+        updatedAtEpochMs = updatedInstant.toEpochMilli(),
+        createdAtEpochMs = createdInstant.toEpochMilli(),
+    )
+
+    private fun makeCachedFloaterList() = CachedFloaterListRecord(
+        id = "floater-list-1",
+        name = "Anytime",
+        color = "#00FF00",
+        iconKey = "star",
+        todoCount = 2,
         updatedAtEpochMs = updatedInstant.toEpochMilli(),
         createdAtEpochMs = createdInstant.toEpochMilli(),
     )
