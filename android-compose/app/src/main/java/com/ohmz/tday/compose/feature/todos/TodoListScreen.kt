@@ -46,6 +46,7 @@ import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyItemScope
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -1598,25 +1599,12 @@ fun TodoListScreen( // skipcq: KT-R1006
                             }
                         }
                     } else if (!showSectionedTimeline) {
-                        items(
-                            items = uiState.items,
-                            key = { it.id },
-                            contentType = { "todo-row" },
-                        ) { todo ->
-                            if (usesTodayStyle) {
-                                TodayTodoRow(
-                                    todo = todo,
-                                    onComplete = { completeAndCelebrate(todo) },
-                                    onDelete = { onDelete(todo) },
-                                )
-                            } else {
-                                TodoRow(
-                                    todo = todo,
-                                    onComplete = { completeAndCelebrate(todo) },
-                                    onDelete = { onDelete(todo) },
-                                )
-                            }
-                        }
+                        flatTodoRowsContent(
+                            todos = uiState.items,
+                            usesTodayStyle = usesTodayStyle,
+                            onComplete = completeAndCelebrate,
+                            onDelete = onDelete,
+                        )
                     }
 
                     // Root floater empty state: mirror the web layout — the
@@ -2460,6 +2448,43 @@ fun TodoListScreen( // skipcq: KT-R1006
                 exitSelection()
             },
         )
+    }
+}
+
+/**
+ * The flat, unsectioned task list body — the non-timeline sibling of
+ * [sectionedTimelineContent], used wherever [TodoListScreen] shows its items
+ * in one plain run rather than under day/priority headers.
+ *
+ * A `LazyListScope` receiver extension, not a plain `@Composable`, so the
+ * `items(...)` call below registers directly against the caller's
+ * [LazyColumn] — its keys, content types and placement are exactly what
+ * they were when this body lived inline in [TodoListScreen].
+ */
+private fun LazyListScope.flatTodoRowsContent(
+    todos: List<TodoItem>,
+    usesTodayStyle: Boolean,
+    onComplete: (TodoItem) -> Unit,
+    onDelete: (TodoItem) -> Unit,
+) {
+    items(
+        items = todos,
+        key = { it.id },
+        contentType = { "todo-row" },
+    ) { todo ->
+        if (usesTodayStyle) {
+            TodayTodoRow(
+                todo = todo,
+                onComplete = { onComplete(todo) },
+                onDelete = { onDelete(todo) },
+            )
+        } else {
+            TodoRow(
+                todo = todo,
+                onComplete = { onComplete(todo) },
+                onDelete = { onDelete(todo) },
+            )
+        }
     }
 }
 
