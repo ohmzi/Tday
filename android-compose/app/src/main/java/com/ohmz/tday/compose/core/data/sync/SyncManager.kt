@@ -389,96 +389,29 @@ class SyncManager @Inject constructor(
 
             val success = runCatching {
                 when (mutation.kind) {
-                    MutationKind.CREATE_LIST -> {
-                        val localListId = mutation.targetId ?: return@runCatching false
-                        if (!localListId.startsWith(LOCAL_LIST_PREFIX)) return@runCatching true
-                        val localListExists = state.lists.any { it.id == localListId }
-                        if (!localListExists) return@runCatching true
-                        val response = requireApiBody(
-                            api.createList(
-                                CreateListRequest(
-                                    name = mutation.name?.trim().orEmpty(),
-                                    color = mutation.color,
-                                    iconKey = mutation.iconKey,
-                                ),
-                            ),
-                            "Could not create list",
-                        )
-                        val serverListId = response.list?.id ?: return@runCatching false
-                        resolvedListIds[localListId] = serverListId
-                        state = replaceLocalListId(state, localListId, serverListId)
-                        true
-                    }
+                    MutationKind.CREATE_LIST ->
+                        applyCreateListMutation(mutation, state, resolvedListIds)
+                            .also { state = it.second }.first
 
-                    MutationKind.UPDATE_LIST -> {
-                        val targetId = resolvedTargetId ?: return@runCatching false
-                        if (targetId.startsWith(LOCAL_LIST_PREFIX)) return@runCatching false
-                        val remoteUpdatedAt = remoteSnapshot.listUpdatedAtById[targetId] ?: 0L
-                        if (remoteUpdatedAt > mutation.timestampEpochMs) return@runCatching true
-                        requireApiBody(
-                            api.patchListByBody(
-                                UpdateListRequest(
-                                    id = targetId,
-                                    name = mutation.name,
-                                    color = mutation.color,
-                                    iconKey = mutation.iconKey,
-                                ),
-                            ),
-                            "Could not update list",
-                        )
-                        true
-                    }
+                    MutationKind.UPDATE_LIST ->
+                        applyUpdateListMutation(mutation, resolvedTargetId, remoteSnapshot, state)
+                            .also { state = it.second }.first
 
-                    MutationKind.DELETE_LIST -> {
-                        val targetId = resolvedTargetId ?: return@runCatching false
-                        if (targetId.startsWith(LOCAL_LIST_PREFIX)) return@runCatching true
-                        requireApiBody(
-                            api.deleteListByBody(DeleteListRequest(id = targetId)),
-                            "Could not delete list",
-                        )
-                        true
-                    }
+                    MutationKind.DELETE_LIST ->
+                        applyDeleteListMutation(resolvedTargetId, state)
+                            .also { state = it.second }.first
 
-                    MutationKind.CREATE_FLOATER_LIST -> {
-                        val localListId = mutation.targetId ?: return@runCatching false
-                        if (!localListId.startsWith(LOCAL_FLOATER_LIST_PREFIX)) return@runCatching true
-                        val localListExists = state.floaterLists.any { it.id == localListId }
-                        if (!localListExists) return@runCatching true
-                        val response = requireApiBody(
-                            api.createFloaterList(
-                                CreateFloaterListRequest(
-                                    name = mutation.name?.trim().orEmpty(),
-                                    color = mutation.color,
-                                    iconKey = mutation.iconKey,
-                                ),
-                            ),
-                            "Could not create floater list",
-                        )
-                        val serverListId = response.list?.id ?: return@runCatching false
-                        resolvedFloaterListIds[localListId] = serverListId
-                        state = replaceLocalFloaterListId(state, localListId, serverListId)
-                        true
-                    }
+                    MutationKind.CREATE_FLOATER_LIST ->
+                        applyCreateFloaterListMutation(mutation, state, resolvedFloaterListIds)
+                            .also { state = it.second }.first
 
-                    MutationKind.UPDATE_FLOATER_LIST -> {
-                        val targetId = resolvedTargetId ?: return@runCatching false
-                        if (targetId.startsWith(LOCAL_FLOATER_LIST_PREFIX)) return@runCatching false
-                        val remoteUpdatedAt =
-                            remoteSnapshot.floaterListUpdatedAtById[targetId] ?: 0L
-                        if (remoteUpdatedAt > mutation.timestampEpochMs) return@runCatching true
-                        requireApiBody(
-                            api.patchFloaterListByBody(
-                                UpdateFloaterListRequest(
-                                    id = targetId,
-                                    name = mutation.name,
-                                    color = mutation.color,
-                                    iconKey = mutation.iconKey,
-                                ),
-                            ),
-                            "Could not update floater list",
-                        )
-                        true
-                    }
+                    MutationKind.UPDATE_FLOATER_LIST ->
+                        applyUpdateFloaterListMutation(
+                            mutation,
+                            resolvedTargetId,
+                            remoteSnapshot,
+                            state,
+                        ).also { state = it.second }.first
 
                     MutationKind.RESET_FLOATER_LIST -> {
                         val targetId = resolvedTargetId ?: return@runCatching false
@@ -977,6 +910,120 @@ class SyncManager @Inject constructor(
         }
 
         return state.copy(pendingMutations = remaining)
+    }
+
+    private suspend fun applyCreateListMutation(
+        mutation: PendingMutationRecord,
+        state: OfflineSyncState,
+        resolvedListIds: MutableMap<String, String>,
+    ): Pair<Boolean, OfflineSyncState> {
+        var nextState = state
+        val localListId = mutation.targetId ?: return false to nextState
+        if (!localListId.startsWith(LOCAL_LIST_PREFIX)) return true to nextState
+        val localListExists = nextState.lists.any { it.id == localListId }
+        if (!localListExists) return true to nextState
+        val response = requireApiBody(
+            api.createList(
+                CreateListRequest(
+                    name = mutation.name?.trim().orEmpty(),
+                    color = mutation.color,
+                    iconKey = mutation.iconKey,
+                ),
+            ),
+            "Could not create list",
+        )
+        val serverListId = response.list?.id ?: return false to nextState
+        resolvedListIds[localListId] = serverListId
+        nextState = replaceLocalListId(nextState, localListId, serverListId)
+        return true to nextState
+    }
+
+    private suspend fun applyUpdateListMutation(
+        mutation: PendingMutationRecord,
+        resolvedTargetId: String?,
+        remoteSnapshot: RemoteSnapshot,
+        state: OfflineSyncState,
+    ): Pair<Boolean, OfflineSyncState> {
+        val targetId = resolvedTargetId ?: return false to state
+        if (targetId.startsWith(LOCAL_LIST_PREFIX)) return false to state
+        val remoteUpdatedAt = remoteSnapshot.listUpdatedAtById[targetId] ?: 0L
+        if (remoteUpdatedAt > mutation.timestampEpochMs) return true to state
+        requireApiBody(
+            api.patchListByBody(
+                UpdateListRequest(
+                    id = targetId,
+                    name = mutation.name,
+                    color = mutation.color,
+                    iconKey = mutation.iconKey,
+                ),
+            ),
+            "Could not update list",
+        )
+        return true to state
+    }
+
+    private suspend fun applyDeleteListMutation(
+        resolvedTargetId: String?,
+        state: OfflineSyncState,
+    ): Pair<Boolean, OfflineSyncState> {
+        val targetId = resolvedTargetId ?: return false to state
+        if (targetId.startsWith(LOCAL_LIST_PREFIX)) return true to state
+        requireApiBody(
+            api.deleteListByBody(DeleteListRequest(id = targetId)),
+            "Could not delete list",
+        )
+        return true to state
+    }
+
+    private suspend fun applyCreateFloaterListMutation(
+        mutation: PendingMutationRecord,
+        state: OfflineSyncState,
+        resolvedFloaterListIds: MutableMap<String, String>,
+    ): Pair<Boolean, OfflineSyncState> {
+        var nextState = state
+        val localListId = mutation.targetId ?: return false to nextState
+        if (!localListId.startsWith(LOCAL_FLOATER_LIST_PREFIX)) return true to nextState
+        val localListExists = nextState.floaterLists.any { it.id == localListId }
+        if (!localListExists) return true to nextState
+        val response = requireApiBody(
+            api.createFloaterList(
+                CreateFloaterListRequest(
+                    name = mutation.name?.trim().orEmpty(),
+                    color = mutation.color,
+                    iconKey = mutation.iconKey,
+                ),
+            ),
+            "Could not create floater list",
+        )
+        val serverListId = response.list?.id ?: return false to nextState
+        resolvedFloaterListIds[localListId] = serverListId
+        nextState = replaceLocalFloaterListId(nextState, localListId, serverListId)
+        return true to nextState
+    }
+
+    private suspend fun applyUpdateFloaterListMutation(
+        mutation: PendingMutationRecord,
+        resolvedTargetId: String?,
+        remoteSnapshot: RemoteSnapshot,
+        state: OfflineSyncState,
+    ): Pair<Boolean, OfflineSyncState> {
+        val targetId = resolvedTargetId ?: return false to state
+        if (targetId.startsWith(LOCAL_FLOATER_LIST_PREFIX)) return false to state
+        val remoteUpdatedAt =
+            remoteSnapshot.floaterListUpdatedAtById[targetId] ?: 0L
+        if (remoteUpdatedAt > mutation.timestampEpochMs) return true to state
+        requireApiBody(
+            api.patchFloaterListByBody(
+                UpdateFloaterListRequest(
+                    id = targetId,
+                    name = mutation.name,
+                    color = mutation.color,
+                    iconKey = mutation.iconKey,
+                ),
+            ),
+            "Could not update floater list",
+        )
+        return true to state
     }
 
     private fun mergeRemoteWithLocal(
