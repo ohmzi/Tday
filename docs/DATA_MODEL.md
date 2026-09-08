@@ -207,6 +207,8 @@ Current mutation kinds:
 
 Server Mode replays pending mutations through `SyncManager`. Local Mode clears/ignores pending mutations because there is no remote target.
 
+`staged` (Android/iOS, default `false`) marks a `DELETE_LIST`/`DELETE_FLOATER_LIST` mutation written by the delayed-commit delete's stage step (`ListRepository.stageDeleteList`/`FloaterListRepository.stageDeleteList`) while the Undo toast is still open. A staged delete is never replayed to the server (the whole point of staging is that Undo needs no network trace), but it counts the same as a real pending delete for `SyncManager`'s merge-time resurrection guard, so a pull-to-refresh landing inside the undo window can't write the still-server-side list back into the cache. The commit step (`deleteList()`) replaces the staged marker with a normal pending mutation of the same kind; Undo removes the marker outright.
+
 ## Web Local Mode Workspace
 
 The web's no-login workspace is one JSON document in `localStorage`

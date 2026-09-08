@@ -575,7 +575,7 @@ final class TodoListViewModel {
         TdayTelemetry.addBreadcrumb("list.delete", data: listTelemetryData(color: nil, iconKey: nil))
         let container = container
         if mode == .floater {
-            let staged = container.floaterListRepository.stageDeleteList(listId: listId)
+            let staged = await container.floaterListRepository.stageDeleteList(listId: listId)
             container.undoableDeleteScheduler.schedule(
                 message: L("List deleted"),
                 restore: {
@@ -593,7 +593,7 @@ final class TodoListViewModel {
                 }
             )
         } else {
-            let staged = container.listRepository.stageDeleteList(listId: listId)
+            let staged = await container.listRepository.stageDeleteList(listId: listId)
             container.undoableDeleteScheduler.schedule(
                 message: L("List deleted"),
                 restore: {
