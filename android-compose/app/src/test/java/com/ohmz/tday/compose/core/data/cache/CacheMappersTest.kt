@@ -474,7 +474,7 @@ class CacheMappersTest {
         id = "floater-list-1",
         name = "Anytime",
         color = "#00FF00",
-        iconKey = "star",
+        iconKey = null,
         todoCount = 2,
         updatedAtEpochMs = updatedInstant.toEpochMilli(),
         createdAtEpochMs = createdInstant.toEpochMilli(),
