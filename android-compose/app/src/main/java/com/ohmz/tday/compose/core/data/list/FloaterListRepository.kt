@@ -288,14 +288,19 @@ class FloaterListRepository @Inject constructor(
     /**
      * Stage step of the delayed-commit floater-list delete: prunes the list and
      * its floaters from the local cache exactly like the prune-half of
-     * [deleteList], but records nothing for the server (no DELETE_FLOATER_LIST
-     * pending mutation), so nothing can sync out during the undo window.
-     * Completed floaters are deliberately left untouched — see [deleteList] for
-     * why — so [StagedFloaterListDeletion.removedCompletedFloaters] is always
+     * [deleteList]. Nothing is sent to the server here — the real
+     * DELETE_FLOATER_LIST mutation is added by the commit step — but a
+     * non-replayable *staged* marker of the same kind is written in its place so
+     * a sync's merge (a pull-to-refresh racing the undo window) still treats the
+     * list as deleted instead of writing it back from the server response; see
+     * [PendingMutationRecord.staged] and SyncManager's replay/merge handling of
+     * it. Completed floaters are deliberately left untouched — see [deleteList]
+     * for why — so [StagedFloaterListDeletion.removedCompletedFloaters] is always
      * empty; the field stays so [undoStagedListDeletion] has nothing extra to
      * special-case if that ever changes. The commit step is the existing
      * [deleteList], whose prune-half re-runs as a no-op on the already-pruned
-     * state.
+     * state and whose own DELETE_FLOATER_LIST mutation naturally replaces this
+     * marker (same targetId).
      */
     suspend fun stageDeleteList(listId: String): StagedFloaterListDeletion {
         val normalizedListId = listId.trim()
@@ -313,21 +318,31 @@ class FloaterListRepository @Inject constructor(
                     mutation.listId == normalizedListId ||
                     deletedFloaterIds.contains(mutation.targetId)
 
+            val stagedMutationId = UUID.randomUUID().toString()
             staged = StagedFloaterListDeletion(
                 removedFloaterLists = state.floaterLists.filter { it.id == normalizedListId },
                 removedFloaters = state.floaters.filter { it.listId == normalizedListId },
                 removedPendingMutations = state.pendingMutations.filter(::matchesMutation),
+                stagedMutationId = stagedMutationId,
             )
             state.copy(
                 floaterLists = state.floaterLists.filterNot { it.id == normalizedListId },
                 floaters = state.floaters.filterNot { it.listId == normalizedListId },
-                pendingMutations = state.pendingMutations.filterNot(::matchesMutation),
+                pendingMutations = state.pendingMutations.filterNot(::matchesMutation) +
+                    PendingMutationRecord(
+                        mutationId = stagedMutationId,
+                        kind = MutationKind.DELETE_FLOATER_LIST,
+                        targetId = normalizedListId,
+                        timestampEpochMs = System.currentTimeMillis(),
+                        staged = true,
+                    ),
             )
         }
         return staged
     }
 
-    /** Undo step: re-inserts the records captured by [stageDeleteList]. Idempotent. */
+    /** Undo step: re-inserts the records captured by [stageDeleteList] and drops its
+     * staged marker mutation. Idempotent. */
     suspend fun undoStagedListDeletion(staged: StagedFloaterListDeletion) {
         cacheManager.updateOfflineState { state ->
             val listIds = state.floaterLists.map { it.id }.toSet()
@@ -341,7 +356,7 @@ class FloaterListRepository @Inject constructor(
                     staged.removedFloaters.filterNot { it.id in floaterIds },
                 completedFloaters = state.completedFloaters +
                     staged.removedCompletedFloaters.filterNot { it.id in completedIds },
-                pendingMutations = state.pendingMutations +
+                pendingMutations = state.pendingMutations.filterNot { it.mutationId == staged.stagedMutationId } +
                     staged.removedPendingMutations.filterNot { it.mutationId in mutationIds },
             )
         }
@@ -473,10 +488,15 @@ class FloaterListRepository @Inject constructor(
  * [removedCompletedFloaters] is always empty — completed floaters are no longer
  * pruned on list delete (they outlive the list; see [deleteList]) — but the field
  * stays so [FloaterListRepository.undoStagedListDeletion] needs no special-casing.
+ * [stagedMutationId] identifies the non-replayable staged DELETE_FLOATER_LIST
+ * marker [FloaterListRepository.stageDeleteList] wrote (see
+ * [PendingMutationRecord.staged]), so [FloaterListRepository.undoStagedListDeletion]
+ * can remove it on Undo instead of leaving it stranded in the pending queue.
  */
 data class StagedFloaterListDeletion(
     val removedFloaterLists: List<CachedFloaterListRecord> = emptyList(),
     val removedFloaters: List<CachedFloaterRecord> = emptyList(),
     val removedCompletedFloaters: List<CachedCompletedFloaterRecord> = emptyList(),
     val removedPendingMutations: List<PendingMutationRecord> = emptyList(),
+    val stagedMutationId: String? = null,
 )

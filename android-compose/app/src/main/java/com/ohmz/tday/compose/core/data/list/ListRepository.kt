@@ -256,11 +256,16 @@ class ListRepository @Inject constructor(
     /**
      * Stage step of the delayed-commit list delete: prunes the list, its tasks and
      * its completed items from the local cache exactly like the prune-half of
-     * [deleteList], but records nothing for the server (no DELETE_LIST pending
-     * mutation), so nothing can sync out during the undo window. The removed
-     * records are captured so [undoStagedListDeletion] can restore them exactly;
-     * the commit step is the existing [deleteList], whose prune-half re-runs as a
-     * no-op on the already-pruned state.
+     * [deleteList]. Nothing is sent to the server here — the real DELETE_LIST
+     * mutation is added by the commit step — but a non-replayable *staged* marker
+     * of the same kind is written in its place so a sync's merge (a pull-to-refresh
+     * racing the undo window) still treats the list as deleted instead of writing
+     * it back from the server response; see [PendingMutationRecord.staged] and
+     * SyncManager's replay/merge handling of it. The removed records are captured
+     * so [undoStagedListDeletion] can restore them exactly; the commit step is the
+     * existing [deleteList], whose prune-half re-runs as a no-op on the
+     * already-pruned state and whose own DELETE_LIST mutation naturally replaces
+     * this marker (same targetId).
      */
     suspend fun stageDeleteList(listId: String): StagedListDeletion {
         val normalizedListId = listId.trim()
@@ -282,23 +287,33 @@ class ListRepository @Inject constructor(
                 completed.listId == normalizedListId ||
                     completed.originalTodoId?.let(deletedTodoIds::contains) == true
 
+            val stagedMutationId = UUID.randomUUID().toString()
             staged = StagedListDeletion(
                 removedLists = state.lists.filter { it.id == normalizedListId },
                 removedTodos = state.todos.filter { it.listId == normalizedListId },
                 removedCompletedItems = state.completedItems.filter(::matchesCompleted),
                 removedPendingMutations = state.pendingMutations.filter(::matchesMutation),
+                stagedMutationId = stagedMutationId,
             )
             state.copy(
                 lists = state.lists.filterNot { it.id == normalizedListId },
                 todos = state.todos.filterNot { it.listId == normalizedListId },
                 completedItems = state.completedItems.filterNot(::matchesCompleted),
-                pendingMutations = state.pendingMutations.filterNot(::matchesMutation),
+                pendingMutations = state.pendingMutations.filterNot(::matchesMutation) +
+                    PendingMutationRecord(
+                        mutationId = stagedMutationId,
+                        kind = MutationKind.DELETE_LIST,
+                        targetId = normalizedListId,
+                        timestampEpochMs = System.currentTimeMillis(),
+                        staged = true,
+                    ),
             )
         }
         return staged
     }
 
-    /** Undo step: re-inserts the records captured by [stageDeleteList]. Idempotent. */
+    /** Undo step: re-inserts the records captured by [stageDeleteList] and drops its
+     * staged marker mutation. Idempotent. */
     suspend fun undoStagedListDeletion(staged: StagedListDeletion) {
         cacheManager.updateOfflineState { state ->
             val listIds = state.lists.map { it.id }.toSet()
@@ -312,7 +327,7 @@ class ListRepository @Inject constructor(
                     staged.removedTodos.filterNot { it.id in todoIds },
                 completedItems = state.completedItems +
                     staged.removedCompletedItems.filterNot { it.id in completedIds },
-                pendingMutations = state.pendingMutations +
+                pendingMutations = state.pendingMutations.filterNot { it.mutationId == staged.stagedMutationId } +
                     staged.removedPendingMutations.filterNot { it.mutationId in mutationIds },
             )
         }
@@ -444,11 +459,15 @@ class ListRepository @Inject constructor(
  * Local cache records removed by [ListRepository.stageDeleteList], retained so an
  * Undo within the delete-toast window can restore the exact pre-delete state
  * (the list plus its cascaded tasks/completed items). Nothing here has been sent
- * to the server.
+ * to the server. [stagedMutationId] identifies the non-replayable staged
+ * DELETE_LIST marker [ListRepository.stageDeleteList] wrote (see
+ * [PendingMutationRecord.staged]), so [ListRepository.undoStagedListDeletion] can
+ * remove it on Undo instead of leaving it stranded in the pending queue.
  */
 data class StagedListDeletion(
     val removedLists: List<CachedListRecord> = emptyList(),
     val removedTodos: List<CachedTodoRecord> = emptyList(),
     val removedCompletedItems: List<CachedCompletedRecord> = emptyList(),
     val removedPendingMutations: List<PendingMutationRecord> = emptyList(),
+    val stagedMutationId: String? = null,
 )

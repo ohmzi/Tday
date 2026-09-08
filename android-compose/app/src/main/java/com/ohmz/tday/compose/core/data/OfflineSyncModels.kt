@@ -134,6 +134,17 @@ data class PendingMutationRecord(
     val iconKey: String? = null,
     // Task-step ordering (REORDER_STEPS): the full ordered list of step ids.
     val orderedIds: List<String>? = null,
+    // True only for the marker a delayed-commit list/floater-list delete writes while
+    // staged (see ListRepository.stageDeleteList / FloaterListRepository.stageDeleteList):
+    // it makes the sync merge's resurrection guard (pendingDeletedListIds /
+    // pendingDeletedFloaterListIds in SyncManager) treat the staged-but-not-yet-committed
+    // delete exactly like a real one, so a refresh mid-undo-window can't write the
+    // still-server-side list back into the cache. SyncManager's replay pass must never
+    // send a staged mutation to the server — the whole point of staging is that Undo
+    // needs no network trace — so it always re-queues these unresolved instead of acting
+    // on them. The real commit (deleteList()/its floater-list twin) replaces the marker
+    // with a normal (non-staged) pending mutation of the same kind.
+    val staged: Boolean = false,
 )
 
 @Serializable

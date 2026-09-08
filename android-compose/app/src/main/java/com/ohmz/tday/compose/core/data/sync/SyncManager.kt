@@ -355,6 +355,16 @@ class SyncManager @Inject constructor(
         val remaining = mutableListOf<PendingMutationRecord>()
 
         for (mutation in pending) {
+            if (mutation.staged) {
+                // A delayed-commit list/floater-list delete still inside its undo
+                // window (see PendingMutationRecord.staged): never replay it — that
+                // would leak the delete to the server before Undo/commit resolves —
+                // just keep it pending so mergeRemoteWithLocal's resurrection guard
+                // keeps covering the list for as long as it stays staged.
+                remaining.add(mutation)
+                continue
+            }
+
             val resolvedTargetId = resolveTargetId(
                 targetId = mutation.targetId,
                 todoIdMap = resolvedTodoIds,
@@ -957,6 +967,11 @@ class SyncManager @Inject constructor(
         localState: OfflineSyncState,
         remote: RemoteSnapshot,
     ): OfflineSyncState {
+        // Deliberately kind-only (not filtered on `staged`): a delayed-commit delete's
+        // staged marker (PendingMutationRecord.staged) carries the same DELETE_LIST /
+        // DELETE_FLOATER_LIST kind specifically so it counts here too — otherwise a
+        // refresh mid-undo-window would write the still-server-side list straight back
+        // into the cache (the bug this guard exists to prevent).
         val pendingDeletedListIds = localState.pendingMutations
             .filter { it.kind == MutationKind.DELETE_LIST }
             .mapNotNull { it.targetId }
