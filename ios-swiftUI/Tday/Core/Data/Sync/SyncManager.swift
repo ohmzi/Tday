@@ -312,6 +312,11 @@ final class SyncManager {
                 }
             }
         )
+        // Deliberately kind-only (not filtered on `staged`): a delayed-commit delete's
+        // staged marker (PendingMutationRecord.staged) carries the same .deleteList /
+        // .deleteFloaterList kind specifically so it counts here too — otherwise a
+        // refresh mid-undo-window would write the still-server-side list straight back
+        // into the cache (the bug this guard exists to prevent).
         let pendingDeletedListIds = Set(
             localState.pendingMutations.compactMap { mutation -> String? in
                 mutation.kind == .deleteList ? mutation.targetId : nil
@@ -637,6 +642,15 @@ final class SyncManager {
 
         for index in orderedMutations.indices {
             let mutation = orderedMutations[index]
+            if mutation.staged {
+                // A delayed-commit list/floater-list delete still inside its undo
+                // window (see PendingMutationRecord.staged): never replay it — that
+                // would leak the delete to the server before Undo/commit resolves —
+                // just keep it pending so mergeRemoteWithLocal's resurrection guard
+                // keeps covering the list for as long as it stays staged.
+                remaining.append(mutation)
+                continue
+            }
             do {
                 try await applyPendingMutation(
                     mutation,

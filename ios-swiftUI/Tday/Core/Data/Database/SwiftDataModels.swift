@@ -191,6 +191,11 @@ final class PendingMutationEntity {
     var name: String?
     var color: String?
     var iconKey: String?
+    // Default literal (not just an init parameter) so SwiftData's lightweight migration can
+    // backfill existing rows on an already-installed app. See PendingMutationRecord.staged for
+    // what this guards: dropping it here would silently reset every staged list/floater-list
+    // delete marker to "real" on the very next `loadOfflineState()` fetch.
+    var staged: Bool = false
 
     init(from record: PendingMutationRecord) {
         mutationId = record.mutationId
@@ -209,6 +214,7 @@ final class PendingMutationEntity {
         name = record.name
         color = record.color
         iconKey = record.iconKey
+        staged = record.staged
     }
 }
 
