@@ -1607,125 +1607,18 @@ fun TodoListScreen( // skipcq: KT-R1006
                         )
                     }
 
-                    // Root floater empty state: mirror the web layout — the
-                    // scene sitting in a gap in the middle of the screen, with
-                    // the list names below it (instead of a full-screen
-                    // watermark overlay).
-                    if (isFloaterTaskHomeScreen && uiState.items.isEmpty() && !uiState.isLoading) {
-                        item(
-                            key = "floater-empty-message",
-                            contentType = "floater-empty-message",
-                        ) {
-                            val gapHeight = (LocalConfiguration.current.screenHeightDp * 0.42f).dp
-                            Box(
-                                // Neither fade, for the same reason the overlay
-                                // version has neither. Arriving: the scene
-                                // inside runs its own entrance on the
-                                // confetti's clock, and a host fade layered
-                                // over it would also dim the burst during the
-                                // frames it is meant to lead at full opacity.
-                                // Leaving: a 42%-tall illustration fading out
-                                // over a task row that is arriving in the same
-                                // slot paints the empty state on top of the
-                                // thing that disproves it — the overlay simply
-                                // stops being composed, and so does this.
-                                modifier = displacedFeedItemMotion(timelineAnimationsEnabled)
-                                    .fillMaxWidth()
-                                    .heightIn(min = gapHeight),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                TdayEmptyState(
-                                    icon = emptySceneIcon,
-                                    accentColor = titleColor,
-                                    title = emptyStateMessageForMode(
-                                        mode = uiState.mode,
-                                        isFloaterList = isListDetailScreen,
-                                    ),
-                                    description = emptyStateDescriptionForMode(
-                                        mode = uiState.mode,
-                                        isFloaterList = isListDetailScreen,
-                                    ),
-                                    celebrate = celebrateEmptyState,
-                                    // The overlay callers below pass nothing:
-                                    // they draw over a page where nothing is
-                                    // moving, so the burst can own the frame
-                                    // the feed empties on. Here the scene is
-                                    // inline, and the tile and list rows under
-                                    // it are still gliding down into the space
-                                    // it just claimed. Hold the celebration for
-                                    // exactly that glide, so the paper flies
-                                    // over a settled screen — which is the
-                                    // whole of what makes the list screen's
-                                    // version read as smooth.
-                                    celebrationStartDelayMillis =
-                                        TdayFeedItemMotion.CelebrationStartDelayMillis,
-                                )
-                            }
-                        }
-                    }
-
-                    // Floater tab's nav entry to the browsable Completed screen — the
-                    // todo side's own root feed reaches it through an identical
-                    // CategoryCard tile (ScheduledTaskHomeScreen's CategoryGrid); this
-                    // is the same shared component and the same destination (one
-                    // Completed screen renders both item types, distinguished there
-                    // by CompletedItem.isFloater), just placed to fit this screen's
-                    // single-column layout instead of a 2-up grid.
-                    if (isFloaterTaskHomeScreen) {
-                        item(
-                            key = "floater-completed-entry",
-                            contentType = "floater-completed-entry",
-                        ) {
-                            // The empty scene above opens a near-half-screen gap
-                            // in the slot the last row leaves, and this tile and
-                            // the lists under it are what that gap displaces.
-                            // Without the shared placement they cover that
-                            // distance in one frame — the snap the celebration
-                            // was landing in the middle of.
-                            CategoryCard(
-                                modifier = displacedFeedItemMotion(timelineAnimationsEnabled)
-                                    .fillMaxWidth()
-                                    .padding(bottom = 10.dp),
-                                color = TdayCompletedTileAccent,
-                                iconRes = R.drawable.ic_lucide_circle_check_big,
-                                watermarkRes = R.drawable.ic_lucide_circle_check_big,
-                                title = stringResource(R.string.scheduled_task_home_category_completed),
-                                onClick = onOpenCompleted,
-                            )
-                        }
-                    }
-
-                    if (floaterTaskHomeListRows.isNotEmpty()) {
-                        item(
-                            key = "floater-my-lists-header",
-                            contentType = "floater-list-header",
-                        ) {
-                            FloaterTaskHomeMyListsHeader(
-                                modifier = displacedFeedItemMotion(timelineAnimationsEnabled)
-                                    .padding(top = 4.dp, bottom = 10.dp),
-                            )
-                        }
-                        items(
-                            items = floaterTaskHomeListRows,
-                            key = { (list, _) -> "floater-list-${list.id}" },
-                            contentType = { "floater-list-row" },
-                        ) { (list, count) ->
-                            FloaterTaskHomeListRow(
-                                modifier = displacedFeedItemMotion(timelineAnimationsEnabled)
-                                    .padding(bottom = 10.dp),
-                                name = list.name,
-                                colorKey = list.color,
-                                iconKey = list.iconKey,
-                                count = count,
-                                onClick = {
-                                    onOpenFloaterList(
-                                        list.id,
-                                        capitalizeFirstListLetter(list.name),
-                                    )
-                                },
-                            )
-                        }
-                    }
+                    floaterTaskHomeRootFeedContent(
+                        isFloaterTaskHomeScreen = isFloaterTaskHomeScreen,
+                        uiState = uiState,
+                        timelineAnimationsEnabled = timelineAnimationsEnabled,
+                        emptySceneIcon = emptySceneIcon,
+                        titleColor = titleColor,
+                        isListDetailScreen = isListDetailScreen,
+                        celebrateEmptyState = celebrateEmptyState,
+                        onOpenCompleted = onOpenCompleted,
+                        floaterTaskHomeListRows = floaterTaskHomeListRows,
+                        onOpenFloaterList = onOpenFloaterList,
+                    )
 
                     uiState.errorMessage?.let { message ->
                         item {
@@ -2483,6 +2376,156 @@ private fun LazyListScope.flatTodoRowsContent(
                 todo = todo,
                 onComplete = { onComplete(todo) },
                 onDelete = { onDelete(todo) },
+            )
+        }
+    }
+}
+
+/**
+ * The root floater feed's own content, below the shared timeline/flat item
+ * paths: the inline empty scene, the Completed tile, and the "My Lists"
+ * header with its rows. Lives only on [TodoListMode.FLOATER] with no
+ * `listId` — every branch below re-checks [isFloaterTaskHomeScreen] (or
+ * [floaterTaskHomeListRows], which is empty whenever that flag is false)
+ * exactly as it did inline, so calling this unconditionally changes nothing.
+ *
+ * A `LazyListScope` receiver extension for the same reason as
+ * [flatTodoRowsContent]: every `item`/`items` call below needs the caller's
+ * scope to register its key, content type and placement correctly.
+ *
+ * [timelineAnimationsEnabled], [celebrateEmptyState] and the celebration
+ * delay feed [displacedFeedItemMotion]/`TdayEmptyState` exactly as they did
+ * inline — this is the celebration choreography from PR #122, so nothing
+ * here changes the item order, keys or placement specs those depend on.
+ */
+private fun LazyListScope.floaterTaskHomeRootFeedContent(
+    isFloaterTaskHomeScreen: Boolean,
+    uiState: TodoListUiState,
+    timelineAnimationsEnabled: Boolean,
+    @DrawableRes emptySceneIcon: Int,
+    titleColor: Color,
+    isListDetailScreen: Boolean,
+    celebrateEmptyState: Boolean,
+    onOpenCompleted: () -> Unit,
+    floaterTaskHomeListRows: List<Pair<ListSummary, Int>>,
+    onOpenFloaterList: (listId: String, listName: String) -> Unit,
+) {
+    // Root floater empty state: mirror the web layout — the
+    // scene sitting in a gap in the middle of the screen, with
+    // the list names below it (instead of a full-screen
+    // watermark overlay).
+    if (isFloaterTaskHomeScreen && uiState.items.isEmpty() && !uiState.isLoading) {
+        item(
+            key = "floater-empty-message",
+            contentType = "floater-empty-message",
+        ) {
+            val gapHeight = (LocalConfiguration.current.screenHeightDp * 0.42f).dp
+            Box(
+                // Neither fade, for the same reason the overlay
+                // version has neither. Arriving: the scene
+                // inside runs its own entrance on the
+                // confetti's clock, and a host fade layered
+                // over it would also dim the burst during the
+                // frames it is meant to lead at full opacity.
+                // Leaving: a 42%-tall illustration fading out
+                // over a task row that is arriving in the same
+                // slot paints the empty state on top of the
+                // thing that disproves it — the overlay simply
+                // stops being composed, and so does this.
+                modifier = displacedFeedItemMotion(timelineAnimationsEnabled)
+                    .fillMaxWidth()
+                    .heightIn(min = gapHeight),
+                contentAlignment = Alignment.Center,
+            ) {
+                TdayEmptyState(
+                    icon = emptySceneIcon,
+                    accentColor = titleColor,
+                    title = emptyStateMessageForMode(
+                        mode = uiState.mode,
+                        isFloaterList = isListDetailScreen,
+                    ),
+                    description = emptyStateDescriptionForMode(
+                        mode = uiState.mode,
+                        isFloaterList = isListDetailScreen,
+                    ),
+                    celebrate = celebrateEmptyState,
+                    // The overlay callers below pass nothing:
+                    // they draw over a page where nothing is
+                    // moving, so the burst can own the frame
+                    // the feed empties on. Here the scene is
+                    // inline, and the tile and list rows under
+                    // it are still gliding down into the space
+                    // it just claimed. Hold the celebration for
+                    // exactly that glide, so the paper flies
+                    // over a settled screen — which is the
+                    // whole of what makes the list screen's
+                    // version read as smooth.
+                    celebrationStartDelayMillis =
+                        TdayFeedItemMotion.CelebrationStartDelayMillis,
+                )
+            }
+        }
+    }
+
+    // Floater tab's nav entry to the browsable Completed screen — the
+    // todo side's own root feed reaches it through an identical
+    // CategoryCard tile (ScheduledTaskHomeScreen's CategoryGrid); this
+    // is the same shared component and the same destination (one
+    // Completed screen renders both item types, distinguished there
+    // by CompletedItem.isFloater), just placed to fit this screen's
+    // single-column layout instead of a 2-up grid.
+    if (isFloaterTaskHomeScreen) {
+        item(
+            key = "floater-completed-entry",
+            contentType = "floater-completed-entry",
+        ) {
+            // The empty scene above opens a near-half-screen gap
+            // in the slot the last row leaves, and this tile and
+            // the lists under it are what that gap displaces.
+            // Without the shared placement they cover that
+            // distance in one frame — the snap the celebration
+            // was landing in the middle of.
+            CategoryCard(
+                modifier = displacedFeedItemMotion(timelineAnimationsEnabled)
+                    .fillMaxWidth()
+                    .padding(bottom = 10.dp),
+                color = TdayCompletedTileAccent,
+                iconRes = R.drawable.ic_lucide_circle_check_big,
+                watermarkRes = R.drawable.ic_lucide_circle_check_big,
+                title = stringResource(R.string.scheduled_task_home_category_completed),
+                onClick = onOpenCompleted,
+            )
+        }
+    }
+
+    if (floaterTaskHomeListRows.isNotEmpty()) {
+        item(
+            key = "floater-my-lists-header",
+            contentType = "floater-list-header",
+        ) {
+            FloaterTaskHomeMyListsHeader(
+                modifier = displacedFeedItemMotion(timelineAnimationsEnabled)
+                    .padding(top = 4.dp, bottom = 10.dp),
+            )
+        }
+        items(
+            items = floaterTaskHomeListRows,
+            key = { (list, _) -> "floater-list-${list.id}" },
+            contentType = { "floater-list-row" },
+        ) { (list, count) ->
+            FloaterTaskHomeListRow(
+                modifier = displacedFeedItemMotion(timelineAnimationsEnabled)
+                    .padding(bottom = 10.dp),
+                name = list.name,
+                colorKey = list.color,
+                iconKey = list.iconKey,
+                count = count,
+                onClick = {
+                    onOpenFloaterList(
+                        list.id,
+                        capitalizeFirstListLetter(list.name),
+                    )
+                },
             )
         }
     }
