@@ -413,135 +413,26 @@ class SyncManager @Inject constructor(
                             state,
                         ).also { state = it.second }.first
 
-                    MutationKind.RESET_FLOATER_LIST -> {
-                        val targetId = resolvedTargetId ?: return@runCatching false
-                        if (targetId.startsWith(LOCAL_FLOATER_LIST_PREFIX)) return@runCatching false
-                        requireApiBody(
-                            api.resetFloaterList(targetId),
-                            "Could not reset floater list",
-                        )
-                        true
-                    }
+                    MutationKind.RESET_FLOATER_LIST ->
+                        applyResetFloaterListMutation(resolvedTargetId, state)
+                            .also { state = it.second }.first
 
-                    MutationKind.DELETE_FLOATER_LIST -> {
-                        val targetId = resolvedTargetId ?: return@runCatching false
-                        if (targetId.startsWith(LOCAL_FLOATER_LIST_PREFIX)) return@runCatching true
-                        requireApiBody(
-                            api.deleteFloaterListByBody(DeleteFloaterListRequest(id = targetId)),
-                            "Could not delete floater list",
-                        )
-                        true
-                    }
+                    MutationKind.DELETE_FLOATER_LIST ->
+                        applyDeleteFloaterListMutation(resolvedTargetId, state)
+                            .also { state = it.second }.first
 
-                    MutationKind.CREATE_TODO -> {
-                        val localTodoId = mutation.targetId ?: return@runCatching false
-                        if (!localTodoId.startsWith(LOCAL_TODO_PREFIX)) return@runCatching true
-                        val localTodoExists = state.todos.any { it.canonicalId == localTodoId }
-                        if (!localTodoExists) return@runCatching true
-                        val resolvedListId = mutation.listId?.let {
-                            resolvedListIds[it] ?: it
-                        }
-                        if (resolvedListId != null && resolvedListId.startsWith(LOCAL_LIST_PREFIX)) {
-                            return@runCatching false
-                        }
-                        val created = requireApiBody(
-                            api.createTodo(
-                                CreateTodoRequest(
-                                    title = mutation.title?.trim().orEmpty(),
-                                    description = mutation.description,
-                                    priority = mutation.priority ?: "Low",
-                                    due = mutation.dueEpochMs?.let {
-                                        Instant.ofEpochMilli(it).toString()
-                                    } ?: return@runCatching false,
-                                    rrule = mutation.rrule?.takeIf { mutation.dueEpochMs != null },
-                                    listID = resolvedListId,
-                                ),
-                            ),
-                            "Could not create task",
-                        ).todo ?: return@runCatching false
-                        val createdTodo = mapTodoDto(created)
-                        resolvedTodoIds[localTodoId] = createdTodo.canonicalId
-                        state = replaceLocalTodoId(state, localTodoId, createdTodo.canonicalId)
-                        true
-                    }
+                    MutationKind.CREATE_TODO ->
+                        applyCreateTodoMutation(mutation, state, resolvedListIds, resolvedTodoIds)
+                            .also { state = it.second }.first
 
-                    MutationKind.UPDATE_TODO -> {
-                        val targetId = resolvedTargetId ?: return@runCatching false
-                        if (targetId.startsWith(LOCAL_TODO_PREFIX)) return@runCatching false
-                        val remoteUpdatedAt = remoteSnapshot.todoUpdatedAtByCanonical[targetId] ?: 0L
-                        if (remoteUpdatedAt > mutation.timestampEpochMs) return@runCatching true
-
-                        val resolvedListId = mutation.listId?.let { resolvedListIds[it] ?: it }
-                        if (!resolvedListId.isNullOrBlank() && resolvedListId.startsWith(LOCAL_LIST_PREFIX)) {
-                            return@runCatching false
-                        }
-
-                        val remoteTodo = remoteSnapshot.todos.firstOrNull { it.canonicalId == targetId }
-                        val isDueOnlyMove = mutation.dueEpochMs != null &&
-                                mutation.title == null &&
-                                mutation.description == null &&
-                                mutation.priority == null &&
-                                mutation.pinned == null &&
-                                mutation.completed == null &&
-                                mutation.rrule == null &&
-                                mutation.listId == null
-                        val descriptionForApi = if (isDueOnlyMove) {
-                            null
-                        } else {
-                            mutation.description
-                                ?: if (remoteTodo?.description != null) "" else null
-                        }
-                        val rruleForApi = if (isDueOnlyMove) {
-                            null
-                        } else {
-                            mutation.rrule ?: if (!remoteTodo?.rrule.isNullOrBlank()) "" else null
-                        }
-                        val listIdForApi = if (isDueOnlyMove) {
-                            null
-                        } else {
-                            resolvedListId ?: if (!remoteTodo?.listId.isNullOrBlank()) "" else null
-                        }
-
-                        if (mutation.instanceDateEpochMs != null) {
-                            requireApiBody(
-                                api.patchTodoInstanceByBody(
-                                    TodoInstanceUpdateRequest(
-                                        todoId = targetId,
-                                        instanceDate = Instant.ofEpochMilli(
-                                            mutation.instanceDateEpochMs,
-                                        ).toString(),
-                                        title = mutation.title,
-                                        description = descriptionForApi,
-                                        priority = mutation.priority,
-                                        due = mutation.dueEpochMs?.let {
-                                            Instant.ofEpochMilli(it).toString()
-                                        },
-                                    ),
-                                ),
-                                "Could not update recurring task instance",
-                            )
-                        } else {
-                            requireApiBody(
-                                api.patchTodoByBody(
-                                    UpdateTodoRequest(
-                                        id = targetId,
-                                        title = mutation.title,
-                                        description = descriptionForApi,
-                                        pinned = mutation.pinned,
-                                        priority = mutation.priority,
-                                        due = mutation.dueEpochMs?.let { Instant.ofEpochMilli(it).toString() },
-                                        rrule = rruleForApi,
-                                        listID = listIdForApi,
-                                        dateChanged = true,
-                                        rruleChanged = if (isDueOnlyMove) null else true,
-                                        instanceDate = null,
-                                    ),
-                                ),
-                                "Could not update task",
-                            )
-                        }
-                        true
-                    }
+                    MutationKind.UPDATE_TODO ->
+                        applyUpdateTodoMutation(
+                            mutation,
+                            resolvedTargetId,
+                            remoteSnapshot,
+                            state,
+                            resolvedListIds,
+                        ).also { state = it.second }.first
 
                     MutationKind.DELETE_TODO -> {
                         val targetId = resolvedTargetId ?: return@runCatching false
@@ -1023,6 +914,154 @@ class SyncManager @Inject constructor(
             ),
             "Could not update floater list",
         )
+        return true to state
+    }
+
+    private suspend fun applyResetFloaterListMutation(
+        resolvedTargetId: String?,
+        state: OfflineSyncState,
+    ): Pair<Boolean, OfflineSyncState> {
+        val targetId = resolvedTargetId ?: return false to state
+        if (targetId.startsWith(LOCAL_FLOATER_LIST_PREFIX)) return false to state
+        requireApiBody(
+            api.resetFloaterList(targetId),
+            "Could not reset floater list",
+        )
+        return true to state
+    }
+
+    private suspend fun applyDeleteFloaterListMutation(
+        resolvedTargetId: String?,
+        state: OfflineSyncState,
+    ): Pair<Boolean, OfflineSyncState> {
+        val targetId = resolvedTargetId ?: return false to state
+        if (targetId.startsWith(LOCAL_FLOATER_LIST_PREFIX)) return true to state
+        requireApiBody(
+            api.deleteFloaterListByBody(DeleteFloaterListRequest(id = targetId)),
+            "Could not delete floater list",
+        )
+        return true to state
+    }
+
+    private suspend fun applyCreateTodoMutation(
+        mutation: PendingMutationRecord,
+        state: OfflineSyncState,
+        resolvedListIds: MutableMap<String, String>,
+        resolvedTodoIds: MutableMap<String, String>,
+    ): Pair<Boolean, OfflineSyncState> {
+        var nextState = state
+        val localTodoId = mutation.targetId ?: return false to nextState
+        if (!localTodoId.startsWith(LOCAL_TODO_PREFIX)) return true to nextState
+        val localTodoExists = nextState.todos.any { it.canonicalId == localTodoId }
+        if (!localTodoExists) return true to nextState
+        val resolvedListId = mutation.listId?.let {
+            resolvedListIds[it] ?: it
+        }
+        if (resolvedListId != null && resolvedListId.startsWith(LOCAL_LIST_PREFIX)) {
+            return false to nextState
+        }
+        val created = requireApiBody(
+            api.createTodo(
+                CreateTodoRequest(
+                    title = mutation.title?.trim().orEmpty(),
+                    description = mutation.description,
+                    priority = mutation.priority ?: "Low",
+                    due = mutation.dueEpochMs?.let {
+                        Instant.ofEpochMilli(it).toString()
+                    } ?: return false to nextState,
+                    rrule = mutation.rrule?.takeIf { mutation.dueEpochMs != null },
+                    listID = resolvedListId,
+                ),
+            ),
+            "Could not create task",
+        ).todo ?: return false to nextState
+        val createdTodo = mapTodoDto(created)
+        resolvedTodoIds[localTodoId] = createdTodo.canonicalId
+        nextState = replaceLocalTodoId(nextState, localTodoId, createdTodo.canonicalId)
+        return true to nextState
+    }
+
+    private suspend fun applyUpdateTodoMutation(
+        mutation: PendingMutationRecord,
+        resolvedTargetId: String?,
+        remoteSnapshot: RemoteSnapshot,
+        state: OfflineSyncState,
+        resolvedListIds: MutableMap<String, String>,
+    ): Pair<Boolean, OfflineSyncState> {
+        val targetId = resolvedTargetId ?: return false to state
+        if (targetId.startsWith(LOCAL_TODO_PREFIX)) return false to state
+        val remoteUpdatedAt = remoteSnapshot.todoUpdatedAtByCanonical[targetId] ?: 0L
+        if (remoteUpdatedAt > mutation.timestampEpochMs) return true to state
+
+        val resolvedListId = mutation.listId?.let { resolvedListIds[it] ?: it }
+        if (!resolvedListId.isNullOrBlank() && resolvedListId.startsWith(LOCAL_LIST_PREFIX)) {
+            return false to state
+        }
+
+        val remoteTodo = remoteSnapshot.todos.firstOrNull { it.canonicalId == targetId }
+        val isDueOnlyMove = mutation.dueEpochMs != null &&
+                mutation.title == null &&
+                mutation.description == null &&
+                mutation.priority == null &&
+                mutation.pinned == null &&
+                mutation.completed == null &&
+                mutation.rrule == null &&
+                mutation.listId == null
+        val descriptionForApi = if (isDueOnlyMove) {
+            null
+        } else {
+            mutation.description
+                ?: if (remoteTodo?.description != null) "" else null
+        }
+        val rruleForApi = if (isDueOnlyMove) {
+            null
+        } else {
+            mutation.rrule ?: if (!remoteTodo?.rrule.isNullOrBlank()) "" else null
+        }
+        val listIdForApi = if (isDueOnlyMove) {
+            null
+        } else {
+            resolvedListId ?: if (!remoteTodo?.listId.isNullOrBlank()) "" else null
+        }
+
+        if (mutation.instanceDateEpochMs != null) {
+            requireApiBody(
+                api.patchTodoInstanceByBody(
+                    TodoInstanceUpdateRequest(
+                        todoId = targetId,
+                        instanceDate = Instant.ofEpochMilli(
+                            mutation.instanceDateEpochMs,
+                        ).toString(),
+                        title = mutation.title,
+                        description = descriptionForApi,
+                        priority = mutation.priority,
+                        due = mutation.dueEpochMs?.let {
+                            Instant.ofEpochMilli(it).toString()
+                        },
+                    ),
+                ),
+                "Could not update recurring task instance",
+            )
+        } else {
+            requireApiBody(
+                api.patchTodoByBody(
+                    UpdateTodoRequest(
+                        id = targetId,
+                        title = mutation.title,
+                        description = descriptionForApi,
+                        pinned = mutation.pinned,
+                        priority = mutation.priority,
+                        due = mutation.dueEpochMs?.let { Instant.ofEpochMilli(it).toString() },
+                        rrule = rruleForApi,
+                        listID = listIdForApi,
+                        dateChanged = true,
+                        rruleChanged = if (isDueOnlyMove) null else true,
+                        instanceDate = null,
+                    ),
+                ),
+                "Could not update task",
+            )
+        }
         return true to state
     }
 
