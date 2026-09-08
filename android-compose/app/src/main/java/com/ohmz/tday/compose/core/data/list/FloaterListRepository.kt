@@ -301,42 +301,50 @@ class FloaterListRepository @Inject constructor(
      * [deleteList], whose prune-half re-runs as a no-op on the already-pruned
      * state and whose own DELETE_FLOATER_LIST mutation naturally replaces this
      * marker (same targetId).
+     *
+     * Runs inside [OfflineCacheManager.withSyncLock] — the same mutex a sync holds
+     * for its whole read-fetch-merge-save span (see [SyncManager.syncCachedData])
+     * — so this write can never land between a concurrent sync's pre-network
+     * state read and its post-network save; see [ListRepository.stageDeleteList]'s
+     * matching note for why that window is otherwise unsafe.
      */
     suspend fun stageDeleteList(listId: String): StagedFloaterListDeletion {
         val normalizedListId = listId.trim()
         if (normalizedListId.isBlank()) return StagedFloaterListDeletion()
 
         var staged = StagedFloaterListDeletion()
-        cacheManager.updateOfflineState { state ->
-            val deletedFloaterIds = state.floaters
-                .filter { it.listId == normalizedListId }
-                .map { it.canonicalId }
-                .toSet()
+        cacheManager.withSyncLock {
+            cacheManager.updateOfflineState { state ->
+                val deletedFloaterIds = state.floaters
+                    .filter { it.listId == normalizedListId }
+                    .map { it.canonicalId }
+                    .toSet()
 
-            fun matchesMutation(mutation: PendingMutationRecord): Boolean =
-                mutation.targetId == normalizedListId ||
-                    mutation.listId == normalizedListId ||
-                    deletedFloaterIds.contains(mutation.targetId)
+                fun matchesMutation(mutation: PendingMutationRecord): Boolean =
+                    mutation.targetId == normalizedListId ||
+                        mutation.listId == normalizedListId ||
+                        deletedFloaterIds.contains(mutation.targetId)
 
-            val stagedMutationId = UUID.randomUUID().toString()
-            staged = StagedFloaterListDeletion(
-                removedFloaterLists = state.floaterLists.filter { it.id == normalizedListId },
-                removedFloaters = state.floaters.filter { it.listId == normalizedListId },
-                removedPendingMutations = state.pendingMutations.filter(::matchesMutation),
-                stagedMutationId = stagedMutationId,
-            )
-            state.copy(
-                floaterLists = state.floaterLists.filterNot { it.id == normalizedListId },
-                floaters = state.floaters.filterNot { it.listId == normalizedListId },
-                pendingMutations = state.pendingMutations.filterNot(::matchesMutation) +
-                    PendingMutationRecord(
-                        mutationId = stagedMutationId,
-                        kind = MutationKind.DELETE_FLOATER_LIST,
-                        targetId = normalizedListId,
-                        timestampEpochMs = System.currentTimeMillis(),
-                        staged = true,
-                    ),
-            )
+                val stagedMutationId = UUID.randomUUID().toString()
+                staged = StagedFloaterListDeletion(
+                    removedFloaterLists = state.floaterLists.filter { it.id == normalizedListId },
+                    removedFloaters = state.floaters.filter { it.listId == normalizedListId },
+                    removedPendingMutations = state.pendingMutations.filter(::matchesMutation),
+                    stagedMutationId = stagedMutationId,
+                )
+                state.copy(
+                    floaterLists = state.floaterLists.filterNot { it.id == normalizedListId },
+                    floaters = state.floaters.filterNot { it.listId == normalizedListId },
+                    pendingMutations = state.pendingMutations.filterNot(::matchesMutation) +
+                        PendingMutationRecord(
+                            mutationId = stagedMutationId,
+                            kind = MutationKind.DELETE_FLOATER_LIST,
+                            targetId = normalizedListId,
+                            timestampEpochMs = System.currentTimeMillis(),
+                            staged = true,
+                        ),
+                )
+            }
         }
         return staged
     }
