@@ -491,68 +491,21 @@ class SyncManager @Inject constructor(
                         applyPromoteFloaterMutation(mutation, resolvedTargetId, state, resolvedTodoIds)
                             .also { state = it.second }.first
 
-                    MutationKind.DEMOTE_TODO -> {
-                        val targetId = resolvedTargetId ?: return@runCatching false
-                        if (targetId.startsWith(LOCAL_TODO_PREFIX)) return@runCatching false
-                        val demoted = requireApiBody(
-                            api.demoteTodo(targetId),
-                            "Could not float task",
-                        ).floater
-                        val localFloaterId = mutation.name
-                        if (demoted != null && localFloaterId != null &&
-                            localFloaterId.startsWith(LOCAL_FLOATER_PREFIX)
-                        ) {
-                            val demotedFloater = mapFloaterDto(demoted)
-                            resolvedTodoIds[localFloaterId] = demotedFloater.canonicalId
-                            state = replaceLocalFloaterId(state, localFloaterId, demotedFloater.canonicalId)
-                        }
-                        true
-                    }
+                    MutationKind.DEMOTE_TODO ->
+                        applyDemoteTodoMutation(mutation, resolvedTargetId, state, resolvedTodoIds)
+                            .also { state = it.second }.first
 
-                    MutationKind.CREATE_STEP -> {
-                        val todoId = resolvedTargetId ?: return@runCatching false
-                        // The parent todo must exist server-side before a step attaches.
-                        if (todoId.startsWith(LOCAL_TODO_PREFIX)) return@runCatching false
-                        val created = requireApiBody(
-                            api.createTaskStep(
-                                CreateTaskStepRequest(
-                                    todoId = todoId,
-                                    title = mutation.title?.trim().orEmpty(),
-                                ),
-                            ),
-                            "Could not add step",
-                        ).step ?: return@runCatching false
-                        // Remap the optimistic local step id (carried in `name`) so a
-                        // later TOGGLE/DELETE in this same batch resolves correctly.
-                        val localStepId = mutation.name
-                        if (localStepId != null && localStepId.startsWith(LOCAL_STEP_PREFIX)) {
-                            resolvedTodoIds[localStepId] = created.id
-                        }
-                        true
-                    }
+                    MutationKind.CREATE_STEP ->
+                        applyCreateStepMutation(mutation, resolvedTargetId, state, resolvedTodoIds)
+                            .also { state = it.second }.first
 
-                    MutationKind.TOGGLE_STEP -> {
-                        val stepId = resolvedTargetId ?: return@runCatching false
-                        if (stepId.startsWith(LOCAL_STEP_PREFIX)) return@runCatching false
-                        requireApiBody(
-                            api.toggleTaskStep(
-                                ToggleTaskStepRequest(id = stepId, completed = mutation.completed ?: false),
-                            ),
-                            "Could not update step",
-                        )
-                        true
-                    }
+                    MutationKind.TOGGLE_STEP ->
+                        applyToggleStepMutation(mutation, resolvedTargetId, state)
+                            .also { state = it.second }.first
 
-                    MutationKind.DELETE_STEP -> {
-                        val stepId = resolvedTargetId ?: return@runCatching false
-                        // A step that never synced has nothing to delete server-side.
-                        if (stepId.startsWith(LOCAL_STEP_PREFIX)) return@runCatching true
-                        requireApiBody(
-                            api.deleteTaskStep(DeleteTaskStepRequest(id = stepId)),
-                            "Could not delete step",
-                        )
-                        true
-                    }
+                    MutationKind.DELETE_STEP ->
+                        applyDeleteStepMutation(resolvedTargetId, state)
+                            .also { state = it.second }.first
 
                     MutationKind.REORDER_STEPS -> {
                         val todoId = resolvedTargetId ?: return@runCatching false
@@ -1179,6 +1132,87 @@ class SyncManager @Inject constructor(
             nextState = replaceLocalTodoId(nextState, localTodoId, promotedTodo.canonicalId)
         }
         return true to nextState
+    }
+
+    private suspend fun applyDemoteTodoMutation(
+        mutation: PendingMutationRecord,
+        resolvedTargetId: String?,
+        state: OfflineSyncState,
+        resolvedTodoIds: MutableMap<String, String>,
+    ): Pair<Boolean, OfflineSyncState> {
+        var nextState = state
+        val targetId = resolvedTargetId ?: return false to nextState
+        if (targetId.startsWith(LOCAL_TODO_PREFIX)) return false to nextState
+        val demoted = requireApiBody(
+            api.demoteTodo(targetId),
+            "Could not float task",
+        ).floater
+        val localFloaterId = mutation.name
+        if (demoted != null && localFloaterId != null &&
+            localFloaterId.startsWith(LOCAL_FLOATER_PREFIX)
+        ) {
+            val demotedFloater = mapFloaterDto(demoted)
+            resolvedTodoIds[localFloaterId] = demotedFloater.canonicalId
+            nextState = replaceLocalFloaterId(nextState, localFloaterId, demotedFloater.canonicalId)
+        }
+        return true to nextState
+    }
+
+    private suspend fun applyCreateStepMutation(
+        mutation: PendingMutationRecord,
+        resolvedTargetId: String?,
+        state: OfflineSyncState,
+        resolvedTodoIds: MutableMap<String, String>,
+    ): Pair<Boolean, OfflineSyncState> {
+        val todoId = resolvedTargetId ?: return false to state
+        // The parent todo must exist server-side before a step attaches.
+        if (todoId.startsWith(LOCAL_TODO_PREFIX)) return false to state
+        val created = requireApiBody(
+            api.createTaskStep(
+                CreateTaskStepRequest(
+                    todoId = todoId,
+                    title = mutation.title?.trim().orEmpty(),
+                ),
+            ),
+            "Could not add step",
+        ).step ?: return false to state
+        // Remap the optimistic local step id (carried in `name`) so a
+        // later TOGGLE/DELETE in this same batch resolves correctly.
+        val localStepId = mutation.name
+        if (localStepId != null && localStepId.startsWith(LOCAL_STEP_PREFIX)) {
+            resolvedTodoIds[localStepId] = created.id
+        }
+        return true to state
+    }
+
+    private suspend fun applyToggleStepMutation(
+        mutation: PendingMutationRecord,
+        resolvedTargetId: String?,
+        state: OfflineSyncState,
+    ): Pair<Boolean, OfflineSyncState> {
+        val stepId = resolvedTargetId ?: return false to state
+        if (stepId.startsWith(LOCAL_STEP_PREFIX)) return false to state
+        requireApiBody(
+            api.toggleTaskStep(
+                ToggleTaskStepRequest(id = stepId, completed = mutation.completed ?: false),
+            ),
+            "Could not update step",
+        )
+        return true to state
+    }
+
+    private suspend fun applyDeleteStepMutation(
+        resolvedTargetId: String?,
+        state: OfflineSyncState,
+    ): Pair<Boolean, OfflineSyncState> {
+        val stepId = resolvedTargetId ?: return false to state
+        // A step that never synced has nothing to delete server-side.
+        if (stepId.startsWith(LOCAL_STEP_PREFIX)) return true to state
+        requireApiBody(
+            api.deleteTaskStep(DeleteTaskStepRequest(id = stepId)),
+            "Could not delete step",
+        )
+        return true to state
     }
 
     private fun mergeRemoteWithLocal(
