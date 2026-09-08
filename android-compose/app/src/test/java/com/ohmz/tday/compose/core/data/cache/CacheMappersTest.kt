@@ -325,7 +325,7 @@ class CacheMappersTest {
     @Test
     fun `replaceLocalListId renames the list, its todos, completed items and pending mutation`() {
         val state = OfflineSyncState(
-            lists = listOf(makeCachedList().copy(id = localListId, name = "Groceries")),
+            lists = listOf(makeCachedList().copy(id = localListId)),
             todos = listOf(makeCachedTodo().copy(listId = localListId)),
             completedItems = listOf(makeCachedCompleted().copy(listId = localListId)),
             pendingMutations = listOf(
@@ -334,7 +334,6 @@ class CacheMappersTest {
                     kind = MutationKind.CREATE_LIST,
                     targetId = localListId,
                     timestampEpochMs = 1L,
-                    name = "Groceries",
                 ),
             ),
         )
@@ -356,8 +355,8 @@ class CacheMappersTest {
         // not leave two rows sharing the server id.
         val state = OfflineSyncState(
             lists = listOf(
-                makeCachedList().copy(id = localListId, name = "Groceries"),
-                makeCachedList().copy(id = serverListId, name = "Groceries"),
+                makeCachedList().copy(id = localListId),
+                makeCachedList().copy(id = serverListId),
             ),
         )
 
