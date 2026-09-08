@@ -1190,7 +1190,7 @@ final class SyncManager {
                     )
                 }
                 return list
-            },
+            }.dedupedByID(),
             floaterLists: state.floaterLists,
             pendingMutations: state.pendingMutations.map { mutation in
                 PendingMutationRecord(
@@ -1268,7 +1268,7 @@ final class SyncManager {
                     updatedAtEpochMs: list.updatedAtEpochMs,
                     createdAtEpochMs: list.createdAtEpochMs
                 )
-            },
+            }.dedupedByID(),
             pendingMutations: state.pendingMutations.map { mutation in
                 PendingMutationRecord(
                     mutationId: mutation.mutationId,
