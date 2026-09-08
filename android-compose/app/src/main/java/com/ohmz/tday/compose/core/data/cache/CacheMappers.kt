@@ -6,6 +6,7 @@ import com.ohmz.tday.compose.core.data.CachedFloaterListRecord
 import com.ohmz.tday.compose.core.data.CachedFloaterRecord
 import com.ohmz.tday.compose.core.data.CachedListRecord
 import com.ohmz.tday.compose.core.data.CachedTodoRecord
+import com.ohmz.tday.compose.core.data.OfflineSyncState
 import com.ohmz.tday.compose.core.model.CompletedFloaterDto
 import com.ohmz.tday.compose.core.model.CompletedItem
 import com.ohmz.tday.compose.core.model.CompletedTodoDto
@@ -135,6 +136,70 @@ internal fun orderFloaterListsLikeWeb(lists: List<CachedFloaterListRecord>): Lis
                 .thenBy { it.index },
         )
         .map { it.value }
+}
+
+/**
+ * Renames a just-synced list from its local placeholder id to the server id
+ * it was assigned, everywhere the placeholder id appears (the list itself,
+ * its todos/completed items, and any pending mutation still targeting it).
+ *
+ * Deduplicates the rewritten list array by id afterward. A realtime
+ * self-echo of this very create can race a background sync into fetching
+ * and merging the new server row (see SyncManager.mergeRemoteWithLocal's
+ * doc comment) before this rename runs, leaving [state] with the
+ * placeholder AND the fetched row already present under two different ids;
+ * renaming the placeholder to [serverListId] in that case would otherwise
+ * turn "two rows, two ids" into "two rows, one id" instead of fixing
+ * anything. Keeping only the first of a same-id pair is safe here because
+ * by the time both exist, both already carry server-confirmed data.
+ */
+internal fun replaceLocalListId(
+    state: OfflineSyncState,
+    localListId: String,
+    serverListId: String,
+): OfflineSyncState {
+    return state.copy(
+        lists = state.lists
+            .map { if (it.id == localListId) it.copy(id = serverListId) else it }
+            .distinctBy { it.id },
+        todos = state.todos.map {
+            if (it.listId == localListId) it.copy(listId = serverListId) else it
+        },
+        completedItems = state.completedItems.map {
+            if (it.listId == localListId) it.copy(listId = serverListId) else it
+        },
+        pendingMutations = state.pendingMutations.map {
+            it.copy(
+                targetId = if (it.targetId == localListId) serverListId else it.targetId,
+                listId = if (it.listId == localListId) serverListId else it.listId,
+            )
+        },
+    )
+}
+
+/** Floater-list counterpart of [replaceLocalListId]; see its doc comment. */
+internal fun replaceLocalFloaterListId(
+    state: OfflineSyncState,
+    localListId: String,
+    serverListId: String,
+): OfflineSyncState {
+    return state.copy(
+        floaterLists = state.floaterLists
+            .map { if (it.id == localListId) it.copy(id = serverListId) else it }
+            .distinctBy { it.id },
+        floaters = state.floaters.map {
+            if (it.listId == localListId) it.copy(listId = serverListId) else it
+        },
+        completedFloaters = state.completedFloaters.map {
+            if (it.listId == localListId) it.copy(listId = serverListId) else it
+        },
+        pendingMutations = state.pendingMutations.map {
+            it.copy(
+                targetId = if (it.targetId == localListId) serverListId else it.targetId,
+                listId = if (it.listId == localListId) serverListId else it.listId,
+            )
+        },
+    )
 }
 
 internal fun listFromCache(

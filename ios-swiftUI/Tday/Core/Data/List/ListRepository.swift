@@ -79,37 +79,47 @@ final class ListRepository {
             return
         }
 
-        do {
-            let response = try await api.createList(
-                payload: CreateListRequest(name: normalizedName, color: color, iconKey: iconKey)
-            )
-            guard let createdList = response.list else {
-                return
-            }
-            let createdAt = parseOptionalDate(createdList.createdAt)?.epochMilliseconds ?? now
-            let updatedAt = parseOptionalDate(createdList.updatedAt)?.epochMilliseconds ?? now
-            _ = try await cacheManager.updateOfflineState { state in
-                var nextState = self.replaceLocalListID(state, localListID: localListID, serverListID: createdList.id)
-                let todoCount = nextState.todos.filter { !$0.completed && $0.dueEpochMs != nil && $0.listId == createdList.id }.count
-                nextState.lists = nextState.lists.map { list in
-                    guard list.id == createdList.id else {
-                        return list
-                    }
-                    return CachedListRecord(
-                        id: createdList.id,
-                        name: createdList.name,
-                        color: createdList.color,
-                        iconKey: createdList.iconKey ?? list.iconKey,
-                        todoCount: todoCount,
-                        updatedAtEpochMs: updatedAt,
-                        createdAtEpochMs: createdAt
-                    )
+        // Held for the whole request-plus-remap: a realtime self-echo of this
+        // very create can otherwise trigger a background sync whose fetch
+        // already contains the new server row while the placeholder above
+        // still carries its local_ id (see SyncManager.mergeRemoteWithLocal's
+        // doc comment) -- the union merge would then keep both. Sharing
+        // syncCachedData's lock means that fetch-and-merge can only run
+        // fully before this starts or fully after it finishes, never
+        // interleaved with it.
+        await cacheManager.withSyncLock {
+            do {
+                let response = try await api.createList(
+                    payload: CreateListRequest(name: normalizedName, color: color, iconKey: iconKey)
+                )
+                guard let createdList = response.list else {
+                    return
                 }
-                nextState.pendingMutations.removeAll { $0.mutationId == mutationID }
-                return nextState
+                let createdAt = parseOptionalDate(createdList.createdAt)?.epochMilliseconds ?? now
+                let updatedAt = parseOptionalDate(createdList.updatedAt)?.epochMilliseconds ?? now
+                _ = try await cacheManager.updateOfflineState { state in
+                    var nextState = self.replaceLocalListID(state, localListID: localListID, serverListID: createdList.id)
+                    let todoCount = nextState.todos.filter { !$0.completed && $0.dueEpochMs != nil && $0.listId == createdList.id }.count
+                    nextState.lists = nextState.lists.map { list in
+                        guard list.id == createdList.id else {
+                            return list
+                        }
+                        return CachedListRecord(
+                            id: createdList.id,
+                            name: createdList.name,
+                            color: createdList.color,
+                            iconKey: createdList.iconKey ?? list.iconKey,
+                            todoCount: todoCount,
+                            updatedAtEpochMs: updatedAt,
+                            createdAtEpochMs: createdAt
+                        )
+                    }
+                    nextState.pendingMutations.removeAll { $0.mutationId == mutationID }
+                    return nextState
+                }
+            } catch {
+                // Keep the pending CREATE_LIST mutation so background sync can retry it.
             }
-        } catch {
-            // Keep the pending CREATE_LIST mutation so background sync can retry it.
         }
     }
 
@@ -410,7 +420,7 @@ final class ListRepository {
                     updatedAtEpochMs: list.updatedAtEpochMs,
                     createdAtEpochMs: list.createdAtEpochMs
                 )
-            },
+            }.dedupedByID(),
             floaterLists: state.floaterLists,
             pendingMutations: state.pendingMutations.map { mutation in
                 PendingMutationRecord(

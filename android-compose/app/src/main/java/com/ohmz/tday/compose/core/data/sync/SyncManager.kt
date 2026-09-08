@@ -28,6 +28,8 @@ import com.ohmz.tday.compose.core.data.cache.mapListDto
 import com.ohmz.tday.compose.core.data.cache.mapTodoDto
 import com.ohmz.tday.compose.core.data.cache.orderFloaterListsLikeWeb
 import com.ohmz.tday.compose.core.data.cache.orderListsLikeWeb
+import com.ohmz.tday.compose.core.data.cache.replaceLocalFloaterListId
+import com.ohmz.tday.compose.core.data.cache.replaceLocalListId
 import com.ohmz.tday.compose.core.data.cache.todoMergeKey
 import com.ohmz.tday.compose.core.data.cache.todoToCache
 import com.ohmz.tday.compose.core.data.ConnectionFailureKind
@@ -1560,54 +1562,6 @@ class SyncManager @Inject constructor(
                 // Consumes a floater (its optimistic todo is local-prefixed and
                 // therefore already merge-protected).
                 this == MutationKind.PROMOTE_FLOATER
-    }
-
-    private fun replaceLocalListId(
-        state: OfflineSyncState,
-        localListId: String,
-        serverListId: String,
-    ): OfflineSyncState {
-        return state.copy(
-            lists = state.lists.map {
-                if (it.id == localListId) it.copy(id = serverListId) else it
-            },
-            todos = state.todos.map {
-                if (it.listId == localListId) it.copy(listId = serverListId) else it
-            },
-            completedItems = state.completedItems.map {
-                if (it.listId == localListId) it.copy(listId = serverListId) else it
-            },
-            pendingMutations = state.pendingMutations.map {
-                it.copy(
-                    targetId = if (it.targetId == localListId) serverListId else it.targetId,
-                    listId = if (it.listId == localListId) serverListId else it.listId,
-                )
-            },
-        )
-    }
-
-    private fun replaceLocalFloaterListId(
-        state: OfflineSyncState,
-        localListId: String,
-        serverListId: String,
-    ): OfflineSyncState {
-        return state.copy(
-            floaterLists = state.floaterLists.map {
-                if (it.id == localListId) it.copy(id = serverListId) else it
-            },
-            floaters = state.floaters.map {
-                if (it.listId == localListId) it.copy(listId = serverListId) else it
-            },
-            completedFloaters = state.completedFloaters.map {
-                if (it.listId == localListId) it.copy(listId = serverListId) else it
-            },
-            pendingMutations = state.pendingMutations.map {
-                it.copy(
-                    targetId = if (it.targetId == localListId) serverListId else it.targetId,
-                    listId = if (it.listId == localListId) serverListId else it.listId,
-                )
-            },
-        )
     }
 
     private fun replaceLocalTodoId(
