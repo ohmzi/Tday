@@ -266,48 +266,59 @@ class ListRepository @Inject constructor(
      * existing [deleteList], whose prune-half re-runs as a no-op on the
      * already-pruned state and whose own DELETE_LIST mutation naturally replaces
      * this marker (same targetId).
+     *
+     * Runs inside [OfflineCacheManager.withSyncLock] — the same mutex a sync holds
+     * for its whole read-fetch-merge-save span (see [SyncManager.syncCachedData])
+     * — so this write can never land between a concurrent sync's pre-network
+     * state read and its post-network save. Without that, the sync's merge would
+     * be computed from a snapshot that still has the list, and its final save
+     * unconditionally overwrites the `lists` table with that stale merge,
+     * resurrecting the list this call just pruned (the staged marker survives
+     * via [mergeConcurrentlyQueuedMutations], but `lists` itself does not).
      */
     suspend fun stageDeleteList(listId: String): StagedListDeletion {
         val normalizedListId = listId.trim()
         if (normalizedListId.isBlank()) return StagedListDeletion()
 
         var staged = StagedListDeletion()
-        cacheManager.updateOfflineState { state ->
-            val deletedTodoIds = state.todos
-                .filter { it.listId == normalizedListId }
-                .map { it.canonicalId }
-                .toSet()
+        cacheManager.withSyncLock {
+            cacheManager.updateOfflineState { state ->
+                val deletedTodoIds = state.todos
+                    .filter { it.listId == normalizedListId }
+                    .map { it.canonicalId }
+                    .toSet()
 
-            fun matchesMutation(mutation: PendingMutationRecord): Boolean =
-                mutation.targetId == normalizedListId ||
-                    mutation.listId == normalizedListId ||
-                    deletedTodoIds.contains(mutation.targetId)
+                fun matchesMutation(mutation: PendingMutationRecord): Boolean =
+                    mutation.targetId == normalizedListId ||
+                        mutation.listId == normalizedListId ||
+                        deletedTodoIds.contains(mutation.targetId)
 
-            fun matchesCompleted(completed: CachedCompletedRecord): Boolean =
-                completed.listId == normalizedListId ||
-                    completed.originalTodoId?.let(deletedTodoIds::contains) == true
+                fun matchesCompleted(completed: CachedCompletedRecord): Boolean =
+                    completed.listId == normalizedListId ||
+                        completed.originalTodoId?.let(deletedTodoIds::contains) == true
 
-            val stagedMutationId = UUID.randomUUID().toString()
-            staged = StagedListDeletion(
-                removedLists = state.lists.filter { it.id == normalizedListId },
-                removedTodos = state.todos.filter { it.listId == normalizedListId },
-                removedCompletedItems = state.completedItems.filter(::matchesCompleted),
-                removedPendingMutations = state.pendingMutations.filter(::matchesMutation),
-                stagedMutationId = stagedMutationId,
-            )
-            state.copy(
-                lists = state.lists.filterNot { it.id == normalizedListId },
-                todos = state.todos.filterNot { it.listId == normalizedListId },
-                completedItems = state.completedItems.filterNot(::matchesCompleted),
-                pendingMutations = state.pendingMutations.filterNot(::matchesMutation) +
-                    PendingMutationRecord(
-                        mutationId = stagedMutationId,
-                        kind = MutationKind.DELETE_LIST,
-                        targetId = normalizedListId,
-                        timestampEpochMs = System.currentTimeMillis(),
-                        staged = true,
-                    ),
-            )
+                val stagedMutationId = UUID.randomUUID().toString()
+                staged = StagedListDeletion(
+                    removedLists = state.lists.filter { it.id == normalizedListId },
+                    removedTodos = state.todos.filter { it.listId == normalizedListId },
+                    removedCompletedItems = state.completedItems.filter(::matchesCompleted),
+                    removedPendingMutations = state.pendingMutations.filter(::matchesMutation),
+                    stagedMutationId = stagedMutationId,
+                )
+                state.copy(
+                    lists = state.lists.filterNot { it.id == normalizedListId },
+                    todos = state.todos.filterNot { it.listId == normalizedListId },
+                    completedItems = state.completedItems.filterNot(::matchesCompleted),
+                    pendingMutations = state.pendingMutations.filterNot(::matchesMutation) +
+                        PendingMutationRecord(
+                            mutationId = stagedMutationId,
+                            kind = MutationKind.DELETE_LIST,
+                            targetId = normalizedListId,
+                            timestampEpochMs = System.currentTimeMillis(),
+                            staged = true,
+                        ),
+                )
+            }
         }
         return staged
     }
