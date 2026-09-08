@@ -475,75 +475,21 @@ class SyncManager @Inject constructor(
                         applyCompleteTodoInstanceMutation(mutation, resolvedTargetId, state)
                             .also { state = it.second }.first
 
-                    MutationKind.UNCOMPLETE_TODO -> {
-                        val targetId = resolvedTargetId ?: return@runCatching false
-                        if (targetId.startsWith(LOCAL_TODO_PREFIX)) return@runCatching false
-                        requireApiBody(
-                            api.uncompleteTodoByBody(
-                                TodoUncompleteRequest(
-                                    id = targetId,
-                                    instanceDate = mutation.instanceDateEpochMs?.let {
-                                        Instant.ofEpochMilli(it).toString()
-                                    },
-                                ),
-                            ),
-                            "Could not restore task",
-                        )
-                        true
-                    }
+                    MutationKind.UNCOMPLETE_TODO ->
+                        applyUncompleteTodoMutation(mutation, resolvedTargetId, state)
+                            .also { state = it.second }.first
 
-                    MutationKind.COMPLETE_FLOATER -> {
-                        val targetId = resolvedTargetId ?: return@runCatching false
-                        if (targetId.startsWith(LOCAL_FLOATER_PREFIX)) return@runCatching false
-                        val remoteUpdatedAt =
-                            remoteSnapshot.floaterUpdatedAtByCanonical[targetId] ?: 0L
-                        if (remoteUpdatedAt > mutation.timestampEpochMs) return@runCatching true
-                        requireApiBody(
-                            api.completeFloaterByBody(FloaterCompleteRequest(id = targetId)),
-                            "Could not complete floater",
-                        )
-                        true
-                    }
+                    MutationKind.COMPLETE_FLOATER ->
+                        applyCompleteFloaterMutation(mutation, resolvedTargetId, remoteSnapshot, state)
+                            .also { state = it.second }.first
 
-                    MutationKind.UNCOMPLETE_FLOATER -> {
-                        val targetId = resolvedTargetId ?: return@runCatching false
-                        if (targetId.startsWith(LOCAL_FLOATER_PREFIX)) return@runCatching false
-                        requireApiBody(
-                            api.uncompleteFloaterByBody(FloaterUncompleteRequest(id = targetId)),
-                            "Could not restore floater",
-                        )
-                        true
-                    }
+                    MutationKind.UNCOMPLETE_FLOATER ->
+                        applyUncompleteFloaterMutation(resolvedTargetId, state)
+                            .also { state = it.second }.first
 
-                    MutationKind.PROMOTE_FLOATER -> {
-                        // A floater that never reached the server has nothing to
-                        // promote yet; its CREATE_FLOATER replays first and
-                        // resolvedTargetId remaps us to the server id.
-                        val targetId = resolvedTargetId ?: return@runCatching false
-                        if (targetId.startsWith(LOCAL_FLOATER_PREFIX)) return@runCatching false
-                        val due = mutation.dueEpochMs ?: return@runCatching true
-                        val promoted = requireApiBody(
-                            api.promoteFloater(
-                                targetId,
-                                PromoteFloaterRequest(
-                                    due = Instant.ofEpochMilli(due).toString(),
-                                    rrule = mutation.rrule,
-                                ),
-                            ),
-                            "Could not schedule floater",
-                        ).todo
-                        // Remap the optimistic local todo (minted at enqueue time,
-                        // carried in `name`) to the server row — CREATE_TODO-style.
-                        val localTodoId = mutation.name
-                        if (promoted != null && localTodoId != null &&
-                            localTodoId.startsWith(LOCAL_TODO_PREFIX)
-                        ) {
-                            val promotedTodo = mapTodoDto(promoted)
-                            resolvedTodoIds[localTodoId] = promotedTodo.canonicalId
-                            state = replaceLocalTodoId(state, localTodoId, promotedTodo.canonicalId)
-                        }
-                        true
-                    }
+                    MutationKind.PROMOTE_FLOATER ->
+                        applyPromoteFloaterMutation(mutation, resolvedTargetId, state, resolvedTodoIds)
+                            .also { state = it.second }.first
 
                     MutationKind.DEMOTE_TODO -> {
                         val targetId = resolvedTargetId ?: return@runCatching false
@@ -1145,6 +1091,94 @@ class SyncManager @Inject constructor(
             "Could not complete recurring task",
         )
         return true to state
+    }
+
+    private suspend fun applyUncompleteTodoMutation(
+        mutation: PendingMutationRecord,
+        resolvedTargetId: String?,
+        state: OfflineSyncState,
+    ): Pair<Boolean, OfflineSyncState> {
+        val targetId = resolvedTargetId ?: return false to state
+        if (targetId.startsWith(LOCAL_TODO_PREFIX)) return false to state
+        requireApiBody(
+            api.uncompleteTodoByBody(
+                TodoUncompleteRequest(
+                    id = targetId,
+                    instanceDate = mutation.instanceDateEpochMs?.let {
+                        Instant.ofEpochMilli(it).toString()
+                    },
+                ),
+            ),
+            "Could not restore task",
+        )
+        return true to state
+    }
+
+    private suspend fun applyCompleteFloaterMutation(
+        mutation: PendingMutationRecord,
+        resolvedTargetId: String?,
+        remoteSnapshot: RemoteSnapshot,
+        state: OfflineSyncState,
+    ): Pair<Boolean, OfflineSyncState> {
+        val targetId = resolvedTargetId ?: return false to state
+        if (targetId.startsWith(LOCAL_FLOATER_PREFIX)) return false to state
+        val remoteUpdatedAt =
+            remoteSnapshot.floaterUpdatedAtByCanonical[targetId] ?: 0L
+        if (remoteUpdatedAt > mutation.timestampEpochMs) return true to state
+        requireApiBody(
+            api.completeFloaterByBody(FloaterCompleteRequest(id = targetId)),
+            "Could not complete floater",
+        )
+        return true to state
+    }
+
+    private suspend fun applyUncompleteFloaterMutation(
+        resolvedTargetId: String?,
+        state: OfflineSyncState,
+    ): Pair<Boolean, OfflineSyncState> {
+        val targetId = resolvedTargetId ?: return false to state
+        if (targetId.startsWith(LOCAL_FLOATER_PREFIX)) return false to state
+        requireApiBody(
+            api.uncompleteFloaterByBody(FloaterUncompleteRequest(id = targetId)),
+            "Could not restore floater",
+        )
+        return true to state
+    }
+
+    private suspend fun applyPromoteFloaterMutation(
+        mutation: PendingMutationRecord,
+        resolvedTargetId: String?,
+        state: OfflineSyncState,
+        resolvedTodoIds: MutableMap<String, String>,
+    ): Pair<Boolean, OfflineSyncState> {
+        var nextState = state
+        // A floater that never reached the server has nothing to
+        // promote yet; its CREATE_FLOATER replays first and
+        // resolvedTargetId remaps us to the server id.
+        val targetId = resolvedTargetId ?: return false to nextState
+        if (targetId.startsWith(LOCAL_FLOATER_PREFIX)) return false to nextState
+        val due = mutation.dueEpochMs ?: return true to nextState
+        val promoted = requireApiBody(
+            api.promoteFloater(
+                targetId,
+                PromoteFloaterRequest(
+                    due = Instant.ofEpochMilli(due).toString(),
+                    rrule = mutation.rrule,
+                ),
+            ),
+            "Could not schedule floater",
+        ).todo
+        // Remap the optimistic local todo (minted at enqueue time,
+        // carried in `name`) to the server row — CREATE_TODO-style.
+        val localTodoId = mutation.name
+        if (promoted != null && localTodoId != null &&
+            localTodoId.startsWith(LOCAL_TODO_PREFIX)
+        ) {
+            val promotedTodo = mapTodoDto(promoted)
+            resolvedTodoIds[localTodoId] = promotedTodo.canonicalId
+            nextState = replaceLocalTodoId(nextState, localTodoId, promotedTodo.canonicalId)
+        }
+        return true to nextState
     }
 
     private fun mergeRemoteWithLocal(
