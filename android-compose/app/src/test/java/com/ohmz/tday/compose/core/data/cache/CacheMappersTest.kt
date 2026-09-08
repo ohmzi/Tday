@@ -473,7 +473,7 @@ class CacheMappersTest {
     private fun makeCachedFloaterList() = CachedFloaterListRecord(
         id = "floater-list-1",
         name = "Anytime",
-        color = "#00FF00",
+        color = null,
         iconKey = null,
         todoCount = 2,
         updatedAtEpochMs = updatedInstant.toEpochMilli(),
