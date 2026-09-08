@@ -233,59 +233,69 @@ final class ListRepository {
     /// — its prune half re-runs as a no-op and its own DELETE_LIST mutation
     /// naturally replaces this marker (same targetId) — or restore with
     /// `undoStagedList(_:)`.
-    func stageDeleteList(listId: String) -> StagedListDeletion {
+    ///
+    /// Runs inside `cacheManager.withSyncLock` — the same lock a sync holds for
+    /// its whole read-fetch-merge-save span (see `SyncManager.syncCachedData`)
+    /// — so this write can never land between a concurrent sync's pre-network
+    /// state read and its post-network save. Without that, the sync's merge
+    /// would be computed from a snapshot that still has the list, and its final
+    /// `saveOfflineState` unconditionally overwrites the cached lists with that
+    /// stale merge, resurrecting the list this call just pruned.
+    func stageDeleteList(listId: String) async -> StagedListDeletion {
         let normalizedListID = listId.trimmingCharacters(in: .whitespacesAndNewlines)
         var staged = StagedListDeletion(lists: [], todos: [], completedItems: [], pendingMutations: [])
         guard !normalizedListID.isEmpty else {
             return staged
         }
 
-        cacheManager.updateOfflineState { state in
-            var nextState = state
-            let deletedTodoIDs = Set(state.todos.filter { $0.listId == normalizedListID }.map(\.canonicalId))
-            let isRemovedCompleted: (CachedCompletedRecord) -> Bool = { completed in
-                completed.listId == normalizedListID ||
-                    completed.originalTodoId.map { deletedTodoIDs.contains($0) } == true
-            }
-            let isRemovedMutation: (PendingMutationRecord) -> Bool = { mutation in
-                mutation.targetId == normalizedListID ||
-                    mutation.listId == normalizedListID ||
-                    mutation.targetId.map { deletedTodoIDs.contains($0) } == true
-            }
-            let stagedMutationID = UUID().uuidString
-            staged = StagedListDeletion(
-                lists: state.lists.filter { $0.id == normalizedListID },
-                todos: state.todos.filter { $0.listId == normalizedListID },
-                completedItems: state.completedItems.filter(isRemovedCompleted),
-                pendingMutations: state.pendingMutations.filter(isRemovedMutation),
-                stagedMutationId: stagedMutationID
-            )
-            nextState.lists.removeAll { $0.id == normalizedListID }
-            nextState.todos.removeAll { $0.listId == normalizedListID }
-            nextState.completedItems.removeAll(where: isRemovedCompleted)
-            nextState.pendingMutations.removeAll(where: isRemovedMutation)
-            nextState.pendingMutations.append(
-                PendingMutationRecord(
-                    mutationId: stagedMutationID,
-                    kind: .deleteList,
-                    targetId: normalizedListID,
-                    timestampEpochMs: Date().epochMilliseconds,
-                    title: nil,
-                    description: nil,
-                    priority: nil,
-                    dueEpochMs: nil,
-                    rrule: nil,
-                    listId: nil,
-                    pinned: nil,
-                    completed: nil,
-                    instanceDateEpochMs: nil,
-                    name: nil,
-                    color: nil,
-                    iconKey: nil,
-                    staged: true
+        await cacheManager.withSyncLock {
+            cacheManager.updateOfflineState { state in
+                var nextState = state
+                let deletedTodoIDs = Set(state.todos.filter { $0.listId == normalizedListID }.map(\.canonicalId))
+                let isRemovedCompleted: (CachedCompletedRecord) -> Bool = { completed in
+                    completed.listId == normalizedListID ||
+                        completed.originalTodoId.map { deletedTodoIDs.contains($0) } == true
+                }
+                let isRemovedMutation: (PendingMutationRecord) -> Bool = { mutation in
+                    mutation.targetId == normalizedListID ||
+                        mutation.listId == normalizedListID ||
+                        mutation.targetId.map { deletedTodoIDs.contains($0) } == true
+                }
+                let stagedMutationID = UUID().uuidString
+                staged = StagedListDeletion(
+                    lists: state.lists.filter { $0.id == normalizedListID },
+                    todos: state.todos.filter { $0.listId == normalizedListID },
+                    completedItems: state.completedItems.filter(isRemovedCompleted),
+                    pendingMutations: state.pendingMutations.filter(isRemovedMutation),
+                    stagedMutationId: stagedMutationID
                 )
-            )
-            return nextState
+                nextState.lists.removeAll { $0.id == normalizedListID }
+                nextState.todos.removeAll { $0.listId == normalizedListID }
+                nextState.completedItems.removeAll(where: isRemovedCompleted)
+                nextState.pendingMutations.removeAll(where: isRemovedMutation)
+                nextState.pendingMutations.append(
+                    PendingMutationRecord(
+                        mutationId: stagedMutationID,
+                        kind: .deleteList,
+                        targetId: normalizedListID,
+                        timestampEpochMs: Date().epochMilliseconds,
+                        title: nil,
+                        description: nil,
+                        priority: nil,
+                        dueEpochMs: nil,
+                        rrule: nil,
+                        listId: nil,
+                        pinned: nil,
+                        completed: nil,
+                        instanceDateEpochMs: nil,
+                        name: nil,
+                        color: nil,
+                        iconKey: nil,
+                        staged: true
+                    )
+                )
+                return nextState
+            }
         }
         return staged
     }

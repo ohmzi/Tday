@@ -240,59 +240,67 @@ final class FloaterListRepository {
     /// `deleteList(listId:onOptimisticDelete:)` — its prune half re-runs as a
     /// no-op and its own DELETE_FLOATER_LIST mutation naturally replaces this
     /// marker (same targetId) — or restore with `undoStagedList(_:)`.
-    func stageDeleteList(listId: String) -> StagedFloaterListDeletion {
+    ///
+    /// Runs inside `cacheManager.withSyncLock` — the same lock a sync holds for
+    /// its whole read-fetch-merge-save span (see `SyncManager.syncCachedData`)
+    /// — so this write can never land between a concurrent sync's pre-network
+    /// state read and its post-network save; see `ListRepository.stageDeleteList`'s
+    /// matching note for why that window is otherwise unsafe.
+    func stageDeleteList(listId: String) async -> StagedFloaterListDeletion {
         let normalizedListID = listId.trimmingCharacters(in: .whitespacesAndNewlines)
         var staged = StagedFloaterListDeletion(floaterLists: [], floaters: [], completedFloaters: [], pendingMutations: [])
         guard !normalizedListID.isEmpty else {
             return staged
         }
 
-        cacheManager.updateOfflineState { state in
-            var nextState = state
-            let deletedFloaterIDs = Set(state.floaters.filter { $0.listId == normalizedListID }.map(\.canonicalId))
-            let isRemovedCompleted: (CachedCompletedFloaterRecord) -> Bool = { completed in
-                completed.listId == normalizedListID ||
-                    completed.originalFloaterId.map { deletedFloaterIDs.contains($0) } == true
-            }
-            let isRemovedMutation: (PendingMutationRecord) -> Bool = { mutation in
-                mutation.targetId == normalizedListID ||
-                    mutation.listId == normalizedListID ||
-                    mutation.targetId.map { deletedFloaterIDs.contains($0) } == true
-            }
-            let stagedMutationID = UUID().uuidString
-            staged = StagedFloaterListDeletion(
-                floaterLists: state.floaterLists.filter { $0.id == normalizedListID },
-                floaters: state.floaters.filter { $0.listId == normalizedListID },
-                completedFloaters: state.completedFloaters.filter(isRemovedCompleted),
-                pendingMutations: state.pendingMutations.filter(isRemovedMutation),
-                stagedMutationId: stagedMutationID
-            )
-            nextState.floaterLists.removeAll { $0.id == normalizedListID }
-            nextState.floaters.removeAll { $0.listId == normalizedListID }
-            nextState.completedFloaters.removeAll(where: isRemovedCompleted)
-            nextState.pendingMutations.removeAll(where: isRemovedMutation)
-            nextState.pendingMutations.append(
-                PendingMutationRecord(
-                    mutationId: stagedMutationID,
-                    kind: .deleteFloaterList,
-                    targetId: normalizedListID,
-                    timestampEpochMs: Date().epochMilliseconds,
-                    title: nil,
-                    description: nil,
-                    priority: nil,
-                    dueEpochMs: nil,
-                    rrule: nil,
-                    listId: nil,
-                    pinned: nil,
-                    completed: nil,
-                    instanceDateEpochMs: nil,
-                    name: nil,
-                    color: nil,
-                    iconKey: nil,
-                    staged: true
+        await cacheManager.withSyncLock {
+            cacheManager.updateOfflineState { state in
+                var nextState = state
+                let deletedFloaterIDs = Set(state.floaters.filter { $0.listId == normalizedListID }.map(\.canonicalId))
+                let isRemovedCompleted: (CachedCompletedFloaterRecord) -> Bool = { completed in
+                    completed.listId == normalizedListID ||
+                        completed.originalFloaterId.map { deletedFloaterIDs.contains($0) } == true
+                }
+                let isRemovedMutation: (PendingMutationRecord) -> Bool = { mutation in
+                    mutation.targetId == normalizedListID ||
+                        mutation.listId == normalizedListID ||
+                        mutation.targetId.map { deletedFloaterIDs.contains($0) } == true
+                }
+                let stagedMutationID = UUID().uuidString
+                staged = StagedFloaterListDeletion(
+                    floaterLists: state.floaterLists.filter { $0.id == normalizedListID },
+                    floaters: state.floaters.filter { $0.listId == normalizedListID },
+                    completedFloaters: state.completedFloaters.filter(isRemovedCompleted),
+                    pendingMutations: state.pendingMutations.filter(isRemovedMutation),
+                    stagedMutationId: stagedMutationID
                 )
-            )
-            return nextState
+                nextState.floaterLists.removeAll { $0.id == normalizedListID }
+                nextState.floaters.removeAll { $0.listId == normalizedListID }
+                nextState.completedFloaters.removeAll(where: isRemovedCompleted)
+                nextState.pendingMutations.removeAll(where: isRemovedMutation)
+                nextState.pendingMutations.append(
+                    PendingMutationRecord(
+                        mutationId: stagedMutationID,
+                        kind: .deleteFloaterList,
+                        targetId: normalizedListID,
+                        timestampEpochMs: Date().epochMilliseconds,
+                        title: nil,
+                        description: nil,
+                        priority: nil,
+                        dueEpochMs: nil,
+                        rrule: nil,
+                        listId: nil,
+                        pinned: nil,
+                        completed: nil,
+                        instanceDateEpochMs: nil,
+                        name: nil,
+                        color: nil,
+                        iconKey: nil,
+                        staged: true
+                    )
+                )
+                return nextState
+            }
         }
         return staged
     }
