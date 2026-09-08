@@ -459,78 +459,21 @@ class SyncManager @Inject constructor(
                         applyDeleteFloaterMutation(mutation, resolvedTargetId, remoteSnapshot, state)
                             .also { state = it.second }.first
 
-                    MutationKind.SET_PINNED -> {
-                        val targetId = resolvedTargetId ?: return@runCatching false
-                        if (targetId.startsWith(LOCAL_TODO_PREFIX)) return@runCatching false
-                        val remoteUpdatedAt = remoteSnapshot.todoUpdatedAtByCanonical[targetId] ?: 0L
-                        if (remoteUpdatedAt > mutation.timestampEpochMs) return@runCatching true
-                        requireApiBody(
-                            api.patchTodoByBody(
-                                UpdateTodoRequest(id = targetId, pinned = mutation.pinned ?: false),
-                            ),
-                            "Could not update pin",
-                        )
-                        true
-                    }
+                    MutationKind.SET_PINNED ->
+                        applySetPinnedMutation(mutation, resolvedTargetId, remoteSnapshot, state)
+                            .also { state = it.second }.first
 
-                    MutationKind.SET_PRIORITY -> {
-                        val targetId = resolvedTargetId ?: return@runCatching false
-                        if (targetId.startsWith(LOCAL_TODO_PREFIX)) return@runCatching false
-                        val remoteUpdatedAt = remoteSnapshot.todoUpdatedAtByCanonical[targetId] ?: 0L
-                        if (remoteUpdatedAt > mutation.timestampEpochMs) return@runCatching true
+                    MutationKind.SET_PRIORITY ->
+                        applySetPriorityMutation(mutation, resolvedTargetId, remoteSnapshot, state)
+                            .also { state = it.second }.first
 
-                        val priority = mutation.priority ?: "Low"
-                        val instanceDateEpochMs = mutation.instanceDateEpochMs
-                        if (instanceDateEpochMs != null) {
-                            requireApiBody(
-                                api.prioritizeTodoByBody(
-                                    TodoPrioritizeRequest(
-                                        id = targetId,
-                                        priority = priority,
-                                        instanceDate = Instant.ofEpochMilli(instanceDateEpochMs).toString(),
-                                    ),
-                                ),
-                                "Could not update priority",
-                            )
-                        } else {
-                            requireApiBody(
-                                api.patchTodoByBody(
-                                    UpdateTodoRequest(id = targetId, priority = priority),
-                                ),
-                                "Could not update priority",
-                            )
-                        }
-                        true
-                    }
+                    MutationKind.COMPLETE_TODO ->
+                        applyCompleteTodoMutation(mutation, resolvedTargetId, remoteSnapshot, state)
+                            .also { state = it.second }.first
 
-                    MutationKind.COMPLETE_TODO -> {
-                        val targetId = resolvedTargetId ?: return@runCatching false
-                        if (targetId.startsWith(LOCAL_TODO_PREFIX)) return@runCatching false
-                        val remoteUpdatedAt = remoteSnapshot.todoUpdatedAtByCanonical[targetId] ?: 0L
-                        if (remoteUpdatedAt > mutation.timestampEpochMs) return@runCatching true
-                        requireApiBody(
-                            api.completeTodoByBody(TodoCompleteRequest(id = targetId)),
-                            "Could not complete task",
-                        )
-                        true
-                    }
-
-                    MutationKind.COMPLETE_TODO_INSTANCE -> {
-                        val targetId = resolvedTargetId ?: return@runCatching false
-                        if (targetId.startsWith(LOCAL_TODO_PREFIX)) return@runCatching false
-                        requireApiBody(
-                            api.completeTodoByBody(
-                                TodoCompleteRequest(
-                                    id = targetId,
-                                    instanceDate = mutation.instanceDateEpochMs?.let {
-                                        Instant.ofEpochMilli(it).toString()
-                                    },
-                                ),
-                            ),
-                            "Could not complete recurring task",
-                        )
-                        true
-                    }
+                    MutationKind.COMPLETE_TODO_INSTANCE ->
+                        applyCompleteTodoInstanceMutation(mutation, resolvedTargetId, state)
+                            .also { state = it.second }.first
 
                     MutationKind.UNCOMPLETE_TODO -> {
                         val targetId = resolvedTargetId ?: return@runCatching false
@@ -1108,6 +1051,98 @@ class SyncManager @Inject constructor(
         requireApiBody(
             api.deleteFloaterByBody(DeleteFloaterRequest(id = targetId)),
             "Could not delete floater",
+        )
+        return true to state
+    }
+
+    private suspend fun applySetPinnedMutation(
+        mutation: PendingMutationRecord,
+        resolvedTargetId: String?,
+        remoteSnapshot: RemoteSnapshot,
+        state: OfflineSyncState,
+    ): Pair<Boolean, OfflineSyncState> {
+        val targetId = resolvedTargetId ?: return false to state
+        if (targetId.startsWith(LOCAL_TODO_PREFIX)) return false to state
+        val remoteUpdatedAt = remoteSnapshot.todoUpdatedAtByCanonical[targetId] ?: 0L
+        if (remoteUpdatedAt > mutation.timestampEpochMs) return true to state
+        requireApiBody(
+            api.patchTodoByBody(
+                UpdateTodoRequest(id = targetId, pinned = mutation.pinned ?: false),
+            ),
+            "Could not update pin",
+        )
+        return true to state
+    }
+
+    private suspend fun applySetPriorityMutation(
+        mutation: PendingMutationRecord,
+        resolvedTargetId: String?,
+        remoteSnapshot: RemoteSnapshot,
+        state: OfflineSyncState,
+    ): Pair<Boolean, OfflineSyncState> {
+        val targetId = resolvedTargetId ?: return false to state
+        if (targetId.startsWith(LOCAL_TODO_PREFIX)) return false to state
+        val remoteUpdatedAt = remoteSnapshot.todoUpdatedAtByCanonical[targetId] ?: 0L
+        if (remoteUpdatedAt > mutation.timestampEpochMs) return true to state
+
+        val priority = mutation.priority ?: "Low"
+        val instanceDateEpochMs = mutation.instanceDateEpochMs
+        if (instanceDateEpochMs != null) {
+            requireApiBody(
+                api.prioritizeTodoByBody(
+                    TodoPrioritizeRequest(
+                        id = targetId,
+                        priority = priority,
+                        instanceDate = Instant.ofEpochMilli(instanceDateEpochMs).toString(),
+                    ),
+                ),
+                "Could not update priority",
+            )
+        } else {
+            requireApiBody(
+                api.patchTodoByBody(
+                    UpdateTodoRequest(id = targetId, priority = priority),
+                ),
+                "Could not update priority",
+            )
+        }
+        return true to state
+    }
+
+    private suspend fun applyCompleteTodoMutation(
+        mutation: PendingMutationRecord,
+        resolvedTargetId: String?,
+        remoteSnapshot: RemoteSnapshot,
+        state: OfflineSyncState,
+    ): Pair<Boolean, OfflineSyncState> {
+        val targetId = resolvedTargetId ?: return false to state
+        if (targetId.startsWith(LOCAL_TODO_PREFIX)) return false to state
+        val remoteUpdatedAt = remoteSnapshot.todoUpdatedAtByCanonical[targetId] ?: 0L
+        if (remoteUpdatedAt > mutation.timestampEpochMs) return true to state
+        requireApiBody(
+            api.completeTodoByBody(TodoCompleteRequest(id = targetId)),
+            "Could not complete task",
+        )
+        return true to state
+    }
+
+    private suspend fun applyCompleteTodoInstanceMutation(
+        mutation: PendingMutationRecord,
+        resolvedTargetId: String?,
+        state: OfflineSyncState,
+    ): Pair<Boolean, OfflineSyncState> {
+        val targetId = resolvedTargetId ?: return false to state
+        if (targetId.startsWith(LOCAL_TODO_PREFIX)) return false to state
+        requireApiBody(
+            api.completeTodoByBody(
+                TodoCompleteRequest(
+                    id = targetId,
+                    instanceDate = mutation.instanceDateEpochMs?.let {
+                        Instant.ofEpochMilli(it).toString()
+                    },
+                ),
+            ),
+            "Could not complete recurring task",
         )
         return true to state
     }
