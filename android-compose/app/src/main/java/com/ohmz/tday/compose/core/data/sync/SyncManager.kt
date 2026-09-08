@@ -507,21 +507,9 @@ class SyncManager @Inject constructor(
                         applyDeleteStepMutation(resolvedTargetId, state)
                             .also { state = it.second }.first
 
-                    MutationKind.REORDER_STEPS -> {
-                        val todoId = resolvedTargetId ?: return@runCatching false
-                        if (todoId.startsWith(LOCAL_TODO_PREFIX)) return@runCatching false
-                        val orderedIds = mutation.orderedIds.orEmpty()
-                            .map { resolvedTodoIds[it] ?: it }
-                            .filterNot { it.startsWith(LOCAL_STEP_PREFIX) }
-                        if (orderedIds.isEmpty()) return@runCatching true
-                        requireApiBody(
-                            api.reorderTaskSteps(
-                                ReorderTaskStepsRequest(todoId = todoId, orderedIds = orderedIds),
-                            ),
-                            "Could not reorder steps",
-                        )
-                        true
-                    }
+                    MutationKind.REORDER_STEPS ->
+                        applyReorderStepsMutation(mutation, resolvedTargetId, state, resolvedTodoIds)
+                            .also { state = it.second }.first
                 }
             }.getOrElse { error ->
                 if (isLikelyConnectivityIssue(error)) {
@@ -1211,6 +1199,27 @@ class SyncManager @Inject constructor(
         requireApiBody(
             api.deleteTaskStep(DeleteTaskStepRequest(id = stepId)),
             "Could not delete step",
+        )
+        return true to state
+    }
+
+    private suspend fun applyReorderStepsMutation(
+        mutation: PendingMutationRecord,
+        resolvedTargetId: String?,
+        state: OfflineSyncState,
+        resolvedTodoIds: MutableMap<String, String>,
+    ): Pair<Boolean, OfflineSyncState> {
+        val todoId = resolvedTargetId ?: return false to state
+        if (todoId.startsWith(LOCAL_TODO_PREFIX)) return false to state
+        val orderedIds = mutation.orderedIds.orEmpty()
+            .map { resolvedTodoIds[it] ?: it }
+            .filterNot { it.startsWith(LOCAL_STEP_PREFIX) }
+        if (orderedIds.isEmpty()) return true to state
+        requireApiBody(
+            api.reorderTaskSteps(
+                ReorderTaskStepsRequest(todoId = todoId, orderedIds = orderedIds),
+            ),
+            "Could not reorder steps",
         )
         return true to state
     }
