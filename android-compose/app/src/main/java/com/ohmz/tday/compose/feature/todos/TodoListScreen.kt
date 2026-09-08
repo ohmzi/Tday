@@ -1002,7 +1002,6 @@ fun TodoListScreen( // skipcq: KT-R1006
         label = "todoFabOffsetY",
     )
     val timelineItemSpacing = TimelineDateGroupSpacing
-    val timelineHeaderBodySpacing = TimelineHeaderBodySpacing
     fun highlightedTodoListTarget(todoId: String): Pair<Int, String>? {
         // Starts at 1: the hero block holds index 0 on this path, so every row
         // below it is one further down than the sections alone would say.
@@ -1171,6 +1170,58 @@ fun TodoListScreen( // skipcq: KT-R1006
                 requestTaskReschedule(drag.todo, targetSection.targetDate)
             }
         }
+    }
+
+    // --- Sectioned timeline callbacks --------------------------------------
+    // Named here, in TodoListScreen's own scope, rather than written inline
+    // where they are used inside sectionedTimelineContent below: each one
+    // closes over a `var ... by remember`/`by rememberSaveable` property
+    // declared above, and a property delegate's get/set resolve against the
+    // live backing state on every call regardless of where the closure that
+    // holds it is invoked from. Moving the *mutation* itself into
+    // sectionedTimelineContent — instead of moving only these already-bound
+    // closures — would have been the TdayApp bug again: the write would
+    // still compile, but it would land on a copy taken at the extracted
+    // function's call site instead of the live state.
+    val onTimelineSectionHeaderToggle: (key: String, wasCollapsed: Boolean) -> Unit =
+        { key, wasCollapsed ->
+            collapsedSectionKeys = if (wasCollapsed) {
+                collapsedSectionKeys - key
+            } else {
+                collapsedSectionKeys + key
+            }
+        }
+    val onTimelineQuickAdd: (dueEpochMs: Long) -> Unit = { dueEpochMs ->
+        quickAddDueEpochMs = dueEpochMs
+        showCreateTaskSheet = true
+    }
+    val onTimelineEditRequested: (todoId: String) -> Unit = { todoId ->
+        editTargetTodoId = todoId
+    }
+    val onTimelinePromoteRequested: (todoId: String) -> Unit = { todoId ->
+        promoteTargetTodoId = todoId
+    }
+    val onTimelineDeferRequested: (todoId: String) -> Unit = { todoId ->
+        deferTargetTodoId = todoId
+    }
+    val onOpenSwipeTaskIdChange: (String?) -> Unit = { openSwipeTaskId = it }
+    val onTimelineDragStart: (todo: TodoItem, position: Offset) -> Unit = { todo, position ->
+        activeDropSectionKey = null
+        timelineDropTargetBounds.clear()
+        draggedScheduledTodoId = todo.id
+        ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.LONG_PRESS)
+        activeTimelineDrag = TimelineInAppDrag(todo, position)
+    }
+    val onTimelineDragMove: (todo: TodoItem, position: Offset) -> Unit = { todo, position ->
+        activeTimelineDrag = activeTimelineDrag?.copy(position = position)
+            ?: TimelineInAppDrag(todo, position)
+        updateActiveTimelineDropTarget(position)
+    }
+    val onTimelineDragCancel: () -> Unit = {
+        activeTimelineDrag = null
+        draggedScheduledTodoId = null
+        activeDropSectionKey = null
+        timelineDropTargetBounds.clear()
     }
 
     Scaffold(
@@ -1367,237 +1418,40 @@ fun TodoListScreen( // skipcq: KT-R1006
                     }
 
                     if (showSectionedTimeline && !suppressInitialTodayTimeline && !scopedSearchHasNoResults) {
-                        timelineSections.forEachIndexed { sectionIndex, section ->
-                            val sectionHasTasks = section.items.isNotEmpty()
-                            val sectionModeCanCollapse = when (uiState.mode) {
-                                TodoListMode.ALL -> true
-                                TodoListMode.OVERDUE -> true
-                                TodoListMode.SCHEDULED -> true
-                                TodoListMode.PRIORITY -> section.key == "earlier"
-                                TodoListMode.LIST -> section.key == "earlier"
-                                else -> false
-                            }
-                            val sectionCanCollapse = sectionModeCanCollapse && sectionHasTasks
-                            // A list opens with Earlier collapsed, so a live query
-                            // would otherwise hide the matches it just found.
-                            val isCollapsed = sectionCanCollapse &&
-                                    !scopedSearchActive &&
-                                    collapsedSectionKeys.contains(section.key)
-                            val isActiveDropSection = activeDropSectionKey == section.key
-                            val sectionDraggedTodo = if (canRescheduleTasks) {
-                                draggedScheduledTodo
-                            } else {
-                                null
-                            }
-                            val isDropEligibleSection = sectionDraggedTodo?.let { todo ->
-                                canDropTodoInTimelineSection(todo, section)
-                            } == true
-
-                            if (!usesRootFeedChrome) {
-                                item(
-                                    key = "timeline-header-${section.key}",
-                                    contentType = "timeline-header",
-                                ) {
-                                    // A header slides with its section but never
-                                    // fades: it is a label on content that is
-                                    // doing its own arriving and leaving.
-                                    val headerModifier =
-                                        displacedFeedItemMotion(timelineAnimationsEnabled)
-                                    TimelineSectionHeader(
-                                        modifier = headerModifier
-                                            .fillMaxWidth()
-                                            .heightIn(min = 1.dp)
-                                            .timelineInAppDropTarget(
-                                                targetId = "header-${section.key}",
-                                                section = section,
-                                                enabled = isDropEligibleSection,
-                                                dropTargets = timelineDropTargetBounds,
-                                            )
-                                            .padding(top = if (sectionIndex == 0) 0.dp else TimelineSectionTopSpacing),
-                                        section = section,
-                                        useMinimalStyle = usesTodayStyle,
-                                        isCollapsed = isCollapsed,
-                                        isDropTarget = isActiveDropSection && isDropEligibleSection,
-                                        bottomSpacing = if (isCollapsed) {
-                                            TimelineCollapsedSectionSpacing
-                                        } else {
-                                            timelineHeaderBodySpacing
-                                        },
-                                        onHeaderClick = if (sectionCanCollapse) {
-                                            {
-                                                collapsedSectionKeys =
-                                                    if (isCollapsed) {
-                                                        collapsedSectionKeys - section.key
-                                                    } else {
-                                                        collapsedSectionKeys + section.key
-                                                    }
-                                            }
-                                        } else {
-                                            null
-                                        },
-                                        onTapForQuickAdd = section.quickAddDefaults
-                                            ?.takeUnless { sectionModeCanCollapse }
-                                            ?.let { dueEpochMs ->
-                                                {
-                                                    quickAddDueEpochMs = dueEpochMs
-                                                    showCreateTaskSheet = true
-                                                }
-                                            },
-                                    )
-                                }
-                            }
-
-                            if (canRescheduleTasks && isActiveDropSection && isDropEligibleSection && section.targetDate != null) {
-                                item(
-                                    key = "timeline-drop-placeholder-${section.key}",
-                                    contentType = "timeline-drop-placeholder",
-                                ) {
-                                    var placeholderModifier: Modifier = Modifier
-                                    if (timelineAnimationsEnabled) {
-                                        placeholderModifier = placeholderModifier.animateItem(
-                                            fadeInSpec = tween(
-                                                durationMillis = 150,
-                                                easing = FastOutSlowInEasing,
-                                            ),
-                                            placementSpec = tween(
-                                                durationMillis = 260,
-                                                easing = FastOutSlowInEasing,
-                                            ),
-                                            fadeOutSpec = tween(
-                                                durationMillis = 120,
-                                                easing = FastOutSlowInEasing,
-                                            ),
-                                        )
-                                    }
-                                    TimelineDropPlaceholder(
-                                        modifier = placeholderModifier
-                                            .timelineInAppDropTarget(
-                                                targetId = "placeholder-${section.key}",
-                                                section = section,
-                                                enabled = isDropEligibleSection,
-                                                dropTargets = timelineDropTargetBounds,
-                                            )
-                                            .padding(
-                                                bottom = TimelineDateGroupSpacing,
-                                            ),
-                                        active = true,
-                                        useMinimalStyle = usesTodayStyle,
-                                    )
-                                }
-                            }
-
-                            if (!isCollapsed && section.items.isNotEmpty()) {
-                                val showEarlierDateTimeSubtitle =
-                                    section.key == "earlier" &&
-                                            (
-                                                    uiState.mode == TodoListMode.ALL ||
-                                                            uiState.mode == TodoListMode.PRIORITY ||
-                                                            uiState.mode == TodoListMode.LIST
-                                                    )
-                                section.items.forEachIndexed { itemIndex, todo ->
-                                    val showTimelineDateDivider = shouldShowDateDivider(
-                                        afterItemIndex = itemIndex,
-                                        inSectionIndex = sectionIndex,
-                                        sections = timelineSections,
-                                        collapsedSectionKeys = collapsedSectionKeys,
-                                    )
-                                    item(
-                                        key = "timeline-todo-${section.key}-${todo.id}",
-                                        contentType = "timeline-todo",
-                                    ) {
-                                        val rowModifier =
-                                            feedItemMotion(timelineAnimationsEnabled)
-                                        TimelineTaskRow(
-                                            modifier = rowModifier
-                                                .alpha(
-                                                    restingAlphaFor(
-                                                        uiState.mode,
-                                                        todo,
-                                                        restingFloatersEnabled
-                                                    )
-                                                )
-                                                .timelineInAppDropTarget(
-                                                    targetId = "row-${section.key}-${todo.id}",
-                                                    section = section,
-                                                    enabled = isDropEligibleSection,
-                                                    dropTargets = timelineDropTargetBounds,
-                                                )
-                                                .padding(
-                                                    bottom = timelineTaskBottomSpacing(
-                                                        itemIndex = itemIndex,
-                                                        lastIndex = section.items.lastIndex,
-                                                        showDateDivider = showTimelineDateDivider,
-                                                    ),
-                                                ),
-                                            todo = todo,
-                                            mode = uiState.mode,
-                                            lists = uiState.lists,
-                                            useMinimalStyle = usesTodayStyle,
-                                            flashHighlight = flashTodoId == todo.id || flashTodoId == todo.canonicalId,
-                                            showEarlierDateTimeSubtitle = showEarlierDateTimeSubtitle,
-                                            showDateDivider = showTimelineDateDivider,
-                                            readOnly = isViewerList,
-                                            selectionActive = selectionActive,
-                                            selected = todo.id in selectedTodoIds,
-                                            onToggleSelected = { toggleTodoSelected(todo) },
-                                            onComplete = { completeAndCelebrate(todo) },
-                                            onDelete = { onDelete(todo) },
-                                            onInfo = {
-                                                editTargetTodoId = todo.id
-                                            },
-                                            onPromote = if (uiState.mode == TodoListMode.FLOATER) {
-                                                { promoteTargetTodoId = todo.id }
-                                            } else {
-                                                null
-                                            },
-                                            onDemote = if (uiState.mode == TodoListMode.OVERDUE) {
-                                                { onDemoteTodo(todo) }
-                                            } else {
-                                                null
-                                            },
-                                            onDefer = { deferTargetTodoId = todo.id },
-                                            draggedTodo = sectionDraggedTodo,
-                                            openSwipeTaskId = openSwipeTaskId,
-                                            onOpenSwipeTaskIdChange = { openSwipeTaskId = it },
-                                            // Long-press drag-to-reschedule stands
-                                            // down while selecting: a null start
-                                            // handler is what turns `dragEnabled`
-                                            // off inside the row.
-                                            onDragTodoStart = if (canRescheduleTasks && !selectionActive) {
-                                                { position ->
-                                                    activeDropSectionKey = null
-                                                    timelineDropTargetBounds.clear()
-                                                    draggedScheduledTodoId = todo.id
-                                                    ViewCompat.performHapticFeedback(
-                                                        view,
-                                                        HapticFeedbackConstantsCompat.LONG_PRESS
-                                                    )
-                                                    activeTimelineDrag =
-                                                        TimelineInAppDrag(todo, position)
-                                                }
-                                            } else {
-                                                null
-                                            },
-                                            onDragTodoMove = { position ->
-                                                activeTimelineDrag =
-                                                    activeTimelineDrag?.copy(position = position)
-                                                        ?: TimelineInAppDrag(todo, position)
-                                                updateActiveTimelineDropTarget(position)
-                                            },
-                                            onDragTodoEnd = { position ->
-                                                finishTimelineDrag(position)
-                                            },
-                                            onDragTodoCancel = {
-                                                activeTimelineDrag = null
-                                                draggedScheduledTodoId = null
-                                                activeDropSectionKey = null
-                                                timelineDropTargetBounds.clear()
-                                            },
-                                        )
-                                    }
-                                }
-                            }
-                        }
+                        sectionedTimelineContent(
+                            uiState = uiState,
+                            timelineSections = timelineSections,
+                            usesRootFeedChrome = usesRootFeedChrome,
+                            usesTodayStyle = usesTodayStyle,
+                            timelineAnimationsEnabled = timelineAnimationsEnabled,
+                            scopedSearchActive = scopedSearchActive,
+                            canRescheduleTasks = canRescheduleTasks,
+                            isViewerList = isViewerList,
+                            selectionActive = selectionActive,
+                            selectedTodoIds = selectedTodoIds,
+                            flashTodoId = flashTodoId,
+                            openSwipeTaskId = openSwipeTaskId,
+                            collapsedSectionKeys = collapsedSectionKeys,
+                            activeDropSectionKey = activeDropSectionKey,
+                            draggedScheduledTodo = draggedScheduledTodo,
+                            restingFloatersEnabled = restingFloatersEnabled,
+                            timelineDropTargetBounds = timelineDropTargetBounds,
+                            canDropTodoInTimelineSection = ::canDropTodoInTimelineSection,
+                            onSectionHeaderToggle = onTimelineSectionHeaderToggle,
+                            onQuickAdd = onTimelineQuickAdd,
+                            onToggleTodoSelected = toggleTodoSelected,
+                            onComplete = completeAndCelebrate,
+                            onDelete = onDelete,
+                            onEditRequested = onTimelineEditRequested,
+                            onPromoteRequested = onTimelinePromoteRequested,
+                            onDemoteTodo = onDemoteTodo,
+                            onDeferRequested = onTimelineDeferRequested,
+                            onOpenSwipeTaskIdChange = onOpenSwipeTaskIdChange,
+                            onDragStart = onTimelineDragStart,
+                            onDragMove = onTimelineDragMove,
+                            onDragEnd = ::finishTimelineDrag,
+                            onDragCancel = onTimelineDragCancel,
+                        )
                     } else if (!showSectionedTimeline) {
                         flatTodoRowsContent(
                             todos = uiState.items,
@@ -2527,6 +2381,269 @@ private fun LazyListScope.floaterTaskHomeRootFeedContent(
                     )
                 },
             )
+        }
+    }
+}
+
+/**
+ * The sectioned timeline body: one [TodoSection] at a time, each its own
+ * header, an optional drop placeholder, then its task rows. The largest and
+ * highest-risk of the three LazyColumn seams pulled out of [TodoListScreen].
+ *
+ * Every mutation below — collapsing a header, starting/updating/ending a
+ * drag, opening the create sheet from a quick-add tap, opening a swipe row,
+ * requesting edit/promote/defer — is routed through a callback parameter
+ * instead of assigning a `var ... by remember` property directly inside this
+ * function. Each callback is bound in [TodoListScreen]'s own scope (see the
+ * block directly above its `Scaffold` call), so every read/write it performs
+ * resolves against the live backing state no matter when this function
+ * invokes it — the same live-state guarantee those properties had before
+ * this code was inline here. Moving the mutation *itself* into this
+ * function, instead of only the already-bound callback, is exactly the
+ * TdayApp regression this extraction is written to avoid: the write would
+ * still compile, but it would land on a value copied at this function's own
+ * call site rather than on the live state.
+ *
+ * [feedItemMotion]/[displacedFeedItemMotion], the drop placeholder's
+ * `animateItem` spec, and the item keys/content types below are the PR #122
+ * celebration/drag choreography and are unchanged by this extraction — same
+ * calls, same order, same keys as when this loop lived inline.
+ */
+private fun LazyListScope.sectionedTimelineContent(
+    uiState: TodoListUiState,
+    timelineSections: List<TodoSection>,
+    usesRootFeedChrome: Boolean,
+    usesTodayStyle: Boolean,
+    timelineAnimationsEnabled: Boolean,
+    scopedSearchActive: Boolean,
+    canRescheduleTasks: Boolean,
+    isViewerList: Boolean,
+    selectionActive: Boolean,
+    selectedTodoIds: Set<String>,
+    flashTodoId: String?,
+    openSwipeTaskId: String?,
+    collapsedSectionKeys: Set<String>,
+    activeDropSectionKey: String?,
+    draggedScheduledTodo: TodoItem?,
+    restingFloatersEnabled: Boolean,
+    timelineDropTargetBounds: MutableMap<String, TimelineDropTargetBounds>,
+    canDropTodoInTimelineSection: (TodoItem, TodoSection) -> Boolean,
+    onSectionHeaderToggle: (key: String, wasCollapsed: Boolean) -> Unit,
+    onQuickAdd: (dueEpochMs: Long) -> Unit,
+    onToggleTodoSelected: (TodoItem) -> Unit,
+    onComplete: (TodoItem) -> Unit,
+    onDelete: (TodoItem) -> Unit,
+    onEditRequested: (todoId: String) -> Unit,
+    onPromoteRequested: (todoId: String) -> Unit,
+    onDemoteTodo: (TodoItem) -> Unit,
+    onDeferRequested: (todoId: String) -> Unit,
+    onOpenSwipeTaskIdChange: (String?) -> Unit,
+    onDragStart: (todo: TodoItem, position: Offset) -> Unit,
+    onDragMove: (todo: TodoItem, position: Offset) -> Unit,
+    onDragEnd: (position: Offset?) -> Unit,
+    onDragCancel: () -> Unit,
+) {
+    timelineSections.forEachIndexed { sectionIndex, section ->
+        val sectionHasTasks = section.items.isNotEmpty()
+        val sectionModeCanCollapse = when (uiState.mode) {
+            TodoListMode.ALL -> true
+            TodoListMode.OVERDUE -> true
+            TodoListMode.SCHEDULED -> true
+            TodoListMode.PRIORITY -> section.key == "earlier"
+            TodoListMode.LIST -> section.key == "earlier"
+            else -> false
+        }
+        val sectionCanCollapse = sectionModeCanCollapse && sectionHasTasks
+        // A list opens with Earlier collapsed, so a live query
+        // would otherwise hide the matches it just found.
+        val isCollapsed = sectionCanCollapse &&
+                !scopedSearchActive &&
+                collapsedSectionKeys.contains(section.key)
+        val isActiveDropSection = activeDropSectionKey == section.key
+        val sectionDraggedTodo = if (canRescheduleTasks) {
+            draggedScheduledTodo
+        } else {
+            null
+        }
+        val isDropEligibleSection = sectionDraggedTodo?.let { todo ->
+            canDropTodoInTimelineSection(todo, section)
+        } == true
+
+        if (!usesRootFeedChrome) {
+            item(
+                key = "timeline-header-${section.key}",
+                contentType = "timeline-header",
+            ) {
+                // A header slides with its section but never
+                // fades: it is a label on content that is
+                // doing its own arriving and leaving.
+                val headerModifier =
+                    displacedFeedItemMotion(timelineAnimationsEnabled)
+                TimelineSectionHeader(
+                    modifier = headerModifier
+                        .fillMaxWidth()
+                        .heightIn(min = 1.dp)
+                        .timelineInAppDropTarget(
+                            targetId = "header-${section.key}",
+                            section = section,
+                            enabled = isDropEligibleSection,
+                            dropTargets = timelineDropTargetBounds,
+                        )
+                        .padding(top = if (sectionIndex == 0) 0.dp else TimelineSectionTopSpacing),
+                    section = section,
+                    useMinimalStyle = usesTodayStyle,
+                    isCollapsed = isCollapsed,
+                    isDropTarget = isActiveDropSection && isDropEligibleSection,
+                    bottomSpacing = if (isCollapsed) {
+                        TimelineCollapsedSectionSpacing
+                    } else {
+                        TimelineHeaderBodySpacing
+                    },
+                    onHeaderClick = if (sectionCanCollapse) {
+                        {
+                            onSectionHeaderToggle(section.key, isCollapsed)
+                        }
+                    } else {
+                        null
+                    },
+                    onTapForQuickAdd = section.quickAddDefaults
+                        ?.takeUnless { sectionModeCanCollapse }
+                        ?.let { dueEpochMs ->
+                            {
+                                onQuickAdd(dueEpochMs)
+                            }
+                        },
+                )
+            }
+        }
+
+        if (canRescheduleTasks && isActiveDropSection && isDropEligibleSection && section.targetDate != null) {
+            item(
+                key = "timeline-drop-placeholder-${section.key}",
+                contentType = "timeline-drop-placeholder",
+            ) {
+                var placeholderModifier: Modifier = Modifier
+                if (timelineAnimationsEnabled) {
+                    placeholderModifier = placeholderModifier.animateItem(
+                        fadeInSpec = tween(
+                            durationMillis = 150,
+                            easing = FastOutSlowInEasing,
+                        ),
+                        placementSpec = tween(
+                            durationMillis = 260,
+                            easing = FastOutSlowInEasing,
+                        ),
+                        fadeOutSpec = tween(
+                            durationMillis = 120,
+                            easing = FastOutSlowInEasing,
+                        ),
+                    )
+                }
+                TimelineDropPlaceholder(
+                    modifier = placeholderModifier
+                        .timelineInAppDropTarget(
+                            targetId = "placeholder-${section.key}",
+                            section = section,
+                            enabled = isDropEligibleSection,
+                            dropTargets = timelineDropTargetBounds,
+                        )
+                        .padding(
+                            bottom = TimelineDateGroupSpacing,
+                        ),
+                    active = true,
+                    useMinimalStyle = usesTodayStyle,
+                )
+            }
+        }
+
+        if (!isCollapsed && section.items.isNotEmpty()) {
+            val showEarlierDateTimeSubtitle =
+                section.key == "earlier" &&
+                        (
+                                uiState.mode == TodoListMode.ALL ||
+                                        uiState.mode == TodoListMode.PRIORITY ||
+                                        uiState.mode == TodoListMode.LIST
+                                )
+            section.items.forEachIndexed { itemIndex, todo ->
+                val showTimelineDateDivider = shouldShowDateDivider(
+                    afterItemIndex = itemIndex,
+                    inSectionIndex = sectionIndex,
+                    sections = timelineSections,
+                    collapsedSectionKeys = collapsedSectionKeys,
+                )
+                item(
+                    key = "timeline-todo-${section.key}-${todo.id}",
+                    contentType = "timeline-todo",
+                ) {
+                    val rowModifier =
+                        feedItemMotion(timelineAnimationsEnabled)
+                    TimelineTaskRow(
+                        modifier = rowModifier
+                            .alpha(
+                                restingAlphaFor(
+                                    uiState.mode,
+                                    todo,
+                                    restingFloatersEnabled
+                                )
+                            )
+                            .timelineInAppDropTarget(
+                                targetId = "row-${section.key}-${todo.id}",
+                                section = section,
+                                enabled = isDropEligibleSection,
+                                dropTargets = timelineDropTargetBounds,
+                            )
+                            .padding(
+                                bottom = timelineTaskBottomSpacing(
+                                    itemIndex = itemIndex,
+                                    lastIndex = section.items.lastIndex,
+                                    showDateDivider = showTimelineDateDivider,
+                                ),
+                            ),
+                        todo = todo,
+                        mode = uiState.mode,
+                        lists = uiState.lists,
+                        useMinimalStyle = usesTodayStyle,
+                        flashHighlight = flashTodoId == todo.id || flashTodoId == todo.canonicalId,
+                        showEarlierDateTimeSubtitle = showEarlierDateTimeSubtitle,
+                        showDateDivider = showTimelineDateDivider,
+                        readOnly = isViewerList,
+                        selectionActive = selectionActive,
+                        selected = todo.id in selectedTodoIds,
+                        onToggleSelected = { onToggleTodoSelected(todo) },
+                        onComplete = { onComplete(todo) },
+                        onDelete = { onDelete(todo) },
+                        onInfo = {
+                            onEditRequested(todo.id)
+                        },
+                        onPromote = if (uiState.mode == TodoListMode.FLOATER) {
+                            { onPromoteRequested(todo.id) }
+                        } else {
+                            null
+                        },
+                        onDemote = if (uiState.mode == TodoListMode.OVERDUE) {
+                            { onDemoteTodo(todo) }
+                        } else {
+                            null
+                        },
+                        onDefer = { onDeferRequested(todo.id) },
+                        draggedTodo = sectionDraggedTodo,
+                        openSwipeTaskId = openSwipeTaskId,
+                        onOpenSwipeTaskIdChange = onOpenSwipeTaskIdChange,
+                        // Long-press drag-to-reschedule stands
+                        // down while selecting: a null start
+                        // handler is what turns `dragEnabled`
+                        // off inside the row.
+                        onDragTodoStart = if (canRescheduleTasks && !selectionActive) {
+                            { position -> onDragStart(todo, position) }
+                        } else {
+                            null
+                        },
+                        onDragTodoMove = { position -> onDragMove(todo, position) },
+                        onDragTodoEnd = { position -> onDragEnd(position) },
+                        onDragTodoCancel = onDragCancel,
+                    )
+                }
+            }
         }
     }
 }
