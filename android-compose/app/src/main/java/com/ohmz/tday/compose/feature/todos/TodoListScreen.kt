@@ -307,25 +307,8 @@ private fun LazyItemScope.displacedFeedItemMotion(enabled: Boolean): Modifier =
  */
 private const val CompletionCelebrationWindowMs = 4_000L
 
-// KT-R1006 (cyclomatic complexity) is suppressed on this declaration rather than
-// fixed here. Two separate facts, both worth writing down:
-//
-//   * It is not this change's. `develop` reports the same finding on the same
-//     function at a complexity of 312. Nothing below adds a branch — folding two
-//     `if (timelineAnimationsEnabled)` blocks into `feedItemMotion` actually took
-//     it to 310 — but DeepSource fingerprints an occurrence by its line and by
-//     the number in its message, so a *lower* complexity on a shifted line still
-//     lands as "1 introduced, 1 resolved" and turns the check red. Every PR that
-//     so much as adds an import above this line inherits that failure.
-//   * It is still real. 310 is an order of magnitude past the smallest
-//     complexity this analyzer reports anywhere in the repo, and none of it is
-//     repairable from a motion PR: the honest fix is breaking this screen apart,
-//     which is a change of a different size and a different risk.
-//
-// One declaration, one issue code — the narrowest form the tool has, and the
-// style the repo already uses for KT-W1042 and KT-C1001. Never file-wide.
 @Composable
-fun TodoListScreen( // skipcq: KT-R1006
+fun TodoListScreen(
     uiState: TodoListUiState,
     onBack: () -> Unit,
     onRefresh: () -> Unit,
