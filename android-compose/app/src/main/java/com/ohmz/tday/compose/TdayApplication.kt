@@ -16,7 +16,10 @@ import com.ohmz.tday.compose.core.notification.ReminderRescheduleWorker
 import com.ohmz.tday.compose.core.notification.TaskReminderReceiver
 import com.ohmz.tday.compose.core.observability.TdayTelemetry
 import com.ohmz.tday.compose.feature.widget.TodayTasksWidgetPreviewPublisher
+import com.ohmz.tday.compose.feature.widget.WidgetEntryPoint
 import com.ohmz.tday.compose.feature.widget.WidgetSyncWorker
+import com.ohmz.tday.compose.feature.widget.didNightModeFlip
+import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.android.HiltAndroidApp
 import io.sentry.android.core.SentryAndroid
 import kotlinx.coroutines.CoroutineScope
@@ -25,6 +28,7 @@ import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
+import android.content.res.Configuration as SystemConfiguration
 
 @HiltAndroidApp
 class TdayApplication : Application(), Configuration.Provider {
@@ -34,10 +38,59 @@ class TdayApplication : Application(), Configuration.Provider {
     @Inject lateinit var calendarSyncManager: CalendarSyncManager
     private val deferredStartupRan = AtomicBoolean(false)
 
+    // Resolved lazily through WidgetEntryPoint rather than an `@Inject lateinit` field, matching
+    // every other widget call site (MainActivity, SettingsScreen, BootRescheduleReceiver,
+    // CompleteTaskAction) — see WidgetEntryPoint's own KDoc for why this app keeps that one
+    // pattern rather than injecting singletons ad hoc.
+    private val widgetRefresher by lazy {
+        EntryPointAccessors
+            .fromApplication(applicationContext, WidgetEntryPoint::class.java)
+            .widgetRefresher()
+    }
+
+    /**
+     * The system `uiMode` this process last observed, seeded from [onCreate]. Compared on every
+     * [onConfigurationChanged] so a widget repaint fires only for an actual day/night flip, not
+     * for every orientation/keyboard/locale delta this callback also carries.
+     */
+    private var lastUiMode: Int = SystemConfiguration.UI_MODE_NIGHT_UNDEFINED
+
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder()
             .setWorkerFactory(workerFactory)
             .build()
+
+    override fun onCreate() {
+        super.onCreate()
+        lastUiMode = resources.configuration.uiMode
+    }
+
+    /**
+     * The only theme-change hook in this app (see docs/WIDGET_SYNC.md). `Application` is notified
+     * of a configuration change in ANY live process — including a widget-only process that has
+     * never opened `MainActivity`, which is the actual repro for "toggled dark mode from Quick
+     * Settings while just looking at the home-screen widget". `MainActivity.onStart()`'s existing
+     * belt-and-braces refresh only fires once the user opens the app, which never happens in that
+     * scenario.
+     *
+     * This still cannot repaint a widget whose process the system has already killed in the
+     * background — nothing can raise a dead process on a config change, which is exactly why
+     * `ACTION_CONFIGURATION_CHANGED` is documented as undeliverable to a manifest-declared
+     * receiver in the first place. That gap is covered the same way every other drift already is:
+     * the 30-minute `WidgetSyncWorker` fallback and the next app open.
+     *
+     * Parameter is fully-qualified via the `SystemConfiguration` import alias: this file already
+     * imports `androidx.work.Configuration` for `Configuration.Provider`, so an unqualified
+     * `Configuration` here would resolve to the wrong class.
+     */
+    override fun onConfigurationChanged(newConfig: SystemConfiguration) {
+        super.onConfigurationChanged(newConfig)
+        val newUiMode = newConfig.uiMode
+        if (didNightModeFlip(lastUiMode, newUiMode)) {
+            widgetRefresher.requestRefresh()
+        }
+        lastUiMode = newUiMode
+    }
 
     fun runDeferredStartup() {
         if (!deferredStartupRan.compareAndSet(false, true)) return
