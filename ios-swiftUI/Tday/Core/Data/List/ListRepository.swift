@@ -9,6 +9,10 @@ struct StagedListDeletion {
     let todos: [CachedTodoRecord]
     let completedItems: [CachedCompletedRecord]
     let pendingMutations: [PendingMutationRecord]
+    /// Identifies the non-replayable staged DELETE_LIST marker `stageDeleteList(listId:)`
+    /// wrote (see `PendingMutationRecord.staged`), so `undoStagedList(_:)` can remove it on
+    /// Undo instead of leaving it stranded in the pending queue.
+    var stagedMutationId: String? = nil
 }
 
 @MainActor
@@ -219,9 +223,16 @@ final class ListRepository {
 
     /// First half of a delayed-commit delete: prunes the list, its tasks,
     /// their completed history, and related pending mutations from the local
-    /// cache without queueing the server delete. Commit later by calling
-    /// `deleteList(listId:onOptimisticDelete:)` — its prune half re-runs as a
-    /// no-op — or restore with `undoStagedList(_:)`.
+    /// cache. Nothing is sent to the server here — the real DELETE_LIST
+    /// mutation is added by the commit step — but a non-replayable *staged*
+    /// marker of the same kind is written in its place so a sync's merge (a
+    /// pull-to-refresh racing the undo window) still treats the list as
+    /// deleted instead of writing it back from the server response; see
+    /// `PendingMutationRecord.staged` and SyncManager's replay/merge handling
+    /// of it. Commit later by calling `deleteList(listId:onOptimisticDelete:)`
+    /// — its prune half re-runs as a no-op and its own DELETE_LIST mutation
+    /// naturally replaces this marker (same targetId) — or restore with
+    /// `undoStagedList(_:)`.
     func stageDeleteList(listId: String) -> StagedListDeletion {
         let normalizedListID = listId.trimmingCharacters(in: .whitespacesAndNewlines)
         var staged = StagedListDeletion(lists: [], todos: [], completedItems: [], pendingMutations: [])
@@ -241,24 +252,48 @@ final class ListRepository {
                     mutation.listId == normalizedListID ||
                     mutation.targetId.map { deletedTodoIDs.contains($0) } == true
             }
+            let stagedMutationID = UUID().uuidString
             staged = StagedListDeletion(
                 lists: state.lists.filter { $0.id == normalizedListID },
                 todos: state.todos.filter { $0.listId == normalizedListID },
                 completedItems: state.completedItems.filter(isRemovedCompleted),
-                pendingMutations: state.pendingMutations.filter(isRemovedMutation)
+                pendingMutations: state.pendingMutations.filter(isRemovedMutation),
+                stagedMutationId: stagedMutationID
             )
             nextState.lists.removeAll { $0.id == normalizedListID }
             nextState.todos.removeAll { $0.listId == normalizedListID }
             nextState.completedItems.removeAll(where: isRemovedCompleted)
             nextState.pendingMutations.removeAll(where: isRemovedMutation)
+            nextState.pendingMutations.append(
+                PendingMutationRecord(
+                    mutationId: stagedMutationID,
+                    kind: .deleteList,
+                    targetId: normalizedListID,
+                    timestampEpochMs: Date().epochMilliseconds,
+                    title: nil,
+                    description: nil,
+                    priority: nil,
+                    dueEpochMs: nil,
+                    rrule: nil,
+                    listId: nil,
+                    pinned: nil,
+                    completed: nil,
+                    instanceDateEpochMs: nil,
+                    name: nil,
+                    color: nil,
+                    iconKey: nil,
+                    staged: true
+                )
+            )
             return nextState
         }
         return staged
     }
 
-    /// Restores the local state captured by `stageDeleteList(listId:)`.
-    /// Idempotent: records that already exist again (e.g. re-added by a sync
-    /// pull during the undo window) are left untouched.
+    /// Restores the local state captured by `stageDeleteList(listId:)` and
+    /// drops its staged marker mutation. Idempotent: records that already
+    /// exist again (e.g. re-added by a sync pull during the undo window) are
+    /// left untouched.
     func undoStagedList(_ staged: StagedListDeletion) {
         cacheManager.updateOfflineState { state in
             var nextState = state
@@ -273,6 +308,7 @@ final class ListRepository {
             for completed in staged.completedItems where !nextState.completedItems.contains(where: { $0.id == completed.id }) {
                 nextState.completedItems.append(completed)
             }
+            nextState.pendingMutations.removeAll { $0.mutationId == staged.stagedMutationId }
             for mutation in staged.pendingMutations where !nextState.pendingMutations.contains(where: {
                 $0.mutationId == mutation.mutationId
             }) {
