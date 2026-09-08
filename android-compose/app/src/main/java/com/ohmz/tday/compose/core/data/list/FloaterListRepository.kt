@@ -13,6 +13,7 @@ import com.ohmz.tday.compose.core.data.cache.OfflineCacheManager
 import com.ohmz.tday.compose.core.data.cache.floaterListFromCache
 import com.ohmz.tday.compose.core.data.cache.orderFloaterListsLikeWeb
 import com.ohmz.tday.compose.core.data.cache.parseOptionalInstant
+import com.ohmz.tday.compose.core.data.cache.replaceLocalFloaterListId
 import com.ohmz.tday.compose.core.data.isLikelyUnrecoverableMutationError
 import com.ohmz.tday.compose.core.data.requireApiBody
 import com.ohmz.tday.compose.core.data.sync.SyncManager
@@ -72,48 +73,58 @@ class FloaterListRepository @Inject constructor(
 
         if (syncManager.isLocalMode()) return
 
-        runCatching {
-            requireApiBody(
-                api.createFloaterList(
-                    CreateFloaterListRequest(
-                        name = normalizedName,
-                        color = color,
-                        iconKey = iconKey,
+        // Held for the whole request-plus-remap: a realtime self-echo of this
+        // very create can otherwise trigger a background sync whose fetch
+        // already contains the new server row while the placeholder above
+        // still carries its local_ id (see mergeRemoteWithLocal's doc
+        // comment) -- the union merge would then keep both. Sharing
+        // syncCachedData's lock means that fetch-and-merge can only run
+        // fully before this starts or fully after it finishes, never
+        // interleaved with it.
+        cacheManager.withSyncLock {
+            runCatching {
+                requireApiBody(
+                    api.createFloaterList(
+                        CreateFloaterListRequest(
+                            name = normalizedName,
+                            color = color,
+                            iconKey = iconKey,
+                        ),
                     ),
-                ),
-                "Could not create floater list",
-            ).list
-        }.onSuccess { createdList ->
-            if (createdList == null) return@onSuccess
-            val createdAt =
-                parseOptionalInstant(createdList.createdAt)?.toEpochMilli() ?: timestampMs
-            val updatedAt =
-                parseOptionalInstant(createdList.updatedAt)?.toEpochMilli() ?: timestampMs
-            cacheManager.updateOfflineState { state ->
-                val remapped = replaceLocalFloaterListId(
-                    state = state,
-                    localListId = localListId,
-                    serverListId = createdList.id,
-                )
-                val todoCount =
-                    remapped.floaters.count { !it.completed && it.listId == createdList.id }
-                remapped.copy(
-                    floaterLists = remapped.floaterLists.map { list ->
-                        if (list.id == createdList.id) {
-                            list.copy(
-                                name = createdList.name,
-                                color = createdList.color,
-                                iconKey = createdList.iconKey ?: list.iconKey,
-                                todoCount = todoCount,
-                                updatedAtEpochMs = updatedAt,
-                                createdAtEpochMs = createdAt,
-                            )
-                        } else {
-                            list
-                        }
-                    },
-                    pendingMutations = remapped.pendingMutations.filterNot { it.mutationId == mutationId },
-                )
+                    "Could not create floater list",
+                ).list
+            }.onSuccess { createdList ->
+                if (createdList == null) return@onSuccess
+                val createdAt =
+                    parseOptionalInstant(createdList.createdAt)?.toEpochMilli() ?: timestampMs
+                val updatedAt =
+                    parseOptionalInstant(createdList.updatedAt)?.toEpochMilli() ?: timestampMs
+                cacheManager.updateOfflineState { state ->
+                    val remapped = replaceLocalFloaterListId(
+                        state = state,
+                        localListId = localListId,
+                        serverListId = createdList.id,
+                    )
+                    val todoCount =
+                        remapped.floaters.count { !it.completed && it.listId == createdList.id }
+                    remapped.copy(
+                        floaterLists = remapped.floaterLists.map { list ->
+                            if (list.id == createdList.id) {
+                                list.copy(
+                                    name = createdList.name,
+                                    color = createdList.color,
+                                    iconKey = createdList.iconKey ?: list.iconKey,
+                                    todoCount = todoCount,
+                                    updatedAtEpochMs = updatedAt,
+                                    createdAtEpochMs = createdAt,
+                                )
+                            } else {
+                                list
+                            }
+                        },
+                        pendingMutations = remapped.pendingMutations.filterNot { it.mutationId == mutationId },
+                    )
+                }
             }
         }
     }
@@ -288,46 +299,69 @@ class FloaterListRepository @Inject constructor(
     /**
      * Stage step of the delayed-commit floater-list delete: prunes the list and
      * its floaters from the local cache exactly like the prune-half of
-     * [deleteList], but records nothing for the server (no DELETE_FLOATER_LIST
-     * pending mutation), so nothing can sync out during the undo window.
-     * Completed floaters are deliberately left untouched — see [deleteList] for
-     * why — so [StagedFloaterListDeletion.removedCompletedFloaters] is always
+     * [deleteList]. Nothing is sent to the server here — the real
+     * DELETE_FLOATER_LIST mutation is added by the commit step — but a
+     * non-replayable *staged* marker of the same kind is written in its place so
+     * a sync's merge (a pull-to-refresh racing the undo window) still treats the
+     * list as deleted instead of writing it back from the server response; see
+     * [PendingMutationRecord.staged] and SyncManager's replay/merge handling of
+     * it. Completed floaters are deliberately left untouched — see [deleteList]
+     * for why — so [StagedFloaterListDeletion.removedCompletedFloaters] is always
      * empty; the field stays so [undoStagedListDeletion] has nothing extra to
      * special-case if that ever changes. The commit step is the existing
      * [deleteList], whose prune-half re-runs as a no-op on the already-pruned
-     * state.
+     * state and whose own DELETE_FLOATER_LIST mutation naturally replaces this
+     * marker (same targetId).
+     *
+     * Runs inside [OfflineCacheManager.withSyncLock] — the same mutex a sync holds
+     * for its whole read-fetch-merge-save span (see [SyncManager.syncCachedData])
+     * — so this write can never land between a concurrent sync's pre-network
+     * state read and its post-network save; see [ListRepository.stageDeleteList]'s
+     * matching note for why that window is otherwise unsafe.
      */
     suspend fun stageDeleteList(listId: String): StagedFloaterListDeletion {
         val normalizedListId = listId.trim()
         if (normalizedListId.isBlank()) return StagedFloaterListDeletion()
 
         var staged = StagedFloaterListDeletion()
-        cacheManager.updateOfflineState { state ->
-            val deletedFloaterIds = state.floaters
-                .filter { it.listId == normalizedListId }
-                .map { it.canonicalId }
-                .toSet()
+        cacheManager.withSyncLock {
+            cacheManager.updateOfflineState { state ->
+                val deletedFloaterIds = state.floaters
+                    .filter { it.listId == normalizedListId }
+                    .map { it.canonicalId }
+                    .toSet()
 
-            fun matchesMutation(mutation: PendingMutationRecord): Boolean =
-                mutation.targetId == normalizedListId ||
-                    mutation.listId == normalizedListId ||
-                    deletedFloaterIds.contains(mutation.targetId)
+                fun matchesMutation(mutation: PendingMutationRecord): Boolean =
+                    mutation.targetId == normalizedListId ||
+                        mutation.listId == normalizedListId ||
+                        deletedFloaterIds.contains(mutation.targetId)
 
-            staged = StagedFloaterListDeletion(
-                removedFloaterLists = state.floaterLists.filter { it.id == normalizedListId },
-                removedFloaters = state.floaters.filter { it.listId == normalizedListId },
-                removedPendingMutations = state.pendingMutations.filter(::matchesMutation),
-            )
-            state.copy(
-                floaterLists = state.floaterLists.filterNot { it.id == normalizedListId },
-                floaters = state.floaters.filterNot { it.listId == normalizedListId },
-                pendingMutations = state.pendingMutations.filterNot(::matchesMutation),
-            )
+                val stagedMutationId = UUID.randomUUID().toString()
+                staged = StagedFloaterListDeletion(
+                    removedFloaterLists = state.floaterLists.filter { it.id == normalizedListId },
+                    removedFloaters = state.floaters.filter { it.listId == normalizedListId },
+                    removedPendingMutations = state.pendingMutations.filter(::matchesMutation),
+                    stagedMutationId = stagedMutationId,
+                )
+                state.copy(
+                    floaterLists = state.floaterLists.filterNot { it.id == normalizedListId },
+                    floaters = state.floaters.filterNot { it.listId == normalizedListId },
+                    pendingMutations = state.pendingMutations.filterNot(::matchesMutation) +
+                        PendingMutationRecord(
+                            mutationId = stagedMutationId,
+                            kind = MutationKind.DELETE_FLOATER_LIST,
+                            targetId = normalizedListId,
+                            timestampEpochMs = System.currentTimeMillis(),
+                            staged = true,
+                        ),
+                )
+            }
         }
         return staged
     }
 
-    /** Undo step: re-inserts the records captured by [stageDeleteList]. Idempotent. */
+    /** Undo step: re-inserts the records captured by [stageDeleteList] and drops its
+     * staged marker mutation. Idempotent. */
     suspend fun undoStagedListDeletion(staged: StagedFloaterListDeletion) {
         cacheManager.updateOfflineState { state ->
             val listIds = state.floaterLists.map { it.id }.toSet()
@@ -341,7 +375,7 @@ class FloaterListRepository @Inject constructor(
                     staged.removedFloaters.filterNot { it.id in floaterIds },
                 completedFloaters = state.completedFloaters +
                     staged.removedCompletedFloaters.filterNot { it.id in completedIds },
-                pendingMutations = state.pendingMutations +
+                pendingMutations = state.pendingMutations.filterNot { it.mutationId == staged.stagedMutationId } +
                     staged.removedPendingMutations.filterNot { it.mutationId in mutationIds },
             )
         }
@@ -437,30 +471,6 @@ class FloaterListRepository @Inject constructor(
         }
     }
 
-    private fun replaceLocalFloaterListId(
-        state: OfflineSyncState,
-        localListId: String,
-        serverListId: String,
-    ): OfflineSyncState {
-        return state.copy(
-            floaterLists = state.floaterLists.map {
-                if (it.id == localListId) it.copy(id = serverListId) else it
-            },
-            floaters = state.floaters.map {
-                if (it.listId == localListId) it.copy(listId = serverListId) else it
-            },
-            completedFloaters = state.completedFloaters.map {
-                if (it.listId == localListId) it.copy(listId = serverListId) else it
-            },
-            pendingMutations = state.pendingMutations.map {
-                it.copy(
-                    targetId = if (it.targetId == localListId) serverListId else it.targetId,
-                    listId = if (it.listId == localListId) serverListId else it.listId,
-                )
-            },
-        )
-    }
-
     private companion object {
         const val LOG_TAG = "FloaterListRepository"
     }
@@ -473,10 +483,15 @@ class FloaterListRepository @Inject constructor(
  * [removedCompletedFloaters] is always empty — completed floaters are no longer
  * pruned on list delete (they outlive the list; see [deleteList]) — but the field
  * stays so [FloaterListRepository.undoStagedListDeletion] needs no special-casing.
+ * [stagedMutationId] identifies the non-replayable staged DELETE_FLOATER_LIST
+ * marker [FloaterListRepository.stageDeleteList] wrote (see
+ * [PendingMutationRecord.staged]), so [FloaterListRepository.undoStagedListDeletion]
+ * can remove it on Undo instead of leaving it stranded in the pending queue.
  */
 data class StagedFloaterListDeletion(
     val removedFloaterLists: List<CachedFloaterListRecord> = emptyList(),
     val removedFloaters: List<CachedFloaterRecord> = emptyList(),
     val removedCompletedFloaters: List<CachedCompletedFloaterRecord> = emptyList(),
     val removedPendingMutations: List<PendingMutationRecord> = emptyList(),
+    val stagedMutationId: String? = null,
 )

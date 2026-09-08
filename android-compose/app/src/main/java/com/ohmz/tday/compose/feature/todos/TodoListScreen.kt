@@ -46,6 +46,7 @@ import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyItemScope
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -306,23 +307,29 @@ private fun LazyItemScope.displacedFeedItemMotion(enabled: Boolean): Modifier =
  */
 private const val CompletionCelebrationWindowMs = 4_000L
 
-// KT-R1006 (cyclomatic complexity) is suppressed on this declaration rather than
-// fixed here. Two separate facts, both worth writing down:
+// KT-R1006 (cyclomatic complexity) is suppressed on this declaration rather
+// than fixed further here. Two separate facts, both worth writing down:
 //
-//   * It is not this change's. `develop` reports the same finding on the same
-//     function at a complexity of 312. Nothing below adds a branch — folding two
-//     `if (timelineAnimationsEnabled)` blocks into `feedItemMotion` actually took
-//     it to 310 — but DeepSource fingerprints an occurrence by its line and by
-//     the number in its message, so a *lower* complexity on a shifted line still
-//     lands as "1 introduced, 1 resolved" and turns the check red. Every PR that
-//     so much as adds an import above this line inherits that failure.
-//   * It is still real. 310 is an order of magnitude past the smallest
-//     complexity this analyzer reports anywhere in the repo, and none of it is
-//     repairable from a motion PR: the honest fix is breaking this screen apart,
-//     which is a change of a different size and a different risk.
+//   * The decomposition already happened, and it helped. DeepSource measured
+//     this function at 310 before this PR. Pulling the sectioned-timeline
+//     body, the flat items path, and the root floater feed body out of the
+//     LazyColumn content below — see [sectionedTimelineContent],
+//     [flatTodoRowsContent], and [floaterTaskHomeRootFeedContent] — brought
+//     it to 272. DeepSource fingerprints an occurrence by its line and by the
+//     number in its message, so that improvement still reads as "1
+//     introduced, 0 resolved" and turns the check red on its own.
+//   * The remaining 272 is not the LazyColumn body's anymore — those three
+//     extractions already own it. It is this function's own state
+//     derivation, effects, and sheet/dialog wiring, and splitting that
+//     further means state-holder classes, not LazyListScope extensions: a
+//     riskier shape of change, on a screen with no Compose UI tests and no
+//     device on this box to catch a state-vs-value mistake at a new function
+//     boundary. That follow-up is deliberately out of scope here rather than
+//     rushed into this PR.
 //
 // One declaration, one issue code — the narrowest form the tool has, and the
-// style the repo already uses for KT-W1042 and KT-C1001. Never file-wide.
+// style the repo already uses for KT-W1042, KT-C1001, and
+// sectionedTimelineContent's own KT-R1006 below. Never file-wide.
 @Composable
 fun TodoListScreen( // skipcq: KT-R1006
     uiState: TodoListUiState,
@@ -1001,7 +1008,6 @@ fun TodoListScreen( // skipcq: KT-R1006
         label = "todoFabOffsetY",
     )
     val timelineItemSpacing = TimelineDateGroupSpacing
-    val timelineHeaderBodySpacing = TimelineHeaderBodySpacing
     fun highlightedTodoListTarget(todoId: String): Pair<Int, String>? {
         // Starts at 1: the hero block holds index 0 on this path, so every row
         // below it is one further down than the sections alone would say.
@@ -1170,6 +1176,58 @@ fun TodoListScreen( // skipcq: KT-R1006
                 requestTaskReschedule(drag.todo, targetSection.targetDate)
             }
         }
+    }
+
+    // --- Sectioned timeline callbacks --------------------------------------
+    // Named here, in TodoListScreen's own scope, rather than written inline
+    // where they are used inside sectionedTimelineContent below: each one
+    // closes over a `var ... by remember`/`by rememberSaveable` property
+    // declared above, and a property delegate's get/set resolve against the
+    // live backing state on every call regardless of where the closure that
+    // holds it is invoked from. Moving the *mutation* itself into
+    // sectionedTimelineContent — instead of moving only these already-bound
+    // closures — would have been the TdayApp bug again: the write would
+    // still compile, but it would land on a copy taken at the extracted
+    // function's call site instead of the live state.
+    val onTimelineSectionHeaderToggle: (key: String, wasCollapsed: Boolean) -> Unit =
+        { key, wasCollapsed ->
+            collapsedSectionKeys = if (wasCollapsed) {
+                collapsedSectionKeys - key
+            } else {
+                collapsedSectionKeys + key
+            }
+        }
+    val onTimelineQuickAdd: (dueEpochMs: Long) -> Unit = { dueEpochMs ->
+        quickAddDueEpochMs = dueEpochMs
+        showCreateTaskSheet = true
+    }
+    val onTimelineEditRequested: (todoId: String) -> Unit = { todoId ->
+        editTargetTodoId = todoId
+    }
+    val onTimelinePromoteRequested: (todoId: String) -> Unit = { todoId ->
+        promoteTargetTodoId = todoId
+    }
+    val onTimelineDeferRequested: (todoId: String) -> Unit = { todoId ->
+        deferTargetTodoId = todoId
+    }
+    val onOpenSwipeTaskIdChange: (String?) -> Unit = { openSwipeTaskId = it }
+    val onTimelineDragStart: (todo: TodoItem, position: Offset) -> Unit = { todo, position ->
+        activeDropSectionKey = null
+        timelineDropTargetBounds.clear()
+        draggedScheduledTodoId = todo.id
+        ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.LONG_PRESS)
+        activeTimelineDrag = TimelineInAppDrag(todo, position)
+    }
+    val onTimelineDragMove: (todo: TodoItem, position: Offset) -> Unit = { todo, position ->
+        activeTimelineDrag = activeTimelineDrag?.copy(position = position)
+            ?: TimelineInAppDrag(todo, position)
+        updateActiveTimelineDropTarget(position)
+    }
+    val onTimelineDragCancel: () -> Unit = {
+        activeTimelineDrag = null
+        draggedScheduledTodoId = null
+        activeDropSectionKey = null
+        timelineDropTargetBounds.clear()
     }
 
     Scaffold(
@@ -1366,378 +1424,61 @@ fun TodoListScreen( // skipcq: KT-R1006
                     }
 
                     if (showSectionedTimeline && !suppressInitialTodayTimeline && !scopedSearchHasNoResults) {
-                        timelineSections.forEachIndexed { sectionIndex, section ->
-                            val sectionHasTasks = section.items.isNotEmpty()
-                            val sectionModeCanCollapse = when (uiState.mode) {
-                                TodoListMode.ALL -> true
-                                TodoListMode.OVERDUE -> true
-                                TodoListMode.SCHEDULED -> true
-                                TodoListMode.PRIORITY -> section.key == "earlier"
-                                TodoListMode.LIST -> section.key == "earlier"
-                                else -> false
-                            }
-                            val sectionCanCollapse = sectionModeCanCollapse && sectionHasTasks
-                            // A list opens with Earlier collapsed, so a live query
-                            // would otherwise hide the matches it just found.
-                            val isCollapsed = sectionCanCollapse &&
-                                    !scopedSearchActive &&
-                                    collapsedSectionKeys.contains(section.key)
-                            val isActiveDropSection = activeDropSectionKey == section.key
-                            val sectionDraggedTodo = if (canRescheduleTasks) {
-                                draggedScheduledTodo
-                            } else {
-                                null
-                            }
-                            val isDropEligibleSection = sectionDraggedTodo?.let { todo ->
-                                canDropTodoInTimelineSection(todo, section)
-                            } == true
-
-                            if (!usesRootFeedChrome) {
-                                item(
-                                    key = "timeline-header-${section.key}",
-                                    contentType = "timeline-header",
-                                ) {
-                                    // A header slides with its section but never
-                                    // fades: it is a label on content that is
-                                    // doing its own arriving and leaving.
-                                    val headerModifier =
-                                        displacedFeedItemMotion(timelineAnimationsEnabled)
-                                    TimelineSectionHeader(
-                                        modifier = headerModifier
-                                            .fillMaxWidth()
-                                            .heightIn(min = 1.dp)
-                                            .timelineInAppDropTarget(
-                                                targetId = "header-${section.key}",
-                                                section = section,
-                                                enabled = isDropEligibleSection,
-                                                dropTargets = timelineDropTargetBounds,
-                                            )
-                                            .padding(top = if (sectionIndex == 0) 0.dp else TimelineSectionTopSpacing),
-                                        section = section,
-                                        useMinimalStyle = usesTodayStyle,
-                                        isCollapsed = isCollapsed,
-                                        isDropTarget = isActiveDropSection && isDropEligibleSection,
-                                        bottomSpacing = if (isCollapsed) {
-                                            TimelineCollapsedSectionSpacing
-                                        } else {
-                                            timelineHeaderBodySpacing
-                                        },
-                                        onHeaderClick = if (sectionCanCollapse) {
-                                            {
-                                                collapsedSectionKeys =
-                                                    if (isCollapsed) {
-                                                        collapsedSectionKeys - section.key
-                                                    } else {
-                                                        collapsedSectionKeys + section.key
-                                                    }
-                                            }
-                                        } else {
-                                            null
-                                        },
-                                        onTapForQuickAdd = section.quickAddDefaults
-                                            ?.takeUnless { sectionModeCanCollapse }
-                                            ?.let { dueEpochMs ->
-                                                {
-                                                    quickAddDueEpochMs = dueEpochMs
-                                                    showCreateTaskSheet = true
-                                                }
-                                            },
-                                    )
-                                }
-                            }
-
-                            if (canRescheduleTasks && isActiveDropSection && isDropEligibleSection && section.targetDate != null) {
-                                item(
-                                    key = "timeline-drop-placeholder-${section.key}",
-                                    contentType = "timeline-drop-placeholder",
-                                ) {
-                                    var placeholderModifier: Modifier = Modifier
-                                    if (timelineAnimationsEnabled) {
-                                        placeholderModifier = placeholderModifier.animateItem(
-                                            fadeInSpec = tween(
-                                                durationMillis = 150,
-                                                easing = FastOutSlowInEasing,
-                                            ),
-                                            placementSpec = tween(
-                                                durationMillis = 260,
-                                                easing = FastOutSlowInEasing,
-                                            ),
-                                            fadeOutSpec = tween(
-                                                durationMillis = 120,
-                                                easing = FastOutSlowInEasing,
-                                            ),
-                                        )
-                                    }
-                                    TimelineDropPlaceholder(
-                                        modifier = placeholderModifier
-                                            .timelineInAppDropTarget(
-                                                targetId = "placeholder-${section.key}",
-                                                section = section,
-                                                enabled = isDropEligibleSection,
-                                                dropTargets = timelineDropTargetBounds,
-                                            )
-                                            .padding(
-                                                bottom = TimelineDateGroupSpacing,
-                                            ),
-                                        active = true,
-                                        useMinimalStyle = usesTodayStyle,
-                                    )
-                                }
-                            }
-
-                            if (!isCollapsed && section.items.isNotEmpty()) {
-                                val showEarlierDateTimeSubtitle =
-                                    section.key == "earlier" &&
-                                            (
-                                                    uiState.mode == TodoListMode.ALL ||
-                                                            uiState.mode == TodoListMode.PRIORITY ||
-                                                            uiState.mode == TodoListMode.LIST
-                                                    )
-                                section.items.forEachIndexed { itemIndex, todo ->
-                                    val showTimelineDateDivider = shouldShowDateDivider(
-                                        afterItemIndex = itemIndex,
-                                        inSectionIndex = sectionIndex,
-                                        sections = timelineSections,
-                                        collapsedSectionKeys = collapsedSectionKeys,
-                                    )
-                                    item(
-                                        key = "timeline-todo-${section.key}-${todo.id}",
-                                        contentType = "timeline-todo",
-                                    ) {
-                                        val rowModifier =
-                                            feedItemMotion(timelineAnimationsEnabled)
-                                        TimelineTaskRow(
-                                            modifier = rowModifier
-                                                .alpha(
-                                                    restingAlphaFor(
-                                                        uiState.mode,
-                                                        todo,
-                                                        restingFloatersEnabled
-                                                    )
-                                                )
-                                                .timelineInAppDropTarget(
-                                                    targetId = "row-${section.key}-${todo.id}",
-                                                    section = section,
-                                                    enabled = isDropEligibleSection,
-                                                    dropTargets = timelineDropTargetBounds,
-                                                )
-                                                .padding(
-                                                    bottom = timelineTaskBottomSpacing(
-                                                        itemIndex = itemIndex,
-                                                        lastIndex = section.items.lastIndex,
-                                                        showDateDivider = showTimelineDateDivider,
-                                                    ),
-                                                ),
-                                            todo = todo,
-                                            mode = uiState.mode,
-                                            lists = uiState.lists,
-                                            useMinimalStyle = usesTodayStyle,
-                                            flashHighlight = flashTodoId == todo.id || flashTodoId == todo.canonicalId,
-                                            showEarlierDateTimeSubtitle = showEarlierDateTimeSubtitle,
-                                            showDateDivider = showTimelineDateDivider,
-                                            readOnly = isViewerList,
-                                            selectionActive = selectionActive,
-                                            selected = todo.id in selectedTodoIds,
-                                            onToggleSelected = { toggleTodoSelected(todo) },
-                                            onComplete = { completeAndCelebrate(todo) },
-                                            onDelete = { onDelete(todo) },
-                                            onInfo = {
-                                                editTargetTodoId = todo.id
-                                            },
-                                            onPromote = if (uiState.mode == TodoListMode.FLOATER) {
-                                                { promoteTargetTodoId = todo.id }
-                                            } else {
-                                                null
-                                            },
-                                            onDemote = if (uiState.mode == TodoListMode.OVERDUE) {
-                                                { onDemoteTodo(todo) }
-                                            } else {
-                                                null
-                                            },
-                                            onDefer = { deferTargetTodoId = todo.id },
-                                            draggedTodo = sectionDraggedTodo,
-                                            openSwipeTaskId = openSwipeTaskId,
-                                            onOpenSwipeTaskIdChange = { openSwipeTaskId = it },
-                                            // Long-press drag-to-reschedule stands
-                                            // down while selecting: a null start
-                                            // handler is what turns `dragEnabled`
-                                            // off inside the row.
-                                            onDragTodoStart = if (canRescheduleTasks && !selectionActive) {
-                                                { position ->
-                                                    activeDropSectionKey = null
-                                                    timelineDropTargetBounds.clear()
-                                                    draggedScheduledTodoId = todo.id
-                                                    ViewCompat.performHapticFeedback(
-                                                        view,
-                                                        HapticFeedbackConstantsCompat.LONG_PRESS
-                                                    )
-                                                    activeTimelineDrag =
-                                                        TimelineInAppDrag(todo, position)
-                                                }
-                                            } else {
-                                                null
-                                            },
-                                            onDragTodoMove = { position ->
-                                                activeTimelineDrag =
-                                                    activeTimelineDrag?.copy(position = position)
-                                                        ?: TimelineInAppDrag(todo, position)
-                                                updateActiveTimelineDropTarget(position)
-                                            },
-                                            onDragTodoEnd = { position ->
-                                                finishTimelineDrag(position)
-                                            },
-                                            onDragTodoCancel = {
-                                                activeTimelineDrag = null
-                                                draggedScheduledTodoId = null
-                                                activeDropSectionKey = null
-                                                timelineDropTargetBounds.clear()
-                                            },
-                                        )
-                                    }
-                                }
-                            }
-                        }
+                        sectionedTimelineContent(
+                            uiState = uiState,
+                            timelineSections = timelineSections,
+                            usesRootFeedChrome = usesRootFeedChrome,
+                            usesTodayStyle = usesTodayStyle,
+                            timelineAnimationsEnabled = timelineAnimationsEnabled,
+                            scopedSearchActive = scopedSearchActive,
+                            canRescheduleTasks = canRescheduleTasks,
+                            isViewerList = isViewerList,
+                            selectionActive = selectionActive,
+                            selectedTodoIds = selectedTodoIds,
+                            flashTodoId = flashTodoId,
+                            openSwipeTaskId = openSwipeTaskId,
+                            collapsedSectionKeys = collapsedSectionKeys,
+                            activeDropSectionKey = activeDropSectionKey,
+                            draggedScheduledTodo = draggedScheduledTodo,
+                            restingFloatersEnabled = restingFloatersEnabled,
+                            timelineDropTargetBounds = timelineDropTargetBounds,
+                            canDropTodoInTimelineSection = ::canDropTodoInTimelineSection,
+                            onSectionHeaderToggle = onTimelineSectionHeaderToggle,
+                            onQuickAdd = onTimelineQuickAdd,
+                            onToggleTodoSelected = toggleTodoSelected,
+                            onComplete = completeAndCelebrate,
+                            onDelete = onDelete,
+                            onEditRequested = onTimelineEditRequested,
+                            onPromoteRequested = onTimelinePromoteRequested,
+                            onDemoteTodo = onDemoteTodo,
+                            onDeferRequested = onTimelineDeferRequested,
+                            onOpenSwipeTaskIdChange = onOpenSwipeTaskIdChange,
+                            onDragStart = onTimelineDragStart,
+                            onDragMove = onTimelineDragMove,
+                            onDragEnd = ::finishTimelineDrag,
+                            onDragCancel = onTimelineDragCancel,
+                        )
                     } else if (!showSectionedTimeline) {
-                        items(
-                            items = uiState.items,
-                            key = { it.id },
-                            contentType = { "todo-row" },
-                        ) { todo ->
-                            if (usesTodayStyle) {
-                                TodayTodoRow(
-                                    todo = todo,
-                                    onComplete = { completeAndCelebrate(todo) },
-                                    onDelete = { onDelete(todo) },
-                                )
-                            } else {
-                                TodoRow(
-                                    todo = todo,
-                                    onComplete = { completeAndCelebrate(todo) },
-                                    onDelete = { onDelete(todo) },
-                                )
-                            }
-                        }
+                        flatTodoRowsContent(
+                            todos = uiState.items,
+                            usesTodayStyle = usesTodayStyle,
+                            onComplete = completeAndCelebrate,
+                            onDelete = onDelete,
+                        )
                     }
 
-                    // Root floater empty state: mirror the web layout — the
-                    // scene sitting in a gap in the middle of the screen, with
-                    // the list names below it (instead of a full-screen
-                    // watermark overlay).
-                    if (isFloaterTaskHomeScreen && uiState.items.isEmpty() && !uiState.isLoading) {
-                        item(
-                            key = "floater-empty-message",
-                            contentType = "floater-empty-message",
-                        ) {
-                            val gapHeight = (LocalConfiguration.current.screenHeightDp * 0.42f).dp
-                            Box(
-                                // Neither fade, for the same reason the overlay
-                                // version has neither. Arriving: the scene
-                                // inside runs its own entrance on the
-                                // confetti's clock, and a host fade layered
-                                // over it would also dim the burst during the
-                                // frames it is meant to lead at full opacity.
-                                // Leaving: a 42%-tall illustration fading out
-                                // over a task row that is arriving in the same
-                                // slot paints the empty state on top of the
-                                // thing that disproves it — the overlay simply
-                                // stops being composed, and so does this.
-                                modifier = displacedFeedItemMotion(timelineAnimationsEnabled)
-                                    .fillMaxWidth()
-                                    .heightIn(min = gapHeight),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                TdayEmptyState(
-                                    icon = emptySceneIcon,
-                                    accentColor = titleColor,
-                                    title = emptyStateMessageForMode(
-                                        mode = uiState.mode,
-                                        isFloaterList = isListDetailScreen,
-                                    ),
-                                    description = emptyStateDescriptionForMode(
-                                        mode = uiState.mode,
-                                        isFloaterList = isListDetailScreen,
-                                    ),
-                                    celebrate = celebrateEmptyState,
-                                    // The overlay callers below pass nothing:
-                                    // they draw over a page where nothing is
-                                    // moving, so the burst can own the frame
-                                    // the feed empties on. Here the scene is
-                                    // inline, and the tile and list rows under
-                                    // it are still gliding down into the space
-                                    // it just claimed. Hold the celebration for
-                                    // exactly that glide, so the paper flies
-                                    // over a settled screen — which is the
-                                    // whole of what makes the list screen's
-                                    // version read as smooth.
-                                    celebrationStartDelayMillis =
-                                        TdayFeedItemMotion.CelebrationStartDelayMillis,
-                                )
-                            }
-                        }
-                    }
-
-                    // Floater tab's nav entry to the browsable Completed screen — the
-                    // todo side's own root feed reaches it through an identical
-                    // CategoryCard tile (ScheduledTaskHomeScreen's CategoryGrid); this
-                    // is the same shared component and the same destination (one
-                    // Completed screen renders both item types, distinguished there
-                    // by CompletedItem.isFloater), just placed to fit this screen's
-                    // single-column layout instead of a 2-up grid.
-                    if (isFloaterTaskHomeScreen) {
-                        item(
-                            key = "floater-completed-entry",
-                            contentType = "floater-completed-entry",
-                        ) {
-                            // The empty scene above opens a near-half-screen gap
-                            // in the slot the last row leaves, and this tile and
-                            // the lists under it are what that gap displaces.
-                            // Without the shared placement they cover that
-                            // distance in one frame — the snap the celebration
-                            // was landing in the middle of.
-                            CategoryCard(
-                                modifier = displacedFeedItemMotion(timelineAnimationsEnabled)
-                                    .fillMaxWidth()
-                                    .padding(bottom = 10.dp),
-                                color = TdayCompletedTileAccent,
-                                iconRes = R.drawable.ic_lucide_circle_check_big,
-                                watermarkRes = R.drawable.ic_lucide_circle_check_big,
-                                title = stringResource(R.string.scheduled_task_home_category_completed),
-                                onClick = onOpenCompleted,
-                            )
-                        }
-                    }
-
-                    if (floaterTaskHomeListRows.isNotEmpty()) {
-                        item(
-                            key = "floater-my-lists-header",
-                            contentType = "floater-list-header",
-                        ) {
-                            FloaterTaskHomeMyListsHeader(
-                                modifier = displacedFeedItemMotion(timelineAnimationsEnabled)
-                                    .padding(top = 4.dp, bottom = 10.dp),
-                            )
-                        }
-                        items(
-                            items = floaterTaskHomeListRows,
-                            key = { (list, _) -> "floater-list-${list.id}" },
-                            contentType = { "floater-list-row" },
-                        ) { (list, count) ->
-                            FloaterTaskHomeListRow(
-                                modifier = displacedFeedItemMotion(timelineAnimationsEnabled)
-                                    .padding(bottom = 10.dp),
-                                name = list.name,
-                                colorKey = list.color,
-                                iconKey = list.iconKey,
-                                count = count,
-                                onClick = {
-                                    onOpenFloaterList(
-                                        list.id,
-                                        capitalizeFirstListLetter(list.name),
-                                    )
-                                },
-                            )
-                        }
-                    }
+                    floaterTaskHomeRootFeedContent(
+                        isFloaterTaskHomeScreen = isFloaterTaskHomeScreen,
+                        uiState = uiState,
+                        timelineAnimationsEnabled = timelineAnimationsEnabled,
+                        emptySceneIcon = emptySceneIcon,
+                        titleColor = titleColor,
+                        isListDetailScreen = isListDetailScreen,
+                        celebrateEmptyState = celebrateEmptyState,
+                        onOpenCompleted = onOpenCompleted,
+                        floaterTaskHomeListRows = floaterTaskHomeListRows,
+                        onOpenFloaterList = onOpenFloaterList,
+                    )
 
                     uiState.errorMessage?.let { message ->
                         item {
@@ -2460,6 +2201,481 @@ fun TodoListScreen( // skipcq: KT-R1006
                 exitSelection()
             },
         )
+    }
+}
+
+/**
+ * The flat, unsectioned task list body — the non-timeline sibling of
+ * [sectionedTimelineContent], used wherever [TodoListScreen] shows its items
+ * in one plain run rather than under day/priority headers.
+ *
+ * A `LazyListScope` receiver extension, not a plain `@Composable`, so the
+ * `items(...)` call below registers directly against the caller's
+ * [LazyColumn] — its keys, content types and placement are exactly what
+ * they were when this body lived inline in [TodoListScreen].
+ */
+private fun LazyListScope.flatTodoRowsContent(
+    todos: List<TodoItem>,
+    usesTodayStyle: Boolean,
+    onComplete: (TodoItem) -> Unit,
+    onDelete: (TodoItem) -> Unit,
+) {
+    items(
+        items = todos,
+        key = { it.id },
+        contentType = { "todo-row" },
+    ) { todo ->
+        if (usesTodayStyle) {
+            TodayTodoRow(
+                todo = todo,
+                onComplete = { onComplete(todo) },
+                onDelete = { onDelete(todo) },
+            )
+        } else {
+            TodoRow(
+                todo = todo,
+                onComplete = { onComplete(todo) },
+                onDelete = { onDelete(todo) },
+            )
+        }
+    }
+}
+
+/**
+ * The root floater feed's own content, below the shared timeline/flat item
+ * paths: the inline empty scene, the Completed tile, and the "My Lists"
+ * header with its rows. Lives only on [TodoListMode.FLOATER] with no
+ * `listId` — every branch below re-checks [isFloaterTaskHomeScreen] (or
+ * [floaterTaskHomeListRows], which is empty whenever that flag is false)
+ * exactly as it did inline, so calling this unconditionally changes nothing.
+ *
+ * A `LazyListScope` receiver extension for the same reason as
+ * [flatTodoRowsContent]: every `item`/`items` call below needs the caller's
+ * scope to register its key, content type and placement correctly.
+ *
+ * [timelineAnimationsEnabled], [celebrateEmptyState] and the celebration
+ * delay feed [displacedFeedItemMotion]/`TdayEmptyState` exactly as they did
+ * inline — this is the celebration choreography from PR #122, so nothing
+ * here changes the item order, keys or placement specs those depend on.
+ */
+private fun LazyListScope.floaterTaskHomeRootFeedContent(
+    isFloaterTaskHomeScreen: Boolean,
+    uiState: TodoListUiState,
+    timelineAnimationsEnabled: Boolean,
+    @DrawableRes emptySceneIcon: Int,
+    titleColor: Color,
+    isListDetailScreen: Boolean,
+    celebrateEmptyState: Boolean,
+    onOpenCompleted: () -> Unit,
+    floaterTaskHomeListRows: List<Pair<ListSummary, Int>>,
+    onOpenFloaterList: (listId: String, listName: String) -> Unit,
+) {
+    // Root floater empty state: mirror the web layout — the
+    // scene sitting in a gap in the middle of the screen, with
+    // the list names below it (instead of a full-screen
+    // watermark overlay).
+    if (isFloaterTaskHomeScreen && uiState.items.isEmpty() && !uiState.isLoading) {
+        item(
+            key = "floater-empty-message",
+            contentType = "floater-empty-message",
+        ) {
+            val gapHeight = (LocalConfiguration.current.screenHeightDp * 0.42f).dp
+            Box(
+                // Neither fade, for the same reason the overlay
+                // version has neither. Arriving: the scene
+                // inside runs its own entrance on the
+                // confetti's clock, and a host fade layered
+                // over it would also dim the burst during the
+                // frames it is meant to lead at full opacity.
+                // Leaving: a 42%-tall illustration fading out
+                // over a task row that is arriving in the same
+                // slot paints the empty state on top of the
+                // thing that disproves it — the overlay simply
+                // stops being composed, and so does this.
+                modifier = displacedFeedItemMotion(timelineAnimationsEnabled)
+                    .fillMaxWidth()
+                    .heightIn(min = gapHeight),
+                contentAlignment = Alignment.Center,
+            ) {
+                TdayEmptyState(
+                    icon = emptySceneIcon,
+                    accentColor = titleColor,
+                    title = emptyStateMessageForMode(
+                        mode = uiState.mode,
+                        isFloaterList = isListDetailScreen,
+                    ),
+                    description = emptyStateDescriptionForMode(
+                        mode = uiState.mode,
+                        isFloaterList = isListDetailScreen,
+                    ),
+                    celebrate = celebrateEmptyState,
+                    // The overlay callers below pass nothing:
+                    // they draw over a page where nothing is
+                    // moving, so the burst can own the frame
+                    // the feed empties on. Here the scene is
+                    // inline, and the tile and list rows under
+                    // it are still gliding down into the space
+                    // it just claimed. Hold the celebration for
+                    // exactly that glide, so the paper flies
+                    // over a settled screen — which is the
+                    // whole of what makes the list screen's
+                    // version read as smooth.
+                    celebrationStartDelayMillis =
+                        TdayFeedItemMotion.CelebrationStartDelayMillis,
+                )
+            }
+        }
+    }
+
+    // Floater tab's nav entry to the browsable Completed screen — the
+    // todo side's own root feed reaches it through an identical
+    // CategoryCard tile (ScheduledTaskHomeScreen's CategoryGrid); this
+    // is the same shared component and the same destination (one
+    // Completed screen renders both item types, distinguished there
+    // by CompletedItem.isFloater), just placed to fit this screen's
+    // single-column layout instead of a 2-up grid.
+    if (isFloaterTaskHomeScreen) {
+        item(
+            key = "floater-completed-entry",
+            contentType = "floater-completed-entry",
+        ) {
+            // The empty scene above opens a near-half-screen gap
+            // in the slot the last row leaves, and this tile and
+            // the lists under it are what that gap displaces.
+            // Without the shared placement they cover that
+            // distance in one frame — the snap the celebration
+            // was landing in the middle of.
+            CategoryCard(
+                modifier = displacedFeedItemMotion(timelineAnimationsEnabled)
+                    .fillMaxWidth()
+                    .padding(bottom = 10.dp),
+                color = TdayCompletedTileAccent,
+                iconRes = R.drawable.ic_lucide_circle_check_big,
+                watermarkRes = R.drawable.ic_lucide_circle_check_big,
+                title = stringResource(R.string.scheduled_task_home_category_completed),
+                onClick = onOpenCompleted,
+            )
+        }
+    }
+
+    if (floaterTaskHomeListRows.isNotEmpty()) {
+        item(
+            key = "floater-my-lists-header",
+            contentType = "floater-list-header",
+        ) {
+            FloaterTaskHomeMyListsHeader(
+                modifier = displacedFeedItemMotion(timelineAnimationsEnabled)
+                    .padding(top = 4.dp, bottom = 10.dp),
+            )
+        }
+        items(
+            items = floaterTaskHomeListRows,
+            key = { (list, _) -> "floater-list-${list.id}" },
+            contentType = { "floater-list-row" },
+        ) { (list, count) ->
+            FloaterTaskHomeListRow(
+                modifier = displacedFeedItemMotion(timelineAnimationsEnabled)
+                    .padding(bottom = 10.dp),
+                name = list.name,
+                colorKey = list.color,
+                iconKey = list.iconKey,
+                count = count,
+                onClick = {
+                    onOpenFloaterList(
+                        list.id,
+                        capitalizeFirstListLetter(list.name),
+                    )
+                },
+            )
+        }
+    }
+}
+
+/**
+ * The sectioned timeline body: one [TodoSection] at a time, each its own
+ * header, an optional drop placeholder, then its task rows. The largest and
+ * highest-risk of the three LazyColumn seams pulled out of [TodoListScreen].
+ *
+ * Every mutation below — collapsing a header, starting/updating/ending a
+ * drag, opening the create sheet from a quick-add tap, opening a swipe row,
+ * requesting edit/promote/defer — is routed through a callback parameter
+ * instead of assigning a `var ... by remember` property directly inside this
+ * function. Each callback is bound in [TodoListScreen]'s own scope (see the
+ * block directly above its `Scaffold` call), so every read/write it performs
+ * resolves against the live backing state no matter when this function
+ * invokes it — the same live-state guarantee those properties had before
+ * this code was inline here. Moving the mutation *itself* into this
+ * function, instead of only the already-bound callback, is exactly the
+ * TdayApp regression this extraction is written to avoid: the write would
+ * still compile, but it would land on a value copied at this function's own
+ * call site rather than on the live state.
+ *
+ * [feedItemMotion]/[displacedFeedItemMotion], the drop placeholder's
+ * `animateItem` spec, and the item keys/content types below are the PR #122
+ * celebration/drag choreography and are unchanged by this extraction — same
+ * calls, same order, same keys as when this loop lived inline.
+ */
+// KT-R1006 (cyclomatic complexity, reported at 33) is suppressed on this
+// declaration rather than split further. Two separate facts, both worth
+// writing down:
+//
+//   * It is unavoidable at this size, not just high. DeepSource fingerprints
+//     an issue by (file, line, message), so a function that never existed on
+//     `develop` reads as "introduced" the moment it appears, regardless of
+//     its complexity value — pulling this loop out of [TodoListScreen] (see
+//     that function's own KT-R1006 note above) could only ever relocate this
+//     finding, never make it disappear on arrival.
+//   * Fragmenting it further is the wrong trade here, not just an unwanted
+//     one. The header item, the drop-placeholder item and the per-todo item
+//     below carry the PR #122 celebration/drag choreography this function's
+//     own doc comment above describes — splitting each into its own
+//     LazyItemScope helper to shave a few complexity points would multiply
+//     the function boundaries that section/drag state and `animateItem`
+//     specs have to keep crossing correctly, on a screen with no Compose UI
+//     test coverage to catch a mistake. The 33 is real (five collapsible-
+//     section rules, a drag/drop eligibility check, and three item kinds
+//     sharing one loop), but it is complexity this loop always had —
+//     extraction only gave it its own line number.
+//
+// One declaration, one issue code — the narrowest form the tool has, and the
+// style the repo already uses for KT-W1042, KT-C1001, and TodoListScreen's
+// own KT-R1006 above. Never file-wide.
+private fun LazyListScope.sectionedTimelineContent( // skipcq: KT-R1006
+    uiState: TodoListUiState,
+    timelineSections: List<TodoSection>,
+    usesRootFeedChrome: Boolean,
+    usesTodayStyle: Boolean,
+    timelineAnimationsEnabled: Boolean,
+    scopedSearchActive: Boolean,
+    canRescheduleTasks: Boolean,
+    isViewerList: Boolean,
+    selectionActive: Boolean,
+    selectedTodoIds: Set<String>,
+    flashTodoId: String?,
+    openSwipeTaskId: String?,
+    collapsedSectionKeys: Set<String>,
+    activeDropSectionKey: String?,
+    draggedScheduledTodo: TodoItem?,
+    restingFloatersEnabled: Boolean,
+    timelineDropTargetBounds: MutableMap<String, TimelineDropTargetBounds>,
+    canDropTodoInTimelineSection: (TodoItem, TodoSection) -> Boolean,
+    onSectionHeaderToggle: (key: String, wasCollapsed: Boolean) -> Unit,
+    onQuickAdd: (dueEpochMs: Long) -> Unit,
+    onToggleTodoSelected: (TodoItem) -> Unit,
+    onComplete: (TodoItem) -> Unit,
+    onDelete: (TodoItem) -> Unit,
+    onEditRequested: (todoId: String) -> Unit,
+    onPromoteRequested: (todoId: String) -> Unit,
+    onDemoteTodo: (TodoItem) -> Unit,
+    onDeferRequested: (todoId: String) -> Unit,
+    onOpenSwipeTaskIdChange: (String?) -> Unit,
+    onDragStart: (todo: TodoItem, position: Offset) -> Unit,
+    onDragMove: (todo: TodoItem, position: Offset) -> Unit,
+    onDragEnd: (position: Offset?) -> Unit,
+    onDragCancel: () -> Unit,
+) {
+    timelineSections.forEachIndexed { sectionIndex, section ->
+        val sectionHasTasks = section.items.isNotEmpty()
+        val sectionModeCanCollapse = when (uiState.mode) {
+            TodoListMode.ALL -> true
+            TodoListMode.OVERDUE -> true
+            TodoListMode.SCHEDULED -> true
+            TodoListMode.PRIORITY -> section.key == "earlier"
+            TodoListMode.LIST -> section.key == "earlier"
+            else -> false
+        }
+        val sectionCanCollapse = sectionModeCanCollapse && sectionHasTasks
+        // A list opens with Earlier collapsed, so a live query
+        // would otherwise hide the matches it just found.
+        val isCollapsed = sectionCanCollapse &&
+                !scopedSearchActive &&
+                collapsedSectionKeys.contains(section.key)
+        val isActiveDropSection = activeDropSectionKey == section.key
+        val sectionDraggedTodo = if (canRescheduleTasks) {
+            draggedScheduledTodo
+        } else {
+            null
+        }
+        val isDropEligibleSection = sectionDraggedTodo?.let { todo ->
+            canDropTodoInTimelineSection(todo, section)
+        } == true
+
+        if (!usesRootFeedChrome) {
+            item(
+                key = "timeline-header-${section.key}",
+                contentType = "timeline-header",
+            ) {
+                // A header slides with its section but never
+                // fades: it is a label on content that is
+                // doing its own arriving and leaving.
+                val headerModifier =
+                    displacedFeedItemMotion(timelineAnimationsEnabled)
+                TimelineSectionHeader(
+                    modifier = headerModifier
+                        .fillMaxWidth()
+                        .heightIn(min = 1.dp)
+                        .timelineInAppDropTarget(
+                            targetId = "header-${section.key}",
+                            section = section,
+                            enabled = isDropEligibleSection,
+                            dropTargets = timelineDropTargetBounds,
+                        )
+                        .padding(top = if (sectionIndex == 0) 0.dp else TimelineSectionTopSpacing),
+                    section = section,
+                    useMinimalStyle = usesTodayStyle,
+                    isCollapsed = isCollapsed,
+                    isDropTarget = isActiveDropSection && isDropEligibleSection,
+                    bottomSpacing = if (isCollapsed) {
+                        TimelineCollapsedSectionSpacing
+                    } else {
+                        TimelineHeaderBodySpacing
+                    },
+                    onHeaderClick = if (sectionCanCollapse) {
+                        {
+                            onSectionHeaderToggle(section.key, isCollapsed)
+                        }
+                    } else {
+                        null
+                    },
+                    onTapForQuickAdd = section.quickAddDefaults
+                        ?.takeUnless { sectionModeCanCollapse }
+                        ?.let { dueEpochMs ->
+                            {
+                                onQuickAdd(dueEpochMs)
+                            }
+                        },
+                )
+            }
+        }
+
+        if (canRescheduleTasks && isActiveDropSection && isDropEligibleSection && section.targetDate != null) {
+            item(
+                key = "timeline-drop-placeholder-${section.key}",
+                contentType = "timeline-drop-placeholder",
+            ) {
+                var placeholderModifier: Modifier = Modifier
+                if (timelineAnimationsEnabled) {
+                    placeholderModifier = placeholderModifier.animateItem(
+                        fadeInSpec = tween(
+                            durationMillis = 150,
+                            easing = FastOutSlowInEasing,
+                        ),
+                        placementSpec = tween(
+                            durationMillis = 260,
+                            easing = FastOutSlowInEasing,
+                        ),
+                        fadeOutSpec = tween(
+                            durationMillis = 120,
+                            easing = FastOutSlowInEasing,
+                        ),
+                    )
+                }
+                TimelineDropPlaceholder(
+                    modifier = placeholderModifier
+                        .timelineInAppDropTarget(
+                            targetId = "placeholder-${section.key}",
+                            section = section,
+                            enabled = isDropEligibleSection,
+                            dropTargets = timelineDropTargetBounds,
+                        )
+                        .padding(
+                            bottom = TimelineDateGroupSpacing,
+                        ),
+                    active = true,
+                    useMinimalStyle = usesTodayStyle,
+                )
+            }
+        }
+
+        if (!isCollapsed && section.items.isNotEmpty()) {
+            val showEarlierDateTimeSubtitle =
+                section.key == "earlier" &&
+                        (
+                                uiState.mode == TodoListMode.ALL ||
+                                        uiState.mode == TodoListMode.PRIORITY ||
+                                        uiState.mode == TodoListMode.LIST
+                                )
+            section.items.forEachIndexed { itemIndex, todo ->
+                val showTimelineDateDivider = shouldShowDateDivider(
+                    afterItemIndex = itemIndex,
+                    inSectionIndex = sectionIndex,
+                    sections = timelineSections,
+                    collapsedSectionKeys = collapsedSectionKeys,
+                )
+                item(
+                    key = "timeline-todo-${section.key}-${todo.id}",
+                    contentType = "timeline-todo",
+                ) {
+                    val rowModifier =
+                        feedItemMotion(timelineAnimationsEnabled)
+                    TimelineTaskRow(
+                        modifier = rowModifier
+                            .alpha(
+                                restingAlphaFor(
+                                    uiState.mode,
+                                    todo,
+                                    restingFloatersEnabled
+                                )
+                            )
+                            .timelineInAppDropTarget(
+                                targetId = "row-${section.key}-${todo.id}",
+                                section = section,
+                                enabled = isDropEligibleSection,
+                                dropTargets = timelineDropTargetBounds,
+                            )
+                            .padding(
+                                bottom = timelineTaskBottomSpacing(
+                                    itemIndex = itemIndex,
+                                    lastIndex = section.items.lastIndex,
+                                    showDateDivider = showTimelineDateDivider,
+                                ),
+                            ),
+                        todo = todo,
+                        mode = uiState.mode,
+                        lists = uiState.lists,
+                        useMinimalStyle = usesTodayStyle,
+                        flashHighlight = flashTodoId == todo.id || flashTodoId == todo.canonicalId,
+                        showEarlierDateTimeSubtitle = showEarlierDateTimeSubtitle,
+                        showDateDivider = showTimelineDateDivider,
+                        readOnly = isViewerList,
+                        selectionActive = selectionActive,
+                        selected = todo.id in selectedTodoIds,
+                        onToggleSelected = { onToggleTodoSelected(todo) },
+                        onComplete = { onComplete(todo) },
+                        onDelete = { onDelete(todo) },
+                        onInfo = {
+                            onEditRequested(todo.id)
+                        },
+                        onPromote = if (uiState.mode == TodoListMode.FLOATER) {
+                            { onPromoteRequested(todo.id) }
+                        } else {
+                            null
+                        },
+                        onDemote = if (uiState.mode == TodoListMode.OVERDUE) {
+                            { onDemoteTodo(todo) }
+                        } else {
+                            null
+                        },
+                        onDefer = { onDeferRequested(todo.id) },
+                        draggedTodo = sectionDraggedTodo,
+                        openSwipeTaskId = openSwipeTaskId,
+                        onOpenSwipeTaskIdChange = onOpenSwipeTaskIdChange,
+                        // Long-press drag-to-reschedule stands
+                        // down while selecting: a null start
+                        // handler is what turns `dragEnabled`
+                        // off inside the row.
+                        onDragTodoStart = if (canRescheduleTasks && !selectionActive) {
+                            { position -> onDragStart(todo, position) }
+                        } else {
+                            null
+                        },
+                        onDragTodoMove = { position -> onDragMove(todo, position) },
+                        onDragTodoEnd = { position -> onDragEnd(position) },
+                        onDragTodoCancel = onDragCancel,
+                    )
+                }
+            }
+        }
     }
 }
 

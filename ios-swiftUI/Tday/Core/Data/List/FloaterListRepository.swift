@@ -9,6 +9,11 @@ struct StagedFloaterListDeletion {
     let floaters: [CachedFloaterRecord]
     let completedFloaters: [CachedCompletedFloaterRecord]
     let pendingMutations: [PendingMutationRecord]
+    /// Identifies the non-replayable staged DELETE_FLOATER_LIST marker
+    /// `stageDeleteList(listId:)` wrote (see `PendingMutationRecord.staged`), so
+    /// `undoStagedList(_:)` can remove it on Undo instead of leaving it stranded
+    /// in the pending queue.
+    var stagedMutationId: String? = nil
 }
 
 @MainActor
@@ -80,41 +85,51 @@ final class FloaterListRepository {
             return
         }
 
-        do {
-            let response = try await api.createFloaterList(
-                payload: CreateFloaterListRequest(name: normalizedName, color: color, iconKey: iconKey)
-            )
-            guard let createdList = response.list else {
-                return
-            }
-            let createdAt = parseOptionalDate(createdList.createdAt)?.epochMilliseconds ?? now
-            let updatedAt = parseOptionalDate(createdList.updatedAt)?.epochMilliseconds ?? now
-            _ = try await cacheManager.updateOfflineState { state in
-                var nextState = self.replaceLocalFloaterListID(
-                    state,
-                    localListID: localListID,
-                    serverListID: createdList.id
+        // Held for the whole request-plus-remap: a realtime self-echo of this
+        // very create can otherwise trigger a background sync whose fetch
+        // already contains the new server row while the placeholder above
+        // still carries its local_ id (see SyncManager.mergeRemoteWithLocal's
+        // doc comment) -- the union merge would then keep both. Sharing
+        // syncCachedData's lock means that fetch-and-merge can only run
+        // fully before this starts or fully after it finishes, never
+        // interleaved with it.
+        await cacheManager.withSyncLock {
+            do {
+                let response = try await api.createFloaterList(
+                    payload: CreateFloaterListRequest(name: normalizedName, color: color, iconKey: iconKey)
                 )
-                let todoCount = nextState.floaters.filter { !$0.completed && $0.listId == createdList.id }.count
-                nextState.floaterLists = nextState.floaterLists.map { list in
-                    guard list.id == createdList.id else {
-                        return list
-                    }
-                    return CachedFloaterListRecord(
-                        id: createdList.id,
-                        name: createdList.name,
-                        color: createdList.color,
-                        iconKey: createdList.iconKey ?? list.iconKey,
-                        todoCount: todoCount,
-                        updatedAtEpochMs: updatedAt,
-                        createdAtEpochMs: createdAt
-                    )
+                guard let createdList = response.list else {
+                    return
                 }
-                nextState.pendingMutations.removeAll { $0.mutationId == mutationID }
-                return nextState
+                let createdAt = parseOptionalDate(createdList.createdAt)?.epochMilliseconds ?? now
+                let updatedAt = parseOptionalDate(createdList.updatedAt)?.epochMilliseconds ?? now
+                _ = try await cacheManager.updateOfflineState { state in
+                    var nextState = self.replaceLocalFloaterListID(
+                        state,
+                        localListID: localListID,
+                        serverListID: createdList.id
+                    )
+                    let todoCount = nextState.floaters.filter { !$0.completed && $0.listId == createdList.id }.count
+                    nextState.floaterLists = nextState.floaterLists.map { list in
+                        guard list.id == createdList.id else {
+                            return list
+                        }
+                        return CachedFloaterListRecord(
+                            id: createdList.id,
+                            name: createdList.name,
+                            color: createdList.color,
+                            iconKey: createdList.iconKey ?? list.iconKey,
+                            todoCount: todoCount,
+                            updatedAtEpochMs: updatedAt,
+                            createdAtEpochMs: createdAt
+                        )
+                    }
+                    nextState.pendingMutations.removeAll { $0.mutationId == mutationID }
+                    return nextState
+                }
+            } catch {
+                // Keep the pending CREATE_FLOATER_LIST mutation so background sync can retry it.
             }
-        } catch {
-            // Keep the pending CREATE_FLOATER_LIST mutation so background sync can retry it.
         }
     }
 
@@ -225,46 +240,85 @@ final class FloaterListRepository {
 
     /// First half of a delayed-commit delete: prunes the floater list, its
     /// floaters, their completed history, and related pending mutations from
-    /// the local cache without queueing the server delete. Commit later by
-    /// calling `deleteList(listId:onOptimisticDelete:)` — its prune half
-    /// re-runs as a no-op — or restore with `undoStagedList(_:)`.
-    func stageDeleteList(listId: String) -> StagedFloaterListDeletion {
+    /// the local cache. Nothing is sent to the server here — the real
+    /// DELETE_FLOATER_LIST mutation is added by the commit step — but a
+    /// non-replayable *staged* marker of the same kind is written in its
+    /// place so a sync's merge (a pull-to-refresh racing the undo window)
+    /// still treats the list as deleted instead of writing it back from the
+    /// server response; see `PendingMutationRecord.staged` and SyncManager's
+    /// replay/merge handling of it. Commit later by calling
+    /// `deleteList(listId:onOptimisticDelete:)` — its prune half re-runs as a
+    /// no-op and its own DELETE_FLOATER_LIST mutation naturally replaces this
+    /// marker (same targetId) — or restore with `undoStagedList(_:)`.
+    ///
+    /// Runs inside `cacheManager.withSyncLock` — the same lock a sync holds for
+    /// its whole read-fetch-merge-save span (see `SyncManager.syncCachedData`)
+    /// — so this write can never land between a concurrent sync's pre-network
+    /// state read and its post-network save; see `ListRepository.stageDeleteList`'s
+    /// matching note for why that window is otherwise unsafe.
+    func stageDeleteList(listId: String) async -> StagedFloaterListDeletion {
         let normalizedListID = listId.trimmingCharacters(in: .whitespacesAndNewlines)
         var staged = StagedFloaterListDeletion(floaterLists: [], floaters: [], completedFloaters: [], pendingMutations: [])
         guard !normalizedListID.isEmpty else {
             return staged
         }
 
-        cacheManager.updateOfflineState { state in
-            var nextState = state
-            let deletedFloaterIDs = Set(state.floaters.filter { $0.listId == normalizedListID }.map(\.canonicalId))
-            let isRemovedCompleted: (CachedCompletedFloaterRecord) -> Bool = { completed in
-                completed.listId == normalizedListID ||
-                    completed.originalFloaterId.map { deletedFloaterIDs.contains($0) } == true
+        await cacheManager.withSyncLock {
+            cacheManager.updateOfflineState { state in
+                var nextState = state
+                let deletedFloaterIDs = Set(state.floaters.filter { $0.listId == normalizedListID }.map(\.canonicalId))
+                let isRemovedCompleted: (CachedCompletedFloaterRecord) -> Bool = { completed in
+                    completed.listId == normalizedListID ||
+                        completed.originalFloaterId.map { deletedFloaterIDs.contains($0) } == true
+                }
+                let isRemovedMutation: (PendingMutationRecord) -> Bool = { mutation in
+                    mutation.targetId == normalizedListID ||
+                        mutation.listId == normalizedListID ||
+                        mutation.targetId.map { deletedFloaterIDs.contains($0) } == true
+                }
+                let stagedMutationID = UUID().uuidString
+                staged = StagedFloaterListDeletion(
+                    floaterLists: state.floaterLists.filter { $0.id == normalizedListID },
+                    floaters: state.floaters.filter { $0.listId == normalizedListID },
+                    completedFloaters: state.completedFloaters.filter(isRemovedCompleted),
+                    pendingMutations: state.pendingMutations.filter(isRemovedMutation),
+                    stagedMutationId: stagedMutationID
+                )
+                nextState.floaterLists.removeAll { $0.id == normalizedListID }
+                nextState.floaters.removeAll { $0.listId == normalizedListID }
+                nextState.completedFloaters.removeAll(where: isRemovedCompleted)
+                nextState.pendingMutations.removeAll(where: isRemovedMutation)
+                nextState.pendingMutations.append(
+                    PendingMutationRecord(
+                        mutationId: stagedMutationID,
+                        kind: .deleteFloaterList,
+                        targetId: normalizedListID,
+                        timestampEpochMs: Date().epochMilliseconds,
+                        title: nil,
+                        description: nil,
+                        priority: nil,
+                        dueEpochMs: nil,
+                        rrule: nil,
+                        listId: nil,
+                        pinned: nil,
+                        completed: nil,
+                        instanceDateEpochMs: nil,
+                        name: nil,
+                        color: nil,
+                        iconKey: nil,
+                        staged: true
+                    )
+                )
+                return nextState
             }
-            let isRemovedMutation: (PendingMutationRecord) -> Bool = { mutation in
-                mutation.targetId == normalizedListID ||
-                    mutation.listId == normalizedListID ||
-                    mutation.targetId.map { deletedFloaterIDs.contains($0) } == true
-            }
-            staged = StagedFloaterListDeletion(
-                floaterLists: state.floaterLists.filter { $0.id == normalizedListID },
-                floaters: state.floaters.filter { $0.listId == normalizedListID },
-                completedFloaters: state.completedFloaters.filter(isRemovedCompleted),
-                pendingMutations: state.pendingMutations.filter(isRemovedMutation)
-            )
-            nextState.floaterLists.removeAll { $0.id == normalizedListID }
-            nextState.floaters.removeAll { $0.listId == normalizedListID }
-            nextState.completedFloaters.removeAll(where: isRemovedCompleted)
-            nextState.pendingMutations.removeAll(where: isRemovedMutation)
-            return nextState
         }
         return staged
     }
 
-    /// Restores the local state captured by `stageDeleteList(listId:)`.
-    /// Idempotent: records that already exist again (e.g. re-added by a sync
-    /// pull during the undo window) are left untouched.
+    /// Restores the local state captured by `stageDeleteList(listId:)` and
+    /// drops its staged marker mutation. Idempotent: records that already
+    /// exist again (e.g. re-added by a sync pull during the undo window) are
+    /// left untouched.
     func undoStagedList(_ staged: StagedFloaterListDeletion) {
         cacheManager.updateOfflineState { state in
             var nextState = state
@@ -279,6 +333,7 @@ final class FloaterListRepository {
             for completed in staged.completedFloaters where !nextState.completedFloaters.contains(where: { $0.id == completed.id }) {
                 nextState.completedFloaters.append(completed)
             }
+            nextState.pendingMutations.removeAll { $0.mutationId == staged.stagedMutationId }
             for mutation in staged.pendingMutations where !nextState.pendingMutations.contains(where: {
                 $0.mutationId == mutation.mutationId
             }) {
@@ -407,7 +462,7 @@ final class FloaterListRepository {
                 updatedAtEpochMs: list.updatedAtEpochMs,
                 createdAtEpochMs: list.createdAtEpochMs
             )
-        }
+        }.dedupedByID()
         nextState.pendingMutations = state.pendingMutations.map { mutation in
             PendingMutationRecord(
                 mutationId: mutation.mutationId,

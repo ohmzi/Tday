@@ -194,7 +194,8 @@ final class OfflineCacheManager {
                     instanceDateEpochMs: $0.instanceDateEpochMs,
                     name: $0.name,
                     color: $0.color,
-                    iconKey: $0.iconKey
+                    iconKey: $0.iconKey,
+                    staged: $0.staged
                 )
             },
             aiSummaryEnabled: metadata?.aiSummaryEnabled ?? true,

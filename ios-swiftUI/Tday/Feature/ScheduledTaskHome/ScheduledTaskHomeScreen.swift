@@ -1352,13 +1352,14 @@ struct CreateListSheet: View {
     @State private var name = ""
     @State private var color = "PINK"
     @State private var iconKey = "inbox"
+    @State private var isSubmitting = false
 
     private var trimmedName: String {
         name.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private var canCreate: Bool {
-        !trimmedName.isEmpty
+        !trimmedName.isEmpty && !isSubmitting
     }
 
     private var accentColor: Color {
@@ -1386,6 +1387,12 @@ struct CreateListSheet: View {
                 isConfirmEnabled: canCreate,
                 onClose: { dismiss() },
                 onConfirm: {
+                    // Re-entrancy guard: the sheet stays mounted and interactive
+                    // through its exit animation (TdayBottomSheetMotion.exitDuration),
+                    // so a fast second tap can otherwise reach this same closure
+                    // before `.disabled` visually applies and fire a second create.
+                    guard canCreate else { return }
+                    isSubmitting = true
                     onSubmit(trimmedName, color, iconKey)
                     dismiss()
                 }

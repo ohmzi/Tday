@@ -17,6 +17,7 @@ fallback for when the app process isn't running to make that write.
 | Widget doesn't update when app is closed           | No lifecycle hook on app background                                                            | Not needed: the repaint already happened at write time, not on close. Android's `MainActivity.onStart()` still re-requests a refresh on the *next* foreground return as belt-and-braces; iOS re-arms its background fallback task |
 | Pressing + and adding a task doesn't update widget | No call to update the widget from the save path                                                | `OfflineCacheManager` is the single chokepoint every write goes through, on both platforms, and it writes the widget snapshot + requests a repaint itself |
 | Widget updates are irregular / unreliable          | No background worker as fallback                                                               | `WidgetSyncWorker` (Android, WorkManager `PeriodicWorkRequest`) / `BGAppRefreshTask` (iOS) both run on a **30-minute** earliest-begin fallback |
+| (Android) Widget text unreadable after toggling system dark/light mode | Every widget color resolves correctly on a repaint, but nothing ever asked for one when the system theme itself changed — `ACTION_CONFIGURATION_CHANGED` is undeliverable to a manifest receiver, and no other trigger covered "app not foregrounded, theme flipped" | `TdayApplication.onConfigurationChanged` compares the system `uiMode`'s night bits against the last-seen value and calls `WidgetRefresher.requestRefresh()` on an actual flip — `Application` is notified in any live process, including a widget-only one that never opened `MainActivity` |
 
 ## Files — where they go
 
@@ -100,6 +101,11 @@ reliability/efficiency trade-offs at this same point in the pipeline.
   after a reboot and also fires a `WidgetSyncWorker.runOnce()`.
 - `MainActivity.onStart()` calls `WidgetRefresher.requestRefresh()` as belt-and-braces (covers
   drift such as an app-lock toggle that predates a render) — `onStop()` touches nothing widget-related.
+- `TdayApplication.onConfigurationChanged` calls `WidgetRefresher.requestRefresh()` whenever the
+  system day/night setting flips, so a placed widget picks up the new color scheme without the
+  app ever being opened. This only fires while the app's process is alive; a process the system
+  has already killed in the background is covered by the existing `WidgetSyncWorker` fallback and
+  the next app open instead, same as any other drift this app tolerates.
 - A widget row's render payload comes from `WidgetSnapshotBuilders.buildTodayWidgetSnapshot` /
   `buildFloaterWidgetSnapshot`, which read `OfflineSyncState` directly — there is no separate
   repository method to implement.
