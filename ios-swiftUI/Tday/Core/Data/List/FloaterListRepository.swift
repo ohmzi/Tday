@@ -80,41 +80,51 @@ final class FloaterListRepository {
             return
         }
 
-        do {
-            let response = try await api.createFloaterList(
-                payload: CreateFloaterListRequest(name: normalizedName, color: color, iconKey: iconKey)
-            )
-            guard let createdList = response.list else {
-                return
-            }
-            let createdAt = parseOptionalDate(createdList.createdAt)?.epochMilliseconds ?? now
-            let updatedAt = parseOptionalDate(createdList.updatedAt)?.epochMilliseconds ?? now
-            _ = try await cacheManager.updateOfflineState { state in
-                var nextState = self.replaceLocalFloaterListID(
-                    state,
-                    localListID: localListID,
-                    serverListID: createdList.id
+        // Held for the whole request-plus-remap: a realtime self-echo of this
+        // very create can otherwise trigger a background sync whose fetch
+        // already contains the new server row while the placeholder above
+        // still carries its local_ id (see SyncManager.mergeRemoteWithLocal's
+        // doc comment) -- the union merge would then keep both. Sharing
+        // syncCachedData's lock means that fetch-and-merge can only run
+        // fully before this starts or fully after it finishes, never
+        // interleaved with it.
+        await cacheManager.withSyncLock {
+            do {
+                let response = try await api.createFloaterList(
+                    payload: CreateFloaterListRequest(name: normalizedName, color: color, iconKey: iconKey)
                 )
-                let todoCount = nextState.floaters.filter { !$0.completed && $0.listId == createdList.id }.count
-                nextState.floaterLists = nextState.floaterLists.map { list in
-                    guard list.id == createdList.id else {
-                        return list
-                    }
-                    return CachedFloaterListRecord(
-                        id: createdList.id,
-                        name: createdList.name,
-                        color: createdList.color,
-                        iconKey: createdList.iconKey ?? list.iconKey,
-                        todoCount: todoCount,
-                        updatedAtEpochMs: updatedAt,
-                        createdAtEpochMs: createdAt
-                    )
+                guard let createdList = response.list else {
+                    return
                 }
-                nextState.pendingMutations.removeAll { $0.mutationId == mutationID }
-                return nextState
+                let createdAt = parseOptionalDate(createdList.createdAt)?.epochMilliseconds ?? now
+                let updatedAt = parseOptionalDate(createdList.updatedAt)?.epochMilliseconds ?? now
+                _ = try await cacheManager.updateOfflineState { state in
+                    var nextState = self.replaceLocalFloaterListID(
+                        state,
+                        localListID: localListID,
+                        serverListID: createdList.id
+                    )
+                    let todoCount = nextState.floaters.filter { !$0.completed && $0.listId == createdList.id }.count
+                    nextState.floaterLists = nextState.floaterLists.map { list in
+                        guard list.id == createdList.id else {
+                            return list
+                        }
+                        return CachedFloaterListRecord(
+                            id: createdList.id,
+                            name: createdList.name,
+                            color: createdList.color,
+                            iconKey: createdList.iconKey ?? list.iconKey,
+                            todoCount: todoCount,
+                            updatedAtEpochMs: updatedAt,
+                            createdAtEpochMs: createdAt
+                        )
+                    }
+                    nextState.pendingMutations.removeAll { $0.mutationId == mutationID }
+                    return nextState
+                }
+            } catch {
+                // Keep the pending CREATE_FLOATER_LIST mutation so background sync can retry it.
             }
-        } catch {
-            // Keep the pending CREATE_FLOATER_LIST mutation so background sync can retry it.
         }
     }
 
@@ -407,7 +417,7 @@ final class FloaterListRepository {
                 updatedAtEpochMs: list.updatedAtEpochMs,
                 createdAtEpochMs: list.createdAtEpochMs
             )
-        }
+        }.dedupedByID()
         nextState.pendingMutations = state.pendingMutations.map { mutation in
             PendingMutationRecord(
                 mutationId: mutation.mutationId,

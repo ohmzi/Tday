@@ -13,6 +13,7 @@ import com.ohmz.tday.compose.core.data.cache.OfflineCacheManager
 import com.ohmz.tday.compose.core.data.cache.listFromCache
 import com.ohmz.tday.compose.core.data.cache.orderListsLikeWeb
 import com.ohmz.tday.compose.core.data.cache.parseOptionalInstant
+import com.ohmz.tday.compose.core.data.cache.replaceLocalListId
 import com.ohmz.tday.compose.core.data.isLikelyUnrecoverableMutationError
 import com.ohmz.tday.compose.core.data.requireApiBody
 import com.ohmz.tday.compose.core.data.sync.SyncManager
@@ -78,47 +79,57 @@ class ListRepository @Inject constructor(
 
         if (syncManager.isLocalMode()) return
 
-        runCatching {
-            requireApiBody(
-                api.createList(
-                    CreateListRequest(
-                        name = normalizedName,
-                        color = color,
-                        iconKey = iconKey,
+        // Held for the whole request-plus-remap: a realtime self-echo of this
+        // very create can otherwise trigger a background sync whose fetch
+        // already contains the new server row while the placeholder above
+        // still carries its local_ id (see mergeRemoteWithLocal's doc
+        // comment) -- the union merge would then keep both. Sharing
+        // syncCachedData's lock means that fetch-and-merge can only run
+        // fully before this starts or fully after it finishes, never
+        // interleaved with it.
+        cacheManager.withSyncLock {
+            runCatching {
+                requireApiBody(
+                    api.createList(
+                        CreateListRequest(
+                            name = normalizedName,
+                            color = color,
+                            iconKey = iconKey,
+                        ),
                     ),
-                ),
-                "Could not create list",
-            ).list
-        }.onSuccess { createdList ->
-            if (createdList == null) return@onSuccess
-            val createdAt =
-                parseOptionalInstant(createdList.createdAt)?.toEpochMilli() ?: timestampMs
-            val updatedAt =
-                parseOptionalInstant(createdList.updatedAt)?.toEpochMilli() ?: timestampMs
-            cacheManager.updateOfflineState { state ->
-                val remapped = replaceLocalListId(
-                    state = state,
-                    localListId = localListId,
-                    serverListId = createdList.id,
-                )
-                val todoCount = remapped.todos.count { !it.completed && it.listId == createdList.id }
-                remapped.copy(
-                    lists = remapped.lists.map { list ->
-                        if (list.id == createdList.id) {
-                            list.copy(
-                                name = createdList.name,
-                                color = createdList.color,
-                                iconKey = createdList.iconKey ?: list.iconKey,
-                                todoCount = todoCount,
-                                updatedAtEpochMs = updatedAt,
-                                createdAtEpochMs = createdAt,
-                            )
-                        } else {
-                            list
-                        }
-                    },
-                    pendingMutations = remapped.pendingMutations.filterNot { it.mutationId == mutationId },
-                )
+                    "Could not create list",
+                ).list
+            }.onSuccess { createdList ->
+                if (createdList == null) return@onSuccess
+                val createdAt =
+                    parseOptionalInstant(createdList.createdAt)?.toEpochMilli() ?: timestampMs
+                val updatedAt =
+                    parseOptionalInstant(createdList.updatedAt)?.toEpochMilli() ?: timestampMs
+                cacheManager.updateOfflineState { state ->
+                    val remapped = replaceLocalListId(
+                        state = state,
+                        localListId = localListId,
+                        serverListId = createdList.id,
+                    )
+                    val todoCount = remapped.todos.count { !it.completed && it.listId == createdList.id }
+                    remapped.copy(
+                        lists = remapped.lists.map { list ->
+                            if (list.id == createdList.id) {
+                                list.copy(
+                                    name = createdList.name,
+                                    color = createdList.color,
+                                    iconKey = createdList.iconKey ?: list.iconKey,
+                                    todoCount = todoCount,
+                                    updatedAtEpochMs = updatedAt,
+                                    createdAtEpochMs = createdAt,
+                                )
+                            } else {
+                                list
+                            }
+                        },
+                        pendingMutations = remapped.pendingMutations.filterNot { it.mutationId == mutationId },
+                    )
+                }
             }
         }
     }
@@ -409,30 +420,6 @@ class ListRepository @Inject constructor(
         return orderListsLikeWeb(state.lists).map {
             listFromCache(cache = it, todoCountOverride = todoCountsByList[it.id] ?: 0)
         }
-    }
-
-    private fun replaceLocalListId(
-        state: OfflineSyncState,
-        localListId: String,
-        serverListId: String,
-    ): OfflineSyncState {
-        return state.copy(
-            lists = state.lists.map {
-                if (it.id == localListId) it.copy(id = serverListId) else it
-            },
-            todos = state.todos.map {
-                if (it.listId == localListId) it.copy(listId = serverListId) else it
-            },
-            completedItems = state.completedItems.map {
-                if (it.listId == localListId) it.copy(listId = serverListId) else it
-            },
-            pendingMutations = state.pendingMutations.map {
-                it.copy(
-                    targetId = if (it.targetId == localListId) serverListId else it.targetId,
-                    listId = if (it.listId == localListId) serverListId else it.listId,
-                )
-            },
-        )
     }
 
     private companion object {
