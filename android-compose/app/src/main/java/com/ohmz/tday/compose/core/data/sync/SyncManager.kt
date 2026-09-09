@@ -1285,8 +1285,16 @@ class SyncManager @Inject constructor(
         val remoteFloaters = remote.floaters
             .filterNot { it.listId != null && pendingDeletedFloaterListIds.contains(it.listId) }
             .map(::floaterToCache)
+        // Deliberately NOT filtered on pendingDeletedFloaterListIds (unlike remoteCompleted
+        // above, the Todo-side twin, which stays list-delete-pending-sensitive on purpose —
+        // that bug is a separate, deliberately out-of-scope product decision, see
+        // docs/design/completed-floaters-durability.md). stageDeleteList/deleteList no
+        // longer prune completedFloaters locally on floater-list delete, so a remote
+        // completed-floater row for a list with a pending (or staged/undoable) delete is
+        // exactly what the local cache already has — filtering it here would re-introduce
+        // the same transient loss the local-pruning removal was for, for the length of the
+        // delete's staging/replay window.
         val remoteCompletedFloaters = remote.completedFloaters
-            .filterNot { it.listId != null && pendingDeletedFloaterListIds.contains(it.listId) }
             .map(::completedFloaterToCache)
             .toMutableList()
 
