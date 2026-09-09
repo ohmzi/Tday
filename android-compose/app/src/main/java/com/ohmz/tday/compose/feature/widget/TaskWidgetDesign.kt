@@ -1,5 +1,7 @@
 package com.ohmz.tday.compose.feature.widget
 
+import android.content.Context
+import android.os.Build
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
@@ -405,6 +407,26 @@ private fun HeaderText(
     }
 }
 
+// Mirrors Glance's own gating for a resource-backed ColorProvider (see HeaderText above,
+// and TextTranslatorKt.setText in glance-appwidget): on API 31+, RemoteViews.setColorStateList
+// stores a color-resource REFERENCE, not a resolved literal, so whichever process later
+// applies this RemoteViews (the launcher/widget host, the OS, or our own app) re-resolves it
+// against ITS OWN current configuration — self-correcting on a theme change even if this
+// app's process was never alive to catch Application.onConfigurationChanged. That overload
+// does not exist below API 31, so we still eagerly bake a literal there — minSdk is 26, so
+// that branch is load-bearing, not dead code; it's exactly this call site's old behavior.
+private fun RemoteViews.setDayNightTextColor(
+    context: Context,
+    viewId: Int,
+    @ColorRes colorResId: Int,
+) {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        setColorStateList(viewId, "setTextColor", colorResId)
+    } else {
+        setTextColor(viewId, ContextCompat.getColor(context, colorResId))
+    }
+}
+
 @Composable
 private fun WidgetText(
     text: String,
@@ -427,7 +449,7 @@ private fun WidgetText(
     val remoteViews = RemoteViews(context.packageName, layoutId).apply {
         setTextViewText(R.id.widget_nunito_text, text)
         setTextViewTextSize(R.id.widget_nunito_text, TypedValue.COMPLEX_UNIT_SP, fontSize.value)
-        setTextColor(R.id.widget_nunito_text, ContextCompat.getColor(context, color.resourceId))
+        setDayNightTextColor(context, R.id.widget_nunito_text, color.resourceId)
         setInt(R.id.widget_nunito_text, "setGravity", textAlign.toWidgetGravity())
         setInt(R.id.widget_nunito_text, "setMaxLines", maxLines)
     }
@@ -655,7 +677,7 @@ private fun TaskTitleAndTime(
     val remoteViews = RemoteViews(context.packageName, R.layout.widget_task_row_line).apply {
         setTextViewText(R.id.widget_row_title, title)
         setTextViewTextSize(R.id.widget_row_title, TypedValue.COMPLEX_UNIT_SP, titleFontSize.value)
-        setTextColor(R.id.widget_row_title, ContextCompat.getColor(context, TaskWidgetTextColor.PRIMARY.resourceId))
+        setDayNightTextColor(context, R.id.widget_row_title, TaskWidgetTextColor.PRIMARY.resourceId)
         setInt(R.id.widget_row_title, "setMaxLines", 2)
         if (trailingText != null) {
             // Reuses the existing high-priority ring color as the overdue tint rather than adding
@@ -668,7 +690,7 @@ private fun TaskTitleAndTime(
             setViewVisibility(R.id.widget_row_time, View.VISIBLE)
             setTextViewText(R.id.widget_row_time, trailingText)
             setTextViewTextSize(R.id.widget_row_time, TypedValue.COMPLEX_UNIT_SP, 11f)
-            setTextColor(R.id.widget_row_time, ContextCompat.getColor(context, trailingColorRes))
+            setDayNightTextColor(context, R.id.widget_row_time, trailingColorRes)
         } else {
             setViewVisibility(R.id.widget_row_time, View.GONE)
         }
