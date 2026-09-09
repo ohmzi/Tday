@@ -340,7 +340,33 @@ class SyncManager @Inject constructor(
         ).also { aiCapability.await() }
     }
 
-    private suspend fun applyPendingMutations(
+    // KT-R1006 (cyclomatic complexity) is suppressed on this declaration rather
+    // than fixed further here. Two separate facts, both worth writing down:
+    //
+    //   * The decomposition already happened, and it helped a lot. DeepSource
+    //     measured this function at 176 (Critical) when it was one `when` with
+    //     26 inline mutation-kind bodies. Pulling each branch out into its own
+    //     applyXMutation handler — see CREATE_LIST through REORDER_STEPS below
+    //     — brought it to 59. DeepSource fingerprints an occurrence by its
+    //     line and by the number in its message, so that improvement still
+    //     reads as "1 introduced, 0 resolved" and turns the check red on its
+    //     own — the same reason TodoListScreen.kt re-suppresses KT-R1006 at
+    //     its own reduced number instead of going green.
+    //   * The remaining 59 is the dispatch itself, not leftover mutation
+    //     logic. Each branch is now a single call plus a
+    //     `.also { state = it.second }`, but a `when` exhaustive over all 26
+    //     `MutationKind` values is 26 decision points no matter how thin each
+    //     arm is. Replacing it with a runtime `Map<MutationKind, Handler>`
+    //     would lower the number, but it would also drop the compiler's
+    //     exhaustiveness check: a new MutationKind added later would silently
+    //     fall through at runtime instead of failing the build. That trade is
+    //     backwards for the function that replays every offline mutation
+    //     against the server, so the `when` stays.
+    //
+    // One declaration, one issue code — the narrowest form the tool has, and
+    // the style the repo already uses for KT-W1042, KT-C1001, and
+    // TodoListScreen's own KT-R1006 suppressions.
+    private suspend fun applyPendingMutations( // skipcq: KT-R1006
         initialState: OfflineSyncState,
         remoteSnapshot: RemoteSnapshot,
     ): OfflineSyncState {
@@ -713,7 +739,27 @@ class SyncManager @Inject constructor(
         return true to nextState
     }
 
-    private suspend fun applyUpdateTodoMutation(
+    // KT-R1006 (cyclomatic complexity, reported at 29) is suppressed on this
+    // declaration rather than split further. This function was extracted out
+    // of applyPendingMutations's UPDATE_TODO branch by an earlier commit on
+    // this same PR; DeepSource fingerprints an occurrence by its line, so the
+    // complexity this branch always had (see applyPendingMutations's own
+    // KT-R1006 note above) reads as newly introduced the moment it gets its
+    // own function boundary, not because it grew.
+    //
+    // The 29 is real: the due-only-move special case, the remote-staleness
+    // check, the null-vs-blank "tombstone" handling for
+    // description/rrule/listId, and the instance-patch-vs-full-patch branch
+    // are genuine mutation-replay semantics, not incidental structure. A
+    // further split would only relocate these same checks into more, smaller
+    // functions crossing the same `state`/`resolvedListIds` boundary, on
+    // sync-critical code with no unit test today that exercises this
+    // function's branch combinations directly.
+    //
+    // One declaration, one issue code — the narrowest form the tool has, and
+    // the style the repo already uses for KT-W1042, KT-C1001, and
+    // TodoListScreen's own KT-R1006 suppressions.
+    private suspend fun applyUpdateTodoMutation( // skipcq: KT-R1006
         mutation: PendingMutationRecord,
         resolvedTargetId: String?,
         remoteSnapshot: RemoteSnapshot,
