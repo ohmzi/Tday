@@ -17,10 +17,12 @@ interface TodoFormContextType {
   setTitle: React.Dispatch<SetStateAction<string>>;
   desc: string;
   setDesc: React.Dispatch<SetStateAction<string>>;
-  priority: "Low" | "Medium" | "High";
+  priority: "Lowest" | "Low" | "Medium" | "High";
   listID: string | null;
   setListID: React.Dispatch<SetStateAction<string | null>>;
-  setPriority: React.Dispatch<SetStateAction<"Low" | "Medium" | "High">>;
+  setPriority: React.Dispatch<
+    SetStateAction<"Lowest" | "Low" | "Medium" | "High">
+  >;
   dateRange: FormDateRange;
   setDateRange: React.Dispatch<SetStateAction<FormDateRange>>;
   rruleOptions: Partial<Options> | null;
@@ -59,9 +61,9 @@ const TodoFormProvider = ({ children, todoItem, overrideFields }: TodoFormProvid
       todoItem?.listID ??
       null,
   );
-  const [priority, setPriority] = useState<"Low" | "Medium" | "High">(
-    todoItem?.priority || "Low",
-  );
+  const [priority, setPriority] = useState<
+    "Lowest" | "Low" | "Medium" | "High"
+  >(todoItem?.priority || "Low");
   const now = new Date();
   now.setHours(now.getHours() + 3);
   now.setSeconds(0, 0);

@@ -33,8 +33,9 @@ type FloaterFormSheetProps = {
 
 const priorityOptions: Array<{
   value: FloaterItemType["priority"];
-  labelKey: "normal" | "important" | "urgent";
+  labelKey: "low" | "normal" | "important" | "urgent";
 }> = [
+  { value: "Lowest", labelKey: "low" },
   { value: "Low", labelKey: "normal" },
   { value: "Medium", labelKey: "important" },
   { value: "High", labelKey: "urgent" },

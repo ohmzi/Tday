@@ -1,12 +1,21 @@
 // Swatch color classes for the native-style centered selector overlays.
 // Mirrors the iOS CreateTaskSheet swatch palette (priority + repeat dots).
 
-export function prioritySwatchClass(priority: "Low" | "Medium" | "High"): string {
-  return priority === "Low"
-    ? "bg-lime"
-    : priority === "Medium"
-      ? "bg-orange"
-      : "bg-red";
+export function prioritySwatchClass(
+  priority: "Lowest" | "Low" | "Medium" | "High",
+): string {
+  switch (priority) {
+    case "Lowest":
+      return "bg-muted-foreground";
+    case "Low":
+      return "bg-lime";
+    case "Medium":
+      return "bg-orange";
+    case "High":
+      return "bg-red";
+    default:
+      return "bg-lime";
+  }
 }
 
 export type RepeatSwatchKind =
