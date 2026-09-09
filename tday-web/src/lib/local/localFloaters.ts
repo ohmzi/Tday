@@ -18,8 +18,20 @@ import {
  * `FloaterService`/`FloaterRoutes`.
  */
 
-const PRIORITIES = new Set(["Low", "Medium", "High"]);
-const PRIORITY_RANK: Record<string, number> = { High: 3, Medium: 2, Low: 1 };
+const PRIORITIES = new Set(["Lowest", "Low", "Medium", "High"]);
+
+// Higher number sorts first (see sortFloaters below) — the OPPOSITE direction
+// from taskSort.ts's "lower rank = more urgent" convention. Low's rank (1) is
+// also the fallback `sortFloaters` uses for a genuinely unrecognized priority
+// string — a different concept from a user explicitly choosing the new
+// "Lowest" tier, which always ranks below Low and is never a fallback.
+const PRIORITY_RANK: Record<string, number> = {
+  High: 3,
+  Medium: 2,
+  Low: 1,
+  Lowest: 0,
+};
+const UNRECOGNIZED_PRIORITY_RANK = PRIORITY_RANK.Low;
 
 export function toFloaterDto(row: LocalFloaterRow) {
   return { ...row, userID: LOCAL_USER_ID };
@@ -32,7 +44,10 @@ function requirePriority(value: unknown, fallback?: string): string {
   }
   const priority = String(value);
   if (!PRIORITIES.has(priority)) {
-    throw localBadRequest("priority must be one of: Low, Medium, High", "priority");
+    throw localBadRequest(
+      "priority must be one of: Lowest, Low, Medium, High",
+      "priority",
+    );
   }
   return priority;
 }
@@ -46,7 +61,8 @@ function normalizeId(value: unknown): string | null {
 export function sortFloaters(rows: LocalFloaterRow[]): LocalFloaterRow[] {
   return [...rows].sort((a, b) => {
     const priorityDelta =
-      (PRIORITY_RANK[b.priority] ?? 0) - (PRIORITY_RANK[a.priority] ?? 0);
+      (PRIORITY_RANK[b.priority] ?? UNRECOGNIZED_PRIORITY_RANK) -
+      (PRIORITY_RANK[a.priority] ?? UNRECOGNIZED_PRIORITY_RANK);
     if (priorityDelta !== 0) return priorityDelta;
     if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
     return a.order - b.order;
