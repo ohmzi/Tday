@@ -475,9 +475,12 @@ struct TodoListScreen: View {
     @State private var collapsedSectionIDs: Set<String>
     /// Req. 3's hand-off flag — see `toggleTodayEarlierSection`. Held true for
     /// the width of the illustration/Earlier hand-off in either direction so
-    /// `showsEmptyStateIllustration` cannot flip mid-transition; harmless
-    /// once Earlier is actually expanded, since `isTodayEarlierExpanded`
-    /// masks the illustration on its own from there.
+    /// `showsEmptyStateIllustration` cannot flip mid-transition. Both branches
+    /// clear it back to `false` once their hand-off completes — the expand
+    /// branch as soon as `isTodayEarlierExpanded` has taken over masking the
+    /// illustration, so this flag is never left stuck true once Earlier is no
+    /// longer around to hand back to (e.g. its last row clears without the
+    /// header being tapped again).
     @State private var suppressEmptyStateForEarlierHandoff = false
     /// Set alongside the above only on Earlier's *collapse* path: the Day
     /// Done haptic/sound (see the `TdayEmptyState` call site) is a payoff for
@@ -3408,6 +3411,16 @@ struct TodoListScreen: View {
             }
             DispatchQueue.main.asyncAfter(deadline: .now() + TodayEarlierIllustrationHandoff.exitDuration) {
                 applyTimelineSectionCollapse(section.id)
+                // Earlier is expanded now, so `isTodayEarlierExpanded` has taken
+                // over masking the illustration on its own — clear the hand-off
+                // flag rather than leaving it stuck true. Otherwise, clearing the
+                // last row from inside the now-expanded Earlier (without ever
+                // tapping its header again, so the collapse branch below never
+                // runs) would drop "earlier" out of `groupedSections` entirely,
+                // `isTodayEarlierExpanded` would go false with nothing left to
+                // mask, and this flag alone would keep the "all done"
+                // illustration from ever coming back.
+                suppressEmptyStateForEarlierHandoff = false
                 todayEarlierHandoffInFlight = false
             }
         } else {
