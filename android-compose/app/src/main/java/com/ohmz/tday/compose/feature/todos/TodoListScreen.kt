@@ -3,6 +3,7 @@ package com.ohmz.tday.compose.feature.todos
 import android.os.SystemClock
 import androidx.activity.compose.BackHandler
 import androidx.annotation.DrawableRes
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.FiniteAnimationSpec
@@ -10,6 +11,9 @@ import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -306,6 +310,36 @@ private fun LazyItemScope.displacedFeedItemMotion(enabled: Boolean): Modifier =
  */
 private const val CompletionCelebrationWindowMs = 4_000L
 
+/**
+ * The pure boolean [TodoListScreen] wires into `celebrate`, pulled out of the
+ * composable so requirement 1 (confetti on completing the last pending-today
+ * task) has a real unit test rather than only a device/emulator check.
+ *
+ * Deliberately takes no opinion on Earlier/overdue tasks: `itemsEmpty` is
+ * `uiState.items.isEmpty()`, and [TodoListUiState.items] has never included
+ * them for Today mode (see `TodoRepository.buildTodosForMode`'s `isTodayTodo`
+ * filter) — that is the root-cause finding for requirement 1. A caller that
+ * folded overdue tasks into `items` to satisfy requirement 2 would break this
+ * function's meaning; Today mode instead carries them in the separate
+ * [TodoListUiState.earlierItems], so this needs no Earlier-aware parameter at
+ * all and this function's behavior is unchanged by requirement 2's section.
+ */
+internal fun shouldCelebrateEmptyState(
+    itemsEmpty: Boolean,
+    lastCompletionAtMs: Long,
+    remoteEmptiedAtMs: Long,
+    screenResumed: Boolean,
+    nowMs: Long,
+    windowMs: Long = CompletionCelebrationWindowMs,
+): Boolean {
+    if (!itemsEmpty) return false
+    val ownTapCelebrates = lastCompletionAtMs != 0L && nowMs - lastCompletionAtMs < windowMs
+    val remoteCompletionCelebrates = remoteEmptiedAtMs != 0L &&
+            screenResumed &&
+            nowMs - remoteEmptiedAtMs < windowMs
+    return ownTapCelebrates || remoteCompletionCelebrates
+}
+
 // KT-R1006 (cyclomatic complexity) is suppressed on this declaration rather
 // than fixed further here. Two separate facts, both worth writing down:
 //
@@ -409,12 +443,23 @@ fun TodoListScreen( // skipcq: KT-R1006
     // `isScreenVisible`/`scenePhase == .active` check for `remoteEmptiedAt`.
     val lifecycleOwner = LocalLifecycleOwner.current
     val screenLifecycleState by lifecycleOwner.lifecycle.currentStateAsState()
-    val celebrateEmptyState = uiState.items.isEmpty() &&
-            ((lastCompletionAtMs != 0L &&
-                    SystemClock.uptimeMillis() - lastCompletionAtMs < CompletionCelebrationWindowMs) ||
-                    (uiState.remoteEmptiedAtMs != 0L &&
-                            screenLifecycleState == Lifecycle.State.RESUMED &&
-                            SystemClock.uptimeMillis() - uiState.remoteEmptiedAtMs < CompletionCelebrationWindowMs))
+    val celebrateEmptyState = shouldCelebrateEmptyState(
+        itemsEmpty = uiState.items.isEmpty(),
+        lastCompletionAtMs = lastCompletionAtMs,
+        remoteEmptiedAtMs = uiState.remoteEmptiedAtMs,
+        screenResumed = screenLifecycleState == Lifecycle.State.RESUMED,
+        nowMs = SystemClock.uptimeMillis(),
+    )
+    // Today only: overdue tasks collapsed under "Earlier". `uiState.items`
+    // never includes them (see `TodoListUiState.earlierItems`), so neither
+    // `celebrateEmptyState` above nor the empty-today check below needs to
+    // change for requirement 2 -- "zero pending today tasks" was already
+    // exactly what `uiState.items.isEmpty()` meant. What DOES change: the
+    // full-screen empty-state overlay further down defers to Earlier's own
+    // inline scene whenever this is true, so the collapsed header stays
+    // reachable instead of sitting under the overlay.
+    val todayHasEarlierItems =
+        uiState.mode == TodoListMode.TODAY && uiState.earlierItems.isNotEmpty()
     val zoneId = remember { ZoneId.systemDefault() }
     val selectedList = uiState.lists.firstOrNull { it.id == uiState.listId }
     val selectedListColorKey = selectedList?.color
@@ -488,6 +533,41 @@ fun TodoListScreen( // skipcq: KT-R1006
     }
     val showScopedSearchField = supportsScopedSearch && scopedSearchExpanded
     val scopedSearchActive = showScopedSearchField && normalizedScopedSearchQuery.isNotBlank()
+    // Day Done: "finished everything" earns its own calm state instead of
+    // the generic no-tasks scene. Hoisted (rather than computed once per
+    // call site, as it used to be inline in the overlay below) because the
+    // empty-state scene now has two possible homes -- the full-screen
+    // overlay for a plain empty Today, and the inline scene Today shows in
+    // Earlier's place when Earlier is still holding overdue tasks
+    // (requirement 2/3) -- and both need to agree on the same
+    // glyph/title/description and fire the same one-shot haptic exactly
+    // once between them, not once each.
+    val isDayDone = uiState.mode == TodoListMode.TODAY &&
+            uiState.items.isEmpty() &&
+            !uiState.isLoading &&
+            !suppressInitialTodayTimeline &&
+            !scopedSearchActive &&
+            uiState.completedTodayCount > 0
+    LaunchedEffect(isDayDone) {
+        if (isDayDone) {
+            ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CONFIRM)
+        }
+    }
+    val emptyStateSceneIconRes = if (isDayDone) {
+        R.drawable.ic_lucide_check_check
+    } else {
+        emptySceneIcon
+    }
+    val emptyStateSceneTitle = if (isDayDone) {
+        stringResource(R.string.todos_all_done_today)
+    } else {
+        emptyStateMessageForMode(mode = uiState.mode, isFloaterList = isListDetailScreen)
+    }
+    val emptyStateSceneDescription = if (isDayDone) {
+        LocalDate.now().format(DateTimeFormatter.ofPattern("EEEE d MMMM", Locale.getDefault()))
+    } else {
+        emptyStateDescriptionForMode(mode = uiState.mode, isFloaterList = isListDetailScreen)
+    }
     val closeScopedSearch = {
         scopedSearchExpanded = false
         scopedSearchQuery = ""
@@ -523,11 +603,17 @@ fun TodoListScreen( // skipcq: KT-R1006
     val timelineDragActive = canRescheduleTasks &&
             draggedScheduledTodoId != null &&
             timelineItems.any { it.id == draggedScheduledTodoId }
-    val timelineSections = remember(uiState.mode, timelineItems, timelineDragActive) {
+    val timelineSections = remember(
+        uiState.mode,
+        timelineItems,
+        timelineDragActive,
+        uiState.earlierItems,
+    ) {
         buildTimelineSections(
             mode = uiState.mode,
             items = timelineItems,
             isDragActive = timelineDragActive,
+            earlierItems = uiState.earlierItems,
         )
     }
     val floaterTaskHomeListRows = remember(uiState.mode, uiState.listId, uiState.items, uiState.lists) {
@@ -600,7 +686,11 @@ fun TodoListScreen( // skipcq: KT-R1006
     val isCollapsibleTimelineMode =
         uiState.mode == TodoListMode.ALL ||
                 uiState.mode == TodoListMode.PRIORITY ||
-                uiState.mode == TodoListMode.LIST
+                uiState.mode == TodoListMode.LIST ||
+                // Today's own "Earlier" bucket (the overdue tasks tucked
+                // under Today, see `buildTodaySections`) -- starts
+                // collapsed exactly like the other three.
+                uiState.mode == TodoListMode.TODAY
     var showCreateTaskSheet by rememberSaveable {
         mutableStateOf(openCreateTaskOnStart)
     }
@@ -794,6 +884,26 @@ fun TodoListScreen( // skipcq: KT-R1006
             },
         )
     }
+    // Requirement 3's sequencing flag: true for the brief window between the
+    // user tapping to expand Today's collapsed Earlier section and the
+    // moment `collapsedSectionKeys` actually drops "earlier" — see
+    // `onTimelineSectionHeaderToggle` below. While true, the inline empty
+    // scene is already animating out even though Earlier's rows have not
+    // been told to appear yet, which is what keeps the two from racing.
+    var earlierExpandPending by rememberSaveable(uiState.mode, uiState.listId) {
+        mutableStateOf(false)
+    }
+    // Requirement 2 + 3: Today has nothing pending, but Earlier is still
+    // holding overdue tasks, collapsed. Independent of `celebrateEmptyState`
+    // — this only decides whether the scene is shown inline (so Earlier's
+    // header stays reachable) versus not at all; it never gates the burst.
+    val showTodayEarlierIllustration = todayHasEarlierItems &&
+            uiState.items.isEmpty() &&
+            !uiState.isLoading &&
+            !suppressInitialTodayTimeline &&
+            !scopedSearchActive &&
+            collapsedSectionKeys.contains("earlier") &&
+            !earlierExpandPending
     var flashTodoId by remember(uiState.mode) { mutableStateOf<String?>(null) }
     var quickAddDueEpochMs by rememberSaveable { mutableStateOf<Long?>(null) }
     var editTargetTodoId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -1092,7 +1202,10 @@ fun TodoListScreen( // skipcq: KT-R1006
         }
     }
     LaunchedEffect(uiState.mode) {
-        if (uiState.mode == TodoListMode.PRIORITY || uiState.mode == TodoListMode.LIST) {
+        if (uiState.mode == TodoListMode.PRIORITY ||
+            uiState.mode == TodoListMode.LIST ||
+            uiState.mode == TodoListMode.TODAY
+        ) {
             collapsedSectionKeys = collapsedSectionKeys + "earlier"
         }
     }
@@ -1190,10 +1303,24 @@ fun TodoListScreen( // skipcq: KT-R1006
     // function's call site instead of the live state.
     val onTimelineSectionHeaderToggle: (key: String, wasCollapsed: Boolean) -> Unit =
         { key, wasCollapsed ->
-            collapsedSectionKeys = if (wasCollapsed) {
-                collapsedSectionKeys - key
+            if (key == "earlier" && wasCollapsed && showTodayEarlierIllustration) {
+                // Requirement 3: the empty-state scene owns this slot right
+                // now. Flip it into its exit first and hold the actual
+                // section open until it has genuinely left, so Earlier's
+                // rows never animate in underneath a scene that is still
+                // on screen.
+                earlierExpandPending = true
+                screenScope.launch {
+                    delay(TdayFeedItemMotion.FadeOutMillis.toLong())
+                    collapsedSectionKeys = collapsedSectionKeys - key
+                    earlierExpandPending = false
+                }
             } else {
-                collapsedSectionKeys + key
+                collapsedSectionKeys = if (wasCollapsed) {
+                    collapsedSectionKeys - key
+                } else {
+                    collapsedSectionKeys + key
+                }
             }
         }
     val onTimelineQuickAdd: (dueEpochMs: Long) -> Unit = { dueEpochMs ->
@@ -1422,6 +1549,87 @@ fun TodoListScreen( // skipcq: KT-R1006
                         }
                     }
 
+                    // Requirement 2 + 3: Today has nothing pending but
+                    // Earlier is still holding overdue tasks. Mounted for as
+                    // long as that stays true regardless of Earlier's own
+                    // collapse state — `AnimatedVisibility` inside is what
+                    // actually shows/hides it, keyed to
+                    // `showTodayEarlierIllustration` — so the scene can play
+                    // its own exit (fade + shrink) the moment the user
+                    // expands Earlier, ahead of `onTimelineSectionHeaderToggle`
+                    // above releasing Earlier's rows to animate in. Placed
+                    // right above `sectionedTimelineContent` below so it
+                    // occupies Morning/Afternoon/Tonight's usual slot and the
+                    // (always-present, real) Earlier header sits right under
+                    // it — reachable the whole time, never covered by an
+                    // overlay the way the plain-empty-Today scene is.
+                    if (todayHasEarlierItems &&
+                        uiState.items.isEmpty() &&
+                        !uiState.isLoading &&
+                        !suppressInitialTodayTimeline &&
+                        !scopedSearchActive
+                    ) {
+                        item(
+                            key = "today-earlier-empty-scene",
+                            contentType = "today-earlier-empty-scene",
+                        ) {
+                            AnimatedVisibility(
+                                visible = showTodayEarlierIllustration,
+                                enter = fadeIn(
+                                    animationSpec = tween(
+                                        durationMillis = TdayFeedItemMotion.FadeInMillis,
+                                        easing = FastOutSlowInEasing,
+                                    ),
+                                ),
+                                // Fade AND shrink: unlike the floater home's
+                                // inline scene (which is only ever removed
+                                // outright, never faded), this one also has to
+                                // clear itself out of Earlier's way on a user
+                                // tap rather than on a data change, so it needs
+                                // a real exit instead of an instant cut.
+                                exit = fadeOut(
+                                    animationSpec = tween(
+                                        durationMillis = TdayFeedItemMotion.FadeOutMillis,
+                                        easing = FastOutSlowInEasing,
+                                    ),
+                                ) + shrinkVertically(
+                                    animationSpec = tween(
+                                        durationMillis = TdayFeedItemMotion.FadeOutMillis,
+                                        easing = FastOutSlowInEasing,
+                                    ),
+                                ),
+                                modifier = displacedFeedItemMotion(timelineAnimationsEnabled),
+                            ) {
+                                val gapHeight =
+                                    (LocalConfiguration.current.screenHeightDp * 0.34f).dp
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .heightIn(min = gapHeight),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    TdayEmptyState(
+                                        icon = emptyStateSceneIconRes,
+                                        accentColor = titleColor,
+                                        title = emptyStateSceneTitle,
+                                        description = emptyStateSceneDescription,
+                                        celebrate = celebrateEmptyState,
+                                        // Mirrors the floater home: hold the
+                                        // burst back for exactly as long as
+                                        // this item's own placement spec takes,
+                                        // so it lands once the (now-shorter)
+                                        // Morning/Afternoon/Tonight sections
+                                        // have finished settling out of the
+                                        // way and the Earlier header below has
+                                        // finished sliding up into place.
+                                        celebrationStartDelayMillis =
+                                            TdayFeedItemMotion.CelebrationStartDelayMillis,
+                                    )
+                                }
+                            }
+                        }
+                    }
+
                     if (showSectionedTimeline && !suppressInitialTodayTimeline && !scopedSearchHasNoResults) {
                         sectionedTimelineContent(
                             uiState = uiState,
@@ -1507,26 +1715,21 @@ fun TodoListScreen( // skipcq: KT-R1006
                 )
             }
             // Root floater shows its empty message inline (in the list, above
-            // the list names) so the overlay version would double up.
+            // the list names) so the overlay version would double up. Today
+            // defers the same way whenever Earlier still holds overdue tasks
+            // (`todayHasEarlierItems`): that case renders its own inline
+            // scene in Earlier's place instead (below, inside the
+            // LazyColumn), so the collapsed header stays reachable under it
+            // rather than sitting beneath this full-screen overlay -- see
+            // requirement 2/3.
             // `scopedSearchActive` and not `scopedSearchHasNoResults`: a scope
             // with no tasks at all still has none once a query is typed, so both
             // states were true at once and the screen drew two empty scenes on
             // top of each other. While a query stands the in-list no-results
             // scene owns it — it is the one that can say what was searched.
             if (uiState.items.isEmpty() && !uiState.isLoading && !suppressInitialTodayTimeline &&
-                !isFloaterTaskHomeScreen && !scopedSearchActive
+                !isFloaterTaskHomeScreen && !scopedSearchActive && !todayHasEarlierItems
             ) {
-                // Day Done: "finished everything" earns its own calm state
-                // instead of the generic no-tasks scene.
-                val isDayDone = uiState.mode == TodoListMode.TODAY && uiState.completedTodayCount > 0
-                if (isDayDone) {
-                    LaunchedEffect(Unit) {
-                        ViewCompat.performHapticFeedback(
-                            view,
-                            HapticFeedbackConstantsCompat.CONFIRM,
-                        )
-                    }
-                }
                 Box(
                     // The Scaffold's insets, so the scene centres in the content
                     // area rather than in the window: without them a notch pushes
@@ -1540,30 +1743,10 @@ fun TodoListScreen( // skipcq: KT-R1006
                         // Day Done keeps its own glyph and its date line: it is
                         // a payoff, not an absence, and the scope's own icon
                         // would undersell it.
-                        icon = if (isDayDone) {
-                            R.drawable.ic_lucide_check_check
-                        } else {
-                            emptySceneIcon
-                        },
+                        icon = emptyStateSceneIconRes,
                         accentColor = titleColor,
-                        title = if (isDayDone) {
-                            stringResource(R.string.todos_all_done_today)
-                        } else {
-                            emptyStateMessageForMode(
-                                mode = uiState.mode,
-                                isFloaterList = isListDetailScreen,
-                            )
-                        },
-                        description = if (isDayDone) {
-                            LocalDate.now().format(
-                                DateTimeFormatter.ofPattern("EEEE d MMMM", Locale.getDefault()),
-                            )
-                        } else {
-                            emptyStateDescriptionForMode(
-                                mode = uiState.mode,
-                                isFloaterList = isListDetailScreen,
-                            )
-                        },
+                        title = emptyStateSceneTitle,
+                        description = emptyStateSceneDescription,
                         celebrate = celebrateEmptyState,
                     )
                 }
@@ -2479,6 +2662,7 @@ private fun LazyListScope.sectionedTimelineContent( // skipcq: KT-R1006
             TodoListMode.SCHEDULED -> true
             TodoListMode.PRIORITY -> section.key == "earlier"
             TodoListMode.LIST -> section.key == "earlier"
+            TodoListMode.TODAY -> section.key == "earlier"
             else -> false
         }
         val sectionCanCollapse = sectionModeCanCollapse && sectionHasTasks
@@ -2590,7 +2774,8 @@ private fun LazyListScope.sectionedTimelineContent( // skipcq: KT-R1006
                         (
                                 uiState.mode == TodoListMode.ALL ||
                                         uiState.mode == TodoListMode.PRIORITY ||
-                                        uiState.mode == TodoListMode.LIST
+                                        uiState.mode == TodoListMode.LIST ||
+                                        uiState.mode == TodoListMode.TODAY
                                 )
             section.items.forEachIndexed { itemIndex, todo ->
                 val showTimelineDateDivider = shouldShowDateDivider(
@@ -2648,7 +2833,9 @@ private fun LazyListScope.sectionedTimelineContent( // skipcq: KT-R1006
                         } else {
                             null
                         },
-                        onDemote = if (uiState.mode == TodoListMode.OVERDUE) {
+                        onDemote = if (uiState.mode == TodoListMode.OVERDUE ||
+                            (uiState.mode == TodoListMode.TODAY && section.key == "earlier")
+                        ) {
                             { onDemoteTodo(todo) }
                         } else {
                             null
@@ -4126,7 +4313,10 @@ private data class TimelineInAppDrag(
     val position: Offset,
 )
 
-private data class TodoSection(
+// internal, not private: exercised directly by TodoTimelineSectionsTest so the
+// "zero pending today" section-building rules (requirement 2's core logic)
+// have real unit coverage instead of only a device/emulator check.
+internal data class TodoSection(
     val key: String,
     val title: String,
     val items: List<TodoItem>,
@@ -4179,14 +4369,15 @@ private enum class TodaySectionSlot {
     MORNING, AFTERNOON, TONIGHT,
 }
 
-private fun buildTimelineSections(
+internal fun buildTimelineSections(
     mode: TodoListMode,
     items: List<TodoItem>,
     isDragActive: Boolean,
+    earlierItems: List<TodoItem> = emptyList(),
 ): List<TodoSection> {
     val zoneId = ZoneId.systemDefault()
     val sections = when (mode) {
-        TodoListMode.TODAY -> buildTodaySections(items, zoneId)
+        TodoListMode.TODAY -> buildTodaySections(items, earlierItems, zoneId)
         TodoListMode.OVERDUE -> buildOverdueSections(items, zoneId)
         TodoListMode.SCHEDULED -> buildScheduledSections(
             items = items,
@@ -4227,8 +4418,26 @@ private fun buildTimelineSections(
     // at all" rule every other scope already gets below. Checked on the built
     // sections rather than the raw `items` so this stays correct regardless of
     // whatever `buildTodaySections` itself filters out before bucketing.
+    //
+    // "earlier" answers to a different rule than the other three: it is not
+    // part of the day's own shape, so it is kept whenever it holds tasks —
+    // Morning/Afternoon/Tonight being empty says nothing about whether
+    // there is still a backlog collapsed underneath. That is requirement 2:
+    // the "day is empty" illustration cares about pending-today only, and
+    // Earlier staying reachable while it shows is requirement 3.
     if (mode == TodoListMode.TODAY) {
-        return if (sections.any { section -> section.items.isNotEmpty() }) sections else emptyList()
+        val timeOfDaySections = sections.filterNot { section -> section.key == "earlier" }
+        val earlierSection = sections.firstOrNull { section -> section.key == "earlier" }
+        val visibleTimeOfDay = if (timeOfDaySections.any { it.items.isNotEmpty() }) {
+            timeOfDaySections
+        } else {
+            emptyList()
+        }
+        return if (earlierSection != null && earlierSection.items.isNotEmpty()) {
+            visibleTimeOfDay + earlierSection
+        } else {
+            visibleTimeOfDay
+        }
     }
 
     // The one rule for every other scope, Earlier and "Rest of <month>" included:
@@ -4301,6 +4510,7 @@ private fun buildOverdueSections(
 
 private fun buildTodaySections(
     items: List<TodoItem>,
+    earlierItems: List<TodoItem>,
     zoneId: ZoneId,
 ): List<TodoSection> {
     val sorted = TaskSortEngine.sortedTodos(items.filter { it.due != null }) { it.toTaskSortKey() }
@@ -4320,6 +4530,25 @@ private fun buildTodaySections(
             else -> TodaySectionSlot.TONIGHT
         }
     }
+
+    // Today's own "Earlier": the overdue tasks fetched separately from
+    // `items` (see `TodoListUiState.earlierItems`) so they never count
+    // toward "pending today" -- that separation is what keeps requirement 1
+    // (confetti on the last pending-today completion) correct without any
+    // special-casing here. Sorted and shaped exactly like every other
+    // scope's own Earlier bucket (`buildScheduledSections`), just carrying
+    // this mode's separately-fetched items instead of a slice of `items`.
+    val sortedEarlier = TaskSortEngine.sortedTodos(earlierItems) { it.toTaskSortKey() }
+    val earlierSection = TodoSection(
+        key = "earlier",
+        title = "Earlier",
+        items = sortedEarlier,
+        quickAddDefaults = quickAddDefaultsForDate(
+            date = today.minusDays(1),
+            zoneId = zoneId,
+        ),
+        targetDate = timelineRescheduleTargetDate("earlier", today),
+    )
 
     return listOf(
         TodoSection(
@@ -4355,6 +4584,7 @@ private fun buildTodaySections(
             targetDate = today,
             targetHour = 20,
         ),
+        earlierSection,
     )
 }
 
