@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   buildTimelineSections,
   findSectionKeyForDayKey,
+  hasNonEarlierTimelineTodos,
 } from "@/lib/timeline/buildTimelineSections";
 import type { TodoItemType } from "@/types";
 
@@ -254,5 +255,97 @@ describe("buildTimelineSections", () => {
     // A day folded into "Rest of June" resolves to that aggregate section.
     const rest = sections.find((s) => s.kind === "rest");
     expect(findSectionKeyForDayKey(sections, "2026-06-12", "UTC")).toBe(rest?.key);
+  });
+});
+
+/**
+ * `ListContainer` feeds this the RAW `listTodos` (not the search-filtered
+ * set) to build a search-independent input for `useCelebrateEmptyTransition`
+ * — see `hasNonEarlierTimelineTodos`'s own doc comment for the regression
+ * this closes: a search-filtered signal can flip empty from typing alone and
+ * then swallow a real remote completion that happens while that same
+ * non-matching search is still active.
+ */
+describe("hasNonEarlierTimelineTodos", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    // Tuesday 2026-06-02, noon UTC.
+    vi.setSystemTime(new Date("2026-06-02T12:00:00.000Z"));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("false when there are no todos at all", () => {
+    expect(hasNonEarlierTimelineTodos({ ...baseArgs, todos: [], futureOnly: false, placesEarlierBeforeToday: true, includeEmptyDropTargets: false })).toBe(false);
+  });
+
+  it("false when every todo is overdue (Earlier-only)", () => {
+    const todos = [
+      makeTodo("past1", "2026-05-28T09:00:00.000Z"),
+      makeTodo("past2", "2026-05-30T09:00:00.000Z"),
+    ];
+
+    expect(
+      hasNonEarlierTimelineTodos({
+        ...baseArgs,
+        todos,
+        futureOnly: false,
+        placesEarlierBeforeToday: true,
+        includeEmptyDropTargets: false,
+      }),
+    ).toBe(false);
+  });
+
+  it("true when a current (today-or-later) todo exists alongside overdue ones", () => {
+    const todos = [
+      makeTodo("past", "2026-05-30T09:00:00.000Z"),
+      makeTodo("today", "2026-06-02T15:00:00.000Z"),
+    ];
+
+    expect(
+      hasNonEarlierTimelineTodos({
+        ...baseArgs,
+        todos,
+        futureOnly: false,
+        placesEarlierBeforeToday: true,
+        includeEmptyDropTargets: false,
+      }),
+    ).toBe(true);
+  });
+
+  it("the exact regression scenario: a search filters the only current task to nothing, but the raw list still has it", () => {
+    const rawTodos = [
+      makeTodo("overdue", "2026-05-30T09:00:00.000Z"),
+      makeTodo("current", "2026-06-02T15:00:00.000Z", { title: "Water the plants" }),
+    ];
+    // The search-filtered set a non-matching query would leave behind: the
+    // one current task is gone, only the overdue one survives.
+    const searchFilteredTodos = rawTodos.filter((t) => t.id !== "current");
+
+    // The buggy, filtered-based signal reads "no current tasks left".
+    expect(
+      hasNonEarlierTimelineTodos({
+        ...baseArgs,
+        todos: searchFilteredTodos,
+        futureOnly: false,
+        placesEarlierBeforeToday: true,
+        includeEmptyDropTargets: false,
+      }),
+    ).toBe(false);
+
+    // The fix: computed from the RAW list, the current task still counts,
+    // so `remoteEmptied` in `ListContainer` never records a false transition
+    // just because the search box happens to hide that task.
+    expect(
+      hasNonEarlierTimelineTodos({
+        ...baseArgs,
+        todos: rawTodos,
+        futureOnly: false,
+        placesEarlierBeforeToday: true,
+        includeEmptyDropTargets: false,
+      }),
+    ).toBe(true);
   });
 });
