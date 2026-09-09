@@ -66,8 +66,8 @@ vi.mock("@/components/todo/dnd/TodayBucketDnd", () => ({
     { label: "Afternoon", targetHour: 15 },
     { label: "Tonight", targetHour: 20 },
   ],
-  TodayBucketDndContext: ({ children }: { children: ReactNode }) => <>{children}</>,
-  TodayBucketDroppable: ({ children }: { children: ReactNode }) => <>{children}</>,
+  TodayBucketDndContext: ({ children }: { children: ReactNode }) => children,
+  TodayBucketDroppable: ({ children }: { children: ReactNode }) => children,
   DraggableTodayTask: ({ todo }: { todo: TodoItemType }) => <div>{todo.title}</div>,
 }));
 
@@ -158,6 +158,13 @@ function renderToday(todos: TodoItemType[]) {
   return { queryClient, ...utils };
 }
 
+// Shared no-op: `Confetti`'s `useReducedMotion` only ever reads `matches` here, so the
+// listener registration methods below exist purely to satisfy `MediaQueryList`'s shape —
+// one stand-in body covers all four.
+function noopListener() {
+  /* not exercised: this suite never triggers a matchMedia change event */
+}
+
 describe("Today screen empty state + celebration (scope=\"today\")", () => {
   beforeEach(() => {
     // Reduced-motion: `Confetti` still mounts its <canvas> (proving `celebrate` was true)
@@ -166,10 +173,10 @@ describe("Today screen empty state + celebration (scope=\"today\")", () => {
     window.matchMedia = ((query: string) => ({
       matches: true,
       media: query,
-      addEventListener: () => {},
-      removeEventListener: () => {},
-      addListener: () => {},
-      removeListener: () => {},
+      addEventListener: noopListener,
+      removeEventListener: noopListener,
+      addListener: noopListener,
+      removeListener: noopListener,
       onchange: null,
       dispatchEvent: () => false,
     })) as unknown as typeof window.matchMedia;
