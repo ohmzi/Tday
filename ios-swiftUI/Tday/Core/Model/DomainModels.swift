@@ -64,16 +64,25 @@ struct CreateTaskPayload: Equatable, Hashable, Codable {
 }
 
 enum TaskPriorityDisplay {
+    /// The new bottom tier. Wire value "Lowest" is a genuinely new enum case (not a
+    /// rename of anything existing); its UI label is "Low" — "Normal" (wire "Low")
+    /// keeps its own label and stays the default. See `TaskSortEngine` for the
+    /// matching rank split.
+    static let lowestValue = "Lowest"
     static let normalValue = "Low"
     static let importantValue = "Medium"
     static let urgentValue = "High"
 
+    static var lowestLabel: String { L("Low") }
     static var normalLabel: String { L("Normal") }
     static var importantLabel: String { L("Important") }
     static var urgentLabel: String { L("Urgent") }
 
+    /// Low-to-high urgency — the display order every picker renders in. The new
+    /// tier leads, ahead of Normal.
     static var options: [(label: String, value: String)] {
         [
+            (lowestLabel, lowestValue),
             (normalLabel, normalValue),
             (importantLabel, importantValue),
             (urgentLabel, urgentValue),
@@ -82,6 +91,8 @@ enum TaskPriorityDisplay {
 
     static func canonicalValue(_ priority: String?) -> String {
         switch priority?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+        case "lowest":
+            return lowestValue
         case "normal", "low":
             return normalValue
         case "important", "medium":
@@ -95,6 +106,8 @@ enum TaskPriorityDisplay {
 
     static func label(for priority: String?) -> String {
         switch canonicalValue(priority) {
+        case lowestValue:
+            return lowestLabel
         case importantValue:
             return importantLabel
         case urgentValue:
@@ -110,6 +123,10 @@ enum TaskPriorityDisplay {
 
     static func isImportant(_ priority: String?) -> Bool {
         canonicalValue(priority) == importantValue
+    }
+
+    static func isLowest(_ priority: String?) -> Bool {
+        canonicalValue(priority) == lowestValue
     }
 }
 

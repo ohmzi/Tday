@@ -2,6 +2,7 @@ package com.ohmz.tday.services
 
 import arrow.core.Either
 import com.ohmz.tday.db.TestDatabase
+import com.ohmz.tday.db.bootstrapProductionPgEnums
 import com.ohmz.tday.db.tables.CompletedFloaters
 import com.ohmz.tday.db.tables.FloaterListShares
 import com.ohmz.tday.db.tables.FloaterLists
@@ -111,23 +112,8 @@ class CompletedFloaterConcurrencyTest {
         )
         TransactionManager.defaultDatabase = db
         transaction(db) {
-            // Same enum bootstrap DatabaseConfig.init() runs in production --
-            // trimmed to the types the tables below actually reference.
-            listOf(
-                "\"UserRole\"" to listOf("ADMIN", "USER"),
-                "\"ApprovalStatus\"" to listOf("APPROVED", "PENDING"),
-                "\"Priority\"" to listOf("Low", "Medium", "High"),
-                "\"ProjectColor\"" to listOf(
-                    "RED", "ORANGE", "YELLOW", "LIME", "BLUE", "PURPLE", "PINK", "TEAL",
-                    "CORAL", "GOLD", "DEEP_BLUE", "ROSE", "LIGHT_RED", "BRICK", "SLATE",
-                ),
-            ).forEach { (name, values) ->
-                val valList = values.joinToString(", ") { "'$it'" }
-                exec(
-                    "DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = " +
-                        "${name.replace("\"", "'")}) THEN CREATE TYPE $name AS ENUM ($valList); END IF; END $$;",
-                )
-            }
+            // Same enum bootstrap DatabaseConfig.init() runs in production.
+            bootstrapProductionPgEnums()
             // The same table set DatabaseConfig.init() bootstraps with -- this is
             // what actually creates the partial unique index in this test, since
             // Postgres (unlike H2) honours the filter condition. Lists/ListShares/
