@@ -3,6 +3,8 @@ package com.ohmz.tday.compose.feature.widget
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import com.ohmz.tday.compose.R
+import com.ohmz.tday.compose.feature.widget.snapshot.WidgetPriorityRing
+import com.ohmz.tday.compose.ui.priority.PRIORITY_LOWEST_VALUE
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -40,7 +42,18 @@ class TaskWidgetDesignTest {
         )
         assertEquals(R.drawable.widget_priority_ring_medium, taskWidgetPriorityRingResource("Medium"))
         assertEquals(R.drawable.widget_priority_ring_low, taskWidgetPriorityRingResource("Low"))
+        assertEquals(R.drawable.widget_priority_ring_lowest, taskWidgetPriorityRingResource("Lowest"))
+        assertEquals(R.drawable.widget_priority_ring_lowest, taskWidgetPriorityRingResource(" lowest "))
         assertEquals(R.drawable.widget_priority_ring_low, taskWidgetPriorityRingResource("unknown"))
+    }
+
+    @Test
+    fun `widget priority ring round-trips through its wire value`() {
+        assertEquals(PRIORITY_LOWEST_VALUE, WidgetPriorityRing.LOWEST.toPriorityValue())
+        assertEquals(
+            R.drawable.widget_priority_ring_lowest,
+            taskWidgetPriorityRingResource(WidgetPriorityRing.LOWEST.toPriorityValue()),
+        )
     }
 
     @Test

@@ -4,6 +4,7 @@ import com.ohmz.tday.compose.core.data.CachedFloaterRecord
 import com.ohmz.tday.compose.core.data.CachedTodoRecord
 import com.ohmz.tday.compose.core.data.OfflineSyncState
 import com.ohmz.tday.compose.ui.priority.isImportantPriority
+import com.ohmz.tday.compose.ui.priority.isLowestPriority
 import com.ohmz.tday.compose.ui.priority.isUrgentPriority
 import com.ohmz.tday.shared.sort.TaskSortEngine
 import com.ohmz.tday.shared.sort.TaskSortKey
@@ -186,12 +187,13 @@ private fun CachedFloaterRecord.toSnapshotRow() = WidgetSnapshotRow(
 )
 
 /**
- * Buckets a raw priority string at write time, the same three-way split
+ * Buckets a raw priority string at write time, the same four-way split
  * `taskWidgetPriorityRingResource` used to do per row on every render. Kept on the write side
  * deliberately: it is the only place in this feature that still needs `ui.priority`.
  */
 internal fun widgetPriorityRingFor(priority: String): WidgetPriorityRing = when {
     isUrgentPriority(priority) -> WidgetPriorityRing.HIGH
     isImportantPriority(priority) -> WidgetPriorityRing.MEDIUM
+    isLowestPriority(priority) -> WidgetPriorityRing.LOWEST
     else -> WidgetPriorityRing.LOW
 }

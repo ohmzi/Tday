@@ -30,6 +30,12 @@ class WidgetSnapshotSchemaTest {
                     title = "Beta",
                     priorityRing = WidgetPriorityRing.LOW,
                 ),
+                WidgetSnapshotRow(
+                    id = "c",
+                    key = "c".hashCode().toLong(),
+                    title = "Gamma",
+                    priorityRing = WidgetPriorityRing.LOWEST,
+                ),
             ),
         )
 

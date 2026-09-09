@@ -367,6 +367,7 @@
     <string name="create_task_list">Senarai</string>
     <string name="create_task_no_list">Tiada senarai</string>
     <string name="create_task_priority">Keutamaan</string>
+    <string name="create_task_priority_low">Rendah</string>
     <string name="create_task_priority_normal">Biasa</string>
     <string name="create_task_priority_important">Penting</string>
     <string name="create_task_priority_urgent">Segera</string>

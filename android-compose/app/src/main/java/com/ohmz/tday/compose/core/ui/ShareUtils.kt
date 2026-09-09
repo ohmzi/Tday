@@ -32,7 +32,10 @@ private fun taskCopyText(
         due?.let {
             add(context.getString(R.string.share_due_label, SHARE_DATE_FORMATTER.format(it)))
         }
-        priority.takeIf { it != "Low" }?.let {
+        // "Low" is the default priority and "Lowest" sits even further below it — neither is
+        // worth flagging in shared text. Mirrors web's listShareText.ts (which fixed this same
+        // gap first) and iOS's ShareSheet.taskShareText.
+        priority.takeIf { it != "Low" && it != "Lowest" }?.let {
             add(context.getString(R.string.share_priority_label, it))
         }
     }

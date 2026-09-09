@@ -232,7 +232,7 @@
                 android:layout_width="14dp"
                 android:layout_height="14dp"
                 android:contentDescription="@null"
-                android:src="@drawable/widget_priority_ring_high" />
+                android:src="@drawable/widget_priority_ring_lowest" />
 
             <TextView
                 android:layout_width="0dp"
@@ -243,7 +243,7 @@
                 android:fontFamily="@font/nunito_app"
                 android:includeFontPadding="false"
                 android:maxLines="1"
-                android:text="Draft the quarterly planning doc"
+                android:text="Water the plants"
                 android:textColor="@color/tday_widget_on_surface"
                 android:textSize="12sp"
                 android:textStyle="bold" />
