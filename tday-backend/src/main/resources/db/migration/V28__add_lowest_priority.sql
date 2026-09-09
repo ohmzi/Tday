@@ -1,0 +1,15 @@
+-- Adds the new "Lowest" priority tier (UI label "Low") to the "Priority" enum.
+--
+-- Placed BEFORE the existing 'Low' value (UI label "Normal", unchanged) so the native
+-- Postgres enum's internal creation-ordinal order becomes:
+--   Lowest < Low < Medium < High
+-- which is exactly what keeps the existing raw-SQL `ORDER BY priority DESC` sites
+-- (FloaterService.kt, FloaterListService.kt) correctly producing High, Medium, Low, Lowest
+-- with ZERO query changes.
+--
+-- `ALTER TYPE ... ADD VALUE` may not be used to reference the new value within the same
+-- transaction it was added in (a PostgreSQL restriction that still applies on PG 15/16).
+-- This migration does ONLY this one statement -- nothing else in this file or transaction
+-- reads 'Lowest' -- so it is safe to run inside Flyway's normal one-transaction-per-migration
+-- wrapping and needs no special non-transactional handling.
+ALTER TYPE "Priority" ADD VALUE 'Lowest' BEFORE 'Low';

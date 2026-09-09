@@ -116,7 +116,7 @@ class CompletedFloaterConcurrencyTest {
             listOf(
                 "\"UserRole\"" to listOf("ADMIN", "USER"),
                 "\"ApprovalStatus\"" to listOf("APPROVED", "PENDING"),
-                "\"Priority\"" to listOf("Low", "Medium", "High"),
+                "\"Priority\"" to listOf("Lowest", "Low", "Medium", "High"),
                 "\"ProjectColor\"" to listOf(
                     "RED", "ORANGE", "YELLOW", "LIME", "BLUE", "PURPLE", "PINK", "TEAL",
                     "CORAL", "GOLD", "DEEP_BLUE", "ROSE", "LIGHT_RED", "BRICK", "SLATE",
