@@ -296,8 +296,14 @@ const AllTasksTimelineContainer = ({
   }, [timelineItems, scope]);
 
   // Today screen: Morning (<12) / Afternoon (12–18) / Tonight (≥18), matching native.
+  // All three buckets stay visible (even empty ones) as long as the day holds at
+  // least one task, so they read as live drop targets alongside the others. But
+  // when the whole day is empty, `scopeFilteredItems` is already the same
+  // dayDiff===0 set `hasScopedTasks` checks below — so this returns no buckets in
+  // lockstep with `showEmpty`, letting the empty-state illustration own the
+  // screen instead of three headerless buckets sitting above it.
   const todayBuckets = useMemo(() => {
-    if (scope !== "today") return [];
+    if (scope !== "today" || scopeFilteredItems.length === 0) return [];
     const groups: Record<"Morning" | "Afternoon" | "Tonight", TodoItemType[]> = {
       Morning: [],
       Afternoon: [],
