@@ -5485,8 +5485,22 @@ func priorityColor(_ priority: String) -> Color {
     if TaskPriorityDisplay.isImportant(priority) {
         return .orange
     }
+    if TaskPriorityDisplay.isLowest(priority) {
+        return tdayPriorityLowestColor
+    }
     return .blue
 }
+
+/// #8E8E93 light / #98989D dark — matches the widget's `tdayPriorityLowest(Dark)`
+/// and Android's parallel colors.xml addition exactly. `priorityColor(_:)` is a
+/// free function called from several screens with no `@Environment(\.colorScheme)`
+/// of its own, so this resolves via a `UIColor` dynamic provider (like the
+/// system does for its own semantic colors) rather than switching explicitly.
+private let tdayPriorityLowestColor = Color(uiColor: UIColor { traits in
+    traits.userInterfaceStyle == .dark
+        ? UIColor(red: 152.0 / 255.0, green: 152.0 / 255.0, blue: 157.0 / 255.0, alpha: 1)
+        : UIColor(red: 142.0 / 255.0, green: 142.0 / 255.0, blue: 147.0 / 255.0, alpha: 1)
+})
 
 func priorityIndicatorSymbolName(_ priority: String) -> String? {
     if TaskPriorityDisplay.isImportant(priority) {

@@ -1427,6 +1427,8 @@ private struct TdayTasksWidgetContent: View {
             return colorScheme == .dark ? .tdayPriorityHighDark : .tdayPriorityHigh
         case "medium", "important":
             return colorScheme == .dark ? .tdayPriorityMediumDark : .tdayPriorityMedium
+        case "lowest":
+            return colorScheme == .dark ? .tdayPriorityLowestDark : .tdayPriorityLowest
         default:
             return colorScheme == .dark ? .tdayPriorityLowDark : .tdayPriorityLow
         }
@@ -1836,6 +1838,11 @@ private extension Color {
     static let tdayPriorityHighDark = Color(red: 1.0, green: 107.0 / 255.0, blue: 97.0 / 255.0)
     static let tdayPriorityMediumDark = Color(red: 1.0, green: 180.0 / 255.0, blue: 84.0 / 255.0)
     static let tdayPriorityLowDark = Color(red: 121.0 / 255.0, green: 184.0 / 255.0, blue: 1.0)
+    // New bottom tier ("Lowest" wire value, "Low" UI label) — iOS system gray
+    // tones (#8E8E93 / #98989D), numerically identical to Android's parallel
+    // colors.xml addition for cross-platform parity.
+    static let tdayPriorityLowest = Color(red: 142.0 / 255.0, green: 142.0 / 255.0, blue: 147.0 / 255.0)
+    static let tdayPriorityLowestDark = Color(red: 152.0 / 255.0, green: 152.0 / 255.0, blue: 157.0 / 255.0)
 }
 
 private extension Date {

@@ -1070,6 +1070,13 @@ private func createTaskSheetPrioritySwatchColor(_ priority: String) -> Color {
     if TaskPriorityDisplay.isImportant(priority) {
         return createTaskSheetHexColor(0xE3B368)
     }
+    if TaskPriorityDisplay.isLowest(priority) {
+        // #8E8E93 — the same iOS-system-gray this tier uses everywhere else
+        // (see TodayTasksWidget's tdayPriorityLowest); a neutral gray needs no
+        // separate desaturated "swatch" variant to sit comfortably next to this
+        // row's muted pastel siblings.
+        return createTaskSheetHexColor(0x8E8E93)
+    }
     return createTaskSheetHexColor(0x6FBF86)
 }
 
