@@ -23,7 +23,7 @@ struct TaskSortKey {
         id: String,
         pinned: Bool = false,
         dueEpochMs: Int64? = nil,
-        priorityRank: Int = TaskSortEngine.lowestPriorityRank,
+        priorityRank: Int = TaskSortEngine.normalPriorityRank,
         updatedAtEpochMs: Int64? = nil
     ) {
         self.id = id
@@ -40,12 +40,27 @@ struct TaskSortKey {
 ///
 /// - Todos (scheduled screen + custom lists, applied WITHIN each day group):
 ///   pinned first, then due date+time ASC (soonest first, undated last), then
-///   priority (High -> Low), then most-recently-modified, then id.
-/// - Floaters: pinned first, then priority (High -> Low), then
+///   priority (High -> Medium -> Low -> Lowest), then most-recently-modified, then id.
+/// - Floaters: pinned first, then priority (High -> Medium -> Low -> Lowest), then
 ///   most-recently-modified, then id.
 enum TaskSortEngine {
 
-    static let lowestPriorityRank = 2
+    /// Rank for the canonical "Low" wire value (UI label "Normal", the default).
+    /// This is ALSO the fallback rank for a priority string that matches nothing
+    /// known — deliberately: an unrecognized/absent priority is a different
+    /// concept from the user explicitly picking the new bottom tier below, and
+    /// must keep degrading to "as if Normal", not to the new tier. Was previously
+    /// named `lowestPriorityRank`; split out from `lowestTierPriorityRank` (below)
+    /// when the "Lowest" wire value was added so the two meanings can no longer be
+    /// conflated by a single constant. Mirrors the shared Kotlin
+    /// `TaskSortEngine.NORMAL_PRIORITY_RANK`.
+    static let normalPriorityRank = 2
+
+    /// Rank for the "Lowest" wire value (UI label "Low") — the new, genuinely
+    /// least-urgent tier, one rank below Normal. Only reached when a priority
+    /// string explicitly matches "lowest"; never used as a fallback. Mirrors the
+    /// shared Kotlin `TaskSortEngine.LOWEST_TIER_PRIORITY_RANK`.
+    static let lowestTierPriorityRank = 3
 
     static func sortedTodos<T>(_ items: [T], key: (T) -> TaskSortKey) -> [T] {
         items.sorted { precedesTodo(key($0), key($1)) }
@@ -85,9 +100,10 @@ enum TaskSortEngine {
     }
 
     /// 0 = highest priority (sorts first). Tolerant of every priority spelling the app stores:
-    /// canonical Low/Medium/High, the server/legacy vocabulary normal/important/urgent, and any
-    /// case. Realtime-synced rows arrive un-normalized, so a strict match would collapse them to
-    /// Low and the sort would ignore priority. Unknown/absent -> Low. Mirrors the shared Kotlin
+    /// canonical Lowest/Low/Medium/High, the server/legacy vocabulary normal/important/urgent,
+    /// and any case. Realtime-synced rows arrive un-normalized, so a strict match would collapse
+    /// them to Normal and the sort would ignore priority. Unknown/absent -> Normal (NOT the new
+    /// "lowest" tier — see `normalPriorityRank`'s doc comment). Mirrors the shared Kotlin
     /// `TaskSortEngine.priorityRank(String?)`.
     static func priorityRank(_ priority: String) -> Int {
         switch priority.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
@@ -95,8 +111,10 @@ enum TaskSortEngine {
             return 0
         case "medium", "important":
             return 1
+        case "lowest":
+            return lowestTierPriorityRank
         default:
-            return lowestPriorityRank
+            return normalPriorityRank
         }
     }
 
