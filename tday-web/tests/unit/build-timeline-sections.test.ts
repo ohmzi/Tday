@@ -30,6 +30,7 @@ const baseArgs = {
   timeZone: "UTC",
   todayLabel: "Today",
   tomorrowLabel: "Tomorrow",
+  earlierLabel: "Overdue",
 };
 
 describe("buildTimelineSections", () => {
@@ -43,7 +44,7 @@ describe("buildTimelineSections", () => {
     vi.useRealTimers();
   });
 
-  it("orders buckets Earlier → Today → Tomorrow → +2..+6 → Rest of month → future months", () => {
+  it("orders buckets Overdue → Today → Tomorrow → +2..+6 → Rest of month → future months", () => {
     const todos = [
       makeTodo("past", "2026-05-30T09:00:00.000Z"),
       makeTodo("today", "2026-06-02T15:00:00.000Z"),
@@ -62,10 +63,11 @@ describe("buildTimelineSections", () => {
       includeEmptyDropTargets: true,
     });
 
-    // Earlier first, collapsible, targets yesterday.
+    // Earlier bucket first, collapsible, targets yesterday — its display
+    // label is the translated "Overdue" string the caller supplies.
     expect(sections[0]).toMatchObject({
       kind: "earlier",
-      label: "Earlier",
+      label: "Overdue",
       collapsible: true,
       targetDayKey: "2026-06-01",
     });

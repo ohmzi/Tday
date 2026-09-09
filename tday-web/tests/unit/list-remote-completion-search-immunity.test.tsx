@@ -63,6 +63,7 @@ const buildArgs = {
   includeEmptyDropTargets: false,
   todayLabel: "Today",
   tomorrowLabel: "Tomorrow",
+  earlierLabel: "Overdue",
 };
 
 /** The fixed composition: `remoteEmptied` fed the RAW list. */

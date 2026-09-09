@@ -34,6 +34,7 @@ export function useListEarlierSection({
   timeZone,
   todayLabel,
   tomorrowLabel,
+  earlierLabel,
   dragActive,
 }: {
   listTodos: TodoItemType[];
@@ -42,6 +43,7 @@ export function useListEarlierSection({
   timeZone?: string;
   todayLabel: string;
   tomorrowLabel: string;
+  earlierLabel: string;
   dragActive: boolean;
 }) {
   const timelineSections = useMemo(
@@ -55,8 +57,9 @@ export function useListEarlierSection({
         includeEmptyDropTargets: dragActive,
         todayLabel,
         tomorrowLabel,
+        earlierLabel,
       }),
-    [dragActive, filteredTodos, locale, timeZone, todayLabel, tomorrowLabel],
+    [dragActive, filteredTodos, locale, timeZone, todayLabel, tomorrowLabel, earlierLabel],
   );
 
   // The same "earlier" bucket `TimelineSections` renders below — reusing
@@ -83,8 +86,9 @@ export function useListEarlierSection({
         includeEmptyDropTargets: false,
         todayLabel,
         tomorrowLabel,
+        earlierLabel,
       }),
-    [listTodos, locale, timeZone, todayLabel, tomorrowLabel],
+    [listTodos, locale, timeZone, todayLabel, tomorrowLabel, earlierLabel],
   );
 
   return {

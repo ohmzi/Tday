@@ -62,6 +62,7 @@ const ListContainer = ({ id }: { id: string }) => {
             timeZone: userTZ?.timeZone,
             todayLabel: appDict("today"),
             tomorrowLabel: appDict("tomorrow"),
+            earlierLabel: appDict("overdue"),
             dragActive,
         });
 
@@ -270,7 +271,7 @@ const ListContainer = ({ id }: { id: string }) => {
                     // Collaborators need accounts; a local workspace has none, so the
                     // Members entry disappears while plain-text sharing stays.
                     onManageMembers={isLocalMode ? undefined : () => setMembersOpen(true)}
-                    onShareList={() => void shareListAsText()}
+                    onShareList={() => shareListAsText()}
                 />
                 <ManageMembersSheet
                     open={membersOpen}
@@ -279,7 +280,7 @@ const ListContainer = ({ id }: { id: string }) => {
                     listType="list"
                     listName={listName}
                     myRole={myRole}
-                    onShareExternal={() => void shareListAsText()}
+                    onShareExternal={() => shareListAsText()}
                 />
             </TaskSelectionProvider>
         </TodoMutationProvider>

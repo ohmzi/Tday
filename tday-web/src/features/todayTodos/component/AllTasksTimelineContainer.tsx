@@ -341,6 +341,7 @@ const AllTasksTimelineContainer = ({
           {showTodayEarlierSection && (
             <TodayEarlierSection
               todos={earlierItems}
+              label={appDict("overdue")}
               expanded={earlierExpanded && !earlierHandoffPending}
               onToggle={() => toggleEarlierExpanded(showEmptyIllustration)}
               highlightedTodoId={focusedTaskId}
