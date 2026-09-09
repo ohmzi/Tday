@@ -5156,8 +5156,8 @@ private func buildSections(
         // Canonical drop hour per bucket — lands inside the display boundaries
         // (Morning < 12, Afternoon 12–18, Tonight ≥ 18). Matches web/Android.
         let bucketHours: [String: Int] = ["Morning": 9, "Afternoon": 15, "Tonight": 20]
-        return ["Morning", "Afternoon", "Tonight"].map { key in
-            return TodoTimelineSection(
+        let todaySections = ["Morning", "Afternoon", "Tonight"].map { key in
+            TodoTimelineSection(
                 id: key,
                 title: key,
                 items: grouped[key, default: []].sorted(by: todoTimelineSortPrecedes),
@@ -5166,6 +5166,17 @@ private func buildSections(
                 targetHour: bucketHours[key]
             )
         }
+        // Morning / Afternoon / Tonight are the shape of the day itself rather
+        // than a scaffold of dates, and each one is where a quick-add lands, so
+        // Today keeps all three whenever the day holds anything, even if e.g.
+        // Afternoon happens to be empty. But when the whole day is empty, the
+        // three headers are stray scaffolding above the empty-state
+        // illustration (`viewModel.items.isEmpty` in `watermarkedModeContent`)
+        // — matching every other mode's "no items, no headers" behavior.
+        guard todaySections.contains(where: { !$0.items.isEmpty }) else {
+            return []
+        }
+        return todaySections
     case .overdue:
         let now = Date()
         let startOfToday = calendar.startOfDay(for: now)
