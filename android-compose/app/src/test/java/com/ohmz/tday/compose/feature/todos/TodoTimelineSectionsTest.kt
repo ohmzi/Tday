@@ -47,7 +47,12 @@ class TodoTimelineSectionsTest {
             .toInstant(),
     )
 
-    private fun overdue(id: String): TodoItem = todo(
+    // Defaulted rather than passed explicitly at every call site: most tests
+    // below need exactly one interchangeable overdue/upcoming task and don't
+    // care what its id is, so a repeated literal argument would only trip
+    // DeepSource's duplicate-string-literal check for no real benefit. A
+    // test that genuinely needs a distinct id still passes one.
+    private fun overdue(id: String = "overdue-1"): TodoItem = todo(
         id = id,
         due = Instant.now().minus(2, ChronoUnit.DAYS),
     )
@@ -81,7 +86,7 @@ class TodoTimelineSectionsTest {
 
     @Test
     fun `zero pending today tasks still surfaces Earlier when it holds overdue tasks`() {
-        val overdueTask = overdue("overdue-1")
+        val overdueTask = overdue()
 
         val sections = buildTimelineSections(
             mode = TodoListMode.TODAY,
@@ -100,7 +105,7 @@ class TodoTimelineSectionsTest {
     @Test
     fun `pending today tasks keep all three time buckets plus a trailing Earlier`() {
         val morningTask = todayAt(hour = 9, id = "morning-1")
-        val overdueTask = overdue("overdue-1")
+        val overdueTask = overdue()
 
         val sections = buildTimelineSections(
             mode = TodoListMode.TODAY,
@@ -146,7 +151,7 @@ class TodoTimelineSectionsTest {
     // [nonEarlierSectionsEmpty], the empty-state condition built on top of
     // it) the same way the Today tests above pin `buildTodaySections`.
 
-    private fun tomorrow(id: String): TodoItem = todo(
+    private fun tomorrow(id: String = "tomorrow-1"): TodoItem = todo(
         id = id,
         due = ZonedDateTime.now(zone).plusDays(1).withHour(9).withMinute(0).withSecond(0).withNano(0)
             .toInstant(),
@@ -154,7 +159,7 @@ class TodoTimelineSectionsTest {
 
     @Test
     fun `All -- an overdue-only scope surfaces just Earlier, and reads as non-Earlier-empty`() {
-        val overdueTask = overdue("overdue-1")
+        val overdueTask = overdue()
 
         val sections = buildTimelineSections(
             mode = TodoListMode.ALL,
@@ -168,7 +173,7 @@ class TodoTimelineSectionsTest {
 
     @Test
     fun `Priority -- an overdue-only scope surfaces just Earlier, and reads as non-Earlier-empty`() {
-        val overdueTask = overdue("overdue-1")
+        val overdueTask = overdue()
 
         val sections = buildTimelineSections(
             mode = TodoListMode.PRIORITY,
@@ -182,7 +187,7 @@ class TodoTimelineSectionsTest {
 
     @Test
     fun `List -- an overdue-only scope surfaces just Earlier, and reads as non-Earlier-empty`() {
-        val overdueTask = overdue("overdue-1")
+        val overdueTask = overdue()
 
         val sections = buildTimelineSections(
             mode = TodoListMode.LIST,
@@ -196,8 +201,8 @@ class TodoTimelineSectionsTest {
 
     @Test
     fun `All -- a real upcoming task alongside Earlier reads as not empty`() {
-        val overdueTask = overdue("overdue-1")
-        val upcomingTask = tomorrow("tomorrow-1")
+        val overdueTask = overdue()
+        val upcomingTask = tomorrow()
 
         val sections = buildTimelineSections(
             mode = TodoListMode.ALL,
@@ -219,7 +224,7 @@ class TodoTimelineSectionsTest {
         // Passing an overdue task in anyway (as if the repository filter
         // were bypassed) pins that this mode still shows nothing for it,
         // rather than silently inventing an Earlier section it never had.
-        val overdueTask = overdue("overdue-1")
+        val overdueTask = overdue()
 
         val sections = buildTimelineSections(
             mode = TodoListMode.SCHEDULED,
@@ -233,7 +238,7 @@ class TodoTimelineSectionsTest {
 
     @Test
     fun `Scheduled -- a real upcoming task reads as not empty, same as before this feature`() {
-        val upcomingTask = tomorrow("tomorrow-1")
+        val upcomingTask = tomorrow()
 
         val sections = buildTimelineSections(
             mode = TodoListMode.SCHEDULED,

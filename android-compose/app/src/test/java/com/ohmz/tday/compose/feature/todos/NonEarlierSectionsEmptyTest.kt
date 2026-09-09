@@ -5,6 +5,13 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
+// Test-local, non-Earlier section keys reused across several cases below --
+// pulled out once "day-2026-09-10" tripped DeepSource's duplicate-string-
+// literal check, the same style [TodoTimelineSectionsTest]'s own
+// TODAY_MORNING_KEY/etc. already use.
+private const val A_DAY_SECTION_KEY = "day-2026-09-10"
+private const val A_REST_OF_MONTH_SECTION_KEY = "rest-2026-09"
+
 /**
  * [nonEarlierSectionsEmpty] generalizes Today's `uiState.items.isEmpty()`
  * empty-state gate to Scheduled/Priority/All/List. `TodoRepository
@@ -63,7 +70,7 @@ class NonEarlierSectionsEmptyTest {
             nonEarlierSectionsEmpty(
                 listOf(
                     section(EARLIER_SECTION_KEY, hasItems = true),
-                    section("day-2026-09-10", hasItems = true),
+                    section(A_DAY_SECTION_KEY, hasItems = true),
                 ),
             ),
         )
@@ -80,7 +87,7 @@ class NonEarlierSectionsEmptyTest {
             nonEarlierSectionsEmpty(
                 listOf(
                     section(EARLIER_SECTION_KEY, hasItems = true),
-                    section("day-2026-09-10", hasItems = false),
+                    section(A_DAY_SECTION_KEY, hasItems = false),
                 ),
             ),
         )
@@ -92,8 +99,8 @@ class NonEarlierSectionsEmptyTest {
             nonEarlierSectionsEmpty(
                 listOf(
                     section(EARLIER_SECTION_KEY, hasItems = true),
-                    section("day-2026-09-10", hasItems = false),
-                    section("rest-2026-09", hasItems = false),
+                    section(A_DAY_SECTION_KEY, hasItems = false),
+                    section(A_REST_OF_MONTH_SECTION_KEY, hasItems = false),
                 ),
             ),
         )
