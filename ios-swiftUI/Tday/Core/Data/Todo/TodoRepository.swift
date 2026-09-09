@@ -1610,7 +1610,15 @@ final class TodoRepository {
         switch mode {
         case .today:
             // An active iOS Focus filter (R6-3) narrows Today to its chosen lists.
-            filtered = items.filter { isTodayTodo($0, now: now) && TdayFocusFilterStore.allows(listId: $0.listId) }
+            // Overdue tasks ride along too: Today renders them in a collapsed
+            // "Earlier" section (see `buildSections`'s `.today` case) rather than
+            // dropping them — a task that slipped past its own due time is still
+            // today's problem, just tucked away instead of mixed into the
+            // Morning/Afternoon/Tonight buckets it was never actually due in.
+            filtered = items.filter {
+                (isTodayTodo($0, now: now) || isOverdueTodo($0, now: now))
+                    && TdayFocusFilterStore.allows(listId: $0.listId)
+            }
         case .overdue:
             filtered = items.filter { isOverdueTodo($0, now: now) }
         case .scheduled:
