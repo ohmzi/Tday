@@ -10,9 +10,10 @@ import { TODAY_EARLIER_EXIT_MS } from "../lib/todayEarlierIllustration";
  * payoff state instead of the generic no-tasks message).
  *
  * The wrapper div only ever carries the exit animation while
- * `earlierHandoffPending` is genuinely true (i.e. only for Today, mid
- * requirement-3 hand-off — see `shouldShowTodayEmptyIllustration`'s own doc
- * comment); it is inert everywhere else.
+ * `earlierHandoffPending` is genuinely true — mid requirement-3 hand-off, on
+ * whichever scope's own Earlier bucket is mid-exit right now (see
+ * `shouldShowTodayEmptyIllustration`'s own doc comment); it is inert
+ * everywhere else.
  */
 export default function TimelineEmptyState({
   icon,
