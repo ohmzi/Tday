@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { TimelineSection as BuiltTimelineSection } from "@/lib/timeline/buildTimelineSections";
 import type { TimelineItem, TimelineSection } from "../component/AllTasksTimelineContainer";
 
 const PAGE_SIZE = 10;
@@ -33,15 +34,29 @@ const toSections = (items: TimelineItem[]): TimelineSection[] => {
  * scoped set changes size, and jumps the page ahead immediately when a
  * deep-linked/focused item or date lands past what's currently revealed, so
  * it's on screen without an extra scroll-to-load.
+ *
+ * Also owns `selectableTodos` — what Select all reaches: the rows this
+ * screen has actually rendered, in display order. Both branches read from
+ * `visibleTimelineItems`, so the two stay in step — the bucketed scopes
+ * through the timeline's own sections (`timelineSections`, collapsed Earlier
+ * included), Today/Overdue directly. Deliberately NOT the whole unpaged set:
+ * Today/Overdue render `PAGE_SIZE` at a time behind the IntersectionObserver
+ * above, so selecting the unpaged set let one tap of Select all + Delete
+ * reach tasks the user had never scrolled to — 60 rows staged from 10 on
+ * screen. Android and iOS have no paging, so there "everything on screen" and
+ * "everything in the scope" are the same set; this keeps web's Select all
+ * honest against the same sentence in the guide.
  */
 export function useTimelinePaging({
   scopeFilteredItems,
   timeline,
+  timelineSections,
   focusedDateKey,
   focusedTaskId,
 }: {
   scopeFilteredItems: TimelineItem[];
   timeline: boolean;
+  timelineSections: BuiltTimelineSection[];
   focusedDateKey: string | null;
   focusedTaskId: string | null;
 }) {
@@ -72,6 +87,14 @@ export function useTimelinePaging({
   const regularSections = useMemo(() => sections.filter((s) => s.dayDiff >= 0), [sections]);
 
   const hasMore = !timeline && visibleCount < scopeFilteredItems.length;
+
+  const selectableTodos = useMemo(
+    () =>
+      timeline
+        ? timelineSections.flatMap((section) => section.todos)
+        : visibleTimelineItems.map((item) => item.todo),
+    [timeline, timelineSections, visibleTimelineItems],
+  );
 
   useEffect(() => {
     setVisibleCount(PAGE_SIZE);
@@ -115,5 +138,12 @@ export function useTimelinePaging({
     };
   }, [scopeFilteredItems.length, hasMore]);
 
-  return { visibleTimelineItems, earlierSections, regularSections, hasMore, sentinelRef };
+  return {
+    visibleTimelineItems,
+    earlierSections,
+    regularSections,
+    hasMore,
+    sentinelRef,
+    selectableTodos,
+  };
 }
