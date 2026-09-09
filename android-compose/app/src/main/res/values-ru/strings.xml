@@ -370,6 +370,7 @@
     <string name="create_task_list">Список</string>
     <string name="create_task_no_list">Без списка</string>
     <string name="create_task_priority">Приоритет</string>
+    <string name="create_task_priority_low">Низкий</string>
     <string name="create_task_priority_normal">Обычный</string>
     <string name="create_task_priority_important">Важный</string>
     <string name="create_task_priority_urgent">Срочный</string>
