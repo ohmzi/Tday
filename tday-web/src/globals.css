@@ -630,9 +630,10 @@
   to { opacity: 1; transform: none; }
 }
 
-/* The exit mirror of `.tday-empty-enter`, played only for Today's "Earlier"
-   hand-off (requirement 3 of the Earlier section): the caller sets
-   `animation-duration` inline from `TODAY_EARLIER_EXIT_MS`
+/* The exit mirror of `.tday-empty-enter`, played only during an "Earlier"
+   hand-off (requirement 3 of the Earlier section — Today originally, since
+   generalized to every other scope with its own Earlier bucket): the caller
+   sets `animation-duration` inline from `TODAY_EARLIER_EXIT_MS`
    (`todayEarlierIllustration.ts`) — the SAME constant that gates the delay
    before Earlier's rows are told to appear — so the visual exit and that
    hand-off are one number, read twice, not two independently tuned to look

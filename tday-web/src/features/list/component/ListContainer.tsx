@@ -1,8 +1,11 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import TodoListLoading from "@/components/todo/component/TodoListLoading";
 import TimelineSections from "@/components/todo/dnd/TimelineSections";
-import { buildTimelineSections } from "@/lib/timeline/buildTimelineSections";
+import TimelineEmptyState from "@/features/todayTodos/component/TimelineEmptyState";
+import { useListSearch } from "../lib/useListSearch";
+import { useListEarlierSection } from "../lib/useListEarlierSection";
+import { useListEmptyState } from "../lib/useListEmptyState";
 import { useCompleteListTodo } from "../query/complete-list-todo";
 import { useDeleteListTodo } from "../query/delete-list-todo";
 import { usePrioritizeListTodo } from "../query/prioritize-list-todo";
@@ -18,8 +21,6 @@ import NativePageHeader, { useNativePageBarSlots } from "@/components/app/Native
 import MobileSearchHeader from "@/components/ui/MobileSearchHeader";
 import ScreenWatermark from "@/components/app/ScreenWatermark";
 import EmptyState from "@/components/app/EmptyState";
-import { taskJustCompleted } from "@/lib/task-completion-signal";
-import { useCelebrateEmptyTransition } from "@/hooks/use-celebrate-empty-transition";
 import { getListIcon } from "@/lib/listIcons";
 import { listColorAccentColors, nativeScreenAccentColors } from "@/components/app/nativeScreenTheme";
 import ListFormSheet from "@/components/Sidebar/List/ListFormSheet";
@@ -31,7 +32,6 @@ import { Button } from "@/components/ui/button";
 import { useLocale } from "@/lib/navigation";
 import { useUserTimezone } from "@/features/user/query/get-timezone";
 import { Pencil, Search, Users } from "lucide-react";
-import { flattenNotesToPlainText } from "@/lib/richNotes";
 
 const ListContainer = ({ id }: { id: string }) => {
     const locale = useLocale();
@@ -43,40 +43,42 @@ const ListContainer = ({ id }: { id: string }) => {
     const [searchQuery, setSearchQuery] = useState("");
     const [editListOpen, setEditListOpen] = useState(false);
     const [membersOpen, setMembersOpen] = useState(false);
-    const [earlierExpanded, setEarlierExpanded] = useState(false);
     // Empty date buckets are drop targets and nothing else, so they exist only
     // for the length of a drag.
     const [dragActive, setDragActive] = useState(false);
-    // Remote sibling of `taskJustCompleted()` below — fires for a completion
-    // on another device or by a collaborator, not just this tab's own tap.
-    const remoteEmptied = useCelebrateEmptyTransition(listTodos.length === 0);
 
-    const filteredTodos = useMemo(() => {
-        const query = searchQuery.trim().toLowerCase();
-        if (!query) return listTodos;
-        return listTodos.filter((todo) => {
-            const title = todo.title.toLowerCase();
-            const description = flattenNotesToPlainText(todo.description).toLowerCase();
-            return title.includes(query) || description.includes(query);
+    const { filteredTodos, isSearching } = useListSearch({ listTodos, searchQuery });
+
+    // Earlier empty-state parity with Today/All/Priority/Scheduled: this
+    // list's own Earlier bucket (`buildTimelineSections`'s `kind: "earlier"`)
+    // is exactly the same display-time subset of `listTodos` those screens
+    // already read — see `useListEarlierSection`'s own doc comment for the
+    // two Earlier/current readings it hands back and why they stay separate.
+    const { timelineSections, hasEarlierItems, hasNonEarlierListTodos, hasNonEarlierRawListTodos } =
+        useListEarlierSection({
+            listTodos,
+            filteredTodos,
+            locale,
+            timeZone: userTZ?.timeZone,
+            todayLabel: appDict("today"),
+            tomorrowLabel: appDict("tomorrow"),
+            earlierLabel: appDict("overdue"),
+            dragActive,
         });
-    }, [listTodos, searchQuery]);
 
-    const timelineSections = useMemo(
-        () =>
-            buildTimelineSections({
-                todos: filteredTodos,
-                locale,
-                timeZone: userTZ?.timeZone,
-                futureOnly: false,
-                placesEarlierBeforeToday: true,
-                includeEmptyDropTargets: dragActive,
-                todayLabel: appDict("today"),
-                tomorrowLabel: appDict("tomorrow"),
-            }),
-        [appDict, dragActive, filteredTodos, locale, userTZ?.timeZone],
-    );
-
-    const isSearching = Boolean(searchQuery.trim());
+    // Requirements 1-4's empty/celebration/hand-off decisions, plus the same
+    // hand-off state machine (`useEarlierExpandHandoff`'s own doc comment)
+    // Today/All/Priority/Scheduled use — see `useListEmptyState`'s own doc
+    // comment for why the two Earlier/current readings above must stay fed to
+    // exactly the parameters they are here.
+    const { earlierExpanded, earlierHandoffPending, toggleEarlierExpanded, celebrate, showEmptyIllustration } =
+        useListEmptyState({
+            listTodosLoading,
+            isSearching,
+            hasEarlierItems,
+            hasNonEarlierListTodos,
+            hasNonEarlierRawListTodos,
+        });
     // This page keeps its search field as the pinned bar, so the header below
     // renders only the block that scrolls away and docks its title into it —
     // the same split the floater list uses.
@@ -196,19 +198,22 @@ const ListContainer = ({ id }: { id: string }) => {
                     {/* Loading state */}
                     {listTodosLoading && <TodoListLoading />}
 
-                    {/* Empty state — no tasks yet */}
-                    {!listTodosLoading && !isSearching && listTodos.length === 0 && (
-                        <EmptyState
+                    {/* Empty state — no current tasks (Earlier's own overdue
+                        tasks, if any, render below via `TimelineSections`;
+                        see `showEmptyIllustration`'s derivation above and
+                        `AllTasksTimelineContainer`'s matching JSX-ordering
+                        comment for why this renders BEFORE that block). */}
+                    {showEmptyIllustration && (
+                        <TimelineEmptyState
                             icon={getListIcon(listMetaData[id]?.iconKey)}
                             accentColor={listAccent}
-                            title={appDict("listEmpty")}
-                            description={appDict("listEmptyBody")}
-                            // Finishing a list is a payoff, not an absence: the
-                            // confetti is for the tick that emptied it, not for a
-                            // list that was already empty when it was opened.
-                            // Whether that tick happened here, on another device,
-                            // or from a collaborator on this shared list.
-                            celebrate={taskJustCompleted() || remoteEmptied}
+                            isDayDone={false}
+                            celebrate={celebrate}
+                            earlierHandoffPending={earlierHandoffPending}
+                            locale={locale}
+                            emptyTitle="listEmpty"
+                            emptyBody="listEmptyBody"
+                            appDict={appDict}
                         />
                     )}
 
@@ -231,7 +236,11 @@ const ListContainer = ({ id }: { id: string }) => {
                         />
                     )}
 
-                    {/* Date-bucketed timeline with drag-and-drop */}
+                    {/* Date-bucketed timeline with drag-and-drop — renders
+                        whenever the list holds anything at all, Earlier's own
+                        overdue tasks included, so a list with only overdue
+                        tasks left still shows its (collapsed) Earlier header
+                        under the illustration above. */}
                     {!listTodosLoading && !(isSearching && filteredTodos.length === 0) && listTodos.length > 0 && (
                         <TimelineSections
                             sections={timelineSections}
@@ -239,9 +248,17 @@ const ListContainer = ({ id }: { id: string }) => {
                             // A live query outranks a shut bucket: a list opens
                             // with Earlier closed, and a task the search turns up in
                             // there must not stay hidden behind its header. Native
-                            // makes the same call.
-                            earlierExpanded={earlierExpanded || isSearching}
-                            onToggleEarlier={() => setEarlierExpanded((value) => !value)}
+                            // makes the same call. `!earlierHandoffPending`: mid
+                            // hand-off, Earlier's own rows stay hidden until the
+                            // illustration above has actually finished exiting —
+                            // requirement 3's sequencing, reused from Today.
+                            earlierExpanded={(earlierExpanded && !earlierHandoffPending) || isSearching}
+                            // Passes `showEmptyIllustration` through exactly like
+                            // Today/All/Priority/Scheduled do: expanding Earlier
+                            // hands off through the illustration first when it
+                            // currently owns the slot (requirement 3), and stays
+                            // the plain immediate toggle otherwise.
+                            onToggleEarlier={() => toggleEarlierExpanded(showEmptyIllustration)}
                             onDragActiveChange={setDragActive}
                         />
                     )}
@@ -254,7 +271,7 @@ const ListContainer = ({ id }: { id: string }) => {
                     // Collaborators need accounts; a local workspace has none, so the
                     // Members entry disappears while plain-text sharing stays.
                     onManageMembers={isLocalMode ? undefined : () => setMembersOpen(true)}
-                    onShareList={() => void shareListAsText()}
+                    onShareList={() => shareListAsText()}
                 />
                 <ManageMembersSheet
                     open={membersOpen}
@@ -263,7 +280,7 @@ const ListContainer = ({ id }: { id: string }) => {
                     listType="list"
                     listName={listName}
                     myRole={myRole}
-                    onShareExternal={() => void shareListAsText()}
+                    onShareExternal={() => shareListAsText()}
                 />
             </TaskSelectionProvider>
         </TodoMutationProvider>

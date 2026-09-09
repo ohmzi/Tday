@@ -93,11 +93,13 @@ const AllTasksTimelineContainer = ({
 
   const timeline = isTimelineScope(scope);
 
-  // Generalizes the plain `useState(false)` this used to be: All/Priority/
-  // Scheduled call `toggle(false)` below and get the exact same immediate
-  // flip they always had; only Today's own Earlier passes a real
-  // `illustrationShowing` value, which is what engages the requirement-3
-  // hand-off. See `useEarlierExpandHandoff`'s own doc comment.
+  // One state machine shared by every scope's own Earlier toggle: each call
+  // site below passes `showEmptyIllustration` — this scope's own "is the
+  // illustration currently on screen" — as `illustrationShowing`, so an
+  // expand only engages the requirement-3 hand-off on the scopes where that
+  // can actually be true right now, and stays the exact plain immediate flip
+  // everywhere else (`illustrationShowing: false`). See
+  // `useEarlierExpandHandoff`'s own doc comment.
   const {
     expanded: earlierExpanded,
     handoffPending: earlierHandoffPending,
@@ -250,33 +252,6 @@ const AllTasksTimelineContainer = ({
 
           {todoLoading && <TodoListLoading heading={pageHeading} />}
 
-          {showTimeline && (
-            <TimelineSections
-              sections={timelineSections}
-              timeZone={userTZ?.timeZone}
-              focusedTaskId={focusedTaskId}
-              focusedDateKey={focusedDateKey}
-              // A live query outranks a shut bucket: these screens open with
-              // Earlier closed, and a task the search turns up in there must not
-              // stay hidden behind its header. Native makes the same call.
-              earlierExpanded={earlierExpanded || isSearching}
-              // `illustrationShowing: false` — these scopes have no
-              // Today-style illustration to hand off from, so this is the
-              // exact plain immediate toggle they always had.
-              onToggleEarlier={() => toggleEarlierExpanded(false)}
-              onDragActiveChange={setDragActive}
-            />
-          )}
-
-          {scope === "overdue" && (
-            <OverdueDaySections
-              regularSections={regularSections}
-              earlierSections={earlierSections}
-              focusedDateKey={focusedDateKey}
-              focusedTaskId={focusedTaskId}
-            />
-          )}
-
           {/* The three time buckets are drop targets, so they stay visible (even
               empty ones) as long as the day holds at least one task — but under a
               search that found nothing they would read as three results, so they
@@ -298,10 +273,21 @@ const AllTasksTimelineContainer = ({
               instead of the generic no-tasks message.
 
               `showEmptyIllustration` (not `showEmpty` directly): identical to
-              `showEmpty` everywhere except Today with a non-empty, expanded
-              Earlier — see `shouldShowTodayEmptyIllustration`. The wrapper div
-              only ever carries the exit animation while `earlierHandoffPending`
-              is genuinely true (i.e. only for Today), so it is inert elsewhere. */}
+              `showEmpty` everywhere except a scope with a non-empty, expanded
+              Earlier bucket — see `shouldShowTodayEmptyIllustration`. The
+              wrapper div only ever carries the exit animation while
+              `earlierHandoffPending` is genuinely true, so it is inert outside
+              an Earlier hand-off.
+
+              Rendered BEFORE the Earlier-holding blocks below (Today's own
+              `TodayEarlierSection`, and All/Priority/Scheduled's Earlier
+              bucket inside `TimelineSections`) so the illustration always sits
+              above Earlier — never simultaneously replaced by it — matching
+              requirement 3's hand-off order. Harmless when both are showing
+              current tasks too: `showEmptyIllustration` is false whenever
+              `showTimeline`/`showTodayEarlierSection` render anything besides
+              a bare collapsed Earlier header, so the two blocks are never both
+              "the body" of a populated screen at once. */}
           {showEmptyIllustration && (
             <TimelineEmptyState
               icon={ScopeIcon}
@@ -316,11 +302,46 @@ const AllTasksTimelineContainer = ({
             />
           )}
 
+          {showTimeline && (
+            <TimelineSections
+              sections={timelineSections}
+              timeZone={userTZ?.timeZone}
+              focusedTaskId={focusedTaskId}
+              focusedDateKey={focusedDateKey}
+              // A live query outranks a shut bucket: these screens open with
+              // Earlier closed, and a task the search turns up in there must not
+              // stay hidden behind its header. Native makes the same call.
+              // `!earlierHandoffPending`: mid hand-off, Earlier's own rows stay
+              // hidden until the illustration above has actually finished
+              // exiting — same requirement-3 sequencing Today's own Earlier
+              // section observes.
+              earlierExpanded={(earlierExpanded && !earlierHandoffPending) || isSearching}
+              // Passes `showEmptyIllustration` through exactly like Today's own
+              // `TodayEarlierSection` does below: when the illustration
+              // currently owns the slot, expanding Earlier hands off through
+              // it first (requirement 3) instead of the plain immediate toggle
+              // this used to always be — see `useEarlierExpandHandoff`'s own
+              // doc comment for why a single boolean is enough to cover both.
+              onToggleEarlier={() => toggleEarlierExpanded(showEmptyIllustration)}
+              onDragActiveChange={setDragActive}
+            />
+          )}
+
+          {scope === "overdue" && (
+            <OverdueDaySections
+              regularSections={regularSections}
+              earlierSections={earlierSections}
+              focusedDateKey={focusedDateKey}
+              focusedTaskId={focusedTaskId}
+            />
+          )}
+
           {/* Today's own "Earlier" bucket (requirement 2) — see
               `useTimelineEmptyState`'s own doc comment for `showTodayEarlierSection`. */}
           {showTodayEarlierSection && (
             <TodayEarlierSection
               todos={earlierItems}
+              label={appDict("overdue")}
               expanded={earlierExpanded && !earlierHandoffPending}
               onToggle={() => toggleEarlierExpanded(showEmptyIllustration)}
               highlightedTodoId={focusedTaskId}

@@ -316,7 +316,7 @@
     <string name="todos_section_morning">午前</string>
     <string name="todos_section_afternoon">午後</string>
     <string name="todos_section_tonight">今夜</string>
-    <string name="todos_section_earlier">それ以前</string>
+    <string name="todos_section_earlier">期限超過</string>
     <string name="todos_section_today">今日</string>
     <string name="todos_section_tomorrow">明日</string>
     <string name="todos_section_rest_of">%1$s の残り</string>
