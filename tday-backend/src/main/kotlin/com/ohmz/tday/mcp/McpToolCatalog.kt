@@ -150,7 +150,7 @@ object McpToolCatalog {
                     "recurrence" to stringProp(
                         "RFC-5545 recurrence rule for a repeating task, e.g. 'RRULE:FREQ=WEEKLY;INTERVAL=1;BYDAY=MO'. Requires 'due'.",
                     ),
-                    "priority" to enumProp(listOf("Low", "Medium", "High"), "Task priority. Defaults to Low."),
+                    "priority" to enumProp(listOf("Lowest", "Low", "Medium", "High"), "Task priority. Defaults to Low."),
                     "listName" to stringProp("Name of the list to file this under. Must already exist unless createListIfMissing is true."),
                     "listId" to stringProp("List id, if you already have it from tday_get_context or tday_find_list. Takes precedence over listName."),
                     "createListIfMissing" to boolProp(
@@ -172,7 +172,7 @@ object McpToolCatalog {
                     "taskId" to taskIdProp(),
                     "title" to stringProp("New title."),
                     "notes" to stringProp("New notes."),
-                    "priority" to enumProp(listOf("Low", "Medium", "High"), "New priority."),
+                    "priority" to enumProp(listOf("Lowest", "Low", "Medium", "High"), "New priority."),
                     "due" to stringProp("New due date/time, in the same formats tday_create_task accepts."),
                     "clearDue" to boolProp("Remove the due date, making this an undated Anytime task. Not possible for a repeating task."),
                     "recurrence" to stringProp("New RFC-5545 recurrence rule."),

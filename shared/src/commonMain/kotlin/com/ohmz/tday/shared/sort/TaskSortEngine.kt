@@ -15,11 +15,38 @@ data class TaskSortKey(
     val id: String,
     val pinned: Boolean = false,
     val dueEpochMs: Long? = null,
-    val priorityRank: Int = LOWEST_PRIORITY_RANK,
+    val priorityRank: Int = UNKNOWN_PRIORITY_RANK,
     val updatedAtEpochMs: Long? = null,
 ) {
     companion object {
-        const val LOWEST_PRIORITY_RANK: Int = 2
+        /** Rank of the real `Priority.Medium` tier. */
+        const val MEDIUM_PRIORITY_RANK: Int = 1
+
+        /**
+         * Rank of the real `Priority.Low` tier (wire `Low`, UI label "Normal", and the
+         * platform default priority).
+         */
+        const val LOW_PRIORITY_RANK: Int = 2
+
+        /**
+         * Rank of the real `Priority.Lowest` tier (wire `Lowest`, UI label "Low") — the least
+         * urgent tier there is, so it sorts after everything else.
+         */
+        const val LOWEST_PRIORITY_RANK: Int = 3
+
+        /**
+         * Fallback rank used ONLY for a genuinely unrecognized/garbage priority string — one
+         * that is not any of the four known wire values. Deliberately kept equal to
+         * [LOW_PRIORITY_RANK] rather than [LOWEST_PRIORITY_RANK]: "we don't understand this
+         * input" must keep degrading to the default/Normal rank exactly as it always has, and
+         * must never silently sort even lower than a task someone genuinely tagged Lowest.
+         *
+         * This used to be conflated into a single `LOWEST_PRIORITY_RANK = 2` constant that
+         * served both as "the real Low tier's rank" and "the unknown-priority fallback" —
+         * that name now belongs to the real `Lowest` tier above, so the unknown-fallback
+         * meaning gets its own name instead of silently reusing (and shadowing) it.
+         */
+        const val UNKNOWN_PRIORITY_RANK: Int = LOW_PRIORITY_RANK
     }
 }
 
@@ -55,23 +82,28 @@ object TaskSortEngine {
         return a.id.compareTo(b.id)
     }
 
-    /** 0 = highest priority (sorts first). Unknown/absent priority → Low. */
+    /** 0 = highest priority (sorts first). Unknown/absent priority → Low (Normal). */
     fun priorityRank(priority: Priority): Int = when (priority) {
         Priority.High -> 0
-        Priority.Medium -> 1
-        Priority.Low -> 2
+        Priority.Medium -> TaskSortKey.MEDIUM_PRIORITY_RANK
+        Priority.Low -> TaskSortKey.LOW_PRIORITY_RANK
+        Priority.Lowest -> TaskSortKey.LOWEST_PRIORITY_RANK
     }
 
-    // Tolerant of every priority spelling the app stores: canonical Low/Medium/High, the
+    // Tolerant of every priority spelling the app stores: canonical Lowest/Low/Medium/High, the
     // server/legacy vocabulary normal/important/urgent, and any case. Realtime-synced rows
     // arrive un-normalized, so a strict enum-name match would collapse them all to Low and the
     // sort would silently ignore priority (the reported "flag updates but list doesn't re-sort"
-    // bug). Unknown/null → Low. Mirrors android canonicalPriorityValue; keep the iOS/web twins
-    // identical.
+    // bug). A genuinely unrecognized/garbage string (not one of the four known values) falls
+    // back to TaskSortKey.UNKNOWN_PRIORITY_RANK — the same numeric value as Low, but named
+    // separately so it never gets confused with a real Lowest-tagged task. Mirrors android
+    // canonicalPriorityValue; keep the iOS/web twins identical.
     fun priorityRank(priority: String?): Int = when (priority?.trim()?.lowercase()) {
         "high", "urgent" -> priorityRank(Priority.High)
         "medium", "important" -> priorityRank(Priority.Medium)
-        else -> priorityRank(Priority.Low)
+        "lowest" -> priorityRank(Priority.Lowest)
+        "low", "normal" -> priorityRank(Priority.Low)
+        else -> TaskSortKey.UNKNOWN_PRIORITY_RANK
     }
 
     private fun pin(a: TaskSortKey, b: TaskSortKey): Int? =

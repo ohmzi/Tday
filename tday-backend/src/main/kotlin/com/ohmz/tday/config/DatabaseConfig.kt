@@ -77,7 +77,7 @@ class DatabaseConfig(private val config: AppConfig) {
                 "\"SortBy\"" to listOf("due", "priority"),
                 "\"GroupBy\"" to listOf("due", "priority", "rrule", "project"),
                 "\"Direction\"" to listOf("Ascending", "Descending"),
-                "\"Priority\"" to listOf("Low", "Medium", "High"),
+                "\"Priority\"" to listOf("Lowest", "Low", "Medium", "High"),
                 "\"ProjectColor\"" to listOf(
                     "RED", "ORANGE", "YELLOW", "LIME", "BLUE", "PURPLE", "PINK", "TEAL",
                     "CORAL", "GOLD", "DEEP_BLUE", "ROSE", "LIGHT_RED", "BRICK", "SLATE",
