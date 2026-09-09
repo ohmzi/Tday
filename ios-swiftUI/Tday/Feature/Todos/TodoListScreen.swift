@@ -5418,7 +5418,7 @@ private func buildSections(
         }
         let earlierSection = TodoTimelineSection(
             id: "earlier",
-            title: L("Earlier"),
+            title: L("Overdue"),
             items: earlierItems,
             isCollapsible: !earlierItems.isEmpty,
             targetDate: timelineRescheduleTargetDate(sectionId: "earlier", today: startOfToday, calendar: calendar)
@@ -5614,7 +5614,7 @@ private func buildFutureTimelineSections(
 
     let earlierSection = TodoTimelineSection(
         id: "earlier",
-        title: L("Earlier"),
+        title: L("Overdue"),
         items: earlierItems,
         isCollapsible: !earlierItems.isEmpty,
         targetDate: timelineRescheduleTargetDate(sectionId: "earlier", today: today, calendar: calendar)
