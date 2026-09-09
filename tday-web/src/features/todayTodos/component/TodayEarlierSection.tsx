@@ -24,11 +24,13 @@ import { TodoItemType } from "@/types";
  */
 export default function TodayEarlierSection({
   todos,
+  label,
   expanded,
   onToggle,
   highlightedTodoId,
 }: {
   todos: TodoItemType[];
+  label: string;
   expanded: boolean;
   onToggle: () => void;
   highlightedTodoId?: string | null;
@@ -45,11 +47,12 @@ export default function TodayEarlierSection({
         ) : (
           <ChevronRight className="h-4 w-4 text-muted-foreground" />
         )}
-        {/* Matches `buildTimelineSections`'s own "Earlier" bucket label —
-            untranslated there too, so this stays consistent with it rather
-            than introducing a locale key for one scope's copy of that word. */}
+        {/* Same translated `app.overdue` string the caller feeds
+            `buildTimelineSections`'s own Earlier bucket label for
+            All/Priority/List, so every scope's collapsible bucket reads the
+            same word in whichever language the app is in. */}
         <h3 className="select-none text-2xl font-black tracking-tight text-muted-foreground">
-          Earlier
+          {label}
         </h3>
         <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
           {todos.length}

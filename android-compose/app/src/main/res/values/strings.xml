@@ -377,7 +377,7 @@
     <string name="todos_section_morning">Morning</string>
     <string name="todos_section_afternoon">Afternoon</string>
     <string name="todos_section_tonight">Tonight</string>
-    <string name="todos_section_earlier">Earlier</string>
+    <string name="todos_section_earlier">Overdue</string>
     <string name="todos_section_today">Today</string>
     <string name="todos_section_tomorrow">Tomorrow</string>
     <string name="todos_section_rest_of">Rest of %1$s</string>

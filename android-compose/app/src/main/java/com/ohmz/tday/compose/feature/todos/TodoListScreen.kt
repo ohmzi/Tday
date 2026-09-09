@@ -315,14 +315,14 @@ private const val CompletionCelebrationWindowMs = 4_000L
  * composable so requirement 1 (confetti on completing the last pending-today
  * task) has a real unit test rather than only a device/emulator check.
  *
- * Deliberately takes no opinion on Earlier/overdue tasks: `itemsEmpty` is
- * `uiState.items.isEmpty()`, and [TodoListUiState.items] has never included
- * them for Today mode (see `TodoRepository.buildTodosForMode`'s `isTodayTodo`
- * filter) — that is the root-cause finding for requirement 1. A caller that
- * folded overdue tasks into `items` to satisfy requirement 2 would break this
- * function's meaning; Today mode instead carries them in the separate
- * [TodoListUiState.earlierItems], so this needs no Earlier-aware parameter at
- * all and this function's behavior is unchanged by requirement 2's section.
+ * Deliberately takes no opinion on Earlier/overdue tasks itself: `itemsEmpty`
+ * means whatever the caller's own mode considers "the screen's own scope,
+ * Earlier excluded". For Today that has always been plain
+ * `uiState.items.isEmpty()` — [TodoListUiState.items] never included overdue
+ * tasks for that mode (see `TodoRepository.buildTodosForMode`'s `isTodayTodo`
+ * filter) — but Scheduled/Priority/All/List mix overdue straight into
+ * `items`, so those callers pass [nonEarlierSectionsEmpty] instead. Either
+ * way this function needs no Earlier-aware parameter of its own.
  */
 internal fun shouldCelebrateEmptyState(
     itemsEmpty: Boolean,
@@ -359,6 +359,12 @@ internal fun shouldCelebrateEmptyState(
  * this interaction -- the one the earlier review found neither the overlay
  * nor the inline scene covered -- has a unit test rather than only a
  * device/emulator check.
+ *
+ * Despite the name, nothing inside is actually Today-specific -- every
+ * parameter is a plain boolean the caller derives however its own mode
+ * needs to. [TodoListScreen] now also calls this for Scheduled/Priority/All/
+ * List, passing their own `scopeHasEarlierItems`/`scopeItemsEmpty` (see
+ * [nonEarlierSectionsEmpty]) in for `todayHasEarlierItems`/`itemsEmpty`.
  */
 internal fun shouldShowTodayEarlierExpandedCelebration(
     todayHasEarlierItems: Boolean,
@@ -387,6 +393,26 @@ internal fun shouldShowTodayEarlierExpandedCelebration(
  * against the real key instead of a second, test-local copy of it.
  */
 internal const val EARLIER_SECTION_KEY = "earlier"
+
+/**
+ * "Zero active/pending items for this screen's own scope" -- generalizes
+ * Today's `uiState.items.isEmpty()` (already exactly this, since
+ * [TodoListUiState.earlierItems] keeps overdue tasks out of `items`
+ * entirely for that mode) to Scheduled/Priority/All/List, where Earlier is
+ * a display-time bucket of the SAME items array instead of a separate
+ * field: [TodoRepository.buildTodosForMode] mixes their overdue tasks
+ * straight into `items`, so `items.isEmpty()` alone would stay false for as
+ * long as Earlier held anything, even with nothing else left pending.
+ *
+ * Takes the sections [buildTimelineSections] already built rather than
+ * re-deriving "which tasks are overdue" itself, so this can never disagree
+ * with what a viewer sees sitting under the Earlier header. Every mode
+ * without an Earlier bucket at all (Scheduled, Overdue, Floater) has no
+ * section keyed [EARLIER_SECTION_KEY] to exclude, so this reduces to plain
+ * "no sections" for them -- the same thing `items.isEmpty()` already meant.
+ */
+internal fun nonEarlierSectionsEmpty(sections: List<TodoSection>): Boolean =
+    sections.none { section -> section.key != EARLIER_SECTION_KEY && section.items.isNotEmpty() }
 
 /** What [TodoListScreen]'s `onTimelineSectionHeaderToggle` does with a tap. */
 internal enum class SectionHeaderToggleAction {
@@ -529,23 +555,47 @@ fun TodoListScreen( // skipcq: KT-R1006
     // `isScreenVisible`/`scenePhase == .active` check for `remoteEmptiedAt`.
     val lifecycleOwner = LocalLifecycleOwner.current
     val screenLifecycleState by lifecycleOwner.lifecycle.currentStateAsState()
+    // Built off `uiState.items` directly -- never the search-filtered
+    // `timelineItems`/`timelineSections` further down -- and with no drag in
+    // progress, so a live query or an in-flight reschedule drag can never
+    // make the scope read as emptier (or as having more/less Earlier) than
+    // it actually does. For Today this reproduces exactly what
+    // `buildTimelineSections` already builds for rendering, since Today's
+    // `items`/`earlierItems` split is unaffected by search or drag state
+    // either; for Scheduled/Priority/All/List it is what lets
+    // [nonEarlierSectionsEmpty] answer for their scope without inventing a
+    // second "is this task overdue" check next to the one already inside
+    // `buildScheduledSections`.
+    val scopeSections = remember(uiState.mode, uiState.items, uiState.earlierItems) {
+        buildTimelineSections(
+            mode = uiState.mode,
+            items = uiState.items,
+            isDragActive = false,
+            earlierItems = uiState.earlierItems,
+        )
+    }
+    // Requirement 2's "does an Earlier section apply here, and does it hold
+    // anything": true for Today whenever `earlierItems` does (as before),
+    // and now also for Scheduled/Priority/All/List whenever their own
+    // Earlier bucket -- carved out of the same `items` array at
+    // display time -- is non-empty. Every other mode has no section keyed
+    // `EARLIER_SECTION_KEY` at all, so this is false for them, unchanged.
+    val scopeHasEarlierItems = scopeSections.any { section ->
+        section.key == EARLIER_SECTION_KEY && section.items.isNotEmpty()
+    }
+    // Requirement 1, generalized: "zero active/pending items for this
+    // screen's own scope, Earlier excluded". Today's `items` already
+    // excludes Earlier by construction, so this is still plain
+    // `items.isEmpty()` for it; see [nonEarlierSectionsEmpty] for why the
+    // other modes need more than that.
+    val scopeItemsEmpty = nonEarlierSectionsEmpty(scopeSections)
     val celebrateEmptyState = shouldCelebrateEmptyState(
-        itemsEmpty = uiState.items.isEmpty(),
+        itemsEmpty = scopeItemsEmpty,
         lastCompletionAtMs = lastCompletionAtMs,
         remoteEmptiedAtMs = uiState.remoteEmptiedAtMs,
         screenResumed = screenLifecycleState == Lifecycle.State.RESUMED,
         nowMs = SystemClock.uptimeMillis(),
     )
-    // Today only: overdue tasks collapsed under "Earlier". `uiState.items`
-    // never includes them (see `TodoListUiState.earlierItems`), so neither
-    // `celebrateEmptyState` above nor the empty-today check below needs to
-    // change for requirement 2 -- "zero pending today tasks" was already
-    // exactly what `uiState.items.isEmpty()` meant. What DOES change: the
-    // full-screen empty-state overlay further down defers to Earlier's own
-    // inline scene whenever this is true, so the collapsed header stays
-    // reachable instead of sitting under the overlay.
-    val todayHasEarlierItems =
-        uiState.mode == TodoListMode.TODAY && uiState.earlierItems.isNotEmpty()
     val zoneId = remember { ZoneId.systemDefault() }
     val selectedList = uiState.lists.firstOrNull { it.id == uiState.listId }
     val selectedListColorKey = selectedList?.color
@@ -979,12 +1029,15 @@ fun TodoListScreen( // skipcq: KT-R1006
     var earlierExpandPending by rememberSaveable(uiState.mode, uiState.listId) {
         mutableStateOf(false)
     }
-    // Requirement 2 + 3: Today has nothing pending, but Earlier is still
-    // holding overdue tasks, collapsed. Independent of `celebrateEmptyState`
-    // — this only decides whether the scene is shown inline (so Earlier's
-    // header stays reachable) versus not at all; it never gates the burst.
-    val showTodayEarlierIllustration = todayHasEarlierItems &&
-            uiState.items.isEmpty() &&
+    // Requirement 2 + 3, generalized: this screen's own scope has nothing
+    // pending, but Earlier is still holding overdue tasks, collapsed --
+    // Today originally, now also Scheduled/Priority/All/List via
+    // `scopeHasEarlierItems`/`scopeItemsEmpty` above. Independent of
+    // `celebrateEmptyState` — this only decides whether the scene is shown
+    // inline (so Earlier's header stays reachable) versus not at all; it
+    // never gates the burst.
+    val showEarlierIllustration = scopeHasEarlierItems &&
+            scopeItemsEmpty &&
             !uiState.isLoading &&
             !suppressInitialTodayTimeline &&
             !scopedSearchActive &&
@@ -992,19 +1045,19 @@ fun TodoListScreen( // skipcq: KT-R1006
             !earlierExpandPending
     // Requirement 1's gap for the case above's mirror: Earlier is already
     // expanded (not collapsed) at the moment the user's own tap -- or a
-    // remote completion -- empties Today. `showTodayEarlierIllustration`
+    // remote completion -- empties this scope. `showEarlierIllustration`
     // stays false on purpose whenever Earlier is expanded (requirement 3:
     // Earlier's own rows own this slot then, not the scene), so without
     // this, a completion landing in that state drew neither the scene nor
     // the full-screen overlay below (which also defers to
-    // `todayHasEarlierItems`) -- no illustration at all, and no confetti.
+    // `scopeHasEarlierItems`) -- no illustration at all, and no confetti.
     // Scoped to `celebrateEmptyState`'s own window rather than shown for as
     // long as Earlier stays expanded and empty: once the celebration times
     // out this hands the slot straight back to Earlier, the same as it
     // would have been the whole time had no completion just happened here.
-    val showTodayEarlierExpandedCelebration = shouldShowTodayEarlierExpandedCelebration(
-        todayHasEarlierItems = todayHasEarlierItems,
-        itemsEmpty = uiState.items.isEmpty(),
+    val showEarlierExpandedCelebration = shouldShowTodayEarlierExpandedCelebration(
+        todayHasEarlierItems = scopeHasEarlierItems,
+        itemsEmpty = scopeItemsEmpty,
         isLoading = uiState.isLoading,
         suppressInitialTodayTimeline = suppressInitialTodayTimeline,
         scopedSearchActive = scopedSearchActive,
@@ -1413,7 +1466,7 @@ fun TodoListScreen( // skipcq: KT-R1006
             // See [decideSectionHeaderToggleAction] for why IGNORE is checked
             // ahead of DEFER_EARLIER_EXPAND's own guard rather than folded
             // into an `else` after it: a tap landing inside an already-running
-            // exit-before-expand beat used to read `showTodayEarlierIllustration`
+            // exit-before-expand beat used to read `showEarlierIllustration`
             // as already false (setting `earlierExpandPending` flips it on the
             // very next recomposition, well before the scheduled coroutine
             // below actually drops "earlier" from `collapsedSectionKeys`) and
@@ -1424,7 +1477,7 @@ fun TodoListScreen( // skipcq: KT-R1006
                 decideSectionHeaderToggleAction(
                     key = key,
                     wasCollapsed = wasCollapsed,
-                    showTodayEarlierIllustration = showTodayEarlierIllustration,
+                    showTodayEarlierIllustration = showEarlierIllustration,
                     earlierExpandPending = earlierExpandPending,
                 )
             ) {
@@ -1679,31 +1732,40 @@ fun TodoListScreen( // skipcq: KT-R1006
                         }
                     }
 
-                    // Requirement 2 + 3: Today has nothing pending but
-                    // Earlier is still holding overdue tasks. Mounted for as
-                    // long as that stays true regardless of Earlier's own
-                    // collapse state — `AnimatedVisibility` inside is what
-                    // actually shows/hides it, keyed to
-                    // `showTodayEarlierIllustration` — so the scene can play
-                    // its own exit (fade + shrink) the moment the user
-                    // expands Earlier, ahead of `onTimelineSectionHeaderToggle`
-                    // above releasing Earlier's rows to animate in. Placed
-                    // right above `sectionedTimelineContent` below so it
-                    // occupies Morning/Afternoon/Tonight's usual slot and the
-                    // (always-present, real) Earlier header sits right under
-                    // it — reachable the whole time, never covered by an
-                    // overlay the way the plain-empty-Today scene is.
+                    // Requirement 2 + 3, generalized: this screen's own scope
+                    // has nothing pending but Earlier is still holding
+                    // overdue tasks -- Today originally, now also
+                    // Scheduled/Priority/All/List (Scheduled and every other
+                    // mode without an Earlier bucket keep `scopeHasEarlierItems`
+                    // false, so this never mounts for them, unchanged from
+                    // before). Mounted for as long as that stays true
+                    // regardless of Earlier's own collapse state —
+                    // `AnimatedVisibility` inside is what actually
+                    // shows/hides it, keyed to `showEarlierIllustration` —
+                    // so the scene can play its own exit (fade + shrink) the
+                    // moment the user expands Earlier, ahead of
+                    // `onTimelineSectionHeaderToggle` above releasing
+                    // Earlier's rows to animate in. Placed right above
+                    // `sectionedTimelineContent` below so it occupies the
+                    // slot the scope's own sections would otherwise fill
+                    // (Morning/Afternoon/Tonight for Today, nothing for the
+                    // others since every non-Earlier section is empty by
+                    // definition here) and the (always-present, real)
+                    // Earlier header sits right under it — reachable the
+                    // whole time, never covered by an overlay the way the
+                    // plain-empty scene is.
                     // Also visible, briefly, when Earlier is expanded rather
-                    // than collapsed — `showTodayEarlierExpandedCelebration`
-                    // — so requirement 1's confetti still lands when the
-                    // completion that emptied Today happens while the user
-                    // already has Earlier open, not just while it is sitting
-                    // collapsed. That flag is scoped to `celebrateEmptyState`'s
-                    // own window, so once it closes this exits the same way
-                    // and Earlier's rows are left owning the slot, same as if
-                    // no completion had just happened.
-                    if (todayHasEarlierItems &&
-                        uiState.items.isEmpty() &&
+                    // than collapsed — `showEarlierExpandedCelebration` —
+                    // so requirement 1's confetti still lands when the
+                    // completion that emptied the scope happens while the
+                    // user already has Earlier open, not just while it is
+                    // sitting collapsed. That flag is scoped to
+                    // `celebrateEmptyState`'s own window, so once it closes
+                    // this exits the same way and Earlier's rows are left
+                    // owning the slot, same as if no completion had just
+                    // happened.
+                    if (scopeHasEarlierItems &&
+                        scopeItemsEmpty &&
                         !uiState.isLoading &&
                         !suppressInitialTodayTimeline &&
                         !scopedSearchActive
@@ -1713,8 +1775,8 @@ fun TodoListScreen( // skipcq: KT-R1006
                             contentType = "today-earlier-empty-scene",
                         ) {
                             AnimatedVisibility(
-                                visible = showTodayEarlierIllustration ||
-                                        showTodayEarlierExpandedCelebration,
+                                visible = showEarlierIllustration ||
+                                        showEarlierExpandedCelebration,
                                 enter = fadeIn(
                                     animationSpec = tween(
                                         durationMillis = TdayFeedItemMotion.FadeInMillis,
@@ -1855,20 +1917,25 @@ fun TodoListScreen( // skipcq: KT-R1006
                 )
             }
             // Root floater shows its empty message inline (in the list, above
-            // the list names) so the overlay version would double up. Today
-            // defers the same way whenever Earlier still holds overdue tasks
-            // (`todayHasEarlierItems`): that case renders its own inline
-            // scene in Earlier's place instead (below, inside the
-            // LazyColumn), so the collapsed header stays reachable under it
-            // rather than sitting beneath this full-screen overlay -- see
-            // requirement 2/3.
+            // the list names) so the overlay version would double up. Any
+            // mode with an Earlier concept (Today, and now
+            // Scheduled/Priority/All/List — see `scopeHasEarlierItems`)
+            // defers the same way whenever Earlier still holds overdue
+            // tasks: that case renders its own inline scene in Earlier's
+            // place instead (above, inside the LazyColumn), so the collapsed
+            // header stays reachable under it rather than sitting beneath
+            // this full-screen overlay -- see requirement 2/3. `scopeItemsEmpty`
+            // rather than raw `uiState.items.isEmpty()` for the same reason:
+            // Scheduled/Priority/All/List mix Earlier straight into `items`,
+            // so the raw count would stay non-zero for as long as Earlier
+            // held anything, even with nothing else left pending.
             // `scopedSearchActive` and not `scopedSearchHasNoResults`: a scope
             // with no tasks at all still has none once a query is typed, so both
             // states were true at once and the screen drew two empty scenes on
             // top of each other. While a query stands the in-list no-results
             // scene owns it — it is the one that can say what was searched.
-            if (uiState.items.isEmpty() && !uiState.isLoading && !suppressInitialTodayTimeline &&
-                !isFloaterTaskHomeScreen && !scopedSearchActive && !todayHasEarlierItems
+            if (scopeItemsEmpty && !uiState.isLoading && !suppressInitialTodayTimeline &&
+                !isFloaterTaskHomeScreen && !scopedSearchActive && !scopeHasEarlierItems
             ) {
                 Box(
                     // The Scaffold's insets, so the scene centres in the content

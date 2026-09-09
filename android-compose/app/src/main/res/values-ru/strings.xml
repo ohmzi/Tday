@@ -316,7 +316,7 @@
     <string name="todos_section_morning">Утро</string>
     <string name="todos_section_afternoon">День</string>
     <string name="todos_section_tonight">Вечер</string>
-    <string name="todos_section_earlier">Ранее</string>
+    <string name="todos_section_earlier">Просроченные</string>
     <string name="todos_section_today">Сегодня</string>
     <string name="todos_section_tomorrow">Завтра</string>
     <string name="todos_section_rest_of">Остаток %1$s</string>
