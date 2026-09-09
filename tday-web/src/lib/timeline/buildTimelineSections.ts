@@ -272,6 +272,34 @@ export function buildTimelineSections({
 }
 
 /**
+ * Whether `todos` has at least one item outside its own Earlier bucket (the
+ * same `dayKey < todayKey` split `buildTimelineSections` buckets a task into
+ * `kind: "earlier"` by), without the caller needing the full section list
+ * back.
+ *
+ * `ListContainer` uses this over the RAW, unsearched `listTodos` to build a
+ * search-independent "current tasks remain" signal for its remote-completion
+ * celebration input (`useCelebrateEmptyTransition`). That hook is a plain
+ * previous-vs-current ref comparison with no notion of *why* its input
+ * changed, so feeding it a search-filtered count is a real bug, not a
+ * cosmetic one: type a query that happens to match none of the current
+ * tasks and the filtered count drops to zero from typing alone, consuming
+ * the false→true edge the ref watches for. If the last current task is then
+ * genuinely completed remotely while that same non-matching search is still
+ * active, the filtered count stays zero→zero — no new edge — so the ref
+ * never learns about the real completion, and the confetti it should have
+ * played on search-clear is silently dropped. Every other consumer of the
+ * Earlier/current split (the visible illustration/timeline gating) correctly
+ * keeps reacting to the search query; only this celebration input needs to
+ * be immune to it, matching this screen's own pre-existing behavior.
+ */
+export function hasNonEarlierTimelineTodos(args: BuildTimelineSectionsArgs): boolean {
+  const earlierCount =
+    buildTimelineSections(args).find((section) => section.kind === "earlier")?.todos.length ?? 0;
+  return args.todos.length - earlierCount > 0;
+}
+
+/**
  * Maps a focus day key (e.g. from the `focusDate`/`focusTask` query params) to
  * the key of the section that actually contains that day, so we can scroll to
  * the right bucket even when the day lives inside an aggregate (Earlier / Rest /

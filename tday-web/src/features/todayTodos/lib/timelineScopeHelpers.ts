@@ -129,3 +129,31 @@ export const isPriorityTask = (priority: string | null | undefined) => {
 // (a timestamp comparison) — see `useTodayEarlierBucket`'s doc comment for
 // how this differs from Today's own day-boundary "Earlier" bucket.
 export const isOverdueTask = (due: Date) => due < new Date();
+
+/**
+ * Splits an already-scoped set of items into "current" (`dayDiff >= 0`) and
+ * "earlier" (`dayDiff < 0`) — the exact rule `getTimelinePriority` above sorts
+ * by, and `buildTimelineSections` buckets a task into its own "earlier"
+ * section by (`dayKey < todayKey`, the day-boundary equivalent of the same
+ * comparison). Used by `useTimelineEmptyState` (All/Priority/Scheduled) and
+ * `ListContainer` (custom Lists) to decide "this scope's own zero" without
+ * either duplicating that classification or double-counting a task that is
+ * both in the flat scoped set and inside its own Earlier bucket — every item
+ * lands in exactly one side. Today's own Earlier bucket is a wholly separate,
+ * independently-fetched array (see `useTodayEarlierBucket`) and never goes
+ * through this; the standalone Overdue screen has no nested Earlier concept
+ * for this to apply to.
+ */
+export function splitEarlierItems(items: readonly { dayDiff: number }[]): {
+  hasEarlierItems: boolean;
+  hasCurrentItems: boolean;
+} {
+  let hasEarlierItems = false;
+  let hasCurrentItems = false;
+  for (const item of items) {
+    if (item.dayDiff < 0) hasEarlierItems = true;
+    else hasCurrentItems = true;
+    if (hasEarlierItems && hasCurrentItems) break;
+  }
+  return { hasEarlierItems, hasCurrentItems };
+}

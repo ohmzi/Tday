@@ -4,6 +4,7 @@ import { useCompletedTodo } from "@/features/completed/query/get-completedTodo";
 import { useCelebrateEmptyTransition } from "@/hooks/use-celebrate-empty-transition";
 import { taskJustCompleted } from "@/lib/task-completion-signal";
 import { shouldShowTodayEmptyIllustration } from "./todayEarlierIllustration";
+import { isTimelineScope, splitEarlierItems } from "./timelineScopeHelpers";
 import type { TimelineItem, TimelineScope } from "../component/AllTasksTimelineContainer";
 
 /**
@@ -11,11 +12,29 @@ import type { TimelineItem, TimelineScope } from "../component/AllTasksTimelineC
  * place: whether the scope has anything at all (`hasScopedTasks`), which of
  * the three body states owns the screen (`showTimeline` / `showEmpty` /
  * `showNoResults`), Today's own "day done" payoff (`isDayDone`, `celebrate`),
- * and — folding in Today's separate Earlier bucket — who owns the empty-state
- * slot once `showEmpty` is true (`showEmptyIllustration`, see
+ * and — folding in whichever scope's own Earlier bucket applies — who owns
+ * the empty-state slot once `showEmpty` is true (`showEmptyIllustration`, see
  * `shouldShowTodayEmptyIllustration`'s own doc comment for the full
- * requirements-1-3 rationale) plus whether Today's own Earlier section itself
- * should render (`showTodayEarlierSection`).
+ * requirements-1-3 rationale) plus whether Today's own separate Earlier
+ * section component should render (`showTodayEarlierSection`).
+ *
+ * Earlier/empty-state parity (All/Priority/Scheduled): unlike Today —
+ * whose own `dayDiff === 0` scope is Earlier-free by construction, with
+ * overdue tasks fetched into a wholly separate `todayHasEarlierItems`/
+ * `earlierItems` pair (see `useTodayEarlierBucket`) — All/Priority's
+ * `scopeFilteredItems` already comes back with overdue tasks mixed in (see
+ * `useScopedTimelineItems`'s own doc comment): they fall out of the same
+ * `buildTimelineSections` bucketing downstream in `useTimelineSections`
+ * instead of a second fetch. So "this scope's own zero" has to read the same
+ * `dayDiff < 0` rule that bucketing already sorts by (`getTimelinePriority`
+ * in `timelineScopeHelpers.ts`) rather than treat every item in the array as
+ * equally "current" — `hasNonEarlierScopedTasks` below is that reduction.
+ * Scheduled's own `scopeFilteredItems` never contains a `dayDiff < 0` item to
+ * begin with (its `buildTimelineSections` call passes `futureOnly: true`, so
+ * it never builds an Earlier bucket at all — confirmed by reading
+ * `buildTimelineSections`, not assumed), so this degenerates to a no-op
+ * there. The standalone Overdue screen keeps its pre-existing flat
+ * definition — it has no nested Earlier concept for this feature to touch.
  */
 export function useTimelineEmptyState({
   scope,
@@ -34,6 +53,7 @@ export function useTimelineEmptyState({
   isSearching: boolean;
   earlierExpanded: boolean;
   earlierHandoffPending: boolean;
+  /** Today's own separately-fetched Earlier signal — see `useTodayEarlierBucket`. Unused for every other scope. */
   todayHasEarlierItems: boolean;
 }) {
   const hasScopedTasks = useMemo(() => {
@@ -43,17 +63,43 @@ export function useTimelineEmptyState({
     return scopeFilteredItems.length > 0;
   }, [scopeFilteredItems, scope]);
 
-  // Render the date buckets only when this scope actually has tasks; an empty
-  // scope shows the native-style centered empty message instead.
+  // Render the date buckets only when this scope actually has tasks (its own
+  // Earlier bucket included, since that is what `TimelineSections` renders
+  // when nothing else in the scope does — see `AllTasksTimelineContainer`'s
+  // JSX ordering comment); an empty scope shows the native-style centered
+  // empty message instead.
   const showTimeline = timeline && hasScopedTasks;
+  // `splitEarlierItems` (`timelineScopeHelpers.ts`) is the same `dayDiff < 0`
+  // reduction `buildTimelineSections` buckets by — reused here, not
+  // reinvented, for the scopes whose Earlier bucket is a display-time subset
+  // of `scopeFilteredItems`.
+  const { hasEarlierItems: timelineHasEarlierItems, hasCurrentItems: timelineHasCurrentItems } =
+    useMemo(
+      () => (isTimelineScope(scope) ? splitEarlierItems(scopeFilteredItems) : { hasEarlierItems: false, hasCurrentItems: false }),
+      [scope, scopeFilteredItems],
+    );
+  // Generalizes `todayHasEarlierItems` (Today's own, separately-sourced
+  // signal) to every scope whose Earlier bucket is that same display-time
+  // subset instead — see this hook's own doc comment.
+  const hasEarlierItems = scope === "today" ? todayHasEarlierItems : timelineHasEarlierItems;
+  // Requirement 1, generalized: the scope's own "zero" excludes whatever its
+  // Earlier bucket already holds, so a screen with only overdue tasks left
+  // still shows the "all done" illustration instead of nothing at all.
+  const hasNonEarlierScopedTasks = isTimelineScope(scope) ? timelineHasCurrentItems : hasScopedTasks;
   // Every scope shows the same native-style centered empty message when there
-  // are no tasks (Today also keeps its Morning/Afternoon/Tonight headers above).
-  const showEmpty = !todoLoading && !hasScopedTasks && !isSearching;
+  // are no non-Earlier tasks (Today also keeps its Morning/Afternoon/Tonight
+  // headers above).
+  const showEmpty = !todoLoading && !hasNonEarlierScopedTasks && !isSearching;
   // Remote sibling of `taskJustCompleted()` below — fires for a completion on
   // another device or by a collaborator, not just this tab's own tap.
-  const remoteEmptied = useCelebrateEmptyTransition(!hasScopedTasks);
+  // Requirement 4: watches the non-Earlier count, so finishing every current
+  // task still celebrates however many overdue tasks Earlier still holds.
+  const remoteEmptied = useCelebrateEmptyTransition(!hasNonEarlierScopedTasks);
   // A search that turns nothing up is a different state from an empty scope:
-  // the scope may be full, this word just is not in it.
+  // the scope may be full, this word just is not in it. Deliberately still
+  // the full (Earlier-included) count: a query that matches only an overdue
+  // task is a result, not "no results" — it surfaces inside Earlier, forced
+  // open by the search (see `earlierExpanded || isSearching` below).
   const showNoResults = !todoLoading && !hasScopedTasks && isSearching;
   // Today-only chrome that a search-with-no-results state stands down
   // together: the week summary, the three time-of-day buckets, and Earlier's
@@ -73,12 +119,14 @@ export function useTimelineEmptyState({
   // see `shouldShowTodayEmptyIllustration`.
   const celebrate = taskJustCompleted() || remoteEmptied;
   // Requirements 1-3: who owns the empty-state slot once `showEmpty` is true.
-  // Degenerates to plain `showEmpty` whenever `todayHasEarlierItems` is false
-  // (every non-Today scope, and Today with no overdue tasks), so this is a
-  // no-op everywhere except the Earlier interaction.
+  // Degenerates to plain `showEmpty` whenever `hasEarlierItems` is false (any
+  // scope with no Earlier bucket, or none of Today/All/Priority holding
+  // overdue tasks right now), so this is a no-op everywhere except the
+  // Earlier interaction — now shared by every scope whose Earlier bucket can
+  // hold tasks while its own "current" set is empty, not just Today's.
   const showEmptyIllustration = shouldShowTodayEmptyIllustration({
     showEmpty,
-    hasEarlierItems: todayHasEarlierItems,
+    hasEarlierItems,
     earlierExpanded,
     earlierHandoffPending,
     celebrate,

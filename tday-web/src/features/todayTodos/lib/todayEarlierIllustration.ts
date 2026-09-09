@@ -1,7 +1,13 @@
 /**
- * Today's own "Earlier" bucket (overdue tasks tucked under an otherwise-empty
- * or non-empty Today, collapsed by default) and its interaction with the
- * "all done for today" illustration.
+ * The "Earlier" bucket (overdue tasks tucked under an otherwise-empty or
+ * non-empty screen, collapsed by default) and its interaction with the "all
+ * done" illustration — originally built for Today, since generalized to
+ * every other scope whose own Earlier bucket can hold tasks while its
+ * "current" set is empty: All, Priority, custom Lists (Scheduled's own
+ * Earlier bucket never has tasks to begin with — its `buildTimelineSections`
+ * call passes `futureOnly: true` — so this is a no-op there; the standalone
+ * Overdue screen has no nested Earlier concept). `AllTasksTimelineContainer`
+ * (`useTimelineEmptyState`) and `ListContainer` are the two call sites.
  *
  * Mirrors the validated Android/iOS mechanism (`shouldShowTodayEarlierIllustration`
  * / `shouldShowTodayEarlierExpandedCelebration` in `TodoListScreen.kt`, the
@@ -14,7 +20,8 @@
  * `animationDuration`) and the delay before Earlier's rows are actually told
  * to appear (`useEarlierExpandHandoff`) are driven by this ONE constant, not
  * two numbers independently tuned to look close enough — so the two are
- * sequenced by construction.
+ * sequenced by construction. Shared by every scope below, not retuned per
+ * screen — see this module's own doc comment for why that is deliberate.
  *
  * Matches `.tday-empty-enter`'s own 520ms arrival (globals.css): the exit
  * mirrors the scene's entrance rather than inventing an unrelated number.
@@ -22,18 +29,19 @@
 export const TODAY_EARLIER_EXIT_MS = 520;
 
 /**
- * Requirements 1-3's full interaction for Today's empty-state illustration
- * once an "Earlier" bucket of overdue tasks exists on the screen.
+ * Requirements 1-3's full interaction for a scope's empty-state illustration
+ * once its own "Earlier" bucket of overdue tasks exists on the screen.
  *
  * Deliberately takes no opinion on anything upstream of `showEmpty` (pending
- * count, loading state, search) — that gate is unchanged by this feature (see
- * the `hasScopedTasks`/`showEmpty` note in `AllTasksTimelineContainer.tsx`):
- * `earlierItems` is a wholly separate array from whatever `showEmpty` reads,
- * so this only ever decides who owns the visual slot once `showEmpty` is
- * already true — it can never itself be the reason `showEmpty` was true or
- * false. That separation is the whole point: folding Earlier into the same
- * array `showEmpty` reads would silently break requirement 1 by making "zero
- * pending" also require "zero overdue".
+ * count, loading state, search) — that gate is a caller concern (see
+ * `useTimelineEmptyState`'s `hasNonEarlierScopedTasks`/`showEmpty`, and
+ * `ListContainer`'s own equivalent): `hasEarlierItems` is read from a wholly
+ * separate reduction than whatever `showEmpty` reads, so this only ever
+ * decides who owns the visual slot once `showEmpty` is already true — it can
+ * never itself be the reason `showEmpty` was true or false. That separation
+ * is the whole point: folding Earlier into the same count `showEmpty` reads
+ * would silently break requirement 1 by making "zero current tasks" also
+ * require "zero overdue".
  */
 export function shouldShowTodayEmptyIllustration({
   showEmpty,
@@ -42,15 +50,15 @@ export function shouldShowTodayEmptyIllustration({
   earlierHandoffPending,
   celebrate,
 }: {
-  /** Zero pending-today tasks, not loading, not mid-search. Unchanged by this feature. */
+  /** Zero current (non-Earlier) tasks for this scope, not loading, not mid-search. */
   showEmpty: boolean;
-  /** Today's own "Earlier" bucket actually holds overdue tasks. */
+  /** This scope's own "Earlier" bucket actually holds overdue tasks. */
   hasEarlierItems: boolean;
   /** Earlier is expanded (its rows are visible) rather than collapsed. */
   earlierExpanded: boolean;
   /** Requirement 3's two-phase hand-off is mid-exit (see `useEarlierExpandHandoff`). */
   earlierHandoffPending: boolean;
-  /** A completion (this tab's or a remote one) just emptied Today. */
+  /** A completion (this tab's or a remote one) just emptied this scope's current tasks. */
   celebrate: boolean;
 }): boolean {
   if (!showEmpty) return false;
@@ -69,10 +77,10 @@ export function shouldShowTodayEmptyIllustration({
 
   // Requirement 3: expanded — Earlier's own rows own the slot instead of the
   // illustration, UNLESS requirement 1's own window is open (`celebrate`): a
-  // completion that just emptied Today still needs its confetti moment even
-  // though the user already happened to have Earlier open. Scoped to
-  // `celebrate`'s own window, so this hands the slot back to Earlier's rows
-  // the instant that window closes, same as if no completion had just
-  // happened here.
+  // completion that just emptied this scope's current tasks still needs its
+  // confetti moment even though the user already happened to have Earlier
+  // open. Scoped to `celebrate`'s own window, so this hands the slot back to
+  // Earlier's rows the instant that window closes, same as if no completion
+  // had just happened here.
   return celebrate;
 }

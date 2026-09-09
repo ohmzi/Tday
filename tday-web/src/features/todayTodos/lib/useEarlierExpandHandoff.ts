@@ -2,12 +2,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 /**
  * The single collapse/expand state machine backing every scope's "Earlier"
- * bucket — generalizes the plain `useState(false)` this component used to
- * own directly, so All/Priority/Scheduled keep the exact immediate toggle
- * they always had (they call `toggle(false)`, see below) while Today's own
- * Earlier engages the extra requirement-3 hand-off by passing `true` for the
- * one call where it actually matters: an expand while the empty-state
- * illustration is currently on screen.
+ * bucket. Every call site passes its own scope's `showEmptyIllustration` —
+ * "is the empty-state illustration currently on screen" — as the `toggle`
+ * argument below, so an expand engages the extra requirement-3 hand-off
+ * exactly when there is an illustration to hand off from, and stays the
+ * plain immediate toggle it always was otherwise (a scope with no Earlier
+ * bucket, or one whose illustration isn't showing right now, always passes
+ * `false`).
  *
  * `handoffPending` is true for exactly the window between that tap and the
  * moment `expanded` actually flips. It is driven by `exitMs` — the SAME
