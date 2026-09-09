@@ -21,3 +21,31 @@ export function getPriorityFlag(
   }
   return null;
 }
+
+/**
+ * Tailwind text/fill classes for the flag icon inside a priority PICKER
+ * itself (trigger + option list) — every tier always shows some color there,
+ * unlike {@link getPriorityFlag} above, which decides whether a badge shows
+ * at all elsewhere in the app. Kept as one map so the picker components don't
+ * each hand-roll their own nested ternary over the same four tiers.
+ */
+export type PriorityFlagClasses = { text: string; fill: string };
+
+const PRIORITY_FLAG_CLASSES: Record<
+  "Lowest" | "Low" | "Medium" | "High",
+  PriorityFlagClasses
+> = {
+  Lowest: { text: "text-muted-foreground", fill: "fill-muted-foreground" },
+  Low: { text: "text-lime", fill: "fill-lime" },
+  Medium: { text: "text-orange", fill: "fill-orange" },
+  High: { text: "text-red", fill: "fill-red" },
+};
+
+export function priorityFlagClasses(
+  priority: string | null | undefined,
+): PriorityFlagClasses {
+  return (
+    PRIORITY_FLAG_CLASSES[priority as keyof typeof PRIORITY_FLAG_CLASSES] ??
+    PRIORITY_FLAG_CLASSES.Low
+  );
+}
