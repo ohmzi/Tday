@@ -132,14 +132,12 @@ func cachedFloaterSortPrecedes(_ lhs: CachedFloaterRecord, _ rhs: CachedFloaterR
     return lhs.id < rhs.id
 }
 
+/// Delegates to the canonical engine rather than hand-duplicating the rank
+/// switch a second time — a prior local copy here (urgent/important/else 0-1-2)
+/// had no branch for the "Lowest" wire value and would have silently sorted it
+/// as Normal.
 private func floaterPriorityRank(_ priority: String) -> Int {
-    if TaskPriorityDisplay.isUrgent(priority) {
-        return 0
-    }
-    if TaskPriorityDisplay.isImportant(priority) {
-        return 1
-    }
-    return 2
+    TaskSortEngine.priorityRank(priority)
 }
 
 // Fixed TODO ordering applied WITHIN each day group (scheduled screen, custom

@@ -73,6 +73,11 @@ enum class DefaultHomeScreen {
 
 @Serializable
 enum class Priority {
+    // `Lowest` (UI label "Low") is the newest, least-urgent tier — added below the original
+    // `Low` (UI label "Normal", still the default). See TaskSortEngine for the sort-rank
+    // scheme and PgEnums/the Flyway migration for why the Postgres native enum orders it
+    // `Lowest` < `Low` < `Medium` < `High`.
+    Lowest,
     Low,
     Medium,
     High;

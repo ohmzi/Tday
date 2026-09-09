@@ -175,7 +175,8 @@ user's timezone (see the timezone model in [`DEPLOYMENT.md`](DEPLOYMENT.md#serve
 | `DELETE` | `/api/floater`  `{ id }`                          | Delete a floater                                     |
 
 Request/response bodies follow the shared DTOs in [`DATA_MODEL.md`](DATA_MODEL.md); `priority` is one
-of `Low | Medium | High`.
+of `Lowest | Low | Medium | High` (UI labels, low to high urgency: Low | Normal | Important | Urgent —
+`Low` is still the default and still labeled "Normal"; `Lowest` is the newest tier, labeled "Low").
 
 ### Example: create a task
 
