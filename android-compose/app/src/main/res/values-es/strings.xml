@@ -316,7 +316,7 @@
     <string name="todos_section_morning">Mañana</string>
     <string name="todos_section_afternoon">Tarde</string>
     <string name="todos_section_tonight">Esta noche</string>
-    <string name="todos_section_earlier">Antes</string>
+    <string name="todos_section_earlier">Vencidas</string>
     <string name="todos_section_today">Hoy</string>
     <string name="todos_section_tomorrow">Mañana</string>
     <string name="todos_section_rest_of">Resto de %1$s</string>
