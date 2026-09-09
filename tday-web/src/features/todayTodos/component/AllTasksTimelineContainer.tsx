@@ -15,6 +15,12 @@ import WeekInReviewCard from "@/features/summary/WeekInReviewCard";
 import TodoListLoading from "@/components/todo/component/TodoListLoading";
 import TodoGroup from "@/components/todo/component/TodoGroup";
 import TimelineSections from "@/components/todo/dnd/TimelineSections";
+import TodayEarlierSection from "./TodayEarlierSection";
+import { useEarlierExpandHandoff } from "../lib/useEarlierExpandHandoff";
+import {
+  TODAY_EARLIER_EXIT_MS,
+  shouldShowTodayEmptyIllustration,
+} from "../lib/todayEarlierIllustration";
 import {
   TODAY_BUCKETS,
   TodayBucketDndContext,
@@ -57,6 +63,10 @@ import {
 
 const PAGE_SIZE = 10;
 const MS_IN_DAY = 1000 * 60 * 60 * 24;
+
+// Stable identity so the memo below doesn't hand back a fresh empty array on
+// every render for scopes other than Today.
+const NO_EARLIER_TODOS: TodoItemType[] = [];
 
 type TimelineItem = {
   todo: TodoItemType;
@@ -230,7 +240,17 @@ const AllTasksTimelineContainer = ({
   const timeline = isTimelineScope(scope);
 
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
-  const [earlierExpanded, setEarlierExpanded] = useState(false);
+  // Generalizes the plain `useState(false)` this used to be: All/Priority/
+  // Scheduled call `toggle(false)` below and get the exact same immediate
+  // flip they always had; only Today's own Earlier passes a real
+  // `illustrationShowing` value, which is what engages the requirement-3
+  // hand-off. See `useEarlierExpandHandoff`'s own doc comment.
+  const {
+    expanded: earlierExpanded,
+    handoffPending: earlierHandoffPending,
+    toggle: toggleEarlierExpanded,
+    setExpandedImmediately: setEarlierExpandedImmediately,
+  } = useEarlierExpandHandoff(TODAY_EARLIER_EXIT_MS);
   // Empty date buckets are drop targets and nothing else, so they exist only for
   // the length of a drag.
   const [dragActive, setDragActive] = useState(false);
@@ -337,6 +357,36 @@ const AllTasksTimelineContainer = ({
     });
   }, [appDict, dragActive, locale, scope, timeline, timelineItems, userTZ?.timeZone]);
 
+  // Today's own "Earlier" bucket (requirement 2): reuses the exact same
+  // section-building code path All/Priority/Scheduled already use for their
+  // own Earlier bucket (`buildTimelineSections`'s `kind: "earlier"`, built
+  // from `dayKey < todayKey`) rather than a fresh definition of "overdue" —
+  // which also keeps it disjoint from Today's own `dayDiff === 0` set below,
+  // so a task due earlier today (already past its time, but still *today*)
+  // is never duplicated between the two. `timelineItems` here is the same
+  // `useTodoTimeline()`-sourced array every other scope (including the
+  // standalone Overdue screen) already reads — no separate fetch.
+  const todayEarlierSection = useMemo(() => {
+    if (scope !== "today") return null;
+    const sections = buildTimelineSections({
+      todos: timelineItems.map((item) => item.todo),
+      locale,
+      timeZone: userTZ?.timeZone,
+      futureOnly: false,
+      placesEarlierBeforeToday: true,
+      includeEmptyDropTargets: false,
+      todayLabel: appDict("today"),
+      tomorrowLabel: appDict("tomorrow"),
+    });
+    return sections.find((section) => section.kind === "earlier") ?? null;
+  }, [appDict, locale, scope, timelineItems, userTZ?.timeZone]);
+
+  const earlierItems = todayEarlierSection?.todos ?? NO_EARLIER_TODOS;
+  // NOT folded into `scopeFilteredItems`/`hasScopedTasks` below — see
+  // `shouldShowTodayEmptyIllustration`'s own doc comment for why that
+  // separation is exactly what keeps requirement 1 intact.
+  const todayHasEarlierItems = scope === "today" && earlierItems.length > 0;
+
   const focusedDateIndex = useMemo(
     () =>
       focusedDateKey
@@ -416,6 +466,24 @@ const AllTasksTimelineContainer = ({
     [completedTodos],
   );
   const isDayDone = scope === "today" && showEmpty && completedTodayCount > 0;
+  // Finishing the scope is a payoff, not an absence: the confetti is for the
+  // tick that emptied it, not for a day with nothing in it. Whether that tick
+  // happened here, on another device, or from a collaborator on a shared
+  // list. Hoisted (rather than inlined on `<EmptyState celebrate>` below) so
+  // Today's own illustration/Earlier hand-off reads the exact same signal —
+  // see `shouldShowTodayEmptyIllustration`.
+  const celebrate = taskJustCompleted() || remoteEmptied;
+  // Requirements 1-3: who owns the empty-state slot once `showEmpty` is true.
+  // Degenerates to plain `showEmpty` whenever `todayHasEarlierItems` is false
+  // (every non-Today scope, and Today with no overdue tasks), so this is a
+  // no-op everywhere except the new Earlier interaction.
+  const showEmptyIllustration = shouldShowTodayEmptyIllustration({
+    showEmpty,
+    hasEarlierItems: todayHasEarlierItems,
+    earlierExpanded,
+    earlierHandoffPending,
+    celebrate,
+  });
 
   useEffect(() => {
     setVisibleCount(PAGE_SIZE);
@@ -439,9 +507,19 @@ const AllTasksTimelineContainer = ({
     if (!timeline || !focusedTaskId) return;
     const earlier = timelineSections.find((section) => section.kind === "earlier");
     if (earlier?.todos.some((todo) => todo.id === focusedTaskId)) {
-      setEarlierExpanded(true);
+      setEarlierExpandedImmediately(true);
     }
-  }, [focusedTaskId, timeline, timelineSections]);
+  }, [focusedTaskId, setEarlierExpandedImmediately, timeline, timelineSections]);
+
+  // Same, for Today's own Earlier: a deep-linked/focused overdue task should
+  // not sit hidden behind a collapsed header. Immediate (no hand-off beat) —
+  // there is no illustration to sequence against on a direct navigation.
+  useEffect(() => {
+    if (scope !== "today" || !focusedTaskId) return;
+    if (earlierItems.some((todo) => todo.id === focusedTaskId)) {
+      setEarlierExpandedImmediately(true);
+    }
+  }, [earlierItems, focusedTaskId, scope, setEarlierExpandedImmediately]);
 
   useEffect(() => {
     if (!hasMore || !sentinelRef.current) {
@@ -564,7 +642,10 @@ const AllTasksTimelineContainer = ({
               // Earlier closed, and a task the search turns up in there must not
               // stay hidden behind its header. Native makes the same call.
               earlierExpanded={earlierExpanded || isSearching}
-              onToggleEarlier={() => setEarlierExpanded((value) => !value)}
+              // `illustrationShowing: false` — these scopes have no
+              // Today-style illustration to hand off from, so this is the
+              // exact plain immediate toggle they always had.
+              onToggleEarlier={() => toggleEarlierExpanded(false)}
               onDragActiveChange={setDragActive}
             />
           )}
@@ -661,28 +742,57 @@ const AllTasksTimelineContainer = ({
               `todayBuckets` empty, so this never renders below headerless
               Morning/Afternoon/Tonight sections; for other scopes it's the only
               body. Day Done: "finished everything" earns a calm payoff state
-              instead of the generic no-tasks message. */}
-          {showEmpty && (
-            <EmptyState
-              // Day Done keeps its own glyph and its date line: it is a payoff,
-              // not an absence, and the scope's own icon would undersell it.
-              icon={isDayDone ? CheckCheck : ScopeIcon}
-              accentColor={timelineScopeAccentColors[scope]}
-              title={isDayDone ? appDict("allDoneToday") : appDict(emptyTitle)}
-              description={
-                isDayDone
-                  ? new Intl.DateTimeFormat(locale, {
-                      weekday: "long",
-                      day: "numeric",
-                      month: "long",
-                    }).format(new Date())
-                  : appDict(emptyBody)
+              instead of the generic no-tasks message.
+
+              `showEmptyIllustration` (not `showEmpty` directly): identical to
+              `showEmpty` everywhere except Today with a non-empty, expanded
+              Earlier — see `shouldShowTodayEmptyIllustration`. The wrapper div
+              only ever carries the exit animation while `earlierHandoffPending`
+              is genuinely true (i.e. only for Today), so it is inert elsewhere. */}
+          {showEmptyIllustration && (
+            <div
+              className={cn(earlierHandoffPending && "tday-empty-exit")}
+              style={
+                earlierHandoffPending
+                  ? { animationDuration: `${TODAY_EARLIER_EXIT_MS}ms` }
+                  : undefined
               }
-              // Finishing the scope is a payoff, not an absence: the confetti is
-              // for the tick that emptied it, not for a day with nothing in it.
-              // Whether that tick happened here, on another device, or from a
-              // collaborator on a shared list.
-              celebrate={taskJustCompleted() || remoteEmptied}
+            >
+              <EmptyState
+                // Day Done keeps its own glyph and its date line: it is a payoff,
+                // not an absence, and the scope's own icon would undersell it.
+                icon={isDayDone ? CheckCheck : ScopeIcon}
+                accentColor={timelineScopeAccentColors[scope]}
+                title={isDayDone ? appDict("allDoneToday") : appDict(emptyTitle)}
+                description={
+                  isDayDone
+                    ? new Intl.DateTimeFormat(locale, {
+                        weekday: "long",
+                        day: "numeric",
+                        month: "long",
+                      }).format(new Date())
+                    : appDict(emptyBody)
+                }
+                celebrate={celebrate}
+              />
+            </div>
+          )}
+
+          {/* Today's own "Earlier" bucket (requirement 2), always reachable at
+              the bottom of the screen whenever it holds anything — independent
+              of `showEmptyIllustration` above, so it renders the same whether
+              Today still has pending tasks, is empty with the illustration
+              showing, or is empty with Earlier already expanded (in which case
+              its rows are what fills that slot — see the illustration block
+              above). `!showNoResults` mirrors the gate already used for the
+              time-of-day buckets above: a search with no results goes with the
+              tasks, not with this. */}
+          {scope === "today" && !showNoResults && todayHasEarlierItems && (
+            <TodayEarlierSection
+              todos={earlierItems}
+              expanded={earlierExpanded && !earlierHandoffPending}
+              onToggle={() => toggleEarlierExpanded(showEmptyIllustration)}
+              highlightedTodoId={focusedTaskId}
             />
           )}
 
