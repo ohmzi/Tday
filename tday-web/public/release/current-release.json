@@ -1,11 +1,11 @@
 {
-  "version": "0.7.15",
-  "publishedAt": "2026-09-09T09:15:12-04:00",
+  "version": "0.7.16",
+  "publishedAt": "2026-09-09T11:37:26-04:00",
   "notes": [
-    "Add Lowest priority tier",
-    "Show the Lowest tier in the widget-picker preview art",
-    "Satisfy DeepSource on the new priority code"
+    "Hide Today section headers when the day is empty",
+    "Hide today's empty time-of-day headers when the day is empty",
+    "Fix stale timeline comments after empty-bucket change"
   ],
-  "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v0.7.15",
-  "compareUrl": "https://github.com/ohmzi/Tday/compare/v0.7.14..v0.7.15"
+  "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v0.7.16",
+  "compareUrl": "https://github.com/ohmzi/Tday/compare/v0.7.15..v0.7.16"
 }
