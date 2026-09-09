@@ -340,6 +340,82 @@ internal fun shouldCelebrateEmptyState(
     return ownTapCelebrates || remoteCompletionCelebrates
 }
 
+/**
+ * The mirror of [TodoListScreen]'s `showTodayEarlierIllustration`, for the case
+ * where Earlier is expanded rather than collapsed.
+ *
+ * `showTodayEarlierIllustration` deliberately stays false once Earlier is
+ * expanded -- requirement 3 hands that slot to Earlier's own rows, not the
+ * scene -- but that left completing the very last pending-today task while
+ * Earlier already happened to be expanded with nothing on screen at all: not
+ * the celebratory scene, not the plain one, no confetti. This is true for
+ * exactly [shouldCelebrateEmptyState]'s own window, so once that closes the
+ * slot goes back to Earlier's rows the same as if no completion had just
+ * happened -- it never contests requirement 3's "expanded Earlier owns this
+ * slot" call outside that window, it only fills the gap requirement 3 left
+ * inside it.
+ *
+ * Pulled out as a pure function, like [shouldCelebrateEmptyState] above, so
+ * this interaction -- the one the earlier review found neither the overlay
+ * nor the inline scene covered -- has a unit test rather than only a
+ * device/emulator check.
+ */
+internal fun shouldShowTodayEarlierExpandedCelebration(
+    todayHasEarlierItems: Boolean,
+    itemsEmpty: Boolean,
+    isLoading: Boolean,
+    suppressInitialTodayTimeline: Boolean,
+    scopedSearchActive: Boolean,
+    earlierCollapsed: Boolean,
+    celebrateEmptyState: Boolean,
+): Boolean {
+    return todayHasEarlierItems &&
+            itemsEmpty &&
+            !isLoading &&
+            !suppressInitialTodayTimeline &&
+            !scopedSearchActive &&
+            !earlierCollapsed &&
+            celebrateEmptyState
+}
+
+/** What [TodoListScreen]'s `onTimelineSectionHeaderToggle` does with a tap. */
+internal enum class SectionHeaderToggleAction {
+    /** A tap on Earlier's header while the exit-before-expand beat owns it. */
+    IGNORE,
+
+    /** Requirement 3: hold Earlier closed for one exit beat, then expand it. */
+    DEFER_EARLIER_EXPAND,
+
+    /** Every other header, and Earlier outside the two cases above. */
+    IMMEDIATE_TOGGLE,
+}
+
+/**
+ * The decision half of `onTimelineSectionHeaderToggle`, pulled out so the race
+ * a review found -- a second tap landing inside the ~150ms exit beat reading
+ * `showTodayEarlierIllustration` as already false and falling through to an
+ * immediate expand -- has a unit test. [earlierExpandPending] is the fix:
+ * checked directly, ahead of the flag it invalidates, so every tap on Earlier
+ * is [IGNORE] for as long as an earlier tap's own beat is still running,
+ * regardless of what [showTodayEarlierIllustration] recomputes to meanwhile.
+ *
+ * The mutation itself -- starting the coroutine, writing the two `var`s --
+ * stays in the composable, the same division [shouldCelebrateEmptyState] and
+ * [TodoListScreen] already draw between pure decision and effectful state.
+ */
+internal fun decideSectionHeaderToggleAction(
+    key: String,
+    wasCollapsed: Boolean,
+    showTodayEarlierIllustration: Boolean,
+    earlierExpandPending: Boolean,
+): SectionHeaderToggleAction = when {
+    key == "earlier" && earlierExpandPending -> SectionHeaderToggleAction.IGNORE
+    key == "earlier" && wasCollapsed && showTodayEarlierIllustration ->
+        SectionHeaderToggleAction.DEFER_EARLIER_EXPAND
+
+    else -> SectionHeaderToggleAction.IMMEDIATE_TOGGLE
+}
+
 // KT-R1006 (cyclomatic complexity) is suppressed on this declaration rather
 // than fixed further here. Two separate facts, both worth writing down:
 //
@@ -904,6 +980,27 @@ fun TodoListScreen( // skipcq: KT-R1006
             !scopedSearchActive &&
             collapsedSectionKeys.contains("earlier") &&
             !earlierExpandPending
+    // Requirement 1's gap for the case above's mirror: Earlier is already
+    // expanded (not collapsed) at the moment the user's own tap -- or a
+    // remote completion -- empties Today. `showTodayEarlierIllustration`
+    // stays false on purpose whenever Earlier is expanded (requirement 3:
+    // Earlier's own rows own this slot then, not the scene), so without
+    // this, a completion landing in that state drew neither the scene nor
+    // the full-screen overlay below (which also defers to
+    // `todayHasEarlierItems`) -- no illustration at all, and no confetti.
+    // Scoped to `celebrateEmptyState`'s own window rather than shown for as
+    // long as Earlier stays expanded and empty: once the celebration times
+    // out this hands the slot straight back to Earlier, the same as it
+    // would have been the whole time had no completion just happened here.
+    val showTodayEarlierExpandedCelebration = shouldShowTodayEarlierExpandedCelebration(
+        todayHasEarlierItems = todayHasEarlierItems,
+        itemsEmpty = uiState.items.isEmpty(),
+        isLoading = uiState.isLoading,
+        suppressInitialTodayTimeline = suppressInitialTodayTimeline,
+        scopedSearchActive = scopedSearchActive,
+        earlierCollapsed = collapsedSectionKeys.contains("earlier"),
+        celebrateEmptyState = celebrateEmptyState,
+    )
     var flashTodoId by remember(uiState.mode) { mutableStateOf<String?>(null) }
     var quickAddDueEpochMs by rememberSaveable { mutableStateOf<Long?>(null) }
     var editTargetTodoId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -1303,23 +1400,46 @@ fun TodoListScreen( // skipcq: KT-R1006
     // function's call site instead of the live state.
     val onTimelineSectionHeaderToggle: (key: String, wasCollapsed: Boolean) -> Unit =
         { key, wasCollapsed ->
-            if (key == "earlier" && wasCollapsed && showTodayEarlierIllustration) {
-                // Requirement 3: the empty-state scene owns this slot right
-                // now. Flip it into its exit first and hold the actual
-                // section open until it has genuinely left, so Earlier's
-                // rows never animate in underneath a scene that is still
-                // on screen.
-                earlierExpandPending = true
-                screenScope.launch {
-                    delay(TdayFeedItemMotion.FadeOutMillis.toLong())
-                    collapsedSectionKeys = collapsedSectionKeys - key
-                    earlierExpandPending = false
+            // See [decideSectionHeaderToggleAction] for why IGNORE is checked
+            // ahead of DEFER_EARLIER_EXPAND's own guard rather than folded
+            // into an `else` after it: a tap landing inside an already-running
+            // exit-before-expand beat used to read `showTodayEarlierIllustration`
+            // as already false (setting `earlierExpandPending` flips it on the
+            // very next recomposition, well before the scheduled coroutine
+            // below actually drops "earlier" from `collapsedSectionKeys`) and
+            // fall through to IMMEDIATE_TOGGLE, expanding Earlier on the spot
+            // and racing its rows in underneath the scene's own still-playing
+            // exit.
+            when (
+                decideSectionHeaderToggleAction(
+                    key = key,
+                    wasCollapsed = wasCollapsed,
+                    showTodayEarlierIllustration = showTodayEarlierIllustration,
+                    earlierExpandPending = earlierExpandPending,
+                )
+            ) {
+                SectionHeaderToggleAction.IGNORE -> Unit
+
+                SectionHeaderToggleAction.DEFER_EARLIER_EXPAND -> {
+                    // Requirement 3: the empty-state scene owns this slot
+                    // right now. Flip it into its exit first and hold the
+                    // actual section open until it has genuinely left, so
+                    // Earlier's rows never animate in underneath a scene that
+                    // is still on screen.
+                    earlierExpandPending = true
+                    screenScope.launch {
+                        delay(TdayFeedItemMotion.FadeOutMillis.toLong())
+                        collapsedSectionKeys = collapsedSectionKeys - key
+                        earlierExpandPending = false
+                    }
                 }
-            } else {
-                collapsedSectionKeys = if (wasCollapsed) {
-                    collapsedSectionKeys - key
-                } else {
-                    collapsedSectionKeys + key
+
+                SectionHeaderToggleAction.IMMEDIATE_TOGGLE -> {
+                    collapsedSectionKeys = if (wasCollapsed) {
+                        collapsedSectionKeys - key
+                    } else {
+                        collapsedSectionKeys + key
+                    }
                 }
             }
         }
@@ -1563,6 +1683,15 @@ fun TodoListScreen( // skipcq: KT-R1006
                     // (always-present, real) Earlier header sits right under
                     // it — reachable the whole time, never covered by an
                     // overlay the way the plain-empty-Today scene is.
+                    // Also visible, briefly, when Earlier is expanded rather
+                    // than collapsed — `showTodayEarlierExpandedCelebration`
+                    // — so requirement 1's confetti still lands when the
+                    // completion that emptied Today happens while the user
+                    // already has Earlier open, not just while it is sitting
+                    // collapsed. That flag is scoped to `celebrateEmptyState`'s
+                    // own window, so once it closes this exits the same way
+                    // and Earlier's rows are left owning the slot, same as if
+                    // no completion had just happened.
                     if (todayHasEarlierItems &&
                         uiState.items.isEmpty() &&
                         !uiState.isLoading &&
@@ -1574,7 +1703,8 @@ fun TodoListScreen( // skipcq: KT-R1006
                             contentType = "today-earlier-empty-scene",
                         ) {
                             AnimatedVisibility(
-                                visible = showTodayEarlierIllustration,
+                                visible = showTodayEarlierIllustration ||
+                                        showTodayEarlierExpandedCelebration,
                                 enter = fadeIn(
                                     animationSpec = tween(
                                         durationMillis = TdayFeedItemMotion.FadeInMillis,
