@@ -2,6 +2,7 @@ package com.ohmz.tday.services
 
 import arrow.core.Either
 import com.ohmz.tday.db.TestDatabase
+import com.ohmz.tday.db.bootstrapProductionPgEnums
 import com.ohmz.tday.db.tables.*
 import kotlinx.coroutines.runBlocking
 import org.flywaydb.core.Flyway
@@ -133,25 +134,7 @@ class PriorityLowestOrdinalTest {
             // that IF NOT EXISTS block is what a fresh dev bootstrap relies on for it), so
             // skipping this here would fail UserPreferences' defaultHomeScreen column below
             // for a reason that has nothing to do with Priority/Lowest.
-            listOf(
-                "\"UserRole\"" to listOf("ADMIN", "USER"),
-                "\"ApprovalStatus\"" to listOf("APPROVED", "PENDING"),
-                "\"SortBy\"" to listOf("due", "priority"),
-                "\"GroupBy\"" to listOf("due", "priority", "rrule", "project"),
-                "\"Direction\"" to listOf("Ascending", "Descending"),
-                "\"Priority\"" to listOf("Lowest", "Low", "Medium", "High"),
-                "\"ProjectColor\"" to listOf(
-                    "RED", "ORANGE", "YELLOW", "LIME", "BLUE", "PURPLE", "PINK", "TEAL",
-                    "CORAL", "GOLD", "DEEP_BLUE", "ROSE", "LIGHT_RED", "BRICK", "SLATE",
-                ),
-                "\"DefaultHomeScreen\"" to listOf("scheduled", "floater"),
-            ).forEach { (name, values) ->
-                val valList = values.joinToString(", ") { "'$it'" }
-                exec(
-                    "DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = " +
-                        "${name.replace("\"", "'")}) THEN CREATE TYPE $name AS ENUM ($valList); END IF; END $$;",
-                )
-            }
+            bootstrapProductionPgEnums()
 
             // The exact table set DatabaseConfig.init() bootstraps in production.
             SchemaUtils.createMissingTablesAndColumns(
