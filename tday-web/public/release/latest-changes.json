@@ -1,11 +1,11 @@
 {
-  "version": "0.7.18",
-  "publishedAt": "2026-09-09T15:07:12-04:00",
+  "version": "0.7.19",
+  "publishedAt": "2026-09-09T18:47:21-04:00",
   "notes": [
-    "Show Today's overdue tasks in a collapsible Earlier section",
-    "Split scope filtering and empty-state derivation out of timeline container",
-    "Clear findings the timeline extraction surfaced on new files"
+    "Extend Earlier empty-state parity to Scheduled/Priority/All/Lists",
+    "Extend empty-state/Earlier parity to Scheduled, Priority, All, and Lists",
+    "Rename overdue timeline section title from Earlier to Overdue"
   ],
-  "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v0.7.18",
-  "compareUrl": "https://github.com/ohmzi/Tday/compare/v0.7.17..v0.7.18"
+  "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v0.7.19",
+  "compareUrl": "https://github.com/ohmzi/Tday/compare/v0.7.18..v0.7.19"
 }
