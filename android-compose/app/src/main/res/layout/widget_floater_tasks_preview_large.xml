@@ -207,7 +207,7 @@
                 android:layout_width="14dp"
                 android:layout_height="14dp"
                 android:contentDescription="@null"
-                android:src="@drawable/widget_priority_ring_low" />
+                android:src="@drawable/widget_priority_ring_lowest" />
 
             <TextView
                 android:layout_width="0dp"

@@ -40,7 +40,7 @@ type TaskSelectorOverlaysProps = {
   derivedRepeatType: DerivedRepeatType;
 };
 
-const PRIORITIES: Priority[] = ["Low", "Medium", "High"];
+const PRIORITIES: Priority[] = ["Lowest", "Low", "Medium", "High"];
 
 type RepeatOption = {
   key: string;

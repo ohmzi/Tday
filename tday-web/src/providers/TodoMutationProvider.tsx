@@ -14,7 +14,7 @@ type UseCompleteTodoType = () => {
     completePending: boolean
 }
 type UsePrioritizeTodoType = () => {
-    prioritizeMutateFn: UseMutateFunction<void, Error, { id: string; level: "Low" | "Medium" | "High"; isRecurring: boolean; }, { oldTodos: TodoItemType[] | undefined; }>;
+    prioritizeMutateFn: UseMutateFunction<void, Error, { id: string; level: "Lowest" | "Low" | "Medium" | "High"; isRecurring: boolean; }, { oldTodos: TodoItemType[] | undefined; }>;
     prioritizePending: boolean
 }
 

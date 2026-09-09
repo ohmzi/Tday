@@ -367,6 +367,7 @@
     <string name="create_task_list">リスト</string>
     <string name="create_task_no_list">リストなし</string>
     <string name="create_task_priority">優先度</string>
+    <string name="create_task_priority_low">低</string>
     <string name="create_task_priority_normal">通常</string>
     <string name="create_task_priority_important">重要</string>
     <string name="create_task_priority_urgent">緊急</string>

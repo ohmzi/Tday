@@ -57,7 +57,7 @@ export interface FloaterItemType {
   createdAt: Date | null;
   updatedAt?: Date | null;
   order: number;
-  priority: "Low" | "Medium" | "High";
+  priority: "Lowest" | "Low" | "Medium" | "High";
   userID?: string | null;
   completed: boolean;
   listID?: string | null;
@@ -71,7 +71,7 @@ export interface TodoItemType {
   createdAt: Date;
   updatedAt?: Date | null;
   order: number;
-  priority: "Low" | "Medium" | "High";
+  priority: "Lowest" | "Low" | "Medium" | "High";
   due: Date;
   rrule: string | null;
   timeZone: string;
@@ -111,7 +111,7 @@ export interface overridingInstance {
   overriddenTitle: string | null;
   overriddenDescription: string | null;
   overriddenDue: Date | null;
-  overriddenPriority: "Low" | "Medium" | "High" | null;
+  overriddenPriority: "Lowest" | "Low" | "Medium" | "High" | null;
 }
 
 export interface recurringTodoItemType extends TodoItemType {
@@ -130,7 +130,7 @@ export interface CompletedTodoItemType {
   description?: string;
   createdAt: Date;
   completedAt: Date;
-  priority: "Low" | "Medium" | "High";
+  priority: "Lowest" | "Low" | "Medium" | "High";
   due: Date | null;
   userID: string;
   rrule: string | null;
@@ -145,7 +145,7 @@ export interface CompletedFloaterItemType {
   title: string;
   description?: string | null;
   completedAt: Date;
-  priority: "Low" | "Medium" | "High";
+  priority: "Lowest" | "Low" | "Medium" | "High";
   daysToComplete: number | null;
   userID?: string | null;
   listID?: string | null;

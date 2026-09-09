@@ -15,7 +15,9 @@ function parseOptionalDate(value: string | Date | null | undefined) {
 }
 
 function normalizePriority(value: string | null | undefined): FloaterItemType["priority"] {
-  if (value === "High" || value === "Medium" || value === "Low") return value;
+  if (value === "High" || value === "Medium" || value === "Low" || value === "Lowest") {
+    return value;
+  }
   return "Low";
 }
 
