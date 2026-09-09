@@ -7,9 +7,14 @@ const MS_IN_DAY = 1000 * 60 * 60 * 24;
 export const isTimelineScope = (scope: TimelineScope) =>
   scope === "all" || scope === "priority" || scope === "scheduled";
 
+// `date` re-expressed as a wall-clock Date in `timeZone` (UTC when omitted),
+// so calendar-field reads (`getHours`, `getFullYear`, …) reflect the user's
+// local day rather than the JS runtime's own timezone.
 export const getTimeZoneDate = (date: Date, timeZone?: string) =>
   new Date(date.toLocaleString("en-US", { timeZone: timeZone || "UTC" }));
 
+// Whole-day offset from today (0 = today, 1 = tomorrow, -1 = yesterday),
+// computed on timezone-local midnights so it is independent of time-of-day.
 export const getDayDiff = (date: Date, timeZone?: string) => {
   const nowInTimezone = getTimeZoneDate(new Date(), timeZone);
   const dateInTimezone = getTimeZoneDate(date, timeZone);
@@ -28,6 +33,8 @@ export const getDayDiff = (date: Date, timeZone?: string) => {
   return Math.round((dateMidnight.getTime() - todayMidnight.getTime()) / MS_IN_DAY);
 };
 
+// Display label for a timeline item's day: "Today"/"Tomorrow" for the two
+// near days, otherwise a short weekday/month/day string in `locale`.
 export const getDayLabel = ({
   date,
   dayDiff,
@@ -60,6 +67,8 @@ export const getDayLabel = ({
     .trim();
 };
 
+// Sort rank for a day-diff group: Earlier first, then Today, Tomorrow, then
+// every later date — the same ordering `compareTimelineItems` sorts within.
 const getTimelinePriority = (dayDiff: number) => {
   if (dayDiff < 0) return -1; // Earlier – above everything
   if (dayDiff === 0) return 0; // Today
@@ -67,6 +76,9 @@ const getTimelinePriority = (dayDiff: number) => {
   return 2; // Future dates
 };
 
+// The default timeline ordering: Earlier, then Today, Tomorrow, then future
+// dates ascending (and Earlier dates descending, i.e. most recent first),
+// falling back to the fixed within-day todo ordering for same-day items.
 export const compareTimelineItems = (a: TimelineItem, b: TimelineItem) => {
   const priorityDelta = getTimelinePriority(a.dayDiff) - getTimelinePriority(b.dayDiff);
   if (priorityDelta !== 0) {
@@ -90,6 +102,9 @@ export const compareTimelineItems = (a: TimelineItem, b: TimelineItem) => {
   return compareTodosWithinDay(a.todo, b.todo);
 };
 
+// The standalone Overdue screen's ordering: today's own still-pending tasks
+// lead, then the genuinely overdue days, each group internally ordered by
+// `compareTimelineItems`.
 export const compareOverdueTimelineItems = (a: TimelineItem, b: TimelineItem) => {
   const aIsToday = a.dayDiff === 0;
   const bIsToday = b.dayDiff === 0;
@@ -101,6 +116,7 @@ export const compareOverdueTimelineItems = (a: TimelineItem, b: TimelineItem) =>
   return compareTimelineItems(a, b);
 };
 
+// Whether a todo's priority counts toward the Priority screen/scope.
 export const isPriorityTask = (priority: string | null | undefined) => {
   const normalized = (priority || "").trim().toLowerCase();
   return normalized === "medium" ||
@@ -109,4 +125,7 @@ export const isPriorityTask = (priority: string | null | undefined) => {
     normalized === "urgent";
 };
 
+// The standalone Overdue screen's own definition: due strictly before now
+// (a timestamp comparison) — see `useTodayEarlierBucket`'s doc comment for
+// how this differs from Today's own day-boundary "Earlier" bucket.
 export const isOverdueTask = (due: Date) => due < new Date();

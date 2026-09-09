@@ -74,10 +74,10 @@ export function useTimelineSections({
     // effect's condition. Worse, the day it targets is usually empty at rest
     // and only becomes findable when the drag conjures its bucket.
     if (!timeline || !focusedDateKey || focusedTaskId || dragActive) {
-      return;
+      return undefined;
     }
     const sectionKey = findSectionKeyForDayKey(timelineSections, focusedDateKey, timeZone);
-    if (!sectionKey) return;
+    if (!sectionKey) return undefined;
 
     const frame = window.requestAnimationFrame(() => {
       document

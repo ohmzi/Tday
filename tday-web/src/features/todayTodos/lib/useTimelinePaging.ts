@@ -4,6 +4,10 @@ import type { TimelineItem, TimelineSection } from "../component/AllTasksTimelin
 
 const PAGE_SIZE = 10;
 
+// Groups the already-sorted, already-paged `TimelineItem`s into consecutive
+// same-day sections — Today/Overdue's own lightweight day-grouping, distinct
+// from the richer `buildTimelineSections` used by the native All/Priority/
+// Scheduled timeline (see `useTimelineSections`).
 const toSections = (items: TimelineItem[]): TimelineSection[] => {
   const sections: TimelineSection[] = [];
 
@@ -115,7 +119,7 @@ export function useTimelinePaging({
 
   useEffect(() => {
     if (!hasMore || !sentinelRef.current) {
-      return;
+      return undefined;
     }
 
     const observer = new IntersectionObserver(

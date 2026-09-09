@@ -78,7 +78,7 @@ export default function OverdueDaySections({
           </div>
           <TodoGroup
             todos={section.todos}
-            overdue={true}
+            overdue
             highlightedTodoId={focusedTaskId}
             showOverdueTag={false}
             className="border-b border-border/60 pb-1"
