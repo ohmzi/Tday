@@ -5317,8 +5317,17 @@ private func buildSections(
         // today's Afternoon. Split on the actual calendar date first.
         let datedItems = items.filter { $0.due != nil }
         let todayItems = datedItems.filter { ($0.due ?? startOfToday) >= startOfToday }
-        let earlierItems = datedItems.filter { ($0.due ?? startOfToday) < startOfToday }
-            .sorted(by: todoTimelineSortPrecedes)
+        // Oldest overdue day first, matching `.list`/`.priority`/`.all`'s own
+        // Earlier section: a flat sort by `todoTimelineSortPrecedes` alone
+        // would put every pinned overdue task at the top regardless of how
+        // overdue it is (pinned outranks due date there), so group by day
+        // first and only let that comparator order tasks within a day.
+        let earlierByDate = Dictionary(
+            grouping: datedItems.filter { ($0.due ?? startOfToday) < startOfToday }.sorted(by: todoTimelineSortPrecedes)
+        ) { item in
+            calendar.startOfDay(for: item.due ?? startOfToday)
+        }
+        let earlierItems = earlierByDate.keys.sorted().flatMap { earlierByDate[$0] ?? [] }
         let grouped = Dictionary(grouping: todayItems) { item -> String in
             let hour = calendar.component(.hour, from: item.due ?? .distantFuture)
             if hour < 12 { return "Morning" }
