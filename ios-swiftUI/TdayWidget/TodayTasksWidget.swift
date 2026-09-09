@@ -1225,14 +1225,14 @@ private struct TdayTasksWidgetContent: View {
 
         let hasOverflow = overflowCount > 0
 
-        // spacing 0: the inter-row gap is recreated by rowDivider's own vertical padding,
-        // so the separator lives INSIDE the existing gap and adds no height — the row-fit
-        // count (3 medium / 9 large) stays exactly the same as without dividers.
+        // spacing 0: the inter-row gap is a plain fixed-height spacer sized to
+        // metrics.rowSpacing, so removing the visible separator line costs no height —
+        // the row-fit count (3 medium / 9 large) stays exactly the same as with dividers.
         return VStack(alignment: .leading, spacing: 0) {
             ForEach(Array(visibleRows.enumerated()), id: \.element.id) { index, row in
                 taskRow(row)
                 if index < visibleRows.count - 1 || hasOverflow {
-                    rowDivider
+                    rowGap
                 }
             }
             if hasOverflow {
@@ -1242,23 +1242,13 @@ private struct TdayTasksWidgetContent: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
-    /// Native Notes-widget-style separator between rows. It sits within the existing
-    /// inter-row gap (vertical padding = (rowSpacing − lineHeight) / 2 on each side), so
-    /// introducing it costs no extra height and never pushes a task out of the widget.
-    private var rowDivider: some View {
-        let lineHeight: CGFloat = 0.75
-        return Rectangle()
-            .fill(dividerColor)
+    /// Inter-row spacing with no visible separator line. Fixed-height so it always
+    /// consumes exactly metrics.rowSpacing, matching the row-fit math the old divider
+    /// (whose vertical padding summed to the same rowSpacing total) relied on.
+    private var rowGap: some View {
+        Color.clear
             .frame(maxWidth: .infinity)
-            .frame(height: lineHeight)
-            .padding(.vertical, max(0, (metrics.rowSpacing - lineHeight) / 2))
-    }
-
-    private var dividerColor: Color {
-        guard renderingMode == .fullColor else {
-            return Color.primary.opacity(0.12)
-        }
-        return Color.primary.opacity(colorScheme == .dark ? 0.17 : 0.12)
+            .frame(height: metrics.rowSpacing)
     }
 
     private func rowUnitCost(_ row: WidgetTaskRowModel) -> Int {
