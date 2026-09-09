@@ -6,6 +6,14 @@ import kotlin.test.assertEquals
 
 class TaskSortEngineTest {
 
+    companion object {
+        /** The `Lowest` wire priority value. */
+        private const val LOWEST = "Lowest"
+
+        /** A task id spelled the same as the priority, used only in the Lowest-tier tests. */
+        private const val LOWEST_ID = "lowest"
+    }
+
     private fun task(
         id: String,
         pinned: Boolean = false,
@@ -99,10 +107,15 @@ class TaskSortEngineTest {
     }
 
     @Test
-    fun priorityRankOrdersHighFirst() {
+    fun priorityRankOrdersHighFirstThenLowestLast() {
         assertEquals(0, TaskSortEngine.priorityRank(Priority.High))
         assertEquals(1, TaskSortEngine.priorityRank(Priority.Medium))
         assertEquals(2, TaskSortEngine.priorityRank(Priority.Low))
+        assertEquals(3, TaskSortEngine.priorityRank(Priority.Lowest))
+        // Genuinely unrecognized input must degrade to Low's rank (2, TaskSortKey.LOW_PRIORITY_RANK
+        // == TaskSortKey.UNKNOWN_PRIORITY_RANK) -- NOT to 3. Unknown input and a real
+        // Lowest-tagged task are different concepts; garbage must never silently outrank a task
+        // someone genuinely tagged Lowest.
         assertEquals(2, TaskSortEngine.priorityRank("nonsense"))
     }
 
@@ -116,9 +129,36 @@ class TaskSortEngineTest {
         for (medium in listOf("Medium", "medium", "important", "IMPORTANT")) {
             assertEquals(1, TaskSortEngine.priorityRank(medium), "medium vocab: '$medium'")
         }
-        for (low in listOf("Low", "low", "normal", "NORMAL", null, "", "weird")) {
-            assertEquals(2, TaskSortEngine.priorityRank(low), "low/default vocab: '$low'")
+        for (low in listOf("Low", "low", "normal", "NORMAL")) {
+            assertEquals(2, TaskSortEngine.priorityRank(low), "low vocab: '$low'")
         }
+        for (lowest in listOf(LOWEST, "lowest", "LOWEST", " lowest ")) {
+            assertEquals(3, TaskSortEngine.priorityRank(lowest), "lowest vocab: '$lowest'")
+        }
+        // Unknown/absent input keeps degrading to Low's rank (2), same as it always has --
+        // never to Lowest's rank (3), even though both spellings share a root word.
+        for (unknown in listOf(null, "", "weird")) {
+            assertEquals(2, TaskSortEngine.priorityRank(unknown), "unknown/default vocab: '$unknown'")
+        }
+    }
+
+    @Test
+    fun floatersSortLowestAfterLow() {
+        val items = listOf(
+            task("low", priority = "Low", updated = 100),
+            task(LOWEST_ID, priority = LOWEST, updated = 100),
+            task("high", priority = "High", updated = 100),
+        )
+        assertEquals(listOf("high", "low", LOWEST_ID), floaterIds(items))
+    }
+
+    @Test
+    fun unrecognizedPriorityNeverOutranksARealLowestTask() {
+        // The exact failure mode the contract calls out: garbage input must keep sorting like
+        // Low (Normal), not silently drop below a task someone genuinely tagged Lowest.
+        val garbage = task("garbage", priority = "not-a-real-priority", updated = 100)
+        val lowest = task(LOWEST_ID, priority = LOWEST, updated = 100)
+        assertEquals(listOf("garbage", LOWEST_ID), floaterIds(listOf(garbage, lowest)))
     }
 
     @Test
