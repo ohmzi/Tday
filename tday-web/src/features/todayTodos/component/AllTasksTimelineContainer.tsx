@@ -296,8 +296,14 @@ const AllTasksTimelineContainer = ({
   }, [timelineItems, scope]);
 
   // Today screen: Morning (<12) / Afternoon (12–18) / Tonight (≥18), matching native.
+  // All three buckets stay visible (even empty ones) as long as the day holds at
+  // least one task, so they read as live drop targets alongside the others. But
+  // when the whole day is empty, `scopeFilteredItems` is already the same
+  // dayDiff===0 set `hasScopedTasks` checks below — so this returns no buckets in
+  // lockstep with `showEmpty`, letting the empty-state illustration own the
+  // screen instead of three headerless buckets sitting above it.
   const todayBuckets = useMemo(() => {
-    if (scope !== "today") return [];
+    if (scope !== "today" || scopeFilteredItems.length === 0) return [];
     const groups: Record<"Morning" | "Afternoon" | "Tonight", TodoItemType[]> = {
       Morning: [],
       Afternoon: [],
@@ -621,9 +627,11 @@ const AllTasksTimelineContainer = ({
               </section>
             ))}
 
-          {/* The three time buckets are drop targets, so they stand empty on a
-              quiet day — but under a search that found nothing they would read as
-              three results, so they go with the tasks. */}
+          {/* The three time buckets are drop targets, so they stay visible (even
+              empty ones) as long as the day holds at least one task — but under a
+              search that found nothing they would read as three results, so they
+              go with the tasks. On a genuinely empty day `todayBuckets` is `[]`
+              (see the note above it), so nothing renders here at all. */}
           {scope === "today" && !showNoResults && (
             <TodayBucketDndContext timeZone={userTZ?.timeZone}>
               {todayBuckets.map((bucket, index) => (
@@ -648,10 +656,12 @@ const AllTasksTimelineContainer = ({
             </TodayBucketDndContext>
           )}
 
-          {/* Native-style centered empty message — for Today it sits below the
-              Morning/Afternoon/Tonight headers; for other scopes it's the only body.
-              Day Done: "finished everything" earns a calm payoff state instead of
-              the generic no-tasks message. */}
+          {/* Native-style centered empty message — for Today, `showEmpty` only
+              fires when the day has zero tasks, the same condition that leaves
+              `todayBuckets` empty, so this never renders below headerless
+              Morning/Afternoon/Tonight sections; for other scopes it's the only
+              body. Day Done: "finished everything" earns a calm payoff state
+              instead of the generic no-tasks message. */}
           {showEmpty && (
             <EmptyState
               // Day Done keeps its own glyph and its date line: it is a payoff,

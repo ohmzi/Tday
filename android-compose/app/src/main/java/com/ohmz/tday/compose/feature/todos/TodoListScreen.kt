@@ -4220,8 +4220,16 @@ private fun buildTimelineSections(
 
     // Morning / Afternoon / Tonight are the shape of the day itself rather than a
     // scaffold of dates, and each one is where a quick-add lands, so Today keeps
-    // all three whether or not they hold anything.
-    if (mode == TodoListMode.TODAY) return sections
+    // all three whether or not they hold anything -- but only once the day has
+    // something in it somewhere. With the whole day empty there is nothing left
+    // to shape, and the three headers would float above the empty-state scene
+    // with nothing under any of them; that case defers to the same "no sections
+    // at all" rule every other scope already gets below. Checked on the built
+    // sections rather than the raw `items` so this stays correct regardless of
+    // whatever `buildTodaySections` itself filters out before bucketing.
+    if (mode == TodoListMode.TODAY) {
+        return if (sections.any { section -> section.items.isNotEmpty() }) sections else emptyList()
+    }
 
     // The one rule for every other scope, Earlier and "Rest of <month>" included:
     // a section earns its header by holding tasks, or by being somewhere the task
