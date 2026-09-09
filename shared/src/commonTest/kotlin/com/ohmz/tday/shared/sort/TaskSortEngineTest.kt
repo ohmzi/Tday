@@ -6,6 +6,10 @@ import kotlin.test.assertEquals
 
 class TaskSortEngineTest {
 
+    companion object {
+        private const val LOWEST = "Lowest"
+    }
+
     private fun task(
         id: String,
         pinned: Boolean = false,
@@ -124,7 +128,7 @@ class TaskSortEngineTest {
         for (low in listOf("Low", "low", "normal", "NORMAL")) {
             assertEquals(2, TaskSortEngine.priorityRank(low), "low vocab: '$low'")
         }
-        for (lowest in listOf("Lowest", "lowest", "LOWEST", " lowest ")) {
+        for (lowest in listOf(LOWEST, "lowest", "LOWEST", " lowest ")) {
             assertEquals(3, TaskSortEngine.priorityRank(lowest), "lowest vocab: '$lowest'")
         }
         // Unknown/absent input keeps degrading to Low's rank (2), same as it always has --
@@ -138,7 +142,7 @@ class TaskSortEngineTest {
     fun floatersSortLowestAfterLow() {
         val items = listOf(
             task("low", priority = "Low", updated = 100),
-            task("lowest", priority = "Lowest", updated = 100),
+            task("lowest", priority = LOWEST, updated = 100),
             task("high", priority = "High", updated = 100),
         )
         assertEquals(listOf("high", "low", "lowest"), floaterIds(items))
@@ -149,7 +153,7 @@ class TaskSortEngineTest {
         // The exact failure mode the contract calls out: garbage input must keep sorting like
         // Low (Normal), not silently drop below a task someone genuinely tagged Lowest.
         val garbage = task("garbage", priority = "not-a-real-priority", updated = 100)
-        val lowest = task("lowest", priority = "Lowest", updated = 100)
+        val lowest = task("lowest", priority = LOWEST, updated = 100)
         assertEquals(listOf("garbage", "lowest"), floaterIds(listOf(garbage, lowest)))
     }
 
