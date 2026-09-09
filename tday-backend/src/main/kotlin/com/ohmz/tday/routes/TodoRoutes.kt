@@ -582,9 +582,10 @@ private fun isPrioritySummaryTask(priority: String?): Boolean {
 
 private fun priorityWeight(priority: String?): Int {
     return when (priority?.trim()?.lowercase(Locale.ROOT)) {
-        "urgent", "important", "high" -> 3
-        "medium" -> 2
-        "low" -> 1
+        "urgent", "important", "high" -> 4
+        "medium" -> 3
+        "low" -> 2
+        "lowest" -> 1
         else -> 0
     }
 }
