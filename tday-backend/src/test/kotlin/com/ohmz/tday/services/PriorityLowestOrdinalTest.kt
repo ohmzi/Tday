@@ -49,7 +49,13 @@ class PriorityLowestOrdinalTest {
     companion object {
         private const val USER_ID = "user_owner_priority_ordinal"
 
-        private lateinit var postgres: PostgreSQLContainer<Nothing>
+        // Nullable backing field + non-null accessor instead of `lateinit`: JUnit5 guarantees
+        // startContainer() (below) runs before any test method, but a plain `lateinit var`
+        // would throw an opaque UninitializedPropertyAccessException if that ordering were
+        // ever violated -- this fails with a clear message instead.
+        private var postgresOrNull: PostgreSQLContainer<Nothing>? = null
+        private val postgres: PostgreSQLContainer<Nothing>
+            get() = checkNotNull(postgresOrNull) { "startContainer() must run before postgres is used" }
 
         @JvmStatic
         @BeforeAll
@@ -59,18 +65,21 @@ class PriorityLowestOrdinalTest {
                 dockerAvailable,
                 "Docker is not available in this environment -- skipping the real-Postgres priority ordinal test",
             )
-            postgres = PostgreSQLContainer<Nothing>(DockerImageName.parse("postgres:16-alpine"))
-            postgres.start()
+            postgresOrNull = PostgreSQLContainer<Nothing>(DockerImageName.parse("postgres:16-alpine")).apply { start() }
         }
 
         @JvmStatic
         @AfterAll
         fun stopContainer() {
-            if (::postgres.isInitialized) postgres.stop()
+            postgresOrNull?.stop()
         }
     }
 
-    private lateinit var db: Database
+    // Same nullable-backing-field pattern as `postgres` above, reassigned twice per setUp()
+    // (see connectAndBootstrapExposedTables()).
+    private var dbOrNull: Database? = null
+    private val db: Database
+        get() = checkNotNull(dbOrNull) { "setUp() must run before db is used" }
     private val push = NoOpPushNotificationService()
     private val cache = CacheServiceImpl()
     private val realtime = RealtimeServiceImpl()
@@ -121,7 +130,7 @@ class PriorityLowestOrdinalTest {
         .migrate()
 
     private fun connectAndBootstrapExposedTables() {
-        db = Database.connect(
+        dbOrNull = Database.connect(
             url = postgres.jdbcUrl,
             driver = "org.postgresql.Driver",
             user = postgres.username,
