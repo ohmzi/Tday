@@ -316,7 +316,7 @@
     <string name="todos_section_morning">上午</string>
     <string name="todos_section_afternoon">下午</string>
     <string name="todos_section_tonight">今晚</string>
-    <string name="todos_section_earlier">更早</string>
+    <string name="todos_section_earlier">逾期</string>
     <string name="todos_section_today">今天</string>
     <string name="todos_section_tomorrow">明天</string>
     <string name="todos_section_rest_of">%1$s 的剩余时间</string>

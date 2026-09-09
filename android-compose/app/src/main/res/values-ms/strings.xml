@@ -316,7 +316,7 @@
     <string name="todos_section_morning">Pagi</string>
     <string name="todos_section_afternoon">Tengah hari</string>
     <string name="todos_section_tonight">Malam ini</string>
-    <string name="todos_section_earlier">Lebih awal</string>
+    <string name="todos_section_earlier">Tertunggak</string>
     <string name="todos_section_today">Hari ini</string>
     <string name="todos_section_tomorrow">Esok</string>
     <string name="todos_section_rest_of">Selebihnya %1$s</string>
