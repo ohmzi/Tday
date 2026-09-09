@@ -1,14 +1,11 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import TodoListLoading from "@/components/todo/component/TodoListLoading";
 import TimelineSections from "@/components/todo/dnd/TimelineSections";
 import TimelineEmptyState from "@/features/todayTodos/component/TimelineEmptyState";
-import { buildTimelineSections, hasNonEarlierTimelineTodos } from "@/lib/timeline/buildTimelineSections";
-import { useEarlierExpandHandoff } from "@/features/todayTodos/lib/useEarlierExpandHandoff";
-import {
-  TODAY_EARLIER_EXIT_MS,
-  shouldShowTodayEmptyIllustration,
-} from "@/features/todayTodos/lib/todayEarlierIllustration";
+import { useListSearch } from "../lib/useListSearch";
+import { useListEarlierSection } from "../lib/useListEarlierSection";
+import { useListEmptyState } from "../lib/useListEmptyState";
 import { useCompleteListTodo } from "../query/complete-list-todo";
 import { useDeleteListTodo } from "../query/delete-list-todo";
 import { usePrioritizeListTodo } from "../query/prioritize-list-todo";
@@ -24,8 +21,6 @@ import NativePageHeader, { useNativePageBarSlots } from "@/components/app/Native
 import MobileSearchHeader from "@/components/ui/MobileSearchHeader";
 import ScreenWatermark from "@/components/app/ScreenWatermark";
 import EmptyState from "@/components/app/EmptyState";
-import { taskJustCompleted } from "@/lib/task-completion-signal";
-import { useCelebrateEmptyTransition } from "@/hooks/use-celebrate-empty-transition";
 import { getListIcon } from "@/lib/listIcons";
 import { listColorAccentColors, nativeScreenAccentColors } from "@/components/app/nativeScreenTheme";
 import ListFormSheet from "@/components/Sidebar/List/ListFormSheet";
@@ -37,7 +32,6 @@ import { Button } from "@/components/ui/button";
 import { useLocale } from "@/lib/navigation";
 import { useUserTimezone } from "@/features/user/query/get-timezone";
 import { Pencil, Search, Users } from "lucide-react";
-import { flattenNotesToPlainText } from "@/lib/richNotes";
 
 const ListContainer = ({ id }: { id: string }) => {
     const locale = useLocale();
@@ -49,108 +43,41 @@ const ListContainer = ({ id }: { id: string }) => {
     const [searchQuery, setSearchQuery] = useState("");
     const [editListOpen, setEditListOpen] = useState(false);
     const [membersOpen, setMembersOpen] = useState(false);
-    // Earlier empty-state parity with Today/All/Priority/Scheduled: the same
-    // hand-off state machine (`useEarlierExpandHandoff`'s own doc comment),
-    // not a fresh `useState(false)` — a custom list's own Earlier bucket
-    // (`buildTimelineSections`'s `kind: "earlier"` below) is exactly the same
-    // display-time subset of `listTodos` those screens already read, so the
-    // requirement-3 sequencing is the same interaction reused, not a new one.
-    const {
-        expanded: earlierExpanded,
-        handoffPending: earlierHandoffPending,
-        toggle: toggleEarlierExpanded,
-    } = useEarlierExpandHandoff(TODAY_EARLIER_EXIT_MS);
     // Empty date buckets are drop targets and nothing else, so they exist only
     // for the length of a drag.
     const [dragActive, setDragActive] = useState(false);
 
-    const filteredTodos = useMemo(() => {
-        const query = searchQuery.trim().toLowerCase();
-        if (!query) return listTodos;
-        return listTodos.filter((todo) => {
-            const title = todo.title.toLowerCase();
-            const description = flattenNotesToPlainText(todo.description).toLowerCase();
-            return title.includes(query) || description.includes(query);
+    const { filteredTodos, isSearching } = useListSearch({ listTodos, searchQuery });
+
+    // Earlier empty-state parity with Today/All/Priority/Scheduled: this
+    // list's own Earlier bucket (`buildTimelineSections`'s `kind: "earlier"`)
+    // is exactly the same display-time subset of `listTodos` those screens
+    // already read — see `useListEarlierSection`'s own doc comment for the
+    // two Earlier/current readings it hands back and why they stay separate.
+    const { timelineSections, hasEarlierItems, hasNonEarlierListTodos, hasNonEarlierRawListTodos } =
+        useListEarlierSection({
+            listTodos,
+            filteredTodos,
+            locale,
+            timeZone: userTZ?.timeZone,
+            todayLabel: appDict("today"),
+            tomorrowLabel: appDict("tomorrow"),
+            dragActive,
         });
-    }, [listTodos, searchQuery]);
 
-    const timelineSections = useMemo(
-        () =>
-            buildTimelineSections({
-                todos: filteredTodos,
-                locale,
-                timeZone: userTZ?.timeZone,
-                futureOnly: false,
-                placesEarlierBeforeToday: true,
-                includeEmptyDropTargets: dragActive,
-                todayLabel: appDict("today"),
-                tomorrowLabel: appDict("tomorrow"),
-            }),
-        [appDict, dragActive, filteredTodos, locale, userTZ?.timeZone],
-    );
-
-    // The same "earlier" bucket `TimelineSections` renders below — reusing
-    // `buildTimelineSections`'s own classification rather than a second
-    // dayKey comparison (see `useTimelineEmptyState`'s doc comment on the All/
-    // Priority/Scheduled screens for why that reuse matters). Every other
-    // dated todo `buildTimelineSections` places is "current" by construction,
-    // whether or not this list opened with a due date on every row.
-    const earlierSection = useMemo(
-        () => timelineSections.find((section) => section.kind === "earlier") ?? null,
-        [timelineSections],
-    );
-    const hasEarlierItems = Boolean(earlierSection && earlierSection.todos.length > 0);
-    const nonEarlierTodoCount = filteredTodos.length - (earlierSection?.todos.length ?? 0);
-    const hasNonEarlierListTodos = nonEarlierTodoCount > 0;
-    // Search-independent twin of `hasNonEarlierListTodos` above, built from
-    // the RAW `listTodos` rather than `filteredTodos` — see
-    // `hasNonEarlierTimelineTodos`'s own doc comment for why
-    // `useCelebrateEmptyTransition` specifically needs this instead of the
-    // search-filtered signal every other derivation above legitimately uses.
-    const hasNonEarlierRawListTodos = useMemo(
-        () =>
-            hasNonEarlierTimelineTodos({
-                todos: listTodos,
-                locale,
-                timeZone: userTZ?.timeZone,
-                futureOnly: false,
-                placesEarlierBeforeToday: true,
-                includeEmptyDropTargets: false,
-                todayLabel: appDict("today"),
-                tomorrowLabel: appDict("tomorrow"),
-            }),
-        [appDict, listTodos, locale, userTZ?.timeZone],
-    );
-    // Remote sibling of `taskJustCompleted()` below — fires for a completion
-    // on another device or by a collaborator, not just this tab's own tap.
-    // Requirement 4: watches the non-Earlier count, so finishing every
-    // current task still celebrates however many overdue tasks Earlier still
-    // holds. Fed the raw signal, not `hasNonEarlierListTodos`: this ref-based
-    // watcher has no notion of *why* its input changed, so a search query
-    // must not be able to fake (or swallow) the empty transition it watches
-    // for.
-    const remoteEmptied = useCelebrateEmptyTransition(!hasNonEarlierRawListTodos);
-
-    const isSearching = Boolean(searchQuery.trim());
-    // Requirement 1, generalized from Today: zero non-Earlier tasks, not
-    // loading, not mid-search — a list with only overdue tasks left still
-    // earns the "all done" illustration, same as All/Priority/Scheduled.
-    const showEmpty = !listTodosLoading && !isSearching && !hasNonEarlierListTodos;
-    // Finishing the list is a payoff, not an absence: the confetti is for the
-    // tick that emptied it, not for a list that was already empty. Hoisted so
-    // the illustration/Earlier hand-off below reads the exact same signal —
-    // see `shouldShowTodayEmptyIllustration`.
-    const celebrate = taskJustCompleted() || remoteEmptied;
-    // Requirements 1-3: who owns the empty-state slot once `showEmpty` is
-    // true — the exact function Today/All/Priority/Scheduled call, reused
-    // rather than a parallel List-only decision.
-    const showEmptyIllustration = shouldShowTodayEmptyIllustration({
-        showEmpty,
-        hasEarlierItems,
-        earlierExpanded,
-        earlierHandoffPending,
-        celebrate,
-    });
+    // Requirements 1-4's empty/celebration/hand-off decisions, plus the same
+    // hand-off state machine (`useEarlierExpandHandoff`'s own doc comment)
+    // Today/All/Priority/Scheduled use — see `useListEmptyState`'s own doc
+    // comment for why the two Earlier/current readings above must stay fed to
+    // exactly the parameters they are here.
+    const { earlierExpanded, earlierHandoffPending, toggleEarlierExpanded, celebrate, showEmptyIllustration } =
+        useListEmptyState({
+            listTodosLoading,
+            isSearching,
+            hasEarlierItems,
+            hasNonEarlierListTodos,
+            hasNonEarlierRawListTodos,
+        });
     // This page keeps its search field as the pinned bar, so the header below
     // renders only the block that scrolls away and docks its title into it —
     // the same split the floater list uses.
