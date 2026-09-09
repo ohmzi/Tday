@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { CalendarClock, CheckCheck, Clock3, Flag, Layers, Search, Sun } from "lucide-react";
+import { CalendarClock, Clock3, Flag, Layers, Search, Sun } from "lucide-react";
 import { isSameDay } from "date-fns";
 import { useCompletedTodo } from "@/features/completed/query/get-completedTodo";
 import NativePageHeader, { useNativePageBarSlots } from "@/components/app/NativePageHeader";
@@ -16,7 +16,9 @@ import TodoListLoading from "@/components/todo/component/TodoListLoading";
 import TodoGroup from "@/components/todo/component/TodoGroup";
 import TimelineSections from "@/components/todo/dnd/TimelineSections";
 import TodayEarlierSection from "./TodayEarlierSection";
+import TimelineEmptyState from "./TimelineEmptyState";
 import { useEarlierExpandHandoff } from "../lib/useEarlierExpandHandoff";
+import { useTodayEarlierBucket } from "../lib/useTodayEarlierBucket";
 import {
   TODAY_EARLIER_EXIT_MS,
   shouldShowTodayEmptyIllustration,
@@ -64,11 +66,7 @@ import {
 const PAGE_SIZE = 10;
 const MS_IN_DAY = 1000 * 60 * 60 * 24;
 
-// Stable identity so the memo below doesn't hand back a fresh empty array on
-// every render for scopes other than Today.
-const NO_EARLIER_TODOS: TodoItemType[] = [];
-
-type TimelineItem = {
+export type TimelineItem = {
   todo: TodoItemType;
   dayDiff: number;
   dayKey: string;
@@ -82,7 +80,7 @@ type TimelineSection = {
   todos: TodoItemType[];
 };
 
-type TimelineScope = "today" | "scheduled" | "all" | "priority" | "overdue";
+export type TimelineScope = "today" | "scheduled" | "all" | "priority" | "overdue";
 
 // Scopes that render the native date-bucketed timeline with drag-and-drop.
 const isTimelineScope = (scope: TimelineScope) =>
@@ -357,40 +355,20 @@ const AllTasksTimelineContainer = ({
     });
   }, [appDict, dragActive, locale, scope, timeline, timelineItems, userTZ?.timeZone]);
 
-  // Today's own "Earlier" bucket (requirement 2): reuses the exact same
-  // section-building code path All/Priority/Scheduled already use for their
-  // own Earlier bucket (`buildTimelineSections`'s `kind: "earlier"`, built
-  // from `dayKey < todayKey`) rather than a fresh definition of "overdue" —
-  // which also keeps it disjoint from Today's own `dayDiff === 0` set below,
-  // so a task due earlier today (already past its time, but still *today*)
-  // is never duplicated between the two. This day-boundary rule is NOT the
-  // same set the standalone Overdue screen shows: that screen's `scope ===
-  // "overdue"` branch below filters on `isOverdueTask` (`due < now`), a
-  // timestamp comparison, so a task due earlier today but still pending is
-  // Overdue there while staying out of this Earlier bucket on purpose. The
-  // only thing shared with every other scope (Overdue included) is the raw
-  // `timelineItems` array itself, sourced from the same `useTodoTimeline()`
-  // query — no separate fetch, just a different filter applied downstream.
-  const todayEarlierSection = useMemo(() => {
-    if (scope !== "today") return null;
-    const sections = buildTimelineSections({
-      todos: timelineItems.map((item) => item.todo),
-      locale,
-      timeZone: userTZ?.timeZone,
-      futureOnly: false,
-      placesEarlierBeforeToday: true,
-      includeEmptyDropTargets: false,
-      todayLabel: appDict("today"),
-      tomorrowLabel: appDict("tomorrow"),
-    });
-    return sections.find((section) => section.kind === "earlier") ?? null;
-  }, [appDict, locale, scope, timelineItems, userTZ?.timeZone]);
-
-  const earlierItems = todayEarlierSection?.todos ?? NO_EARLIER_TODOS;
-  // NOT folded into `scopeFilteredItems`/`hasScopedTasks` below — see
-  // `shouldShowTodayEmptyIllustration`'s own doc comment for why that
-  // separation is exactly what keeps requirement 1 intact.
-  const todayHasEarlierItems = scope === "today" && earlierItems.length > 0;
+  // Today's own "Earlier" bucket (requirement 2), plus its deep-link
+  // auto-expand behavior — see `useTodayEarlierBucket`'s own doc comment for
+  // why it reuses `buildTimelineSections` instead of a fresh "overdue"
+  // definition, and how that set differs from the standalone Overdue
+  // screen's `isOverdueTask` filter below.
+  const { earlierItems, todayHasEarlierItems } = useTodayEarlierBucket({
+    scope,
+    timelineItems,
+    locale,
+    timeZone: userTZ?.timeZone,
+    appDict,
+    focusedTaskId,
+    setEarlierExpandedImmediately,
+  });
 
   const focusedDateIndex = useMemo(
     () =>
@@ -463,6 +441,10 @@ const AllTasksTimelineContainer = ({
   // A search that turns nothing up is a different state from an empty scope:
   // the scope may be full, this word just is not in it.
   const showNoResults = !todoLoading && !hasScopedTasks && isSearching;
+  // Today-only chrome that a search-with-no-results state stands down
+  // together: the week summary, the three time-of-day buckets, and Earlier's
+  // own header all share this exact gate below.
+  const showTodayScope = scope === "today" && !showNoResults;
   const { completedTodos } = useCompletedTodo();
   const completedTodayCount = useMemo(
     () =>
@@ -516,15 +498,8 @@ const AllTasksTimelineContainer = ({
     }
   }, [focusedTaskId, setEarlierExpandedImmediately, timeline, timelineSections]);
 
-  // Same, for Today's own Earlier: a deep-linked/focused overdue task should
-  // not sit hidden behind a collapsed header. Immediate (no hand-off beat) —
-  // there is no illustration to sequence against on a direct navigation.
-  useEffect(() => {
-    if (scope !== "today" || !focusedTaskId) return;
-    if (earlierItems.some((todo) => todo.id === focusedTaskId)) {
-      setEarlierExpandedImmediately(true);
-    }
-  }, [earlierItems, focusedTaskId, scope, setEarlierExpandedImmediately]);
+  // Today's own Earlier's equivalent deep-link auto-expand lives inside
+  // `useTodayEarlierBucket` above, right alongside the data it reads.
 
   useEffect(() => {
     if (!hasMore || !sentinelRef.current) {
@@ -633,7 +608,7 @@ const AllTasksTimelineContainer = ({
           {/* Stood down while a query finds nothing: a week-summary card sitting
               above "no matching tasks" reads as a result. Same reason the three
               time-of-day drop targets are suppressed below. */}
-          {scope === "today" && !showNoResults && <WeekInReviewCard />}
+          {showTodayScope && <WeekInReviewCard />}
 
           {todoLoading && <TodoListLoading heading={pageHeading} />}
 
@@ -718,7 +693,7 @@ const AllTasksTimelineContainer = ({
               search that found nothing they would read as three results, so they
               go with the tasks. On a genuinely empty day `todayBuckets` is `[]`
               (see the note above it), so nothing renders here at all. */}
-          {scope === "today" && !showNoResults && (
+          {showTodayScope && (
             <TodayBucketDndContext timeZone={userTZ?.timeZone}>
               {todayBuckets.map((bucket, index) => (
                 <TodayBucketDroppable
@@ -755,32 +730,17 @@ const AllTasksTimelineContainer = ({
               only ever carries the exit animation while `earlierHandoffPending`
               is genuinely true (i.e. only for Today), so it is inert elsewhere. */}
           {showEmptyIllustration && (
-            <div
-              className={cn(earlierHandoffPending && "tday-empty-exit")}
-              style={
-                earlierHandoffPending
-                  ? { animationDuration: `${TODAY_EARLIER_EXIT_MS}ms` }
-                  : undefined
-              }
-            >
-              <EmptyState
-                // Day Done keeps its own glyph and its date line: it is a payoff,
-                // not an absence, and the scope's own icon would undersell it.
-                icon={isDayDone ? CheckCheck : ScopeIcon}
-                accentColor={timelineScopeAccentColors[scope]}
-                title={isDayDone ? appDict("allDoneToday") : appDict(emptyTitle)}
-                description={
-                  isDayDone
-                    ? new Intl.DateTimeFormat(locale, {
-                        weekday: "long",
-                        day: "numeric",
-                        month: "long",
-                      }).format(new Date())
-                    : appDict(emptyBody)
-                }
-                celebrate={celebrate}
-              />
-            </div>
+            <TimelineEmptyState
+              icon={ScopeIcon}
+              accentColor={timelineScopeAccentColors[scope]}
+              isDayDone={isDayDone}
+              celebrate={celebrate}
+              earlierHandoffPending={earlierHandoffPending}
+              locale={locale}
+              emptyTitle={emptyTitle}
+              emptyBody={emptyBody}
+              appDict={appDict}
+            />
           )}
 
           {/* Today's own "Earlier" bucket (requirement 2), always reachable at
@@ -789,10 +749,10 @@ const AllTasksTimelineContainer = ({
               Today still has pending tasks, is empty with the illustration
               showing, or is empty with Earlier already expanded (in which case
               its rows are what fills that slot — see the illustration block
-              above). `!showNoResults` mirrors the gate already used for the
+              above). `showTodayScope` mirrors the gate already used for the
               time-of-day buckets above: a search with no results goes with the
               tasks, not with this. */}
-          {scope === "today" && !showNoResults && todayHasEarlierItems && (
+          {showTodayScope && todayHasEarlierItems && (
             <TodayEarlierSection
               todos={earlierItems}
               expanded={earlierExpanded && !earlierHandoffPending}

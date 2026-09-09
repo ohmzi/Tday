@@ -20,7 +20,7 @@ describe("useEarlierExpandHandoff", () => {
     expect(result.current.handoffPending).toBe(false);
   });
 
-  it("toggle(false) — no illustration to hand off from — expands immediately, never sets handoffPending", async () => {
+  it("toggle(false) — no illustration to hand off from — expands immediately, never sets handoffPending", () => {
     const { result } = renderHook(() => useEarlierExpandHandoff(EXIT_MS));
 
     act(() => {
@@ -135,7 +135,7 @@ describe("useEarlierExpandHandoff", () => {
     expect(result.current.handoffPending).toBe(false);
   });
 
-  it("setExpandedImmediately(false) also clears a pending hand-off (collapse-while-exiting path)", async () => {
+  it("setExpandedImmediately(false) also clears a pending hand-off (collapse-while-exiting path)", () => {
     const { result } = renderHook(() => useEarlierExpandHandoff(EXIT_MS));
 
     act(() => {
