@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { CalendarClock, Clock3, Flag, Layers, Search, Sun } from "lucide-react";
 import { isSameDay } from "date-fns";
@@ -13,27 +13,18 @@ import { timelineScopeAccentColors } from "@/components/app/nativeScreenTheme";
 import SummaryButton from "@/features/summary/SummaryButton";
 import WeekInReviewCard from "@/features/summary/WeekInReviewCard";
 import TodoListLoading from "@/components/todo/component/TodoListLoading";
-import TodoGroup from "@/components/todo/component/TodoGroup";
 import TimelineSections from "@/components/todo/dnd/TimelineSections";
 import TodayEarlierSection from "./TodayEarlierSection";
 import TimelineEmptyState from "./TimelineEmptyState";
+import OverdueDaySections from "./OverdueDaySections";
+import TodayTimeBuckets from "./TodayTimeBuckets";
 import { useEarlierExpandHandoff } from "../lib/useEarlierExpandHandoff";
 import { useTodayEarlierBucket } from "../lib/useTodayEarlierBucket";
+import { useTimelinePaging } from "../lib/useTimelinePaging";
 import {
   TODAY_EARLIER_EXIT_MS,
   shouldShowTodayEmptyIllustration,
 } from "../lib/todayEarlierIllustration";
-import {
-  TODAY_BUCKETS,
-  TodayBucketDndContext,
-  TodayBucketDroppable,
-  DraggableTodayTask,
-} from "@/components/todo/dnd/TodayBucketDnd";
-import {
-  headerToBodyGap,
-  sectionTopGapFilled,
-  sectionTopGapFirst,
-} from "@/components/todo/dnd/timelineDndClasses";
 import TodoMutationProvider from "@/providers/TodoMutationProvider";
 import TaskSelectionProvider from "@/providers/TaskSelectionProvider";
 import BulkSelectButton from "@/components/todo/bulk/BulkSelectButton";
@@ -46,7 +37,6 @@ import { useEditTodo } from "../query/update-todo";
 import { useEditTodoInstance } from "../query/update-todo-instance";
 import { useReorderTodo } from "../query/reorder-todo";
 import { useUserTimezone } from "@/features/user/query/get-timezone";
-import { cn } from "@/lib/utils";
 import { flattenNotesToPlainText } from "@/lib/richNotes";
 import { useLocale } from "@/lib/navigation";
 import { useSearchParams } from "react-router-dom";
@@ -63,7 +53,6 @@ import {
   isTodoFocusDateKey,
 } from "@/lib/todoToastNavigation";
 
-const PAGE_SIZE = 10;
 const MS_IN_DAY = 1000 * 60 * 60 * 24;
 
 export type TimelineItem = {
@@ -73,7 +62,7 @@ export type TimelineItem = {
   label: string;
 };
 
-type TimelineSection = {
+export type TimelineSection = {
   key: string;
   label: string;
   dayDiff: number;
@@ -180,27 +169,6 @@ const compareOverdueTimelineItems = (a: TimelineItem, b: TimelineItem) => {
   return compareTimelineItems(a, b);
 };
 
-const toSections = (items: TimelineItem[]) => {
-  const sections: TimelineSection[] = [];
-
-  for (const item of items) {
-    const currentSection = sections[sections.length - 1];
-    if (!currentSection || currentSection.key !== item.dayKey) {
-      sections.push({
-        key: item.dayKey,
-        label: item.label,
-        dayDiff: item.dayDiff,
-        todos: [item.todo],
-      });
-      continue;
-    }
-
-    currentSection.todos.push(item.todo);
-  }
-
-  return sections;
-};
-
 const isPriorityTask = (priority: string | null | undefined) => {
   const normalized = (priority || "").trim().toLowerCase();
   return normalized === "medium" ||
@@ -224,6 +192,14 @@ const SCOPE_CONFIG: Record<
   priority: { icon: Flag, heading: "priority", emptyTitle: "priorityEmpty", emptyBody: "priorityEmptyBody" },
 };
 
+// Today/Priority headings are locale keys (translated); the rest are already
+// the display string in `SCOPE_CONFIG`.
+const getPageHeading = (
+  scope: TimelineScope,
+  scopeHeading: string,
+  appDict: (key: string) => string,
+) => (scope === "today" || scope === "priority" ? appDict(scopeHeading) : scopeHeading);
+
 const AllTasksTimelineContainer = ({
   scope = "today",
 }: {
@@ -237,7 +213,6 @@ const AllTasksTimelineContainer = ({
 
   const timeline = isTimelineScope(scope);
 
-  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   // Generalizes the plain `useState(false)` this used to be: All/Priority/
   // Scheduled call `toggle(false)` below and get the exact same immediate
   // flip they always had; only Today's own Earlier passes a real
@@ -253,9 +228,8 @@ const AllTasksTimelineContainer = ({
   // the length of a drag.
   const [dragActive, setDragActive] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const sentinelRef = useRef<HTMLDivElement | null>(null);
   const { icon: ScopeIcon, emptyTitle, emptyBody, heading: scopeHeading } = SCOPE_CONFIG[scope];
-  const pageHeading = scope === "today" || scope === "priority" ? appDict(scopeHeading) : scopeHeading;
+  const pageHeading = getPageHeading(scope, scopeHeading, appDict);
   const barSlots = useNativePageBarSlots();
   const focusedTaskId = searchParams.get(TODO_FOCUS_TASK_QUERY_PARAM);
   const focusedDateKey = useMemo(() => {
@@ -370,37 +344,14 @@ const AllTasksTimelineContainer = ({
     setEarlierExpandedImmediately,
   });
 
-  const focusedDateIndex = useMemo(
-    () =>
-      focusedDateKey
-        ? scopeFilteredItems.findIndex((item) => item.dayKey === focusedDateKey)
-        : -1,
-    [focusedDateKey, scopeFilteredItems],
-  );
-  const focusedTaskIndex = useMemo(
-    () =>
-      focusedTaskId
-        ? scopeFilteredItems.findIndex((item) => item.todo.id === focusedTaskId)
-        : -1,
-    [focusedTaskId, scopeFilteredItems],
-  );
   // ----- today / overdue paging + grouping (unchanged) -----
-  const visibleTimelineItems = useMemo(
-    () => scopeFilteredItems.slice(0, visibleCount),
-    [scopeFilteredItems, visibleCount],
-  );
-  const sections = useMemo(
-    () => toSections(visibleTimelineItems),
-    [visibleTimelineItems],
-  );
-  const earlierSections = useMemo(
-    () => sections.filter((s) => s.dayDiff < 0),
-    [sections],
-  );
-  const regularSections = useMemo(
-    () => sections.filter((s) => s.dayDiff >= 0),
-    [sections],
-  );
+  const { visibleTimelineItems, earlierSections, regularSections, hasMore, sentinelRef } =
+    useTimelinePaging({
+      scopeFilteredItems,
+      timeline,
+      focusedDateKey,
+      focusedTaskId,
+    });
   const hasScopedTasks = useMemo(() => {
     if (scope === "today") {
       return scopeFilteredItems.some((item) => item.dayDiff === 0);
@@ -427,7 +378,6 @@ const AllTasksTimelineContainer = ({
     [timeline, timelineSections, visibleTimelineItems],
   );
 
-  const hasMore = !timeline && visibleCount < scopeFilteredItems.length;
   const isSearching = Boolean(searchQuery.trim());
   // Render the date buckets only when this scope actually has tasks; an empty
   // scope shows the native-style centered empty message instead.
@@ -472,23 +422,6 @@ const AllTasksTimelineContainer = ({
     celebrate,
   });
 
-  useEffect(() => {
-    setVisibleCount(PAGE_SIZE);
-  }, [scopeFilteredItems.length]);
-
-  useEffect(() => {
-    if (timeline) return;
-    const targetIndex = focusedTaskIndex >= 0 ? focusedTaskIndex : focusedDateIndex;
-    if (targetIndex < 0 || targetIndex < visibleCount) {
-      return;
-    }
-
-    setVisibleCount((prev) => {
-      const nextCount = Math.ceil((targetIndex + 1) / PAGE_SIZE) * PAGE_SIZE;
-      return Math.min(Math.max(prev, nextCount), scopeFilteredItems.length);
-    });
-  }, [focusedDateIndex, focusedTaskIndex, scopeFilteredItems.length, timeline, visibleCount]);
-
   // Expand Earlier when the focused task lives in the past (timeline scopes).
   useEffect(() => {
     if (!timeline || !focusedTaskId) return;
@@ -499,34 +432,9 @@ const AllTasksTimelineContainer = ({
   }, [focusedTaskId, setEarlierExpandedImmediately, timeline, timelineSections]);
 
   // Today's own Earlier's equivalent deep-link auto-expand lives inside
-  // `useTodayEarlierBucket` above, right alongside the data it reads.
-
-  useEffect(() => {
-    if (!hasMore || !sentinelRef.current) {
-      return;
-    }
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const [entry] = entries;
-        if (!entry?.isIntersecting) {
-          return;
-        }
-        setVisibleCount((prev) =>
-          Math.min(prev + PAGE_SIZE, scopeFilteredItems.length),
-        );
-      },
-      {
-        root: null,
-        rootMargin: "200px 0px",
-      },
-    );
-
-    observer.observe(sentinelRef.current);
-    return () => {
-      observer.disconnect();
-    };
-  }, [scopeFilteredItems.length, hasMore]);
+  // `useTodayEarlierBucket` above, right alongside the data it reads. The
+  // paging reset, the focus-driven page expansion, and the infinite-scroll
+  // IntersectionObserver all live inside `useTimelinePaging` above too.
 
   // Scroll a focused date into view within the timeline (the bucket may be an
   // aggregate Earlier / Rest / month section).
@@ -630,63 +538,14 @@ const AllTasksTimelineContainer = ({
             />
           )}
 
-          {scope === "overdue" &&
-            regularSections.map((section) => (
-              <section
-                id={getTodoDateSectionId(section.key)}
-                key={section.key}
-                className={cn(
-                  "scroll-mt-24",
-                  section.dayDiff === 0 ? sectionTopGapFirst : sectionTopGapFilled,
-                )}
-              >
-                <div className={cn(headerToBodyGap, "flex items-center gap-2")}>
-                  <h3
-                    className={cn(
-                      "select-none text-2xl font-black tracking-tight",
-                      focusedDateKey === section.key ? "text-accent" : "text-muted-foreground",
-                    )}
-                  >
-                    {section.label}
-                  </h3>
-                </div>
-                <TodoGroup
-                  todos={section.todos}
-                  overdue={section.dayDiff < 0}
-                  perTaskOverdue={section.dayDiff === 0}
-                  highlightedTodoId={focusedTaskId}
-                  showOverdueTag={false}
-                  className="border-b border-border/60 pb-1"
-                />
-              </section>
-            ))}
-
-          {scope === "overdue" &&
-            earlierSections.map((section) => (
-              <section
-                id={getTodoDateSectionId(section.key)}
-                key={section.key}
-                className={cn("scroll-mt-24", sectionTopGapFilled)}
-              >
-                <div className={cn(headerToBodyGap, "flex items-center gap-2")}>
-                  <h3
-                    className={cn(
-                      "select-none text-2xl font-black tracking-tight",
-                      focusedDateKey === section.key ? "text-accent" : "text-muted-foreground",
-                    )}
-                  >
-                    {section.label}
-                  </h3>
-                </div>
-                <TodoGroup
-                  todos={section.todos}
-                  overdue={true}
-                  highlightedTodoId={focusedTaskId}
-                  showOverdueTag={false}
-                  className="border-b border-border/60 pb-1"
-                />
-              </section>
-            ))}
+          {scope === "overdue" && (
+            <OverdueDaySections
+              regularSections={regularSections}
+              earlierSections={earlierSections}
+              focusedDateKey={focusedDateKey}
+              focusedTaskId={focusedTaskId}
+            />
+          )}
 
           {/* The three time buckets are drop targets, so they stay visible (even
               empty ones) as long as the day holds at least one task — but under a
@@ -694,27 +553,11 @@ const AllTasksTimelineContainer = ({
               go with the tasks. On a genuinely empty day `todayBuckets` is `[]`
               (see the note above it), so nothing renders here at all. */}
           {showTodayScope && (
-            <TodayBucketDndContext timeZone={userTZ?.timeZone}>
-              {todayBuckets.map((bucket, index) => (
-                <TodayBucketDroppable
-                  key={bucket.label}
-                  bucket={bucket.label}
-                  targetHour={
-                    TODAY_BUCKETS.find((b) => b.label === bucket.label)?.targetHour ?? 9
-                  }
-                  isFirst={index === 0}
-                >
-                  {bucket.todos.map((todo) => (
-                    <DraggableTodayTask
-                      key={todo.id}
-                      todo={todo}
-                      currentBucket={bucket.label}
-                      highlighted={focusedTaskId === todo.id}
-                    />
-                  ))}
-                </TodayBucketDroppable>
-              ))}
-            </TodayBucketDndContext>
+            <TodayTimeBuckets
+              todayBuckets={todayBuckets}
+              timeZone={userTZ?.timeZone}
+              focusedTaskId={focusedTaskId}
+            />
           )}
 
           {/* Native-style centered empty message — for Today, `showEmpty` only
