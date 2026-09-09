@@ -316,7 +316,7 @@
     <string name="todos_section_morning">Manhã</string>
     <string name="todos_section_afternoon">Tarde</string>
     <string name="todos_section_tonight">Hoje à noite</string>
-    <string name="todos_section_earlier">Mais cedo</string>
+    <string name="todos_section_earlier">Atrasadas</string>
     <string name="todos_section_today">Hoje</string>
     <string name="todos_section_tomorrow">Amanhã</string>
     <string name="todos_section_rest_of">Restante de %1$s</string>

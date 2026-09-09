@@ -316,7 +316,7 @@
     <string name="todos_section_morning">Vormittag</string>
     <string name="todos_section_afternoon">Nachmittag</string>
     <string name="todos_section_tonight">Heute Abend</string>
-    <string name="todos_section_earlier">Früher</string>
+    <string name="todos_section_earlier">Überfällig</string>
     <string name="todos_section_today">Heute</string>
     <string name="todos_section_tomorrow">Morgen</string>
     <string name="todos_section_rest_of">Rest von %1$s</string>
