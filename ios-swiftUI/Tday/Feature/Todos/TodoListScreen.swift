@@ -473,6 +473,28 @@ struct TodoListScreen: View {
     @State private var dropTargetFrames: [String: TodoDropTargetFrame] = [:]
     @State private var pendingRescheduleDrop: TodoRescheduleDrop?
     @State private var collapsedSectionIDs: Set<String>
+    /// Req. 3's hand-off flag — see `toggleTodayEarlierSection`. Held true for
+    /// the width of the illustration/Earlier hand-off in either direction so
+    /// `showsEmptyStateIllustration` cannot flip mid-transition. Both branches
+    /// clear it back to `false` once their hand-off completes — the expand
+    /// branch as soon as `isTodayEarlierExpanded` has taken over masking the
+    /// illustration, so this flag is never left stuck true once Earlier is no
+    /// longer around to hand back to (e.g. its last row clears without the
+    /// header being tapped again).
+    @State private var suppressEmptyStateForEarlierHandoff = false
+    /// Set alongside the above only on Earlier's *collapse* path: the Day
+    /// Done haptic/sound (see the `TdayEmptyState` call site) is a payoff for
+    /// a completion, and this reappearance is Earlier folding shut again,
+    /// not one.
+    @State private var suppressDayDoneFeedbackOnReturn = false
+    /// Guards `toggleTodayEarlierSection` against a second tap landing mid
+    /// hand-off, the way `completionPhases[todo.id] == nil` guards a row
+    /// against a second completion tap: without it, a fast double-tap on
+    /// Earlier's header while the first tap's delayed continuation is still
+    /// pending would queue a second one that fires after the first, flips
+    /// `collapsedSectionIDs` right back, and leaves Earlier the opposite of
+    /// what the second tap actually asked for.
+    @State private var todayEarlierHandoffInFlight = false
     @State private var timelineScrollOffset: CGFloat = 0
     @State private var headerScroll = RootFeedHeaderScrollState()
     @State private var rootDockCollapsed = false
@@ -542,7 +564,7 @@ struct TodoListScreen: View {
         self.onOpenCompleted = onOpenCompleted
         self.summaryAvailable = summaryAvailable
         _viewModel = State(initialValue: TodoListViewModel(container: container, mode: mode, listId: listId, listName: listName))
-        _collapsedSectionIDs = State(initialValue: mode == .priority || mode == .all || mode == .list ? ["earlier"] : [])
+        _collapsedSectionIDs = State(initialValue: mode == .today || mode == .priority || mode == .all || mode == .list ? ["earlier"] : [])
     }
 
     /// An empty date bucket is scaffolding, not content: at rest a list holding
@@ -800,6 +822,47 @@ struct TodoListScreen: View {
         )
     }
 
+    /// The condition behind both the "all done" illustration and its
+    /// confetti (`celebratesEmptyState`): nothing left *pending*. For every
+    /// mode but Today that is just "no items at all" — `viewModel.items` is
+    /// already exactly what the screen renders. Today is the one screen that
+    /// can hold overdue tasks (the collapsed Earlier section) alongside
+    /// nothing due today itself: `viewModel.items` includes those overdue
+    /// tasks (see `TodoRepository.buildTodos`'s `.today` case) so Earlier can
+    /// render them, but they are still on screen, just tucked away — they
+    /// must not keep either the illustration or its confetti from firing.
+    /// Reads `groupedSections` rather than re-deriving the day/earlier split,
+    /// so this always agrees with what `buildSections`'s `.today` case
+    /// actually rendered.
+    private var hasNoPendingItems: Bool {
+        guard viewModel.mode == .today else { return viewModel.items.isEmpty }
+        return !groupedSections.contains { $0.id != "earlier" && !$0.items.isEmpty }
+    }
+
+    /// Today's Earlier, expanded and holding rows. While true the illustration
+    /// stands down even if `hasNoPendingItems` is true — Earlier's own rows
+    /// are the content in that case, not an absence — see
+    /// `showsEmptyStateIllustration` and req. 3's coexistence rule.
+    private var isTodayEarlierExpanded: Bool {
+        guard viewModel.mode == .today,
+              let section = groupedSections.first(where: { $0.id == "earlier" }),
+              !section.items.isEmpty else {
+            return false
+        }
+        return !isTimelineSectionCollapsed(section)
+    }
+
+    /// `hasNoPendingItems`, gated by the two things specific to sharing the
+    /// screen with Today's Earlier: hidden while Earlier is open (its rows
+    /// are the content), and held back mid hand-off by
+    /// `toggleTodayEarlierSection` so it never moves on the same frame as
+    /// Earlier's own expand/collapse. Every other mode has neither an
+    /// Earlier to share the screen with nor a reason to suppress, so this is
+    /// just `hasNoPendingItems` there.
+    private var showsEmptyStateIllustration: Bool {
+        hasNoPendingItems && !isTodayEarlierExpanded && !suppressEmptyStateForEarlierHandoff
+    }
+
     /// Whether the empty state about to be shown is the end of a finished list
     /// rather than a list that was never filled. Deleting the last task, or
     /// opening an empty list, gets the plain arrival; ticking the last one off
@@ -816,8 +879,15 @@ struct TodoListScreen: View {
     ///
     /// The window is wider than the burst's own flight, so a redraw mid-flight
     /// cannot cut the paper off in mid-air.
+    ///
+    /// Gated on `hasNoPendingItems`, not `viewModel.items.isEmpty`: on Today,
+    /// completing the very last pending task while Earlier still holds
+    /// overdue tasks leaves `viewModel.items` non-empty, and this is req. 1
+    /// and req. 2's shared root cause — a confetti gate keyed to "everything
+    /// gone" is exactly as wrong as an illustration gate keyed to it, for the
+    /// same reason, so both read this one condition.
     private var celebratesEmptyState: Bool {
-        guard viewModel.items.isEmpty else { return false }
+        guard hasNoPendingItems else { return false }
         let window = TodoListScreen.completionCelebrationWindow
         if let completedAt = viewModel.lastCompletionAt,
            Date().timeIntervalSince(completedAt) < window {
@@ -832,6 +902,22 @@ struct TodoListScreen: View {
     }
 
     private static let completionCelebrationWindow: TimeInterval = 4
+
+    /// Timing for req. 3's illustration/Earlier hand-off — see
+    /// `toggleTodayEarlierSection`. Not shared with `EmptyStateEnter`
+    /// (`TdayEmptyState.swift`): that one times a scene arriving over a row
+    /// the user just cleared, a bigger, slower hand-off than this one, which
+    /// times a small illustration getting out of the way of a section header
+    /// a few points below it.
+    private enum TodayEarlierIllustrationHandoff {
+        static let exitDuration: Double = 0.22
+        /// The section toggle's own spring (`response: 0.28,
+        /// dampingFraction: 0.9`) reads as settled slightly past its
+        /// response time; this is that spring's practical settle time, not
+        /// its response value.
+        static let collapseSettleDuration: Double = 0.34
+        static let enterDuration: Double = 0.3
+    }
 
     private var emptyStateAssetName: String {
         emptyTimelineBadgeAssetName(
@@ -1501,10 +1587,13 @@ struct TodoListScreen: View {
                         // A live query answers for itself in the feed, so the
                         // screen's own "nothing here" line stands down rather
                         // than talking over the no-results state.
-                        if viewModel.items.isEmpty, !viewModel.isLoading, !isFloaterTaskHomeScreen, !isSearchingList {
+                        if showsEmptyStateIllustration, !viewModel.isLoading, !isFloaterTaskHomeScreen, !isSearchingList {
                             // Day Done: "finished everything" is a payoff, not an
                             // absence, so it keeps its own glyph and its date line
                             // rather than the screen's — which would undersell it.
+                            // Correct even with overdue tasks still tucked away in
+                            // a collapsed Earlier: nothing *pending* is what "done"
+                            // means here (`hasNoPendingItems`), not nothing at all.
                             if viewModel.mode == .today, viewModel.completedTodayCount > 0 {
                                 TdayEmptyState(
                                     assetName: "LucideCheckCheck",
@@ -1513,7 +1602,18 @@ struct TodoListScreen: View {
                                     description: context.date.formatted(.dateTime.weekday(.wide).day().month(.wide)),
                                     celebrate: celebratesEmptyState
                                 )
-                                .onAppear { HapticManager.taskCompleted(); SoundManager.taskCompleted() }
+                                .onAppear {
+                                    // Earlier folding shut hands the illustration
+                                    // back too (see `toggleTodayEarlierSection`),
+                                    // and that return is not a fresh completion —
+                                    // it must not replay the payoff each time.
+                                    guard !suppressDayDoneFeedbackOnReturn else {
+                                        suppressDayDoneFeedbackOnReturn = false
+                                        return
+                                    }
+                                    HapticManager.taskCompleted()
+                                    SoundManager.taskCompleted()
+                                }
                             } else {
                                 TdayEmptyState(
                                     assetName: emptyStateAssetName,
@@ -3246,6 +3346,9 @@ struct TodoListScreen: View {
         if viewModel.mode == .list {
             return section.id == "earlier" && section.isCollapsible
         }
+        if viewModel.mode == .today {
+            return section.id == "earlier" && section.isCollapsible
+        }
         return viewModel.mode == .priority && section.isCollapsible
     }
 
@@ -3254,12 +3357,86 @@ struct TodoListScreen: View {
     }
 
     private func toggleTimelineSection(_ section: TodoTimelineSection) {
-        let id = section.id
+        // Today's Earlier needs one extra beat over every other section's plain
+        // toggle whenever the "all done" illustration shares the screen with
+        // it — see `toggleTodayEarlierSection`.
+        if viewModel.mode == .today, section.id == "earlier" {
+            toggleTodayEarlierSection(section)
+            return
+        }
+        applyTimelineSectionCollapse(section.id)
+    }
+
+    private func applyTimelineSectionCollapse(_ id: String) {
         withAnimation(.spring(response: 0.28, dampingFraction: 0.9)) {
             if collapsedSectionIDs.contains(id) {
                 collapsedSectionIDs.remove(id)
             } else {
                 collapsedSectionIDs.insert(id)
+            }
+        }
+    }
+
+    /// Req. 3's choreography: while the "all done" illustration is up because
+    /// Today has nothing pending but Earlier is still holding overdue tasks
+    /// (`hasNoPendingItems`), Earlier's own expand/collapse must never move on
+    /// the same frames as the illustration's arrival/departure — the exact
+    /// lesson the floater home's empty-state celebration fix (PR #122,
+    /// Android: "smooth the floater home's empty-state celebration" /
+    /// "let the floater celebration land on a settled feed") settled: don't
+    /// let a celebratory burst or scene coexist visually with something else
+    /// still moving. There it was the feed settling before the burst; here
+    /// it's the illustration exiting before Earlier's rows expand, and
+    /// Earlier settling before the illustration returns.
+    ///
+    /// Outside that specific overlap (nothing pending is showing, or the user
+    /// is mid-search so nothing is collapsed to begin with) this is exactly
+    /// `applyTimelineSectionCollapse` — one spring, no hand-off needed because
+    /// there is nothing sharing the frame with it.
+    private func toggleTodayEarlierSection(_ section: TodoTimelineSection) {
+        guard hasNoPendingItems, !isSearchingList else {
+            applyTimelineSectionCollapse(section.id)
+            return
+        }
+        // A second tap mid hand-off is ignored rather than queued — see
+        // `todayEarlierHandoffInFlight`'s doc comment.
+        guard !todayEarlierHandoffInFlight else { return }
+        let isExpanding = collapsedSectionIDs.contains(section.id)
+        todayEarlierHandoffInFlight = true
+        if isExpanding {
+            // The illustration exits under its own animation first; Earlier's
+            // rows only start expanding once that has had the frame to itself.
+            withAnimation(.easeIn(duration: TodayEarlierIllustrationHandoff.exitDuration)) {
+                suppressEmptyStateForEarlierHandoff = true
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + TodayEarlierIllustrationHandoff.exitDuration) {
+                applyTimelineSectionCollapse(section.id)
+                // Earlier is expanded now, so `isTodayEarlierExpanded` has taken
+                // over masking the illustration on its own — clear the hand-off
+                // flag rather than leaving it stuck true. Otherwise, clearing the
+                // last row from inside the now-expanded Earlier (without ever
+                // tapping its header again, so the collapse branch below never
+                // runs) would drop "earlier" out of `groupedSections` entirely,
+                // `isTodayEarlierExpanded` would go false with nothing left to
+                // mask, and this flag alone would keep the "all done"
+                // illustration from ever coming back.
+                suppressEmptyStateForEarlierHandoff = false
+                todayEarlierHandoffInFlight = false
+            }
+        } else {
+            // Reverse hand-off: Earlier's own collapse spring settles first,
+            // and only then does the illustration fade back in — never across
+            // the same frames as the rows sliding shut. The onAppear this
+            // triggers is a return, not a fresh payoff, so it skips the Day
+            // Done haptic/sound (see the `TdayEmptyState` call site).
+            suppressEmptyStateForEarlierHandoff = true
+            suppressDayDoneFeedbackOnReturn = true
+            applyTimelineSectionCollapse(section.id)
+            DispatchQueue.main.asyncAfter(deadline: .now() + TodayEarlierIllustrationHandoff.collapseSettleDuration) {
+                withAnimation(.easeOut(duration: TodayEarlierIllustrationHandoff.enterDuration)) {
+                    suppressEmptyStateForEarlierHandoff = false
+                }
+                todayEarlierHandoffInFlight = false
             }
         }
     }
@@ -5145,9 +5322,26 @@ private func buildSections(
     switch mode {
     case .today:
         let startOfToday = calendar.startOfDay(for: Date())
-        let grouped = Dictionary(grouping: items.compactMap { item -> TodoItem? in
-            item.due == nil ? nil : item
-        }) { item -> String in
+        // `items` now carries overdue tasks alongside today's own (see
+        // `TodoRepository.buildTodos`'s `.today` case) so Today can render them
+        // in a collapsed Earlier section — they must NOT fall into the M/A/T
+        // grouping below, which buckets purely by hour-of-day and would
+        // otherwise mis-sort e.g. a task overdue from yesterday 3pm into
+        // today's Afternoon. Split on the actual calendar date first.
+        let datedItems = items.filter { $0.due != nil }
+        let todayItems = datedItems.filter { ($0.due ?? startOfToday) >= startOfToday }
+        // Oldest overdue day first, matching `.list`/`.priority`/`.all`'s own
+        // Earlier section: a flat sort by `todoTimelineSortPrecedes` alone
+        // would put every pinned overdue task at the top regardless of how
+        // overdue it is (pinned outranks due date there), so group by day
+        // first and only let that comparator order tasks within a day.
+        let earlierByDate = Dictionary(
+            grouping: datedItems.filter { ($0.due ?? startOfToday) < startOfToday }.sorted(by: todoTimelineSortPrecedes)
+        ) { item in
+            calendar.startOfDay(for: item.due ?? startOfToday)
+        }
+        let earlierItems = earlierByDate.keys.sorted().flatMap { earlierByDate[$0] ?? [] }
+        let grouped = Dictionary(grouping: todayItems) { item -> String in
             let hour = calendar.component(.hour, from: item.due ?? .distantFuture)
             if hour < 12 { return "Morning" }
             if hour < 18 { return "Afternoon" }
@@ -5166,17 +5360,37 @@ private func buildSections(
                 targetHour: bucketHours[key]
             )
         }
+        let earlierSection = TodoTimelineSection(
+            id: "earlier",
+            title: L("Earlier"),
+            items: earlierItems,
+            isCollapsible: !earlierItems.isEmpty,
+            targetDate: timelineRescheduleTargetDate(sectionId: "earlier", today: startOfToday, calendar: calendar)
+        )
+        let hasTodayItems = todaySections.contains(where: { !$0.items.isEmpty })
         // Morning / Afternoon / Tonight are the shape of the day itself rather
         // than a scaffold of dates, and each one is where a quick-add lands, so
-        // Today keeps all three whenever the day holds anything, even if e.g.
-        // Afternoon happens to be empty. But when the whole day is empty, the
-        // three headers are stray scaffolding above the empty-state
-        // illustration (`viewModel.items.isEmpty` in `watermarkedModeContent`)
-        // — matching every other mode's "no items, no headers" behavior.
-        guard todaySections.contains(where: { !$0.items.isEmpty }) else {
+        // Today keeps all three whenever the day holds anything of its own,
+        // even if e.g. Afternoon happens to be empty. But when there is
+        // nothing due today, the three headers are stray scaffolding — dropped
+        // whether or not Earlier still holds something, matching every other
+        // mode's "no items, no headers" behavior. Earlier itself stays,
+        // collapsed, whenever it holds anything: the "all done for today"
+        // illustration (`hasNoPendingItems` in `watermarkedModeContent`) reads
+        // only the M/A/T buckets, so nothing due today plus a non-empty
+        // Earlier still shows the illustration — with Earlier's own header
+        // sitting alongside it, tappable, for req. 2/3's coexistence.
+        guard hasTodayItems || !earlierItems.isEmpty else {
             return []
         }
-        return todaySections
+        var sections: [TodoTimelineSection] = []
+        if !earlierItems.isEmpty {
+            sections.append(earlierSection)
+        }
+        if hasTodayItems {
+            sections.append(contentsOf: todaySections)
+        }
+        return sections
     case .overdue:
         let now = Date()
         let startOfToday = calendar.startOfDay(for: now)
