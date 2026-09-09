@@ -378,6 +378,16 @@ internal fun shouldShowTodayEarlierExpandedCelebration(
             celebrateEmptyState
 }
 
+/**
+ * The [TodoSection.key] every mode uses for the overdue/"Earlier" bucket.
+ * Pulled out once the Today-mode Earlier section (and its exit-before-expand
+ * sequencing) started repeating this literal enough in one file to trip
+ * DeepSource's duplicate-string-literal check. `internal` rather than
+ * `private` so [decideSectionHeaderToggleAction]'s own tests can assert
+ * against the real key instead of a second, test-local copy of it.
+ */
+internal const val EARLIER_SECTION_KEY = "earlier"
+
 /** What [TodoListScreen]'s `onTimelineSectionHeaderToggle` does with a tap. */
 internal enum class SectionHeaderToggleAction {
     /** A tap on Earlier's header while the exit-before-expand beat owns it. */
@@ -409,8 +419,8 @@ internal fun decideSectionHeaderToggleAction(
     showTodayEarlierIllustration: Boolean,
     earlierExpandPending: Boolean,
 ): SectionHeaderToggleAction = when {
-    key == "earlier" && earlierExpandPending -> SectionHeaderToggleAction.IGNORE
-    key == "earlier" && wasCollapsed && showTodayEarlierIllustration ->
+    key == EARLIER_SECTION_KEY && earlierExpandPending -> SectionHeaderToggleAction.IGNORE
+    key == EARLIER_SECTION_KEY && wasCollapsed && showTodayEarlierIllustration ->
         SectionHeaderToggleAction.DEFER_EARLIER_EXPAND
 
     else -> SectionHeaderToggleAction.IMMEDIATE_TOGGLE
@@ -954,7 +964,7 @@ fun TodoListScreen( // skipcq: KT-R1006
     var collapsedSectionKeys by rememberSaveable(uiState.mode, uiState.listId, highlightedTodoId) {
         mutableStateOf(
             if (isCollapsibleTimelineMode && highlightedTodoId.isNullOrBlank()) {
-                setOf("earlier")
+                setOf(EARLIER_SECTION_KEY)
             } else {
                 emptySet()
             },
@@ -978,7 +988,7 @@ fun TodoListScreen( // skipcq: KT-R1006
             !uiState.isLoading &&
             !suppressInitialTodayTimeline &&
             !scopedSearchActive &&
-            collapsedSectionKeys.contains("earlier") &&
+            collapsedSectionKeys.contains(EARLIER_SECTION_KEY) &&
             !earlierExpandPending
     // Requirement 1's gap for the case above's mirror: Earlier is already
     // expanded (not collapsed) at the moment the user's own tap -- or a
@@ -998,7 +1008,7 @@ fun TodoListScreen( // skipcq: KT-R1006
         isLoading = uiState.isLoading,
         suppressInitialTodayTimeline = suppressInitialTodayTimeline,
         scopedSearchActive = scopedSearchActive,
-        earlierCollapsed = collapsedSectionKeys.contains("earlier"),
+        earlierCollapsed = collapsedSectionKeys.contains(EARLIER_SECTION_KEY),
         celebrateEmptyState = celebrateEmptyState,
     )
     var flashTodoId by remember(uiState.mode) { mutableStateOf<String?>(null) }
@@ -1303,7 +1313,7 @@ fun TodoListScreen( // skipcq: KT-R1006
             uiState.mode == TodoListMode.LIST ||
             uiState.mode == TodoListMode.TODAY
         ) {
-            collapsedSectionKeys = collapsedSectionKeys + "earlier"
+            collapsedSectionKeys = collapsedSectionKeys + EARLIER_SECTION_KEY
         }
     }
     LaunchedEffect(draggedScheduledTodoId) {
@@ -2790,9 +2800,9 @@ private fun LazyListScope.sectionedTimelineContent( // skipcq: KT-R1006
             TodoListMode.ALL -> true
             TodoListMode.OVERDUE -> true
             TodoListMode.SCHEDULED -> true
-            TodoListMode.PRIORITY -> section.key == "earlier"
-            TodoListMode.LIST -> section.key == "earlier"
-            TodoListMode.TODAY -> section.key == "earlier"
+            TodoListMode.PRIORITY -> section.key == EARLIER_SECTION_KEY
+            TodoListMode.LIST -> section.key == EARLIER_SECTION_KEY
+            TodoListMode.TODAY -> section.key == EARLIER_SECTION_KEY
             else -> false
         }
         val sectionCanCollapse = sectionModeCanCollapse && sectionHasTasks
@@ -2900,7 +2910,7 @@ private fun LazyListScope.sectionedTimelineContent( // skipcq: KT-R1006
 
         if (!isCollapsed && section.items.isNotEmpty()) {
             val showEarlierDateTimeSubtitle =
-                section.key == "earlier" &&
+                section.key == EARLIER_SECTION_KEY &&
                         (
                                 uiState.mode == TodoListMode.ALL ||
                                         uiState.mode == TodoListMode.PRIORITY ||
@@ -2964,7 +2974,7 @@ private fun LazyListScope.sectionedTimelineContent( // skipcq: KT-R1006
                             null
                         },
                         onDemote = if (uiState.mode == TodoListMode.OVERDUE ||
-                            (uiState.mode == TodoListMode.TODAY && section.key == "earlier")
+                            (uiState.mode == TodoListMode.TODAY && section.key == EARLIER_SECTION_KEY)
                         ) {
                             { onDemoteTodo(todo) }
                         } else {
@@ -4556,8 +4566,8 @@ internal fun buildTimelineSections(
     // the "day is empty" illustration cares about pending-today only, and
     // Earlier staying reachable while it shows is requirement 3.
     if (mode == TodoListMode.TODAY) {
-        val timeOfDaySections = sections.filterNot { section -> section.key == "earlier" }
-        val earlierSection = sections.firstOrNull { section -> section.key == "earlier" }
+        val timeOfDaySections = sections.filterNot { section -> section.key == EARLIER_SECTION_KEY }
+        val earlierSection = sections.firstOrNull { section -> section.key == EARLIER_SECTION_KEY }
         val visibleTimeOfDay = if (timeOfDaySections.any { it.items.isNotEmpty() }) {
             timeOfDaySections
         } else {
@@ -4580,7 +4590,7 @@ internal fun buildTimelineSections(
     // would make rescheduling INTO the past possible here and not there.
     return sections.filter { section ->
         section.items.isNotEmpty() ||
-                (isDragActive && section.targetDate != null && section.key != "earlier")
+                (isDragActive && section.targetDate != null && section.key != EARLIER_SECTION_KEY)
     }
 }
 
@@ -4670,14 +4680,14 @@ private fun buildTodaySections(
     // this mode's separately-fetched items instead of a slice of `items`.
     val sortedEarlier = TaskSortEngine.sortedTodos(earlierItems) { it.toTaskSortKey() }
     val earlierSection = TodoSection(
-        key = "earlier",
+        key = EARLIER_SECTION_KEY,
         title = "Earlier",
         items = sortedEarlier,
         quickAddDefaults = quickAddDefaultsForDate(
             date = today.minusDays(1),
             zoneId = zoneId,
         ),
-        targetDate = timelineRescheduleTargetDate("earlier", today),
+        targetDate = timelineRescheduleTargetDate(EARLIER_SECTION_KEY, today),
     )
 
     return listOf(
@@ -4794,14 +4804,14 @@ private fun buildScheduledSections(
         // Handed over whole, empty or not: buildTimelineSections is the single
         // place that decides whether an empty bucket is worth a header.
         TodoSection(
-            key = "earlier",
+            key = EARLIER_SECTION_KEY,
             title = "Earlier",
             items = earlierItems,
             quickAddDefaults = quickAddDefaultsForDate(
                 date = today.minusDays(1),
                 zoneId = zoneId,
             ),
-            targetDate = timelineRescheduleTargetDate("earlier", today),
+            targetDate = timelineRescheduleTargetDate(EARLIER_SECTION_KEY, today),
         )
     } else {
         null
@@ -4891,7 +4901,7 @@ private fun localizedSectionTitle(section: TodoSection): String {
         section.key == "today-morning" -> stringResource(R.string.todos_section_morning)
         section.key == "today-afternoon" -> stringResource(R.string.todos_section_afternoon)
         section.key == "today-tonight" -> stringResource(R.string.todos_section_tonight)
-        section.key == "earlier" -> stringResource(R.string.todos_section_earlier)
+        section.key == EARLIER_SECTION_KEY -> stringResource(R.string.todos_section_earlier)
         section.key.startsWith("day-") -> {
             val zoneId = ZoneId.systemDefault()
             val date = runCatching { LocalDate.parse(section.key.removePrefix("day-")) }.getOrNull()
