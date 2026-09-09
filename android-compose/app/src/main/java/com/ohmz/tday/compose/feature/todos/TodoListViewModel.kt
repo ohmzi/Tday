@@ -48,6 +48,13 @@ data class TodoListUiState(
     val hasHydratedSnapshot: Boolean = false,
     val lists: List<ListSummary> = emptyList(),
     val items: List<TodoItem> = emptyList(),
+    // Today mode only: overdue tasks tucked into the collapsible "Earlier"
+    // section. Deliberately NOT folded into [items] -- [items] stays exactly
+    // "today, pending" so every existing reader (search, share-as-text,
+    // select-all, the empty-state/celebration gate) keeps its current
+    // meaning. See TodoListScreen's `buildTodaySections`/`celebrateEmptyState`
+    // for how this is consumed.
+    val earlierItems: List<TodoItem> = emptyList(),
     // Feeds the Day Done state: completed-today count from the local cache,
     // bumped optimistically on complete so the payoff shows immediately.
     val completedTodayCount: Int = 0,
@@ -68,6 +75,7 @@ data class TodoListUiState(
 
 private data class HydrateSnapshot(
     val todos: List<TodoItem>,
+    val earlierTodos: List<TodoItem>,
     val lists: List<ListSummary>,
     val aiSummaryEnabled: Boolean,
     val aiSummaryConfigured: Boolean,
@@ -284,19 +292,40 @@ class TodoListViewModel @Inject constructor(
             0
         }
 
+    // Today's collapsible "Earlier" section, sourced the same way the
+    // standalone Overdue screen already is -- `fetchTodosSnapshot` is a
+    // synchronous cache read, so this is cheap to recompute alongside every
+    // `items` refresh below. Every other mode has no Earlier bucket of its
+    // own (ALL/PRIORITY/LIST carve theirs out of their own flat `items`
+    // instead), so this stays empty everywhere but Today.
+    private fun earlierItemsFor(mode: TodoListMode): List<TodoItem> =
+        if (mode == TodoListMode.TODAY) {
+            runCatching {
+                todoRepository.fetchTodosSnapshot(mode = TodoListMode.OVERDUE)
+            }.getOrDefault(emptyList())
+        } else {
+            emptyList()
+        }
+
     private fun hydrateFromCache(mode: TodoListMode, listId: String?) {
         runCatching {
             val todos = todoRepository.fetchTodosSnapshot(mode = mode, listId = listId)
+            val earlierTodos = earlierItemsFor(mode)
             val lists = fetchListsSnapshotForMode(mode)
             val aiSummaryEnabled = settingsRepository.isAiSummaryEnabledSnapshot()
             val aiSummaryConfigured = settingsRepository.aiSummaryConfiguredSnapshot()
-            HydrateSnapshot(todos, lists, aiSummaryEnabled, aiSummaryConfigured)
+            HydrateSnapshot(todos, earlierTodos, lists, aiSummaryEnabled, aiSummaryConfigured)
         }.onSuccess { snapshot ->
             _uiState.update { current ->
                 current.copy(
                     hasHydratedSnapshot = true,
                     lists = if (current.lists == snapshot.lists) current.lists else snapshot.lists,
                     items = if (current.items == snapshot.todos) current.items else snapshot.todos,
+                    earlierItems = if (current.earlierItems == snapshot.earlierTodos) {
+                        current.earlierItems
+                    } else {
+                        snapshot.earlierTodos
+                    },
                     completedTodayCount = completedTodayCountFor(mode),
                     aiSummaryEnabled = snapshot.aiSummaryEnabled,
                     aiSummaryConfigured = snapshot.aiSummaryConfigured,
@@ -341,14 +370,20 @@ class TodoListViewModel @Inject constructor(
                         .onFailure { /* fall back to local cache */ }
                 }
                 val todos = todoRepository.fetchTodos(mode = mode, listId = listId)
+                val earlierTodos = earlierItemsFor(mode)
                 val lists = fetchListsForMode(mode)
-                todos to lists
-            }.onSuccess { (todos, lists) ->
+                Triple(todos, earlierTodos, lists)
+            }.onSuccess { (todos, earlierTodos, lists) ->
                 _uiState.update { current ->
                     current.copy(
                         isLoading = false,
                         lists = if (current.lists == lists) current.lists else lists,
                         items = if (current.items == todos) current.items else todos,
+                        earlierItems = if (current.earlierItems == earlierTodos) {
+                            current.earlierItems
+                        } else {
+                            earlierTodos
+                        },
                             completedTodayCount = completedTodayCountFor(mode),
                         errorMessage = null,
                     )
