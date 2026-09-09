@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import TodoListLoading from "@/components/todo/component/TodoListLoading";
 import TimelineSections from "@/components/todo/dnd/TimelineSections";
 import TimelineEmptyState from "@/features/todayTodos/component/TimelineEmptyState";
-import { buildTimelineSections } from "@/lib/timeline/buildTimelineSections";
+import { buildTimelineSections, hasNonEarlierTimelineTodos } from "@/lib/timeline/buildTimelineSections";
 import { useEarlierExpandHandoff } from "@/features/todayTodos/lib/useEarlierExpandHandoff";
 import {
   TODAY_EARLIER_EXIT_MS,
@@ -102,12 +102,34 @@ const ListContainer = ({ id }: { id: string }) => {
     const hasEarlierItems = Boolean(earlierSection && earlierSection.todos.length > 0);
     const nonEarlierTodoCount = filteredTodos.length - (earlierSection?.todos.length ?? 0);
     const hasNonEarlierListTodos = nonEarlierTodoCount > 0;
+    // Search-independent twin of `hasNonEarlierListTodos` above, built from
+    // the RAW `listTodos` rather than `filteredTodos` — see
+    // `hasNonEarlierTimelineTodos`'s own doc comment for why
+    // `useCelebrateEmptyTransition` specifically needs this instead of the
+    // search-filtered signal every other derivation above legitimately uses.
+    const hasNonEarlierRawListTodos = useMemo(
+        () =>
+            hasNonEarlierTimelineTodos({
+                todos: listTodos,
+                locale,
+                timeZone: userTZ?.timeZone,
+                futureOnly: false,
+                placesEarlierBeforeToday: true,
+                includeEmptyDropTargets: false,
+                todayLabel: appDict("today"),
+                tomorrowLabel: appDict("tomorrow"),
+            }),
+        [appDict, listTodos, locale, userTZ?.timeZone],
+    );
     // Remote sibling of `taskJustCompleted()` below — fires for a completion
     // on another device or by a collaborator, not just this tab's own tap.
     // Requirement 4: watches the non-Earlier count, so finishing every
     // current task still celebrates however many overdue tasks Earlier still
-    // holds.
-    const remoteEmptied = useCelebrateEmptyTransition(!hasNonEarlierListTodos);
+    // holds. Fed the raw signal, not `hasNonEarlierListTodos`: this ref-based
+    // watcher has no notion of *why* its input changed, so a search query
+    // must not be able to fake (or swallow) the empty transition it watches
+    // for.
+    const remoteEmptied = useCelebrateEmptyTransition(!hasNonEarlierRawListTodos);
 
     const isSearching = Boolean(searchQuery.trim());
     // Requirement 1, generalized from Today: zero non-Earlier tasks, not
