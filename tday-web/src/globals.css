@@ -630,6 +630,24 @@
   to { opacity: 1; transform: none; }
 }
 
+/* The exit mirror of `.tday-empty-enter`, played only for Today's "Earlier"
+   hand-off (requirement 3 of the Earlier section): the caller sets
+   `animation-duration` inline from `TODAY_EARLIER_EXIT_MS`
+   (`todayEarlierIllustration.ts`) — the SAME constant that gates the delay
+   before Earlier's rows are told to appear — so the visual exit and that
+   hand-off are one number, read twice, not two independently tuned to look
+   close together. */
+.tday-empty-exit {
+  animation-name: tday-empty-sink;
+  animation-timing-function: cubic-bezier(0.3, 0, 0.4, 1);
+  animation-fill-mode: both;
+}
+
+@keyframes tday-empty-sink {
+  from { opacity: 1; transform: none; }
+  to { opacity: 0; transform: translateY(-14px) scale(0.94); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   /* Held at the top of the twinkle rather than switched off, so the scene still
      looks deliberate rather than half-drawn. */
@@ -637,6 +655,10 @@
   .tday-empty-sparkle { animation: none; opacity: 1; }
   /* Drawn where it lands, with no trip to get there. */
   .tday-empty-enter { animation: none; }
+  /* Held fully visible rather than switched off mid-air — the hand-off's own
+     timer (not this animation) is what actually gates Earlier's rows, so
+     disabling the animation changes nothing about when they appear. */
+  .tday-empty-exit { animation: none; }
 }
 
 /* ── Route change ──
