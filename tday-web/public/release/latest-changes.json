@@ -1,11 +1,11 @@
 {
-  "version": "0.7.16",
-  "publishedAt": "2026-09-09T11:37:26-04:00",
+  "version": "0.7.17",
+  "publishedAt": "2026-09-09T13:59:53-04:00",
   "notes": [
-    "Hide Today section headers when the day is empty",
-    "Hide today's empty time-of-day headers when the day is empty",
-    "Fix stale timeline comments after empty-bucket change"
+    "Show Today's Earlier tasks and fix its empty-state gate",
+    "Extract duplicated Earlier section-key literals to constants",
+    "Show confetti when completing Today with Earlier expanded"
   ],
-  "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v0.7.16",
-  "compareUrl": "https://github.com/ohmzi/Tday/compare/v0.7.15..v0.7.16"
+  "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v0.7.17",
+  "compareUrl": "https://github.com/ohmzi/Tday/compare/v0.7.16..v0.7.17"
 }
