@@ -1,7 +1,11 @@
 package com.ohmz.tday.compose.ui.theme
 
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import com.ohmz.tday.compose.ui.priority.isImportantPriority
+import com.ohmz.tday.compose.ui.priority.isLowestPriority
 import com.ohmz.tday.compose.ui.priority.isUrgentPriority
 import java.util.Locale
 
@@ -15,6 +19,14 @@ const val TDAY_DEFAULT_LIST_COLOR_KEY = "PINK"
 val TdayPriorityHigh = Color(0xFFFF3B30)
 val TdayPriorityMedium = Color(0xFFFF9500)
 val TdayPriorityLow = Color(0xFF6FBF86) // green for normal priority (matches iOS)
+
+// #8E8E93 light / #98989D dark — the exact values already shipped on iOS
+// (`tdayPriorityLowest`/`tdayPriorityLowestDark`) and in this app's own widget
+// colors.xml/values-night addition, for cross-platform numeric parity. Unlike
+// High/Medium/Low above, the Lowest tier needs an explicit dark-mode swap (see
+// [tdayPriorityColor]) rather than a single value shared by both themes.
+val TdayPriorityLowest = Color(0xFF8E8E93)
+val TdayPriorityLowestDark = Color(0xFF98989D)
 val TdayFloaterAccent = Color(0xFF4D8F83)
 val TdayTodoModeTodayAccent = Color(0xFF5C9FE7)
 val TdayTodoModeOverdueAccent = Color(0xFFDA7661)
@@ -57,10 +69,15 @@ val TdayListColorOptions = listOf(
 
 private val TdayListColorMap = TdayListColorOptions.associate { it.key to it.color }
 
+@Composable
 fun tdayPriorityColor(priority: String): Color {
     return when {
         isUrgentPriority(priority) -> TdayPriorityHigh
         isImportantPriority(priority) -> TdayPriorityMedium
+        isLowestPriority(priority) -> {
+            val isDarkTheme = MaterialTheme.colorScheme.background.luminance() < 0.5f
+            if (isDarkTheme) TdayPriorityLowestDark else TdayPriorityLowest
+        }
         else -> TdayPriorityLow
     }
 }

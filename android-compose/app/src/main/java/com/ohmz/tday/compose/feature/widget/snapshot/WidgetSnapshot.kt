@@ -9,9 +9,9 @@ internal const val LIST_TASKS_WIDGET_TASK_LIMIT = 50
 @Serializable
 internal enum class WidgetSnapshotStatus { SETUP, EMPTY, TASKS }
 
-/** The three priority buckets a widget row can render (see `taskWidgetPriorityRingResource`). */
+/** The four priority buckets a widget row can render (see `taskWidgetPriorityRingResource`). */
 @Serializable
-internal enum class WidgetPriorityRing { HIGH, MEDIUM, LOW }
+internal enum class WidgetPriorityRing { HIGH, MEDIUM, LOW, LOWEST }
 
 /**
  * Which shape a per-list widget instance renders in — chosen once, at configuration time, by

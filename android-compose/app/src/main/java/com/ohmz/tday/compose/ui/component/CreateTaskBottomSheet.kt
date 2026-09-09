@@ -94,9 +94,7 @@ import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
 import com.ohmz.tday.compose.feature.guide.GuideHelpLink
-import com.ohmz.tday.compose.ui.priority.PRIORITY_IMPORTANT_VALUE
-import com.ohmz.tday.compose.ui.priority.PRIORITY_NORMAL_VALUE
-import com.ohmz.tday.compose.ui.priority.PRIORITY_URGENT_VALUE
+import com.ohmz.tday.compose.ui.priority.PRIORITY_OPTIONS_LOW_TO_HIGH
 import com.ohmz.tday.compose.ui.priority.canonicalPriorityValue
 import com.ohmz.tday.compose.ui.priority.priorityDisplayLabelRes
 import com.ohmz.tday.compose.ui.theme.TdayTaskCompleteAccent
@@ -294,13 +292,8 @@ fun CreateTaskBottomSheet(
     var sheetVisible by remember { mutableStateOf(presentImmediately) }
 
     val noListLabel = stringResource(R.string.create_task_no_list)
-    val priorityOptions =
-        remember { listOf(PRIORITY_NORMAL_VALUE, PRIORITY_IMPORTANT_VALUE, PRIORITY_URGENT_VALUE) }
-    val priorityLabels = mapOf(
-        PRIORITY_NORMAL_VALUE to stringResource(priorityDisplayLabelRes(PRIORITY_NORMAL_VALUE)),
-        PRIORITY_IMPORTANT_VALUE to stringResource(priorityDisplayLabelRes(PRIORITY_IMPORTANT_VALUE)),
-        PRIORITY_URGENT_VALUE to stringResource(priorityDisplayLabelRes(PRIORITY_URGENT_VALUE)),
-    )
+    val priorityOptions = remember { PRIORITY_OPTIONS_LOW_TO_HIGH }
+    val priorityLabels = priorityOptions.associateWith { stringResource(priorityDisplayLabelRes(it)) }
     val repeatLabels = mapOf(
         RepeatPreset.NONE to stringResource(RepeatPreset.NONE.labelRes),
         RepeatPreset.DAILY to stringResource(RepeatPreset.DAILY.labelRes),
@@ -1122,7 +1115,7 @@ private fun <T> SheetDropdownRow(
     value: String,
     options: List<T>,
     optionLabel: (T) -> String,
-    optionSwatchColor: (T) -> Color,
+    optionSwatchColor: @Composable (T) -> Color,
     isSelected: (T) -> Boolean,
     onOptionSelected: (T) -> Unit,
     valueLeading: (@Composable () -> Unit)? = null,
