@@ -72,18 +72,20 @@ func mergeCompletedRecordsWithPendingOverrides(
     return mergedRecords
 }
 
+/// Unlike `mergeCompletedRecordsWithPendingOverrides` (the Todo-side twin, which stays
+/// list-delete-pending-sensitive on purpose — that bug is explicitly out of scope, see
+/// `docs/design/completed-floaters-durability.md`), this has no `pendingDeletedListIds`
+/// filter. `FloaterListRepository.stageDeleteList`/`.deleteList` no longer prune
+/// `completedFloaters` locally, so a remote completed-floater row for a list with a
+/// pending (or staged/undoable) delete is exactly what the local cache already has —
+/// filtering it here would re-introduce the same transient loss the pruning removal was
+/// for, for the length of the delete's staging/replay window.
 func mergeCompletedFloaterRecordsWithPendingOverrides(
     localRecords: [CachedCompletedFloaterRecord],
     remoteRecords: [CachedCompletedFloaterRecord],
-    pendingFloaterTargets: Set<String>,
-    pendingDeletedListIds: Set<String> = []
+    pendingFloaterTargets: Set<String>
 ) -> [CachedCompletedFloaterRecord] {
-    var mergedRecords = remoteRecords.filter { record in
-        guard let listId = record.listId else {
-            return true
-        }
-        return !pendingDeletedListIds.contains(listId)
-    }
+    var mergedRecords = remoteRecords
 
     for canonicalID in pendingFloaterTargets {
         let localRecordsForFloater = localRecords.filter { $0.originalFloaterId == canonicalID }
@@ -432,8 +434,7 @@ final class SyncManager {
         let mergedCompletedFloaters = mergeCompletedFloaterRecordsWithPendingOverrides(
             localRecords: localState.completedFloaters,
             remoteRecords: remote.completedFloaters.map(completedFloaterToCache),
-            pendingFloaterTargets: pendingFloaterTargets,
-            pendingDeletedListIds: pendingDeletedFloaterListIds
+            pendingFloaterTargets: pendingFloaterTargets
         )
 
         let todoCountsByList = Dictionary(grouping: mergedTodos.filter { !$0.completed }, by: { $0.listId })

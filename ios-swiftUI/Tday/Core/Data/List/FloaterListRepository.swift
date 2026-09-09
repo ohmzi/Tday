@@ -1,9 +1,11 @@
 import Foundation
 
-/// Snapshot of everything `stageDeleteList(listId:)` pruned from the local
-/// cache — the floater list, its floaters, completed history for those
-/// floaters, and any pending mutations — so `undoStagedList(_:)` can restore
-/// the exact pre-delete state.
+/// Local cache records removed by `stageDeleteList(listId:)`, retained so an
+/// Undo within the delete-toast window can restore the exact pre-delete state
+/// (the list plus its cascaded floaters). Nothing here has been sent to the
+/// server. `completedFloaters` is always empty — completed floaters are no
+/// longer pruned on list delete (they outlive the list; see `deleteList`) —
+/// but the field stays so `undoStagedList(_:)` needs no special-casing.
 struct StagedFloaterListDeletion {
     let floaterLists: [CachedFloaterListRecord]
     let floaters: [CachedFloaterRecord]
@@ -238,15 +240,18 @@ final class FloaterListRepository {
         }
     }
 
-    /// First half of a delayed-commit delete: prunes the floater list, its
-    /// floaters, their completed history, and related pending mutations from
-    /// the local cache. Nothing is sent to the server here — the real
-    /// DELETE_FLOATER_LIST mutation is added by the commit step — but a
-    /// non-replayable *staged* marker of the same kind is written in its
-    /// place so a sync's merge (a pull-to-refresh racing the undo window)
-    /// still treats the list as deleted instead of writing it back from the
-    /// server response; see `PendingMutationRecord.staged` and SyncManager's
-    /// replay/merge handling of it. Commit later by calling
+    /// First half of a delayed-commit delete: prunes the floater list and its
+    /// floaters, and related pending mutations, from the local cache. Nothing
+    /// is sent to the server here — the real DELETE_FLOATER_LIST mutation is
+    /// added by the commit step — but a non-replayable *staged* marker of the
+    /// same kind is written in its place so a sync's merge (a pull-to-refresh
+    /// racing the undo window) still treats the list as deleted instead of
+    /// writing it back from the server response; see
+    /// `PendingMutationRecord.staged` and SyncManager's replay/merge handling
+    /// of it. Completed floaters are deliberately left untouched — see
+    /// `deleteList` for why — so `StagedFloaterListDeletion.completedFloaters`
+    /// is always empty; the field stays so `undoStagedList(_:)` has nothing
+    /// extra to special-case if that ever changes. Commit later by calling
     /// `deleteList(listId:onOptimisticDelete:)` — its prune half re-runs as a
     /// no-op and its own DELETE_FLOATER_LIST mutation naturally replaces this
     /// marker (same targetId) — or restore with `undoStagedList(_:)`.
@@ -267,10 +272,6 @@ final class FloaterListRepository {
             cacheManager.updateOfflineState { state in
                 var nextState = state
                 let deletedFloaterIDs = Set(state.floaters.filter { $0.listId == normalizedListID }.map(\.canonicalId))
-                let isRemovedCompleted: (CachedCompletedFloaterRecord) -> Bool = { completed in
-                    completed.listId == normalizedListID ||
-                        completed.originalFloaterId.map { deletedFloaterIDs.contains($0) } == true
-                }
                 let isRemovedMutation: (PendingMutationRecord) -> Bool = { mutation in
                     mutation.targetId == normalizedListID ||
                         mutation.listId == normalizedListID ||
@@ -280,13 +281,17 @@ final class FloaterListRepository {
                 staged = StagedFloaterListDeletion(
                     floaterLists: state.floaterLists.filter { $0.id == normalizedListID },
                     floaters: state.floaters.filter { $0.listId == normalizedListID },
-                    completedFloaters: state.completedFloaters.filter(isRemovedCompleted),
+                    completedFloaters: [],
                     pendingMutations: state.pendingMutations.filter(isRemovedMutation),
                     stagedMutationId: stagedMutationID
                 )
                 nextState.floaterLists.removeAll { $0.id == normalizedListID }
                 nextState.floaters.removeAll { $0.listId == normalizedListID }
-                nextState.completedFloaters.removeAll(where: isRemovedCompleted)
+                // Completed floaters survive list deletion (see
+                // docs/design/completed-floaters-durability.md): only the live/pending
+                // floaters for this list are pruned here, matching the backend's
+                // FloaterListService.deleteMany(), which detaches CompletedFloaters
+                // rows (nulling their listID) instead of deleting them.
                 nextState.pendingMutations.removeAll(where: isRemovedMutation)
                 nextState.pendingMutations.append(
                     PendingMutationRecord(
@@ -318,7 +323,10 @@ final class FloaterListRepository {
     /// Restores the local state captured by `stageDeleteList(listId:)` and
     /// drops its staged marker mutation. Idempotent: records that already
     /// exist again (e.g. re-added by a sync pull during the undo window) are
-    /// left untouched.
+    /// left untouched. The `completedFloaters` restore loop below is
+    /// defensive dead code: `staged.completedFloaters` is always empty
+    /// because `stageDeleteList(listId:)` no longer removes any, so this has
+    /// nothing to special-case unless that ever changes.
     func undoStagedList(_ staged: StagedFloaterListDeletion) {
         cacheManager.updateOfflineState { state in
             var nextState = state
@@ -343,6 +351,12 @@ final class FloaterListRepository {
         }
     }
 
+    /// Deletes the floater list. Its cache-prune block below removes
+    /// `floaterLists` and `floaters` for the deleted list but never touches
+    /// `completedFloaters`: completed floaters survive list deletion (see
+    /// docs/design/completed-floaters-durability.md), matching the backend's
+    /// `FloaterListService.deleteMany()`, which detaches CompletedFloaters
+    /// rows (nulling their listID) instead of deleting them.
     func deleteList(listId: String, onOptimisticDelete: () -> Void = {}) async throws {
         let normalizedListID = listId.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !normalizedListID.isEmpty else {
@@ -358,10 +372,6 @@ final class FloaterListRepository {
 
             nextState.floaterLists.removeAll { $0.id == normalizedListID }
             nextState.floaters.removeAll { $0.listId == normalizedListID }
-            nextState.completedFloaters.removeAll { completed in
-                completed.listId == normalizedListID ||
-                    completed.originalFloaterId.map { deletedFloaterIDs.contains($0) } == true
-            }
             nextState.pendingMutations.removeAll { mutation in
                 mutation.targetId == normalizedListID ||
                     mutation.listId == normalizedListID ||
