@@ -129,7 +129,7 @@ class TodayEarlierEmptyStateGatingTest {
         assertEquals(
             SectionHeaderToggleAction.IGNORE,
             decideSectionHeaderToggleAction(
-                key = "earlier",
+                key = EARLIER_SECTION_KEY,
                 wasCollapsed = true,
                 showTodayEarlierIllustration = false,
                 earlierExpandPending = true,
@@ -142,7 +142,7 @@ class TodayEarlierEmptyStateGatingTest {
         assertEquals(
             SectionHeaderToggleAction.DEFER_EARLIER_EXPAND,
             decideSectionHeaderToggleAction(
-                key = "earlier",
+                key = EARLIER_SECTION_KEY,
                 wasCollapsed = true,
                 showTodayEarlierIllustration = true,
                 earlierExpandPending = false,
@@ -155,7 +155,7 @@ class TodayEarlierEmptyStateGatingTest {
         assertEquals(
             SectionHeaderToggleAction.IMMEDIATE_TOGGLE,
             decideSectionHeaderToggleAction(
-                key = "earlier",
+                key = EARLIER_SECTION_KEY,
                 wasCollapsed = false,
                 showTodayEarlierIllustration = false,
                 earlierExpandPending = false,
@@ -171,7 +171,7 @@ class TodayEarlierEmptyStateGatingTest {
         assertEquals(
             SectionHeaderToggleAction.IMMEDIATE_TOGGLE,
             decideSectionHeaderToggleAction(
-                key = "earlier",
+                key = EARLIER_SECTION_KEY,
                 wasCollapsed = true,
                 showTodayEarlierIllustration = false,
                 earlierExpandPending = false,

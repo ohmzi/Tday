@@ -10,6 +10,13 @@ import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.time.temporal.ChronoUnit
 
+// Test-local copies of the two [TodoSection.key] values this file asserts on
+// more than once ("earlier" itself is [EARLIER_SECTION_KEY] from
+// TodoListScreen.kt, the real production key rather than a third copy).
+private const val TODAY_MORNING_KEY = "today-morning"
+private const val TODAY_AFTERNOON_KEY = "today-afternoon"
+private const val TODAY_TONIGHT_KEY = "today-tonight"
+
 /**
  * Requirement 2's core logic: the Today screen's "zero pending tasks" rule
  * has to hold regardless of what Earlier is carrying, and Earlier itself has
@@ -77,7 +84,7 @@ class TodoTimelineSectionsTest {
         // Morning/Afternoon/Tonight stay hidden -- nothing pending today to
         // shape them around -- but Earlier is not, because requirement 2 is
         // "zero pending today", not "zero tasks anywhere on this screen".
-        assertEquals(listOf("earlier"), sections.map { it.key })
+        assertEquals(listOf(EARLIER_SECTION_KEY), sections.map { it.key })
         assertEquals(listOf(overdueTask), sections.single().items)
     }
 
@@ -94,12 +101,12 @@ class TodoTimelineSectionsTest {
         )
 
         assertEquals(
-            listOf("today-morning", "today-afternoon", "today-tonight", "earlier"),
+            listOf(TODAY_MORNING_KEY, TODAY_AFTERNOON_KEY, TODAY_TONIGHT_KEY, EARLIER_SECTION_KEY),
             sections.map { it.key },
         )
-        assertEquals(listOf(morningTask), sections.first { it.key == "today-morning" }.items)
-        assertTrue(sections.first { it.key == "today-afternoon" }.items.isEmpty())
-        assertEquals(listOf(overdueTask), sections.first { it.key == "earlier" }.items)
+        assertEquals(listOf(morningTask), sections.first { it.key == TODAY_MORNING_KEY }.items)
+        assertTrue(sections.first { it.key == TODAY_AFTERNOON_KEY }.items.isEmpty())
+        assertEquals(listOf(overdueTask), sections.first { it.key == EARLIER_SECTION_KEY }.items)
     }
 
     @Test
@@ -114,7 +121,7 @@ class TodoTimelineSectionsTest {
         )
 
         assertEquals(
-            listOf("today-morning", "today-afternoon", "today-tonight"),
+            listOf(TODAY_MORNING_KEY, TODAY_AFTERNOON_KEY, TODAY_TONIGHT_KEY),
             sections.map { it.key },
         )
     }
