@@ -7,7 +7,11 @@ import kotlin.test.assertEquals
 class TaskSortEngineTest {
 
     companion object {
+        /** The `Lowest` wire priority value. */
         private const val LOWEST = "Lowest"
+
+        /** A task id spelled the same as the priority, used only in the Lowest-tier tests. */
+        private const val LOWEST_ID = "lowest"
     }
 
     private fun task(
@@ -142,10 +146,10 @@ class TaskSortEngineTest {
     fun floatersSortLowestAfterLow() {
         val items = listOf(
             task("low", priority = "Low", updated = 100),
-            task("lowest", priority = LOWEST, updated = 100),
+            task(LOWEST_ID, priority = LOWEST, updated = 100),
             task("high", priority = "High", updated = 100),
         )
-        assertEquals(listOf("high", "low", "lowest"), floaterIds(items))
+        assertEquals(listOf("high", "low", LOWEST_ID), floaterIds(items))
     }
 
     @Test
@@ -153,8 +157,8 @@ class TaskSortEngineTest {
         // The exact failure mode the contract calls out: garbage input must keep sorting like
         // Low (Normal), not silently drop below a task someone genuinely tagged Lowest.
         val garbage = task("garbage", priority = "not-a-real-priority", updated = 100)
-        val lowest = task("lowest", priority = LOWEST, updated = 100)
-        assertEquals(listOf("garbage", "lowest"), floaterIds(listOf(garbage, lowest)))
+        val lowest = task(LOWEST_ID, priority = LOWEST, updated = 100)
+        assertEquals(listOf("garbage", LOWEST_ID), floaterIds(listOf(garbage, lowest)))
     }
 
     @Test
