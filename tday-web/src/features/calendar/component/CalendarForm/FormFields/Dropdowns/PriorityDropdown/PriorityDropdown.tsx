@@ -30,11 +30,11 @@ const PriorityDropdownMenu = ({
         <Flag
           className={clsx(
             "w-4 h-4",
-            priority == "Lowest"
+            priority === "Lowest"
               ? "fill-muted-foreground text-muted-foreground"
-              : priority == "Low"
+              : priority === "Low"
                 ? "fill-lime text-lime"
-                : priority == "Medium"
+                : priority === "Medium"
                   ? "fill-orange text-orange"
                   : "fill-red text-red",
           )}
@@ -50,7 +50,7 @@ const PriorityDropdownMenu = ({
           <Flag
             className={clsx(
               "w-4 h-4 text-muted-foreground",
-              priority == "Lowest" && "fill-muted-foreground",
+              priority === "Lowest" && "fill-muted-foreground",
             )}
           />
         </DropdownMenuItem>

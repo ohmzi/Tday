@@ -47,7 +47,7 @@ const PriorityDropdownMenu = ({ }) => {
           <Flag
             className={clsx(
               "w-4 h-4 text-muted-foreground",
-              priority == "Lowest" && "fill-muted-foreground",
+              priority === "Lowest" && "fill-muted-foreground",
             )}
           />
         </button>

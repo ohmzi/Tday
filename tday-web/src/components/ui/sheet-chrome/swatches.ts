@@ -13,6 +13,8 @@ export function prioritySwatchClass(
       return "bg-orange";
     case "High":
       return "bg-red";
+    default:
+      return "bg-lime";
   }
 }
 
