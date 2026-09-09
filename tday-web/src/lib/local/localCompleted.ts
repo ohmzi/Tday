@@ -12,13 +12,16 @@ import { epochMs, parseDueMinute } from "@/lib/local/localTime";
  * `CompletedTodoService` / `CompletedFloaterService`.
  */
 
-const PRIORITIES = new Set(["Low", "Medium", "High"]);
+const PRIORITIES = new Set(["Lowest", "Low", "Medium", "High"]);
 
 function optionalPriority(value: unknown): string | undefined {
   if (value == null) return undefined;
   const priority = String(value);
   if (!PRIORITIES.has(priority)) {
-    throw localBadRequest("priority must be one of: Low, Medium, High", "priority");
+    throw localBadRequest(
+      "priority must be one of: Lowest, Low, Medium, High",
+      "priority",
+    );
   }
   return priority;
 }

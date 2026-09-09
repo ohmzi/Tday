@@ -44,7 +44,10 @@ export function buildTaskShareText({
   if (todo.due) {
     lines.push(t("shareDueLabel", { date: format(todo.due, "PPp", { locale }) }));
   }
-  if (todo.priority && todo.priority !== "Low") {
+  // "Low" is the default priority and "Lowest" sits even further below it —
+  // neither is worth calling out in the shared text, matching the flag
+  // renderer's precedent that the bottom tier stays unmarked.
+  if (todo.priority && todo.priority !== "Low" && todo.priority !== "Lowest") {
     lines.push(t("sharePriorityLabel", { priority: todo.priority }));
   }
   return lines.join("\n");

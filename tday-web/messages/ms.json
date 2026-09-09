@@ -266,6 +266,7 @@
     "priority": "Keutamaan",
     "list": "Projek",
     "overdue": "Tunggakan",
+    "low": "Rendah",
     "normal": "Normal",
     "important": "Penting",
     "urgent": "Segera",

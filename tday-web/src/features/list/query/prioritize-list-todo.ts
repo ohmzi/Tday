@@ -19,7 +19,7 @@ export const usePrioritizeListTodo = () => {
         isRecurring,
       }: {
         id: string;
-        level: "Low" | "Medium" | "High";
+        level: "Lowest" | "Low" | "Medium" | "High";
         isRecurring: boolean;
       }) => {
         const instanceDate = todoInstanceTimestampFromId(id);
@@ -40,7 +40,7 @@ export const usePrioritizeListTodo = () => {
         level,
       }: {
         id: string;
-        level: "Low" | "Medium" | "High";
+        level: "Lowest" | "Low" | "Medium" | "High";
         isRecurring: boolean;
       }) => {
         await queryClient.cancelQueries({ queryKey: ["list"] });

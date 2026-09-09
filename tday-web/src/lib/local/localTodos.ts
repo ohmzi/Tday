@@ -23,7 +23,7 @@ import {
  * doesn't send them either, and clients expand recurrences from `rrule`).
  */
 
-const PRIORITIES = new Set(["Low", "Medium", "High"]);
+const PRIORITIES = new Set(["Lowest", "Low", "Medium", "High"]);
 
 export type TodoDto = {
   id: string;
@@ -70,7 +70,10 @@ function requirePriority(value: unknown, fallback?: string): string {
   }
   const priority = String(value);
   if (!PRIORITIES.has(priority)) {
-    throw localBadRequest("priority must be one of: Low, Medium, High", "priority");
+    throw localBadRequest(
+      "priority must be one of: Lowest, Low, Medium, High",
+      "priority",
+    );
   }
   return priority;
 }

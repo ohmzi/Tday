@@ -266,6 +266,7 @@
     "priority": "Prioridade",
     "list": "Projeto",
     "overdue": "Atrasado",
+    "low": "Baixa",
     "normal": "Normal",
     "important": "Importante",
     "urgent": "Urgente",

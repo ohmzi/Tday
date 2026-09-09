@@ -27,11 +27,33 @@ const PriorityDropdownMenu = ({
   return (
     <DropdownMenu modal={true}>
       <DropdownMenuTrigger className="cursor-pointer bg-popover border p-2 text-sm flex justify-center items-center gap-2 hover:bg-popover-border rounded-md hover:text-foreground">
-        <Flag className={clsx("w-4 h-4", priority == "Low" ? "fill-lime text-lime" : priority == "Medium" ? "fill-orange text-orange" : "fill-red text-red")} />
+        <Flag
+          className={clsx(
+            "w-4 h-4",
+            priority == "Lowest"
+              ? "fill-muted-foreground text-muted-foreground"
+              : priority == "Low"
+                ? "fill-lime text-lime"
+                : priority == "Medium"
+                  ? "fill-orange text-orange"
+                  : "fill-red text-red",
+          )}
+        />
         <p className="hidden sm:block">{appDict("priority")}</p>
         <ChevronDown className="w-4 h-4 text-muted-foreground" />
       </DropdownMenuTrigger>
       <DropdownMenuContent className="min-w-[150px] text-foreground space-y-1">
+        <DropdownMenuItem
+          className="hover:text-foreground hover:bg-popover-accent"
+          onClick={() => setPriority("Lowest")}
+        >
+          <Flag
+            className={clsx(
+              "w-4 h-4 text-muted-foreground",
+              priority == "Lowest" && "fill-muted-foreground",
+            )}
+          />
+        </DropdownMenuItem>
         <DropdownMenuItem
           className="hover:text-foreground hover:bg-popover-accent"
           onClick={() => setPriority("Low")}

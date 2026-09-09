@@ -1,9 +1,10 @@
 // Central label-key maps shared by the native task selectors.
 // Values resolve against the "app" i18n namespace (e.g. app.normal = "Normal").
 
-export type Priority = "Low" | "Medium" | "High";
+export type Priority = "Lowest" | "Low" | "Medium" | "High";
 
 export const priorityLabelKey: Record<Priority, string> = {
+  Lowest: "low",
   Low: "normal",
   Medium: "important",
   High: "urgent",

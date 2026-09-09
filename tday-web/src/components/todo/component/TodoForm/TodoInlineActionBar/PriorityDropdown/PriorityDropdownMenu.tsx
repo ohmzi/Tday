@@ -27,17 +27,30 @@ const PriorityDropdownMenu = ({ }) => {
           <Flag
             className={clsx(
               "w-4 h-4 transition-text duration-200 ease-out",
-              priority === "Low"
-                ? "text-lime"
-                : priority === "Medium"
-                  ? "text-orange"
-                  : "text-red",
+              priority === "Lowest"
+                ? "text-muted-foreground"
+                : priority === "Low"
+                  ? "text-lime"
+                  : priority === "Medium"
+                    ? "text-orange"
+                    : "text-red",
             )}
           />
           <p>{appDict("priority")}</p>
         </Button>
       </PopoverTrigger>
       <PopoverContent className="min-w-38 text-foreground flex flex-col p-1 items-start justify-center">
+        <button
+          className={itemClass}
+          onClick={() => setPriority("Lowest")}
+        >
+          <Flag
+            className={clsx(
+              "w-4 h-4 text-muted-foreground",
+              priority == "Lowest" && "fill-muted-foreground",
+            )}
+          />
+        </button>
         <button
           className={itemClass}
           onClick={() => setPriority("Low")}

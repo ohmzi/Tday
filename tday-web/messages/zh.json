@@ -266,6 +266,7 @@
     "priority": "优先级",
     "list": "项目",
     "overdue": "已逾期",
+    "low": "低",
     "normal": "普通",
     "important": "重要",
     "urgent": "紧急",
