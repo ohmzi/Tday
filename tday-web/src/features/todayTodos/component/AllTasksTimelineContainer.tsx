@@ -363,9 +363,14 @@ const AllTasksTimelineContainer = ({
   // from `dayKey < todayKey`) rather than a fresh definition of "overdue" —
   // which also keeps it disjoint from Today's own `dayDiff === 0` set below,
   // so a task due earlier today (already past its time, but still *today*)
-  // is never duplicated between the two. `timelineItems` here is the same
-  // `useTodoTimeline()`-sourced array every other scope (including the
-  // standalone Overdue screen) already reads — no separate fetch.
+  // is never duplicated between the two. This day-boundary rule is NOT the
+  // same set the standalone Overdue screen shows: that screen's `scope ===
+  // "overdue"` branch below filters on `isOverdueTask` (`due < now`), a
+  // timestamp comparison, so a task due earlier today but still pending is
+  // Overdue there while staying out of this Earlier bucket on purpose. The
+  // only thing shared with every other scope (Overdue included) is the raw
+  // `timelineItems` array itself, sourced from the same `useTodoTimeline()`
+  // query — no separate fetch, just a different filter applied downstream.
   const todayEarlierSection = useMemo(() => {
     if (scope !== "today") return null;
     const sections = buildTimelineSections({
