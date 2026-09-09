@@ -118,6 +118,8 @@ export type BuildTimelineSectionsArgs = {
   includeEmptyDropTargets: boolean;
   todayLabel: string;
   tomorrowLabel: string;
+  /** Display label for the collapsible Earlier bucket (already localized). */
+  earlierLabel: string;
 };
 
 export function buildTimelineSections({
@@ -129,6 +131,7 @@ export function buildTimelineSections({
   includeEmptyDropTargets,
   todayLabel,
   tomorrowLabel,
+  earlierLabel,
 }: BuildTimelineSectionsArgs): TimelineSection[] {
   const dated = todos.filter(hasValidDue);
 
@@ -184,7 +187,7 @@ export function buildTimelineSections({
     earlierTodos.length > 0
       ? {
           key: "earlier",
-          label: "Earlier",
+          label: earlierLabel,
           kind: "earlier",
           targetDayKey: offsetDayKey(-1),
           collapsible: true,

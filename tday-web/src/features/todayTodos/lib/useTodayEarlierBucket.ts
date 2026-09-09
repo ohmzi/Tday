@@ -56,6 +56,7 @@ export function useTodayEarlierBucket({
       includeEmptyDropTargets: false,
       todayLabel: appDict("today"),
       tomorrowLabel: appDict("tomorrow"),
+      earlierLabel: appDict("overdue"),
     });
     return sections.find((section) => section.kind === "earlier") ?? null;
   }, [appDict, locale, scope, timelineItems, timeZone]);
