@@ -368,6 +368,17 @@ const AllTasksTimelineContainer = ({
     () => sections.filter((s) => s.dayDiff >= 0),
     [sections],
   );
+  // For "today" this is already "zero PENDING tasks due today, Earlier excluded" —
+  // not just belt-and-braces with the filter two lines up in `scopeFilteredItems`.
+  // Today has no in-page Earlier/overdue section to speak of: an overdue task never
+  // reaches `scopeFilteredItems` for this scope in the first place (it's filtered to
+  // `dayDiff === 0` above), and overdue tasks live entirely on the separate
+  // `scope="overdue"` screen (`/app/overdue`), reached from a tile on the home
+  // dashboard — mirroring Android's `TodoListMode.OVERDUE` and iOS's `.overdueTodos`,
+  // which are equally separate from their own Today equivalents. So the empty state
+  // below already fires on exactly "today's own pending items are gone", regardless
+  // of what's sitting overdue, with no expand/collapse choreography to coordinate it
+  // with — there's nothing here that ever collapses.
   const hasScopedTasks = useMemo(() => {
     if (scope === "today") {
       return scopeFilteredItems.some((item) => item.dayDiff === 0);
