@@ -50,6 +50,7 @@ export function useTimelineSections({
       includeEmptyDropTargets: dragActive,
       todayLabel: appDict("today"),
       tomorrowLabel: appDict("tomorrow"),
+      earlierLabel: appDict("overdue"),
     });
   }, [appDict, dragActive, locale, scope, timeline, timelineItems, timeZone]);
 

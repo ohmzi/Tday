@@ -62,6 +62,7 @@ const ListContainer = ({ id }: { id: string }) => {
             timeZone: userTZ?.timeZone,
             todayLabel: appDict("today"),
             tomorrowLabel: appDict("tomorrow"),
+            earlierLabel: appDict("overdue"),
             dragActive,
         });
 
