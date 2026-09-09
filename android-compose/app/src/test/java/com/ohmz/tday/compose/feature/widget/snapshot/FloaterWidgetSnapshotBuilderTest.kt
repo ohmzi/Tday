@@ -46,13 +46,24 @@ class FloaterWidgetSnapshotBuilderTest {
                     floater(id = "urgent-b", title = "Alpha", priority = "Important"),
                     // Same rank as "high-b"/"urgent-a" but modified, so it leads them both.
                     floater(id = "zz-high-recent", title = "Zeta", priority = "High", updatedAtEpochMs = 500L),
+                    // The new bottom tier: ranks below "low-a", never above it.
+                    floater(id = "lowest-a", title = "Alpha", priority = "Lowest"),
                 ),
             ),
             workspaceConfigured = true,
         )
 
         assertEquals(
-            listOf("pinned-low", "zz-high-recent", "high-b", "urgent-a", "medium-a", "urgent-b", "low-a"),
+            listOf(
+                "pinned-low",
+                "zz-high-recent",
+                "high-b",
+                "urgent-a",
+                "medium-a",
+                "urgent-b",
+                "low-a",
+                "lowest-a",
+            ),
             snapshot.rows.map { it.id },
         )
     }

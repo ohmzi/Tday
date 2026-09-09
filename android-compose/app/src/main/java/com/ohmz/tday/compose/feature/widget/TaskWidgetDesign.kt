@@ -45,9 +45,11 @@ import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.feature.widget.snapshot.WidgetPriorityRing
 import com.ohmz.tday.compose.feature.widget.snapshot.WidgetSnapshotStatus
 import com.ohmz.tday.compose.ui.priority.PRIORITY_IMPORTANT_VALUE
+import com.ohmz.tday.compose.ui.priority.PRIORITY_LOWEST_VALUE
 import com.ohmz.tday.compose.ui.priority.PRIORITY_NORMAL_VALUE
 import com.ohmz.tday.compose.ui.priority.PRIORITY_URGENT_VALUE
 import com.ohmz.tday.compose.ui.priority.isImportantPriority
+import com.ohmz.tday.compose.ui.priority.isLowestPriority
 import com.ohmz.tday.compose.ui.priority.isUrgentPriority
 import com.ohmz.tday.compose.core.text.flattenNotesToPlainText
 
@@ -80,6 +82,7 @@ internal fun WidgetPriorityRing.toPriorityValue(): String = when (this) {
     WidgetPriorityRing.HIGH -> PRIORITY_URGENT_VALUE
     WidgetPriorityRing.MEDIUM -> PRIORITY_IMPORTANT_VALUE
     WidgetPriorityRing.LOW -> PRIORITY_NORMAL_VALUE
+    WidgetPriorityRing.LOWEST -> PRIORITY_LOWEST_VALUE
 }
 
 internal enum class TaskWidgetLayout {
@@ -719,6 +722,7 @@ internal fun taskWidgetPriorityRingResource(priority: String): Int {
     return when {
         isUrgentPriority(priority) -> R.drawable.widget_priority_ring_high
         isImportantPriority(priority) -> R.drawable.widget_priority_ring_medium
+        isLowestPriority(priority) -> R.drawable.widget_priority_ring_lowest
         else -> R.drawable.widget_priority_ring_low
     }
 }
