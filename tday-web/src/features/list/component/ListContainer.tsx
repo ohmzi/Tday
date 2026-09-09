@@ -2,7 +2,13 @@ import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import TodoListLoading from "@/components/todo/component/TodoListLoading";
 import TimelineSections from "@/components/todo/dnd/TimelineSections";
+import TimelineEmptyState from "@/features/todayTodos/component/TimelineEmptyState";
 import { buildTimelineSections } from "@/lib/timeline/buildTimelineSections";
+import { useEarlierExpandHandoff } from "@/features/todayTodos/lib/useEarlierExpandHandoff";
+import {
+  TODAY_EARLIER_EXIT_MS,
+  shouldShowTodayEmptyIllustration,
+} from "@/features/todayTodos/lib/todayEarlierIllustration";
 import { useCompleteListTodo } from "../query/complete-list-todo";
 import { useDeleteListTodo } from "../query/delete-list-todo";
 import { usePrioritizeListTodo } from "../query/prioritize-list-todo";
@@ -43,13 +49,20 @@ const ListContainer = ({ id }: { id: string }) => {
     const [searchQuery, setSearchQuery] = useState("");
     const [editListOpen, setEditListOpen] = useState(false);
     const [membersOpen, setMembersOpen] = useState(false);
-    const [earlierExpanded, setEarlierExpanded] = useState(false);
+    // Earlier empty-state parity with Today/All/Priority/Scheduled: the same
+    // hand-off state machine (`useEarlierExpandHandoff`'s own doc comment),
+    // not a fresh `useState(false)` — a custom list's own Earlier bucket
+    // (`buildTimelineSections`'s `kind: "earlier"` below) is exactly the same
+    // display-time subset of `listTodos` those screens already read, so the
+    // requirement-3 sequencing is the same interaction reused, not a new one.
+    const {
+        expanded: earlierExpanded,
+        handoffPending: earlierHandoffPending,
+        toggle: toggleEarlierExpanded,
+    } = useEarlierExpandHandoff(TODAY_EARLIER_EXIT_MS);
     // Empty date buckets are drop targets and nothing else, so they exist only
     // for the length of a drag.
     const [dragActive, setDragActive] = useState(false);
-    // Remote sibling of `taskJustCompleted()` below — fires for a completion
-    // on another device or by a collaborator, not just this tab's own tap.
-    const remoteEmptied = useCelebrateEmptyTransition(listTodos.length === 0);
 
     const filteredTodos = useMemo(() => {
         const query = searchQuery.trim().toLowerCase();
@@ -76,7 +89,46 @@ const ListContainer = ({ id }: { id: string }) => {
         [appDict, dragActive, filteredTodos, locale, userTZ?.timeZone],
     );
 
+    // The same "earlier" bucket `TimelineSections` renders below — reusing
+    // `buildTimelineSections`'s own classification rather than a second
+    // dayKey comparison (see `useTimelineEmptyState`'s doc comment on the All/
+    // Priority/Scheduled screens for why that reuse matters). Every other
+    // dated todo `buildTimelineSections` places is "current" by construction,
+    // whether or not this list opened with a due date on every row.
+    const earlierSection = useMemo(
+        () => timelineSections.find((section) => section.kind === "earlier") ?? null,
+        [timelineSections],
+    );
+    const hasEarlierItems = Boolean(earlierSection && earlierSection.todos.length > 0);
+    const nonEarlierTodoCount = filteredTodos.length - (earlierSection?.todos.length ?? 0);
+    const hasNonEarlierListTodos = nonEarlierTodoCount > 0;
+    // Remote sibling of `taskJustCompleted()` below — fires for a completion
+    // on another device or by a collaborator, not just this tab's own tap.
+    // Requirement 4: watches the non-Earlier count, so finishing every
+    // current task still celebrates however many overdue tasks Earlier still
+    // holds.
+    const remoteEmptied = useCelebrateEmptyTransition(!hasNonEarlierListTodos);
+
     const isSearching = Boolean(searchQuery.trim());
+    // Requirement 1, generalized from Today: zero non-Earlier tasks, not
+    // loading, not mid-search — a list with only overdue tasks left still
+    // earns the "all done" illustration, same as All/Priority/Scheduled.
+    const showEmpty = !listTodosLoading && !isSearching && !hasNonEarlierListTodos;
+    // Finishing the list is a payoff, not an absence: the confetti is for the
+    // tick that emptied it, not for a list that was already empty. Hoisted so
+    // the illustration/Earlier hand-off below reads the exact same signal —
+    // see `shouldShowTodayEmptyIllustration`.
+    const celebrate = taskJustCompleted() || remoteEmptied;
+    // Requirements 1-3: who owns the empty-state slot once `showEmpty` is
+    // true — the exact function Today/All/Priority/Scheduled call, reused
+    // rather than a parallel List-only decision.
+    const showEmptyIllustration = shouldShowTodayEmptyIllustration({
+        showEmpty,
+        hasEarlierItems,
+        earlierExpanded,
+        earlierHandoffPending,
+        celebrate,
+    });
     // This page keeps its search field as the pinned bar, so the header below
     // renders only the block that scrolls away and docks its title into it —
     // the same split the floater list uses.
@@ -196,19 +248,22 @@ const ListContainer = ({ id }: { id: string }) => {
                     {/* Loading state */}
                     {listTodosLoading && <TodoListLoading />}
 
-                    {/* Empty state — no tasks yet */}
-                    {!listTodosLoading && !isSearching && listTodos.length === 0 && (
-                        <EmptyState
+                    {/* Empty state — no current tasks (Earlier's own overdue
+                        tasks, if any, render below via `TimelineSections`;
+                        see `showEmptyIllustration`'s derivation above and
+                        `AllTasksTimelineContainer`'s matching JSX-ordering
+                        comment for why this renders BEFORE that block). */}
+                    {showEmptyIllustration && (
+                        <TimelineEmptyState
                             icon={getListIcon(listMetaData[id]?.iconKey)}
                             accentColor={listAccent}
-                            title={appDict("listEmpty")}
-                            description={appDict("listEmptyBody")}
-                            // Finishing a list is a payoff, not an absence: the
-                            // confetti is for the tick that emptied it, not for a
-                            // list that was already empty when it was opened.
-                            // Whether that tick happened here, on another device,
-                            // or from a collaborator on this shared list.
-                            celebrate={taskJustCompleted() || remoteEmptied}
+                            isDayDone={false}
+                            celebrate={celebrate}
+                            earlierHandoffPending={earlierHandoffPending}
+                            locale={locale}
+                            emptyTitle="listEmpty"
+                            emptyBody="listEmptyBody"
+                            appDict={appDict}
                         />
                     )}
 
@@ -231,7 +286,11 @@ const ListContainer = ({ id }: { id: string }) => {
                         />
                     )}
 
-                    {/* Date-bucketed timeline with drag-and-drop */}
+                    {/* Date-bucketed timeline with drag-and-drop — renders
+                        whenever the list holds anything at all, Earlier's own
+                        overdue tasks included, so a list with only overdue
+                        tasks left still shows its (collapsed) Earlier header
+                        under the illustration above. */}
                     {!listTodosLoading && !(isSearching && filteredTodos.length === 0) && listTodos.length > 0 && (
                         <TimelineSections
                             sections={timelineSections}
@@ -239,9 +298,17 @@ const ListContainer = ({ id }: { id: string }) => {
                             // A live query outranks a shut bucket: a list opens
                             // with Earlier closed, and a task the search turns up in
                             // there must not stay hidden behind its header. Native
-                            // makes the same call.
-                            earlierExpanded={earlierExpanded || isSearching}
-                            onToggleEarlier={() => setEarlierExpanded((value) => !value)}
+                            // makes the same call. `!earlierHandoffPending`: mid
+                            // hand-off, Earlier's own rows stay hidden until the
+                            // illustration above has actually finished exiting —
+                            // requirement 3's sequencing, reused from Today.
+                            earlierExpanded={(earlierExpanded && !earlierHandoffPending) || isSearching}
+                            // Passes `showEmptyIllustration` through exactly like
+                            // Today/All/Priority/Scheduled do: expanding Earlier
+                            // hands off through the illustration first when it
+                            // currently owns the slot (requirement 3), and stays
+                            // the plain immediate toggle otherwise.
+                            onToggleEarlier={() => toggleEarlierExpanded(showEmptyIllustration)}
                             onDragActiveChange={setDragActive}
                         />
                     )}
