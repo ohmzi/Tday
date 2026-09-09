@@ -8,11 +8,12 @@
 //
 //   - Todos (scheduled screen + custom lists, applied WITHIN each day group):
 //       pinned first, then due date+time ascending (soonest first, a null/absent
-//       due sorts LAST), then priority (High → Medium → Low), then modified date
-//       DESCENDING (most recently modified first, null last), then id ascending.
+//       due sorts LAST), then priority (High → Medium → Low → Lowest), then
+//       modified date DESCENDING (most recently modified first, null last),
+//       then id ascending.
 //   - Floaters:
-//       pinned first, then priority (High → Medium → Low), then modified date
-//       DESCENDING, then id ascending.
+//       pinned first, then priority (High → Medium → Low → Lowest), then
+//       modified date DESCENDING, then id ascending.
 
 /**
  * Minimal, platform-neutral view of a task. Each surface maps its own model onto
@@ -28,8 +29,17 @@ export interface TaskSortKey {
   updatedAtEpochMs: number | null;
 }
 
-/** Unknown/absent priority sorts as Low. Mirrors Priority.fromApiOrDefault. */
-const LOWEST_PRIORITY_RANK = 2;
+/**
+ * Low's rank — also the rank a genuinely unrecognized/absent priority string
+ * falls back to (Mirrors Priority.fromApiOrDefault). That fallback is a
+ * different concept from the user explicitly choosing the "Lowest" tier below:
+ * unknown input must keep degrading to this default/Normal rank, never to
+ * LOWEST_TIER_PRIORITY_RANK.
+ */
+const LOW_PRIORITY_RANK = 2;
+
+/** Rank for the explicit "Lowest" tier — always below Low, never a fallback. */
+const LOWEST_TIER_PRIORITY_RANK = 3;
 
 const pinRank = (pinned: boolean): number => (pinned ? 1 : 0);
 
@@ -113,9 +123,11 @@ export function sortFloaters<T>(items: T[], key: (item: T) => TaskSortKey): T[] 
 
 /**
  * 0 = highest priority (sorts first). Tolerant of every priority spelling the app
- * stores: canonical Low/Medium/High, the server/legacy vocabulary normal/important/
- * urgent, and any case. Realtime-synced rows arrive un-normalized, so a strict match
- * would collapse them to Low and the sort would ignore priority. Unknown/absent → Low.
+ * stores: canonical Lowest/Low/Medium/High, the server/legacy vocabulary normal/
+ * important/urgent, and any case. Realtime-synced rows arrive un-normalized, so a
+ * strict match would collapse them to Low and the sort would ignore priority.
+ * Unknown/absent → Low (see LOW_PRIORITY_RANK) — never the new Lowest tier, which
+ * only a recognized "lowest" string produces.
  * Mirrors the shared Kotlin `TaskSortEngine.priorityRank(String?)`.
  */
 export function priorityRank(priority: string | null | undefined): number {
@@ -126,7 +138,9 @@ export function priorityRank(priority: string | null | undefined): number {
     case "medium":
     case "important":
       return 1;
+    case "lowest":
+      return LOWEST_TIER_PRIORITY_RANK;
     default:
-      return LOWEST_PRIORITY_RANK;
+      return LOW_PRIORITY_RANK;
   }
 }

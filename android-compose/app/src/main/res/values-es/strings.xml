@@ -368,6 +368,7 @@
     <string name="create_task_list">Lista</string>
     <string name="create_task_no_list">Sin lista</string>
     <string name="create_task_priority">Prioridad</string>
+    <string name="create_task_priority_low">Baja</string>
     <string name="create_task_priority_normal">Normal</string>
     <string name="create_task_priority_important">Importante</string>
     <string name="create_task_priority_urgent">Urgente</string>

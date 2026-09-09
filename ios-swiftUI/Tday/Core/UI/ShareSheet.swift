@@ -18,7 +18,10 @@ struct ShareSheet {
             formatter.dateFormat = "EEE, MMM d 'at' h:mm a"
             parts.append("Due: \(formatter.string(from: due))")
         }
-        if priority != "Low" {
+        // "Low" is the default priority and "Lowest" sits even further below it —
+        // neither is worth calling out in the shared text. Mirrors Android's
+        // ShareUtils.taskCopyText and web's listShareText.ts buildTaskShareText.
+        if priority != "Low" && priority != "Lowest" {
             parts.append("Priority: \(priority)")
         }
         return parts.joined(separator: "\n")

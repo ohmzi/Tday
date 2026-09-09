@@ -224,7 +224,7 @@ fun <T> TdayCenteredSelectorDialog(
     title: String,
     options: List<T>,
     optionLabel: (T) -> String,
-    optionSwatchColor: (T) -> Color,
+    optionSwatchColor: @Composable (T) -> Color,
     isSelected: (T) -> Boolean,
     onDismiss: () -> Unit,
     onOptionSelected: (T) -> Unit,

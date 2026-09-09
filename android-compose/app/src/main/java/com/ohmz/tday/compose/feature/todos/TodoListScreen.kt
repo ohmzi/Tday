@@ -185,11 +185,10 @@ import com.ohmz.tday.compose.ui.component.TdaySheetFullBleedWindow
 import com.ohmz.tday.compose.ui.component.TdaySheetHeader
 import com.ohmz.tday.compose.ui.component.TdaySheetSectionTitle
 import com.ohmz.tday.compose.ui.component.ThemedDatePickerDialog
-import com.ohmz.tday.compose.ui.priority.PRIORITY_IMPORTANT_VALUE
-import com.ohmz.tday.compose.ui.priority.PRIORITY_NORMAL_VALUE
-import com.ohmz.tday.compose.ui.priority.PRIORITY_URGENT_VALUE
+import com.ohmz.tday.compose.ui.priority.PRIORITY_OPTIONS_LOW_TO_HIGH
 import com.ohmz.tday.compose.ui.priority.canonicalPriorityValue
 import com.ohmz.tday.compose.ui.priority.isImportantPriority
+import com.ohmz.tday.compose.ui.priority.isLowestPriority
 import com.ohmz.tday.compose.ui.priority.isUrgentPriority
 import com.ohmz.tday.compose.ui.priority.priorityDisplayLabelRes
 import com.ohmz.tday.compose.ui.theme.TDAY_DEFAULT_LIST_COLOR_KEY
@@ -2114,9 +2113,7 @@ fun TodoListScreen( // skipcq: KT-R1006
 
     if (showBulkPriorityPicker && bulkNonRecurringTargets.isNotEmpty()) {
         val priorityTargets = bulkNonRecurringTargets
-        val priorityOptions = remember {
-            listOf(PRIORITY_NORMAL_VALUE, PRIORITY_IMPORTANT_VALUE, PRIORITY_URGENT_VALUE)
-        }
+        val priorityOptions = remember { PRIORITY_OPTIONS_LOW_TO_HIGH }
         TdayCenteredSelectorDialog(
             title = stringResource(R.string.bulk_action_priority),
             options = priorityOptions,
@@ -4369,6 +4366,7 @@ private fun floaterPriorityRank(priority: String): Int {
     return when {
         isUrgentPriority(priority) -> 0
         isImportantPriority(priority) -> 1
+        isLowestPriority(priority) -> 3
         else -> 2
     }
 }

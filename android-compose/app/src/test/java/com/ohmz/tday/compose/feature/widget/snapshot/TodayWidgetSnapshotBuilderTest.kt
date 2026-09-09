@@ -125,6 +125,12 @@ class TodayWidgetSnapshotBuilderTest {
                         priority = "Medium",
                     ),
                     todo(id = "low", title = "Low", dueEpochMs = dayStart + 120_000, priority = "Low"),
+                    todo(
+                        id = "lowest",
+                        title = "Lowest",
+                        dueEpochMs = dayStart + 180_000,
+                        priority = "Lowest",
+                    ),
                 ),
             ),
             workspaceConfigured = true,
@@ -137,6 +143,7 @@ class TodayWidgetSnapshotBuilderTest {
                 "high" to WidgetPriorityRing.HIGH,
                 "medium" to WidgetPriorityRing.MEDIUM,
                 "low" to WidgetPriorityRing.LOW,
+                "lowest" to WidgetPriorityRing.LOWEST,
             ),
             snapshot.rows.associate { it.id to it.priorityRing },
         )

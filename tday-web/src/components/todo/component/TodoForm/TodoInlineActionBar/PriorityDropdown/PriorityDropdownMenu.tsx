@@ -7,9 +7,12 @@ import {
 } from "@/components/ui/popover";
 import { Flag } from "lucide-react";
 import { useTodoForm } from "@/providers/TodoFormProvider";
+import { priorityFlagClasses } from "@/lib/priority";
 import clsx from "clsx";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "react-i18next";
+
+const PRIORITIES = ["Lowest", "Low", "Medium", "High"] as const;
 
 const PriorityDropdownMenu = ({ }) => {
   const { t: appDict } = useTranslation("app");
@@ -27,35 +30,25 @@ const PriorityDropdownMenu = ({ }) => {
           <Flag
             className={clsx(
               "w-4 h-4 transition-text duration-200 ease-out",
-              priority === "Low"
-                ? "text-lime"
-                : priority === "Medium"
-                  ? "text-orange"
-                  : "text-red",
+              priorityFlagClasses(priority).text,
             )}
           />
           <p>{appDict("priority")}</p>
         </Button>
       </PopoverTrigger>
       <PopoverContent className="min-w-38 text-foreground flex flex-col p-1 items-start justify-center">
-        <button
-          className={itemClass}
-          onClick={() => setPriority("Low")}
-        >
-          <Flag className={clsx("w-4 h-4 text-lime", priority == "Low" && "fill-lime")} />
-        </button>
-        <button
-          className={itemClass}
-          onClick={() => setPriority("Medium")}
-        >
-          <Flag className={clsx("w-4 h-4 text-orange", priority == "Medium" && "fill-orange")} />
-        </button>
-        <button
-          className={itemClass}
-          onClick={() => setPriority("High")}
-        >
-          <Flag className={clsx("w-4 h-4 text-red", priority == "High" && "fill-red")} />
-        </button>
+        {PRIORITIES.map((value) => {
+          const { text, fill } = priorityFlagClasses(value);
+          return (
+            <button
+              key={value}
+              className={itemClass}
+              onClick={() => setPriority(value)}
+            >
+              <Flag className={clsx("w-4 h-4", text, priority === value && fill)} />
+            </button>
+          );
+        })}
       </PopoverContent>
     </Popover>
   );

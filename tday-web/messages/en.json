@@ -266,6 +266,7 @@
     "priority": "Priority",
     "list": "List",
     "overdue": "Overdue",
+    "low": "Low",
     "normal": "Normal",
     "important": "Important",
     "urgent": "Urgent",

@@ -37,7 +37,7 @@ import { hapticConfirm, hapticTick } from "@/lib/haptics";
 import { cn } from "@/lib/utils";
 import type { TodoItemType } from "@/types";
 
-const PRIORITIES: Priority[] = ["Low", "Medium", "High"];
+const PRIORITIES: Priority[] = ["Lowest", "Low", "Medium", "High"];
 
 /**
  * `recurrenceUnknown` is set by `useList` when the payload has no `rrule` key at

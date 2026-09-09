@@ -33,8 +33,8 @@ export const todoSchema = z.object({
   // fail validation, so `patchTodo` silently skipped the PATCH (the move never
   // saved). The backend ignores a null description, leaving it unchanged.
   description: z.string().nullable().optional(),
-  priority: z.enum(["Low", "Medium", "High"], {
-    errorMap: () => ({ message: "priority must be one of: low, medium, high" }),
+  priority: z.enum(["Lowest", "Low", "Medium", "High"], {
+    errorMap: () => ({ message: "priority must be one of: lowest, low, medium, high" }),
   }),
   due: z
     .date({ message: "end date is not identified" })
@@ -55,8 +55,8 @@ export const todoInstanceSchema = z.object({
   // See todoSchema: a null description must validate so recurring-instance
   // reschedules from a raw todo aren't silently dropped.
   description: z.string().nullable().optional(),
-  priority: z.enum(["Low", "Medium", "High"], {
-    errorMap: () => ({ message: "priority must be one of: low, medium, high" }),
+  priority: z.enum(["Lowest", "Low", "Medium", "High"], {
+    errorMap: () => ({ message: "priority must be one of: lowest, low, medium, high" }),
   }),
   due: z
     .date({ message: "end date is not identified" })
@@ -75,8 +75,8 @@ export const floaterSchema = z.object({
     .trim()
     .min(1, { message: "title cannot be left empty" }),
   description: z.string().nullable().optional(),
-  priority: z.enum(["Low", "Medium", "High"], {
-    errorMap: () => ({ message: "priority must be one of: low, medium, high" }),
+  priority: z.enum(["Lowest", "Low", "Medium", "High"], {
+    errorMap: () => ({ message: "priority must be one of: lowest, low, medium, high" }),
   }),
   listID: z.string().nullable().optional(),
 });
