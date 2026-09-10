@@ -1,11 +1,10 @@
 {
-  "version": "0.7.20",
-  "publishedAt": "2026-09-10T12:41:23-04:00",
+  "version": "0.7.21",
+  "publishedAt": "2026-09-10T14:35:46-04:00",
   "notes": [
-    "Crossfade the Overdue illustration/rows hand-off",
-    "Crossfade the Overdue hand-off's illustration and rows",
-    "Address DeepSource JavaScript findings on fade-unmount hook"
+    "Drop Earlier header's placementSpec during the illustration hand-off",
+    "Stop the Overdue illustration overlay from centering over its own header"
   ],
-  "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v0.7.20",
-  "compareUrl": "https://github.com/ohmzi/Tday/compare/v0.7.19..v0.7.20"
+  "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v0.7.21",
+  "compareUrl": "https://github.com/ohmzi/Tday/compare/v0.7.20..v0.7.21"
 }
