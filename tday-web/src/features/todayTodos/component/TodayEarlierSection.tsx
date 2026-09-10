@@ -2,6 +2,8 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import TodoGroup from "@/components/todo/component/TodoGroup";
 import { headerToBodyGap, sectionTopGapFilled } from "@/components/todo/dnd/timelineDndClasses";
+import { useFadeUnmount } from "@/hooks/useFadeUnmount";
+import { OVERDUE_ROWS_FADE_MS } from "../lib/todayEarlierIllustration";
 import { TodoItemType } from "@/types";
 
 /**
@@ -35,6 +37,12 @@ export default function TodayEarlierSection({
   onToggle: () => void;
   highlightedTodoId?: string | null;
 }) {
+  // Keeps the rows mounted for `OVERDUE_ROWS_FADE_MS` past a collapse so
+  // `.tday-rows-exit` has time to actually play — see `useFadeUnmount`'s own
+  // doc comment. `expanded` itself (not this hook's own state) still decides
+  // WHEN the rows may appear at all — requirement 3's hand-off, untouched.
+  const rowsMounted = useFadeUnmount(expanded, OVERDUE_ROWS_FADE_MS);
+
   return (
     <section className={cn("scroll-mt-24 rounded-3xl px-1", sectionTopGapFilled)}>
       <button
@@ -59,14 +67,19 @@ export default function TodayEarlierSection({
         </span>
       </button>
 
-      {expanded && (
-        <TodoGroup
-          todos={todos}
-          overdue
-          highlightedTodoId={highlightedTodoId}
-          showOverdueTag={false}
-          className="border-b border-border/60 pb-1"
-        />
+      {rowsMounted && (
+        <div
+          className={expanded ? "tday-rows-enter" : "tday-rows-exit"}
+          style={{ animationDuration: `${OVERDUE_ROWS_FADE_MS}ms` }}
+        >
+          <TodoGroup
+            todos={todos}
+            overdue
+            highlightedTodoId={highlightedTodoId}
+            showOverdueTag={false}
+            className="border-b border-border/60 pb-1"
+          />
+        </div>
       )}
     </section>
   );

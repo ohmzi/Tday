@@ -954,6 +954,25 @@ struct TodoListScreen: View {
     /// the user just cleared, a bigger, slower hand-off than this one, which
     /// times a small illustration getting out of the way of a section header
     /// a few points below it.
+    ///
+    /// `exitDuration` does double duty: it is both the animation on
+    /// `suppressEmptyStateForEarlierHandoff`'s flip to `true` and the delay
+    /// before `applyTimelineSectionCollapse` runs, so the illustration's own
+    /// fade-out (`emptyStateIllustrationTransition`'s removal leg, which
+    /// takes its animation from that same `withAnimation`) finishes exactly
+    /// when Earlier's rows start — the exit-before-expand guarantee is that
+    /// delay matching this duration, not a coincidence. Change one, change
+    /// the other.
+    ///
+    /// `enterDuration` has no matching duty on the way back: it still wraps
+    /// `suppressEmptyStateForEarlierHandoff`'s flip to `false` on the collapse
+    /// path, but `emptyStateIllustrationTransition`'s insertion leg is
+    /// `.identity` on purpose (see its own doc comment), so this duration
+    /// drives nothing visible on the illustration itself — the fade-*in* is
+    /// entirely `TdayEmptyState`'s own `onAppear` arrival. It is kept as
+    /// `withAnimation` anyway, both for symmetry with the exit branch and as
+    /// a live seam if a future visible property ever needs to ride along
+    /// with this flag on the way back in.
     private enum EarlierIllustrationHandoff {
         static let exitDuration: Double = 0.22
         /// The section toggle's own spring (`response: 0.28,
@@ -1660,6 +1679,7 @@ struct TodoListScreen: View {
                                     HapticManager.taskCompleted()
                                     SoundManager.taskCompleted()
                                 }
+                                .transition(emptyStateIllustrationTransition)
                             } else {
                                 TdayEmptyState(
                                     assetName: emptyStateAssetName,
@@ -1668,6 +1688,7 @@ struct TodoListScreen: View {
                                     description: emptyTimelineDescription(for: viewModel.mode, isListDetail: isListDetailScreen),
                                     celebrate: celebratesEmptyState
                                 )
+                                .transition(emptyStateIllustrationTransition)
                             }
                         }
                     }
@@ -3539,6 +3560,31 @@ struct TodoListScreen: View {
             .combined(with: .move(edge: .top))
             .animation(todoDropPlaceholderAnimation)
         return .asymmetric(insertion: insertion, removal: removal)
+    }
+
+    /// The "all done" illustration's own insertion/removal transition — see
+    /// the `showsEmptyStateIllustration` call site in `watermarkedModeContent`.
+    /// Deliberately asymmetric, and deliberately not `.opacity` both ways:
+    ///
+    /// - Removal fades it out via plain `.opacity`, taking its animation from
+    ///   whatever transaction is active when `showsEmptyStateIllustration`
+    ///   flips false — the Earlier hand-off wraps that flip in
+    ///   `withAnimation(.easeIn(duration: EarlierIllustrationHandoff.exitDuration))`
+    ///   (see `toggleEarlierSectionWithIllustrationHandoff`), so this is what
+    ///   actually turns that 0.22s window into a visible fade instead of the
+    ///   instant pop it was before: nothing here or in `TdayEmptyState` used
+    ///   to animate disappearance at all.
+    /// - Insertion is `.identity` — deliberately inert — because
+    ///   `TdayEmptyState` already gives itself a considered, purpose-built
+    ///   arrival (see its own doc comment: "it never cuts in", a 0.52s
+    ///   rise-and-fade driven by its own `onAppear`/`entered` state, entirely
+    ///   independent of SwiftUI's transition system). Pairing that with a
+    ///   second, external opacity transition on insertion would stack two
+    ///   independent fades on the same appearance — the exact "double
+    ///   animation stutter" this hand-off must not produce — without making
+    ///   the arrival read as any smoother.
+    private var emptyStateIllustrationTransition: AnyTransition {
+        .asymmetric(insertion: .identity, removal: .opacity)
     }
 
     private func minimalTimelineSubtitle(for todo: TodoItem, in section: TodoTimelineSection) -> String? {

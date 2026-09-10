@@ -649,6 +649,38 @@
   to { opacity: 0; transform: translateY(-14px) scale(0.94); }
 }
 
+/* The Overdue/Earlier ROWS' own fade — layered on top of the hand-off above
+   rather than replacing it: these rows only ever mount once
+   `useEarlierExpandHandoff` has already decided they may (after the
+   illustration's own `.tday-empty-exit` has fully played), so this pair only
+   ever controls how the rows LOOK while appearing/disappearing, never WHEN.
+   `useFadeUnmount` (`src/hooks/useFadeUnmount.ts`) keeps a collapsing body
+   mounted for `OVERDUE_ROWS_FADE_MS` (`todayEarlierIllustration.ts`) — given
+   here too, via `animationDuration`, the same one-number-read-twice approach
+   `TODAY_EARLIER_EXIT_MS`/`.tday-empty-exit` already use — so the CSS fade and
+   the moment the DOM node is actually removed line up exactly. Shared by
+   every scope's own Overdue/Earlier body (`TodayEarlierSection`,
+   `TimelineSectionDroppable`) rather than a fresh pair per call site. */
+.tday-rows-enter {
+  animation-name: tday-rows-fade-in;
+  animation-timing-function: ease-in-out;
+  animation-fill-mode: both;
+}
+
+.tday-rows-exit {
+  animation-name: tday-rows-fade-out;
+  animation-timing-function: ease-in-out;
+  animation-fill-mode: both;
+}
+
+@keyframes tday-rows-fade-in {
+  from { opacity: 0; }
+}
+
+@keyframes tday-rows-fade-out {
+  to { opacity: 0; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   /* Held at the top of the twinkle rather than switched off, so the scene still
      looks deliberate rather than half-drawn. */
@@ -660,6 +692,11 @@
      timer (not this animation) is what actually gates Earlier's rows, so
      disabling the animation changes nothing about when they appear. */
   .tday-empty-exit { animation: none; }
+  /* `useFadeUnmount` itself skips its own delay under reduced motion (see its
+     own doc comment), so these never actually get applied for long — this is
+     just the same belt-and-braces as the pair above. */
+  .tday-rows-enter { animation: none; }
+  .tday-rows-exit { animation: none; }
 }
 
 /* ── Route change ──
