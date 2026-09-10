@@ -91,8 +91,15 @@ describe("useFadeUnmount", () => {
     window.matchMedia = ((query: string) => ({
       matches: query.includes("prefers-reduced-motion"),
       media: query,
-      addEventListener: () => {},
-      removeEventListener: () => {},
+      // No-op: this mock's `matches` is fixed for its lifetime, so the hook
+      // (which never actually subscribes) has nothing to be notified of.
+      // Present only to satisfy `MediaQueryList`'s shape.
+      addEventListener: () => {
+        /* intentionally empty — see comment above */
+      },
+      removeEventListener: () => {
+        /* intentionally empty — see comment above */
+      },
     })) as unknown as typeof window.matchMedia;
 
     try {
