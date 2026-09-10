@@ -1,5 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 
+/**
+ * Reads the OS/browser "reduce motion" preference directly (rather than
+ * subscribing to it) because this hook only ever consults it once, at the
+ * moment a collapse starts — see the call site below.
+ */
 const prefersReducedMotion = () =>
   typeof window !== "undefined" &&
   typeof window.matchMedia === "function" &&
