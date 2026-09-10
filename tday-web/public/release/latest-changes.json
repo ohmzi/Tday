@@ -1,11 +1,11 @@
 {
-  "version": "0.7.19",
-  "publishedAt": "2026-09-09T18:47:21-04:00",
+  "version": "0.7.20",
+  "publishedAt": "2026-09-10T12:41:23-04:00",
   "notes": [
-    "Extend Earlier empty-state parity to Scheduled/Priority/All/Lists",
-    "Extend empty-state/Earlier parity to Scheduled, Priority, All, and Lists",
-    "Rename overdue timeline section title from Earlier to Overdue"
+    "Crossfade the Overdue illustration/rows hand-off",
+    "Crossfade the Overdue hand-off's illustration and rows",
+    "Address DeepSource JavaScript findings on fade-unmount hook"
   ],
-  "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v0.7.19",
-  "compareUrl": "https://github.com/ohmzi/Tday/compare/v0.7.18..v0.7.19"
+  "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v0.7.20",
+  "compareUrl": "https://github.com/ohmzi/Tday/compare/v0.7.19..v0.7.20"
 }
