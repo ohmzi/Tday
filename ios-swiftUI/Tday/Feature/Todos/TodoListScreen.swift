@@ -12,6 +12,30 @@ private struct FloaterSearchResultsFrameKey: PreferenceKey {
         value = nextValue()
     }
 }
+
+/// The height the "all done" illustration (`watermarkedModeContent`'s
+/// `.overlay`) must yield at the top of its frame before it centres itself in
+/// what is left. Fed by the hero title row (always) and, only while it is
+/// actually on screen, the collapsed Overdue/Earlier section header sitting
+/// right below it (`minimalTimelineSection`) — the one section that can ever
+/// be visible above the illustration, since every OTHER section is empty
+/// (and therefore unrendered) whenever `hasNoPendingItems` is true. Without
+/// this, the illustration centred itself in the List's FULL frame regardless
+/// of how much of that frame the real content above it actually filled: when
+/// the screen's own scope was empty and Overdue held nothing but its
+/// collapsed header, that populated region was well under half the
+/// available height, so the frame's geometric centre — where the
+/// illustration draws — landed on the header instead of safely below it.
+/// Summed via `reduce` rather than overwritten, so the hero row's and the
+/// header's own reports (each posted independently, from wherever they sit
+/// in the tree) combine into one total.
+private struct EmptyStateReservedTopHeightPreferenceKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value += nextValue()
+    }
+}
 private let todoTimelineScrollTopID = "todo-timeline-scroll-top"
 
 private final class TodoTaskDragSession {
@@ -122,6 +146,19 @@ enum TodoTimelineMetrics {
         guard end > start else { return value >= end ? 1 : 0 }
         return RootFeedHeroHeaderMetrics.stagger(value - start, to: end - start)
     }
+}
+
+/// Layout guards for the "all done" illustration in `watermarkedModeContent` —
+/// see `EmptyStateReservedTopHeightPreferenceKey`.
+private enum EmptyStateIllustrationLayout {
+    /// A floor under the space the illustration centres in, once the reserved
+    /// hero-row/header height is subtracted from the frame. Roughly
+    /// `TdayEmptyState`'s own natural height (its 136pt scene, the 28pt gap
+    /// below it, and its title/description block) with headroom: without a
+    /// floor, a reported reservation approaching or exceeding the frame's own
+    /// height — extreme Dynamic Type, a very short window — could push the
+    /// scene's centre past the bottom edge instead of merely crowding it.
+    static let minimumRemainder: CGFloat = 240
 }
 
 private let todoDropPlaceholderAnimation = Animation.spring(response: 0.28, dampingFraction: 0.88, blendDuration: 0.02)
@@ -472,6 +509,11 @@ struct TodoListScreen: View {
     @State private var activeDropSectionId: String?
     @State private var dropTargetFrames: [String: TodoDropTargetFrame] = [:]
     @State private var pendingRescheduleDrop: TodoRescheduleDrop?
+    /// Measured, not guessed — see `EmptyStateReservedTopHeightPreferenceKey`.
+    /// Read by `watermarkedModeContent` to keep the "all done" illustration
+    /// out from under the hero row and (when it is showing) the collapsed
+    /// Overdue/Earlier header.
+    @State private var emptyStateReservedTopHeight: CGFloat = 0
     @State private var collapsedSectionIDs: Set<String>
     /// Req. 3's hand-off flag — see `toggleEarlierSectionWithIllustrationHandoff`.
     /// Held true for the width of the illustration/Earlier hand-off in either
@@ -1637,6 +1679,9 @@ struct TodoListScreen: View {
     // watermark rather than behind it.
     private var watermarkedModeContent: some View {
         modeContent
+            .onPreferenceChange(EmptyStateReservedTopHeightPreferenceKey.self) { height in
+                emptyStateReservedTopHeight = height
+            }
             .overlay {
                 TimelineView(.periodic(from: .now, by: 60)) { context in
                     ZStack {
@@ -1652,43 +1697,37 @@ struct TodoListScreen: View {
                         // screen's own "nothing here" line stands down rather
                         // than talking over the no-results state.
                         if showsEmptyStateIllustration, !viewModel.isLoading, !isFloaterTaskHomeScreen, !isSearchingList {
-                            // Day Done: "finished everything" is a payoff, not an
-                            // absence, so it keeps its own glyph and its date line
-                            // rather than the screen's — which would undersell it.
-                            // Correct even with overdue tasks still tucked away in
-                            // a collapsed Earlier: nothing *pending* is what "done"
-                            // means here (`hasNoPendingItems`), not nothing at all.
-                            if viewModel.mode == .today, viewModel.completedTodayCount > 0 {
-                                TdayEmptyState(
-                                    assetName: "LucideCheckCheck",
-                                    accentColor: modeAccentColor,
-                                    title: L("All done for today"),
-                                    description: context.date.formatted(.dateTime.weekday(.wide).day().month(.wide)),
-                                    celebrate: celebratesEmptyState
+                            // Centred in whatever is left BELOW the hero row
+                            // and — while it is on screen — the collapsed
+                            // Overdue/Earlier header, not in the full frame
+                            // regardless of how much of it that content
+                            // actually fills. A plain `ZStack`-centred scene
+                            // here used to land on top of the header rather
+                            // than under it whenever the screen's own scope
+                            // was empty (so Overdue's header was the only
+                            // thing rendered above it): that populated
+                            // region ran to a few hundred points, well under
+                            // half the frame's own few hundred + more, so
+                            // the frame's geometric centre fell on the
+                            // header instead of past it. See
+                            // `EmptyStateReservedTopHeightPreferenceKey`.
+                            GeometryReader { proxy in
+                                // Clamped so a reserved height taller than
+                                // the frame itself (extreme Dynamic Type, a
+                                // very short window) still leaves the scene a
+                                // floor to centre in rather than being pushed
+                                // off the bottom edge entirely.
+                                let reservedTop = min(
+                                    emptyStateReservedTopHeight,
+                                    max(0, proxy.size.height - EmptyStateIllustrationLayout.minimumRemainder)
                                 )
-                                .onAppear {
-                                    // Earlier folding shut hands the illustration
-                                    // back too (see
-                                    // `toggleEarlierSectionWithIllustrationHandoff`),
-                                    // and that return is not a fresh completion —
-                                    // it must not replay the payoff each time.
-                                    guard !suppressDayDoneFeedbackOnReturn else {
-                                        suppressDayDoneFeedbackOnReturn = false
-                                        return
-                                    }
-                                    HapticManager.taskCompleted()
-                                    SoundManager.taskCompleted()
+                                VStack(spacing: 0) {
+                                    Color.clear.frame(height: reservedTop)
+                                    Spacer(minLength: 0)
+                                    emptyStateIllustration(for: context.date)
+                                    Spacer(minLength: 0)
                                 }
-                                .transition(emptyStateIllustrationTransition)
-                            } else {
-                                TdayEmptyState(
-                                    assetName: emptyStateAssetName,
-                                    accentColor: modeAccentColor,
-                                    title: emptyTimelineTitle(for: viewModel.mode, isListDetail: isListDetailScreen),
-                                    description: emptyTimelineDescription(for: viewModel.mode, isListDetail: isListDetailScreen),
-                                    celebrate: celebratesEmptyState
-                                )
-                                .transition(emptyStateIllustrationTransition)
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
                             }
                         }
                     }
@@ -1701,6 +1740,47 @@ struct TodoListScreen: View {
                     .ignoresSafeArea(.keyboard, edges: .bottom)
                 }
             }
+    }
+
+    /// Day Done: "finished everything" is a payoff, not an absence, so it
+    /// keeps its own glyph and its date line rather than the screen's —
+    /// which would undersell it. Correct even with overdue tasks still
+    /// tucked away in a collapsed Earlier: nothing *pending* is what "done"
+    /// means here (`hasNoPendingItems`), not nothing at all.
+    @ViewBuilder
+    private func emptyStateIllustration(for date: Date) -> some View {
+        if viewModel.mode == .today, viewModel.completedTodayCount > 0 {
+            TdayEmptyState(
+                assetName: "LucideCheckCheck",
+                accentColor: modeAccentColor,
+                title: L("All done for today"),
+                description: date.formatted(.dateTime.weekday(.wide).day().month(.wide)),
+                celebrate: celebratesEmptyState
+            )
+            .onAppear {
+                // Earlier folding shut hands the illustration
+                // back too (see
+                // `toggleEarlierSectionWithIllustrationHandoff`),
+                // and that return is not a fresh completion —
+                // it must not replay the payoff each time.
+                guard !suppressDayDoneFeedbackOnReturn else {
+                    suppressDayDoneFeedbackOnReturn = false
+                    return
+                }
+                HapticManager.taskCompleted()
+                SoundManager.taskCompleted()
+            }
+            .transition(emptyStateIllustrationTransition)
+        } else {
+            TdayEmptyState(
+                assetName: emptyStateAssetName,
+                accentColor: modeAccentColor,
+                title: emptyTimelineTitle(for: viewModel.mode, isListDetail: isListDetailScreen),
+                description: emptyTimelineDescription(for: viewModel.mode, isListDetail: isListDetailScreen),
+                celebrate: celebratesEmptyState
+            )
+            .transition(emptyStateIllustrationTransition)
+        }
     }
 
     @ToolbarContentBuilder
@@ -1794,6 +1874,17 @@ struct TodoListScreen: View {
         .background {
             TimelineScrollOffsetObserver { timelineScrollOffset = $0 }
                 .frame(width: 0, height: 0)
+        }
+        // Reports its own rendered height so the "all done" illustration can
+        // reserve exactly this much space at the top of its frame instead of
+        // centring through it — see `EmptyStateReservedTopHeightPreferenceKey`.
+        .background {
+            GeometryReader { proxy in
+                Color.clear.preference(
+                    key: EmptyStateReservedTopHeightPreferenceKey.self,
+                    value: proxy.size.height
+                )
+            }
         }
         .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
         .listRowBackground(colors.background)
@@ -3379,6 +3470,22 @@ struct TodoListScreen: View {
                         setActiveDropSection(sectionId)
                     }
                 )
+                // Overdue/Earlier is the one section that can still be on
+                // screen when the "all done" illustration shows — every
+                // other section is empty, and therefore unrendered, whenever
+                // `hasNoPendingItems` is true. Reports its rendered height so
+                // the illustration reserves this row rather than centring
+                // through it — see `EmptyStateReservedTopHeightPreferenceKey`.
+                .background {
+                    if section.id == "earlier" {
+                        GeometryReader { proxy in
+                            Color.clear.preference(
+                                key: EmptyStateReservedTopHeightPreferenceKey.self,
+                                value: proxy.size.height
+                            )
+                        }
+                    }
+                }
                 .listRowInsets(
                     EdgeInsets(
                         top: 0,
