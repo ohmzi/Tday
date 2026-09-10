@@ -29,6 +29,22 @@
 export const TODAY_EARLIER_EXIT_MS = 520;
 
 /**
+ * The Overdue/Earlier ROWS' own fade duration — deliberately a separate,
+ * shorter number from `TODAY_EARLIER_EXIT_MS` above. That constant times the
+ * illustration's own exit AND the hand-off delay before these rows are
+ * revealed AT ALL (requirement 3's ordering guarantee); this one only times
+ * how long the rows themselves take to fade once whether-and-when has already
+ * been decided elsewhere — a purely presentational polish on top, read by
+ * `useFadeUnmount` (`src/hooks/useFadeUnmount.ts`, shared by
+ * `TodayEarlierSection` and `TimelineSectionDroppable`) and by the CSS
+ * `.tday-rows-enter`/`.tday-rows-exit` pair (globals.css) it hands the
+ * duration to via `animationDuration`, so the fade and the moment the DOM
+ * node actually goes away line up exactly, the same one-number-read-twice
+ * approach as `TODAY_EARLIER_EXIT_MS` itself.
+ */
+export const OVERDUE_ROWS_FADE_MS = 260;
+
+/**
  * Requirements 1-3's full interaction for a scope's empty-state illustration
  * once its own "Earlier" bucket of overdue tasks exists on the screen.
  *
