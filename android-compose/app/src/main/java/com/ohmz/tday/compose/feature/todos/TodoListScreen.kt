@@ -268,18 +268,25 @@ private fun timelineTaskBottomSpacing(
  *
  * Every item that a completion can move goes through here rather than declaring
  * its own specs, so the row that leaves, the empty scene that takes its slot and
- * the tiles that scene pushes down are all on one clock. Placement is not
- * negotiable — that shared clock is the point — but a caller passes `null` for a
- * fade it owns itself, or has no business running.
+ * the tiles that scene pushes down are all on one clock. A caller passes `null`
+ * for a fade it owns itself, or has no business running.
+ *
+ * [placementSpec] defaults to [TdayFeedItemMotion.Placement] — the shared clock
+ * every ordinary displacement (a row added or removed elsewhere) travels on —
+ * but is itself nullable, not "not negotiable" the way the fade specs are
+ * documented as owned-or-not: see [EARLIER_SECTION_KEY]'s header at its
+ * `sectionedTimelineContent` call site for the one caller that passes `null`
+ * here, and why.
  */
 private fun LazyItemScope.feedItemMotion(
     enabled: Boolean,
     fadeInSpec: FiniteAnimationSpec<Float>? = TdayFeedItemMotion.FadeIn,
     fadeOutSpec: FiniteAnimationSpec<Float>? = TdayFeedItemMotion.FadeOut,
+    placementSpec: FiniteAnimationSpec<IntOffset>? = TdayFeedItemMotion.Placement,
 ): Modifier = if (enabled) {
     Modifier.animateItem(
         fadeInSpec = fadeInSpec,
-        placementSpec = TdayFeedItemMotion.Placement,
+        placementSpec = placementSpec,
         fadeOutSpec = fadeOutSpec,
     )
 } else {
@@ -294,9 +301,21 @@ private fun LazyItemScope.feedItemMotion(
  * describe — and it would fire on a path this fix has no business touching:
  * a live search query replaces the whole feed body in one go, and an item with
  * a fade spec fades out and back in on every open and close of the field.
+ *
+ * [placementSpec] defaults to the shared [TdayFeedItemMotion.Placement] clock,
+ * same as [feedItemMotion] — see that default's own doc for the one caller
+ * that overrides it to `null`.
  */
-private fun LazyItemScope.displacedFeedItemMotion(enabled: Boolean): Modifier =
-    feedItemMotion(enabled = enabled, fadeInSpec = null, fadeOutSpec = null)
+private fun LazyItemScope.displacedFeedItemMotion(
+    enabled: Boolean,
+    placementSpec: FiniteAnimationSpec<IntOffset>? = TdayFeedItemMotion.Placement,
+): Modifier =
+    feedItemMotion(
+        enabled = enabled,
+        fadeInSpec = null,
+        fadeOutSpec = null,
+        placementSpec = placementSpec,
+    )
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 /**
@@ -430,6 +449,45 @@ internal val EarlierExpandDeferMillis: Long = TdayFeedItemMotion.FadeOutMillis.t
  */
 internal fun nonEarlierSectionsEmpty(sections: List<TodoSection>): Boolean =
     sections.none { section -> section.key != EARLIER_SECTION_KEY && section.items.isNotEmpty() }
+
+/**
+ * Whether [sectionedTimelineContent]'s Earlier header should skip
+ * `animateItem`'s `placementSpec` for this frame -- true exactly when [section]
+ * is Earlier's own and [earlierIllustrationPresent] says the inline
+ * "today-earlier-empty-scene" item (below, in [TodoListScreen]'s own
+ * `LazyColumn` content) currently exists above it.
+ *
+ * That item's `AnimatedVisibility` gives it a real, continuously-changing
+ * height for the ~150-190ms its `fadeOut+shrinkVertically` / `fadeIn+expandVertically`
+ * run (see the enter/exit specs at its own `item("today-earlier-empty-scene")`
+ * call). `displacedFeedItemMotion`'s `placementSpec` on the header below it
+ * reacts to that the way it reacts to anything else moving it: by chasing
+ * whatever this frame's real offset is with its own separately-clocked
+ * [TdayFeedItemMotion.PlacementMillis]-long tween. Chasing a target that
+ * jumps once and then holds still is exactly what that tween is for --
+ * chasing one that keeps moving for a shorter span than the tween itself
+ * takes to catch up is not: the header lags behind the illustration's real,
+ * already-smooth height for the whole transition (and briefly after), which
+ * is what let the header visibly overlap the illustration while it was
+ * still growing, and overlap Earlier's first row the instant the
+ * illustration finished shrinking away and that row appeared already
+ * sitting at its correct, un-lagged position.
+ *
+ * Safe to drop entirely rather than merely re-time, because nothing else
+ * ever legitimately moves this specific header while [earlierIllustrationPresent]
+ * holds: [buildTimelineSections] filters every non-Earlier section down to
+ * nothing the moment the scope reads as empty (see
+ * [TodoTimelineSectionsTest]'s "surfaces just Earlier" cases), so Earlier's
+ * header has nothing above it but this one item for as long as this is true.
+ * The header's own rows are a different story -- they can still legitimately
+ * reorder among themselves while Earlier is expanded and the scope is
+ * otherwise empty, which is exactly why this only ever touches the header,
+ * never [feedItemMotion] on the rows themselves.
+ */
+internal fun earlierHeaderSkipsPlacementSpec(
+    section: String,
+    earlierIllustrationPresent: Boolean,
+): Boolean = section == EARLIER_SECTION_KEY && earlierIllustrationPresent
 
 /** What [TodoListScreen]'s `onTimelineSectionHeaderToggle` does with a tap. */
 internal enum class SectionHeaderToggleAction {
@@ -1081,6 +1139,16 @@ fun TodoListScreen( // skipcq: KT-R1006
         earlierCollapsed = collapsedSectionKeys.contains(EARLIER_SECTION_KEY),
         celebrateEmptyState = celebrateEmptyState,
     )
+    // Exactly the "today-earlier-empty-scene" item's own gate below, pulled
+    // out under its own name because `sectionedTimelineContent` needs it too:
+    // see [earlierHeaderSkipsPlacementSpec] for why Earlier's header cares
+    // whether that item exists, independent of `showEarlierIllustration`'s
+    // narrower "and its content is the visible one right now".
+    val earlierIllustrationPresent = scopeHasEarlierItems &&
+            scopeItemsEmpty &&
+            !uiState.isLoading &&
+            !suppressInitialTodayTimeline &&
+            !scopedSearchActive
     var flashTodoId by remember(uiState.mode) { mutableStateOf<String?>(null) }
     var quickAddDueEpochMs by rememberSaveable { mutableStateOf<Long?>(null) }
     var editTargetTodoId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -1781,12 +1849,7 @@ fun TodoListScreen( // skipcq: KT-R1006
                     // this exits the same way and Earlier's rows are left
                     // owning the slot, same as if no completion had just
                     // happened.
-                    if (scopeHasEarlierItems &&
-                        scopeItemsEmpty &&
-                        !uiState.isLoading &&
-                        !suppressInitialTodayTimeline &&
-                        !scopedSearchActive
-                    ) {
+                    if (earlierIllustrationPresent) {
                         item(
                             key = "today-earlier-empty-scene",
                             contentType = "today-earlier-empty-scene",
@@ -1891,6 +1954,7 @@ fun TodoListScreen( // skipcq: KT-R1006
                             usesRootFeedChrome = usesRootFeedChrome,
                             usesTodayStyle = usesTodayStyle,
                             timelineAnimationsEnabled = timelineAnimationsEnabled,
+                            earlierIllustrationPresent = earlierIllustrationPresent,
                             scopedSearchActive = scopedSearchActive,
                             canRescheduleTasks = canRescheduleTasks,
                             isViewerList = isViewerList,
@@ -2853,6 +2917,11 @@ private fun LazyListScope.floaterTaskHomeRootFeedContent(
  * `animateItem` spec, and the item keys/content types below are the PR #122
  * celebration/drag choreography and are unchanged by this extraction — same
  * calls, same order, same keys as when this loop lived inline.
+ *
+ * [earlierIllustrationPresent] exists only for [earlierHeaderSkipsPlacementSpec]
+ * on the Earlier header below — see that function's own doc for why the
+ * header, alone among everything here, needs to know about an item that
+ * this function never otherwise touches.
  */
 // KT-R1006 (cyclomatic complexity, reported at 33) is suppressed on this
 // declaration rather than split further. Two separate facts, both worth
@@ -2885,6 +2954,7 @@ private fun LazyListScope.sectionedTimelineContent( // skipcq: KT-R1006
     usesRootFeedChrome: Boolean,
     usesTodayStyle: Boolean,
     timelineAnimationsEnabled: Boolean,
+    earlierIllustrationPresent: Boolean,
     scopedSearchActive: Boolean,
     canRescheduleTasks: Boolean,
     isViewerList: Boolean,
@@ -2947,9 +3017,25 @@ private fun LazyListScope.sectionedTimelineContent( // skipcq: KT-R1006
             ) {
                 // A header slides with its section but never
                 // fades: it is a label on content that is
-                // doing its own arriving and leaving.
+                // doing its own arriving and leaving. Earlier's
+                // header is the one exception to sliding, too,
+                // for as long as the inline empty-state item
+                // above it is the sole thing that can move it --
+                // see [earlierHeaderSkipsPlacementSpec].
                 val headerModifier =
-                    displacedFeedItemMotion(timelineAnimationsEnabled)
+                    displacedFeedItemMotion(
+                        enabled = timelineAnimationsEnabled,
+                        placementSpec = if (
+                            earlierHeaderSkipsPlacementSpec(
+                                section = section.key,
+                                earlierIllustrationPresent = earlierIllustrationPresent,
+                            )
+                        ) {
+                            null
+                        } else {
+                            TdayFeedItemMotion.Placement
+                        },
+                    )
                 TimelineSectionHeader(
                     modifier = headerModifier
                         .fillMaxWidth()
